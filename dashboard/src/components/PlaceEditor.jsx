@@ -192,7 +192,7 @@ export default function PlaceEditor() {
     setDrafting(true);
     try {
       const d = await api.draftBlurb(slug);
-      setForm((f) => ({ ...f, desc_vi: d.desc_vi, desc_en: d.desc_en }));
+      setForm((f) => ({ ...f, desc_vi: d.desc_vi, desc_en: d.desc_en, desc_ja: d.desc_ja }));
       const from = [
         d.photos ? `${d.photos} photo${d.photos === 1 ? '' : 's'}` : null,
         d.sources?.length ? 'Wikipedia' : null,
@@ -321,7 +321,7 @@ export default function PlaceEditor() {
               </button>
               <p className="note">
                 {blank
-                  ? 'Fills the EN and VI Blurb fields from the row and its photographs. Read it before you save.'
+                  ? 'Fills the three Blurb fields from the row and its photographs. Read them before you save.'
                   : 'Clear the EN and VI Blurb fields to draft a new one.'}
               </p>
             </div>

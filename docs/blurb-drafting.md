@@ -22,7 +22,7 @@ skill `threads-to-datadesk` đưa vào (`threads`, 40).
 ## Một function, một cổng
 
 `supabase/functions/write-blurb` nhận `{ slug }` và trả về `{ desc_vi,
-desc_en, sources }`. Nó **không ghi gì vào bảng**. Chữ rơi vào hai ô Blurb
+desc_en, desc_ja, sources, photos }`. Nó **không ghi gì vào bảng**. Chữ rơi vào ba ô Blurb
 của dashboard ở trạng thái chưa lưu, như thể editor vừa gõ, và nút Save
 vốn có là cổng duyệt. Không có cột nháp, không có bảng lịch sử: function
 chỉ nhận chỗ trống (chỗ đã có mô tả trả 409), nên với mọi dòng "đã đổi

@@ -74,7 +74,7 @@ const PARK = {
 };
 const HUE = { name_en: 'Hue', name_vi: 'Huế', short_en: 'Hue', short_vi: 'Huế' };
 const WRITTEN = [
-  { name_en: 'Tao Dan Park', categories: ['nature'], desc_vi: 'Thảm cỏ râm mát giữa Quận 1.', desc_en: 'Shaded lawns in D1.' },
+  { name_en: 'Tao Dan Park', categories: ['nature'], desc_vi: 'Thảm cỏ râm mát giữa Quận 1.', desc_en: 'Shaded lawns in D1.', desc_ja: '1区の木陰の芝生。' },
   { name_en: 'A café', categories: ['cafes'], desc_vi: 'Quán', desc_en: 'Café' },
   { name_en: 'Half written', categories: ['nature'], desc_vi: 'Chỉ tiếng Việt', desc_en: null },
   { name_en: 'No kinds', categories: null, desc_vi: 'x', desc_en: 'y' },
@@ -133,7 +133,7 @@ describe('the door', () => {
       { data: { token: 's3cret', expires_at: new Date(Date.now() + 60_000).toISOString() } },
       { data: PARK, error: null }, { data: HUE, error: null }, { data: [], error: null }, { data: [], error: null },
     );
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     const res = await call({ slug: 'thuong-bac-park' }, { headers: { 'x-ops-token': 's3cret' } });
     expect(res.status).toBe(200);
     expect(h.fake.log[0]).toMatchObject({ table: 'ops_tokens', filters: [['name', 'write-blurb']] });
@@ -171,12 +171,13 @@ describe('what it refuses', () => {
 describe('the draft', () => {
   it('returns both languages trimmed, writes nothing, and names no source without an article', async () => {
     door();
-    h.create.mockResolvedValue(says({ desc_vi: '  Bờ sông Hương, ghế đá dưới hàng cây. ', desc_en: ' Riverside benches under old trees.  ' }));
+    h.create.mockResolvedValue(says({ desc_vi: '  Bờ sông Hương, ghế đá dưới hàng cây. ', desc_en: ' Riverside benches under old trees.  ', desc_ja: ' フォン川のほとり、木陰のベンチ。 ' }));
     const res = await call({ slug: PARK.slug });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       desc_vi: 'Bờ sông Hương, ghế đá dưới hàng cây.',
       desc_en: 'Riverside benches under old trees.',
+      desc_ja: 'フォン川のほとり、木陰のベンチ。',
       sources: [],
       photos: 2,
     });
@@ -185,11 +186,11 @@ describe('the draft', () => {
 
   it('asks Haiku for a two-field JSON answer under the house rules', async () => {
     door();
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     await call({ slug: PARK.slug });
     const req = sent();
     expect(req.model).toBe('claude-haiku-5-5');
-    expect(req.output_config.format.schema.required).toEqual(['desc_vi', 'desc_en']);
+    expect(req.output_config.format.schema.required).toEqual(['desc_vi', 'desc_en', 'desc_ja']);
     expect(req.system).toContain('No invented years');
     expect(req.system).toContain('never mention the rating');
     expect(req.system).toContain('photographs are the best material');
@@ -200,7 +201,7 @@ describe('the draft', () => {
   // visible frame in the catalog's own Storage, none of Google's links.
   it('shows the model every photograph in Storage, the cover first, and none of Google’s links', async () => {
     door();
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     await call({ slug: PARK.slug });
     expect(frames()).toEqual(['https://cdn/park/cover.jpg', 'https://cdn/park/2.jpg']);
     const content = sent().messages[0].content;
@@ -215,7 +216,7 @@ describe('the draft', () => {
 
   it('says so when there are no photographs, and sends no frame', async () => {
     door(PARK, WRITTEN, []);
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     const res = await call({ slug: PARK.slug });
     expect(frames()).toEqual([]);
     expect(sent().messages[0].content[0].type).toBe('text');
@@ -225,7 +226,7 @@ describe('the draft', () => {
 
   it('hands the model the row’s facts and the desk’s blurbs of the same kinds, five at most', async () => {
     door();
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     await call({ slug: PARK.slug });
     const p = prompt();
     expect(p).toContain('Name: Công viên Thương Bạc / Thuong Bac Park');
@@ -235,7 +236,11 @@ describe('the draft', () => {
     expect(p).toContain('Hours: Monday: Open 24 hours');
     expect(p).toContain('Website: ?');
     // The park, not the café; both halves written; five, not eight.
-    expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.');
+    expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
+    // An example with no Japanese shows two lines, not a "ja: null".
+    expect(p).toContain('- Park 3\n  vi: vi 3\n  en: en 3\n');
+    expect(p).not.toContain('ja: null');
+    expect(sent().system).toContain('desc_ja is Japanese written for a Japanese reader');
     expect(p).not.toContain('A café');
     expect(p).not.toContain('Half written');
     expect(p).not.toContain('No kinds');
@@ -251,7 +256,7 @@ describe('the draft', () => {
   it('fills the facts it does not have with a question mark rather than a guess', async () => {
     door({ ...PARK, city_id: null, neighborhood_vi: null, neighborhood_en: null, address: null, categories: null, vibe_tags: null, opening_hours: null, primary_type: null }, []);
     h.fake.queue.splice(3, 1, { data: null, error: null }); // no city row
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     await call({ slug: PARK.slug });
     const p = prompt();
     expect(p).toContain('City: ? / ');
@@ -284,7 +289,7 @@ describe('the article', () => {
   it('passes the Vietnamese lead on with its URL as the source, asking for the Vietnamese title first', async () => {
     door();
     h.fetch.mockResolvedValueOnce(page({}));
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     const res = await call({ slug: PARK.slug });
     expect((await res.json()).sources).toEqual(['https://vi.wikipedia.org/wiki/C%C3%B4ng_vi%C3%AAn_Th%C6%B0%C6%A1ng_B%E1%BA%A1c']);
     expect(h.fetch.mock.calls[0][0]).toBe('https://vi.wikipedia.org/api/rest_v1/page/summary/C%C3%B4ng_vi%C3%AAn_Th%C6%B0%C6%A1ng_B%E1%BA%A1c');
@@ -298,7 +303,7 @@ describe('the article', () => {
     h.fetch
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
       .mockResolvedValueOnce(page({ extract: 'A riverside park in Hue, Vietnam.', content_urls: undefined }));
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     const res = await call({ slug: PARK.slug });
     expect((await res.json()).sources).toEqual(['https://en.wikipedia.org/wiki/Thuong%20Bac%20Park']);
     expect(h.fetch.mock.calls[1][0]).toBe('https://en.wikipedia.org/api/rest_v1/page/summary/Thuong_Bac_Park');
@@ -313,7 +318,7 @@ describe('the article', () => {
       h.fetch.mockReset();
       for (const a of answers) h.fetch.mockResolvedValueOnce(a);
       h.fetch.mockResolvedValue({ ok: false, json: async () => ({}) });
-      h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+      h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
       const res = await call({ slug: PARK.slug });
       expect((await res.json()).sources).toEqual([]);
       expect(prompt()).toContain('No article extract');
@@ -325,7 +330,7 @@ describe('the article', () => {
     h.fetch.mockReset();
     h.fetch.mockRejectedValue(new Error('offline'));
     door();
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     expect((await (await call({ slug: PARK.slug })).json()).sources).toEqual([]);
   });
 
@@ -333,7 +338,7 @@ describe('the article', () => {
     h.fake.replies(session, editor, { data: { ...PARK, city_id: 'dalat', name_en: 'Lake Park', name_vi: 'Lake Park' }, error: null },
       { data: { name_en: 'Da Lat', name_vi: 'Đà Lạt', short_en: null, short_vi: null }, error: null }, { data: [], error: null }, { data: [], error: null });
     h.fetch.mockResolvedValueOnce(page({ extract: 'Lake Park sits on Xuan Huong lake in Da Lat.' }));
-    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     const res = await call({ slug: PARK.slug });
     expect((await res.json()).sources).toHaveLength(1);
   });

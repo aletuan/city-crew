@@ -1,6 +1,6 @@
 // A first draft of a place's blurb, for the desk to read before it saves.
 //
-// POST { slug } → { desc_vi, desc_en, sources: string[], photos: number }
+// POST { slug } → { desc_vi, desc_en, desc_ja, sources: string[], photos: number }
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -51,6 +51,21 @@
 // photographs do not back, no word about how anything tastes, no year
 // or figure that is not in the material. The voice is learned from the
 // desk's own blurbs, five of the same kinds, sent as examples.
+//
+// ── three languages, since 13 Oct 2026 ──
+//
+// The first cut wrote Vietnamese and English, and the desk could not
+// even show the Japanese field (it listed EN and VI by hand until #918).
+// 837 of 940 live places had no Japanese blurb, and every draft this
+// wrote added one more. So the model writes all three in one call: the
+// third language costs a few hundred output tokens on a request that
+// already carries the photographs, against a backlog that would
+// otherwise grow in a language nobody was writing. The Japanese is
+// written for a Japanese reader from the same material, not translated
+// from the English — the examples the desk wrote are the model for that
+// too, where they have a JA slot. It is machine prose by construction;
+// the desk reads it before Save like the other two, and marking it as
+// machine for a later review pass is the content-schema work's to add.
 //
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
@@ -110,6 +125,7 @@ Rules, none of which bend:
 - Never say how food or drink tastes, and never mention the rating.
 - No hashtags, no emoji, no second person ("you") unless the examples use it for the kind of place.
 - desc_vi is Vietnamese; desc_en is English written for an English reader, saying the same things — not a word-for-word translation.
+- desc_ja is Japanese written for a Japanese reader from the same material, in the register of the examples' Japanese where they have it: plain, です・ます, place names kept in the Latin alphabet as the screen prints them.
 - Do not repeat the place's name in the blurb; the screen prints it above.`;
 
 type Row = {
@@ -125,7 +141,7 @@ type Row = {
   desc_vi: string | null; desc_en: string | null;
 };
 
-type Example = { name_en: string; categories: string[] | null; desc_vi: string | null; desc_en: string | null };
+type Example = { name_en: string; categories: string[] | null; desc_vi: string | null; desc_en: string | null; desc_ja?: string | null };
 
 const foldLite = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
 
@@ -201,7 +217,7 @@ Deno.serve(async (req) => {
     // the tests run on; forty rows and a filter here cost nothing.
     const { data: written } = await admin
       .from("places")
-      .select("name_en, categories, desc_vi, desc_en")
+      .select("name_en, categories, desc_vi, desc_en, desc_ja")
       .eq("reviewer_source", "editorial").eq("is_published", true)
       .limit(40);
     const kinds = row.categories ?? [];
@@ -244,8 +260,8 @@ Deno.serve(async (req) => {
           type: "json_schema",
           schema: {
             type: "object",
-            properties: { desc_vi: { type: "string" }, desc_en: { type: "string" } },
-            required: ["desc_vi", "desc_en"],
+            properties: { desc_vi: { type: "string" }, desc_en: { type: "string" }, desc_ja: { type: "string" } },
+            required: ["desc_vi", "desc_en", "desc_ja"],
             additionalProperties: false,
           },
         },
@@ -261,7 +277,7 @@ Deno.serve(async (req) => {
             type: "text" as const,
             text: [
               "Examples of the voice, from the same kinds of place:",
-              ...examples.map((e) => `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}`),
+              ...examples.map((e) => `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}${e.desc_ja ? `\n  ja: ${e.desc_ja}` : ""}`),
               "",
               "The place:",
               facts,
@@ -276,7 +292,7 @@ Deno.serve(async (req) => {
 
     const text = message.content.find((c) => c.type === "text");
     if (!text || text.type !== "text") return json({ error: "model gave no text" }, 502);
-    const parsed = JSON.parse(text.text) as { desc_vi: string; desc_en: string };
+    const parsed = JSON.parse(text.text) as { desc_vi: string; desc_en: string; desc_ja: string };
     console.log("write-blurb", {
       slug, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,
@@ -284,6 +300,7 @@ Deno.serve(async (req) => {
     return json({
       desc_vi: parsed.desc_vi.trim(),
       desc_en: parsed.desc_en.trim(),
+      desc_ja: parsed.desc_ja.trim(),
       sources: lead ? [lead.url] : [],
       photos: photos.length,
     });

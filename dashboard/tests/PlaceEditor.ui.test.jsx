@@ -497,13 +497,14 @@ describe('the blurb draft', () => {
   });
 
   it('fills both fields from the draft, lights Save, and saves nothing by itself', async () => {
-    api.draftBlurb.mockResolvedValue({ desc_vi: 'Bờ sông, ghế đá.', desc_en: 'Riverside benches.', sources: ['https://vi.wikipedia.org/wiki/x'], photos: 3 });
+    api.draftBlurb.mockResolvedValue({ desc_vi: 'Bờ sông, ghế đá.', desc_en: 'Riverside benches.', desc_ja: '川沿いのベンチ。', sources: ['https://vi.wikipedia.org/wiki/x'], photos: 3 });
     openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null, categories: ['nature'] });
     await screen.findByDisplayValue('Park C');
     expect(saveButton().disabled).toBe(true);
     await act(async () => { fireEvent.click(draftButton()); });
     expect(api.draftBlurb).toHaveBeenCalledWith('park-c');
     expect(field('desc_vi').value).toBe('Bờ sông, ghế đá.');
+    expect(field('desc_ja').value).toBe('川沿いのベンチ。');
     expect(field('desc_en').value).toBe('Riverside benches.');
     expect(saveButton().disabled).toBe(false);
     expect(api.savePlace).not.toHaveBeenCalled();
