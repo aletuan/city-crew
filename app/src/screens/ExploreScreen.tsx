@@ -772,6 +772,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const visitedSlugs = useMemo(() => new Set(visits.data.map((v) => v.place_slug)), [visits.data]);
   const isVisited = useCallback((slug: string) => visitedSlugs.has(slug), [visitedSlugs]);
   const checkinOn = useFlag('place_checkin');
+  // For the quick-filter pill's shadow: a light scheme needs less of it.
+  const light = useScheme().scheme === 'light';
   const [sortOrigin, setSortOrigin] = useState<ExploreOrigin | null>(null);
 
   // Every city's places, in the four columns the filters read.
@@ -1100,6 +1102,18 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       : t('Saved-places filter off.', 'Bỏ lọc theo điểm đã lưu.', '保存済みの絞り込みを解除しました。'));
   };
   pickSavedRef.current = pickSaved;
+  // The sheet's Visited row, as a cell: same door for a guest, same
+  // reason ('saved' — see the sheet's `onNeedSignIn`), same resume.
+  const pickVisitedRef = useRef<() => void>(() => {});
+  const pickVisited = () => {
+    if (!session) { askToSignIn('saved', () => pickVisitedRef.current()); return; }
+    const on = !appliedFilters.visitedOnly;
+    setAppliedFilters({ ...appliedFilters, visitedOnly: on });
+    say(on
+      ? t('Showing only places you checked in at.', 'Chỉ hiện những điểm đã check-in.', 'チェックインしたスポットのみ表示します。')
+      : t('Visited-places filter off.', 'Bỏ lọc theo điểm đã check-in.', '訪問済みの絞り込みを解除しました。'));
+  };
+  pickVisitedRef.current = pickVisited;
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
@@ -1510,42 +1524,84 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                   same state. Sort stays in the sheet; a cycling button for
                   three sorts is a slot machine. */}
               <View style={s.mapQuick}>
-                <PressableScale
-                  onPress={pickStatus}
-                  haptic="selection"
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間')}: ${statusLabel(appliedFilters.status, t)}`}
-                  accessibilityState={{ selected: appliedFilters.status !== 'any' }}
-                  hitSlop={4}
-                  style={[s.filterButton, s.mapDisc, appliedFilters.status !== 'any' && s.mapDiscOn]}
-                >
-                  <Ionicons
-                    name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
-                    size={19}
-                    color={appliedFilters.status !== 'any' ? colors.accent : colors.textSecondary}
-                  />
-                </PressableScale>
-                <PressableScale
-                  onPress={pickSaved}
-                  haptic="selection"
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ')}
-                  accessibilityState={{ selected: appliedFilters.savedOnly }}
-                  hitSlop={4}
-                  style={[s.filterButton, s.mapDisc, appliedFilters.savedOnly && s.mapDiscOn]}
-                >
-                  <Ionicons
-                    name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
-                    size={19}
-                    color={appliedFilters.savedOnly ? colors.accent : colors.textSecondary}
-                  />
-                </PressableScale>
-                {/* Beside the two discs rather than centred or at the
-                    foot: the reader's eyes are on the disc they just
-                    pressed, and the foot of the map is spoken for — the
-                    selected place's strip and the tab bar both live
-                    there. Read as the disc's caption, which is what it
-                    is for two seconds. */}
+                {/* One pill, not two discs. Each disc wore the look's
+                    elevated ground, which is within a few points of the
+                    map's land colour in every look: 1.2:1 on Sand against
+                    Google's land tint, 1.1:1 on the white looks, 1.04:1
+                    on Midnight against its own night land (measured 13
+                    Oct 2026). On Sand the discs read as two faint rings
+                    on the tiles. A ground the same colour cannot be made
+                    to stand off the map by colour, so the pill stands off it the way
+                    the place card at the map's foot does — by shadow and
+                    a real border — and stays the look's own material,
+                    which is what the Profile's theme choice promises.
+                    The cells sit inside it as a segmented control does:
+                    the one that is on gets the accent wash the bar's
+                    chips wear, inset so nothing needs clipping and the
+                    shadow survives (iOS draws shadows outside bounds). */}
+                <View style={[s.mapPill, { shadowOpacity: light ? 0.14 : 0.35 }]}>
+                  <PressableScale
+                    onPress={pickStatus}
+                    haptic="selection"
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間')}: ${statusLabel(appliedFilters.status, t)}`}
+                    accessibilityState={{ selected: appliedFilters.status !== 'any' }}
+                    hitSlop={4}
+                    style={[s.mapCell, appliedFilters.status !== 'any' && s.mapCellOn]}
+                  >
+                    <Ionicons
+                      name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
+                      size={19}
+                      color={appliedFilters.status !== 'any' ? colors.accent : colors.textSecondary}
+                    />
+                  </PressableScale>
+                  <View style={s.mapRule} />
+                  <PressableScale
+                    onPress={pickSaved}
+                    haptic="selection"
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ')}
+                    accessibilityState={{ selected: appliedFilters.savedOnly }}
+                    hitSlop={4}
+                    style={[s.mapCell, appliedFilters.savedOnly && s.mapCellOn]}
+                  >
+                    <Ionicons
+                      name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
+                      size={19}
+                      color={appliedFilters.savedOnly ? colors.accent : colors.textSecondary}
+                    />
+                  </PressableScale>
+                  {/* The third question a person on a street asks — "have
+                      I been here?" — with the Check-in pill's own ring,
+                      and behind the same flag as the sheet's row. */}
+                  {checkinOn ? (
+                    <>
+                      <View style={s.mapRule} />
+                      <PressableScale
+                        onPress={pickVisited}
+                        haptic="selection"
+                        testID="map-visited"
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ')}
+                        accessibilityState={{ selected: appliedFilters.visitedOnly }}
+                        hitSlop={4}
+                        style={[s.mapCell, appliedFilters.visitedOnly && s.mapCellOn]}
+                      >
+                        <Ionicons
+                          name={appliedFilters.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                          size={19}
+                          color={appliedFilters.visitedOnly ? colors.accent : colors.textSecondary}
+                        />
+                      </PressableScale>
+                    </>
+                  ) : null}
+                </View>
+                {/* Beside the pill rather than centred or at the foot:
+                    the reader's eyes are on the cell they just pressed,
+                    and the foot of the map is spoken for — the selected
+                    place's strip and the tab bar both live there. Read as
+                    the pill's caption, which is what it is for two
+                    seconds. */}
                 <Toast note={note} testID="explore-map-toast" />
               </View>
               <PlacesMap
@@ -1721,8 +1777,31 @@ const s = StyleSheet.create({
   // Map tiles are light in both schemes, so a disc that reads fine over
   // the hero's dark scrim goes nearly invisible over them — it needs a
   // ground of its own rather than the glass surface the rest of the row wears.
-  mapDisc: { backgroundColor: colors.bgElevated, borderColor: colors.borderGlassSoft },
-  mapDiscOn: { borderColor: colors.accentLine, borderWidth: 1 },
+  // The map's own quick filters. Opaque elevated ground, never the glass
+  // the rest of the row wears: the tiles under it are busy with lines and
+  // labels, and glass over them is noise. Lift is the place card's
+  // (`MapPlaceCard`), not the nudge's: the pill is a small control, and
+  // the nudge's 18-point blur under a 42-point object reads as a smear.
+  mapPill: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 3, borderRadius: radius.pill,
+    backgroundColor: colors.bgElevated,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
+    shadowColor: '#000', shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  // 40 wide, not 36: the pill has no gap between cells, so the extra
+  // four points are what keeps two neighbouring glyphs from reading as
+  // one. The radius is the pill's minus its padding, so an on-cell's
+  // wash follows the pill's curve at the ends instead of cutting across it.
+  mapCell: {
+    width: 40, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  mapCellOn: { backgroundColor: colors.accentSoft },
+  // Between cells, a rule the height of the glyph rather than the cell:
+  // full height would carve the pill into boxes.
+  mapRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: colors.borderGlass },
   // The slot pushes it to the end of the heading row; the pill itself is
   // the thing that gets pressed, which is why the two are separate — see
   // `PressableScale` on where a width has to live.
