@@ -67,7 +67,7 @@ const editor = { data: { email: 'reader@crew.test' } };
 const notEditor = { data: null };
 
 const PARK = {
-  slug: 'thuong-bac-park', name_en: 'Thuong Bac Park', name_vi: 'Công viên Thương Bạc', city_id: 'hue',
+  id: 'pid-1', slug: 'thuong-bac-park', name_en: 'Thuong Bac Park', name_vi: 'Công viên Thương Bạc', city_id: 'hue',
   address: 'Đường Trần Hưng Đạo, Phú Xuân, Huế, Vietnam', neighborhood_en: 'Phú Xuân', neighborhood_vi: 'Phú Xuân',
   categories: ['nature'], vibe_tags: ['outdoors', 'chill'], opening_hours: ['Monday: Open 24 hours'],
   website: null, primary_type: 'park', desc_vi: null, desc_en: null,
@@ -81,20 +81,31 @@ const WRITTEN = [
   ...Array.from({ length: 7 }, (_, i) => ({ name_en: `Park ${i}`, categories: ['nature', 'views'], desc_vi: `vi ${i}`, desc_en: `en ${i}` })),
 ];
 
-/** Signed in as an editor, the park found, its city, the desk's blurbs. */
-const door = (place: unknown = PARK, written: unknown[] = WRITTEN) =>
-  h.fake.replies(session, editor, { data: place, error: null }, { data: HUE, error: null }, { data: written, error: null });
+const SHOTS = [
+  { photo_uri: 'https://cdn/park/cover.jpg', storage_path: 'thuong-bac-park/cover.jpg' },
+  { photo_uri: 'https://cdn/park/2.jpg', storage_path: 'thuong-bac-park/2.jpg' },
+  // Google's short-lived link, never copied: left out, since a dead link
+  // fails the whole call.
+  { photo_uri: 'https://lh3.googleusercontent.com/old', storage_path: null },
+];
+
+/** Signed in as an editor, the park found, its city, the desk's blurbs, its photographs. */
+const door = (place: unknown = PARK, written: unknown[] = WRITTEN, shots: unknown[] = SHOTS) =>
+  h.fake.replies(session, editor, { data: place, error: null }, { data: HUE, error: null }, { data: written, error: null }, { data: shots, error: null });
 
 const says = (json: unknown) => ({
   content: [{ type: 'text', text: JSON.stringify(json) }],
   usage: { input_tokens: 10, output_tokens: 5 },
 });
+type Block = { type: 'text'; text: string } | { type: 'image'; source: { type: 'url'; url: string } };
 const sent = () => h.create.mock.calls.at(-1)![0] as {
   model: string; max_tokens: number; system: string;
   output_config: { format: { schema: { required: string[] } } };
-  messages: { role: string; content: string }[];
+  messages: { role: string; content: Block[] }[];
 };
-const prompt = () => sent().messages[0].content;
+/** The words the model was handed, with the frames between them left out. */
+const prompt = () => sent().messages[0].content.filter((b): b is Extract<Block, { type: 'text' }> => b.type === 'text').map((b) => b.text).join('\n');
+const frames = () => sent().messages[0].content.filter((b): b is Extract<Block, { type: 'image' }> => b.type === 'image').map((b) => b.source.url);
 
 describe('the door', () => {
   it('answers the preflight, and refuses anything but POST', async () => {
@@ -120,7 +131,7 @@ describe('the door', () => {
   it('opens to the write-blurb ops token, for a batch', async () => {
     h.fake.replies(
       { data: { token: 's3cret', expires_at: new Date(Date.now() + 60_000).toISOString() } },
-      { data: PARK, error: null }, { data: HUE, error: null }, { data: [], error: null },
+      { data: PARK, error: null }, { data: HUE, error: null }, { data: [], error: null }, { data: [], error: null },
     );
     h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
     const res = await call({ slug: 'thuong-bac-park' }, { headers: { 'x-ops-token': 's3cret' } });
@@ -167,6 +178,7 @@ describe('the draft', () => {
       desc_vi: 'Bờ sông Hương, ghế đá dưới hàng cây.',
       desc_en: 'Riverside benches under old trees.',
       sources: [],
+      photos: 2,
     });
     expect(h.fake.log.filter((a) => a.op !== 'select' && a.op !== 'auth')).toEqual([]);
   });
@@ -180,6 +192,35 @@ describe('the draft', () => {
     expect(req.output_config.format.schema.required).toEqual(['desc_vi', 'desc_en']);
     expect(req.system).toContain('No invented years');
     expect(req.system).toContain('never mention the rating');
+    expect(req.system).toContain('photographs are the best material');
+  });
+
+  // The frames are the material that matters: the first cut had none and
+  // wrote two parks that read as any park anywhere. Cover first, every
+  // visible frame in the catalog's own Storage, none of Google's links.
+  it('shows the model every photograph in Storage, the cover first, and none of Google’s links', async () => {
+    door();
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    await call({ slug: PARK.slug });
+    expect(frames()).toEqual(['https://cdn/park/cover.jpg', 'https://cdn/park/2.jpg']);
+    const content = sent().messages[0].content;
+    expect(content[0]).toEqual({ type: 'text', text: '2 photograph(s) of the place, the cover first:' });
+    expect(content[1].type).toBe('image');
+    expect(content.at(-1)!.type).toBe('text');
+    expect(prompt()).not.toContain('No photographs either');
+    const asked = h.fake.log.find((a) => a.table === 'place_photos')!;
+    expect(asked).toMatchObject({ filters: [['place_id', 'pid-1'], ['is_hidden', false]], limit: 20 });
+    expect(asked.orders).toEqual([['is_cover', { ascending: false }], ['sort_order']]);
+  });
+
+  it('says so when there are no photographs, and sends no frame', async () => {
+    door(PARK, WRITTEN, []);
+    h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
+    const res = await call({ slug: PARK.slug });
+    expect(frames()).toEqual([]);
+    expect(sent().messages[0].content[0].type).toBe('text');
+    expect(prompt()).toContain('No photographs either. Write only from the facts above');
+    expect((await res.json()).photos).toBe(0);
   });
 
   it('hands the model the row’s facts and the desk’s blurbs of the same kinds, five at most', async () => {
@@ -290,7 +331,7 @@ describe('the article', () => {
 
   it('matches the city without marks, so "Da Lat" in an English lead counts for Đà Lạt', async () => {
     h.fake.replies(session, editor, { data: { ...PARK, city_id: 'dalat', name_en: 'Lake Park', name_vi: 'Lake Park' }, error: null },
-      { data: { name_en: 'Da Lat', name_vi: 'Đà Lạt', short_en: null, short_vi: null }, error: null }, { data: [], error: null });
+      { data: { name_en: 'Da Lat', name_vi: 'Đà Lạt', short_en: null, short_vi: null }, error: null }, { data: [], error: null }, { data: [], error: null });
     h.fetch.mockResolvedValueOnce(page({ extract: 'Lake Park sits on Xuan Huong lake in Da Lat.' }));
     h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B' }));
     const res = await call({ slug: PARK.slug });

@@ -1,6 +1,6 @@
 // A first draft of a place's blurb, for the desk to read before it saves.
 //
-// POST { slug } → { desc_vi, desc_en, sources: string[] }
+// POST { slug } → { desc_vi, desc_en, sources: string[], photos: number }
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -29,19 +29,28 @@
 // ── what the model is given, and what it is not ──
 //
 // The row's own facts — names, district, city, kinds, hours, website —
-// and, when one can be had, the lead of the place's Wikipedia article,
-// in Vietnamese or English, with its URL returned as a source. A
-// Wikipedia lead is accepted only when it names the city: "Lake Park"
-// and "Park Square" have namesakes on three continents, and the summary
-// endpoint returns the most famous one. Nothing from Google beyond what
-// the row already holds — the import does not keep reviews, and the
-// Places terms say why.
+// every photograph the catalog holds of the place, and, when one can be
+// had, the lead of the place's Wikipedia article, in Vietnamese or
+// English, with its URL returned as a source. A Wikipedia lead is
+// accepted only when it names the city: "Lake Park" and "Park Square"
+// have namesakes on three continents, and the summary endpoint returns
+// the most famous one. Nothing from Google beyond what the row already
+// holds — the import does not keep reviews, and the Places terms say why.
 //
-// The rules of the prose are the Threads skill's own for a synthesised
-// blurb: concrete, every claim something a visitor could check, no
-// adjective the facts do not back, no word about how anything tastes,
-// no year or figure that is not in the material. The voice is learned
-// from the desk's own blurbs, five of the same kinds, sent as examples.
+// The photographs are the material that matters, and the first cut
+// (13 Oct 2026) did without them. Run on two parks, with no Wikipedia
+// article for either, it wrote what it had — the district, "open 24
+// hours", the vibe tags — and both drafts read as any park anywhere.
+// Thương Bạc's riverbank and APEC's sculpture garden were in the
+// catalog's photographs the whole time. The Threads skill's own rule for
+// a synthesised blurb is written around photographs: "no adjective you
+// cannot point at in a frame". So the model is shown the frames.
+//
+// The rules of the prose are that skill's: concrete, every claim
+// something a visitor could check, no adjective the facts or the
+// photographs do not back, no word about how anything tastes, no year
+// or figure that is not in the material. The voice is learned from the
+// desk's own blurbs, five of the same kinds, sent as examples.
 //
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
@@ -79,10 +88,24 @@ const EXTRACT_CHARS = 900;
 /** Wikipedia, or nothing: a draft is worth less than a desk left waiting. */
 const WIKI_TIMEOUT_MS = 4000;
 
+/**
+ * Every photograph the place has, up to this. The catalog's largest
+ * gallery held 18 on 13 Oct 2026 and the median 6, so this is "all of
+ * them" with room, and a bound on what one request can cost: at Haiku's
+ * rate eighteen frames are about three tenths of a cent.
+ *
+ * Only frames in the catalog's own Storage. A row whose copy failed
+ * still points at Google's short-lived link (`storage_path` null, three
+ * such photos today), and a link that has since died would fail the
+ * whole call rather than one frame.
+ */
+const PHOTOS = 20;
+
 const SYSTEM = `You write the two-line blurb City Crew shows under a place — "Why go" — for its editors to read, edit and save. Write in the voice of the examples: one or two sentences, 120–260 characters per language, plain and concrete, often a dash between the setting and the reason to go.
 
 Rules, none of which bend:
-- Every claim must come from the facts or the article extract given. No invented years, sizes, prices, opening hours or history. If the material is thin, write less.
+- Every claim must come from the photographs, the facts or the article extract given. No invented years, sizes, prices, opening hours or history. If the material is thin, write less.
+- The photographs are the best material you have. Say what they show — the water, the trees, the paving, the building, the light, how people use the place — and nothing they do not.
 - No adjective the material does not back. "Shaded" needs trees in the material; "peaceful" needs something that says so.
 - Never say how food or drink tastes, and never mention the rating.
 - No hashtags, no emoji, no second person ("you") unless the examples use it for the kind of place.
@@ -90,6 +113,7 @@ Rules, none of which bend:
 - Do not repeat the place's name in the blurb; the screen prints it above.`;
 
 type Row = {
+  id: string;
   slug: string;
   name_en: string; name_vi: string;
   city_id: string | null;
@@ -162,7 +186,7 @@ Deno.serve(async (req) => {
 
     const { data: place } = await admin
       .from("places")
-      .select("slug, name_en, name_vi, city_id, address, neighborhood_en, neighborhood_vi, categories, vibe_tags, opening_hours, website, primary_type, desc_vi, desc_en")
+      .select("id, slug, name_en, name_vi, city_id, address, neighborhood_en, neighborhood_vi, categories, vibe_tags, opening_hours, website, primary_type, desc_vi, desc_en")
       .eq("slug", slug).maybeSingle();
     const row = place as Row | null;
     if (!row) return json({ error: `unknown place: ${slug}` }, 404);
@@ -182,6 +206,18 @@ Deno.serve(async (req) => {
       .limit(40);
     const kinds = row.categories ?? [];
     const examples = pickExamples((written ?? []) as Example[], kinds);
+
+    // Cover first, then the gallery's own order, so the frame the app
+    // leads with is the one the model reads first.
+    const { data: shots } = await admin
+      .from("place_photos")
+      .select("photo_uri, storage_path")
+      .eq("place_id", row.id).eq("is_hidden", false)
+      .order("is_cover", { ascending: false }).order("sort_order")
+      .limit(PHOTOS);
+    const photos = ((shots ?? []) as { photo_uri: string; storage_path: string | null }[])
+      .filter((ph) => ph.storage_path && ph.photo_uri)
+      .map((ph) => ph.photo_uri);
 
     const lead = (await wikiLead("vi", row.name_vi, cityNames)) ?? (await wikiLead("en", row.name_en, cityNames));
 
@@ -217,14 +253,24 @@ Deno.serve(async (req) => {
       messages: [{
         role: "user",
         content: [
-          "Examples of the voice, from the same kinds of place:",
-          ...examples.map((e) => `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}`),
-          "",
-          "The place:",
-          facts,
-          "",
-          lead ? `Wikipedia lead (${lead.url}):\n${lead.text}` : "No article extract. Write only from the facts above, and write less rather than more.",
-        ].join("\n"),
+          ...(photos.length
+            ? [{ type: "text" as const, text: `${photos.length} photograph(s) of the place, the cover first:` }]
+            : []),
+          ...photos.map((url) => ({ type: "image" as const, source: { type: "url" as const, url } })),
+          {
+            type: "text" as const,
+            text: [
+              "Examples of the voice, from the same kinds of place:",
+              ...examples.map((e) => `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}`),
+              "",
+              "The place:",
+              facts,
+              "",
+              lead ? `Wikipedia lead (${lead.url}):\n${lead.text}` : "No article extract.",
+              photos.length ? "" : "No photographs either. Write only from the facts above, and write less rather than more.",
+            ].join("\n"),
+          },
+        ],
       }],
     });
 
@@ -232,13 +278,14 @@ Deno.serve(async (req) => {
     if (!text || text.type !== "text") return json({ error: "model gave no text" }, 502);
     const parsed = JSON.parse(text.text) as { desc_vi: string; desc_en: string };
     console.log("write-blurb", {
-      slug, examples: examples.length, wiki: lead?.url ?? null,
+      slug, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,
     });
     return json({
       desc_vi: parsed.desc_vi.trim(),
       desc_en: parsed.desc_en.trim(),
       sources: lead ? [lead.url] : [],
+      photos: photos.length,
     });
   } catch (err) {
     console.log("write-blurb failed", (err as Error).message);
