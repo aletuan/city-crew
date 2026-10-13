@@ -14,8 +14,9 @@
 // cosmic, both dark; then three more, duck (light), honey and royal
 // (dark); on 12 Oct plum, violet and wine, all dark; and that evening
 // four more from four two-tone references — maroon, neon and ember,
-// dark, and amber, the one light look among them. Each has its note on
-// its palette.
+// dark, and amber, the one light look among them; on 13 Oct sand, light,
+// the one half of a forest-and-sand reference that could be read. Each
+// has its note on its palette.
 //
 // Notes on a token below were written for the standard pair and the coffee
 // brown; a figure for another palette says which it is, and `theme.test.ts`
@@ -1252,12 +1253,85 @@ const EMBER: Palette = {
   accentFade: 'rgba(244,104,9,0.02)',
 };
 
+/**
+ * "Be cát" (13 Oct 2026): the owner's "Xanh rừng / Be cát" reference,
+ * #52796F and #DCCDBA — taken as the *light* half, sand page under forest
+ * type, and only that half.
+ *
+ * The two reference colours stand 3.1 apart, which is a poster's display
+ * type and not a 13pt label. The forest half could not be made a dark
+ * look without ceasing to be the reference: a mid-tone page (0.17) holds
+ * cream type at 4.4 and the sand accent at 3.1, and the elevated surface
+ * — lighter than the page, as every dark look's is — pulls both lower
+ * still. Clearing the floors needs the page down at #2E4A42, two to one
+ * from #52796F: a deep-forest look of its own, for another day.
+ *
+ * The sand page is kept exact. The forest is the type-strength accent,
+ * and it is the reference two steps deeper for the same reason Duck's
+ * teal is: #365549 reads 5.3 on the page and 6.0 on a card where
+ * #52796F reads 3.1. It is also the fill (under a sand-white ink, 7.0),
+ * the pill (same pair), and the gradient's start. The type is a forest
+ * near-black and two forest greys (9.5, 6.5 and 4.5, 1.45 apart — the
+ * floor, held by the tertiary at #4E5C56; one step lighter reads 4.2).
+ * Elevated surfaces are the sand let up a shade (#E6DACB), the way
+ * Duck's cream goes to white. The warnings are dark, as Amber's are: an
+ * amber `soon` would sink into a sand page, so it is the same brown.
+ *
+ * What tells it from Duck: Duck is cream and teal — a cold, bright pair;
+ * this is a warm page a full stop darker (0.62 against 0.90) under a
+ * greyed green 1.5 from the teal. The two sit on one strip and read as
+ * two rooms.
+ */
+const SAND: Palette = {
+  bg: '#DCCDBA',
+  bgElevated: '#E6DACB',
+  bgElevatedVeil: 'rgba(230,218,203,0.88)',
+  surfaceCard: '#E6DACB',
+  surfaceGlass: 'rgba(30,42,38,0.06)',
+  surfaceGlassStrong: 'rgba(30,42,38,0.10)',
+  borderGlass: 'rgba(30,42,38,0.16)',
+  borderGlassSoft: 'rgba(30,42,38,0.09)',
+  text: '#1E2A26',
+  textSecondary: '#364440',
+  textTertiary: '#4E5C56',
+  accent: '#365549',
+  accentFill: '#365549',
+  badge: 'rgba(54,85,73,0.16)',
+  badgeSolid: '#365549',
+  badgeInk: '#365549',
+  accentBright: '#447063',
+  accentInk: '#F3EBDD',
+  accentSoft: 'rgba(54,85,73,0.12)',
+  accentLine: 'rgba(54,85,73,0.32)',
+  accentFaint: 'rgba(54,85,73,0.72)',
+  emberGlow: 'rgba(54,85,73,0.12)',
+  emberGlowFade: 'rgba(54,85,73,0.04)',
+  sun: '#7A4E00',
+  soon: '#7A4E00',
+  ok: '#3F7A4A',
+  open: '#3F7D55',
+  shutInk: '#8C2B1F',
+  ink: '#28342F',
+  bad: '#8C2B1F',
+  badSoft: '#F2D1C4',
+  okSoft: '#D4E2C3',
+  okInk: '#1F5A2E',
+  gradAI: ['#365549', '#2C483D'],
+  ringTrack: '#CFC0AC',
+  pillInk: '#F3EBDD',
+  heartInk: '#365549',
+  onPhotoAccent: '#A9C9BB',
+  glassVeil: 'rgba(220,205,186,0.48)',
+  glassHalo: 'rgba(220,205,186,0.95)',
+  accentFade: 'rgba(54,85,73,0.02)',
+};
+
 export const PALETTES = {
   paper: PAPER, charcoal: CHARCOAL, coffee: COFFEE, rose: ROSE,
   blush: BLUSH, slate: SLATE, midnight: MIDNIGHT, navy: NAVY,
   chocolate: CHOCOLATE, cosmic: COSMIC, duck: DUCK, honey: HONEY, royal: ROYAL,
   plum: PLUM, violet: VIOLET, wine: WINE,
-  maroon: MAROON, amber: AMBER, neon: NEON, ember: EMBER,
+  maroon: MAROON, amber: AMBER, neon: NEON, ember: EMBER, sand: SAND,
 } as const;
 
 /** Each look's two sides: the light half and the dark half of every pair. */
@@ -1281,6 +1355,7 @@ export const LOOKS: Record<Look, { light: Palette; dark: Palette }> = {
   amber: { light: AMBER, dark: AMBER },
   neon: { light: NEON, dark: NEON },
   ember: { light: EMBER, dark: EMBER },
+  sand: { light: SAND, dark: SAND },
 };
 
 /**

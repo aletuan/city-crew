@@ -143,7 +143,7 @@ describe('looks', () => {
     expect(LOOKS.standard).toEqual({ light: PALETTES.paper, dark: PALETTES.charcoal });
     expect(LOOKS.coffee.light).toBe(LOOKS.coffee.dark);
     expect(LOOKS.rose.light).toBe(LOOKS.rose.dark);
-    for (const l of ['blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember'] as const) {
+    for (const l of ['blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember', 'sand'] as const) {
       expect(LOOKS[l]).toEqual({ light: PALETTES[l], dark: PALETTES[l] });
     }
   });

@@ -11,7 +11,7 @@ describe('look', () => {
     expect(parseLook('standard')).toBe('standard');
     expect(parseLook(undefined)).toBe('standard');
     expect(parseLook('charcoal')).toBe('standard');
-    for (const l of ['blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember']) expect(parseLook(l)).toBe(l);
+    for (const l of ['blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember', 'sand']) expect(parseLook(l)).toBe(l);
     // A name every object answers to is still not a look.
     expect(parseLook('toString')).toBe('standard');
     expect(parseLook(3)).toBe('standard');
@@ -32,12 +32,12 @@ describe('look', () => {
     expect(lookOf('dark')).toBe('standard');
     expect(lookOf('coffee')).toBe('coffee');
     expect(lookOf('rose')).toBe('rose');
-    for (const l of ['blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember'] as const) expect(lookOf(l)).toBe(l);
+    for (const l of ['blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember', 'sand'] as const) expect(lookOf(l)).toBe(l);
   });
 
   // The sheet's order: the standard three, then the looks oldest first.
   it('offers every look, in the order the sheet lists them', () => {
-    expect(PREFS).toEqual(['system', 'light', 'dark', 'coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember']);
+    expect(PREFS).toEqual(['system', 'light', 'dark', 'coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember', 'sand']);
   });
 
   it('pins coffee dark and rose light, and lets Automatic follow the phone', () => {
@@ -59,6 +59,7 @@ describe('look', () => {
     expect(pinnedScheme('royal')).toBe('dark');
     for (const l of ['plum', 'violet', 'wine', 'maroon', 'neon', 'ember'] as const) expect(pinnedScheme(l)).toBe('dark');
     expect(pinnedScheme('amber')).toBe('light');
+    expect(pinnedScheme('sand')).toBe('light');
   });
 
   it('asks for a restart only when the look changes', () => {

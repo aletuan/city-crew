@@ -82,7 +82,7 @@ describe('mapStyle', () => {
     expect(ground('maroon')).toBe('#4E1A2E');
     expect(ground('neon')).toBe('#352038');
     expect(ground('ember')).toBe('#1B1612');
-    for (const l of ['blush', 'slate', 'duck', 'amber'] as const) expect(mapStyle('light', l)).toEqual(mapStyle('light'));
+    for (const l of ['blush', 'slate', 'duck', 'amber', 'sand'] as const) expect(mapStyle('light', l)).toEqual(mapStyle('light'));
   });
 
   // The blue looks' land is a lift above their own page, as every night's
