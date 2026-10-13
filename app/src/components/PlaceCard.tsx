@@ -334,11 +334,28 @@ export default function PlaceCard({
               District, then distance, then hour. District first because
               the line reads as a sentence about a place and that is its
               subject; the distance after it, as "Kim Liên · 850 m" reads
-              and "850 m · Kim Liên" does not. The hour stays last because
-              the line clips its tail on a long district and the hour is
-              the fact that was already chosen to give way (see the vibe
-              note above): the figure that justifies the order must not be
-              the one that is cut.
+              and "850 m · Kim Liên" does not.
+
+              ── words give way, figures never ──
+
+              The line used to be one Text clipped at its tail, which cut
+              whatever came last — the hour, by the vibe note's reasoning
+              that "đến 22:00" lost is a fact you can still read. That
+              held until a figure sat on the line: measured on the
+              owner's 430pt phone, the district column has about 31
+              characters beside a two-vibe pill, 25 on a 390pt phone, and
+              "Xuân Hương - Đà Lạt · 1.2 km" is 28. The tail cut landed on
+              the number — "Xuân Hương - Đà Lạt · 1.…" — and a clipped
+              figure is not a shorter fact, it is a wrong one. (The hour
+              had the same flaw all along: "Kim Liên · đến 2…".)
+
+              So the district is the one piece that shrinks and takes the
+              ellipsis, and the figures sit in a Text that never does.
+              A long district reads "Xuân Hương - Đ… · 1.2 km", which is
+              a shortened word beside a whole number. The catalog's own
+              long names were cut by hand the same day (see
+              `docs/place-naming.md`, "Dòng phường"), so this is the
+              backstop for the next merged ward, not the fix for those.
 
               ── why the weight and not the colour ──
 
@@ -368,13 +385,19 @@ export default function PlaceCard({
                   {(where || far)
                     ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
                     : null}
-                  <Text style={s.where} numberOfLines={1}>
-                    {where}
-                    {where && far ? ' · ' : ''}
-                    {far ? <Text style={s.far}>{far}</Text> : null}
-                    {(where || far) && when ? ' · ' : ''}
-                    {when ? <Text style={s.soon}>{when}</Text> : null}
-                  </Text>
+                  {where ? (
+                    <Text style={s.where} numberOfLines={1} testID={testID ? `${testID}-district` : undefined}>
+                      {where}
+                    </Text>
+                  ) : null}
+                  {(far || when) ? (
+                    <Text style={s.figures} numberOfLines={1} testID={testID ? `${testID}-figures` : undefined}>
+                      {where && far ? ' · ' : ''}
+                      {far ? <Text style={s.far}>{far}</Text> : null}
+                      {(where || far) && when ? ' · ' : ''}
+                      {when ? <Text style={s.soon}>{when}</Text> : null}
+                    </Text>
+                  ) : null}
                 </View>
               ) : null}
               {place.vibe_tags.length > 0 ? (
@@ -587,7 +610,12 @@ const s = StyleSheet.create({
   whereRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
-  where: { flex: 1, color: colors.textTertiary, ...type.meta },
+  // The district shrinks and takes the ellipsis; nothing else on the
+  // line does — see "words give way, figures never" at the meta row.
+  where: { flexShrink: 1, color: colors.textTertiary, ...type.meta },
+  // The figures' Text: the same face as the district, in a box that
+  // never gives up a point of width.
+  figures: { flexShrink: 0, color: colors.textTertiary, ...type.meta },
   // The hour, for the forty-five minutes it is urgent — see CLOSING_SOON_MIN.
   // Weight as well as colour: amber alone is a hue difference, and the
   // readers most likely to be planning an evening around a closing time

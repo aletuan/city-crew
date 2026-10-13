@@ -243,6 +243,28 @@ describe('the distance', () => {
     expect(line()).toContain('Kim Lien · 12 km');
   });
 
+  // The district is the one piece of the line that may shrink; the
+  // figures' box never does, so a long district ends in an ellipsis and
+  // the number stays whole. jsdom lays nothing out, so this holds the
+  // flex rules themselves — the mutant that puts the figures back in the
+  // district's Text, or lets their box shrink, fails here.
+  it('lets the district shrink and never the figures', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-10T14:30:00Z'));
+    card(1.24, {
+      neighborhood_en: 'Van Mieu - Quoc Tu Giam', neighborhood_vi: 'Văn Miếu - Quốc Tử Giám',
+      opening_hours: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        .map((d) => `${d}: 8:00 AM – 10:00 PM`),
+    });
+    const district = screen.getByTestId('card-district');
+    const figures = screen.getByTestId('card-figures');
+    expect(district.textContent).toBe('Van Mieu - Quoc Tu Giam');
+    expect(figures.textContent).toBe(' · 1.2 km · until 22:00');
+    expect(getComputedStyle(district).flexShrink).toBe('1');
+    expect(getComputedStyle(figures).flexShrink).toBe('0');
+    vi.useRealTimers();
+  });
+
   // A place with no district still gets its figure, and the line is
   // not dropped the way an empty one is.
   it('stands alone when the catalog has no district', () => {
