@@ -12,7 +12,7 @@ const week = (line: string) => Array.from({ length: 7 }, (_, i) =>
 const NOW = new Date('2026-09-15T08:00:00Z');
 const NONE = () => false;
 const ALL = 'all';
-const plain = { category: ALL, allCategory: ALL, status: 'any' as const, savedOnly: false, isSaved: NONE, now: NOW, tz: () => 'Asia/Ho_Chi_Minh' };
+const plain = { category: ALL, allCategory: ALL, status: 'any' as const, savedOnly: false, isSaved: NONE, visitedOnly: false, isVisited: NONE, now: NOW, tz: () => 'Asia/Ho_Chi_Minh' };
 
 describe('countsByCity', () => {
   it('counts each city under its own id', () => {
@@ -54,6 +54,16 @@ describe('countsByCity', () => {
     const saved = new Set(['a', 'c']);
     expect(countsByCity(rows, { ...plain, savedOnly: true, isSaved: (s) => saved.has(s) }))
       .toEqual({ hanoi: 1, hcmc: 1 });
+  });
+
+  // The same again for where the reader has checked in — the fourth
+  // filter, and the one that most often empties a city they have not
+  // been to, which is the honest figure.
+  it('narrows every city by where the reader checked in', () => {
+    const rows = [row('a', 'hanoi'), row('b', 'hcmc'), row('c', 'hcmc')];
+    const visited = new Set(['b']);
+    expect(countsByCity(rows, { ...plain, visitedOnly: true, isVisited: (s) => visited.has(s) }))
+      .toEqual({ hcmc: 1 });
   });
 
   // Absent, not zero: a marker with no number is silent, a marker with a

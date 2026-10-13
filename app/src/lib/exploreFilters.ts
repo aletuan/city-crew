@@ -10,11 +10,16 @@ export type ExploreFilters = {
   sort: ExploreSort;
   status: ExploreStatus;
   savedOnly: boolean;
+  /** Only places this reader has checked in at. Off for a guest, who has
+   *  checked in nowhere; the sheet shows the switch only behind the
+   *  `place_checkin` flag, since a filter on a thing nobody can do is a
+   *  question with one answer. */
+  visitedOnly: boolean;
 };
 
 export type ExploreOrigin = { lat: number; lng: number };
 
-/** What the three filters need of a row. Looser than `Place` on purpose:
+/** What the four filters need of a row. Looser than `Place` on purpose:
  *  the per-city counts run this same rule over an index that carries only
  *  these columns, and one rule is the whole point — a number under a
  *  different rule is a number in a different unit. */
@@ -26,7 +31,7 @@ export type Filterable = Parameters<typeof categoriesOf>[0] & {
 };
 
 /**
- * Whether a row survives Explore's three filters.
+ * Whether a row survives Explore's four filters.
  *
  * Sort is not here: sorting an unfiltered list and counting a filtered
  * one are different jobs, and only this half is shared.
@@ -37,6 +42,8 @@ export function matchesExplore(row: Filterable, options: {
   status: ExploreStatus;
   savedOnly: boolean;
   isSaved: (slug: string) => boolean;
+  visitedOnly: boolean;
+  isVisited: (slug: string) => boolean;
   now: Date;
   /** The zone a row's hours are read in, by the row's city: Explore's
    *  rows are all one city, the city counts' rows are every city, and a
@@ -46,7 +53,8 @@ export function matchesExplore(row: Filterable, options: {
   return (options.category === options.allCategory || categoriesOf(row).includes(options.category))
     && (options.status === 'any'
       || openState(row.opening_hours as Parameters<typeof openState>[0], options.now, options.tz(row.city_id))?.open === (options.status === 'open'))
-    && (!options.savedOnly || options.isSaved(row.slug));
+    && (!options.savedOnly || options.isSaved(row.slug))
+    && (!options.visitedOnly || options.isVisited(row.slug));
 }
 
 /**
@@ -62,6 +70,7 @@ export function filterExplorePlaces(
     allCategory: string;
     origin: ExploreOrigin | null;
     isSaved: (slug: string) => boolean;
+    isVisited: (slug: string) => boolean;
     now: Date;
     tz: (cityId: string | null | undefined) => string;
   },

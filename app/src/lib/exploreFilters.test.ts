@@ -37,7 +37,7 @@ const place = (slug: string, over: Partial<Place> = {}): Place => ({
   ...over,
 });
 
-const defaults: ExploreFilters = { sort: 'recommended', status: 'any', savedOnly: false };
+const defaults: ExploreFilters = { sort: 'recommended', status: 'any', savedOnly: false, visitedOnly: false };
 const run = (places: Place[], over: Partial<Parameters<typeof filterExplorePlaces>[1]> = {}) =>
   filterExplorePlaces(places, {
     ...defaults,
@@ -45,6 +45,7 @@ const run = (places: Place[], over: Partial<Parameters<typeof filterExplorePlace
     allCategory: 'all',
     origin: null,
     isSaved: () => false,
+    isVisited: () => false,
     now: new Date('2026-08-12T03:00:00Z'), tz: () => 'Asia/Ho_Chi_Minh',
     ...over,
   });
@@ -133,5 +134,13 @@ describe('Explore filters', () => {
     const places = [place('saved'), place('other')];
     expect(run(places, { savedOnly: true, isSaved: (slug) => slug === 'saved' }).map((p) => p.slug))
       .toEqual(['saved']);
+  });
+
+  it('keeps only visited places when requested, and both filters stack', () => {
+    const places = [place('both'), place('visited'), place('saved'), place('other')];
+    const isVisited = (slug: string) => slug === 'visited' || slug === 'both';
+    const isSaved = (slug: string) => slug === 'saved' || slug === 'both';
+    expect(run(places, { visitedOnly: true, isVisited }).map((p) => p.slug)).toEqual(['both', 'visited']);
+    expect(run(places, { visitedOnly: true, isVisited, savedOnly: true, isSaved }).map((p) => p.slug)).toEqual(['both']);
   });
 });

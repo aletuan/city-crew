@@ -32,6 +32,8 @@ export function countsByCity(
     status: ExploreStatus;
     savedOnly: boolean;
     isSaved: (slug: string) => boolean;
+    visitedOnly: boolean;
+    isVisited: (slug: string) => boolean;
     now: Date;
     tz: (cityId: string | null | undefined) => string;
   },

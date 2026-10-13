@@ -36,6 +36,7 @@ import { Collection, coverOf, fetchPlaceIndex, membersOf, Place, PlaceIndexRow, 
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useAuth } from '../lib/auth';
 import { useSave } from '../lib/save';
+import { useMyCheckins } from '../lib/checkins';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { bestFirst } from '../lib/rank';
 import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
@@ -762,8 +763,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const [cat, setCat] = useState<string>(ALL);
   const [filterOpen, setFilterOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ExploreFilters>({
-    sort: 'recommended', status: 'any', savedOnly: false,
+    sort: 'recommended', status: 'any', savedOnly: false, visitedOnly: false,
   });
+  // The reader's visits, for the fourth filter. A set of slugs rather
+  // than the rows: the rule asks "was I here" per place, and a guest's
+  // list is empty, which is the right answer for a guest.
+  const visits = useMyCheckins();
+  const visitedSlugs = useMemo(() => new Set(visits.data.map((v) => v.place_slug)), [visits.data]);
+  const isVisited = useCallback((slug: string) => visitedSlugs.has(slug), [visitedSlugs]);
+  const checkinOn = useFlag('place_checkin');
   const [sortOrigin, setSortOrigin] = useState<ExploreOrigin | null>(null);
 
   // Every city's places, in the four columns the filters read.
@@ -791,6 +799,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         status: appliedFilters.status,
         savedOnly: appliedFilters.savedOnly,
         isSaved,
+        visitedOnly: appliedFilters.visitedOnly,
+        isVisited,
         now: new Date(),
         // Every city's rows are counted, each on its own clock.
         tz: (id) => cityTz(cities, id),
@@ -807,7 +817,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         lat: c.center_lat,
         lng: c.center_lng,
       }));
-  }, [cities, city?.id, cityIndex, cat, appliedFilters.status, appliedFilters.savedOnly, isSaved, t]);
+  }, [cities, city?.id, cityIndex, cat, appliedFilters.status, appliedFilters.savedOnly, isSaved, appliedFilters.visitedOnly, isVisited, t]);
   // How the places are looked at, remembered the way Collections
   // remembers its tiles-or-rows: one word in storage, read once on
   // mount. Until it has been read the list shows, which is also the
@@ -986,9 +996,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     allCategory: ALL,
     origin: sortOrigin,
     isSaved,
+    isVisited,
     now: new Date(),
     tz: (id) => cityTz(cities, id),
-  }), [recommended, sortOrigin, isSaved, cities]);
+  }), [recommended, sortOrigin, isSaved, isVisited, cities]);
 
   const shown = useMemo(() => filteredFor(appliedFilters), [filteredFor, appliedFilters]);
 
@@ -1047,7 +1058,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   const filterCount = (appliedFilters.sort === 'recommended' ? 0 : 1)
     + (appliedFilters.status === 'any' ? 0 : 1)
-    + (appliedFilters.savedOnly ? 1 : 0);
+    + (appliedFilters.savedOnly ? 1 : 0)
+    + (appliedFilters.visitedOnly ? 1 : 0);
 
   /**
    * What a quick filter on the map just did, said for two seconds.
@@ -1586,6 +1598,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           visible={filterOpen}
           applied={appliedFilters}
           signedIn={!!session}
+          visitedAvailable={checkinOn}
           countFor={(next) => filteredFor(next).length}
           onClose={() => setFilterOpen(false)}
           onApply={applyFilters}
