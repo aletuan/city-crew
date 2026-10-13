@@ -21,6 +21,7 @@
 // user content, like a collection, not of a signal. Hence `checkins`.
 
 import { fold } from './search';
+import type { I18nDoc } from './localized';
 
 /** One visit, as the screens hold it: the row's id (to undo it), the
  *  place by slug (the key every screen uses), where, and when. */
@@ -35,7 +36,10 @@ export type Checkin = {
    *  is not holding. Null when the place is gone; absent on a row the
    *  cache kept before the columns rode along. */
   place?: {
-    name_en: string; name_vi: string; name_ja: string | null; cover: string | null;
+    name_en: string; name_vi: string; cover: string | null;
+    /** The object, on rows fetched since 13 Oct 2026; a cached row may
+     *  carry the old column instead. `lib/localized` reads either. */
+    i18n?: I18nDoc | null; name_ja?: string | null;
     /** The place's kinds (`lib/categories`), for the Visited screen's
      *  second row of chips. Empty when the row has none. */
     categories: string[];

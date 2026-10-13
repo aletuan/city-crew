@@ -10,6 +10,7 @@ import { cityTz } from '../lib/clock';
 import { openFragment, openState, sashLabel, shutLabel } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
@@ -39,7 +40,7 @@ export default function PlaceCard({
   accessibilityActions?: AccessibilityActionInfo[];
   onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { save, isSaved } = useSave();
   const saved = isSaved(place.slug);
   const cover = coverOf(place);
@@ -48,8 +49,7 @@ export default function PlaceCard({
   // zero-state gives: a list left open across a closing time should not
   // keep insisting the door is open.
   const where = place.neighborhood_en
-    ? t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
-      place.neighborhood_ja ?? place.neighborhood_en)
+    ? localized(place, 'neighborhood', lang)
     : null;
   const at = new Date();
   // On the place's own clock: a list can hold places from more than one
@@ -243,7 +243,7 @@ export default function PlaceCard({
               leave to the detail screen, which prints the full name and
               the street address (2 Oct 2026). `splitName` cuts at the
               first spaced dash and leaves a name without one whole. */}
-          <Text style={s.name} numberOfLines={1}>{splitName(t(place.name_en, place.name_vi, place.name_ja)).title}</Text>
+          <Text style={s.name} numberOfLines={1}>{splitName(localized(place, 'name', lang)).title}</Text>
           {/* Which part of town, before you have to open it to find out.
               ── the question this answers ──
 

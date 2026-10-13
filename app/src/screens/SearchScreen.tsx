@@ -37,6 +37,7 @@ import { useBrowseTaste } from '../lib/tasteProfile';
 import { rankPopular } from '../lib/popular';
 import { collectionMatches, findPlaces, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -65,7 +66,7 @@ type Row =
   | { kind: 'open'; key: string; place: Place };
 
 export default function SearchScreen({ navigation }: { navigation: Nav }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [query, setQuery] = useState('');
   const { data: places } = usePlaces();
   const { city } = useCity();
@@ -538,7 +539,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             // `openFragment`, shared with the Explore cards, so the two
             // lists can never learn to disagree about what an hour says.
             const when = openFragment(openState(pl.opening_hours, now, city?.tz ?? DEFAULT_TZ), t);
-            const area = t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja);
+            const area = localized(pl, 'neighborhood', lang);
             const meta = [area, when].filter(Boolean).join(' · ');
             return (
               <PressableScale
@@ -553,7 +554,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     {/* The brand alone, as `PlaceCard` prints it: the ward
                         after the dash is the row below. */}
                     <Text style={s.cardTitle} numberOfLines={1}>
-                      {splitName(t(pl.name_en, pl.name_vi, pl.name_ja ?? pl.name_en)).title}
+                      {splitName(localized(pl, 'name', lang)).title}
                     </Text>
                     {/* The pin belongs to the area, the same mark at
                         the same size PlaceCard's district row wears — so

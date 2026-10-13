@@ -838,6 +838,22 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show(place({ desc_en: null, desc_vi: null, desc_ja: 'ココナッツコーヒー。' }));
     expect(screen.getByText('ココナッツコーヒー。')).toBeTruthy();
   });
+
+  // Since 13 Oct 2026 the Japanese arrives in the row's `i18n` object and
+  // the column is no longer selected. The object wins when both are
+  // present, and a Japanese blurb from the object is the reader's own
+  // language — no "English original" note under it.
+  it('reads the Japanese name and blurb from the i18n object, ahead of any column', () => {
+    state.lang = 'ja';
+    show(place({
+      name_ja: 'column name', desc_ja: 'column desc',
+      i18n: { ja: { name: 'オブジェクトの店', desc: '湖畔のカフェです。', machine: true } },
+    }));
+    expect(screen.getByText('オブジェクトの店')).toBeTruthy();
+    expect(screen.getByTestId('detail-desc').textContent).toContain('湖畔のカフェです。');
+    expect(screen.queryByText('column desc')).toBeNull();
+    expect(screen.queryByTestId('blurb-fallback')).toBeNull();
+  });
 });
 
 describe('PlaceDetailScreen — hero', () => {

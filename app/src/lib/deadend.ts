@@ -22,6 +22,7 @@
 // example is a promise that typing it works.
 
 import { CATEGORIES, categoriesOf, Categorisable } from './categories';
+import { type I18nDoc, slot } from './localized';
 import { fold, TermMap } from './search';
 
 /** A way out of a dead end, in the order the screen should offer them. */
@@ -61,6 +62,7 @@ export type DeadEndPlace = Categorisable & {
   neighborhood_en?: string | null;
   neighborhood_vi?: string | null;
   neighborhood_ja?: string | null;
+  i18n?: I18nDoc | null;
 };
 
 /**
@@ -96,7 +98,7 @@ export function escapeRoutes(
     seen.add(folded);
     if (!phraseIn(q, folded)) continue;
     if (!area || folded.length > area.folded.length) {
-      area = { folded, en, vi: p.neighborhood_vi ?? en, ja: p.neighborhood_ja ?? en };
+      area = { folded, en, vi: p.neighborhood_vi ?? en, ja: slot(p, 'neighborhood', 'ja') ?? en };
     }
   }
   if (area) out.push({ kind: 'area', en: area.en, vi: area.vi, ja: area.ja });

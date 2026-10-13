@@ -30,6 +30,7 @@ import { useCity } from '../lib/city';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { coverOf, membersOf, photosOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -70,7 +71,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   navigation: Nav;
   route: RootRoute<'CollectionForm'>;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { width } = useWindowDimensions();
   const { session } = useAuth();
   const { city } = useCity();
@@ -436,11 +437,11 @@ export default function CollectionFormScreen({ navigation, route }: {
                 // cannot move through.
                 accessibilityLabel={of > 1
                   ? t(
-                    `${t(place.name_en, place.name_vi, place.name_ja)}, photo ${n} of ${of}`,
-                    `${t(place.name_en, place.name_vi, place.name_ja)}, ảnh ${n} trên ${of}`,
-                    `${t(place.name_en, place.name_vi, place.name_ja)}、写真${n}/${of}`,
+                    `${localized(place, 'name', lang)}, photo ${n} of ${of}`,
+                    `${localized(place, 'name', lang)}, ảnh ${n} trên ${of}`,
+                    `${localized(place, 'name', lang)}、写真${n}/${of}`,
                   )
-                  : t(place.name_en, place.name_vi, place.name_ja)}
+                  : localized(place, 'name', lang)}
                 accessibilityState={{ selected: coverId === ph.id }}
                 aria-selected={coverId === ph.id}
                 style={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}

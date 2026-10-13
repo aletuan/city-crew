@@ -43,7 +43,8 @@ import {
 } from '../lib/links';
 import { cityTz } from '../lib/clock';
 import { clockOf, dateline, groupHours, openState } from '../lib/format';
-import { spokenIn, useI18n } from '../lib/i18n';
+import { useI18n } from '../lib/i18n';
+import { localized, localizedLang } from '../lib/localized';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
 import { vibeLabel } from '../lib/vibes';
@@ -275,7 +276,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // lines of display type. See `lib/name` for the cut. The subtitle is
   // dropped when it only repeats what the card already prints: the
   // neighbourhood line under it, or the address row further down.
-  const neighborhood = t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja);
+  const neighborhood = localized(place, 'neighborhood', lang);
   // The district line under the title is only for a place with no
   // address row: the short address ends in the ward, so with one on the
   // card the line said the same word a few lines up, and a bare district
@@ -285,7 +286,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // address ends in, which is the same repetition the line was hidden
   // to avoid.
   const showsNeighborhood = !place.address;
-  const fullName = t(place.name_en, place.name_vi, place.name_ja);
+  const fullName = localized(place, 'name', lang);
   const name = splitName(fullName);
   // `address`, not `place.address`: the test is against what the reader
   // can actually see, and the short one is what the row prints.
@@ -301,7 +302,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // Asked of the string the reader will actually get, not of the columns:
   // a description written only in Japanese is one for a Japanese reader,
   // and nothing (rather than an empty paragraph) for everyone else.
-  const desc = t(place.desc_en, place.desc_vi, place.desc_ja);
+  const desc = localized(place, 'desc', lang);
   // The language those words are in, when it is not the reader's. 837 of
   // 940 places had no Japanese blurb on 13 Oct 2026 and `t` fell back to
   // English on every one of them without a word, so a Japanese reader
@@ -315,7 +316,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // rows) is the desk's to fill, not the reader's to be told about.
   // A Vietnamese reader can only be handed English; a Japanese one,
   // English or Vietnamese — so two labels cover every fallback there is.
-  const descLang = spokenIn(lang, place.desc_en, place.desc_vi, place.desc_ja);
+  const descLang = localizedLang(place, 'desc', lang);
   const descFallback = desc && lang !== 'en' && descLang && descLang !== lang
     ? (descLang === 'en'
       ? t('In English', 'Bản tiếng Anh', '英語の原文')

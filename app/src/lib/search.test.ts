@@ -225,6 +225,18 @@ describe('placeHaystack', () => {
     expect(matches(placeHaystack(place()), queryTerms('cinema'))).toBe(false);
   });
 
+  // A language kept in the row's `i18n` object is in the haystack like a
+  // column's — the fourth language will be, too, with no change here.
+  it('holds what the i18n object says, in every language it has', () => {
+    const hay = placeHaystack({
+      name_en: 'Temple of Literature', name_vi: 'Văn Miếu',
+      i18n: { ja: { name: '文廟', desc: '湖のほとり' }, ko: { neighborhood: '동다구' } },
+    });
+    expect(matches(hay, queryTerms('文廟'))).toBe(true);
+    expect(matches(hay, queryTerms('湖'))).toBe(true);
+    expect(matches(hay, queryTerms('동다구'))).toBe(true);
+  });
+
   // Search never reads the reader's UI language, and the haystack is why:
   // all three sit in it at once.
   it('answers in any of the three languages at once', () => {

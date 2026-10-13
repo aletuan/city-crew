@@ -37,6 +37,7 @@ import { useMyTrips } from '../lib/mytrips';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { useInvitations } from '../lib/invitations';
 import { spendVnd } from '../lib/trips';
 import { legsOf } from '../lib/travel';
@@ -183,11 +184,11 @@ export default function TripInvitationScreen({ navigation, route }: {
                   <View style={s.dot} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={s.name} numberOfLines={1}>
-                      {p ? t(p.name_en, p.name_vi, p.name_ja)
+                      {p ? localized(p, 'name', lang)
                         : t('A place that has since gone', 'Một nơi giờ không còn', 'いまはない場所')}
                     </Text>
                     <Text style={s.where} numberOfLines={1}>
-                      {[p ? t(p.neighborhood_en, p.neighborhood_vi, p.neighborhood_ja) : null,
+                      {[p ? localized(p, 'neighborhood', lang) : null,
                         st.dwell_min ? fmtMinutes(st.dwell_min, lang) : null]
                         .filter(Boolean).join(' · ')}
                     </Text>

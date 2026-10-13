@@ -15,6 +15,7 @@ import { cityTz } from '../lib/clock';
 import { openFragment, openState, shutLabel } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { colors, font, radius, space } from '../theme';
 import { PressableScale } from './ui';
@@ -32,7 +33,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   now: Date;
   onPress: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const cover = coverOf(place);
   // Open: `openFragment` speaks only when closing is within the hour, and
   // is silent otherwise. Shut: `shutLabel`. One of the two is null by
@@ -45,7 +46,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // the pin that is standing in it — the map says where better than a
   // word in the name line could. Spoken the same way: a listener walking
   // the pins hears one name per pin, not a name and a ward per pin.
-  const name = splitName(t(place.name_en, place.name_vi, place.name_ja)).title;
+  const name = splitName(localized(place, 'name', lang)).title;
   const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;
   // The same figure the list's cards print under "Nearest first", from
   // the same formatter: metres to the nearest fifty while it is a walk,

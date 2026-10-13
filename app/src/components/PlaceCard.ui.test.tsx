@@ -73,6 +73,12 @@ describe('the name', () => {
     expect(screen.getByText('Cong Caphe')).toBeTruthy();
   });
 
+  it('names the place from the i18n object when the reader’s language lives there', () => {
+    state.lang = 'ja';
+    render(<PlaceCard place={place({ name_ja: null, i18n: { ja: { name: 'オブジェクト' } } })} onPress={() => {}} />);
+    expect(screen.getByText('オブジェクト')).toBeTruthy();
+  });
+
   // The ward after the dash is the line under the name — see the
   // component, and `docs/place-naming.md` on who shows which half.
   it('shows the brand alone, leaving the branch after the dash to the line below', () => {
