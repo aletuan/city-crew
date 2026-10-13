@@ -165,16 +165,29 @@ table: every read is a PostgREST select string and every policy is per
 table, so a second table doubles the policies and puts a join inside the
 public-read one, for a catalog of 940 rows that fits in one request.
 
+**Correction made while writing PR 3a (13 Oct):** generated columns
+cannot be assigned, and three writers assign the `_ja` columns today —
+the desk's Save (every form field), `import-place.ts` (`name_ja` from a
+kana sign) and ad-hoc SQL. A generated column would have broken the
+desk on the day it applied, before the desk change could ship, and the
+desk change cannot ship first because its target column would not
+exist. So the `_ja` columns stay real and a BEFORE trigger
+(`sync_place_i18n`) mirrors both ways, object winning when both change
+in one statement; writers move one at a time, and the columns and the
+trigger go in a last migration once nothing writes them. The read-side
+compatibility the generated column promised is the same.
+
 What would change the recommendation: a plan to let *contributors*
 submit translations (per-row ownership and review state per language is
 where a side table earns its policies), or a sixth language.
 
-Cost: migration + generated columns + SQL test (`supabase/tests`), the
+Cost: migration + mirror trigger + SQL test (`supabase/tests`), the
 desk's save (one function), `AddPlaceScreen`, `import-place.ts`, the
 `write-blurb` save path, `search.ts`, `localized()` helper + the 60 call
 sites moved behind it (mechanical), regenerated types. Four PRs,
-roughly: schema+generated columns (no app change), desk+functions
-writing JSON, app helper + call sites, drop the generated columns later.
+roughly: 3a schema + mirror (no app change), 3b desk writing JSON with
+the `machine` mark, 3c app helper + call sites + types, 3d drop the
+`_ja` columns and the trigger.
 
 ### UI strings (separate from the content schema)
 

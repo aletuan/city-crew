@@ -266,6 +266,22 @@ for f in "$ROOT"/supabase/migrations/*_theme_counts.sql \
 done
 run "$DB" -f "$HERE/popular_themes_test.sql"
 
+# Every language beyond EN and VI in one column (13 Oct 2026). The JA
+# columns' own migration has never run on this bench — it also touches
+# `collections` and `cities`, which the stubs above provide by now — so it
+# runs first; then the seed, because the backfill carries over rows that
+# already exist; then the column and its mirror. The test leaves the stub
+# as it found it.
+echo "→ place i18n"
+for f in "$ROOT"/supabase/migrations/*_japanese_content_columns.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/place_i18n_seed.sql"
+for f in "$ROOT"/supabase/migrations/*_place_i18n.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/place_i18n_test.sql"
+
 # The daily caps. After preferences and the collection blocks, because the
 # policies it rewrites count rows in those tables; it seeds and removes
 # its own account.
