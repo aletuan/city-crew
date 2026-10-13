@@ -361,7 +361,7 @@ const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
 /**
  * The style for a map that carries our own pins, in the reading the
  * reader chose in Profile. The light looks — Rose, Blush, Slate, Teal,
- * Amber — take Google's own day map, as paper does; each dark look its
+ * Amber, Sand — take Google's own day map, as paper does; each dark look its
  * own night.
  *
  * Not for `MiniMap`, which is a picker: there the reader is choosing a

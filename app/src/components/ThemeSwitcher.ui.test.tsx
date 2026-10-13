@@ -209,9 +209,9 @@ describe('the looks', () => {
     expect(screen.queryByText('Appearance')).toBeNull();
     const rows = [...document.querySelectorAll('[role="radio"]')].map((r) => r.textContent);
     expect(rows.map((r) => r!.replace(/(Following|Restarts).*/, ''))).toEqual(
-      ['Automatic', 'Dark', 'Light', 'Coffee', 'Rose', 'Blush', 'Slate', 'Midnight', 'Navy', 'Chocolate', 'Cosmic', 'Teal', 'Honey', 'Royal', 'Plum', 'Violet', 'Wine', 'Maroon', 'Amber', 'Neon', 'Ember'],
+      ['Automatic', 'Dark', 'Light', 'Coffee', 'Rose', 'Blush', 'Slate', 'Midnight', 'Navy', 'Chocolate', 'Cosmic', 'Teal', 'Honey', 'Royal', 'Plum', 'Violet', 'Wine', 'Maroon', 'Amber', 'Neon', 'Ember', 'Sand'],
     );
-    for (const icon of ['cafe-outline', 'flower-outline', 'heart-outline', 'cloud-outline', 'star-outline', 'boat-outline', 'ice-cream-outline', 'planet-outline', 'leaf-outline', 'flash-outline', 'diamond-outline', 'nutrition-outline', 'sparkles-outline', 'wine-outline', 'rose-outline', 'partly-sunny-outline', 'bulb-outline', 'flame-outline']) {
+    for (const icon of ['cafe-outline', 'flower-outline', 'heart-outline', 'cloud-outline', 'star-outline', 'boat-outline', 'ice-cream-outline', 'planet-outline', 'leaf-outline', 'flash-outline', 'diamond-outline', 'nutrition-outline', 'sparkles-outline', 'wine-outline', 'rose-outline', 'partly-sunny-outline', 'bulb-outline', 'flame-outline', 'footsteps-outline']) {
       expect(document.querySelector(`[data-icon="${icon}"]`), icon).toBeTruthy();
     }
   });
@@ -221,7 +221,7 @@ describe('the looks', () => {
   it('draws each look’s card in that look’s own page, pill and fill', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
     const rgb = (h: string) => `rgb(${[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
-    for (const look of ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember'] as const) {
+    for (const look of ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember', 'sand'] as const) {
       const sw = screen.getByTestId(`swatch-${look}`);
       const p = PALETTES[look];
       expect(getComputedStyle(sw).backgroundColor, look).toBe(rgb(p.bg));
@@ -263,11 +263,11 @@ describe('the looks', () => {
     const stride = () => strip().snapToInterval as number;
     const radiosIn = (page: number) => screen.getByTestId(`look-page-${page}`).querySelectorAll('[role="radio"]').length;
 
-    it('cuts the eighteen into pages of four, four, four, four and two, and counts them on the heading', () => {
+    it('cuts the nineteen into pages of four, four, four, four and three, and counts them on the heading', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       expect(screen.queryByTestId('look-page-5')).toBeNull();
-      expect([radiosIn(0), radiosIn(1), radiosIn(2), radiosIn(3), radiosIn(4)]).toEqual([4, 4, 4, 4, 2]);
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 1/5');
+      expect([radiosIn(0), radiosIn(1), radiosIn(2), radiosIn(3), radiosIn(4)]).toEqual([4, 4, 4, 4, 3]);
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
       // No dots, no arrows: the count and the sliver are the indicator.
       expect(document.querySelector('[data-icon="chevron-forward"]')).toBeNull();
       expect(document.querySelector('[data-icon="chevron-back"]')).toBeNull();
@@ -294,13 +294,13 @@ describe('the looks', () => {
     it('reports the page a swipe landed on, rounded and clamped', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       swipe(stride() * 2);
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 3/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 3/5');
       swipe(stride() * 0.6);
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 2/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 2/5');
       swipe(stride() * 9);
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 5/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 5/5');
       swipe(-40);
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 1/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
     });
 
     // The tick is the one thing a settings sheet owes on arrival, so the
@@ -310,7 +310,7 @@ describe('the looks', () => {
       state.look = 'cosmic';
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       expect(strip().contentOffset).toEqual({ x: stride(), y: 0 });
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 2/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 2/5');
       expect(screen.getByTestId('look-page-1').querySelector('[data-icon="checkmark"]')).toBeTruthy();
 
       cleanup();
@@ -318,7 +318,7 @@ describe('the looks', () => {
       state.look = 'royal';
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       expect(strip().contentOffset).toEqual({ x: stride() * 2, y: 0 });
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 3/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 3/5');
 
       // And the first page from a ground, which is on no page.
       cleanup();
@@ -333,10 +333,10 @@ describe('the looks', () => {
     it('starts the count over each time it opens', () => {
       const { rerender } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
       swipe(stride() * 2);
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 3/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 3/5');
       rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
       rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(screen.getByTestId('look-pages').textContent).toBe('18 colours · 1/5');
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
     });
   });
 
@@ -431,7 +431,7 @@ describe('the looks', () => {
   // The two words on a card (12 Oct 2026) — see the header of
   // `lib/lookLabels` for why words on a few cards and not an order.
   describe('the words on a card', () => {
-    const ALL = ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember'];
+    const ALL = ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine', 'maroon', 'amber', 'neon', 'ember', 'sand'];
     const said = (word: string) => [...document.querySelectorAll(`[data-testid$="-${word}"]`)]
       .map((el) => el.getAttribute('data-testid')!.replace(/^theme-/, '').replace(`-${word}`, ''));
 

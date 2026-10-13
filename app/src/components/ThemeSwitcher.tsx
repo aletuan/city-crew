@@ -150,7 +150,8 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   // teal, a bolt for the honey yellow, a diamond for the royal blue, a
   // fruit for the plum, sparkles for the violet, a glass for the wine, a
   // rose for the maroon, a sun behind cloud for the amber, a bulb for the
-  // neon, a flame for the ember.
+  // neon, a flame for the ember, footsteps for the sand — not a leaf,
+  // which Duck's teal already wears.
   { id: 'coffee', icon: 'cafe-outline' },
   { id: 'rose', icon: 'flower-outline' },
   { id: 'blush', icon: 'heart-outline' },
@@ -169,6 +170,7 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'amber', icon: 'partly-sunny-outline' },
   { id: 'neon', icon: 'bulb-outline' },
   { id: 'ember', icon: 'flame-outline' },
+  { id: 'sand', icon: 'footsteps-outline' },
 ];
 
 const isLook = (id: Pref): id is Pinned => Object.prototype.hasOwnProperty.call(PINNED, id);
@@ -238,6 +240,7 @@ export function schemeLabel(id: Pref, t: T): string {
   if (id === 'amber') return t('Amber', 'Vàng đậm', 'アンバー');
   if (id === 'neon') return t('Neon', 'Hồng neon', 'ネオン');
   if (id === 'ember') return t('Ember', 'Cam cháy', 'エンバー');
+  if (id === 'sand') return t('Sand', 'Be cát', 'サンド');
   return id === 'dark'
     ? t('Dark', 'Tối', 'ダーク')
     : t('Light', 'Sáng', 'ライト');

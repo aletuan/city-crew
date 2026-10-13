@@ -25,7 +25,8 @@
 //   chocolate chocolate on both sides        — pinned dark
 //   cosmic    cosmic on both sides           — pinned dark
 //   … and on 12 Oct 2026 duck (light), honey, royal, plum, violet, wine,
-//   maroon, neon, ember (dark) and amber (light), the same way.
+//   maroon, neon, ember (dark) and amber (light), the same way; on 13 Oct
+//   sand (light).
 //
 // Moving between Light, Dark and Automatic stays instant, as before: the
 // look does not change. Moving to or from any other look changes the look,
@@ -69,6 +70,7 @@ export const PINNED = {
   amber: 'light',
   neon: 'dark',
   ember: 'dark',
+  sand: 'light',
 } as const satisfies Record<string, Scheme>;
 
 /** A look other than the standard one. */
