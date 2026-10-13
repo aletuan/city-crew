@@ -123,6 +123,36 @@ tên, với hậu tố làm subtitle khi nó nói điều địa chỉ chưa nó
 phường là chuyện hiếm, và khi có, dòng phường vẫn khác nhau hoặc màn chi
 tiết phân xử — chủ sở hữu quyết định như vậy ngày 2/10/2026.
 
+## Dòng phường
+
+Cột `neighborhood_*` là dòng card in dưới tên, kèm pin: nó trả lời "ở khu
+nào", trong một danh sách đã chọn thành phố. Nó **không** phải chỗ ghi tên
+hành chính đầy đủ — tên đầy đủ nằm trong `address`, màn chi tiết in cả
+dòng. Vì thế dòng phường theo cùng nguyên tắc với hậu tố chi nhánh ở trên:
+bỏ những gì màn hình đã nói.
+
+Hai trường hợp đã gặp, đều là tên phường chính thức sau sáp nhập 7/2025:
+
+**Tên thành phố ở cuối tên phường thì bỏ.** Đà Lạt không còn là đơn vị hành
+chính, nên bốn phường của Lâm Đồng mang tên nó: `Xuân Hương - Đà Lạt`,
+`Cam Ly - Đà Lạt`, `Lâm Viên - Đà Lạt`, `Xuân Trường - Đà Lạt`. Trong city
+Đà Lạt, dòng đó nói tên thành phố hai lần trên mỗi card, và là bốn dòng
+phường dài nhất catalog. Ghi `Xuân Hương`, `Cam Ly`, `Lâm Viên`, `Xuân
+Trường`. Máy làm được và `fetch-place` làm ngay lúc nhập
+(`_shared/ward.ts`, `shortWard`): cắt đúng ` - <tên thành phố đang nhập>`
+ở cuối, mọi loại gạch, không phân biệt dấu. 54 dòng cũ sửa tay ngày
+13/10/2026, cùng một dòng `Lam Vien - Da Lat` thiếu dấu.
+
+**Hai tên phường ghép thì giữ nửa người dân gọi.** `Văn Miếu - Quốc Tử
+Giám` là hai phường cũ gộp lại; trên card ghi `Văn Miếu`. Cái này máy
+không làm: giữ nửa nào là phán đoán, nên `fetch-place` để nguyên tên ghép
+và người rà sửa tay. 8 dòng sửa ngày 13/10/2026.
+
+Lý do dòng này cần ngắn là đo được: trên máy 430pt, dòng phường còn khoảng
+31 ký tự khi card có pill hai vibe và đang in khoảng cách; trên máy 390pt
+còn 25. `Xuân Hương - Đà Lạt · 1.2 km` là 28 ký tự, và khi cắt đuôi thì
+thứ mất là con số.
+
 ## Slug thì không sửa
 
 `slug` là khoá ổn định — nó nằm trong link chia sẻ, trong collection, trong
@@ -170,6 +200,10 @@ select slug, name_en from public.places
  where name_en ~ '[®™©℠]'
     or name_en ~ '[가-힣ぁ-んァ-ヶ一-龥]'
     or name_en <> btrim(name_en) or name_en ~ '\s{2,}';
+
+-- dòng phường: tên ghép sau sáp nhập còn nguyên
+select slug, city_id, neighborhood_vi from public.places
+ where neighborhood_vi ~ '\s[-–—]\s' or neighborhood_en ~ '\s[-–—]\s';
 
 -- luật 4: trùng tên trong cùng một thành phố
 select name_en, city_id, count(*)

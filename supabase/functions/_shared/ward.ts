@@ -57,3 +57,41 @@ export function wardFromAddress(address: string | null | undefined): string | nu
   if (/^\d/.test(ward)) return null;
   return ward;
 }
+
+/**
+ * A ward name with its city's name taken off the end: "Xuân Hương - Đà
+ * Lạt" in Đà Lạt is "Xuân Hương". Null in, null out; a name with no such
+ * suffix, or a suffix that is not this city, comes back as it was.
+ *
+ * ── why a ward carries the city's name at all ──
+ *
+ * The July 2025 mergers dissolved Đà Lạt as an administrative unit and
+ * kept its name alive inside four of Lâm Đồng's new wards instead:
+ * Xuân Hương - Đà Lạt, Cam Ly - Đà Lạt, Lâm Viên - Đà Lạt, Xuân Trường
+ * - Đà Lạt. Google writes those in full, so every import there arrived
+ * with the city's name on the line the card prints under the place's —
+ * under a city chip that already says Đà Lạt. 54 of the catalog's 913
+ * district lines carried it on 12 Oct 2026, and the four longest lines
+ * on the card were all of them.
+ *
+ * ── only the city's own name, and only at the end ──
+ *
+ * This takes off exactly a trailing " - <name of the city the place is
+ * filed under>", on any dash and with the marks folded, so "Lam Vien - Da
+ * Lat" and "Lâm Viên – Đà Lạt" both shorten. It does not touch the other
+ * merged names — "Văn Miếu - Quốc Tử Giám" is two wards' names joined,
+ * and which half the card should keep is a judgement (the owner chose
+ * "Văn Miếu", the name people use) that a machine should not make. Those
+ * are edited by hand; `docs/place-naming.md` says how.
+ */
+export function shortWard(
+  ward: string | null | undefined,
+  cityNames: readonly (string | null | undefined)[],
+): string | null {
+  if (!ward) return null;
+  const m = ward.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
+  if (!m) return ward;
+  const suffix = foldLite(m[2]);
+  const isCity = cityNames.some((n) => n && foldLite(n) === suffix);
+  return isCity ? m[1].trim() : ward;
+}
