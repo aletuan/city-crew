@@ -64,7 +64,8 @@ const spies = vi.hoisted(() => ({
 // The provider's own fallback order, so a Japanese reader can be stood in
 // for: which language a field is shown in is part of what is under test.
 type Str = string | null | undefined;
-vi.mock('../lib/i18n', () => ({
+vi.mock('../lib/i18n', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/i18n')>()),
   useI18n: () => ({
     lang: state.lang,
     setLang: () => {},
@@ -2035,5 +2036,54 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     fireEvent.click(screen.getByTestId('blurb-credit'));
     await settle();
     expect(alert).toHaveBeenCalledWith('Could not open the source');
+  });
+});
+
+// The blurb's language, when it is not the reader's. 837 of 940 places had
+// no Japanese blurb on 13 Oct 2026, and the English fallback said nothing
+// about itself — so the note exists, and so does the test that it stays
+// away when the reader got their own language.
+describe('the blurb in another language', () => {
+  const EN_ONLY = { desc_en: 'Riverside benches.', desc_vi: null, desc_ja: null };
+
+  it('says so, in the reader’s language, when a Vietnamese reader gets English', () => {
+    state.lang = 'vi';
+    show(place(EN_ONLY));
+    expect(screen.getByTestId('detail-desc').textContent).toContain('Riverside benches.');
+    expect(screen.getByTestId('blurb-fallback').textContent).toBe('Bản tiếng Anh');
+  });
+
+  it('says so to a Japanese reader, in Japanese', () => {
+    state.lang = 'ja';
+    show(place(EN_ONLY));
+    expect(screen.getByTestId('blurb-fallback').textContent).toBe('英語の原文');
+  });
+
+  it('names Vietnamese when that is what a Japanese reader was handed', () => {
+    state.lang = 'ja';
+    show(place({ desc_en: null, desc_vi: 'Ghế đá bờ sông.', desc_ja: null }));
+    expect(screen.getByTestId('detail-desc').textContent).toContain('Ghế đá bờ sông.');
+    expect(screen.getByTestId('blurb-fallback').textContent).toBe('ベトナム語の原文');
+  });
+
+  it('says nothing when the reader got their own language', () => {
+    state.lang = 'ja';
+    show(place({ ...EN_ONLY, desc_ja: '川沿いのベンチ。' }));
+    expect(screen.getByTestId('detail-desc').textContent).toContain('川沿いのベンチ。');
+    expect(screen.queryByTestId('blurb-fallback')).toBeNull();
+  });
+
+  it('says nothing to an English reader, who is never falling back to anything', () => {
+    state.lang = 'en';
+    show(place({ desc_en: null, desc_vi: 'Ghế đá bờ sông.', desc_ja: null }));
+    expect(screen.getByTestId('detail-desc').textContent).toContain('Ghế đá bờ sông.');
+    expect(screen.queryByTestId('blurb-fallback')).toBeNull();
+  });
+
+  it('has nothing to say about a place with no blurb', () => {
+    state.lang = 'vi';
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null }));
+    expect(screen.queryByTestId('detail-desc')).toBeNull();
+    expect(screen.queryByTestId('blurb-fallback')).toBeNull();
   });
 });

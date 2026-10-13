@@ -19,7 +19,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '../uitest/render';
-import { I18nProvider, useI18n, type Lang } from './i18n';
+import { I18nProvider, spokenIn, useI18n, type Lang } from './i18n';
 
 const KEY = 'citycrew.lang';
 
@@ -176,5 +176,26 @@ describe('without a provider', () => {
     }
     render(<Bare />);
     expect(read('bare')).toBe('en:Places:');
+  });
+});
+
+// `t` is `spokenIn` plus a lookup, so the order is tested once, here, and
+// the screens that ask "did I fall back?" get the same answer `t` gave.
+describe('spokenIn', () => {
+  it('names the slot each reader is handed, in the provider’s own order', () => {
+    expect(spokenIn('en', 'a', 'b', 'c')).toBe('en');
+    expect(spokenIn('en', null, 'b', 'c')).toBe('vi');
+    expect(spokenIn('en', null, null, 'c')).toBeNull();
+    expect(spokenIn('vi', 'a', 'b', 'c')).toBe('vi');
+    expect(spokenIn('vi', 'a', null, 'c')).toBe('en');
+    expect(spokenIn('vi', null, null, 'c')).toBeNull();
+    expect(spokenIn('ja', 'a', 'b', 'c')).toBe('ja');
+    expect(spokenIn('ja', 'a', 'b')).toBe('en');
+    expect(spokenIn('ja', null, 'b')).toBe('vi');
+    expect(spokenIn('ja', null, null, null)).toBeNull();
+  });
+
+  it('treats an empty string as written, exactly as t does', () => {
+    expect(spokenIn('ja', 'a', 'b', '')).toBe('ja');
   });
 });
