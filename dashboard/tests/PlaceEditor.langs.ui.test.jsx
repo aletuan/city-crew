@@ -15,15 +15,12 @@ vi.mock('../src/lib/googleMaps.js', async (importOriginal) => ({
   loadGoogleMaps: vi.fn(async () => null),
 }));
 
+// `langs.js` reads LANGS at call time, so appending a row to the real
+// array is the mock — no helper has to be re-implemented here.
 vi.mock('../src/langs.js', async (importOriginal) => {
   const real = await importOriginal();
-  const LANGS = [...real.LANGS, { code: 'ko', label: 'KO' }];
-  return {
-    ...real,
-    LANGS,
-    localizedColumns: (fields = real.LOCALIZED_FIELDS) =>
-      fields.flatMap((field) => LANGS.map((l) => `${field}_${l.code}`)),
-  };
+  real.LANGS.push({ code: 'ko', label: 'KO', store: 'i18n' });
+  return real;
 });
 
 const PLACE = {
@@ -33,7 +30,7 @@ const PLACE = {
   duration_min: null, duration_max: null, website: null, phone: null, threads_handle: null,
   is_published: false, review_note: null, reviewer_source: null, reviewer_name: null, reviewer_url: null,
   review_status: 'pending', lat: 10.7731, lng: 106.7012, rating: 4.4, rating_count: 812,
-  google_place_id: 'gp-a', opening_hours: [], place_photos: [],
+  google_place_id: 'gp-a', opening_hours: [], place_photos: [], i18n: {},
 };
 
 describe('a fourth language', () => {
@@ -50,6 +47,8 @@ describe('a fourth language', () => {
     fireEvent.change(document.getElementById('name_ko'), { target: { value: '카페 A' } });
     fireEvent.click(screen.getByRole('button', { name: /^Save/ }));
     await findToast();
-    expect(api.savePlace).toHaveBeenCalledWith('cafe-a', expect.objectContaining({ name_ko: '카페 A' }));
+    const sent = api.savePlace.mock.calls[0][1];
+    expect(sent.i18n).toEqual({ ko: { name: '카페 A' } });
+    expect(sent).not.toHaveProperty('name_ko');
   });
 });

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js';
 import { leftBehindNote } from '../storage.js';
 import { CATEGORY_KEYS } from '../categories.js';
-import { LANGS, localizedColumns } from '../langs.js';
+import { LANGS, foldI18n, localizedColumns, localizedKeys, objectLangs, unfoldI18n } from '../langs.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
@@ -19,7 +19,21 @@ const FORM_FIELDS = [
   'reviewer_source', 'reviewer_name', 'reviewer_url',
 ];
 
-const pickForm = (place) => Object.fromEntries(FORM_FIELDS.map((k) => [k, place[k]]));
+// The object's languages arrive as flat keys beside the columns', so the
+// fields, the dirty check and the tests see one shape — see `langs.js`.
+const pickForm = (place) => ({
+  ...Object.fromEntries(FORM_FIELDS.map((k) => [k, place[k]])),
+  ...unfoldI18n(place.i18n),
+});
+// What Save sends: the columns as they are, the object's languages folded
+// back into `i18n`. The flat keys never reach the row — they are not
+// columns any more (the trigger would mirror them, but a patch naming a
+// column that is on its way out is the thing `EDITABLE` refuses).
+const OBJECT_KEYS = new Set(localizedKeys().filter((k) => !localizedColumns().includes(k)));
+const toPatch = (form, place, drafted) => ({
+  ...Object.fromEntries(Object.entries(form).filter(([k]) => !OBJECT_KEYS.has(k))),
+  i18n: foldI18n(form, place.i18n, drafted),
+});
 
 /**
  * The Fact-check map: is the pin where the address says it is?
@@ -95,7 +109,7 @@ function FactCheckMap({ lat, lng, name }) {
 /** One input per language in `LANGS`, for a column that exists once per
  *  language. The id is the column name, which is what the tests and the
  *  Threads skill select by. */
-function LocalizedField({ label, field, form, set, textarea }) {
+function LocalizedField({ label, field, form, set, textarea, machine }) {
   const Input = textarea ? 'textarea' : 'input';
   return (
     <div className="langs">
@@ -103,7 +117,13 @@ function LocalizedField({ label, field, form, set, textarea }) {
         const name = `${field}_${code}`;
         return (
           <div className="field" key={name}>
-            <label htmlFor={name}>{label}<span className="lang">{lang}</span></label>
+            <label htmlFor={name}>
+              {label}<span className="lang">{lang}</span>
+              {/* The words are a model's and nobody has changed them.
+                  Said on the blurb only — that is the field a draft
+                  fills — and cleared by editing, not by reading. */}
+              {machine?.has(code) ? <span className="lang machine">machine draft</span> : null}
+            </label>
             <Input id={name} value={form[name] ?? ''} onChange={(e) => set(name, e.target.value)} />
           </div>
         );
@@ -127,6 +147,9 @@ export default function PlaceEditor() {
   const [saves, setSaves] = useState(null);
   const [saving, setSaving] = useState(false);
   const [drafting, setDrafting] = useState(false);
+  // The blurb text the model produced this session, per object language:
+  // what `foldI18n` compares against to decide the `machine` flag.
+  const [drafted, setDrafted] = useState({});
 
   const load = useCallback(async () => {
     const p = await api.place(slug);
@@ -192,7 +215,11 @@ export default function PlaceEditor() {
     setDrafting(true);
     try {
       const d = await api.draftBlurb(slug);
-      setForm((f) => ({ ...f, desc_vi: d.desc_vi, desc_en: d.desc_en, desc_ja: d.desc_ja }));
+      setForm((f) => ({
+        ...f, desc_vi: d.desc_vi, desc_en: d.desc_en,
+        ...Object.fromEntries(objectLangs().map((l) => [`desc_${l.code}`, d[`desc_${l.code}`] ?? f[`desc_${l.code}`]])),
+      }));
+      setDrafted(Object.fromEntries(objectLangs().filter((l) => d[`desc_${l.code}`]).map((l) => [l.code, d[`desc_${l.code}`]])));
       const from = [
         d.photos ? `${d.photos} photo${d.photos === 1 ? '' : 's'}` : null,
         d.sources?.length ? 'Wikipedia' : null,
@@ -213,7 +240,7 @@ export default function PlaceEditor() {
     if (saving) return;
     setSaving(true);
     try {
-      await api.savePlace(slug, { ...form, ...extra });
+      await api.savePlace(slug, { ...toPatch(form, place, drafted), ...extra });
 
       // Apply staged photo edits in one batch, same Save as the text.
       const e = photoEdits;
@@ -254,7 +281,7 @@ export default function PlaceEditor() {
     } finally {
       setSaving(false);
     }
-  }, [saving, slug, form, photoEdits, place, refreshProgress, toast]);
+  }, [saving, slug, form, photoEdits, place, refreshProgress, toast, drafted]);
 
   const idx = siblings.indexOf(slug);
   const go = useCallback((delta) => {
@@ -314,7 +341,12 @@ export default function PlaceEditor() {
           <section className="panel">
             <h3>Identity</h3>
             <LocalizedField label="Name" field="name" form={form} set={set} />
-            <LocalizedField label="Blurb" field="desc" form={form} set={set} textarea />
+            <LocalizedField
+              label="Blurb" field="desc" form={form} set={set} textarea
+              machine={new Set(objectLangs()
+                .filter((l) => foldI18n(form, place.i18n, drafted)[l.code]?.machine)
+                .map((l) => l.code))}
+            />
             <div className="draftline">
               <button type="button" className="vibe" onClick={draft} disabled={drafting || !blank}>
                 {drafting ? 'Drafting…' : 'Draft blurb'}

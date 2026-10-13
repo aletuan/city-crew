@@ -15,6 +15,8 @@ const BUCKET = 'place-photos';
 // fails loudly here instead of silently bouncing off RLS.
 const EDITABLE = new Set([
   ...localizedColumns(),
+  // Every language past EN and VI, as one object — see `langs.js`.
+  'i18n',
   'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_level', 'price_display', 'price_vnd', 'duration_min', 'duration_max',
   'opening_hours', 'website', 'phone', 'threads_handle', 'sort_order', 'is_published',

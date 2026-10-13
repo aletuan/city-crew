@@ -1131,6 +1131,8 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   text-transform: uppercase; color: var(--text-tertiary); font-family: var(--font-data);
 }
 .hint { font-size: 12px; color: var(--bad); margin: 0; }
+/* A model's words, unread: a second tag after the language tag. */
+.langs .lang.machine { color: var(--warn, #b7791f); }
 /* One column per language in `src/langs.js`. auto-fit, not a count, so a
    fourth language is a row in that file and not an edit here; 170px is
    the narrowest a Vietnamese neighbourhood name stays readable at. */
