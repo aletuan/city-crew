@@ -6,7 +6,7 @@
 // it instead.
 
 import { describe, expect, it } from 'vitest';
-import { wardFromAddress } from '../../../supabase/functions/_shared/ward';
+import { shortWard, wardFromAddress } from '../../../supabase/functions/_shared/ward';
 
 describe('wardFromAddress', () => {
   // The rows that motivated this: real Saigon imports whose Google
@@ -45,5 +45,40 @@ describe('wardFromAddress', () => {
     expect(wardFromAddress(null)).toBeNull();
     expect(wardFromAddress(undefined)).toBeNull();
     expect(wardFromAddress('')).toBeNull();
+  });
+});
+
+// The city's name off the end of a merged ward's. Đà Lạt's four wards
+// carry it since the 2025 mergers, and under a chip that already says
+// Đà Lạt the card was saying it twice.
+describe('shortWard', () => {
+  const DALAT = ['Da Lat', 'Đà Lạt', 'Da Lat', 'Đà Lạt'];
+
+  it('takes the city’s own name off the end, however it was written', () => {
+    expect(shortWard('Xuân Hương - Đà Lạt', DALAT)).toBe('Xuân Hương');
+    // The marks are not restored: that row's "Lam Vien" was fixed by hand.
+    expect(shortWard('Lam Vien - Da Lat', DALAT)).toBe('Lam Vien');
+    expect(shortWard('Cam Ly – Đà Lạt', DALAT)).toBe('Cam Ly');
+    expect(shortWard('Xuân Trường — Đà Lạt', DALAT)).toBe('Xuân Trường');
+  });
+
+  // Two wards' names joined are not a ward and a city: which half to
+  // keep is the owner's call, made by hand, not this function's.
+  it('leaves a merged name alone when the suffix is not the city', () => {
+    expect(shortWard('Văn Miếu - Quốc Tử Giám', ['Hanoi', 'Hà Nội'])).toBe('Văn Miếu - Quốc Tử Giám');
+    expect(shortWard('Xuân Hương - Đà Lạt', ['Hanoi', 'Hà Nội'])).toBe('Xuân Hương - Đà Lạt');
+  });
+
+  it('passes a bare name, an empty name and an unknown city through', () => {
+    expect(shortWard('Hoàn Kiếm', DALAT)).toBe('Hoàn Kiếm');
+    expect(shortWard('Phường 7', [])).toBe('Phường 7');
+    expect(shortWard(null, DALAT)).toBeNull();
+    expect(shortWard('', DALAT)).toBeNull();
+    expect(shortWard('Xuân Hương - Đà Lạt', [null, undefined])).toBe('Xuân Hương - Đà Lạt');
+  });
+
+  // The hyphen inside a name is not the city dash: it has no spaces.
+  it('does not read a hyphenated name as a suffix', () => {
+    expect(shortWard('Bà Rịa-Vũng Tàu', ['Vung Tau', 'Vũng Tàu'])).toBe('Bà Rịa-Vũng Tàu');
   });
 });

@@ -5,7 +5,7 @@ import { classify } from "./classify.ts";
 import { MAX_CITY_KM, nearestCity } from "./nearest-city.ts";
 import { cleanName } from "./place-name.ts";
 import { copyPhoto } from "./rehost.ts";
-import { wardFromAddress } from "./ward.ts";
+import { shortWard, wardFromAddress } from "./ward.ts";
 import { PRICE_LEVEL_VND, PRICE_LEVELS } from "./price-level.ts";
 
 // The tables live in `price-level.ts` (see why there); still exported from
@@ -209,9 +209,16 @@ export async function importPlace(
   // imported into whichever city happens to be least far.
   const at = pointOf(d.location);
   let city = cityId;
+  // The city's names, for `shortWard` below: read off the same rows the
+  // nearest-city pass fetches, so a place with coordinates costs one
+  // query as before. A place Google gave no point for keeps its ward as
+  // written — the cities are not fetched for it, and that row is rarer
+  // than the suffix is worth a second round trip.
+  let cityNames: (string | null | undefined)[] = [];
   if (at) {
     const { data: cities } = await admin
-      .from("cities").select("id, center_lat, center_lng").eq("is_active", true).order("id");
+      .from("cities").select("id, name_en, name_vi, short_en, short_vi, center_lat, center_lng")
+      .eq("is_active", true).order("id");
     const near = nearestCity(cities ?? [], at);
     if (near && near.km > MAX_CITY_KM) {
       throw new Error(
@@ -219,6 +226,8 @@ export async function importPlace(
       );
     }
     if (near) city = near.id;
+    const row = (cities ?? []).find((c: any) => c.id === city);
+    cityNames = [row?.name_en, row?.name_vi, row?.short_en, row?.short_vi];
   }
 
   const { name: cleaned, ja } = cleanName(d.displayName?.text ?? "");
@@ -299,8 +308,13 @@ export async function importPlace(
       // import landed with no neighbourhood and the card showed no 📍
       // line, while Hanoi's — whose quận still arrive as components —
       // always did.
-      neighborhood_en: neighborhoodOf(d.addressComponents) ?? wardFromAddress(d.formattedAddress),
-      neighborhood_vi: neighborhoodOf(d.addressComponents) ?? wardFromAddress(d.formattedAddress),
+      //
+      // Then the city's own name comes off the end of it: Đà Lạt's
+      // merged wards are written "Xuân Hương - Đà Lạt", and the card
+      // prints this line under a chip that already says Đà Lạt. See
+      // `shortWard` for what is and is not taken off.
+      neighborhood_en: shortWard(neighborhoodOf(d.addressComponents) ?? wardFromAddress(d.formattedAddress), cityNames),
+      neighborhood_vi: shortWard(neighborhoodOf(d.addressComponents) ?? wardFromAddress(d.formattedAddress), cityNames),
       address: d.formattedAddress ?? null,
       lat: d.location?.latitude ?? null,
       lng: d.location?.longitude ?? null,

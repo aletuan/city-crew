@@ -39,7 +39,7 @@ import {
 // in `inserted`, by table.
 
 type World = {
-  cities: { id: string; center_lat: number; center_lng: number }[];
+  cities: { id: string; center_lat: number; center_lng: number; name_en?: string; name_vi?: string; short_en?: string; short_vi?: string }[];
   taken: string[];
   placesInsertError?: string;
   photosInsertError?: string;
@@ -229,6 +229,41 @@ describe('the row', () => {
       },
     });
     expect(place).toMatchObject({ neighborhood_en: 'Sài Gòn', neighborhood_vi: 'Sài Gòn' });
+  });
+
+  // Đà Lạt's merged wards carry the city's name; the card prints the
+  // line under a chip that already says it. The names come off the same
+  // cities rows the nearest-city pass reads, so this costs no query.
+  it('takes the city’s name off a Đà Lạt ward, and leaves Hanoi’s merged names to the desk', async () => {
+    const DALAT = {
+      id: 'dalat', name_en: 'Da Lat', name_vi: 'Đà Lạt', short_en: 'Da Lat', short_vi: 'Đà Lạt',
+      center_lat: 11.9404, center_lng: 108.4583,
+    };
+    const { place } = await run({
+      cityId: 'dalat',
+      world: { cities: [...CITIES, DALAT] },
+      details: {
+        ...DETAILS,
+        formattedAddress: '07 Đường Lý Tự Trọng, Xuân Hương - Đà Lạt, Lâm Đồng, Vietnam',
+        addressComponents: [
+          { longText: 'Xuân Hương - Đà Lạt', types: ['administrative_area_level_2', 'political'] },
+          { longText: 'Lâm Đồng', types: ['administrative_area_level_1', 'political'] },
+        ],
+        location: { latitude: 11.9404, longitude: 108.4583 },
+      },
+    });
+    expect(place).toMatchObject({ city_id: 'dalat', neighborhood_en: 'Xuân Hương', neighborhood_vi: 'Xuân Hương' });
+
+    const { place: hanoi } = await run({
+      world: { cities: [{ ...HANOI, name_en: 'Hanoi', name_vi: 'Hà Nội', short_en: 'Hanoi', short_vi: 'Hà Nội' }] },
+      details: {
+        ...DETAILS,
+        addressComponents: [
+          { longText: 'Văn Miếu - Quốc Tử Giám', types: ['administrative_area_level_2', 'political'] },
+        ],
+      },
+    });
+    expect(hanoi).toMatchObject({ neighborhood_en: 'Văn Miếu - Quốc Tử Giám' });
   });
 
   it('prefers the tier Google actually filled, in priority order', async () => {
