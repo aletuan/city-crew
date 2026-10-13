@@ -1131,7 +1131,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   text-transform: uppercase; color: var(--text-tertiary); font-family: var(--font-data);
 }
 .hint { font-size: 12px; color: var(--bad); margin: 0; }
-.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+/* One column per language in `src/langs.js`. auto-fit, not a count, so a
+   fourth language is a row in that file and not an edit here; 170px is
+   the narrowest a Vietnamese neighbourhood name stays readable at. */
+.langs { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 12px; }
 .draftline { display: flex; align-items: center; gap: 10px; margin: -2px 0 14px; }
 .draftline .note { font-size: 12px; color: var(--text-secondary); margin: 0; }
 .triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
@@ -1655,7 +1658,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .lighttable { position: static; }
   .photogrid { grid-template-columns: repeat(3, 1fr); }
   .pcell .ops { opacity: 1; } /* no hover on touch — keep actions visible */
-  .pair { grid-template-columns: 1fr; }
+  .langs { grid-template-columns: 1fr; }
   .triple { grid-template-columns: 1fr; }
   .herolangs { flex-wrap: wrap; }
   .heropicked { margin-left: 0; flex-basis: 100%; }

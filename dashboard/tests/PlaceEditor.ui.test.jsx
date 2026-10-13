@@ -139,6 +139,28 @@ describe('PlaceEditor', () => {
     }));
   });
 
+  // The third language had a column for two months and no field: the
+  // editor listed EN and VI by hand. Now every language in `langs.js` gets
+  // its three fields, and the save path accepts them — see `langs.js`.
+  it('shows and saves every language the catalog is written in, Japanese included', async () => {
+    openEditor('/place/cafe-a', { ...PLACE, name_ja: 'カフェA', desc_ja: null, neighborhood_ja: null });
+    await screen.findByDisplayValue('Café A');
+    for (const base of ['name', 'desc', 'neighborhood']) {
+      for (const lang of ['en', 'vi', 'ja']) expect(field(`${base}_${lang}`)).toBeTruthy();
+    }
+    expect(field('name_ja').value).toBe('カフェA');
+    expect(field('desc_ja').tagName).toBe('TEXTAREA');
+    // The label names the language, the way the EN and VI ones always have.
+    expect(screen.getByLabelText('BlurbJA')).toBe(field('desc_ja'));
+    fireEvent.change(field('desc_ja'), { target: { value: '川沿いのベンチ。' } });
+    fireEvent.change(field('neighborhood_ja'), { target: { value: '1区' } });
+    fireEvent.click(saveButton());
+    await findToast();
+    expect(api.savePlace).toHaveBeenCalledWith('cafe-a', expect.objectContaining({
+      desc_ja: '川沿いのベンチ。', neighborhood_ja: '1区', name_ja: 'カフェA',
+    }));
+  });
+
   it('Approve and Flag save with the stamp, and the stamp wears the button', async () => {
     openEditor();
     await screen.findByDisplayValue('Café A');
@@ -467,7 +489,7 @@ describe('the blurb draft', () => {
     openEditor();
     await screen.findByDisplayValue('Café A');
     expect(draftButton().disabled).toBe(true);
-    expect(screen.getByText('Clear both Blurb fields to draft a new one.')).toBeTruthy();
+    expect(screen.getByText('Clear the EN and VI Blurb fields to draft a new one.')).toBeTruthy();
     fireEvent.change(field('desc_en'), { target: { value: '' } });
     expect(draftButton().disabled).toBe(false);
     fireEvent.change(field('desc_vi'), { target: { value: '  Đã có ' } });

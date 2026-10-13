@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js';
 import { leftBehindNote } from '../storage.js';
 import { CATEGORY_KEYS } from '../categories.js';
+import { LANGS, localizedColumns } from '../langs.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
@@ -11,7 +12,7 @@ import { SOURCE_OPTIONS, sourceCredit, sourceLink, sourceProblem, sniffSource } 
 import { loadGoogleMaps, DARK_STYLE } from '../lib/googleMaps.js';
 
 const FORM_FIELDS = [
-  'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
+  ...localizedColumns(),
   'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_display', 'price_vnd', 'duration_min', 'duration_max',
   'website', 'phone', 'threads_handle', 'is_published', 'review_note',
@@ -91,16 +92,22 @@ function FactCheckMap({ lat, lng, name }) {
   return <div className="mapframe" ref={elRef} />;
 }
 
-function BilingualField({ label, nameEn, nameVi, form, set, textarea }) {
+/** One input per language in `LANGS`, for a column that exists once per
+ *  language. The id is the column name, which is what the tests and the
+ *  Threads skill select by. */
+function LocalizedField({ label, field, form, set, textarea }) {
   const Input = textarea ? 'textarea' : 'input';
   return (
-    <div className="pair">
-      {[[nameEn, 'EN'], [nameVi, 'VI']].map(([name, lang]) => (
-        <div className="field" key={name}>
-          <label htmlFor={name}>{label}<span className="lang">{lang}</span></label>
-          <Input id={name} value={form[name] ?? ''} onChange={(e) => set(name, e.target.value)} />
-        </div>
-      ))}
+    <div className="langs">
+      {LANGS.map(({ code, label: lang }) => {
+        const name = `${field}_${code}`;
+        return (
+          <div className="field" key={name}>
+            <label htmlFor={name}>{label}<span className="lang">{lang}</span></label>
+            <Input id={name} value={form[name] ?? ''} onChange={(e) => set(name, e.target.value)} />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -306,19 +313,19 @@ export default function PlaceEditor() {
         <div className="facts-col">
           <section className="panel">
             <h3>Identity</h3>
-            <BilingualField label="Name" nameEn="name_en" nameVi="name_vi" form={form} set={set} />
-            <BilingualField label="Blurb" nameEn="desc_en" nameVi="desc_vi" form={form} set={set} textarea />
+            <LocalizedField label="Name" field="name" form={form} set={set} />
+            <LocalizedField label="Blurb" field="desc" form={form} set={set} textarea />
             <div className="draftline">
               <button type="button" className="vibe" onClick={draft} disabled={drafting || !blank}>
                 {drafting ? 'Drafting…' : 'Draft blurb'}
               </button>
               <p className="note">
                 {blank
-                  ? 'Fills both Blurb fields from the row and its Wikipedia article, if it has one. Read it before you save.'
-                  : 'Clear both Blurb fields to draft a new one.'}
+                  ? 'Fills the EN and VI Blurb fields from the row and its photographs. Read it before you save.'
+                  : 'Clear the EN and VI Blurb fields to draft a new one.'}
               </p>
             </div>
-            <BilingualField label="Neighborhood" nameEn="neighborhood_en" nameVi="neighborhood_vi" form={form} set={set} />
+            <LocalizedField label="Neighborhood" field="neighborhood" form={form} set={set} />
             <div className="inline-fields">
               <div className="field" style={{ flex: 3 }}>
                 <label htmlFor="address">Address</label>
