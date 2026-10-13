@@ -538,6 +538,9 @@ export const api = {
   },
 
   searchPlaces: (query, city) => invoke('fetch-place', { action: 'search', query, city }),
+  // A first draft of a blank blurb, for the editor to read before Save.
+  // The function writes nothing; see `write-blurb/index.ts` for why.
+  draftBlurb: (slug) => invoke('write-blurb', { slug }),
   importPlace: (place_id, category, city) => invoke('fetch-place', { action: 'import', place_id, category, city }),
 
   scanCategories: () => invoke('scan-city', { action: 'categories' }),

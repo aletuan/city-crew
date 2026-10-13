@@ -455,3 +455,52 @@ describe('PlaceEditor', () => {
 });
 
 const url = (router) => router.state.location.pathname + router.state.location.search;
+
+// The blurb draft: a model's first words in the two Blurb fields, unsaved,
+// and only ever into a blank. The one gate is the Save the editor already
+// has, so what is pinned is that the button fills the form and lights Save
+// without touching `api.savePlace`, and that it will not run over a blurb.
+describe('the blurb draft', () => {
+  const draftButton = () => screen.getByRole('button', { name: /^Draft/ });
+
+  it('is closed while either Blurb field holds words', async () => {
+    openEditor();
+    await screen.findByDisplayValue('Café A');
+    expect(draftButton().disabled).toBe(true);
+    expect(screen.getByText('Clear both Blurb fields to draft a new one.')).toBeTruthy();
+    fireEvent.change(field('desc_en'), { target: { value: '' } });
+    expect(draftButton().disabled).toBe(false);
+    fireEvent.change(field('desc_vi'), { target: { value: '  Đã có ' } });
+    expect(draftButton().disabled).toBe(true);
+  });
+
+  it('fills both fields from the draft, lights Save, and saves nothing by itself', async () => {
+    api.draftBlurb.mockResolvedValue({ desc_vi: 'Bờ sông, ghế đá.', desc_en: 'Riverside benches.', sources: ['https://vi.wikipedia.org/wiki/x'] });
+    openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null, categories: ['nature'] });
+    await screen.findByDisplayValue('Park C');
+    expect(saveButton().disabled).toBe(true);
+    await act(async () => { fireEvent.click(draftButton()); });
+    expect(api.draftBlurb).toHaveBeenCalledWith('park-c');
+    expect(field('desc_vi').value).toBe('Bờ sông, ghế đá.');
+    expect(field('desc_en').value).toBe('Riverside benches.');
+    expect(saveButton().disabled).toBe(false);
+    expect(api.savePlace).not.toHaveBeenCalled();
+    expect((await findToast()).textContent).toContain('Drafted from the row and Wikipedia');
+    // Now there are words, so the button closes again.
+    expect(draftButton().disabled).toBe(true);
+  });
+
+  it('says when the draft came from the row alone, and when it failed', async () => {
+    api.draftBlurb.mockResolvedValueOnce({ desc_vi: 'A', desc_en: 'B', sources: [] });
+    openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null });
+    await screen.findByDisplayValue('Park C');
+    await act(async () => { fireEvent.click(draftButton()); });
+    expect((await findToast()).textContent).toContain('Drafted from the row alone');
+    fireEvent.change(field('desc_en'), { target: { value: '' } });
+    fireEvent.change(field('desc_vi'), { target: { value: '' } });
+    api.draftBlurb.mockRejectedValueOnce(new Error('has_blurb'));
+    await act(async () => { fireEvent.click(draftButton()); });
+    await waitFor(() => expect(screen.getByText(/Draft failed: has_blurb/)).toBeTruthy());
+    expect(field('desc_en').value).toBe('');
+  });
+});

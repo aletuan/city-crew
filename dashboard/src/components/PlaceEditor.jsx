@@ -119,6 +119,7 @@ export default function PlaceEditor() {
   const [siblings, setSiblings] = useState([]);
   const [saves, setSaves] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [drafting, setDrafting] = useState(false);
 
   const load = useCallback(async () => {
     const p = await api.place(slug);
@@ -172,6 +173,29 @@ export default function PlaceEditor() {
   }, [dirty]);
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  // A model's first draft of a blank blurb, dropped into the two Blurb
+  // fields unsaved — exactly as if the editor had typed it — so the one
+  // gate every sentence in the app already passes, Save, is the gate
+  // here too. Nothing reaches the row until the editor has read it. Only
+  // for a blank: a blurb worth replacing is cleared by hand first, so the
+  // button never puts a model's words over a person's.
+  const draft = async () => {
+    if (drafting) return;
+    setDrafting(true);
+    try {
+      const d = await api.draftBlurb(slug);
+      setForm((f) => ({ ...f, desc_vi: d.desc_vi, desc_en: d.desc_en }));
+      toast(d.sources?.length
+        ? 'Drafted from the row and Wikipedia — read it before you save.'
+        : 'Drafted from the row alone — read it before you save.');
+    } catch (err) {
+      toast(`Draft failed: ${err.message}`);
+    } finally {
+      setDrafting(false);
+    }
+  };
+  const blank = !(form?.desc_en?.trim() || form?.desc_vi?.trim());
   const setNum = (key, value) => set(key, value === '' ? null : Number(value));
 
   const save = useCallback(async (extra = {}) => {
@@ -280,6 +304,16 @@ export default function PlaceEditor() {
             <h3>Identity</h3>
             <BilingualField label="Name" nameEn="name_en" nameVi="name_vi" form={form} set={set} />
             <BilingualField label="Blurb" nameEn="desc_en" nameVi="desc_vi" form={form} set={set} textarea />
+            <div className="draftline">
+              <button type="button" className="vibe" onClick={draft} disabled={drafting || !blank}>
+                {drafting ? 'Drafting…' : 'Draft blurb'}
+              </button>
+              <p className="note">
+                {blank
+                  ? 'Fills both Blurb fields from the row and its Wikipedia article, if it has one. Read it before you save.'
+                  : 'Clear both Blurb fields to draft a new one.'}
+              </p>
+            </div>
             <BilingualField label="Neighborhood" nameEn="neighborhood_en" nameVi="neighborhood_vi" form={form} set={set} />
             <div className="inline-fields">
               <div className="field" style={{ flex: 3 }}>
