@@ -65,8 +65,12 @@ describe('planTrips', () => {
       expect(ask(['cafes'])).toBe(1);
     });
 
-    it('gives a day one more, because a day has the room', () => {
-      expect(ask(['cafes'], 'day')).toBe(2);
+    // A day used to get one more, and the one more could only be a
+    // repeat of a kind already asked for — two cafés for "cafés". The
+    // count is the ask, by day as by evening.
+    it('answers the same by day: one kind, one place', () => {
+      expect(ask(['cafes'], 'day')).toBe(1);
+      expect(ask(['cafes', 'eats'], 'day')).toBe(2);
     });
 
     it('grows a stop per kind asked for', () => {
@@ -78,7 +82,8 @@ describe('planTrips', () => {
     // many kinds are named, because five in an evening is not an evening.
     it('never exceeds the shape it is filling', () => {
       expect(ask(['cafes', 'eats', 'nightlife', 'views'])).toBe(3);
-      expect(ask(['cafes', 'eats', 'nightlife', 'views'], 'day')).toBe(5);
+      expect(ask(['cafes', 'eats', 'nightlife', 'views'], 'day')).toBe(4);
+      expect(ask(['cafes', 'eats', 'nightlife', 'views', 'heritage', 'nature'], 'day')).toBe(5);
     });
 
     // Nothing was narrowed, so nothing should be. `canPlan` stops an empty
@@ -239,7 +244,9 @@ describe('planTrips', () => {
         place({ slug: 'doorstep', categories: ['eats'], rating: 3.7, rating_count: 0, lat: 21.030009, lng: 105.852 }),
         place({ slug: 'down-the-street', categories: ['eats'], rating: 3.7, rating_count: 0, lat: 21.0354, lng: 105.852 }),
       ];
-      const day: TripDraft = { ...EVENING, when: 'day', categories: ['eats'] };
+      // Two kinds for two stops; every place here answers to either, so
+      // the second seat is the draw this test is about.
+      const day: TripDraft = { ...EVENING, when: 'day', categories: ['eats', 'cafes'] };
       for (let seed = 0; seed < 10; seed++) {
         const stops = planTrips(day, catalog, 'hanoi', { seed })[0].stops.map((s) => s.place.slug);
         expect(stops).toEqual(['anchor', 'down-the-street']);
@@ -865,7 +872,7 @@ describe('a day shape asked for late in the day', () => {
   });
 
   it('leaves a shape asked for at its own hour alone', () => {
-    expect(planTrips(DAY, CATALOG, 'hanoi', { seed: 1 })[0].stops).toHaveLength(4);
+    expect(planTrips(DAY, CATALOG, 'hanoi', { seed: 1 })[0].stops).toHaveLength(3);
   });
 
   // A draft naming no category keeps the whole shape, and that ceiling is
