@@ -348,16 +348,25 @@ export default function PlaceCard({
               one an accent. Weight alone lifts the figure enough to be
               found at a glance down the feed.
 
-              The glyph changes with it: the pin marks a place on a map,
-              the arrow is the sort's own mark in the filter sheet, and a
-              line that says "from where you are" should wear the mark of
-              the control that asked for it. */}
+              ── why the pin stays the pin ──
+
+              The first cut swapped the pin for the sort's own arrow
+              whenever a figure was present, so the line would wear the
+              mark of the control that asked for it. The owner saw the
+              icon change under "Nearest first" and asked whether it was
+              an accident — which is the whole case against it: three
+              sorts, one of which changes a glyph on every card and two
+              of which do not, reads as a glitch to anyone who did not
+              open the sheet. The figure in the district's weight already
+              says "from where you are"; the glyph's job is to be the same
+              thing in the same place so the eye finds the line through
+              every change of sort. */}
           {(where || far || when || place.vibe_tags.length > 0) && (
             <View style={s.metaRow}>
               {(where || far || when) ? (
                 <View style={s.whereRow}>
                   {(where || far)
-                    ? <Ionicons name={far ? 'navigate-outline' : 'location-outline'} size={13} color={colors.textTertiary} />
+                    ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
                     : null}
                   <Text style={s.where} numberOfLines={1}>
                     {where}
