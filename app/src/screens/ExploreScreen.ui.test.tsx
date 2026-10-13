@@ -1375,6 +1375,60 @@ describe('the map’s quick filters, said aloud', () => {
     expect(spies.askToSignIn).toHaveBeenCalledOnce();
     expect(screen.queryByTestId('explore-map-toast')).toBeNull();
   });
+
+  // The third cell is the sheet's Visited row with the words taken off,
+  // so it is held to the row's rules: behind the flag, a door for a
+  // guest, and one state with the sheet and the badge.
+  it('has no Visited cell until check-in is switched on', async () => {
+    state.uid = 'u1';
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.queryByTestId('map-visited')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Visited only' })).toBeNull();
+  });
+
+  it('asks a guest to sign in instead of switching Visited only on, and resumes it once they have', async () => {
+    appFlags.set('place_checkin', true);
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    const { rerender } = render(<ExploreScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Visited only' })); });
+    expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(spies.askToSignIn).toHaveBeenCalledWith('saved', expect.any(Function));
+    expect(screen.queryByTestId('explore-map-toast')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+    const resume = spies.askToSignIn.mock.calls.at(-1)![1] as () => void;
+    state.uid = 'u1';
+    rerender(<ExploreScreen navigation={navigation} />);
+    await act(async () => { resume(); });
+    expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
+  });
+
+  it('switches Visited only on and off for a signed-in reader, in words, and the sheet agrees', async () => {
+    appFlags.set('place_checkin', true);
+    state.uid = 'u1';
+    state.checkins = [{ id: 'k1', place_slug: 'b', city_id: 'hanoi', at: '2026-10-01T03:00:00Z' }];
+    state.places.data = [place('a', { lat: 21, lng: 105 }), place('b', { lat: 21.1, lng: 105.1 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const cell = screen.getByRole('button', { name: 'Visited only' });
+    expect(cell.querySelector('[data-icon="checkmark-circle-outline"]')).toBeTruthy();
+    await act(async () => { fireEvent.click(cell); });
+    expect(cell.querySelector('[data-icon="checkmark-circle"]')).toBeTruthy();
+    expect(toast()).toBe('Showing only places you checked in at.');
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
+    // The sheet reads the same state the cell wrote.
+    fireEvent.click(screen.getByTestId('explore-filter-pinned'));
+    expect(screen.getByRole('checkbox', { name: 'Visited only' }).querySelector('[data-icon="checkmark-circle"]')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('filter-close'));
+    await act(async () => { fireEvent.click(cell); });
+    expect(cell.querySelector('[data-icon="checkmark-circle-outline"]')).toBeTruthy();
+    expect(toast()).toBe('Visited-places filter off.');
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
 });
 
 // Explore's tab pressed while it is already the selected one. The stack's
