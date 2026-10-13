@@ -792,9 +792,36 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
               >
                 <Ionicons name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
-                <Text style={[s.goText, latestVisit && s.checkinOnText]}>
-                  {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
-                </Text>
+                {/* ── one width in both states ──
+                    The pill was as wide as its word, and the two words
+                    are not the same length: "Check-in" and "Đã qua" are
+                    8 and 6 characters, so on the phone the pill shrank
+                    by about 18pt on the tap and grew back on the undo.
+                    The owner read that as the control breathing.
+
+                    So the label is a column holding both words: the one
+                    being shown, and the other at zero height, invisible
+                    and hidden from VoiceOver. A column is as wide as its
+                    widest child, so the pill is the width of the longer
+                    word whichever is showing, and the shown word sits
+                    centred in that width under the glyph. Measured, not
+                    fixed: a `minWidth` would be a number for one
+                    language and one type size, and the ghost word is
+                    right in all three languages and at every Dynamic
+                    Type step, because it is the other word itself. */}
+                <View style={s.checkinWords}>
+                  <Text style={[s.goText, latestVisit && s.checkinOnText]}>
+                    {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
+                  </Text>
+                  <Text
+                    style={[s.goText, s.checkinGhost]}
+                    aria-hidden
+                    importantForAccessibility="no-hide-descendants"
+                    testID="detail-checkin-ghost"
+                  >
+                    {latestVisit ? t('Check in', 'Check-in', 'チェックイン') : t('Visited', 'Đã qua', '訪問済み')}
+                  </Text>
+                </View>
               </PressableScale>
             )}
           </View>
@@ -1591,6 +1618,11 @@ const s = StyleSheet.create({
   // `okInk` on it: 5.1:1 on paper, 7.2:1 on charcoal.
   checkinOn: { backgroundColor: colors.okSoft, borderColor: 'transparent' },
   checkinOnText: { color: colors.okInk },
+  // The two words stacked; see "one width in both states" at the pill.
+  checkinWords: { alignItems: 'center' },
+  // The word not being shown: it keeps its width and gives up its height,
+  // so it sizes the column and draws nothing.
+  checkinGhost: { height: 0, opacity: 0, overflow: 'hidden' },
   checkinHead: { gap: 12 },
   checkinHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   checkinHeadTitle: { flex: 1, color: colors.text, fontSize: 18, fontFamily: display.semibold },
