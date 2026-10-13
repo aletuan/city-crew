@@ -70,7 +70,7 @@ const PARK = {
   id: 'pid-1', slug: 'thuong-bac-park', name_en: 'Thuong Bac Park', name_vi: 'Công viên Thương Bạc', city_id: 'hue',
   address: 'Đường Trần Hưng Đạo, Phú Xuân, Huế, Vietnam', neighborhood_en: 'Phú Xuân', neighborhood_vi: 'Phú Xuân',
   categories: ['nature'], vibe_tags: ['outdoors', 'chill'], opening_hours: ['Monday: Open 24 hours'],
-  website: null, primary_type: 'park', desc_vi: null, desc_en: null,
+  website: null, primary_type: 'park', desc_vi: null, desc_en: null, desc_ja: null, i18n: {},
 };
 const HUE = { name_en: 'Hue', name_vi: 'Huế', short_en: 'Hue', short_vi: 'Huế' };
 const WRITTEN = [
@@ -341,5 +341,56 @@ describe('the article', () => {
     h.create.mockResolvedValue(says({ desc_vi: 'A', desc_en: 'B', desc_ja: 'C' }));
     const res = await call({ slug: PARK.slug });
     expect((await res.json()).sources).toHaveLength(1);
+  });
+});
+
+// The mirror image: a blurb the desk already has, asked for in Japanese.
+// Refuses the two things the full mode accepts and accepts the one it
+// refuses; no article, examples with a JA line only, one field back.
+describe('the ja mode', () => {
+  const WRITTEN_PARK = { ...PARK, desc_vi: 'Ghế đá bờ sông.', desc_en: 'Riverside benches.' };
+
+  it('refuses an unknown mode, a place with no blurb, and one that already has Japanese through either door', async () => {
+    h.fake.replies(session, editor);
+    expect((await call({ slug: PARK.slug, mode: 'ko' })).status).toBe(400);
+    h.fake.replies(session, editor, { data: PARK, error: null });
+    let res = await call({ slug: PARK.slug, mode: 'ja' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'no_blurb' });
+    h.fake.replies(session, editor, { data: { ...WRITTEN_PARK, desc_ja: ' 古い。 ' }, error: null });
+    res = await call({ slug: PARK.slug, mode: 'ja' });
+    expect(await res.json()).toEqual({ error: 'has_ja' });
+    h.fake.replies(session, editor, { data: { ...WRITTEN_PARK, i18n: { ja: { desc: '物体。' } } }, error: null });
+    res = await call({ slug: PARK.slug, mode: 'ja' });
+    expect(await res.json()).toEqual({ error: 'has_ja' });
+    expect(h.create).not.toHaveBeenCalled();
+  });
+
+  it('hands the model the blurb and the frames, asks for desc_ja alone, and reads no article', async () => {
+    door(WRITTEN_PARK);
+    h.create.mockResolvedValue(says({ desc_ja: ' 川沿いのベンチ。 ' }));
+    const res = await call({ slug: PARK.slug, mode: 'ja' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ desc_ja: '川沿いのベンチ。', photos: 2 });
+    expect(h.fetch).not.toHaveBeenCalled();
+    const req = sent();
+    expect(req.output_config.format.schema.required).toEqual(['desc_ja']);
+    const p = prompt();
+    expect(p).toContain('vi: Ghế đá bờ sông.');
+    expect(p).toContain('en: Riverside benches.');
+    expect(p).toContain('for a Japanese reader');
+    expect(p).not.toContain('No article extract');
+    expect(frames()).toEqual(['https://cdn/park/cover.jpg', 'https://cdn/park/2.jpg']);
+    // Only an example that carries Japanese can show the register.
+    expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
+    expect(p).not.toContain('- Park 3');
+    expect(h.fake.log.filter((a) => a.op !== 'select' && a.op !== 'auth')).toEqual([]);
+  });
+
+  it('prints a dash for the language the blurb does not have', async () => {
+    door({ ...WRITTEN_PARK, desc_vi: '  ' });
+    h.create.mockResolvedValue(says({ desc_ja: 'x' }));
+    await call({ slug: PARK.slug, mode: 'ja' });
+    expect(prompt()).toContain('vi: —');
   });
 });

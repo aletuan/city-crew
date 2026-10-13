@@ -1,6 +1,7 @@
 // A first draft of a place's blurb, for the desk to read before it saves.
 //
-// POST { slug } → { desc_vi, desc_en, desc_ja, sources: string[], photos: number }
+// POST { slug }             → { desc_vi, desc_en, desc_ja, sources: string[], photos: number }
+// POST { slug, mode: 'ja' } → { desc_ja, photos }
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -66,6 +67,21 @@
 // too, where they have a JA slot. It is machine prose by construction;
 // the desk reads it before Save like the other two, and marking it as
 // machine for a later review pass is the content-schema work's to add.
+//
+// ── the ja mode (13 Oct 2026) ──
+//
+// 110 live places carry an English blurb and no Japanese one, written
+// before the third language was asked for. They are not blanks — the
+// mode above refuses them, rightly — and they are not translation jobs
+// for a person: 48 of them are the desk's own words or Google's. So
+// `mode: 'ja'` is the mirror image: it requires a blurb and refuses a
+// row that already has Japanese (column or object), takes no Wikipedia
+// lead (the blurb is the material now), reads only the examples that
+// carry a JA line, and asks for the one field. The photographs still go,
+// so a word the blurb uses can be checked against what it names, not
+// elaborated. The 42 credited Threads quotations are left out of the
+// batch by the caller, not here: a translation under somebody's handle
+// is theirs to decline, and the function cannot know who is calling.
 //
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
@@ -139,6 +155,8 @@ type Row = {
   opening_hours: string[] | null;
   website: string | null; primary_type: string | null;
   desc_vi: string | null; desc_en: string | null;
+  desc_ja: string | null;
+  i18n: { ja?: { desc?: string | null } | null } | null;
 };
 
 type Example = { name_en: string; categories: string[] | null; desc_vi: string | null; desc_en: string | null; desc_ja?: string | null };
@@ -177,8 +195,9 @@ async function wikiLead(lang: "vi" | "en", title: string, cityNames: string[]): 
 }
 
 /** The desk's own blurbs of the same kinds, as the model's examples. */
-function pickExamples(rows: Example[], kinds: string[]): Example[] {
-  const same = rows.filter((r) => r.desc_vi && r.desc_en && (r.categories ?? []).some((c) => kinds.includes(c)));
+function pickExamples(rows: Example[], kinds: string[], withJa = false): Example[] {
+  const same = rows.filter((r) => r.desc_vi && r.desc_en && (!withJa || r.desc_ja)
+    && (r.categories ?? []).some((c) => kinds.includes(c)));
   return same.slice(0, EXAMPLES);
 }
 
@@ -199,14 +218,20 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const slug = String(body.slug ?? "").trim();
     if (!slug) return json({ error: "slug required" }, 400);
+    if (body.mode != null && body.mode !== "ja") return json({ error: "unknown mode" }, 400);
+    const mode: "full" | "ja" = body.mode === "ja" ? "ja" : "full";
 
     const { data: place } = await admin
       .from("places")
-      .select("id, slug, name_en, name_vi, city_id, address, neighborhood_en, neighborhood_vi, categories, vibe_tags, opening_hours, website, primary_type, desc_vi, desc_en")
+      .select("id, slug, name_en, name_vi, city_id, address, neighborhood_en, neighborhood_vi, categories, vibe_tags, opening_hours, website, primary_type, desc_vi, desc_en, desc_ja, i18n")
       .eq("slug", slug).maybeSingle();
     const row = place as Row | null;
     if (!row) return json({ error: `unknown place: ${slug}` }, 404);
-    if (row.desc_vi?.trim() || row.desc_en?.trim()) return json({ error: "has_blurb" }, 409);
+    const hasBlurb = !!(row.desc_vi?.trim() || row.desc_en?.trim());
+    const hasJa = !!(row.i18n?.ja?.desc?.trim() || row.desc_ja?.trim());
+    if (mode === "full" && hasBlurb) return json({ error: "has_blurb" }, 409);
+    if (mode === "ja" && !hasBlurb) return json({ error: "no_blurb" }, 409);
+    if (mode === "ja" && hasJa) return json({ error: "has_ja" }, 409);
 
     const { data: city } = await admin
       .from("cities").select("name_en, name_vi, short_en, short_vi").eq("id", row.city_id).maybeSingle();
@@ -221,7 +246,7 @@ Deno.serve(async (req) => {
       .eq("reviewer_source", "editorial").eq("is_published", true)
       .limit(40);
     const kinds = row.categories ?? [];
-    const examples = pickExamples((written ?? []) as Example[], kinds);
+    const examples = pickExamples((written ?? []) as Example[], kinds, mode === "ja");
 
     // Cover first, then the gallery's own order, so the frame the app
     // leads with is the one the model reads first.
@@ -235,7 +260,11 @@ Deno.serve(async (req) => {
       .filter((ph) => ph.storage_path && ph.photo_uri)
       .map((ph) => ph.photo_uri);
 
-    const lead = (await wikiLead("vi", row.name_vi, cityNames)) ?? (await wikiLead("en", row.name_en, cityNames));
+    // The blurb is the material in the ja mode; an article would be a
+    // second source the Japanese could drift towards and the blurb never had.
+    const lead = mode === "ja"
+      ? null
+      : (await wikiLead("vi", row.name_vi, cityNames)) ?? (await wikiLead("en", row.name_en, cityNames));
 
     const facts = [
       `Name: ${row.name_vi} / ${row.name_en}`,
@@ -258,12 +287,19 @@ Deno.serve(async (req) => {
         effort: "low",
         format: {
           type: "json_schema",
-          schema: {
-            type: "object",
-            properties: { desc_vi: { type: "string" }, desc_en: { type: "string" }, desc_ja: { type: "string" } },
-            required: ["desc_vi", "desc_en", "desc_ja"],
-            additionalProperties: false,
-          },
+          schema: mode === "ja"
+            ? {
+              type: "object",
+              properties: { desc_ja: { type: "string" } },
+              required: ["desc_ja"],
+              additionalProperties: false,
+            }
+            : {
+              type: "object",
+              properties: { desc_vi: { type: "string" }, desc_en: { type: "string" }, desc_ja: { type: "string" } },
+              required: ["desc_vi", "desc_en", "desc_ja"],
+              additionalProperties: false,
+            },
         },
       },
       messages: [{
@@ -282,8 +318,18 @@ Deno.serve(async (req) => {
               "The place:",
               facts,
               "",
-              lead ? `Wikipedia lead (${lead.url}):\n${lead.text}` : "No article extract.",
-              photos.length ? "" : "No photographs either. Write only from the facts above, and write less rather than more.",
+              ...(mode === "ja"
+                ? [
+                  "The place's blurb, as the desk wrote it:",
+                  `vi: ${row.desc_vi?.trim() || "—"}`,
+                  `en: ${row.desc_en?.trim() || "—"}`,
+                  "",
+                  "Write desc_ja: the same blurb for a Japanese reader — what it says and no more. The photographs are there to see what its words refer to, not to add to them.",
+                ]
+                : [
+                  lead ? `Wikipedia lead (${lead.url}):\n${lead.text}` : "No article extract.",
+                  photos.length ? "" : "No photographs either. Write only from the facts above, and write less rather than more.",
+                ]),
             ].join("\n"),
           },
         ],
@@ -292,14 +338,15 @@ Deno.serve(async (req) => {
 
     const text = message.content.find((c) => c.type === "text");
     if (!text || text.type !== "text") return json({ error: "model gave no text" }, 502);
-    const parsed = JSON.parse(text.text) as { desc_vi: string; desc_en: string; desc_ja: string };
+    const parsed = JSON.parse(text.text) as { desc_vi?: string; desc_en?: string; desc_ja: string };
     console.log("write-blurb", {
-      slug, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
+      slug, mode, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,
     });
+    if (mode === "ja") return json({ desc_ja: parsed.desc_ja.trim(), photos: photos.length });
     return json({
-      desc_vi: parsed.desc_vi.trim(),
-      desc_en: parsed.desc_en.trim(),
+      desc_vi: (parsed.desc_vi ?? "").trim(),
+      desc_en: (parsed.desc_en ?? "").trim(),
       desc_ja: parsed.desc_ja.trim(),
       sources: lead ? [lead.url] : [],
       photos: photos.length,
