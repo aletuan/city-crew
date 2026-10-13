@@ -721,11 +721,26 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 the filter row on Explore says "press me" with a bare
                 outline where that row said "read me" with a glass fill;
                 the outline is the accent at hairline
-                strength, and the pin is filled, one solid mark in a row
-                of outlines. Not the tinted fill the mockup wore: the
+                strength. Not the tinted fill the mockup wore: the
                 accent as a surface is for state (`theme.ts`), and a pill
                 at rest is not one. *Having* checked in is the state, and
                 the state wears a fill of its own — green, see "worn" below.
+
+                ── the glyph: a ringed tick, hollow then filled ──
+
+                The rest glyph was a filled pin, "one solid mark in a row
+                of outlines", and the worn glyph a bare tick. The owner
+                found the pin indistinguishable from the pin on the
+                address row just below it and from the map tab at the
+                foot of the screen — three pins on one screen, one of
+                which is a verb. A pin says *where*; this control says
+                *I was here*, which is what a tick in a ring says, on a
+                form, on a passport stamp, on the owner's own reference
+                (13 Oct 2026). Hollow at rest, filled once worn: the same
+                glyph in its two states, the way the bookmark on the
+                cover is `bookmark-outline` and then `bookmark`, so the
+                eye reads one control changing rather than one control
+                replaced. Pin-then-tick was two glyphs for one button.
 
                 It sat at the right of the category pills until those
                 moved onto the cover; it hangs at the right of the score
@@ -776,7 +791,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 style={[s.checkin, latestVisit && s.checkinOn]}
                 testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
               >
-                <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
+                <Ionicons name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
                 <Text style={[s.goText, latestVisit && s.checkinOnText]}>
                   {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
                 </Text>
