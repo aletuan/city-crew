@@ -43,7 +43,7 @@ import {
 } from '../lib/links';
 import { cityTz } from '../lib/clock';
 import { clockOf, dateline, groupHours, openState } from '../lib/format';
-import { useI18n } from '../lib/i18n';
+import { spokenIn, useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
 import { vibeLabel } from '../lib/vibes';
@@ -302,6 +302,25 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // a description written only in Japanese is one for a Japanese reader,
   // and nothing (rather than an empty paragraph) for everyone else.
   const desc = t(place.desc_en, place.desc_vi, place.desc_ja);
+  // The language those words are in, when it is not the reader's. 837 of
+  // 940 places had no Japanese blurb on 13 Oct 2026 and `t` fell back to
+  // English on every one of them without a word, so a Japanese reader
+  // could not tell a catalog written in English from a broken one. Named
+  // under the paragraph, in the reader's language: a fallback that says
+  // so is a choice; one that does not is a defect. Only the blurb — a
+  // café's name is its name in any language, and the district falls back
+  // on every card already, where a label would be noise. And not for an
+  // English reader: English is the language the catalog is written in,
+  // and the one case where it is missing (a Vietnamese-only blurb, 96
+  // rows) is the desk's to fill, not the reader's to be told about.
+  // A Vietnamese reader can only be handed English; a Japanese one,
+  // English or Vietnamese — so two labels cover every fallback there is.
+  const descLang = spokenIn(lang, place.desc_en, place.desc_vi, place.desc_ja);
+  const descFallback = desc && lang !== 'en' && descLang && descLang !== lang
+    ? (descLang === 'en'
+      ? t('In English', 'Bản tiếng Anh', '英語の原文')
+      : t('In Vietnamese', 'Bản tiếng Việt', 'ベトナム語の原文'))
+    : null;
   // Who wrote the sentence above it. Null for most places — the desk wrote
   // its own copy, and there is nobody outside to name.
   const blurbFrom = blurbCredit(place);
@@ -981,6 +1000,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     </Text>
                   ) : null}
                 </Text>
+                {descFallback ? (
+                  <Text style={s.descFallback} testID="blurb-fallback">{descFallback}</Text>
+                ) : null}
               </View>
             </View>
           ) : null}
@@ -1685,6 +1707,9 @@ const s = StyleSheet.create({
   // thing that marks the source as reachable — an underline in this face
   // is a scar.
   credit: { color: colors.textTertiary, fontSize: 15 },
+  // Two steps down from the paragraph, where the credit is one: the
+  // credit is part of the quote and this is a note about it.
+  descFallback: { color: colors.textTertiary, fontSize: 12 },
   creditLink: { color: colors.accent },
 
   // The Card supplies ground, border and radius; the horizontal inset

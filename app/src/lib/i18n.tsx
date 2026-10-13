@@ -25,6 +25,28 @@ type I18n = {
 
 const STORE_KEY = 'citycrew.lang';
 
+/**
+ * Which of the three variants `t` will hand a reader of `lang`, or null
+ * when every slot is empty. The fallback order, written once: Vietnamese
+ * falls to English; Japanese falls to English, then Vietnamese; English
+ * falls to Vietnamese. `t` is this plus a lookup, so the two cannot drift.
+ *
+ * Exported because a screen sometimes needs to know *that* it fell back,
+ * not only what to print: a Japanese reader shown an English blurb is
+ * told so (`PlaceDetailScreen`), and a silent fallback reads as a bug.
+ * Null, not undefined, is "nothing" here — an empty string is a written
+ * (if empty) value, exactly as `t`'s `??` has always treated it.
+ */
+export function spokenIn(lang: Lang, en: Str, vi: Str, ja?: Str): Lang | null {
+  const order: [Lang, Str][] = lang === 'vi'
+    ? [['vi', vi], ['en', en]]
+    : lang === 'ja'
+      ? [['ja', ja], ['en', en], ['vi', vi]]
+      : [['en', en], ['vi', vi]];
+  const hit = order.find(([, s]) => s != null);
+  return hit ? hit[0] : null;
+}
+
 const Ctx = createContext<I18n>({ lang: 'en', setLang: () => {}, t: (en) => en ?? '' });
 
 export const useI18n = () => useContext(Ctx);
@@ -47,9 +69,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     lang,
     setLang,
     t: (en, vi, ja) => {
-      if (lang === 'vi') return vi ?? en ?? '';
-      if (lang === 'ja') return ja ?? en ?? vi ?? '';
-      return en ?? vi ?? '';
+      const spoken = spokenIn(lang, en, vi, ja);
+      return (spoken === 'vi' ? vi : spoken === 'ja' ? ja : spoken === 'en' ? en : null) ?? '';
     },
   }), [lang, setLang]);
 
