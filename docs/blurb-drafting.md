@@ -78,8 +78,12 @@ mang nhãn "machine draft" chừng nào dấu còn.
 
 `POST { slug, mode: 'ja' }` là chiều ngược lại: dòng **phải có** EN hoặc VI
 và **chưa có** JA (cột hay object), nếu không trả 409 `no_blurb` / `has_ja`.
-Không đọc Wikipedia (blurb là chất liệu), ví dụ chỉ lấy dòng có JA, ảnh vẫn
-gửi để model thấy chữ trong blurb chỉ cái gì. Trả `{ desc_ja, photos }`.
+Không đọc Wikipedia (blurb là chất liệu), ví dụ chỉ lấy dòng có JA, và
+**không gửi ảnh**. Bản đầu có gửi, kèm lời dặn "ảnh để thấy chữ chỉ cái
+gì, không để thêm"; chạy thử 3 dòng thì cả 3 đều thêm chi tiết từ ảnh
+(sofa da đỏ, đèn đồng, shawarma trên ảnh thực đơn) mà blurb không có.
+Dấu `machine` hứa một bản dịch, không phải blurb thứ hai, nên model không
+được thấy thứ nó có thể thêm vào. Trả `{ desc_ja }`.
 Trên desk là nút "Draft JA", hiện khi blurb có mà ô JA trống; batch đi qua
 ops token và ghi `i18n.ja = {desc, machine: true}`, giữ `approved`: lật
 sang `flagged` là app mất dòng đó (RLS đọc công khai đòi `approved`), nên
