@@ -189,6 +189,7 @@ const IMPURE = [
   'src/lib/database.types.ts', // generated from the schema; one runtime const, no logic
   'src/lib/channel.ts', // reads expo-updates; two consts, no logic to hold
   'src/lib/reminders.ts', // talks to expo-notifications; the maths it uses is remind.ts, which the gate holds
+  'src/lib/askReview.ts', // reads AsyncStorage and the native review sheet; the rules it applies are review.ts, which the gate holds
   'src/lib/data/fetch.ts', // the hook every query is driven by; needs a renderer
   'src/lib/data/hooks.ts', // and the wrappers around it, for the same reason
   'src/lib/data/index.ts', // the barrel: re-exports and nothing else

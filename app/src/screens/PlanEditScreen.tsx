@@ -104,6 +104,7 @@ import { useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
+import { reviewAfterTripSaved } from '../lib/askReview';
 import { spendVnd } from '../lib/trips';
 import { clockOf, dateline } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
@@ -404,6 +405,8 @@ export default function PlanEditScreen({ navigation, route }: {
         { id: tripId, day, title, startMin: startMinOf(current.map((st) => ({ arrive_min: st.arriveMin }))) },
         t,
       );
+      // A rating ask from the second saved plan on; see `lib/review`.
+      reviewAfterTripSaved();
       const kept = new Set(current.map((st) => st.place.slug));
       for (const slug of kept) note(slug, 'plan_keep');
       for (const st of picked?.stops ?? []) {

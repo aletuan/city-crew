@@ -15,7 +15,8 @@ dùng chung cho mọi ngôn ngữ.
 ## Subtitle (30 ký tự)
 
 - EN (26/30): `City guides, lists & plans`
-- VI (30/30): `Cẩm nang, danh sách & kế hoạch`
+- VI 1.0.8 (27/30): `Cafe, quán ăn & đi đâu chơi` — ba cụm người Việt gõ thật; bản cũ chưa từng lên store vì VI chưa có localization
+- VI cũ (30/30): `Cẩm nang, danh sách & kế hoạch`
 - JA: `街ガイド・リスト・プラン`
 
 Từ 1.0.5 subtitle không gắn với một nước: app có Melbourne từ 1.0.4, và
@@ -26,8 +27,10 @@ guide & plans`.
 
 ## Promotional text (170 ký tự — đổi được không cần review)
 
-- EN (đang chạy từ 1.0.4): `Hand-picked cafés, restaurants and bars across Vietnam and Melbourne, lists from people who actually go, and a plan for the day you pick.`
-- VI: `Quán cà phê, nhà hàng và bar được chọn tay ở năm thành phố Việt Nam, danh sách từ người đi thật, và kế hoạch cho đúng ngày bạn chọn.`
+- EN 1.0.8 (161/170): `Hand-picked cafés, restaurants and bars across Vietnam and Melbourne. Check in where you went, keep lists from people who actually go, and plan the day you pick.`
+- VI 1.0.8 (146/170): `Quán cà phê, nhà hàng và bar chọn lọc ở Việt Nam và Melbourne, danh sách từ người đi thật, check-in nơi bạn đã đến, và kế hoạch cho ngày bạn chọn.`
+- EN (1.0.4 → 1.0.7): `Hand-picked cafés, restaurants and bars across Vietnam and Melbourne, lists from people who actually go, and a plan for the day you pick.`
+- VI cũ (chưa dùng, còn ghi "năm thành phố"): `Quán cà phê, nhà hàng và bar được chọn tay ở năm thành phố Việt Nam, danh sách từ người đi thật, và kế hoạch cho đúng ngày bạn chọn.`
 - JA: `ベトナム5都市の厳選スポット、実際に通う人のリスト、そして選んだ日のプラン。`
 
 ## Description
@@ -187,9 +190,16 @@ lặp lại là phí ký tự. Tên thành phố là từ khoá đáng giá nh�
 `melbourne`, `map` và bỏ `itinerary`, `weekend` để lọt 100 ký tự; VI/JA chưa
 có localization trên App Store Connect nên chưa cần cập nhật.
 
+Từ 1.0.8 bật localization **Tiếng Việt** trên App Store Connect (ảnh vẫn dùng bộ
+EN), nên VI có keyword riêng 100 ký tự. EN giữ `travel` (owner, 12/10/2026);
+thêm `coffee`, `checkin`, `itinerary` cho tính năng check-in và kế hoạch; bỏ
+`vungtau`, `nightlife`, `food` để vừa 100.
+
+- EN 1.0.8 (99/100): `vietnam,saigon,hanoi,danang,dalat,hue,melbourne,cafe,coffee,restaurant,bar,checkin,itinerary,travel`
+- VI 1.0.8 (96/100): `sài gòn,hà nội,đà nẵng,đà lạt,huế,quán cà phê,quán ăn,đi đâu,check in,quán bar,hẹn hò,lịch trình`
 - EN 1.0.5 (97/100): `vietnam,saigon,hanoi,danang,dalat,hue,vungtau,melbourne,cafe,restaurant,bar,nightlife,travel,food` — `vietnam` vào vì subtitle mới không còn nó; bỏ `date,map` cho đủ chỗ.
 - EN ≤1.0.4 (99/100): `saigon,hanoi,danang,dalat,hue,vungtau,melbourne,cafe,restaurant,bar,nightlife,travel,food,date,map`
-- VI (96/100): `sài gòn,hà nội,đà nẵng,đà lạt,huế,quán cà phê,nhà hàng,ăn uống,đi chơi,hẹn hò,cuối tuần,địa điểm`
+- VI nháp cũ (96/100): `sài gòn,hà nội,đà nẵng,đà lạt,huế,quán cà phê,nhà hàng,ăn uống,đi chơi,hẹn hò,cuối tuần,địa điểm`
 - JA (54/100): `ホーチミン,ハノイ,ダナン,ダラット,フエ,ベトナム,カフェ,レストラン,旅行,グルメ,デート,週末,プラン`
 
 ## Release notes v1.0 (What's New)
@@ -515,6 +525,50 @@ bật bằng flag `place_checkin` (đang on). Không có mặt ở đây: test/s
 • 保存やいいねからサインインすると、続きの操作を同じタブで完了します。
 • プラン：「現在地」から開始できる行を追加し、その都市にスポットがあるリストだけを表示。
 • 読みやすく、押しやすく：ダークモードの文字コントラストを上げ、タップ領域を拡大。
+```
+
+## Release notes v1.0.8 (What's New)
+
+Viết từ các PR merge sau build 1.0.7 (32) — #882 → #916, cộng lời mời đánh
+giá (expo-store-review, native module mới nên phải build mới; không nhắc
+trong What's New). Expo lên 57.0.28 cùng expo-location/sharing/updates.
+`app.json` lên 1.0.8. Không có mặt ở đây: plan-assist/write-blurb (server,
+Data Desk), test. Từ bản này VI có localization riêng trên App Store Connect.
+
+### EN
+
+```
+• Explore: show only the places you have checked in at, on the list and on the map.
+• With Nearest first, every card shows how far away the place is.
+• Directions opens a route from where you are, not just a pin.
+• Eleven more themes, 19 in all, and your theme now follows your account to any phone.
+• Start a plan from the city's community lists, not only your own.
+• Plans give one stop for each kind of place you ask for.
+• A cleaner place page: highlights on their own line, vibes as chips, the source at the end of the quote.
+```
+
+### VI
+
+```
+• Khám phá: lọc chỉ những nơi bạn đã check-in, cả ở danh sách lẫn bản đồ.
+• Khi xếp "Gần nhất", mỗi thẻ hiện khoảng cách tới địa điểm.
+• Nút Chỉ đường mở lộ trình từ chỗ bạn đứng, không chỉ là một ghim.
+• Thêm 11 giao diện, tổng cộng 19, và giao diện bạn chọn đi theo tài khoản sang mọi máy.
+• Lên kế hoạch từ các list của cộng đồng trong thành phố, không chỉ list của bạn.
+• Kế hoạch có đúng một điểm dừng cho mỗi loại địa điểm bạn chọn.
+• Trang địa điểm gọn hơn: điểm nổi bật một dòng riêng, không khí dạng chip, nguồn trích dẫn ở cuối đoạn.
+```
+
+### JA
+
+```
+• 探索：チェックインしたスポットだけを、リストでも地図でも表示できます。
+• 「近い順」では各カードにスポットまでの距離を表示。
+• 「経路」はピンではなく、現在地からのルートを開きます。
+• テーマを11種類追加して全19種類に。選んだテーマはアカウントに保存され、どの端末でも同じに。
+• 自分のリストだけでなく、その都市のみんなのリストからもプランを作れます。
+• プランは選んだ種類ごとに立ち寄り先を1つずつ提案。
+• スポットページを整理：ハイライトは独立した行に、雰囲気はチップで、出典は引用の最後に。
 ```
 
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
