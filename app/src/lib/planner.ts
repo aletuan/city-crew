@@ -233,9 +233,18 @@ export function partAt(minutes: number): PartKey {
  * cafés never has a restaurant wedged into it. The cost of that choice only
  * shows at one category, where every slot collapses onto the same kind.
  *
- * So the count comes from the ask: **one stop per kind of place**, plus one
- * for a day, which has the room. One kind is a destination — a coffee, a
+ * So the count comes from the ask: **one stop per kind of place**, the
+ * same by day as by evening. One kind is a destination — a coffee, a
  * meal — and three kinds is an outing. The old ceiling still applies.
+ *
+ * A day used to get one more, "because a day has the room". The owner
+ * read the result on the phone (13 Oct 2026): ask a day for cafés and
+ * get two cafés; ask for cafés and a meal and get three stops. The extra
+ * slot could only ever hold a repeat, since the reader's kinds are the
+ * hard filter — so it reproduced, one stop smaller, the crawl this rule
+ * was written to end, and it looked like the planner disobeying the ask.
+ * The room a day has is the reader's to fill by naming more kinds, which
+ * says the same thing without a rule to explain.
  *
  * A draft naming no category at all keeps the whole shape: nothing has been
  * narrowed, so nothing should be.
@@ -265,9 +274,7 @@ function slotsFor(draft: TripDraft, start: number): readonly Slot[] {
   // every hour a little, and a ceiling that tracked them exactly would
   // change the number of stops on a plan because one café closes at nine.
   const fits = Math.floor((DAY_END - start) / NOMINAL_STEP);
-  const wanted = draft.categories.length
-    ? draft.categories.length + (draft.when === 'day' ? 1 : 0)
-    : shape.length;
+  const wanted = draft.categories.length || shape.length;
   return shape.slice(0, Math.max(1, Math.min(shape.length, wanted, fits)));
 }
 
