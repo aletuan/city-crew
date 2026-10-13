@@ -165,5 +165,5 @@ the point:
 | `app/README.md` | Running the app, the three ways onto a phone, and the Google Maps keys. |
 | `docs/testing/e2e-simulator.md` | The Maestro suite on the iOS simulator: what it checks, and the environment failures already hit. Setup is `app/.maestro/README.md`; how to write a flow is `app/.maestro/GUIDELINES.md`. |
 | `docs/tech-eval-app-store.md` | Third-party data, measured and decided: the Google Places cache that outlives what the Maps Platform ToS allows (C1, still open), what Google search and geocoding cost, the credits owed, and why follower counts are not stored (C4). Read it before touching `import-place.ts`. The work it used to list as open is issue #708, where it can be closed. |
-| `docs/place-naming.md`, `docs/planner-origin-distance.md`, `docs/threads-handles.md` | One question each, answered specifically. |
+| `docs/place-naming.md`, `docs/planner-origin-distance.md`, `docs/threads-handles.md`, `docs/blurb-drafting.md` | One question each, answered specifically. |
 | `docs/history/` | Plans and specs for work that already shipped. Provenance, not instructions. |

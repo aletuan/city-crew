@@ -73,6 +73,7 @@ const API_DEFAULTS = {
   existingByPlaceIds: async () => ({}),
   searchPlaces: async () => ({ candidates: [] }),
   importPlace: async () => ({ slug: 'new-place', photos: 0 }),
+  draftBlurb: async () => ({ desc_vi: '', desc_en: '', sources: [] }),
   scanCategories: async () => ({ categories: [] }),
   scanCity: async () => ({ imported: [], skipped_existing: 0, errors: [] }),
   patchPhoto: async () => ({ ok: true }),
