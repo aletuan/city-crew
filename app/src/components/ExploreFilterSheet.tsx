@@ -11,22 +11,34 @@ import { useSheetDrag } from './sheetDrag';
 /** What the sheet looks like with nothing chosen — the state Reset
  *  returns to, and the one it compares against to know it has anything
  *  to return from. */
-const NOTHING_APPLIED: ExploreFilters = { sort: 'recommended', status: 'any', savedOnly: false };
+const NOTHING_APPLIED: ExploreFilters = { sort: 'recommended', status: 'any', savedOnly: false, visitedOnly: false };
 
 const SORTS: ExploreSort[] = ['recommended', 'distance', 'rating'];
 const STATUSES: ExploreStatus[] = ['any', 'open', 'closed'];
 
 /**
- * The sort's name says what it does to the list, not what it sorts on.
+ * The sort's name, short enough for a third of a row.
  *
- * "Distance" and "Rating" name a column. "Nearest first" and "Highest
- * rated" name the order you will get, which is the thing being chosen —
- * and they cost nothing, because these are rows now and a row has the
- * width for them.
+ * These were "Nearest first" and "Highest rated" while the sorts were
+ * three rows of a card: a row has the width to name the *order* rather
+ * than the column, and the longer names were chosen for that. The sorts
+ * are three segments of one track again (13 Oct 2026) — the sheet
+ * gained a fourth question, the check-in filter, and three rows of 52pt
+ * on top of it put the Apply button under the home indicator on a
+ * 390pt phone — so the names are back to what fits a segment. The
+ * owner asked for the shorter Vietnamese in the same breath: "trước"
+ * in "Gần nhất trước" only repeats what the heading "Sắp xếp theo"
+ * already says.
+ *
+ * Each still names a direction and not a column: "Nearest", not
+ * "Distance"; "Top rated", not "Rating". Vietnamese "Đánh giá" is the
+ * one that reads as a column, and it stands because the star beside
+ * it says which way a rating sort can go, and "Đánh giá cao nhất"
+ * wraps to two lines in a segment while its neighbours take one.
  */
 function sortLabel(value: ExploreSort, t: ReturnType<typeof useI18n>['t']) {
-  if (value === 'distance') return t('Nearest first', 'Gần nhất trước', '近い順');
-  if (value === 'rating') return t('Highest rated', 'Đánh giá cao nhất', '評価の高い順');
+  if (value === 'distance') return t('Nearest', 'Gần nhất', '近い順');
+  if (value === 'rating') return t('Top rated', 'Đánh giá', '評価順');
   return t('Recommended', 'Đề xuất', 'おすすめ');
 }
 
@@ -67,6 +79,7 @@ export default function ExploreFilterSheet({
   visible,
   applied,
   signedIn,
+  visitedAvailable,
   countFor,
   onClose,
   onApply,
@@ -75,6 +88,9 @@ export default function ExploreFilterSheet({
   visible: boolean;
   applied: ExploreFilters;
   signedIn: boolean;
+  /** Whether check-in exists on this build (`place_checkin`); off, the
+   *  sheet has three questions, as it did before the fourth. */
+  visitedAvailable: boolean;
   countFor: (filters: ExploreFilters) => number;
   onClose: () => void;
   onApply: (filters: ExploreFilters) => Promise<string | null>;
@@ -113,7 +129,8 @@ export default function ExploreFilterSheet({
   const count = countFor(draft);
   const dirty = draft.sort !== NOTHING_APPLIED.sort
     || draft.status !== NOTHING_APPLIED.status
-    || draft.savedOnly !== NOTHING_APPLIED.savedOnly;
+    || draft.savedOnly !== NOTHING_APPLIED.savedOnly
+    || draft.visitedOnly !== NOTHING_APPLIED.visitedOnly;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
@@ -138,30 +155,23 @@ export default function ExploreFilterSheet({
           </PressableScale>
         </View>
 
-        {/* Rows, where these were three pills in a line.
-            A pill row fits three words and nothing else, and the words it
-            fitted named columns — "Distance", "Rating" — because that is
-            all that would fit. A row has the width for the name of the
-            *order*, a mark to recognise it by, and a radio that says out
-            loud that these three are one choice. It costs height, and
-            that is the trade: the pills were cheaper and said less. */}
-        <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え')}</Text>
-        {/* One card of divided rows, which is the shape this app already
-            keeps for a list of choices — `Card` with `featureRow` and a
-            hairline on all but the last, four times over in
-            ProfileScreen. Three rows standing apart each looked like
-            their own switch; the frame is what says they are one answer.
+        {/* A track of three segments, with a mark each — the shape the
+            opening-hours question below already takes, so the two
+            questions read as two of one thing.
 
-            The horizontal padding is on the rows rather than on the
-            card, so the rule between them runs the card's full width and
-            the chosen row's tint reaches both edges. ProfileScreen insets
-            its rules instead; here the tint is the reason not to. */}
-        {/* The role goes on a wrapper rather than on `Card`, which takes
-            children and a style and nothing else — a shared primitive
-            should not grow a prop for one caller. */}
-        <View accessibilityRole="radiogroup">
-        <Card>
-          {SORTS.map((value, i) => {
+            They were three rows of a card, and the rows were the better
+            answer while the sheet had three questions: the width for
+            the order's full name, a radio saying out loud that the
+            three are one choice. The fourth question (13 Oct 2026) is
+            what took the room back — three 52pt rows above it put the
+            Apply button under the home indicator on a 390pt phone, and
+            a sheet that scrolls to reach its own button is a sheet that
+            has lost. A segment gives up the radio and the long name and
+            keeps the mark, the tint and the hairline; the track is what
+            says these three are one answer, as it does for the hours. */}
+        <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え')}</Text>
+        <View style={s.track} accessibilityRole="radiogroup">
+          {SORTS.map((value) => {
             const active = draft.sort === value;
             return (
               <PressableScale
@@ -170,30 +180,25 @@ export default function ExploreFilterSheet({
                 testID={`filter-sort-${value}`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
+                aria-checked={active}
                 // Said in words, not assembled from children: without
-                // this the row's label is the icon's glyph, a comma and
-                // then the words — `'\uf599, Highest rated'` in the tree.
+                // this the segment's label is the icon's glyph, a comma
+                // and then the words.
                 accessibilityLabel={sortLabel(value, t)}
-                style={[s.row, i < SORTS.length - 1 && s.rowDivided, active && s.rowOn]}
+                containerStyle={s.segmentCell}
+                style={[s.segment, s.segmentWithMark, active && s.segmentOn]}
               >
                 <Ionicons
                   name={sortIcon(value)}
-                  size={19}
+                  size={16}
                   color={active ? colors.accent : colors.textSecondary}
                 />
-                <Text style={[s.rowText, active && s.rowTextOn]} numberOfLines={1}>
+                <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
                   {sortLabel(value, t)}
                 </Text>
-                {/* The border is always drawn and only ever changes
-                    colour, so choosing one cannot move the row by a
-                    pixel. Same rule as the tabs elsewhere in the app. */}
-                <View style={[s.radio, active && s.radioOn]}>
-                  {active ? <View style={s.radioDot} /> : null}
-                </View>
               </PressableScale>
             );
           })}
-        </Card>
         </View>
 
         {/* One track holding three segments, rather than three pills
@@ -281,6 +286,54 @@ export default function ExploreFilterSheet({
         </PressableScale>
         </Card>
 
+        {/* The fourth question, the saved one's twin: same card, same
+            row, same door for a guest. Its glyph is the Check-in pill's
+            own ring — hollow until the switch is on, as the pill is
+            hollow until a visit is written — so the filter and the
+            thing it filters on wear one mark. Behind `place_checkin`
+            with the pill itself: a filter on a thing nobody on this
+            build can do is a question with one answer. */}
+        {visitedAvailable ? (
+          <>
+            <Text style={s.legend}>{t('Visited places', 'Địa điểm đã check-in', '訪問済み')}</Text>
+            <Card>
+            <PressableScale
+              onPress={() => {
+                if (!signedIn) { onNeedSignIn(); return; }
+                choose('visitedOnly', !draft.visitedOnly);
+              }}
+              testID="filter-visited"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: draft.visitedOnly, disabled: !signedIn }}
+              accessibilityLabel={t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ')}
+              accessibilityHint={signedIn
+                ? undefined
+                : t('Sign in to use this', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして使う')}
+              style={[s.row, draft.visitedOnly && s.rowOn]}
+            >
+              <Ionicons
+                name={draft.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                size={19}
+                color={draft.visitedOnly ? colors.accent : colors.textSecondary}
+              />
+              <Text style={[s.rowText, draft.visitedOnly && s.rowTextOn]}>
+                {t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ')}
+              </Text>
+              {signedIn ? (
+                <View style={[s.check, draft.visitedOnly && s.checkOn]}>
+                  {draft.visitedOnly ? <Ionicons name="checkmark" size={14} color={colors.accentInk} /> : null}
+                </View>
+              ) : (
+                <View style={s.signIn}>
+                  <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+                </View>
+              )}
+            </PressableScale>
+            </Card>
+          </>
+        ) : null}
+
         {error ? <Text style={s.error} accessibilityRole="alert">{error}</Text> : null}
         <View style={s.divider} />
         <View style={s.actions}>
@@ -366,8 +419,8 @@ const s = StyleSheet.create({
   // top of the screen.
   legendFirst: { marginTop: 0 },
 
-  // One row shape for every choice in this sheet — the three sorts and
-  // the saved toggle — so the eye learns it once.
+  // One row shape for every switch in this sheet — the saved toggle and
+  // the visited one — so the eye learns it once.
   //
   // It carries no frame of its own any more: the card around it is the
   // frame, and a rounded rect inside a rounded rect was two of them
@@ -377,24 +430,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     minHeight: 52, paddingHorizontal: 14,
   },
-  // The rule between rows, on every one but the last — `featureRowDivider`
-  // in ProfileScreen, which is where this pattern already lives.
-  rowDivided: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
   rowOn: { backgroundColor: colors.accentSoft },
   rowText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
   rowTextOn: { color: colors.accent, fontWeight: font.semibold },
-
-  // The empty ring is drawn in the tertiary ink the drag handle uses, not
-  // in a border token: `borderGlass` on the dark card was a ring you had
-  // to know was there. An unchosen radio the eye cannot find is not
-  // offering a choice.
-  radio: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 1.5, borderColor: colors.textTertiary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  radioOn: { borderColor: colors.accent },
-  radioDot: { width: 11, height: 11, borderRadius: 5.5, backgroundColor: colors.accent },
 
   check: {
     width: 22, height: 22, borderRadius: 7,
@@ -417,6 +455,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 6,
     borderWidth: 1, borderColor: 'transparent', borderRadius: radius.card - 7,
   },
+  // The sort segments carry a mark before the word; the hours segments
+  // do not, and a mark on three one-word answers would be three more
+  // things to read than the words.
+  segmentWithMark: { flexDirection: 'row', gap: 6 },
   segmentOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
   segmentText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
   segmentTextOn: { color: colors.accent, fontWeight: font.semibold },

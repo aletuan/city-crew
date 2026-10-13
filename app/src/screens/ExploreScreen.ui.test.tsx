@@ -36,6 +36,7 @@ const state = vi.hoisted(() => ({
   myLikes: [] as string[],
   uid: null as string | null,
   saved: new Set<string>(),
+  checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
   locationGranted: true,
   position: { latitude: 21.0285, longitude: 105.8542 },
   taste: null as null | { affinity: (p: { slug: string }) => number },
@@ -93,6 +94,9 @@ vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, setScheme: () => {}, ready: true }),
 }));
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => state.taste }));
+vi.mock('../lib/checkins', () => ({
+  useMyCheckins: () => ({ data: state.checkins, loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: () => {} }),
+}));
 vi.mock('../lib/sky', () => ({ useSky: () => state.sky }));
 vi.mock('../components/tabBarDuck', () => ({
   useTabBarDuck: () => ({ ducked: state.ducked, show: spies.show }),
@@ -315,6 +319,7 @@ beforeEach(async () => {
   state.myLikes = [];
   state.uid = null;
   state.saved = new Set();
+  state.checkins = [];
   state.locationGranted = true;
   state.position = { latitude: 21.0285, longitude: 105.8542 };
   state.taste = null;
@@ -762,7 +767,7 @@ describe('sort and filter', () => {
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
     expect(screen.getByText('Sort & filter')).toBeTruthy();
-    fireEvent.click(screen.getByText('Highest rated'));
+    fireEvent.click(screen.getByText('Top rated'));
     await act(async () => { fireEvent.click(screen.getByText('Show 3 places')); });
     expect(cardNames().map((n) => n.match(/Place (\w+)/)?.[1])).toEqual(['high', 'low', 'none']);
   });
@@ -818,6 +823,44 @@ describe('sort and filter', () => {
     expect(spies.askToSignIn).toHaveBeenCalledWith('saved');
   });
 
+  // The fourth question, behind the same flag as the Check-in pill: a
+  // filter on a thing nobody on this build can do is a question with
+  // one answer.
+  it('shows no Visited only row while check-in is off', () => {
+    state.uid = 'u1';
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    expect(screen.queryByText('Visited only')).toBeNull();
+    expect(screen.queryByTestId('filter-visited')).toBeNull();
+  });
+
+  it('keeps only the places the reader checked in at, and counts the filter', async () => {
+    appFlags.set('place_checkin', true);
+    state.uid = 'u1';
+    state.checkins = [{ id: 'k1', place_slug: 'b', city_id: 'hanoi', at: '2026-10-01T03:00:00Z' }];
+    state.places.data = [place('a'), place('b'), place('c')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    const row = screen.getByRole('checkbox', { name: 'Visited only' });
+    expect(row.querySelector('[data-icon="checkmark-circle-outline"]')).toBeTruthy();
+    fireEvent.click(row);
+    expect(row.querySelector('[data-icon="checkmark-circle"]')).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
+    expect(cardNames().map((n) => n.match(/Place (\w+)/)?.[1])).toEqual(['b']);
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
+  });
+
+  it('asks a guest to sign in when Visited only is tapped', async () => {
+    appFlags.set('place_checkin', true);
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Visited only'));
+    await waitFor(() => expect(spies.askToSignIn).toHaveBeenCalledOnce());
+    expect(spies.askToSignIn).toHaveBeenCalledWith('saved');
+  });
+
   // Distance is the one control that can fail, and it fails in two
   // different places: the permission, and the fix itself. Both are
   // answered inside the sheet rather than by closing it — the reader
@@ -828,7 +871,7 @@ describe('sort and filter', () => {
     state.places.data = [place('a'), place('b')];
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Nearest first'));
+    fireEvent.click(screen.getByText('Nearest'));
     await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
     expect(screen.getByText('Allow location access to sort places by distance.')).toBeTruthy();
     expect(screen.getByText('Sort & filter')).toBeTruthy();
@@ -840,7 +883,7 @@ describe('sort and filter', () => {
     state.places.data = [place('a')];
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Nearest first'));
+    fireEvent.click(screen.getByText('Nearest'));
     await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
     expect(screen.getByText("Couldn't read your location. Try again in a moment.")).toBeTruthy();
   });
@@ -853,7 +896,7 @@ describe('sort and filter', () => {
     render(<ExploreScreen navigation={nav()} />);
     expect(spies.getForegroundPermissionsAsync).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Nearest first'));
+    fireEvent.click(screen.getByText('Nearest'));
     await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
     expect(spies.getForegroundPermissionsAsync).toHaveBeenCalledOnce();
     expect(cardNames()[0]).toContain('Place near');
@@ -872,7 +915,7 @@ describe('sort and filter', () => {
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.queryByText(/\d (m|km)$/)).toBeNull();
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Nearest first'));
+    fireEvent.click(screen.getByText('Nearest'));
     await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
     const first = screen.getByTestId('place-card-0').textContent ?? '';
     const second = screen.getByTestId('place-card-1').textContent ?? '';
