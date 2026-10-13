@@ -366,12 +366,12 @@ describe('the ja mode', () => {
     expect(h.create).not.toHaveBeenCalled();
   });
 
-  it('hands the model the blurb and the frames, asks for desc_ja alone, and reads no article', async () => {
+  it('hands the model the blurb and nothing to add to it: no frames, no article, desc_ja alone', async () => {
     door(WRITTEN_PARK);
     h.create.mockResolvedValue(says({ desc_ja: ' 川沿いのベンチ。 ' }));
     const res = await call({ slug: PARK.slug, mode: 'ja' });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ desc_ja: '川沿いのベンチ。', photos: 2 });
+    expect(await res.json()).toEqual({ desc_ja: '川沿いのベンチ。' });
     expect(h.fetch).not.toHaveBeenCalled();
     const req = sent();
     expect(req.output_config.format.schema.required).toEqual(['desc_ja']);
@@ -380,7 +380,11 @@ describe('the ja mode', () => {
     expect(p).toContain('en: Riverside benches.');
     expect(p).toContain('for a Japanese reader');
     expect(p).not.toContain('No article extract');
-    expect(frames()).toEqual(['https://cdn/park/cover.jpg', 'https://cdn/park/2.jpg']);
+    // The gallery is not even read: the two frames the full mode would
+    // send are what the first ja drafts elaborated from.
+    expect(frames()).toEqual([]);
+    expect(p).not.toContain('photograph');
+    expect(h.fake.log.find((a) => a.table === 'place_photos')).toBeUndefined();
     // Only an example that carries Japanese can show the register.
     expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
     expect(p).not.toContain('- Park 3');

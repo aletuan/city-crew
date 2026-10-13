@@ -235,8 +235,9 @@ export default function PlaceEditor() {
   };
   const blank = !(form?.desc_en?.trim() || form?.desc_vi?.trim());
   // The other direction: a blurb the row has, asked for in one of the
-  // object's languages that is still empty. Same model, same photographs,
-  // the blurb as the material; the flag is set exactly as a full draft's.
+  // object's languages that is still empty. Same model, the blurb as the
+  // only material (no photographs: shown them, the model added what they
+  // held — see the function); the flag is set exactly as a full draft's.
   const draftLang = async (code) => {
     if (drafting) return;
     setDrafting(true);
@@ -244,7 +245,7 @@ export default function PlaceEditor() {
       const d = await api.draftBlurb(slug, code);
       setForm((f) => ({ ...f, [`desc_${code}`]: d[`desc_${code}`] }));
       setDrafted((prev) => ({ ...prev, [code]: d[`desc_${code}`] }));
-      toast(`Drafted from the blurb and ${d.photos ? `${d.photos} photo${d.photos === 1 ? '' : 's'}` : 'no photos'} — read it before you save.`);
+      toast('Drafted from the blurb — read it before you save.');
     } catch (err) {
       toast(`Draft failed: ${err.message}`);
     } finally {

@@ -1,7 +1,7 @@
 // A first draft of a place's blurb, for the desk to read before it saves.
 //
 // POST { slug }             → { desc_vi, desc_en, desc_ja, sources: string[], photos: number }
-// POST { slug, mode: 'ja' } → { desc_ja, photos }
+// POST { slug, mode: 'ja' } → { desc_ja }
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -77,11 +77,21 @@
 // `mode: 'ja'` is the mirror image: it requires a blurb and refuses a
 // row that already has Japanese (column or object), takes no Wikipedia
 // lead (the blurb is the material now), reads only the examples that
-// carry a JA line, and asks for the one field. The photographs still go,
-// so a word the blurb uses can be checked against what it names, not
-// elaborated. The 42 credited Threads quotations are left out of the
-// batch by the caller, not here: a translation under somebody's handle
-// is theirs to decline, and the function cannot know who is calling.
+// carry a JA line, and asks for the one field. The 42 credited Threads
+// quotations are left out of the batch by the caller, not here: a
+// translation under somebody's handle is theirs to decline, and the
+// function cannot know who is calling.
+//
+// No photographs in this mode. The first cut sent them, "so a word the
+// blurb uses can be checked against what it names, not elaborated", and
+// told the model as much. Run on three rows it elaborated on all three:
+// a bar whose blurb says "19th-century industrial" came back with red
+// leather sofas, a bottle cabinet and brass lamps; a Greek restaurant's
+// one line grew shawarma and hummus off a menu photograph. Every detail
+// was in a frame and none was in the blurb — and the `machine` flag the
+// desk sets on this draft promises a translation, the same blurb for a
+// Japanese reader, not a second blurb. What a model is not shown it
+// cannot add. The frames were also seven tenths of the request's cost.
 //
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
@@ -250,7 +260,7 @@ Deno.serve(async (req) => {
 
     // Cover first, then the gallery's own order, so the frame the app
     // leads with is the one the model reads first.
-    const { data: shots } = await admin
+    const { data: shots } = mode === "ja" ? { data: [] } : await admin
       .from("place_photos")
       .select("photo_uri, storage_path")
       .eq("place_id", row.id).eq("is_hidden", false)
@@ -324,7 +334,7 @@ Deno.serve(async (req) => {
                   `vi: ${row.desc_vi?.trim() || "—"}`,
                   `en: ${row.desc_en?.trim() || "—"}`,
                   "",
-                  "Write desc_ja: the same blurb for a Japanese reader — what it says and no more. The photographs are there to see what its words refer to, not to add to them.",
+                  "Write desc_ja: the same blurb for a Japanese reader — what it says and no more.",
                 ]
                 : [
                   lead ? `Wikipedia lead (${lead.url}):\n${lead.text}` : "No article extract.",
@@ -343,7 +353,7 @@ Deno.serve(async (req) => {
       slug, mode, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,
     });
-    if (mode === "ja") return json({ desc_ja: parsed.desc_ja.trim(), photos: photos.length });
+    if (mode === "ja") return json({ desc_ja: parsed.desc_ja.trim() });
     return json({
       desc_vi: (parsed.desc_vi ?? "").trim(),
       desc_en: (parsed.desc_en ?? "").trim(),

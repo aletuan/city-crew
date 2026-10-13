@@ -578,11 +578,11 @@ describe('the Japanese draft', () => {
   });
 
   it('fills the JA field from the blurb, flags it as machine, and saves it into the object', async () => {
-    api.draftBlurb.mockResolvedValue({ desc_ja: '川沿いのベンチ。', photos: 2 });
+    api.draftBlurb.mockResolvedValue({ desc_ja: '川沿いのベンチ。' });
     openEditor();
     await screen.findByDisplayValue('Café A');
     fireEvent.click(screen.getByRole('button', { name: 'Draft JA' }));
-    expect((await findToast()).textContent).toBe('Drafted from the blurb and 2 photos — read it before you save.');
+    expect((await findToast()).textContent).toBe('Drafted from the blurb — read it before you save.');
     expect(api.draftBlurb).toHaveBeenCalledWith('cafe-a', 'ja');
     expect(field('desc_ja').value).toBe('川沿いのベンチ。');
     expect(screen.getByText('machine draft')).toBeTruthy();
