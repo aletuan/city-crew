@@ -2,6 +2,7 @@
 // this file knows the columns.
 
 import { supabase } from '../supabase';
+import type { I18nDoc } from '../localized';
 import type { Checkin } from '../checkin';
 import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import { fetchPlaceId } from './guide';
@@ -10,7 +11,7 @@ type PhotoRow = { photo_uri: string; is_cover: boolean; is_hidden: boolean; sort
 type CheckinRow = {
   id: string; city_id: string | null; at: string;
   places: {
-    slug: string; name_en: string; name_vi: string; name_ja: string | null;
+    slug: string; name_en: string; name_vi: string; i18n?: I18nDoc | null;
     categories?: string[] | null;
     /** Absent on a row the launch cache kept before the embed joined. */
     place_photos?: PhotoRow[];
@@ -38,7 +39,7 @@ function coverUri(photos: PhotoRow[] | undefined): string | null {
 export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
   const { data, error } = await supabase
     .from('checkins')
-    .select('id, city_id, at, places(slug, name_en, name_vi, name_ja, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))')
+    .select('id, city_id, at, places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))')
     .eq('user_id', ownerId)
     .order('at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -48,7 +49,7 @@ export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
     id: r.id, place_slug: r.places?.slug ?? '', city_id: r.city_id, at: r.at,
     place: r.places
       ? {
-        name_en: r.places.name_en, name_vi: r.places.name_vi, name_ja: r.places.name_ja,
+        name_en: r.places.name_en, name_vi: r.places.name_vi, i18n: r.places.i18n ?? null,
         cover: coverUri(r.places.place_photos), categories: r.places.categories ?? [],
       }
       : null,

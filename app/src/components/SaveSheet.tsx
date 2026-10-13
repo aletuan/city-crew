@@ -11,6 +11,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Collection, holds, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { colors, display, font, space } from '../theme';
 import { PressableScale } from './ui';
 
@@ -22,7 +23,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
   onToggle: (c: Collection, place: Place) => void;
   onNew: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
   const rise = useRef(new Animated.Value(1)).current;
   const visible = !!place;
@@ -48,7 +49,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
         <Text style={s.title}>{t('Save to', 'Lưu vào', '保存先')}</Text>
         {place ? (
           <Text style={s.subtitle} numberOfLines={1}>
-            {t(place.name_en, place.name_vi, place.name_ja)}
+            {localized(place, 'name', lang)}
           </Text>
         ) : null}
 

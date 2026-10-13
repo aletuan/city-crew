@@ -1,3 +1,4 @@
+import type { I18nDoc } from './localized';
 // The shapes the catalog comes back in.
 //
 // Their own module because they have no dependencies and everything else
@@ -24,7 +25,12 @@ export type Place = {
   slug: string;
   name_en: string;
   name_vi: string;
-  name_ja: string | null;
+  /** Every language past EN and VI: `{ ja: { name, desc, neighborhood, machine } }`.
+   *  Read through `lib/localized`, never by key. */
+  i18n?: I18nDoc | null;
+  /** @deprecated Mirrored from `i18n.ja` by a trigger while the column
+   *  lasts; a fixture may still set it, the app no longer reads it. */
+  name_ja?: string | null;
   /** Which city this is in. Long a filter and nothing else — a place only
    *  ever arrived through its own city's query, so it never had to say.
    *  Collections reach across cities now, so a place travelling inside one
@@ -57,7 +63,8 @@ export type Place = {
   vibe_tags: string[];
   neighborhood_en: string | null;
   neighborhood_vi: string | null;
-  neighborhood_ja: string | null;
+  /** @deprecated See `name_ja`. */
+  neighborhood_ja?: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -69,7 +76,8 @@ export type Place = {
   duration_max: number | null;
   desc_en: string | null;
   desc_vi: string | null;
-  desc_ja: string | null;
+  /** @deprecated See `name_ja`. */
+  desc_ja?: string | null;
   emoji: string | null;
   opening_hours: string[] | null;
   website: string | null;

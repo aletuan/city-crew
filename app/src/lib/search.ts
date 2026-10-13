@@ -19,6 +19,7 @@
 // languages mixed, never three lists behind a language switch.
 
 import { CATEGORIES, categoriesOf } from './categories';
+import { type I18nDoc, allLocalized } from './localized';
 
 /** Lowercase, diacritics stripped, đ folded — the shape we match on.
  *
@@ -109,6 +110,8 @@ export type Searchable = {
   name_en?: string | null; name_vi?: string | null; name_ja?: string | null;
   neighborhood_en?: string | null; neighborhood_vi?: string | null; neighborhood_ja?: string | null;
   desc_en?: string | null; desc_vi?: string | null; desc_ja?: string | null;
+  /** Every language past EN and VI — see `lib/localized`. */
+  i18n?: I18nDoc | null;
   address?: string | null;
   vibe_tags?: string[] | null;
   categories?: string[] | null;
@@ -149,9 +152,9 @@ export function placeHaystack(p: Searchable): string {
   const cached = haystacks.get(p);
   if (cached !== undefined) return cached;
   const built = fold([
-    p.name_en, p.name_vi, p.name_ja,
-    p.neighborhood_en, p.neighborhood_vi, p.neighborhood_ja,
-    p.desc_en, p.desc_vi, p.desc_ja,
+    ...allLocalized(p, 'name'),
+    ...allLocalized(p, 'neighborhood'),
+    ...allLocalized(p, 'desc'),
     (p.vibe_tags ?? []).join(' '),
     categoriesOf(p).flatMap((c) => {
       const cat = CATEGORIES[c];
@@ -262,7 +265,7 @@ export function collectionHaystack(c: SearchableCollection): string {
  * place", and a place is asked for by name.
  */
 function memberNames(members: readonly Searchable[]): string {
-  return fold(members.map((m) => [m.name_en, m.name_vi, m.name_ja].join(' ')).join(' '));
+  return fold(members.map((m) => allLocalized(m, 'name').join(' ')).join(' '));
 }
 
 /**

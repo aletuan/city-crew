@@ -39,6 +39,7 @@ import { fetchGallery, fetchPlaceId, removePlacePhoto, setCover, setHidden, useP
 import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryPhoto } from '../lib/gallery';
 import { MAX_PER_PLACE } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
@@ -50,7 +51,7 @@ const COLS = 3;
 const GAP = 6;
 
 export default function GalleryScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'Gallery'> }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { slug } = route.params;
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
@@ -133,7 +134,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     onAdded: () => { load().catch(fail); reloadCatalog(); },
   });
 
-  const name = place ? splitName(t(place.name_en, place.name_vi, place.name_ja)).title : '';
+  const name = place ? splitName(localized(place, 'name', lang)).title : '';
   const shown = photos ?? [];
   // The cell: the page's width less its margins, shared three ways with
   // two gutters between. Square, because a gallery of mixed aspect

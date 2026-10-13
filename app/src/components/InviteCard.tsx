@@ -31,6 +31,7 @@ import type { FriendProfile, Trip } from '../lib/data';
 import { fromISO } from '../lib/day';
 import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { summaryLine } from '../lib/sketch';
 import { tripCover } from '../lib/trips';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
@@ -72,7 +73,7 @@ export default function InviteCard({
   // about. Truncated by the line rather than by a count: three short
   // names fit where two long ones do not.
   const where = stops
-    .map((st) => (st.places ? t(st.places.name_en, st.places.name_vi, st.places.name_ja) : null))
+    .map((st) => (st.places ? localized(st.places, 'name', lang) : null))
     .filter(Boolean)
     .join(' · ');
 

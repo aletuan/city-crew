@@ -57,6 +57,7 @@ import { useMyCheckins } from '../lib/checkins';
 import { removeCheckin } from '../lib/data';
 import { clockOf, numericDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
 import { parseRecents, RECENTS_SHOWN, rememberSearch, VISIT_RECENTS_KEY } from '../lib/recents';
 import { colors, display, font, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -149,7 +150,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   // The words typed match the place's name or its city, through the same
   // fold the catalog search uses, and they narrow what the chips leave.
   const shown = useMemo(() => filterVisits(visits.data, city, kind)
-    .filter((v) => textMatches([v.place ? t(v.place.name_en, v.place.name_vi, v.place.name_ja ?? v.place.name_en) : '', v.city_id ? cityName(v.city_id) : ''], query)),
+    .filter((v) => textMatches([v.place ? localized(v.place, 'name', lang) : '', v.city_id ? cityName(v.city_id) : ''], query)),
     // `cityName` closes over `cities` and `t`, which are listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [visits.data, city, kind, query, cities, t]);
@@ -158,7 +159,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const filtered = !!(city || kind);
 
   const nameOf = (v: Checkin) => (v.place
-    ? t(v.place.name_en, v.place.name_vi, v.place.name_ja ?? v.place.name_en)
+    ? localized(v.place, 'name', lang)
     : t('A place that was removed', 'Một địa điểm đã bị gỡ', '削除された場所'));
   /** The date, the clock, and the city when the app still knows it. No
    *  weekday — see `numericDate`: thirty rows of "Thứ 5," said nothing. */

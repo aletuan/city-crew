@@ -6,7 +6,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type Lang = 'en' | 'vi' | 'ja';
+import { type Lang, spokenIn } from './lang';
+
+export { spokenIn, type Lang };
 
 export const LANGS: { id: Lang; label: string }[] = [
   { id: 'en', label: 'English' },
@@ -24,28 +26,6 @@ type I18n = {
 };
 
 const STORE_KEY = 'citycrew.lang';
-
-/**
- * Which of the three variants `t` will hand a reader of `lang`, or null
- * when every slot is empty. The fallback order, written once: Vietnamese
- * falls to English; Japanese falls to English, then Vietnamese; English
- * falls to Vietnamese. `t` is this plus a lookup, so the two cannot drift.
- *
- * Exported because a screen sometimes needs to know *that* it fell back,
- * not only what to print: a Japanese reader shown an English blurb is
- * told so (`PlaceDetailScreen`), and a silent fallback reads as a bug.
- * Null, not undefined, is "nothing" here — an empty string is a written
- * (if empty) value, exactly as `t`'s `??` has always treated it.
- */
-export function spokenIn(lang: Lang, en: Str, vi: Str, ja?: Str): Lang | null {
-  const order: [Lang, Str][] = lang === 'vi'
-    ? [['vi', vi], ['en', en]]
-    : lang === 'ja'
-      ? [['ja', ja], ['en', en], ['vi', vi]]
-      : [['en', en], ['vi', vi]];
-  const hit = order.find(([, s]) => s != null);
-  return hit ? hit[0] : null;
-}
 
 const Ctx = createContext<I18n>({ lang: 'en', setLang: () => {}, t: (en) => en ?? '' });
 

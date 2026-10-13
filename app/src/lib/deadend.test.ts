@@ -56,6 +56,17 @@ describe('escapeRoutes', () => {
     ]);
   });
 
+  it('takes the area’s Japanese from the i18n object, and English when neither door has it', () => {
+    const fromObject = { ...thaoDien, neighborhood_ja: null, i18n: { ja: { neighborhood: '物体' } } };
+    expect(escapeRoutes("Pizza 4P's Thảo Điền", [fromObject], {})[0]).toEqual(
+      { kind: 'area', en: 'Thao Dien', vi: 'Thảo Điền', ja: '物体' },
+    );
+    const bare = { ...thaoDien, neighborhood_ja: null };
+    expect(escapeRoutes("Pizza 4P's Thảo Điền", [bare], {})[0]).toEqual(
+      { kind: 'area', en: 'Thao Dien', vi: 'Thảo Điền', ja: 'Thao Dien' },
+    );
+  });
+
   it('finds the kind of place too, via the synonym terms', () => {
     const routes = escapeRoutes("Pizza 4P's Thảo Điền", [thaoDien, district1], TERMS);
     expect(routes).toEqual([

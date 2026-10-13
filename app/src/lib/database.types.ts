@@ -657,6 +657,7 @@ export type Database = {
           duration_min: number | null
           emoji: string | null
           google_place_id: string | null
+          i18n: Json
           id: string
           instagram_handle: string | null
           is_featured: boolean
@@ -705,6 +706,7 @@ export type Database = {
           duration_min?: number | null
           emoji?: string | null
           google_place_id?: string | null
+          i18n?: Json
           id?: string
           instagram_handle?: string | null
           is_featured?: boolean
@@ -753,6 +755,7 @@ export type Database = {
           duration_min?: number | null
           emoji?: string | null
           google_place_id?: string | null
+          i18n?: Json
           id?: string
           instagram_handle?: string | null
           is_featured?: boolean
@@ -1113,6 +1116,7 @@ export type Database = {
         Args: { hidden: boolean; photo: string }
         Returns: undefined
       }
+      i18n_well_formed: { Args: { doc: Json }; Returns: boolean }
       is_blocked_pair: { Args: { a: string; b: string }; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
       is_local_guide:
