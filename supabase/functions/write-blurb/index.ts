@@ -115,9 +115,17 @@ const json = (body: unknown, status = 200) =>
  *  paragraphs from a page of facts is the size of job it was moved for. */
 const MODEL = "claude-haiku-5-5";
 
-/** Two sentences in two languages is under 200 tokens; the rest is room
- *  for the thinking the model does first. */
-const MAX_TOKENS = 1200;
+/**
+ * The answer is small — three languages of two sentences is under 300
+ * tokens, one language under 200 — and the rest is the thinking the model
+ * does first, which this limit also caps. At 1200 the 13 Oct 2026 batch of
+ * 80 ja calls lost twelve: thinking ran 60–1191 tokens on the calls that
+ * came back, and the ones that did not had spent the whole budget on it,
+ * arriving as no text block or a JSON string cut mid-word. Two rows did
+ * that four times each. Three times the longest run seen; a token is
+ * billed only when used, so the room costs nothing on the short calls.
+ */
+const MAX_TOKENS = 4000;
 
 /** How many of the desk's own blurbs the model reads before writing. */
 const EXAMPLES = 5;
@@ -276,9 +284,16 @@ Deno.serve(async (req) => {
       ? null
       : (await wikiLead("vi", row.name_vi, cityNames)) ?? (await wikiLead("en", row.name_en, cityNames));
 
+    // In the ja mode the row's facts stop at the name and the city — what
+    // the Latin-alphabet rule and the register need. The first batch had
+    // the full block, and 10 of 66 drafts worked the opening hours into a
+    // blurb that in English never mentions them: hours go stale and a
+    // blurb is not re-synced, which is why the desk's own blurbs leave
+    // them out. The same door the photographs went out of (#925).
     const facts = [
       `Name: ${row.name_vi} / ${row.name_en}`,
       `City: ${city?.name_vi ?? row.city_id ?? "?"} / ${city?.name_en ?? ""}`,
+      ...(mode === "ja" ? [] : [
       `District: ${row.neighborhood_vi ?? row.neighborhood_en ?? "?"}`,
       `Address: ${row.address ?? "?"}`,
       `Kinds: ${kinds.join(", ") || "?"}`,
@@ -286,6 +301,7 @@ Deno.serve(async (req) => {
       `Google type: ${row.primary_type ?? "?"}`,
       `Hours: ${(row.opening_hours ?? []).join("; ") || "?"}`,
       `Website: ${row.website ?? "?"}`,
+      ]),
     ].join("\n");
 
     const anthropic = new Anthropic({ apiKey });
@@ -346,9 +362,21 @@ Deno.serve(async (req) => {
       }],
     });
 
+    // The stop reason is the one word that says which way a reply went
+    // wrong — `max_tokens` is the budget, `refusal` is the material — and
+    // without it twelve failures in one batch read as one.
     const text = message.content.find((c) => c.type === "text");
-    if (!text || text.type !== "text") return json({ error: "model gave no text" }, 502);
-    const parsed = JSON.parse(text.text) as { desc_vi?: string; desc_en?: string; desc_ja: string };
+    if (!text || text.type !== "text") {
+      console.log("write-blurb no text", { slug, mode, stop_reason: message.stop_reason, output_tokens: message.usage.output_tokens });
+      return json({ error: `model gave no text (${message.stop_reason})` }, 502);
+    }
+    let parsed: { desc_vi?: string; desc_en?: string; desc_ja: string };
+    try {
+      parsed = JSON.parse(text.text);
+    } catch (e) {
+      console.log("write-blurb bad json", { slug, mode, stop_reason: message.stop_reason, output_tokens: message.usage.output_tokens });
+      return json({ error: `${(e as Error).message} (${message.stop_reason})` }, 502);
+    }
     console.log("write-blurb", {
       slug, mode, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,

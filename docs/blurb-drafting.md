@@ -84,6 +84,15 @@ gì, không để thêm"; chạy thử 3 dòng thì cả 3 đều thêm chi ti�
 (sofa da đỏ, đèn đồng, shawarma trên ảnh thực đơn) mà blurb không có.
 Dấu `machine` hứa một bản dịch, không phải blurb thứ hai, nên model không
 được thấy thứ nó có thể thêm vào. Trả `{ desc_ja }`.
+
+Batch 68 dòng ngày 13 Oct 2026 chạy qua `pg_net` theo đợt 12, ghi
+`i18n.ja` bằng join với `net._http_response` nên không chép tay chữ Nhật.
+12 trong 80 lần gọi trả 502 "model gave no text" hoặc JSON cắt ngang:
+`max_tokens` 1200 gồm cả phần suy nghĩ, và model nghĩ 60–1191 token cho
+một câu trả lời dưới 200. Nâng lên 4000, và lỗi giờ kèm `stop_reason`.
+Đọc lại 66 bản đã ghi: 10 bản chép giờ mở cửa từ khối facts vào blurb,
+thứ bản EN không có và sẽ lỗi thời. Từ đó ja mode chỉ gửi Name và City
+trong facts; 10 dòng đó được xoá JA và chạy lại.
 Trên desk là nút "Draft JA", hiện khi blurb có mà ô JA trống; batch đi qua
 ops token và ghi `i18n.ja = {desc, machine: true}`, giữ `approved`: lật
 sang `flagged` là app mất dòng đó (RLS đọc công khai đòi `approved`), nên

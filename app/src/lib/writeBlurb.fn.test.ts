@@ -95,6 +95,7 @@ const door = (place: unknown = PARK, written: unknown[] = WRITTEN, shots: unknow
 
 const says = (json: unknown) => ({
   content: [{ type: 'text', text: JSON.stringify(json) }],
+  stop_reason: 'end_turn',
   usage: { input_tokens: 10, output_tokens: 5 },
 });
 type Block = { type: 'text'; text: string } | { type: 'image'; source: { type: 'url'; url: string } };
@@ -271,12 +272,21 @@ describe('the draft', () => {
   it('answers 502 when the model fails or gives no text', async () => {
     door();
     h.create.mockRejectedValue(new Error('overloaded'));
-    const res = await call({ slug: PARK.slug });
+    let res = await call({ slug: PARK.slug });
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: 'overloaded' });
+    // A reply with no text block, and one cut off mid-string: both are
+    // what the budget running out looks like, and the answer names it.
     door();
-    h.create.mockResolvedValue({ content: [{ type: 'tool_use' }], usage: { input_tokens: 1, output_tokens: 1 } });
-    expect((await call({ slug: PARK.slug })).status).toBe(502);
+    h.create.mockResolvedValue({ content: [{ type: 'thinking' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 1200 } });
+    res = await call({ slug: PARK.slug });
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: 'model gave no text (max_tokens)' });
+    door();
+    h.create.mockResolvedValue({ content: [{ type: 'text', text: '{"desc_vi": "Bờ sô' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 1200 } });
+    res = await call({ slug: PARK.slug });
+    expect(res.status).toBe(502);
+    expect((await res.json()).error).toMatch(/JSON.*\(max_tokens\)$/);
   });
 });
 
@@ -385,6 +395,14 @@ describe('the ja mode', () => {
     expect(frames()).toEqual([]);
     expect(p).not.toContain('photograph');
     expect(h.fake.log.find((a) => a.table === 'place_photos')).toBeUndefined();
+    // Nor the hours, the address or the website: ten of the first batch's
+    // drafts put the opening hours into a blurb that never had them.
+    expect(p).toContain('Name: Công viên Thương Bạc / Thuong Bac Park');
+    expect(p).toContain('City: ');
+    expect(p).not.toContain('Hours:');
+    expect(p).not.toContain('Address:');
+    expect(p).not.toContain('Website:');
+    expect(p).not.toContain('District:');
     // Only an example that carries Japanese can show the register.
     expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
     expect(p).not.toContain('- Park 3');
