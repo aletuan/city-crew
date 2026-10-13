@@ -25,6 +25,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
+import { reviewAfterCheckin } from '../lib/askReview';
 import { canRepeat, latestCheckin, visitsAt } from '../lib/checkin';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
@@ -515,6 +516,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     try {
       await addCheckin({ ownerId: uid, placeSlug: place.slug, cityId: place.city_id ?? city?.id ?? null });
       successHaptic();
+      // The list is the one before this visit; the count includes it.
+      reviewAfterCheckin(visits.data.length + 1);
       visits.reload();
     } catch (e) {
       // The cap gets its own words, as the collection form's does. Not
