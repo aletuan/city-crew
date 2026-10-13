@@ -527,7 +527,10 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     // until the worn state needed a word that did not share it.
     expect(pill.getAttribute('aria-label')).toBe('Check in');
     expect(pill.getAttribute('role')).toBe('button');
-    expect(pill.querySelector('[data-icon="location"]')!.getAttribute('data-color')).toBe(colors.accent);
+    // A ringed tick, hollow: not a pin, which the address row and the
+    // map tab already wear on this screen.
+    expect(pill.querySelector('[data-icon="checkmark-circle-outline"]')!.getAttribute('data-color')).toBe(colors.accent);
+    expect(pill.querySelector('[data-icon="location"]')).toBeNull();
     expect(within(pill).getByText('Check in')).toBeTruthy();
     // A bordered button: bare outline is the filter row's own word for
     // "press me"; the accent at hairline strength is whose word it is.
@@ -591,7 +594,8 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
     const pill = screen.getByTestId('detail-checked-in');
-    expect(pill.querySelector('[data-icon="checkmark"]')!.getAttribute('data-color')).toBe(String(colors.okInk));
+    // The same ring, filled: one glyph in its second state.
+    expect(pill.querySelector('[data-icon="checkmark-circle"]')!.getAttribute('data-color')).toBe(String(colors.okInk));
     // A word that shares nothing with the rest label — "Checked in"
     // beside "Check-in" read as the same verb at a glance.
     const word = within(pill).getByText('Visited');
