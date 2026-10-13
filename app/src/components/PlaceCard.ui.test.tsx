@@ -227,6 +227,14 @@ describe('the distance', () => {
     expect(line()).toContain('Kim Lien · 850 m');
   });
 
+  // The pin is the pin whatever the sort. A first cut swapped it for the
+  // sort's arrow beside a figure, and the owner read the swap as a glitch.
+  it('keeps the pin beside the figure, the same glyph as without one', () => {
+    card(0.847);
+    expect(document.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(document.querySelector('[data-icon="navigate-outline"]')).toBeNull();
+  });
+
   it('rounds to one decimal on a ride and to whole kilometres beyond ten', () => {
     card(1.24);
     expect(line()).toContain('Kim Lien · 1.2 km');
