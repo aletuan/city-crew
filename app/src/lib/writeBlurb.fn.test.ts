@@ -74,7 +74,11 @@ const PARK = {
 };
 const HUE = { name_en: 'Hue', name_vi: 'Huế', short_en: 'Hue', short_vi: 'Huế' };
 const WRITTEN = [
-  { name_en: 'Tao Dan Park', categories: ['nature'], desc_vi: 'Thảm cỏ râm mát giữa Quận 1.', desc_en: 'Shaded lawns in D1.', desc_ja: '1区の木陰の芝生。' },
+  { name_en: 'Tao Dan Park', categories: ['nature'], desc_vi: 'Thảm cỏ râm mát giữa Quận 1.', desc_en: 'Shaded lawns in D1.', i18n: { ja: { desc: '1区の木陰の芝生。' } } },
+  // A Japanese draft nobody has read is no example of Japanese; a column
+  // the object does not carry is not read at all.
+  { name_en: 'Machine Park', categories: ['nature'], desc_vi: 'Máy', desc_en: 'Machine', i18n: { ja: { desc: '機械。', machine: true } } },
+  { name_en: 'Column Park', categories: ['nature'], desc_vi: 'Cột', desc_en: 'Column', desc_ja: '列。', i18n: {} },
   { name_en: 'A café', categories: ['cafes'], desc_vi: 'Quán', desc_en: 'Café' },
   { name_en: 'Half written', categories: ['nature'], desc_vi: 'Chỉ tiếng Việt', desc_en: null },
   { name_en: 'No kinds', categories: null, desc_vi: 'x', desc_en: 'y' },
@@ -236,21 +240,27 @@ describe('the draft', () => {
     expect(p).toContain('Kinds: nature');
     expect(p).toContain('Hours: Monday: Open 24 hours');
     expect(p).toContain('Website: ?');
-    // The park, not the café; both halves written; five, not eight.
+    // The park, not the café; both halves written; five, not ten.
     expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
-    // An example with no Japanese shows two lines, not a "ja: null".
-    expect(p).toContain('- Park 3\n  vi: vi 3\n  en: en 3\n');
+    // An example with no Japanese a person wrote shows two lines: not a
+    // "ja: null", not the machine draft, not the mirrored column.
+    expect(p).toContain('- Machine Park\n  vi: Máy\n  en: Machine\n');
+    expect(p).toContain('- Column Park\n  vi: Cột\n  en: Column\n');
+    expect(p).not.toContain('機械。');
+    expect(p).not.toContain('列。');
     expect(p).not.toContain('ja: null');
     expect(sent().system).toContain('desc_ja is Japanese written for a Japanese reader');
     expect(p).not.toContain('A café');
     expect(p).not.toContain('Half written');
     expect(p).not.toContain('No kinds');
-    expect(p).toContain('- Park 3');
-    expect(p).not.toContain('- Park 4');
+    expect(p).toContain('- Park 1');
+    expect(p).not.toContain('- Park 2');
     expect(p).toContain('No article extract');
-    // The desk's blurbs, read by source and published only.
+    // The desk's blurbs, read by source and published only, of the same
+    // kinds, in a stable order — the database narrows, not the function.
     expect(h.fake.log.filter((a) => a.table === 'places')[1]).toMatchObject({
-      filters: [['reviewer_source', 'editorial'], ['is_published', true]], limit: 40,
+      filters: [['reviewer_source', 'editorial'], ['is_published', true], ['categories&&', ['nature']]],
+      order: ['slug'], limit: 40,
     });
   });
 
@@ -386,10 +396,16 @@ describe('the ja mode', () => {
     const req = sent();
     expect(req.output_config.format.schema.required).toEqual(['desc_ja']);
     const p = prompt();
-    expect(p).toContain('vi: Ghế đá bờ sông.');
+    // The English, alone: it is what a Japanese reader sees until the
+    // Japanese exists, so it is what the Japanese must say.
     expect(p).toContain('en: Riverside benches.');
+    expect(p).not.toContain('Ghế đá bờ sông.');
     expect(p).toContain('for a Japanese reader');
     expect(p).not.toContain('No article extract');
+    // Its own instructions: nothing about photographs or facts to draw on.
+    expect(sent().system).toContain('the only material');
+    expect(sent().system).not.toContain('photographs');
+    expect(sent().system).not.toContain('facts');
     // The gallery is not even read: the two frames the full mode would
     // send are what the first ja drafts elaborated from.
     expect(frames()).toEqual([]);
@@ -403,16 +419,21 @@ describe('the ja mode', () => {
     expect(p).not.toContain('Address:');
     expect(p).not.toContain('Website:');
     expect(p).not.toContain('District:');
-    // Only an example that carries Japanese can show the register.
-    expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
-    expect(p).not.toContain('- Park 3');
+    // Only an example that carries Japanese a person wrote can show the
+    // register, and it is shown as the pair asked for: English, Japanese.
+    expect(p).toContain('- Tao Dan Park\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
+    expect(p).not.toContain('Thảm cỏ râm mát');
+    expect(p).not.toContain('Machine Park');
+    expect(p).not.toContain('Column Park');
+    expect(p).not.toContain('- Park 0');
     expect(h.fake.log.filter((a) => a.op !== 'select' && a.op !== 'auth')).toEqual([]);
   });
 
-  it('prints a dash for the language the blurb does not have', async () => {
-    door({ ...WRITTEN_PARK, desc_vi: '  ' });
+  it('falls back to the Vietnamese only when there is no English', async () => {
+    door({ ...WRITTEN_PARK, desc_en: '  ' });
     h.create.mockResolvedValue(says({ desc_ja: 'x' }));
     await call({ slug: PARK.slug, mode: 'ja' });
-    expect(prompt()).toContain('vi: —');
+    expect(prompt()).toContain('The blurb, as the desk wrote it:\nvi: Ghế đá bờ sông.');
+    expect(prompt()).not.toContain('en: Riverside benches.');
   });
 });

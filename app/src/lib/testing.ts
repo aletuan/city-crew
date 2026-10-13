@@ -118,6 +118,9 @@ export function fakeSupabase() {
       // difference is the point wherever it is used: handles are stored
       // lowercase and typed however the reader felt.
       ilike: (k: string, v: unknown) => { asked.filters.push([`${k}~~*`, v]); return b; },
+      // Array overlap (`&&`): recorded with the operator, as `ilike` is,
+      // because a test asserting it wants to see the kinds, not an `eq`.
+      overlaps: (k: string, v: unknown) => { asked.filters.push([`${k}&&`, v]); return b; },
       limit: (n: number) => { asked.limit = n; return b; },
       or: (s: string) => { asked.or = s; return b; },
       order: (...a: unknown[]) => {
