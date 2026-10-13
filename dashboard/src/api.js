@@ -4,6 +4,7 @@
 // components used against the old localhost Express API.
 
 import { supabase } from './lib/supabase.js';
+import { localizedColumns } from './langs.js';
 import { removeObjects } from './storage.js';
 import { cityHeroApi } from './cityHero.js';
 import { countThreads } from './lib/threads.js';
@@ -13,7 +14,7 @@ const BUCKET = 'place-photos';
 // Same whitelist the old server enforced — kept client-side so a typo'd field
 // fails loudly here instead of silently bouncing off RLS.
 const EDITABLE = new Set([
-  'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
+  ...localizedColumns(),
   'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_level', 'price_display', 'price_vnd', 'duration_min', 'duration_max',
   'opening_hours', 'website', 'phone', 'threads_handle', 'sort_order', 'is_published',

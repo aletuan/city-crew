@@ -56,6 +56,14 @@ test('savePlace leaves reviewed_at alone for an ordinary field edit', async () =
   assert.equal(updateArgs[0].name_en, 'New name');
 });
 
+test('savePlace accepts every localized column langs.js produces, Japanese included', async () => {
+  const { api, client } = await loadApi([{ data: [{ slug: 'a-slug' }], error: null }]);
+  await api.savePlace('a-slug', { desc_ja: '川沿い', name_ja: 'カフェ', neighborhood_ja: '1区' });
+  const [, updateArgs] = client.calls[0].chain.find(([m]) => m === 'update');
+  assert.equal(updateArgs[0].desc_ja, '川沿い');
+  assert.equal(updateArgs[0].neighborhood_ja, '1区');
+});
+
 test('savePlace surfaces "not an editor" rather than a bare 0-rows result', async () => {
   const { api } = await loadApi([{ data: [], error: null }]);
   await assert.rejects(() => api.savePlace('a-slug', { name_en: 'x' }), /not an editor/);
