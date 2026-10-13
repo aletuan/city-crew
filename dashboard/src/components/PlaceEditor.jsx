@@ -234,6 +234,24 @@ export default function PlaceEditor() {
     }
   };
   const blank = !(form?.desc_en?.trim() || form?.desc_vi?.trim());
+  // The other direction: a blurb the row has, asked for in one of the
+  // object's languages that is still empty. Same model, same photographs,
+  // the blurb as the material; the flag is set exactly as a full draft's.
+  const draftLang = async (code) => {
+    if (drafting) return;
+    setDrafting(true);
+    try {
+      const d = await api.draftBlurb(slug, code);
+      setForm((f) => ({ ...f, [`desc_${code}`]: d[`desc_${code}`] }));
+      setDrafted((prev) => ({ ...prev, [code]: d[`desc_${code}`] }));
+      toast(`Drafted from the blurb and ${d.photos ? `${d.photos} photo${d.photos === 1 ? '' : 's'}` : 'no photos'} — read it before you save.`);
+    } catch (err) {
+      toast(`Draft failed: ${err.message}`);
+    } finally {
+      setDrafting(false);
+    }
+  };
+  const missingLangs = blank ? [] : objectLangs().filter((l) => !form?.[`desc_${l.code}`]?.trim());
   const setNum = (key, value) => set(key, value === '' ? null : Number(value));
 
   const save = useCallback(async (extra = {}) => {
@@ -351,10 +369,17 @@ export default function PlaceEditor() {
               <button type="button" className="vibe" onClick={draft} disabled={drafting || !blank}>
                 {drafting ? 'Drafting…' : 'Draft blurb'}
               </button>
+              {missingLangs.map((l) => (
+                <button key={l.code} type="button" className="vibe" onClick={() => draftLang(l.code)} disabled={drafting}>
+                  {drafting ? 'Drafting…' : `Draft ${l.label}`}
+                </button>
+              ))}
               <p className="note">
                 {blank
                   ? 'Fills the three Blurb fields from the row and its photographs. Read them before you save.'
-                  : 'Clear the EN and VI Blurb fields to draft a new one.'}
+                  : missingLangs.length
+                    ? `Drafts the ${missingLangs.map((l) => l.label).join(', ')} blurb from the EN and VI ones. Clear both to draft from scratch.`
+                    : 'Clear the EN and VI Blurb fields to draft a new one.'}
               </p>
             </div>
             <LocalizedField label="Neighborhood" field="neighborhood" form={form} set={set} />

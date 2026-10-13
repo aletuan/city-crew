@@ -73,3 +73,14 @@ viết và chưa ai sửa trong ngôn ngữ đó. Desk đặt dấu khi bấm "D
 giữ dấu khi Save mà không đụng ô JA, và bỏ dấu khi editor sửa chữ trong ô
 JA — xem `foldI18n` trong `dashboard/src/langs.js`. Trên editor, ô Blurb JA
 mang nhãn "machine draft" chừng nào dấu còn.
+
+## Chế độ `ja`: dịch blurb đã có
+
+`POST { slug, mode: 'ja' }` là chiều ngược lại: dòng **phải có** EN hoặc VI
+và **chưa có** JA (cột hay object), nếu không trả 409 `no_blurb` / `has_ja`.
+Không đọc Wikipedia (blurb là chất liệu), ví dụ chỉ lấy dòng có JA, ảnh vẫn
+gửi để model thấy chữ trong blurb chỉ cái gì. Trả `{ desc_ja, photos }`.
+Trên desk là nút "Draft JA", hiện khi blurb có mà ô JA trống; batch đi qua
+ops token và ghi `i18n.ja = {desc, machine: true}`, giữ `approved`: lật
+sang `flagged` là app mất dòng đó (RLS đọc công khai đòi `approved`), nên
+dấu `machine` là hàng đợi rà soát, không phải trạng thái review.

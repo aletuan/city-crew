@@ -509,13 +509,15 @@ const url = (router) => router.state.location.pathname + router.state.location.s
 // has, so what is pinned is that the button fills the form and lights Save
 // without touching `api.savePlace`, and that it will not run over a blurb.
 describe('the blurb draft', () => {
-  const draftButton = () => screen.getByRole('button', { name: /^Draft/ });
+  // The first of the draft buttons is the full one; a Draft JA button
+  // follows it once the row has a blurb (see 'the Japanese draft').
+  const draftButton = () => screen.getAllByRole('button', { name: /^Draft/ })[0];
 
   it('is closed while either Blurb field holds words', async () => {
     openEditor();
     await screen.findByDisplayValue('Café A');
     expect(draftButton().disabled).toBe(true);
-    expect(screen.getByText('Clear the EN and VI Blurb fields to draft a new one.')).toBeTruthy();
+    expect(screen.getByText('Drafts the JA blurb from the EN and VI ones. Clear both to draft from scratch.')).toBeTruthy();
     fireEvent.change(field('desc_en'), { target: { value: '' } });
     expect(draftButton().disabled).toBe(false);
     fireEvent.change(field('desc_vi'), { target: { value: '  Đã có ' } });
@@ -557,5 +559,44 @@ describe('the blurb draft', () => {
     await act(async () => { fireEvent.click(draftButton()); });
     await waitFor(() => expect(screen.getByText(/Draft failed: has_blurb/)).toBeTruthy());
     expect(field('desc_en').value).toBe('');
+  });
+});
+
+// The other direction: a row with a blurb and no Japanese gets a second
+// button. Same gate as the first — the words land in the field, Save is
+// the only write — and the same flag.
+describe('the Japanese draft', () => {
+  it('offers Draft JA only while the blurb exists and the Japanese does not', async () => {
+    openEditor('/place/cafe-a', { ...PLACE, i18n: { ja: { desc: '古い。' } } });
+    await screen.findByDisplayValue('Café A');
+    expect(screen.queryByRole('button', { name: 'Draft JA' })).toBeNull();
+    expect(screen.getByText('Clear the EN and VI Blurb fields to draft a new one.')).toBeTruthy();
+    fireEvent.change(field('desc_ja'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Draft JA' })).toBeTruthy();
+    fireEvent.change(field('desc_en'), { target: { value: '' } });
+    expect(screen.queryByRole('button', { name: 'Draft JA' })).toBeNull();
+  });
+
+  it('fills the JA field from the blurb, flags it as machine, and saves it into the object', async () => {
+    api.draftBlurb.mockResolvedValue({ desc_ja: '川沿いのベンチ。', photos: 2 });
+    openEditor();
+    await screen.findByDisplayValue('Café A');
+    fireEvent.click(screen.getByRole('button', { name: 'Draft JA' }));
+    expect((await findToast()).textContent).toBe('Drafted from the blurb and 2 photos — read it before you save.');
+    expect(api.draftBlurb).toHaveBeenCalledWith('cafe-a', 'ja');
+    expect(field('desc_ja').value).toBe('川沿いのベンチ。');
+    expect(screen.getByText('machine draft')).toBeTruthy();
+    expect(api.savePlace).not.toHaveBeenCalled();
+    fireEvent.click(saveButton());
+    await findToast();
+    expect(api.savePlace.mock.calls[0][1].i18n).toEqual({ ja: { desc: '川沿いのベンチ。', machine: true } });
+  });
+
+  it('says why when the draft fails', async () => {
+    api.draftBlurb.mockRejectedValueOnce(new Error('has_ja'));
+    openEditor();
+    await screen.findByDisplayValue('Café A');
+    fireEvent.click(screen.getByRole('button', { name: 'Draft JA' }));
+    expect((await findToast()).textContent).toBe('Draft failed: has_ja');
   });
 });

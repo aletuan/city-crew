@@ -608,6 +608,7 @@ test('each wrapper sends its own function name and body', async () => {
   await api.suspendUser('u1');
   await api.suspendUser('u2', false);
   await api.draftBlurb('park-a');
+  await api.draftBlurb('park-a', 'ja');
   assert.deepEqual(rec.sent, [
     ['fetch-place', { action: 'search', query: 'phở', city: 'hanoi' }],
     ['fetch-place', { action: 'import', place_id: 'g1', category: 'food', city: 'hanoi' }],
@@ -616,6 +617,7 @@ test('each wrapper sends its own function name and body', async () => {
     ['suspend-user', { user_id: 'u1', suspend: true }],
     ['suspend-user', { user_id: 'u2', suspend: false }],
     ['write-blurb', { slug: 'park-a' }],
+    ['write-blurb', { slug: 'park-a', mode: 'ja' }],
   ]);
 });
 
