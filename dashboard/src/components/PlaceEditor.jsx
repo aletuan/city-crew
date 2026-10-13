@@ -186,8 +186,12 @@ export default function PlaceEditor() {
     try {
       const d = await api.draftBlurb(slug);
       setForm((f) => ({ ...f, desc_vi: d.desc_vi, desc_en: d.desc_en }));
-      toast(d.sources?.length
-        ? 'Drafted from the row and Wikipedia — read it before you save.'
+      const from = [
+        d.photos ? `${d.photos} photo${d.photos === 1 ? '' : 's'}` : null,
+        d.sources?.length ? 'Wikipedia' : null,
+      ].filter(Boolean);
+      toast(from.length
+        ? `Drafted from ${from.join(' and ')} — read it before you save.`
         : 'Drafted from the row alone — read it before you save.');
     } catch (err) {
       toast(`Draft failed: ${err.message}`);

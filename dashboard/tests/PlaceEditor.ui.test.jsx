@@ -475,7 +475,7 @@ describe('the blurb draft', () => {
   });
 
   it('fills both fields from the draft, lights Save, and saves nothing by itself', async () => {
-    api.draftBlurb.mockResolvedValue({ desc_vi: 'Bờ sông, ghế đá.', desc_en: 'Riverside benches.', sources: ['https://vi.wikipedia.org/wiki/x'] });
+    api.draftBlurb.mockResolvedValue({ desc_vi: 'Bờ sông, ghế đá.', desc_en: 'Riverside benches.', sources: ['https://vi.wikipedia.org/wiki/x'], photos: 3 });
     openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null, categories: ['nature'] });
     await screen.findByDisplayValue('Park C');
     expect(saveButton().disabled).toBe(true);
@@ -485,17 +485,22 @@ describe('the blurb draft', () => {
     expect(field('desc_en').value).toBe('Riverside benches.');
     expect(saveButton().disabled).toBe(false);
     expect(api.savePlace).not.toHaveBeenCalled();
-    expect((await findToast()).textContent).toContain('Drafted from the row and Wikipedia');
+    expect((await findToast()).textContent).toContain('Drafted from 3 photos and Wikipedia');
     // Now there are words, so the button closes again.
     expect(draftButton().disabled).toBe(true);
   });
 
   it('says when the draft came from the row alone, and when it failed', async () => {
-    api.draftBlurb.mockResolvedValueOnce({ desc_vi: 'A', desc_en: 'B', sources: [] });
+    api.draftBlurb.mockResolvedValueOnce({ desc_vi: 'A', desc_en: 'B', sources: [], photos: 0 });
     openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null });
     await screen.findByDisplayValue('Park C');
     await act(async () => { fireEvent.click(draftButton()); });
     expect((await findToast()).textContent).toContain('Drafted from the row alone');
+    fireEvent.change(field('desc_en'), { target: { value: '' } });
+    fireEvent.change(field('desc_vi'), { target: { value: '' } });
+    api.draftBlurb.mockResolvedValueOnce({ desc_vi: 'A', desc_en: 'B', sources: [], photos: 1 });
+    await act(async () => { fireEvent.click(draftButton()); });
+    await waitFor(() => expect(screen.getByText(/Drafted from 1 photo —/)).toBeTruthy());
     fireEvent.change(field('desc_en'), { target: { value: '' } });
     fireEvent.change(field('desc_vi'), { target: { value: '' } });
     api.draftBlurb.mockRejectedValueOnce(new Error('has_blurb'));
