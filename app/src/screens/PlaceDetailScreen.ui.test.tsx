@@ -599,7 +599,9 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     // A word that shares nothing with the rest label — "Checked in"
     // beside "Check-in" read as the same verb at a glance.
     const word = within(pill).getByText('Visited');
-    expect(within(pill).queryByText(/check/i)).toBeNull();
+    // The other word is in the pill too, as a ghost that sizes it (see
+    // below) — hidden from the reader and from VoiceOver.
+    expect(within(pill).getByText(/check in/i).getAttribute('aria-hidden')).toBe('true');
     // Green, filled: a different hue from the coral rest state, not only
     // a fill. Coral here read as one more ask on a screen of coral asks.
     const inner = getComputedStyle(pill.firstElementChild!);
@@ -614,6 +616,29 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(a11yState('Visited — options').selected).toBe(true);
   });
 
+  // One width in both states: the pill holds both words, the other one
+  // at zero height, so it is as wide as the longer word whichever is
+  // showing and does not breathe on the tap.
+  it('keeps the word it is not showing as a zero-height ghost, so the pill holds one width', () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    show();
+    const rest = screen.getByTestId('detail-checkin');
+    const ghost = within(rest).getByTestId('detail-checkin-ghost');
+    expect(ghost.textContent).toBe('Visited');
+    expect(ghost.getAttribute('aria-hidden')).toBe('true');
+    expect(getComputedStyle(ghost).height).toBe('0px');
+    expect(getComputedStyle(ghost).opacity).toBe('0');
+    expect(within(rest).getByText('Check in').getAttribute('aria-hidden')).not.toBe('true');
+
+    cleanup();
+    state.checkins = [visit('k1', 60)];
+    show();
+    const worn = screen.getByTestId('detail-checked-in');
+    expect(within(worn).getByTestId('detail-checkin-ghost').textContent).toBe('Check in');
+    expect(within(worn).getByText('Visited').getAttribute('aria-hidden')).not.toBe('true');
+  });
+
   it('says the worn state in Vietnamese without the word the rest label uses', () => {
     state.checkin = true;
     state.uid = 'u1';
@@ -621,8 +646,9 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     state.checkins = [visit('k1', 60)];
     show();
     const pill = screen.getByTestId('detail-checked-in');
-    expect(within(pill).getByText('Đã qua')).toBeTruthy();
-    expect(within(pill).queryByText(/check/i)).toBeNull();
+    expect(within(pill).getByText('Đã qua').getAttribute('aria-hidden')).not.toBe('true');
+    // "Check-in" is in the pill only as the ghost that sizes it.
+    expect(within(pill).getByText(/check/i).getAttribute('aria-hidden')).toBe('true');
     expect(pill.getAttribute('aria-label')).toBe('Đã qua — tuỳ chọn');
   });
 
