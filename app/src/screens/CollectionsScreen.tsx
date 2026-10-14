@@ -193,8 +193,10 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
  * says so can also hand the reader the way to end it — the same shape
  * `FirstCollection` uses one section up.
  */
-function CommunityEmpty({ signedIn, onCreate, onExplore }: {
+function CommunityEmpty({ signedIn, city, onCreate, onExplore }: {
   signedIn: boolean;
+  /** The city the shelf is scoped to, by name; null when it is every city. */
+  city: string | null;
   onCreate: () => void;
   onExplore: () => void;
 }) {
@@ -205,14 +207,21 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
         <View style={s.firstIcon}>
           <Ionicons name="globe" size={27} color={colors.accent} />
         </View>
+        {/* Named for the city, since that is the whole of why it is
+            empty: the shelf is scoped, and "no public lists" with no
+            place named read as a verdict on the app. */}
         <Text style={s.firstTitle}>
-          {t('No public lists here yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません')}
+          {city
+            ? t(`No public lists in ${city} yet`, `Chưa có bộ sưu tập công khai nào ở ${city}`, `${city}にはまだ公開コレクションがありません`)
+            : t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません')}
         </Text>
+        {/* True now that a curator's own public list is on this shelf; it
+            promised the same thing while the shelf filtered them out. */}
         <Text style={s.firstBody}>
           {t(
-            'Yours can be the first — make a list, set it to Public, and it shows up here.',
-            'Bộ sưu tập của bạn có thể là đầu tiên — tạo một danh sách và đặt Công khai là nó xuất hiện ở đây.',
-            '最初の一つはあなたかも — リストを作って「公開」にすると、ここに並びます。',
+            'Yours can be the first — make a list, set it to Public, and it shows up here for everyone.',
+            'Bộ sưu tập của bạn có thể là đầu tiên — tạo một danh sách và đặt Công khai, nó sẽ hiện ở đây cho mọi người.',
+            '最初の一つはあなたかも — リストを作って「公開」にすると、ここにみんなの目に並びます。',
           )}
         </Text>
         {/* Signed out, "make a list" is not yet an offer this reader can
@@ -486,14 +495,20 @@ export default function CollectionsScreen({ navigation, route }: {
   // own are neither: an empty one is new, and one made in another city is
   // still yours — `mine` is filtered by neither test.
   //
-  // And your own published lists come out here rather than at the query,
-  // which is where this used to happen. They are on the Yours tab a
-  // centimetre away, and one list under both tabs reads as two lists —
-  // but that is a fact about *this* screen, the only one that shows both
-  // shelves at once. Asking the database to hide them hid them from
-  // Explore and Search too, which have no Yours tab to find them on. See
-  // `fetchCollections`.
-  const community = cols.data.filter((c) => (!me || c.owner_id !== me) && membersOf(c, places).length > 0);
+  // Your own published lists are on this shelf too, as everyone sees
+  // them. They were filtered out here (a list under both tabs reads as
+  // two lists), and the owner's review (14 Oct 2026) found what that
+  // cost: on Hội An the one public list was the owner's, so Community
+  // read "0 collections · Hội An" and the empty card promised that a
+  // list set to Public "shows up here" — which, under that filter, it
+  // never would. The two tabs answer two questions, "what do I keep" and
+  // "what does everyone see here", and a list that is the answer to both
+  // belongs on both. A curator's own card wears their own byline and a
+  // tally for a heart, since the database refuses a curator's like on
+  // their own list — see the tile.
+  const community = cols.data.filter((c) => membersOf(c, places).length > 0);
+  /** Yours, on the community shelf: drawn as everyone sees it, bar the heart. */
+  const mineToo = (c: Collection) => !!me && c.owner_id === me;
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
@@ -1119,7 +1134,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                   an invitation and the one it invites is
                                   impossible. */}
                               {c.id && c.is_public ? (
-                                item.own ? (
+                                item.own || mineToo(c) ? (
                                   likesWorthShowing(likes[c.slug]) ? (
                                     <View style={[s.gcardLikes, { marginLeft: 'auto' }]}>
                                       <Ionicons name="heart" size={13} color={onPhoto.textSecondary} />
@@ -1326,7 +1341,19 @@ export default function CollectionsScreen({ navigation, route }: {
                                 now, and the list nobody has liked yet is
                                 precisely the one that needs one. Only the
                                 number keeps the old rule. */}
-                            {c.id && c.is_public ? (
+                            {c.id && c.is_public && mineToo(c) ? (
+                              // Your own list, as everyone sees it — except
+                              // the heart, which is a tally here as on your
+                              // own row, for the tile's reason.
+                              likesWorthShowing(likes[c.slug]) ? (
+                                <View style={[s.likesWrap, s.likesRow]}>
+                                  <Ionicons name="heart" size={13} color={colors.textTertiary} />
+                                  <Text style={s.meta}>
+                                    {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
+                                  </Text>
+                                </View>
+                              ) : null
+                            ) : c.id && c.is_public ? (
                               <PressableScale
                                 containerStyle={s.likesWrap}
                                 style={s.likesRow}
@@ -1544,6 +1571,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 ? (
                   <CommunityEmpty
                     signedIn={!!session}
+                    city={scopeCity ? cityName(scopeCity) : null}
                     onCreate={() => navigation.navigate('CollectionForm')}
                     onExplore={() => navigation.getParent()?.navigate('Explore')}
                   />

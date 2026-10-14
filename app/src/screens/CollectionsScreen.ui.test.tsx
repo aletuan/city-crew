@@ -274,7 +274,7 @@ describe('CollectionsScreen — as a guest', () => {
 
   it('an empty shelf points a guest at Explore, not at creating', () => {
     const { navigation } = show();
-    expect(screen.getByText('No public lists here yet')).toBeTruthy();
+    expect(screen.getByText('No public lists in hanoi yet')).toBeTruthy();
     expect(screen.queryByText('Create a collection')).toBeNull();
     fireEvent.click(screen.getByText('Explore places'));
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Explore');
@@ -400,17 +400,34 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getByText('Create your first collection')).toBeTruthy();
   });
 
-  // The public query hands over every public list now, the reader's own
-  // included — Explore's shelf and Search have nowhere else to get them
-  // from. This is the one screen that also shows your library, so this is
-  // where the dedupe lives: a list on both tabs reads as two lists.
-  it('keeps your own published list off Community — it is already on Yours', () => {
-    const own = col('mine1', ['a'], { owner_id: 'u1' });
+  // Your own published list is on Community too, as everyone sees it: the
+  // two tabs answer "what do I keep" and "what does everyone see here",
+  // and a list that answers both belongs on both. It used to be filtered
+  // out, and on a city where the only public list was the owner's the
+  // shelf read "0 collections" under a card promising it would show.
+  it('shows your own published list on Community, with your byline and a tally for a heart', () => {
+    const own = col('mine1', ['a'], { owner_id: 'u1', curator_handle: 'me', is_public: true });
     state.mine.data = [own];
-    state.cols.data = [own, col('theirs', ['a'])];
+    state.cols.data = [own, col('theirs', ['a'], { curator_handle: 'them' })];
+    state.likes = { mine1: 2, theirs: 1 };
     show({ tab: 'community' });
     expect(screen.getByText('List theirs')).toBeTruthy();
-    expect(screen.queryByText('List mine1')).toBeNull();
+    expect(screen.getByText('List mine1')).toBeTruthy();
+    expect(screen.getByText('@me')).toBeTruthy();
+    // One heart control, theirs; yours is a count the database would
+    // refuse a press on.
+    expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(1);
+    expect(screen.getByText('2')).toBeTruthy();
+    // The same on the row shape.
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(1);
+    expect(screen.getByText('2 likes')).toBeTruthy();
+    state.likes = {};
+  });
+
+  it('names the city on the empty community card', () => {
+    show({ tab: 'community' });
+    expect(screen.getByText('No public lists in hanoi yet')).toBeTruthy();
   });
 
   it('an empty library greets with the community shelf', () => {
@@ -445,7 +462,7 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.queryByText('New collection')).toBeNull();
     // And no greeting yet: the tab stays on Yours, so the community's
     // empty-shelf card is not what is showing either.
-    expect(screen.queryByText('No public lists here yet')).toBeNull();
+    expect(screen.queryByText('No public lists in hanoi yet')).toBeNull();
   });
 
   it("the route's tab wins over a full library, and a fresh param re-aims it", () => {
@@ -790,7 +807,7 @@ describe('CollectionsScreen — search', () => {
     type('zzz');
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
     // Under a query the empty-shelf invitation stands down.
-    expect(screen.queryByText('No public lists here yet')).toBeNull();
+    expect(screen.queryByText('No public lists in hanoi yet')).toBeNull();
     fireEvent.click(screen.getByTestId('collections-clear'));
     expect(screen.getByText('Coffee')).toBeTruthy();
     expect(screen.queryByTestId('collections-clear')).toBeNull();
