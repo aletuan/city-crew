@@ -51,7 +51,13 @@
 // something a visitor could check, no adjective the facts or the
 // photographs do not back, no word about how anything tastes, no year
 // or figure that is not in the material. The voice is learned from the
-// desk's own blurbs, five of the same kinds, sent as examples.
+// desk's own blurbs, five of the same kinds, sent as examples — picked
+// by the database, not by the function: the first cut read forty
+// editorial rows in whatever order Postgres returned them and filtered
+// here, and with 111 such rows (13 Oct 2026) the three bookshops in one
+// batch got no example at all while every café got five. A Japanese
+// example is one a person wrote: a `machine` draft teaching the next
+// draft its register is a loop that converges on nothing.
 //
 // ── three languages, since 13 Oct 2026 ──
 //
@@ -76,22 +82,26 @@
 // for a person: 48 of them are the desk's own words or Google's. So
 // `mode: 'ja'` is the mirror image: it requires a blurb and refuses a
 // row that already has Japanese (column or object), takes no Wikipedia
-// lead (the blurb is the material now), reads only the examples that
-// carry a JA line, and asks for the one field. The 42 credited Threads
-// quotations are left out of the batch by the caller, not here: a
-// translation under somebody's handle is theirs to decline, and the
-// function cannot know who is calling.
+// lead, reads only the examples that carry a JA line a person wrote,
+// and asks for the one field. The 42 credited Threads quotations are
+// left out of the batch by the caller, not here: a translation under
+// somebody's handle is theirs to decline, and the function cannot know
+// who is calling.
 //
-// No photographs in this mode. The first cut sent them, "so a word the
-// blurb uses can be checked against what it names, not elaborated", and
-// told the model as much. Run on three rows it elaborated on all three:
-// a bar whose blurb says "19th-century industrial" came back with red
-// leather sofas, a bottle cabinet and brass lamps; a Greek restaurant's
-// one line grew shawarma and hummus off a menu photograph. Every detail
-// was in a frame and none was in the blurb — and the `machine` flag the
-// desk sets on this draft promises a translation, the same blurb for a
-// Japanese reader, not a second blurb. What a model is not shown it
-// cannot add. The frames were also seven tenths of the request's cost.
+// The blurb is the only material, and the English blurb when there is
+// one. The first cut sent the photographs too, "so a word the blurb
+// uses can be checked against what it names", and the full block of
+// facts, under the same system prompt as the full mode — which says the
+// photographs are the best material and every claim may come from the
+// facts. The model did as told: of the first 80 drafts, three grew sofas
+// and brass lamps off the frames, ten put the opening hours into a blurb
+// whose English never mentions them. So this mode has a system prompt of
+// its own, sees no frame, no hours and no address, and is handed one
+// language: the English, because that is what a Japanese reader is shown
+// when there is no Japanese (`spokenIn` falls ja → en → vi), so the
+// translation must be of that and not a union of the two — the first
+// drafts merged a Vietnamese sentence and an English one into a third
+// blurb longer than either. Vietnamese only when the English is blank.
 //
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
@@ -162,6 +172,18 @@ Rules, none of which bend:
 - desc_ja is Japanese written for a Japanese reader from the same material, in the register of the examples' Japanese where they have it: plain, です・ます, place names kept in the Latin alphabet as the screen prints them.
 - Do not repeat the place's name in the blurb; the screen prints it above.`;
 
+/** The ja mode's instructions: a translation, with nothing to draw on
+ *  but the sentence in front of it. Separate from SYSTEM because that
+ *  one licenses the facts and the frames, and under it the model used
+ *  them (see the header). */
+const SYSTEM_JA = `You translate the two-line blurb City Crew shows under a place — "Why go" — into Japanese, for its editors to read, edit and save.
+
+Rules, none of which bend:
+- The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
+- Keep its length and its shape: one or two sentences, a dash where it has one.
+- Japanese for a Japanese reader, in the register of the examples: plain, です・ます, place names kept in the Latin alphabet as the screen prints them.
+- No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
+
 type Row = {
   id: string;
   slug: string;
@@ -177,7 +199,19 @@ type Row = {
   i18n: { ja?: { desc?: string | null } | null } | null;
 };
 
-type Example = { name_en: string; categories: string[] | null; desc_vi: string | null; desc_en: string | null; desc_ja?: string | null };
+type Example = {
+  name_en: string; categories: string[] | null;
+  desc_vi: string | null; desc_en: string | null;
+  i18n: { ja?: { desc?: string | null; machine?: boolean } | null } | null;
+};
+
+/** The example's Japanese, when a person wrote it: the object's entry,
+ *  never the mirrored column (gone with the trigger one day), and not a
+ *  `machine` draft nobody has read. */
+const exampleJa = (e: Example): string | null => {
+  const ja = e.i18n?.ja;
+  return ja && !ja.machine && ja.desc?.trim() ? ja.desc.trim() : null;
+};
 
 const foldLite = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
 
@@ -212,9 +246,11 @@ async function wikiLead(lang: "vi" | "en", title: string, cityNames: string[]): 
   }
 }
 
-/** The desk's own blurbs of the same kinds, as the model's examples. */
+/** The desk's own blurbs of the same kinds, as the model's examples.
+ *  The query already narrows to the kinds (`overlaps`); the check here
+ *  is what a test can see, and costs nothing on forty rows. */
 function pickExamples(rows: Example[], kinds: string[], withJa = false): Example[] {
-  const same = rows.filter((r) => r.desc_vi && r.desc_en && (!withJa || r.desc_ja)
+  const same = rows.filter((r) => r.desc_vi && r.desc_en && (!withJa || exampleJa(r))
     && (r.categories ?? []).some((c) => kinds.includes(c)));
   return same.slice(0, EXAMPLES);
 }
@@ -256,14 +292,19 @@ Deno.serve(async (req) => {
     const cityNames = [city?.name_en, city?.name_vi, city?.short_en, city?.short_vi].filter((s): s is string => !!s);
 
     // The desk's own voice, read fresh each time so a better blurb written
-    // tomorrow is an example the day after. `overlaps` is not in the fake
-    // the tests run on; forty rows and a filter here cost nothing.
+    // tomorrow is an example the day after. Narrowed to the kinds by the
+    // database, so forty rows are forty of the right kind. Ordered by
+    // slug, not by date: a nightly job touches `updated_at` on every row,
+    // so "newest" means nothing, and a stable order means the same place
+    // drafts the same way twice.
+    const kinds = row.categories ?? [];
     const { data: written } = await admin
       .from("places")
-      .select("name_en, categories, desc_vi, desc_en, desc_ja")
+      .select("name_en, categories, desc_vi, desc_en, i18n")
       .eq("reviewer_source", "editorial").eq("is_published", true)
+      .overlaps("categories", kinds)
+      .order("slug")
       .limit(40);
-    const kinds = row.categories ?? [];
     const examples = pickExamples((written ?? []) as Example[], kinds, mode === "ja");
 
     // Cover first, then the gallery's own order, so the frame the app
@@ -308,7 +349,7 @@ Deno.serve(async (req) => {
     const message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
-      system: SYSTEM,
+      system: mode === "ja" ? SYSTEM_JA : SYSTEM,
       output_config: {
         effort: "low",
         format: {
@@ -339,18 +380,19 @@ Deno.serve(async (req) => {
             type: "text" as const,
             text: [
               "Examples of the voice, from the same kinds of place:",
-              ...examples.map((e) => `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}${e.desc_ja ? `\n  ja: ${e.desc_ja}` : ""}`),
+              ...examples.map((e) => mode === "ja"
+                ? `- ${e.name_en}\n  en: ${e.desc_en}\n  ja: ${exampleJa(e)}`
+                : `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}${exampleJa(e) ? `\n  ja: ${exampleJa(e)}` : ""}`),
               "",
               "The place:",
               facts,
               "",
               ...(mode === "ja"
                 ? [
-                  "The place's blurb, as the desk wrote it:",
-                  `vi: ${row.desc_vi?.trim() || "—"}`,
-                  `en: ${row.desc_en?.trim() || "—"}`,
+                  "The blurb, as the desk wrote it:",
+                  row.desc_en?.trim() ? `en: ${row.desc_en.trim()}` : `vi: ${row.desc_vi!.trim()}`,
                   "",
-                  "Write desc_ja: the same blurb for a Japanese reader — what it says and no more.",
+                  "Write desc_ja: this blurb for a Japanese reader — what it says and no more.",
                 ]
                 : [
                   lead ? `Wikipedia lead (${lead.url}):\n${lead.text}` : "No article extract.",

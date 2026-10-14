@@ -93,6 +93,22 @@ một câu trả lời dưới 200. Nâng lên 4000, và lỗi giờ kèm `stop_
 Đọc lại 66 bản đã ghi: 10 bản chép giờ mở cửa từ khối facts vào blurb,
 thứ bản EN không có và sẽ lỗi thời. Từ đó ja mode chỉ gửi Name và City
 trong facts; 10 dòng đó được xoá JA và chạy lại.
+
+Review toàn bộ sau batch (cùng ngày) sửa thêm bốn điểm, một PR:
+
+- **Ví dụ do database chọn.** Query cũ lấy 40 dòng editorial không
+  `order`, lọc category trong function; với 111 dòng editorial, ba hiệu
+  sách trong batch nhận 0 ví dụ. Giờ `overlaps('categories', kinds)` và
+  `order('slug')` (không `updated_at`: job đêm chạm mọi dòng).
+- **Ví dụ JA chỉ lấy bản người viết.** 71/117 dòng có JA là máy viết;
+  nếu làm ví dụ thì máy dạy máy. Đọc `i18n.ja` và bỏ `machine: true`;
+  không đọc cột `desc_ja` nữa, để 3d bỏ cột không gãy gì.
+- **SYSTEM riêng cho ja mode.** SYSTEM chung cho phép facts và ảnh là
+  chất liệu, nên model dùng chúng; `SYSTEM_JA` nói blurb là chất liệu
+  duy nhất.
+- **Dịch từ EN, VI chỉ khi EN trống.** Người đọc JA thấy EN khi chưa có
+  JA (`spokenIn` ja → en → vi), nên bản JA phải là bản EN đó; gửi cả hai
+  thì model gộp thành blurb thứ ba dài hơn cả hai.
 Trên desk là nút "Draft JA", hiện khi blurb có mà ô JA trống; batch đi qua
 ops token và ghi `i18n.ja = {desc, machine: true}`, giữ `approved`: lật
 sang `flagged` là app mất dòng đó (RLS đọc công khai đòi `approved`), nên
