@@ -31,6 +31,7 @@ const world = vi.hoisted(() => ({
     { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', name_ja: null, center_lat: 21.03, center_lng: 105.85, radius_km: 25 },
     { id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'Thành phố Hồ Chí Minh', name_ja: null, center_lat: 10.7769, center_lng: 106.7009, radius_km: 25 },
   ],
+  mode: 'auto' as 'auto' | 'manual',
   me: null as { lat: number; lng: number } | null,
   session: { user: { id: 'u1' } } as { user: { id: string } } | null,
 }));
@@ -40,7 +41,7 @@ vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: world.session }) }));
 const setCity = vi.hoisted(() => vi.fn());
 const followMyLocation = vi.hoisted(() => vi.fn(async () => true));
 vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: world.city, cities: world.cities, setCity, followMyLocation }),
+  useCity: () => ({ city: world.city, cities: world.cities, mode: world.mode, setCity, followMyLocation }),
   useMyPosition: () => world.me,
 }));
 vi.mock('../lib/i18n', () => ({
@@ -81,6 +82,15 @@ const centre = () => screen.getByTestId('centre').textContent;
 const caption = () => screen.getByTestId('caption').textContent;
 const chip = (name: string) => screen.getByRole('button', { name });
 const cta = () => screen.getByRole('button', { name: /Search|Use this location/ });
+const row = () => screen.getByRole('button', { name: 'Current location' });
+const SAIGON = { name: 'Thành phố Hồ Chí Minh', label: 'Vietnam', lat: 10.78, lng: 106.70 };
+const NHATRANG = { name: 'Nha Trang', label: 'Khánh Hòa', lat: 12.2388, lng: 109.1967 };
+/** Search, and take the one result. */
+const takeResult = async (q: string, spot: { name: string }) => {
+  type(q);
+  fireEvent.click(cta());
+  fireEvent.click(await screen.findByText(spot.name));
+};
 const field = () => screen.getByPlaceholderText('Search an address or place') as HTMLInputElement;
 const type = (q: string) => fireEvent.change(field(), { target: { value: q } });
 /**
@@ -108,7 +118,9 @@ beforeEach(() => {
     { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', name_ja: null, center_lat: 21.03, center_lng: 105.85, radius_km: 25 },
     { id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'Thành phố Hồ Chí Minh', name_ja: null, center_lat: 10.7769, center_lng: 106.7009, radius_km: 25 },
   ];
+  world.mode = 'auto';
   world.me = null;
+  setCity.mockClear();
   location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'undetermined', canAskAgain: true } as never);
   location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied', canAskAgain: true } as never);
 });
@@ -268,37 +280,63 @@ describe('the search', () => {
   // the list left up to pick again. The owner's rule: never plan the city
   // the sheet happened to be open on.
   it('takes a result in another catalog city and switches the app to it', async () => {
-    setCity.mockClear();
-    const SAIGON = { name: 'Thành phố Hồ Chí Minh', label: 'Vietnam', lat: 10.78, lng: 106.70 };
     findSpots.mockResolvedValue([SAIGON]);
     const { onDone } = openSheet();
-    type('thanh pho ho chi minh');
-    fireEvent.click(cta());
-    fireEvent.click(await screen.findByText('Thành phố Hồ Chí Minh'));
+    await takeResult('thanh pho ho chi minh', SAIGON);
     expect(setCity).toHaveBeenCalledWith('hcmc');
     const moved = screen.getByTestId('start-moved');
-    expect(moved.textContent).toContain('Switched to Ho Chi Minh City');
+    // What the plan will do, not what the app did: the switch is real now
+    // and a cancel takes it back, so "switched to" would be a report of
+    // the one thing that may still be undone.
+    expect(moved.textContent).toBe('The plan will be made in Ho Chi Minh City.');
     expect(moved.querySelector('[data-icon="checkmark-circle"]')).toBeTruthy();
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith({ district: null, at: { lat: 10.78, lng: 106.70 }, atName: 'Thành phố Hồ Chí Minh' });
   });
 
   it('refuses a result in no catalog city, says so by name in a well, and drops the list', async () => {
-    setCity.mockClear();
-    const NHATRANG = { name: 'Nha Trang', label: 'Khánh Hòa', lat: 12.2388, lng: 109.1967 };
     findSpots.mockResolvedValue([NHATRANG]);
     const { onDone } = openSheet();
-    type('nha trang');
-    fireEvent.click(cta());
-    fireEvent.click(await screen.findByText('Nha Trang'));
+    await takeResult('nha trang', NHATRANG);
     expect(setCity).not.toHaveBeenCalled();
     const well = screen.getByTestId('start-elsewhere');
-    expect(well.textContent).toBe('No places near Nha Trang yet.Search somewhere else, or pick an area below.');
+    expect(well.textContent).toBe('No places near Nha Trang yet.Search somewhere else, pick an area below, or use your current location.');
     expect(well.querySelector('[data-icon="alert-circle"]')).toBeTruthy();
     expect(getComputedStyle(well).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    // The list goes; the words typed stay; nothing landed in the draft.
+    // The list goes; the words typed stay.
     expect(screen.queryByText('Khánh Hòa')).toBeNull();
     expect(screen.getByDisplayValue('nha trang')).toBeTruthy();
+    // And nothing is chosen: the tick that stood on Thanh Xuân over a
+    // refused "Cần Thơ" (14 Oct 2026) is gone, and the button with it —
+    // one tap used to make a plan of the city the sheet was open on.
+    expect(row().getAttribute('aria-selected')).toBe('false');
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(cta());
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  // The three ways out the well names, each one taking the refusal down.
+  it('lets a refusal be answered by a new search, an area, or the reader’s own position', async () => {
+    findSpots.mockResolvedValue([NHATRANG]);
+    location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
+    world.me = { lat: 21.03, lng: 105.85 };
+    const { onDone } = openSheet();
+    await takeResult('nha trang', NHATRANG);
+    // A new question in the field: the button is Search again, and live.
+    type('nha trang beach');
+    expect(cta().textContent).toBe('Search');
+    expect(cta().getAttribute('aria-disabled')).not.toBe('true');
+    expect(screen.getByTestId('start-elsewhere')).toBeTruthy();
+    // An area.
+    fireEvent.click(chip('Tây Hồ'));
+    expect(screen.queryByTestId('start-elsewhere')).toBeNull();
+    expect(cta().getAttribute('aria-disabled')).not.toBe('true');
+    // The reader's own position, after a second refusal.
+    await takeResult('nha trang', NHATRANG);
+    expect(chip('Tây Hồ').getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(row());
+    await waitFor(() => expect(screen.queryByTestId('start-elsewhere')).toBeNull());
+    expect(row().getAttribute('aria-selected')).toBe('true');
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith(NOWHERE);
   });
@@ -308,15 +346,12 @@ describe('the search', () => {
   // is held to the pin's rule — in another catalog city the app follows
   // them there, in none the warn well says the plan will not reach them.
   it('drops the wells on “Current location”, and follows the reader to their own city', async () => {
-    setCity.mockClear();
     followMyLocation.mockClear();
     location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
     world.me = { lat: 21.03, lng: 105.85 };
-    findSpots.mockResolvedValue([{ name: 'Thành phố Hồ Chí Minh', label: 'Vietnam', lat: 10.78, lng: 106.70 }]);
+    findSpots.mockResolvedValue([SAIGON]);
     openSheet();
-    type('thanh pho ho chi minh');
-    fireEvent.click(cta());
-    fireEvent.click(await screen.findByText('Thành phố Hồ Chí Minh'));
+    await takeResult('thanh pho ho chi minh', SAIGON);
     expect(screen.getByTestId('start-moved')).toBeTruthy();
     // The pin switched the app; the mock does not, so say it did — and
     // render once more so the sheet reads the new city.
@@ -324,7 +359,7 @@ describe('the search', () => {
     type('x');
     fireEvent.click(screen.getByRole('button', { name: 'Current location' }));
     await waitFor(() => expect(followMyLocation).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByTestId('start-moved').textContent).toContain('Switched to Hanoi'));
+    await waitFor(() => expect(screen.getByTestId('start-moved').textContent).toBe('The plan will be made in Hanoi.'));
     fireEvent.click(chip('Tây Hồ'));
     expect(screen.queryByTestId('start-moved')).toBeNull();
   });
@@ -345,25 +380,37 @@ describe('the search', () => {
     expect(screen.queryByTestId('start-moved')).toBeNull();
   });
 
-  it('says so when the reader stands in no catalog city, and still lets them start there', async () => {
+  it('says so when the reader stands in no catalog city, and holds the plan until they pick an area', async () => {
     followMyLocation.mockClear();
     location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
     world.me = { lat: 12.2388, lng: 109.1967 }; // Nha Trang
     const { onDone } = openSheet();
-    fireEvent.click(screen.getByRole('button', { name: 'Current location' }));
-    await waitFor(() => expect(screen.getByTestId('start-elsewhere').textContent).toContain('No places near you yet.'));
+    fireEvent.click(row());
+    // The reader's own position is the thing refused, so the well does not
+    // offer it back, and the areas come first.
+    await waitFor(() => expect(screen.getByTestId('start-elsewhere').textContent)
+      .toBe('No places near you yet.Pick an area below, or search somewhere else.'));
     expect(followMyLocation).not.toHaveBeenCalled();
+    expect(row().getAttribute('aria-selected')).toBe('false');
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(cta());
-    expect(onDone).toHaveBeenCalledWith(NOWHERE);
+    expect(onDone).not.toHaveBeenCalled();
+    fireEvent.click(chip('Hà Đông'));
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalledWith({ district: 'Hà Đông', at: null, atName: null });
   });
 
-  it('refuses a map tap in no catalog city the same way', async () => {
+  it('refuses a map tap in no catalog city the same way, and drops the answer it was over', async () => {
     world.cities = world.cities.filter((c) => c.id === 'hcmc');
-    const { onDone } = openSheet();
+    const { onDone } = openSheet({ district: 'Tây Hồ', at: null, atName: null });
     fireEvent.click(screen.getByRole('button', { name: 'drop a pin' }));
     expect(screen.getByTestId('start-elsewhere').textContent).toContain('No places near that pin yet');
+    // Not the area it opened on either: a refusal leaves nothing chosen,
+    // rather than the last answer standing under a notice about another.
+    expect(chip('Tây Hồ').getAttribute('aria-selected')).toBe('false');
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(cta());
-    expect(onDone).toHaveBeenCalledWith(NOWHERE);
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it('asks Google once, biased by the point the map is on, and lists what came back', async () => {
@@ -671,18 +718,97 @@ describe('the current-location row', () => {
 });
 
 describe('opening again', () => {
+  const sheet = (visible: boolean, value: Start, onDone = () => {}) =>
+    <StartSheet visible={visible} places={PLACES} value={value} onClose={() => {}} onDone={onDone} onNeedSignIn={() => {}} />;
+
   // The sheet is a question, and closing it without answering must not
   // change the answer that was already there.
   it('starts from the value it was given, with the last visit’s typing gone', () => {
     const value: Start = { district: 'Tây Hồ', at: null, atName: null };
-    const view = render(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={() => {}} onNeedSignIn={() => {}} />);
+    const view = render(sheet(true, value));
     type('cau giay');
     fireEvent.click(chip('Ba Đình'));
 
-    view.rerender(<StartSheet visible={false} places={PLACES} value={value} onClose={() => {}} onDone={() => {}} onNeedSignIn={() => {}} />);
-    view.rerender(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={() => {}} onNeedSignIn={() => {}} />);
+    view.rerender(sheet(false, value));
+    view.rerender(sheet(true, value));
     expect(field().value).toBe('');
     expect(chip('Tây Hồ').getAttribute('aria-selected')).toBe('true');
     expect(chip('Ba Đình').getAttribute('aria-selected')).toBe('false');
+  });
+
+  // The answer the sheet reopens on has to be visible somewhere, and a
+  // pin's only place is the field: an empty field over a pin at Saigon
+  // showed a map and an unticked row and nothing that said why.
+  it('shows the pin it reopens on by name, ready to use', () => {
+    const value: Start = { district: null, at: { lat: 10.78, lng: 106.70 }, atName: 'Thành phố Hồ Chí Minh' };
+    const onDone = vi.fn();
+    render(sheet(true, value, onDone));
+    expect(field().value).toBe('Thành phố Hồ Chí Minh');
+    expect(row().getAttribute('aria-selected')).toBe('false');
+    expect(cta().textContent).toBe('Use this location');
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalledWith(value);
+  });
+
+  // The city the sheet switched to while open is part of the answer, and a
+  // cancel takes it back with the rest — as it was, auto or manual. On 14
+  // Oct 2026 a cancelled sheet put the start back on Thanh Xuân and left
+  // the app on Ho Chi Minh City, with the "switched" well still up.
+  it('puts the city back, as it was, when closed without an answer', async () => {
+    world.mode = 'manual';
+    findSpots.mockResolvedValue([SAIGON]);
+    const view = render(sheet(true, NOWHERE));
+    await takeResult('thanh pho ho chi minh', SAIGON);
+    expect(setCity).toHaveBeenCalledWith('hcmc');
+    // The pin switched the app; the mock does not, so say it did.
+    world.city = world.cities[1];
+    view.rerender(sheet(true, NOWHERE));
+    view.rerender(sheet(false, NOWHERE));
+    expect(setCity).toHaveBeenLastCalledWith('hanoi', 'manual');
+    expect(setCity).toHaveBeenCalledTimes(2);
+  });
+
+  it('puts an automatic city back as automatic', async () => {
+    findSpots.mockResolvedValue([SAIGON]);
+    const view = render(sheet(true, NOWHERE));
+    await takeResult('thanh pho ho chi minh', SAIGON);
+    world.city = world.cities[1];
+    view.rerender(sheet(true, NOWHERE));
+    view.rerender(sheet(false, NOWHERE));
+    expect(setCity).toHaveBeenLastCalledWith('hanoi', 'auto');
+  });
+
+  it('keeps the city when the answer was taken, and when it never moved', async () => {
+    findSpots.mockResolvedValue([SAIGON]);
+    const onDone = vi.fn();
+    const view = render(sheet(true, NOWHERE, onDone));
+    await takeResult('thanh pho ho chi minh', SAIGON);
+    world.city = world.cities[1];
+    view.rerender(sheet(true, NOWHERE, onDone));
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalled();
+    view.rerender(sheet(false, NOWHERE, onDone));
+    expect(setCity).toHaveBeenCalledTimes(1);
+    // Opened on the new city and closed on it: nothing to put back.
+    view.rerender(sheet(true, NOWHERE, onDone));
+    view.rerender(sheet(false, NOWHERE, onDone));
+    expect(setCity).toHaveBeenCalledTimes(1);
+  });
+
+  // The wells and the permission notice answered a visit that is over.
+  it('reopens without the last visit’s notices', async () => {
+    findSpots.mockResolvedValue([NHATRANG]);
+    location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'denied', canAskAgain: false } as never);
+    const view = render(sheet(true, NOWHERE));
+    await takeResult('nha trang', NHATRANG);
+    expect(screen.getByTestId('start-elsewhere')).toBeTruthy();
+    fireEvent.click(row());
+    expect(await screen.findByText(/City Crew is not allowed to know where you are/)).toBeTruthy();
+    view.rerender(sheet(false, NOWHERE));
+    view.rerender(sheet(true, NOWHERE));
+    expect(screen.queryByTestId('start-elsewhere')).toBeNull();
+    expect(screen.queryByText(/City Crew is not allowed to know where you are/)).toBeNull();
+    expect(row().getAttribute('aria-selected')).toBe('true');
+    expect(cta().getAttribute('aria-disabled')).not.toBe('true');
   });
 });

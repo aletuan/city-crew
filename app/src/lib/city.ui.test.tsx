@@ -255,6 +255,25 @@ describe('a launch with no cached fix', () => {
     expect(screen.getByTestId('city').textContent).toBe('danang');
     expect(screen.getByTestId('mode').textContent).toBe('manual');
   });
+
+  // The start sheet's cancel puts a city back as it was, and a city the
+  // app had chosen by position must come back as auto, or the cancelled
+  // sheet would leave the app deaf to the next fix.
+  it('takes a mode with the pick, and stores it', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'danang', mode: 'manual' }));
+    function Picker() {
+      const { setCity } = useCity();
+      return <button type="button" onClick={() => setCity('hanoi', 'auto')}>back</button>;
+    }
+    render(<CityProvider><Probe /><Picker /></CityProvider>);
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+
+    fireEvent.click(screen.getByText('back'));
+    expect(screen.getByTestId('city').textContent).toBe('hanoi');
+    expect(screen.getByTestId('mode').textContent).toBe('auto');
+    const stored = vi.mocked(AsyncStorage.setItem).mock.calls.filter(([k]) => k === KEY).at(-1)?.[1];
+    expect(JSON.parse(String(stored))).toEqual({ id: 'hanoi', mode: 'auto' });
+  });
 });
 
 // ── a client shipped ahead of its migration ──
