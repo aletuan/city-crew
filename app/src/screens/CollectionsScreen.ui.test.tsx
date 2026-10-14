@@ -16,7 +16,7 @@
 // for real, because the filtering they do is the behaviour being pinned.
 
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Keyboard } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
@@ -378,11 +378,26 @@ describe('CollectionsScreen — signed in', () => {
     expect(actionRows()).toEqual([]);
   });
 
-  it('the dashed row under your lists starts a new one', () => {
+  // The Trips screen's pill, in the header, on Yours once there is a
+  // list: the dashed row at the foot was found only by scrolling past
+  // every list to reach it.
+  it('the New pill in the header starts a new one, on Yours with lists only', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     const { navigation } = show();
-    fireEvent.click(screen.getByText('New collection'));
+    // The dashed row is gone; the pill carries its id for the smoke flows.
+    expect(screen.queryByText('New collection')).toBeNull();
+    fireEvent.click(screen.getByTestId('collection-new'));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
+    // Not on Community, where the lists are not yours to add to.
+    fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
+    expect(screen.queryByRole('button', { name: 'New collection' })).toBeNull();
+  });
+
+  it('keeps the pill off an empty library, whose card is the door', () => {
+    show();
+    fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
+    expect(screen.queryByRole('button', { name: 'New collection' })).toBeNull();
+    expect(screen.getByText('Create your first collection')).toBeTruthy();
   });
 
   // The public query hands over every public list now, the reader's own
@@ -823,13 +838,30 @@ describe('CollectionsScreen — search', () => {
     expectSub('2 collections · hanoi');
   });
 
-  it('on your own tab a miss shows the honest footer, not the new-collection row', () => {
+  it('on your own tab a miss shows the honest footer, and the pill stays', () => {
     state.uid = 'u1';
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
     type('zzz');
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
-    expect(screen.queryByText('New collection')).toBeNull();
+    expect(screen.getByRole('button', { name: 'New collection' })).toBeTruthy();
+  });
+
+  // A chip is an answer; the keyboard asks for words. Tapped, it puts the
+  // keyboard away and leaves the panel up, so the box is one tap away.
+  it('a chip puts the keyboard away and keeps the panel open', () => {
+    state.places = [cafe('a'), bar('c')];
+    state.cols.data = [col('one', ['a']), col('two', ['c'])];
+    const dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+    show();
+    open();
+    const blur = vi.spyOn(box(), 'blur');
+    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(blur).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('collections-panel')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cafés' }).getAttribute('aria-selected')).toBe('true');
+    dismiss.mockRestore();
   });
 
   // ── the panel ──

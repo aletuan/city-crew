@@ -16,7 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { AmbientWarmth, Avatar, Card, Chip, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
-import { AddSlot } from '../components/add';
+import { AddPill } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
@@ -278,18 +278,6 @@ function RowGhost() {
       <Text style={s.blurb}>{' \n '}</Text>
       <View style={s.likesRow}><Text style={s.meta}>{' '}</Text></View>
     </View>
-  );
-}
-
-function NewCollectionRow({ onPress }: { onPress: () => void }) {
-  const { t } = useI18n();
-  return (
-    <AddSlot
-      onPress={onPress}
-      title={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
-      subtitle={t('Group places for your next plan', 'Nhóm địa điểm cho kế hoạch tới', '次の予定に向けてスポットをまとめる')}
-      testID="collection-new"
-    />
   );
 }
 
@@ -624,6 +612,13 @@ export default function CollectionsScreen({ navigation, route }: {
     inputRef.current?.blur();
     Keyboard.dismiss();
   };
+  // A chip is an answer, and the keyboard asks for words. Tapped, it
+  // puts the keyboard away and leaves the panel up (the panel closes on
+  // Cancel, not on blur — see VisitedScreen): the reader sees the shelf
+  // the chip just narrowed, and the box is one tap away if words are
+  // still wanted. Before this the keyboard stood over the results of
+  // every chip (the owner, 14 Oct 2026).
+  const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); };
 
   // What this box remembered, in its own drawer — the visits screen's
   // mechanism, for its reasons: kept when a search *worked* (a card
@@ -792,16 +787,28 @@ export default function CollectionsScreen({ navigation, route }: {
     : [{ own: false, data: shape(sifted, false) }];
 
   return (
-    // No control in the header: creating belongs to the Yours tab, which
-    // always shows one door — the dashed row under the list, or the empty
-    // card's own button. (The "New" pill that rode the section heading
-    // went with the heading itself when the sections became tabs: it was
-    // the same action a third time.)
+    // The door to a new list is the Trips screen's pill, in the header's
+    // right, on the Yours tab once there is a list. It was a dashed row at
+    // the foot of the list, on the argument that the tab always showed
+    // one door and a "New" pill on the heading was the same action a
+    // third time. True at four lists and wrong at fifteen: the owner's
+    // review (14 Oct 2026) found the row only by scrolling past every
+    // list to reach it. The empty library keeps its own card and button,
+    // as Trips keeps its first-trip card, so the pill is never the only
+    // door and never one of two on one screen.
     <Screen
       title={t('Collections', 'Bộ sưu tập', 'コレクション')}
+      right={onYours && mineReady && mine.data.length > 0 ? (
+        <AddPill
+          tall
+          label={t('New', 'Tạo mới', '新規')}
+          onPress={() => navigation.navigate('CollectionForm')}
+          accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+          testID="collection-new"
+        />
+      ) : undefined}
       // The search was a disc up here, where every screen keeps its
-      // utility; it is a box under the tabs now — see `panel`. The right
-      // side is free for the door the next change puts there.
+      // utility; it is a box under the tabs now — see `panel`.
       // A tab root's header takes a `lede`, not a `subtitle` — the line
       // under a large title is the screen's own, in its own type.
       lede={!holding && (onYours ? mineReady : true)
@@ -907,7 +914,7 @@ export default function CollectionsScreen({ navigation, route }: {
                     key={term}
                     style={s.suggestion}
                     scaleTo={0.97}
-                    onPress={() => setQuery(term)}
+                    onPress={() => { setQuery(term); answered(); }}
                     accessibilityRole="button"
                     accessibilityLabel={term}
                   >
@@ -928,7 +935,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       active={scopeCity === id}
                       // The Community shelf's own city, let go of, is every
                       // city; on Yours unset already means that.
-                      onPress={() => setCityPick(scopeCity === id ? (onYours ? null : 'all') : id)}
+                      onPress={() => { setCityPick(scopeCity === id ? (onYours ? null : 'all') : id); answered(); }}
                     />
                   ))}
                 </View>
@@ -945,7 +952,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       icon={CATEGORIES[k]?.icon}
                       iconColor={CATEGORIES[k]?.color}
                       active={kind === k}
-                      onPress={() => setKind(kind === k ? null : k)}
+                      onPress={() => { setKind(kind === k ? null : k); answered(); }}
                     />
                   ))}
                 </View>
@@ -1531,7 +1538,7 @@ export default function CollectionsScreen({ navigation, route }: {
               if (section.own) {
                 return section.data.length === 0
                   ? <FirstCollection onPress={() => navigation.navigate('CollectionForm')} />
-                  : <NewCollectionRow onPress={() => navigation.navigate('CollectionForm')} />;
+                  : null;
               }
               return section.data.length === 0
                 ? (
