@@ -1886,17 +1886,44 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
   });
 
   // "City Crew pick": `is_featured` chose Explore's hero and was said
-  // nowhere else. On the heading row, as a mark and not a filled pill.
-  it('marks a featured place as City Crew’s pick on the heading row, and others not', () => {
+  // nowhere else. Over the name since 14 Oct 2026, as an eyebrow and not
+  // a filled pill: "chosen" is a claim about the place, not about the
+  // paragraph, and it must survive a featured place with no paragraph.
+  it('marks a featured place as City Crew’s pick over the name, and others not', () => {
     show(place({ desc_en: 'Brunch and counter food under the arches.', is_featured: true }));
     const pick = screen.getByTestId('detail-pick');
     expect(pick.textContent).toBe('City Crew pick');
-    expect(screen.getByText('Highlights').parentElement!.contains(pick)).toBe(true);
+    expect(order('detail-pick')).toBeLessThan(order('detail-name'));
+    expect(screen.getByTestId('detail-why').contains(pick)).toBe(false);
     expect(pick.querySelector('[data-icon="ribbon-outline"]')).toBeTruthy();
     expect(getComputedStyle(pick).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     cleanup();
     show(place({ desc_en: 'Brunch and counter food under the arches.', is_featured: false }));
     expect(screen.queryByTestId('detail-pick')).toBeNull();
+    cleanup();
+    // The case the heading row lost: featured, and nothing written yet.
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null, is_featured: true }));
+    expect(screen.getByTestId('detail-pick').textContent).toBe('City Crew pick');
+    expect(screen.queryByTestId('detail-why')).toBeNull();
+  });
+
+  // One card for the paragraph and the chips, on the surface the address
+  // card wears: two grounds on the screen, the page and the cards. Not the
+  // accent's tint, which is for state; not the glass, which is a third
+  // ground. No card where there is neither a paragraph nor a tag.
+  it('puts the highlights and the vibes in one card on the info card’s surface', () => {
+    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes'] }));
+    const card = screen.getByTestId('detail-why-card');
+    expect(card.contains(screen.getByTestId('detail-why'))).toBe(true);
+    expect(card.contains(screen.getByTestId('detail-vibes'))).toBe(true);
+    const fill = getComputedStyle(card).backgroundColor;
+    expect(fill).not.toBe('rgba(0, 0, 0, 0)');
+    expect(fill).toBe(getComputedStyle(screen.getByTestId('detail-info-card')).backgroundColor);
+    // The chip is a step of glass over the card, not the card's own fill.
+    expect(getComputedStyle(screen.getByTestId('detail-vibe-cafes')).backgroundColor).not.toBe(fill);
+    cleanup();
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: [] }));
+    expect(screen.queryByTestId('detail-why-card')).toBeNull();
   });
 
   it.each([

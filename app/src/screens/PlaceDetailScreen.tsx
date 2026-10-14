@@ -668,6 +668,29 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               The rating loses nothing by moving. A score and a count are
               one short line of text; a badge was a box drawn around them,
               and the box was the part that was expensive. */}
+          {/* ── "City Crew pick", over the name ──
+              `is_featured` chose Explore's hero and was said nowhere else;
+              since 12 Oct 2026 it is said here, and since 14 Oct it is said
+              over the name rather than at the right of the Highlights
+              heading. "Chosen" is a claim about the place, and the name is
+              what the place is called; on the heading row it read as a
+              claim about the paragraph, and it was lost on a featured
+              place with no paragraph — 6 of the 21 featured places had
+              none until 13 Oct, so that was not the empty case the old
+              comment took it for. An eyebrow: the kicker above a title is
+              where an editor's mark lives on a listing, read before the
+              name and gone from the way of everything after it.
+              A glyph and the accent on the words, small caps and spaced;
+              not a tinted fill, because the accent as a surface is for
+              state (`theme.ts`) and a place being featured is not
+              something the reader did. The uppercase is a no-op on the
+              Japanese, which has no case, so one style serves three. */}
+          {place.is_featured ? (
+            <View style={s.pick} testID="detail-pick">
+              <Ionicons name="ribbon-outline" size={13} color={colors.accent} />
+              <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ')}</Text>
+            </View>
+          ) : null}
           <Text style={s.name} testID="detail-name">{name.title}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
           {showsNeighborhood ? (
@@ -879,6 +902,28 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
               No chevron. There is no fuller version to open, and an arrow
               that leads nowhere is a promise the screen cannot keep. */}
+          {/* ── one card for the desk's words and the desk's tags ──
+              Since 14 Oct 2026 the paragraph and the vibe chips sit in a
+              `Card`, the same surface the address and hours below wear
+              (`surfaceCard`), so the screen has two grounds and no more:
+              the page, and the cards on it. Grouping the two was the
+              owner's ask — the blurb and the chips are one unit, the
+              desk's reading of the place, and the facts below are
+              another. Rejected, with what ruled them out:
+              - a tint of the accent, as in the mockup: `theme.ts` keeps
+                the accent as a surface for state the reader made, and
+                this would be the largest accent surface in the app under
+                something that is not one; the check-in pill above tried
+                `accentSoft` and read as "the same pill with the light on
+                it".
+              - the theme's glass (`surfaceGlass`): one step off the cards
+                below, so three grounds on one screen where the owner
+                wanted fewer colours, not more.
+              Drawn when there is either a paragraph or a tag; nothing to
+              say is no card, not an empty one. The chips keep the glass
+              inside the card, 5% over the card's own ground. */}
+          {(desc || place.vibe_tags.length) ? (
+          <Card style={s.whyCard} testID="detail-why-card">
           {desc ? (
             <View style={s.why} testID="detail-why">
               {/* A quotation mark, not a speech bubble. A bubble is what
@@ -910,30 +955,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   column of text, and on a heading row a bare mark in the
                   display face reads as a magazine's opening quote, which
                   is what the owner asked for on seeing it with the disc.
-                  The heading row is also where the pick mark lives, at
-                  the right. */}
+                  The pick mark sat at the right of this row until 14 Oct
+                  2026; it is over the name now (see "City Crew pick"). */}
               <View style={s.whyHead}>
                 <Text style={s.whyQuote}>{'\u201C'}</Text>
                 <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ')}</Text>
-                {/* "City Crew pick", for a place the desk featured.
-                    `is_featured` chose Explore's hero and was said nowhere
-                    else — a reader could never learn a place was one of
-                    ours. A mark, not a pill: a glyph and the accent on the
-                    words. Not a tinted fill, because the accent as a
-                    surface is for state (`theme.ts`) and a place being
-                    featured is not something the reader did. Not under the
-                    paragraph as a credit: `blurbSource` says why "City
-                    Crew" under City Crew's own words costs attention and
-                    returns nothing; "chosen" is a different claim from
-                    "written", and it goes with the heading. Lost on a
-                    featured place with no blurb, which is not a case the
-                    catalog has: featuring means the desk wrote it up. */}
-                {place.is_featured ? (
-                  <View style={s.pick} testID="detail-pick">
-                    <Ionicons name="ribbon-outline" size={13} color={colors.accent} />
-                    <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ')}</Text>
-                  </View>
-                ) : null}
               </View>
               <View style={s.whyBody}>
                 {/* Whose words those are, at the end of them. It was a line
@@ -1042,6 +1068,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               ))}
             </View>
           ) : null}
+          </Card>
+          ) : null}
 
           {/* The one offer this screen makes to the person who put the
               place here. Draws nothing for everybody else — see
@@ -1069,7 +1097,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
           {/* ── info card ── */}
           {firstRow != null && (
-            <Card style={s.infoGroup}>
+            <Card style={s.infoGroup} testID="detail-info-card">
               {place.address && (
                 <InfoRow
                   icon="location-outline"
@@ -1678,7 +1706,12 @@ const s = StyleSheet.create({
   // columns pretending to be one.
   // A column since the heading took a line of its own (see the block):
   // the head row, then the paragraph at the screen's full width.
-  why: { gap: 6, marginTop: 14 },
+  // The card's inner spacing is the info card's (`space.cardPadding`),
+  // so the paragraph's left edge is the address's. 10 between the
+  // paragraph block and the chips, the gap the chips used to carry as a
+  // margin, now the card's so it holds whichever of the two is first.
+  whyCard: { marginTop: 14, padding: space.cardPadding, gap: 10 },
+  why: { gap: 6 },
   // Baseline-aligned, not centred: the mark is a glyph beside a word and
   // sits on the word's line, its ink at cap height the way an opening
   // quote does. Centred in a 28pt box (the disc's, kept a day after the
@@ -1694,12 +1727,15 @@ const s = StyleSheet.create({
   // 16, the Local Guide panel's title, now that this is a heading row of
   // its own rather than a label tucked over the paragraph.
   whyLabel: { flex: 1, color: colors.accent, fontSize: 16, fontWeight: font.semibold },
-  pick: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold },
+  // An eyebrow: 6 above the name, which is the gap a kicker keeps from
+  // its headline at this size. Spaced caps at 12 — the label's own size
+  // from the heading row — so it reads as a mark, not a second title.
+  pick: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.8, textTransform: 'uppercase' },
   // A label's chip (see the block): 24pt — 16 of line and 4 of padding
   // each way — against the 44pt of anything on this screen that is
   // pressed; the theme's glass, no border, no dot.
-  vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   vibe: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.surfaceGlass },
   vibeText: { color: colors.text, fontSize: 13, lineHeight: 16, fontWeight: font.semibold },
 
