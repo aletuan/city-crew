@@ -339,6 +339,25 @@ describe('PlaceEditor', () => {
     expect(api.savePlace).toHaveBeenCalledWith('cafe-a', expect.objectContaining({ threads_handle: null }));
   });
 
+  it('moves a Google blurb to the desk on the first edit to EN or VI, and not on a Japanese one', async () => {
+    openEditor('/place/cafe-a', { ...PLACE, reviewer_source: 'google', desc_en: 'Cozy cafe with pastries.', desc_vi: 'Quán ấm.' });
+    await screen.findByDisplayValue('Café A');
+    expect(field('reviewer_source').value).toBe('google');
+    fireEvent.change(field('desc_ja'), { target: { value: '翻訳。' } });
+    expect(field('reviewer_source').value).toBe('google');
+    fireEvent.change(field('desc_en'), { target: { value: 'Cozy cafe with pastries and a garden.' } });
+    expect(field('reviewer_source').value).toBe('editorial');
+    expect(field('reviewer_name').getAttribute('placeholder')).toBe('the desk credits nobody');
+    // The editor's own choice after that is kept.
+    fireEvent.change(field('reviewer_source'), { target: { value: 'google' } });
+    fireEvent.change(field('desc_vi'), { target: { value: 'Quán ấm, có vườn.' } });
+    expect(field('reviewer_source').value).toBe('editorial');
+    // A Threads blurb edited is still the person's, credited.
+    fireEvent.change(field('reviewer_source'), { target: { value: 'threads' } });
+    fireEvent.change(field('desc_en'), { target: { value: 'Cozy.' } });
+    expect(field('reviewer_source').value).toBe('threads');
+  });
+
   it('the blurb source fills itself from a pasted permalink, and complains when the three disagree', async () => {
     openEditor();
     await screen.findByDisplayValue('Café A');
