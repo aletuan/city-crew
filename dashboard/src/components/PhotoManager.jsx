@@ -111,6 +111,10 @@ export default function PhotoManager({ place, edits, setEdits }) {
 
   return (
     <div className="lighttable">
+      <div className="photoheading">
+        <h3>Photos</h3>
+        <p>Click a thumbnail to set the cover. Drag to reorder. Save to apply.</p>
+      </div>
       <div className="coverwrap">
         {cover
           ? <>
