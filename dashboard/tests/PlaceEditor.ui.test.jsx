@@ -545,6 +545,19 @@ describe('the blurb draft', () => {
     expect(draftButton().disabled).toBe(true);
   });
 
+  it('keeps a Japanese sentence a person wrote, unflagged, when only EN and VI were blank', async () => {
+    api.draftBlurb.mockResolvedValueOnce({ desc_vi: 'A', desc_en: 'B', desc_ja: '機械の文。', sources: [], photos: 0 });
+    openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null, i18n: { ja: { desc: '人の文。' } } });
+    await screen.findByDisplayValue('Park C');
+    await act(async () => { fireEvent.click(draftButton()); });
+    expect(field('desc_en').value).toBe('B');
+    expect(field('desc_ja').value).toBe('人の文。');
+    expect(screen.queryByText('machine draft')).toBeNull();
+    fireEvent.click(saveButton());
+    await findToast();
+    expect(api.savePlace.mock.calls[0][1].i18n).toEqual({ ja: { desc: '人の文。' } });
+  });
+
   it('keeps a source that is already set: a draft does not take a Threads credit', async () => {
     api.draftBlurb.mockResolvedValueOnce({ desc_vi: 'A', desc_en: 'B', sources: [], photos: 0 });
     openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null, reviewer_source: 'threads', reviewer_name: 'an' });
