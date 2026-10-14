@@ -28,8 +28,11 @@ const world = vi.hoisted(() => ({
   city: { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', center_lat: 21.03, center_lng: 105.85 } as
     { id: string; name_en: string; name_vi: string; center_lat: number; center_lng: number } | null,
   me: null as { lat: number; lng: number } | null,
+  session: { user: { id: 'u1' } } as { user: { id: string } } | null,
 }));
-vi.mock('../lib/findplace', () => ({ findSpots, nameOf }));
+const SignedOutError = vi.hoisted(() => class SignedOutError extends Error {});
+vi.mock('../lib/findplace', () => ({ findSpots, nameOf, SignedOutError }));
+vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: world.session }) }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: world.city }), useMyPosition: () => world.me }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -61,9 +64,9 @@ const PLACES = [
 const NOWHERE: Start = { district: null, at: null, atName: null };
 
 const location = vi.mocked(Location);
-const openSheet = (value: Start = NOWHERE, onDone = vi.fn()) => {
-  const view = render(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={onDone} />);
-  return { ...view, onDone };
+const openSheet = (value: Start = NOWHERE, onDone = vi.fn(), onNeedSignIn = vi.fn()) => {
+  const view = render(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={onDone} onNeedSignIn={onNeedSignIn} />);
+  return { ...view, onDone, onNeedSignIn };
 };
 const centre = () => screen.getByTestId('centre').textContent;
 const caption = () => screen.getByTestId('caption').textContent;
@@ -224,6 +227,27 @@ describe('the search', () => {
     expect(cta().textContent).toBe('Use this location');
     type('cau giay');
     expect(cta().textContent).toBe('Search');
+  });
+
+  // The search needs an account. A reader without one is sent to the
+  // door, not told "nothing found"; so is a reader whose session lapsed
+  // between opening the sheet and pressing Search.
+  it('sends a signed-out reader to the door instead of searching, and one whose session lapsed too', async () => {
+    world.session = null;
+    const { onNeedSignIn } = openSheet();
+    type('335 quan nhan');
+    fireEvent.click(cta());
+    expect(onNeedSignIn).toHaveBeenCalledTimes(1);
+    expect(findSpots).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Nothing found/)).toBeNull();
+    cleanup();
+    world.session = { user: { id: 'u1' } };
+    findSpots.mockRejectedValueOnce(new SignedOutError('not signed in'));
+    const second = openSheet();
+    type('335 quan nhan');
+    fireEvent.click(cta());
+    await waitFor(() => expect(second.onNeedSignIn).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/Nothing found/)).toBeNull();
   });
 
   it('asks Google once, biased by the point the map is on, and lists what came back', async () => {
@@ -535,12 +559,12 @@ describe('opening again', () => {
   // change the answer that was already there.
   it('starts from the value it was given, with the last visit’s typing gone', () => {
     const value: Start = { district: 'Tây Hồ', at: null, atName: null };
-    const view = render(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={() => {}} />);
+    const view = render(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={() => {}} onNeedSignIn={() => {}} />);
     type('cau giay');
     fireEvent.click(chip('Ba Đình'));
 
-    view.rerender(<StartSheet visible={false} places={PLACES} value={value} onClose={() => {}} onDone={() => {}} />);
-    view.rerender(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={() => {}} />);
+    view.rerender(<StartSheet visible={false} places={PLACES} value={value} onClose={() => {}} onDone={() => {}} onNeedSignIn={() => {}} />);
+    view.rerender(<StartSheet visible places={PLACES} value={value} onClose={() => {}} onDone={() => {}} onNeedSignIn={() => {}} />);
     expect(field().value).toBe('');
     expect(chip('Tây Hồ').getAttribute('aria-selected')).toBe('true');
     expect(chip('Ba Đình').getAttribute('aria-selected')).toBe('false');
