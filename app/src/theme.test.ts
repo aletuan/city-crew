@@ -129,9 +129,10 @@ describe('pillInk', () => {
 });
 
 // The visited pill's pair; and the delete well's, its counterpart.
-describe('okInk and bad', () => {
+describe('okInk, warnInk and bad', () => {
   it.each(NAMED)('read at 4.5:1 or better on their wells in %s', (_, p) => {
     expect(contrast(hex(p.okInk), hex(p.okSoft))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex(p.warnInk), hex(p.warnSoft))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(hex(p.bad), hex(p.badSoft))).toBeGreaterThanOrEqual(3);
   });
 });

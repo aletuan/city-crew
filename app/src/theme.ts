@@ -105,6 +105,12 @@ export type Palette = {
   badSoft: string;
   okSoft: string;
   okInk: string;
+  /** The warning well and the words on it — the third semantic tone
+   *  beside `ok` (green) and `bad` (red): something the reader should
+   *  read before going on, that is nobody's fault. Amber on every look,
+   *  tinted to the look's ground; held to 4.5:1 like `okInk`. */
+  warnSoft: string;
+  warnInk: string;
   /** The accent as a gradient's two stops — see `gradAI`. */
   gradAI: readonly [string, string];
   /** The engagement ring's track — see `ringTrack`. */
@@ -158,6 +164,8 @@ const PAPER: Palette = {
   badSoft: '#F8DFD9',
   okSoft: '#D9EBD7',
   okInk: '#2F6B3B',
+  warnSoft: '#F6E3C8',
+  warnInk: '#8A4B12',
   gradAI: ['#FF6F5B', '#FF9A5C'],
   ringTrack: '#DDD7CB',
   pillInk: '#A33724',
@@ -205,6 +213,8 @@ const CHARCOAL: Palette = {
   badSoft: '#2A1A18',
   okSoft: '#182A1C',
   okInk: '#8FBF8A',
+  warnSoft: '#2E2212',
+  warnInk: '#E0A24A',
   gradAI: ['#FF6F5B', '#FF9A5C'],
   ringTrack: '#252320',
   pillInk: '#141310',
@@ -252,6 +262,8 @@ const COFFEE: Palette = {
   badSoft: '#422520',
   okSoft: '#24361F',
   okInk: '#8FBF8A',
+  warnSoft: '#453018',
+  warnInk: '#E6AE5A',
   gradAI: ['#FF6F5B', '#FF9A5C'],
   ringTrack: '#3A2A20',
   pillInk: '#141310',
@@ -310,6 +322,8 @@ const ROSE: Palette = {
   badSoft: '#F6D6C8',
   okSoft: '#DCE8C4',
   okInk: '#2F6B3B',
+  warnSoft: '#F5DFB0',
+  warnInk: '#7E4210',
   gradAI: ['#A04A57', '#B45865'],
   ringTrack: '#E3D9AE',
   pillInk: '#8E3C4A',
@@ -370,6 +384,8 @@ const BLUSH: Palette = {
   badSoft: '#F9D4CF',
   okSoft: '#DCEBD3',
   okInk: '#2F6B3B',
+  warnSoft: '#FAE0CC',
+  warnInk: '#8A4B12',
   gradAI: ['#AD4E63', '#B5566B'],
   ringTrack: '#F0CBD5',
   pillInk: '#463543',
@@ -427,6 +443,8 @@ const SLATE: Palette = {
   badSoft: '#F8DFD9',
   okSoft: '#D9EBD7',
   okInk: '#2F6B3B',
+  warnSoft: '#F6E3C8',
+  warnInk: '#8A4B12',
   gradAI: ['#424A58', '#525C6E'],
   ringTrack: '#E2E1DC',
   pillInk: '#2E3440',
@@ -483,6 +501,8 @@ const MIDNIGHT: Palette = {
   badSoft: '#43303F',
   okSoft: '#22392F',
   okInk: '#9FCB9A',
+  warnSoft: '#3E3A2E',
+  warnInk: '#EBB866',
   gradAI: ['#F2D27A', '#F7E3A3'],
   ringTrack: '#36426B',
   pillInk: '#1B2340',
@@ -541,6 +561,8 @@ const NAVY: Palette = {
   badSoft: '#3A2A2E',
   okSoft: '#1C3A30',
   okInk: '#8FBF8A',
+  warnSoft: '#3A3322',
+  warnInk: '#E6B35C',
   gradAI: ['#E6A979', '#EDBE96'],
   ringTrack: '#22394A',
   pillInk: '#10222D',
@@ -602,6 +624,8 @@ const CHOCOLATE: Palette = {
   badSoft: '#5A3A36',
   okSoft: '#3A4738',
   okInk: '#BFDDB8',
+  warnSoft: '#5A4A30',
+  warnInk: '#F0C27A',
   gradAI: ['#DEAA9B', '#E9BCAE'],
   ringTrack: '#5F4F49',
   pillInk: '#2B2220',
@@ -658,6 +682,8 @@ const COSMIC: Palette = {
   badSoft: '#43303F',
   okSoft: '#22392F',
   okInk: '#9FCB9A',
+  warnSoft: '#3E3426',
+  warnInk: '#EBB866',
   gradAI: ['#E76629', '#F0803F'],
   ringTrack: '#342A4C',
   pillInk: '#211832',
@@ -716,6 +742,8 @@ const DUCK: Palette = {
   badSoft: '#F7D6CF',
   okSoft: '#D9EBD2',
   okInk: '#2F6B3B',
+  warnSoft: '#F7E2BE',
+  warnInk: '#8A4B12',
   gradAI: ['#2A9D8F', '#35A999'],
   ringTrack: '#D9E8E0',
   pillInk: '#14524A',
@@ -773,6 +801,8 @@ const HONEY: Palette = {
   badSoft: '#4A2A22',
   okSoft: '#34402A',
   okInk: '#B9D89A',
+  warnSoft: '#4A3812',
+  warnInk: '#F0C06A',
   gradAI: ['#EDCA3B', '#F5D85A'],
   ringTrack: '#3A2E16',
   pillInk: '#1E1608',
@@ -832,6 +862,8 @@ const ROYAL: Palette = {
   badSoft: '#4C3862',
   okSoft: '#1F4F62',
   okInk: '#A9D9A0',
+  warnSoft: '#4E4A3A',
+  warnInk: '#F3C977',
   gradAI: ['#F9BF02', '#FFD23F'],
   ringTrack: '#1C56A4',
   pillInk: '#04408B',
@@ -894,6 +926,8 @@ const PLUM: Palette = {
   badSoft: '#5E3B52',
   okSoft: '#3B4A4F',
   okInk: '#BFDDB8',
+  warnSoft: '#5E5040',
+  warnInk: '#F0C27A',
   gradAI: ['#AE445A', '#9C3A4F'],
   ringTrack: '#5C5489',
   pillInk: '#FFF5F3',
@@ -950,6 +984,8 @@ const VIOLET: Palette = {
   badSoft: '#4F2340',
   okSoft: '#2E3A2A',
   okInk: '#B9D89A',
+  warnSoft: '#4F3A26',
+  warnInk: '#EBB866',
   gradAI: ['#752E8D', '#8A3FA3'],
   ringTrack: '#4A1F45',
   pillInk: '#FFFFFF',
@@ -1005,6 +1041,8 @@ const WINE: Palette = {
   badSoft: '#6A2A3C',
   okSoft: '#3C3A2A',
   okInk: '#B9D89A',
+  warnSoft: '#6A4A2C',
+  warnInk: '#F2C47A',
   gradAI: ['#AF144B', '#C42A60'],
   ringTrack: '#6B2A3F',
   pillInk: '#FFFFFF',
@@ -1063,6 +1101,8 @@ const MAROON: Palette = {
   badSoft: '#5E2A36',
   okSoft: '#3F3B2A',
   okInk: '#BFD9A0',
+  warnSoft: '#5E4026',
+  warnInk: '#F0C27A',
   gradAI: ['#E5D0B6', '#D8BE9F'],
   ringTrack: '#5E2A3B',
   pillInk: '#3D1223',
@@ -1127,6 +1167,8 @@ const AMBER: Palette = {
   badSoft: '#FFD7C2',
   okSoft: '#F6E2A8',
   okInk: '#1F5A2E',
+  warnSoft: '#FFE6B8',
+  warnInk: '#5C2F06',
   gradAI: ['#191820', '#2A2430'],
   ringTrack: '#E9A52A',
   pillInk: '#FFD27A',
@@ -1185,6 +1227,8 @@ const NEON: Palette = {
   badSoft: '#4F2340',
   okSoft: '#2E3A2A',
   okInk: '#B9D89A',
+  warnSoft: '#4F3A26',
+  warnInk: '#EBB866',
   gradAI: ['#E670E5', '#D45AD3'],
   ringTrack: '#4A2A4A',
   pillInk: '#271627',
@@ -1243,6 +1287,8 @@ const EMBER: Palette = {
   badSoft: '#4A2418',
   okSoft: '#2A3324',
   okInk: '#B9D89A',
+  warnSoft: '#4A3214',
+  warnInk: '#E8B25C',
   gradAI: ['#F46809', '#E05A05'],
   ringTrack: '#2E2419',
   pillInk: '#0C0903',
@@ -1316,6 +1362,8 @@ const SAND: Palette = {
   badSoft: '#F2D1C4',
   okSoft: '#D4E2C3',
   okInk: '#1F5A2E',
+  warnSoft: '#EBD5B0',
+  warnInk: '#6E3A0C',
   gradAI: ['#365549', '#2C483D'],
   ringTrack: '#CFC0AC',
   pillInk: '#F3EBDD',
@@ -1639,6 +1687,11 @@ export const colors = {
   //  #24361F on the brown, #182A1C on charcoal — charcoal's read as the
   //  page with a green cast on #271910: `okInk` on it 6.2:1.
   okSoft: pick('okSoft'),
+  /** The warning well and its ink — see the palette note. First used by
+   *  the start sheet (14 Oct 2026) for a pin that fell in no catalog
+   *  city, which a grey line under the field had let readers walk past. */
+  warnSoft: pick('warnSoft'),
+  warnInk: pick('warnInk'),
   /** Words and glyphs *on* `okSoft`. `ok` itself is 4.1:1 on the paper
    *  side of that ground, under the 4.5:1 a 16pt label needs; a shade
    *  darker is 5.1:1. The dark side keeps `ok`'s own sage, 6.2:1 on its
