@@ -535,11 +535,22 @@ describe('the blurb draft', () => {
     expect(field('desc_ja').value).toBe('川沿いのベンチ。');
     expect(screen.getByText('machine draft')).toBeTruthy();
     expect(field('desc_en').value).toBe('Riverside benches.');
+    // The desk's blurb, so the desk's source — filled in, not left for
+    // the editor to remember.
+    expect(field('reviewer_source').value).toBe('editorial');
     expect(saveButton().disabled).toBe(false);
     expect(api.savePlace).not.toHaveBeenCalled();
     expect((await findToast()).textContent).toContain('Drafted from 3 photos and Wikipedia');
     // Now there are words, so the button closes again.
     expect(draftButton().disabled).toBe(true);
+  });
+
+  it('keeps a source that is already set: a draft does not take a Threads credit', async () => {
+    api.draftBlurb.mockResolvedValueOnce({ desc_vi: 'A', desc_en: 'B', sources: [], photos: 0 });
+    openEditor('/place/park-c', { ...PLACE, slug: 'park-c', name_en: 'Park C', desc_en: null, desc_vi: null, reviewer_source: 'threads', reviewer_name: 'an' });
+    await screen.findByDisplayValue('Park C');
+    await act(async () => { fireEvent.click(draftButton()); });
+    expect(field('reviewer_source').value).toBe('threads');
   });
 
   it('says when the draft came from the row alone, and when it failed', async () => {

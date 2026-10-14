@@ -109,6 +109,17 @@ Review toàn bộ sau batch (cùng ngày) sửa thêm bốn điểm, một PR:
 - **Dịch từ EN, VI chỉ khi EN trống.** Người đọc JA thấy EN khi chưa có
   JA (`spokenIn` ja → en → vi), nên bản JA phải là bản EN đó; gửi cả hai
   thì model gộp thành blurb thứ ba dài hơn cả hai.
+
+Hai lỗ quy trình trên desk, vá cùng ngày (14 Oct 2026):
+
+- **Draft điền sẵn Source = editorial** khi ô đang trống. Blurb do desk
+  đọc và Save là blurb của desk; để trống thì app không hiện credit và
+  function không bao giờ lấy nó làm ví dụ (query lọc đúng `editorial`).
+  20 dòng đã bị như vậy. Source đã có (Threads) thì giữ nguyên.
+- **Nhóm "Blurb" trong rail**, một dòng "Machine JA" mỗi ngôn ngữ trong
+  object: đếm và lọc theo `i18n.ja.machine = true` qua JSON path của
+  PostgREST, không thêm cột. Đây là hàng đợi rà soát mà cờ `machine` hứa:
+  mở dòng, sửa câu JA, Save thì cờ tắt và dòng rời danh sách.
 Trên desk là nút "Draft JA", hiện khi blurb có mà ô JA trống; batch đi qua
 ops token và ghi `i18n.ja = {desc, machine: true}`, giữ `approved`: lật
 sang `flagged` là app mất dòng đó (RLS đọc công khai đòi `approved`), nên

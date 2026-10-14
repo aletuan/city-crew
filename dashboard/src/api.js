@@ -4,7 +4,7 @@
 // components used against the old localhost Express API.
 
 import { supabase } from './lib/supabase.js';
-import { localizedColumns } from './langs.js';
+import { countMachine, localizedColumns, objectLangs } from './langs.js';
 import { removeObjects } from './storage.js';
 import { cityHeroApi } from './cityHero.js';
 import { countThreads } from './lib/threads.js';
@@ -223,6 +223,13 @@ export const api = {
     // already treats them as missing, and the two would disagree.
     if (params.threads === 'yes') query = query.not('threads_handle', 'is', null);
     if (params.threads === 'no') query = query.is('threads_handle', null);
+    // A model's draft nobody has read, in one language: the `machine` flag
+    // the fold sets beside the text in `i18n`. Read through PostgREST's
+    // JSON path, so no column needs adding per language. The code goes
+    // into that path, so only a code LANGS knows is allowed to.
+    if (params.machine && objectLangs().some((l) => l.code === params.machine)) {
+      query = query.eq(`i18n->${params.machine}->>machine`, 'true');
+    }
     if (params.channel) query = query.eq('channel', params.channel);
     if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
     if (!params.all) {
@@ -380,7 +387,7 @@ export const api = {
 
   progress: async (city) => {
     let query = supabase.from('places')
-      .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification, threads_handle');
+      .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification, threads_handle, i18n');
     if (city) query = query.eq('city_id', city);
     const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
@@ -425,6 +432,8 @@ export const api = {
       // worklist, and a chip that cannot show its own size is a chip
       // nobody presses first.
       by_threads: countThreads(rows),
+      // The machine drafts per language: the review queue the flag is.
+      by_machine: countMachine(rows),
     };
   },
 

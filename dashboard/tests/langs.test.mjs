@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LANGS, columnLangs, objectLangs, localizedColumns, localizedKeys, unfoldI18n, foldI18n,
+  countMachine, machineFilters,
 } from '../src/langs.js';
 
 test('EN and VI are columns, every later language is in the object', () => {
@@ -73,4 +74,18 @@ test('a text nobody touched keeps its flag; a text somebody changed loses it', (
 test('other metadata beside the text survives a fold', () => {
   const base = { ja: { desc: '古い。', machine: true, source: 'threads' } };
   assert.deepEqual(foldI18n({ desc_ja: '新しい。' }, base), { ja: { source: 'threads', desc: '新しい。' } });
+});
+
+test('the machine queue is counted per object language, on the boolean the fold writes', () => {
+  assert.deepEqual(machineFilters(), [['ja', 'Machine JA']]);
+  assert.deepEqual(countMachine(null), { ja: 0 });
+  assert.deepEqual(countMachine([
+    { i18n: { ja: { desc: 'a', machine: true } } },
+    { i18n: { ja: { desc: 'b', machine: true } } },
+    { i18n: { ja: { desc: 'c' } } },            // read and saved: flag gone
+    { i18n: { ja: { desc: 'd', machine: 'true' } } }, // not the fold's boolean
+    { i18n: { ko: { desc: 'e', machine: true } } },   // a language LANGS does not list
+    { i18n: {} },
+    {},
+  ]), { ja: 2 });
 });

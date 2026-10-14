@@ -218,6 +218,13 @@ export default function PlaceEditor() {
       setForm((f) => ({
         ...f, desc_vi: d.desc_vi, desc_en: d.desc_en,
         ...Object.fromEntries(objectLangs().map((l) => [`desc_${l.code}`, d[`desc_${l.code}`] ?? f[`desc_${l.code}`]])),
+        // A draft the desk reads and saves is the desk's blurb, so its
+        // source is `editorial` — the one value the function reads its
+        // examples by, and the one the app credits as the desk's. Left for
+        // the editor to pick, it was left blank: 20 rows on 13 Oct 2026,
+        // none of them ever an example. A source already set is kept; a
+        // Threads credit is not something a draft should overwrite.
+        reviewer_source: f.reviewer_source || 'editorial',
       }));
       setDrafted(Object.fromEntries(objectLangs().filter((l) => d[`desc_${l.code}`]).map((l) => [l.code, d[`desc_${l.code}`]])));
       const from = [

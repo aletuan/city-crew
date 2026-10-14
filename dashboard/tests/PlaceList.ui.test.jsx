@@ -30,6 +30,7 @@ const PAGE = { rows: ROWS, total: 3, pageSize: 24 };
 const PROGRESS = {
   ...EMPTY_PROGRESS, total: 3, by_status: { pending: 2, approved: 1 },
   by_category_tag: { cafes: 3, views: 1, focus: 1 }, by_vibe: { quiet: 1, nightlife: 1 }, by_threads: { yes: 0, no: 3 },
+  by_machine: { ja: 2 },
 };
 
 const rows = () => [...document.querySelectorAll('.prow')];
@@ -410,5 +411,22 @@ describe('PlaceList', () => {
     await act(async () => { router.navigate('/reports'); });
     await screen.findByRole('heading', { name: 'Reports' });
     expect(document.documentElement.style.getPropertyValue('--worktop-h')).toBe('');
+  });
+});
+
+describe('the Blurb group', () => {
+  it('lists the machine drafts per language with their count, and filters by the flag', async () => {
+    api.places.mockResolvedValue(PAGE);
+    api.progress.mockResolvedValue(PROGRESS);
+    const { router } = renderDesk('/');
+    await screen.findByText('cafe-a');
+    const row = group('Blurb').getByRole('checkbox', { name: /^Machine JA/ });
+    expect(row.querySelector('.filtercount').textContent).toBe('2');
+    fireEvent.click(row);
+    expect(url(router)).toBe('/?machine=ja');
+    await waitFor(() => expect(lastPlacesCall()).toMatchObject({ machine: 'ja' }));
+    expect(screen.getByRole('button', { name: 'Remove filter Machine JA' })).toBeTruthy();
+    fireEvent.click(rail().getByRole('button', { name: 'Reset' }));
+    expect(url(router)).toBe('/');
   });
 });
