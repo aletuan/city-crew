@@ -204,20 +204,28 @@ export default function PlaceEditor() {
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
-  // A model's first draft of a blank blurb, dropped into the two Blurb
+  // A model's first draft of a blank blurb, dropped into the Blurb
   // fields unsaved — exactly as if the editor had typed it — so the one
   // gate every sentence in the app already passes, Save, is the gate
   // here too. Nothing reaches the row until the editor has read it. Only
   // for a blank: a blurb worth replacing is cleared by hand first, so the
   // button never puts a model's words over a person's.
+  //
+  // That holds per field. The button opens on EN and VI being blank and
+  // the function answers in three languages, so a Japanese sentence a
+  // person wrote on a row whose EN and VI were cleared was being replaced
+  // in the form, and flagged `machine` on Save (found in review, 14 Oct
+  // 2026; no live row was in that state). A language the form already
+  // holds keeps what it holds, and is not recorded as drafted.
   const draft = async () => {
     if (drafting) return;
     setDrafting(true);
     try {
       const d = await api.draftBlurb(slug);
+      const filled = objectLangs().filter((l) => d[`desc_${l.code}`] && !form[`desc_${l.code}`]?.trim());
       setForm((f) => ({
         ...f, desc_vi: d.desc_vi, desc_en: d.desc_en,
-        ...Object.fromEntries(objectLangs().map((l) => [`desc_${l.code}`, d[`desc_${l.code}`] ?? f[`desc_${l.code}`]])),
+        ...Object.fromEntries(filled.map((l) => [`desc_${l.code}`, d[`desc_${l.code}`]])),
         // A draft the desk reads and saves is the desk's blurb, so its
         // source is `editorial` — the one value the function reads its
         // examples by, and the one the app credits as the desk's. Left for
@@ -226,7 +234,7 @@ export default function PlaceEditor() {
         // Threads credit is not something a draft should overwrite.
         reviewer_source: f.reviewer_source || 'editorial',
       }));
-      setDrafted(Object.fromEntries(objectLangs().filter((l) => d[`desc_${l.code}`]).map((l) => [l.code, d[`desc_${l.code}`]])));
+      setDrafted(Object.fromEntries(filled.map((l) => [l.code, d[`desc_${l.code}`]])));
       const from = [
         d.photos ? `${d.photos} photo${d.photos === 1 ? '' : 's'}` : null,
         d.sources?.length ? 'Wikipedia' : null,
