@@ -38,8 +38,9 @@ const SignedOutError = vi.hoisted(() => class SignedOutError extends Error {});
 vi.mock('../lib/findplace', () => ({ findSpots, nameOf, SignedOutError }));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: world.session }) }));
 const setCity = vi.hoisted(() => vi.fn());
+const followMyLocation = vi.hoisted(() => vi.fn(async () => true));
 vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: world.city, cities: world.cities, setCity }),
+  useCity: () => ({ city: world.city, cities: world.cities, setCity, followMyLocation }),
   useMyPosition: () => world.me,
 }));
 vi.mock('../lib/i18n', () => ({
@@ -298,6 +299,60 @@ describe('the search', () => {
     // The list goes; the words typed stay; nothing landed in the draft.
     expect(screen.queryByText('Khánh Hòa')).toBeNull();
     expect(screen.getByDisplayValue('nha trang')).toBeTruthy();
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalledWith(NOWHERE);
+  });
+
+  // The wells answer the pin just taken and go with it: "Current
+  // location" and an area chip each drop them. And the reader's position
+  // is held to the pin's rule — in another catalog city the app follows
+  // them there, in none the warn well says the plan will not reach them.
+  it('drops the wells on “Current location”, and follows the reader to their own city', async () => {
+    setCity.mockClear();
+    followMyLocation.mockClear();
+    location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
+    world.me = { lat: 21.03, lng: 105.85 };
+    findSpots.mockResolvedValue([{ name: 'Thành phố Hồ Chí Minh', label: 'Vietnam', lat: 10.78, lng: 106.70 }]);
+    openSheet();
+    type('thanh pho ho chi minh');
+    fireEvent.click(cta());
+    fireEvent.click(await screen.findByText('Thành phố Hồ Chí Minh'));
+    expect(screen.getByTestId('start-moved')).toBeTruthy();
+    // The pin switched the app; the mock does not, so say it did — and
+    // render once more so the sheet reads the new city.
+    world.city = world.cities[1];
+    type('x');
+    fireEvent.click(screen.getByRole('button', { name: 'Current location' }));
+    await waitFor(() => expect(followMyLocation).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByTestId('start-moved').textContent).toContain('Switched to Hanoi'));
+    fireEvent.click(chip('Tây Hồ'));
+    expect(screen.queryByTestId('start-moved')).toBeNull();
+  });
+
+  it('drops the “switched” well on “Current location” even when there is no city to follow', async () => {
+    location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
+    world.me = { lat: 21.03, lng: 105.85 };
+    findSpots.mockResolvedValue([{ name: 'Thành phố Hồ Chí Minh', label: 'Vietnam', lat: 10.78, lng: 106.70 }]);
+    openSheet();
+    type('thanh pho ho chi minh');
+    fireEvent.click(cta());
+    fireEvent.click(await screen.findByText('Thành phố Hồ Chí Minh'));
+    expect(screen.getByTestId('start-moved')).toBeTruthy();
+    // The mock's city stays Hanoi, where the reader stands: nothing to
+    // follow, and nothing left to say.
+    fireEvent.click(screen.getByRole('button', { name: 'Current location' }));
+    await waitFor(() => expect(location.getForegroundPermissionsAsync).toHaveBeenCalled());
+    expect(screen.queryByTestId('start-moved')).toBeNull();
+  });
+
+  it('says so when the reader stands in no catalog city, and still lets them start there', async () => {
+    followMyLocation.mockClear();
+    location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
+    world.me = { lat: 12.2388, lng: 109.1967 }; // Nha Trang
+    const { onDone } = openSheet();
+    fireEvent.click(screen.getByRole('button', { name: 'Current location' }));
+    await waitFor(() => expect(screen.getByTestId('start-elsewhere').textContent).toContain('No places near you yet.'));
+    expect(followMyLocation).not.toHaveBeenCalled();
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith(NOWHERE);
   });

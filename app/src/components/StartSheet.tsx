@@ -80,7 +80,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   onNeedSignIn: () => void;
 }) {
   const { t, lang } = useI18n();
-  const { city, cities, setCity } = useCity();
+  const { city, cities, setCity, followMyLocation } = useCity();
   const signedIn = !!useAuth().session;
   /** A pin that fell in no catalog city, by the name it came with. */
   const [elsewhere, setElsewhere] = useState<string | null>(null);
@@ -396,8 +396,13 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
     setSettled('');
     setHits(null);
     setMissed(false);
+    // The wells answer the pin that was just taken; this is a different
+    // answer. They stayed up past it on 14 Oct 2026 — "switched to Ho Chi
+    // Minh City" over a ticked "Current location · Thanh Xuân".
+    setMoved(null);
+    setElsewhere(null);
     const held = await Location.getForegroundPermissionsAsync();
-    if (held.status === 'granted') { setBlocked(false); return; }
+    if (held.status === 'granted') { setBlocked(false); await settleCity(); return; }
     // `canAskAgain` is the difference between a question and a wall. The
     // first press on a fresh install can still raise the dialog; every
     // press after a refusal cannot, and pretending otherwise is what made
@@ -406,6 +411,26 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
     const got = await Location.requestForegroundPermissionsAsync().catch(() => null);
     setBlocked(got != null && got.status !== 'granted' && !got.canAskAgain);
     setAsked((n) => n + 1);
+  };
+
+  /**
+   * Where the reader is standing, held to the same rule as a pin.
+   *
+   * A pin that switched the app to another city left "Current location"
+   * pointing at the old one: the sheet ticked Thanh Xuân and listed the
+   * areas of Ho Chi Minh City, and the plan would have been Saigon cafés
+   * from a Hanoi corner — the first bug, mirrored. So the reader's
+   * position goes through the city's own "use my location": in another
+   * catalog city, the app follows them there (and back to automatic, as
+   * that button has always meant) and the ok well says so. In no catalog
+   * city, there is nothing to refuse — it is where they are — so the
+   * warn well says the plan will not reach them and leaves the choice.
+   */
+  const settleCity = async () => {
+    if (!me) return;
+    const home = cityAround(cities, me.lat, me.lng);
+    if (!home) { setElsewhere(t('you', 'bạn', '現在地')); return; }
+    if (city && home.id !== city.id && await followMyLocation()) setMoved(home);
   };
 
   return (
@@ -661,6 +686,8 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                     label={d}
                     active={draft.district === d}
                     onPress={() => {
+                      setMoved(null);
+                      setElsewhere(null);
                       setDraft({ district: draft.district === d ? null : d, at: null, atName: null });
                       // The heading above says *or*. Taking this answer
                       // drops the other one rather than leaving half a
