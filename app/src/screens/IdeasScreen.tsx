@@ -23,6 +23,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
+import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import StartSheet, { Start } from '../components/StartSheet';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, SelectTick, Tile, TileGrid,
@@ -31,7 +32,7 @@ import {
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import IdeasHeaderArt from '../components/IdeasHeaderArt';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
-import { useCity, useMyPosition } from '../lib/city';
+import { type City, useCity, useMyPosition } from '../lib/city';
 import { useAuth } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { type Collection, coverOf, membersOf, type Place } from '../lib/data';
@@ -108,9 +109,13 @@ function Section({ title, cols, children }: {
   );
 }
 
-export default function IdeasScreen({ navigation }: { navigation: Nav }) {
+export default function IdeasScreen({ navigation, route }: {
+  navigation: Nav;
+  /** Optional, since the tab mounts this screen with no params at all. */
+  route?: { params?: { from?: string; at?: number } };
+}) {
   const { t, lang } = useI18n();
-  const { city } = useCity();
+  const { city, cities, setCity } = useCity();
   const { data: places } = usePlaces();
   const { mine, askToSignIn } = useSave();
   const cols = useCollections();
@@ -244,6 +249,81 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
 
   const set = <K extends keyof TripDraft>(k: K, v: TripDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
+
+  /**
+   * A collection sent here to start from — the detail screen's "Plan a
+   * trip" (`IdeasHome.from`).
+   *
+   * Ticked on arrival, and the lists opened so the tick is in view. The
+   * city is the question: the seeds only count places in the app's city
+   * (`inCity`), so a list from elsewhere would arrive ticked and seed
+   * nothing. Three cases, the start sheet's rule applied to a list. A
+   * list with a place here is ticked and nothing moves. A list whose
+   * places are all in one other catalog city switches the app there —
+   * the reader just chose that list, and a plan of it is what they asked
+   * for — and the well under the heading says so. A list across several
+   * catalog cities with none here is asked about, one row per city with
+   * its count, since choosing for the reader would be guessing which
+   * half of their list they meant.
+   *
+   * Keyed on `at`, so the same list sent twice is applied twice and a
+   * re-render is not; waits for the catalog, since a list read from the
+   * launch cache may arrive before its places do.
+   */
+  const [asking, setAsking] = useState<{ slug: string; choices: { id: string; n: number }[] } | null>(null);
+  const [moved, setMoved] = useState<City | null>(null);
+  const applied = useRef<number | null>(null);
+  const cityName = (c: City) => t(c.short_en, c.short_vi, c.short_ja ?? c.short_en);
+  const tick = (slug: string) => {
+    setDraft((d) => (d.from.includes(slug) ? d : { ...d, from: [...d.from, slug] }));
+    setMore(true);
+  };
+  const follow = (slug: string, to: City) => {
+    setCity(to.id);
+    setMoved(to);
+    tick(slug);
+  };
+  const from = route?.params?.from;
+  const at = route?.params?.at ?? 0;
+  useEffect(() => {
+    if (!from || applied.current === at) return;
+    const c = [...mine.data, ...cols.data].find((x) => x.slug === from);
+    if (!c || places.length === 0) return;
+    applied.current = at;
+    const all = membersOf(c, places);
+    if (!city || all.some((p) => p.city_id === city.id)) { tick(from); return; }
+    const count = new Map<string, number>();
+    all.forEach((p) => {
+      const id = p.city_id;
+      if (id && cities.some((x) => x.id === id)) count.set(id, (count.get(id) ?? 0) + 1);
+    });
+    const choices = [...count].map(([id, n]) => ({ id, n })).sort((a, b) => b.n - a.n);
+    if (choices.length === 0) return;
+    if (choices.length === 1) {
+      const to = cities.find((x) => x.id === choices[0].id);
+      if (to) follow(from, to);
+      return;
+    }
+    setAsking({ slug: from, choices });
+  // `tick`, `follow` and `cityName` close over state that is listed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, at, mine.data, cols.data, places, city?.id, cities]);
+  const askActions: SheetAction[] = asking
+    ? asking.choices.flatMap(({ id, n }) => {
+      const to = cities.find((x) => x.id === id);
+      return to ? [{
+        key: id,
+        icon: 'location-outline' as const,
+        title: cityName(to),
+        desc: t(
+          `${n} ${n === 1 ? 'place' : 'places'} from this collection will be included`,
+          `${n} địa điểm của bộ sưu tập sẽ được đưa vào`,
+          `このコレクションから${n}件が含まれます`,
+        ),
+        onPress: () => { setAsking(null); follow(asking.slug, to); },
+      }] : [];
+    })
+    : [];
 
   // Plain "near you" until the city resolves: "Around  · near you" printed
   // the hole where its name goes.
@@ -559,6 +639,21 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                 )}
               </Text>
             )}
+            {/* The start sheet's ok well, for the same fact: a city the
+                reader's own choice moved the app to. Only while the app
+                is still on it — a switch made afterwards is a new fact. */}
+            {moved && city?.id === moved.id && (
+              <View style={s.movedWell} testID="ideas-moved">
+                <Ionicons name="checkmark-circle" size={18} color={colors.okInk} />
+                <Text style={s.movedText}>
+                  {t(
+                    `The plan will be made in ${cityName(moved)}.`,
+                    `Kế hoạch sẽ lập ở ${cityName(moved)}.`,
+                    `プランは${cityName(moved)}で作ります。`,
+                  )}
+                </Text>
+              </View>
+            )}
             {own.length > 0 && (
               <>
                 {/* Labelled only once there are two cards to tell apart. */}
@@ -741,6 +836,26 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         </Modal>
       )}
 
+      {/* Which city, when a list sent here spans several and none is this
+          one. Closing without choosing leaves the list unticked: a guess
+          would be a plan of the wrong half. */}
+      <ActionSheet
+        visible={asking !== null}
+        onClose={() => setAsking(null)}
+        actions={askActions}
+        header={(
+          <View style={{ gap: 2 }}>
+            <Text style={s.askTitle}>{t('Which city?', 'Thành phố nào?', 'どの都市にしますか？')}</Text>
+            <Text style={s.askMeta}>
+              {t(
+                'This collection has places in more than one city. The plan is made in one.',
+                'Bộ sưu tập này có địa điểm ở nhiều thành phố. Kế hoạch chỉ lập ở một nơi.',
+                'このコレクションは複数の都市にスポットがあります。プランは一つの都市で作ります。',
+              )}
+            </Text>
+          </View>
+        )}
+      />
       <StartSheet
         visible={sheet}
         places={places}
@@ -820,6 +935,16 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 13, paddingHorizontal: space.page,
     marginTop: -(space.headingToContent - 2), marginBottom: 10,
   },
+  // The start sheet's well, on the heading's margin: `okSoft` on `okInk`,
+  // the pair the theme keeps for state the reader made.
+  movedWell: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginHorizontal: space.page,
+    marginBottom: 12, paddingHorizontal: 14, paddingVertical: 11, borderRadius: radius.card,
+    backgroundColor: colors.okSoft,
+  },
+  movedText: { flex: 1, color: colors.okInk, fontSize: 13, lineHeight: 19 },
+  askTitle: { color: colors.text, ...type.cardTitle },
+  askMeta: { color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
   groupLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
     letterSpacing: 0.7, textTransform: 'uppercase', paddingHorizontal: space.page,
