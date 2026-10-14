@@ -117,6 +117,12 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
     inputRef.current?.blur();
     Keyboard.dismiss();
   };
+  // A chip is an answer, and the keyboard asks for words. Tapped, it
+  // puts the keyboard away and leaves the panel up: the reader sees the
+  // list the chip just narrowed, and the box is one tap away if words
+  // are still wanted. Before this the keyboard stood over the results of
+  // every chip (the owner, 14 Oct 2026).
+  const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); };
 
   // What this box remembered, in its own drawer (`VISIT_RECENTS_KEY`),
   // ferried to and from storage as the catalog's box ferries its own.
@@ -267,7 +273,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                     key={term}
                     style={s.suggestion}
                     scaleTo={0.97}
-                    onPress={() => setQuery(term)}
+                    onPress={() => { setQuery(term); answered(); }}
                     accessibilityRole="button"
                     accessibilityLabel={term}
                   >
@@ -282,7 +288,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                 <Text style={s.legend}>{t('City', 'Thành phố', '都市')}</Text>
                 <View style={s.chipWrap}>
                   {cityChoices.map((id) => (
-                    <Chip key={id} label={cityName(id)} active={city === id} onPress={() => setCity(city === id ? null : id)} />
+                    <Chip key={id} label={cityName(id)} active={city === id} onPress={() => { setCity(city === id ? null : id); answered(); }} />
                   ))}
                 </View>
               </View>
@@ -298,7 +304,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                       icon={CATEGORIES[k]?.icon}
                       iconColor={CATEGORIES[k]?.color}
                       active={kind === k}
-                      onPress={() => setKind(kind === k ? null : k)}
+                      onPress={() => { setKind(kind === k ? null : k); answered(); }}
                     />
                   ))}
                 </View>

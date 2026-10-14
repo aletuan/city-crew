@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Alert } from 'react-native';
+import { Alert, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
@@ -214,6 +214,23 @@ describe('VisitedScreen', () => {
     beforeEach(async () => {
       await AsyncStorage.removeItem(VISIT_RECENTS_KEY);
       vi.mocked(AsyncStorage.setItem).mockClear();
+    });
+
+    // A chip is an answer; the keyboard asks for words. Tapped, it puts
+    // the keyboard away and leaves the panel up, so the box is one tap
+    // away if words are still wanted.
+    it('a chip puts the keyboard away and keeps the panel open', () => {
+      data.visits.data = many();
+      const dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+      show();
+      open();
+      const blur = vi.spyOn(input(), 'blur');
+      fireEvent.click(chip('Saigon'));
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      expect(blur).toHaveBeenCalledTimes(1);
+      expect(chips()).toHaveLength(4);
+      expect(selected()).toEqual(['Saigon']);
+      dismiss.mockRestore();
     });
 
     it('keeps the panel closed until the box is tapped, and Cancel closes it with everything let go', () => {

@@ -127,7 +127,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * section heading only when that section has rows, and how Trips hides it
  * until the first trip exists.
  */
-export function AddPill({ label, onPress, tall, busy, accessibilityLabel }: {
+export function AddPill({ label, onPress, tall, busy, accessibilityLabel, testID }: {
   label: string;
   onPress: () => void;
   /** At the 44pt control height: in a screen's header, beside a 34pt title
@@ -145,6 +145,8 @@ export function AddPill({ label, onPress, tall, busy, accessibilityLabel }: {
    *  neither has to mean both. */
   busy?: boolean;
   accessibilityLabel?: string;
+  /** For the smoke flows, which tap by id. */
+  testID?: string;
 }) {
   const glyph = 18;
   return (
@@ -157,6 +159,7 @@ export function AddPill({ label, onPress, tall, busy, accessibilityLabel }: {
       accessibilityState={{ busy: !!busy, disabled: !!busy }}
       aria-disabled={busy}
       aria-busy={busy}
+      testID={testID}
     >
       <LinearGradient {...gradAI} style={[s.pill, tall && s.pillTall, busy && s.pillBusy]}>
         {/* The spinner takes the plus's own box, so the word does not move
