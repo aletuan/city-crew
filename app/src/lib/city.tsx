@@ -69,7 +69,19 @@ type CityContext = {
   city: City | null;      // null until bootstrap resolves — screens skeleton
   cities: City[];
   mode: 'auto' | 'manual';
-  setCity: (id: string) => void;
+  /**
+   * The reader's pick, and manual unless told otherwise.
+   *
+   * The second argument exists for one caller: the start sheet, which
+   * switches the city the moment a pin lands so its chips and map can
+   * show the pin's city, and puts it back if the sheet is closed without
+   * an answer. Back means *as it was* — a city the app had chosen by
+   * position (auto) must come back as auto, or a cancelled sheet would
+   * leave the app deaf to the next fix. `followMyLocation` could not do
+   * it: it asks the platform again, and with the permission refused it
+   * would leave the wrong city standing.
+   */
+  setCity: (id: string, mode?: 'auto' | 'manual') => void;
   /**
    * Locate the reader, switch to the nearest city, and go back to auto.
    *
@@ -536,12 +548,12 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, [followFreshFix]);
 
-  const setCity = useCallback((id: string) => {
+  const setCity = useCallback((id: string, mode: 'auto' | 'manual' = 'manual') => {
     setCityId(id);
-    setMode('manual');
+    setMode(mode);
     // At once, not on the next render: a fix already out must see this.
-    now.current = { ...now.current, cityId: id, mode: 'manual' };
-    AsyncStorage.setItem(KEY, JSON.stringify({ id, mode: 'manual' })).catch(() => {});
+    now.current = { ...now.current, cityId: id, mode };
+    AsyncStorage.setItem(KEY, JSON.stringify({ id, mode })).catch(() => {});
   }, []);
 
   const followMyLocation = useCallback(async () => {

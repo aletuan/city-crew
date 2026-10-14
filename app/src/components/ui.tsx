@@ -1012,7 +1012,7 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
           at zero — and without this the button would take a tap and show
           nothing at all to the readers who asked for less movement, which
           is worse than the label it replaces. Fade is not motion. */}
-      <LinearGradient {...gradAI} style={[s.cta, busy && s.ctaBusy]}>
+      <LinearGradient {...gradAI} style={[s.cta, (busy || disabled) && s.ctaDim]}>
         {/* The rotation wraps the glyph whether or not it is turning. At
             rest `useLoop` holds zero, so it is the identity transform —
             no branch between rest and busy, no reflow, and the icon
@@ -1222,7 +1222,10 @@ const s = StyleSheet.create({
   // same figure on a coral gradient running the width of the screen reads
   // as broken. Chosen by eye rather than measured — a value to argue with,
   // not a finding.
-  ctaBusy: { opacity: 0.6 },
+  // Busy and not-ready wear the same dim: both mean "a press does
+  // nothing now", and a disabled button at full strength (the start
+  // sheet's, after a refused pin) read as the one thing to press.
+  ctaDim: { opacity: 0.6 },
   // Nothing left to say about the wide one but that it is wide — the
   // centring and the height it used to carry are now what every button of
   // this class gets. `wide` still stretches it in its parent; see

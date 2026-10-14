@@ -33,6 +33,31 @@
 // So there is a list of candidates to choose from, which is what people
 // expect from a search box and what the geocoder could never give. The
 // reader picks one and the map moves to it.
+//
+// ── the five rules (14 Oct 2026) ──
+//
+// Three fixes in a day each closed one hole and opened the next — a pin
+// in Saigon kept a tick on Thanh Xuân; the "switched" well outlived the
+// pin; cancelling the sheet put the start back and left the city moved.
+// All of them were the sheet keeping three kinds of state under three
+// different rules. The owner asked for the rules instead of a fourth fix:
+//
+// 1. The sheet is a transaction. City and mode are snapshotted on open;
+//    "Use this location" commits everything, closing without it puts
+//    everything back, the city included. While it is open the app may be
+//    switched for real, so the chips and the map show the pin's city.
+// 2. Exactly one answer is current and it is always visible: the tick on
+//    the row, a lit chip, or the pin's name in the field — on reopening
+//    too, which is why the field is seeded from `value`.
+// 3. Refused means nothing is chosen. A pin, or the reader's own position,
+//    in no catalog city drops the tick, dims the button and says the
+//    ways out in the warn well. There is no quiet road back to the city
+//    the sheet was open on.
+// 4. The wells describe the current answer, not the last action: cleared
+//    on open and by any other answer, and worded for what the plan will
+//    do rather than what the app just did.
+// 5. Nothing found is not a refusal. The reader chose nothing new, so the
+//    old answer stands and the grey line says so.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -80,10 +105,12 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   onNeedSignIn: () => void;
 }) {
   const { t, lang } = useI18n();
-  const { city, cities, setCity, followMyLocation } = useCity();
+  const { city, cities, mode, setCity, followMyLocation } = useCity();
   const signedIn = !!useAuth().session;
-  /** A pin that fell in no catalog city, by the name it came with. */
-  const [elsewhere, setElsewhere] = useState<string | null>(null);
+  /** A pin that fell in no catalog city, by the name it came with; `me`
+   *  when the pin is the reader, for whom "use your current location" is
+   *  not a way out. */
+  const [elsewhere, setElsewhere] = useState<{ name: string; me: boolean } | null>(null);
   /** The city the last pin moved the app to, when it did. */
   const [moved, setMoved] = useState<City | null>(null);
   const cityName = (c: City) => (lang === 'vi' ? c.name_vi : lang === 'ja' ? (c.name_ja ?? c.name_en) : c.name_en);
@@ -98,16 +125,19 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
    * is showing lands. A pin in another catalog city lands and moves the
    * app there (`setCity`): the reader just named that city, and a plan
    * of it is what she asked for. A pin in no catalog city does not land
-   * at all — the sheet says there is nothing around it and the draft
-   * stays as it was. The owner's rule: never plan the city the sheet
-   * happened to be open on, because the reader would not know what
-   * they had done wrong.
+   * at all — the sheet says there is nothing around it, and nothing is
+   * chosen (rule 3): the draft goes back to near-you *and* `elsewhere`
+   * takes the tick and the button away, so the one tap that used to make
+   * a Hanoi plan out of "Cần Thơ" makes nothing. The owner's rule: never
+   * plan the city the sheet happened to be open on, because the reader
+   * would not know what they had done wrong.
    */
   const land = (at: { lat: number; lng: number }, atName: string | null): boolean => {
     const home = cityAround(cities, at.lat, at.lng);
     if (!home) {
-      setElsewhere(atName ?? t('that pin', 'ghim này', 'そのピン'));
+      setElsewhere({ name: atName ?? t('that pin', 'ghim này', 'そのピン'), me: false });
       setMoved(null);
+      setDraft({ district: null, at: null, atName: null });
       return false;
     }
     setElsewhere(null);
@@ -218,16 +248,41 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   const showField = () => scroller.current?.scrollTo({ y: Math.max(0, fieldY - 8), animated: true });
   const showMap = () => scroller.current?.scrollTo({ y: 0, animated: true });
 
+  /** The city and mode the sheet opened on — what a cancel puts back. */
+  const opened = useRef<{ id: string; mode: 'auto' | 'manual' } | null>(null);
+  /** Set by the button; a hide without it is a cancel. */
+  const committed = useRef(false);
+
   // Re-seeded on each open rather than held between them: the sheet is a
   // question, and closing it without answering must not change the answer
-  // that was already there.
+  // that was already there (rule 1). The field is seeded with the pin's
+  // name so the answer the sheet reopens on is visible in it (rule 2);
+  // the wells and the permission notice answered a visit that is over
+  // (rule 4).
+  //
+  // The hide is the cancel, not the scrim or the back gesture: the screen
+  // above closes the sheet for a sign-in too, and a switch that leaks
+  // through that door would stand on a sheet that reopens reseeded from
+  // `value`, as if nothing had been chosen — which is what the reseed
+  // already says. Put back as it was, auto or manual: `setCity`'s second
+  // argument has the reasoning.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      const was = opened.current;
+      if (!committed.current && was && city && was.id !== city.id) setCity(was.id, was.mode);
+      return;
+    }
+    opened.current = city ? { id: city.id, mode } : null;
+    committed.current = false;
     setDraft(value);
-    setQuery('');
+    const name = value.at ? (value.atName ?? '') : '';
+    setQuery(name);
+    setSettled(name);
     setMissed(false);
     setHits(null);
-    setSettled('');
+    setMoved(null);
+    setElsewhere(null);
+    setBlocked(false);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
@@ -281,7 +336,13 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   const nearestKm = useMemo(() => nearestAreaKm(places, near), [places, near?.lat, near?.lng]);
   const areasAreNear = nearestKm == null || nearestKm <= 25;
 
-  const onMe = !draft.district && !draft.at;
+  // Not while a refusal stands: the draft is near-you then, as it is at
+  // open, but nothing has been chosen (rule 3), and the tick says chosen.
+  const onMe = !draft.district && !draft.at && !elsewhere;
+  // The button is a way out only while the field holds a new question.
+  // Committing over a refusal would be the quiet road back to the city
+  // the sheet was open on, which is the road rule 3 closes.
+  const refused = !!elsewhere && cta === 'commit';
 
   /**
    * What leaves the sheet.
@@ -429,8 +490,14 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   const settleCity = async () => {
     if (!me) return;
     const home = cityAround(cities, me.lat, me.lng);
-    if (!home) { setElsewhere(t('you', 'bạn', '現在地')); return; }
+    if (!home) { setElsewhere({ name: t('you', 'bạn', '現在地'), me: true }); return; }
     if (city && home.id !== city.id && await followMyLocation()) setMoved(home);
+  };
+
+  /** The one way anything leaves the sheet; see `committed`. */
+  const commit = () => {
+    committed.current = true;
+    onDone(settle());
   };
 
   return (
@@ -594,31 +661,45 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[s.wellTitle, { color: colors.warnInk }]}>
                   {t(
-                    `No places near ${elsewhere} yet.`,
-                    `Chưa có địa điểm quanh ${elsewhere}.`,
-                    `${elsewhere} の周辺にはまだスポットがありません。`,
+                    `No places near ${elsewhere.name} yet.`,
+                    `Chưa có địa điểm quanh ${elsewhere.name}.`,
+                    `${elsewhere.name} の周辺にはまだスポットがありません。`,
                   )}
                 </Text>
+                {/* Every way out, since nothing is chosen now (rule 3) and
+                    the button below is dimmed. When the refused pin is
+                    the reader's own position, "your current location"
+                    is the thing just refused, and the areas come first:
+                    they are the only answer that needs no typing. */}
                 <Text style={[s.wellBody, { color: colors.warnInk }]}>
-                  {t(
-                    'Search somewhere else, or pick an area below.',
-                    'Tìm chỗ khác, hoặc chọn một khu vực bên dưới.',
-                    '別の場所を検索するか、下のエリアを選んでください。',
-                  )}
+                  {elsewhere.me
+                    ? t(
+                      'Pick an area below, or search somewhere else.',
+                      'Chọn một khu vực bên dưới, hoặc tìm chỗ khác.',
+                      '下のエリアを選ぶか、別の場所を検索してください。',
+                    )
+                    : t(
+                      'Search somewhere else, pick an area below, or use your current location.',
+                      'Tìm chỗ khác, chọn một khu vực bên dưới, hoặc dùng vị trí hiện tại.',
+                      '別の場所を検索するか、下のエリアを選ぶか、現在地を使ってください。',
+                    )}
                 </Text>
               </View>
             </View>
           )}
           {/* The confirmation is the ok pair: a city the reader just chose
-              is state they made, which is what that green is for. */}
+              is state they made, which is what that green is for. What
+              the plan will do, not what the app just did (rule 4): the
+              switch is real now and undone by a cancel, and "switched to"
+              was a report of the one thing a cancel takes back. */}
           {moved && (
             <View style={[s.well, s.okWell]} testID="start-moved">
               <Ionicons name="checkmark-circle" size={18} color={colors.okInk} />
               <Text style={[s.wellBody, { color: colors.okInk, flex: 1 }]}>
                 {t(
-                  `Switched to ${cityName(moved)}: the plan will be made there.`,
-                  `Đã chuyển sang ${cityName(moved)}: kế hoạch sẽ lập ở đó.`,
-                  `${cityName(moved)} に切り替えました。プランはそこで作ります。`,
+                  `The plan will be made in ${cityName(moved)}.`,
+                  `Kế hoạch sẽ lập ở ${cityName(moved)}.`,
+                  `プランは${cityName(moved)}で作ります。`,
                 )}
               </Text>
             </View>
@@ -716,7 +797,8 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             label={cta === 'search'
               ? t('Search', 'Tìm', '検索')
               : t('Use this location', 'Dùng chỗ này', 'ここにする')}
-            onPress={cta === 'search' ? find : () => onDone(settle())}
+            onPress={cta === 'search' ? find : commit}
+            disabled={refused}
             wide
           />
         </View>
