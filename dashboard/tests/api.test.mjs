@@ -198,11 +198,13 @@ test('places() maps each filter param to its own query clause', async () => {
   const { api, client } = await loadApi([{ data: [], error: null, count: 0 }]);
   await api.places({
     city: 'hanoi', status: 'approved', category: 'cafe', vibe: 'chill',
-    needs: true, threads: 'no', channel: 'mobile', q: 'phở',
+    needs: true, threads: 'no', channel: 'mobile', q: 'phở', machine: 'ja',
   });
   const chain = client.calls[0].chain;
   const has = (m, args) => chain.some(([mm, aa]) => mm === m && JSON.stringify(aa) === JSON.stringify(args));
   assert.ok(has('eq', ['city_id', 'hanoi']));
+  // The flag beside the text in the object, through the JSON path.
+  assert.ok(has('eq', ['i18n->ja->>machine', 'true']));
   assert.ok(has('eq', ['review_status', 'approved']));
   assert.ok(has('contains', ['categories', ['cafe']]));
   assert.ok(has('contains', ['vibe_tags', ['chill']]));
@@ -210,6 +212,12 @@ test('places() maps each filter param to its own query clause', async () => {
   assert.ok(has('is', ['threads_handle', null]));
   assert.ok(has('eq', ['channel', 'mobile']));
   assert.ok(chain.some(([m, a]) => m === 'or' && a[0].includes('phở')));
+});
+
+test('places() lets only a language LANGS lists into the JSON path', async () => {
+  const { api, client } = await loadApi([{ data: [], error: null, count: 0 }]);
+  await api.places({ machine: 'ja->>desc' });
+  assert.ok(!client.calls[0].chain.some(([m, a]) => m === 'eq' && String(a[0]).startsWith('i18n')));
 });
 
 test('places() defaults to created_at desc and paginates by 24', async () => {
@@ -311,15 +319,18 @@ test('publishApproved only ever flips approved-and-unpublished rows, optionally 
 
 test('progress() counts a place as unpublished only when approved and not yet live', async () => {
   const rows = [
-    { slug: 'a', review_status: 'approved', is_published: false, categories: ['cafe'], vibe_tags: ['chill'] },
-    { slug: 'b', review_status: 'approved', is_published: true, categories: [], vibe_tags: [] },
-    { slug: 'c', review_status: 'pending', is_published: false, categories: [], vibe_tags: [] },
+    { slug: 'a', review_status: 'approved', is_published: false, categories: ['cafe'], vibe_tags: ['chill'], i18n: { ja: { desc: 'x', machine: true } } },
+    { slug: 'b', review_status: 'approved', is_published: true, categories: [], vibe_tags: [], i18n: { ja: { desc: 'y' } } },
+    { slug: 'c', review_status: 'pending', is_published: false, categories: [], vibe_tags: [], i18n: {} },
   ];
-  const { api } = await loadApi([{ data: rows, error: null }]);
+  const { api, client } = await loadApi([{ data: rows, error: null }]);
   const result = await api.progress();
   assert.equal(result.unpublished, 1);
   assert.equal(result.total, 3);
   assert.equal(result.by_status.approved, 2);
+  // The machine queue rides on the same rows, so the select carries the object.
+  assert.deepEqual(result.by_machine, { ja: 1 });
+  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'select' && a[0].includes('i18n')));
 });
 
 test('progress() names the unclassified rows and which half is missing, rather than only counting them', async () => {

@@ -53,6 +53,31 @@ export const localizedColumns = (fields = LOCALIZED_FIELDS) =>
 export const localizedKeys = (fields = LOCALIZED_FIELDS) =>
   fields.flatMap((field) => LANGS.map((l) => `${field}_${l.code}`));
 
+/**
+ * The rail's rows for the machine drafts: one per object language, so a
+ * fourth language brings its own row the day it is added to LANGS. The
+ * value is the language code — it is what the query reads.
+ */
+export const machineFilters = () => objectLangs().map((l) => [l.code, `Machine ${l.label}`]);
+
+/**
+ * How many rows carry a draft a model wrote in each object language that
+ * nobody has read since, keyed by code so a row can read its own count.
+ *
+ * The flag is the review queue — the desk keeps a machine draft
+ * `approved`, because `flagged` hides the place from the app — and a
+ * queue nobody can see is not one: 73 drafts sat behind it on 14 Oct
+ * 2026 with no screen that listed them. Strictly `=== true`: the fold
+ * writes a boolean, and a string "true" from an ad-hoc SQL write is not
+ * a flag the desk set.
+ */
+export function countMachine(rows) {
+  const list = rows ?? [];
+  return Object.fromEntries(objectLangs().map((l) => [
+    l.code, list.filter((r) => r.i18n?.[l.code]?.machine === true).length,
+  ]));
+}
+
 const text = (s) => (typeof s === 'string' ? s.trim() : '');
 
 /** The object's languages as flat form keys, `null` where the object

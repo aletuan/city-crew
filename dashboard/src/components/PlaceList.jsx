@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { THREADS_FILTERS } from '../lib/threads.js';
+import { machineFilters } from '../langs.js';
 import { CategoryIcon } from '../icons.jsx';
 import { ALL_CITIES, chipLabel, useCity, useProgress, useToast } from '../App.jsx';
 
@@ -13,7 +14,7 @@ const STATUSES = ['pending', 'approved', 'flagged'];
 // lists and Reset / Clear all clear. `q` is not among them: it has its own
 // visible box in the toolbar, and a reader who can see their own search
 // term does not need a chip telling them it is there.
-const FILTER_KEYS = ['status', 'category', 'vibe', 'threads'];
+const FILTER_KEYS = ['status', 'category', 'vibe', 'threads', 'machine'];
 const VIEW_KEY = 'citycrew.dashboard.view';
 const SORTS = [
   ['created_at:desc', 'Newest collected'],
@@ -37,6 +38,7 @@ const FILTER_LABEL = {
   category: (v) => CATEGORY_LABEL[v] ?? v,
   vibe: (v) => VIBE_STYLE[v]?.label ?? v.replace('_', ' '),
   threads: (v) => THREADS_LABEL[v] ?? v,
+  machine: (v) => Object.fromEntries(machineFilters())[v] ?? v,
 };
 
 /* How many answers a group shows before it offers the rest.
@@ -444,6 +446,7 @@ export default function PlaceList() {
   const category = params.get('category') ?? '';
   const vibe = params.get('vibe') ?? '';
   const threads = params.get('threads') ?? '';
+  const machine = params.get('machine') ?? '';
   const sort = params.get('sort') || 'created_at';
   const dir = params.get('dir') || 'desc';
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -791,6 +794,22 @@ export default function PlaceList() {
                 value: v,
                 label,
                 count: progress?.by_threads?.[v] ?? 0,
+              }))}
+            />
+            {/* The blurbs a model wrote in a language nobody has read
+                since. Like "No handle", a worklist: it shrinks only when
+                somebody opens a row, reads the Japanese and saves, which
+                clears the flag. Kept `approved` the whole time — flagging
+                would pull the place from the app over a sentence a reader
+                in that language would otherwise simply not get. */}
+            <FilterGroup
+              label="Blurb"
+              value={machine}
+              onPick={(v) => toggle('machine', v)}
+              options={machineFilters().map(([v, label]) => ({
+                value: v,
+                label,
+                count: progress?.by_machine?.[v] ?? 0,
               }))}
             />
           </div>
