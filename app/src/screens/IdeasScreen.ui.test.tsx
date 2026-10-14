@@ -556,6 +556,47 @@ describe('where the day starts', () => {
   });
 });
 
+describe('a city switch and the pin', () => {
+  const HANOI = { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ', center_lat: 21.0285, center_lng: 105.8542, radius_km: 25 };
+  const SAIGON = { id: 'hcmc', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009, radius_km: 25 };
+  const open = () => {
+    const navigation = { navigate: vi.fn(), goBack: vi.fn() };
+    const view = render(<IdeasScreen navigation={navigation as unknown as Nav} />);
+    return { again: () => view.rerender(<IdeasScreen navigation={navigation as unknown as Nav} />) };
+  };
+  const pin = (at: { lat: number; lng: number }, atName: string) => {
+    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
+    act(() => { (sheet.props!.onDone as (s: object) => void)({ district: null, at, atName }); });
+  };
+
+  it('drops a pin left in the old city, and a district with it', () => {
+    state.city = HANOI as unknown as typeof state.city;
+    const { again } = open();
+    pin({ lat: 21.04, lng: 105.81 }, 'Tràng Tiền');
+    expect(screen.getByText('Tràng Tiền')).toBeTruthy();
+    state.city = SAIGON as unknown as typeof state.city;
+    again();
+    expect(screen.queryByText('Tràng Tiền')).toBeNull();
+    expect(screen.getByRole('button', { name: /^Saigon · Near you/ })).toBeTruthy();
+    // A district the same way.
+    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
+    act(() => { (sheet.props!.onDone as (s: object) => void)({ district: 'Quận 1', at: null }); });
+    expect(screen.getByText('Quận 1')).toBeTruthy();
+    state.city = HANOI as unknown as typeof state.city;
+    again();
+    expect(screen.queryByText('Quận 1')).toBeNull();
+  });
+
+  it('keeps a pin that lies in the new city: the start sheet’s own switch loses nothing', () => {
+    state.city = HANOI as unknown as typeof state.city;
+    const { again } = open();
+    pin({ lat: 10.78, lng: 106.70 }, 'Thành phố Hồ Chí Minh');
+    state.city = SAIGON as unknown as typeof state.city;
+    again();
+    expect(screen.getByText('Thành phố Hồ Chí Minh')).toBeTruthy();
+  });
+});
+
 describe('start from what you love', () => {
   /** A member place in a city; `photo` makes it a cover candidate. */
   const here = (photo?: string) => ({ city_id: 'hn', photo });

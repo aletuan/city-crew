@@ -15,7 +15,7 @@
 // The plan itself is not built here. The button hands the draft to
 // Sketching, which builds it, and nothing about the draft is decided twice.
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
@@ -42,6 +42,7 @@ import { useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
+import { cityAround } from '../lib/geo';
 import type { Nav } from '../nav';
 import { colors, font, quoteFace, radius, space, type } from '../theme';
 
@@ -123,6 +124,30 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   useScrollToTop(scrollRef);
 
   const [draft, setDraft] = useState<TripDraft>(EMPTY_DRAFT);
+
+  // A pin does not survive a city switch unless it lies in the new city.
+  //
+  // The draft is this screen's and the city is the app's, and until 14
+  // Oct 2026 nothing connected them: a pin set in Hanoi, then Explore's
+  // switcher to Saigon, left the planner ready to plan Saigon cafés from
+  // a Hanoi corner. A district is the old city's by construction and
+  // goes with it. A pin that lies in the new city stays — which is every
+  // pin the start sheet lands when it is the sheet that switched the
+  // city (`StartSheet.land`), so that path loses nothing. Back to
+  // near-you otherwise, the draft's own starting state.
+  //
+  // Keyed on the id, not the object: the catalog refetches the row and
+  // a fresh object for the same city is not a switch.
+  const cityId = city?.id;
+  useEffect(() => {
+    if (!city) return;
+    setDraft((d) => {
+      if (!d.district && !d.at) return d;
+      if (d.at && cityAround([city], d.at.lat, d.at.lng)) return d;
+      return { ...d, district: null, at: null, atName: null };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityId]);
   const [picking, setPicking] = useState(false);
   /**
    * The chosen day, resolved and never in the past — and, when nobody has
