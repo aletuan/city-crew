@@ -302,6 +302,119 @@ export function findCollections<C extends SearchableCollection>(
   return pairs.filter(({ c, members }) => collectionMatches(c, members, terms)).map(({ c }) => c);
 }
 
+/**
+ * A member as the Collections screen sifts it: its names, and the two
+ * facts a chip can ask about. `city_name` is the words a reader types
+ * for the city — the screen passes the localized short name, so "da
+ * nang" lands on a list of Da Nang places the way it lands on a visit.
+ */
+export type SiftMember = Searchable & {
+  city_id?: string | null;
+  city_name?: string | null;
+};
+
+export type CollectionSift = {
+  query: string;
+  /** A city id, or null for no narrowing. */
+  city: string | null;
+  /** A category key, or null for no narrowing. */
+  kind: string | null;
+};
+
+/**
+ * One listed collection and why it is listed — the figures the card
+ * prints under its name when the shelf is narrowed.
+ */
+export type CollectionHit<C> = {
+  c: C;
+  /** Members that satisfy the chips, and the words when the words landed
+   *  on members rather than on the list itself. */
+  hits: number;
+  total: number;
+  /** The first member the words landed on, when the list's own words did
+   *  not — "matches MONO Coffee Lab", the one thing a reader could not
+   *  tell from the card. Null when the list was found by its own words
+   *  or there were none. */
+  place: SiftMember | null;
+};
+
+function memberHaystack(m: SiftMember): string {
+  return fold(`${allLocalized(m, 'name').join(' ')} ${m.city_name ?? ''}`);
+}
+
+/**
+ * The collections a query and two chips find, each with its reason.
+ *
+ * The question has two halves that the old `findCollections` folded
+ * into one: whether the list is listed, and — new with the chips — how
+ * much of it the reader's choice reaches. A chip is a question about
+ * *places*: "Cafés" lists a collection for the cafés inside it, so a
+ * list named "Cà phê" with no café in it is not listed under that chip,
+ * and the count the card prints is of members, never of lists.
+ *
+ * The words keep their old rule for *whether* (every term lands
+ * somewhere on the list's own words, its curator, or its members'
+ * names and cities — `collectionMatches`, widened by the city), and
+ * gain one for *why*: when none of
+ * them landed on the list's own words, the members they landed on are
+ * the hits, and the first is named. A word that landed on the title
+ * reaches every member the chips leave, since the reader asked for the
+ * list, not for a place in it.
+ *
+ * Order, when anything is asked: lists found by their own words first,
+ * then by hits, most first; ties keep the order they arrived in, which
+ * the caller ranked by likes. Nothing asked, nothing reordered.
+ */
+export function siftCollections<C extends SearchableCollection>(
+  pairs: readonly { c: C; members: readonly SiftMember[] }[], sift: CollectionSift,
+): CollectionHit<C>[] {
+  const terms = queryTerms(sift.query);
+  const bare = terms.map((t) => t.replace(/^@/, ''));
+  const narrowed = !!(sift.city || sift.kind);
+  const asked = narrowed || terms.length > 0;
+  const chipPass = (m: SiftMember) =>
+    (!sift.city || m.city_id === sift.city) && (!sift.kind || (m.categories ?? []).includes(sift.kind));
+  const out: (CollectionHit<C> & { byTitle: boolean })[] = [];
+  pairs.forEach(({ c, members }) => {
+    // `collectionMatches`' rule with the members' cities in the haystack
+    // too, so that "da nang" lands on a list of Da Nang places.
+    const whole = `${collectionHaystack(c)} ${members.map(memberHaystack).join(' ')}`;
+    if (terms.length && !matches(whole, bare)) return;
+    const byTitle = terms.length > 0 && matches(collectionHaystack(c), bare);
+    const onWords = (m: SiftMember) => {
+      const hay = memberHaystack(m);
+      return bare.some((term) => matches(hay, [term]));
+    };
+    const hit = members.filter((m) => chipPass(m) && (byTitle || !terms.length || onWords(m)));
+    if (narrowed ? hit.length === 0 : !(byTitle || !terms.length || hit.length > 0)) return;
+    out.push({
+      c, hits: hit.length, total: members.length, byTitle,
+      // Found through a place, there is always a first hit: the empty
+      // case returned a line above.
+      place: terms.length && !byTitle ? hit[0] : null,
+    });
+  });
+  if (asked) {
+    // Stable: equal keys keep their arrival order.
+    out.sort((a, b) => Number(b.byTitle) - Number(a.byTitle) || b.hits - a.hits);
+  }
+  return out.map(({ byTitle: _, ...hit }) => hit);
+}
+
+/** Distinct values across every member, most frequent first — the chips
+ *  a shelf can offer, so that no chip leads to an empty shelf. */
+function byFrequency(values: readonly string[]): string[] {
+  const count = new Map<string, number>();
+  values.forEach((v) => count.set(v, (count.get(v) ?? 0) + 1));
+  return [...count.keys()].sort((a, b) => count.get(b)! - count.get(a)!);
+}
+export function collectionCities(pairs: readonly { members: readonly SiftMember[] }[]): string[] {
+  return byFrequency(pairs.flatMap(({ members }) => members.map((m) => m.city_id).filter((c): c is string => !!c)));
+}
+export function collectionKinds(pairs: readonly { members: readonly SiftMember[] }[]): string[] {
+  return byFrequency(pairs.flatMap(({ members }) => members.flatMap((m) => m.categories ?? [])));
+}
+
 /** The query, as the tokens every one of which must land somewhere.
  *
  *  Split on whitespace, which is the right rule for two of the three

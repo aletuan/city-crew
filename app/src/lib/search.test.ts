@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from './categories';
 import {
-  collectionHaystack, collectionMatches, findCollections, findPlaces, fold, kindAnswersTo,
+  collectionCities, collectionHaystack, collectionKinds, collectionMatches, findCollections, findPlaces, fold, kindAnswersTo,
   matches, mergeTerms, placeHaystack, queryTerms, type Searchable, type SearchableCollection,
+  siftCollections, type SiftMember,
 } from './search';
 
 const place = (p: Partial<Parameters<typeof placeHaystack>[0]> = {}) => ({
@@ -556,5 +557,119 @@ describe('findCollections', () => {
   it('exposes the same verdict per collection through collectionMatches', () => {
     expect(collectionMatches(cafes.c, cafes.members, queryTerms('huynh hoa'))).toBe(true);
     expect(collectionMatches(cafes.c, cafes.members, queryTerms('sky'))).toBe(false);
+  });
+});
+
+// ── the Collections shelf, sifted ──
+//
+// Two chips and a box over lists of places. The chips ask about places
+// and the card prints how many of a list's places the choice reached;
+// the words keep `findCollections`' rule for whether a list is listed
+// and gain a reason — the member they landed on — for the card.
+describe('siftCollections', () => {
+  const m = (name_en: string, city_id: string, categories: string[], city_name?: string): SiftMember =>
+    ({ name_en, city_id, categories, city_name });
+  const cafes = {
+    c: { title_en: 'Quiet cafés', title_vi: 'Cà phê yên tĩnh', curator_handle: 'minh' },
+    members: [m('Bánh Mì Huỳnh Hoa', 'hcmc', ['eats'], 'Saigon'), m('Mono Coffee Lab', 'hanoi', ['cafes'], 'Hanoi'), m('Tranquil', 'hanoi', ['cafes'])],
+  };
+  const rooftops = {
+    c: { title_en: 'Rooftops with a view', curator_handle: 'anh' },
+    members: [m('Lush Sky Bar', 'hanoi', ['nightlife', 'views'], 'Hanoi')],
+  };
+  const danang = {
+    c: { title_en: 'Da Nang cafés' },
+    members: [m('43 Factory', 'danang', ['cafes'], 'Da Nang'), m('Cộng', 'danang', ['cafes'], 'Da Nang')],
+  };
+  const empty = { c: { title_en: 'Someday' }, members: [] as SiftMember[] };
+  const pairs = [cafes, rooftops, danang, empty];
+  const none = { query: '', city: null, kind: null };
+  const slugs = (hits: { c: { title_en?: string | null } }[]) => hits.map((h) => h.c.title_en);
+
+  it('asks nothing, lists everything as it arrived, every member a hit', () => {
+    const out = siftCollections(pairs, none);
+    expect(slugs(out)).toEqual(['Quiet cafés', 'Rooftops with a view', 'Da Nang cafés', 'Someday']);
+    expect(out.map((h) => [h.hits, h.total, h.place])).toEqual([[3, 3, null], [1, 1, null], [2, 2, null], [0, 0, null]]);
+  });
+
+  it('a list found by its own words reaches every member, and names no place', () => {
+    const [hit] = siftCollections(pairs, { ...none, query: 'ca phe yen' });
+    expect(hit.c).toBe(cafes.c);
+    expect(hit).toMatchObject({ hits: 3, total: 3, place: null });
+  });
+
+  it('a list found by a place inside it names that place and counts the places the words reached', () => {
+    const out = siftCollections(pairs, { ...none, query: 'mono' });
+    expect(slugs(out)).toEqual(['Quiet cafés']);
+    expect(out[0]).toMatchObject({ hits: 1, total: 3, place: cafes.members[1] });
+  });
+
+  it('keeps the whether-rule: every word must land on the list somewhere', () => {
+    // "mono" is a member and "minh" the curator: listed, by the member.
+    const [hit] = siftCollections(pairs, { ...none, query: 'mono minh' });
+    expect(hit).toMatchObject({ c: cafes.c, hits: 1, place: cafes.members[1] });
+    // "mono" and "anh" land on different lists: nowhere whole.
+    expect(siftCollections(pairs, { ...none, query: 'mono anh' })).toEqual([]);
+  });
+
+  it('finds a list by the city its places are in, typed as words', () => {
+    const out = siftCollections(pairs, { ...none, query: 'da nang' });
+    // By title for the Da Nang list; by a member's city for nobody else.
+    expect(slugs(out)).toEqual(['Da Nang cafés']);
+    expect(out[0].place).toBeNull();
+    const [bySaigon] = siftCollections(pairs, { ...none, query: 'saigon' });
+    expect(bySaigon).toMatchObject({ c: cafes.c, hits: 1, place: cafes.members[0] });
+  });
+
+  it('lists a list found by its words even with no places in it', () => {
+    expect(siftCollections(pairs, { ...none, query: 'someday' })).toEqual([{ c: empty.c, hits: 0, total: 0, place: null }]);
+  });
+
+  it('a kind chip counts the places of that kind, drops lists with none, and orders by the count', () => {
+    const out = siftCollections(pairs, { ...none, kind: 'cafes' });
+    expect(slugs(out)).toEqual(['Quiet cafés', 'Da Nang cafés']);
+    expect(out.map((h) => [h.hits, h.total])).toEqual([[2, 3], [2, 2]]);
+    expect(out.every((h) => h.place === null)).toBe(true);
+  });
+
+  it('a chip hides a list whose own words match but whose places do not', () => {
+    // "Quiet cafés" has no nightlife; the rooftops do.
+    expect(slugs(siftCollections(pairs, { query: 'quiet', city: null, kind: 'nightlife' }))).toEqual([]);
+    expect(slugs(siftCollections(pairs, { query: 'rooftops', city: null, kind: 'nightlife' }))).toEqual(['Rooftops with a view']);
+  });
+
+  it('a city chip counts the places in that city', () => {
+    const out = siftCollections(pairs, { ...none, city: 'hanoi' });
+    expect(slugs(out)).toEqual(['Quiet cafés', 'Rooftops with a view']);
+    expect(out.map((h) => h.hits)).toEqual([2, 1]);
+  });
+
+  it('words and chips together: the words pick the members, the chips keep only those that pass', () => {
+    // "mono" lands on a Hanoi café: under Saigon it is gone, under Hanoi it stays.
+    expect(siftCollections(pairs, { query: 'mono', city: 'hcmc', kind: null })).toEqual([]);
+    const [hit] = siftCollections(pairs, { query: 'mono', city: 'hanoi', kind: null });
+    expect(hit).toMatchObject({ hits: 1, place: cafes.members[1] });
+  });
+
+  it('puts lists found by their own words before lists found through a place', () => {
+    // "cafés" is in two titles and in no member's name; "lab" only in a member.
+    const out = siftCollections([rooftops, cafes, danang], { ...none, query: 'cafe' });
+    expect(slugs(out)).toEqual(['Quiet cafés', 'Da Nang cafés']);
+    const mixed = siftCollections([cafes, rooftops], { ...none, query: 'lush rooftops' });
+    expect(slugs(mixed)).toEqual(['Rooftops with a view']);
+  });
+
+  it('a member with no categories and no city name is simply not of any kind', () => {
+    const bare = { c: { title_en: 'Bare' }, members: [{ name_en: 'Nameless' } as SiftMember] };
+    expect(siftCollections([bare], { ...none, kind: 'cafes' })).toEqual([]);
+    expect(siftCollections([bare], { ...none, query: 'nameless' })[0]).toMatchObject({ hits: 1, place: bare.members[0] });
+  });
+
+  it('offers the cities and kinds its members have, most common first', () => {
+    expect(collectionCities(pairs)).toEqual(['hanoi', 'danang', 'hcmc']);
+    expect(collectionKinds(pairs)).toEqual(['cafes', 'eats', 'nightlife', 'views']);
+    const loose = [{ members: [{ name_en: 'x' } as SiftMember, { name_en: 'y', city_id: null, categories: null } as SiftMember] }];
+    expect(collectionCities(loose)).toEqual([]);
+    expect(collectionKinds(loose)).toEqual([]);
   });
 });
