@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js';
 import { leftBehindNote } from '../storage.js';
 import { CATEGORY_KEYS } from '../categories.js';
-import { LANGS, foldI18n, localizedColumns, localizedKeys, objectLangs, unfoldI18n } from '../langs.js';
+import { LANGS, columnLangs, foldI18n, localizedColumns, localizedKeys, objectLangs, unfoldI18n } from '../langs.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
@@ -204,6 +204,23 @@ export default function PlaceEditor() {
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
+  // Google's summary, once the desk has changed a word of it, is the
+  // desk's blurb: a "Google" credit under words Google did not write is
+  // the fabricated credit `sourceCredit` refuses to print. So the first
+  // edit to EN or VI on a Google row moves the source to `editorial`; the
+  // select stays open for an editor who meant otherwise. Object languages
+  // do not move it — a Japanese draft under a Google blurb is Google's
+  // words, translated. Not undone when the text is typed back to what
+  // Google wrote: that would need the form to remember who flipped it,
+  // for a case that is one click in the select.
+  const setBlurb = (name, value) => setForm((f) => ({
+    ...f,
+    [name]: value,
+    ...(f.reviewer_source === 'google' && columnLangs().some((l) => name === `desc_${l.code}`)
+      ? { reviewer_source: 'editorial' }
+      : {}),
+  }));
+
   // A model's first draft of a blank blurb, dropped into the Blurb
   // fields unsaved — exactly as if the editor had typed it — so the one
   // gate every sentence in the app already passes, Save, is the gate
@@ -376,7 +393,7 @@ export default function PlaceEditor() {
             <h3>Identity</h3>
             <LocalizedField label="Name" field="name" form={form} set={set} />
             <LocalizedField
-              label="Blurb" field="desc" form={form} set={set} textarea
+              label="Blurb" field="desc" form={form} set={setBlurb} textarea
               machine={new Set(objectLangs()
                 .filter((l) => foldI18n(form, place.i18n, drafted)[l.code]?.machine)
                 .map((l) => l.code))}
