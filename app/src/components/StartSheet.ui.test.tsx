@@ -275,12 +275,14 @@ describe('the search', () => {
     fireEvent.click(cta());
     fireEvent.click(await screen.findByText('Thành phố Hồ Chí Minh'));
     expect(setCity).toHaveBeenCalledWith('hcmc');
-    expect(screen.getByTestId('start-moved').textContent).toContain('Switched to Ho Chi Minh City');
+    const moved = screen.getByTestId('start-moved');
+    expect(moved.textContent).toContain('Switched to Ho Chi Minh City');
+    expect(moved.querySelector('[data-icon="checkmark-circle"]')).toBeTruthy();
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith({ district: null, at: { lat: 10.78, lng: 106.70 }, atName: 'Thành phố Hồ Chí Minh' });
   });
 
-  it('refuses a result in no catalog city, says so by name, and keeps the list', async () => {
+  it('refuses a result in no catalog city, says so by name in a well, and drops the list', async () => {
     setCity.mockClear();
     const NHATRANG = { name: 'Nha Trang', label: 'Khánh Hòa', lat: 12.2388, lng: 109.1967 };
     findSpots.mockResolvedValue([NHATRANG]);
@@ -289,9 +291,13 @@ describe('the search', () => {
     fireEvent.click(cta());
     fireEvent.click(await screen.findByText('Nha Trang'));
     expect(setCity).not.toHaveBeenCalled();
-    expect(screen.getByTestId('start-elsewhere').textContent).toBe('No places near Nha Trang yet. Pick a spot in one of City Crew’s cities.');
-    // Still listed, still pickable; nothing landed in the draft.
-    expect(screen.getByText('Nha Trang')).toBeTruthy();
+    const well = screen.getByTestId('start-elsewhere');
+    expect(well.textContent).toBe('No places near Nha Trang yet.Search somewhere else, or pick an area below.');
+    expect(well.querySelector('[data-icon="alert-circle"]')).toBeTruthy();
+    expect(getComputedStyle(well).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    // The list goes; the words typed stay; nothing landed in the draft.
+    expect(screen.queryByText('Khánh Hòa')).toBeNull();
+    expect(screen.getByDisplayValue('nha trang')).toBeTruthy();
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith(NOWHERE);
   });

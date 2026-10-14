@@ -343,6 +343,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
     if (!signedIn) { onNeedSignIn(); return; }
     setFinding(true);
     setMissed(false);
+    setElsewhere(null);
     let found: Spot[];
     try {
       found = await findSpots(q, near ?? centre, city?.id ?? null, lang);
@@ -366,9 +367,10 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
    *  comes back into view so the move is something the reader watches
    *  rather than something they have to scroll up to find. */
   const take = (spot: Spot) => {
-    // A result in no catalog city is not taken: the list stays, with the
-    // notice under it, for the reader to pick again.
-    if (!land({ lat: spot.lat, lng: spot.lng }, spot.name)) return;
+    // A result in no catalog city is not taken. The list goes and the
+    // well under the field says so, pointing at the areas below; the
+    // words typed stay, to be edited rather than retyped.
+    if (!land({ lat: spot.lat, lng: spot.lng }, spot.name)) { setHits(null); return; }
     setHits(null);
     setQuery(spot.name);
     setSettled(spot.name);
@@ -551,23 +553,50 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             />
             {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
           </View>
+          {/* ── a pin that fell nowhere ──
+              A well, not a line. The first cut said this in `missed`'s
+              13pt grey, the register of "nothing found for that", and the
+              owner's reading was that nobody would notice it — which is
+              the one notice here that must be noticed, since the reader
+              has just done something the sheet refused. The theme's warn
+              pair (new with this, amber on every look) with the glyph
+              beside it; the fact in bold, the way out under it: search
+              again, or the area chips right below. "Not yet" rather than
+              "none": the catalog has not reached there, not the place. */}
           {elsewhere && (
-            <Text style={s.missed} testID="start-elsewhere">
-              {t(
-                `No places near ${elsewhere} yet. Pick a spot in one of City Crew’s cities.`,
-                `Chưa có địa điểm nào quanh ${elsewhere}. Chọn một chỗ trong các thành phố City Crew có.`,
-                `${elsewhere} の周辺にはまだスポットがありません。City Crew にある街の中から選んでください。`,
-              )}
-            </Text>
+            <View style={[s.well, s.warnWell]} testID="start-elsewhere">
+              <Ionicons name="alert-circle" size={18} color={colors.warnInk} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[s.wellTitle, { color: colors.warnInk }]}>
+                  {t(
+                    `No places near ${elsewhere} yet.`,
+                    `Chưa có địa điểm quanh ${elsewhere}.`,
+                    `${elsewhere} の周辺にはまだスポットがありません。`,
+                  )}
+                </Text>
+                <Text style={[s.wellBody, { color: colors.warnInk }]}>
+                  {t(
+                    'Search somewhere else, or pick an area below.',
+                    'Tìm chỗ khác, hoặc chọn một khu vực bên dưới.',
+                    '別の場所を検索するか、下のエリアを選んでください。',
+                  )}
+                </Text>
+              </View>
+            </View>
           )}
+          {/* The confirmation is the ok pair: a city the reader just chose
+              is state they made, which is what that green is for. */}
           {moved && (
-            <Text style={s.missed} testID="start-moved">
-              {t(
-                `Switched to ${cityName(moved)}: the plan will be made there.`,
-                `Đã chuyển sang ${cityName(moved)}: kế hoạch sẽ lập ở đó.`,
-                `${cityName(moved)} に切り替えました。プランはそこで作ります。`,
-              )}
-            </Text>
+            <View style={[s.well, s.okWell]} testID="start-moved">
+              <Ionicons name="checkmark-circle" size={18} color={colors.okInk} />
+              <Text style={[s.wellBody, { color: colors.okInk, flex: 1 }]}>
+                {t(
+                  `Switched to ${cityName(moved)}: the plan will be made there.`,
+                  `Đã chuyển sang ${cityName(moved)}: kế hoạch sẽ lập ở đó.`,
+                  `${cityName(moved)} に切り替えました。プランはそこで作ります。`,
+                )}
+              </Text>
+            </View>
           )}
           {missed && (
             <Text style={s.missed}>
@@ -696,6 +725,17 @@ const s = StyleSheet.create({
   },
   input: { flex: 1, color: colors.text, fontSize: 16, padding: 0 },
   missed: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8 },
+  // The two wells under the field, `blocked`'s shape in the theme's
+  // semantic tones: 14 inside, the card's radius, glyph at the top of the
+  // first line so a two-line well still reads glyph-then-title.
+  well: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12,
+    paddingHorizontal: 14, paddingVertical: 11, borderRadius: radius.card,
+  },
+  warnWell: { backgroundColor: colors.warnSoft },
+  okWell: { backgroundColor: colors.okSoft },
+  wellTitle: { fontSize: 14, lineHeight: 19, fontWeight: font.semibold },
+  wellBody: { fontSize: 13, lineHeight: 19 },
   // A tinted well rather than a bare line, unlike `missed`: that one
   // answers a search the reader just ran and is read in passing, while
   // this one is asking them to leave the app and come back.
