@@ -5,24 +5,27 @@
 // ambient warmth that all but disappears into it, translucent charcoal
 // surfaces and thin warm hairlines — not from shadows.
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { type AccessibilityProps, Alert, Animated, SectionList, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type AccessibilityProps, Alert, Animated, Keyboard, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, RoundIconButton, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Chip, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
-import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf, touchesCity } from '../lib/data';
+import { CATEGORIES, categoryLabel } from '../lib/categories';
+import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
-import { findCollections } from '../lib/search';
+import { COLLECTION_RECENTS_KEY, parseRecents, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { collectionCities, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
@@ -430,7 +433,7 @@ export default function CollectionsScreen({ navigation, route }: {
 }) {
   const { t } = useI18n();
   const { session } = useAuth();
-  const { city } = useCity();
+  const { city, cities } = useCity();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);
   // Shared with the save sheet — see SaveProvider. Reading it here through
@@ -484,8 +487,14 @@ export default function CollectionsScreen({ navigation, route }: {
 
   const me = session?.user?.id;
 
-  // A public collection with nothing in this city is somebody else's trip,
-  // and one with nothing at all is a dead end, so both stay hidden. Your
+  const cityName = useCallback((id: string | null | undefined) => {
+    const c = id ? cities.find((x) => x.id === id) : undefined;
+    return c ? t(c.short_en, c.short_vi, c.short_ja ?? c.short_en) : (id ?? '');
+  }, [cities, t]);
+
+  // A public collection with nothing at all is a dead end, so it stays
+  // hidden; one with nothing in this city is somebody else's trip, and
+  // the sift below hides it under the city the shelf is scoped to. Your
   // own are neither: an empty one is new, and one made in another city is
   // still yours — `mine` is filtered by neither test.
   //
@@ -496,9 +505,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // shelves at once. Asking the database to hide them hid them from
   // Explore and Search too, which have no Yours tab to find them on. See
   // `fetchCollections`.
-  const visible = cols.data.filter(
-    (c) => (!me || c.owner_id !== me) && touchesCity(membersOf(c, places), city?.id),
-  );
+  const community = cols.data.filter((c) => (!me || c.owner_id !== me) && membersOf(c, places).length > 0);
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
@@ -584,24 +591,146 @@ export default function CollectionsScreen({ navigation, route }: {
   // The search over what is already here. Everything it reads — both
   // lists, every member — is in memory, so this is a filter that runs on
   // the keystroke, offline, with no query behind it. It answers by a
-  // list's own words, by the places inside it, and by @handle; the
-  // arithmetic lives in `findCollections`, under the gate, beside the
-  // rules it shares with the search box on Explore.
+  // list's own words, by the places inside it, by their city, and by
+  // @handle; the arithmetic lives in `siftCollections`, under the gate,
+  // beside the rules it shares with the search box on Explore.
   //
-  // Closed, it is one glyph in the space the left-aligned tabs leave
-  // free. The field only exists while wanted — the lesson of the Crew
-  // tray, spent here before the fact.
-  const [searching, setSearching] = useState(false);
+  // It was a glyph in the header and a field that existed only while
+  // wanted. The owner's review (14 Oct 2026): the check-ins screen had
+  // meanwhile grown a box under its title with a panel of chips behind
+  // it, and a reader who had learned that screen looked for the same
+  // thing here. So this is that box, with that panel — recent searches,
+  // then the cities, then the kinds of place — opened by focus and closed
+  // by Cancel, for the reasons VisitedScreen gives at length. One city
+  // and one kind at a time, a chosen chip tapped again lets go.
+  //
+  // What the panel adds that the words could not: a chip asks about the
+  // *places* in a list. Under "Cafés" a list is listed for the cafés in
+  // it, and the card says how many of its places those are, because a
+  // list of eight with three cafés and a list of three cafés are
+  // different answers to the same chip.
   const [query, setQuery] = useState('');
   const q = query.trim();
-  const closeSearch = () => { setSearching(false); setQuery(''); };
+  const [panel, setPanel] = useState(false);
+  const [kind, setKind] = useState<string | null>(null);
+  // The city chip, in three states: unset (the shelf's own scope — the
+  // app's city on Community, every city on Yours), a city, or 'all',
+  // which is the Community shelf's own chip let go of. Yours never needs
+  // 'all', since unset already means it there.
+  const [cityPick, setCityPick] = useState<string | 'all' | null>(null);
+  const inputRef = useRef<TextInput>(null);
+  const cancel = () => {
+    setPanel(false); setQuery(''); setKind(null); setCityPick(null);
+    inputRef.current?.blur();
+    Keyboard.dismiss();
+  };
+
+  // What this box remembered, in its own drawer — the visits screen's
+  // mechanism, for its reasons: kept when a search *worked* (a card
+  // opened, or the return key), never on a keystroke.
+  const [recents, setRecents] = useState<string[]>([]);
+  useEffect(() => {
+    AsyncStorage.getItem(COLLECTION_RECENTS_KEY)
+      .then((raw) => setRecents(parseRecents(raw)))
+      .catch(() => {});
+  }, []);
+  const keepRecents = (next: string[]) => {
+    setRecents(next);
+    AsyncStorage.setItem(COLLECTION_RECENTS_KEY, JSON.stringify(next)).catch(() => {});
+  };
+  const noteSearch = () => {
+    const next = rememberSearch(recents, query);
+    if (next !== recents) keepRecents(next);
+  };
+  const suggestions = recents
+    .filter((term) => term.toLowerCase().includes(q.toLowerCase()) && term.trim() !== q)
+    .slice(0, RECENTS_SHOWN);
+
+  // Guests have one shelf and no switch; see the tabs below.
+  const onYours = !!session && tab === 'yours';
+  // Every member with the words a reader types for its city — the sift
+  // matches "da nang" against a member's city as it does against its
+  // name. Built once per catalog, not per keystroke.
+  const pairOf = useCallback((c: Collection): { c: Collection; members: SiftMember[] } => ({
+    c,
+    members: membersOf(c, places).map((p): SiftMember => ({ ...p, city_name: cityName(p.city_id) })),
+  }), [places, cityName]);
+  const shelf = useMemo(
+    () => (onYours ? mine.data : community).map(pairOf),
+    // `community` is derived from `cols.data`, `me` and `places`, all listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onYours, mine.data, cols.data, me, places, pairOf],
+  );
+  // The chips a shelf can offer: only what its lists actually hold, so no
+  // chip leads to an empty shelf. A city group with one city is a fact
+  // and not a choice — unless that one city is not the one the shelf is
+  // scoped to, when the chip is the only way to those lists.
+  const cityChoices = useMemo(() => collectionCities(shelf), [shelf]);
+  const kindChoices = useMemo(() => collectionKinds(shelf), [shelf]);
+  const scopeCity = cityPick === 'all' ? null : (cityPick ?? (onYours ? null : city?.id ?? null));
+  const offerCities = cityChoices.length > 1 || (cityChoices.length === 1 && cityChoices[0] !== scopeCity);
+  const asked = !!(q || kind || cityPick);
+
+  const hits = useMemo(
+    () => siftCollections(shelf, { query: q, city: scopeCity, kind }),
+    [shelf, q, scopeCity, kind],
+  );
+  const hitBy = useMemo(() => new Map(hits.map((h) => [h.c.slug, h])), [hits]);
+
+  /**
+   * Why a card is listed, when the shelf is narrowed — the line under its
+   * name. "matches MONO Coffee Lab" when the words landed on a place
+   * rather than on the list; "3 of 8 places · Cafés" when a chip reached
+   * part of it. Null when the ordinary count says it all: nothing asked
+   * (every place is a hit then, by construction), or a list found by its
+   * own words with every place still counted. The default city scope
+   * prints nothing per card — it is the subtitle's to say, once.
+   */
+  const placesOf = (n: number) => `${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`;
+  const reasonFor = (slug: string): string | null => {
+    const hit = hitBy.get(slug);
+    if (!hit) return null;
+    const parts: string[] = [];
+    if (hit.place) {
+      const name = t(hit.place.name_en ?? '', hit.place.name_vi ?? '', hit.place.name_ja ?? undefined);
+      parts.push(t(`matches ${name}`, `khớp ${name}`, `${name} に一致`));
+    }
+    if (hit.hits !== hit.total) {
+      parts.push(t(
+        `${hit.hits} of ${placesOf(hit.total)}`,
+        `${hit.hits} trong ${placesOf(hit.total)}`,
+        `${placesOf(hit.total)}のうち${hit.hits}`,
+      ));
+      if (kind) parts.push(categoryLabel(kind, t));
+      if (cityPick && cityPick !== 'all') parts.push(cityName(cityPick));
+    }
+    return parts.length ? parts.join(' · ') : null;
+  };
+
+  // The line under the title: how many lists, and which city they are
+  // in — the one thing the two shelves did differently without saying so
+  // (the owner's review: Community was scoped to the city, Yours was not,
+  // and nothing on the screen said either). Narrowed, it names the chips
+  // instead, as the visits screen does.
+  const listsWord = (n: number) => t(n === 1 ? '1 collection' : `${n} collections`, `${n} bộ sưu tập`, `${n}件のコレクション`);
+  const chosen = [
+    kind ? categoryLabel(kind, t) : null,
+    cityPick ? (cityPick === 'all' ? t('All cities', 'Mọi thành phố', 'すべての都市') : cityName(cityPick)) : null,
+  ].filter((x): x is string => !!x);
+  const scopeLine = (() => {
+    if (chosen.length) return [listsWord(hits.length), ...chosen].join(' · ');
+    if (!onYours) return `${listsWord(hits.length)} · ${scopeCity ? cityName(scopeCity) : t('All cities', 'Mọi thành phố', 'すべての都市')}`;
+    const k = cityChoices.length;
+    if (k === 0) return listsWord(hits.length);
+    return `${listsWord(hits.length)} · ${k === 1 ? cityName(cityChoices[0]) : t(`${k} cities`, `${k} thành phố`, `${k}都市`)}`;
+  })();
 
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
   const mineReady = mine.loaded;
-  const sift = (list: Collection[]) => (q
-    ? findCollections(list.map((c) => ({ c, members: membersOf(c, places) })), q)
-    : list);
+  // The shelf, as the sift ordered it — by likes when nothing is asked,
+  // lists found by their own words first and then by hits when it is.
+  const sifted = hits.map((h) => h.c);
 
   // Both halves default to tiles — covers first, in the Explore shelf's
   // own card language, six covers where the rows showed three — and one
@@ -658,9 +787,9 @@ export default function CollectionsScreen({ navigation, route }: {
   const shape = (list: Collection[], own: boolean): ListRow[] => (view === 'tile'
     ? pairUp(list, own)
     : list.map((c, at): ListRow => (own ? { kind: 'own', c } : { kind: 'com', c, at })));
-  const sections = session && tab === 'yours'
-    ? (mineReady ? [{ own: true, data: shape(sift(mine.data), true) }] : [])
-    : [{ own: false, data: shape(sift(visible), false) }];
+  const sections = onYours
+    ? (mineReady ? [{ own: true, data: shape(sifted, true) }] : [])
+    : [{ own: false, data: shape(sifted, false) }];
 
   return (
     // No control in the header: creating belongs to the Yours tab, which
@@ -670,22 +799,14 @@ export default function CollectionsScreen({ navigation, route }: {
     // the same action a third time.)
     <Screen
       title={t('Collections', 'Bộ sưu tập', 'コレクション')}
-      // The search lives where every screen keeps its utility — the
-      // header's right, in the same grey disc the Crew screen gives ⊕
-      // and Explore gives its own magnifier. It sat as a bare 18pt glyph
-      // on the tabs row first, and the owner's review was right: a
-      // feature nobody notices is a feature nobody has. Up here it is
-      // also a door guests get — the tabs row below is signed-in only,
-      // the community list is not.
-      right={(
-        <RoundIconButton
-          icon={searching ? 'close' : 'search'}
-          label={searching
-            ? t('Close search', 'Đóng tìm kiếm', '検索を閉じる')
-            : t('Search collections', 'Tìm bộ sưu tập', 'コレクションを検索')}
-          onPress={() => (searching ? closeSearch() : setSearching(true))}
-        />
-      )}
+      // The search was a disc up here, where every screen keeps its
+      // utility; it is a box under the tabs now — see `panel`. The right
+      // side is free for the door the next change puts there.
+      // A tab root's header takes a `lede`, not a `subtitle` — the line
+      // under a large title is the screen's own, in its own type.
+      lede={!holding && (onYours ? mineReady : true)
+        ? <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scopeLine}</Text>
+        : null}
     >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
@@ -734,38 +855,107 @@ export default function CollectionsScreen({ navigation, route }: {
             )}
           />
         ) : null}
-        {searching ? (
+        {/* The box, and the panel it opens. Outside the list rather than
+            as its header: a box that scrolled away with the shelf was the
+            one the owner's review called hard to find, and the panel is
+            short-lived — open while choosing, gone on Cancel. */}
+        {!holding && (
           <View style={s.searchRow}>
-            <Ionicons name="search" size={15} color={colors.textTertiary} />
-            <TextInput
-              style={s.searchInput}
+            <SearchField
+              inputRef={inputRef}
               value={query}
               onChangeText={setQuery}
-              // The three things it answers by, named in the box itself —
-              // and in the app's own word for the third: "username" is
-              // what the Crew screen's add flow already calls it, where
-              // "handle" is what this codebase calls it. Readers get the
-              // screen's vocabulary, not the repository's.
-              placeholder={t('Name, place, or @username', 'Tên, địa điểm, hoặc @username', '名前・スポット・@ユーザー名')}
-              placeholderTextColor={colors.textTertiary}
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="search"
+              onFocus={() => setPanel(true)}
+              onSubmitEditing={noteSearch}
+              testID={{ input: 'collections-input', clear: 'collections-clear' }}
+              // The four things it answers by, named in the box itself —
+              // and in the app's own word for the last: "username" is
+              // what the Crew screen's add flow already calls it.
+              placeholder={t('Name, place, city, or @username', 'Tên, địa điểm, thành phố, hoặc @username', '名前・スポット・都市・@ユーザー名')}
             />
-            {query.length > 0 && (
+            {panel && (
               <PressableScale
-                scaleTo={0.85}
-                hitSlop={8}
-                onPress={() => setQuery('')}
+                onPress={cancel}
+                scaleTo={0.94}
+                style={s.cancel}
                 accessibilityRole="button"
-                accessibilityLabel={t('Clear', 'Xoá', 'クリア')}
+                accessibilityLabel={t('Cancel', 'Hủy', 'キャンセル')}
               >
-                <Ionicons name="close-circle" size={17} color={colors.textTertiary} />
+                <Text style={s.cancelText}>{t('Cancel', 'Hủy', 'キャンセル')}</Text>
               </PressableScale>
             )}
           </View>
-        ) : null}
+        )}
+        {!holding && panel && (
+          <Card style={s.panel} testID="collections-panel">
+            {suggestions.length > 0 && (
+              <View style={s.group}>
+                <View style={s.legendRow}>
+                  <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補')}</Text>
+                  <PressableScale
+                    onPress={() => keepRecents([])}
+                    scaleTo={0.92}
+                    hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去')}
+                  >
+                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去')}</Text>
+                  </PressableScale>
+                </View>
+                {suggestions.map((term) => (
+                  <PressableScale
+                    key={term}
+                    style={s.suggestion}
+                    scaleTo={0.97}
+                    onPress={() => setQuery(term)}
+                    accessibilityRole="button"
+                    accessibilityLabel={term}
+                  >
+                    <Ionicons name="search-outline" size={17} color={colors.textTertiary} />
+                    <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
+                  </PressableScale>
+                ))}
+              </View>
+            )}
+            {offerCities && (
+              <View style={s.group}>
+                <Text style={s.legend}>{t('City', 'Thành phố', '都市')}</Text>
+                <View style={s.chipWrap}>
+                  {cityChoices.map((id) => (
+                    <Chip
+                      key={id}
+                      label={cityName(id)}
+                      active={scopeCity === id}
+                      // The Community shelf's own city, let go of, is every
+                      // city; on Yours unset already means that.
+                      onPress={() => setCityPick(scopeCity === id ? (onYours ? null : 'all') : id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+            {kindChoices.length > 1 && (
+              <View style={s.group}>
+                <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類')}</Text>
+                <View style={s.chipWrap}>
+                  {kindChoices.map((k) => (
+                    <Chip
+                      key={k}
+                      label={categoryLabel(k, t)}
+                      icon={CATEGORIES[k]?.icon}
+                      iconColor={CATEGORIES[k]?.color}
+                      active={kind === k}
+                      onPress={() => setKind(kind === k ? null : k)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+            {suggestions.length === 0 && !offerCities && kindChoices.length <= 1 && (
+              <Text style={s.legend}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。')}</Text>
+            )}
+          </Card>
+        )}
         {holding && (
           <View>
             <GuestNotice navigation={navigation} />
@@ -811,12 +1001,13 @@ export default function CollectionsScreen({ navigation, route }: {
                     {item.pair.map((c, j) => {
                       const uri = coverFor(c);
                       const members = membersOf(c, places).length;
+                      const reason = reasonFor(c.slug);
                       const my = !!c.id && myLikes.includes(c.id);
                       return (
                         <PressableScale
                           key={c.slug}
                           style={[s.gcard, { width: gcardW, height: gcardH }]}
-                          onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                          onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
                           testID={item.own ? undefined : `collection-card-${item.at + j}`}
                           accessibilityRole="button"
                           accessibilityLabel={t(c.title_en, c.title_vi, c.title_ja)}
@@ -889,7 +1080,14 @@ export default function CollectionsScreen({ navigation, route }: {
                                   — and only yours can be empty here: the
                                   community shelf drops empty lists before
                                   they reach a tile (see `visible`). */}
-                              {item.own && (
+                              {/* Narrowed, the reason stands in for the count
+                                  on every tile — the one time a community
+                                  tile says anything about its places, since
+                                  which of them the chip reached is what the
+                                  reader just asked. */}
+                              {reason ? (
+                                <Text style={s.gcardMeta} numberOfLines={1}>{reason}</Text>
+                              ) : item.own && (
                                 <Text style={s.gcardMeta} numberOfLines={1}>
                                   {members === 0
                                     ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
@@ -962,6 +1160,7 @@ export default function CollectionsScreen({ navigation, route }: {
               if (item.kind === 'com') {
                 const c = item.c;
                 const n = membersOf(c, places).length;
+                const reason = reasonFor(c.slug);
                 const cover = coverFor(c);
                 // The same test the tile makes, for the same glyph: the
                 // `pair` branch has asked it all along, and this one never
@@ -969,7 +1168,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 const my = !!c.id && myLikes.includes(c.id);
                 const blurb = t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() || '';
                 const byline = c.curator_handle
-                  ? `${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}, ${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`
+                  ? `${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}, ${reason ?? placesOf(n)}`
                   : undefined;
                 return (
                   <View style={s.row}>
@@ -979,7 +1178,7 @@ export default function CollectionsScreen({ navigation, route }: {
                         says for the whole row, so the title alone would
                         silence the one the meta line keeps. */}
                     <PressableScale
-                      onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                      onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
                       testID={`collection-card-${item.at}`}
                       accessibilityRole="button"
                       accessibilityLabel={byline
@@ -1042,7 +1241,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                 accessibilityLabel={byline}
                               >
                                 {c.curator_handle ? `${atHandle(c.curator_handle)}  ·  ` : ''}
-                                {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
+                                {reason ?? placesOf(n)}
                               </Text>
                             </View>
                             {/* The sentence the curator wrote, which was
@@ -1172,7 +1371,7 @@ export default function CollectionsScreen({ navigation, route }: {
               // for the length of every swipe.
               const card = (open: boolean, drag: Drag | null, a11y: RowA11y) => (
                 <PressableScale
-                  onPress={() => navigation.navigate('CollectionDetail', { slug: own.slug })}
+                  onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: own.slug }); }}
                   accessibilityRole="button"
                   accessibilityLabel={t(own.title_en, own.title_vi, own.title_ja)}
                   {...a11y}
@@ -1206,9 +1405,9 @@ export default function CollectionsScreen({ navigation, route }: {
                           <Text style={s.meta} numberOfLines={1}>
                             {/* "0 places" reads like a broken count; an empty
                                 list you just made deserves a sentence. */}
-                            {count === 0
+                            {reasonFor(own.slug) ?? (count === 0
                               ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
-                              : `${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
+                              : placesOf(count))}
                             {`  ·  ${own.is_public
                               ? t('Public', 'Công khai', '公開')
                               : t('Private', 'Riêng tư', '非公開')}`}
@@ -1323,10 +1522,11 @@ export default function CollectionsScreen({ navigation, route }: {
               // matched. The creation rows stay out of it — "start your
               // first collection" under a search that found nothing would
               // be answering a question nobody asked.
-              if (q) {
-                return section.data.length === 0
+              if (asked) {
+                if (section.data.length > 0) return null;
+                return q
                   ? <Empty text={t(`Nothing here matches "${q}".`, `Không có gì khớp với "${q}".`, `「${q}」に一致するものはありません。`)} />
-                  : null;
+                  : <Empty text={t('No collections match that choice.', 'Không có bộ sưu tập nào khớp lựa chọn đó.', 'その条件に合うコレクションはありません。')} />;
               }
               if (section.own) {
                 return section.data.length === 0
@@ -1413,15 +1613,23 @@ const s = StyleSheet.create({
   },
   viewBtnOn: { backgroundColor: colors.surfaceCard },
 
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: space.page, marginBottom: 14,
-    paddingHorizontal: 14, height: 42,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.pill,
-  },
-  searchInput: { flex: 1, color: colors.text, fontSize: 15, paddingVertical: 0 },
+  // The visits screen's box and panel, to the point: the same row, the
+  // same Cancel in words, the same card of groups, so the two screens
+  // that let a reader narrow a list of their own do it with one grammar.
+  // The header's own subtitle type (ui.tsx `s.subtitle`), which a tab
+  // root's header does not draw for itself.
+  scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginTop: 2 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginHorizontal: space.page, marginBottom: 14 },
+  cancel: { height: 44, justifyContent: 'center', paddingHorizontal: 10 },
+  cancelText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
+  panel: { marginHorizontal: space.page, marginBottom: 14, padding: space.cardPadding, gap: space.headingToContent },
+  group: { gap: 10 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  legend: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
+  clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
+  suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {

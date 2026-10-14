@@ -32,6 +32,10 @@ export const RECENTS_KEY = 'citycrew.recentSearches';
  *  shared list would offer each box the other's shortcuts. Same rules,
  *  same parse and remember — only the drawer differs. */
 export const VISIT_RECENTS_KEY = 'citycrew.recentVisitSearches';
+/** The Collections screen's own drawer, for the same reason the visits
+ *  have one: what you looked for among lists is not what you looked for
+ *  in the catalog. */
+export const COLLECTION_RECENTS_KEY = 'citycrew.recentCollectionSearches';
 
 /**
  * Whatever storage handed back, as a list that is safe to render.

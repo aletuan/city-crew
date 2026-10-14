@@ -761,50 +761,208 @@ describe('CollectionsScreen — list view', () => {
 });
 
 describe('CollectionsScreen — search', () => {
+  const box = () => screen.getByPlaceholderText('Name, place, city, or @username') as HTMLInputElement;
+  const type = (v: string) => fireEvent.change(box(), { target: { value: v } });
+  const open = () => fireEvent.focus(box());
+  const expectSub = (line: string) => expect(screen.getByTestId('collections-scope').textContent).toBe(line);
+
   it('filters by name, says when nothing matches, and clears', () => {
     state.cols.data = [col('rooftops', ['a'], { title_en: 'Rooftops' }), col('coffee', ['b'], { title_en: 'Coffee' })];
     show();
-    fireEvent.click(screen.getByRole('button', { name: 'Search collections' }));
-    const input = screen.getByPlaceholderText('Name, place, or @username');
-    fireEvent.change(input, { target: { value: 'roof' } });
+    type('roof');
     expect(screen.getByText('Rooftops')).toBeTruthy();
     expect(screen.queryByText('Coffee')).toBeNull();
-    fireEvent.change(input, { target: { value: 'zzz' } });
+    type('zzz');
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
     // Under a query the empty-shelf invitation stands down.
     expect(screen.queryByText('No public lists here yet')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByTestId('collections-clear'));
     expect(screen.getByText('Coffee')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
+    expect(screen.queryByTestId('collections-clear')).toBeNull();
   });
 
-  it('matches by a place inside the list', () => {
+  it('matches by a place inside the list, and says which place', () => {
     state.cols.data = [col('one', ['a']), col('two', ['b'])];
     show();
-    fireEvent.click(screen.getByRole('button', { name: 'Search collections' }));
-    fireEvent.change(screen.getByPlaceholderText('Name, place, or @username'), { target: { value: 'Place b' } });
+    type('Place b');
     expect(screen.getByText('List two')).toBeTruthy();
     expect(screen.queryByText('List one')).toBeNull();
+    // The one thing the card could not tell the reader: why it is here.
+    expect(screen.getByText('matches Place b')).toBeTruthy();
   });
 
-  it('closing the search drops the field and the query with it', () => {
+  it('matches by the city the places are in, typed as words', () => {
+    state.places = [place('a', 'hanoi'), place('b', 'danang')];
+    state.cols.data = [col('one', ['a']), col('two', ['b'])];
+    show();
+    open();
+    // The Community shelf is the app's city; the words reach past it only
+    // through the chip — see the scope test — so here the words find the
+    // list of the city on screen.
+    type('hanoi');
+    expect(screen.getByText('List one')).toBeTruthy();
+  });
+
+  it('Cancel drops the panel, the words and the chips with them', () => {
+    state.places = [{ ...place('a', 'hanoi'), categories: ['cafes'] }, { ...place('b', 'hanoi'), categories: ['nightlife'] }];
     state.cols.data = [col('rooftops', ['a'], { title_en: 'Rooftops' }), col('coffee', ['b'], { title_en: 'Coffee' })];
     show();
-    fireEvent.click(screen.getByRole('button', { name: 'Search collections' }));
-    fireEvent.change(screen.getByPlaceholderText('Name, place, or @username'), { target: { value: 'roof' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Close search' }));
-    expect(screen.queryByPlaceholderText('Name, place, or @username')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    open();
+    expect(screen.getByTestId('collections-panel')).toBeTruthy();
+    type('roof');
+    fireEvent.click(screen.getByRole('button', { name: 'Nightlife' }));
+    expect(screen.queryByText('Rooftops')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByTestId('collections-panel')).toBeNull();
+    expect(box().value).toBe('');
+    // Both lists back: the chip went with the words. A filter nobody can
+    // see is a trap.
     expect(screen.getByText('Coffee')).toBeTruthy();
+    expect(screen.getByText('Rooftops')).toBeTruthy();
+    expectSub('2 collections · hanoi');
   });
 
   it('on your own tab a miss shows the honest footer, not the new-collection row', () => {
     state.uid = 'u1';
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
-    fireEvent.click(screen.getByRole('button', { name: 'Search collections' }));
-    fireEvent.change(screen.getByPlaceholderText('Name, place, or @username'), { target: { value: 'zzz' } });
+    type('zzz');
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
     expect(screen.queryByText('New collection')).toBeNull();
+  });
+
+  // ── the panel ──
+  //
+  // A chip asks about places: "Cafés" lists a collection for the cafés
+  // in it and the card says how many of its places those are.
+  const cafe = (slug: string, city = 'hanoi') => ({ ...place(slug, city), categories: ['cafes'] } as unknown as Place);
+  const bar = (slug: string, city = 'hanoi') => ({ ...place(slug, city), categories: ['nightlife'] } as unknown as Place);
+
+  it('offers only the kinds its lists hold, narrows by one, and counts the places it reached', () => {
+    state.places = [cafe('a'), cafe('b'), bar('c'), bar('d')];
+    state.cols.data = [col('mixed', ['a', 'c', 'd'], { title_en: 'Mixed', curator_handle: 'minh' }), col('bars', ['d'], { title_en: 'Bars' })];
+    show();
+    open();
+    expect(screen.getByText('Kind of place')).toBeTruthy();
+    expect(screen.queryByText('Nature')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    expect(screen.getByText('Mixed')).toBeTruthy();
+    expect(screen.queryByText('Bars')).toBeNull();
+    expect(screen.getByText('1 of 3 places · Cafés')).toBeTruthy();
+    expectSub('1 collection · Cafés');
+    // Tapped again, the chip lets go.
+    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    expect(screen.getByText('Bars')).toBeTruthy();
+    expect(screen.queryByText('1 of 3 places · Cafés')).toBeNull();
+  });
+
+  it('says so when nothing has a place the chips ask for, in words or without', () => {
+    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
+    state.cols.data = [col('one', ['a'], { title_en: 'Cafés of Hanoi' }), col('two', ['c'], { title_en: 'Bars' })];
+    show();
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Nightlife' }));
+    // The words land on the first list's title, but the chip asks about
+    // places, and it has no bar — and under words the miss names them.
+    type('cafes');
+    expect(screen.getByText('Nothing here matches "cafes".')).toBeTruthy();
+    // Chips alone: Hanoi has no nightlife on this shelf.
+    type('');
+    expect(screen.getByText('No collections match that choice.')).toBeTruthy();
+  });
+
+  // ── the city scope, said and switched ──
+  //
+  // Community was scoped to the app's city and Yours to every city, and
+  // nothing on the screen said either. The subtitle says it; the city
+  // chip, pre-chosen on Community, lets the reader look at another city
+  // without switching the app, or at every city by letting go of it.
+  it('names the shelf’s city under the title, and looks at another city through the chip', () => {
+    state.places = [place('a', 'hanoi'), place('b', 'danang'), place('c', 'danang')];
+    state.cols.data = [col('hn', ['a'], { title_en: 'Hanoi list' }), col('dn', ['b', 'c'], { title_en: 'Da Nang list' })];
+    show();
+    expectSub('1 collection · hanoi');
+    expect(screen.queryByText('Da Nang list')).toBeNull();
+    open();
+    expect(screen.getByRole('button', { name: 'hanoi' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    expect(screen.getByText('Da Nang list')).toBeTruthy();
+    expect(screen.queryByText('Hanoi list')).toBeNull();
+    expectSub('1 collection · danang');
+    // Let go of: every city.
+    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    expect(screen.getByText('Hanoi list')).toBeTruthy();
+    expect(screen.getByText('Da Nang list')).toBeTruthy();
+    expectSub('2 collections · All cities');
+  });
+
+  it('offers the one other city when the shelf’s own has no lists', () => {
+    state.places = [place('b', 'danang')];
+    state.cols.data = [col('dn', ['b'], { title_en: 'Da Nang list' })];
+    show();
+    expectSub('0 collections · hanoi');
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    expect(screen.getByText('Da Nang list')).toBeTruthy();
+  });
+
+  it('counts every city on Yours, and narrows to one through the chip without an “all”', () => {
+    state.uid = 'u1';
+    state.places = [place('a', 'hanoi'), place('b', 'danang')];
+    state.mine.data = [col('m1', ['a'], { owner_id: 'u1', title_en: 'Mine in Hanoi' }), col('m2', ['b'], { owner_id: 'u1', title_en: 'Mine in Da Nang' })];
+    show();
+    expectSub('2 collections · 2 cities');
+    expect(screen.getByText('Mine in Da Nang')).toBeTruthy();
+    open();
+    expect(screen.getByRole('button', { name: 'danang' }).getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    expect(screen.queryByText('Mine in Hanoi')).toBeNull();
+    expectSub('1 collection · danang');
+    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    expectSub('2 collections · 2 cities');
+  });
+
+  it('names the one city on Yours when there is one', () => {
+    state.uid = 'u1';
+    state.places = [place('a', 'hanoi')];
+    state.mine.data = [col('m1', ['a'], { owner_id: 'u1' })];
+    show();
+    expectSub('1 collection · hanoi');
+    expect(screen.queryByText('City')).toBeNull();
+  });
+
+  it('remembers the words when a card they found is opened', async () => {
+    state.cols.data = [col('rooftops', ['a'], { title_en: 'Rooftops' })];
+    show();
+    type('roof');
+    fireEvent.click(screen.getByText('Rooftops'));
+    await waitFor(async () => {
+      expect(JSON.parse((await AsyncStorage.getItem('citycrew.recentCollectionSearches')) ?? '[]')).toEqual(['roof']);
+    });
+    await AsyncStorage.removeItem('citycrew.recentCollectionSearches');
+  });
+
+  // ── what the box remembers ──
+  it('remembers a search on return, offers it back, and clears the drawer', async () => {
+    await AsyncStorage.setItem('citycrew.recentCollectionSearches', JSON.stringify(['rooftops']));
+    state.cols.data = [col('rooftops', ['a'], { title_en: 'Rooftops' })];
+    show();
+    await waitFor(() => { open(); expect(screen.getByText('Suggestions')).toBeTruthy(); });
+    fireEvent.click(screen.getByRole('button', { name: 'rooftops' }));
+    expect(box().value).toBe('rooftops');
+    type('coffee');
+    fireEvent.keyDown(box(), { key: 'Enter' });
+    await waitFor(async () => {
+      expect(JSON.parse((await AsyncStorage.getItem('citycrew.recentCollectionSearches')) ?? '[]')).toEqual(['coffee', 'rooftops']);
+    });
+    // Offered narrowed by what is typed, never the word already in the box.
+    expect(screen.queryByText('Suggestions')).toBeNull();
+    type('');
+    expect(screen.getByRole('button', { name: 'coffee' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear suggestions' }));
+    expect(screen.queryByText('Suggestions')).toBeNull();
+    await AsyncStorage.removeItem('citycrew.recentCollectionSearches');
   });
 });
 
