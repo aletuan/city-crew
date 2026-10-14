@@ -43,7 +43,8 @@ import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MiniMap from './MiniMap';
 import { Chip, GradientCta, PressableScale, SelectTick } from './ui';
-import { useCity, useMyPosition } from '../lib/city';
+import { type City, useCity, useMyPosition } from '../lib/city';
+import { cityAround } from '../lib/geo';
 import { findSpots, nameOf, SignedOutError, type Spot } from '../lib/findplace';
 import { useAuth } from '../lib/auth';
 import { ctaMode } from '../lib/spots';
@@ -79,8 +80,41 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   onNeedSignIn: () => void;
 }) {
   const { t, lang } = useI18n();
-  const { city } = useCity();
+  const { city, cities, setCity } = useCity();
   const signedIn = !!useAuth().session;
+  /** A pin that fell in no catalog city, by the name it came with. */
+  const [elsewhere, setElsewhere] = useState<string | null>(null);
+  /** The city the last pin moved the app to, when it did. */
+  const [moved, setMoved] = useState<City | null>(null);
+  const cityName = (c: City) => (lang === 'vi' ? c.name_vi : lang === 'ja' ? (c.name_ja ?? c.name_en) : c.name_en);
+
+  /**
+   * Where a pin may land.
+   *
+   * The search is biased, not restricted, so a pin can come back from
+   * anywhere — and until 14 Oct 2026 it did: a reader in Hanoi took
+   * "Thành phố Hồ Chí Minh" as her pin and was planned a Hanoi evening
+   * starting 1,100 km away. Three cases now. A pin in the city the app
+   * is showing lands. A pin in another catalog city lands and moves the
+   * app there (`setCity`): the reader just named that city, and a plan
+   * of it is what she asked for. A pin in no catalog city does not land
+   * at all — the sheet says there is nothing around it and the draft
+   * stays as it was. The owner's rule: never plan the city the sheet
+   * happened to be open on, because the reader would not know what
+   * they had done wrong.
+   */
+  const land = (at: { lat: number; lng: number }, atName: string | null): boolean => {
+    const home = cityAround(cities, at.lat, at.lng);
+    if (!home) {
+      setElsewhere(atName ?? t('that pin', 'ghim này', 'そのピン'));
+      setMoved(null);
+      return false;
+    }
+    setElsewhere(null);
+    if (city && home.id !== city.id) { setCity(home.id); setMoved(home); } else setMoved(null);
+    setDraft({ district: null, at, atName });
+    return true;
+  };
   const [draft, setDraft] = useState<Start>(value);
   const [where, setWhere] = useState<string>('');
   const [query, setQuery] = useState('');
@@ -332,7 +366,9 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
    *  comes back into view so the move is something the reader watches
    *  rather than something they have to scroll up to find. */
   const take = (spot: Spot) => {
-    setDraft({ district: null, at: { lat: spot.lat, lng: spot.lng }, atName: spot.name });
+    // A result in no catalog city is not taken: the list stays, with the
+    // notice under it, for the reader to pick again.
+    if (!land({ lat: spot.lat, lng: spot.lng }, spot.name)) return;
     setHits(null);
     setQuery(spot.name);
     setSettled(spot.name);
@@ -414,7 +450,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
               caption={caption}
               onLocate={locate}
               onPick={(at) => {
-                setDraft({ district: null, at, atName: null });
+                if (!land(at, null)) return;
                 // The old point's name must not be read as this one's
                 // while the geocoder is still out; the effect refills it.
                 setWhere('');
@@ -515,6 +551,24 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             />
             {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
           </View>
+          {elsewhere && (
+            <Text style={s.missed} testID="start-elsewhere">
+              {t(
+                `No places near ${elsewhere} yet. Pick a spot in one of City Crew’s cities.`,
+                `Chưa có địa điểm nào quanh ${elsewhere}. Chọn một chỗ trong các thành phố City Crew có.`,
+                `${elsewhere} の周辺にはまだスポットがありません。City Crew にある街の中から選んでください。`,
+              )}
+            </Text>
+          )}
+          {moved && (
+            <Text style={s.missed} testID="start-moved">
+              {t(
+                `Switched to ${cityName(moved)}: the plan will be made there.`,
+                `Đã chuyển sang ${cityName(moved)}: kế hoạch sẽ lập ở đó.`,
+                `${cityName(moved)} に切り替えました。プランはそこで作ります。`,
+              )}
+            </Text>
+          )}
           {missed && (
             <Text style={s.missed}>
               {t(

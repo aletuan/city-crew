@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distanceKm, fmtDistance, nearestTo } from './geo';
+import { cityAround, distanceKm, fmtDistance, nearestTo } from './geo';
 
 // The three the app ships with, at the coordinates the cities table
 // holds. Using the real numbers is the point: a formula that passes on
@@ -127,5 +127,30 @@ describe('fmtDistance', () => {
   it('says nothing rather than something wrong', () => {
     expect(fmtDistance(NaN)).toBe('');
     expect(fmtDistance(-1)).toBe('');
+  });
+});
+
+describe('cityAround', () => {
+  // The radii the cities table holds: 25 for Hanoi and Saigon, 20 for Da Nang.
+  const BOUNDED = [
+    { ...SAIGON, radius_km: 25 }, { ...HANOI, radius_km: 25 }, { ...DANANG, radius_km: 20 },
+  ];
+
+  it('names the city a point lies in, by the nearest centre and that city’s own radius', () => {
+    expect(cityAround(BOUNDED, 21.0368, 105.7827)?.id).toBe('hanoi');   // Cầu Giấy
+    expect(cityAround(BOUNDED, 10.7943, 106.7215)?.id).toBe('hcmc');    // Bình Thạnh
+    expect(cityAround(BOUNDED, 16.0678, 108.2208)?.id).toBe('danang');  // Sơn Trà
+  });
+
+  it('answers null for a point in no catalog city, however near the nearest', () => {
+    expect(cityAround(BOUNDED, 12.2388, 109.1967)).toBeNull();   // Nha Trang
+    expect(cityAround(BOUNDED, 20.8449, 106.6881)).toBeNull();   // Hải Phòng, 95 km from Hanoi
+    expect(cityAround([], 21.0285, 105.8542)).toBeNull();
+  });
+
+  it('holds each city to its own radius, not a shared one', () => {
+    // 22 km from Da Nang's centre: inside Hanoi's 25, outside Da Nang's 20.
+    expect(cityAround(BOUNDED, 16.2444, 108.2022)).toBeNull();
+    expect(cityAround(BOUNDED, 21.2185, 105.8542)?.id).toBe('hanoi');
   });
 });
