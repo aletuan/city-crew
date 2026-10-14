@@ -100,7 +100,10 @@ export type RootStackParamList = {
    *  Google in place now rather than sending anyone here. */
   AddPlace: undefined;
   CollectionDetail: { slug: string };
-  IdeasHome: undefined;
+  /** `from` is a collection the planner should start from, ticked on
+   *  arrival — the detail screen's "Plan a trip". `at` is the moment of
+   *  the tap, so a repeat tap on the same list is a new param. */
+  IdeasHome: { from?: string; at?: number } | undefined;
   /** The screen that does the work. Carries the answers rather than
    *  re-reading the draft, because the draft lives in the screen behind
    *  this one and a plan should be built from what was asked at the

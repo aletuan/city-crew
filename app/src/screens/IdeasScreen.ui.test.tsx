@@ -24,7 +24,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import { addDays, toISO } from '../lib/day';
 import { dateline } from '../lib/format';
@@ -33,8 +33,13 @@ import type { Nav } from '../nav';
 type Pos = { lat: number; lng: number } | null;
 type Coll = { slug: string; title_en: string; title_vi: string; title_ja: string; cover?: { photo_uri: string } | null };
 
+const HN = { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
+const SG = { id: 'sg', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン' };
+const DN = { id: 'dn', short_en: 'Da Nang', short_vi: 'Đà Nẵng', short_ja: 'ダナン' };
+const setCity = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({
   city: { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as Record<string, string> | null,
+  cities: [] as Record<string, string>[],
   places: [] as unknown[],
   mine: [] as unknown[],
   cols: [] as unknown[],
@@ -56,7 +61,7 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: state.city }),
+  useCity: () => ({ city: state.city, cities: state.cities, setCity }),
   useMyPosition: () => state.me,
 }));
 vi.mock('../lib/catalog', () => ({
@@ -104,9 +109,9 @@ const line = (iso: string) => {
   return dateline('en', new Date(y, mo - 1, d, 12));
 };
 
-const renderScreen = () => {
+const renderScreen = (params?: { from?: string; at?: number }) => {
   const navigation = { navigate: vi.fn(), goBack: vi.fn() };
-  render(<IdeasScreen navigation={navigation as unknown as Nav} />);
+  render(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params }} />);
   return navigation;
 };
 const tap = (text: string) => fireEvent.click(screen.getByText(text));
@@ -594,6 +599,111 @@ describe('a city switch and the pin', () => {
     state.city = SAIGON as unknown as typeof state.city;
     again();
     expect(screen.getByText('Thành phố Hồ Chí Minh')).toBeTruthy();
+  });
+});
+
+// ── sent here from a collection ──
+//
+// The detail screen's "Plan a trip" lands with `from`. The list is ticked
+// and the city is decided by the start sheet's rule: a place here, nothing
+// moves; all in one other city, the app follows; several other cities, ask.
+describe('arriving from a collection', () => {
+  const here = () => ({ city_id: 'hn' });
+  const away = (city_id = 'sg') => ({ city_id });
+  const ticked = (name: RegExp) => !!screen.getByRole('checkbox', { name }).querySelector('[data-icon="checkmark"]');
+  const sheetRows = () => screen.queryAllByTestId('sheet-glyph').length;
+
+  beforeEach(() => {
+    setCity.mockClear();
+    state.cities = [HN, SG, DN];
+    state.places = [place('p', ['cafes'])];
+    state.uid = 'u1';
+    state.mine = [coll('pho', 'Phở run'), coll('far', 'Far away'), coll('split', 'Split')];
+    state.cols = [coll('theirs1', 'Theirs one', { owner_id: 'u2' } as never), coll('theirs2', 'Theirs two', { owner_id: 'u2' } as never), coll('theirs3', 'Theirs three', { owner_id: 'u2' } as never), coll('theirs4', 'Theirs four', { owner_id: 'u2' } as never)];
+    state.members = {
+      pho: [here(), away()], far: [away(), away()], split: [away('sg'), away('dn'), away('dn')],
+      theirs1: [here()], theirs2: [here()], theirs3: [here()], theirs4: [here()],
+    };
+  });
+
+  it('ticks a list with a place here, opens the lists, and moves nothing', () => {
+    renderScreen({ from: 'pho', at: 1 });
+    expect(ticked(/Phở run/)).toBe(true);
+    expect(setCity).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('ideas-moved')).toBeNull();
+    // Opened: the community's fourth list is in view without "more".
+    expect(screen.getByRole('checkbox', { name: /Theirs four/ })).toBeTruthy();
+  });
+
+  it('follows a list whose places are all in one other city, and says so while the app is there', () => {
+    const navigation = { navigate: vi.fn(), goBack: vi.fn() };
+    const view = render(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params: { from: 'far', at: 2 } }} />);
+    expect(setCity).toHaveBeenCalledWith('sg');
+    expect(setCity).toHaveBeenCalledTimes(1);
+    // The catalog refreshing under the same ask is not a second ask.
+    state.places = [place('p', ['cafes'])];
+    view.rerender(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params: { from: 'far', at: 2 } }} />);
+    expect(setCity).toHaveBeenCalledTimes(1);
+    // The mock does not move the city; say it did.
+    state.city = SG;
+    view.rerender(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params: { from: 'far', at: 2 } }} />);
+    expect(screen.getByTestId('ideas-moved').textContent).toBe('The plan will be made in Saigon.');
+    expect(ticked(/Far away/)).toBe(true);
+    // Applied once: the re-render carried the same `at`.
+    expect(setCity).toHaveBeenCalledTimes(1);
+    // A switch made afterwards is a new fact; the well goes with it.
+    state.city = DN;
+    view.rerender(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params: { from: 'far', at: 2 } }} />);
+    expect(screen.queryByTestId('ideas-moved')).toBeNull();
+    state.city = HN;
+  });
+
+  it('asks which city when the list spans several and none is this one, and follows the answer', async () => {
+    renderScreen({ from: 'split', at: 3 });
+    expect(setCity).not.toHaveBeenCalled();
+    expect(screen.getByText('Which city?')).toBeTruthy();
+    expect(sheetRows()).toBe(2);
+    // Most places first, with the count the plan would take.
+    expect(screen.getAllByRole('button', { name: /Saigon|Da Nang/ }).map((b) => b.getAttribute('aria-label'))).toEqual(['Da Nang', 'Saigon']);
+    expect(screen.getByText('2 places from this collection will be included')).toBeTruthy();
+    expect(screen.getByText('1 place from this collection will be included')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Da Nang' }));
+    // The sheet closes first and the answer lands a beat later, the
+    // sheet's own rule against stacked modals.
+    await waitFor(() => expect(setCity).toHaveBeenCalledWith('dn'));
+    // (The modal's fade never ends under jsdom, so whether the sheet is
+    // gone is not asked here — it is the sheet's own concern.)
+  });
+
+  it('leaves the list unticked when the question is closed without an answer', () => {
+    renderScreen({ from: 'split', at: 4 });
+    fireEvent.click(screen.getByLabelText('Close'));
+    expect(setCity).not.toHaveBeenCalled();
+    // Still on this city, where the split list has nothing and is not a row.
+    expect(screen.queryByRole('checkbox', { name: /Split/ })).toBeNull();
+  });
+
+  it('waits for the catalog, and does nothing for a list in no catalog city', () => {
+    state.places = [];
+    const navigation = { navigate: vi.fn(), goBack: vi.fn() };
+    const view = render(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params: { from: 'pho', at: 5 } }} />);
+    // The row is there (its members come from the mock); the tick is not.
+    expect(ticked(/Phở run/)).toBe(false);
+    state.places = [place('p', ['cafes'])];
+    view.rerender(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params: { from: 'pho', at: 5 } }} />);
+    expect(ticked(/Phở run/)).toBe(true);
+
+    state.members.far = [away('xx')];
+    view.rerender(<IdeasScreen navigation={navigation as unknown as Nav} route={{ params: { from: 'far', at: 6 } }} />);
+    expect(setCity).not.toHaveBeenCalled();
+    expect(sheetRows()).toBe(0);
+    expect(screen.queryByText('Which city?')).toBeNull();
+  });
+
+  it('is unmoved by no params at all, and by a slug nobody has', () => {
+    renderScreen();
+    renderScreen({ from: 'nope', at: 7 });
+    expect(setCity).not.toHaveBeenCalled();
   });
 });
 

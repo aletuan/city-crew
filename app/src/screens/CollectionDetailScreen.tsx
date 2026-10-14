@@ -32,7 +32,7 @@ import { useI18n } from '../lib/i18n';
 import type { TipId } from '../lib/tips';
 import { colors, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
-import { type Nav, type RootRoute } from '../nav';
+import { goTo, type Nav, type RootRoute } from '../nav';
 
 /**
  * The empty state of a list you own.
@@ -971,6 +971,25 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {/* Checked on the text `t` picks, not on a hand-listed pair of
           columns: that left a Japanese-only description never drawn. */}
       {!!desc && <Text style={s.desc}>{desc}</Text>}
+      {/* The door from a list to a day. The planner has seeded plans from
+          collections since 12 Oct 2026, but the only way to it was the
+          Plan tab and a row to find there; the owner's review asked for
+          the step to be here, on the list the reader is looking at.
+          `goTo`, since the planner is a sibling tab's stack; `at` makes
+          a second press on the same list a new ask. Only once there is
+          something to plan from — an empty list seeds nothing, and its
+          own empty card already says what to do. The planner decides
+          the city (see IdeasScreen's `from`), so nothing here asks. */}
+      {col && members.length > 0 && (
+        <View style={s.planRow}>
+          <GradientCta
+            icon="sparkles"
+            label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+            onPress={() => goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } })}
+            testID="collection-plan"
+          />
+        </View>
+      )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
@@ -1220,6 +1239,10 @@ const s = StyleSheet.create({
   bannerUndo: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
   bannerUndoBusy: { opacity: 0.4 },
 
+  // Its own width, at the page margin, under the description and over the
+  // list: the one action on the screen that leaves it, set apart from the
+  // rows that open places.
+  planRow: { paddingHorizontal: space.page, paddingBottom: 14, alignItems: 'flex-start' },
   desc: {
     color: colors.textSecondary, ...type.body, lineHeight: 24,
     paddingHorizontal: space.page, paddingBottom: 12,

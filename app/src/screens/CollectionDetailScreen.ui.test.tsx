@@ -34,6 +34,7 @@ import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 
 const spies = vi.hoisted(() => ({
+  goTo: vi.fn(),
   deleteCollection: vi.fn(async (_slug: string) => {}),
   reorderCollection: vi.fn(async (_slug: string, _slugs: string[]) => {}),
   setCollectionPublic: vi.fn(async (_slug: string, _next: boolean) => {}),
@@ -93,6 +94,7 @@ vi.mock('../lib/save', () => ({
   }),
 }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city }) }));
+vi.mock('../nav', () => ({ goTo: spies.goTo }));
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
@@ -1343,5 +1345,34 @@ describe('signed out', () => {
     openMenu();
     expect(screen.queryByText('Delete collection')).toBeNull();
     expect(menuRow('Save a copy')).toBeTruthy();
+  });
+});
+
+// ── the door to a day ──
+//
+// The planner has seeded plans from collections since 12 Oct 2026; the
+// owner's review asked for the step to be on the list itself. The planner
+// decides the city, so this button only sends the slug.
+describe('Plan a trip', () => {
+  it('sends the list to the planner, as a fresh ask each time', () => {
+    show();
+    fireEvent.click(button('Plan a trip'));
+    expect(spies.goTo).toHaveBeenCalledWith('Ideas', { screen: 'IdeasHome', params: { from: 'old-quarter', at: expect.any(Number) } });
+    const first = spies.goTo.mock.calls[0][1].params.at;
+    fireEvent.click(button('Plan a trip'));
+    expect(spies.goTo.mock.calls[1][1].params.at).toBeGreaterThanOrEqual(first);
+  });
+
+  it('is not offered on a list with nothing to plan from', () => {
+    state.mine = [collection({}, [])];
+    show();
+    expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
+  });
+
+  it('is offered on somebody else’s public list too', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    expect(button('Plan a trip')).toBeTruthy();
   });
 });
