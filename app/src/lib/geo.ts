@@ -64,3 +64,25 @@ export function nearestTo<T extends Centred>(list: T[], lat: number, lng: number
   }
   return best;
 }
+
+/** A city with the reach the desk gave it: `radius_km` is how far out it
+ *  still counts as itself (20–25 today). */
+export type Bounded = Centred & { radius_km: number };
+
+/**
+ * Which of the catalog's cities a point lies in, or null when it lies in
+ * none: the nearest centre, held to that city's own radius.
+ *
+ * Written for the start sheet on 14 Oct 2026, after a reader in Hanoi
+ * searched "Thành phố Hồ Chí Minh", took the result as her pin, and got
+ * a plan of Hanoi cafés starting "3.1 km" from a point 1,100 km away. The
+ * sheet had never asked where the pin fell. A pin in another catalog city
+ * means that city; a pin in none means there is nothing to plan with,
+ * and the sheet has to say so rather than plan the city it was already
+ * showing.
+ */
+export function cityAround<T extends Bounded>(cities: T[], lat: number, lng: number): T | null {
+  const c = nearestTo(cities, lat, lng);
+  if (!c) return null;
+  return distanceKm(lat, lng, c.center_lat, c.center_lng) <= c.radius_km ? c : null;
+}

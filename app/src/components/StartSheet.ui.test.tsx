@@ -25,15 +25,23 @@ import type { Place } from '../lib/types';
 const findSpots = vi.hoisted(() => vi.fn(async () => [] as { name: string; label: string; lat: number; lng: number }[]));
 const nameOf = vi.hoisted(() => vi.fn(async () => 'Hoàn Kiếm'));
 const world = vi.hoisted(() => ({
-  city: { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', center_lat: 21.03, center_lng: 105.85 } as
-    { id: string; name_en: string; name_vi: string; center_lat: number; center_lng: number } | null,
+  city: { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', center_lat: 21.03, center_lng: 105.85, radius_km: 25 } as
+    { id: string; name_en: string; name_vi: string; center_lat: number; center_lng: number; radius_km: number } | null,
+  cities: [
+    { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', name_ja: null, center_lat: 21.03, center_lng: 105.85, radius_km: 25 },
+    { id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'Thành phố Hồ Chí Minh', name_ja: null, center_lat: 10.7769, center_lng: 106.7009, radius_km: 25 },
+  ],
   me: null as { lat: number; lng: number } | null,
   session: { user: { id: 'u1' } } as { user: { id: string } } | null,
 }));
 const SignedOutError = vi.hoisted(() => class SignedOutError extends Error {});
 vi.mock('../lib/findplace', () => ({ findSpots, nameOf, SignedOutError }));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: world.session }) }));
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: world.city }), useMyPosition: () => world.me }));
+const setCity = vi.hoisted(() => vi.fn());
+vi.mock('../lib/city', () => ({
+  useCity: () => ({ city: world.city, cities: world.cities, setCity }),
+  useMyPosition: () => world.me,
+}));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
@@ -94,7 +102,11 @@ beforeEach(() => {
   findSpots.mockResolvedValue([]);
   nameOf.mockClear();
   nameOf.mockResolvedValue('Hoàn Kiếm');
-  world.city = { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', center_lat: 21.03, center_lng: 105.85 };
+  world.city = { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', center_lat: 21.03, center_lng: 105.85, radius_km: 25 };
+  world.cities = [
+    { id: 'hanoi', name_en: 'Hanoi', name_vi: 'Hà Nội', name_ja: null, center_lat: 21.03, center_lng: 105.85, radius_km: 25 },
+    { id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'Thành phố Hồ Chí Minh', name_ja: null, center_lat: 10.7769, center_lng: 106.7009, radius_km: 25 },
+  ];
   world.me = null;
   location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'undetermined', canAskAgain: true } as never);
   location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied', canAskAgain: true } as never);
@@ -248,6 +260,49 @@ describe('the search', () => {
     fireEvent.click(cta());
     await waitFor(() => expect(second.onNeedSignIn).toHaveBeenCalledTimes(1));
     expect(screen.queryByText(/Nothing found/)).toBeNull();
+  });
+
+  // Where a pin may land. A result in another catalog city moves the app
+  // there and is taken; one in no catalog city is refused, by name, with
+  // the list left up to pick again. The owner's rule: never plan the city
+  // the sheet happened to be open on.
+  it('takes a result in another catalog city and switches the app to it', async () => {
+    setCity.mockClear();
+    const SAIGON = { name: 'Thành phố Hồ Chí Minh', label: 'Vietnam', lat: 10.78, lng: 106.70 };
+    findSpots.mockResolvedValue([SAIGON]);
+    const { onDone } = openSheet();
+    type('thanh pho ho chi minh');
+    fireEvent.click(cta());
+    fireEvent.click(await screen.findByText('Thành phố Hồ Chí Minh'));
+    expect(setCity).toHaveBeenCalledWith('hcmc');
+    expect(screen.getByTestId('start-moved').textContent).toContain('Switched to Ho Chi Minh City');
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalledWith({ district: null, at: { lat: 10.78, lng: 106.70 }, atName: 'Thành phố Hồ Chí Minh' });
+  });
+
+  it('refuses a result in no catalog city, says so by name, and keeps the list', async () => {
+    setCity.mockClear();
+    const NHATRANG = { name: 'Nha Trang', label: 'Khánh Hòa', lat: 12.2388, lng: 109.1967 };
+    findSpots.mockResolvedValue([NHATRANG]);
+    const { onDone } = openSheet();
+    type('nha trang');
+    fireEvent.click(cta());
+    fireEvent.click(await screen.findByText('Nha Trang'));
+    expect(setCity).not.toHaveBeenCalled();
+    expect(screen.getByTestId('start-elsewhere').textContent).toBe('No places near Nha Trang yet. Pick a spot in one of City Crew’s cities.');
+    // Still listed, still pickable; nothing landed in the draft.
+    expect(screen.getByText('Nha Trang')).toBeTruthy();
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalledWith(NOWHERE);
+  });
+
+  it('refuses a map tap in no catalog city the same way', async () => {
+    world.cities = world.cities.filter((c) => c.id === 'hcmc');
+    const { onDone } = openSheet();
+    fireEvent.click(screen.getByRole('button', { name: 'drop a pin' }));
+    expect(screen.getByTestId('start-elsewhere').textContent).toContain('No places near that pin yet');
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalledWith(NOWHERE);
   });
 
   it('asks Google once, biased by the point the map is on, and lists what came back', async () => {
