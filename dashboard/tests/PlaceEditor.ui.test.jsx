@@ -59,7 +59,7 @@ describe('PlaceEditor', () => {
     expect(field('duration_max').value).toBe('');
     expect(screen.getByRole('link', { name: '← All places' }).getAttribute('href')).toBe('/?status=pending&q=caf');
     expect(screen.getByText('cafe-a', { selector: '.slug' })).toBeTruthy();
-    expect(within(document.querySelector('.crumbs')).getByText('pending').className).toContain('stamp');
+    expect(within(document.querySelector('.editor-status')).getByText('pending').className).toContain('stamp');
     expect(screen.getByText('Opening hours (from Google)')).toBeTruthy();
     expect(document.querySelector('.hoursline').textContent).toBe('Mon 7–22\nTue 7–22');
     expect(await screen.findByText(/10\.773100, 106\.701200 · ★ 4\.4 \(812 reviews\) · in 2 lists/)).toBeTruthy();
@@ -69,6 +69,31 @@ describe('PlaceEditor', () => {
     expect(screen.getByText('2 / 3')).toBeTruthy();
     expect(saveButton().disabled).toBe(true);
     expect(url(router)).toBe('/place/cafe-a?status=pending&q=caf');
+  });
+
+  it.each([
+    ['approved', true, 'Visible in the public catalog'],
+    ['approved', false, 'Not visible in the public catalog'],
+    ['pending', true, 'Not visible in the public catalog'],
+    ['flagged', true, 'Not visible in the public catalog'],
+  ])('the saved summary distinguishes review %s from publication %s', async (review_status, is_published, visibility) => {
+    openEditor('/place/cafe-a', { ...PLACE, review_status, is_published });
+    await screen.findByDisplayValue('Café A');
+    expect(screen.getByRole('heading', { name: 'Café A' })).toBeTruthy();
+    const summary = within(document.querySelector('.editor-status'));
+    expect(summary.getByText(review_status)).toBeTruthy();
+    const publication = is_published ? 'Published' : 'Not published';
+    expect(summary.getByText(publication)).toBeTruthy();
+    expect(summary.getByText(visibility)).toBeTruthy();
+    expect(screen.getByText('No unsaved changes')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Published'));
+    expect(screen.getByText('Unsaved changes')).toBeTruthy();
+    // The summary still describes the server, not an unsaved checkbox.
+    expect(summary.getByText(publication)).toBeTruthy();
+    expect(summary.getByText(visibility)).toBeTruthy();
+    expect(api.savePlace).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText('Published'));
+    expect(screen.getByText('No unsaved changes')).toBeTruthy();
   });
 
   it('the save count is counted beside the row: one, none, or nothing to say', async () => {

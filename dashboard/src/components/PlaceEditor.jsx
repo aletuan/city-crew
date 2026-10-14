@@ -377,12 +377,34 @@ export default function PlaceEditor() {
   const sourceHref = sourceLink({ ...form, google_place_id: place.google_place_id });
 
   return (
-    <>
+    <div className="place-editor">
       <div className="crumbs">
         <Link to={`/?${params}`}>← All places</Link>
         <span>/</span>
         <span className="slug">{place.slug}</span>
-        <span className={`stamp ${place.review_status}`} style={{ marginLeft: 8 }}>{place.review_status}</span>
+      </div>
+
+      <header className="editorheading">
+        <h1>{place.name_en}</h1>
+        <p>{place.name_vi}</p>
+      </header>
+      {/* Saved state, not the checkbox's pending value: a publication edit
+          is not live until Save succeeds. Keep the actual controls in their
+          original order for the Threads import skill. */}
+      <div className="editor-status" aria-label="Saved place status">
+        <div className="editor-status-item">
+          <span className="status-label">Review status</span>
+          <span className={`stamp ${place.review_status}`}>{place.review_status}</span>
+        </div>
+        <div className="editor-status-item">
+          <span className="status-label">Publication</span>
+          <span className="publication-value">{place.is_published ? 'Published' : 'Not published'}</span>
+        </div>
+        <p className="catalog-state">
+          {place.is_published && place.review_status === 'approved'
+            ? 'Visible in the public catalog'
+            : 'Not visible in the public catalog'}
+        </p>
       </div>
 
       <div className="editor">
@@ -680,33 +702,40 @@ export default function PlaceEditor() {
       </div>
 
       <div className="reviewbar">
-        <button className="navbtn" onClick={() => go(-1)} disabled={idx <= 0} aria-label="Previous place">←</button>
-        <span className="pos">{idx + 1} / {siblings.length}</span>
-        <button className="navbtn" onClick={() => go(1)} disabled={idx >= siblings.length - 1} aria-label="Next place">→</button>
+        <div className="reviewnav">
+          <button className="navbtn" onClick={() => go(-1)} disabled={idx <= 0} aria-label="Previous place">←</button>
+          <span className="pos">{idx + 1} / {siblings.length}</span>
+          <button className="navbtn" onClick={() => go(1)} disabled={idx >= siblings.length - 1} aria-label="Next place">→</button>
+        </div>
+        <span className={`save-state${dirty ? ' unsaved' : ''}`} aria-live="polite">
+          {dirty ? 'Unsaved changes' : 'No unsaved changes'}
+        </span>
         <input
           className="notefield"
           placeholder="Review note…"
           value={form.review_note ?? ''}
           onChange={(e) => set('review_note', e.target.value)}
         />
-        <button className={`rbtn save ${dirty ? 'dirty' : ''}`} onClick={() => save()} disabled={saving || !dirty}>
-          Save<span className="kbd-hint">S</span>
-        </button>
-        <button
-          className={`rbtn approve ${place.review_status === 'approved' ? 'on' : ''}`}
-          onClick={() => save({ review_status: 'approved' })}
-          disabled={saving}
-        >
-          Approve<span className="kbd-hint">A</span>
-        </button>
-        <button
-          className={`rbtn flag ${place.review_status === 'flagged' ? 'on' : ''}`}
-          onClick={() => save({ review_status: 'flagged' })}
-          disabled={saving}
-        >
-          Flag<span className="kbd-hint">F</span>
-        </button>
+        <div className="reviewactions">
+          <button className={`rbtn save ${dirty ? 'dirty' : ''}`} onClick={() => save()} disabled={saving || !dirty}>
+            Save<span className="kbd-hint">S</span>
+          </button>
+          <button
+            className={`rbtn approve ${place.review_status === 'approved' ? 'on' : ''}`}
+            onClick={() => save({ review_status: 'approved' })}
+            disabled={saving}
+          >
+            Approve<span className="kbd-hint">A</span>
+          </button>
+          <button
+            className={`rbtn flag ${place.review_status === 'flagged' ? 'on' : ''}`}
+            onClick={() => save({ review_status: 'flagged' })}
+            disabled={saving}
+          >
+            Flag<span className="kbd-hint">F</span>
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
