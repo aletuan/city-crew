@@ -598,6 +598,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     onPress: () => {},
   }];
 
+  // The vibe chips, drawn in the highlights card when there is a
+  // paragraph and bare when there is not — see the card's note.
+  const vibes = place.vibe_tags.length ? (
+    <View style={[s.vibes, desc ? null : s.vibesBare]} testID="detail-vibes">
+      {place.vibe_tags.map((v) => (
+        <View key={v} style={s.vibe} testID={`detail-vibe-${v}`}>
+          <Text style={s.vibeText}>{vibeLabel(v, t)}</Text>
+        </View>
+      ))}
+    </View>
+  ) : null;
+
   return (
     // No top safe area: the photograph is what belongs against the top of
     // the glass, and insetting the screen is exactly what put a beige band
@@ -919,12 +931,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               - the theme's glass (`surfaceGlass`): one step off the cards
                 below, so three grounds on one screen where the owner
                 wanted fewer colours, not more.
-              Drawn when there is either a paragraph or a tag; nothing to
-              say is no card, not an empty one. The chips keep the glass
-              inside the card, 5% over the card's own ground. */}
-          {(desc || place.vibe_tags.length) ? (
-          <Card style={s.whyCard} testID="detail-why-card">
+              Drawn only when there is a paragraph. The first cut drew it
+              for a tag alone too, and on the phone a card holding one chip
+              read as a box inside a box — and that is the common case,
+              not the edge: 720 of 940 live places had no blurb on 14 Oct
+              2026. Without a paragraph the chips stand bare, as they did
+              before the card. The chips keep the glass inside the card,
+              5% over the card's own ground. */}
           {desc ? (
+          <Card style={s.whyCard} testID="detail-why-card">
             <View style={s.why} testID="detail-why">
               {/* A quotation mark, not a speech bubble. A bubble is what
                   somebody else said — a review, a comment, a message — and
@@ -1032,7 +1047,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 ) : null}
               </View>
             </View>
-          ) : null}
 
           {/* ── vibes ──
               What the place feels like. `vibe_tags` was on every card in
@@ -1059,17 +1073,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               would stop it marking anything. Drawn with or without a
               blurb: the tags are the desk's, the blurb may be Google's,
               and a place can have the one and not the other. */}
-          {place.vibe_tags.length ? (
-            <View style={s.vibes} testID="detail-vibes">
-              {place.vibe_tags.map((v) => (
-                <View key={v} style={s.vibe} testID={`detail-vibe-${v}`}>
-                  <Text style={s.vibeText}>{vibeLabel(v, t)}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
+            {vibes}
           </Card>
-          ) : null}
+          ) : vibes}
 
           {/* The one offer this screen makes to the person who put the
               place here. Draws nothing for everybody else — see
@@ -1736,6 +1742,8 @@ const s = StyleSheet.create({
   // each way — against the 44pt of anything on this screen that is
   // pressed; the theme's glass, no border, no dot.
   vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // Bare, under the meta row: the 14 the card would have kept from it.
+  vibesBare: { marginTop: 14 },
   vibe: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.surfaceGlass },
   vibeText: { color: colors.text, fontSize: 13, lineHeight: 16, fontWeight: font.semibold },
 
