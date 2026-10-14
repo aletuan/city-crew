@@ -824,14 +824,17 @@ export default function CollectionsScreen({ navigation, route }: {
       ) : undefined}
       // The search was a disc up here, where every screen keeps its
       // utility; it is a box under the tabs now — see `panel`.
-      // A tab root's header takes a `lede`, not a `subtitle` — the line
-      // under a large title is the screen's own, in its own type.
-      lede={!holding && (onYours ? mineReady : true)
-        ? <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scopeLine}</Text>
-        : null}
     >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
+        {/* The line under the title is in the body, as the Trips lede is,
+            and not the header's `lede`: the header row aligns its right
+            slot to the bottom of the title column, so a line in that
+            column drops the pill a line below the title — the owner saw
+            the two screens' pills at two heights (14 Oct 2026). */}
+        {!holding && (onYours ? mineReady : true) ? (
+          <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scopeLine}</Text>
+        ) : null}
         {/* The tab bar's own glyph for your shelf; the globe every public
             row already wears for everyone else's. Guests have no library,
             so they get the one half with no switch in front of it. */}
@@ -1651,9 +1654,10 @@ const s = StyleSheet.create({
   // The visits screen's box and panel, to the point: the same row, the
   // same Cancel in words, the same card of groups, so the two screens
   // that let a reader narrow a list of their own do it with one grammar.
-  // The header's own subtitle type (ui.tsx `s.subtitle`), which a tab
-  // root's header does not draw for itself.
-  scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginTop: 2 },
+  // The header's own subtitle type (ui.tsx `s.subtitle`), in the page's
+  // margins. The header ends 14 under the title; -6 brings this line to
+  // the 8 a subtitle sits under its title in that header.
+  scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginHorizontal: space.page, marginBottom: 14 },
   cancel: { height: 44, justifyContent: 'center', paddingHorizontal: 10 },
   cancelText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
