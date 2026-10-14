@@ -23,6 +23,7 @@ import React, { useEffect, useLayoutEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { AppState } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 
 const h = vi.hoisted(() => ({ fake: null as ReturnType<typeof import('./testing').fakeSupabase> | null }));
@@ -572,5 +573,106 @@ describe('the city list', () => {
 
     await act(async () => { await vi.advanceTimersByTimeAsync(45_000); });
     expect(asked()).toBe(3);
+  });
+
+  // ── the list, refreshed on return ──
+  //
+  // A list that succeeded was the list for the life of the process, and
+  // iOS keeps a process alive for days: a city switched on in the desk
+  // took a cold start to reach a phone. The provider asks again when the
+  // app comes back to the foreground after the catalog's own threshold.
+  describe('on return to the foreground', () => {
+    let wake: ((s: string) => void) | null = null;
+    const asked = () => h.fake!.log.filter((a) => a.table === 'cities').length;
+    const written = () => vi.mocked(AsyncStorage.setItem).mock.calls.filter(([k]) => k === LIST_KEY).length;
+    const HOIAN = FULL('hoian', 'Hoi An', 15.88, 108.33);
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.spyOn(AppState, 'addEventListener').mockImplementation((_type, fn) => {
+        wake = fn as (s: string) => void;
+        return { remove: () => {} } as unknown as ReturnType<typeof AppState.addEventListener>;
+      });
+    });
+    afterEach(() => { wake = null; vi.restoreAllMocks(); });
+
+    /** Mounted, bootstrapped, and with the given reply queued for the next ask. */
+    const settled = async (...next: Parameters<NonNullable<typeof h.fake>['replies']>) => {
+      h.fake!.reset();
+      h.fake!.replies({ data: CITIES, error: null }, ...next);
+      mountList();
+      await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi'));
+      vi.mocked(AsyncStorage.setItem).mockClear();
+    };
+    const back = async () => { await act(async () => { wake!('active'); await Promise.resolve(); await Promise.resolve(); }); };
+
+    it('asks again after a while away, takes a changed list, and keeps the city it is on', async () => {
+      await settled({ data: [...CITIES, HOIAN], error: null });
+      // Straight back from a notification shade: not a request.
+      await back();
+      expect(asked()).toBe(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      await back();
+      await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi,hoian'));
+      expect(asked()).toBe(2);
+      expect(screen.getByTestId('city').textContent).toBe('danang');
+      // Written down for the next launch, like the bootstrap's own fetch.
+      expect(written()).toBe(1);
+    });
+
+    it('ignores every state but active', async () => {
+      await settled({ data: [...CITIES, HOIAN], error: null });
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      await act(async () => { wake!('background'); wake!('inactive'); });
+      expect(asked()).toBe(1);
+    });
+
+    it('leaves an unchanged list alone, and the clock running from the ask', async () => {
+      await settled({ data: CITIES, error: null }, { data: [...CITIES, HOIAN], error: null });
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      await back();
+      await waitFor(() => expect(asked()).toBe(2));
+      expect(written()).toBe(0);
+      // The ask that found nothing new still counts as fresh.
+      await back();
+      expect(asked()).toBe(2);
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      await back();
+      await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi,hoian'));
+    });
+
+    it('refuses a list that no longer holds the city on screen, and an empty one', async () => {
+      await settled({ data: [FULL('hanoi', 'Hanoi', 21.03, 105.85), HOIAN], error: null }, { data: [], error: null });
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      await back();
+      await waitFor(() => expect(asked()).toBe(2));
+      expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi');
+      expect(screen.getByTestId('city').textContent).toBe('danang');
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      await back();
+      await waitFor(() => expect(asked()).toBe(3));
+      expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi');
+      expect(written()).toBe(0);
+    });
+
+    it('stays out of the way while the bootstrap has not brought a list back', async () => {
+      h.fake!.reset();
+      h.fake!.replies({ data: [], error: null }, { data: [], error: null }, { data: [], error: null });
+      mountList();
+      await waitFor(() => expect(asked()).toBe(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      const before = asked();
+      await back();
+      // Only the healer's own ticks, if any — never one of this effect's.
+      expect(asked()).toBe(before);
+    });
+
+    it('never stacks a second ask on one still out', async () => {
+      await settled({ data: [...CITIES, HOIAN], error: null });
+      await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      await act(async () => { wake!('active'); wake!('active'); });
+      await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi,hoian'));
+      expect(asked()).toBe(2);
+    });
   });
 });

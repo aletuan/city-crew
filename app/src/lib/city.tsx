@@ -14,11 +14,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from './supabase';
 // Pure arithmetic, kept where a test runner can reach it.
 import { nearestTo } from './geo';
 import { openOn, releaseChoice, settleOn, shouldCorrect, storedPick } from './citypick';
 import { parseCachedCities } from './citylist';
+import { shouldRefresh } from './stale';
 import { startupTrace } from './trace';
 
 export type City = {
@@ -329,6 +331,9 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   // the app in a tunnel, not a database with one city. Drives the healer
   // below and nothing else.
   const [listFailed, setListFailed] = useState(false);
+  // When a fetch last brought the list back; null until one has. Read by
+  // the foreground refresh below, written by every fetch that succeeds.
+  const listAt = useRef<number | null>(null);
 
   // What a fix that lands late has to be checked against: the city and the
   // mode *now*, not when it was asked for. A reader who picks a city while
@@ -404,6 +409,7 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       // re-seeding launch — and never written on a failed fetch, which
       // would trade a stale-but-real list for nothing.
       if (fetched.length) {
+        listAt.current = Date.now();
         AsyncStorage.setItem(LIST_KEY, JSON.stringify(fetched)).catch(() => {});
       }
 
@@ -492,11 +498,59 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
     const id = setInterval(async () => {
       const fetched = await fetchCities();
       if (!live || !fetched.length) return;
+      listAt.current = Date.now();
       setCities(fetched);
       setListFailed(false);
     }, 15_000);
     return () => { live = false; clearInterval(id); };
   }, [listFailed]);
+
+  /**
+   * The list, refreshed on return.
+   *
+   * The bootstrap fetches the cities once and the healer only asks again
+   * for a list that failed, so a list that *succeeded* was the list for
+   * the life of the process — and iOS keeps a process alive for days. On
+   * 14 Oct 2026 Hội An was switched on in the desk and the owner's phone,
+   * an hour later, still had eight cities in the switcher and the old
+   * line under the Hai Phong cover: nothing had ever asked twice.
+   *
+   * So the same return the catalog revalidates on (`lib/catalog`, same
+   * threshold from `lib/stale`, for the same reason — `active` fires on
+   * the way out of every notification shade, not only out of a real
+   * absence). Only the list changes; the city stays where it is, by the
+   * bootstrap's own rule that it never moves on its own after commit.
+   * Two refusals keep that rule honest: a fetched list that no longer
+   * holds the city on screen is not applied at all, since applying it
+   * would make `city` null under every screen (the next cold start sorts
+   * a retired city out, as it always has); and a list identical to the
+   * one showing is not set, since a fresh array of the same rows would
+   * re-render every consumer in the app for nothing.
+   *
+   * `listAt` is null until a fetch has succeeded — while the bootstrap is
+   * out or the healer is asking, this stays out of their way.
+   */
+  useEffect(() => {
+    let inFlight = false;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active' || inFlight) return;
+      const at = listAt.current;
+      if (at == null || !shouldRefresh(at, Date.now())) return;
+      inFlight = true;
+      void (async () => {
+        const fetched = await fetchCities();
+        inFlight = false;
+        if (!now.current.live || !fetched.length) return;
+        listAt.current = Date.now();
+        const { cities: showing, cityId: on } = now.current;
+        if (on && !fetched.some((c) => c.id === on)) return;
+        if (JSON.stringify(fetched) === JSON.stringify(showing)) return;
+        setCities(fetched);
+        AsyncStorage.setItem(LIST_KEY, JSON.stringify(fetched)).catch(() => {});
+      })();
+    });
+    return () => sub.remove();
+  }, []);
 
   /**
    * When the account that made a manual pick leaves, the pick stops being
