@@ -44,7 +44,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MiniMap from './MiniMap';
 import { Chip, GradientCta, PressableScale, SelectTick } from './ui';
 import { useCity, useMyPosition } from '../lib/city';
-import { findSpots, nameOf, type Spot } from '../lib/findplace';
+import { findSpots, nameOf, SignedOutError, type Spot } from '../lib/findplace';
+import { useAuth } from '../lib/auth';
 import { ctaMode } from '../lib/spots';
 import { useI18n } from '../lib/i18n';
 import { areaCentre, areasNear, nearestAreaKm } from '../lib/trip';
@@ -60,7 +61,7 @@ export type Start = {
   atName: string | null;
 };
 
-export default function StartSheet({ visible, places, value, onClose, onDone }: {
+export default function StartSheet({ visible, places, value, onClose, onDone, onNeedSignIn }: {
   visible: boolean;
   /** The catalog, because the areas are ordered from it — and ordered in
    *  here rather than by the caller, which was the first version and did
@@ -70,9 +71,16 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   value: Start;
   onClose: () => void;
   onDone: (next: Start) => void;
+  /** The search needs an account (`fetch-place` answers 401 without
+   *  one). Raised instead of searching when there is none, and when the
+   *  function says there is none — a session can lapse between render
+   *  and tap. The screen owns the door, as Explore does for its filter
+   *  sheet: a sheet over a sheet is the caller's to arrange. */
+  onNeedSignIn: () => void;
 }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
+  const signedIn = !!useAuth().session;
   const [draft, setDraft] = useState<Start>(value);
   const [where, setWhere] = useState<string>('');
   const [query, setQuery] = useState('');
@@ -296,9 +304,19 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     const q = query.trim();
     if (!q || finding) return;
     Keyboard.dismiss();
+    // No session, no search: the function would say so with a 401, and
+    // "nothing found" is the wrong sentence for it (see `findSpots`).
+    if (!signedIn) { onNeedSignIn(); return; }
     setFinding(true);
     setMissed(false);
-    const found = await findSpots(q, near ?? centre, city?.id ?? null, lang);
+    let found: Spot[];
+    try {
+      found = await findSpots(q, near ?? centre, city?.id ?? null, lang);
+    } catch (e) {
+      setFinding(false);
+      if (e instanceof SignedOutError) { onNeedSignIn(); return; }
+      throw e;
+    }
     setFinding(false);
     setHits(found);
     // Asked, so the button stops offering to ask again. A search that came

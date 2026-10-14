@@ -12,7 +12,7 @@ vi.mock('./supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { findSpots, nameOf } from './findplace';
+import { findSpots, nameOf, SignedOutError } from './findplace';
 import type { Candidate } from './suggest';
 
 const fake = () => h.fake!;
@@ -68,6 +68,17 @@ describe('findSpots', () => {
   // not as two empty states and a crash.
   it('answers nothing when the function refuses', async () => {
     fake().replies({ error: { message: 'boom' } });
+    expect(await findSpots('anywhere', null, 'hanoi', 'en')).toEqual([]);
+  });
+
+  // The one refusal that is not "nothing found": no session. The reader
+  // can do something about that, so it is thrown, not swallowed.
+  it('throws SignedOutError when the function says the reader is not signed in', async () => {
+    fake().replies({ error: { message: 'x', context: { status: 401 } } as never });
+    await expect(findSpots('anywhere', null, 'hanoi', 'en')).rejects.toBeInstanceOf(SignedOutError);
+    fake().replies({ error: { message: 'x', context: { status: 500, body: { error: 'not signed in' } } } as never });
+    await expect(findSpots('anywhere', null, 'hanoi', 'en')).rejects.toBeInstanceOf(SignedOutError);
+    fake().replies({ error: { message: 'x', context: { status: 500, body: { error: 'Google 400' } } } as never });
     expect(await findSpots('anywhere', null, 'hanoi', 'en')).toEqual([]);
   });
 

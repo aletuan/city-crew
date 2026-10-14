@@ -10,9 +10,10 @@
 import { supabase } from './supabase';
 import type { Lang } from './i18n';
 import { fromCandidates, type Spot } from './spots';
-import type { Candidate } from './suggest';
+import { bodyOf, SignedOutError, type Candidate } from './suggest';
 
 export type { Spot };
+export { SignedOutError };
 
 /**
  * Places matching a name, biased towards a point.
@@ -27,9 +28,15 @@ export type { Spot };
  * needs for its fallback bias and nothing else. `lang` asks Google for
  * names and addresses in the reader's language rather than its guess.
  *
- * Throws nothing. A search that failed and a search that found nothing
- * are the same sentence to the reader — "we could not put that on the
- * map" — so the caller gets one empty state to render rather than two.
+ * A search that failed and a search that found nothing are the same
+ * sentence to the reader — "we could not put that on the map" — so both
+ * come back as an empty list. One failure is not that sentence: the
+ * function answering 401, which it does for a reader with no session.
+ * That is "sign in to search", a thing the reader can do, and until 14
+ * Oct 2026 it was folded into "nothing found": the owner, whose session
+ * had lapsed on a global sign-out an hour earlier, typed a street in
+ * Hanoi and was told to try fewer words. It throws `SignedOutError` for
+ * that case alone, as `searchPlaces` does for Add a place.
  */
 export async function findSpots(
   query: string,
@@ -39,16 +46,22 @@ export async function findSpots(
 ): Promise<Spot[]> {
   const q = query.trim();
   if (!q) return [];
+  let res: { data: unknown; error: unknown };
   try {
-    const { data, error } = await supabase.functions.invoke('fetch-place', {
+    res = await supabase.functions.invoke('fetch-place', {
       body: { action: 'search', query: q, at, city: city ?? undefined, lang },
     });
-    if (error) return [];
-    const rows = (data as { candidates?: Candidate[] })?.candidates;
-    return Array.isArray(rows) ? fromCandidates(rows) : [];
   } catch {
     return [];
   }
+  if (res.error) {
+    const status = (res.error as { context?: { status?: number } }).context?.status;
+    const body = await bodyOf(res.error);
+    if (status === 401 || body?.error === 'not signed in') throw new SignedOutError();
+    return [];
+  }
+  const rows = (res.data as { candidates?: Candidate[] })?.candidates;
+  return Array.isArray(rows) ? fromCandidates(rows) : [];
 }
 
 /**

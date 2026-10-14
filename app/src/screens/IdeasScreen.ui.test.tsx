@@ -65,7 +65,8 @@ vi.mock('../lib/catalog', () => ({
   useLikes: () => ({ likes: state.likes }),
 }));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }) }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine, reload: vi.fn() } }) }));
+const askToSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine, reload: vi.fn() }, askToSignIn }) }));
 vi.mock('../lib/data', () => ({
   membersOf: (c: { slug: string }) => state.members[c.slug] ?? [],
   coverOf: (p: { photo?: string }) => (p.photo ? { photo_uri: p.photo } : null),
@@ -474,6 +475,20 @@ describe('where the day starts', () => {
     expect(sheet.props!.places).toBe(state.places);
     act(() => { (sheet.props!.onClose as () => void)(); });
     expect(screen.queryByText('start-sheet-open')).toBeNull();
+  });
+
+  // The sheet's search needs an account: the sheet steps aside, the door
+  // opens for that reason, and a sign-in brings the sheet back.
+  it('hands a signed-out search to the door, and reopens the sheet after sign-in', () => {
+    askToSignIn.mockClear();
+    renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /^Hanoi · Near you/ }));
+    expect(screen.getByText('start-sheet-open')).toBeTruthy();
+    act(() => { (sheet.props!.onNeedSignIn as () => void)(); });
+    expect(screen.queryByText('start-sheet-open')).toBeNull();
+    expect(askToSignIn).toHaveBeenCalledWith('start', expect.any(Function));
+    act(() => { (askToSignIn.mock.calls[0][1] as () => void)(); });
+    expect(screen.getByText('start-sheet-open')).toBeTruthy();
   });
 
   // Before the city resolves the label printed " · Near you" — a hole

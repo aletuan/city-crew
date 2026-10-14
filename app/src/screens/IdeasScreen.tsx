@@ -111,7 +111,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { data: places } = usePlaces();
-  const { mine } = useSave();
+  const { mine, askToSignIn } = useSave();
   const cols = useCollections();
   const { likes } = useLikes();
   const uid = useAuth().session?.user?.id;
@@ -724,6 +724,13 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         onDone={(next: Start) => {
           setDraft((d) => ({ ...d, district: next.district, at: next.at, atName: next.atName ?? null }));
           setSheet(false);
+        }}
+        // The sheet's search needs an account. The sheet closes, the door
+        // opens for that reason, and a sign-in brings the sheet back —
+        // the same hand-off Explore makes for its filter sheet.
+        onNeedSignIn={() => {
+          setSheet(false);
+          askToSignIn('start', () => setSheet(true));
         }}
       />
     </Screen>

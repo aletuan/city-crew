@@ -88,7 +88,7 @@ export async function readOutcome(res: Fn): Promise<SuggestOutcome> {
 
 type Body = { error?: string; live?: boolean; slug?: string; limit?: number };
 
-async function bodyOf(err: unknown): Promise<Body | null> {
+export async function bodyOf(err: unknown): Promise<Body | null> {
   const ctx = (err as { context?: unknown })?.context;
   if (!ctx) return null;
   // A `Response` on the versions that hand one back, an already-parsed

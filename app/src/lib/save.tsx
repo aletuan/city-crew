@@ -38,7 +38,7 @@ import { dropResume, focusedTab, holdResume } from './resume';
  * - `search`: asking Google Maps for places the catalog has not got.
  * - `trip`: Save to Trips, under a drafted plan.
  */
-export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search' | 'trip';
+export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search' | 'trip' | 'start';
 
 type Save = {
   /** Open whatever this person needs next in order to save this place. */
