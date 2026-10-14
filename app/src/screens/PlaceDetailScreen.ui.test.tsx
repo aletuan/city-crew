@@ -1911,7 +1911,7 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
   // card wears: two grounds on the screen, the page and the cards. Not the
   // accent's tint, which is for state; not the glass, which is a third
   // ground. No card where there is neither a paragraph nor a tag.
-  it('puts the highlights and the vibes in one card on the info card’s surface', () => {
+  it('puts the highlights and the vibes in one card on the info card’s surface, and no card without highlights', () => {
     show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes'] }));
     const card = screen.getByTestId('detail-why-card');
     expect(card.contains(screen.getByTestId('detail-why'))).toBe(true);
@@ -1921,6 +1921,13 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(fill).toBe(getComputedStyle(screen.getByTestId('detail-info-card')).backgroundColor);
     // The chip is a step of glass over the card, not the card's own fill.
     expect(getComputedStyle(screen.getByTestId('detail-vibe-cafes')).backgroundColor).not.toBe(fill);
+    cleanup();
+    // No paragraph: no card, and the chips stand bare — a card around one
+    // chip read as a box in a box, on 720 of 940 live places.
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['cafes'] }));
+    expect(screen.queryByTestId('detail-why-card')).toBeNull();
+    const bare = screen.getByTestId('detail-vibes');
+    expect(getComputedStyle(bare.parentElement!).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     cleanup();
     show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: [] }));
     expect(screen.queryByTestId('detail-why-card')).toBeNull();
