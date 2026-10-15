@@ -33,6 +33,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/rend
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
+import { colors } from '../theme';
 
 const spies = vi.hoisted(() => ({
   goTo: vi.fn(),
@@ -1465,6 +1466,8 @@ describe('the chips', () => {
   const cards = () => screen.getAllByText(/^card:/).map((e) => e.textContent);
   const chip = (k: string) => screen.getByTestId(`collection-kinds-${k}`);
   const on = (k: string) => chip(k).getAttribute('aria-selected') === 'true';
+  // A theme colour as the browser reports it: rgba() kept, hex converted.
+  const rgba = (c: string) => (c.startsWith('#') ? rgb(c) : c.replace(/,(?=\S)/g, ', '));
   // The pill inside the button: `PressableScale`'s animated view, then it.
   const pillOf = (k: string) => chip(k).firstElementChild!.firstElementChild as HTMLElement;
 
@@ -1522,10 +1525,15 @@ describe('the chips', () => {
     expect(on('nightlife')).toBe(true);
     expect(cards()).toEqual(['card:Cafe Giang']);
     expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 of 4 places');
-    // Lit in the accent while chosen, and only then.
+    // Lit as Explore's chips are, and only while chosen: the glass a step
+    // heavier, its border drawn in the glass's own line — not an accent
+    // ring — and the word in the accent.
     const lit = getComputedStyle(pillOf('nightlife'));
     const unlit = getComputedStyle(pillOf('eats'));
     expect(lit.borderTopColor).not.toBe(unlit.borderTopColor);
+    expect(lit.backgroundColor).not.toBe(unlit.backgroundColor);
+    expect(lit.borderTopColor).toBe(rgba(String(colors.borderGlass)));
+    expect(lit.borderTopColor).not.toBe(rgba(String(colors.accent)));
     // Any, not all: a second chip widens, in the list's own order.
     fireEvent.click(chip('heritage'));
     expect(cards()).toEqual(['card:Cafe Giang', 'card:Fine Arts Museum']);

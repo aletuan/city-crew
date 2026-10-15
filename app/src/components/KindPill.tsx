@@ -65,11 +65,10 @@ export function KindPill({ kind, more = 0, chosen = false, testID }: {
  * reading of what the card had to count.
  *
  * Given `onPick`, the pills are also a filter (a collection's, 15 Oct
- * 2026): each a button that says whether it is chosen, lit in the
- * accent while it is — the accent is for state the reader made, and a
- * chosen filter is that. The pill keeps its dot and its size, so the row
- * does not reflow as chips light; the ring is drawn in a border every
- * pill already carries, transparent at rest.
+ * 2026): each a button that says whether it is chosen, and lit the way
+ * Explore's filter chips are while it is — see `pillOn`. The pill keeps
+ * its dot and its size, so the row does not reflow as chips light; the
+ * border it lights is one every pill already carries, clear at rest.
  *
  * The pills are 25pt tall, under the 44 a target wants, and the owner
  * took that trade for one row instead of two (the filter row above the
@@ -127,11 +126,17 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'transparent',
     paddingHorizontal: 10, paddingVertical: 3,
   },
-  pillOn: { borderColor: colors.accent },
+  // Chosen, in the filter row's own words (`Chip`'s `chipOn`): the glass
+  // a step heavier and its border drawn, the word in the accent — and not
+  // an accent ring, which is what this wore for a build and the owner
+  // found heavy beside Explore's quiet one (15 Oct 2026). The step is
+  // from the pill's own resting glass, as `Chip`'s is from its clear one,
+  // so the change is the same size on both.
+  pillOn: { backgroundColor: colors.surfaceGlassStrong, borderColor: colors.borderGlass },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
   // Full-strength text: one word on a card is the label, not an aside.
   label: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
-  labelOn: { color: colors.accent },
+  labelOn: { color: colors.accent, fontWeight: font.semibold },
   // A rule, not a hairline: at 0.5pt it disappeared against the fill on a
   // light ground, and the count then read as part of the label.
   sep: { width: 1, height: 13, backgroundColor: colors.borderGlassSoft },
