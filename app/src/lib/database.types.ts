@@ -278,6 +278,8 @@ export type Database = {
           desc_vi: string | null
           id: string
           is_public: boolean
+          kinds_added: string[]
+          kinds_hidden: string[]
           owner_id: string | null
           slug: string
           sort_order: number | null
@@ -296,6 +298,8 @@ export type Database = {
           desc_vi?: string | null
           id?: string
           is_public?: boolean
+          kinds_added?: string[]
+          kinds_hidden?: string[]
           owner_id?: string | null
           slug: string
           sort_order?: number | null
@@ -314,6 +318,8 @@ export type Database = {
           desc_vi?: string | null
           id?: string
           is_public?: boolean
+          kinds_added?: string[]
+          kinds_hidden?: string[]
           owner_id?: string | null
           slug?: string
           sort_order?: number | null

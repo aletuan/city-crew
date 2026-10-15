@@ -175,4 +175,11 @@ export type Collection = {
   created_at?: string | null;
   /** The desk's sequence. Null on anything a reader made. */
   sort_order?: number | null;
+  /** The owner's word on the list's chips: categories taken off, and
+   *  categories put on. Optional because a row from the launch cache, or
+   *  from a database before `20261015090000_collection_kinds.sql`, has
+   *  neither — and absent reads as "no decisions". See
+   *  `lib/collectionKinds`. */
+  kinds_hidden?: string[];
+  kinds_added?: string[];
 };

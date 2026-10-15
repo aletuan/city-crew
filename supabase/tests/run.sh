@@ -469,3 +469,11 @@ for f in "$ROOT"/supabase/migrations/*_checkins.sql "$ROOT"/supabase/migrations/
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkins_test.sql"
+
+# The owner's chips on a collection (15 Oct 2026): two columns and their
+# checks. Needs only `collections`, which every block above has had.
+echo "→ collection kinds"
+for f in "$ROOT"/supabase/migrations/*_collection_kinds.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/collection_kinds_test.sql"

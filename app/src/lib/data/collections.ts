@@ -9,6 +9,7 @@
 import { supabase } from '../supabase';
 import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import type { Collection, Place } from '../types';
+import type { KindChoice } from '../collectionKinds';
 import { slugify } from '../place';
 import { PLACE_COLS } from './places';
 
@@ -45,7 +46,7 @@ import { PLACE_COLS } from './places';
 // it until the like button did, and then the control that only appears
 // on a public list never appeared at all.
 const COLLECTION_COLS = (withOwner: boolean) =>
-  `id, slug, is_public, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri)`;
+  `id, slug, is_public, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id, kinds_hidden, kinds_added' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri)`;
 
 export async function fetchCollections(cityId: string): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
@@ -143,7 +144,7 @@ function withMembers(data: unknown): Collection[] {
  * whether they are published or not.
  */
 const MY_COLLECTION_COLS =
-  `id, slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
+  `id, slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, kinds_hidden, kinds_added, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
 
 export async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
   const { data, error } = await supabase
@@ -253,6 +254,9 @@ export async function createCollection(input: {
    *  `copied_from`, which is what lets the original's curator hear about
    *  it (`copies_of_mine`); null for a list made from scratch. */
   copiedFrom?: string | null;
+  /** The owner's chip decisions — see `lib/collectionKinds`. A copy
+   *  carries the original's; a new list has none. */
+  kinds?: KindChoice;
 }): Promise<string> {
   const title = input.title.trim();
   const desc = input.desc?.trim() || null;
@@ -277,6 +281,8 @@ export async function createCollection(input: {
       desc_en: desc, desc_vi: desc, desc_ja: desc,
       is_public: false,
       copied_from: input.copiedFrom ?? null,
+      kinds_hidden: [...(input.kinds?.hidden ?? [])],
+      kinds_added: [...(input.kinds?.added ?? [])],
     });
     if (!error) return slug;
     // A policy said no. The only policy that can, for a row carrying the
@@ -293,7 +299,7 @@ export async function createCollection(input: {
 /** Rename one of the user's own lists. RLS scopes this to rows they own. */
 export async function updateCollection(
   slug: string,
-  input: { title: string; desc?: string; coverPhotoId?: string | null },
+  input: { title: string; desc?: string; coverPhotoId?: string | null; kinds?: KindChoice },
 ): Promise<void> {
   const title = input.title.trim();
   const desc = input.desc?.trim() || null;
@@ -307,6 +313,9 @@ export async function updateCollection(
       title_en: title, title_vi: title, title_ja: title,
       desc_en: desc, desc_vi: desc, desc_ja: desc,
       cover_photo_id: input.coverPhotoId ?? null,
+      // Left alone when the caller has no word on them, rather than
+      // cleared: a save that did not show the chips must not wipe them.
+      ...(input.kinds ? { kinds_hidden: [...input.kinds.hidden], kinds_added: [...input.kinds.added] } : {}),
     })
     .eq('slug', slug);
   if (error) throw new Error(error.message);
@@ -426,6 +435,7 @@ export async function copyCollection(input: {
   placeSlugs: readonly string[];
   /** The original's id — see `createCollection`. */
   copiedFrom?: string | null;
+  kinds?: KindChoice;
 }): Promise<string> {
   const slug = await createCollection({
     ownerId: input.ownerId,
@@ -433,6 +443,7 @@ export async function copyCollection(input: {
     title: input.title,
     desc: input.desc,
     copiedFrom: input.copiedFrom,
+    kinds: input.kinds,
   });
   if (!input.placeSlugs.length) return slug;
 
