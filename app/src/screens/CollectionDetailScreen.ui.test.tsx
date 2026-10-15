@@ -398,6 +398,9 @@ describe('your own list', () => {
     const card = screen.getByTestId('collection-desc');
     expect(card.textContent).toContain('Where we eat.');
     expect(getComputedStyle(card).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    // The note glyph leads; the pencil is the menu's own framed one.
+    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       slug: 'old-quarter', title: 'Old Quarter eats', desc: 'Where we eat.',
@@ -410,6 +413,9 @@ describe('your own list', () => {
     expect(screen.queryByTestId('collection-desc')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
     expect(screen.getByText('Add a few words about this list.')).toBeTruthy();
+    const invite = screen.getByRole('button', { name: 'Add a description' });
+    expect(invite.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    expect(invite.querySelector('[data-icon="create-outline"]')).toBeTruthy();
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       slug: 'old-quarter', title: 'Old Quarter eats', desc: '',
     });
@@ -1414,6 +1420,8 @@ describe('the description, for a visitor', () => {
     state.cols = [theirs()];
     show();
     expect(screen.getByTestId('collection-desc').textContent).toContain('Where we eat.');
+    // The note glyph is for the visitor most of all: it says whose words.
+    expect(screen.getByTestId('collection-desc').querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
 
