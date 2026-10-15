@@ -14,6 +14,8 @@ const ja: T = (_e, _v, j) => j ?? '';
 const row = (signals: Signals, over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer_version: SCORER_VERSION, aesthetic: 0.4, is_utility: false, signals, ...over,
 });
+/** A scene with a horizon in it, so a tilt is worth saying. */
+const ROOM = [{ id: 'interior_room', p: 0.8 }];
 const why = (signals: Signals, over: Partial<PhotoScore> = {}, t = en) => explainScore(row(signals, over), t);
 
 describe('needsScore', () => {
@@ -69,7 +71,7 @@ describe('explainScore', () => {
   });
 
   it('puts what helped first, capitalised, then what held it back', () => {
-    expect(why({ brightness: 0.5, sharpness: 2500, tilt: 4.4 }))
+    expect(why({ brightness: 0.5, sharpness: 2500, tilt: 4.4, labels: ROOM }))
       .toBe('Well lit, sharp. Held back by: horizon tilted 4°.');
   });
 
@@ -77,8 +79,8 @@ describe('explainScore', () => {
     const LEAD = 'Lots of writing in frame — it reads like a menu or a sign rather than a picture.';
 
     it('leads with it when Vision flags it and writing was measured', () => {
-      expect(why({ brightness: 0.5, textArea: 0.2 }, { is_utility: true })).toBe(`${LEAD} Well lit.`);
-      expect(why({ textLines: 6 }, { is_utility: true })).toBe(LEAD);
+      expect(why({ brightness: 0.5, textLines: 12 }, { is_utility: true })).toBe(`${LEAD} Well lit.`);
+      expect(why({ textLines: 10 }, { is_utility: true })).toBe(LEAD);
     });
 
     it('takes a document or board label as the evidence too', () => {
@@ -112,14 +114,14 @@ describe('explainScore', () => {
     });
 
     it('names the writing once, in the lead, not again among what held it back', () => {
-      expect(why({ textArea: 0.2 }, { is_utility: true })).not.toContain('a lot of writing in frame');
-      expect(why({ textArea: 0.2 })).toBe('Held back by: a lot of writing in frame.');
+      expect(why({ textLines: 12 }, { is_utility: true })).not.toContain('a lot of writing in frame');
+      expect(why({ textLines: 12 })).toBe('Held back by: a lot of writing in frame.');
     });
 
     it('speaks Vietnamese and Japanese', () => {
-      expect(why({ textArea: 0.2 }, { is_utility: true }, vi_))
+      expect(why({ textLines: 12 }, { is_utility: true }, vi_))
         .toBe('Trong khung có nhiều chữ, trông như ảnh menu hoặc biển hiệu hơn là ảnh để ngắm.');
-      expect(why({ textArea: 0.2 }, { is_utility: true }, ja))
+      expect(why({ textLines: 12 }, { is_utility: true }, ja))
         .toBe('文字が多く、鑑賞用の写真というよりメニューや看板のように見えます。');
     });
   });
@@ -162,10 +164,24 @@ describe('explainScore', () => {
     [-6.6, 7],
     [15, 15],
     [15.1, null],
-  ])('a horizon %s° off level', (tilt, n) => {
-    expect(why({ tilt })).toBe(n === null
+  ])('a horizon %s° off level, in a scene', (tilt, n) => {
+    expect(why({ tilt, labels: ROOM })).toBe(n === null
       ? 'Nothing measured stands out either way.'
       : `Held back by: horizon tilted ${n}°.`);
+  });
+
+  // O3 Brunswick's cup of coffee, shot from above: the "horizon" was the
+  // table's edge (owner, 15 Oct 2026).
+  it('says nothing of a tilt where there is no scene to have a horizon', () => {
+    const cup: Signals = {
+      tilt: 5, textArea: 0.48, textLines: 1,
+      labels: [{ id: 'coffee', p: 0.85 }, { id: 'drink', p: 0.85 }, { id: 'tableware', p: 0.76 }],
+    };
+    expect(why(cup)).toBe('Nothing measured stands out either way.');
+    expect(why({ tilt: 5 })).toBe('Nothing measured stands out either way.');
+    // A scene label under 0.3 is not a scene.
+    expect(why({ tilt: 5, labels: [{ id: 'interior_room', p: 0.29 }] })).toBe('Nothing measured stands out either way.');
+    expect(why({ tilt: 5, labels: [{ id: 'street', p: 0.3 }] })).toBe('Held back by: horizon tilted 5°.');
   });
 
   it('names people only once one fills more than a seventh of the frame', () => {
@@ -173,10 +189,14 @@ describe('explainScore', () => {
     expect(why({ people: 1, peopleArea: 0.2 })).toBe('Held back by: people fill much of the frame.');
   });
 
-  it('names writing by its area or by its lines', () => {
-    expect(why({ textArea: 0.08, textLines: 5 })).toBe('Nothing measured stands out either way.');
-    expect(why({ textArea: 0.09 })).toBe('Held back by: a lot of writing in frame.');
-    expect(why({ textLines: 6 })).toBe('Held back by: a lot of writing in frame.');
+  // Counted in lines, not area: one false box round half the frame is not
+  // writing (O3 Brunswick, owner, 15 Oct 2026), and real writing is many
+  // thin lines over little of it.
+  it('names writing by its lines, from ten, and never by area alone', () => {
+    expect(why({ textLines: 9, textArea: 0.5 })).toBe('Nothing measured stands out either way.');
+    expect(why({ textLines: 10, textArea: 0.04 })).toBe('Held back by: a lot of writing in frame.');
+    // The counter with a small menu: one box, 37% of the frame.
+    expect(why({ textLines: 1, textArea: 0.37 })).toBe('Nothing measured stands out either way.');
   });
 
   describe('the subject', () => {
@@ -207,7 +227,7 @@ describe('explainScore', () => {
   });
 
   it('speaks Vietnamese and Japanese with their own punctuation', () => {
-    const s: Signals = { brightness: 0.5, sharpness: 2500, tilt: 3 };
+    const s: Signals = { brightness: 0.5, sharpness: 2500, tilt: 3, labels: ROOM };
     expect(why(s, {}, vi_)).toBe('Đủ sáng, rõ nét. Trừ điểm: đường chân trời nghiêng 3°.');
     expect(why(s, {}, ja)).toBe('明るさが適切、シャープ。減点：水平が3°傾いている。');
   });

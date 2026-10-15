@@ -57,7 +57,8 @@ export type Signals = {
   /** The largest person's share of the frame. */
   peopleArea?: number;
   textLines?: number;
-  /** All the writing's share of the frame, summed. */
+  /** All the writing's share of the frame, summed. Kept, not judged on —
+   *  see `TEXT_LINES` for why one false box makes it unreliable. */
   textArea?: number;
   /** Vision's five most confident labels from 0.1 up. */
   labels?: { id: string; p: number }[];
@@ -145,20 +146,51 @@ const SHARP = 2000;
 /** Under 2° is the detector's own noise; over 15° is a choice, not a
  *  slip, and not this sentence's business. */
 const TILT = [2, 15] as const;
+/**
+ * The labels of a scene with a horizon in it — a room, a street, a
+ * front — at this confidence or more. A tilt is said only of those.
+ *
+ * Vision's horizon detector finds a line in any photograph, and on a
+ * close-up the line is a table's edge: O3 Brunswick's cup of coffee, shot
+ * from above, was marked down for a horizon 5° off level (owner, 15 Oct
+ * 2026). Of the 46 photographs given a tilt by 15 Oct, 13 carried one of
+ * these labels and 17 were a table top. A name Vision never returns
+ * costs nothing.
+ */
+const SCENE = new Set([
+  'interior_room', 'restaurant', 'building', 'outdoor', 'sky', 'street', 'arch', 'portal',
+  'door', 'window', 'stairs', 'balcony', 'fence', 'skyscraper', 'cityscape', 'bridge',
+]);
+const SCENE_P = 0.3;
 /** A person taking a seventh of the frame is the photo's subject — and
  *  the desk's cover rule is no people. */
 const PEOPLE = 0.15;
-/** A menu board or a sign filling the frame. */
-const TEXT_AREA = 0.08;
-const TEXT_LINES = 6;
+/**
+ * Lines of writing, from which on writing is what the photograph is of.
+ *
+ * Counted in lines and not in area. Area summed the boxes Vision drew
+ * round each line, and its fast pass sometimes draws one box round half
+ * the frame: O3 Brunswick's cup of coffee read as one "line" covering 48%
+ * of it, its counter with a small menu as one covering 37%, and both
+ * were marked down for "a lot of writing" (owner, 15 Oct 2026). Of the
+ * 18 photographs over the old 8% cut, 15 had one or two lines. Real
+ * writing is the other way round — thin boxes, many of them: the four
+ * photographs of a menu, a sign or a chalkboard by 15 Oct had 10 to 55
+ * lines covering only 4–6% of the frame, so an area cut that holds them
+ * cannot also hold out the false boxes. The next ones down had 5 or 6
+ * lines and were a cup, a coffee machine, a wall of plants — writing
+ * there, and not what the photograph is of. A small menu in a counter
+ * shot is the photographer's detail, not the subject (owner).
+ */
+const TEXT_LINES = 10;
 /** Vision's labels for a page or a board, at this confidence or more —
  *  the other evidence, beside measured writing, that a photograph is a
  *  record. A name it never returns costs nothing. */
 const RECORD = new Set(['document', 'handwriting', 'chalkboard', 'menu', 'poster', 'receipt', 'screenshot']);
 const RECORD_P = 0.3;
 
-/** Writing measured in the frame: its area, or its lines. */
-const writing = (s: Signals) => (s.textArea ?? 0) > TEXT_AREA || (s.textLines ?? 0) >= TEXT_LINES;
+/** Writing is what the photograph is of — see `TEXT_LINES`. */
+const writing = (s: Signals) => (s.textLines ?? 0) >= TEXT_LINES;
 
 /**
  * Whether Vision's "record, not a picture" is worth repeating.
@@ -213,7 +245,8 @@ function said(s: Signals, t: T, record: boolean): Said {
   }
 
   const tilt = Math.abs(s.tilt ?? 0);
-  if (tilt >= TILT[0] && tilt <= TILT[1]) {
+  const scene = (s.labels ?? []).some((l) => SCENE.has(l.id) && l.p >= SCENE_P);
+  if (scene && tilt >= TILT[0] && tilt <= TILT[1]) {
     const n = Math.round(tilt);
     minus.push(t(`horizon tilted ${n}°`, `đường chân trời nghiêng ${n}°`, `水平が${n}°傾いている`));
   }

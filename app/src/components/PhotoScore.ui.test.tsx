@@ -37,7 +37,7 @@ import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText,
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer_version: SCORER_VERSION, aesthetic: 0.68, is_utility: false,
-  signals: { brightness: 0.5, tilt: 4 }, ...over,
+  signals: { brightness: 0.5, tilt: 4, labels: [{ id: 'interior_room', p: 0.8 }] }, ...over,
 });
 
 describe('tenText', () => {
