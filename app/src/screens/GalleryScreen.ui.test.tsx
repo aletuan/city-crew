@@ -678,7 +678,12 @@ describe('scoring', () => {
     show([photo('a'), photo('b', { sort_order: 1 })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-score'));
+    // On screen before anything is read.
+    expect(data.scoreAsync).not.toHaveBeenCalled();
     expect((await screen.findByTestId('scoring-dialog')).textContent).toContain('1/2');
+    // The first photograph is handed over once the dialog has had two
+    // frames to start its bars.
+    await waitFor(() => expect(data.scoreAsync).toHaveBeenCalledTimes(1));
     await act(async () => { release(); });
     await screen.findByTestId('scored-card');
   });
@@ -693,6 +698,7 @@ describe('scoring', () => {
     await grid();
     fireEvent.click(screen.getByTestId('gallery-score'));
     await screen.findByTestId('scoring-dialog');
+    await waitFor(() => expect(data.scoreAsync).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByTestId('scoring-cancel'));
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Stopping after this photo…');
     await act(async () => { release(); });

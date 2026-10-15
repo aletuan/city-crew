@@ -33,7 +33,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
 }));
 
-import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from './PhotoScore';
+import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer_version: SCORER_VERSION, aesthetic: 0.68, is_utility: false,
@@ -177,6 +177,31 @@ describe('ScoreGlyph', () => {
     const before = loops();
     render(<ScoreGlyph size={22} color="#123" active />);
     expect(loops() - before).toBe(3);
+  });
+
+  // The owner saw the first build's bars stand still on the phone: each
+  // was a sequence, which React Native cannot loop natively, so every leg
+  // waited on a busy JS thread. One native timing per bar, out and back
+  // in its easing, needs nothing from JavaScript once started.
+  it('loops each bar as one native-driven timing, not a sequence', () => {
+    const seq = vi.spyOn(Animated, 'sequence');
+    vi.mocked(Animated.timing).mockClear();
+    render(<ScoreGlyph size={22} color="#123" active />);
+    expect(seq).not.toHaveBeenCalled();
+    const configs = vi.mocked(Animated.timing).mock.calls.map((c) => c[1]);
+    expect(configs).toHaveLength(3);
+    for (const c of configs) {
+      expect(c.useNativeDriver).toBe(true);
+      expect(c.easing).toBe(thereAndBack);
+    }
+    seq.mockRestore();
+  });
+
+  it('eases out and back, at rest at both ends of the loop', () => {
+    expect(thereAndBack(0)).toBe(0);
+    expect(thereAndBack(0.5)).toBe(1);
+    expect(thereAndBack(1)).toBeCloseTo(0, 12);
+    expect(thereAndBack(0.25)).toBeCloseTo(0.5, 12);
   });
 
   // Never in step: three rhythms, no two alike.
