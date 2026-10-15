@@ -978,7 +978,20 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           "Edit collection" does. Two doors to one action, which is what
           took the "Add place" slot away the same day — but this one sits
           on the text it changes, so it reads as "change this", not as a
-          second general button. 17pt drawn, 44pt to the thumb.
+          second general button. 44pt to the thumb.
+
+          ── the two glyphs (owner, 15 Oct 2026) ──
+          The pencil was Ionicons' `pencil`, a single thin diagonal that
+          read at 17pt on a pale card as a stroke rather than a control.
+          It is `create-outline` now — the framed pencil the ⋯ menu's own
+          "Edit collection" row wears, so one action has one glyph and the
+          reader already knows it from the menu. And a note glyph leads
+          the card: on somebody else's list nothing said whose words these
+          were, and the card could read as the app's own copy. The page
+          with lines says "a note", which is the one fact it adds. Both at
+          20pt in `textSecondary`, the card's one secondary ink, each
+          centred on the first line (24 tall, so 2 down); the text column
+          gives up their 32pt, which a two-line note can spare.
 
           An owner's list with no description draws the card anyway, as an
           invitation, and the whole card is the press. A visitor's list
@@ -990,18 +1003,19 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {col && desc ? (
         <View style={s.descWrap}>
           <Card style={s.descCard} testID="collection-desc">
+            <Ionicons name="document-text-outline" size={20} color={colors.textSecondary} style={s.descGlyph} />
             <Text style={s.descText}>{desc}</Text>
             {owned && (
               <PressableScale
                 onPress={edit}
                 scaleTo={0.85}
                 haptic="selection"
-                hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 accessibilityRole="button"
                 accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
                 testID="collection-desc-edit"
               >
-                <Ionicons name="pencil" size={17} color={colors.textSecondary} />
+                <Ionicons name="create-outline" size={20} color={colors.textSecondary} style={s.descGlyph} />
               </PressableScale>
             )}
           </Card>
@@ -1017,6 +1031,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             testID="collection-desc-empty"
           >
             <Card style={s.descCard}>
+              <Ionicons name="document-text-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
               <Text style={s.descEmpty}>
                 {t(
                   'Add a few words about this list.',
@@ -1024,7 +1039,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   'このリストについて一言添えましょう。',
                 )}
               </Text>
-              <Ionicons name="pencil" size={17} color={colors.textTertiary} />
+              <Ionicons name="create-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
             </Card>
           </PressableScale>
         </View>
@@ -1304,6 +1319,8 @@ const s = StyleSheet.create({
   descCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: space.cardPadding },
   descText: { flex: 1, color: colors.textSecondary, ...type.body, lineHeight: 24 },
   descEmpty: { flex: 1, color: colors.textTertiary, ...type.body, lineHeight: 24 },
+  // A 20pt glyph centred on a 24pt first line.
+  descGlyph: { marginTop: 2 },
 
   // A text button, not a pill: it sits where the overflow control was and
   // the header already has one round shape in it on the other side.
