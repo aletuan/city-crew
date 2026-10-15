@@ -269,7 +269,8 @@ describe('VisitedScreen', () => {
       type('saigon');
       expect(names()).toEqual(['pizza en', 'bun en']);
       expect(screen.getByText('2 places · Saigon')).toBeTruthy();
-      fireEvent.click(screen.getByTestId('visits-clear'));
+      // Emptied by the keyboard — there is no (x).
+      type('');
       expect(names()).toHaveLength(3);
       expect(screen.getByText('3 places · 2 cities')).toBeTruthy();
     });

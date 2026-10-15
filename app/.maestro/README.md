@@ -194,7 +194,7 @@ reaches the native view.
 | `ExploreFilterSheet` | `filter-sort-<recommended\|distance\|rating>`, `filter-status-<any\|open\|closed>`, `filter-saved`, `filter-reset` (only when dirty), `filter-apply`, `filter-close` |
 | `CitySwitcher` | `city-row-<index>` |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
-| `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
+| `SearchScreen` | `search-input`, `search-cancel`, `search-result-<index>` |
 | `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language` |
 | `LanguageSwitcher` | `lang-<en\|vi\|ja>` |
 | `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`), `signin-forgot`; `auth-error` (`FormError`) |

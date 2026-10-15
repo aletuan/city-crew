@@ -237,20 +237,11 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             onChangeText={setQuery}
             onFocus={() => setOpen(true)}
             onSubmitEditing={noteSearch}
-            testID={{ input: 'visits-input', clear: 'visits-clear' }}
+            testID={{ input: 'visits-input', cancel: 'visits-cancel' }}
             placeholder={t('Place or city', 'Tên địa điểm hoặc thành phố', '場所または都市')}
+            // Inside the box, while the panel is up — see `SearchField`.
+            cancel={{ shown: open, label: t('Cancel', 'Hủy', 'キャンセル'), onPress: cancel }}
           />
-          {open && (
-            <PressableScale
-              onPress={cancel}
-              scaleTo={0.94}
-              style={s.cancel}
-              accessibilityRole="button"
-              accessibilityLabel={t('Cancel', 'Hủy', 'キャンセル')}
-            >
-              <Text style={s.cancelText}>{t('Cancel', 'Hủy', 'キャンセル')}</Text>
-            </PressableScale>
-          )}
         </View>
         {open && (
           <Card style={s.panel}>
@@ -402,11 +393,6 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  // Cancel is words, not a glyph, as iOS draws it beside a search box:
-  // the one control here that undoes rather than narrows. 44 tall to
-  // match the box, 10 of padding so the word is not against its edge.
-  cancel: { height: 44, justifyContent: 'center', paddingHorizontal: 10 },
-  cancelText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
   panel: { padding: space.cardPadding, gap: space.headingToContent },
   group: { gap: 10 },
   legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
