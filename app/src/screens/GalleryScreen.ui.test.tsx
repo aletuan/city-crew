@@ -610,6 +610,8 @@ describe('scoring', () => {
     show([photo('a'), photo('b', { sort_order: 1 })]);
     await grid();
     expect(screen.getByTestId('gallery-score').textContent).toBe('Score photos');
+    // The scorer's bars; sparkles mean "suggested" in this app.
+    expect(screen.getByTestId('gallery-score').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('stats-chart');
     // Nothing is being read until it is asked.
     expect(screen.queryByTestId('scoring-dialog')).toBeNull();
   });

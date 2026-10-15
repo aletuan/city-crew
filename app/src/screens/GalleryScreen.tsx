@@ -40,7 +40,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import ActionSheet, { sheetHeader, type SheetAction } from '../components/ActionSheet';
 import { AddPill } from '../components/add';
-import { ScoreBadge, ScoreBlock, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
+import { SCORE_ICON, ScoreBadge, ScoreBlock, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useAuth } from '../lib/auth';
@@ -310,7 +310,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                 nothing is a button that teaches the reader to doubt it. */}
             {mode === 'view' && photoScorer && uid && unscored.length > 0 && (
               <Tool
-                icon="sparkles-outline"
+                icon={SCORE_ICON}
                 label={anyScored
                   ? t(`Score ${unscored.length} new`, `Chấm ${unscored.length} ảnh mới`, `新しい${unscored.length}枚を採点`)
                   : t('Score photos', 'Chấm ảnh', '写真を採点')}

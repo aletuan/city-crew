@@ -14,7 +14,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
 }));
 
-import { ScoreBadge, ScoreBlock, ScoredCard, ScoringDialog, tenText } from './PhotoScore';
+import { SCORE_ICON, ScoreBadge, ScoreBlock, ScoredCard, ScoringDialog, tenText } from './PhotoScore';
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer_version: SCORER_VERSION, aesthetic: 0.68, is_utility: false,
@@ -70,6 +70,9 @@ describe('ScoringDialog', () => {
     render(<ScoringDialog visible done={2} total={6} stopping={false} onCancel={() => {}} />);
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Reading the photos… 3/6');
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Analysed on this phone.');
+    // The bars, not the sparkles that mean "suggested" elsewhere.
+    expect(SCORE_ICON).toBe('stats-chart');
+    expect(screen.getByTestId('scoring-dialog').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe(SCORE_ICON);
     expect(screen.getByTestId('scoring-fill').style.width).toBe('33.33333333333333%');
   });
 
