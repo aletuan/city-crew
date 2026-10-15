@@ -7,14 +7,33 @@
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '../uitest/render';
+import { AccessibilityInfo, Animated } from 'react-native';
+import { act, fireEvent, render, screen } from '../uitest/render';
 import { SCORER_VERSION, type PhotoScore } from '../lib/photoScore';
+
+// Every loop started, and every one stopped. Under jsdom no frame of a
+// native-driven animation is drawn, so whether the bars are moving is
+// read off the loops: started when they should move, stopped when they
+// should not.
+const realLoop = Animated.loop;
+const made: { stopped: boolean }[] = [];
+vi.spyOn(Animated, 'loop').mockImplementation((anim, cfg) => {
+  const loop = realLoop(anim, cfg);
+  const mark = { stopped: false };
+  made.push(mark);
+  const stop = loop.stop.bind(loop);
+  loop.stop = () => { mark.stopped = true; stop(); };
+  return loop;
+});
+/** The loops started since `from`, and whether each has been stopped. */
+const since = (from: number) => made.slice(from).map((m) => m.stopped);
+vi.spyOn(Animated, 'timing');
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
 }));
 
-import { SCORE_ICON, ScoreBadge, ScoreBlock, ScoredCard, ScoringDialog, tenText } from './PhotoScore';
+import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from './PhotoScore';
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer_version: SCORER_VERSION, aesthetic: 0.68, is_utility: false,
@@ -71,8 +90,8 @@ describe('ScoringDialog', () => {
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Reading the photos… 3/6');
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Analysed on this phone.');
     // The bars, not the sparkles that mean "suggested" elsewhere.
-    expect(SCORE_ICON).toBe('stats-chart');
-    expect(screen.getByTestId('scoring-dialog').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe(SCORE_ICON);
+    expect(screen.getByTestId('scoring-dialog').querySelector('[data-icon]')).toBeNull();
+    expect(screen.getAllByTestId('scoring-glyph-bar')).toHaveLength(3);
     expect(screen.getByTestId('scoring-fill').style.width).toBe('33.33333333333333%');
   });
 
@@ -85,11 +104,15 @@ describe('ScoringDialog', () => {
 
   it('cancels from its button, and says it is stopping once asked', () => {
     const onCancel = vi.fn();
+    const from = made.length;
     const { rerender } = render(<ScoringDialog visible done={1} total={3} stopping={false} onCancel={onCancel} />);
+    expect(since(from)).toEqual([false, false, false]);
     fireEvent.click(screen.getByTestId('scoring-cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);
     rerender(<ScoringDialog visible done={1} total={3} stopping onCancel={onCancel} />);
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Stopping after this photo…');
+    // The bars settle once Cancel is in: only the photo in hand is left.
+    expect(since(from)).toEqual([true, true, true]);
     expect(screen.getByTestId('scoring-dialog').textContent).not.toContain('2/3');
   });
 
@@ -131,5 +154,52 @@ describe('ScoringDialog, closing', () => {
     const { rerender } = render(<ScoringDialog visible done={2} total={3} stopping={false} onCancel={() => {}} />);
     rerender(<ScoringDialog visible={false} done={0} total={0} stopping={false} onCancel={() => {}} />);
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('3/3');
+  });
+});
+
+describe('ScoreGlyph', () => {
+  const loops = () => vi.mocked(Animated.loop).mock.calls.length;
+
+  it('is three bars, short, tall and middling at rest', () => {
+    render(<ScoreGlyph size={20} color="#123" testID="g" />);
+    const bars = screen.getAllByTestId('g-bar');
+    expect(bars).toHaveLength(3);
+    expect(bars.map((b) => getComputedStyle(b).transform)).toEqual(['scaleY(0.55)', 'scaleY(1)', 'scaleY(0.75)']);
+  });
+
+  it('stays still unless active', () => {
+    const before = loops();
+    render(<ScoreGlyph size={15} color="#123" />);
+    expect(loops()).toBe(before);
+  });
+
+  it('sets each bar moving on a loop of its own while active', () => {
+    const before = loops();
+    render(<ScoreGlyph size={22} color="#123" active />);
+    expect(loops() - before).toBe(3);
+  });
+
+  // Never in step: three rhythms, no two alike.
+  it('gives each bar a rhythm of its own, slow enough to read as looking', () => {
+    vi.mocked(Animated.timing).mockClear();
+    render(<ScoreGlyph size={22} color="#123" active />);
+    const legs = vi.mocked(Animated.timing).mock.calls.map((c) => c[1].duration!);
+    expect(new Set(legs).size).toBe(3);
+    expect(Math.min(...legs)).toBeGreaterThanOrEqual(900);
+  });
+
+  it('stays still under Reduce Motion, active or not', async () => {
+    vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValueOnce(true);
+    const from = made.length;
+    render(<ScoreGlyph size={22} color="#123" active testID="g" />);
+    const before = loops();
+    await act(async () => {});
+    // The setting arrives a beat after the first render, and every loop
+    // started before it is stopped.
+    expect(since(from)).toEqual([true, true, true]);
+    // The loops stop and every bar is back at its rest.
+    expect(screen.getAllByTestId('g-bar').map((b) => getComputedStyle(b).transform))
+      .toEqual(['scaleY(0.55)', 'scaleY(1)', 'scaleY(0.75)']);
+    expect(loops()).toBe(before);
   });
 });

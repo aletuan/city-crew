@@ -40,7 +40,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import ActionSheet, { sheetHeader, type SheetAction } from '../components/ActionSheet';
 import { AddPill } from '../components/add';
-import { SCORE_ICON, ScoreBadge, ScoreBlock, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
+import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useAuth } from '../lib/auth';
@@ -310,7 +310,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                 nothing is a button that teaches the reader to doubt it. */}
             {mode === 'view' && photoScorer && uid && unscored.length > 0 && (
               <Tool
-                icon={SCORE_ICON}
+                glyph={<ScoreGlyph size={15} color={colors.text} />}
                 label={anyScored
                   ? t(`Score ${unscored.length} new`, `Chấm ${unscored.length} ảnh mới`, `新しい${unscored.length}枚を採点`)
                   : t('Score photos', 'Chấm ảnh', '写真を採点')}
@@ -427,21 +427,30 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         {/* The rules, once, in the reader's language — the ones a menu
             cannot show because they are about what it does *not* offer. */}
         <Card style={s.tips}>
-          <Text style={s.tipsTitle}>{t('How it works', 'Lưu ý', '使い方')}</Text>
+          {/* Rewritten with the owner (15 Oct 2026). "The desk" is a
+              name only the team uses, so the second tip names City Crew.
+              "JPG or PNG" went: the roll's HEIC is turned into JPEG on
+              the way up, so the format was never the reader's to mind.
+              "Pick them all at once" went too: the picker says so itself.
+              The cover tip now says what adding does to the cover, which
+              is the surprise the old wording only hinted at — the upload
+              trigger (`20260921093000_guide_upload_becomes_cover.sql`)
+              makes the newest photo the cover. */}
+          <Text style={s.tipsTitle}>{t('Note', 'Chú ý', 'ご注意')}</Text>
           <Tip text={t(
-            'The cover is the picture that stands for the place. The first photo you pick becomes the cover.',
-            'Ảnh bìa là ảnh đại diện cho địa điểm. Ảnh đầu tiên bạn chọn sẽ thành ảnh bìa.',
-            'カバーはこの場所を代表する写真です。最初に選んだ写真がカバーになります。',
+            'A photo you add becomes the cover (with several, the first one you picked). To change it, tap ⋯ on another photo.',
+            'Ảnh bạn thêm sẽ thành ảnh bìa (thêm nhiều ảnh thì là ảnh chọn đầu tiên). Muốn đổi, bấm ⋯ trên ảnh khác.',
+            '追加した写真がカバーになります（複数なら最初に選んだ1枚）。変えるには別の写真の⋯をタップ。',
           )} />
           <Tip text={t(
-            'You and the desk can do the same things to every photo here. The last change is the one that counts.',
-            'Bạn và data desk có quyền như nhau với mọi ảnh ở đây. Ai sửa sau thì tính.',
-            'ここにある写真はあなたとデスクが同じように扱えます。最後の変更が有効です。',
+            'The City Crew team can edit these photos too. The latest change is the one kept.',
+            'Đội ngũ City Crew cũng có thể chỉnh các ảnh này. Thay đổi mới nhất sẽ được giữ.',
+            'City Crewのチームもこれらの写真を編集できます。最新の変更が反映されます。',
           )} />
           <Tip text={t(
-            `JPG or PNG, up to ${MAX_PER_PLACE} of yours per place — pick them all at once.`,
-            `JPG hoặc PNG, tối đa ${MAX_PER_PLACE} ảnh của bạn mỗi địa điểm, chọn một lần được nhiều ảnh.`,
-            `JPGまたはPNG、1つの場所につきあなたの写真は${MAX_PER_PLACE}枚まで。まとめて選べます。`,
+            `You can add up to ${MAX_PER_PLACE} photos per place.`,
+            `Mỗi địa điểm bạn thêm được tối đa ${MAX_PER_PLACE} ảnh.`,
+            `1つの場所に追加できる写真は${MAX_PER_PLACE}枚までです。`,
           )} />
         </Card>
       </ScrollView>
@@ -482,8 +491,10 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
 /** A toolbar pill. Quiet by default; `destructive` for the one that
  *  deletes. */
-function Tool({ icon, label, onPress, destructive, testID }: {
-  icon: keyof typeof Ionicons.glyphMap;
+function Tool({ icon, glyph, label, onPress, destructive, testID }: {
+  icon?: keyof typeof Ionicons.glyphMap;
+  /** A drawn glyph in place of an Ionicons name — the scorer's bars. */
+  glyph?: React.ReactNode;
   label: string;
   onPress: () => void;
   destructive?: boolean;
@@ -499,7 +510,7 @@ function Tool({ icon, label, onPress, destructive, testID }: {
       style={[s.tool, destructive && s.toolBad]}
       testID={testID}
     >
-      <Ionicons name={icon} size={15} color={ink} />
+      {glyph ?? <Ionicons name={icon} size={15} color={ink} />}
       <Text style={[s.toolText, { color: ink }]}>{label}</Text>
     </PressableScale>
   );

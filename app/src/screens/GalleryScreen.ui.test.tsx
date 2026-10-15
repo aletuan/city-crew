@@ -581,8 +581,14 @@ describe('adding one', () => {
   it('explains the boundary once, at the bottom', async () => {
     show([mine('m')]);
     await grid();
-    expect(screen.getByText(/The last change is the one that counts/)).toBeTruthy();
-    expect(screen.getByText(/JPG or PNG, up to 5 of yours/)).toBeTruthy();
+    expect(screen.getByText('Note')).toBeTruthy();
+    expect(screen.getByText(/A photo you add becomes the cover/)).toBeTruthy();
+    expect(screen.getByText(/The City Crew team can edit these photos too/)).toBeTruthy();
+    expect(screen.getByText('You can add up to 5 photos per place.')).toBeTruthy();
+    // "The desk" is the team's own name for itself, and the format was
+    // never the reader's to mind (owner, 15 Oct 2026).
+    expect(screen.queryByText(/desk/i)).toBeNull();
+    expect(screen.queryByText(/JPG/)).toBeNull();
   });
 });
 
@@ -611,7 +617,8 @@ describe('scoring', () => {
     await grid();
     expect(screen.getByTestId('gallery-score').textContent).toBe('Score photos');
     // The scorer's bars; sparkles mean "suggested" in this app.
-    expect(screen.getByTestId('gallery-score').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('stats-chart');
+    expect(screen.getByTestId('gallery-score').querySelector('[data-icon]')).toBeNull();
+    expect(within(screen.getByTestId('gallery-score')).getAllByTestId('score-glyph-bar')).toHaveLength(3);
     // Nothing is being read until it is asked.
     expect(screen.queryByTestId('scoring-dialog')).toBeNull();
   });
