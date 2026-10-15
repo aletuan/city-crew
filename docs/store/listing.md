@@ -571,6 +571,46 @@ Data Desk), test. Từ bản này VI có localization riêng trên App Store Con
 • スポットページを整理：ハイライトは独立した行に、雰囲気はチップで、出典は引用の最後に。
 ```
 
+## Release notes v1.0.9 (What's New)
+
+Viết từ các PR merge sau build 1.0.8 (33) — #918 → #959. Bản này phải build mới
+vì có native module mới (`modules/photo-score`, Apple Vision); EAS Update
+không mang được nó. Chấm ảnh chỉ dành cho local guide và editor, trên iOS 18
+trở lên. Không có mặt ở đây: write-blurb (server, Data Desk), test.
+
+### EN
+
+```
+• Lists describe themselves: a description card, and chips for the kinds of places a list holds. Tap any to narrow the list.
+• Plan a trip straight from a list.
+• Explore: pick several categories at once. Choose none to see everything.
+• Searching: Cancel sits inside the search box.
+• The community shelf now shows your own public lists too.
+• Local guides on iOS 18 can have the phone score a place's photos out of ten, with the reasons.
+```
+
+### VI
+
+```
+• List có thẻ mô tả và chip cho các loại địa điểm trong list. Chạm vào chip để lọc.
+• Lên kế hoạch ngay từ một list.
+• Khám phá: chọn nhiều thể loại cùng lúc. Không chọn gì là xem tất cả.
+• Tìm kiếm: nút Huỷ nằm ngay trong ô tìm.
+• Kệ list cộng đồng giờ có cả list công khai của bạn.
+• Local guide dùng iOS 18 có thể để máy chấm ảnh của địa điểm trên thang 10, kèm lý do.
+```
+
+### JA
+
+```
+• リストに説明カードと、含まれるスポットの種類のチップが付きました。タップで絞り込めます。
+• リストからそのままプランを作れます。
+• 探索：カテゴリーを複数同時に選べます。何も選ばなければすべて表示。
+• 検索：キャンセルは検索ボックスの中に。
+• みんなのリストに、あなたの公開リストも並びます。
+• iOS 18のローカルガイドは、スポットの写真を端末で10点満点で採点し、理由も確認できます。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
