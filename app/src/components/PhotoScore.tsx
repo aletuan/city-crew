@@ -23,12 +23,20 @@ export const tenText = (ten: number) => ten.toFixed(1);
  * the top-right; a third corner is the one that says nothing until a
  * score exists. The scrim is the cover badge's, so the two read as one
  * family on a photograph of any colour.
+ *
+ * The number alone. It wore the sparkles glyph of the button that made
+ * it for the first build, and on a scored gallery that was the same
+ * glyph six times over, every one saying what the one before had said
+ * (owner, 15 Oct 2026, from 99/81 Coffee's six). The cover keeps its
+ * star because there is one cover; a glyph earns its place by telling
+ * one tile from the rest, and on a scored gallery every tile has a
+ * score. The button, the dialog and the sheet still wear the sparkles,
+ * so the number is learned where it was asked for.
  */
 export function ScoreBadge({ score, testID }: { score: PhotoScore; testID?: string }) {
   if (score.aesthetic == null) return null;
   return (
     <View style={s.badge} testID={testID}>
-      <Ionicons name="sparkles" size={10} color={onPhoto.accent} />
       <Text style={s.badgeText}>{tenText(toTen(score.aesthetic))}</Text>
     </View>
   );
@@ -90,7 +98,11 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
             <View style={[s.fill, { width: `${total ? (done / total) * 100 : 0}%` }]} testID="scoring-fill" />
           </View>
           <Text style={s.dialogNote}>
-            {t('On this phone, nothing is uploaded.', 'Phân tích ngay trên máy, không gửi ảnh đi đâu.', '端末内で処理し、写真は送信しません。')}
+            {/* Where the work happens, and no more: a promise about
+                what is not sent invites the question of what is (the
+                scores are, to the gallery), so the owner kept it to the
+                one fact (15 Oct 2026). */}
+            {t('Analysed on this phone.', 'Phân tích ngay trên máy.', '端末内で分析します。')}
           </Text>
           <PressableScale
             onPress={onCancel}
@@ -162,7 +174,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 3, borderRadius: radius.pill,
     backgroundColor: 'rgba(6,5,8,0.62)',
   },
-  badgeText: { color: onPhoto.text, fontSize: 11, fontWeight: font.semibold },
+  // Tabular figures, so 7.2 and 8.3 are the same width and a row of
+  // badges lines up the way the tiles above them do.
+  badgeText: { color: onPhoto.text, fontSize: 12, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
 
   block: {
     gap: 6, padding: space.cardPadding, marginTop: 10,

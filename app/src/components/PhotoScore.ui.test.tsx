@@ -33,6 +33,12 @@ describe('ScoreBadge', () => {
     render(<ScoreBadge score={score()} testID="b" />);
     expect(screen.getByTestId('b').textContent).toBe('8.4');
   });
+  // The same glyph on every tile of a scored gallery said nothing the
+  // tile beside it had not (owner, 15 Oct 2026).
+  it('is the number alone, with no glyph', () => {
+    render(<ScoreBadge score={score()} testID="b" />);
+    expect(screen.getByTestId('b').querySelector('[data-icon]')).toBeNull();
+  });
   it('is nothing for a row with no number', () => {
     render(<ScoreBadge score={score({ aesthetic: null })} testID="b" />);
     expect(screen.queryByTestId('b')).toBeNull();
@@ -63,6 +69,7 @@ describe('ScoringDialog', () => {
   it('counts the photo being read from one, and fills by what is done', () => {
     render(<ScoringDialog visible done={2} total={6} stopping={false} onCancel={() => {}} />);
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Reading the photos… 3/6');
+    expect(screen.getByTestId('scoring-dialog').textContent).toContain('Analysed on this phone.');
     expect(screen.getByTestId('scoring-fill').style.width).toBe('33.33333333333333%');
   });
 
