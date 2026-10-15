@@ -53,6 +53,7 @@ const state = vi.hoisted(() => ({
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
+  askToSignIn: vi.fn(),
   addCheckin: vi.fn(async () => {}),
   removeCheckin: vi.fn(async () => {}),
   reloadCheckins: vi.fn(),
@@ -103,7 +104,7 @@ vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
 vi.mock('../lib/save', () => ({
-  useSave: () => ({ save: spies.save, isSaved: (slug: string) => state.saved.includes(slug) }),
+  useSave: () => ({ save: spies.save, askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.includes(slug) }),
 }));
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 // Two switches now, and they are not the same answer. `place_price` ships
@@ -507,13 +508,18 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
   });
 
-  // A guest has nobody to check in as. Hidden rather than a door to the
-  // sign-in form: the bookmark already plays that part on this screen,
-  // and a placeholder has nothing to offer on the far side of signing in.
-  it('keeps check-in from a guest even with the switch on', () => {
+  // Drawn for a guest too, and the tap is the sign-in door with its reason
+  // named — the like's and the bookmark's pattern (owner, 15 Oct 2026).
+  // Nothing is written, and nothing resumes on the far side.
+  it('shows a guest the pill, and opens the sign-in door on the tap', () => {
     state.checkin = true;
+    spies.askToSignIn.mockClear();
+    spies.addCheckin.mockClear();
     show();
-    expect(screen.queryByTestId('detail-checkin')).toBeNull();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    expect(spies.askToSignIn).toHaveBeenCalledWith('checkin');
+    expect(spies.askToSignIn.mock.calls[0]).toHaveLength(1);
+    expect(spies.addCheckin).not.toHaveBeenCalled();
   });
 
   it('hangs a bordered Check-in pill at the right of the score once the switch is on', () => {
