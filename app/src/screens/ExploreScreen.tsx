@@ -27,7 +27,7 @@ import { CitySwitcherModal } from '../components/CitySwitcher';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarFrame, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint, type CategoryStyle } from '../lib/categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, chosenKind, pinTint, type CategoryStyle } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { useSky } from '../lib/sky';
@@ -60,9 +60,6 @@ import { startupTrace } from '../lib/trace';
 import { launchSettled } from '../lib/launch';
 import { reportStartup } from '../lib/tracereport';
 
-// The one chip that isn't a category: the whole catalog. It carries no
-// glyph — a colourless chip reads as "not a kind of place".
-const ALL = 'all';
 
 /**
  * The pinned filter row's own breathing room, above and below its chips.
@@ -760,7 +757,16 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // and with it the only control that could have fixed anything.
   const fail = classifyLoadFail(error);
   const failedEmpty = fail !== null && places.length === 0;
-  const [cat, setCat] = useState<string>(ALL);
+  // ── the chips: any number, and none is everything (owner, 15 Oct 2026) ──
+  //
+  // A place shows if it carries any chosen kind, so two chips widen; with
+  // none chosen the list is the whole city. There was an "All" chip, one
+  // kind at a time, until the collection screen tried this first and the
+  // owner brought it here: "All" was a chip that meant "no chip", and a
+  // tap on it was the only way to leave a choice. Now a chip tapped again
+  // lets go of its kind.
+  const [picked, setPicked] = useState<string[]>([]);
+  const pick = (c: string) => setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
   const [filterOpen, setFilterOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ExploreFilters>({
     sort: 'recommended', status: 'any', savedOnly: false, visitedOnly: false,
@@ -796,8 +802,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     // the same kind of thing.
     const counts = cityIndex.length
       ? countsByCity(cityIndex, {
-        category: cat,
-        allCategory: ALL,
+        categories: picked,
         status: appliedFilters.status,
         savedOnly: appliedFilters.savedOnly,
         isSaved,
@@ -819,7 +824,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         lat: c.center_lat,
         lng: c.center_lng,
       }));
-  }, [cities, city?.id, cityIndex, cat, appliedFilters.status, appliedFilters.savedOnly, isSaved, appliedFilters.visitedOnly, isVisited, t]);
+  }, [cities, city?.id, cityIndex, picked, appliedFilters.status, appliedFilters.savedOnly, isSaved, appliedFilters.visitedOnly, isVisited, t]);
   // How the places are looked at, remembered the way Collections
   // remembers its tiles-or-rows: one word in storage, read once on
   // mount. Until it has been read the list shows, which is also the
@@ -954,12 +959,11 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return () => clearTimeout(t);
   }, [loaded]);
 
-  // Switching city can retire the selected chip — fall back to the full
-  // list rather than leave the screen stuck on a filter that no longer
-  // matches anything.
+  // Switching city can retire a chosen chip — let go of it, keep the rest,
+  // rather than leave the screen narrowed by a kind no chip can show.
   useEffect(() => {
-    if (places.length > 0 && cat !== ALL && !cats.includes(cat)) setCat(ALL);
-  }, [cats, cat, places.length]);
+    if (places.length > 0 && picked.some((c) => !cats.includes(c))) setPicked((p) => p.filter((c) => cats.includes(c)));
+  }, [cats, picked, places.length]);
 
   /**
    * What this reader leans towards, or null — the same hook Search uses,
@@ -986,16 +990,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * same order within a chip; filtering first just ranks fewer places.
    */
   const recommended = useMemo(() => {
-    const inCat = cat === ALL ? places : places.filter((p) => categoriesOf(p).includes(cat));
+    const inCat = picked.length ? places.filter((p) => categoriesOf(p).some((c) => picked.includes(c))) : places;
     return bestFirst(inCat, taste);
-  }, [places, cat, taste]);
+  }, [places, picked, taste]);
 
   const filteredFor = useCallback((next: ExploreFilters) => filterExplorePlaces(recommended, {
     ...next,
     // Category already ran before recommendation ranking, preserving the
     // feed's existing order exactly when the new controls are untouched.
-    category: ALL,
-    allCategory: ALL,
+    categories: [],
     origin: sortOrigin,
     isSaved,
     isVisited,
@@ -1385,19 +1388,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: space.page }}
       >
-        <Chip
-          label={t('All', 'Tất cả', 'すべて')}
-          active={cat === ALL}
-          onPress={() => setCat(ALL)}
-        />
         {cats.map((c) => (
           <Chip
             key={c}
             label={categoryLabel(c, t)}
             icon={CATEGORIES[c]?.icon}
             iconColor={CATEGORIES[c]?.color}
-            active={cat === c}
-            onPress={() => setCat(c)}
+            active={picked.includes(c)}
+            onPress={() => pick(c)}
           />
         ))}
       </ScrollView>
@@ -1450,7 +1448,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               <PlaceCard
                 place={item}
                 testID={`place-card-${index}`}
-                chip={cat === ALL ? null : cat}
+                chip={chosenKind(item, picked)}
                 // The figure goes with the sort, not with the fix: the
                 // reader may well have a position from the map or from
                 // an earlier sort, and a card under "Recommended" that
@@ -1609,9 +1607,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 places={shown}
                 selectedSlug={selectedSlug}
                 onSelect={setSelectedSlug}
-                // Under a chip the pins take the chip's colour; at "All"
-                // each speaks for itself. See the prop's own note.
-                category={cat === ALL ? null : cat}
+                // Under a chip the pins take the chip's colour; with none
+                // chosen each speaks for itself. See the prop's own note.
+                categories={picked}
                 origin={sortOrigin}
                 // Where the map opens with neither a fix nor a pin: the
                 // city's own centre. `city` is in the render condition
@@ -1633,7 +1631,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     distanceKm={selectedKm}
                     // The same rule the map draws the pin with, so the
                     // mark on the card and the pin cannot drift apart.
-                    tint={pinTint(selected, cat === ALL ? null : cat)}
+                    tint={pinTint(selected, chosenKind(selected, picked))}
                     now={new Date()}
                     onPress={() => navigation.navigate('PlaceDetail', { slug: selected.slug })}
                   />

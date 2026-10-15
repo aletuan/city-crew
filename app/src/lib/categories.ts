@@ -226,6 +226,22 @@ export function pinCategory(p: Categorisable, chip?: string | null): string | nu
 }
 
 /**
+ * Which of the chosen chips a place answers to, where several can be
+ * chosen at once (owner, 15 Oct 2026): the first, in the filter row's
+ * order, that the place carries. Null with none chosen, or none carried —
+ * and `pinCategory` then reads the place's own.
+ *
+ * The row's order rather than the order they were tapped, so a pin does
+ * not change colour because the reader chose Eats before Cafés: a café
+ * that serves food is the café chip's under both.
+ */
+export function chosenKind(p: Categorisable, chosen: readonly string[]): string | null {
+  if (!chosen.length) return null;
+  const cats = categoriesOf(p);
+  return CATEGORY_ORDER.find((c) => chosen.includes(c) && cats.includes(c)) ?? null;
+}
+
+/**
  * The colour a pin wears on the map, and the mark the strip's card wears
  * so the eye can walk from the card back to the pin it is talking about.
  *

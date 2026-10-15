@@ -37,8 +37,10 @@ export type Filterable = Parameters<typeof categoriesOf>[0] & {
  * one are different jobs, and only this half is shared.
  */
 export function matchesExplore(row: Filterable, options: {
-  category: string;
-  allCategory: string;
+  /** The chips chosen on the filter row. A row carrying any of them
+   *  passes; none chosen passes every row (owner, 15 Oct 2026 — there is
+   *  no "All" chip, and two chips widen rather than narrow). */
+  categories: readonly string[];
   status: ExploreStatus;
   savedOnly: boolean;
   isSaved: (slug: string) => boolean;
@@ -50,7 +52,7 @@ export function matchesExplore(row: Filterable, options: {
    *  function serves both. See `cityTz`. */
   tz: (cityId: string | null | undefined) => string;
 }): boolean {
-  return (options.category === options.allCategory || categoriesOf(row).includes(options.category))
+  return (!options.categories.length || categoriesOf(row).some((c) => options.categories.includes(c)))
     && (options.status === 'any'
       || openState(row.opening_hours as Parameters<typeof openState>[0], options.now, options.tz(row.city_id))?.open === (options.status === 'open'))
     && (!options.savedOnly || options.isSaved(row.slug))
@@ -66,8 +68,7 @@ export function matchesExplore(row: Filterable, options: {
 export function filterExplorePlaces(
   recommended: readonly Place[],
   options: ExploreFilters & {
-    category: string;
-    allCategory: string;
+    categories: readonly string[];
     origin: ExploreOrigin | null;
     isSaved: (slug: string) => boolean;
     isVisited: (slug: string) => boolean;
