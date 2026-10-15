@@ -7,12 +7,34 @@
 // them, so a threshold corrected there changes every one of these at once.
 
 import React, { useRef } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Animated, type ColorValue, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { band, bandLabel, explainScore, toTen, type PhotoScore } from '../lib/photoScore';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
-import { Card, PressableScale } from './ui';
+import { Card, PressableScale, useLoop, useReducedMotion } from './ui';
+
+/**
+ * Each bar's travel, as shares of the glyph's height, and how long one
+ * rise and fall takes. At rest every bar sits at its first figure —
+ * short, tall, middling, the shape of the still glyph — so the static
+ * icon and the first frame of the moving one are the same drawing.
+ *
+ * Made to read as "looking", not as a music player (owner, 15 Oct 2026):
+ * an equalizer is fast, beat-locked, and bounces off the floor. These
+ * are slow (a leg of 0.95 to 1.4 s, eased in and out), never drop under
+ * two fifths of the height, and the middle bar starts tall and falls
+ * while the others rise. The periods share no small multiple — 1.9, 2.2
+ * and 2.8 s line up again only after 106.4 s — so the three are never
+ * seen in step, and each loop is seamless on its own because it is a
+ * there-and-back. Nothing random: a seed would make no two runs alike
+ * and no test able to say what it draws.
+ */
+const BARS = [
+  { from: 0.55, to: 0.95, ms: 2200 },
+  { from: 1, to: 0.6, ms: 2800 },
+  { from: 0.75, to: 0.4, ms: 1900 },
+] as const;
 
 /**
  * The scorer's one glyph, on the Gallery's button and the dialog it
@@ -21,10 +43,43 @@ import { Card, PressableScale } from './ui';
  * suggestions — Explore's "for you" order and the planner's button — and
  * a score is the opposite of a suggestion: it is what was measured. The
  * bars are nobody else's glyph here, so they can mean this one thing.
- * Filled, not outlined: at the toolbar's 15pt the outlined bars are
- * three hairline boxes, and the filled ones read as bars.
+ *
+ * `active` sets them moving, which the dialog does while the phone
+ * reads; the button's are still. Under Reduce Motion they are always
+ * still, the plain three-bar mark.
+ *
+ * Drawn rather than taken from Ionicons, whose `stats-chart` has four
+ * bars of its own proportions — a glyph cannot move bar by bar, and the
+ * still one beside the button's word has to be the same drawing the
+ * dialog sets moving. Each bar is scaled from its foot (`scaleY` with
+ * `transformOrigin` at the bottom) on the native driver, so the motion
+ * costs the JS thread nothing while Vision is busy.
  */
-export const SCORE_ICON = 'stats-chart' as const;
+export function ScoreGlyph({ size, color, active = false, testID = 'score-glyph' }: {
+  size: number; color: ColorValue; active?: boolean; testID?: string;
+}) {
+  const still = useReducedMotion() || !active;
+  const waves = [useLoop(BARS[0].ms, still, 'inOut'), useLoop(BARS[1].ms, still, 'inOut'), useLoop(BARS[2].ms, still, 'inOut')];
+  // A fifth of the height wide and a seventh between, so three bars
+  // fill the glyph's box the way Ionicons' marks fill theirs.
+  const w = Math.max(2, Math.round(size * 0.2));
+  const gap = Math.max(1, Math.round(size * 0.14));
+  return (
+    <View style={[s.glyph, { height: size, gap }]} testID={testID} aria-hidden>
+      {BARS.map((b, i) => (
+        <Animated.View
+          key={i}
+          testID={`${testID}-bar`}
+          style={{
+            width: w, height: size, borderRadius: w / 2, backgroundColor: color,
+            transformOrigin: 'bottom',
+            transform: [{ scaleY: waves[i].interpolate({ inputRange: [0, 1], outputRange: [b.from, b.to] }) }],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
 
 /** "8.4", the way every one of these writes it — one decimal, always,
  *  so a 7 and a 7.5 line up in a grid. */
@@ -42,8 +97,8 @@ export const tenText = (ten: number) => ten.toFixed(1);
  * (owner, 15 Oct 2026, from 99/81 Coffee's six). The cover keeps its
  * star because there is one cover; a glyph earns its place by telling
  * one tile from the rest, and on a scored gallery every tile has a
- * score. The button and the dialog still wear `SCORE_ICON`, so the
- * number is learned where it was asked for.
+ * score. The button and the dialog still wear the scorer's bars
+ * (`ScoreGlyph`), so the number is learned where it was asked for.
  */
 export function ScoreBadge({ score, testID }: { score: PhotoScore; testID?: string }) {
   if (score.aesthetic == null) return null;
@@ -100,7 +155,9 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
       <View style={s.scrim}>
         <View style={s.dialog} testID="scoring-dialog">
-          <Ionicons name={SCORE_ICON} size={22} color={colors.accent} />
+          {/* Moving while the phone reads; still once Cancel is in,
+              because then it is only finishing the photo in hand. */}
+          <ScoreGlyph size={22} color={colors.accent} active={!stopping} testID="scoring-glyph" />
           <Text style={s.dialogTitle}>
             {stopping
               ? t('Stopping after this photo…', 'Đang dừng sau ảnh này…', 'この写真のあとで停止します…')
@@ -180,6 +237,7 @@ export function ScoredCard({ scored, failed, best, onClose }: {
 }
 
 const s = StyleSheet.create({
+  glyph: { flexDirection: 'row', alignItems: 'flex-end' },
   badge: {
     position: 'absolute', bottom: 6, left: 6,
     flexDirection: 'row', alignItems: 'center', gap: 3,
