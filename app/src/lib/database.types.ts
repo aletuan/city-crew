@@ -547,6 +547,44 @@ export type Database = {
         }
         Relationships: []
       }
+      photo_scores: {
+        Row: {
+          aesthetic: number | null
+          is_utility: boolean | null
+          photo_id: string
+          scored_at: string
+          scored_by: string | null
+          scorer_version: number
+          signals: Json
+        }
+        Insert: {
+          aesthetic?: number | null
+          is_utility?: boolean | null
+          photo_id: string
+          scored_at?: string
+          scored_by?: string | null
+          scorer_version: number
+          signals?: Json
+        }
+        Update: {
+          aesthetic?: number | null
+          is_utility?: boolean | null
+          photo_id?: string
+          scored_at?: string
+          scored_by?: string | null
+          scorer_version?: number
+          signals?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_scores_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: true
+            referencedRelation: "place_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       place_events: {
         Row: {
           city_id: string | null
