@@ -9,7 +9,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '../uitest/render';
+import { cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { DAILY_LIMIT } from '../lib/quota';
@@ -559,8 +559,8 @@ describe('saving a copy of somebody else’s list', () => {
     await waitFor(() => expect(copyCollection).toHaveBeenCalledWith({
       ownerId: 'u1', cityId: 'hanoi', title: 'Mine now', desc: 'By @linh', placeSlugs: ['sam', 'heim'],
       copiedFrom: 'c-src',
-      // The source carried no chip decisions, and none were made here.
-      kinds: { hidden: [], added: [] },
+      // The source hid no kinds, and none were hidden here.
+      kinds: { hidden: [] },
     }));
     // Auto, the common case, needs no second write.
     expect(updateCollection).not.toHaveBeenCalled();
@@ -596,16 +596,16 @@ describe('saving a copy of somebody else’s list', () => {
   });
 });
 
-// The chips (owner, 15 Oct 2026): all nine categories, lit where the list
-// shows them, any of them a tap from on or off. A rename reads its own
-// row; a copy, the original's decisions; a new list has no section.
+// The chips (owner, 15 Oct 2026): every kind the list's places carry, in
+// the order the card shows them, lit unless hidden; a tap hides one or
+// shows it again. Nothing to put on — a kind no place carries is not
+// offered. A rename reads its own row; a copy, the original's.
 describe('the categories', () => {
   const typed = (p: Place, ...categories: string[]) => ({ ...(p as object), categories }) as unknown as Place;
   const CAFE = typed(HEIM, 'cafes');
   const BAR = typed(SAM, 'nightlife', 'cafes');
   const pick = (k: string) => screen.getByTestId(`collection-kind-pick-${k}`);
-  const lit = () => ['cafes', 'focus', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife', 'fun']
-    .filter((k) => pick(k).getAttribute('aria-selected') === 'true');
+  const lit = () => ['cafes', 'nightlife'].filter((k) => pick(k).getAttribute('aria-selected') === 'true');
   const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   const rename = (over: object = {}) => {
     catalog.data = [CAFE, BAR];
@@ -614,20 +614,20 @@ describe('the categories', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
   };
 
-  it('offers all nine in the filter row’s order, lit where the list shows them', () => {
+  it('offers only the kinds the places carry, most places first, all lit', () => {
     rename();
-    expect(screen.getByTestId('collection-kinds-field').textContent).toContain('CATEGORIES');
-    const labels = screen.getAllByRole('button').map((b) => b.textContent).filter((x) => [
-      'Cafés', 'Focus', 'Eats', 'Views', 'Culture', 'Nature', 'Shopping', 'Nightlife', 'Fun',
-    ].includes(x ?? ''));
-    expect(labels).toEqual(['Cafés', 'Focus', 'Eats', 'Views', 'Culture', 'Nature', 'Shopping', 'Nightlife', 'Fun']);
-    // Both places are cafés, one is a bar too: half the list is a third.
+    const field = screen.getByTestId('collection-kinds-field');
+    expect(field.textContent).toContain('CATEGORIES');
+    const labels = [...field.querySelectorAll('[role="button"]')].map((b) => b.textContent);
+    // Both are cafés, one a bar too: Cafés leads, and nothing else is offered.
+    expect(labels).toEqual(['Cafés', 'Nightlife']);
+    expect(screen.queryByTestId('collection-kind-pick-nature')).toBeNull();
     expect(lit()).toEqual(['cafes', 'nightlife']);
   });
 
-  it('starts from the owner’s decisions on the row', () => {
-    rename({ kinds_hidden: ['nightlife'], kinds_added: ['views'] });
-    expect(lit()).toEqual(['cafes', 'views']);
+  it('starts from the kinds the owner hid on the row', () => {
+    rename({ kinds_hidden: ['nightlife'] });
+    expect(lit()).toEqual(['cafes']);
   });
 
   // Untouched, the rename writes no chips at all — and a tap and its undo
@@ -636,9 +636,9 @@ describe('the categories', () => {
     rename();
     const tick = () => screen.getByRole('button', { name: 'Save changes' }).getAttribute('aria-disabled');
     expect(tick()).toBe('true');
-    fireEvent.click(pick('nature'));
+    fireEvent.click(pick('nightlife'));
     expect(tick()).not.toBe('true');
-    fireEvent.click(pick('nature'));
+    fireEvent.click(pick('nightlife'));
     expect(tick()).toBe('true');
     fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Late bars' } });
     save();
@@ -646,33 +646,40 @@ describe('the categories', () => {
     expect((updateCollection.mock.calls[0] as unknown[])[1]).not.toHaveProperty('kinds', expect.anything());
   });
 
-  it('saves one put on and one taken off as the owner’s word', async () => {
-    rename();
-    fireEvent.click(pick('nature'));
+  it('saves a kind hidden, and one shown again, as the owner’s word', async () => {
+    rename({ kinds_hidden: ['cafes'] });
+    fireEvent.click(pick('cafes'));
     fireEvent.click(pick('nightlife'));
-    expect(lit()).toEqual(['cafes', 'nature']);
+    expect(lit()).toEqual(['cafes']);
     save();
     await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({
-      kinds: { hidden: ['nightlife'], added: ['nature'] },
+      kinds: { hidden: ['nightlife'] },
     })));
   });
 
-  it('carries a copy’s decisions from the original, with this form’s own on top', async () => {
+  it('carries a copy’s hidden kinds from the original, with this form’s own on top', async () => {
     catalog.data = [CAFE, BAR];
     render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: {
       sourceId: 'c-src', title: 'Hanoi by night', desc: '', cityId: 'hanoi', placeSlugs: ['heim', 'sam'],
-      kinds: { hidden: ['cafes'], added: [] },
+      kinds: { hidden: ['cafes'] },
     } })} />);
     expect(lit()).toEqual(['nightlife']);
-    fireEvent.click(pick('eats'));
+    fireEvent.click(pick('cafes'));
     fireEvent.click(screen.getByRole('button', { name: 'Save the copy' }));
     await waitFor(() => expect(copyCollection).toHaveBeenCalledWith(expect.objectContaining({
-      kinds: { hidden: ['cafes'], added: ['eats'] },
+      kinds: { hidden: [] },
     })));
   });
 
-  it('is not offered on a brand-new list', () => {
+  // Nothing carried, nothing to hide: a brand-new list, or one whose
+  // places nobody has classified.
+  it('is not offered where the places carry no kind', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    expect(screen.queryByTestId('collection-kinds-field')).toBeNull();
+    cleanup();
+    catalog.data = [HEIM, SAM];
+    saved.data = [listOf([HEIM, SAM])];
+    render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
     expect(screen.queryByTestId('collection-kinds-field')).toBeNull();
   });
 });

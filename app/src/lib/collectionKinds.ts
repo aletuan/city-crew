@@ -1,44 +1,48 @@
-// Which categories a collection wears as chips.
+// Which categories a collection wears as chips — and narrows by.
 //
-// Worked out from the list's own places, then corrected by its owner —
-// the shape the owner chose on 15 Oct 2026: chips come from the category
-// vocabulary and nowhere else (no free words, nothing read out of the
-// title, which owners already use for their own conventions), they are
-// derived rather than typed, and the owner can take one off or put any
-// of the nine on.
+// Worked out from the list's own places, then corrected by its owner:
+// chips come from the category vocabulary and nowhere else (no free
+// words, nothing read out of the title, which owners already use for
+// their own conventions), they are derived rather than typed, and the
+// owner can take one off (owner, 15 Oct 2026).
 //
-// ── what derives ──
+// ── every kind the places carry, most places first ──
 //
-// A category shows when it covers a third of the list or more, three at
-// most. Measured on the 39 live collections that day: drawing every
-// category a member carries put a "Nightlife" chip on a list of 72 cafés
-// because nine of them also count as nightlife, and six categories on a
-// 15-place Đà Lạt café list. At a third, both read as one chip, Cafés.
-// The most any list kept at a third was four (three places in four
-// categories), so three is the cap and it bites on small lists only.
+// The first cut showed a category only on a third of the list or more,
+// three at most, so the chips said what the list *is*: "Nightlife" off a
+// list of 72 cafés because nine of them also count as nightlife. Then the
+// chips became the list's filter, the same day, and a threshold there
+// hides exactly the way in a reader wants most — the nine bars among the
+// seventy-two cafés. So the threshold went (the owner's call), and what
+// the list *is* is said by the order instead: most places first, so the
+// leading chip is the list's own kind. Counts beside the words were
+// offered and turned down as clutter.
+//
+// Measured on the 38 live lists with places: 12 carry one kind, 11 two,
+// 10 three, 4 four and 1 six (the Đà Lạt café list). No cap, then: the
+// most a card has to wrap is two lines.
 //
 // ── what is stored ──
 //
-// Only the owner's decisions (`kinds_hidden`, `kinds_added`), never the
-// derived set — see `20261015090000_collection_kinds.sql` for why a list
-// that is still growing must not have its chips frozen at a save.
+// Only the kinds the owner took off (`kinds_hidden`), never the derived
+// set — see `20261015090000_collection_kinds.sql` for why a list that is
+// still growing must not have its chips frozen at a save.
+//
+// Putting a kind on (`kinds_added`) went with the threshold: every kind a
+// place carries already shows, so the only kind left to add is one no
+// place carries — a chip that says something untrue of the list and
+// filters it to nothing. The column stays, written empty.
 
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, type Categorisable } from './categories';
 
-/** A third of the list, the share a category needs to show on its own. */
-export const KIND_SHARE = 1 / 3;
-/** At most this many derived chips; the owner's own are on top. */
-export const KIND_CAP = 3;
-
-export type KindChoice = { hidden: readonly string[]; added: readonly string[] };
+export type KindChoice = { hidden: readonly string[] };
 
 const rank = (k: string) => CATEGORY_ORDER.indexOf(k as (typeof CATEGORY_ORDER)[number]);
 
 /**
- * The categories the places earn on their own: a third of the list or
- * more, most places first, the filter row's order breaking ties, three
- * at most. Keys the table does not know are not counted — a chip is a
- * category's glyph and colour, and an unknown key has neither.
+ * Every category the places carry, most places first, the filter row's
+ * order breaking ties. Keys the table does not know are not counted — a
+ * chip is a category's glyph and colour, and an unknown key has neither.
  */
 export function derivedKinds(members: readonly Categorisable[]): string[] {
   const tally = new Map<string, number>();
@@ -48,53 +52,25 @@ export function derivedKinds(members: readonly Categorisable[]): string[] {
     }
   }
   return [...tally]
-    .filter(([, n]) => n >= members.length * KIND_SHARE)
     .sort(([a, n], [b, m]) => m - n || rank(a) - rank(b))
-    .slice(0, KIND_CAP)
     .map(([k]) => k);
 }
 
-/**
- * The chips a list shows: what the owner put on, in the filter row's
- * order, then what the places earn, less whatever the owner took off.
- *
- * The owner's first because they are the stronger statement — the places
- * say what the list holds, the owner says what it is for. The cap is the
- * derived set's, taken before the hidden ones leave: taking a chip off
- * should not pull a fourth one up into its place.
- */
+/** The chips a list shows: what its places carry, less what the owner
+ *  took off. */
 export function collectionKinds(members: readonly Categorisable[], choice: Partial<KindChoice>): string[] {
   const hidden = new Set(choice.hidden ?? []);
-  const added = [...new Set(choice.added ?? [])]
-    .filter((k) => CATEGORIES[k] && !hidden.has(k))
-    .sort((a, b) => rank(a) - rank(b));
-  const earned = derivedKinds(members).filter((k) => !hidden.has(k) && !added.includes(k));
-  return [...added, ...earned];
+  return derivedKinds(members).filter((k) => !hidden.has(k));
 }
 
 /**
- * The owner turns one chip on or off. The word is sticky either way: on
- * pins it whatever the places later say, off keeps it off however many
- * places of that kind arrive — and a key is never in both lists, which
- * the database also refuses (`collections_kinds_one_word`).
+ * The owner shows or hides one chip. Hidden sticks — however many more
+ * places of that kind arrive, the owner said it is not what this list
+ * is — and shown again is simply not hidden.
  */
 export function chooseKind(choice: KindChoice, key: string, on: boolean): KindChoice {
   const hidden = choice.hidden.filter((k) => k !== key);
-  const added = choice.added.filter((k) => k !== key);
-  return on ? { hidden, added: [...added, key] } : { hidden: [...hidden, key], added };
-}
-
-/**
- * Every category the list's places carry, in the filter row's order —
- * what a reader can narrow the list by. Not the chips above: those are
- * what the list *is*, three at most; this is every way into it, the café
- * that is also a bar among seventy-two cafés included. Keys the table
- * has not learned are left out, since a filter chip is a glyph and a
- * colour and they have neither.
- */
-export function kindsPresent(members: readonly Categorisable[]): string[] {
-  const seen = new Set(members.flatMap((p) => categoriesOf(p)));
-  return CATEGORY_ORDER.filter((k) => seen.has(k));
+  return { hidden: on ? hidden : [...hidden, key] };
 }
 
 /**

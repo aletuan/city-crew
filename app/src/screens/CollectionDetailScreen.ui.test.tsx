@@ -409,15 +409,18 @@ describe('your own list', () => {
     });
   });
 
-  it('invites the owner to write one when there is none, and the card is the press', () => {
+  // The line and the pencil are the press, not the whole card: the
+  // chips under the line are the list's filter (see "the chips").
+  it('invites the owner to write one when there is none, the line and the pencil the press', () => {
     state.mine = [collection({ desc_en: null })];
     const { raw } = show();
     expect(screen.queryByTestId('collection-desc')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
     expect(screen.getByText('Add a few words about this list.')).toBeTruthy();
-    const invite = screen.getByRole('button', { name: 'Add a description' });
-    expect(invite.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
-    expect(invite.querySelector('[data-icon="create-outline"]')).toBeTruthy();
+    const card = screen.getByTestId('collection-desc-empty');
+    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
+    expect(card.getAttribute('role')).not.toBe('button');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       slug: 'old-quarter', title: 'Old Quarter eats', desc: '',
     });
@@ -1234,8 +1237,8 @@ describe("somebody else's list", () => {
         // on the row and the curator's Activity, not the copy's text.
         desc: 'Where we eat.',
         placeSlugs: ['pho', 'cafe', 'museum'],
-        // The original's chip decisions go with it; this one has none.
-        kinds: { hidden: [], added: [] },
+        // The kinds the original's owner hid go with it; this one has none.
+        kinds: { hidden: [] },
       },
     });
   });
@@ -1439,47 +1442,58 @@ describe('the description, for a visitor', () => {
 });
 
 // The list's chips, inside the description card (owner, 15 Oct 2026):
-// the categories its places earn — a third of the list or more — as the
-// owner corrected them, in the pill a place's card wears.
+// every kind its places carry, most places first, less what the owner
+// hid, in the pill a place's card wears — and the list's filter: any
+// number chosen, a place kept if it carries any of them, nothing chosen
+// the whole list, no "All" chip and no second row of chips.
 describe('the chips', () => {
   const rgb = (hex: string) => {
     const n = parseInt(hex.slice(1), 16);
     return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
   };
   const cats = (...categories: string[]) => ({ categories } as Partial<Place>);
+  // Eats on three, Cafés and Culture on one each, Nightlife on one.
   const eatery = () => {
     state.places = [
       place('pho', 'Pho 10', cats('eats')),
-      place('cafe', 'Cafe Giang', cats('cafes', 'eats')),
+      place('cafe', 'Cafe Giang', cats('cafes', 'eats', 'nightlife')),
       place('museum', 'Fine Arts Museum', cats('heritage')),
       place('bun', 'Bun Cha', cats('eats')),
     ];
   };
   const four = ['pho', 'cafe', 'museum', 'bun'].map((sl) => place(sl, sl));
+  const cards = () => screen.getAllByText(/^card:/).map((e) => e.textContent);
+  const chip = (k: string) => screen.getByTestId(`collection-kinds-${k}`);
+  const on = (k: string) => chip(k).getAttribute('aria-selected') === 'true';
+  // The pill inside the button: `PressableScale`'s animated view, then it.
+  const pillOf = (k: string) => chip(k).firstElementChild!.firstElementChild as HTMLElement;
 
-  it('shows what the places earn, under the words, in the card’s pill, as labels', () => {
+  it('shows every kind the places carry, most places first, under the words, in the card’s pill', () => {
     eatery();
     state.mine = [collection({}, four)];
     show();
     const card = screen.getByTestId('collection-desc');
     const row = screen.getByTestId('collection-kinds');
     expect(card.contains(row)).toBe(true);
-    // Eats is on three of four; Cafés and Culture on one each, under a third.
-    expect(row.textContent).toBe('Eats');
-    // The pill a place's card wears: a dot in the category's colour and
-    // its word, no glyph — glyphs are for chips you press.
-    const dot = screen.getByTestId('collection-kinds-eats').firstElementChild as HTMLElement;
+    // Eats leads on three of four; the ones-each follow in the filter
+    // row's order. No threshold and no count beside the words.
+    expect(row.textContent).toBe('EatsCafésCultureNightlife');
+    // The pill a place's card wears: a dot in the category's colour, no glyph.
+    const dot = pillOf('eats').firstElementChild as HTMLElement;
     expect(getComputedStyle(dot).backgroundColor).toBe(rgb(CATEGORIES.eats.color));
     expect(row.querySelector('[data-icon]')).toBeNull();
-    // A label, not a control: nothing in the row is a button.
-    expect(row.querySelector('[role="button"]')).toBeNull();
+    // One row of chips: none under the card.
+    expect(screen.queryByTestId('collection-filter')).toBeNull();
+    expect(screen.queryByText('All')).toBeNull();
   });
 
-  it('reads the owner’s word: one put on, one taken off', () => {
+  it('leaves out what the owner hid', () => {
     eatery();
-    state.mine = [collection({ kinds_added: ['nature'], kinds_hidden: ['eats'] }, four)];
+    state.mine = [collection({ kinds_hidden: ['eats'], kinds_added: ['nature'] }, four)];
     show();
-    expect(screen.getByTestId('collection-kinds').textContent).toBe('Nature');
+    // A kind once "put on" is retired with the threshold: it shows only
+    // if a place carries it.
+    expect(screen.getByTestId('collection-kinds').textContent).toBe('CafésCultureNightlife');
   });
 
   it('speaks the reader’s language', () => {
@@ -1487,25 +1501,135 @@ describe('the chips', () => {
     state.lang = 'vi';
     state.mine = [collection({}, four)];
     show();
-    expect(screen.getByTestId('collection-kinds').textContent).toBe('Ăn uống');
+    expect(screen.getByTestId('collection-kinds').textContent).toBe('Ăn uốngCà phêVăn hóaVề đêm');
   });
 
-  it('draws no row where nothing is earned or chosen', () => {
+  it('draws no row where the places carry nothing', () => {
     state.mine = [collection()];
     show();
     expect(screen.getByTestId('collection-desc')).toBeTruthy();
     expect(screen.queryByTestId('collection-kinds')).toBeNull();
   });
 
-  // The owner with no words yet: the invitation, with the chips under it,
-  // and the whole card still the press.
-  it('rides under the owner’s invitation when there is no description', () => {
+  it('narrows to any chosen kind, says how many, and clears in one tap', () => {
     eatery();
-    state.mine = [collection({ desc_en: null }, four)];
+    state.mine = [collection({}, four)];
     show();
-    const invite = screen.getByRole('button', { name: 'Add a description' });
+    expect(chip('eats').getAttribute('role')).toBe('button');
+    expect(['eats', 'cafes', 'heritage', 'nightlife'].some(on)).toBe(false);
+    expect(cards()).toHaveLength(4);
+    fireEvent.click(chip('nightlife'));
+    expect(on('nightlife')).toBe(true);
+    expect(cards()).toEqual(['card:Cafe Giang']);
+    expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 of 4 places');
+    // Lit in the accent while chosen, and only then.
+    const lit = getComputedStyle(pillOf('nightlife'));
+    const unlit = getComputedStyle(pillOf('eats'));
+    expect(lit.borderTopColor).not.toBe(unlit.borderTopColor);
+    // Any, not all: a second chip widens, in the list's own order.
+    fireEvent.click(chip('heritage'));
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Fine Arts Museum']);
+    expect(screen.getByTestId('collection-filter-count').textContent).toBe('2 of 4 places');
+    // Tapped again, a chip lets go of its kind.
+    fireEvent.click(chip('nightlife'));
+    expect(cards()).toEqual(['card:Fine Arts Museum']);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(['eats', 'cafes', 'heritage', 'nightlife'].some(on)).toBe(false);
+    expect(cards()).toHaveLength(4);
+    expect(screen.queryByTestId('collection-filter-count')).toBeNull();
+  });
+
+  it('counts in the reader’s language', () => {
+    eatery();
+    state.lang = 'vi';
+    state.mine = [collection({}, four)];
+    show();
+    fireEvent.click(chip('eats'));
+    expect(screen.getByTestId('collection-filter-count').textContent).toBe('3 trên 4 địa điểm');
+    expect(screen.getByRole('button', { name: 'Bỏ lọc' })).toBeTruthy();
+  });
+
+  // A filter of one kind narrows nothing, so its pill is a label.
+  it('makes no button of the one chip on a list of one kind', () => {
+    state.places = [place('pho', 'Pho 10', cats('eats')), place('bun', 'Bun Cha', cats('eats'))];
+    state.mine = [collection({}, [place('pho', 'p'), place('bun', 'b')])];
+    show();
+    const row = screen.getByTestId('collection-kinds');
+    expect(row.textContent).toBe('Eats');
+    expect(row.querySelector('[role="button"]')).toBeNull();
+  });
+
+  // Narrowed, a card names the chosen kind it answers to — the first in
+  // the card's order — as a card under a chip does on Explore.
+  it('has each card name the chosen kind it answers to', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    expect(cardProps.get('cafe')!.chip ?? null).toBeNull();
+    fireEvent.click(chip('nightlife'));
+    expect(cardProps.get('cafe')!.chip).toBe('nightlife');
+    // Eats leads the card, so it answers before Nightlife.
+    fireEvent.click(chip('eats'));
+    expect(cardProps.get('cafe')!.chip).toBe('eats');
+  });
+
+  // No order to change among places the reader cannot all see.
+  it('stops the owner reordering while narrowed', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    expect(cardProps.get('pho')!.onLongPress).toBeTruthy();
+    fireEvent.click(chip('eats'));
+    expect(cardProps.get('pho')!.onLongPress).toBeUndefined();
+    fireEvent.click(chip('eats'));
+    expect(cardProps.get('pho')!.onLongPress).toBeTruthy();
+  });
+
+  it('plans from the whole list while narrowed', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    fireEvent.click(chip('eats'));
+    expect(screen.getByTestId('collection-plan')).toBeTruthy();
+  });
+
+  // A chosen kind the list no longer carries is let go, not kept as a
+  // filter nothing can match.
+  it('lets go of a chosen kind the places stop carrying', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    fireEvent.click(chip('nightlife'));
+    state.places = [
+      place('pho', 'Pho 10', cats('eats')),
+      place('cafe', 'Cafe Giang', cats('cafes', 'eats')),
+      place('museum', 'Fine Arts Museum', cats('heritage')),
+      place('bun', 'Bun Cha', cats('eats')),
+    ];
+    fireEvent.click(chip('heritage'));
+    expect(screen.queryByTestId('collection-kinds-nightlife')).toBeNull();
+    expect(cards()).toEqual(['card:Fine Arts Museum']);
+    // With the one kind left let go, nothing is chosen: the whole list.
+    fireEvent.click(chip('heritage'));
+    expect(cards()).toHaveLength(4);
+    expect(screen.queryByTestId('collection-filter-count')).toBeNull();
+  });
+
+  // The owner with no words yet: the line and the pencil open the form;
+  // the chips under the line filter, not open it.
+  it('rides under the owner’s invitation, which no longer takes the chips’ taps', () => {
+    eatery();
+    const { raw } = (() => { state.mine = [collection({ desc_en: null }, four)]; return show(); })();
+    const invite = screen.getByTestId('collection-desc-empty');
     expect(invite.contains(screen.getByTestId('collection-kinds'))).toBe(true);
     expect(screen.queryByTestId('collection-desc')).toBeNull();
+    fireEvent.click(chip('eats'));
+    expect(raw.navigate).not.toHaveBeenCalled();
+    expect(cards()).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
+    expect(raw.navigate).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+    expect(raw.navigate).toHaveBeenCalledTimes(2);
   });
 
   // A visitor's list with chips and no words still gets the card, but no
@@ -1516,153 +1640,21 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('Eats');
+    expect(card.textContent).toBe('EatsCafésCultureNightlife');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
 
-  it('carries the original’s decisions into a copy', () => {
+  it('carries the kinds the original’s owner hid into a copy', () => {
     eatery();
     state.mine = [];
-    state.cols = [theirs({ kinds_added: ['views'], kinds_hidden: ['eats'] }, four)];
+    state.cols = [theirs({ kinds_hidden: ['eats'] }, four)];
     const { raw } = show();
     openMenu();
     fireEvent.click(menuRow('Save a copy'));
     endModalFade();
     return waitFor(() => expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', expect.objectContaining({
-      copyFrom: expect.objectContaining({ kinds: { hidden: ['eats'], added: ['views'] } }),
+      copyFrom: expect.objectContaining({ kinds: { hidden: ['eats'] } }),
     })));
-  });
-});
-
-// Narrowing the list by kind (owner, 15 Oct 2026): a row of the filter
-// row's chips over the places, any number chosen, a place kept if it
-// carries any of them; nothing chosen is the whole list, and there is no
-// "All" chip.
-describe('the filter', () => {
-  const cats = (...categories: string[]) => ({ categories } as Partial<Place>);
-  const mixed = () => {
-    state.places = [
-      place('pho', 'Pho 10', cats('eats')),
-      place('cafe', 'Cafe Giang', cats('cafes', 'nightlife')),
-      place('museum', 'Fine Arts Museum', cats('heritage')),
-    ];
-  };
-  const cards = () => screen.getAllByText(/^card:/).map((e) => e.textContent);
-  const chip = (k: string) => screen.getByTestId(`collection-filter-${k}`);
-  const on = (k: string) => chip(k).getAttribute('aria-selected') === 'true';
-
-  it('offers every kind the places carry, in the filter row’s order, as controls, none chosen', () => {
-    mixed();
-    state.mine = [collection()];
-    show();
-    const row = screen.getByTestId('collection-filter');
-    expect(row.textContent).toBe('CafésEatsCultureNightlife');
-    expect(screen.queryByText('All')).toBeNull();
-    // The filter row's chip: a glyph in the kind's colour, and a button.
-    expect(chip('cafes').getAttribute('role')).toBe('button');
-    expect(chip('cafes').querySelector('[data-icon="cafe-outline"]')!.getAttribute('data-color')).toBe(CATEGORIES.cafes.color);
-    expect(['cafes', 'eats', 'heritage', 'nightlife'].some(on)).toBe(false);
-    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
-    expect(screen.queryByTestId('collection-filter-count')).toBeNull();
-  });
-
-  it('keeps the places carrying any chosen kind, says how many, and clears in one tap', () => {
-    mixed();
-    state.mine = [collection()];
-    show();
-    fireEvent.click(chip('nightlife'));
-    expect(on('nightlife')).toBe(true);
-    expect(cards()).toEqual(['card:Cafe Giang']);
-    expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 of 3 places');
-    // Any, not all: a second chip widens, in the list's own order.
-    fireEvent.click(chip('heritage'));
-    expect(cards()).toEqual(['card:Cafe Giang', 'card:Fine Arts Museum']);
-    expect(screen.getByTestId('collection-filter-count').textContent).toBe('2 of 3 places');
-    // A chip tapped again lets go of its kind.
-    fireEvent.click(chip('nightlife'));
-    expect(cards()).toEqual(['card:Fine Arts Museum']);
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
-    expect(['cafes', 'eats', 'heritage', 'nightlife'].some(on)).toBe(false);
-    expect(cards()).toHaveLength(3);
-    expect(screen.queryByTestId('collection-filter-count')).toBeNull();
-  });
-
-  it('counts in the reader’s language', () => {
-    mixed();
-    state.lang = 'vi';
-    state.mine = [collection()];
-    show();
-    fireEvent.click(chip('eats'));
-    expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 trên 3 địa điểm');
-    expect(screen.getByRole('button', { name: 'Bỏ lọc' })).toBeTruthy();
-  });
-
-  // Narrowed, a card names the chosen kind it answers to — the first in
-  // the row's order — as a card under a chip does on Explore.
-  it('has each card name the chosen kind it answers to', () => {
-    mixed();
-    state.mine = [collection()];
-    show();
-    // Not narrowed: no chip to answer to (an owner's card is the
-    // draggable one, which passes none at all).
-    expect(cardProps.get('cafe')!.chip ?? null).toBeNull();
-    fireEvent.click(chip('nightlife'));
-    expect(cardProps.get('cafe')!.chip).toBe('nightlife');
-    fireEvent.click(chip('cafes'));
-    expect(cardProps.get('cafe')!.chip).toBe('cafes');
-  });
-
-  // No order to change among places the reader cannot all see: the cards
-  // stop lifting while narrowed, and come back when it clears.
-  it('stops the owner reordering while narrowed', () => {
-    mixed();
-    state.mine = [collection()];
-    show();
-    expect(cardProps.get('pho')!.onLongPress).toBeTruthy();
-    fireEvent.click(chip('eats'));
-    expect(cardProps.get('pho')!.onLongPress).toBeUndefined();
-    fireEvent.click(chip('eats'));
-    expect(cardProps.get('pho')!.onLongPress).toBeTruthy();
-  });
-
-  // The planner seeds from the list, not from the look at it.
-  it('plans from the whole list while narrowed', () => {
-    mixed();
-    state.mine = [collection()];
-    show();
-    fireEvent.click(chip('eats'));
-    expect(screen.getByTestId('collection-plan')).toBeTruthy();
-  });
-
-  // A chosen kind the list no longer carries is let go, not kept as a
-  // filter nothing can match.
-  it('lets go of a chosen kind the places stop carrying', () => {
-    mixed();
-    state.mine = [collection()];
-    show();
-    fireEvent.click(chip('nightlife'));
-    state.places = [
-      place('pho', 'Pho 10', cats('eats')),
-      place('cafe', 'Cafe Giang', cats('cafes')),
-      place('museum', 'Fine Arts Museum', cats('heritage')),
-    ];
-    // The next render is the one that sees the change.
-    fireEvent.click(chip('eats'));
-    expect(screen.queryByTestId('collection-filter-nightlife')).toBeNull();
-    expect(cards()).toEqual(['card:Pho 10']);
-    expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 of 3 places');
-    // With the one kind left let go, nothing is chosen: the whole list,
-    // not an empty one narrowed by a kind no chip can show.
-    fireEvent.click(chip('eats'));
-    expect(cards()).toHaveLength(3);
-    expect(screen.queryByTestId('collection-filter-count')).toBeNull();
-  });
-
-  it('draws no row for a list of one kind', () => {
-    state.places = [place('pho', 'Pho 10', cats('eats')), place('cafe', 'Cafe Giang', cats('eats'))];
-    state.mine = [collection({}, [place('pho', 'p'), place('cafe', 'c')])];
-    show();
-    expect(screen.queryByTestId('collection-filter')).toBeNull();
   });
 });

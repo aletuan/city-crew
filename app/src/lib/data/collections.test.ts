@@ -125,8 +125,9 @@ describe('updateCollection', () => {
   // The rename above sent no chips and so wrote none: a save that never
   // showed them must not clear them. One that did writes both lists.
   it('writes the owner’s chip decisions only when it has them', async () => {
-    await updateCollection('quan-ca-phe-cu', { title: 'Mới', kinds: { hidden: ['eats'], added: ['nature'] } });
-    expect(fake().log[0].payload).toMatchObject({ kinds_hidden: ['eats'], kinds_added: ['nature'] });
+    await updateCollection('quan-ca-phe-cu', { title: 'Mới', kinds: { hidden: ['eats'] } });
+    // Adding a kind is retired, so a save that has the chips clears it.
+    expect(fake().log[0].payload).toMatchObject({ kinds_hidden: ['eats'], kinds_added: [] });
   });
 
   it('throws what the database said', async () => {
@@ -570,8 +571,8 @@ describe('copyCollection', () => {
   // The original's chip decisions travel with it, as its description does.
   it('carries the original’s chip decisions onto the copy', async () => {
     fake().replies({ error: null });
-    await copyCollection({ ...input, placeSlugs: [], kinds: { hidden: ['cafes'], added: ['views'] } });
-    expect(fake().log[0].payload).toMatchObject({ kinds_hidden: ['cafes'], kinds_added: ['views'] });
+    await copyCollection({ ...input, placeSlugs: [], kinds: { hidden: ['cafes'] } });
+    expect(fake().log[0].payload).toMatchObject({ kinds_hidden: ['cafes'], kinds_added: [] });
   });
 
   it('stops at the empty list when there is nothing to copy', async () => {
