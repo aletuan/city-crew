@@ -9,12 +9,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
 import TipBox from '../components/TipBox';
 import {
-  AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, Card, Chip, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
+import { CATEGORIES, categoryLabel } from '../lib/categories';
+import { collectionKinds } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
@@ -367,6 +369,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
   const desc = col ? t(col.desc_en, col.desc_vi, col.desc_ja) : '';
+  // The list's chips: what its places earn, as the owner corrected it.
+  const kinds = useMemo(
+    () => (col ? collectionKinds(members, { hidden: col.kinds_hidden, added: col.kinds_added }) : []),
+    [col, members],
+  );
+  const kindRow = kinds.length > 0 ? (
+    <View style={s.kinds} testID="collection-kinds">
+      {kinds.map((k) => (
+        <Chip
+          key={k}
+          label={categoryLabel(k, t)}
+          icon={CATEGORIES[k].icon}
+          iconColor={CATEGORIES[k].color}
+          testID={`collection-kind-${k}`}
+        />
+      ))}
+    </View>
+  ) : null;
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
   // Where the popover hangs from. Measured off the button rather than
@@ -408,7 +428,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // so a saved edit arrives here as a changed title, description or cover:
   // the effect runs on that change, and only one the form was opened for
   // counts.
-  const editFields = col ? `${title}\n${desc}\n${col.cover?.id ?? ''}` : null;
+  const editFields = col
+    ? `${title}\n${desc}\n${col.cover?.id ?? ''}\n${col.kinds_hidden ?? []}\n${col.kinds_added ?? []}`
+    : null;
   const editing = useRef(false);
   useEffect(() => {
     if (!editing.current) return;
@@ -673,6 +695,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // `membersOf` — copying the list means copying the sequence the
         // curator chose, not the order the rows happen to come back in.
         placeSlugs: members.map((p) => p.slug),
+        kinds: { hidden: col.kinds_hidden ?? [], added: col.kinds_added ?? [] },
       },
     });
   };
@@ -999,12 +1022,28 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           reads as a failure to load.
 
           Checked on the text `t` picks, not on a hand-listed pair of
-          columns: that left a Japanese-only description never drawn. */}
-      {col && desc ? (
+          columns: that left a Japanese-only description never drawn.
+
+          ── the chips (owner, 15 Oct 2026) ──
+          Under the words, in the same card, because they answer the same
+          question — what is this list — and one pencil edits both. They
+          are the categories the places earn, as the owner corrected them
+          (`lib/collectionKinds`), drawn as the Explore filter row draws
+          them: the category's glyph in its own colour, the one colour a
+          tag may wear in this app. Not pressable yet, so not buttons —
+          `Chip` without `onPress` is a label to VoiceOver and to the eye.
+          A visitor's list with chips and no words still gets the card,
+          without the note glyph, since there is no note. */}
+      {col && (desc || (kinds.length > 0 && !owned)) ? (
         <View style={s.descWrap}>
           <Card style={s.descCard} testID="collection-desc">
-            <Ionicons name="document-text-outline" size={20} color={colors.textSecondary} style={s.descGlyph} />
-            <Text style={s.descText}>{desc}</Text>
+            {/* The note glyph says "the curator's words", so it comes with
+                the words: a visitor's card of chips alone has none. */}
+            {desc ? <Ionicons name="document-text-outline" size={20} color={colors.textSecondary} style={s.descGlyph} /> : null}
+            <View style={s.descBody}>
+              {desc ? <Text style={s.descText}>{desc}</Text> : null}
+              {kindRow}
+            </View>
             {owned && (
               <PressableScale
                 onPress={edit}
@@ -1032,13 +1071,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           >
             <Card style={s.descCard}>
               <Ionicons name="document-text-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
-              <Text style={s.descEmpty}>
-                {t(
-                  'Add a few words about this list.',
-                  'Thêm vài dòng về danh sách này.',
-                  'このリストについて一言添えましょう。',
-                )}
-              </Text>
+              <View style={s.descBody}>
+                <Text style={s.descEmpty}>
+                  {t(
+                    'Add a few words about this list.',
+                    'Thêm vài dòng về danh sách này.',
+                    'このリストについて一言添えましょう。',
+                  )}
+                </Text>
+                {kindRow}
+              </View>
               <Ionicons name="create-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
             </Card>
           </PressableScale>
@@ -1317,8 +1359,13 @@ const s = StyleSheet.create({
   // line, and the text takes the rest of the row.
   descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
   descCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: space.cardPadding },
-  descText: { flex: 1, color: colors.textSecondary, ...type.body, lineHeight: 24 },
-  descEmpty: { flex: 1, color: colors.textTertiary, ...type.body, lineHeight: 24 },
+  descBody: { flex: 1, gap: 12 },
+  descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
+  descEmpty: { color: colors.textTertiary, ...type.body, lineHeight: 24 },
+  // The chips wrap rather than scroll: three derived at most, and a row
+  // that scrolls sideways hides what it holds. `Chip` keeps 8pt to its
+  // right of its own; the 8 here is between rows.
+  kinds: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 },
   // A 20pt glyph centred on a 24pt first line.
   descGlyph: { marginTop: 2 },
 

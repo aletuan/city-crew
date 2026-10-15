@@ -23,10 +23,12 @@ import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
-import { PressableScale, successHaptic } from '../components/ui';
+import { Chip, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
+import { CATEGORIES, CATEGORY_ORDER, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
+import { chooseKind, collectionKinds, type KindChoice } from '../lib/collectionKinds';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
@@ -177,6 +179,20 @@ export default function CollectionFormScreen({ navigation, route }: {
     : null;
   const coverId = pick.chosen ? pick.id : startCover;
 
+  // The chips, as the owner's two lists of decisions — see
+  // `lib/collectionKinds`. Seeded the way the cover is, from the row as
+  // it stands until the reader touches one: a rename reads its own row,
+  // a copy the original's, carried in the route.
+  const startKinds: KindChoice = copyFrom
+    ? { hidden: copyFrom.kinds?.hidden ?? [], added: copyFrom.kinds?.added ?? [] }
+    : { hidden: col?.kinds_hidden ?? [], added: col?.kinds_added ?? [] };
+  const [kindPick, setKindPick] = useState<KindChoice | null>(null);
+  const kindChoice = kindPick ?? startKinds;
+  const shownKinds = collectionKinds(members, kindChoice);
+  // Changed means the chips the list would show changed, not that a list
+  // was rewritten: off and on again is no edit.
+  const kindsChanged = shownKinds.join() !== collectionKinds(members, startKinds).join();
+
   // Whether the form now says something it did not say on opening — the
   // one question both the ✓ and the discard guard ask, so the two can
   // never disagree, as on the profile form.
@@ -185,7 +201,8 @@ export default function CollectionFormScreen({ navigation, route }: {
   // save that would write back exactly what was there. A new list and a
   // copy need only a name — the copy is born on submit, so submitting
   // its prefilled suggestion unchanged is the whole point of the button.
-  const changed = title.trim() !== start.title.trim() || desc.trim() !== start.desc.trim() || coverId !== startCover;
+  const changed = title.trim() !== start.title.trim() || desc.trim() !== start.desc.trim() || coverId !== startCover
+    || kindsChanged;
 
   // Leaving with changes asks first — header Back and iOS's swipe alike,
   // both of which go through `beforeRemove`. A form that has just saved
@@ -242,6 +259,7 @@ export default function CollectionFormScreen({ navigation, route }: {
           // The row remembers its original, so the curator hears about
           // the copy the way they hear about a like (7 Oct 2026).
           copiedFrom: copyFrom.sourceId,
+          kinds: kindChoice,
         });
         // A chosen cover rides a second write: `copyCollection` stays the
         // create-and-fill it was, and Auto — the common case — needs no
@@ -260,7 +278,11 @@ export default function CollectionFormScreen({ navigation, route }: {
         return;
       }
       if (editing) {
-        await updateCollection(editing, { title: name, desc, coverPhotoId: coverId });
+        // The chips only when they changed: an untouched form must not
+        // rewrite decisions it merely displayed.
+        await updateCollection(editing, {
+          title: name, desc, coverPhotoId: coverId, kinds: kindsChanged ? kindChoice : undefined,
+        });
       } else {
         const slug = await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
         // Reached from a place's bookmark with nowhere to put it: the list
@@ -393,6 +415,44 @@ export default function CollectionFormScreen({ navigation, route }: {
         multiline
         returnKeyType="done"
       />
+      {/* ── the chips ──
+          All nine, in the filter row's order, lit where the list shows
+          them: what its places earn, as corrected. Any of the nine can be
+          turned on (the owner's ruling, 15 Oct 2026), so the whole
+          vocabulary is on offer rather than only what the places carry.
+          A tap is the owner's word and it sticks — see `chooseKind`.
+
+          Not on a brand-new list: it has no places to earn anything, and
+          the form that names it should stay one field long. A rename and
+          a copy have places. */}
+      {editing || copyFrom ? (
+        <View style={s.coverBlock} testID="collection-kinds-field">
+          <Text style={s.coverLabel}>{t('CATEGORIES', 'THỂ LOẠI', 'カテゴリー')}</Text>
+          <Text style={s.kindsHint}>
+            {t(
+              'Suggested from the places in it. Tap to turn one on or off.',
+              'Gợi ý từ các địa điểm trong danh sách. Chạm để bật hoặc tắt.',
+              'リストのスポットから提案しています。タップでオン・オフできます。',
+            )}
+          </Text>
+          <View style={s.kindsGrid}>
+            {CATEGORY_ORDER.map((k) => {
+              const on = shownKinds.includes(k);
+              return (
+                <Chip
+                  key={k}
+                  label={categoryLabel(k, t)}
+                  icon={CATEGORIES[k].icon}
+                  iconColor={CATEGORIES[k].color}
+                  active={on}
+                  onPress={() => setKindPick(chooseKind(kindChoice, k, !on))}
+                  testID={`collection-kind-pick-${k}`}
+                />
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
       {/* `choices` is only ever non-empty when there are members to draw
           from — a rename or a copy; a brand-new list offers no picker. */}
       {choices.length > 0 ? (
@@ -479,6 +539,10 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   thumbOn: { borderColor: colors.accentFill },
+  kindsHint: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, marginBottom: 10 },
+  // Wrapped, all nine in view: a row that scrolls sideways hides most of
+  // what it holds (the cover grid's note says the same of its chips).
+  kindsGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 },
   thumbImg: { width: '100%', height: '100%' },
   auto: {
     alignItems: 'center', justifyContent: 'center', gap: 3,

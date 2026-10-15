@@ -7,11 +7,13 @@
 //
 // The vocabulary is closed and mirrored by the places_categories_known
 // check constraint, whose current form is set by
-// supabase/migrations/20260819040000_focus_fun_categories.sql. Adding or
-// removing a key means changing this list, the dashboard's copy in
-// dashboard/src/categories.js, and the constraint — in that last order,
-// since a constraint tightened before the writers know about it fails
-// every import.
+// supabase/migrations/20260819040000_focus_fun_categories.sql, and by
+// collections_kinds_known, which holds a collection's chips to the same
+// keys (20261015090000_collection_kinds.sql). Adding or removing a key
+// means changing this list, the dashboard's copy in
+// dashboard/src/categories.js, and both constraints — in that last
+// order, since a constraint tightened before the writers know about it
+// fails every import.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
 

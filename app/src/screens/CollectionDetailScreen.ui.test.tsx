@@ -32,6 +32,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
+import { CATEGORIES } from '../lib/categories';
 
 const spies = vi.hoisted(() => ({
   goTo: vi.fn(),
@@ -1232,6 +1233,8 @@ describe("somebody else's list", () => {
         // on the row and the curator's Activity, not the copy's text.
         desc: 'Where we eat.',
         placeSlugs: ['pho', 'cafe', 'museum'],
+        // The original's chip decisions go with it; this one has none.
+        kinds: { hidden: [], added: [] },
       },
     });
   });
@@ -1431,5 +1434,95 @@ describe('the description, for a visitor', () => {
     show();
     expect(screen.queryByTestId('collection-desc')).toBeNull();
     expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
+  });
+});
+
+// The list's chips, inside the description card (owner, 15 Oct 2026):
+// the categories its places earn — a third of the list or more — as the
+// owner corrected them, drawn as Explore's filter row draws them.
+describe('the chips', () => {
+  const cats = (...categories: string[]) => ({ categories } as Partial<Place>);
+  const eatery = () => {
+    state.places = [
+      place('pho', 'Pho 10', cats('eats')),
+      place('cafe', 'Cafe Giang', cats('cafes', 'eats')),
+      place('museum', 'Fine Arts Museum', cats('heritage')),
+      place('bun', 'Bun Cha', cats('eats')),
+    ];
+  };
+  const four = ['pho', 'cafe', 'museum', 'bun'].map((sl) => place(sl, sl));
+
+  it('shows what the places earn, under the words, in each category’s own colour, as labels', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    const card = screen.getByTestId('collection-desc');
+    const row = screen.getByTestId('collection-kinds');
+    expect(card.contains(row)).toBe(true);
+    // Eats is on three of four; Cafés and Culture on one each, under a third.
+    expect(row.textContent).toBe('Eats');
+    const glyph = row.querySelector('[data-icon="restaurant-outline"]')!;
+    expect(glyph.getAttribute('data-color')).toBe(CATEGORIES.eats.color);
+    // A label, not a control: nothing in the row is a button.
+    expect(row.querySelector('[role="button"]')).toBeNull();
+  });
+
+  it('reads the owner’s word: one put on, one taken off', () => {
+    eatery();
+    state.mine = [collection({ kinds_added: ['nature'], kinds_hidden: ['eats'] }, four)];
+    show();
+    expect(screen.getByTestId('collection-kinds').textContent).toBe('Nature');
+  });
+
+  it('speaks the reader’s language', () => {
+    eatery();
+    state.lang = 'vi';
+    state.mine = [collection({}, four)];
+    show();
+    expect(screen.getByTestId('collection-kinds').textContent).toBe('Ăn uống');
+  });
+
+  it('draws no row where nothing is earned or chosen', () => {
+    state.mine = [collection()];
+    show();
+    expect(screen.getByTestId('collection-desc')).toBeTruthy();
+    expect(screen.queryByTestId('collection-kinds')).toBeNull();
+  });
+
+  // The owner with no words yet: the invitation, with the chips under it,
+  // and the whole card still the press.
+  it('rides under the owner’s invitation when there is no description', () => {
+    eatery();
+    state.mine = [collection({ desc_en: null }, four)];
+    show();
+    const invite = screen.getByRole('button', { name: 'Add a description' });
+    expect(invite.contains(screen.getByTestId('collection-kinds'))).toBe(true);
+    expect(screen.queryByTestId('collection-desc')).toBeNull();
+  });
+
+  // A visitor's list with chips and no words still gets the card, but no
+  // note glyph — there is no note.
+  it('gives a visitor the card for chips alone, without the note glyph', () => {
+    eatery();
+    state.mine = [];
+    state.cols = [theirs({ desc_en: null }, four)];
+    show();
+    const card = screen.getByTestId('collection-desc');
+    expect(card.textContent).toBe('Eats');
+    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
+  });
+
+  it('carries the original’s decisions into a copy', () => {
+    eatery();
+    state.mine = [];
+    state.cols = [theirs({ kinds_added: ['views'], kinds_hidden: ['eats'] }, four)];
+    const { raw } = show();
+    openMenu();
+    fireEvent.click(menuRow('Save a copy'));
+    endModalFade();
+    return waitFor(() => expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', expect.objectContaining({
+      copyFrom: expect.objectContaining({ kinds: { hidden: ['eats'], added: ['views'] } }),
+    })));
   });
 });
