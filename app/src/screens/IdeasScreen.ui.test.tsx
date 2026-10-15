@@ -121,7 +121,6 @@ const sent = (navigation: { navigate: ReturnType<typeof vi.fn> }) => {
   expect(navigation.navigate.mock.calls[0][0]).toBe('Sketching');
   return navigation.navigate.mock.calls[0][1] as Record<string, unknown>;
 };
-const HINT = "Just pick who's going and one thing you fancy.";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -174,7 +173,7 @@ describe('the questions', () => {
     state.places = [];
     renderScreen();
     expect(screen.queryByText('Cafés')).toBeNull();
-    expect(screen.getByText(HINT)).toBeTruthy();
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
   });
 });
 
@@ -184,20 +183,18 @@ describe('the button', () => {
     expect(cta().querySelector('[data-icon="paw"]')).toBeTruthy();
   });
 
-  it('is dimmed with its reason until both company and a category are chosen', () => {
+  // Dimmed, and said so to VoiceOver, until the draft is whole. No line
+  // under it any more (15 Oct 2026): the empty questions are on screen.
+  it('is dimmed until both company and a category are chosen', () => {
     renderScreen();
-    // Said to VoiceOver as well as shown: dimmed until the draft is whole.
-    expect(screen.getByText(HINT)).toBeTruthy();
     expect(cta().getAttribute('aria-disabled')).toBe('true');
+    expect(screen.queryByText(/one thing you fancy/)).toBeNull();
     tap('Friends');
-    expect(screen.getByText(HINT)).toBeTruthy();
     expect(cta().getAttribute('aria-disabled')).toBe('true');
     tap('Cafés');
-    expect(screen.queryByText(HINT)).toBeNull();
     expect(cta().getAttribute('aria-disabled')).not.toBe('true');
-    // Untoggling the only category takes the reason back.
+    // Untoggling the only category dims it again.
     tap('Cafés');
-    expect(screen.getByText(HINT)).toBeTruthy();
     expect(cta().getAttribute('aria-disabled')).toBe('true');
   });
 
@@ -240,7 +237,7 @@ describe('the button', () => {
     fireEvent.click(cta());
     expect(sent(navigation).company).toBe('family');
     tap('Family');
-    expect(screen.getByText(HINT)).toBeTruthy();
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
   });
 
   it('sends the day shape when Day is chosen, from nine', () => {
