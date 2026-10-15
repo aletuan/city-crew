@@ -83,3 +83,28 @@ export function chooseKind(choice: KindChoice, key: string, on: boolean): KindCh
   const added = choice.added.filter((k) => k !== key);
   return on ? { hidden, added: [...added, key] } : { hidden: [...hidden, key], added };
 }
+
+/**
+ * Every category the list's places carry, in the filter row's order —
+ * what a reader can narrow the list by. Not the chips above: those are
+ * what the list *is*, three at most; this is every way into it, the café
+ * that is also a bar among seventy-two cafés included. Keys the table
+ * has not learned are left out, since a filter chip is a glyph and a
+ * colour and they have neither.
+ */
+export function kindsPresent(members: readonly Categorisable[]): string[] {
+  const seen = new Set(members.flatMap((p) => categoriesOf(p)));
+  return CATEGORY_ORDER.filter((k) => seen.has(k));
+}
+
+/**
+ * The places carrying at least one of the chosen kinds, in the list's own
+ * order; nothing chosen is the whole list (owner, 15 Oct 2026). Any, not
+ * all: two chips widen the list, as a row of kinds does everywhere a
+ * reader has met one. The one pair that reads as a narrowing — a café to
+ * work in — is reached by Focus alone, whose places are cafés already.
+ */
+export function narrowTo<T extends Categorisable>(members: readonly T[], chosen: readonly string[]): T[] {
+  if (!chosen.length) return [...members];
+  return members.filter((p) => categoriesOf(p).some((k) => chosen.includes(k)));
+}

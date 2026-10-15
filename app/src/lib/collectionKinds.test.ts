@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseKind, collectionKinds, derivedKinds, KIND_CAP } from './collectionKinds';
+import { chooseKind, collectionKinds, derivedKinds, KIND_CAP, kindsPresent, narrowTo } from './collectionKinds';
 
 const p = (...categories: string[]) => ({ categories });
 const many = (n: number, ...categories: string[]) => Array.from({ length: n }, () => p(...categories));
@@ -108,5 +108,46 @@ describe('chooseKind', () => {
     expect(once).toEqual({ hidden: [], added: ['cafes'] });
     const off = chooseKind(once, 'cafes', false);
     expect(off).toEqual({ hidden: ['cafes'], added: [] });
+  });
+});
+
+describe('kindsPresent', () => {
+  it('is every category any place carries, in the filter row’s order', () => {
+    expect(kindsPresent([p('nightlife'), ...many(70, 'cafes'), p('cafes', 'focus')]))
+      .toEqual(['cafes', 'focus', 'nightlife']);
+  });
+
+  it('leaves out a key the table does not know', () => {
+    expect(kindsPresent([p('street_food'), p('eats')])).toEqual(['eats']);
+  });
+
+  it('reads legacy rows the way every screen does', () => {
+    expect(kindsPresent([{ vibe_tags: ['food_tour'] }])).toEqual(['eats']);
+  });
+});
+
+describe('narrowTo', () => {
+  const a = { slug: 'a', categories: ['cafes'] };
+  const b = { slug: 'b', categories: ['eats', 'nightlife'] };
+  const c = { slug: 'c', categories: ['views'] };
+  const list = [a, b, c];
+
+  it('is the whole list, in its order, when nothing is chosen — and a copy of it', () => {
+    const all = narrowTo(list, []);
+    expect(all).toEqual(list);
+    expect(all).not.toBe(list);
+  });
+
+  it('keeps the places carrying the one chosen kind', () => {
+    expect(narrowTo(list, ['nightlife'])).toEqual([b]);
+  });
+
+  // Any, not all: two chips widen.
+  it('keeps a place carrying any of several, in the list’s order', () => {
+    expect(narrowTo(list, ['views', 'cafes'])).toEqual([a, c]);
+  });
+
+  it('is empty when no place carries what was chosen', () => {
+    expect(narrowTo(list, ['fun'])).toEqual([]);
   });
 });
