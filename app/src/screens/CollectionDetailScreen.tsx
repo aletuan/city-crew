@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
 import TipBox from '../components/TipBox';
 import {
-  AmbientWarmth, Avatar, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
@@ -965,9 +965,70 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </View>
       )}
-      {/* Checked on the text `t` picks, not on a hand-listed pair of
+      {/* ── the description, in a card ──
+          It was bare grey body text under the header, and read as one
+          more line of the header. The owner's review (15 Oct 2026) put it
+          in a card on `surfaceCard` — the surface the place screen's
+          address card and its "City Crew chọn" card already wear, so it
+          follows the look chosen in Profile and adds no colour of its
+          own. Not the accent as a surface: that is for state the reader
+          just made (`theme.ts`), and a description is not one.
+
+          The pencil is the owner's, and opens the same form the menu's
+          "Edit collection" does. Two doors to one action, which is what
+          took the "Add place" slot away the same day — but this one sits
+          on the text it changes, so it reads as "change this", not as a
+          second general button. 17pt drawn, 44pt to the thumb.
+
+          An owner's list with no description draws the card anyway, as an
+          invitation, and the whole card is the press. A visitor's list
+          with none draws nothing: an empty card on somebody else's list
+          reads as a failure to load.
+
+          Checked on the text `t` picks, not on a hand-listed pair of
           columns: that left a Japanese-only description never drawn. */}
-      {!!desc && <Text style={s.desc}>{desc}</Text>}
+      {col && desc ? (
+        <View style={s.descWrap}>
+          <Card style={s.descCard} testID="collection-desc">
+            <Text style={s.descText}>{desc}</Text>
+            {owned && (
+              <PressableScale
+                onPress={edit}
+                scaleTo={0.85}
+                haptic="selection"
+                hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
+                testID="collection-desc-edit"
+              >
+                <Ionicons name="pencil" size={17} color={colors.textSecondary} />
+              </PressableScale>
+            )}
+          </Card>
+        </View>
+      ) : col && owned ? (
+        <View style={s.descWrap}>
+          <PressableScale
+            onPress={edit}
+            scaleTo={0.985}
+            haptic="selection"
+            accessibilityRole="button"
+            accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
+            testID="collection-desc-empty"
+          >
+            <Card style={s.descCard}>
+              <Text style={s.descEmpty}>
+                {t(
+                  'Add a few words about this list.',
+                  'Thêm vài dòng về danh sách này.',
+                  'このリストについて一言添えましょう。',
+                )}
+              </Text>
+              <Ionicons name="pencil" size={17} color={colors.textTertiary} />
+            </Card>
+          </PressableScale>
+        </View>
+      ) : null}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
@@ -1235,10 +1296,14 @@ const s = StyleSheet.create({
   // Full width at the foot of the list, in the page's margins, with the
   // room the dashed slot it replaced kept above it.
   planFoot: { paddingHorizontal: space.page, paddingTop: 10 },
-  desc: {
-    color: colors.textSecondary, ...type.body, lineHeight: 24,
-    paddingHorizontal: space.page, paddingBottom: 12,
-  },
+  // The page's margins outside, the card's padding inside; the text keeps
+  // the body size and line height it had bare, so nothing reflows but
+  // the inset. The pencil hangs at the top right, level with the first
+  // line, and the text takes the rest of the row.
+  descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
+  descCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: space.cardPadding },
+  descText: { flex: 1, color: colors.textSecondary, ...type.body, lineHeight: 24 },
+  descEmpty: { flex: 1, color: colors.textTertiary, ...type.body, lineHeight: 24 },
 
   // A text button, not a pill: it sits where the overflow control was and
   // the header already has one round shape in it on the other side.

@@ -391,6 +391,30 @@ describe('your own list', () => {
     await waitFor(() => expect(screen.queryByText('Edit collection')).toBeNull());
   });
 
+  // The description sits in a card on the theme's own surface, with the
+  // owner's pencil on it (owner, 15 Oct 2026).
+  it('draws the description in a card, and the owner’s pencil opens the form', () => {
+    const { raw } = show();
+    const card = screen.getByTestId('collection-desc');
+    expect(card.textContent).toContain('Where we eat.');
+    expect(getComputedStyle(card).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+    expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
+      slug: 'old-quarter', title: 'Old Quarter eats', desc: 'Where we eat.',
+    });
+  });
+
+  it('invites the owner to write one when there is none, and the card is the press', () => {
+    state.mine = [collection({ desc_en: null })];
+    const { raw } = show();
+    expect(screen.queryByTestId('collection-desc')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
+    expect(screen.getByText('Add a few words about this list.')).toBeTruthy();
+    expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
+      slug: 'old-quarter', title: 'Old Quarter eats', desc: '',
+    });
+  });
+
   it('Edit hands the form the slug, title and description', () => {
     const { raw } = show();
     openMenu();
@@ -1379,5 +1403,25 @@ describe('Plan a trip', () => {
     state.cols = [theirs()];
     show();
     expect(button('Plan a trip')).toBeTruthy();
+  });
+});
+
+// A visitor reads the description in the same card, with no pencil; a
+// visitor's list with no description draws no card at all.
+describe('the description, for a visitor', () => {
+  it('is the same card, without the pencil', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    expect(screen.getByTestId('collection-desc').textContent).toContain('Where we eat.');
+    expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
+  });
+
+  it('is nothing when there is none', () => {
+    state.mine = [];
+    state.cols = [theirs({ desc_en: null })];
+    show();
+    expect(screen.queryByTestId('collection-desc')).toBeNull();
+    expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
   });
 });
