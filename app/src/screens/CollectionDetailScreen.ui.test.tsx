@@ -1439,8 +1439,12 @@ describe('the description, for a visitor', () => {
 
 // The list's chips, inside the description card (owner, 15 Oct 2026):
 // the categories its places earn — a third of the list or more — as the
-// owner corrected them, drawn as Explore's filter row draws them.
+// owner corrected them, in the pill a place's card wears.
 describe('the chips', () => {
+  const rgb = (hex: string) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+  };
   const cats = (...categories: string[]) => ({ categories } as Partial<Place>);
   const eatery = () => {
     state.places = [
@@ -1452,7 +1456,7 @@ describe('the chips', () => {
   };
   const four = ['pho', 'cafe', 'museum', 'bun'].map((sl) => place(sl, sl));
 
-  it('shows what the places earn, under the words, in each category’s own colour, as labels', () => {
+  it('shows what the places earn, under the words, in the card’s pill, as labels', () => {
     eatery();
     state.mine = [collection({}, four)];
     show();
@@ -1461,8 +1465,11 @@ describe('the chips', () => {
     expect(card.contains(row)).toBe(true);
     // Eats is on three of four; Cafés and Culture on one each, under a third.
     expect(row.textContent).toBe('Eats');
-    const glyph = row.querySelector('[data-icon="restaurant-outline"]')!;
-    expect(glyph.getAttribute('data-color')).toBe(CATEGORIES.eats.color);
+    // The pill a place's card wears: a dot in the category's colour and
+    // its word, no glyph — glyphs are for chips you press.
+    const dot = screen.getByTestId('collection-kinds-eats').firstElementChild as HTMLElement;
+    expect(getComputedStyle(dot).backgroundColor).toBe(rgb(CATEGORIES.eats.color));
+    expect(row.querySelector('[data-icon]')).toBeNull();
     // A label, not a control: nothing in the row is a button.
     expect(row.querySelector('[role="button"]')).toBeNull();
   });

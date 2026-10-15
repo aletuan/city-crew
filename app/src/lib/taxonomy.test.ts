@@ -14,10 +14,11 @@ import {
   categoriesOf,
   categoryColor,
   categoryLabel,
+  kindsInOrder,
   pinCategory,
   pinTint,
 } from './categories';
-import { judgementsOf, VIBES, vibeLabel } from './vibes';
+import { VIBES, vibeLabel } from './vibes';
 
 /** The app's `t`, in English. */
 const t = (en: string) => en;
@@ -83,33 +84,22 @@ describe('vibes', () => {
     expect(vibeLabel('food_tour', t)).toBe(VIBES.food_tour.en);
     expect(vibeLabel('rooftop_bars', t)).toBe('Rooftop bars');
   });
+});
 
-  // The seven that restate a category drop out; the judgements stay in
-  // stored order, and a key nobody has defined stays with them.
-  it('keeps the judgements and drops the vibes that restate a category', () => {
-    expect(judgementsOf(['cafes', 'quiet', 'food_tour', 'views', 'romantic', 'culture', 'outdoors', 'shopping', 'nightlife']))
-      .toEqual(['quiet', 'romantic']);
-    expect(judgementsOf(['chill', 'kid_friendly', 'rooftop_bars'])).toEqual(['chill', 'kid_friendly', 'rooftop_bars']);
-    // Own keys only: an object's inherited names are not vibes.
-    expect(judgementsOf(['constructor', 'toString'])).toEqual(['constructor', 'toString']);
-    expect(judgementsOf([])).toEqual([]);
+// The order the card's pill and the page's row both read: what the place
+// is most first, then the filter row's order, unknown keys last as stored.
+describe('kindsInOrder', () => {
+  it('leads with the pin’s category and follows the filter row', () => {
+    expect(kindsInOrder({ categories: ['views', 'heritage', 'cafes'] })).toEqual(['cafes', 'views', 'heritage']);
   });
 
-  // A judgement is drawn in grey beside categories drawn in colour, and
-  // the glyph is what tells the reader which is which. Sharing one would
-  // say "Nature" in grey — the chill leaf that did, until 15 Oct 2026.
-  it('gives no judgement a category’s glyph', () => {
-    const kinds = new Set(Object.values(CATEGORIES).map((c) => c.icon));
-    const judged = judgementsOf(Object.keys(VIBES));
-    expect(judged.sort()).toEqual(['chill', 'kid_friendly', 'quiet', 'romantic']);
-    for (const v of judged) expect(kinds.has(VIBES[v].icon), v).toBe(false);
+  it('puts keys the table has not learned last, in their stored order', () => {
+    expect(kindsInOrder({ categories: ['street_food', 'nightlife', 'rooftop', 'eats'] }))
+      .toEqual(['eats', 'nightlife', 'street_food', 'rooftop']);
   });
 
-  // Two judgements side by side with one glyph would be one mark for two
-  // facts.
-  it('gives every judgement its own glyph', () => {
-    const glyphs = judgementsOf(Object.keys(VIBES)).map((v) => VIBES[v].icon);
-    expect(new Set(glyphs).size).toBe(glyphs.length);
+  it('reads a legacy row the way categoriesOf does', () => {
+    expect(kindsInOrder({ vibe_tags: ['food_tour', 'cafes'] })).toEqual(['cafes', 'eats']);
   });
 });
 

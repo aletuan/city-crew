@@ -8,14 +8,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
 import TipBox from '../components/TipBox';
+import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, Card, Chip, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
-import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { collectionKinds } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
@@ -374,19 +374,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     () => (col ? collectionKinds(members, { hidden: col.kinds_hidden, added: col.kinds_added }) : []),
     [col, members],
   );
-  const kindRow = kinds.length > 0 ? (
-    <View style={s.kinds} testID="collection-kinds">
-      {kinds.map((k) => (
-        <Chip
-          key={k}
-          label={categoryLabel(k, t)}
-          icon={CATEGORIES[k].icon}
-          iconColor={CATEGORIES[k].color}
-          testID={`collection-kind-${k}`}
-        />
-      ))}
-    </View>
-  ) : null;
+  const kindRow = <KindPills kinds={kinds} testID="collection-kinds" />;
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
   // Where the popover hangs from. Measured off the button rather than
@@ -1028,10 +1016,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           Under the words, in the same card, because they answer the same
           question — what is this list — and one pencil edits both. They
           are the categories the places earn, as the owner corrected them
-          (`lib/collectionKinds`), drawn as the Explore filter row draws
-          them: the category's glyph in its own colour, the one colour a
-          tag may wear in this app. Not pressable yet, so not buttons —
-          `Chip` without `onPress` is a label to VoiceOver and to the eye.
+          (`lib/collectionKinds`), drawn as `KindPill` — the pill a
+          place's card and page wear, a dot in the category's colour and
+          its word (owner, 15 Oct 2026; the first cut wore the filter
+          row's glyphs, which are for chips you press).
           A visitor's list with chips and no words still gets the card,
           without the note glyph, since there is no note. */}
       {col && (desc || (kinds.length > 0 && !owned)) ? (
@@ -1362,10 +1350,6 @@ const s = StyleSheet.create({
   descBody: { flex: 1, gap: 12 },
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   descEmpty: { color: colors.textTertiary, ...type.body, lineHeight: 24 },
-  // The chips wrap rather than scroll: three derived at most, and a row
-  // that scrolls sideways hides what it holds. `Chip` keeps 8pt to its
-  // right of its own; the 8 here is between rows.
-  kinds: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 },
   // A 20pt glyph centred on a 24pt first line.
   descGlyph: { marginTop: 2 },
 
