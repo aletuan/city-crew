@@ -1450,6 +1450,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               <PlaceCard
                 place={item}
                 testID={`place-card-${index}`}
+                chip={cat === ALL ? null : cat}
                 // The figure goes with the sort, not with the fix: the
                 // reader may well have a position from the map or from
                 // an earlier sort, and a card under "Recommended" that

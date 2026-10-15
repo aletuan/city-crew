@@ -1,19 +1,32 @@
-// Vibe taxonomy — the soft, n-to-n signals a place carries ("cafes",
-// "views", "nightlife"), as opposed to the hard `category` axis.
+// Vibe taxonomy — the soft, n-to-n signals a place carries ("quiet",
+// "kid_friendly"), as opposed to the hard `category` axis.
 //
-// One source of truth for how a vibe presents itself: its dot colour, its
-// glyph, and its label in each language. Screens read from here rather than
-// keeping their own maps.
+// One source of truth for how a vibe presents itself: its glyph and its
+// label in each language. Screens read from here rather than keeping
+// their own maps.
 //
-// Colour discipline: the accent stays the only identity colour, so a vibe's
-// hue lives in a 6pt dot and never in a fill or in type. The palette is
-// desaturated on purpose — on the near-black ground nothing should compete
-// with the accent used for active state.
+// ── no colour, since 15 Oct 2026 ──
+//
+// The app draws a tag in one of three ways, and which one says what kind
+// of tag it is (owner's ruling, 15 Oct 2026): a category wears its own
+// hue, a judgement about a place wears a neutral glyph, and free words
+// wear nothing but themselves. A vibe that says something the category
+// does not is a judgement, so it has no colour to give.
+//
+// The palette that used to live here gave each vibe a dot, and the seven
+// that restate a category (`restatesCategory`) a dot in exactly that
+// category's hue. Measured that day on the live catalog: 1,152 of 1,350
+// vibe tags sat on a place already carrying the category they restate
+// (493 of 495 `cafes`). So the card's dot was a category dot reached by
+// a second road, and the detail screen, which drew vibes without one,
+// said "Cà phê" twice in two styles — glyph in its hue on the cover,
+// grey chip below. The rule ends both: the card's pill reads the
+// category, and only the four judgements reach the detail screen.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
+import { restatesCategory } from './categories';
 
 export type VibeStyle = {
-  color: string;
   icon: keyof typeof Ionicons.glyphMap;
   en: string;
   vi: string;
@@ -21,16 +34,17 @@ export type VibeStyle = {
 };
 
 export const VIBES: Record<string, VibeStyle> = {
-  cafes: { color: '#D2A679', icon: 'cafe-outline', en: 'Cafés', vi: 'Cà phê', ja: 'カフェ' },
-  food_tour: { color: '#E09A6B', icon: 'restaurant-outline', en: 'Food', vi: 'Ăn uống', ja: 'グルメ' },
-  nightlife: { color: '#A98CD9', icon: 'wine-outline', en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ' },
-  // Teal, not green: at 6pt a green dot here was indistinguishable from
-  // outdoors' green next to it.
-  views: { color: '#6FB3C0', icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望' },
-  culture: { color: '#D98A80', icon: 'library-outline', en: 'Culture', vi: 'Văn hóa', ja: 'カルチャー' },
-  outdoors: { color: '#8FBF8A', icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然' },
-  chill: { color: '#7FA8D9', icon: 'leaf-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり' },
-  shopping: { color: '#C98BB0', icon: 'bag-outline', en: 'Shopping', vi: 'Mua sắm', ja: 'ショッピング' },
+  cafes: { icon: 'cafe-outline', en: 'Cafés', vi: 'Cà phê', ja: 'カフェ' },
+  food_tour: { icon: 'restaurant-outline', en: 'Food', vi: 'Ăn uống', ja: 'グルメ' },
+  nightlife: { icon: 'wine-outline', en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ' },
+  views: { icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望' },
+  culture: { icon: 'library-outline', en: 'Culture', vi: 'Văn hóa', ja: 'カルチャー' },
+  outdoors: { icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然' },
+  // Not the leaf it wore while vibes had colours: that is Nature's
+  // glyph, and a grey leaf under a green one on the same screen says one
+  // thing two ways, which is the confusion this file's note retires.
+  chill: { icon: 'happy-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり' },
+  shopping: { icon: 'bag-outline', en: 'Shopping', vi: 'Mua sắm', ja: 'ショッピング' },
 
   // ── suitability, which is what this axis was for ──
   //
@@ -49,13 +63,10 @@ export const VIBES: Record<string, VibeStyle> = {
   //
   // Three, not eight. Every value here is desk work on two hundred rows,
   // and a value nothing consumes is the redundancy this note opens with.
-  kid_friendly: { color: '#D9C37A', icon: 'balloon-outline', en: 'Kid-friendly', vi: 'Hợp trẻ em', ja: '子連れOK' },
-  romantic: { color: '#E08FA8', icon: 'heart-outline', en: 'Romantic', vi: 'Lãng mạn', ja: 'ロマンチック' },
-  quiet: { color: '#A8A79B', icon: 'volume-low-outline', en: 'Quiet', vi: 'Yên tĩnh', ja: '静か' },
+  kid_friendly: { icon: 'balloon-outline', en: 'Kid-friendly', vi: 'Hợp trẻ em', ja: '子連れOK' },
+  romantic: { icon: 'heart-outline', en: 'Romantic', vi: 'Lãng mạn', ja: 'ロマンチック' },
+  quiet: { icon: 'volume-low-outline', en: 'Quiet', vi: 'Yên tĩnh', ja: '静か' },
 };
-
-/** Neutral dot for a vibe the catalog grew before this table knew about it. */
-export const VIBE_FALLBACK_COLOR = '#6E706D';
 
 /**
  * Label for a vibe key. An unknown key is shown as-is rather than dropped —
@@ -67,6 +78,14 @@ export function vibeLabel(key: string, t: (en: string, vi: string, ja?: string) 
   return key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }
 
-export function vibeColor(key: string): string {
-  return VIBES[key]?.color ?? VIBE_FALLBACK_COLOR;
+/**
+ * The tags that say something the place's category does not: the
+ * judgements, in stored order.
+ *
+ * A key the table has never heard of stays — it cannot be a restatement
+ * of anything, and new data should show rather than vanish (see
+ * `vibeLabel`).
+ */
+export function judgementsOf(tags: readonly string[]): string[] {
+  return tags.filter((v) => !restatesCategory(v));
 }
