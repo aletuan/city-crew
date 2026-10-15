@@ -145,12 +145,6 @@ const FROM_VIBE: Record<string, string> = {
   nightlife: 'nightlife',
 };
 
-/** Is this vibe a category under another name? `cafes`, `food_tour` and
- *  the rest of the table above are; `quiet` is not. */
-export function restatesCategory(vibe: string): boolean {
-  return Object.prototype.hasOwnProperty.call(FROM_VIBE, vibe);
-}
-
 export type Categorisable = { categories?: string[] | null; vibe_tags?: string[] | null; category?: string };
 
 /**
@@ -189,6 +183,19 @@ export function categoriesOf(p: Categorisable): string[] {
 function chiefCategory(p: Categorisable): string | null {
   const cats = categoriesOf(p);
   return CATEGORY_ORDER.find((c) => cats.includes(c)) ?? null;
+}
+
+/**
+ * A place's categories in the order a reader meets them: what it is most
+ * first — the pin's answer, and the card's pill — then the rest in the
+ * filter row's order, and keys the table has not learned last, as stored.
+ */
+export function kindsInOrder(p: Categorisable): string[] {
+  const at = (k: string) => {
+    const i = CATEGORY_ORDER.indexOf(k as (typeof CATEGORY_ORDER)[number]);
+    return i < 0 ? CATEGORY_ORDER.length : i;
+  };
+  return [...categoriesOf(p)].sort((a, b) => at(a) - at(b));
 }
 
 export function categoryColor(p: Categorisable): string | null {

@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { CATEGORIES, categoriesOf, categoryLabel, pinCategory } from '../lib/categories';
+import { categoriesOf, pinCategory } from '../lib/categories';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
@@ -17,6 +17,7 @@ import { useSave } from '../lib/save';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
+import { KindPill } from './KindPill';
 
 export default function PlaceCard({
   place, onPress, testID, distanceKm, chip, onLongPress, delayLongPress, onPressOut,
@@ -430,22 +431,7 @@ export default function PlaceCard({
                   ) : null}
                 </View>
               ) : null}
-              {kind ? (
-                <View style={s.vibePill} testID={testID ? `${testID}-kind` : undefined}>
-                  {CATEGORIES[kind] ? (
-                    <View style={[s.vibeDot, { backgroundColor: CATEGORIES[kind].color }]} />
-                  ) : null}
-                  <Text style={s.vibeLabel} numberOfLines={1}>
-                    {categoryLabel(kind, t)}
-                  </Text>
-                  {more > 0 ? (
-                    <>
-                      <View style={s.vibeSep} />
-                      <Text style={s.vibeMore}>{`+${more}`}</Text>
-                    </>
-                  ) : null}
-                </View>
-              ) : null}
+              {kind ? <KindPill kind={kind} more={more} testID={testID ? `${testID}-kind` : undefined} /> : null}
             </View>
           )}
           {/* Only its submitter can see this card at all, so the marker is
@@ -679,27 +665,6 @@ const s = StyleSheet.create({
   statusText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
   statusTextBad: { color: colors.bad },
 
-  // One pill, not a row of chips: a colour dot, the first tag spelled out,
-  // then — only when there is a second tag — a hairline and how many more.
-  //
-  // No border, unlike the chips it replaces. A bordered pill beside an
-  // unbordered line of grey text read as a control you could press; the
-  // fill alone is enough to say "this is one object" at 12.5pt.
-  //
-  // `flexShrink: 0` is the whole contract with the line: the pill is
-  // either drawn whole or not at all.
-  vibePill: {
-    flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 0,
-    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
-    paddingHorizontal: 11, paddingVertical: 4,
-  },
-  vibeDot: { width: 7, height: 7, borderRadius: 3.5 },
-  // Full-strength text, where the old chip used secondary: one word on a
-  // card is the label, not an aside, and there is no second chip beside it
-  // to make a run of dark type look heavy.
-  vibeLabel: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
-  // A rule, not a hairline: at 0.5pt it disappeared against the fill on a
-  // light ground, and the count then read as part of the label.
-  vibeSep: { width: 1, height: 13, backgroundColor: colors.borderGlassSoft },
-  vibeMore: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
+  // The pill itself is `KindPill`, shared with the place page and a
+  // list's card, so the three say a category one way.
 });

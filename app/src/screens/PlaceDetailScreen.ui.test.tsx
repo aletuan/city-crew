@@ -24,7 +24,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uit
 import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
-import { colors, onPhoto } from '../theme';
+import { colors } from '../theme';
 import { CATEGORIES } from '../lib/categories';
 import { clockOf } from '../lib/format';
 
@@ -238,6 +238,14 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
   throw new Error('no matching element in the committed tree');
 };
 /** The carousel's photographs, in the order a swipe reaches them. */
+/** A table hex as the browser reports it. */
+const rgb = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+};
+/** Where an element falls in reading order — the document's order. */
+const docOrder = (id: string) => [...document.querySelectorAll('[data-testid]')].indexOf(screen.getByTestId(id));
+
 const heroPhotos = () => [...document.querySelectorAll('img')].map((i) => i.getAttribute('src'));
 /** Which page the hero's count says is on screen, read off its props. */
 const heroPage = () => {
@@ -428,73 +436,43 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.getByTestId('detail-rating').getAttribute('aria-label')).toBe('4.6');
   });
 
-  // ── the kinds, on the cover ──
+  // ── the kinds, as the card's pills ──
   //
-  // They were a row of labelled pills under the rating; they are glyphs
-  // on the photograph now, in the cover's dark glass, and say their names
-  // on a tap — because three of the nine glyphs do not say them on sight.
-  it('puts the kinds on the cover as glyphs, in the cover’s glass', () => {
-    show(place({ categories: ['cafes', 'eats'] }));
+  // The feed's card says "● Cafés | +1"; this page names every one, in
+  // the same pill, under the score (owner, 15 Oct 2026). Nothing on the
+  // cover any more, and nothing to tap: the words are there.
+  it('names every kind under the score, in the card’s pill, leading where the pin leads', () => {
+    show(place({ categories: ['views', 'cafes'] }));
     const kinds = screen.getByTestId('detail-kinds');
-    // On the hero, not in the page's column.
-    expect(kinds.compareDocumentPosition(screen.getByTestId('detail-name')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByTestId('detail-name').parentElement!.contains(kinds)).toBe(false);
-    const cup = kinds.querySelector('[data-icon="cafe-outline"]')!;
-    const fork = kinds.querySelector('[data-icon="restaurant-outline"]')!;
-    // Each in its kind's own hue, as its chip on Explore and its dot on
-    // the map: a colour code holds everywhere or it is not a code.
-    expect(cup.getAttribute('data-color')).toBe(CATEGORIES.cafes.color);
-    expect(fork.getAttribute('data-color')).toBe(CATEGORIES.eats.color);
-    expect(cup.getAttribute('data-color')).not.toBe(onPhoto.text);
-    const inner = getComputedStyle(kinds.firstElementChild!);
-    expect(inner.backgroundColor).toBe('rgba(10, 11, 10, 0.58)');
-    expect(inner.minHeight).toBe('44px');
-    // Glyphs only until asked; the names are what VoiceOver hears.
+    expect(kinds.textContent).toBe('CafésViews');
+    // In the page's column, after the score, not on the photograph.
+    expect(docOrder('detail-rating')).toBeLessThan(docOrder('detail-kinds'));
+    // A dot in each kind's own colour — the pin's — and no glyph.
+    const cafes = screen.getByTestId('detail-kinds-cafes');
+    expect(getComputedStyle(cafes.firstElementChild as HTMLElement).backgroundColor).toBe(rgb(CATEGORIES.cafes.color));
+    expect(kinds.querySelector('[data-icon]')).toBeNull();
+    // No count: the page has the room the card did not.
+    expect(within(kinds).queryByText(/^\+\d+$/)).toBeNull();
+    // A label, not a control.
+    expect(kinds.querySelector('[role="button"]')).toBeNull();
+    // The cover's glyph cluster is gone, and its caption with it.
     expect(screen.queryByTestId('detail-kinds-names')).toBeNull();
-    expect(within(kinds).queryByText(/Cafés/)).toBeNull();
-    expect(kinds.getAttribute('aria-label')).toBe('Cafés, Eats');
-    expect(kinds.getAttribute('role')).toBe('button');
-    // No row of pills left under the rating.
-    expect(screen.queryByTestId('detail-facts')).toBeNull();
-  });
-
-  const kindsState = () =>
-    propsWhere((p) => p.testID === 'detail-kinds').accessibilityState as unknown as Record<string, boolean>;
-
-  it('names the kinds on a tap, and folds them on the next', () => {
-    show(place({ categories: ['cafes', 'eats'] }));
-    const kinds = screen.getByTestId('detail-kinds');
-    expect(kindsState()).toEqual({ expanded: false });
-    fireEvent.click(kinds);
-    // In a caption over the cluster, not inside it: the pill keeps its
-    // size, so three names never run it into the dots.
-    const names = screen.getByTestId('detail-kinds-names');
-    expect(names.textContent).toBe('Cafés · Eats');
-    expect(kinds.contains(names)).toBe(false);
-    expect(getComputedStyle(names).bottom).toBe('65px');
-    expect(within(kinds).queryByText(/Cafés/)).toBeNull();
-    expect(kindsState()).toEqual({ expanded: true });
-    fireEvent.click(kinds);
-    expect(screen.queryByTestId('detail-kinds-names')).toBeNull();
-    expect(kindsState()).toEqual({ expanded: false });
-  });
-
-  // A hairline between glyphs: two glyphs 12pt apart read as one mark.
-  it('draws a rule between kinds and none for a single kind', () => {
-    show(place({ categories: ['cafes', 'eats', 'nightlife'] }));
-    // Three glyphs and the two rules between them, in that order.
-    const parts = [...screen.getByTestId('detail-kinds').firstElementChild!.children];
-    expect(parts).toHaveLength(5);
-    expect(parts.map((el) => el.hasAttribute('data-icon'))).toEqual([true, false, true, false, true]);
-    cleanup();
-    show(place({ categories: ['cafes'] }));
-    expect(screen.getByTestId('detail-kinds').firstElementChild!.children).toHaveLength(1);
   });
 
   it('names the kinds in Vietnamese', () => {
     state.lang = 'vi';
     show(place({ categories: ['cafes', 'eats'] }));
-    expect(screen.getByTestId('detail-kinds').getAttribute('aria-label')).toBe('Cà phê, Ăn uống');
+    expect(screen.getByTestId('detail-kinds').textContent).toBe('Cà phêĂn uống');
+  });
+
+  it('falls back to the legacy category for rows written before `categories`', () => {
+    show(place({ categories: [], category: 'food' }));
+    expect(screen.getByTestId('detail-kinds').textContent).toBe('Eats');
+  });
+
+  it('draws no row for a place nothing classifies', () => {
+    show(place({ categories: [], vibe_tags: [], category: 'out' }));
+    expect(screen.queryByTestId('detail-kinds')).toBeNull();
   });
 
   // ── check-in, a door drawn before the room behind it ──
@@ -824,10 +802,6 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByText(/person|Free/)).toBeNull();
   });
 
-  it('falls back to the legacy category for rows written before `categories`', () => {
-    show(place({ categories: [], category: 'food' }));
-    expect(screen.getByTestId('detail-kinds').getAttribute('aria-label')).toBe('Eats');
-  });
 
   it('prints the description', () => {
     show();
@@ -1822,10 +1796,10 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     state.uid = 'u1';
     state.guide = true;
     show(place({ rating: 4.1, rating_count: 604, categories: ['cafes', 'eats'], submitted_by: 'u1' }));
-    // The kinds ride the cover, so they are said before the name.
-    expect(order('detail-kinds')).toBeLessThan(order('detail-name'));
+    // The kinds sit under the score, before the paragraph.
     expect(order('detail-name')).toBeLessThan(order('detail-rating'));
-    expect(order('detail-rating')).toBeLessThan(order('detail-why'));
+    expect(order('detail-rating')).toBeLessThan(order('detail-kinds'));
+    expect(order('detail-kinds')).toBeLessThan(order('detail-why'));
     expect(order('detail-why')).toBeLessThan(order('guide-panel'));
     expect(order('guide-panel')).toBeLessThan(order('detail-address'));
   });
@@ -1913,29 +1887,19 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(screen.queryByTestId('detail-why')).toBeNull();
   });
 
-  // One card for the paragraph and the chips, on the surface the address
-  // card wears: two grounds on the screen, the page and the cards. Not the
-  // accent's tint, which is for state; not the glass, which is a third
-  // ground. No card where there is neither a paragraph nor a tag.
-  it('puts the highlights and the vibes in one card on the info card’s surface, and no card without highlights', () => {
-    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['quiet'] }));
+  // One card for the paragraph, on the surface the address card wears:
+  // two grounds on the screen, the page and the cards. Not the accent's
+  // tint, which is for state; not the glass, which is a third ground. No
+  // card where there is no paragraph.
+  it('puts the highlights in a card on the info card’s surface, and no card without them', () => {
+    show(place({ desc_en: 'Brunch and counter food under the arches.' }));
     const card = screen.getByTestId('detail-why-card');
     expect(card.contains(screen.getByTestId('detail-why'))).toBe(true);
-    expect(card.contains(screen.getByTestId('detail-vibes'))).toBe(true);
     const fill = getComputedStyle(card).backgroundColor;
     expect(fill).not.toBe('rgba(0, 0, 0, 0)');
     expect(fill).toBe(getComputedStyle(screen.getByTestId('detail-info-card')).backgroundColor);
-    // The chip is a step of glass over the card, not the card's own fill.
-    expect(getComputedStyle(screen.getByTestId('detail-vibe-quiet')).backgroundColor).not.toBe(fill);
     cleanup();
-    // No paragraph: no card, and the chips stand bare — a card around one
-    // chip read as a box in a box, on 720 of 940 live places.
-    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['quiet'] }));
-    expect(screen.queryByTestId('detail-why-card')).toBeNull();
-    const bare = screen.getByTestId('detail-vibes');
-    expect(getComputedStyle(bare.parentElement!).backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    cleanup();
-    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: [] }));
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null }));
     expect(screen.queryByTestId('detail-why-card')).toBeNull();
   });
 
@@ -1948,48 +1912,20 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(screen.getByText(label)).toBeTruthy();
   });
 
-  // The judgements as small chips: one fill from the theme, a grey glyph
-  // and the word, no dot in any hue, nothing pressable, with or without a
-  // blurb. A vibe that restates a category is the cover's to say.
-  it('says each judgement under the highlights as a chip in the theme’s glass, and none where there are none', () => {
-    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes', 'quiet', 'views', 'romantic'] }));
-    const vibes = screen.getByTestId('detail-vibes');
-    expect(vibes.textContent).toBe('QuietRomantic');
-    expect(screen.queryByTestId('detail-vibe-cafes')).toBeNull();
-    const chip = screen.getByTestId('detail-vibe-quiet');
-    // Its own glyph, in the grey every judgement wears — never a hue.
-    const glyph = chip.querySelector('[data-icon="volume-low-outline"]') as HTMLElement;
-    expect(glyph).toBeTruthy();
-    expect(glyph.getAttribute('data-color')).toBe(String(colors.textSecondary));
-    expect(screen.getByTestId('detail-vibe-romantic').querySelector('[data-icon="heart-outline"]')!
-      .getAttribute('data-color')).toBe(String(colors.textSecondary));
-    const fill = getComputedStyle(chip).backgroundColor;
-    expect(fill).not.toBe('rgba(0, 0, 0, 0)');
-    expect(getComputedStyle(screen.getByTestId('detail-vibe-romantic')).backgroundColor).toBe(fill);
-    expect(getComputedStyle(chip).borderTopWidth === '' || getComputedStyle(chip).borderTopWidth === '0px').toBe(true);
-    expect(vibes.querySelector('[role="button"]')).toBeNull();
-    cleanup();
-    show(place({ vibe_tags: [] }));
+  // The vibes are the planner's, not this screen's (owner, 15 Oct 2026):
+  // a judgement on 123 of 976 places read as a verdict where it was
+  // missing. None is drawn, with or without a paragraph — and a vibe that
+  // restates a category is said once, by the kinds row.
+  it('draws no vibe, judgement or otherwise', () => {
+    show(place({ desc_en: 'Brunch.', categories: ['cafes'], vibe_tags: ['cafes', 'quiet', 'romantic', 'late_night'] }));
     expect(screen.queryByTestId('detail-vibes')).toBeNull();
+    expect(screen.queryByText('Quiet')).toBeNull();
+    expect(screen.queryByText('Romantic')).toBeNull();
+    expect(screen.queryByText('Late night')).toBeNull();
+    expect(screen.getAllByText('Cafés')).toHaveLength(1);
     cleanup();
-    // Every tag a restatement: nothing left to say here, and no empty row.
-    show(place({ vibe_tags: ['cafes', 'food_tour'] }));
-    expect(screen.queryByTestId('detail-vibes')).toBeNull();
-  });
-
-  // A key the table has not learned is not a restatement of anything; it
-  // keeps its word, and has no glyph to wear.
-  it('names a judgement the table has never heard of, with no glyph', () => {
-    show(place({ vibe_tags: ['late_night'] }));
-    const chip = screen.getByTestId('detail-vibe-late_night');
-    expect(chip.textContent).toBe('Late night');
-    expect(chip.querySelector('[data-icon]')).toBeNull();
-  });
-
-  it('says the judgements even where the desk has written nothing', () => {
-    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['nightlife', 'kid_friendly'] }));
-    expect(screen.queryByTestId('detail-why')).toBeNull();
-    expect(screen.getByTestId('detail-vibes').textContent).toBe('Kid-friendly');
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['chill'] }));
+    expect(screen.queryByText('Chill')).toBeNull();
   });
 
   // Whose words these are. Most blurbs are the desk's own and carry no

@@ -1,5 +1,5 @@
-// Place detail — hero carousel with a page count, floating share/save and
-// the place's kinds as glyphs, the score with check-in beside it, and one
+// Place detail — hero carousel with a page count, floating share/save, the
+// score with check-in beside it, the place's kinds as the card's pills, and one
 // grouped card of Address / Hours / Call / Website rows, the weekly table
 // folded behind the open-now line.
 //
@@ -33,7 +33,7 @@ import { usePlaces } from '../lib/catalog';
 import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
-import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
+import { kindsInOrder } from '../lib/categories';
 import MiniMap, { canDrawMap } from '../components/MiniMap';
 import PhotoCarousel from '../components/PhotoCarousel';
 import { PAGE_COUNT_H } from '../components/PageCount';
@@ -47,13 +47,13 @@ import { useI18n } from '../lib/i18n';
 import { localized, localizedLang } from '../lib/localized';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
-import { judgementsOf, VIBES, vibeLabel } from '../lib/vibes';
 import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Card, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
+import { KindPills } from '../components/KindPill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
 
@@ -178,9 +178,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // reload after a tap here is what the profile's count draws too.
   const visits = useMyCheckins();
   const [checkinMenu, setCheckinMenu] = useState(false);
-  // The category icons on the cover say their names on a tap, and say
-  // nothing until then — see "kinds" over the hero.
-  const [kindsOpen, setKindsOpen] = useState(false);
   const [checking, setChecking] = useState(false);
   // How many lines the address wanted before anything clamped it, and
   // whether the reader has asked for the rest. `null` is "not measured
@@ -238,7 +235,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
   const photos = photosOf(place);
   const reviews = fmtCount(place.rating_count);
-  const cats = categoriesOf(place);
+  // The pin's category first, so the page leads where the card led.
+  const kindOrder = kindsInOrder(place);
   const priceShown = showPrice && (place.price_display || place.price_vnd != null);
   // Full width, and tall enough that what shows *below* the status bar is
   // still the 4:3.4 frame the inset card had — the inset's worth of
@@ -463,68 +461,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
             </PressableScale>
 
-            {/* ── kinds ──
-                What kind of place this is, as glyphs on the picture, where
-                it used to be a row of labelled pills under the rating. That
-                row was the fourth band of boxes between the photograph and
-                the first fact a reader acts on, and the owner's reference
-                drew the kinds where the eye already is: bottom left, the
-                corner the page count leaves free.
-
-                The material is the cover's, not the page's. The back,
-                share and bookmark discs are one dark glass in both themes
-                because the ground under them is a photograph, not paper or
-                charcoal; a paper pill here would vanish into a bright
-                storefront, which is exactly what this cover has.
-
-                Glyphs in each kind's own hue, the one its chip wears on
-                Explore and its dot on the map. They shipped white first
-                (#854), beside the three white discs, and that broke the
-                rule `collectionBadge` on Explore records: a category glyph
-                wears its colour everywhere, because a colour code is only a
-                code if it holds everywhere, and the one white glyph that
-                used to exist was taken out for exactly that. The hues are
-                mid-tones made for dark ground, and this ground is dark
-                glass in both themes.
-
-                Words on a tap. Six of the nine glyphs say their kind on
-                sight; three do not — Views is a building, Culture a
-                library, Focus a book — so a tap names them, in a caption
-                over the cluster, and a second tap takes it away. Over it,
-                not inside it: opened in place, three names made the pill
-                about 330pt wide, and on a 390pt phone the page count
-                leaves it about 285 (it measured against the dots' 250
-                first). VoiceOver hears the names either way. */}
-            {cats.length > 0 && (
-              <PressableScale
-                onPress={() => setKindsOpen((o) => !o)}
-                scaleTo={0.96}
-                haptic="selection"
-                accessibilityRole="button"
-                accessibilityLabel={cats.map((c) => categoryLabel(c, t)).join(', ')}
-                accessibilityState={{ expanded: kindsOpen }}
-                containerStyle={[s.fabSlot, s.kindsSlot]}
-                style={s.kinds}
-                testID="detail-kinds"
-              >
-                {cats.map((c, i) => (
-                  <React.Fragment key={c}>
-                    {i > 0 ? <View style={s.kindsRule} /> : null}
-                    <Ionicons name={CATEGORIES[c]?.icon ?? 'pricetag-outline'} size={19} color={CATEGORIES[c]?.color ?? onPhoto.text} />
-                  </React.Fragment>
-                ))}
-              </PressableScale>
-            )}
-            {cats.length > 0 && kindsOpen ? (
-              <View
-                pointerEvents="none"
-                style={[s.fabSlot, s.kindsTip, { maxWidth: heroW - 2 * space.page }]}
-                testID="detail-kinds-names"
-              >
-                <Text style={s.kindText}>{cats.map((c) => categoryLabel(c, t)).join(' · ')}</Text>
-              </View>
-            ) : null}
-
             {/* Where the reader is in the photographs is `PageCount`'s
                 "2 / 4" at the bottom right, drawn by the carousel — see
                 that file for why a count and not dots. Not read aloud:
@@ -608,20 +544,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     onPress: () => {},
   }];
 
-  // The vibe chips, drawn in the highlights card when there is a
-  // paragraph and bare when there is not — see the card's note. Only the
-  // judgements: a vibe that restates a category is already on the cover.
-  const judged = judgementsOf(place.vibe_tags);
-  const vibes = judged.length ? (
-    <View style={[s.vibes, desc ? null : s.vibesBare]} testID="detail-vibes">
-      {judged.map((v) => (
-        <View key={v} style={s.vibe} testID={`detail-vibe-${v}`}>
-          {VIBES[v] ? <Ionicons name={VIBES[v].icon} size={14} color={colors.textSecondary} /> : null}
-          <Text style={s.vibeText}>{vibeLabel(v, t)}</Text>
-        </View>
-      ))}
-    </View>
-  ) : null;
 
   return (
     // No top safe area: the photograph is what belongs against the top of
@@ -727,9 +649,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {/* ── the score, and the one thing to do about it ──
               The rating at the left, check-in at the right: one line that
               used to be two bands, the score and then a row of category
-              pills with the pill at its end. The categories are on the
-              cover now (see "kinds"); what was left of their row was a
-              control with nothing to sit beside. */}
+              pills with the pill at its end. The categories went onto the
+              cover then, and came back under this line on 15 Oct 2026 as a
+              row of their own (see "what the place is"); check-in stays
+              here, beside the score it answers. */}
           {(place.rating || showCheckin || priceShown) ? (
           <View style={s.metaRow} testID="detail-meta">
           <View style={s.metaFacts}>
@@ -898,6 +821,29 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           </View>
           ) : null}
 
+          {/* ── what the place is ──
+              Every category, as the pill the feed's card wears — the card
+              says "● Cà phê | +1" because its line has room for one, and
+              this is where the "+1" is named (owner, 15 Oct 2026). Same
+              component (`KindPill`), so the two cannot drift.
+
+              It replaces the glyphs that sat on the cover since #854. They
+              said the same categories a second way — no words, a tap to
+              name them — and the reader who came from "+1" did not find
+              it there: three of the nine glyphs do not say their kind on
+              sight, and the chips under the rating, which were the vibes,
+              read as the "+1" instead. The vibes are gone from this
+              screen too (the owner's call, the same day): the four
+              judgements are on 123 of 976 places, so their absence read
+              as a verdict it was not, and the planner, which is what
+              they were for, still reads them from the row.
+
+              In `kindsInOrder`: the pin's category first, so the pill that
+              leads here is the one the card led with, then the filter
+              row's order. 14 under the meta row, the step the vibes kept
+              from it. */}
+          <KindPills kinds={kindOrder} style={s.kindRow} testID="detail-kinds" />
+
           {/* ── highlights ── */}
           {/* Unlabelled, the description read as boilerplate and got
               skimmed; named, it is the paragraph a reader stops for.
@@ -950,7 +896,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               not the edge: 720 of 940 live places had no blurb on 14 Oct
               2026. Without a paragraph the chips stand bare, as they did
               before the card. The chips keep the glass inside the card,
-              5% over the card's own ground. */}
+              5% over the card's own ground.
+
+              Since 15 Oct 2026 the card holds the paragraph alone: the
+              vibe chips left this screen (see "what the place is"). */}
           {desc ? (
           <Card style={s.whyCard} testID="detail-why-card">
             <View style={s.why} testID="detail-why">
@@ -1061,45 +1010,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               </View>
             </View>
 
-          {/* ── vibes ──
-              What the place feels like. `vibe_tags` was on every card in
-              the feed and on no detail screen — a reader who opened "Yên
-              tĩnh" from the feed found the word gone. Every tag here, not
-              the card's one-and-a-count: the card's line had room for one,
-              and this screen has the room.
-
-              Chips, since the evening of 12 Oct 2026, and small ones. The
-              first cut was the card's dot-and-word, on the argument that a
-              filled pill on this screen says "press me" (the check-in
-              button, the filter row on Explore). The owner's answer: what
-              says "press me" is the height, not the fill. Those controls
-              are 44pt; a 24pt chip with no border is a label, the way a
-              category tag under an App Store listing is, and a label is
-              what a vibe is — the reader learns the place is quiet, or
-              good to work in, and taps nothing. No dot inside, and one fill
-              for all of them, the theme's own glass (`surfaceGlass`, the
-              look cards' and the info card's material): the vibe palette's
-              hues sit next to the category pills' hues on the same screen,
-              and two colour systems for two taxonomies is one more than a
-              reader can hold. Not the accent's tint, either, which the
-              heading, the pick and the credit already carry — three more
-              would stop it marking anything. Drawn with or without a
-              blurb: the tags are the desk's, the blurb may be Google's,
-              and a place can have the one and not the other.
-
-              Only the judgements, since 15 Oct 2026, each behind its own
-              glyph in the chip's grey. The seven vibes that restate a
-              category (`restatesCategory`) said "Cà phê" here in grey
-              while the cover said it in the category's hue, one fact in
-              two styles; on the live catalog that was 1,152 of 1,350
-              tags. The owner's rule for every tag in the app: colour is
-              the category's, a judgement is a neutral glyph, free words
-              are words. The glyph is what tells a reader this is the
-              second kind and not the first, so it never borrows a
-              category's (`taxonomy.test.ts`). */}
-            {vibes}
           </Card>
-          ) : vibes}
+          ) : null}
 
           {/* The one offer this screen makes to the person who put the
               place here. Draws nothing for everybody else — see
@@ -1602,30 +1514,6 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
-  // Bottom left, the page margin in, bottoms flush with the page count at
-  // its right (`countBottom` 15). The labelled pill's alpha (0.58, as
-  // the rating pill on a card) rather than the discs' 0.55: it carries
-  // type once open. 44 tall, the target every control here has.
-  kindsSlot: { left: space.page, bottom: 15 },
-  kinds: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    minHeight: 44, paddingHorizontal: 14, borderRadius: radius.pill,
-    backgroundColor: 'rgba(10,11,10,0.58)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
-  // The names, one step over the cluster: its 15 + 44, and 6 of air.
-  // The credit, when its switch is on, sits at the right at 44, so the
-  // two share no line.
-  kindsTip: {
-    left: space.page, bottom: 15 + 44 + 6,
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.pill,
-    backgroundColor: 'rgba(10,11,10,0.58)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
-  kindText: { color: onPhoto.text, fontSize: 13, fontWeight: font.medium },
-  // The divider the reference drew between glyphs: without it two glyphs
-  // 12pt apart read as one mark.
-  kindsRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: onPhoto.line },
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
   // Above the page count, right-aligned to it: the line its old seat's note
@@ -1666,6 +1554,7 @@ const s = StyleSheet.create({
   // pill: the line is one 24pt row of text beside a 44pt control, and a
   // top-aligned score sat 10pt high of the pill's word.
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, minHeight: 24 },
+  kindRow: { marginTop: 14 },
   metaFacts: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 4 },
   priceLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   // The score keeps the size and weight it wore inside the badge. It was
@@ -1762,18 +1651,6 @@ const s = StyleSheet.create({
   // from the heading row — so it reads as a mark, not a second title.
   pick: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
   pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.8, textTransform: 'uppercase' },
-  // A label's chip (see the block): 24pt — 16 of line and 4 of padding
-  // each way — against the 44pt of anything on this screen that is
-  // pressed; the theme's glass, no border, no dot; a 14pt glyph in grey,
-  // one point over the 13pt word, the step `Chip` keeps (15 over 14).
-  vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  // Bare, under the meta row: the 14 the card would have kept from it.
-  vibesBare: { marginTop: 14 },
-  vibe: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.surfaceGlass,
-  },
-  vibeText: { color: colors.text, fontSize: 13, lineHeight: 16, fontWeight: font.semibold },
 
   // The paragraph's last run (see the block): one step under its size,
   // quieter than the sentence it attributes. The link colour is the only

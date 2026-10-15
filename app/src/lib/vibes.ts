@@ -21,10 +21,13 @@
 // a second road, and the detail screen, which drew vibes without one,
 // said "Cà phê" twice in two styles — glyph in its hue on the cover,
 // grey chip below. The rule ends both: the card's pill reads the
-// category, and only the four judgements reach the detail screen.
+// category, and the four judgements reached the detail screen alone —
+// until later that day, when the owner took them off it too (123 of 976
+// places carry one, so a missing "Quiet" read as a verdict it was not).
+// They are the planner's now (`COMPANY_LEAN`), which is what they were
+// added for; nothing in the app draws a vibe.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
-import { restatesCategory } from './categories';
 
 export type VibeStyle = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -40,9 +43,6 @@ export const VIBES: Record<string, VibeStyle> = {
   views: { icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望' },
   culture: { icon: 'library-outline', en: 'Culture', vi: 'Văn hóa', ja: 'カルチャー' },
   outdoors: { icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然' },
-  // Not the leaf it wore while vibes had colours: that is Nature's
-  // glyph, and a grey leaf under a green one on the same screen says one
-  // thing two ways, which is the confusion this file's note retires.
   chill: { icon: 'happy-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり' },
   shopping: { icon: 'bag-outline', en: 'Shopping', vi: 'Mua sắm', ja: 'ショッピング' },
 
@@ -76,16 +76,4 @@ export function vibeLabel(key: string, t: (en: string, vi: string, ja?: string) 
   const v = VIBES[key];
   if (v) return t(v.en, v.vi, v.ja);
   return key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
-}
-
-/**
- * The tags that say something the place's category does not: the
- * judgements, in stored order.
- *
- * A key the table has never heard of stays — it cannot be a restatement
- * of anything, and new data should show rather than vanish (see
- * `vibeLabel`).
- */
-export function judgementsOf(tags: readonly string[]): string[] {
-  return tags.filter((v) => !restatesCategory(v));
 }
