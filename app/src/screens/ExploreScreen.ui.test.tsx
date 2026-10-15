@@ -261,9 +261,9 @@ const listProps = (): ListProps => {
 };
 /** The pinned block — the heading, its control and the chips. */
 const sectionHeader = (): HTMLElement => {
-  // Up from a chip, which only the section header draws, to the element
-  // carrying the row's own bottom padding.
-  let el: HTMLElement | null = screen.getByText('All');
+  // Up from the filter control, which only the section header draws, to
+  // the element carrying the row's own bottom padding.
+  let el: HTMLElement | null = screen.getByTestId('explore-filter');
   while (el && window.getComputedStyle(el).paddingBottom !== '10px') el = el.parentElement;
   if (!el) throw new Error('no pinned chips row in the tree');
   return el;
@@ -724,54 +724,78 @@ describe('the category filter', () => {
     place('cafe2', { categories: ['cafes'] }),
   ];
 
-  it('offers All plus only the categories this city has, in taxonomy order', () => {
+  const on = (name: string) => chip(name).getAttribute('aria-selected') === 'true';
+
+  // No "All" chip (owner, 15 Oct 2026): nothing chosen is everything.
+  it('offers only the categories this city has, in taxonomy order, none chosen', () => {
     state.places.data = [place('bar1', { categories: ['nightlife'] }), place('cafe1', { categories: ['cafes'] })];
     render(<ExploreScreen navigation={nav()} />);
-    expect(chip('All')).toBeTruthy();
+    expect(noChip('All')).toBeNull();
     const cafes = chip('Cafés');
     const night = chip('Nightlife');
     expect(cafes.compareDocumentPosition(night) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(noChip('Eats')).toBeNull();
+    expect(on('Cafés') || on('Nightlife')).toBe(false);
+    expect(cardNames()).toHaveLength(2);
   });
 
-  it('narrows the list to the chosen category, and All brings it back', () => {
+  // Any number chosen; a place shows if it carries any of them, so a
+  // second chip widens. A chip tapped again lets go of its kind.
+  it('narrows to any chosen category, widens with a second, and lets go on a second tap', () => {
     state.places.data = mixed();
     render(<ExploreScreen navigation={nav()} />);
     expect(cardNames()).toHaveLength(3);
     fireEvent.click(chip('Cafés'));
+    expect(on('Cafés')).toBe(true);
     expect(cardNames().every((n) => n.includes('cafe'))).toBe(true);
     expect(cardNames()).toHaveLength(2);
     fireEvent.click(chip('Eats'));
+    expect(on('Cafés') && on('Eats')).toBe(true);
+    expect(cardNames()).toHaveLength(3);
+    fireEvent.click(chip('Cafés'));
+    expect(on('Cafés')).toBe(false);
     expect(cardNames()).toHaveLength(1);
     expect(cardNames()[0]).toContain('Place bar1');
-    fireEvent.click(chip('All'));
+    fireEvent.click(chip('Eats'));
     expect(cardNames()).toHaveLength(3);
   });
 
-  it('drops back to All when a city switch retires the chosen chip', () => {
+  // A city switch retires one chosen chip and keeps the others.
+  it('lets go of a chosen chip a city switch retires, and keeps the rest', () => {
     state.places.data = mixed();
     const { rerender } = render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(chip('Eats'));
-    expect(cardNames()).toHaveLength(1);
-    state.places.data = [place('cafe9', { categories: ['cafes'] }), place('cafe8', { categories: ['cafes'] })];
+    fireEvent.click(chip('Cafés'));
+    expect(cardNames()).toHaveLength(3);
+    state.places.data = [
+      place('cafe9', { categories: ['cafes'] }),
+      place('cafe8', { categories: ['cafes'] }),
+      place('park', { categories: ['nature'] }),
+    ];
     rerender(<ExploreScreen navigation={nav()} />);
     expect(noChip('Eats')).toBeNull();
+    expect(on('Cafés')).toBe(true);
     expect(cardNames()).toHaveLength(2);
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
   });
 });
 
 // The card's pill follows the pin's rule: under a chip it names the chip,
-// so the row, the pins and the cards say one thing.
+// so the row, the pins and the cards say one thing. Under several, the
+// first chosen in the row's order that the place carries.
 describe('the card under a chip', () => {
-  it('names the chip rather than what the place is most', () => {
-    state.places.data = [place('work1', { categories: ['cafes', 'focus'] })];
+  it('names the chosen chip it answers to rather than what the place is most', () => {
+    state.places.data = [place('work1', { categories: ['cafes', 'focus', 'eats'] })];
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+1');
+    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+2');
+    fireEvent.click(screen.getByRole('button', { name: 'Eats' }));
+    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Eats+2');
+    // Focus comes before Eats in the row, whatever order they were tapped.
     fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
-    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Focus+1');
-    fireEvent.click(screen.getByRole('button', { name: 'All' }));
-    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+1');
+    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Focus+2');
+    fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eats' }));
+    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+2');
   });
 });
 
@@ -1098,7 +1122,7 @@ describe('the map', () => {
   // that is also a place to work would otherwise come out café-brown
   // under Focus, because a place that is several things takes the first
   // of them — true at "All", noise inside a chip.
-  it('paints the pins in the chip’s picture, and lets them speak for themselves at All', async () => {
+  it('paints the pins in the chip’s picture, and lets them speak for themselves with none chosen', async () => {
     state.places.data = [
       place('a', { lat: 21, lng: 105, categories: ['cafes', 'focus'] }),
       place('b', { lat: 21.1, lng: 105.1, categories: ['focus'] }),
@@ -1113,7 +1137,8 @@ describe('the map', () => {
     fireEvent.click(screen.getByText('Focus'));
     expect(pins()).toEqual([focusPin, focusPin]);
 
-    fireEvent.click(screen.getByText('All'));
+    // Tapped again, the chip lets go: each pin is its own kind again.
+    fireEvent.click(screen.getByText('Focus'));
     expect(pins()).toEqual([cafesPin, focusPin]);
   });
 

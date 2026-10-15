@@ -27,8 +27,7 @@ export type Countable = Filterable & { city_id: string | null };
 export function countsByCity(
   rows: readonly Countable[],
   options: {
-    category: string;
-    allCategory: string;
+    categories: readonly string[];
     status: ExploreStatus;
     savedOnly: boolean;
     isSaved: (slug: string) => boolean;

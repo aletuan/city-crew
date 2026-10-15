@@ -41,8 +41,7 @@ const defaults: ExploreFilters = { sort: 'recommended', status: 'any', savedOnly
 const run = (places: Place[], over: Partial<Parameters<typeof filterExplorePlaces>[1]> = {}) =>
   filterExplorePlaces(places, {
     ...defaults,
-    category: 'all',
-    allCategory: 'all',
+    categories: [],
     origin: null,
     isSaved: () => false,
     isVisited: () => false,
@@ -54,7 +53,13 @@ describe('Explore filters', () => {
   it('preserves the recommendation order by default and filters categories', () => {
     const places = [place('first'), place('second', { categories: ['heritage'] })];
     expect(run(places).map((p) => p.slug)).toEqual(['first', 'second']);
-    expect(run(places, { category: 'heritage' }).map((p) => p.slug)).toEqual(['second']);
+    expect(run(places, { categories: ['heritage'] }).map((p) => p.slug)).toEqual(['second']);
+  });
+
+  // Two chips widen: a place carrying either survives, in the feed's order.
+  it('keeps a place carrying any of the chosen categories', () => {
+    const places = [place('cafe'), place('museum', { categories: ['heritage'] }), place('park', { categories: ['nature'] })];
+    expect(run(places, { categories: ['nature', 'cafes'] }).map((p) => p.slug)).toEqual(['cafe', 'park']);
   });
 
   it('separates known open and closed places without pretending unknown hours are closed', () => {

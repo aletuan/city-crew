@@ -28,6 +28,7 @@ import type { ExploreOrigin } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { pinImage } from './mapPins';
+import { chosenKind } from '../lib/categories';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 import MapBoundary from './MapBoundary';
@@ -73,12 +74,12 @@ const OPENING_SPAN = 0.05;
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
 
-export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING }: {
+export default function PlacesMap({ places, selectedSlug, onSelect, categories, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING }: {
   places: readonly Place[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
   /**
-   * The category chip the reader is standing in, or null for the whole
+   * The category chips the reader has chosen, or none for the whole
    * catalog.
    *
    * Inside a chip every pin is already that kind of place, so painting
@@ -86,8 +87,10 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
    * filter row says Focus while a dozen pins say café, because a place
    * that is both takes the earlier of the two. Under a chip the chip's
    * own colour is the honest one — one kind asked for, one colour back.
+   * Under several, each pin takes the chosen kind it answers to, first
+   * in the row's order (`chosenKind`).
    */
-  category: string | null;
+  categories: readonly string[];
   /** The reader's fix, if they gave one — the first place the view
    *  centres on when there is nothing chosen yet. */
   origin: ExploreOrigin | null;
@@ -277,7 +280,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             // unconditionally, and `didInsertInMap` applies it again — it
             // would erase the picture on every tap, since the prop used to
             // vary with the chosen slug. A fallback that eats its subject.
-            image={pinImage(p, category, p.slug === selectedSlug)}
+            image={pinImage(p, chosenKind(p, categories), p.slug === selectedSlug)}
             // Already the default; written down so the tip of the teardrop
             // is the thing standing on the coordinate. An asset drawn to a
             // different shape would have to revisit it.

@@ -11,8 +11,7 @@ const week = (line: string) => Array.from({ length: 7 }, (_, i) =>
 // A Tuesday, mid-afternoon in the app's timezone.
 const NOW = new Date('2026-09-15T08:00:00Z');
 const NONE = () => false;
-const ALL = 'all';
-const plain = { category: ALL, allCategory: ALL, status: 'any' as const, savedOnly: false, isSaved: NONE, visitedOnly: false, isVisited: NONE, now: NOW, tz: () => 'Asia/Ho_Chi_Minh' };
+const plain = { categories: [] as string[], status: 'any' as const, savedOnly: false, isSaved: NONE, visitedOnly: false, isVisited: NONE, now: NOW, tz: () => 'Asia/Ho_Chi_Minh' };
 
 describe('countsByCity', () => {
   it('counts each city under its own id', () => {
@@ -34,7 +33,9 @@ describe('countsByCity', () => {
       row('d', 'hcmc', { categories: ['eats'] }),
       row('e', 'hcmc', { categories: ['cafes', 'focus'] }),
     ];
-    expect(countsByCity(rows, { ...plain, category: 'cafes' })).toEqual({ hanoi: 1, hcmc: 2 });
+    expect(countsByCity(rows, { ...plain, categories: ['cafes'] })).toEqual({ hanoi: 1, hcmc: 2 });
+    // Any of several, counted once however many it carries.
+    expect(countsByCity(rows, { ...plain, categories: ['cafes', 'eats', 'focus'] })).toEqual({ hanoi: 2, hcmc: 3 });
   });
 
   it('narrows every city by the opening hours', () => {
@@ -70,7 +71,7 @@ describe('countsByCity', () => {
   // zero says something. The caller decides which to draw.
   it('leaves out a city where nothing survives', () => {
     const rows = [row('a', 'hanoi', { categories: ['cafes'] }), row('b', 'hcmc', { categories: ['eats'] })];
-    const counts = countsByCity(rows, { ...plain, category: 'cafes' });
+    const counts = countsByCity(rows, { ...plain, categories: ['cafes'] });
     expect(counts.hcmc).toBeUndefined();
     expect(counts).toEqual({ hanoi: 1 });
   });

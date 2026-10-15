@@ -14,6 +14,7 @@ import {
   categoriesOf,
   categoryColor,
   categoryLabel,
+  chosenKind,
   kindsInOrder,
   pinCategory,
   pinTint,
@@ -283,5 +284,28 @@ describe('the pin assets', () => {
   it('drew nothing the table does not ask for', () => {
     const wanted = new Set([...CATEGORY_ORDER, 'neutral'].flatMap((k) => [k, `${k}-chosen`]));
     expect(Object.keys(manifest).sort()).toEqual([...wanted].sort());
+  });
+});
+
+// Which chosen chip a place answers to when several are chosen: the first
+// in the filter row's order that it carries, whatever the tapping order.
+describe('chosenKind', () => {
+  const place = { categories: ['eats', 'focus', 'cafes'] };
+
+  it('is null with nothing chosen', () => {
+    expect(chosenKind(place, [])).toBeNull();
+  });
+
+  it('is the first chosen in the row’s order that the place carries', () => {
+    expect(chosenKind(place, ['eats', 'focus'])).toBe('focus');
+    expect(chosenKind(place, ['eats', 'nature'])).toBe('eats');
+  });
+
+  it('is null when the place carries none of the chosen', () => {
+    expect(chosenKind(place, ['nature', 'fun'])).toBeNull();
+  });
+
+  it('reads a legacy row the way categoriesOf does', () => {
+    expect(chosenKind({ vibe_tags: ['food_tour'] }, ['eats'])).toBe('eats');
   });
 });
