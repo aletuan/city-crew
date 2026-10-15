@@ -81,9 +81,10 @@ export default function CollectionFormScreen({ navigation, route }: {
   const copyFrom = route.params?.copyFrom;
   // A copy opens with its provenance already written in: "Copy of X" as
   // the title — a suggestion sitting in an editable field, not a suffix
-  // welded on — and the source's description with the credit line the
-  // detail screen composed. Truncated because the prefix can push a
-  // long source title past what one row holds.
+  // welded on — and the source's description as the curator wrote it.
+  // Where the copy came from is `copiedFrom`, saved onto the row, not a
+  // line of text. Truncated because the prefix can push a long source
+  // title past what one row holds.
   const [title, setTitle] = useState(() => (copyFrom
     ? t(`Copy of ${copyFrom.title}`, `Bản sao của ${copyFrom.title}`, `「${copyFrom.title}」のコピー`).slice(0, MAX_TITLE)
     : route.params?.title ?? ''));
