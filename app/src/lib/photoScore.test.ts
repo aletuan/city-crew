@@ -69,13 +69,59 @@ describe('explainScore', () => {
   });
 
   it('puts what helped first, capitalised, then what held it back', () => {
-    expect(why({ brightness: 0.5, sharpness: 400, tilt: 4.4 }))
+    expect(why({ brightness: 0.5, sharpness: 2500, tilt: 4.4 }))
       .toBe('Well lit, sharp. Held back by: horizon tilted 4°.');
   });
 
-  it('leads with Vision\'s "a record, not a picture" when it says so', () => {
-    expect(why({ brightness: 0.5 }, { is_utility: true }))
-      .toBe('Vision reads this as a record — a menu, a sign, a document — rather than a picture. Well lit.');
+  describe('a record, not a picture', () => {
+    const LEAD = 'Lots of writing in frame — it reads like a menu or a sign rather than a picture.';
+
+    it('leads with it when Vision flags it and writing was measured', () => {
+      expect(why({ brightness: 0.5, textArea: 0.2 }, { is_utility: true })).toBe(`${LEAD} Well lit.`);
+      expect(why({ textLines: 6 }, { is_utility: true })).toBe(LEAD);
+    });
+
+    it('takes a document or board label as the evidence too', () => {
+      expect(why({ labels: [{ id: 'chalkboard', p: 0.3 }] }, { is_utility: true })).toBe(LEAD);
+      expect(why({ labels: [{ id: 'chalkboard', p: 0.29 }] }, { is_utility: true }))
+        .toBe('Nothing measured stands out either way.');
+    });
+
+    // Bengal rooftop's bar, as the phone read it on 15 Oct 2026: flagged
+    // by Vision, no writing, no document label, and Vision unsure of
+    // everything it saw. The first build captioned it as a menu.
+    it('says nothing of it when only the flag is there', () => {
+      const bar: Signals = {
+        width: 1200, height: 900, brightness: 0.114, shadows: 0.409, highlights: 0,
+        sharpness: 947.5, textArea: 0, textLines: 0, people: 0, peopleArea: 0,
+        subject: { x: 0.454, y: 0.49, area: 0.628 },
+        labels: [
+          { id: 'structure', p: 0.257 }, { id: 'furniture', p: 0.256 }, { id: 'table', p: 0.225 },
+          { id: 'stool', p: 0.204 }, { id: 'art', p: 0.197 },
+        ],
+      };
+      const said = why(bar, { is_utility: true });
+      expect(said).toBe('Held back by: a little dark, shadows lose detail.');
+      expect(why(bar, { is_utility: true }, vi_)).not.toMatch(/menu|thực đơn|biển hiệu|giấy tờ/);
+    });
+
+    it('says nothing of the flag on a reading with nothing measured beside it', () => {
+      expect(why({}, { is_utility: true })).toBe('Nothing measured stands out either way.');
+      expect(explainScore({ is_utility: true, signals: undefined as unknown as Signals }, en))
+        .toBe('Nothing measured stands out either way.');
+    });
+
+    it('names the writing once, in the lead, not again among what held it back', () => {
+      expect(why({ textArea: 0.2 }, { is_utility: true })).not.toContain('a lot of writing in frame');
+      expect(why({ textArea: 0.2 })).toBe('Held back by: a lot of writing in frame.');
+    });
+
+    it('speaks Vietnamese and Japanese', () => {
+      expect(why({ textArea: 0.2 }, { is_utility: true }, vi_))
+        .toBe('Trong khung có nhiều chữ, trông như ảnh menu hoặc biển hiệu hơn là ảnh để ngắm.');
+      expect(why({ textArea: 0.2 }, { is_utility: true }, ja))
+        .toBe('文字が多く、鑑賞用の写真というよりメニューや看板のように見えます。');
+    });
   });
 
   describe('light', () => {
@@ -98,11 +144,14 @@ describe('explainScore', () => {
     });
   });
 
+  // Cut where the 182 readings of 15 Oct 2026 fall: about the softest
+  // tenth, and the sharpest quarter.
   it.each([
-    [59, 'Held back by: a little soft.'],
-    [60, 'Nothing measured stands out either way.'],
-    [300, 'Nothing measured stands out either way.'],
-    [301, 'Sharp.'],
+    [429, 'Held back by: a little soft.'],
+    [430, 'Nothing measured stands out either way.'],
+    [1256, 'Nothing measured stands out either way.'],
+    [2000, 'Nothing measured stands out either way.'],
+    [2001, 'Sharp.'],
   ])('focus %s', (sharpness, said) => {
     expect(why({ sharpness })).toBe(said);
   });
@@ -158,7 +207,7 @@ describe('explainScore', () => {
   });
 
   it('speaks Vietnamese and Japanese with their own punctuation', () => {
-    const s: Signals = { brightness: 0.5, sharpness: 400, tilt: 3 };
+    const s: Signals = { brightness: 0.5, sharpness: 2500, tilt: 3 };
     expect(why(s, {}, vi_)).toBe('Đủ sáng, rõ nét. Trừ điểm: đường chân trời nghiêng 3°.');
     expect(why(s, {}, ja)).toBe('明るさが適切、シャープ。減点：水平が3°傾いている。');
   });
