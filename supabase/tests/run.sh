@@ -415,6 +415,15 @@ for f in "$ROOT"/supabase/migrations/*_editors_keep_every_gallery.sql; do
 done
 run "$DB" -f "$HERE/editor_gallery_test.sql"
 
+# Photo scores (15 Oct 2026). Right after the editors' gallery block:
+# the write policies ask `guide_may_manage` as that block left it, and the
+# test reuses its editor and guides.
+echo "→ photo scores"
+for f in "$ROOT"/supabase/migrations/*_photo_scores.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/photo_scores_test.sql"
+
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
   run "$DB" -f "$f" >/dev/null
