@@ -33,7 +33,7 @@ vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }))
 import AuthSheet, { ART_ASPECT, ART_HEIGHT } from './AuthSheet';
 import { labelScaleCap } from '../theme';
 
-const REASONS = ['save', 'like', 'copy', 'saved', 'search', 'trip', 'start'] as const;
+const REASONS = ['save', 'like', 'copy', 'saved', 'search', 'trip', 'start', 'checkin'] as const;
 const open = (why?: SignInWhy) =>
   render(<AuthSheet visible why={why} onClose={() => {}} onSignIn={() => {}} />);
 /** Every line of text the sheet shows, in order. */
@@ -56,6 +56,7 @@ describe('what it says', () => {
     ['saved', 'Xem địa điểm đã lưu'],
     ['search', 'Tìm địa điểm mới trên Google Maps'],
     ['start', 'Tìm điểm xuất phát'],
+    ['checkin', 'Check-in ở đây'],
     ['trip', 'Lưu chuyến đi này'],
   ] as const)('names %s in its title', (why, title) => {
     open(why);

@@ -131,7 +131,7 @@ const HISTORY_ROW = 48;
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
   const { city, cities } = useCity();
-  const { save, isSaved } = useSave();
+  const { save, isSaved, askToSignIn } = useSave();
   const { width } = useWindowDimensions();
   const { loading: catalogLoading, data: places } = usePlaces();
   const inCatalog = useMemo(
@@ -164,11 +164,16 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const [hoursOpen, setHoursOpen] = useState(false);
   const showPrice = useFlag('place_price');
   // The door before the room: see `place_checkin` in `lib/flags`. For
-  // the signed-in only — a guest has nobody to check in as, and the
-  // bookmark already plays the door-to-sign-in part on this screen.
+  // everyone, guests included. It was the signed-in's only, on the
+  // argument that a guest has nobody to check in as and the bookmark
+  // already played the door-to-sign-in part here. The owner's review
+  // (15 Oct 2026): a control that appears only after signing in is one
+  // a guest never learns exists, and the bookmark and the like are both
+  // drawn for guests and open the sign-in sheet on a tap. So this does
+  // the same — see `checkIn`.
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  const showCheckin = useFlag('place_checkin') && !!uid;
+  const showCheckin = useFlag('place_checkin');
   // The reader's visits — the one copy the whole app shares, so the
   // reload after a tap here is what the profile's count draws too.
   const visits = useMyCheckins();
@@ -531,7 +536,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const latestVisit = latestCheckin(visits.data, place.slug);
   const visitsHere = visitsAt(visits.data, place.slug);
   const checkIn = async () => {
-    if (checking || !uid) return;
+    // A guest's tap is the door, with its reason named, as the like's is.
+    // Nothing resumes on the far side: signed in, the pill is the same
+    // pill, and a visit written by a sign-in rather than by a tap would
+    // be one the reader did not quite make.
+    if (!uid) { askToSignIn('checkin'); return; }
+    if (checking) return;
     setChecking(true);
     try {
       await addCheckin({ ownerId: uid, placeSlug: place.slug, cityId: place.city_id ?? city?.id ?? null });

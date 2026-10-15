@@ -51,6 +51,7 @@ const TITLES: Record<SignInWhy, (t: T) => string> = {
   search: (t) => t('Find new places on Google Maps', 'Tìm địa điểm mới trên Google Maps', 'Google マップで新しいスポットを探す'),
   trip: (t) => t('Save this trip', 'Lưu chuyến đi này', 'この旅程を保存'),
   start: (t) => t('Find a starting point', 'Tìm điểm xuất phát', '出発地を探す'),
+  checkin: (t) => t('Check in here', 'Check-in ở đây', 'ここにチェックイン'),
 };
 
 /** Width over height of both files (900×471). */
