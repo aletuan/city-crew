@@ -44,7 +44,7 @@ import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText 
 import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useAuth } from '../lib/auth';
-import { usePlaces } from '../lib/catalog';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { fetchGallery, fetchPlaceId, removePlacePhoto, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
 import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryPhoto } from '../lib/gallery';
 import { MAX_PER_PLACE } from '../lib/guide';
@@ -53,6 +53,7 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { bestOf, needsScore, scoreAll, toTen } from '../lib/photoScore';
 import { photoScorer } from '../lib/photoScoreNative';
+import { useSave } from '../lib/save';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -76,7 +77,17 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // it is there, and by its own fetch when it is not — a place still
   // waiting at the desk is exactly where this screen is most useful, and
   // that one is not in the catalog. Same two-step `PlaceDetail` takes.
-  const { loading: catalogLoading, data: places, reload: reloadCatalog } = usePlaces();
+  const { loading: catalogLoading, data: places, reload: reloadPlaces } = usePlaces();
+  const { reload: reloadLists } = useCollections();
+  const { mine } = useSave();
+  // Everything on screen that draws this place's photographs, read again
+  // after a write. Not only the catalog: a collection carries its places
+  // embedded whole (`withMembers`), photographs and all, so a list holding
+  // this place kept its old cover until something reloaded the lists —
+  // Royal Botanic Gardens' new cover showed on its own page and not in
+  // the collection beside it (owner, 15 Oct 2026). Both shelves, the
+  // public lists and the reader's own, since a place can be in either.
+  const reloadCatalog = () => { reloadPlaces(); reloadLists(); mine.reload(); };
   const inCatalog = useMemo(() => places.find((p) => p.slug === slug), [places, slug]);
   const elsewhere = usePlaceBySlug(!catalogLoading && !inCatalog ? slug : null);
   const place = inCatalog ?? elsewhere.data ?? null;
@@ -128,7 +139,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   }, [mayKeep]);
 
   // Every write, the same way: do it, read the gallery back, and tell the
-  // catalog so the detail screen behind this one draws the new cover on
+  // catalog and the lists (`reloadCatalog`) so the detail screen behind
+  // this one, and any collection holding the place, draw the new cover on
   // the way back. Reading back rather than patching state is what keeps
   // this screen honest about the desk: whatever the desk did in between
   // arrives with the answer.

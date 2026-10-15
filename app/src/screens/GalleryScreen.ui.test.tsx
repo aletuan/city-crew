@@ -42,6 +42,8 @@ const state = vi.hoisted(() => ({
 }));
 const data = vi.hoisted(() => ({
   reload: vi.fn(),
+  reloadLists: vi.fn(),
+  reloadMine: vi.fn(),
   fetchPlaceId: vi.fn(async () => 'place-uuid'),
   fetchGallery: vi.fn(async () => state.rows),
   setCover: vi.fn(async () => {}),
@@ -83,6 +85,10 @@ vi.mock('../lib/auth', () => ({
 }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.catalog, reload: data.reload }),
+  useCollections: () => ({ reload: data.reloadLists }),
+}));
+vi.mock('../lib/save', () => ({
+  useSave: () => ({ mine: { reload: data.reloadMine } }),
 }));
 vi.mock('../lib/data', () => ({
   usePlaceBySlug: () => state.elsewhere,
@@ -304,14 +310,19 @@ describe('who may keep it', () => {
 
 describe('the menu on one photograph', () => {
   // Every write, the same way: do it, read the gallery back, tell the
-  // catalog — so the detail screen behind this one draws the new cover.
-  it('sets the cover, then reads back and tells the catalog', async () => {
+  // catalog — so the detail screen behind this one draws the new cover —
+  // and both shelves of lists, which carry the place's photographs in
+  // their own copy of it (owner, 15 Oct 2026: a collection kept the old
+  // cover until navigated away and back).
+  it('sets the cover, then reads back and tells the catalog and the lists', async () => {
     show([photo('a'), mine('m', { sort_order: 1 })]);
     await grid();
     await pick('a', 'Make it the cover');
     await waitFor(() => expect(data.setCover).toHaveBeenCalledWith('a'));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
     expect(data.reload).toHaveBeenCalled();
+    expect(data.reloadLists).toHaveBeenCalledTimes(1);
+    expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 
   it('does not offer to set the cover on the cover', async () => {
@@ -327,6 +338,9 @@ describe('the menu on one photograph', () => {
     await grid();
     await pick('a', 'Hide it');
     await waitFor(() => expect(data.setHidden).toHaveBeenCalledWith('a', true));
+    // A hidden cover leaves a list's tile too.
+    await waitFor(() => expect(data.reloadLists).toHaveBeenCalledTimes(1));
+    expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 
   // No veto: hidden by anybody, the way back is offered. A hidden
@@ -363,6 +377,8 @@ describe('the menu on one photograph', () => {
     // The row's id and its file's path, so the bucket is cleared with it.
     await waitFor(() => expect(data.removePlacePhoto).toHaveBeenCalledWith('m', 'u1/cong-caphe-m.jpg'));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(data.reloadLists).toHaveBeenCalledTimes(1));
+    expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 
   it('says so when a write is refused', async () => {
@@ -431,6 +447,9 @@ describe('adding one', () => {
     });
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
     expect(data.reload).toHaveBeenCalled();
+    // A new photograph becomes the cover, so the lists are told too.
+    expect(data.reloadLists).toHaveBeenCalledTimes(1);
+    expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 
   // Adding took one to three seconds on a phone and the only sign of it
