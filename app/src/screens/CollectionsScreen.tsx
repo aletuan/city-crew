@@ -892,23 +892,14 @@ export default function CollectionsScreen({ navigation, route }: {
               onChangeText={setQuery}
               onFocus={() => setPanel(true)}
               onSubmitEditing={noteSearch}
-              testID={{ input: 'collections-input', clear: 'collections-clear' }}
+              testID={{ input: 'collections-input', cancel: 'collections-cancel' }}
               // The four things it answers by, named in the box itself —
               // and in the app's own word for the last: "username" is
               // what the Crew screen's add flow already calls it.
               placeholder={t('Name, place, city, or @username', 'Tên, địa điểm, thành phố, hoặc @username', '名前・スポット・都市・@ユーザー名')}
+              // Inside the box, while the panel is up — see `SearchField`.
+              cancel={{ shown: panel, label: t('Cancel', 'Hủy', 'キャンセル'), onPress: cancel }}
             />
-            {panel && (
-              <PressableScale
-                onPress={cancel}
-                scaleTo={0.94}
-                style={s.cancel}
-                accessibilityRole="button"
-                accessibilityLabel={t('Cancel', 'Hủy', 'キャンセル')}
-              >
-                <Text style={s.cancelText}>{t('Cancel', 'Hủy', 'キャンセル')}</Text>
-              </PressableScale>
-            )}
           </View>
         )}
         {!holding && panel && (
@@ -1652,15 +1643,13 @@ const s = StyleSheet.create({
   viewBtnOn: { backgroundColor: colors.surfaceCard },
 
   // The visits screen's box and panel, to the point: the same row, the
-  // same Cancel in words, the same card of groups, so the two screens
+  // same Cancel inside the box, the same card of groups, so the two screens
   // that let a reader narrow a list of their own do it with one grammar.
   // The header's own subtitle type (ui.tsx `s.subtitle`), in the page's
   // margins. The header ends 14 under the title; -6 brings this line to
   // the 8 a subtitle sits under its title in that header.
   scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginHorizontal: space.page, marginBottom: 14 },
-  cancel: { height: 44, justifyContent: 'center', paddingHorizontal: 10 },
-  cancelText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
   panel: { marginHorizontal: space.page, marginBottom: 14, padding: space.cardPadding, gap: space.headingToContent },
   group: { gap: 10 },
   legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

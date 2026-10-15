@@ -459,19 +459,24 @@ describe('typing a query', () => {
     expect(screen.queryByText('No matches for “cong”')).toBeNull();
   });
 
-  it('clears the box from the × and returns to the zero-state', () => {
+  // No (x): emptied by the keyboard, the box returns to the zero-state.
+  it('returns to the zero-state when the box is emptied, with no clear to press', () => {
     mount();
-    expect(screen.queryByTestId('search-clear')).toBeNull();
     type('cong');
-    fireEvent.click(screen.getByTestId('search-clear'));
+    expect(screen.queryByTestId('search-clear')).toBeNull();
+    type('');
     expect(input().value).toBe('');
     expect(screen.getByText('Most popular')).toBeTruthy();
-    expect(screen.queryByTestId('search-clear')).toBeNull();
   });
 
-  it('goes back from the back button', () => {
+  // No back disc beside the box (owner, 15 Oct 2026): Cancel, inside it,
+  // always shown, is the way back — leaving the search is leaving here.
+  it('goes back from Cancel inside the box, and has no back button', () => {
     const { navigation } = mount();
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    const cancel = screen.getByTestId('search-cancel');
+    expect(input().parentElement!.contains(cancel)).toBe(true);
+    fireEvent.click(cancel);
     expect(navigation.goBack).toHaveBeenCalled();
   });
 });

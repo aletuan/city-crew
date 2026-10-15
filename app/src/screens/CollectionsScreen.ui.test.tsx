@@ -798,7 +798,23 @@ describe('CollectionsScreen — search', () => {
   const open = () => fireEvent.focus(box());
   const expectSub = (line: string) => expect(screen.getByTestId('collections-scope').textContent).toBe(line);
 
-  it('filters by name, says when nothing matches, and clears', () => {
+  // Cancel lives inside the box (owner, 15 Oct 2026): absent at rest, in
+  // the box's own frame once the box is focused, gone again when pressed.
+  it('shows Cancel inside the box on focus, and takes it away on the tap', () => {
+    state.cols.data = [col('coffee', ['b'], { title_en: 'Coffee' })];
+    show();
+    expect(screen.queryByTestId('collections-cancel')).toBeNull();
+    open();
+    const cancel = screen.getByTestId('collections-cancel');
+    expect(box().parentElement!.contains(cancel)).toBe(true);
+    type('cof');
+    fireEvent.click(cancel);
+    expect(box().value).toBe('');
+    expect(screen.queryByTestId('collections-cancel')).toBeNull();
+    expect(screen.queryByTestId('collections-panel')).toBeNull();
+  });
+
+  it('filters by name, says when nothing matches, and comes back when emptied', () => {
     state.cols.data = [col('rooftops', ['a'], { title_en: 'Rooftops' }), col('coffee', ['b'], { title_en: 'Coffee' })];
     show();
     type('roof');
@@ -808,7 +824,8 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
     // Under a query the empty-shelf invitation stands down.
     expect(screen.queryByText('No public lists in hanoi yet')).toBeNull();
-    fireEvent.click(screen.getByTestId('collections-clear'));
+    // Emptied by the keyboard — there is no (x) — the shelf comes back.
+    type('');
     expect(screen.getByText('Coffee')).toBeTruthy();
     expect(screen.queryByTestId('collections-clear')).toBeNull();
   });

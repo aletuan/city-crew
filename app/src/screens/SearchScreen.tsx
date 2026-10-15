@@ -17,7 +17,7 @@ import { AddSlot } from '../components/add';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import {
-  AmbientWarmth, BackButton, Card, Chip, Empty, PressableScale, useTabBarClearance,
+  AmbientWarmth, Card, Chip, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
 import {
   Collection, coverOf, isLive, membersOf, Place, touchesCity,
@@ -418,14 +418,21 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     <SafeAreaView style={s.screen} edges={['top']}>
       <AmbientWarmth />
       <View style={s.header}>
-        <BackButton onPress={() => navigation.goBack()} />
         {/* The one box — `SearchField`, which this screen's drawing of it
-            became once the check-ins list wanted the same one. */}
+            became once the check-ins list wanted the same one.
+
+            No back control beside it since 15 Oct 2026: the owner's
+            call, with Cancel inside the box as on Collections. This
+            screen is a search and nothing else, so leaving the search is
+            leaving the screen — Cancel goes back, always shown, and the
+            box takes the width the back disc had. The edge swipe and the
+            tab bar still leave too. */}
         <SearchField
           inputRef={inputRef}
           value={query}
           onChangeText={setQuery}
           placeholder={t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索')}
+          cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル'), onPress: () => navigation.goBack() }}
         />
       </View>
 

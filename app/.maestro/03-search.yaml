@@ -1,4 +1,4 @@
-# Search: type a keyword, open the first hit, come back, clear the query.
+# Search: type a keyword, open the first hit, come back, empty the query, leave by Cancel.
 appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
@@ -52,7 +52,17 @@ env:
     visible:
       id: "search-input"
     timeout: 10000
+# No (x) since 15 Oct 2026 — Cancel is the way out, and it leaves the
+# screen. Emptying the words is the keyboard's job.
 - tapOn:
-    id: "search-clear"
+    id: "search-input"
+- eraseText: 20
 - assertNotVisible:
     id: "search-result-0"
+# Cancel, inside the box, leaves the search for the screen it came from.
+- tapOn:
+    id: "search-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "explore-list"
+    timeout: 10000
