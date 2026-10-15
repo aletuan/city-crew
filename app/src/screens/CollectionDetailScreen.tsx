@@ -8,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
 import TipBox from '../components/TipBox';
-import { AddSlot } from '../components/add';
 import {
   AmbientWarmth, Avatar, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useTabBarClearance,
@@ -971,25 +970,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {/* Checked on the text `t` picks, not on a hand-listed pair of
           columns: that left a Japanese-only description never drawn. */}
       {!!desc && <Text style={s.desc}>{desc}</Text>}
-      {/* The door from a list to a day. The planner has seeded plans from
-          collections since 12 Oct 2026, but the only way to it was the
-          Plan tab and a row to find there; the owner's review asked for
-          the step to be here, on the list the reader is looking at.
-          `goTo`, since the planner is a sibling tab's stack; `at` makes
-          a second press on the same list a new ask. Only once there is
-          something to plan from — an empty list seeds nothing, and its
-          own empty card already says what to do. The planner decides
-          the city (see IdeasScreen's `from`), so nothing here asks. */}
-      {col && members.length > 0 && (
-        <View style={s.planRow}>
-          <GradientCta
-            icon="sparkles"
-            label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
-            onPress={() => goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } })}
-            testID="collection-plan"
-          />
-        </View>
-      )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
@@ -1035,23 +1015,38 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   'このコレクションにはまだスポットがありません。',
                 )} />)
               : null}
-            // Only once there is a list to end. Empty, the card above is
-            // already asking for the first place, and two invitations to do
-            // one thing read as two different things.
-            ListFooterComponent={owned && members.length > 0
+            // The door from a list to a day, at the end of the list — where
+            // the owner's "Add place" slot stood until 15 Oct 2026. That
+            // slot was the same action the ⋯ menu's first row already
+            // offers, and the owner's review drew the line: one place for
+            // adding (the menu), and the foot of the list for the thing a
+            // reader does with a list once they have read it. The planner
+            // has seeded plans from collections since 12 Oct 2026, but the
+            // only way to it was the Plan tab and a row to find there; it
+            // sat under the description for a day and read as a header
+            // control over a list it had not yet shown. Everyone gets it,
+            // guests included: the planner seeds from public lists too.
+            //
+            // The paw, the planner's own mark on its own button — not the
+            // sparkle it wore for that day, which has become every app's
+            // "AI" glyph and said nothing about whose planning this is.
+            // `goTo`, since the planner is a sibling tab's stack; `at`
+            // makes a second press on the same list a new ask. Only once
+            // there is a list to end: an empty list seeds nothing, and its
+            // own card is already asking for the first place. The planner
+            // decides the city (see IdeasScreen's `from`), so nothing here
+            // asks.
+            ListFooterComponent={col && members.length > 0
               ? (
-                <AddSlot
-                  onPress={addPlace}
-                  title={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
-                  // The second line names where the places come from. Without
-                  // it the row is a verb with no object, and "Add place" alone
-                  // had already sent one reader to Explore expecting a picker.
-                  subtitle={t(
-                    'From search or your bookmarks',
-                    'Từ tìm kiếm hoặc mục đã lưu',
-                    '検索や保存済みから',
-                  )}
-                />
+                <View style={s.planFoot}>
+                  <GradientCta
+                    wide
+                    icon="paw"
+                    label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+                    onPress={() => goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } })}
+                    testID="collection-plan"
+                  />
+                </View>
               )
               : null}
             contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
@@ -1239,10 +1234,9 @@ const s = StyleSheet.create({
   bannerUndo: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
   bannerUndoBusy: { opacity: 0.4 },
 
-  // Its own width, at the page margin, under the description and over the
-  // list: the one action on the screen that leaves it, set apart from the
-  // rows that open places.
-  planRow: { paddingHorizontal: space.page, paddingBottom: 14, alignItems: 'flex-start' },
+  // Full width at the foot of the list, in the page's margins, with the
+  // room the dashed slot it replaced kept above it.
+  planFoot: { paddingHorizontal: space.page, paddingTop: 10 },
   desc: {
     color: colors.textSecondary, ...type.body, lineHeight: 24,
     paddingHorizontal: space.page, paddingBottom: 12,

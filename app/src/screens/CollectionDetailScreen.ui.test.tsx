@@ -5,7 +5,7 @@
 //
 // - the owner's list has a padlock or "Public" in the byline, an overflow
 //   menu with Add / Edit / Reorder / Share / Make public|private / Delete,
-//   and an "Add place" slot at the end of a non-empty list;
+//   and "Plan a trip" at the end of a non-empty list;
 // - somebody else's list credits its curator, offers a heart that likes or
 //   unlikes it, and a menu of Save a copy / Share / Report — never Edit or
 //   Delete;
@@ -199,7 +199,7 @@ const openMenu = () => fireEvent.click(button('More'));
 /**
  * A row in the overflow menu, by its label. The modal portals to the end of
  * the document, so when a label also appears on the page (the owner's
- * "Add place" footer) the menu's copy is the last one.
+ * "Add place" footer, until 15 Oct 2026) the menu's copy is the last one.
  */
 const menuRow = (label: string) => screen.getAllByText(label).at(-1)!;
 
@@ -339,19 +339,21 @@ describe('your own list', () => {
     expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
-  it('ends a non-empty list with an Add place slot that goes to Explore', () => {
-    const { parent } = show();
-    expect(screen.getByText('From search or your bookmarks')).toBeTruthy();
-    fireEvent.click(screen.getByText('From search or your bookmarks'));
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+  // The "Add place" slot that ended the list went on 15 Oct 2026: it was
+  // the menu's first row again. Adding is the menu's; the foot of the
+  // list is "Plan a trip" — see its own describe below.
+  it('ends a non-empty list with no Add place slot; adding is the menu’s', () => {
+    show();
+    expect(screen.queryByText('From search or your bookmarks')).toBeNull();
+    expect(screen.queryByText('Add place')).toBeNull();
   });
 
-  it('greets an empty list with one invitation to Explore, and no footer slot', () => {
+  it('greets an empty list with one invitation to Explore, and no footer', () => {
     state.mine = [collection({}, [])];
     const { parent } = show();
     expect(screen.getByText('Nothing here yet.')).toBeTruthy();
     expect(screen.queryByText('No places in this collection yet.')).toBeNull();
-    expect(screen.queryByText('From search or your bookmarks')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
     expect(screen.getByText(/0 places/)).toBeTruthy();
     fireEvent.click(screen.getByText('Explore places'));
     expect(parent.navigate).toHaveBeenCalledWith('Explore');
@@ -579,9 +581,9 @@ describe('reordering', () => {
     show();
     expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     for (const slug of ['pho', 'cafe', 'museum']) expect(card(slug).onLongPress).toBeTypeOf('function');
-    // The rest of the screen stays what it was: the menu, the Add slot.
+    // The rest of the screen stays what it was: the menu, the plan button.
     expect(button('More')).toBeTruthy();
-    expect(screen.getByText('From search or your bookmarks')).toBeTruthy();
+    expect(button('Plan a trip')).toBeTruthy();
     for (const label of ['Done', 'Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
   });
 
@@ -1029,9 +1031,8 @@ describe('tips', () => {
   it('retires the add tip once a place is added', async () => {
     show();
     await settle();
-    // The slot at the end of the list (the menu, faded out but still
-    // mounted in jsdom, holds the other copy).
-    fireEvent.click(screen.getAllByText('Add place')[0]);
+    openMenu();
+    fireEvent.click(menuRow('Add place'));
     await settle();
     expect(await retiredNow()).toEqual(['add']);
   });
@@ -1351,11 +1352,13 @@ describe('signed out', () => {
 // ── the door to a day ──
 //
 // The planner has seeded plans from collections since 12 Oct 2026; the
-// owner's review asked for the step to be on the list itself. The planner
-// decides the city, so this button only sends the slug.
+// owner's review asked for the step to be on the list itself, at its foot
+// where the Add place slot stood, wearing the planner's own paw. The
+// planner decides the city, so this button only sends the slug.
 describe('Plan a trip', () => {
-  it('sends the list to the planner, as a fresh ask each time', () => {
+  it('ends the list, wears the paw, and sends the list to the planner as a fresh ask each time', () => {
     show();
+    expect(button('Plan a trip').querySelector('[data-icon="paw"]')).toBeTruthy();
     fireEvent.click(button('Plan a trip'));
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', { screen: 'IdeasHome', params: { from: 'old-quarter', at: expect.any(Number) } });
     const first = spies.goTo.mock.calls[0][1].params.at;

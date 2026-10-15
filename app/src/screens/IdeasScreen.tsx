@@ -770,15 +770,12 @@ export default function IdeasScreen({ navigation, route }: {
               }}
             />
           </View>
-          {!ready && (
-            <Text style={s.ctaHint}>
-              {t(
-                "Just pick who's going and one thing you fancy.",
-                'Chỉ cần đi cùng ai và một thứ bạn thích là được.',
-                '誰と行くかと、気になるもの1つだけで大丈夫です。',
-              )}
-            </Text>
-          )}
+          {/* No line under a dimmed button. One said "just pick who's
+              going and one thing you fancy" until 15 Oct 2026, and the
+              owner asked for it to go: the two empty questions are on
+              the screen, and the dimmed button already says the day is
+              not whole. The button's own `aria-disabled` keeps VoiceOver
+              told. */}
         </View>
       </ScrollView>
 
@@ -958,10 +955,9 @@ const s = StyleSheet.create({
 
   cta: { paddingHorizontal: space.page, marginTop: 4, gap: 10 },
   ctaOff: { opacity: 0.4 },
-  ctaHint: { color: colors.textTertiary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
 
   // Under the card, not inside it: the card is the control and this is a
-  // consequence of it, the same relation `ctaHint` has to the button.
+  // consequence of it.
   //
   // `space.page`, like every other top-level element here. This screen has
   // no container padding — the scroll view runs edge to edge and the lede,
