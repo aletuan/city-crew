@@ -36,6 +36,7 @@ vi.mock('../lib/save', () => ({
 }));
 
 import PlaceCard from './PlaceCard';
+import { CATEGORIES } from '../lib/categories';
 import { appFlags } from '../lib/flags';
 
 const place = (over: Partial<Place> = {}): Place => ({
@@ -405,71 +406,102 @@ describe('the hour', () => {
   });
 });
 
-// The vibe pill shares the district's line: the first tag spelled out, the
-// rest as a count. What is asserted is what a reader sees — the word, and
+// The kind pill shares the district's line: what the place is, spelled
+// out, with the dot its pin wears, and the rest of its kinds as a count.
+// What is asserted is what a reader sees — the word, the dot's colour and
 // whether a number appears beside it — not the layout, which
 // `react-native-web` does not simulate.
-describe('the vibe pill', () => {
-  it('spells out the only tag, with no count beside it', () => {
-    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['cafes'] })} />);
-    expect(screen.getByText('Cafés')).toBeTruthy();
-    expect(screen.queryByText(/^\+\d+$/)).toBeNull();
+describe('the kind pill', () => {
+  const pill = () => screen.getByTestId('c-kind');
+  const dot = () => pill().firstElementChild as HTMLElement;
+  // The colour as the browser reports it, from the table's hex.
+  const rgb = (hex: string) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+  };
+
+  it('spells out the only kind, in its own colour, with no count beside it', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['cafes'] })} />);
+    expect(pill().textContent).toBe('Cafés');
+    expect(getComputedStyle(dot()).backgroundColor).toBe(rgb(CATEGORIES.cafes.color));
   });
 
-  it('counts the tags it did not spell out', () => {
-    render(<PlaceCard onPress={() => {}} place={place({
-      vibe_tags: ['food_tour', 'kid_friendly'],
+  // The vibe pill this replaced read `vibe_tags[0]`: here that is a
+  // judgement, and the card would have said "Quiet" in a colour no
+  // category wears.
+  it('reads the category, not the first vibe', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({
+      categories: ['eats'], vibe_tags: ['quiet', 'food_tour'],
     })} />);
-    expect(screen.getByText('Food')).toBeTruthy();
-    expect(screen.getByText('+1')).toBeTruthy();
-    // The second tag is counted, not named.
-    expect(screen.queryByText('Kid-friendly')).toBeNull();
+    expect(pill().textContent).toBe('Eats');
+    expect(screen.queryByText('Quiet')).toBeNull();
   });
 
-  it('counts every tag past the first, however many', () => {
-    render(<PlaceCard onPress={() => {}} place={place({
-      vibe_tags: ['culture', 'views', 'chill', 'quiet'],
+  // What it is *most*, by the filter row's order, which is the pin's rule
+  // — not whichever the row stored first.
+  it('names the kind its pin wears and counts the rest', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({
+      categories: ['views', 'heritage', 'cafes'],
     })} />);
-    expect(screen.getByText('Culture')).toBeTruthy();
-    expect(screen.getByText('+3')).toBeTruthy();
+    expect(pill().textContent).toBe('Cafés+2');
+    expect(getComputedStyle(dot()).backgroundColor).toBe(rgb(CATEGORIES.cafes.color));
+    expect(screen.queryByText('Views')).toBeNull();
+  });
+
+  // Under a chip, every card is already that kind of place; the pill
+  // names the chip, as the pin does, rather than contradict the row.
+  it('names the chip the list is filtered to', () => {
+    render(<PlaceCard testID="c" chip="focus" onPress={() => {}} place={place({
+      categories: ['cafes', 'focus'],
+    })} />);
+    expect(pill().textContent).toBe('Focus+1');
+    expect(getComputedStyle(dot()).backgroundColor).toBe(rgb(CATEGORIES.focus.color));
   });
 
   it('speaks the reader’s language', () => {
     state.lang = 'vi';
-    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['cafes', 'quiet'] })} />);
-    expect(screen.getByText('Cà phê')).toBeTruthy();
-    expect(screen.getByText('+1')).toBeTruthy();
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['cafes', 'focus'] })} />);
+    expect(pill().textContent).toBe('Cà phê+1');
   });
 
-  // A tag the catalog grew before `VIBES` knew about it still gets a word
-  // rather than a blank pill — `vibeLabel` falls back to the key itself.
-  it('names a tag the table has never heard of', () => {
-    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['late_night'] })} />);
-    expect(screen.getByText('Late night')).toBeTruthy();
+  // A key the catalog grew before `CATEGORIES` knew about it still gets a
+  // word, tidied, but no dot: a colour is a category's, and this one has
+  // none to give.
+  it('names a kind the table has never heard of, without a dot', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['street_food'] })} />);
+    expect(pill().textContent).toBe('Street food');
+    expect(pill().children.length).toBe(1);
   });
 
-  it('is absent when the place carries no tags', () => {
-    render(<PlaceCard onPress={() => {}} place={place({
-      neighborhood_en: 'Ngoc Ha', vibe_tags: [],
+  // A known kind beside an unknown one: the known one leads, and the
+  // unknown one is still counted.
+  it('leads with the kind it knows and counts the one it does not', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['street_food', 'nightlife'] })} />);
+    expect(pill().textContent).toBe('Nightlife+1');
+  });
+
+  it('is absent when nothing classifies the place', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({
+      neighborhood_en: 'Ngoc Ha', categories: [], vibe_tags: ['quiet'],
     })} />);
     expect(screen.getByText(/Ngoc Ha/)).toBeTruthy();
-    expect(screen.queryByText(/^\+\d+$/)).toBeNull();
+    expect(screen.queryByTestId('c-kind')).toBeNull();
   });
 
-  // The line is drawn for the tags alone: a place with no district and no
-  // hour still shows its vibe rather than dropping the row.
+  // The line is drawn for the pill alone: a place with no district and no
+  // hour still says what it is rather than dropping the row.
   it('is drawn even with neither a district nor an hour', () => {
-    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['outdoors'] })} />);
+    render(<PlaceCard onPress={() => {}} place={place({ categories: ['nature'] })} />);
     expect(screen.getByText('Nature')).toBeTruthy();
   });
 
-  // The long name this catalog actually holds, beside a two-tag pill: the
-  // name is its own line, so nothing here competes with it.
+  // The long name this catalog actually holds, beside a two-kind pill:
+  // the name is its own line, so nothing here competes with it.
   it('stands beside the longest names in the catalog', () => {
     render(<PlaceCard onPress={() => {}} place={place({
       name_en: 'Vietnam Military History Museum',
       neighborhood_en: 'Xuan Phuong',
-      vibe_tags: ['culture', 'kid_friendly'],
+      categories: ['heritage', 'nature'],
     })} />);
     expect(screen.getByText('Vietnam Military History Museum')).toBeTruthy();
     expect(screen.getByText('Culture')).toBeTruthy();

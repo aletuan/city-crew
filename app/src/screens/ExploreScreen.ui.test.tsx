@@ -713,6 +713,10 @@ describe('the places list', () => {
 });
 
 describe('the category filter', () => {
+  // By role: every card now names its kind too, so the word alone finds
+  // the chip and each card that says it.
+  const chip = (name: string) => screen.getByRole('button', { name });
+  const noChip = (name: string) => screen.queryByRole('button', { name });
   const mixed = () => [
     place('cafe1', { categories: ['cafes'] }),
     // Derived from its vibe rather than stored — the older rows' path.
@@ -723,37 +727,51 @@ describe('the category filter', () => {
   it('offers All plus only the categories this city has, in taxonomy order', () => {
     state.places.data = [place('bar1', { categories: ['nightlife'] }), place('cafe1', { categories: ['cafes'] })];
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByText('All')).toBeTruthy();
-    const cafes = screen.getByText('Cafés');
-    const night = screen.getByText('Nightlife');
+    expect(chip('All')).toBeTruthy();
+    const cafes = chip('Cafés');
+    const night = chip('Nightlife');
     expect(cafes.compareDocumentPosition(night) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByText('Eats')).toBeNull();
+    expect(noChip('Eats')).toBeNull();
   });
 
   it('narrows the list to the chosen category, and All brings it back', () => {
     state.places.data = mixed();
     render(<ExploreScreen navigation={nav()} />);
     expect(cardNames()).toHaveLength(3);
-    fireEvent.click(screen.getByText('Cafés'));
+    fireEvent.click(chip('Cafés'));
     expect(cardNames().every((n) => n.includes('cafe'))).toBe(true);
     expect(cardNames()).toHaveLength(2);
-    fireEvent.click(screen.getByText('Eats'));
+    fireEvent.click(chip('Eats'));
     expect(cardNames()).toHaveLength(1);
     expect(cardNames()[0]).toContain('Place bar1');
-    fireEvent.click(screen.getByText('All'));
+    fireEvent.click(chip('All'));
     expect(cardNames()).toHaveLength(3);
   });
 
   it('drops back to All when a city switch retires the chosen chip', () => {
     state.places.data = mixed();
     const { rerender } = render(<ExploreScreen navigation={nav()} />);
-    fireEvent.click(screen.getByText('Eats'));
+    fireEvent.click(chip('Eats'));
     expect(cardNames()).toHaveLength(1);
     state.places.data = [place('cafe9', { categories: ['cafes'] }), place('cafe8', { categories: ['cafes'] })];
     rerender(<ExploreScreen navigation={nav()} />);
-    expect(screen.queryByText('Eats')).toBeNull();
+    expect(noChip('Eats')).toBeNull();
     expect(cardNames()).toHaveLength(2);
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
+  });
+});
+
+// The card's pill follows the pin's rule: under a chip it names the chip,
+// so the row, the pins and the cards say one thing.
+describe('the card under a chip', () => {
+  it('names the chip rather than what the place is most', () => {
+    state.places.data = [place('work1', { categories: ['cafes', 'focus'] })];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+1');
+    fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
+    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Focus+1');
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+1');
   });
 });
 

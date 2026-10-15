@@ -1918,7 +1918,7 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
   // accent's tint, which is for state; not the glass, which is a third
   // ground. No card where there is neither a paragraph nor a tag.
   it('puts the highlights and the vibes in one card on the info card’s surface, and no card without highlights', () => {
-    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes'] }));
+    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['quiet'] }));
     const card = screen.getByTestId('detail-why-card');
     expect(card.contains(screen.getByTestId('detail-why'))).toBe(true);
     expect(card.contains(screen.getByTestId('detail-vibes'))).toBe(true);
@@ -1926,11 +1926,11 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(fill).not.toBe('rgba(0, 0, 0, 0)');
     expect(fill).toBe(getComputedStyle(screen.getByTestId('detail-info-card')).backgroundColor);
     // The chip is a step of glass over the card, not the card's own fill.
-    expect(getComputedStyle(screen.getByTestId('detail-vibe-cafes')).backgroundColor).not.toBe(fill);
+    expect(getComputedStyle(screen.getByTestId('detail-vibe-quiet')).backgroundColor).not.toBe(fill);
     cleanup();
     // No paragraph: no card, and the chips stand bare — a card around one
     // chip read as a box in a box, on 720 of 940 live places.
-    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['cafes'] }));
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['quiet'] }));
     expect(screen.queryByTestId('detail-why-card')).toBeNull();
     const bare = screen.getByTestId('detail-vibes');
     expect(getComputedStyle(bare.parentElement!).backgroundColor).toBe('rgba(0, 0, 0, 0)');
@@ -1948,30 +1948,48 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(screen.getByText(label)).toBeTruthy();
   });
 
-  // The vibes as small chips: every tag, one fill from the theme, no dot
-  // in the vibe's hue, nothing pressable, with or without a blurb.
-  it('says every vibe tag under the highlights as a chip in the theme’s glass, and none where there are none', () => {
-    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes', 'views'] }));
+  // The judgements as small chips: one fill from the theme, a grey glyph
+  // and the word, no dot in any hue, nothing pressable, with or without a
+  // blurb. A vibe that restates a category is the cover's to say.
+  it('says each judgement under the highlights as a chip in the theme’s glass, and none where there are none', () => {
+    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes', 'quiet', 'views', 'romantic'] }));
     const vibes = screen.getByTestId('detail-vibes');
-    expect(vibes.textContent).toBe('CafésViews');
-    const chip = screen.getByTestId('detail-vibe-views');
-    // The word alone inside: no dot, so no second element.
-    expect(chip.children.length).toBe(1);
+    expect(vibes.textContent).toBe('QuietRomantic');
+    expect(screen.queryByTestId('detail-vibe-cafes')).toBeNull();
+    const chip = screen.getByTestId('detail-vibe-quiet');
+    // Its own glyph, in the grey every judgement wears — never a hue.
+    const glyph = chip.querySelector('[data-icon="volume-low-outline"]') as HTMLElement;
+    expect(glyph).toBeTruthy();
+    expect(glyph.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    expect(screen.getByTestId('detail-vibe-romantic').querySelector('[data-icon="heart-outline"]')!
+      .getAttribute('data-color')).toBe(String(colors.textSecondary));
     const fill = getComputedStyle(chip).backgroundColor;
     expect(fill).not.toBe('rgba(0, 0, 0, 0)');
-    expect(fill).not.toBe('rgb(111, 179, 192)');
-    expect(getComputedStyle(screen.getByTestId('detail-vibe-cafes')).backgroundColor).toBe(fill);
+    expect(getComputedStyle(screen.getByTestId('detail-vibe-romantic')).backgroundColor).toBe(fill);
     expect(getComputedStyle(chip).borderTopWidth === '' || getComputedStyle(chip).borderTopWidth === '0px').toBe(true);
     expect(vibes.querySelector('[role="button"]')).toBeNull();
     cleanup();
     show(place({ vibe_tags: [] }));
     expect(screen.queryByTestId('detail-vibes')).toBeNull();
+    cleanup();
+    // Every tag a restatement: nothing left to say here, and no empty row.
+    show(place({ vibe_tags: ['cafes', 'food_tour'] }));
+    expect(screen.queryByTestId('detail-vibes')).toBeNull();
   });
 
-  it('says the vibes even where the desk has written nothing', () => {
-    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['nightlife'] }));
+  // A key the table has not learned is not a restatement of anything; it
+  // keeps its word, and has no glyph to wear.
+  it('names a judgement the table has never heard of, with no glyph', () => {
+    show(place({ vibe_tags: ['late_night'] }));
+    const chip = screen.getByTestId('detail-vibe-late_night');
+    expect(chip.textContent).toBe('Late night');
+    expect(chip.querySelector('[data-icon]')).toBeNull();
+  });
+
+  it('says the judgements even where the desk has written nothing', () => {
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['nightlife', 'kid_friendly'] }));
     expect(screen.queryByTestId('detail-why')).toBeNull();
-    expect(screen.getByTestId('detail-vibes').textContent).toBe('Nightlife');
+    expect(screen.getByTestId('detail-vibes').textContent).toBe('Kid-friendly');
   });
 
   // Whose words these are. Most blurbs are the desk's own and carry no

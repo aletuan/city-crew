@@ -143,6 +143,12 @@ const FROM_VIBE: Record<string, string> = {
   nightlife: 'nightlife',
 };
 
+/** Is this vibe a category under another name? `cafes`, `food_tour` and
+ *  the rest of the table above are; `quiet` is not. */
+export function restatesCategory(vibe: string): boolean {
+  return Object.prototype.hasOwnProperty.call(FROM_VIBE, vibe);
+}
+
 export type Categorisable = { categories?: string[] | null; vibe_tags?: string[] | null; category?: string };
 
 /**

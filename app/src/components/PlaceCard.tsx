@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { CATEGORIES, categoriesOf, categoryLabel, pinCategory } from '../lib/categories';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
@@ -13,16 +14,18 @@ import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { useSave } from '../lib/save';
-import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 
 export default function PlaceCard({
-  place, onPress, testID, distanceKm, onLongPress, delayLongPress, onPressOut,
+  place, onPress, testID, distanceKm, chip, onLongPress, delayLongPress, onPressOut,
   accessibilityHint, accessibilityActions, onAccessibilityAction,
 }: {
   place: Place;
+  /** The category the list is filtered to, if any (Explore's chip row).
+   *  The pill then names it, as the map's pin does — see `pinCategory`. */
+  chip?: string | null;
   onPress: () => void;
   testID?: string;
   /** How far from the reader, when the list is in the order that figure
@@ -73,6 +76,14 @@ export default function PlaceCard({
   // own note says why metres round to fifty and why the decimal is a full
   // stop beside a "4.7" rating even in Vietnamese.
   const far = distanceKm != null ? fmtDistance(distanceKm) : null;
+  // The pill names what the place is, in the rule the map's pin follows,
+  // so a card and its pin cannot disagree; the rest of its kinds are a
+  // count. A place nothing classifies, or classifies only in keys the
+  // table has not learned, gets its first key spelled out and no dot: a
+  // colour is a category's, and an unknown one has none to give.
+  const kinds = categoriesOf(place);
+  const kind = pinCategory(place, chip) ?? kinds[0] ?? null;
+  const more = kinds.filter((k) => k !== kind).length;
   return (
     <PressableScale
       onPress={onPress}
@@ -288,7 +299,26 @@ export default function PlaceCard({
               district the row can still carry an hour, and an icon
               pointing at a closing time would label the wrong half of
               the sentence. */}
-          {/* Vibe rides the district's line rather than a line of its own.
+          {/* The kind rides the district's line rather than a line of its own.
+
+              ── why the category and not the vibe ──
+
+              This pill spelled out the first vibe tag until 15 Oct 2026,
+              in a dot of the vibe's hue. Measured that day, 1,152 of the
+              catalog's 1,350 vibe tags restate the place's category (493
+              of 495 `cafes` sit on a café), and those seven vibes wore
+              their category's exact hue, so the pill was a category drawn
+              from a second column — and only mostly: on six places the
+              first vibe was a judgement, and the pill said "Chill" in a
+              blue no category wears. The owner's rule for every tag in the
+              app (15 Oct): colour is the category's. So the pill reads the
+              category, with the dot its pin wears.
+
+              The notes below were written for the vibe pill and count
+              vibes. The categories have the same shape, measured the same
+              day: of 976 published places 787 carry one, 161 two, 28
+              three, and none carries none.
+
               ── why it moved ──
 
               It used to be a third row of up to three chips, and that row
@@ -378,7 +408,7 @@ export default function PlaceCard({
               says "from where you are"; the glyph's job is to be the same
               thing in the same place so the eye finds the line through
               every change of sort. */}
-          {(where || far || when || place.vibe_tags.length > 0) && (
+          {(where || far || when || kind) && (
             <View style={s.metaRow}>
               {(where || far || when) ? (
                 <View style={s.whereRow}>
@@ -400,16 +430,18 @@ export default function PlaceCard({
                   ) : null}
                 </View>
               ) : null}
-              {place.vibe_tags.length > 0 ? (
-                <View style={s.vibePill}>
-                  <View style={[s.vibeDot, { backgroundColor: vibeColor(place.vibe_tags[0]) }]} />
+              {kind ? (
+                <View style={s.vibePill} testID={testID ? `${testID}-kind` : undefined}>
+                  {CATEGORIES[kind] ? (
+                    <View style={[s.vibeDot, { backgroundColor: CATEGORIES[kind].color }]} />
+                  ) : null}
                   <Text style={s.vibeLabel} numberOfLines={1}>
-                    {vibeLabel(place.vibe_tags[0], t)}
+                    {categoryLabel(kind, t)}
                   </Text>
-                  {place.vibe_tags.length > 1 ? (
+                  {more > 0 ? (
                     <>
                       <View style={s.vibeSep} />
-                      <Text style={s.vibeMore}>{`+${place.vibe_tags.length - 1}`}</Text>
+                      <Text style={s.vibeMore}>{`+${more}`}</Text>
                     </>
                   ) : null}
                 </View>
@@ -588,7 +620,7 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   name: { color: colors.text, ...type.cardTitle },
-  // District and hour on the left, the vibe pill on the right, on one line.
+  // District and hour on the left, the kind pill on the right, on one line.
   // The text cluster takes the slack and the pill keeps its size — see the
   // note beside the markup for which half is allowed to give way.
   //

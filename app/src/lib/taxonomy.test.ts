@@ -17,7 +17,7 @@ import {
   pinCategory,
   pinTint,
 } from './categories';
-import { VIBE_FALLBACK_COLOR, VIBES, vibeColor, vibeLabel } from './vibes';
+import { judgementsOf, VIBES, vibeLabel } from './vibes';
 
 /** The app's `t`, in English. */
 const t = (en: string) => en;
@@ -84,16 +84,32 @@ describe('vibes', () => {
     expect(vibeLabel('rooftop_bars', t)).toBe('Rooftop bars');
   });
 
-  it('gives an unknown vibe the neutral dot rather than no dot', () => {
-    expect(vibeColor('nightlife')).toBe(VIBES.nightlife.color);
-    expect(vibeColor('unknown')).toBe(VIBE_FALLBACK_COLOR);
+  // The seven that restate a category drop out; the judgements stay in
+  // stored order, and a key nobody has defined stays with them.
+  it('keeps the judgements and drops the vibes that restate a category', () => {
+    expect(judgementsOf(['cafes', 'quiet', 'food_tour', 'views', 'romantic', 'culture', 'outdoors', 'shopping', 'nightlife']))
+      .toEqual(['quiet', 'romantic']);
+    expect(judgementsOf(['chill', 'kid_friendly', 'rooftop_bars'])).toEqual(['chill', 'kid_friendly', 'rooftop_bars']);
+    // Own keys only: an object's inherited names are not vibes.
+    expect(judgementsOf(['constructor', 'toString'])).toEqual(['constructor', 'toString']);
+    expect(judgementsOf([])).toEqual([]);
   });
 
-  // Two vibes sitting next to each other with the same 6pt dot say
-  // nothing; the palette was chosen so that never happens.
-  it('gives every vibe its own colour', () => {
-    const colours = Object.values(VIBES).map((v) => v.color);
-    expect(new Set(colours).size).toBe(colours.length);
+  // A judgement is drawn in grey beside categories drawn in colour, and
+  // the glyph is what tells the reader which is which. Sharing one would
+  // say "Nature" in grey — the chill leaf that did, until 15 Oct 2026.
+  it('gives no judgement a category’s glyph', () => {
+    const kinds = new Set(Object.values(CATEGORIES).map((c) => c.icon));
+    const judged = judgementsOf(Object.keys(VIBES));
+    expect(judged.sort()).toEqual(['chill', 'kid_friendly', 'quiet', 'romantic']);
+    for (const v of judged) expect(kinds.has(VIBES[v].icon), v).toBe(false);
+  });
+
+  // Two judgements side by side with one glyph would be one mark for two
+  // facts.
+  it('gives every judgement its own glyph', () => {
+    const glyphs = judgementsOf(Object.keys(VIBES)).map((v) => VIBES[v].icon);
+    expect(new Set(glyphs).size).toBe(glyphs.length);
   });
 });
 

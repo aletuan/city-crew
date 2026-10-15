@@ -47,7 +47,7 @@ import { useI18n } from '../lib/i18n';
 import { localized, localizedLang } from '../lib/localized';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
-import { vibeLabel } from '../lib/vibes';
+import { judgementsOf, VIBES, vibeLabel } from '../lib/vibes';
 import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -609,11 +609,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   }];
 
   // The vibe chips, drawn in the highlights card when there is a
-  // paragraph and bare when there is not — see the card's note.
-  const vibes = place.vibe_tags.length ? (
+  // paragraph and bare when there is not — see the card's note. Only the
+  // judgements: a vibe that restates a category is already on the cover.
+  const judged = judgementsOf(place.vibe_tags);
+  const vibes = judged.length ? (
     <View style={[s.vibes, desc ? null : s.vibesBare]} testID="detail-vibes">
-      {place.vibe_tags.map((v) => (
+      {judged.map((v) => (
         <View key={v} style={s.vibe} testID={`detail-vibe-${v}`}>
+          {VIBES[v] ? <Ionicons name={VIBES[v].icon} size={14} color={colors.textSecondary} /> : null}
           <Text style={s.vibeText}>{vibeLabel(v, t)}</Text>
         </View>
       ))}
@@ -1082,7 +1085,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               heading, the pick and the credit already carry — three more
               would stop it marking anything. Drawn with or without a
               blurb: the tags are the desk's, the blurb may be Google's,
-              and a place can have the one and not the other. */}
+              and a place can have the one and not the other.
+
+              Only the judgements, since 15 Oct 2026, each behind its own
+              glyph in the chip's grey. The seven vibes that restate a
+              category (`restatesCategory`) said "Cà phê" here in grey
+              while the cover said it in the category's hue, one fact in
+              two styles; on the live catalog that was 1,152 of 1,350
+              tags. The owner's rule for every tag in the app: colour is
+              the category's, a judgement is a neutral glyph, free words
+              are words. The glyph is what tells a reader this is the
+              second kind and not the first, so it never borrows a
+              category's (`taxonomy.test.ts`). */}
             {vibes}
           </Card>
           ) : vibes}
@@ -1750,11 +1764,15 @@ const s = StyleSheet.create({
   pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.8, textTransform: 'uppercase' },
   // A label's chip (see the block): 24pt — 16 of line and 4 of padding
   // each way — against the 44pt of anything on this screen that is
-  // pressed; the theme's glass, no border, no dot.
+  // pressed; the theme's glass, no border, no dot; a 14pt glyph in grey,
+  // one point over the 13pt word, the step `Chip` keeps (15 over 14).
   vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   // Bare, under the meta row: the 14 the card would have kept from it.
   vibesBare: { marginTop: 14 },
-  vibe: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.surfaceGlass },
+  vibe: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.surfaceGlass,
+  },
   vibeText: { color: colors.text, fontSize: 13, lineHeight: 16, fontWeight: font.semibold },
 
   // The paragraph's last run (see the block): one step under its size,
