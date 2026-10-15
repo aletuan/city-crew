@@ -14,6 +14,18 @@ import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 import { Card, PressableScale } from './ui';
 
+/**
+ * The scorer's one glyph, on the Gallery's button and the dialog it
+ * opens: three bars, a measurement (owner, 15 Oct 2026, from a board of
+ * eighteen). It was the sparkles, which in this app already stand for
+ * suggestions — Explore's "for you" order and the planner's button — and
+ * a score is the opposite of a suggestion: it is what was measured. The
+ * bars are nobody else's glyph here, so they can mean this one thing.
+ * Filled, not outlined: at the toolbar's 15pt the outlined bars are
+ * three hairline boxes, and the filled ones read as bars.
+ */
+export const SCORE_ICON = 'stats-chart' as const;
+
 /** "8.4", the way every one of these writes it — one decimal, always,
  *  so a 7 and a 7.5 line up in a grid. */
 export const tenText = (ten: number) => ten.toFixed(1);
@@ -30,8 +42,8 @@ export const tenText = (ten: number) => ten.toFixed(1);
  * (owner, 15 Oct 2026, from 99/81 Coffee's six). The cover keeps its
  * star because there is one cover; a glyph earns its place by telling
  * one tile from the rest, and on a scored gallery every tile has a
- * score. The button, the dialog and the sheet still wear the sparkles,
- * so the number is learned where it was asked for.
+ * score. The button and the dialog still wear `SCORE_ICON`, so the
+ * number is learned where it was asked for.
  */
 export function ScoreBadge({ score, testID }: { score: PhotoScore; testID?: string }) {
   if (score.aesthetic == null) return null;
@@ -88,7 +100,7 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
       <View style={s.scrim}>
         <View style={s.dialog} testID="scoring-dialog">
-          <Ionicons name="sparkles" size={22} color={colors.accent} />
+          <Ionicons name={SCORE_ICON} size={22} color={colors.accent} />
           <Text style={s.dialogTitle}>
             {stopping
               ? t('Stopping after this photo…', 'Đang dừng sau ảnh này…', 'この写真のあとで停止します…')
