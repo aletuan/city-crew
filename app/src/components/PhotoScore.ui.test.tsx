@@ -33,6 +33,12 @@ describe('ScoreBadge', () => {
     render(<ScoreBadge score={score()} testID="b" />);
     expect(screen.getByTestId('b').textContent).toBe('8.4');
   });
+  // The same glyph on every tile of a scored gallery said nothing the
+  // tile beside it had not (owner, 15 Oct 2026).
+  it('is the number alone, with no glyph', () => {
+    render(<ScoreBadge score={score()} testID="b" />);
+    expect(screen.getByTestId('b').querySelector('[data-icon]')).toBeNull();
+  });
   it('is nothing for a row with no number', () => {
     render(<ScoreBadge score={score({ aesthetic: null })} testID="b" />);
     expect(screen.queryByTestId('b')).toBeNull();
