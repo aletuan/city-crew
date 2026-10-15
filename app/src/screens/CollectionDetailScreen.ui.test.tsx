@@ -1189,7 +1189,7 @@ describe("somebody else's list", () => {
     );
   });
 
-  it('Save a copy opens the form with the source, a credit line and the order', () => {
+  it('Save a copy opens the form with the source, its description untouched and the order', () => {
     const { raw } = show();
     openMenu();
     fireEvent.click(menuRow('Save a copy'));
@@ -1198,7 +1198,9 @@ describe("somebody else's list", () => {
         sourceId: 'c1',
         cityId: 'hanoi',
         title: 'Old Quarter eats',
-        desc: 'Where we eat.\n\nCopied from @hanoicrew',
+        // No "Copied from" line: where a copy came from is `copied_from`
+        // on the row and the curator's Activity, not the copy's text.
+        desc: 'Where we eat.',
         placeSlugs: ['pho', 'cafe', 'museum'],
       },
     });

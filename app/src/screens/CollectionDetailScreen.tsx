@@ -620,27 +620,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    *
    * Nothing is created here. The row hands the source's facts to the
    * collection form — the title (which the form offers back as "Copy of
-   * X", editable before anything exists), the description with a credit
-   * line under it, the members in the curator's order — and the copy is
+   * X", editable before anything exists), the description as the curator
+   * wrote it, the members in the curator's order — and the copy is
    * born only when the reader saves there. Backing out of the form
    * creates nothing, so a curious tap costs nothing to undo.
    *
-   * ── the credit, added ──
+   * ── the credit, kept out of the text ──
    *
-   * The curator's handle goes into the description, under whatever the
-   * curator wrote. It is the only durable place for it: `curator_handle`
-   * on the new row is not ours to set — a database trigger stamps it from
-   * the owner's profile on publish, precisely so a byline cannot be
-   * forged from the client — so a copy that is later published would go
-   * out under the copier's name with nothing recording where it came
-   * from. A line of description travels with the list and survives that.
+   * The copy used to carry a "Copied from @curator" line appended to its
+   * description, back when that was the only record of where a copy came
+   * from. It no longer is: the form writes `copied_from` onto the new row
+   * (see `CollectionFormScreen`), and the curator hears about the copy in
+   * Activity through `copies_of_mine`. The line had become a stamp in
+   * somebody else's words — the copier's first edit was to delete it, it
+   * was written in whichever language the copier happened to read, and
+   * the form saved that one string into every language column. So the
+   * description now carries only what the curator wrote, and where the
+   * copy came from lives in the data, not on the screen (owner, 15 Oct
+   * 2026).
    *
    * ── the city, from the list rather than from the tab ──
    *
-   * `col.city_id`, falling back to the city on screen. The two agree in
-   * every path that reaches this button — a list you do not own arrives
-   * through the public query, which is city-scoped — and the fallback
-   * exists for the legacy select that omits the column.
+   * `col.city_id`, falling back to the city on screen. The fallback
+   * exists for the legacy select that omits the column. The public query
+   * is no longer city-scoped (a list appears in every city it has a place
+   * in — see `fetchCollections`), so the stamp can differ from the tab;
+   * the copy takes the original's stamp, not the tab's.
    */
   const copyCityId = col?.city_id || city?.id;
   const copyRef = useRef<() => void>(() => {});
@@ -657,20 +662,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     const cityId = copyCityId;
     if (!cityId) return;
     const sourceDesc = t(col.desc_en, col.desc_vi, col.desc_ja)?.trim() || '';
-    const credit = col.curator_handle
-      ? t(
-        `Copied from ${atHandle(col.curator_handle)}`,
-        `Sao chép từ ${atHandle(col.curator_handle)}`,
-        `${atHandle(col.curator_handle)} からコピー`,
-      )
-      : '';
     did('copy');
     navigation.navigate('CollectionForm', {
       copyFrom: {
         sourceId: col.id,
         cityId,
         title,
-        desc: [sourceDesc, credit].filter(Boolean).join('\n\n'),
+        desc: sourceDesc,
         // The order on screen, which is `sort_order` already resolved by
         // `membersOf` — copying the list means copying the sequence the
         // curator chose, not the order the rows happen to come back in.
