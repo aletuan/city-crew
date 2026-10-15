@@ -132,11 +132,16 @@ const LIT = [0.35, 0.7] as const;
  *  an eighth blown to white is a window that lost its view. */
 const SHADOWS = 0.3;
 const HIGHLIGHTS = 0.125;
-/** Laplacian variance on the 512-pixel copy. The usual full-size cut is
- *  around 100; scaling down sharpens, so the soft cut sits lower and
- *  "sharp" well above it. */
-const SOFT = 60;
-const SHARP = 300;
+/** Laplacian variance on the 512-pixel copy, cut where the readings
+ *  actually fall. The first guess (soft under 60, sharp over 300) was
+ *  the usual full-size cut scaled down, and it was wrong by an order of
+ *  magnitude: on the 182 photographs read by 15 Oct 2026 the softest
+ *  tenth sits under 434, the middle at 1,256 and the sharpest quarter
+ *  over 2,048, so "soft" never fired and "sharp" praised 175 of the 182
+ *  (owner, from Bengal rooftop's bar). Now "soft" is about the bottom
+ *  tenth and "sharp" the top quarter, so either word says something. */
+const SOFT = 430;
+const SHARP = 2000;
 /** Under 2° is the detector's own noise; over 15° is a choice, not a
  *  slip, and not this sentence's business. */
 const TILT = [2, 15] as const;
@@ -146,6 +151,32 @@ const PEOPLE = 0.15;
 /** A menu board or a sign filling the frame. */
 const TEXT_AREA = 0.08;
 const TEXT_LINES = 6;
+/** Vision's labels for a page or a board, at this confidence or more —
+ *  the other evidence, beside measured writing, that a photograph is a
+ *  record. A name it never returns costs nothing. */
+const RECORD = new Set(['document', 'handwriting', 'chalkboard', 'menu', 'poster', 'receipt', 'screenshot']);
+const RECORD_P = 0.3;
+
+/** Writing measured in the frame: its area, or its lines. */
+const writing = (s: Signals) => (s.textArea ?? 0) > TEXT_AREA || (s.textLines ?? 0) >= TEXT_LINES;
+
+/**
+ * Whether Vision's "record, not a picture" is worth repeating.
+ *
+ * Only when something measured agrees. `isUtility` is Apple's own
+ * classifier and says nothing of why; on the 182 photographs read by 15
+ * Oct 2026 it fired on 27, and 20 of those had no writing and no
+ * document label at all — Bengal rooftop's dark bar among them, which
+ * the first build captioned as a menu (owner). Those 20 were the photos
+ * Vision was least sure about: their most confident label averaged 0.66,
+ * against 0.80 for the rest. The flag stays in the row; the sentence
+ * repeats it only with evidence beside it.
+ */
+const isRecord = (score: Pick<PhotoScore, 'is_utility' | 'signals'>) => {
+  const s = score.signals ?? {};
+  return !!score.is_utility
+    && (writing(s) || (s.labels ?? []).some((l) => RECORD.has(l.id) && l.p >= RECORD_P));
+};
 /** A subject this far from the centre, on either axis, is at the edge. */
 const EDGE = 0.35;
 /** A subject between these shares of the frame reads as one thing. */
@@ -163,7 +194,7 @@ const GREEN_P = 0.3;
 type Said = { plus: string[]; minus: string[] };
 
 /** The measurements, each said where it is worth saying. */
-function said(s: Signals, t: T): Said {
+function said(s: Signals, t: T, record: boolean): Said {
   const plus: string[] = [];
   const minus: string[] = [];
 
@@ -190,7 +221,8 @@ function said(s: Signals, t: T): Said {
   if ((s.peopleArea ?? 0) > PEOPLE) {
     minus.push(t('people fill much of the frame', 'người chiếm nhiều khung hình', '人物が大きく写っている'));
   }
-  if ((s.textArea ?? 0) > TEXT_AREA || (s.textLines ?? 0) >= TEXT_LINES) {
+  // Said once: a record's lead sentence already names the writing.
+  if (writing(s) && !record) {
     minus.push(t('a lot of writing in frame', 'nhiều chữ trong khung', '文字が多い'));
   }
 
@@ -218,21 +250,25 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * The sentence under the number: what helped, then what held it back,
- * and — when Vision called it a record rather than a picture — that
- * first, because it outweighs the rest. Only measured things; when
- * nothing measured stands out, it says so rather than inventing praise.
+ * and — when the photograph is a record rather than a picture, by
+ * Vision's flag and a measurement together (`isRecord`) — that first,
+ * because it outweighs the rest. Only measured things, named as
+ * measured: the record sentence says there is writing, which was seen,
+ * not that it is a menu, which was not. When nothing measured stands
+ * out, it says so rather than inventing praise.
  */
 export function explainScore(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): string {
   const sep = t(', ', ', ', '、');
   const stop = t('.', '.', '。');
   const gap = t(' ', ' ', '');
-  const { plus, minus } = said(score.signals ?? {}, t);
+  const record = isRecord(score);
+  const { plus, minus } = said(score.signals ?? {}, t, record);
   const out: string[] = [];
-  if (score.is_utility) {
+  if (record) {
     out.push(t(
-      'Vision reads this as a record — a menu, a sign, a document — rather than a picture.',
-      'Vision xếp đây là ảnh ghi lại thông tin (thực đơn, biển hiệu, giấy tờ) hơn là ảnh để ngắm.',
-      'Visionはこれを鑑賞用ではなく記録用の写真（メニュー、看板、書類）と判断しました。',
+      'Lots of writing in frame — it reads like a menu or a sign rather than a picture.',
+      'Trong khung có nhiều chữ, trông như ảnh menu hoặc biển hiệu hơn là ảnh để ngắm.',
+      '文字が多く、鑑賞用の写真というよりメニューや看板のように見えます。',
     ));
   }
   if (plus.length) out.push(capital(plus.join(sep)) + stop);
