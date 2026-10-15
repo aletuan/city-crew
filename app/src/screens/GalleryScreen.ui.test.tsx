@@ -19,6 +19,7 @@ import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
+import { SCORER_VERSION, type PhotoScore, type Reading } from '../lib/photoScore';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 
@@ -47,6 +48,8 @@ const data = vi.hoisted(() => ({
   setHidden: vi.fn(async () => {}),
   reorderGallery: vi.fn(async () => {}),
   removePlacePhoto: vi.fn(async (_id: string, _path: string | null) => {}),
+  savePhotoScore: vi.fn(async (_id: string, _reading: Reading, _uid: string) => {}),
+  scoreAsync: vi.fn(async (_uri: string): Promise<Reading> => ({ aesthetic: 0.5, isUtility: false, signals: {} })),
   removePhotoFile: vi.fn(async (_path: string) => {}),
   fetchMyPhotoCounts: vi.fn(async () => ({ mineHere: 0, mineToday: 0 })),
   addPlacePhoto: vi.fn(async (_row: unknown) => 'photo-new'),
@@ -66,6 +69,14 @@ const gate = (g: { hold: boolean; release: () => void }) =>
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
+// The Vision module, present or not as a test says. A getter, so the
+// screen reads whichever the test set when it renders.
+const native = vi.hoisted(() => ({ present: true }));
+vi.mock('../lib/photoScoreNative', () => ({
+  get photoScorer() {
+    return native.present ? { isAvailable: () => true, scoreAsync: (uri: string) => data.scoreAsync(uri) } : null;
+  },
+}));
 vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => state.editor }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
@@ -81,6 +92,7 @@ vi.mock('../lib/data', () => ({
   setHidden: data.setHidden,
   reorderGallery: data.reorderGallery,
   removePlacePhoto: data.removePlacePhoto,
+  savePhotoScore: data.savePhotoScore,
   removePhotoFile: data.removePhotoFile,
   fetchMyPhotoCounts: data.fetchMyPhotoCounts,
   addPlacePhoto: data.addPlacePhoto,
@@ -185,7 +197,10 @@ beforeEach(() => {
   state.elsewhere = { loading: false, data: null };
   state.picked = true;
   state.pickedCount = 1;
+  native.present = true;
   for (const fn of Object.values(data)) fn.mockClear();
+  data.scoreAsync.mockReset().mockResolvedValue({ aesthetic: 0.5, isUtility: false, signals: {} });
+  data.savePhotoScore.mockReset().mockResolvedValue(undefined);
   data.fetchMyPhotoCounts.mockReset().mockResolvedValue({ mineHere: 0, mineToday: 0 });
   alert.mockClear();
 });
@@ -568,5 +583,151 @@ describe('adding one', () => {
     await grid();
     expect(screen.getByText(/The last change is the one that counts/)).toBeTruthy();
     expect(screen.getByText(/JPG or PNG, up to 5 of yours/)).toBeTruthy();
+  });
+});
+
+describe('scoring', () => {
+  const read = (aesthetic: number, over: Partial<PhotoScore> = {}): PhotoScore => ({
+    scorer_version: SCORER_VERSION, aesthetic, is_utility: false, signals: { brightness: 0.5 }, ...over,
+  });
+  /** Each save lands on the row, as the read-back after a real run would
+   *  find it. */
+  const landing = () => data.savePhotoScore.mockImplementation(async (id: string, r: Reading) => {
+    state.rows = state.rows.map((p) => (p.id === id ? { ...p, score: read(r.aesthetic) } : p));
+  });
+
+  // Every absence of the module reads as null — Expo Go, Android, an
+  // older binary, iOS before 18 — and every one means no button.
+  it('draws no button where the phone cannot read', async () => {
+    native.present = false;
+    show([photo('a')]);
+    await grid();
+    expect(screen.getByTestId('gallery-select')).toBeTruthy();
+    expect(screen.queryByTestId('gallery-score')).toBeNull();
+  });
+
+  it('offers to score every photo when none has been read', async () => {
+    show([photo('a'), photo('b', { sort_order: 1 })]);
+    await grid();
+    expect(screen.getByTestId('gallery-score').textContent).toBe('Score photos');
+    // Nothing is being read until it is asked.
+    expect(screen.queryByTestId('scoring-dialog')).toBeNull();
+  });
+
+  // Score once: a read photo is not offered again, and one read by an
+  // older scorer counts as unread.
+  it('offers only the photos not yet read by this scorer', async () => {
+    show([
+      photo('a', { score: read(0.68) }),
+      photo('b', { sort_order: 1, score: read(0.1, { scorer_version: SCORER_VERSION - 1 }) }),
+      photo('c', { sort_order: 2 }),
+    ]);
+    await grid();
+    expect(screen.getByTestId('gallery-score').textContent).toBe('Score 2 new');
+  });
+
+  it('draws no button once every photo is read', async () => {
+    show([photo('a', { score: read(0.68) })]);
+    await grid();
+    expect(screen.queryByTestId('gallery-score')).toBeNull();
+  });
+
+  it('wears the score bottom-left on a read tile, and says it to VoiceOver', async () => {
+    show([photo('a', { score: read(0.68) }), photo('b', { sort_order: 1 })]);
+    await grid();
+    expect(screen.getByTestId('gallery-score-a').textContent).toBe('8.4');
+    expect(screen.queryByTestId('gallery-score-b')).toBeNull();
+    expect(screen.getByTestId('gallery-tile-a').getAttribute('aria-label')).toBe('Photo 1 · 8.4/10');
+    expect(screen.getByTestId('gallery-tile-b').getAttribute('aria-label')).toBe('Photo 2');
+  });
+
+  it('reads each unread photo in turn, keeps each in the guide\'s name, reads back and says how it went', async () => {
+    landing();
+    data.scoreAsync.mockImplementation(async (uri: string) => ({
+      aesthetic: uri.includes('/c.') ? 0.72 : 0.2, isUtility: false, signals: {},
+    }));
+    show([photo('a', { score: read(0.3) }), photo('b', { sort_order: 1 }), photo('c', { sort_order: 2 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-score'));
+    const card = await screen.findByTestId('scored-card');
+    expect(data.scoreAsync.mock.calls.map((c) => c[0])).toEqual(['http://cdn/b.jpg', 'http://cdn/c.jpg']);
+    expect(data.savePhotoScore).toHaveBeenCalledWith('c', { aesthetic: 0.72, isUtility: false, signals: {} }, 'u1');
+    expect(data.fetchGallery).toHaveBeenCalledTimes(2);
+    expect(card.textContent).toContain('Scored 2 photos');
+    expect(card.textContent).toContain('Best: photo 3 · 8.6');
+    // Everything is read now, so the offer goes.
+    expect(screen.queryByTestId('gallery-score')).toBeNull();
+    fireEvent.click(screen.getByTestId('scored-close'));
+    expect(screen.queryByTestId('scored-card')).toBeNull();
+  });
+
+  it('shows how far it has got while it reads', async () => {
+    let release = () => {};
+    data.scoreAsync.mockImplementationOnce(() => new Promise((r) => {
+      release = () => r({ aesthetic: 0.5, isUtility: false, signals: {} });
+    }));
+    show([photo('a'), photo('b', { sort_order: 1 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-score'));
+    expect((await screen.findByTestId('scoring-dialog')).textContent).toContain('1/2');
+    await act(async () => { release(); });
+    await screen.findByTestId('scored-card');
+  });
+
+  // Cancel stops after the photo in hand, and what was read is kept.
+  it('stops after the photo in hand when cancelled, keeping what it read', async () => {
+    let release = () => {};
+    data.scoreAsync.mockImplementationOnce(() => new Promise((r) => {
+      release = () => r({ aesthetic: 0.5, isUtility: false, signals: {} });
+    }));
+    show([photo('a'), photo('b', { sort_order: 1 }), photo('c', { sort_order: 2 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-score'));
+    await screen.findByTestId('scoring-dialog');
+    fireEvent.click(screen.getByTestId('scoring-cancel'));
+    expect(screen.getByTestId('scoring-dialog').textContent).toContain('Stopping after this photo…');
+    await act(async () => { release(); });
+    const card = await screen.findByTestId('scored-card');
+    expect(data.scoreAsync).toHaveBeenCalledTimes(1);
+    expect(data.savePhotoScore).toHaveBeenCalledTimes(1);
+    expect(card.textContent).toContain('Scored 1 photo');
+  });
+
+  it('counts the photos it could not read and goes on', async () => {
+    data.scoreAsync.mockRejectedValueOnce(new Error('404'));
+    show([photo('a'), photo('b', { sort_order: 1 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-score'));
+    await screen.findByTestId('scored-card');
+    expect(data.savePhotoScore).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('scored-failed').textContent).toBe('1 could not be read');
+  });
+
+  it('is not offered, and its card not drawn, while choosing photos to delete', async () => {
+    show([photo('a'), photo('b', { sort_order: 1 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-score'));
+    await screen.findByTestId('scored-card');
+    fireEvent.click(screen.getByTestId('gallery-select'));
+    expect(screen.queryByTestId('gallery-score')).toBeNull();
+    expect(screen.queryByTestId('scored-card')).toBeNull();
+  });
+
+  it('puts the number and its reasons in the photo\'s sheet, above what can be done to it', async () => {
+    show([photo('a', { score: read(0.68) }), photo('b', { sort_order: 1 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-tile-a'));
+    const block = await screen.findByTestId('score-block');
+    expect(block.textContent).toContain('8.4');
+    expect(block.textContent).toContain('Very good');
+    expect(screen.getByTestId('score-why').textContent).toBe('Well lit.');
+  });
+
+  it('has no score block for a photo nobody has read', async () => {
+    show([photo('a')]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-tile-a'));
+    await screen.findByRole('button', { name: 'Make it the cover' });
+    expect(screen.queryByTestId('score-block')).toBeNull();
   });
 });

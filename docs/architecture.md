@@ -49,7 +49,7 @@ Chiều mũi tên chỉ đi xuống. Hai điểm hay bị hiểu nhầm:
 - **`lib/` là hai tầng đội một tên.** `.ts` là phần thuần, `.tsx` là
   provider. Ranh giới được giữ bằng đuôi file, vì cổng coverage đọc đuôi
   file (xem dưới) — một `.ts` không thuần phải được ghi tên vào `IMPURE`
-  trong `app/vitest.config.ts` kèm lý do (hiện có 10).
+  trong `app/vitest.config.ts` kèm lý do (hiện có 11).
 - **Không màn hình hay component nào nói chuyện với Supabase.** Muốn đọc
   hay ghi thì gọi một hàm trong `lib/data` hoặc một provider. Đây là lý do
   `planner.test.ts` chạy không cần mạng, và là lý do đổi một câu truy vấn

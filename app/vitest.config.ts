@@ -133,7 +133,11 @@ import { defineConfig } from 'vitest/config';
 // Which hands each column to a different screen: `SearchScreen` at
 // 99.29% lines and statements, `CrewScreen` at 91.89% branches,
 // `GalleryScreen` at 91.3% functions.
-const SCREENS_FLOOR = { lines: 99, statements: 99, branches: 91, functions: 91 };
+//
+// `GalleryScreen` rose to 93.54 with its photo-scoring tests (15 Oct),
+// and the functions column went to the next-lowest: `PlaceDetailScreen`
+// and `TripsScreen`, both at 92.3.
+const SCREENS_FLOOR = { lines: 99, statements: 99, branches: 91, functions: 92 };
 
 // ── the components' floor ──
 //
@@ -190,6 +194,7 @@ const IMPURE = [
   'src/lib/channel.ts', // reads expo-updates; two consts, no logic to hold
   'src/lib/reminders.ts', // talks to expo-notifications; the maths it uses is remind.ts, which the gate holds
   'src/lib/askReview.ts', // reads AsyncStorage and the native review sheet; the rules it applies are review.ts, which the gate holds
+  'src/lib/photoScoreNative.ts', // looks up the Vision module, absent everywhere a test runs; what it reads is photoScore.ts, which the gate holds
   'src/lib/data/fetch.ts', // the hook every query is driven by; needs a renderer
   'src/lib/data/hooks.ts', // and the wrappers around it, for the same reason
   'src/lib/data/index.ts', // the barrel: re-exports and nothing else
