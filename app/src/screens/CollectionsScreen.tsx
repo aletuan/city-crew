@@ -189,14 +189,15 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
  * is a dead end in the one place a dead end costs most: a city the desk
  * has just opened has no public lists at all, and the morning this was
  * written the owner read that honest emptiness as data loss. Emptiness
- * here is the state of *this city*, not a fault, and the sentence that
+ * here is a state, not a fault, and the sentence that
  * says so can also hand the reader the way to end it — the same shape
  * `FirstCollection` uses one section up.
+ *
+ * It named the city while the shelf was scoped to one. The shelf shows
+ * every city now, so empty means empty everywhere, and says so plainly.
  */
-function CommunityEmpty({ signedIn, city, onCreate, onExplore }: {
+function CommunityEmpty({ signedIn, onCreate, onExplore }: {
   signedIn: boolean;
-  /** The city the shelf is scoped to, by name; null when it is every city. */
-  city: string | null;
   onCreate: () => void;
   onExplore: () => void;
 }) {
@@ -207,13 +208,8 @@ function CommunityEmpty({ signedIn, city, onCreate, onExplore }: {
         <View style={s.firstIcon}>
           <Ionicons name="globe" size={27} color={colors.accent} />
         </View>
-        {/* Named for the city, since that is the whole of why it is
-            empty: the shelf is scoped, and "no public lists" with no
-            place named read as a verdict on the app. */}
         <Text style={s.firstTitle}>
-          {city
-            ? t(`No public lists in ${city} yet`, `Chưa có bộ sưu tập công khai nào ở ${city}`, `${city}にはまだ公開コレクションがありません`)
-            : t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません')}
+          {t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません')}
         </Text>
         {/* True now that a curator's own public list is on this shelf; it
             promised the same thing while the shelf filtered them out. */}
@@ -430,7 +426,7 @@ export default function CollectionsScreen({ navigation, route }: {
 }) {
   const { t } = useI18n();
   const { session } = useAuth();
-  const { city, cities } = useCity();
+  const { cities } = useCity();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);
   // Shared with the save sheet — see SaveProvider. Reading it here through
@@ -490,10 +486,18 @@ export default function CollectionsScreen({ navigation, route }: {
   }, [cities, t]);
 
   // A public collection with nothing at all is a dead end, so it stays
-  // hidden; one with nothing in this city is somebody else's trip, and
-  // the sift below hides it under the city the shelf is scoped to. Your
-  // own are neither: an empty one is new, and one made in another city is
-  // still yours — `mine` is filtered by neither test.
+  // hidden. Your own are not: an empty one is new — `mine` is not
+  // filtered by it.
+  //
+  // ── every city, as Yours is (owner, 15 Oct 2026) ──
+  //
+  // This shelf was scoped to the app's city, Yours to none, and nothing
+  // on the screen said the two differed until a subtitle did. The owner
+  // asked for Community to show every city by default, as Yours does: a
+  // reader in Saigon planning a week in Hanoi is the reader most in need
+  // of Hanoi's lists, and the city chip still narrows to one. The
+  // members come embedded whole (`withMembers`), so a list from another
+  // city has its places and its cover without that city's catalog.
   //
   // Your own published lists are on this shelf too, as everyone sees
   // them. They were filtered out here (a list under both tabs reads as
@@ -616,11 +620,11 @@ export default function CollectionsScreen({ navigation, route }: {
   const q = query.trim();
   const [panel, setPanel] = useState(false);
   const [kind, setKind] = useState<string | null>(null);
-  // The city chip, in three states: unset (the shelf's own scope — the
-  // app's city on Community, every city on Yours), a city, or 'all',
-  // which is the Community shelf's own chip let go of. Yours never needs
-  // 'all', since unset already means it there.
-  const [cityPick, setCityPick] = useState<string | 'all' | null>(null);
+  // The city chip: unset is every city, on both shelves; a city narrows
+  // to the lists with a place there. It had a third state, 'all', while
+  // Community was scoped to the app's city and letting go of that chip
+  // had to mean something other than unset.
+  const [cityPick, setCityPick] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   const cancel = () => {
     setPanel(false); setQuery(''); setKind(null); setCityPick(null);
@@ -673,11 +677,11 @@ export default function CollectionsScreen({ navigation, route }: {
   );
   // The chips a shelf can offer: only what its lists actually hold, so no
   // chip leads to an empty shelf. A city group with one city is a fact
-  // and not a choice — unless that one city is not the one the shelf is
-  // scoped to, when the chip is the only way to those lists.
+  // and not a choice — unless a chip is already chosen, when the group
+  // is the way back to it.
   const cityChoices = useMemo(() => collectionCities(shelf), [shelf]);
   const kindChoices = useMemo(() => collectionKinds(shelf), [shelf]);
-  const scopeCity = cityPick === 'all' ? null : (cityPick ?? (onYours ? null : city?.id ?? null));
+  const scopeCity = cityPick;
   const offerCities = cityChoices.length > 1 || (cityChoices.length === 1 && cityChoices[0] !== scopeCity);
   const asked = !!(q || kind || cityPick);
 
@@ -693,8 +697,7 @@ export default function CollectionsScreen({ navigation, route }: {
    * rather than on the list; "3 of 8 places · Cafés" when a chip reached
    * part of it. Null when the ordinary count says it all: nothing asked
    * (every place is a hit then, by construction), or a list found by its
-   * own words with every place still counted. The default city scope
-   * prints nothing per card — it is the subtitle's to say, once.
+   * own words with every place still counted.
    */
   const placesOf = (n: number) => `${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`;
   const reasonFor = (slug: string): string | null => {
@@ -712,24 +715,21 @@ export default function CollectionsScreen({ navigation, route }: {
         `${placesOf(hit.total)}のうち${hit.hits}`,
       ));
       if (kind) parts.push(categoryLabel(kind, t));
-      if (cityPick && cityPick !== 'all') parts.push(cityName(cityPick));
+      if (cityPick) parts.push(cityName(cityPick));
     }
     return parts.length ? parts.join(' · ') : null;
   };
 
-  // The line under the title: how many lists, and which city they are
-  // in — the one thing the two shelves did differently without saying so
-  // (the owner's review: Community was scoped to the city, Yours was not,
-  // and nothing on the screen said either). Narrowed, it names the chips
-  // instead, as the visits screen does.
+  // The line under the title: how many lists, and across how many cities
+  // — the same on both shelves now that both show every city. Narrowed,
+  // it names the chips instead, as the visits screen does.
   const listsWord = (n: number) => t(n === 1 ? '1 collection' : `${n} collections`, `${n} bộ sưu tập`, `${n}件のコレクション`);
   const chosen = [
     kind ? categoryLabel(kind, t) : null,
-    cityPick ? (cityPick === 'all' ? t('All cities', 'Mọi thành phố', 'すべての都市') : cityName(cityPick)) : null,
+    cityPick ? cityName(cityPick) : null,
   ].filter((x): x is string => !!x);
   const scopeLine = (() => {
     if (chosen.length) return [listsWord(hits.length), ...chosen].join(' · ');
-    if (!onYours) return `${listsWord(hits.length)} · ${scopeCity ? cityName(scopeCity) : t('All cities', 'Mọi thành phố', 'すべての都市')}`;
     const k = cityChoices.length;
     if (k === 0) return listsWord(hits.length);
     return `${listsWord(hits.length)} · ${k === 1 ? cityName(cityChoices[0]) : t(`${k} cities`, `${k} thành phố`, `${k}都市`)}`;
@@ -942,9 +942,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       key={id}
                       label={cityName(id)}
                       active={scopeCity === id}
-                      // The Community shelf's own city, let go of, is every
-                      // city; on Yours unset already means that.
-                      onPress={() => { setCityPick(scopeCity === id ? (onYours ? null : 'all') : id); answered(); }}
+                      onPress={() => { setCityPick(scopeCity === id ? null : id); answered(); }}
                     />
                   ))}
                 </View>
@@ -1565,7 +1563,6 @@ export default function CollectionsScreen({ navigation, route }: {
                 ? (
                   <CommunityEmpty
                     signedIn={!!session}
-                    city={scopeCity ? cityName(scopeCity) : null}
                     onCreate={() => navigation.navigate('CollectionForm')}
                     onExplore={() => navigation.getParent()?.navigate('Explore')}
                   />
