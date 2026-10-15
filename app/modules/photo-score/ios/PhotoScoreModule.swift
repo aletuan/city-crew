@@ -67,9 +67,28 @@ public class PhotoScoreModule: Module {
         let (body, _) = try await URLSession.shared.data(from: url)
         data = body
       }
-      return try await Reading.of(data, uri: uri)
+      // Off whatever thread called. The reading is a few hundred
+      // milliseconds of decoding and Vision, most of it synchronous, and
+      // where an async body runs is Expo's business and not documented;
+      // detached, it is certainly not the JS thread, which has Cancel to
+      // answer and the dialog's bars to keep (owner, 15 Oct 2026: they
+      // stood still — the JavaScript half of that fix is `useWave`).
+      let reading = try await Task.detached(priority: .userInitiated) { () async throws -> Carried in
+        let measured = try await Reading.of(data, uri: uri)
+        return Carried(measured)
+      }.value
+      return reading.value
     }
   }
+}
+
+/// The reading, carried out of the detached task. `Task` asks for a
+/// `Sendable` result and a `[String: Any]` is not one; this dictionary is
+/// built inside the task and only read after it, never shared, so the
+/// promise is kept by construction.
+internal final class Carried: @unchecked Sendable {
+  let value: [String: Any]
+  init(_ value: [String: Any]) { self.value = value }
 }
 
 internal final class VisionUnavailableException: Exception {

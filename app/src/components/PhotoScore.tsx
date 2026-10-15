@@ -6,13 +6,13 @@
 // The words and the arithmetic are `lib/photoScore`'s; this only draws
 // them, so a threshold corrected there changes every one of these at once.
 
-import React, { useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, type ColorValue, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { band, bandLabel, explainScore, toTen, type PhotoScore } from '../lib/photoScore';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
-import { Card, PressableScale, useLoop, useReducedMotion } from './ui';
+import { Card, PressableScale, useReducedMotion } from './ui';
 
 /**
  * Each bar's travel, as shares of the glyph's height, and how long one
@@ -36,6 +36,38 @@ const BARS = [
   { from: 0.75, to: 0.4, ms: 1900 },
 ] as const;
 
+/** Out and back in one stroke: 0 at both ends, 1 halfway, eased like a
+ *  sine, so one timing is a whole rise and fall and the loop's seam is
+ *  where the bar is already at rest. */
+export const thereAndBack = (t: number) => (1 - Math.cos(2 * Math.PI * t)) / 2;
+
+/**
+ * One bar's wave, run entirely on the UI thread.
+ *
+ * Not `useLoop(ms, still, 'inOut')`, which the first build used and the
+ * owner saw stand still on the phone (15 Oct 2026). That loop is a
+ * sequence — up, then down — and React Native cannot loop a sequence
+ * natively ("Loops run using the native driver cannot contain
+ * Animated.sequence animations"), so every leg was started again from
+ * JavaScript; while the phone reads a photograph the JS side is busy, and
+ * each bar finished its leg and waited. A single timing whose easing goes
+ * out and back is looped by the native driver itself — the easing is
+ * sampled into frames once, at the start — and needs nothing from
+ * JavaScript until it is stopped.
+ */
+function useWave(ms: number, still: boolean) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (still) { v.setValue(0); return; }
+    const loop = Animated.loop(Animated.timing(v, {
+      toValue: 1, duration: ms, easing: thereAndBack, useNativeDriver: true,
+    }));
+    loop.start();
+    return () => { loop.stop(); v.setValue(0); };
+  }, [ms, still, v]);
+  return v;
+}
+
 /**
  * The scorer's one glyph, on the Gallery's button and the dialog it
  * opens: three bars, a measurement (owner, 15 Oct 2026, from a board of
@@ -53,27 +85,36 @@ const BARS = [
  * still one beside the button's word has to be the same drawing the
  * dialog sets moving. Each bar is scaled from its foot (`scaleY` with
  * `transformOrigin` at the bottom) on the native driver, so the motion
- * costs the JS thread nothing while Vision is busy.
+ * costs the JS thread nothing while Vision is busy — see `useWave`.
  */
 export function ScoreGlyph({ size, color, active = false, testID = 'score-glyph' }: {
   size: number; color: ColorValue; active?: boolean; testID?: string;
 }) {
   const still = useReducedMotion() || !active;
-  const waves = [useLoop(BARS[0].ms, still, 'inOut'), useLoop(BARS[1].ms, still, 'inOut'), useLoop(BARS[2].ms, still, 'inOut')];
+  const waves = [useWave(BARS[0].ms, still), useWave(BARS[1].ms, still), useWave(BARS[2].ms, still)];
+  // Made once: the dialog renders again at every photo, and a new
+  // interpolation each time would hand the native driver a new node to
+  // attach mid-loop.
+  const scales = useMemo(
+    () => BARS.map((b, i) => waves[i].interpolate({ inputRange: [0, 1], outputRange: [b.from, b.to] })),
+    // The three values are refs, made once with the component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
   // A fifth of the height wide and a seventh between, so three bars
   // fill the glyph's box the way Ionicons' marks fill theirs.
   const w = Math.max(2, Math.round(size * 0.2));
   const gap = Math.max(1, Math.round(size * 0.14));
   return (
     <View style={[s.glyph, { height: size, gap }]} testID={testID} aria-hidden>
-      {BARS.map((b, i) => (
+      {scales.map((scale, i) => (
         <Animated.View
           key={i}
           testID={`${testID}-bar`}
           style={{
             width: w, height: size, borderRadius: w / 2, backgroundColor: color,
             transformOrigin: 'bottom',
-            transform: [{ scaleY: waves[i].interpolate({ inputRange: [0, 1], outputRange: [b.from, b.to] }) }],
+            transform: [{ scaleY: scale }],
           }}
         />
       ))}

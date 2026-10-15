@@ -59,6 +59,8 @@ import type { Nav, RootRoute } from '../nav';
 
 type Mode = 'view' | 'pick';
 
+const nextFrame = () => new Promise<void>((r) => { requestAnimationFrame(() => r()); });
+
 const COLS = 3;
 const GAP = 6;
 
@@ -235,6 +237,11 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     stop.current = false;
     setScored(null);
     setScoring({ done: 0, total: unscored.length });
+    // Two frames, so the dialog is on screen and its bars are moving
+    // before the first photograph is handed over: the reading can keep
+    // the JS side busy, and the bars' loops are started from there.
+    await nextFrame();
+    await nextFrame();
     const result = await scoreAll(unscored, {
       read: (uri) => scorer.scoreAsync(uri),
       save: (id, reading) => savePhotoScore(id, reading, me),
