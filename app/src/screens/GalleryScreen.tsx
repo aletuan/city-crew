@@ -18,12 +18,21 @@
 // is confirmed, so a change of mind costs nothing — "Cancel" throws it
 // away and the rows were never touched.
 //
+// ── scoring (owner, 15 Oct 2026) ──
+//
+// The phone can read each photograph with Apple Vision and say how good
+// it is, out of ten, and why — on the device, once per photograph, kept
+// in `photo_scores`. The button offers only what has not been read, and
+// is not drawn at all where the phone cannot do it (`photoScoreNative`
+// says where that is). Nothing is decided by the score: the cover stays
+// the guide's choice, and the number is there to make it quicker.
+//
 // ── what is not here ──
 //
 // No ordering, no tags, no captions, no crop. Version one is the desk's
 // three verbs and nothing the desk cannot do yet.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -31,16 +40,19 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import ActionSheet, { sheetHeader, type SheetAction } from '../components/ActionSheet';
 import { AddPill } from '../components/add';
+import { ScoreBadge, ScoreBlock, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
-import { fetchGallery, fetchPlaceId, removePlacePhoto, setCover, setHidden, usePlaceBySlug } from '../lib/data';
+import { fetchGallery, fetchPlaceId, removePlacePhoto, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
 import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryPhoto } from '../lib/gallery';
 import { MAX_PER_PLACE } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
+import { bestOf, needsScore, scoreAll, toTen } from '../lib/photoScore';
+import { photoScorer } from '../lib/photoScoreNative';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -82,6 +94,11 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const [picked, setPicked] = useState<string[]>([]);
   const [menuFor, setMenuFor] = useState<GalleryPhoto | null>(null);
   const [busy, setBusy] = useState(false);
+  // A run of the scorer: how far it has got while it runs, and what it
+  // came to once it has finished, until the card is closed.
+  const [scoring, setScoring] = useState<{ done: number; total: number; stopping?: boolean } | null>(null);
+  const [scored, setScored] = useState<{ scored: number; failed: number } | null>(null);
+  const stop = useRef(false);
 
   const fail = useCallback((e: unknown) => {
     Alert.alert(
@@ -207,6 +224,31 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     p.is_hidden ? t('Hidden', 'Đã ẩn', '非表示') : null,
   ].filter(Boolean).join(' · ');
 
+  // ── scoring ──
+
+  // Only what has not been read, or was read by an older scorer.
+  const unscored = shown.filter((p) => needsScore(p.score));
+  const anyScored = unscored.length < shown.length;
+  const best = bestOf(shown);
+
+  const startScoring = async (scorer: NonNullable<typeof photoScorer>, me: string) => {
+    stop.current = false;
+    setScored(null);
+    setScoring({ done: 0, total: unscored.length });
+    const result = await scoreAll(unscored, {
+      read: (uri) => scorer.scoreAsync(uri),
+      save: (id, reading) => savePhotoScore(id, reading, me),
+      onStep: (done) => setScoring((was) => ({ ...was, done, total: unscored.length })),
+      stopped: () => stop.current,
+    });
+    // Read back before the dialog goes, so the badges and the card's
+    // "best" arrive with it rather than a beat after.
+    await load().catch(fail);
+    setScoring(null);
+    setScored(result);
+    if (result.scored) successHaptic();
+  };
+
   // ── modes ──
 
   const startPick = () => { setPicked([]); setMode('pick'); };
@@ -263,6 +305,19 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
             {mode === 'view' && (
               <Tool icon="checkmark-circle-outline" label={t('Select', 'Chọn', '選択')} onPress={startPick} testID="gallery-select" />
             )}
+            {/* Drawn only where the phone can read, and only while there
+                is something left to read — a button that would score
+                nothing is a button that teaches the reader to doubt it. */}
+            {mode === 'view' && photoScorer && uid && unscored.length > 0 && (
+              <Tool
+                icon="sparkles-outline"
+                label={anyScored
+                  ? t(`Score ${unscored.length} new`, `Chấm ${unscored.length} ảnh mới`, `新しい${unscored.length}枚を採点`)
+                  : t('Score photos', 'Chấm ảnh', '写真を採点')}
+                onPress={() => { void startScoring(photoScorer!, uid); }}
+                testID="gallery-score"
+              />
+            )}
             {mode === 'pick' && (
               <>
                 <Tool icon="close" label={t('Cancel', 'Huỷ', 'キャンセル')} onPress={cancel} testID="gallery-cancel" />
@@ -280,6 +335,15 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
           </View>
         )}
 
+        {scored && mode === 'view' && (
+          <ScoredCard
+            scored={scored.scored}
+            failed={scored.failed}
+            best={best ? { n: shown.indexOf(best.photo) + 1, ten: best.ten } : null}
+            onClose={() => setScored(null)}
+          />
+        )}
+
         {photos === null ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
         ) : shown.length === 0 && !adder.busy ? (
@@ -295,7 +359,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   disabled={busy}
                   onPress={picks ? () => togglePick(p.id) : () => setMenuFor(p)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示')}` : ''}`}
+                  accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示')}` : ''}${p.score?.aesthetic != null ? ` · ${tenText(toTen(p.score.aesthetic))}/10` : ''}`}
                   accessibilityState={picks ? { selected: picked.includes(p.id) } : undefined}
                   containerStyle={{ width: cell, height: cell }}
                   style={s.tile}
@@ -318,6 +382,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                       <Text style={s.badgeText}>{t('Cover', 'Bìa', 'カバー')}</Text>
                     </View>
                   )}
+
+                  {p.score && <ScoreBadge score={p.score} testID={`gallery-score-${p.id}`} />}
 
                   {mode === 'view' && (
                     <View style={s.more} testID={`gallery-more-${p.id}`}>
@@ -385,16 +451,30 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         onClose={() => setMenuFor(null)}
         actions={menuFor ? galleryActions(menuFor).map((a) => actionRow(menuFor, a)) : []}
         header={menuFor ? (
-          <View style={s.who}>
-            <Image source={{ uri: menuFor.photo_uri }} style={s.thumb} contentFit="cover" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={s.whoName} numberOfLines={1}>
-                {t('Photo', 'Ảnh', '写真')} {shown.indexOf(menuFor) + 1}/{shown.length}
-              </Text>
-              <Text style={s.whoMeta} numberOfLines={1}>{provenance(menuFor)}</Text>
+          <View>
+            <View style={s.who}>
+              <Image source={{ uri: menuFor.photo_uri }} style={s.thumb} contentFit="cover" />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={s.whoName} numberOfLines={1}>
+                  {t('Photo', 'Ảnh', '写真')} {shown.indexOf(menuFor) + 1}/{shown.length}
+                </Text>
+                <Text style={s.whoMeta} numberOfLines={1}>{provenance(menuFor)}</Text>
+              </View>
             </View>
+            {/* The number with its reasons, under the photograph it is
+                about and above what can be done to it — the order a guide
+                deciding on a cover reads in. */}
+            {menuFor.score && <ScoreBlock score={menuFor.score} />}
           </View>
         ) : null}
+      />
+
+      <ScoringDialog
+        visible={scoring !== null}
+        done={scoring?.done ?? 0}
+        total={scoring?.total ?? 0}
+        stopping={scoring?.stopping ?? false}
+        onCancel={() => { stop.current = true; setScoring((was) => was && { ...was, stopping: true }); }}
       />
     </Screen>
   );

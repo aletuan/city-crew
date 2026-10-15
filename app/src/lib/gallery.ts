@@ -22,6 +22,7 @@
 // Plain TypeScript, tested from `gallery.test.ts`.
 
 import { canAddPhoto } from './guide';
+import type { PhotoScore } from './photoScore';
 
 /** A photograph as the gallery reads it. `source` is printed, never
  *  decided on. */
@@ -35,6 +36,8 @@ export type GalleryPhoto = {
   /** Where the file is in `place-photos`; null for a row whose picture
    *  was never ours to store. A delete passes it on to the bucket. */
   storage_path: string | null;
+  /** Vision's reading, once somebody has asked for it (`photoScore`). */
+  score?: PhotoScore | null;
 };
 
 /** Who may open the gallery at all: the same three conditions that let a
