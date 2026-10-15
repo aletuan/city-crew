@@ -98,7 +98,11 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
             <View style={[s.fill, { width: `${total ? (done / total) * 100 : 0}%` }]} testID="scoring-fill" />
           </View>
           <Text style={s.dialogNote}>
-            {t('On this phone, nothing is uploaded.', 'Phân tích ngay trên máy, không gửi ảnh đi đâu.', '端末内で処理し、写真は送信しません。')}
+            {/* Where the work happens, and no more: a promise about
+                what is not sent invites the question of what is (the
+                scores are, to the gallery), so the owner kept it to the
+                one fact (15 Oct 2026). */}
+            {t('Analysed on this phone.', 'Phân tích ngay trên máy.', '端末内で分析します。')}
           </Text>
           <PressableScale
             onPress={onCancel}

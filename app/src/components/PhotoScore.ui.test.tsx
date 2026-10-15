@@ -69,6 +69,7 @@ describe('ScoringDialog', () => {
   it('counts the photo being read from one, and fills by what is done', () => {
     render(<ScoringDialog visible done={2} total={6} stopping={false} onCancel={() => {}} />);
     expect(screen.getByTestId('scoring-dialog').textContent).toContain('Reading the photos… 3/6');
+    expect(screen.getByTestId('scoring-dialog').textContent).toContain('Analysed on this phone.');
     expect(screen.getByTestId('scoring-fill').style.width).toBe('33.33333333333333%');
   });
 
