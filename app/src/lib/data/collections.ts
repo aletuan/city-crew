@@ -282,7 +282,9 @@ export async function createCollection(input: {
       is_public: false,
       copied_from: input.copiedFrom ?? null,
       kinds_hidden: [...(input.kinds?.hidden ?? [])],
-      kinds_added: [...(input.kinds?.added ?? [])],
+      // Retired with the third-of-the-list threshold — see
+      // `lib/collectionKinds`. Written empty so no row carries one.
+      kinds_added: [],
     });
     if (!error) return slug;
     // A policy said no. The only policy that can, for a row carrying the
@@ -315,7 +317,7 @@ export async function updateCollection(
       cover_photo_id: input.coverPhotoId ?? null,
       // Left alone when the caller has no word on them, rather than
       // cleared: a save that did not show the chips must not wipe them.
-      ...(input.kinds ? { kinds_hidden: [...input.kinds.hidden], kinds_added: [...input.kinds.added] } : {}),
+      ...(input.kinds ? { kinds_hidden: [...input.kinds.hidden], kinds_added: [] } : {}),
     })
     .eq('slug', slug);
   if (error) throw new Error(error.message);

@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '../uitest/render';
+import { fireEvent, render, screen } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
 
 vi.mock('../lib/i18n', () => ({
@@ -61,5 +61,26 @@ describe('KindPills', () => {
   it('needs no test id to draw', () => {
     const { container } = render(<KindPills kinds={['fun']} />);
     expect(container.textContent).toBe('Fun');
+  });
+});
+
+// Given `onPick`, the pills are a filter: each a button that says whether
+// it is chosen, and hands its kind back on a tap.
+describe('KindPills as a filter', () => {
+  it('makes each pill a button that says whether it is chosen', () => {
+    const onPick = vi.fn();
+    render(<KindPills kinds={['eats', 'views']} chosen={['views']} onPick={onPick} testID="row" />);
+    const views = screen.getByTestId('row-views');
+    expect(views.getAttribute('role')).toBe('button');
+    expect(views.getAttribute('aria-label')).toBe('Views');
+    expect(views.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('row-eats').getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(screen.getByTestId('row-eats'));
+    expect(onPick).toHaveBeenCalledWith('eats');
+  });
+
+  it('chooses nothing unless told', () => {
+    render(<KindPills kinds={['fun']} onPick={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Fun' }).getAttribute('aria-selected')).toBe('false');
   });
 });

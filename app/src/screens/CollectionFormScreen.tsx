@@ -26,9 +26,9 @@ import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '
 import { Chip, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
-import { CATEGORIES, CATEGORY_ORDER, categoryLabel } from '../lib/categories';
+import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
-import { chooseKind, collectionKinds, type KindChoice } from '../lib/collectionKinds';
+import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
@@ -179,13 +179,13 @@ export default function CollectionFormScreen({ navigation, route }: {
     : null;
   const coverId = pick.chosen ? pick.id : startCover;
 
-  // The chips, as the owner's two lists of decisions — see
-  // `lib/collectionKinds`. Seeded the way the cover is, from the row as
-  // it stands until the reader touches one: a rename reads its own row,
-  // a copy the original's, carried in the route.
-  const startKinds: KindChoice = copyFrom
-    ? { hidden: copyFrom.kinds?.hidden ?? [], added: copyFrom.kinds?.added ?? [] }
-    : { hidden: col?.kinds_hidden ?? [], added: col?.kinds_added ?? [] };
+  // The chips, as the kinds the owner hid — see `lib/collectionKinds`.
+  // Seeded the way the cover is, from the row as it stands until the
+  // reader touches one: a rename reads its own row, a copy the
+  // original's, carried in the route.
+  const startKinds: KindChoice = { hidden: (copyFrom ? copyFrom.kinds?.hidden : col?.kinds_hidden) ?? [] };
+  // Every kind the places carry, in the card's order, each lit unless hidden.
+  const offered = derivedKinds(members);
   const [kindPick, setKindPick] = useState<KindChoice | null>(null);
   const kindChoice = kindPick ?? startKinds;
   const shownKinds = collectionKinds(members, kindChoice);
@@ -416,27 +416,28 @@ export default function CollectionFormScreen({ navigation, route }: {
         returnKeyType="done"
       />
       {/* ── the chips ──
-          All nine, in the filter row's order, lit where the list shows
-          them: what its places earn, as corrected. Any of the nine can be
-          turned on (the owner's ruling, 15 Oct 2026), so the whole
-          vocabulary is on offer rather than only what the places carry.
-          A tap is the owner's word and it sticks — see `chooseKind`.
+          Every kind the list's places carry, in the order the card shows
+          them, lit unless hidden; a tap hides one or shows it again, and
+          hidden sticks — see `chooseKind`. Only what the places carry:
+          putting on a kind no place has (offered for a day, 15 Oct 2026)
+          went when every carried kind started to show, since the only
+          kind left to add was one that says something untrue of the list
+          and filters it to nothing.
 
-          Not on a brand-new list: it has no places to earn anything, and
-          the form that names it should stay one field long. A rename and
-          a copy have places. */}
-      {editing || copyFrom ? (
+          Not where nothing is carried — a brand-new list, or a list of
+          places nobody has classified: there is nothing to hide. */}
+      {offered.length > 0 ? (
         <View style={s.coverBlock} testID="collection-kinds-field">
           <Text style={s.coverLabel}>{t('CATEGORIES', 'THỂ LOẠI', 'カテゴリー')}</Text>
           <Text style={s.kindsHint}>
             {t(
-              'Suggested from the places in it. Tap to turn one on or off.',
-              'Gợi ý từ các địa điểm trong danh sách. Chạm để bật hoặc tắt.',
-              'リストのスポットから提案しています。タップでオン・オフできます。',
+              'From the places in it. Tap one to hide it from the list, or show it again.',
+              'Lấy từ các địa điểm trong danh sách. Chạm để ẩn hoặc hiện lại.',
+              'リストのスポットから。タップで非表示・再表示を切り替えます。',
             )}
           </Text>
           <View style={s.kindsGrid}>
-            {CATEGORY_ORDER.map((k) => {
+            {offered.map((k) => {
               const on = shownKinds.includes(k);
               return (
                 <Chip

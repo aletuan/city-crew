@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, Pressable, ScrollView, StyleProp, StyleSheet,
+  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, Pressable, StyleProp, StyleSheet,
   Text, View,
   ViewStyle,
 } from 'react-native';
@@ -10,14 +10,14 @@ import PlaceCard from '../components/PlaceCard';
 import TipBox from '../components/TipBox';
 import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, Card, Chip, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
-import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
-import { collectionKinds, kindsPresent, narrowTo } from '../lib/collectionKinds';
+import { categoriesOf } from '../lib/categories';
+import { collectionKinds, narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
@@ -370,12 +370,69 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
   const desc = col ? t(col.desc_en, col.desc_vi, col.desc_ja) : '';
-  // The list's chips: what its places earn, as the owner corrected it.
+  // The list's chips: every kind its places carry, most places first,
+  // less what the owner hid (`lib/collectionKinds`).
   const kinds = useMemo(
-    () => (col ? collectionKinds(members, { hidden: col.kinds_hidden, added: col.kinds_added }) : []),
+    () => (col ? collectionKinds(members, { hidden: col.kinds_hidden }) : []),
     [col, members],
   );
-  const kindRow = <KindPills kinds={kinds} testID="collection-kinds" />;
+
+  // ── the chips are the filter (owner, 15 Oct 2026) ──
+  //
+  // A tap on a chip narrows the places to that kind; any number chosen,
+  // and a place stays if it carries any of them. Nothing chosen is the
+  // whole list — there is no "All" chip, by the owner's ruling, and the
+  // way back is the count line's "Clear" or the chips tapped off.
+  //
+  // It was a second row of the filter row's glyph chips under the card
+  // for one build, and the owner saw the same kinds twice: in the card,
+  // and again under it, one chip apart. So the card's pills are the
+  // filter now, which is also why they carry every kind rather than the
+  // three that cleared a third of the list — a threshold there hid the
+  // nine bars among seventy-two cafés, the case a filter is for.
+  //
+  // Only with two kinds or more: on a list of one kind a filter has
+  // nothing to narrow, and a pill that does nothing should not be a
+  // button. Chosen keys a reload takes away are let go rather than kept
+  // as a filter nothing can match. Not kept across visits: a filter is a
+  // look at the list, and a list that opens narrowed reads as a list that
+  // lost places.
+  const [picked, setPicked] = useState<string[]>([]);
+  const filters = kinds.length > 1;
+  const chosen = filters ? picked.filter((k) => kinds.includes(k)) : [];
+  const narrowed = chosen.length > 0;
+  const pick = (k: string) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
+  const kept = narrowed ? narrowTo(members, chosen).length : members.length;
+  const kindRow = kinds.length > 0 ? (
+    <View style={s.kindsBlock}>
+      <KindPills
+        kinds={kinds}
+        chosen={chosen}
+        onPick={filters ? pick : undefined}
+        testID="collection-kinds"
+      />
+      {narrowed ? (
+        <View style={s.filterCount}>
+          <Text style={s.filterCountText} testID="collection-filter-count">
+            {t(
+              `${kept} of ${members.length} places`,
+              `${kept} trên ${members.length} địa điểm`,
+              `${members.length}件中${kept}件`,
+            )}
+          </Text>
+          <Text style={s.filterCountText}>·</Text>
+          <Pressable
+            onPress={() => setPicked([])}
+            hitSlop={12}
+            accessibilityRole="button"
+            testID="collection-filter-clear"
+          >
+            <Text style={s.filterClear}>{t('Clear', 'Bỏ lọc', '解除')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  ) : null;
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
   // Where the popover hangs from. Measured off the button rather than
@@ -575,28 +632,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     timer.current = setTimeout(() => { timer.current = null; void flush(); }, SAVE_AFTER_MS);
   };
 
-  // ── narrowing the list by kind (owner, 15 Oct 2026) ──
-  //
-  // A row of the filter row's chips over the places: every category the
-  // list's places carry, any number chosen, and a place stays if it
-  // carries any of them. Nothing chosen is the whole list — there is no
-  // "All" chip, by the owner's ruling, so the row is only ever kinds and
-  // the way back is the count line's "Clear" (or tapping the chips off).
-  //
-  // Glyph chips, not `KindPill`s: these are controls, and in this app a
-  // glyph is a chip you press or a pin on the map, a dot is a fact. The
-  // pills in the card above say what the list is; this says what to show.
-  //
-  // Chosen keys a reload takes away are dropped rather than kept as a
-  // filter nothing can match. Not kept across visits: a filter is a look
-  // at the list, and a list that opens narrowed reads as a list that
-  // lost places.
-  const [picked, setPicked] = useState<string[]>([]);
-  const present = useMemo(() => kindsPresent(members), [members]);
-  const chosen = picked.filter((k) => present.includes(k));
-  const narrowed = chosen.length > 0;
+  // The places on screen: the whole list, or the kinds chosen on the
+  // card (see "the chips are the filter").
   const shown = narrowed ? narrowTo(drafted, chosen) : drafted;
-  const pick = (k: string) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
 
   // Only your own list, and only one with an order to change: a single
   // place has none, and a card that lifts to go nowhere is a gesture
@@ -709,7 +747,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // `membersOf` — copying the list means copying the sequence the
         // curator chose, not the order the rows happen to come back in.
         placeSlugs: members.map((p) => p.slug),
-        kinds: { hidden: col.kinds_hidden ?? [], added: col.kinds_added ?? [] },
+        kinds: { hidden: col.kinds_hidden ?? [] },
       },
     });
   };
@@ -1041,11 +1079,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           ── the chips (owner, 15 Oct 2026) ──
           Under the words, in the same card, because they answer the same
           question — what is this list — and one pencil edits both. They
-          are the categories the places earn, as the owner corrected them
-          (`lib/collectionKinds`), drawn as `KindPill` — the pill a
-          place's card and page wear, a dot in the category's colour and
-          its word (owner, 15 Oct 2026; the first cut wore the filter
-          row's glyphs, which are for chips you press).
+          are every kind the places carry, most places first, less what
+          the owner hid (`lib/collectionKinds`), drawn as `KindPill` — the
+          pill a place's card and page wear, a dot in the category's
+          colour and its word. They are also the list's filter (see "the
+          chips are the filter"), lit in the accent while chosen.
           A visitor's list with chips and no words still gets the card,
           without the note glyph, since there is no note. */}
       {col && (desc || (kinds.length > 0 && !owned)) ? (
@@ -1074,18 +1112,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           </Card>
         </View>
       ) : col && owned ? (
+        // The invitation: the line and the pencil open the form. Not the
+        // whole card any more, as it was until the chips under the line
+        // became a filter — a tap meant for a chip would have opened the
+        // form instead.
         <View style={s.descWrap}>
-          <PressableScale
-            onPress={edit}
-            scaleTo={0.985}
-            haptic="selection"
-            accessibilityRole="button"
-            accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
-            testID="collection-desc-empty"
-          >
-            <Card style={s.descCard}>
-              <Ionicons name="document-text-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
-              <View style={s.descBody}>
+          <Card style={s.descCard} testID="collection-desc-empty">
+            <Ionicons name="document-text-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
+            <View style={s.descBody}>
+              <PressableScale
+                onPress={edit}
+                scaleTo={0.985}
+                haptic="selection"
+                accessibilityRole="button"
+                accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
+              >
                 <Text style={s.descEmpty}>
                   {t(
                     'Add a few words about this list.',
@@ -1093,59 +1134,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                     'このリストについて一言添えましょう。',
                   )}
                 </Text>
-                {kindRow}
-              </View>
+              </PressableScale>
+              {kindRow}
+            </View>
+            <PressableScale
+              onPress={edit}
+              scaleTo={0.85}
+              haptic="selection"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
+            >
               <Ionicons name="create-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
-            </Card>
-          </PressableScale>
+            </PressableScale>
+          </Card>
         </View>
       ) : null}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
-      {/* The row only where there is a choice to make: a list of one
-          kind has nothing to narrow, and a row of one chip would be a
-          control that does nothing anybody could want. */}
-      {col && present.length > 1 ? (
-        <View style={s.filter} testID="collection-filter">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: space.page }}
-          >
-            {present.map((k) => (
-              <Chip
-                key={k}
-                label={categoryLabel(k, t)}
-                icon={CATEGORIES[k].icon}
-                iconColor={CATEGORIES[k].color}
-                active={chosen.includes(k)}
-                onPress={() => pick(k)}
-                testID={`collection-filter-${k}`}
-              />
-            ))}
-          </ScrollView>
-          {narrowed ? (
-            <View style={s.filterCount}>
-              <Text style={s.filterCountText} testID="collection-filter-count">
-                {t(
-                  `${shown.length} of ${members.length} places`,
-                  `${shown.length} trên ${members.length} địa điểm`,
-                  `${members.length}件中${shown.length}件`,
-                )}
-              </Text>
-              <Text style={s.filterCountText}>·</Text>
-              <Pressable
-                onPress={() => setPicked([])}
-                hitSlop={12}
-                accessibilityRole="button"
-                testID="collection-filter-clear"
-              >
-                <Text style={s.filterClear}>{t('Clear', 'Bỏ lọc', '解除')}</Text>
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
         <View style={s.dragArea} {...panHandlers}>
           <FlatList
@@ -1177,13 +1183,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 // By position, mine or not, so a smoke flow opens the first
                 // place whichever card shape the list is drawn with.
                 // Narrowed, the card names the chosen kind it answers to —
-                // the first of them in the row's order — as the pin and
+                // the first of them in the card's order — as the pin and
                 // card do under a chip on Explore.
                 : (
                   <PlaceCard
                     place={item}
                     onPress={open}
-                    chip={narrowed ? present.find((k) => chosen.includes(k) && categoriesOf(item).includes(k)) : null}
+                    chip={narrowed ? kinds.find((k) => chosen.includes(k) && categoriesOf(item).includes(k)) : null}
                     testID={`collection-place-${index}`}
                   />
                 );
@@ -1421,13 +1427,9 @@ const s = StyleSheet.create({
   // Full width at the foot of the list, in the page's margins, with the
   // room the dashed slot it replaced kept above it.
   planFoot: { paddingHorizontal: space.page, paddingTop: 10 },
-  // Below the card, above the places; the count line under the chips
-  // only while something is chosen.
-  filter: { paddingBottom: 6 },
-  filterCount: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: space.page, paddingTop: 10,
-  },
+  // The chips and, while something is chosen, the count line under them.
+  kindsBlock: { gap: 10 },
+  filterCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   filterCountText: { color: colors.textTertiary, fontSize: 13 },
   filterClear: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
   // The page's margins outside, the card's padding inside; the text keeps
