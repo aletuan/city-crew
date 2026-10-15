@@ -208,7 +208,9 @@ describe('CollectionsScreen — as a guest', () => {
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
   });
 
-  it('shows only public lists with a place in the city on screen', () => {
+  // Every city, as Yours is (owner, 15 Oct 2026): a list made in another
+  // city is on the shelf; one with nothing in it is still not.
+  it('shows every public list with places, whatever its city, and not an empty one', () => {
     state.cols.data = [
       col('here', ['a']),
       col('elsewhere', ['s']),
@@ -216,7 +218,7 @@ describe('CollectionsScreen — as a guest', () => {
     ];
     show();
     expect(screen.getByText('List here')).toBeTruthy();
-    expect(screen.queryByText('List elsewhere')).toBeNull();
+    expect(screen.getByText('List elsewhere')).toBeTruthy();
     expect(screen.queryByText('List hollow')).toBeNull();
   });
 
@@ -274,7 +276,7 @@ describe('CollectionsScreen — as a guest', () => {
 
   it('an empty shelf points a guest at Explore, not at creating', () => {
     const { navigation } = show();
-    expect(screen.getByText('No public lists in hanoi yet')).toBeTruthy();
+    expect(screen.getByText('No public lists yet')).toBeTruthy();
     expect(screen.queryByText('Create a collection')).toBeNull();
     fireEvent.click(screen.getByText('Explore places'));
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Explore');
@@ -425,9 +427,12 @@ describe('CollectionsScreen — signed in', () => {
     state.likes = {};
   });
 
-  it('names the city on the empty community card', () => {
+  // The shelf is every city's, so an empty one is empty everywhere and
+  // names no city.
+  it('says plainly the community shelf is empty, naming no city', () => {
     show({ tab: 'community' });
-    expect(screen.getByText('No public lists in hanoi yet')).toBeTruthy();
+    expect(screen.getByText('No public lists yet')).toBeTruthy();
+    expect(screen.queryByText(/hanoi/)).toBeNull();
   });
 
   it('an empty library greets with the community shelf', () => {
@@ -462,7 +467,7 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.queryByText('New collection')).toBeNull();
     // And no greeting yet: the tab stays on Yours, so the community's
     // empty-shelf card is not what is showing either.
-    expect(screen.queryByText('No public lists in hanoi yet')).toBeNull();
+    expect(screen.queryByText('No public lists yet')).toBeNull();
   });
 
   it("the route's tab wins over a full library, and a fresh param re-aims it", () => {
@@ -823,7 +828,7 @@ describe('CollectionsScreen — search', () => {
     type('zzz');
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
     // Under a query the empty-shelf invitation stands down.
-    expect(screen.queryByText('No public lists in hanoi yet')).toBeNull();
+    expect(screen.queryByText('No public lists yet')).toBeNull();
     // Emptied by the keyboard — there is no (x) — the shelf comes back.
     type('');
     expect(screen.getByText('Coffee')).toBeTruthy();
@@ -928,6 +933,7 @@ describe('CollectionsScreen — search', () => {
     state.cols.data = [col('one', ['a'], { title_en: 'Cafés of Hanoi' }), col('two', ['c'], { title_en: 'Bars' })];
     show();
     open();
+    fireEvent.click(screen.getByRole('button', { name: 'hanoi' }));
     fireEvent.click(screen.getByRole('button', { name: 'Nightlife' }));
     // The words land on the first list's title, but the chip asks about
     // places, and it has no bar — and under words the miss names them.
@@ -940,18 +946,19 @@ describe('CollectionsScreen — search', () => {
 
   // ── the city scope, said and switched ──
   //
-  // Community was scoped to the app's city and Yours to every city, and
-  // nothing on the screen said either. The subtitle says it; the city
-  // chip, pre-chosen on Community, lets the reader look at another city
-  // without switching the app, or at every city by letting go of it.
-  it('names the shelf’s city under the title, and looks at another city through the chip', () => {
+  // Both shelves show every city and say how many under the title (owner,
+  // 15 Oct 2026 — Community was scoped to the app's city until then). The
+  // city chip narrows to one, and letting go of it is every city again.
+  it('counts every city on Community, and narrows to one through the chip', () => {
     state.places = [place('a', 'hanoi'), place('b', 'danang'), place('c', 'danang')];
     state.cols.data = [col('hn', ['a'], { title_en: 'Hanoi list' }), col('dn', ['b', 'c'], { title_en: 'Da Nang list' })];
     show();
-    expectSub('1 collection · hanoi');
-    expect(screen.queryByText('Da Nang list')).toBeNull();
+    expectSub('2 collections · 2 cities');
+    expect(screen.getByText('Hanoi list')).toBeTruthy();
+    expect(screen.getByText('Da Nang list')).toBeTruthy();
     open();
-    expect(screen.getByRole('button', { name: 'hanoi' }).getAttribute('aria-selected')).toBe('true');
+    // Nothing chosen for the reader: the app's city is not pre-picked.
+    expect(screen.getByRole('button', { name: 'hanoi' }).getAttribute('aria-selected')).toBe('false');
     fireEvent.click(screen.getByRole('button', { name: 'danang' }));
     expect(screen.getByText('Da Nang list')).toBeTruthy();
     expect(screen.queryByText('Hanoi list')).toBeNull();
@@ -960,17 +967,15 @@ describe('CollectionsScreen — search', () => {
     fireEvent.click(screen.getByRole('button', { name: 'danang' }));
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
-    expectSub('2 collections · All cities');
+    expectSub('2 collections · 2 cities');
   });
 
-  it('offers the one other city when the shelf’s own has no lists', () => {
+  it('shows a list from another city with no chip to reach it', () => {
     state.places = [place('b', 'danang')];
     state.cols.data = [col('dn', ['b'], { title_en: 'Da Nang list' })];
     show();
-    expectSub('0 collections · hanoi');
-    open();
-    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
     expect(screen.getByText('Da Nang list')).toBeTruthy();
+    expectSub('1 collection · danang');
   });
 
   it('counts every city on Yours, and narrows to one through the chip without an “all”', () => {
