@@ -1,12 +1,13 @@
 {
-  "_about": "Step B2 of docs/photo-critic.md. What each category's photographs are expected to show, as sentences an image-text model compares a photograph against. One key per category in app/src/lib/categories.ts (data/test/photo-eval-prompts.test.mjs holds them in step). English, because the candidate models (SigLIP 2, CLIP) were trained on English captions; written for Vietnamese and Melbourne places, the two catalogs there are. A category scores a photograph by its best-matching sentence, so a sentence is added for a kind of photo the category has, not to weight it.",
+  "_about": "Step B2 of docs/photo-critic.md. What each category's photographs are expected to show, as sentences an image-text model compares a photograph against. One key per category in app/src/lib/categories.ts (data/test/photo-eval-prompts.test.mjs holds them in step). English, because the candidate models (SigLIP 2, CLIP) were trained on English captions; written for Vietnamese and Melbourne places, the two catalogs there are. A category scores a photograph by its best-matching sentence, so a sentence is added for a kind of photo the category has, not to weight it. Every category but focus, views and heritage gained a sentence for its front or entrance after the first full run (16 Oct 2026): a cover is an establishing view, and with only cafes describing one, 132 covers came out off-topic. Heritage already had one; a views place is shown from its terrace, and a focus place is a cafe whose front is a cafe's.",
   "categories": {
     "cafes": [
       "a photo of the inside of a coffee shop",
       "a photo of a cup of Vietnamese iced coffee on a table",
       "a photo of people sitting and chatting in a cafe",
       "a photo of a barista making coffee at a counter",
-      "a photo of the entrance of a small cafe with plants"
+      "a photo of the entrance of a small cafe with plants",
+      "a photo of the front of a cafe with its sign on a street"
     ],
     "focus": [
       "a photo of people working on laptops in a cafe",
@@ -19,7 +20,9 @@
       "a photo of a bowl of Vietnamese noodle soup",
       "a photo of the dining room of a restaurant",
       "a photo of a chef cooking in a kitchen",
-      "a photo of people eating together at a table"
+      "a photo of people eating together at a table",
+      "a photo of the front of a restaurant with its sign",
+      "a photo of a street food stall on a sidewalk"
     ],
     "views": [
       "a photo of a city skyline seen from a rooftop",
@@ -38,28 +41,33 @@
       "a photo of a park with trees and grass",
       "a photo of a garden full of flowers",
       "a photo of a lake surrounded by trees",
-      "a photo of a path through a forest"
+      "a photo of a path through a forest",
+      "a photo of the entrance gate of a park"
     ],
     "markets": [
       "a photo of the inside of a clothing store",
       "a photo of the inside of a shopping mall",
       "a photo of a busy local market with stalls",
       "a photo of shelves of products in a shop",
-      "a photo of a small souvenir shop"
+      "a photo of a small souvenir shop",
+      "a photo of the storefront of a shop on a street",
+      "a photo of the entrance of a market"
     ],
     "nightlife": [
       "a photo of a cocktail bar at night",
       "a photo of a bartender mixing a drink",
       "a photo of a rooftop bar at night",
       "a photo of glasses of beer in a pub",
-      "a photo of a club with colourful lights"
+      "a photo of a club with colourful lights",
+      "a photo of the entrance of a bar with a lit sign at night"
     ],
     "fun": [
       "a photo of a cinema with rows of seats",
       "a photo of a karaoke room",
       "a photo of a bowling alley",
       "a photo of an arcade full of games",
-      "a photo of a live music show"
+      "a photo of a live music show",
+      "a photo of the entrance of a cinema or an entertainment centre"
     ]
   },
   "offTopic": [

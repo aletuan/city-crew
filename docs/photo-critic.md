@@ -92,6 +92,37 @@ Với City Crew còn một mục tiêu riêng: ảnh phải **đại diện đư
   - chạy cả catalog trên Mac mất khoảng 2,5 giờ (đo: 20 ảnh trong 29 giây,
     tính cả tải ảnh), lần chạy sau nhanh hơn nhờ `out/cache/`;
   - `--limit N` lấy N ảnh đầu theo `id`, là uuid, nên coi như mẫu ngẫu nhiên.
+- **B4, lần chạy đầy đủ (16/10, trên Mac, 1 giờ 28 phút cho cả hai mô hình).**
+  Câu mô tả B2, luật cũ (lạc đề = category khác hơn category của địa điểm
+  ≥ 0,02):
+
+  | | SigLIP 2 | CLIP |
+  |---|---|---|
+  | category đúng ở top 1 | **75,0%** | 70,0% |
+  | category đúng trong top 3 | **94,7%** | 92,9% |
+  | hợp / chưa rõ / lạc đề | 4.504 / 916 / 791 | 4.184 / 1.093 / 934 |
+  | ảnh bìa bị coi là lạc đề | 132 | 152 |
+  | "hợp" trên 351 ảnh Vision đã chấm (luật Vision: 338) | 268 | 243 |
+
+  Top 1 theo category, chỉ địa điểm một category (SigLIP 2 / CLIP): cafes
+  74% / 65% (2.534 ảnh), eats 76% / 75% (1.756), heritage 80% / 74% (187),
+  nightlife 65% / 60% (363), markets 68% / 62% (78), nature 53% / 45% (77),
+  views 54% / 61% (57), fun 5/6 / 2/6. **Focus: không có địa điểm nào chỉ
+  có focus**, nên catalog không đo được category này; chỉ ảnh thử B6 đo được.
+  Nhầm nhiều nhất: cafes → eats 269, eats → cafes 242, cafes → markets 102,
+  cafes → focus 102, nightlife → eats 56, nature → heritage 20.
+
+  Đọc kết quả:
+  - **Luật lạc đề sai, không phải mô hình.** Chỉ 327 ảnh có category của
+    địa điểm nằm ngoài top 3, nhưng 791 ảnh bị coi là lạc đề. Vậy ít nhất
+    464 ảnh bị gọi lạc đề trong khi category đúng vẫn ở hạng 2 hoặc 3, như
+    ảnh bánh của quán cà phê được chấm `eats` cao hơn `cafes` một chút.
+    Luật mới (B5): ngoài top 3 mới có thể là lạc đề.
+  - **Câu mô tả gần như không có mặt tiền.** Ảnh bìa là ảnh toàn cảnh (mặt
+    tiền, lối vào), mà chỉ `cafes` có một câu tả lối vào. B5 thêm câu mặt
+    tiền cho các category còn lại.
+  - **So với Vision không phải là so độ chính xác.** Luật nhãn Vision gần như
+    cho mọi ảnh là hợp, và không có đáp án đúng để so.
 
 ## 5. Quy trình 6 bước
 
@@ -213,6 +244,7 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 | D8 | 16/10 | Chủ sản phẩm chụp hoặc cung cấp ảnh thử cho các category khó | Chủ sản phẩm |
 | D9 | 16/10 | Mô hình cho B: SigLIP 2 base, so với CLIP B/32. Loại MobileCLIP | Giấy phép: MobileCLIP chỉ cho nghiên cứu (mục 8) |
 | D10 | 16/10 | Thử câu mô tả tiếng Việt và tiếng Nhật trên SigLIP 2 (B6b). Chỉ khi không đủ tốt mới thử bản đa ngôn ngữ của SigLIP đời đầu | Chủ sản phẩm. SigLIP 2 đã học trên dữ liệu nhiều ngôn ngữ; CLIP gần như chỉ biết tiếng Anh nên không tham gia phép thử này |
+| D11 | 16/10 | Dùng SigLIP 2 cho các bước tiếp theo; CLIP chỉ để đối chiếu | B4: hơn CLIP ở top 1 (75,0% so với 70,0%), top 3 (94,7% so với 92,9%) và số ảnh bìa bị coi là lạc đề (132 so với 152) |
 
 ## 10. Câu hỏi đang mở
 
@@ -246,9 +278,14 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
   - tải ảnh, chạy mô hình;
   - xuất CSV và một trang HTML dạng lưới ảnh: category đoán, category thật,
     đánh dấu chỗ lệch.
-- [ ] **B4. Chạy** trên Mac của chủ sản phẩm (D7): `python eval.py`, rồi
-  `--model clip`, theo `data/photo-eval/README.md`. Gửi lại file `.json`.
-- [ ] **B5. Đo:**
+- [x] **B4. Chạy** trên Mac của chủ sản phẩm (D7): `python eval.py`, rồi
+  `--model clip`, theo `data/photo-eval/README.md`. Kết quả ở mục 4:
+  SigLIP 2 hơn CLIP ở mọi chỉ số (D11).
+- [ ] **B5. Đo.** Đã làm: luật lạc đề mới (ngoài top 3 mới có thể lạc
+  đề), câu tả mặt tiền, vector ảnh lưu trong cache để chạy lại trong vài
+  giây, trang HTML lấy mẫu từng nhóm và có nút để chủ sản phẩm tự chấm.
+  Còn lại: chạy lại một lần trên Mac để tạo cache (ảnh đã tải sẵn, nhưng mô hình vẫn phải đọc lại từng ảnh),
+  ghi số mới vào mục 4, và chấm mẫu trên trang HTML.
   - tỉ lệ đoán đúng category của địa điểm ở top 1 và top 3, so với nhãn
     Vision hiện tại;
   - bảng nhầm lẫn giữa các category;
@@ -325,6 +362,7 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 | 16/10/2026 | B1: MobileCLIP chỉ cho nghiên cứu → chọn SigLIP 2 / CLIP. B2–B3: `data/photo-eval/` (câu mô tả, script, hướng dẫn). Quyết định D6–D9 |
 | 16/10/2026 | B4, lần chạy đầu trên Mac: tải được mô hình và catalog, rồi lỗi vì transformers 5 trả embedding trong `pooler_output`. Script giờ nhận cả hai phiên bản, và dừng nếu véc-tơ ảnh và véc-tơ chữ khác độ dài |
 | 16/10/2026 | B4 chạy được với `--limit 20` (29 giây). Catalog thật là 6.211 ảnh, 351 ảnh có điểm Vision (mục 4). Thêm B6b và D10: thử câu mô tả tiếng Việt và tiếng Nhật trên SigLIP 2; Q7 về tìm ảnh bằng chữ |
+| 16/10/2026 | B4 xong: SigLIP 2 75,0% top 1 / 94,7% top 3, CLIP 70,0% / 92,9% (mục 4, D11). B5 phần đầu: luật lạc đề mới, câu tả mặt tiền, cache vector, trang mẫu có nút chấm, test cho `eval.py` chạy trong CI |
 
 ## 13. Phương án đã loại
 
