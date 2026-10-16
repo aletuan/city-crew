@@ -40,7 +40,7 @@ Với City Crew còn một mục tiêu riêng: ảnh phải **đại diện đư
 - **Con số là số đo, không phải số tự chọn.** Mỗi ngưỡng ghi kèm nguồn đo và
   ngày đo, như các hằng số trong `photoScoreVision.ts`.
 - **Mặc định phân tích trên máy.** Lời hứa trong `legal.ts` và câu "Phân tích
-  ngay trên máy" chỉ được đổi khi có quyết định rõ ràng (mục 10, câu hỏi Q1).
+  ngay trên máy" được giữ (quyết định D6).
 - **Không giả vờ chính xác.** Phần trăm làm tròn tới 5, không bao giờ ghi 0%
   hay 100%. Điểm hiện một chữ số thập phân.
 
@@ -137,7 +137,7 @@ category.
 | | Cách làm | Hiểu cảnh? | Chi phí / ràng buộc |
 |---|---|---|---|
 | **A** | Lưu ~20 nhãn thay vì 5 | Một phần: thấy vật, không hiểu cảnh | Build mới, chấm lại ảnh |
-| **B** | **MobileCLIP trên máy**: so ảnh với câu mô tả của từng category | **Có, ở mức cảnh** | Build mới, app nặng thêm vài chục MB (cần đo), kiểm giấy phép trọng số |
+| **B** | **Mô hình ảnh–chữ trên máy** (SigLIP 2, hoặc CLIP): so ảnh với câu mô tả của từng category | **Có, ở mức cảnh** | Build mới. Phần đọc ảnh nặng khoảng 90–170 MB (ước tính, đo ở B11); có thể tải về khi cần thay vì đóng sẵn trong app. MobileCLIP bị loại vì giấy phép (mục 8) |
 | **C** | AI có thị giác chạy trên server, hỏi thẳng | Có, giải thích được bằng lời | Ảnh rời máy (gửi cho bên thứ ba), tốn tiền theo ảnh, phải sửa `legal.ts`. Không cần build vì server chấm ảnh có sẵn trong catalog |
 | **D** | Tự huấn luyện Core ML bằng Create ML | Có, trong các category đã dạy | Cần ~30–50 ảnh có nhãn mỗi category (học chuyển giao); hiện **chưa có dữ liệu hợp lệ** (mục 8) |
 
@@ -151,12 +151,20 @@ thành nhãn để huấn luyện D.
 
 **Hướng đang theo: B trước, đo rồi mới quyết** (quyết định D5). B dùng chính
 category làm câu mô tả nên không cần tự gom dữ liệu, và ảnh không rời máy.
+Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy cùng
+để so sánh (quyết định D9).
 
 ## 8. Ràng buộc pháp lý và giấy phép (⚠️ = chưa đối chiếu nguyên văn)
 
-- ⚠️ **Ảnh Google không được dùng để huấn luyện mô hình.** Hiểu biết hiện tại
-  là điều khoản Google Maps Platform cấm dùng nội dung để huấn luyện hoặc cải
-  thiện mô hình máy học. Phải trích nguyên văn trước khi làm D.
+- ⚠️ **Ảnh Google không được dùng để huấn luyện mô hình.**
+  - Đã tìm thấy điều khoản (B1, 16/10): mục "No Unfair Exploitation" trong
+    *Google Maps Platform Analytics Service Specific Terms* cấm đưa nội dung
+    Maps vào huấn luyện AI/ML; điều khoản này giữ nguyên qua các bản ngày
+    30/09/2025, 04/12/2025 và 30/06/2026.
+  - Chưa đọc được văn bản ToS chính của Maps Platform (trang bị cắt khi tải),
+    nên chưa biết nó có cùng điều khoản đó không. Coi như cấm cho tới khi đọc
+    được.
+  - Phương án B không huấn luyện gì, chỉ chạy một mô hình có sẵn.
   - Chỉ **đánh giá** (chạy mô hình có sẵn lên ảnh để đo) thì khác với huấn
     luyện, nhưng cũng nên đối chiếu.
   - Liên quan C1 trong `tech-eval-app-store.md`.
@@ -170,7 +178,15 @@ category làm câu mô tả nên không cần tự gom dữ liệu, và ảnh kh
   - ⚠️ **COCO**: nhãn CC BY 4.0, ảnh Flickr với nhiều loại giấy phép.
   - ⚠️ **Food-101**: phải kiểm.
 - Mô hình:
-  - ⚠️ **MobileCLIP**: phải đọc giấy phép trọng số, việc đầu tiên của B1.
+  - ❌ **MobileCLIP / MobileCLIP 2** (Apple): giấy phép trọng số (`apple-amlr`
+    trên Hugging Face) **chỉ cho nghiên cứu**, cấm dùng trong sản phẩm hay
+    dịch vụ, và mô hình phái sinh cũng bị ràng buộc như vậy (B1, 16/10). Bị loại.
+  - ✅ **SigLIP 2** (Google): Apache 2.0, theo các bản Core ML trên Hugging Face
+    ghi lại giấy phép của mô hình gốc. ⚠️ Vẫn phải đọc model card của chính
+    Google trước B8.
+  - ✅ **CLIP** (OpenAI): MIT.
+  - ⚠️ **TinyCLIP** (Microsoft, nhỏ hơn nhiều): giấy phép chưa rõ nguồn gốc;
+    chưa dùng.
   - ⚠️ **YOLO của Ultralytics**: AGPL → không hợp với app đóng mã.
 - Nếu chọn C: sửa `app/src/lib/legal.ts` cùng câu "Phân tích ngay trên máy"
   trong `ScoringDialog`, và cân nhắc danh sách bên thứ ba xử lý dữ liệu trong
@@ -184,17 +200,17 @@ category làm câu mô tả nên không cần tự gom dữ liệu, và ảnh kh
 | D2 | 16/10 | Không có điểm thành phần trên thang 10 (bố cục, màu sắc) | Không đo được, viết ra là bịa (#973) |
 | D3 | 16/10 | Bước 2 dùng category sẵn có, không tạo bộ nhãn ảnh mới | Chủ sản phẩm: tránh thêm một bộ nhãn song song |
 | D4 | 16/10 | "Hợp làm bìa" là trục riêng, không gộp vào điểm đẹp | 6/42, xem mục 4 |
-| D5 | 16/10 | Thử phương án B (MobileCLIP) bằng đánh giá ngoài app trước khi tích hợp | Đo trước rồi mới tốn công build |
+| D5 | 16/10 | Thử phương án B bằng đánh giá ngoài app trước khi tích hợp | Đo trước rồi mới tốn công build |
+| D6 | 16/10 | Giữ nguyên tắc phân tích ngay trên máy "nếu có thể" → loại C cho lúc này | Chủ sản phẩm |
+| D7 | 16/10 | Chạy đánh giá trên Mac của chủ sản phẩm | Chủ sản phẩm; container không kết nối được kho ảnh |
+| D8 | 16/10 | Chủ sản phẩm chụp hoặc cung cấp ảnh thử cho các category khó | Chủ sản phẩm |
+| D9 | 16/10 | Mô hình cho B: SigLIP 2 base, so với CLIP B/32. Loại MobileCLIP | Giấy phép: MobileCLIP chỉ cho nghiên cứu (mục 8) |
 
 ## 10. Câu hỏi đang mở
 
-- **Q1.** Có giữ nguyên tắc "phân tích ngay trên máy" không? Nếu không giữ thì
-  phương án C mới dùng được.
-- **Q2.** Có chấp nhận build mới và app nặng thêm (B: vài chục MB) không?
-- **Q3.** Chạy đánh giá B bằng GitHub Action bấm tay (đề xuất) hay trên Mac
-  của chủ sản phẩm?
-- **Q4.** Ai chụp và chụp khi nào khoảng 10 ảnh thử cho mỗi category khó:
-  người làm việc với laptop, cửa hàng hoặc trung tâm mua sắm, chỗ giải trí?
+- **Q2.** Có chấp nhận build mới, và phần đọc ảnh nặng khoảng 90–170 MB không?
+  Đóng sẵn trong app, hay tải về lần đầu khi guide bấm "Chấm ảnh"? Đề xuất:
+  tải về khi cần, để người không chấm ảnh không phải gánh thêm dung lượng.
 - **Q5.** Ngưỡng nào thì B được coi là đạt? Đề xuất ở B7.
 - **Q6.** Category Văn hóa, Mua sắm, Giải trí, Học tập: nếu B vẫn yếu thì chỉ
   dùng hai mức "Hợp" và "Chưa rõ", không bao giờ báo lạc đề?
@@ -203,29 +219,30 @@ category làm câu mô tả nên không cần tự gom dữ liệu, và ảnh kh
 
 ### Phương án B — Giai đoạn 1: đánh giá ngoài app (không build)
 
-- [ ] **B1. Giấy phép.** Đọc nguyên văn giấy phép trọng số MobileCLIP và điều
-  khoản Google về phân tích hoặc huấn luyện. Ghi kết luận vào mục 8 (bỏ dấu ⚠️).
-  Nếu MobileCLIP không cho dùng thương mại → chọn mô hình khác cùng loại có
-  giấy phép mở, rồi ghi lại.
-- [ ] **B2. Câu mô tả theo category.** 3–5 câu tiếng Anh cho mỗi category,
+- [x] **B1. Giấy phép.** MobileCLIP chỉ cho nghiên cứu → loại. Chọn SigLIP 2
+  (Apache 2.0), so với CLIP (MIT). Đã tìm thấy điều khoản cấm huấn luyện của
+  Google trong Analytics terms; ToS chính chưa đọc được. Chi tiết ở mục 8;
+  ⚠️ còn lại: đọc model card SigLIP 2 của Google trước B8.
+- [x] **B2. Câu mô tả theo category.** 3–5 câu tiếng Anh cho mỗi category,
   theo bối cảnh Việt Nam, cộng một nhóm câu "không thuộc category nào"
   (menu, đường phố, bầu trời). Lưu thành file dữ liệu trong `data/photo-eval/`.
-- [ ] **B3. Script đánh giá** `data/photo-eval/`:
+- [x] **B3. Script đánh giá** `data/photo-eval/` (`eval.py`, `prompts.json`,
+  hướng dẫn trong `README.md`; khoá category được test giữ khớp với app):
   - lấy danh sách ảnh đã chấm kèm category và việc có phải ảnh bìa (bằng key
     công khai);
   - tải ảnh, chạy mô hình;
   - xuất CSV và một trang HTML dạng lưới ảnh: category đoán, category thật,
     đánh dấu chỗ lệch.
-- [ ] **B4. Chạy.** Bằng GitHub Action `workflow_dispatch`, xuất kết quả thành
-  file tải về (hoặc trên Mac, tuỳ Q3).
+- [ ] **B4. Chạy** trên Mac của chủ sản phẩm (D7): `python eval.py`, rồi
+  `--model clip`, theo `data/photo-eval/README.md`. Gửi lại file `.json`.
 - [ ] **B5. Đo:**
   - tỉ lệ đoán đúng category của địa điểm ở top 1 và top 3, so với nhãn
     Vision hiện tại;
   - bảng nhầm lẫn giữa các category;
   - xem lại 7 ca ở mục 4: Sam Saigon phải bị bắt, mặt tiền Memento phải
     được tha.
-- [ ] **B6. Ảnh thử cho category khó** (Q4): khoảng 10 ảnh mỗi loại, là ảnh
-  của mình.
+- [ ] **B6. Ảnh thử cho category khó** (D8): khoảng 10 ảnh mỗi loại, là ảnh
+  của mình, xếp vào thư mục theo khoá category và chạy với `--extra`.
 - [ ] **B7. Chốt có làm tiếp hay không.** Ngưỡng đề xuất, chờ chủ sản phẩm
   duyệt:
   - top 3 khớp ≥ 85% trên toàn catalog;
@@ -239,8 +256,8 @@ category làm câu mô tả nên không cần tự gom dữ liệu, và ảnh kh
 ### Phương án B — Giai đoạn 2: tích hợp (chỉ khi B7 đạt)
 
 - [ ] **B8. Native.** Đưa phần xử lý ảnh của mô hình (bản Core ML) vào
-  `modules/photo-score`. Module trả "dấu vân tay" của ảnh (dãy khoảng 512 số,
-  cần xác nhận) vào `signals`.
+  `modules/photo-score`. Module trả "dấu vân tay" của ảnh (768 số với
+  SigLIP 2 base, 512 với CLIP B/32) vào `signals`.
 - [ ] **B9. JS.** So dấu vân tay với các câu mô tả đã tính sẵn (lưu thành JSON
   trong JS). Sửa câu mô tả hay ngưỡng chỉ cần EAS Update. Thêm `fit` vào
   `Interpreter`.
@@ -268,7 +285,8 @@ category làm câu mô tả nên không cần tự gom dữ liệu, và ảnh kh
 |---|---|
 | 15/10/2026 | #958–#968: chấm ảnh bằng Vision, lời giải thích dựa trên bằng chứng |
 | 16/10/2026 | #969: tách theo bộ chấm. #970–#974: sheet ảnh, xem toàn màn hình, phân tích chi tiết, ảnh bìa lên đầu |
-| 16/10/2026 | Thiết kế bước 2 và các phương án A–D. Chọn đánh giá B trước. Tài liệu này ra đời |
+| 16/10/2026 | Thiết kế bước 2 và các phương án A–D. Chọn đánh giá B trước. Tài liệu này ra đời (#975) |
+| 16/10/2026 | B1: MobileCLIP chỉ cho nghiên cứu → chọn SigLIP 2 / CLIP. B2–B3: `data/photo-eval/` (câu mô tả, script, hướng dẫn). Quyết định D6–D9 |
 
 ## 13. Phương án đã loại
 
@@ -281,5 +299,7 @@ category làm câu mô tả nên không cần tự gom dữ liệu, và ảnh kh
   tối với một phòng tối. Dùng category **Về đêm** của địa điểm làm bối cảnh
   thay vào đó.
 - **Places365 để huấn luyện:** giấy phép phi thương mại.
+- **MobileCLIP** cho phương án B: trọng số chỉ cho nghiên cứu (B1). Đây là ứng
+  viên đầu tiên vì nhỏ và Apple có sẵn bản Core ML.
 - **Huấn luyện bằng ảnh Google hoặc ảnh Threads:** điều khoản và bản quyền
   (mục 8).

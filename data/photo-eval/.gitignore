@@ -1,0 +1,3 @@
+# Downloaded photographs, model outputs and reports: per run, per machine.
+out/
+.venv/
