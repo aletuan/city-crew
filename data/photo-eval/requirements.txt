@@ -1,9 +1,0 @@
-# Python 3.10 or later. torch picks Apple's GPU (MPS) on a Mac by itself.
-torch>=2.3
-# SigLIP 2 arrived in transformers 4.49.
-transformers>=4.49
-sentencepiece
-protobuf
-pillow
-# Only for HEIC test photographs straight off an iPhone.
-pillow-heif
