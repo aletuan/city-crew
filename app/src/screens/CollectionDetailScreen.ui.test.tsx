@@ -14,7 +14,8 @@
 //   than failing;
 // - publishing is refused (as a sentence, not a Postgres code) while places
 //   are still under review — the Public row is dimmed and says why — and
-//   otherwise flips the flag, reloads both catalogs and offers Undo;
+//   otherwise flips the flag, reloads both catalogs and says so in a
+//   banner that goes by itself after three seconds;
 // - reordering happens on the list itself: the owner holds a card and
 //   drags it to where it lands (or uses VoiceOver's Move up / Move down),
 //   a tip under the title says so, and the order saves itself a beat
@@ -28,7 +29,7 @@
 // has its own rendering concerns and what this screen owes it is the tap.
 
 import React from 'react';
-import { AccessibilityInfo, Alert, PanResponder, type PanResponderCallbacks } from 'react-native';
+import { AccessibilityInfo, Alert, LayoutAnimation, PanResponder, type PanResponderCallbacks } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
@@ -235,12 +236,16 @@ const endModalFade = () => {
 const chooseVisibility = (key: 'public' | 'private') => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   try {
-    fireEvent.click(screen.getByTestId('collection-visibility'));
-    fireEvent.click(screen.getByTestId(`sheet-action-${key}`));
-    act(() => { vi.advanceTimersByTime(220); });
+    pickVisibility(key);
   } finally {
     vi.useRealTimers();
   }
+};
+/** The same, for a test already on the fake clock. */
+const pickVisibility = (key: 'public' | 'private') => {
+  fireEvent.click(screen.getByTestId('collection-visibility'));
+  fireEvent.click(screen.getByTestId(`sheet-action-${key}`));
+  act(() => { vi.advanceTimersByTime(220); });
 };
 
 /** Press a button in the last alert shown, by its label. */
@@ -536,18 +541,92 @@ describe('publishing', () => {
     expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeNull();
   });
 
-  it('makes a list public, reloads both catalogs and offers Undo', async () => {
+  it('makes a list public, reloads both catalogs, and says so with no Undo', async () => {
+    const announce = vi.spyOn(AccessibilityInfo, 'announceForAccessibility');
     show();
     chooseVisibility('public');
     expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true);
     expect(await screen.findByText('This collection is now public')).toBeTruthy();
     expect(spies.mineReload).toHaveBeenCalled();
     expect(spies.colsReload).toHaveBeenCalled();
+    // The way back is the word at the card's foot, not a button here.
+    expect(screen.queryByText('Undo')).toBeNull();
+    // VoiceOver cannot see a banner arrive, so it is told.
+    expect(announce).toHaveBeenCalledWith('This collection is now public');
+    announce.mockRestore();
+  });
 
-    // Undo is the same switch, the other way.
-    fireEvent.click(screen.getByText('Undo'));
-    expect(spies.setCollectionPublic).toHaveBeenLastCalledWith('old-quarter', false);
-    expect(await screen.findByText('This collection is private again')).toBeTruthy();
+  it('puts the banner away by itself after three seconds', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      show();
+      pickVisibility('public');
+      await act(async () => {});
+      expect(screen.getByTestId('collection-banner')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(2999); });
+      expect(screen.getByTestId('collection-banner')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(screen.queryByTestId('collection-banner')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('runs no clock on a visit with nothing to say', () => {
+    const ease = vi.spyOn(LayoutAnimation, 'configureNext').mockImplementation(() => {});
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      show();
+      act(() => { vi.advanceTimersByTime(3000); });
+      expect(ease).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      ease.mockRestore();
+    }
+  });
+
+  it('gives a new message its own three seconds', async () => {
+    // The write lands, so the list the screen reads back has changed and
+    // the sheet's other answer is the live one.
+    spies.setCollectionPublic.mockImplementation(async (_slug: string, next: boolean) => {
+      state.mine = [collection({ is_public: next })];
+    });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      show();
+      pickVisibility('public');
+      await act(async () => {});
+      act(() => { vi.advanceTimersByTime(2000); });
+      // Changed back before the first message had gone.
+      pickVisibility('private');
+      await act(async () => {});
+      expect(screen.getByText('This collection is private again')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(2500); });
+      expect(screen.getByText('This collection is private again')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(500); });
+      expect(screen.queryByTestId('collection-banner')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('eases the banner in and out, but not under Reduce Motion', async () => {
+    const ease = vi.spyOn(LayoutAnimation, 'configureNext').mockImplementation(() => {});
+    show();
+    chooseVisibility('public');
+    fireEvent.click(await screen.findByTestId('collection-banner'));
+    // Once to open the row, once to close it.
+    expect(ease).toHaveBeenCalledTimes(2);
+    cleanup();
+    ease.mockClear();
+    const reduce = vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    show();
+    await act(async () => {});
+    chooseVisibility('public');
+    fireEvent.click(await screen.findByTestId('collection-banner'));
+    expect(ease).not.toHaveBeenCalled();
+    reduce.mockRestore();
+    ease.mockRestore();
   });
 
   it('makes a public list private again', async () => {
@@ -564,17 +643,6 @@ describe('publishing', () => {
     const banner = await screen.findByText('This collection is now public');
     fireEvent.click(banner);
     expect(screen.queryByText('This collection is now public')).toBeNull();
-  });
-
-  it('makes Undo a button of its own, not nested inside another', async () => {
-    show();
-    chooseVisibility('public');
-    await screen.findByText('This collection is now public');
-    const undo = button('Undo');
-    // A button inside a button is one element to VoiceOver.
-    expect(undo.parentElement!.closest('[role="button"]')).toBeNull();
-    fireEvent.click(undo);
-    expect(spies.setCollectionPublic).toHaveBeenLastCalledWith('old-quarter', false);
   });
 
   it('refuses while places are pending or rejected, and says which in words', () => {
@@ -599,9 +667,9 @@ describe('publishing', () => {
       vi.useRealTimers();
     }
     expect(spies.setCollectionPublic).not.toHaveBeenCalled();
-    // The sheet stays open over a refused tap, and nothing to undo.
+    // The sheet stays open over a refused tap, and nothing is said.
     expect(screen.getByTestId('sheet-action-public')).toBeTruthy();
-    expect(screen.queryByText('Undo')).toBeNull();
+    expect(screen.queryByTestId('collection-banner')).toBeNull();
     // Private stays a live row.
     expect(screen.getByTestId('sheet-action-private').getAttribute('aria-disabled')).not.toBe('true');
   });
@@ -623,17 +691,17 @@ describe('publishing', () => {
     expect(screen.getByTestId('sheet-action-public').getAttribute('aria-disabled')).not.toBe('true');
     expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
     cleanup();
+    spies.setCollectionPublic.mockImplementation(async (_slug: string, next: boolean) => {
+      state.mine = [collection({ is_public: next })];
+    });
     show();
     chooseVisibility('private');
     expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false);
     expect(await screen.findByText('This collection is private again')).toBeTruthy();
-    // And Undo, which would publish it again, says why it cannot — as a
-    // banner, since there is no sheet to dim a row in.
-    spies.setCollectionPublic.mockClear();
-    fireEvent.click(button('Undo'));
-    expect(spies.setCollectionPublic).not.toHaveBeenCalled();
-    expect(screen.getByText('Private until every place is live — 1 was not accepted.')).toBeTruthy();
-    expect(screen.queryByText('Undo')).toBeNull();
+    // And the way back is now dimmed, with the reason on it.
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    expect(screen.getByTestId('sheet-action-public').textContent)
+      .toBe('PublicPrivate until every place is live — 1 was not accepted.');
   });
 
   it('says so when the write fails, and shows no banner', async () => {

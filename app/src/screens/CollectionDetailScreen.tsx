@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, type NativeScrollEvent,
+  AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, LayoutAnimation, Modal,
+  type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +11,7 @@ import TipBox from '../components/TipBox';
 import { KindPills } from '../components/KindPill';
 import {
   AmbientWarmth, Avatar, Card, CONTROL_H, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
-  fireHaptic, useTabBarClearance,
+  fireHaptic, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
@@ -99,6 +100,22 @@ function MenuRow({ icon, label, onPress, danger, first, testID }: {
     </Pressable>
   );
 }
+
+/**
+ * How long the visibility banner stays. The longer sentence is seven
+ * words ("Bộ sưu tập này giờ đã công khai"), about two seconds at an
+ * adult's silent reading pace of roughly 240 words a minute, and a
+ * second more for the eye to arrive at it after the sheet has closed.
+ * Not longer: the word at the card's foot already says the same thing
+ * and stays.
+ */
+const BANNER_MS = 3000;
+
+/** The banner's arrival and departure: 250ms, eased both ways, fading as
+ *  the row opens or closes so the list below moves rather than jumps.
+ *  The search field's slide is 200 for a smaller move; this one carries
+ *  the whole list 60pt. */
+const BANNER_EASE = LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity);
 
 /**
  * Why a list cannot be published, said in words rather than counted at
@@ -494,32 +511,34 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   /**
    * Publish, or take it back.
    *
-   * No confirmation on the way out, and a banner with Undo instead. An
-   * alert asking "are you sure" before a reversible act is a toll on
-   * everyone who meant it, paid so that the few who did not are stopped
-   * one step earlier than the Undo would have stopped them. Publishing is
-   * one boolean and unpublishing is the same boolean — the thing to
-   * provide is a way back, not a gate.
+   * No confirmation, and since 17 Oct 2026 no Undo either (owner: the
+   * banner looked busy with it). An alert asking "are you sure" before a
+   * reversible act is a toll on everyone who meant it. The Undo was the
+   * way back while the switch was one tap in the ⋯ menu, where a slip
+   * was easy; it is two deliberate taps now — the word at the card's
+   * foot, then the answer in the sheet — and the way back is the same
+   * two taps on the same word, which stays on screen after the banner
+   * has gone.
    *
    * Both catalogs are reloaded because the row moves between them: it
    * leaves nothing in `mine`, which returns everything you own either
    * way, but it enters and leaves the public query, and that query is
    * what the other section is drawn from.
    */
-  const [banner, setBanner] = useState<null | 'public' | 'private' | 'blocked'>(null);
+  const [banner, setBanner] = useState<null | 'public' | 'private'>(null);
   const [publishing, setPublishing] = useState(false);
+  // No check for places under review here. The sheet's Public row is
+  // dimmed while there are any and says why (see `whoSeesRows`), so
+  // nothing reaches this asking to publish a blocked list; the database
+  // refuses it anyway, and that is where the rule lives.
   const setPublic = (next: boolean) => {
     if (!col || publishing) return;
-    // The database refuses this too — that is where the rule lives. This
-    // is so the answer arrives as a sentence about the list rather than
-    // as `collection_has_pending_places` from Postgres.
-    if (next && blocked) { setBanner('blocked'); return; }
     setPublishing(true);
     setCollectionPublic(col.slug, next)
       .then(() => {
         mine.reload();
         cols.reload();
-        setBanner(next ? 'public' : 'private');
+        showBanner(next ? 'public' : 'private');
         if (next) did('publish');
       })
       .catch((e: Error) => Alert.alert(
@@ -531,10 +550,36 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       .finally(() => setPublishing(false));
   };
 
-  // The banner stands until it is dismissed or the screen is left. It
-  // holds the only Undo there is, so a timer would be a deadline on
-  // changing your mind about who can see your list.
-  const undo = () => setPublic(banner === 'public' ? false : true);
+  /* The banner says it once and goes. It stood until dismissed while it
+     held the only Undo; with no Undo in it, a message that stays is a
+     message about something already done, still taking a row at the top
+     of the list. The word at the card's foot is the lasting record.
+
+     VoiceOver hears the sentence, since it cannot see a banner arrive —
+     `accessibilityLiveRegion` is Android's alone.
+
+     It opens and closes as a layout animation rather than a jump: it
+     sits in the flow above the card, and a 60pt row vanishing in one
+     frame pulls the whole list up under the reader's eye. Not under
+     Reduce Motion, which asks for exactly that jump instead. */
+  const still = useReducedMotion();
+  const ease = () => { if (!still) LayoutAnimation.configureNext(BANNER_EASE); };
+  const bannerText = (which: 'public' | 'private') => which === 'public'
+    ? t('This collection is now public', 'Bộ sưu tập này giờ đã công khai', 'このコレクションは公開されました')
+    : t('This collection is private again', 'Bộ sưu tập này đã riêng tư trở lại', 'このコレクションは非公開に戻りました');
+  const showBanner = (which: 'public' | 'private') => {
+    ease();
+    setBanner(which);
+    AccessibilityInfo.announceForAccessibility(bannerText(which));
+  };
+  const hideBanner = () => { ease(); setBanner(null); };
+  useEffect(() => {
+    if (!banner) return;
+    const timer = setTimeout(hideBanner, BANNER_MS);
+    return () => clearTimeout(timer);
+    // Re-armed by a new message, not by a new render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banner]);
 
   /**
    * Putting the list in order.
@@ -1367,56 +1412,28 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {/* Keyed by the reader, so another account signing in starts from
           its own record rather than the last one's chosen tip. */}
       <TipBox key={uid ?? 'guest'} reader={uid} eligible={tipsHere} done={moved ? [...done, 'reorder'] : done} />
-      {/* What just happened, and the way back out of it. Above the
-          description rather than floating over the list: it is about the
-          collection as a whole, and a toast that covers the first place
-          card would be reporting on the list by hiding part of it.
+      {/* What just happened, for three seconds — see `showBanner`. Above
+          the description rather than floating over the list: it is about
+          the collection as a whole, and a toast that covers the first
+          place card would be reporting on the list by hiding part of it.
 
-          Dismissible by its own tick — the row is the acknowledgement, so
-          tapping it is how you say you have read it. The container is a
-          plain View and the message and Undo are sibling controls: a
-          button nested in a button is one element to VoiceOver, and Undo
-          could not be reached on its own. */}
+          A tap puts it away sooner: the row is the acknowledgement, so
+          tapping it is how you say you have read it. */}
       {banner && (
-        <View
+        <Pressable
           style={[s.banner, banner === 'private' && s.bannerQuiet]}
-          accessibilityLiveRegion="polite"
+          onPress={hideBanner}
+          accessibilityRole="button"
+          accessibilityHint={t('Dismisses this message', 'Ẩn thông báo này', 'このメッセージを閉じます')}
+          testID="collection-banner"
         >
-          <Pressable
-            style={s.bannerBody}
-            onPress={() => setBanner(null)}
-            accessibilityRole="button"
-            accessibilityHint={t('Dismisses this message', 'Ẩn thông báo này', 'このメッセージを閉じます')}
-          >
-            <Ionicons
-              name={banner === 'public' ? 'checkmark-circle' : banner === 'blocked' ? 'time-outline' : 'lock-closed'}
-              size={19}
-              color={banner === 'public' ? colors.ok : colors.textSecondary}
-            />
-            <Text style={s.bannerText} numberOfLines={3}>
-              {banner === 'public'
-                ? t(
-                  'This collection is now public',
-                  'Bộ sưu tập này giờ đã công khai',
-                  'このコレクションは公開されました',
-                )
-                : banner === 'blocked'
-                  ? blockerSentence(blockers, t)
-                  : t(
-                    'This collection is private again',
-                    'Bộ sưu tập này đã riêng tư trở lại',
-                    'このコレクションは非公開に戻りました',
-                  )}
-            </Text>
-          </Pressable>
-          {banner !== 'blocked' && (
-            <Pressable onPress={undo} hitSlop={10} disabled={publishing} accessibilityRole="button">
-              <Text style={[s.bannerUndo, publishing && s.bannerUndoBusy]}>
-                {t('Undo', 'Hoàn tác', '元に戻す')}
-              </Text>
-            </Pressable>
-          )}
-        </View>
+          <Ionicons
+            name={banner === 'public' ? 'checkmark-circle' : 'lock-closed'}
+            size={19}
+            color={banner === 'public' ? colors.ok : colors.textSecondary}
+          />
+          <Text style={s.bannerText} numberOfLines={3}>{bannerText(banner)}</Text>
+        </Pressable>
       )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
@@ -1689,13 +1706,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.okSoft,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  // The tappable half of the banner, laid out as the banner row itself was
-  // so moving the press off the container changes nothing on screen.
-  bannerBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   bannerQuiet: { backgroundColor: colors.surfaceGlass },
   bannerText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
-  bannerUndo: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
-  bannerUndoBusy: { opacity: 0.4 },
 
   // Full width at the foot of the list, in the page's margins, with the
   // room the dashed slot it replaced kept above it.
