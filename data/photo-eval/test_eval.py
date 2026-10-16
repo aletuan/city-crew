@@ -65,6 +65,42 @@ class Verdict(unittest.TestCase):
         self.assertEqual(judge(s, ["cafes"], off_rank=2), "unclear")
 
 
+    # The pair chosen on 16 Oct 2026 (D14): second is unclear, third is
+    # off however close, and nothing has to be passed to get them.
+    def test_the_chosen_thresholds_are_the_default(self):
+        groups = lambda s: {g: [[s.get(g, 0.0)]] for g in [*CATS, "_off", "_neutral"]}
+        photo = ev.Photo("p", "https://example.test/p.jpg", "place", ["cafes"])
+        second = ev.read_photo(photo, [1.0], groups({"eats": 0.300, "cafes": 0.299}))
+        third = ev.read_photo(photo, [1.0], groups({"eats": 0.300, "nightlife": 0.2995, "cafes": 0.299}))
+        self.assertEqual((second.verdict, third.verdict), ("unclear", "off"))
+
+
+class Marks(unittest.TestCase):
+    def load(self, text):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "marks.json"
+            path.write_text(text)
+            return ev.load_marks(path)
+
+    def test_the_page_copy_box_loads(self):
+        marks = self.load('{"a": {"place": "x", "owner": "off"}, "b": {"owner": "unclear"}}')
+        self.assertEqual(set(marks), {"a", "b"})
+
+    # What the clipboard held on 16 Oct 2026: a command, not the marks.
+    def test_whatever_else_the_clipboard_held_stops_the_run(self):
+        with self.assertRaises(SystemExit):
+            self.load("python eval.py --marks out/marks.json")
+
+    def test_marks_with_no_answer_stop_the_run(self):
+        for text in ('{}', '[]', '{"a": {"owner": "unclear"}}', '{"a": "off"}'):
+            with self.subTest(text=text), self.assertRaises(SystemExit):
+                self.load(text)
+
+    def test_a_missing_file_stops_the_run(self):
+        with self.assertRaises(SystemExit):
+            ev.load_marks(Path("/nonexistent/marks.json"))
+
+
 class Calibration(unittest.TestCase):
     # Marked: one the owner calls off, sitting second; a cover the owner
     # calls off, far down (a finding, not an error); a cover the owner calls
