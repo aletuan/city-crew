@@ -86,10 +86,11 @@ describe('ScoreTen', () => {
 });
 
 describe('ScoreWhy', () => {
-  it('is the measured reasons and who measured', () => {
+  // Who measured lives in the detailed analysis now (owner, 16 Oct 2026).
+  it('is the measured reasons, and not who measured', () => {
     render(<ScoreWhy score={score()} />);
     expect(screen.getByTestId('score-why').textContent).toBe('Well lit. Held back by: horizon tilted 4°.');
-    expect(screen.getByTestId('score-source').textContent).toBe('Measured on this phone by Apple Vision.');
+    expect(screen.queryByTestId('score-source')).toBeNull();
   });
   // A row a later app wrote: its measurements are not Vision's to read.
   it('gives no reasons for a scorer it cannot interpret', () => {
@@ -127,6 +128,17 @@ describe('ScoreDetails', () => {
     expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 80% of the catalog\'s photos');
     expect(screen.getByTestId('score-detail-light').textContent).toBe('LightWell lit');
     expect(screen.getByTestId('score-detail-level').textContent).toBe('HorizonHorizon tilted 6°');
+  });
+
+  // Who measured, for the reader who opened the analysis — last, and only
+  // once it is open.
+  it('says who measured, last, once opened', () => {
+    const { rerender } = render(<ScoreDetails score={measured} open={false} onToggle={() => {}} />);
+    expect(screen.queryByTestId('score-source')).toBeNull();
+    rerender(<ScoreDetails score={measured} open onToggle={() => {}} />);
+    const source = screen.getByTestId('score-source');
+    expect(source.textContent).toBe('Measured on this phone by Apple Vision.');
+    expect(source.nextElementSibling).toBeNull();
   });
 
   // Good and held back look different, so a guide can scan the column.

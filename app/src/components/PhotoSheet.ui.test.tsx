@@ -84,8 +84,9 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('photo-sheet-page-p4').querySelector('img')!.getAttribute('src')).toBe('http://cdn/p4.jpg');
     expect(screen.getByTestId('photo-sheet-page-p4').getAttribute('aria-label')).toBe('Photo 4/6');
     const sheet = screen.getByTestId('photo-sheet');
+    // The count on the photograph, once: no "Photo 4/6" head repeating it.
     expect(sheet.textContent).toContain('4/6');
-    expect(sheet.textContent).toContain('Photo 4/6');
+    expect(sheet.textContent).not.toContain('Photo 4/6');
     expect(screen.getByTestId('photo-sheet-status').textContent).toBe('Cover');
   });
 
@@ -131,19 +132,22 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('photo-sheet-blur')).toBeTruthy();
   });
 
-  // The reasons sit under the name and the number beside them, so no gap
-  // opens under a one-line name beside a two-line number (owner, 16 Oct).
-  it('puts the reasons under the name, and the number beside them', () => {
-    render(<PhotoSheet {...props({ photos: [photo({ score })] })} />);
-    const title = screen.getByText('Photo 1/1');
+  // The reasons lead the head, the number beside them, the status under
+  // them; no "Photo n/m" and no "who measured" (owner, 16 Oct 2026).
+  it('leads with the reasons, the number beside them', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ score, is_cover: true })] })} />);
     const why = screen.getByTestId('score-why');
     const ten = screen.getByTestId('score-ten');
+    const status = screen.getByTestId('photo-sheet-status');
     expect(ten.textContent).toContain('8.4');
     expect(why.textContent).toBe('Well lit.');
-    const column = title.parentElement!.parentElement!;
-    expect(column.contains(why)).toBe(true);
+    const column = why.parentElement!;
+    expect(column.contains(status)).toBe(true);
+    expect(column.firstElementChild).toBe(why);
     expect(column.contains(ten)).toBe(false);
     expect(column.parentElement!.contains(ten)).toBe(true);
+    expect(screen.queryByText(/^Photo \d/)).toBeNull();
+    expect(screen.queryByTestId('score-source')).toBeNull();
   });
 
   it('says nothing of a score for a photograph nobody has read', () => {
@@ -191,7 +195,7 @@ describe('PhotoSheet', () => {
     const { rerender } = render(<PhotoSheet {...props({ photos, index: 2, actionsFor: () => [row()] })} />);
     rerender(<PhotoSheet {...props({ photos: [], index: null, actionsFor: () => [row()] })} />);
     expect(screen.getByTestId('photo-sheet-page-p3').querySelector('img')!.getAttribute('src')).toBe('http://cdn/p3.jpg');
-    expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 3/3');
+    expect(screen.getByTestId('photo-sheet').textContent).toContain('3/3');
     // Its rows go with it: nothing is pressable on a sheet on its way out.
     expect(screen.queryByRole('button', { name: 'Make it the cover' })).toBeNull();
   });

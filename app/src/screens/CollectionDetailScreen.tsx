@@ -1058,20 +1058,25 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </View>
   ) : null;
 
-  /* ── the list's two actions, at the card's foot and in the dock ──
+  /* ── the list's two actions: the dock, and the menu ──
      (owner, 16 Oct 2026). Planning a trip from the list is what a reader
      does with it once read, owner or not; adding a place is the owner's
      everyday edit. Both were out of reach: Plan at the very end of the
-     list, under every photograph, and Add only in the ⋯ menu (where it
-     also stays, by the owner's call).
+     list, under every photograph, and Add only in the ⋯ menu.
 
-     So they sit in two places that never show at once. At the top they
-     end the card, where the list is introduced. Once the card has
-     scrolled away and the tab bar has ducked, the same two rise into the
-     bar's dock — `DockSlot`, the slot Explore lends "Not finding it?" —
-     in thumb reach however deep the list goes. A short list never ducks
-     the bar, and its card never leaves the screen, so its actions are
-     always in sight there.
+     For a build they also ended the intro card. The owner took them out
+     again the same evening: the card introduces the list — whose it is,
+     what it is, how it is doing — and a pair of buttons there made it a
+     toolbar. So the two live where a reader is when they want them:
+
+     - In the dock, once the card has scrolled away and the tab bar has
+       ducked — `DockSlot`, the slot Explore lends "Not finding it?" — in
+       thumb reach however deep the list goes.
+     - In the ⋯ menu, always: Add place as before, and Plan a trip beside
+       it. That row is not a second door for its own sake. A list of two
+       or three places is too short to scroll, so the bar never ducks and
+       the dock never comes; without the row, Plan would be on no screen
+       at all for a short list.
 
      Plan only once there is a list to plan from: an empty one seeds
      nothing, and its own card is already asking for the first place.
@@ -1080,9 +1085,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      mark. Add, until the in-place picker exists, goes to Explore, where
      saving a place already offers this list by name.
 
-     Add is the quiet one — glass and a hairline, not a second gradient:
-     two filled buttons side by side read as two primaries, and the
-     gradient belongs to the action the list exists for. */
+     In the dock, Add is the quiet one — glass and a hairline, not a
+     second gradient: two filled buttons side by side read as two
+     primaries, and the gradient belongs to the action the list exists
+     for. */
   const plan = () => {
     if (!col) return;
     goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } });
@@ -1102,21 +1108,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <Text style={s.addQuietText}>{t('Add', 'Thêm', '追加')}</Text>
     </PressableScale>
   );
-  const planButton = (testID: string, wide?: boolean) => (
+  const planButton = (testID: string) => (
     <GradientCta
-      wide={wide}
       icon="paw"
       label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
       onPress={plan}
       testID={testID}
     />
   );
-  const cardActions = canPlan ? (
-    <View style={s.cardActions}>
-      {owned ? addButton('collection-add') : null}
-      {planButton('collection-plan', !owned)}
-    </View>
-  ) : null;
 
   // Where the card ends in the list's content, measured, so the dock waits
   // until it has actually gone rather than guessing from a row count.
@@ -1256,7 +1255,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </View>
         {cardFoot}
-          {cardActions}
       </Card>
     </View>
   ) : null;
@@ -1427,6 +1425,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 onPress={() => act(addPlace)}
                 first
               />
+              {canPlan && (
+                <MenuRow
+                  icon="paw-outline"
+                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+                  onPress={() => act(plan)}
+                  testID="collection-menu-plan"
+                />
+              )}
               <MenuRow
                 icon="create-outline"
                 label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
@@ -1475,6 +1481,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                copies, and the row says so before the tap rather than
                after it. */
             <>
+              {/* What a reader does with a list once read, so it leads. */}
+              {canPlan && (
+                <MenuRow
+                  icon="paw-outline"
+                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+                  onPress={() => act(plan)}
+                  first
+                  testID="collection-menu-plan"
+                />
+              )}
               {/* Only with a city to file the copy under. Without one the
                   row could only close the menu and do nothing, and a row
                   that does nothing is worse than a row that is not there. */}
@@ -1483,14 +1499,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   icon="duplicate-outline"
                   label={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
                   onPress={() => act(copy)}
-                  first
+                  first={!canPlan}
                 />
               )}
               <MenuRow
                 icon="share-outline"
                 label={t('Share', 'Chia sẻ', '共有')}
                 onPress={() => act(share)}
-                first={!copyCityId}
+                first={!copyCityId && !canPlan}
               />
               {/* The third thing you can do about somebody else's list,
                   and the one the store asks for: say something is wrong
@@ -1604,8 +1620,6 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
   footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  // Add and Plan at the card's end; a visitor's Plan alone spans it.
-  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 },
   // The quiet one: the gradient button's height and pill, in glass and a
   // hairline, so the row is one object with one primary.
   addQuiet: {

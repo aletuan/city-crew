@@ -376,7 +376,7 @@ describe('the menu on one photograph', () => {
     fireEvent.click(screen.getByTestId('gallery-tile-b'));
     const page = await screen.findByTestId('photo-sheet-page-b');
     expect(page.querySelector('img')!.getAttribute('src')).toBe('http://cdn/b.jpg');
-    expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 2/3');
+    expect(screen.getByTestId('photo-sheet').textContent).toContain('2/3');
   });
 
   // Swiping in the sheet moves to the next photograph, its rows with it,
@@ -394,7 +394,7 @@ describe('the menu on one photograph', () => {
     expect(page).toBeGreaterThan(0);
     Object.defineProperty(pager, 'scrollLeft', { value: page, configurable: true });
     fireEvent.scroll(pager);
-    await waitFor(() => expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 2/3'));
+    await waitFor(() => expect(screen.getByTestId('photo-sheet').textContent).toContain('2/3'));
     expect(screen.getByRole('button', { name: 'Make it the cover' })).toBeTruthy();
     fireEvent.click(screen.getByTestId('photo-sheet-close'));
     const ringed = (id: string) =>

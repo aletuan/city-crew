@@ -26,8 +26,11 @@
 //
 // ── what the head says ──
 //
-// "Ảnh 4/6", whether it is the cover or hidden, and the score with its
-// reasons. Where it came from was cut (owner, 16 Oct 2026): the icon and
+// What the photograph is like, in a sentence, beside its score — and
+// whether it is the cover or hidden. Not "Ảnh 4/6" (owner, 16 Oct 2026):
+// the count is already on the photograph, and saying it twice gave the
+// head's biggest type to the one fact the reader could see anyway. Where
+// it came from was cut the same day: the icon and
 // "Đã tải lên" told a guide nothing they act on — every row offers the
 // same actions whoever added it. The reasons sit under the name, beside
 // the number, so no gap opens below a name one line tall next to a
@@ -66,7 +69,7 @@ import { useSheetDrag } from './sheetDrag';
 import { PressableScale } from './ui';
 import type { GalleryPhoto } from '../lib/gallery';
 import { useI18n } from '../lib/i18n';
-import { colors, display, font, onPhoto, radius, space } from '../theme';
+import { colors, font, onPhoto, radius, space } from '../theme';
 
 /** The most of the screen's height the picture may take. */
 const MAX_SHARE = 0.5;
@@ -222,11 +225,8 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
 
           <View style={s.head}>
             <View style={s.name}>
-              <View style={s.titleLine}>
-                <Text style={s.title} numberOfLines={1}>{t('Photo', 'Ảnh', '写真')} {count}</Text>
-                {status ? <Text style={s.status} numberOfLines={1} testID="photo-sheet-status">{status}</Text> : null}
-              </View>
-              {p.score && <ScoreWhy score={p.score} />}
+              {p.score && <ScoreWhy score={p.score} lead />}
+              {status ? <Text style={s.status} numberOfLines={1} testID="photo-sheet-status">{status}</Text> : null}
             </View>
             {p.score && <ScoreTen score={p.score} />}
           </View>
@@ -278,7 +278,5 @@ const s = StyleSheet.create({
 
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   name: { flex: 1, gap: 8 },
-  titleLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  title: { flexShrink: 0, color: colors.text, fontSize: 20, fontFamily: display.semibold },
-  status: { flexShrink: 1, color: colors.textTertiary, fontSize: 14 },
+  status: { color: colors.textTertiary, fontSize: 14 },
 });

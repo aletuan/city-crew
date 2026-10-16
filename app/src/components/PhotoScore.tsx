@@ -181,20 +181,33 @@ export function ScoreTen({ score, onDark }: {
 }
 
 /**
- * Why, and who measured, under the photograph's name. A row from a
- * scorer this build cannot interpret says nothing here rather than
- * reading its measurements on another scorer's scales — its number,
- * which every scorer shares, is still `ScoreTen`'s to show.
+ * Why, in a sentence. A row from a scorer this build cannot interpret
+ * says nothing here rather than reading its measurements on another
+ * scorer's scales — its number, which every scorer shares, is still
+ * `ScoreTen`'s to show.
+ *
+ * `lead`: the sentence is the head of the photo sheet, opposite the
+ * number, where "Ảnh 2/6" used to be (owner, 16 Oct 2026) — the count
+ * already sits on the photograph, so the head says what the photograph
+ * is like instead of which one it is.
+ *
+ * Who measured is not said here any more. "Measured on this phone by
+ * Apple Vision" is a technical fact a guide does not act on, so it moved
+ * into the detailed analysis (`ScoreDetails`), where a reader who opens
+ * it has asked for that depth — and where it still tells two scorers'
+ * numbers apart once there is more than one.
  */
-export function ScoreWhy({ score, onDark }: { score: PhotoScore; onDark?: boolean }) {
+export function ScoreWhy({ score, onDark, lead }: { score: PhotoScore; onDark?: boolean; lead?: boolean }) {
   const { t } = useI18n();
   const how = interpreterOf(score.scorer);
   if (score.aesthetic == null || !how) return null;
   return (
-    <View style={s.why}>
-      <Text style={[s.whyText, onDark && s.whyTextDark]} testID="score-why">{how.explain(score, t)}</Text>
-      <Text style={[s.whySource, onDark && s.inkDark]} testID="score-source">{how.source(t)}</Text>
-    </View>
+    <Text
+      style={[s.whyText, lead && s.whyLead, onDark && s.whyTextDark]}
+      testID="score-why"
+    >
+      {how.explain(score, t)}
+    </Text>
   );
 }
 
@@ -364,6 +377,9 @@ export function ScoreDetails({ score, open, onToggle }: {
               {tips.map((tip) => <Text key={tip} style={s.tip}>{tip}</Text>)}
             </View>
           )}
+          {/* Who measured, last: provenance for the reader who came this
+              far, moved here from under the sentence (see `ScoreWhy`). */}
+          <Text style={s.whySource} testID="score-source">{how.source(t)}</Text>
         </View>
       )}
     </View>
@@ -414,7 +430,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.accentSoft,
   },
   bandText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
-  why: { gap: 6 },
 
   detail: {
     backgroundColor: colors.surfaceCard,
@@ -451,6 +466,8 @@ const s = StyleSheet.create({
   bandTextDark: { color: onPhoto.text },
   whyTextDark: { color: onPhoto.text },
   whyText: { color: colors.textSecondary, fontSize: 15, lineHeight: 21 },
+  // The sheet's head: the text's own ink and a step up, opposite the number.
+  whyLead: { color: colors.text, fontSize: 17, lineHeight: 23, fontWeight: font.semibold },
   whySource: { color: colors.textTertiary, fontSize: 12 },
 
   scrim: {
