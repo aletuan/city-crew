@@ -210,7 +210,7 @@ reaches the native view.
 | `PlaceDetailScreen` (check-in) | `detail-checkin` / `detail-checked-in` — one id per state; in the visit sheet `checkin-head`, `checkin-visit` (each row), `checkin-visit-remove` (each row's trash), `detail-checkin-again` |
 | `SaveSheet` | `save-row-<index>`, `save-done` |
 | `CollectionFormScreen` | `collection-name`, `collection-submit` |
-| `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the New pill in the header, on Yours once there is a list) |
+| `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the New pill in the header: on Yours once there is a list, on Community always when signed in) |
 | `CollectionDetailScreen` | `collection-place-<index>`, `collection-back`, `collection-more`, `collection-menu-edit`, `collection-menu-delete` |
 
 Renaming one of these is a breaking change for this suite, and
