@@ -169,6 +169,26 @@ class FakeModel:
         return self._vec(photo.id)
 
 
+def features(out):
+    """The projected embedding out of `get_text_features` /
+    `get_image_features`. transformers 4 returns it as a tensor;
+    transformers 5 returns a `BaseModelOutputWithPooling` holding it in
+    `pooler_output` (the owner's first run on the Mac, 16 Oct 2026, failed
+    on exactly that). Both are taken, so the version pip picks is not this
+    script's business."""
+    if hasattr(out, "norm"):
+        return out
+    for name in ("text_embeds", "image_embeds", "pooler_output"):
+        value = getattr(out, name, None)
+        if value is not None:
+            return value
+    raise TypeError(f"no embedding in a {type(out).__name__}")
+
+
+def unit(t) -> list[list[float]]:
+    return (t / t.norm(dim=-1, keepdim=True)).cpu().tolist()
+
+
 class HFModel:
     def __init__(self, name: str):
         import torch  # noqa: PLC0415
@@ -180,8 +200,8 @@ class HFModel:
         self.model = AutoModel.from_pretrained(self.id).to(self.device).eval()
         self.proc = AutoProcessor.from_pretrained(self.id)
 
-    def _norm(self, t):
-        return (t / t.norm(dim=-1, keepdim=True)).cpu().tolist()
+    def _norm(self, out):
+        return unit(features(out))
 
     def texts(self, texts: list[str]) -> list[list[float]]:
         # SigLIP was trained on text padded to 64 tokens and reads others
@@ -215,6 +235,11 @@ class Reading:
 
 def read_photo(photo: Photo, img: list[float], groups: dict[str, list[list[float]]],
                fit_margin: float, off_margin: float) -> Reading:
+    # `zip` would quietly compare the first n numbers of two vectors of
+    # different lengths and every score after it would be noise.
+    width = len(next(iter(groups.values()))[0])
+    if len(img) != width:
+        raise ValueError(f"image vector has {len(img)} numbers, text vectors {width}")
     by_group = {g: max(dot(img, t) for t in vecs) for g, vecs in groups.items()}
     ranked = sorted((g for g in by_group if g != "_neutral"), key=lambda g: -by_group[g])
     own = [by_group[c] for c in photo.categories if c in by_group]

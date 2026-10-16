@@ -287,6 +287,7 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 | 16/10/2026 | #969: tách theo bộ chấm. #970–#974: sheet ảnh, xem toàn màn hình, phân tích chi tiết, ảnh bìa lên đầu |
 | 16/10/2026 | Thiết kế bước 2 và các phương án A–D. Chọn đánh giá B trước. Tài liệu này ra đời (#975) |
 | 16/10/2026 | B1: MobileCLIP chỉ cho nghiên cứu → chọn SigLIP 2 / CLIP. B2–B3: `data/photo-eval/` (câu mô tả, script, hướng dẫn). Quyết định D6–D9 |
+| 16/10/2026 | B4, lần chạy đầu trên Mac: tải được mô hình và catalog, rồi lỗi vì transformers 5 trả embedding trong `pooler_output`. Script giờ nhận cả hai phiên bản, và dừng nếu véc-tơ ảnh và véc-tơ chữ khác độ dài |
 
 ## 13. Phương án đã loại
 
