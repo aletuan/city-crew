@@ -279,7 +279,7 @@ class Reading:
 
 
 def read_photo(photo: Photo, img: list[float], groups: dict[str, list[list[float]]],
-               fit_margin: float, off_margin: float) -> Reading:
+               fit_margin: float, off_margin: float, off_rank: int = 3) -> Reading:
     # `zip` would quietly compare the first n numbers of two vectors of
     # different lengths and every score after it would be noise.
     width = len(next(iter(groups.values()))[0])
@@ -290,25 +290,74 @@ def read_photo(photo: Photo, img: list[float], groups: dict[str, list[list[float
     own = [by_group[c] for c in photo.categories if c in by_group]
     others = [v for g, v in by_group.items() if g not in photo.categories and g != "_neutral"]
     margin = (max(own) - max(others)) if own and others else None
+    verdict = judge(photo, by_group, ranked, margin, fit_margin, off_margin, off_rank)
+    return Reading(photo, by_group, ranked, margin, verdict, vision_fit(photo))
+
+
+def judge(photo: Photo, by_group: dict[str, float], ranked: list[str], margin: float | None,
+          fit_margin: float, off_margin: float, off_rank: int) -> str:
+    """Fit, unclear or off, from scores already computed: apart from
+    `read_photo` so that `calibrate` can try other thresholds on the same
+    scores. Off means what the owner settled on 16 Oct 2026: what the
+    photograph shows does not match the place's category. Whether it is a
+    good photograph is steps 4 and 5, not this."""
     # A menu or a sign is neither for nor against a place: when it is the
     # best match, the photograph is not judged at all.
     if margin is None or ranked and by_group.get("_neutral", -1) > by_group[ranked[0]]:
-        verdict = "unclear"
-    elif margin >= fit_margin:
-        verdict = "fit"
-    # Second or third is not off-topic. The first full run (16 Oct 2026)
+        return "unclear"
+    if margin >= fit_margin:
+        return "fit"
+    # Within the top `off_rank` is unclear, not off. The first full run
     # judged by the margin alone and called 791 of 6,211 photographs off
-    # while only 327 had their place's category outside the top three: a
-    # cafe's cake that scored `eats` a hair above `cafes` was off-topic,
-    # and so were 132 covers. A neighbouring category is a reason to look,
-    # not a verdict.
-    elif set(photo.categories) & set(ranked[:3]):
-        verdict = "unclear"
-    elif ranked[0] == "_off" or margin <= -off_margin:
-        verdict = "off"
-    else:
-        verdict = "unclear"
-    return Reading(photo, by_group, ranked, margin, verdict, vision_fit(photo))
+    # while only 327 had their category outside the top three, 132 covers
+    # among them; the top three brought that to 211 and 26. The owner's
+    # marks then cut the other way: of 65 photographs this left unclear,
+    # 42 were off in the owner's eyes. So the rank is a threshold for
+    # `--marks` to choose (step B7), and 3 is only where it starts.
+    if set(photo.categories) & set(ranked[:off_rank]):
+        return "unclear"
+    if ranked[0] == "_off" or margin <= -off_margin:
+        return "off"
+    return "unclear"
+
+
+# The thresholds `calibrate` tries. Rank 1 calls off everything whose own
+# category is not first; margins from none to a clear lead, in the
+# thousandths the margins of the first run were spread over.
+CALIBRATION_RANKS = (1, 2, 3)
+CALIBRATION_MARGINS = (0.0, 0.005, 0.01, 0.02, 0.03, 0.05)
+
+
+def calibrate(readings: list[Reading], marks: dict[str, dict], fit_margin: float) -> list[dict]:
+    """How each pair of thresholds agrees with the owner's marks (the page's
+    Copy box, saved to a file). Only Hợp and Lạc đề marks count: the owner
+    is the judge of what fits, and Chưa rõ is no answer to measure against.
+
+    `covers_fit_called_off` is the figure that must be 0: a cover the owner
+    calls fitting, called off by the model. A cover the owner calls off is
+    a finding, not an error (six of the first nine were)."""
+    marked = [(r, marks[r.photo.id]["owner"]) for r in readings
+              if r.photo.id in marks and marks[r.photo.id].get("owner") in ("fit", "off")]
+    cat = [r for r in readings if r.photo.truth is None]
+    rows = []
+    for rank in CALIBRATION_RANKS:
+        for m in CALIBRATION_MARGINS:
+            def v(r):
+                return judge(r.photo, r.by_group, r.ranked, r.margin, fit_margin, m, rank)
+            said = [(v(r), owner, r.photo.cover) for r, owner in marked]
+            off_both = sum(model == "off" and owner == "off" for model, owner, _ in said)
+            called_off = sum(model == "off" for model, _, _ in said)
+            owner_off = sum(owner == "off" for _, owner, _ in said)
+            rows.append({
+                "off_rank": rank, "off_margin": m,
+                "off_precision": round(off_both / called_off, 3) if called_off else None,
+                "off_recall": round(off_both / owner_off, 3) if owner_off else None,
+                "fit_but_owner_off": sum(model == "fit" and owner == "off" for model, owner, _ in said),
+                "covers_fit_called_off": sum(c and model == "off" and owner == "fit" for model, owner, c in said),
+                "catalog_off": sum(v(r) == "off" for r in cat),
+                "catalog_covers_off": sum(r.photo.cover and v(r) == "off" for r in cat),
+            })
+    return rows
 
 
 def vision_fit(photo: Photo) -> bool | None:
@@ -465,6 +514,18 @@ def write_html(readings: list[Reading], summary: dict, model: str, path: Path,
 
 
 
+def calibration_table(rows: list[dict]) -> str:
+    """The calibration as text a person can paste back: one line a rule."""
+    head = ["off_rank", "off_margin", "off_precision", "off_recall", "fit_but_owner_off",
+            "covers_fit_called_off", "catalog_off", "catalog_covers_off"]
+    def cell(v):
+        return "—" if v is None else f"{v:g}" if isinstance(v, float) else str(v)
+    lines = ["  ".join(head)]
+    for r in rows:
+        lines.append("  ".join(cell(r[h]).rjust(len(h)) for h in head))
+    return "\n".join(lines)
+
+
 # ── main ──────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -479,8 +540,12 @@ def main() -> None:
     ap.add_argument("--fit-margin", type=float, default=0.0,
                     help="own category ahead of every other by at least this: fit")
     ap.add_argument("--off-margin", type=float, default=0.02,
-                    help="own category outside the top three, and another ahead by more than this "
+                    help="own category outside the top --off-rank, and another ahead by more than this "
                          "or the off-topic sentences first: off")
+    ap.add_argument("--off-rank", type=int, default=3,
+                    help="own category within this many of the top: never off")
+    ap.add_argument("--marks", type=Path,
+                    help="the owner's marks (the page's Copy box): how each threshold agrees with them")
     ap.add_argument("--sample", type=int, default=12,
                     help="photographs per section of the HTML page, at random; 0 for all")
     ap.add_argument("--seed", type=int, default=1, help="which random sample")
@@ -514,16 +579,22 @@ def main() -> None:
                 continue
             if not p.truth:
                 vectors.put(p, img)
-        readings.append(read_photo(p, img, groups, a.fit_margin, a.off_margin))
+        readings.append(read_photo(p, img, groups, a.fit_margin, a.off_margin, a.off_rank))
         if i % 50 == 0:
             print(f"{i}/{len(photos)}", file=sys.stderr)
 
     summary = summarise(readings)
+    if a.marks:
+        summary["marks"] = len(json.loads(a.marks.read_text()))
+        summary["calibration"] = calibrate(readings, json.loads(a.marks.read_text()), a.fit_margin)
     stem = a.out / f"photo-fit-{model.name}"
     write_csv(readings, list(groups), stem.with_suffix(".csv"))
     write_html(readings, summary, model.name, stem.with_suffix(".html"), a.sample, a.seed)
     (stem.with_suffix(".json")).write_text(json.dumps(summary, indent=2, ensure_ascii=False))
-    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    shown = {k: v for k, v in summary.items() if k != "calibration"}
+    print(json.dumps(shown, indent=2, ensure_ascii=False))
+    if "calibration" in summary:
+        print("\n" + calibration_table(summary["calibration"]))
     print(f"\n→ {stem.with_suffix('.html')}")
 
 
