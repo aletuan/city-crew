@@ -59,27 +59,15 @@ const W = PHONE.width - space.page * 2;
 
 const frame = () => screen.getByTestId('photo-sheet-frame');
 const frameH = () => parseFloat(frame().style.height);
-/** Picture `id` arriving, at its own size, as `expo-image` reports it. */
-const arrive = (w: number, h: number, id = 'p1') => {
-  const img = screen.getByTestId(`photo-sheet-page-${id}`).querySelector('img')!;
-  Object.defineProperty(img, 'naturalWidth', { value: w, configurable: true });
-  Object.defineProperty(img, 'naturalHeight', { value: h, configurable: true });
-  fireEvent.load(img);
-};
 
 describe('frameHeight', () => {
-  it('is the picture\'s own height when it is wider than tall', () => {
-    expect(frameHeight(4 / 3, 360, 2000)).toBe(270);
-    expect(frameHeight(16 / 9, 360, 2000)).toBe(203);
-  });
-  // Never cropped to a landscape: a portrait sits whole in a square.
-  it('is a square for a square or a portrait', () => {
-    expect(frameHeight(1, 360, 2000)).toBe(360);
-    expect(frameHeight(3 / 4, 360, 2000)).toBe(360);
+  it('is a square the frame\'s width across', () => {
+    expect(frameHeight(360, 2000)).toBe(360);
   });
   it('never takes more than half the screen', () => {
-    expect(frameHeight(1, 360, 600)).toBe(300);
-    expect(frameHeight(4 / 3, 360, 500)).toBe(250);
+    expect(frameHeight(360, 600)).toBe(300);
+    expect(frameHeight(361, 851)).toBe(361);
+    expect(frameHeight(500, 851)).toBe(426);
   });
 });
 
@@ -116,20 +104,17 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('photo-sheet-status').textContent).toBe('Cover · Hidden');
   });
 
-  // The frame takes the picture's shape once the picture says what it is.
-  it('fits the frame to the picture once it arrives, and ignores a size with a zero side', () => {
-    render(<PhotoSheet {...props()} />);
-    expect(frameH()).toBe(Math.round(W * 3 / 4));
-    // Wide enough to sit under the half-screen cap, so the ratio shows.
-    arrive(3000, 1000);
-    expect(frameH()).toBe(Math.round(W / 3));
-    expect(frameH()).toBeLessThan(PHONE.height / 2);
-    // A size with a zero side is no size: it would make the frame a
-    // sliver (no height) or a square (no width).
-    arrive(1000, 0);
-    expect(frameH()).toBe(Math.round(W / 3));
-    arrive(0, 1000);
-    expect(frameH()).toBe(Math.round(W / 3));
+  // One frame for every photograph: the sheet does not grow or shrink as
+  // the guide swipes from a portrait to a landscape (owner, 16 Oct 2026).
+  it('keeps one frame, whichever photograph is open', () => {
+    const photos = gallery(3);
+    const { rerender } = render(<PhotoSheet {...props({ photos, index: 0 })} />);
+    expect(frameH()).toBe(frameHeight(W, PHONE.height));
+    rerender(<PhotoSheet {...props({ photos, index: 2 })} />);
+    expect(frameH()).toBe(frameHeight(W, PHONE.height));
+    for (const id of ['p1', 'p2', 'p3']) {
+      expect(parseFloat(screen.getByTestId(`photo-sheet-page-${id}`).style.height)).toBe(frameH());
+    }
   });
 
   // Whole, never cropped: the frame is the picture's shape, or a square
@@ -139,18 +124,11 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('photo-sheet-page-p1').querySelector('img')!.getAttribute('contentfit')).toBe('contain');
   });
 
-  // A shape learned for one photograph is not another's.
-  it('takes the shape of whichever photograph is open', () => {
-    const photos = gallery(2);
-    const { rerender } = render(<PhotoSheet {...props({ photos, index: 0 })} />);
-    arrive(3000, 1000, 'p1');
-    expect(frameH()).toBe(Math.round(W / 3));
-    rerender(<PhotoSheet {...props({ photos, index: 1 })} />);
-    expect(frameH()).toBe(Math.round(W * 3 / 4));
-    arrive(1000, 1000, 'p2');
-    expect(frameH()).toBe(W);
-    rerender(<PhotoSheet {...props({ photos, index: 0 })} />);
-    expect(frameH()).toBe(Math.round(W / 3));
+  // The grid behind is photographs too; dimmed alone it read as a second
+  // screen (owner, 16 Oct 2026).
+  it('blurs the screen behind it', () => {
+    render(<PhotoSheet {...props()} />);
+    expect(screen.getByTestId('photo-sheet-blur')).toBeTruthy();
   });
 
   // The reasons sit under the name and the number beside them, so no gap
