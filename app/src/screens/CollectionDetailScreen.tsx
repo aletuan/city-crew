@@ -21,13 +21,14 @@ import { collectionKinds, narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  deleteCollection, membersOf, publishBlockers, reorderCollection,
+  blockUser, deleteCollection, membersOf, publishBlockers, reorderCollection,
   setCollectionPublic, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
+import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
@@ -801,142 +802,211 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     ],
   );
 
-  /* The line under the title. It goes to `Screen` as a node rather than a
-     string because it is not a sentence: a padlock or a globe, the
-     curator's face, the counts, and a heart you can press. `Screen`
-     styles a string and leaves a node to style itself, which is what this
-     one needs — the 18pt face and the 15pt heart are tuned to `meta`'s
-     measure, not to the 13.5pt a written subtitle takes. */
-  const byline = col ? (
+  /* The line under the title — the owner's alone now (owner, 16 Oct
+     2026). The counts and the heart went down into the card, beside the
+     curator's face and the words they are about, so "who made this, what
+     is in it, how is it doing" reads as one block rather than a header
+     line and a card that each said half. What stays up here is the one
+     fact an owner checks before leaving the screen: whether anybody else
+     can see this list. A visitor's header is the title alone.
+
+     The padlock the list already uses for the same fact, so a private
+     collection looks the same wherever you meet it — and a globe once it
+     is not private any more. Published reads in colour, because it is the
+     state worth checking; Private stays grey, the resting state, which
+     does not need announcing.
+
+     No self-credit. `CollectionsScreen` already states it — your own
+     byline is the padlock's business, not a credit line. */
+  const byline = col && owned ? (
     <View style={s.metaRow}>
-      {/* The padlock the list already uses for the same fact, so a
-          private collection looks the same wherever you meet it —
-          and a globe once it is not private any more.
-
-          Published reads first and in colour, because it is the
-          state worth checking before you leave the screen. Private
-          stays grey: it is the resting state and does not need
-          announcing. */}
-      {owned && (
-        <Ionicons
-          name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
-          size={13}
-          color={isPublic ? colors.ok : colors.textTertiary}
-        />
-      )}
-      {owned && isPublic && (
-        <Text style={s.metaPublic}>{t('Public', 'Công khai', '公開')}</Text>
-      )}
-      {/* The face leads the line and the handle follows it, which
-          is a reordering rather than an insertion: a photograph
-          belongs beside the name it is of, and the only way to
-          keep the byline a single `Text` — which `numberOfLines`
-          needs, or the ellipsis arrives twice — is to put the
-          person first and the counts after.
-
-          18pt against a 15pt line, and that is the whole answer
-          to the two round controls this header already has. A
-          face at the size of the type it sits in is never
-          mistaken for the 44pt glass one, and it costs the header
-          no height. The rule is written where the controls are,
-          in `ui.tsx`.
-
-          No self-credit. `CollectionsScreen` already states it —
-          your own byline is the padlock's business, not a credit
-          line — and this screen was the one place contradicting
-          it. Beside a padlock only an owner sees, above a menu
-          that offers only an owner Delete, your own name was a
-          third way of saying the same thing. */}
-      {holdForFace ? <Avatar url={curatorAvatar} size={18} /> : null}
-      <Text style={[s.meta, s.byline]} numberOfLines={1}>
-        {owned && isPublic ? '·  ' : ''}
-        {!owned && col.curator_handle ? `${atHandle(col.curator_handle)}  ·  ` : ''}
-        {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
-        {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
+      <Ionicons
+        name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
+        size={13}
+        color={isPublic ? colors.ok : colors.textTertiary}
+      />
+      <Text style={isPublic ? s.metaPublic : s.meta}>
+        {isPublic ? t('Public', 'Công khai', '公開') : t('Private', 'Riêng tư', '非公開')}
       </Text>
-
-      {/* One heart, and it is both the gesture and the tally — the
-          shape the shelf card settled on and the argument written
-          there: two marks for one meaning is one too many, and a
-          number sitting beside a control it does not belong to
-          reads as that control's label.
-
-          This screen had exactly that split. A 44pt heart in the
-          header did the liking; the words "1 likes" down here did
-          the counting; and the number was nowhere near the thing
-          it counted. Merged, outline is a list you have not liked,
-          coral filled is one you have, and the figure beside it is
-          how many people agree — which is also how Instagram, X
-          and every app that stopped shipping "N likes" as prose
-          now says it.
-
-          Pressable for everyone except the curator, and that is
-          the only exception. A curator cannot like their own
-          list — the database enforces it, and `!owned` here is
-          the app's half of the same rule: the policy is what
-          makes it true, this is what keeps the reader from
-          meeting it as a heart that does nothing. The Explore
-          shelf and the Collections grid each carry their own
-          copy of the rule, drawn the same way. The shelf used
-          not to need one, because the query it draws from left
-          your own lists out — which is also why a list you had
-          just published was nowhere on the front door.
-
-          So the owner gets the same shape drawn grey and inert —
-          they still want to know how the list is doing. Signed
-          out it stays pressable and opens the sign-in sheet; see
-          `onHeart`.
-          `hitSlop` is what buys a 15pt glyph a 44pt target
-          without drawing a disc — the shelf's trick, and the
-          reason the header can lose a round control without
-          losing a tap.
-
-          It sits immediately after the counts rather than out at
-          the margin, which is the correction to how this first
-          shipped — see `s.like`.
-
-          Same rule as the shelf on the number itself: it prints
-          from one. A `0` reads as "nobody liked this" rather than
-          "no votes yet", and below that the heart draws bare —
-          which is exactly when it is most obviously an
-          invitation. */}
-      {isPublic && col.id ? (
-        !owned ? (
-          <>
-            <Text style={[s.meta, s.sep]}>·</Text>
-            <PressableScale
-              style={s.like}
-              scaleTo={0.82}
-              haptic="none"
-              hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
-              onPress={onHeart}
-              accessibilityRole="button"
-              accessibilityState={{ selected: liked }}
-              accessibilityLabel={liked
-                ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
-                : t('Like', 'Thích', 'いいね')}
-            >
-              <Ionicons
-                name={liked ? 'heart' : 'heart-outline'}
-                size={15}
-                color={liked ? colors.accent : colors.textTertiary}
-              />
-              {likesWorthShowing(likes[col.slug])
-                ? <Text style={s.meta}>{likes[col.slug]}</Text>
-                : null}
-            </PressableScale>
-          </>
-        ) : likesWorthShowing(likes[col.slug]) ? (
-          <>
-            <Text style={[s.meta, s.sep]}>·</Text>
-            <View style={s.like}>
-              <Ionicons name="heart" size={15} color={colors.textTertiary} />
-              <Text style={s.meta}>{likes[col.slug]}</Text>
-            </View>
-          </>
-        ) : null
-      ) : null}
     </View>
+  ) : undefined;
+
+  /* One heart, and it is both the gesture and the tally — the shape the
+     shelf card settled on: two marks for one meaning is one too many, and
+     a number beside a control it does not belong to reads as that
+     control's label. Outline is a list you have not liked, filled is one
+     you have, and the figure beside it is how many people agree.
+
+     Pressable for everyone except the curator. A curator cannot like
+     their own list — the database enforces it, and `!owned` here is the
+     app's half of the same rule, so the reader never meets a heart that
+     does nothing. The owner gets the same shape grey and inert, because
+     they still want to know how the list is doing. Signed out it stays
+     pressable and opens the sign-in sheet; see `onHeart`. `hitSlop` buys
+     a 15pt glyph a 44pt target without drawing a disc.
+
+     It prints from one: a `0` reads as "nobody liked this" rather than
+     "no votes yet", and below that the heart draws bare — exactly when it
+     is most obviously an invitation. */
+  const heart = col && isPublic && col.id ? (
+    !owned ? (
+      <PressableScale
+        style={s.like}
+        scaleTo={0.82}
+        haptic="none"
+        hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
+        onPress={onHeart}
+        accessibilityRole="button"
+        accessibilityState={{ selected: liked }}
+        accessibilityLabel={liked
+          ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
+          : t('Like', 'Thích', 'いいね')}
+      >
+        <Ionicons
+          name={liked ? 'heart' : 'heart-outline'}
+          size={15}
+          color={liked ? colors.accent : colors.textTertiary}
+        />
+        {likesWorthShowing(likes[col.slug])
+          ? <Text style={s.meta}>{likes[col.slug]}</Text>
+          : null}
+      </PressableScale>
+    ) : likesWorthShowing(likes[col.slug]) ? (
+      <View style={s.like}>
+        <Ionicons name="heart" size={15} color={colors.textTertiary} />
+        <Text style={s.meta}>{likes[col.slug]}</Text>
+      </View>
+    ) : null
+  ) : null;
+
+  /* The card's foot: how many places, and the heart. Under a hairline,
+     the count at the start and the heart at the end — the two are
+     separate facts now that the handle is not between them, and the end
+     of the row is where a thumb finds a gesture. Drawn on every list,
+     yours included: the count is the one line every list has. */
+  const cardFoot = col ? (
+    <View style={s.cardFoot} testID="collection-stats">
+      <View style={s.footCount}>
+        <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+        <Text style={s.meta}>
+          {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
+        </Text>
+      </View>
+      {heart}
+    </View>
+  ) : null;
+
+  /* ── the curator, at the head of the card (owner, 16 Oct 2026) ──
+     The face and the handle lead the card on somebody else's list, where
+     the note glyph used to: the glyph said "a note", the face says whose,
+     which is the question the glyph was standing in for. 28pt, beside a
+     handle in the card's own ink — larger than the 18pt it wore in the
+     header, because it is the card's subject now rather than a mark in a
+     line of meta.
+
+     The face appears only where there is a person: `holdForFace` keeps
+     the slot while the lookup is out and drops it once an editorial
+     handle comes back with nobody behind it.
+
+     A tap opens the curator sheet: report this list, and — only where a
+     real account stands behind the handle — block them. Both already
+     existed (the ⋯ menu's report row, Crew's block); this is the door
+     beside the person they are about. No "View profile" and no follow:
+     there is no public profile screen to open, and the app's graph is
+     friendship, not following. Where neither action applies (signed
+     out, or an editorial list you cannot report) the row is not a
+     button — a press that opens an empty sheet is a dead control. */
+  const [aboutCurator, setAboutCurator] = useState(false);
+  const curatorTag = !owned && col?.curator_handle ? atHandle(col.curator_handle) : '';
+  const curatorName = lookup.data?.full_name?.trim() || '';
+  // A face or a profile row means an account; an editorial handle has
+  // neither (see `curatorHandle`). Blocking a handle with nobody behind
+  // it would block whoever seeded the row — the desk's own account.
+  const curatorIsPerson = !!curatorAvatar || !!lookup.data;
+  const blockCurator = () => {
+    const target = col?.owner_id;
+    if (!target) return;
+    Alert.alert(
+      t(`Block ${curatorTag}?`, `Chặn ${curatorTag}?`, `${curatorTag} をブロックしますか？`),
+      t(
+        'They will not be told. You can undo this from Blocked.',
+        'Họ sẽ không được báo. Bạn có thể bỏ chặn trong mục Đã chặn.',
+        '相手に通知されません。ブロック中から解除できます。',
+      ),
+      [
+        { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+        {
+          text: t('Block', 'Chặn', 'ブロック'),
+          style: 'destructive',
+          onPress: () => {
+            blockUser(target)
+              .then(() => Alert.alert(
+                t(`${curatorTag} is blocked`, `Đã chặn ${curatorTag}`, `${curatorTag} をブロックしました`),
+                t(
+                  'Their public lists stay on the shelf; they can no longer reach you.',
+                  'Danh sách công khai của họ vẫn hiện; họ không thể liên hệ bạn nữa.',
+                  '公開リストは表示されたままですが、相手からは連絡できなくなります。',
+                ),
+              ))
+              .catch(() => Alert.alert(
+                t('Could not block', 'Không chặn được', 'ブロックできませんでした'),
+                t('Please try again later.', 'Vui lòng thử lại sau.', '後でもう一度お試しください。'),
+              ));
+          },
+        },
+      ],
+    );
+  };
+  const curatorActions: PersonAction[] = [];
+  if (col && curatorTag && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id })) {
+    curatorActions.push({
+      key: 'report',
+      icon: 'flag-outline',
+      title: t('Report this list', 'Báo cáo danh sách này', 'このリストを報告'),
+      desc: t(
+        'Tell the desk something here is wrong.',
+        'Báo cho desk biết có điều gì không ổn ở đây.',
+        'ここに問題があることをデスクに伝えます。',
+      ),
+      onPress: () => report({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id, name: title }),
+    });
+  }
+  if (col && curatorTag && uid && col.owner_id && curatorIsPerson) {
+    curatorActions.push({
+      key: 'block',
+      icon: 'ban-outline',
+      title: t(`Block ${curatorTag}`, `Chặn ${curatorTag}`, `${curatorTag} をブロック`),
+      desc: t(
+        'They will not be told, and can no longer reach you.',
+        'Họ sẽ không được báo, và không thể liên hệ bạn nữa.',
+        '相手に通知されず、あなたに連絡できなくなります。',
+      ),
+      destructive: true,
+      onPress: blockCurator,
+    });
+  }
+  const curatorFace = (
+    <>
+      {holdForFace ? <Avatar url={curatorAvatar} size={28} /> : null}
+      <Text style={s.curatorTag} numberOfLines={1}>{curatorTag}</Text>
+    </>
+  );
+  const curatorRow = curatorTag ? (
+    curatorActions.length > 0 ? (
+      <PressableScale
+        style={s.curator}
+        onPress={() => setAboutCurator(true)}
+        scaleTo={0.97}
+        haptic="selection"
+        accessibilityRole="button"
+        accessibilityLabel={curatorTag}
+        testID="collection-curator"
+      >
+        {curatorFace}
+      </PressableScale>
+    ) : (
+      <View style={s.curator} testID="collection-curator">{curatorFace}</View>
+    )
   ) : null;
 
   /* The header's right-hand slot.
@@ -1068,10 +1138,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           centred on the first line (24 tall, so 2 down); the text column
           gives up their 32pt, which a two-line note can spare.
 
-          An owner's list with no description draws the card anyway, as an
-          invitation, and the whole card is the press. A visitor's list
-          with none draws nothing: an empty card on somebody else's list
-          reads as a failure to load.
+          ── the face, the foot (owner, 16 Oct 2026) ──
+          On somebody else's list the curator's face and handle now lead
+          the card where the note glyph was (see `curatorRow`), and every
+          card ends in a foot with the place count and the heart (see
+          `cardFoot`), both moved down from the header. So the card is
+          drawn on every list, a visitor's included: it always has at
+          least the count to say. Your own list keeps the note glyph.
+
+          An owner's list with no description still invites one: the line
+          and the pencil open the form.
 
           Checked on the text `t` picks, not on a hand-listed pair of
           columns: that left a Japanese-only description never drawn.
@@ -1083,70 +1159,70 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           the owner hid (`lib/collectionKinds`), drawn as `KindPill` — the
           pill a place's card and page wear, a dot in the category's
           colour and its word. They are also the list's filter (see "the
-          chips are the filter"), lit in the accent while chosen.
-          A visitor's list with chips and no words still gets the card,
-          without the note glyph, since there is no note. */}
-      {col && (desc || (kinds.length > 0 && !owned)) ? (
+          chips are the filter"), lit in the accent while chosen. */}
+      {col ? (
         <View style={s.descWrap}>
-          <Card style={s.descCard} testID="collection-desc">
-            {/* The note glyph says "the curator's words", so it comes with
-                the words: a visitor's card of chips alone has none. */}
-            {desc ? <Ionicons name="document-text-outline" size={20} color={colors.textSecondary} style={s.descGlyph} /> : null}
-            <View style={s.descBody}>
-              {desc ? <Text style={s.descText}>{desc}</Text> : null}
-              {kindRow}
+          <Card
+            style={s.descCard}
+            testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}
+          >
+            <View style={s.descTop}>
+              {/* The note glyph stays on your own list, where there is no
+                  face to lead with: it says "your words go here". */}
+              {owned ? (
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color={desc ? colors.textSecondary : colors.textTertiary}
+                  style={s.descGlyph}
+                />
+              ) : null}
+              <View style={s.descBody}>
+                {curatorRow}
+                {desc ? (
+                  <Text style={s.descText}>{desc}</Text>
+                ) : owned ? (
+                  // The invitation: the line and the pencil open the form.
+                  // Not the whole card, since the chips under the line are
+                  // a filter and a tap meant for one would open the form.
+                  <PressableScale
+                    onPress={edit}
+                    scaleTo={0.985}
+                    haptic="selection"
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
+                  >
+                    <Text style={s.descEmpty}>
+                      {t(
+                        'Add a few words about this list.',
+                        'Thêm vài dòng về danh sách này.',
+                        'このリストについて一言添えましょう。',
+                      )}
+                    </Text>
+                  </PressableScale>
+                ) : null}
+                {kindRow}
+              </View>
+              {owned && (
+                <PressableScale
+                  onPress={edit}
+                  scaleTo={0.85}
+                  haptic="selection"
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
+                  testID="collection-desc-edit"
+                >
+                  <Ionicons
+                    name="create-outline"
+                    size={20}
+                    color={desc ? colors.textSecondary : colors.textTertiary}
+                    style={s.descGlyph}
+                  />
+                </PressableScale>
+              )}
             </View>
-            {owned && (
-              <PressableScale
-                onPress={edit}
-                scaleTo={0.85}
-                haptic="selection"
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
-                testID="collection-desc-edit"
-              >
-                <Ionicons name="create-outline" size={20} color={colors.textSecondary} style={s.descGlyph} />
-              </PressableScale>
-            )}
-          </Card>
-        </View>
-      ) : col && owned ? (
-        // The invitation: the line and the pencil open the form. Not the
-        // whole card any more, as it was until the chips under the line
-        // became a filter — a tap meant for a chip would have opened the
-        // form instead.
-        <View style={s.descWrap}>
-          <Card style={s.descCard} testID="collection-desc-empty">
-            <Ionicons name="document-text-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
-            <View style={s.descBody}>
-              <PressableScale
-                onPress={edit}
-                scaleTo={0.985}
-                haptic="selection"
-                accessibilityRole="button"
-                accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
-              >
-                <Text style={s.descEmpty}>
-                  {t(
-                    'Add a few words about this list.',
-                    'Thêm vài dòng về danh sách này.',
-                    'このリストについて一言添えましょう。',
-                  )}
-                </Text>
-              </PressableScale>
-              {kindRow}
-            </View>
-            <PressableScale
-              onPress={edit}
-              scaleTo={0.85}
-              haptic="selection"
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
-            >
-              <Ionicons name="create-outline" size={20} color={colors.textTertiary} style={s.descGlyph} />
-            </PressableScale>
+            {cardFoot}
           </Card>
         </View>
       ) : null}
@@ -1362,6 +1438,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         </View>
       </Modal>
       {reportSheet}
+      <PersonSheet
+        visible={aboutCurator}
+        name={curatorName || curatorTag}
+        meta={curatorName ? curatorTag : undefined}
+        avatarUrl={curatorAvatar ?? undefined}
+        actions={curatorActions}
+        onClose={() => setAboutCurator(false)}
+      />
     </Screen>
   );
 }
@@ -1379,26 +1463,10 @@ const s = StyleSheet.create({
   // than one line at 20 ever did.
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   meta: { color: colors.textTertiary, ...type.meta },
-  // The words yield, the heart does not. Without this a long handle
-  // sizes the byline to its own content and pushes the tally off the
-  // right edge — `numberOfLines` alone only stops a second line, it does
-  // not make a row's text give way to its siblings.
-  byline: { flexShrink: 1 },
-  // The join between the byline and the tally, as an element rather than
-  // two more characters inside the Text: a trailing "  ·  " would go
-  // under the ellipsis with the words it trails, leaving a heart with
-  // nothing attaching it to the line. The 3 is what makes it match the
-  // separators it is standing in for — the row's own `gap` is 5, and the
-  // dots inside the Text are written "  ·  ", about 8 either side.
-  sep: { marginHorizontal: 3 },
-  // Next to the count it belongs to, not out at the margin. This shipped
-  // with `marginLeft: 'auto'` on the argument that a gesture wants a
-  // corner. True of a gesture — but the whole point of bringing the heart
-  // down here was that the mark and its tally are one fact, and a fact
-  // belongs in the line that states the others. Pushed to the edge it sat
-  // directly under the ⋯ button with a hand's width of nothing between it
-  // and the byline, and read as a second header control that had slipped
-  // a line, which is exactly what it had stopped being.
+  // The heart and its tally, one fact. At the end of the card's foot now:
+  // in the header it had to sit beside the count, or it read as a second
+  // header control slipped a line under ⋯ — inside the card there is no
+  // control above it to be mistaken for.
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The one word on the line that is not grey. `ok` is the app's green and
   // measures 4.35:1 on paper, which small text needs; the padlock beside
@@ -1437,8 +1505,22 @@ const s = StyleSheet.create({
   // the inset. The pencil hangs at the top right, level with the first
   // line, and the text takes the rest of the row.
   descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
-  descCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: space.cardPadding },
+  descCard: { gap: 14, padding: space.cardPadding },
+  // The glyph, the words and the pencil, on one row above the foot.
+  descTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   descBody: { flex: 1, gap: 12 },
+  // The face and the handle. `alignSelf` keeps the press to the row's own
+  // width rather than the card's: a tap on empty space beside a handle
+  // should not open a sheet about a person.
+  curator: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%' },
+  curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
+  // A hairline, then the count and the heart at either end.
+  cardFoot: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+  },
+  footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   descEmpty: { color: colors.textTertiary, ...type.body, lineHeight: 24 },
   // A 20pt glyph centred on a 24pt first line.
