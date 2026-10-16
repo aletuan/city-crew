@@ -225,13 +225,13 @@ describe('the read', () => {
     expect(screen.getByText('Cộng Cà Phê')).toBeTruthy();
   });
 
-  it('wears the cover badge on the cover, wherever it sits', async () => {
+  // First, where it is found without looking (owner, 16 Oct 2026).
+  it('puts the cover first, wearing its badge', async () => {
     show([photo('a', { sort_order: 0 }), photo('b', { sort_order: 1, is_cover: true })]);
     await grid();
+    expect(tileIds()).toEqual(['b', 'a']);
     expect(within(screen.getByTestId('gallery-tile-b')).getByTestId('gallery-cover')).toBeTruthy();
     expect(within(screen.getByTestId('gallery-tile-a')).queryByTestId('gallery-cover')).toBeNull();
-    // Not moved to the front: the gallery is the list "Reorder" edits.
-    expect(tileIds()).toEqual(['a', 'b']);
   });
 
   // No boundary between kinds: an upload and a Google row open the same
@@ -382,10 +382,12 @@ describe('the menu on one photograph', () => {
   // Swiping in the sheet moves to the next photograph, its rows with it,
   // and the grid rings the one the guide ended on.
   it('moves to the photograph swiped to, its rows and its ring with it', async () => {
-    show([photo('a'), photo('b', { sort_order: 1, is_cover: true }), photo('c', { sort_order: 2 })]);
+    show([photo('a', { is_cover: true }), photo('b', { sort_order: 1 }), photo('c', { sort_order: 2 })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
-    expect(await screen.findByRole('button', { name: 'Make it the cover' })).toBeTruthy();
+    await screen.findByTestId('photo-sheet');
+    // a is the cover: its sheet offers no "Make it the cover".
+    expect(screen.queryByRole('button', { name: 'Make it the cover' })).toBeNull();
     const pager = screen.getByTestId('photo-sheet-pager');
     // One page along: a page is as wide as the frame.
     const page = parseFloat(screen.getByTestId('photo-sheet-page-a').style.width);
@@ -393,8 +395,7 @@ describe('the menu on one photograph', () => {
     Object.defineProperty(pager, 'scrollLeft', { value: page, configurable: true });
     fireEvent.scroll(pager);
     await waitFor(() => expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 2/3'));
-    // b is the cover: its sheet offers no "Make it the cover".
-    expect(screen.queryByRole('button', { name: 'Make it the cover' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Make it the cover' })).toBeTruthy();
     fireEvent.click(screen.getByTestId('photo-sheet-close'));
     const ringed = (id: string) =>
       getComputedStyle(screen.getByTestId(`gallery-tile-${id}`).firstElementChild!).borderTopWidth === '2.5px';
@@ -655,9 +656,11 @@ describe('adding one', () => {
     show([mine('m')]);
     await grid();
     expect(screen.getByText('Note')).toBeTruthy();
-    expect(screen.getByText(/A photo you add becomes the cover/)).toBeTruthy();
-    expect(screen.getByText(/The City Crew team can edit these photos too/)).toBeTruthy();
-    expect(screen.getByText('You can add up to 5 photos per place.')).toBeTruthy();
+    // One line each (owner, 16 Oct 2026): nothing the screen shows itself.
+    expect(screen.getByText('A photo you add becomes the cover.')).toBeTruthy();
+    expect(screen.getByText('The City Crew team can edit these photos too.')).toBeTruthy();
+    expect(screen.getByText('Up to 5 photos per place.')).toBeTruthy();
+    expect(screen.queryByText(/latest change/)).toBeNull();
     // "The desk" is the team's own name for itself, and the format was
     // never the reader's to mind (owner, 15 Oct 2026).
     expect(screen.queryByText(/desk/i)).toBeNull();

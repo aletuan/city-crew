@@ -41,9 +41,14 @@ describe('the order', () => {
     photo({ id: 'a', sort_order: 0 }),
   ];
 
-  // `photosOf` leads with the cover; this does not.
-  it('is sort_order and nothing cleverer, cover included', () => {
-    expect(galleryOrder(three).map((p) => p.id)).toEqual(['a', 'b', 'c']);
+  // The cover where it is found without looking (owner, 16 Oct 2026).
+  it('leads with the cover, then follows sort_order', () => {
+    expect(galleryOrder(three).map((p) => p.id)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('is sort_order alone when there is no cover', () => {
+    const none = three.map((p) => ({ ...p, is_cover: false }));
+    expect(galleryOrder(none).map((p) => p.id)).toEqual(['a', 'b', 'c']);
   });
 
   it('leaves the input alone', () => {

@@ -66,12 +66,18 @@ export function galleryActions(photo: GalleryPhoto): GalleryAction[] {
 }
 
 /**
- * The gallery's order, which is `sort_order` and nothing cleverer.
+ * The gallery's order: the cover first, then `sort_order`.
  *
- * Not cover-first, though `photosOf` is. That function chooses what the
- * carousel *shows*; this one shows what the guide is looking at, and
- * the cover wears a badge wherever it sits.
+ * It was `sort_order` alone, the cover wearing its badge wherever it sat,
+ * on the reasoning that this screen shows what the guide is arranging and
+ * the carousel (`photosOf`, cover-first) shows what readers see. The
+ * owner turned it round (16 Oct 2026): the cover is the photograph that
+ * matters most, and it should be where it is found without looking — the
+ * first tile, as it is the first picture on the place. The cost, taken
+ * knowingly: making another photograph the cover moves it to the front
+ * and the rest along one. The ring on the tile last opened follows the
+ * photograph, not the cell, so the guide still sees which one it was.
  */
 export function galleryOrder(photos: readonly GalleryPhoto[]): GalleryPhoto[] {
-  return [...photos].sort((a, b) => a.sort_order - b.sort_order);
+  return [...photos].sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order);
 }
