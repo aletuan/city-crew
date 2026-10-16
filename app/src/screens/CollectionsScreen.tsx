@@ -594,6 +594,27 @@ export default function CollectionsScreen({ navigation, route }: {
     if (mine.data.length === 0) setTab('community');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine.loaded]);
+  // A list started from Community lands on Yours, where it now is: the
+  // form goes back to whichever tab sent it, and on Community the new
+  // list is invisible until it is made public. Keyed on the count, not on
+  // the return — a cancelled form adds nothing and leaves the reader where
+  // they were. The count rather than the focus because the form's
+  // `mine.reload()` lands after the screen is focused again. A tab the
+  // reader picks by hand in between drops the errand.
+  const startedFromCommunity = useRef<number | null>(null);
+  useEffect(() => {
+    if (startedFromCommunity.current === null || mine.data.length <= startedFromCommunity.current) return;
+    startedFromCommunity.current = null;
+    setTab('yours');
+  }, [mine.data.length]);
+  const pickTab = (next: 'yours' | 'community') => {
+    startedFromCommunity.current = null;
+    setTab(next);
+  };
+  const startNew = () => {
+    startedFromCommunity.current = onYours ? null : mine.data.length;
+    navigation.navigate('CollectionForm');
+  };
 
   // The search over what is already here. Everything it reads — both
   // lists, every member — is in memory, so this is a filter that runs on
@@ -809,15 +830,24 @@ export default function CollectionsScreen({ navigation, route }: {
     // third time. True at four lists and wrong at fifteen: the owner's
     // review (14 Oct 2026) found the row only by scrolling past every
     // list to reach it. The empty library keeps its own card and button,
-    // as Trips keeps its first-trip card, so the pill is never the only
-    // door and never one of two on one screen.
+    // as Trips keeps its first-trip card, so on Yours the pill is never
+    // one of two doors on one screen.
+    //
+    // On Community it shows for every signed-in reader, lists or none
+    // (owner, 16 Oct 2026): browsing other people's lists is when the idea
+    // for one of your own arrives, and the pill coming and going with the
+    // tab moved the title under the reader's thumb. It was hidden there on
+    // the argument that Community's lists are not yours to add to — true,
+    // but the pill never added to them; it starts one of yours, and
+    // `startNew` takes the reader to Yours once it exists. Guests have no
+    // library, so no pill.
     <Screen
       title={t('Collections', 'Bộ sưu tập', 'コレクション')}
-      right={onYours && mineReady && mine.data.length > 0 ? (
+      right={(onYours ? mineReady && mine.data.length > 0 : !!session) ? (
         <AddPill
           tall
           label={t('New', 'Tạo mới', '新規')}
-          onPress={() => navigation.navigate('CollectionForm')}
+          onPress={startNew}
           accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
           testID="collection-new"
         />
@@ -845,7 +875,7 @@ export default function CollectionsScreen({ navigation, route }: {
               { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの') },
             ]}
             active={tab}
-            onChange={setTab}
+            onChange={pickTab}
             // One preference, both shelves — see `shape`.
             right={(
               <View style={s.viewToggle}>
