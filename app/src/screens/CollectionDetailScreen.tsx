@@ -1088,7 +1088,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      In the dock, Add is the quiet one — glass and a hairline, not a
      second gradient: two filled buttons side by side read as two
      primaries, and the gradient belongs to the action the list exists
-     for. */
+     for.
+
+     Its word is the noun, "+ Địa điểm", not the verb (owner, 16 Oct
+     2026). The glyph already says add. "Thêm" alone was the very word
+     on Explore's dock, where it adds a place the catalog does not have;
+     here it adds one the catalog has to this list, and the same word
+     in two looks for two acts read as one button drawn inconsistently.
+     The ⋯ menu keeps "Thêm địa điểm": a menu row is read as a sentence. */
   const plan = () => {
     if (!col) return;
     goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } });
@@ -1105,7 +1112,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       testID={testID}
     >
       <Ionicons name="add" size={20} color={colors.text} />
-      <Text style={s.addQuietText}>{t('Add', 'Thêm', '追加')}</Text>
+      <Text style={s.addQuietText}>{t('Place', 'Địa điểm', 'スポット')}</Text>
     </PressableScale>
   );
   const planButton = (testID: string) => (

@@ -1888,11 +1888,12 @@ describe('the actions and the dock', () => {
     fireEvent.click(screen.getByTestId('collection-dock-plan'));
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.objectContaining({ params: expect.objectContaining({ from: 'old-quarter' }) }));
     const add = screen.getByTestId('collection-dock-add');
-    // The quiet one: glass, its word short, its name whole for VoiceOver.
+    // The quiet one: glass, the noun beside its "+" — not Explore's "Add",
+    // which adds a place the catalog lacks — its name whole for VoiceOver.
     expect(add.getAttribute('aria-label')).toBe('Add place');
     fireEvent.click(add);
     expect(parent.navigate).toHaveBeenCalledWith('Explore');
-    expect(dock.textContent).toBe('AddPlan a trip');
+    expect(dock.textContent).toBe('PlacePlan a trip');
   });
 
   it('names the list in a visitor’s dock, beside the Plan', () => {
