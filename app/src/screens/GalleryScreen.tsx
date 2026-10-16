@@ -107,11 +107,14 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const [mode, setMode] = useState<Mode>('view');
   // The draft choice, meaningful in pick mode only.
   const [picked, setPicked] = useState<string[]>([]);
-  const [menuFor, setMenuFor] = useState<GalleryPhoto | null>(null);
+  // The photograph open in the sheet, by id, so a read-back that moves it
+  // keeps it open on the same picture.
+  const [openId, setOpenId] = useState<string | null>(null);
   // The photograph last opened, ringed on the grid once its sheet has
-  // closed, so the guide coming back finds where they were.
+  // closed, so the guide coming back finds where they were — the last one
+  // swiped to, when the guide swiped.
   const [lastOpened, setLastOpened] = useState<string | null>(null);
-  const open = (p: GalleryPhoto) => { setMenuFor(p); setLastOpened(p.id); };
+  const open = (p: GalleryPhoto) => { setOpenId(p.id); setLastOpened(p.id); };
   const [busy, setBusy] = useState(false);
   // A run of the scorer: how far it has got while it runs, and what it
   // came to once it has finished, until the card is closed.
@@ -173,6 +176,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   const name = place ? splitName(localized(place, 'name', lang)).title : '';
   const shown = photos ?? [];
+  const openIndex = shown.findIndex((p) => p.id === openId);
   // The cell: the page's width less its margins, shared three ways with
   // two gutters between. Square, because a gallery of mixed aspect
   // ratios is a gallery whose rows never line up.
@@ -466,11 +470,11 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       </ScrollView>
 
       <PhotoSheet
-        photo={menuFor}
-        index={menuFor ? shown.indexOf(menuFor) : 0}
-        total={shown.length}
-        actions={menuFor ? galleryActions(menuFor).map((a) => actionRow(menuFor, a)) : []}
-        onClose={() => setMenuFor(null)}
+        photos={shown}
+        index={openIndex >= 0 ? openIndex : null}
+        onIndex={(i) => open(shown[i])}
+        actionsFor={(p) => galleryActions(p).map((a) => actionRow(p, a))}
+        onClose={() => setOpenId(null)}
       />
 
       <ScoringDialog

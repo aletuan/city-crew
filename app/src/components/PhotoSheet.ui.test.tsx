@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 //
 // One photograph, opened. What is pinned is what the guide sees and can
-// do: the picture, at its own shape; its place in the gallery and where
-// it came from; its score when it has one; the rows, titles only; and
-// the ways out. Which rows a photograph offers is `lib/gallery`'s, and
-// what each does is the Gallery screen's — tested there.
+// do: the picture, at its own shape; its place in the gallery and whether
+// it is the cover or hidden; its score when it has one; the rows, titles
+// only; swiping to the next; the full screen; and the ways out. Which
+// rows a photograph offers is `lib/gallery`'s, and what each does is the
+// Gallery screen's — tested there.
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '../uitest/render';
+import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
 import type { PhotoScore } from '../lib/photoScore';
 import type { SheetAction } from './ActionSheet';
@@ -31,6 +32,20 @@ const photo = (over: Partial<GalleryPhoto> = {}): GalleryPhoto => ({
   id: 'p1', photo_uri: 'http://cdn/p1.jpg', is_cover: false, is_hidden: false,
   sort_order: 0, source: 'google', storage_path: null, ...over,
 } as GalleryPhoto);
+/** A gallery of `n`, p1…pn. */
+const gallery = (n: number, over: Partial<GalleryPhoto> = {}) =>
+  Array.from({ length: n }, (_, i) => photo({ id: `p${i + 1}`, photo_uri: `http://cdn/p${i + 1}.jpg`, sort_order: i, ...over }));
+
+type Props = React.ComponentProps<typeof PhotoSheet>;
+const props = (over: Partial<Props> = {}): Props => ({
+  photos: [photo()], index: 0, onIndex: vi.fn(), actionsFor: () => [], onClose: vi.fn(), ...over,
+});
+/** The sheet's pager, scrolled to `x` and come to rest there. */
+const swipeTo = (x: number, id = 'photo-sheet-pager') => {
+  const pager = screen.getByTestId(id);
+  Object.defineProperty(pager, 'scrollLeft', { value: x, configurable: true });
+  fireEvent.scroll(pager);
+};
 const score: PhotoScore = {
   scorer: 'apple-vision', scorer_version: 1, aesthetic: 0.68, is_utility: false,
   signals: { brightness: 0.5 },
@@ -44,9 +59,9 @@ const W = PHONE.width - space.page * 2;
 
 const frame = () => screen.getByTestId('photo-sheet-frame');
 const frameH = () => parseFloat(frame().style.height);
-/** The picture arriving, at its own size, as `expo-image` reports it. */
-const arrive = (w: number, h: number) => {
-  const img = frame().querySelector('img')!;
+/** Picture `id` arriving, at its own size, as `expo-image` reports it. */
+const arrive = (w: number, h: number, id = 'p1') => {
+  const img = screen.getByTestId(`photo-sheet-page-${id}`).querySelector('img')!;
   Object.defineProperty(img, 'naturalWidth', { value: w, configurable: true });
   Object.defineProperty(img, 'naturalHeight', { value: h, configurable: true });
   fireEvent.load(img);
@@ -70,78 +85,101 @@ describe('frameHeight', () => {
 
 describe('PhotoSheet', () => {
   it('is nothing until a photograph has been opened', () => {
-    render(<PhotoSheet photo={null} index={0} total={3} actions={[]} onClose={() => {}} />);
+    render(<PhotoSheet {...props({ index: null })} />);
     expect(screen.queryByTestId('photo-sheet')).toBeNull();
   });
 
-  it('shows the picture, its place in the gallery, and where it came from', () => {
-    render(<PhotoSheet photo={photo({ is_cover: true })} index={3} total={6} actions={[]} onClose={() => {}} />);
-    expect(frame().querySelector('img')!.getAttribute('src')).toBe('http://cdn/p1.jpg');
-    expect(frame().querySelector('img')!.getAttribute('alt')).toBe('Photo 4/6');
+  it('shows the picture open, its place in the gallery, and whether it is the cover', () => {
+    const photos = gallery(6);
+    photos[3] = { ...photos[3], is_cover: true };
+    render(<PhotoSheet {...props({ photos, index: 3 })} />);
+    expect(screen.getByTestId('photo-sheet-page-p4').querySelector('img')!.getAttribute('src')).toBe('http://cdn/p4.jpg');
+    expect(screen.getByTestId('photo-sheet-page-p4').getAttribute('aria-label')).toBe('Photo 4/6');
     const sheet = screen.getByTestId('photo-sheet');
-    // On the picture, and as its name.
     expect(sheet.textContent).toContain('4/6');
     expect(sheet.textContent).toContain('Photo 4/6');
-    expect(screen.getByTestId('photo-sheet-meta').textContent).toBe('From Google · Cover');
-    expect(sheet.querySelector('[data-icon="logo-google"]')).not.toBeNull();
+    expect(screen.getByTestId('photo-sheet-status').textContent).toBe('Cover');
   });
 
-  it('says an upload is one, and that a hidden one is hidden', () => {
-    render(<PhotoSheet photo={photo({ source: 'guide', is_hidden: true })} index={0} total={1} actions={[]} onClose={() => {}} />);
-    expect(screen.getByTestId('photo-sheet-meta').textContent).toBe('Uploaded · Hidden');
-    expect(screen.getByTestId('photo-sheet').querySelector('[data-icon="logo-google"]')).toBeNull();
+  // Where it came from told the guide nothing to act on (owner, 16 Oct).
+  it('says nothing of where a photograph came from', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ source: 'google' })] })} />);
+    const sheet = screen.getByTestId('photo-sheet');
+    expect(sheet.textContent).not.toMatch(/From Google|Uploaded/);
+    expect(sheet.querySelector('[data-icon="logo-google"]')).toBeNull();
+    expect(sheet.querySelector('[data-icon="cloud-upload-outline"]')).toBeNull();
+    expect(screen.queryByTestId('photo-sheet-status')).toBeNull();
+  });
+
+  it('says a hidden photograph is hidden, and a hidden cover both', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ is_hidden: true, is_cover: true })] })} />);
+    expect(screen.getByTestId('photo-sheet-status').textContent).toBe('Cover · Hidden');
   });
 
   // The frame takes the picture's shape once the picture says what it is.
   it('fits the frame to the picture once it arrives, and ignores a size with a zero side', () => {
-    render(<PhotoSheet photo={photo()} index={0} total={1} actions={[]} onClose={() => {}} />);
-    const width = W;
-    const half = PHONE.height / 2;
-    expect(frameH()).toBe(Math.round(width * 3 / 4));
+    render(<PhotoSheet {...props()} />);
+    expect(frameH()).toBe(Math.round(W * 3 / 4));
     // Wide enough to sit under the half-screen cap, so the ratio shows.
     arrive(3000, 1000);
-    expect(frameH()).toBe(Math.round(width / 3));
-    expect(frameH()).toBeLessThan(half);
+    expect(frameH()).toBe(Math.round(W / 3));
+    expect(frameH()).toBeLessThan(PHONE.height / 2);
     // A size with a zero side is no size: it would make the frame a
     // sliver (no height) or a square (no width).
     arrive(1000, 0);
-    expect(frameH()).toBe(Math.round(width / 3));
+    expect(frameH()).toBe(Math.round(W / 3));
     arrive(0, 1000);
-    expect(frameH()).toBe(Math.round(width / 3));
+    expect(frameH()).toBe(Math.round(W / 3));
   });
 
   // Whole, never cropped: the frame is the picture's shape, or a square
   // with dark ground either side.
   it('shows the whole picture, never a crop of it', () => {
-    render(<PhotoSheet photo={photo()} index={0} total={1} actions={[]} onClose={() => {}} />);
-    expect(frame().querySelector('img')!.getAttribute('contentfit')).toBe('contain');
+    render(<PhotoSheet {...props()} />);
+    expect(screen.getByTestId('photo-sheet-page-p1').querySelector('img')!.getAttribute('contentfit')).toBe('contain');
   });
 
   // A shape learned for one photograph is not another's.
-  it('starts from the guess again for the next photograph', () => {
-    const { rerender } = render(<PhotoSheet photo={photo()} index={0} total={2} actions={[]} onClose={() => {}} />);
-    arrive(3000, 1000);
-    const wide = frameH();
-    rerender(<PhotoSheet photo={photo({ id: 'p2', photo_uri: 'http://cdn/p2.jpg' })} index={1} total={2} actions={[]} onClose={() => {}} />);
-    expect(frameH()).not.toBe(wide);
+  it('takes the shape of whichever photograph is open', () => {
+    const photos = gallery(2);
+    const { rerender } = render(<PhotoSheet {...props({ photos, index: 0 })} />);
+    arrive(3000, 1000, 'p1');
+    expect(frameH()).toBe(Math.round(W / 3));
+    rerender(<PhotoSheet {...props({ photos, index: 1 })} />);
     expect(frameH()).toBe(Math.round(W * 3 / 4));
+    arrive(1000, 1000, 'p2');
+    expect(frameH()).toBe(W);
+    rerender(<PhotoSheet {...props({ photos, index: 0 })} />);
+    expect(frameH()).toBe(Math.round(W / 3));
   });
 
-  it('carries the score, right of the name and why beneath, when there is one', () => {
-    render(<PhotoSheet photo={photo({ score })} index={0} total={1} actions={[]} onClose={() => {}} />);
-    expect(screen.getByTestId('score-ten').textContent).toContain('8.4');
-    expect(screen.getByTestId('score-why').textContent).toBe('Well lit.');
+  // The reasons sit under the name and the number beside them, so no gap
+  // opens under a one-line name beside a two-line number (owner, 16 Oct).
+  it('puts the reasons under the name, and the number beside them', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ score })] })} />);
+    const title = screen.getByText('Photo 1/1');
+    const why = screen.getByTestId('score-why');
+    const ten = screen.getByTestId('score-ten');
+    expect(ten.textContent).toContain('8.4');
+    expect(why.textContent).toBe('Well lit.');
+    const column = title.parentElement!.parentElement!;
+    expect(column.contains(why)).toBe(true);
+    expect(column.contains(ten)).toBe(false);
+    expect(column.parentElement!.contains(ten)).toBe(true);
   });
 
   it('says nothing of a score for a photograph nobody has read', () => {
-    render(<PhotoSheet photo={photo()} index={0} total={1} actions={[]} onClose={() => {}} />);
+    render(<PhotoSheet {...props()} />);
     expect(screen.queryByTestId('score-ten')).toBeNull();
     expect(screen.queryByTestId('score-why')).toBeNull();
   });
 
   // The picture above makes the sentence plain; VoiceOver still hears it.
-  it('lists the rows by title alone, keeping each sentence for VoiceOver', () => {
-    render(<PhotoSheet photo={photo()} index={0} total={1} actions={[row()]} onClose={() => {}} />);
+  it('lists the open photograph\'s rows by title alone', () => {
+    const actionsFor = vi.fn(() => [row()]);
+    const photos = gallery(2);
+    render(<PhotoSheet {...props({ photos, index: 1, actionsFor })} />);
+    expect(actionsFor).toHaveBeenLastCalledWith(photos[1]);
     const button = screen.getByRole('button', { name: 'Make it the cover' });
     expect(button.textContent).toBe('Make it the cover');
     expect(screen.getByTestId('photo-sheet').textContent).not.toContain('stands for the place');
@@ -151,7 +189,7 @@ describe('PhotoSheet', () => {
     vi.useFakeTimers();
     const onClose = vi.fn();
     const act1 = row();
-    render(<PhotoSheet photo={photo()} index={0} total={1} actions={[act1]} onClose={onClose} />);
+    render(<PhotoSheet {...props({ actionsFor: () => [act1], onClose })} />);
     fireEvent.click(screen.getByRole('button', { name: 'Make it the cover' }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(act1.onPress).not.toHaveBeenCalled();
@@ -162,19 +200,87 @@ describe('PhotoSheet', () => {
 
   it('closes from the × on the picture, and from the dimmed screen above it', () => {
     const onClose = vi.fn();
-    render(<PhotoSheet photo={photo()} index={0} total={1} actions={[]} onClose={onClose} />);
+    render(<PhotoSheet {...props({ onClose })} />);
     fireEvent.click(screen.getByTestId('photo-sheet-close'));
     fireEvent.click(screen.getAllByLabelText('Close')[0]);
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  // The sheet fades out after `photo` goes null, and the caller has
+  // The sheet fades out after `index` goes null, and the caller has
   // nothing left to show by then.
   it('keeps showing the photograph it last had while it fades', () => {
-    const { rerender } = render(<PhotoSheet photo={photo()} index={2} total={3} actions={[row()]} onClose={() => {}} />);
-    rerender(<PhotoSheet photo={null} index={0} total={3} actions={[]} onClose={() => {}} />);
-    expect(frame().querySelector('img')!.getAttribute('src')).toBe('http://cdn/p1.jpg');
+    const photos = gallery(3);
+    const { rerender } = render(<PhotoSheet {...props({ photos, index: 2, actionsFor: () => [row()] })} />);
+    rerender(<PhotoSheet {...props({ photos: [], index: null, actionsFor: () => [row()] })} />);
+    expect(screen.getByTestId('photo-sheet-page-p3').querySelector('img')!.getAttribute('src')).toBe('http://cdn/p3.jpg');
     expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 3/3');
-    expect(screen.getByRole('button', { name: 'Make it the cover' })).toBeTruthy();
+    // Its rows go with it: nothing is pressable on a sheet on its way out.
+    expect(screen.queryByRole('button', { name: 'Make it the cover' })).toBeNull();
+  });
+
+  // A swipe moves to the next photograph without closing the sheet and
+  // finding the tile (owner, 16 Oct 2026) — once it comes to rest.
+  it('moves to the photograph a swipe comes to rest on, and not before', async () => {
+    const onIndex = vi.fn();
+    render(<PhotoSheet {...props({ photos: gallery(3), index: 0, onIndex })} />);
+    swipeTo(W * 0.6);
+    expect(onIndex).not.toHaveBeenCalled();
+    // react-native-web reports the resting offset when the scroll ends.
+    swipeTo(W * 2);
+    await waitFor(() => expect(onIndex).toHaveBeenCalledWith(2));
+    expect(onIndex).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not report the photograph already open', () => {
+    const onIndex = vi.fn();
+    render(<PhotoSheet {...props({ photos: gallery(3), index: 1, onIndex })} />);
+    swipeTo(W);
+    expect(onIndex).not.toHaveBeenCalled();
+  });
+
+  it('opens the full screen from ⛶ and from the picture, and closes back to the sheet', () => {
+    const photos = gallery(2, { score });
+    render(<PhotoSheet {...props({ photos, index: 1 })} />);
+    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    fireEvent.click(screen.getByTestId('photo-sheet-full'));
+    expect(screen.getByTestId('photo-viewer-count').textContent).toBe('2/2');
+    fireEvent.click(screen.getByTestId('photo-viewer-close'));
+    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    expect(screen.getByTestId('photo-sheet')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('photo-sheet-page-p2'));
+    expect(screen.getByTestId('photo-viewer')).toBeTruthy();
+  });
+
+  // The viewer pages the same photographs, and where it rests is where
+  // the sheet is when it closes: the gallery owns the index.
+  it('reports a swipe in the full screen as the sheet\'s own', () => {
+    const onIndex = vi.fn();
+    render(<PhotoSheet {...props({ photos: gallery(3), index: 0, onIndex })} />);
+    fireEvent.click(screen.getByTestId('photo-sheet-full'));
+    swipeTo(PHONE.width, 'photo-viewer-pager');
+    expect(onIndex).toHaveBeenCalledWith(1);
+  });
+
+  // Back on Android, or Escape here: the full screen first, then the sheet.
+  it('closes the full screen before the sheet on the system\'s back', () => {
+    const onClose = vi.fn();
+    render(<PhotoSheet {...props({ onClose })} />);
+    // react-native-web listens for Escape once the Modal has finished
+    // appearing, on `animationend`, which jsdom never fires by itself.
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    fireEvent.click(screen.getByTestId('photo-sheet-full'));
+    fireEvent.keyUp(document, { key: 'Escape' });
+    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyUp(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens on the sheet again, not the full screen, next time', () => {
+    const { rerender } = render(<PhotoSheet {...props()} />);
+    fireEvent.click(screen.getByTestId('photo-sheet-full'));
+    rerender(<PhotoSheet {...props({ index: null })} />);
+    rerender(<PhotoSheet {...props()} />);
+    expect(screen.queryByTestId('photo-viewer')).toBeNull();
   });
 });
