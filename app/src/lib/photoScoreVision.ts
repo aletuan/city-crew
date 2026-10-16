@@ -40,7 +40,8 @@
 // nothing stood out. "Horizon tilted 4°" is true of the photograph; "a
 // cosy, inviting space" would be a guess dressed as a reading.
 
-import type { Interpreter, PhotoScore, Signals, T } from './photoScore';
+import type { Detail, Interpreter, PhotoScore, Signals, T } from './photoScore';
+import { percentText, standingIn } from './standing';
 
 // ── the thresholds — first guesses, every one ──
 //
@@ -148,61 +149,138 @@ const LOW_RES = 800;
 const GREEN = new Set(['plant', 'tree', 'foliage', 'grass', 'garden', 'flower', 'houseplant', 'potted_plant', 'shrub']);
 const GREEN_P = 0.3;
 
-type Said = { plus: string[]; minus: string[] };
+/** The measured qualities the detail lists, one row each. */
+type Dim = 'light' | 'focus' | 'subject' | 'level' | 'clutter' | 'green' | 'size';
+
+/**
+ * One thing measured and worth saying: which quality it is about, whether
+ * it helped, how it is said, and — for what held the photograph back —
+ * what would have helped. The sentence under the number and the detail
+ * rows are both read off this one list, so they cannot disagree.
+ */
+type Fact = {
+  dim: Dim;
+  plus: boolean;
+  say: string;
+  fix?: string;
+  /** Left out of the sentence, which has already said it another way
+   *  (the record's lead names the writing); the detail still lists it. */
+  quiet?: boolean;
+};
 
 /** The measurements, each said where it is worth saying. */
-function said(s: Signals, t: T, record: boolean): Said {
-  const plus: string[] = [];
-  const minus: string[] = [];
+function facts(s: Signals, t: T, record: boolean): Fact[] {
+  const out: Fact[] = [];
+  const fixLight = t(
+    'Choose a photo taken in more light.',
+    'Chọn ảnh chụp lúc nhiều ánh sáng hơn.',
+    'もっと明るい時に撮った写真を選びましょう。',
+  );
 
   const b = s.brightness;
   if (b !== undefined) {
-    if (b < DARK) minus.push(t('a little dark', 'hơi thiếu sáng', 'やや暗い'));
-    else if (b > BRIGHT) minus.push(t('a little overexposed', 'hơi dư sáng', 'やや明るすぎ'));
-    else if (b >= LIT[0] && b <= LIT[1]) plus.push(t('well lit', 'đủ sáng', '明るさが適切'));
+    if (b < DARK) out.push({ dim: 'light', plus: false, say: t('a little dark', 'hơi thiếu sáng', 'やや暗い'), fix: fixLight });
+    else if (b > BRIGHT) {
+      out.push({
+        dim: 'light', plus: false, say: t('a little overexposed', 'hơi dư sáng', 'やや明るすぎ'),
+        fix: t('Avoid shooting into the light.', 'Tránh chụp ngược sáng.', '逆光を避けましょう。'),
+      });
+    } else if (b >= LIT[0] && b <= LIT[1]) out.push({ dim: 'light', plus: true, say: t('well lit', 'đủ sáng', '明るさが適切') });
   }
-  if ((s.shadows ?? 0) > SHADOWS) minus.push(t('shadows lose detail', 'vùng tối mất chi tiết', '暗部がつぶれている'));
-  if ((s.highlights ?? 0) > HIGHLIGHTS) minus.push(t('highlights blown out', 'vùng sáng bị cháy', '白飛びがある'));
+  if ((s.shadows ?? 0) > SHADOWS) {
+    out.push({ dim: 'light', plus: false, say: t('shadows lose detail', 'vùng tối mất chi tiết', '暗部がつぶれている'), fix: fixLight });
+  }
+  if ((s.highlights ?? 0) > HIGHLIGHTS) {
+    out.push({
+      dim: 'light', plus: false, say: t('highlights blown out', 'vùng sáng bị cháy', '白飛びがある'),
+      fix: t(
+        'Keep bright windows and lamps from filling the frame.',
+        'Tránh để cửa sổ hay đèn sáng chiếm nhiều khung.',
+        '明るい窓や照明が大きく入らないようにしましょう。',
+      ),
+    });
+  }
 
   if (s.sharpness !== undefined) {
-    if (s.sharpness < SOFT) minus.push(t('a little soft', 'hơi mờ', 'ややぼやけている'));
-    else if (s.sharpness > SHARP) plus.push(t('sharp', 'rõ nét', 'シャープ'));
+    if (s.sharpness < SOFT) {
+      out.push({
+        dim: 'focus', plus: false, say: t('a little soft', 'hơi mờ', 'ややぼやけている'),
+        fix: t(
+          'Hold the phone steady and tap the subject to focus.',
+          'Giữ máy chắc tay và chạm vào chủ thể để lấy nét.',
+          '端末をしっかり持ち、被写体をタップしてピントを合わせましょう。',
+        ),
+      });
+    } else if (s.sharpness > SHARP) out.push({ dim: 'focus', plus: true, say: t('sharp', 'rõ nét', 'シャープ') });
   }
 
   const tilt = Math.abs(s.tilt ?? 0);
-  const scene = (s.labels ?? []).some((l) => SCENE.has(l.id) && l.p >= SCENE_P);
-  if (scene && tilt >= TILT[0] && tilt <= TILT[1]) {
+  if (scene(s) && tilt >= TILT[0] && tilt <= TILT[1]) {
     const n = Math.round(tilt);
-    minus.push(t(`horizon tilted ${n}°`, `đường chân trời nghiêng ${n}°`, `水平が${n}°傾いている`));
+    out.push({
+      dim: 'level', plus: false,
+      say: t(`horizon tilted ${n}°`, `đường chân trời nghiêng ${n}°`, `水平が${n}°傾いている`),
+      fix: t(
+        'Straighten it: Edit → Crop in Photos levels the horizon.',
+        'Chỉnh thẳng khung: Sửa → Cắt trong app Ảnh sẽ cân lại đường chân trời.',
+        '写真アプリの「編集 → 切り取り」で水平を直せます。',
+      ),
+    });
   }
 
   if ((s.peopleArea ?? 0) > PEOPLE) {
-    minus.push(t('people fill much of the frame', 'người chiếm nhiều khung hình', '人物が大きく写っている'));
+    out.push({
+      dim: 'clutter', plus: false,
+      say: t('people fill much of the frame', 'người chiếm nhiều khung hình', '人物が大きく写っている'),
+      fix: t(
+        'Choose a moment with fewer people, or keep them small in the frame.',
+        'Chụp lúc vắng người, hoặc để người nhỏ trong khung.',
+        '人が少ない時に撮るか、人物を小さく写しましょう。',
+      ),
+    });
   }
-  // Said once: a record's lead sentence already names the writing.
-  if (writing(s) && !record) {
-    minus.push(t('a lot of writing in frame', 'nhiều chữ trong khung', '文字が多い'));
+  // Said once in the sentence: a record's lead already names the writing.
+  if (writing(s)) {
+    out.push({
+      dim: 'clutter', plus: false, quiet: record,
+      say: t('a lot of writing in frame', 'nhiều chữ trong khung', '文字が多い'),
+      fix: t(
+        'Step back or crop so signs and menus do not fill the frame.',
+        'Lùi ra hoặc cắt bớt để biển, menu không chiếm khung.',
+        '看板やメニューが画面を占めないよう、下がるか切り取りましょう。',
+      ),
+    });
   }
 
   if (s.subject) {
     const { x, y, area } = s.subject;
     if (Math.abs(x - 0.5) > EDGE || Math.abs(y - 0.5) > EDGE) {
-      minus.push(t('subject pushed to the edge', 'chủ thể lệch sát mép', '被写体が端に寄っている'));
+      out.push({
+        dim: 'subject', plus: false,
+        say: t('subject pushed to the edge', 'chủ thể lệch sát mép', '被写体が端に寄っている'),
+        fix: t('Bring the subject in from the edge.', 'Đưa chủ thể vào gần giữa khung hơn.', '被写体を中央寄りにしましょう。'),
+      });
     } else if (area >= SUBJECT[0] && area <= SUBJECT[1]) {
-      plus.push(t('a clear subject', 'chủ thể rõ ràng', '被写体がはっきりしている'));
+      out.push({ dim: 'subject', plus: true, say: t('a clear subject', 'chủ thể rõ ràng', '被写体がはっきりしている') });
     }
   }
 
-  if ((s.labels ?? []).some((l) => GREEN.has(l.id) && l.p >= GREEN_P)) {
-    plus.push(t('greenery in frame', 'có cây xanh', '緑がある'));
-  }
+  if (green(s)) out.push({ dim: 'green', plus: true, say: t('greenery in frame', 'có cây xanh', '緑がある') });
 
   if (s.width !== undefined && s.height !== undefined && Math.max(s.width, s.height) < LOW_RES) {
-    minus.push(t('low resolution', 'độ phân giải thấp', '解像度が低い'));
+    out.push({
+      dim: 'size', plus: false, say: t('low resolution', 'độ phân giải thấp', '解像度が低い'),
+      fix: t('Use the original photo, not a resized copy.', 'Dùng ảnh gốc, không dùng bản đã thu nhỏ.', '縮小版ではなく元の写真を使いましょう。'),
+    });
   }
 
-  return { plus, minus };
+  return out;
 }
+
+/** A scene with a horizon in it — see `SCENE`. */
+const scene = (s: Signals) => (s.labels ?? []).some((l) => SCENE.has(l.id) && l.p >= SCENE_P);
+/** Greenery in frame — see `GREEN`. */
+const green = (s: Signals) => (s.labels ?? []).some((l) => GREEN.has(l.id) && l.p >= GREEN_P);
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -220,7 +298,9 @@ export function explainScore(score: Pick<PhotoScore, 'is_utility' | 'signals'>, 
   const stop = t('.', '.', '。');
   const gap = t(' ', ' ', '');
   const record = isRecord(score);
-  const { plus, minus } = said(score.signals ?? {}, t, record);
+  const said = facts(score.signals ?? {}, t, record).filter((f) => !f.quiet);
+  const plus = said.filter((f) => f.plus).map((f) => f.say);
+  const minus = said.filter((f) => !f.plus).map((f) => f.say);
   const out: string[] = [];
   if (record) {
     out.push(t(
@@ -234,6 +314,109 @@ export function explainScore(score: Pick<PhotoScore, 'is_utility' | 'signals'>, 
   if (!out.length) out.push(t('Nothing measured stands out either way.', 'Không có điểm đo nào nổi bật.', '測定上、目立つ点はありません。'));
   return out.join(gap);
 }
+// ── the detailed analysis ──
+//
+// The design review drew seven bars out of ten — light, composition,
+// focus, subject, colour, angle, distractions (owner, 16 Oct 2026).
+// Vision gives one number, not seven, and measures neither composition
+// nor colour at all, so those two rows are not here and the rest are
+// what was measured, said in words: "Nghiêng 6°", not "Góc chụp 8.8". A
+// bar appears only where higher is plainly better and there is a
+// catalog to stand in — focus — and it is the photograph's place among
+// the catalog's, not a score.
+
+/**
+ * The catalog's spread of focus and of Vision's number: the least, every
+ * tenth, and the most, over the 277 photographs read by 16 Oct 2026
+ * (`percentile_cont` over `photo_scores`). Kept here rather than asked
+ * for, since the spread moves slowly and a query per sheet would not;
+ * read again when the catalog has doubled.
+ */
+const SHARPNESS_SPREAD = [67, 425, 701, 906, 1126, 1385, 1770, 2078, 2768, 3657, 11559] as const;
+const AESTHETIC_SPREAD = [0.072, 0.368, 0.408, 0.442, 0.479, 0.508, 0.555, 0.596, 0.635, 0.696, 0.881] as const;
+
+/** The measured qualities, one row each, in the order a guide reads a
+ *  photograph: its light and focus, then what it shows, then its size. */
+export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): Detail[] {
+  const sig = score.signals ?? {};
+  const all = facts(sig, t, isRecord(score));
+  const sep = t(', ', ', ', '、');
+  const rows: Detail[] = [];
+  /** A row read off the facts about `key`: what held it back if anything
+   *  did, else what helped, else `empty` — measured, and unremarkable. */
+  const row = (key: Dim, label: string, empty: Pick<Detail, 'value' | 'tone'>, extra: Partial<Detail> = {}) => {
+    const of = all.filter((f) => f.dim === key);
+    const minus = of.filter((f) => !f.plus);
+    const said = minus.length ? minus : of;
+    rows.push({
+      key, label, ...extra,
+      ...(said.length
+        ? { value: capital(said.map((f) => f.say).join(sep)), tone: minus.length ? 'warn' : 'good' }
+        : empty),
+    });
+  };
+
+  if (sig.brightness !== undefined) {
+    row('light', t('Light', 'Ánh sáng', '明るさ'),
+      { value: t('Neither dark nor bright', 'Không tối, không quá sáng', '暗くも明るすぎもしない'), tone: 'plain' });
+  }
+  if (sig.sharpness !== undefined) {
+    const rank = standingIn(sig.sharpness, SHARPNESS_SPREAD);
+    const n = percentText(rank);
+    row('focus', t('Focus', 'Độ nét', 'ピント'), { value: t('Average', 'Trung bình', '標準的'), tone: 'plain' }, {
+      rank,
+      note: t(`Sharper than ${n}% of the catalog's photos`, `Nét hơn ${n}% ảnh trong catalog`, `カタログの${n}%の写真よりシャープ`),
+    });
+  }
+  if (sig.subject) {
+    row('subject', t('Subject', 'Chủ thể', '被写体'), sig.subject.area < SUBJECT[0]
+      ? { value: t('Small in the frame', 'Nhỏ trong khung', '画面の中で小さい'), tone: 'plain' }
+      : { value: t('Fills most of the frame', 'Chiếm gần hết khung', '画面のほとんどを占める'), tone: 'plain' });
+  }
+  // Only of a scene with a horizon in it: on a close-up the "horizon" is
+  // a table's edge (`SCENE`).
+  if (scene(sig)) {
+    const tilt = Math.abs(sig.tilt ?? 0);
+    const n = Math.round(tilt);
+    row('level', t('Horizon', 'Đường chân trời', '水平'), sig.tilt === undefined
+      ? { value: t('None found', 'Không thấy', '見つからない'), tone: 'plain' }
+      : tilt < TILT[0]
+        ? { value: t('Level', 'Thẳng', '水平'), tone: 'good' }
+        : { value: t(`Tilted ${n}°, by the look of it on purpose`, `Nghiêng ${n}°, có vẻ cố ý`, `${n}°傾いている（意図的に見える）`), tone: 'plain' });
+  }
+  if (sig.peopleArea !== undefined || sig.textLines !== undefined) {
+    row('clutter', t('Distractions', 'Yếu tố gây nhiễu', '邪魔な要素'),
+      { value: t('Few people, little writing', 'Ít người, ít chữ', '人も文字も少ない'), tone: 'good' });
+  }
+  if (sig.labels !== undefined) {
+    row('green', t('Greenery', 'Cây xanh', '緑'), { value: t('None seen', 'Không thấy', '見当たらない'), tone: 'plain' });
+  }
+  if (sig.width !== undefined && sig.height !== undefined) {
+    const long = Math.max(sig.width, sig.height);
+    row('size', t('Resolution', 'Độ phân giải', '解像度'),
+      { value: t(`${long} px on the long side`, `Cạnh dài ${long} px`, `長辺${long}px`), tone: 'good' });
+  }
+  return rows;
+}
+
+/**
+ * What would have helped, once each: one line for every distinct thing
+ * that held the photograph back. Nothing when nothing did — a tip with
+ * no fault under it would be advice for its own sake. A record's writing
+ * is its subject, not a fault, and gets none.
+ */
+export function suggestionsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): string[] {
+  const fixes = facts(score.signals ?? {}, t, isRecord(score))
+    .filter((f) => !f.plus && !f.quiet)
+    .map((f) => f.fix!);
+  return [...new Set(fixes)];
+}
+
+/** Where Vision's number for this photograph stands in the catalog. */
+export function standingOf(score: Pick<PhotoScore, 'aesthetic'>): number | null {
+  return score.aesthetic == null ? null : standingIn(score.aesthetic, AESTHETIC_SPREAD);
+}
+
 /**
  * Apple Vision, as the registry knows it. `version` is the reading's,
  * not the sentence's: raise it only when the module measures something
@@ -245,4 +428,7 @@ export const appleVision: Interpreter = {
   version: 1,
   source: (t) => t('Measured on this phone by Apple Vision.', 'Đo trên máy bằng Apple Vision.', 'この端末でApple Visionが測定。'),
   explain: explainScore,
+  details: detailsOf,
+  suggestions: suggestionsOf,
+  standing: standingOf,
 };

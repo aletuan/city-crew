@@ -261,4 +261,24 @@ describe('PhotoSheet', () => {
     rerender(<PhotoSheet {...props()} />);
     expect(screen.queryByTestId('photo-viewer')).toBeNull();
   });
+
+  it('folds the detailed analysis under the reasons, for a scored photograph only', () => {
+    const { rerender } = render(<PhotoSheet {...props({ photos: [photo({ score })] })} />);
+    expect(screen.getByTestId('score-detail-toggle')).toBeTruthy();
+    expect(screen.queryByTestId('score-detail-light')).toBeNull();
+    rerender(<PhotoSheet {...props()} />);
+    expect(screen.queryByTestId('score-detail')).toBeNull();
+  });
+
+  // Opened once, it stays open as the guide swipes through the gallery.
+  it('keeps the detailed analysis open from one photograph to the next', () => {
+    const photos = gallery(2, { score });
+    const { rerender } = render(<PhotoSheet {...props({ photos, index: 0 })} />);
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.getByTestId('score-detail-light')).toBeTruthy();
+    rerender(<PhotoSheet {...props({ photos, index: 1 })} />);
+    expect(screen.getByTestId('score-detail-light')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.queryByTestId('score-detail-light')).toBeNull();
+  });
 });

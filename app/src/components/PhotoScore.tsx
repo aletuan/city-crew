@@ -11,7 +11,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, type ColorValue, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { band, bandLabel, interpreterOf, toTen, type PhotoScore } from '../lib/photoScore';
+import { band, bandLabel, interpreterOf, toTen, type Detail, type PhotoScore } from '../lib/photoScore';
+import { percentText } from '../lib/standing';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 import { Card, PressableScale, useReducedMotion } from './ui';
@@ -304,6 +305,94 @@ export function ScoredCard({ scored, failed, best, onClose }: {
   );
 }
 
+const TONE_ICON = {
+  good: { name: 'checkmark-circle', color: colors.accent },
+  warn: { name: 'alert-circle', color: colors.warnInk },
+  plain: { name: 'ellipse-outline', color: colors.textTertiary },
+} as const;
+
+/**
+ * The detailed analysis, folded under the reasons (design review, 16 Oct
+ * 2026): where the number stands in the catalog, each measured quality
+ * with what was measured, and what would have helped. Folded by default,
+ * since the sentence above already says the most of it; `open` is the
+ * sheet's to keep, so it stays open as the guide swipes on. Nothing for a
+ * scorer this build cannot read, or a row with no number.
+ */
+export function ScoreDetails({ score, open, onToggle }: {
+  score: PhotoScore;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useI18n();
+  const how = interpreterOf(score.scorer);
+  if (score.aesthetic == null || !how) return null;
+  const standing = how.standing(score);
+  const rows = how.details(score, t);
+  const tips = how.suggestions(score, t);
+  return (
+    <View style={s.detail} testID="score-detail">
+      <PressableScale
+        style={s.detailHead}
+        scaleTo={0.99}
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        testID="score-detail-toggle"
+      >
+        <Text style={s.detailTitle}>{t('Detailed analysis', 'Phân tích chi tiết', '詳しい分析')}</Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
+      </PressableScale>
+      {open && (
+        <View style={s.detailBody}>
+          {standing !== null && (
+            <Text style={s.standing} testID="score-standing">
+              {t(
+                `Scores higher than ${percentText(standing)}% of the catalog's photos`,
+                `Điểm cao hơn ${percentText(standing)}% ảnh trong catalog`,
+                `カタログの${percentText(standing)}%の写真より高得点`,
+              )}
+            </Text>
+          )}
+          {rows.map((d) => <DetailRow key={d.key} d={d} />)}
+          {tips.length > 0 && (
+            <View style={s.tips} testID="score-tips">
+              <View style={s.tipsHead}>
+                <Ionicons name="bulb-outline" size={16} color={colors.accent} />
+                <Text style={s.tipsTitle}>{t('To improve', 'Gợi ý cải thiện', '改善のヒント')}</Text>
+              </View>
+              {tips.map((tip) => <Text key={tip} style={s.tip}>{tip}</Text>)}
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function DetailRow({ d }: { d: Detail }) {
+  const icon = TONE_ICON[d.tone];
+  return (
+    <View style={s.row} testID={`score-detail-${d.key}`}>
+      <Ionicons name={icon.name} size={17} color={icon.color} />
+      <View style={s.rowText}>
+        <View style={s.rowLine}>
+          <Text style={s.rowLabel}>{d.label}</Text>
+          <Text style={s.rowValue}>{d.value}</Text>
+        </View>
+        {d.rank !== undefined && (
+          <View style={s.rank}>
+            <View style={s.rankTrack}>
+              <View style={[s.rankFill, { width: `${Math.round(d.rank * 100)}%` }]} testID={`score-detail-${d.key}-rank`} />
+            </View>
+            <Text style={s.rankNote}>{d.note}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   glyph: { flexDirection: 'row', alignItems: 'flex-end' },
   badge: {
@@ -326,6 +415,33 @@ const s = StyleSheet.create({
   },
   bandText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
   why: { gap: 6 },
+
+  detail: {
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
+    overflow: 'hidden',
+  },
+  detailHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: space.cardPadding, paddingVertical: 13,
+  },
+  detailTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  detailBody: { paddingHorizontal: space.cardPadding, paddingBottom: space.cardPadding, gap: 12 },
+  standing: { color: colors.textSecondary, fontSize: 14 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  rowText: { flex: 1, gap: 6 },
+  // Label left, what was measured right, wrapping under it when long.
+  rowLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
+  rowLabel: { color: colors.text, fontSize: 15, fontWeight: font.medium },
+  rowValue: { flexShrink: 1, color: colors.textSecondary, fontSize: 15, textAlign: 'right' },
+  rank: { gap: 4 },
+  rankTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceGlassStrong, overflow: 'hidden' },
+  rankFill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
+  rankNote: { color: colors.textTertiary, fontSize: 12 },
+  tips: { gap: 6, padding: 12, borderRadius: 12, backgroundColor: colors.accentSoft },
+  tipsHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tipsTitle: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
+  tip: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   // Over a photograph: `onPhoto`'s inks, and a translucent pill, since
   // the accent wash vanishes into a dark scrim.
   tenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
