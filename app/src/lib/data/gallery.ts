@@ -13,15 +13,16 @@
 
 import { supabase } from '../supabase';
 import type { GalleryPhoto } from '../gallery';
-import { SCORER_VERSION, type PhotoScore, type Reading } from '../photoScore';
+import { SHOWN, type PhotoScore, type Reading, type ScorerKey } from '../photoScore';
 
 /** The catalog's photo columns plus `source`, which the sheet prints. */
 // `storage_path` rides along for one reason: a delete hands it to the
 // bucket once the row is gone (`removePlacePhoto`).
-// The score rides along embedded, one-to-one on its primary key: the
-// gallery is the one screen that shows it, so it costs no other read.
+// The score rides along embedded: the gallery is the one screen that
+// shows it, so it costs no other read. Only the shown scorer's row — see
+// the filter in `fetchGallery`.
 const COLS = 'id, photo_uri, is_cover, is_hidden, sort_order, source, storage_path, '
-  + 'photo_scores(scorer_version, aesthetic, is_utility, signals)';
+  + 'photo_scores(scorer, scorer_version, aesthetic, is_utility, signals)';
 
 type Row = Omit<GalleryPhoto, 'score'> & { photo_scores?: PhotoScore | PhotoScore[] | null };
 
@@ -42,34 +43,44 @@ export async function fetchGallery(placeId: string): Promise<GalleryPhoto[]> {
     .from('place_photos')
     .select(COLS)
     .eq('place_id', placeId)
+    // A filter on the embedded rows, not on the photographs: a photograph
+    // the shown scorer has not read still comes back, with no score. The
+    // table keys a row on (photo, scorer) since 16 Oct 2026, so without it
+    // a second scorer's row could be the one that arrived.
+    .eq('photo_scores.scorer', SHOWN.id)
     .order('sort_order');
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as Row[]).map(({ photo_scores: sc, ...photo }) => ({
     ...photo,
-    // An object, as PostgREST embeds a one-to-one; an array of one is
-    // what it sends when it cannot prove the relation is one-to-one, and
-    // this should not depend on which it decided.
+    // An object, as PostgREST embeds a one-to-one (it still is, while
+    // `photo_scores_one_per_photo` stands); an array, as it embeds a
+    // one-to-many, which it will be once that constraint goes. This
+    // should not depend on which it decided.
     score: (Array.isArray(sc) ? sc[0] : sc) ?? null,
   }));
 }
 
 /**
- * Keep one reading. An upsert, so a rescore by a newer scorer replaces
- * the old row; `scored_by` and `scored_at` are written outright because
- * an upsert that hits an existing row is an update, which keeps the old
- * values — and the update policy asks that the row be in the writer's
- * name (`20261015120000_photo_scores.sql`).
+ * Keep one reading, stamped with the scorer that made it — the one that
+ * read, not a constant, so a row never claims a reader it did not have.
+ * An upsert on (photo, scorer), so a rescore by a newer version of the
+ * same scorer replaces its row and leaves any other scorer's alone;
+ * `scored_by` and `scored_at` are written outright because an upsert
+ * that hits an existing row is an update, which keeps the old values —
+ * and the update policy asks that the row be in the writer's name
+ * (`20261015120000_photo_scores.sql`).
  */
-export async function savePhotoScore(photoId: string, reading: Reading, uid: string): Promise<void> {
+export async function savePhotoScore(photoId: string, scorer: ScorerKey, reading: Reading, uid: string): Promise<void> {
   const { error } = await supabase.from('photo_scores').upsert({
     photo_id: photoId,
-    scorer_version: SCORER_VERSION,
+    scorer: scorer.id,
+    scorer_version: scorer.version,
     aesthetic: reading.aesthetic,
     is_utility: reading.isUtility,
     signals: reading.signals,
     scored_by: uid,
     scored_at: new Date().toISOString(),
-  }, { onConflict: 'photo_id' });
+  }, { onConflict: 'photo_id,scorer' });
   if (error) throw new Error(error.message);
 }
 

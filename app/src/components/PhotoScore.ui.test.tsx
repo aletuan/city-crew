@@ -9,7 +9,7 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { AccessibilityInfo, Animated } from 'react-native';
 import { act, fireEvent, render, screen } from '../uitest/render';
-import { SCORER_VERSION, type PhotoScore } from '../lib/photoScore';
+import type { PhotoScore } from '../lib/photoScore';
 
 // Every loop started, and every one stopped. Under jsdom no frame of a
 // native-driven animation is drawn, so whether the bars are moving is
@@ -36,7 +36,7 @@ vi.mock('../lib/i18n', () => ({
 import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
-  scorer_version: SCORER_VERSION, aesthetic: 0.68, is_utility: false,
+  scorer: 'apple-vision', scorer_version: 1, aesthetic: 0.68, is_utility: false,
   signals: { brightness: 0.5, tilt: 4, labels: [{ id: 'interior_room', p: 0.8 }] }, ...over,
 });
 
@@ -72,7 +72,17 @@ describe('ScoreBlock', () => {
     expect(block.textContent).toContain('/10');
     expect(block.textContent).toContain('Very good');
     expect(screen.getByTestId('score-why').textContent).toBe('Well lit. Held back by: horizon tilted 4°.');
-    expect(block.textContent).toContain('Apple Vision');
+    expect(screen.getByTestId('score-source').textContent).toBe('Measured on this phone by Apple Vision.');
+  });
+  // A row a later app wrote: its number is every scorer's to show, its
+  // measurements are not Vision's to read.
+  it('keeps the number and its word for a scorer it cannot interpret, and gives no reasons', () => {
+    render(<ScoreBlock score={score({ scorer: 'later-model' })} />);
+    const block = screen.getByTestId('score-block');
+    expect(block.textContent).toContain('8.4');
+    expect(block.textContent).toContain('Very good');
+    expect(screen.queryByTestId('score-why')).toBeNull();
+    expect(screen.queryByTestId('score-source')).toBeNull();
   });
   it('takes its word from the band the number falls in', () => {
     render(<ScoreBlock score={score({ aesthetic: -0.2 })} />);

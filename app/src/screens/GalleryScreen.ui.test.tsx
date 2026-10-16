@@ -19,7 +19,7 @@ import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
-import { SCORER_VERSION, type PhotoScore, type Reading } from '../lib/photoScore';
+import type { PhotoScore, Reading, ScorerKey } from '../lib/photoScore';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 
@@ -50,7 +50,7 @@ const data = vi.hoisted(() => ({
   setHidden: vi.fn(async () => {}),
   reorderGallery: vi.fn(async () => {}),
   removePlacePhoto: vi.fn(async (_id: string, _path: string | null) => {}),
-  savePhotoScore: vi.fn(async (_id: string, _reading: Reading, _uid: string) => {}),
+  savePhotoScore: vi.fn(async (_id: string, _scorer: ScorerKey, _reading: Reading, _uid: string) => {}),
   scoreAsync: vi.fn(async (_uri: string): Promise<Reading> => ({ aesthetic: 0.5, isUtility: false, signals: {} })),
   removePhotoFile: vi.fn(async (_path: string) => {}),
   fetchMyPhotoCounts: vi.fn(async () => ({ mineHere: 0, mineToday: 0 })),
@@ -76,7 +76,9 @@ vi.mock('../lib/i18n', () => ({
 const native = vi.hoisted(() => ({ present: true }));
 vi.mock('../lib/photoScoreNative', () => ({
   get photoScorer() {
-    return native.present ? { isAvailable: () => true, scoreAsync: (uri: string) => data.scoreAsync(uri) } : null;
+    // A version the shown scorer does not have, so a test can tell the
+    // row was stamped by the scorer that read and not by a constant.
+    return native.present ? { id: 'apple-vision', version: 7, read: (uri: string) => data.scoreAsync(uri) } : null;
   },
 }));
 vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => state.editor }));
@@ -613,11 +615,11 @@ describe('adding one', () => {
 
 describe('scoring', () => {
   const read = (aesthetic: number, over: Partial<PhotoScore> = {}): PhotoScore => ({
-    scorer_version: SCORER_VERSION, aesthetic, is_utility: false, signals: { brightness: 0.5 }, ...over,
+    scorer: 'apple-vision', scorer_version: 1, aesthetic, is_utility: false, signals: { brightness: 0.5 }, ...over,
   });
   /** Each save lands on the row, as the read-back after a real run would
    *  find it. */
-  const landing = () => data.savePhotoScore.mockImplementation(async (id: string, r: Reading) => {
+  const landing = () => data.savePhotoScore.mockImplementation(async (id: string, _s: ScorerKey, r: Reading) => {
     state.rows = state.rows.map((p) => (p.id === id ? { ...p, score: read(r.aesthetic) } : p));
   });
 
@@ -643,15 +645,16 @@ describe('scoring', () => {
   });
 
   // Score once: a read photo is not offered again, and one read by an
-  // older scorer counts as unread.
+  // older version of the scorer, or by another scorer, counts as unread.
   it('offers only the photos not yet read by this scorer', async () => {
     show([
       photo('a', { score: read(0.68) }),
-      photo('b', { sort_order: 1, score: read(0.1, { scorer_version: SCORER_VERSION - 1 }) }),
+      photo('b', { sort_order: 1, score: read(0.1, { scorer_version: 0 }) }),
       photo('c', { sort_order: 2 }),
+      photo('d', { sort_order: 3, score: read(0.4, { scorer: 'later-model' }) }),
     ]);
     await grid();
-    expect(screen.getByTestId('gallery-score').textContent).toBe('Score 2 new');
+    expect(screen.getByTestId('gallery-score').textContent).toBe('Score 3 new');
   });
 
   it('draws no button once every photo is read', async () => {
@@ -679,7 +682,10 @@ describe('scoring', () => {
     fireEvent.click(screen.getByTestId('gallery-score'));
     const card = await screen.findByTestId('scored-card');
     expect(data.scoreAsync.mock.calls.map((c) => c[0])).toEqual(['http://cdn/b.jpg', 'http://cdn/c.jpg']);
-    expect(data.savePhotoScore).toHaveBeenCalledWith('c', { aesthetic: 0.72, isUtility: false, signals: {} }, 'u1');
+    // Stamped by the scorer that read it, version and all.
+    expect(data.savePhotoScore).toHaveBeenCalledWith(
+      'c', expect.objectContaining({ id: 'apple-vision', version: 7 }), { aesthetic: 0.72, isUtility: false, signals: {} }, 'u1',
+    );
     expect(data.fetchGallery).toHaveBeenCalledTimes(2);
     expect(card.textContent).toContain('Scored 2 photos');
     expect(card.textContent).toContain('Best: photo 3 · 8.6');

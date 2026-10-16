@@ -422,7 +422,14 @@ echo "→ photo scores"
 for f in "$ROOT"/supabase/migrations/*_photo_scores.sql; do
   run "$DB" -f "$f" >/dev/null
 done
+# Per scorer (16 Oct 2026), applied before either test: the first test
+# passing unchanged on the re-keyed table is the proof that phones on
+# the older JavaScript, which upsert on `photo_id` alone, still land.
+for f in "$ROOT"/supabase/migrations/*_photo_scores_per_scorer.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
 run "$DB" -f "$HERE/photo_scores_test.sql"
+run "$DB" -f "$HERE/photo_scores_per_scorer_test.sql"
 
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do

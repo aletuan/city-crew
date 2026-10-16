@@ -11,7 +11,6 @@ vi.mock('../supabase', async () => {
 });
 
 import { fetchGallery, savePhotoScore, setCover, setHidden } from './gallery';
-import { SCORER_VERSION } from '../photoScore';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -24,7 +23,8 @@ describe('fetchGallery', () => {
     fake().replies({ data: [{ id: 'a', sort_order: 0 }] });
     expect(await fetchGallery('place-1')).toEqual([{ id: 'a', sort_order: 0, score: null }]);
     const q = fake().log[0];
-    expect(q).toMatchObject({ table: 'place_photos', op: 'select', filters: [['place_id', 'place-1']] });
+    expect(q).toMatchObject({ table: 'place_photos', op: 'select' });
+    expect(q.filters[0]).toEqual(['place_id', 'place-1']);
     // `storage_path` is what a delete hands to the bucket afterwards.
     for (const col of ['source', 'is_hidden', 'is_cover', 'sort_order', 'storage_path']) {
       expect(String(q.payload)).toContain(col);
@@ -38,12 +38,21 @@ describe('fetchGallery', () => {
   it('does not filter hidden rows away', async () => {
     fake().replies({ data: [] });
     await fetchGallery('place-1');
-    expect(fake().log[0].filters).toEqual([['place_id', 'place-1']]);
+    expect(fake().log[0].filters.map(([col]) => col)).not.toContain('is_hidden');
+  });
+
+  // The place's photographs, and of their scores only the shown
+  // scorer's: the second filter names the embed, so it narrows the
+  // scores and never the photographs.
+  it('asks for the shown scorer\'s score alone', async () => {
+    fake().replies({ data: [] });
+    await fetchGallery('place-1');
+    expect(fake().log[0].filters).toEqual([['place_id', 'place-1'], ['photo_scores.scorer', 'apple-vision']]);
   });
 
   // The score is embedded, so the gallery costs one read and not two.
   it('carries each photograph\'s score, as an object whichever way PostgREST embeds it', async () => {
-    const sc = { scorer_version: 1, aesthetic: 0.4, is_utility: false, signals: {} };
+    const sc = { scorer: 'apple-vision', scorer_version: 1, aesthetic: 0.4, is_utility: false, signals: {} };
     fake().replies({ data: [
       { id: 'a', photo_scores: sc },
       { id: 'b', photo_scores: [sc] },
@@ -54,7 +63,7 @@ describe('fetchGallery', () => {
     expect(got.map((p) => p.score)).toEqual([sc, sc, null, null]);
     // The embed's own key does not survive into the photograph.
     expect(got[0]).not.toHaveProperty('photo_scores');
-    expect(String(fake().log[0].payload)).toMatch(/photo_scores\(scorer_version, aesthetic, is_utility, signals\)/);
+    expect(String(fake().log[0].payload)).toMatch(/photo_scores\(scorer, scorer_version, aesthetic, is_utility, signals\)/);
   });
 
   it('is an empty gallery, not a crash, when the reply carries no rows', async () => {
@@ -102,16 +111,19 @@ describe('the two writes', () => {
 
 describe('savePhotoScore', () => {
   const reading = { aesthetic: 0.42, isUtility: true, signals: { brightness: 0.5 } };
+  // Not the shown scorer's version: the row is stamped by the one that read.
+  const scorer = { id: 'apple-vision', version: 3 };
 
   // An upsert, in the scorer's name and at this moment, so a rescore
   // passes the update policy that asks for the writer's own name.
   it('keeps the reading against its photograph, in the scorer\'s name', async () => {
     fake().replies({ data: null });
-    await savePhotoScore('photo-1', reading, 'u1');
+    await savePhotoScore('photo-1', scorer, reading, 'u1');
     const q = fake().log[0];
-    expect(q).toMatchObject({ table: 'photo_scores', op: 'insert', upsert: true });
+    // On the pair the table is keyed on, so another scorer's row is left.
+    expect(q).toMatchObject({ table: 'photo_scores', op: 'insert', upsert: true, onConflict: 'photo_id,scorer' });
     expect(q.payload).toMatchObject({
-      photo_id: 'photo-1', scorer_version: SCORER_VERSION,
+      photo_id: 'photo-1', scorer: 'apple-vision', scorer_version: 3,
       aesthetic: 0.42, is_utility: true, signals: { brightness: 0.5 }, scored_by: 'u1',
     });
     expect(Date.parse((q.payload as { scored_at: string }).scored_at)).not.toBeNaN();
@@ -119,6 +131,6 @@ describe('savePhotoScore', () => {
 
   it('throws when the server refuses', async () => {
     fake().replies({ error: { message: 'not yours to score' } });
-    await expect(savePhotoScore('photo-1', reading, 'u1')).rejects.toThrow('not yours to score');
+    await expect(savePhotoScore('photo-1', scorer, reading, 'u1')).rejects.toThrow('not yours to score');
   });
 });

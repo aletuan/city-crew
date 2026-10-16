@@ -554,6 +554,7 @@ export type Database = {
           photo_id: string
           scored_at: string
           scored_by: string | null
+          scorer: string
           scorer_version: number
           signals: Json
         }
@@ -563,6 +564,7 @@ export type Database = {
           photo_id: string
           scored_at?: string
           scored_by?: string | null
+          scorer?: string
           scorer_version: number
           signals?: Json
         }
@@ -572,6 +574,7 @@ export type Database = {
           photo_id?: string
           scored_at?: string
           scored_by?: string | null
+          scorer?: string
           scorer_version?: number
           signals?: Json
         }
