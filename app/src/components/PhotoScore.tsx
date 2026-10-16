@@ -1,4 +1,4 @@
-// The gallery's four pieces of photo scoring, after the owner's mockup
+// The gallery's pieces of photo scoring, after the owner's mockup
 // (15 Oct 2026): the number on a tile, the number with its reasons in
 // the photo's sheet, the dialog while the phone reads, and the card that
 // says it has finished.
@@ -129,9 +129,9 @@ export function ScoreGlyph({ size, color, active = false, testID = 'score-glyph'
 export const tenText = (ten: number) => ten.toFixed(1);
 
 /**
- * Bottom-left on a tile. The cover badge has the top-left and the menu
- * the top-right; a third corner is the one that says nothing until a
- * score exists. The scrim is the cover badge's, so the two read as one
+ * Bottom-left on a tile. The cover badge has the top-left and the tick
+ * of a choice the top-right; a third corner is the one that says
+ * nothing until a score exists. The scrim is the cover badge's, so the two read as one
  * family on a photograph of any colour.
  *
  * The number alone. It wore the sparkles glyph of the button that made
@@ -153,31 +153,41 @@ export function ScoreBadge({ score, testID }: { score: PhotoScore; testID?: stri
 }
 
 /**
- * The score in the photo's sheet: the number, its word, and why. A row
- * from a scorer this build cannot interpret keeps its number and word,
- * which every scorer shares, and says no reasons rather than reading its
- * measurements on another scorer's scales.
+ * The number in the photo's sheet, out of ten with its word beneath —
+ * right of the photograph's name, where the design puts it (owner, 16
+ * Oct 2026). Nothing for a row with no number.
  */
-export function ScoreBlock({ score }: { score: PhotoScore }) {
+export function ScoreTen({ score }: { score: PhotoScore }) {
   const { t } = useI18n();
   if (score.aesthetic == null) return null;
   const ten = toTen(score.aesthetic);
-  const how = interpreterOf(score.scorer);
   return (
-    <View style={s.block} testID="score-block">
-      <View style={s.blockTop}>
-        <Text style={s.blockTen}>{tenText(ten)}</Text>
-        <Text style={s.blockOutOf}>/10</Text>
-        <View style={s.bandPill}>
-          <Text style={s.bandText}>{bandLabel(band(ten), t)}</Text>
-        </View>
+    <View style={s.ten} testID="score-ten">
+      <View style={s.tenLine}>
+        <Text style={s.tenBig}>{tenText(ten)}</Text>
+        <Text style={s.tenOutOf}>/10</Text>
       </View>
-      {how && (
-        <>
-          <Text style={s.blockWhy} testID="score-why">{how.explain(score, t)}</Text>
-          <Text style={s.blockSource} testID="score-source">{how.source(t)}</Text>
-        </>
-      )}
+      <View style={s.bandPill}>
+        <Text style={s.bandText}>{bandLabel(band(ten), t)}</Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Why, and who measured, under the photograph's name. A row from a
+ * scorer this build cannot interpret says nothing here rather than
+ * reading its measurements on another scorer's scales — its number,
+ * which every scorer shares, is still `ScoreTen`'s to show.
+ */
+export function ScoreWhy({ score }: { score: PhotoScore }) {
+  const { t } = useI18n();
+  const how = interpreterOf(score.scorer);
+  if (score.aesthetic == null || !how) return null;
+  return (
+    <View style={s.why}>
+      <Text style={s.whyText} testID="score-why">{how.explain(score, t)}</Text>
+      <Text style={s.whySource} testID="score-source">{how.source(t)}</Text>
     </View>
   );
 }
@@ -301,22 +311,18 @@ const s = StyleSheet.create({
   // badges lines up the way the tiles above them do.
   badgeText: { color: onPhoto.text, fontSize: 12, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
 
-  block: {
-    gap: 6, padding: space.cardPadding, marginTop: 10,
-    backgroundColor: colors.surfaceCard,
-    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
-  },
-  blockTop: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  blockTen: { color: colors.text, fontSize: 30, fontFamily: display.semibold },
-  blockOutOf: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
+  ten: { alignItems: 'flex-end', gap: 4 },
+  tenLine: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
+  tenBig: { color: colors.text, fontSize: 30, fontFamily: display.semibold, fontVariant: ['tabular-nums'] },
+  tenOutOf: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
   bandPill: {
-    marginLeft: 8, alignSelf: 'center',
     paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill,
     backgroundColor: colors.accentSoft,
   },
   bandText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
-  blockWhy: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
-  blockSource: { color: colors.textTertiary, fontSize: 12 },
+  why: { gap: 6 },
+  whyText: { color: colors.textSecondary, fontSize: 15, lineHeight: 21 },
+  whySource: { color: colors.textTertiary, fontSize: 12 },
 
   scrim: {
     flex: 1, alignItems: 'center', justifyContent: 'center',

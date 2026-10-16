@@ -101,45 +101,67 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
 
         {header}
 
-        {/* No card when there is nothing to put in it. The check-in
-            sheet's rows are all in its header once the day's cap is
-            reached, and an empty bordered card under them read as a
-            row that failed to load. */}
-        {actions.length > 0 && <View style={s.group}>
-          {actions.map((a, i) => (
-            <PressableScale
-              key={a.key}
-              style={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff]}
-              scaleTo={a.disabled ? 1 : 0.985}
-              // The sheet goes first, always. A dialog raised over a
-              // sheet that is still animating out is the stacked-modal
-              // bug every platform has its own version of.
-              onPress={() => { onClose(); setTimeout(a.onPress, 220); }}
-              // `disabled` alone: the Pressable then drops the press and
-              // says "dimmed" to VoiceOver itself; a guard on `onPress`
-              // and a separate `aria-disabled` were two more copies of
-              // the same fact, each one a thing to forget.
-              disabled={a.disabled}
-              accessibilityRole="button"
-              accessibilityLabel={a.title}
-              accessibilityHint={a.desc}
-            >
-              <View style={s.glyph} testID="sheet-glyph">
-                <Ionicons
-                  name={a.icon}
-                  size={19}
-                  color={a.destructive ? colors.bad : colors.text}
-                />
-              </View>
-              <View style={{ flex: 1, gap: 3 }}>
-                <Text style={[s.rowTitle, a.destructive && s.rowTitleBad]}>{a.title}</Text>
-                <Text style={s.rowDesc}>{a.desc}</Text>
-              </View>
-            </PressableScale>
-          ))}
-        </View>}
+        <SheetRows actions={actions} onClose={onClose} />
       </Animated.View>
     </Modal>
+  );
+}
+
+/**
+ * The rows, on their card: what `ActionSheet` draws under its header,
+ * lifted out so a sheet with a body of its own (the photograph's,
+ * `PhotoSheet`) lists what can be done the same way.
+ *
+ * `titlesOnly` drops the sentence under each title from the screen and
+ * keeps it for VoiceOver. For a sheet whose header already shows the
+ * thing the rows act on at full size, where the sentence repeats what
+ * the picture above it makes plain (owner, 16 Oct 2026, from the photo
+ * sheet's design); the menus about a person keep theirs, which is where
+ * two red rows had to be told apart.
+ */
+export function SheetRows({ actions, onClose, titlesOnly }: {
+  actions: SheetAction[];
+  onClose: () => void;
+  titlesOnly?: boolean;
+}) {
+  // No card when there is nothing to put in it. The check-in sheet's
+  // rows are all in its header once the day's cap is reached, and an
+  // empty bordered card under them read as a row that failed to load.
+  if (!actions.length) return null;
+  return (
+    <View style={s.group}>
+      {actions.map((a, i) => (
+        <PressableScale
+          key={a.key}
+          style={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff, titlesOnly && s.rowShort]}
+          scaleTo={a.disabled ? 1 : 0.985}
+          // The sheet goes first, always. A dialog raised over a sheet
+          // that is still animating out is the stacked-modal bug every
+          // platform has its own version of.
+          onPress={() => { onClose(); setTimeout(a.onPress, 220); }}
+          // `disabled` alone: the Pressable then drops the press and says
+          // "dimmed" to VoiceOver itself; a guard on `onPress` and a
+          // separate `aria-disabled` were two more copies of the same
+          // fact, each one a thing to forget.
+          disabled={a.disabled}
+          accessibilityRole="button"
+          accessibilityLabel={a.title}
+          accessibilityHint={a.desc}
+        >
+          <View style={s.glyph} testID="sheet-glyph">
+            <Ionicons
+              name={a.icon}
+              size={19}
+              color={a.destructive ? colors.bad : colors.text}
+            />
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={[s.rowTitle, a.destructive && s.rowTitleBad]}>{a.title}</Text>
+            {!titlesOnly && <Text style={s.rowDesc}>{a.desc}</Text>}
+          </View>
+        </PressableScale>
+      ))}
+    </View>
   );
 }
 
@@ -182,6 +204,9 @@ const s = StyleSheet.create({
   // 0.45, the figure the dimmed CTAs already use, so "not yet" reads the
   // same on a row as on a button.
   rowOff: { opacity: 0.45 },
+  // A title alone is one line: the 14pt above and below that suits a
+  // title and its sentence leaves a lone title floating, so 12.
+  rowShort: { paddingVertical: 12 },
   // The old well's 44pt footprint, a 26pt box with room for a 19pt
   // glyph's whole line, lifted so its middle is the 19pt title line's.
   glyph: {

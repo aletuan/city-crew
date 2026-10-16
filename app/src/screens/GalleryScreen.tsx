@@ -13,7 +13,8 @@
 //
 // ── two modes, one grid ──
 //
-// Looking at the gallery, a tile opens its menu. Choosing several to
+// Looking at the gallery, a tile opens its photograph (`PhotoSheet`): the
+// picture large, its score, and what can be done to it. Choosing several to
 // delete, a tile is a tick. The draft choice is held in state until it
 // is confirmed, so a change of mind costs nothing — "Cancel" throws it
 // away and the rows were never touched.
@@ -38,9 +39,10 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import ActionSheet, { sheetHeader, type SheetAction } from '../components/ActionSheet';
+import type { SheetAction } from '../components/ActionSheet';
+import PhotoSheet from '../components/PhotoSheet';
 import { AddPill } from '../components/add';
-import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
+import { ScoreBadge, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useAuth } from '../lib/auth';
@@ -55,7 +57,7 @@ import { SHOWN, bestOf, needsScore, scoreAll, toTen, type PhotoScorer } from '..
 import { photoScorer } from '../lib/photoScoreNative';
 import { useSave } from '../lib/save';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
-import { colors, display, font, onPhoto, radius, space } from '../theme';
+import { colors, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 type Mode = 'view' | 'pick';
@@ -106,6 +108,10 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // The draft choice, meaningful in pick mode only.
   const [picked, setPicked] = useState<string[]>([]);
   const [menuFor, setMenuFor] = useState<GalleryPhoto | null>(null);
+  // The photograph last opened, ringed on the grid once its sheet has
+  // closed, so the guide coming back finds where they were.
+  const [lastOpened, setLastOpened] = useState<string | null>(null);
+  const open = (p: GalleryPhoto) => { setMenuFor(p); setLastOpened(p.id); };
   const [busy, setBusy] = useState(false);
   // A run of the scorer: how far it has got while it runs, and what it
   // came to once it has finished, until the card is closed.
@@ -228,15 +234,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     },
   }[a]);
 
-  // Where a photograph came from, for the sheet's header. Printed, never
-  // decided on: the menu is the same whichever it says.
-  const provenance = (p: GalleryPhoto) => [
-    p.source === 'google'
-      ? t('From Google', 'Từ Google', 'Googleから')
-      : t('Uploaded', 'Đã tải lên', 'アップロード'),
-    p.is_cover ? t('Cover', 'Ảnh bìa', 'カバー') : null,
-    p.is_hidden ? t('Hidden', 'Đã ẩn', '非表示') : null,
-  ].filter(Boolean).join(' · ');
 
   // ── scoring ──
 
@@ -376,12 +373,12 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   key={p.id}
                   scaleTo={0.96}
                   disabled={busy}
-                  onPress={picks ? () => togglePick(p.id) : () => setMenuFor(p)}
+                  onPress={picks ? () => togglePick(p.id) : () => open(p)}
                   accessibilityRole="button"
                   accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示')}` : ''}${p.score?.aesthetic != null ? ` · ${tenText(toTen(p.score.aesthetic))}/10` : ''}`}
                   accessibilityState={picks ? { selected: picked.includes(p.id) } : undefined}
                   containerStyle={{ width: cell, height: cell }}
-                  style={s.tile}
+                  style={[s.tile, !picks && lastOpened === p.id && s.tileLast]}
                   testID={`gallery-tile-${p.id}`}
                 >
                   <Image source={{ uri: p.photo_uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
@@ -403,12 +400,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   )}
 
                   {p.score && <ScoreBadge score={p.score} testID={`gallery-score-${p.id}`} />}
-
-                  {mode === 'view' && (
-                    <View style={s.more} testID={`gallery-more-${p.id}`}>
-                      <Ionicons name="ellipsis-horizontal" size={16} color={onPhoto.text} />
-                    </View>
-                  )}
 
                   {picks && (
                     <View style={[s.tick, picked.includes(p.id) && s.tickOn]} testID={`gallery-tick-${p.id}`}>
@@ -457,9 +448,9 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
               makes the newest photo the cover. */}
           <Text style={s.tipsTitle}>{t('Note', 'Chú ý', 'ご注意')}</Text>
           <Tip text={t(
-            'A photo you add becomes the cover (with several, the first one you picked). To change it, tap ⋯ on another photo.',
-            'Ảnh bạn thêm sẽ thành ảnh bìa (thêm nhiều ảnh thì là ảnh chọn đầu tiên). Muốn đổi, bấm ⋯ trên ảnh khác.',
-            '追加した写真がカバーになります（複数なら最初に選んだ1枚）。変えるには別の写真の⋯をタップ。',
+            'A photo you add becomes the cover (with several, the first one you picked). To change it, open another photo and make it the cover.',
+            'Ảnh bạn thêm sẽ thành ảnh bìa (thêm nhiều ảnh thì là ảnh chọn đầu tiên). Muốn đổi, mở ảnh khác rồi chọn Đặt làm ảnh bìa.',
+            '追加した写真がカバーになります（複数なら最初に選んだ1枚）。変えるには別の写真を開いてカバーにします。',
           )} />
           <Tip text={t(
             'The City Crew team can edit these photos too. The latest change is the one kept.',
@@ -474,27 +465,12 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         </Card>
       </ScrollView>
 
-      <ActionSheet
-        visible={menuFor !== null}
-        onClose={() => setMenuFor(null)}
+      <PhotoSheet
+        photo={menuFor}
+        index={menuFor ? shown.indexOf(menuFor) : 0}
+        total={shown.length}
         actions={menuFor ? galleryActions(menuFor).map((a) => actionRow(menuFor, a)) : []}
-        header={menuFor ? (
-          <View>
-            <View style={s.who}>
-              <Image source={{ uri: menuFor.photo_uri }} style={s.thumb} contentFit="cover" />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={s.whoName} numberOfLines={1}>
-                  {t('Photo', 'Ảnh', '写真')} {shown.indexOf(menuFor) + 1}/{shown.length}
-                </Text>
-                <Text style={s.whoMeta} numberOfLines={1}>{provenance(menuFor)}</Text>
-              </View>
-            </View>
-            {/* The number with its reasons, under the photograph it is
-                about and above what can be done to it — the order a guide
-                deciding on a cover reads in. */}
-            {menuFor.score && <ScoreBlock score={menuFor.score} />}
-          </View>
-        ) : null}
+        onClose={() => setMenuFor(null)}
       />
 
       <ScoringDialog
@@ -579,12 +555,9 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(6,5,8,0.62)',
   },
   badgeText: { color: onPhoto.text, fontSize: 11, fontWeight: font.semibold },
-  more: {
-    position: 'absolute', top: 6, right: 6,
-    width: 26, height: 26, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(6,5,8,0.62)',
-  },
+  // The ring on the tile last opened: the accent, inside the tile so the
+  // grid's gutters stay even.
+  tileLast: { borderWidth: 2.5, borderColor: colors.accent },
 
 
   tick: {
@@ -602,8 +575,4 @@ const s = StyleSheet.create({
   tipDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.accent, marginTop: 7 },
   tipText: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
 
-  who: sheetHeader,
-  thumb: { width: 52, height: 52, borderRadius: 12, backgroundColor: colors.surfaceGlassStrong },
-  whoName: { color: colors.text, fontSize: 18, fontFamily: display.semibold },
-  whoMeta: { color: colors.textTertiary, fontSize: 14 },
 });

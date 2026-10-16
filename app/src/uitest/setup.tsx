@@ -71,9 +71,15 @@ vi.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 // assert on alt text and on which photo was chosen, so this one keeps the
 // mapping rather than throwing the props away.
 vi.mock('expo-image', () => {
-  const Image = ({ source, ...rest }: { source?: { uri?: string } | string }) =>
+  type Loaded = { source: { width: number; height: number } };
+  const Image = ({ source, onLoad, ...rest }: { source?: { uri?: string } | string; onLoad?: (e: Loaded) => void }) =>
     React.createElement('img', {
       src: typeof source === 'string' ? source : source?.uri,
+      // `expo-image` hands `onLoad` the picture's own size, where the web
+      // hands an event; a test sets `naturalWidth`/`naturalHeight` on the
+      // element and fires `load` to stand for a picture arriving.
+      onLoad: onLoad && ((e: { currentTarget: HTMLImageElement }) =>
+        onLoad({ source: { width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight } })),
       ...rest,
     });
   // A static on the component, which is where `expo-image` puts it. There

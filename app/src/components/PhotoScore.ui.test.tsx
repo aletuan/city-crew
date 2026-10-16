@@ -33,7 +33,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
 }));
 
-import { ScoreBadge, ScoreBlock, ScoreGlyph, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
+import { ScoreBadge, ScoreGlyph, ScoreTen, ScoreWhy, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer: 'apple-vision', scorer_version: 1, aesthetic: 0.68, is_utility: false,
@@ -64,33 +64,42 @@ describe('ScoreBadge', () => {
   });
 });
 
-describe('ScoreBlock', () => {
-  it('is the number, its word and the measured reasons', () => {
-    render(<ScoreBlock score={score()} />);
-    const block = screen.getByTestId('score-block');
-    expect(block.textContent).toContain('8.4');
-    expect(block.textContent).toContain('/10');
-    expect(block.textContent).toContain('Very good');
+describe('ScoreTen', () => {
+  it('is the number out of ten, with the word for its band beneath', () => {
+    render(<ScoreTen score={score()} />);
+    const ten = screen.getByTestId('score-ten');
+    expect(ten.textContent).toBe('8.4/10Very good');
+  });
+  it('takes its word from the band the number falls in', () => {
+    render(<ScoreTen score={score({ aesthetic: -0.2 })} />);
+    expect(screen.getByTestId('score-ten').textContent).toContain('Weak');
+  });
+  // Its number is every scorer's to show, whoever read the row.
+  it('shows the number of a scorer this build cannot interpret', () => {
+    render(<ScoreTen score={score({ scorer: 'later-model' })} />);
+    expect(screen.getByTestId('score-ten').textContent).toContain('8.4');
+  });
+  it('is nothing for a row with no number', () => {
+    render(<ScoreTen score={score({ aesthetic: null })} />);
+    expect(screen.queryByTestId('score-ten')).toBeNull();
+  });
+});
+
+describe('ScoreWhy', () => {
+  it('is the measured reasons and who measured', () => {
+    render(<ScoreWhy score={score()} />);
     expect(screen.getByTestId('score-why').textContent).toBe('Well lit. Held back by: horizon tilted 4°.');
     expect(screen.getByTestId('score-source').textContent).toBe('Measured on this phone by Apple Vision.');
   });
-  // A row a later app wrote: its number is every scorer's to show, its
-  // measurements are not Vision's to read.
-  it('keeps the number and its word for a scorer it cannot interpret, and gives no reasons', () => {
-    render(<ScoreBlock score={score({ scorer: 'later-model' })} />);
-    const block = screen.getByTestId('score-block');
-    expect(block.textContent).toContain('8.4');
-    expect(block.textContent).toContain('Very good');
+  // A row a later app wrote: its measurements are not Vision's to read.
+  it('gives no reasons for a scorer it cannot interpret', () => {
+    render(<ScoreWhy score={score({ scorer: 'later-model' })} />);
     expect(screen.queryByTestId('score-why')).toBeNull();
     expect(screen.queryByTestId('score-source')).toBeNull();
   });
-  it('takes its word from the band the number falls in', () => {
-    render(<ScoreBlock score={score({ aesthetic: -0.2 })} />);
-    expect(screen.getByTestId('score-block').textContent).toContain('Weak');
-  });
-  it('is nothing for a row with no number', () => {
-    render(<ScoreBlock score={score({ aesthetic: null })} />);
-    expect(screen.queryByTestId('score-block')).toBeNull();
+  it('gives no reasons for a row with no number', () => {
+    render(<ScoreWhy score={score({ aesthetic: null })} />);
+    expect(screen.queryByTestId('score-why')).toBeNull();
   });
 });
 
