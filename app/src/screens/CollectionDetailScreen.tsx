@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, type NativeScrollEvent,
+  AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -143,9 +143,8 @@ function blockerSentence(
  * How long after the last move the order is written.
  *
  * Long enough that a run of moves — three cards dropped one after another
- * — is one write rather than one per drop; short enough that the header
- * says "Saved" before the reader has looked up. Not measured: a chosen
- * beat. Leaving the screen writes at once, so the value can only decide
+ * — is one write rather than one per drop; short enough that the write
+ * lands before the reader has looked up. Not measured: a chosen beat. Leaving the screen writes at once, so the value can only decide
  * how many writes there are, never whether one is lost.
  */
 const SAVE_AFTER_MS = 600;
@@ -551,8 +550,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * back arrow skipped and so threw the order away without a word. So each
    * move is written on its own, a beat after the last drop (`SAVE_AFTER_MS`)
    * so that three drops are one write rather than three. Leaving the
-   * screen writes whatever is waiting at once. The header says what the
-   * write is doing instead of offering to do it.
+   * screen writes whatever is waiting at once.
+   *
+   * Nothing on screen says it worked: the order on screen is the result,
+   * and a failure puts the old order back and says so in an alert. The
+   * header used to carry "Saving…" then "Saved" beside the ⋯, and every
+   * drag shifted the title across to make room for it — a report on
+   * something the reader could already see, paid for by the one line that
+   * says which list this is (owner, 16 Oct 2026). VoiceOver, which cannot
+   * see the card land, is told instead.
    *
    * `draft` is the order on screen, as slugs — never places, because the
    * catalog can reload underneath this screen and slugs are what the write
@@ -599,6 +605,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         await reorderCollection(col.slug, order);
       }
       setSaveState('saved');
+      AccessibilityInfo.announceForAccessibility(
+        t('Order saved', 'Đã lưu thứ tự', '並び順を保存しました'),
+      );
       // Both catalogs: the row is in `mine` and, once published, in the
       // public list too, and the order is read from whichever copy the
       // screen that draws it happens to hold.
@@ -1037,16 +1046,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      read `owner_id` off yet — `owned` is false by default, so the owner was
      briefly offered the visitor's "Save a copy" of their own list. Once the
      row is here its `owner_id` settles whose it is. */
-  // Beside the menu, a report on the order rather than a control: there
-  // is nothing to confirm. Blank until something has moved.
-  const status = saveState === 'waiting' || saveState === 'saving'
-    ? t('Saving…', 'Đang lưu…', '保存中…')
-    : saveState === 'saved'
-      ? t('Saved', 'Đã lưu', '保存しました')
-      : '';
   const headerRight = col ? (
     <View style={s.headerRight}>
-      {!!status && <Text style={s.saveState} accessibilityLiveRegion="polite">{status}</Text>}
       <View ref={btn} collapsable={false}>
         <RoundIconButton
           icon="ellipsis-horizontal"
@@ -1113,6 +1114,25 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     >
       <Ionicons name="add" size={20} color={colors.text} />
       <Text style={s.addQuietText}>{t('Place', 'Địa điểm', 'スポット')}</Text>
+    </PressableScale>
+  );
+  /* A visitor's quiet one is the copy: the thing they can do to a list
+     that is not theirs, as the owner's is the place they add (owner, 16
+     Oct 2026). The ⋯ menu's own glyph, so one act wears one mark
+     wherever it is met; and the verb kept, unlike "+ Địa điểm", because
+     two stacked squares do not say "save" the way "+" says "add". */
+  const copyButton = (testID: string) => (
+    <PressableScale
+      onPress={copy}
+      scaleTo={0.96}
+      haptic="selection"
+      style={s.addQuiet}
+      accessibilityRole="button"
+      accessibilityLabel={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
+      testID={testID}
+    >
+      <Ionicons name="duplicate-outline" size={18} color={colors.text} />
+      <Text style={s.addQuietText}>{t('Save a copy', 'Lưu bản sao', 'コピーを保存')}</Text>
     </PressableScale>
   );
   const planButton = (testID: string) => (
@@ -1537,8 +1557,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </View>
       </Modal>
-      <DockSlot visible={dock} style={s.dockIsland} testID="collection-dock">
-        {owned ? addButton('collection-dock-add') : (
+      <DockSlot
+        visible={dock}
+        style={[s.dockIsland, !owned && !copyCityId && s.dockIslandTitled]}
+        testID="collection-dock"
+      >
+        {owned ? addButton('collection-dock-add') : copyCityId ? copyButton('collection-dock-copy') : (
+          // A list with no city to file a copy under has no copy to offer
+          // (see the ⋯ menu), so its name keeps the island from holding a
+          // lone button.
           <Text style={s.dockTitle} numberOfLines={1}>{title}</Text>
         )}
         <View style={s.dockGrow} />
@@ -1637,11 +1664,20 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
   },
   addQuietText: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
-  // In the dock: the list's name where an owner has Add, so a visitor's
-  // island does not hold a lone button. 52 + 2 × 6 is the bar's 64.
+  // In the dock: the list's name, only where there is no copy to offer.
   dockTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
   dockGrow: { flex: 1 },
-  dockIsland: { paddingVertical: 6 },
+  // The same 6 on all four sides, so each button sits in the island the
+  // way the island sits in the screen (owner, 16 Oct 2026). The dock's
+  // own 18 / 10 / 8 suit Explore's line of text; around two buttons they
+  // left the Add three times further from its edge than from the top.
+  // 52 + 2 × 6 is the bar's 64, and 26 + 6 is the island's 32 radius:
+  // a 6pt ring keeps each pill's curve concentric with the island's.
+  // Each side named: the dock's own `paddingLeft` and `paddingVertical`
+  // would outrank a bare `padding`.
+  dockIsland: { paddingVertical: 6, paddingLeft: 6, paddingRight: 6 },
+  // A line of text wants the dock's own lead-in, not a button's.
+  dockIslandTitled: { paddingLeft: 18 },
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   descEmpty: { color: colors.textTertiary, ...type.body, lineHeight: 24 },
   // A 20pt glyph centred on a 24pt first line.
@@ -1653,7 +1689,6 @@ const s = StyleSheet.create({
   dragArea: { flex: 1 },
   // The status beside ⋯ and the button, on one line.
   headerRight: { flexDirection: 'row', alignItems: 'center' },
-  saveState: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium, paddingHorizontal: 10 },
   // Lifted: above its neighbours, with the shadow of something held off
   // the page. `zIndex` for iOS and the web, `elevation` for Android.
   arrangeCellLifted: { zIndex: 10, elevation: 6 },
