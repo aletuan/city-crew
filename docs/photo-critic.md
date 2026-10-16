@@ -154,6 +154,25 @@ Với City Crew còn một mục tiêu riêng: ảnh phải **đại diện đư
     trong catalog, không phải lỗi của mô hình. 3 ca mô hình sai:
     a-little-coffee-in-bed-go-vap, hanoi-old-quarter, still-cafe (D13).
   - Mặt tiền Memento (ảnh bìa): cả mô hình và chủ sản phẩm đều chấm hợp.
+- **So ngưỡng với 106 ảnh đã chấm (`--marks`, 16/10).** Chủ sản phẩm gọi
+  61 ảnh là lạc đề. Một số cặp tiêu biểu trong 18 cặp:
+
+  | off_rank / off_margin | đúng khi gọi lạc đề | bắt được / 61 | ảnh bìa chấm Hợp bị gọi sai | lạc đề trên catalog |
+  |---|---|---|---|---|
+  | 3 / 0,02 (luật #980) | 74% | 14 | 3 | 214 |
+  | **2 / 0 (chốt, D14)** | **79%** | **27** | **3** | **560** |
+  | 2 / 0,03 | 79% | 15 | 2 | 293 |
+  | 1 / 0,02 | 70% | 32 | 3 | 713 |
+  | 1 / 0 | 65% | 52 | 8 | 1.528 |
+
+  Không cặp nào đạt **0** ảnh bìa chấm Hợp bị gọi sai (D13): thấp nhất là
+  2. Ba ảnh bìa bị gọi sai ở hầu hết các cặp là a-little-coffee-in-bed-go-vap,
+  hanoi-old-quarter và still-cafe (Q8). Các ngưỡng được chọn trên chính
+  phần chấm này, nên số thật có thể thấp hơn; B7 kiểm lại trên mẫu mới.
+- **Các ca cũ ở mục này, với SigLIP 2 (lần chạy hai):** Sam Saigon có 1 ảnh
+  bị gọi lạc đề (nightlife đứng đầu, −0,020). Hội Quán 9/10 ảnh hợp, ảnh bìa
+  hợp (+0,075). Bold Brew (2 chi nhánh) không ảnh nào bị gọi lạc đề. Vision
+  từng báo nhầm mặt tiền của cả hai quán này.
 
 ## 5. Quy trình 6 bước
 
@@ -278,6 +297,7 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 | D11 | 16/10 | Dùng SigLIP 2 cho các bước tiếp theo; CLIP chỉ để đối chiếu | B4: hơn CLIP ở top 1 (75,0% so với 70,0%), top 3 (94,7% so với 92,9%) và số ảnh bìa bị coi là lạc đề (132 so với 152) |
 | D12 | 16/10 | "Lạc đề" nghĩa là nội dung ảnh không khớp với category của địa điểm. Ảnh xấu, cận một món hay không đại diện được cho quán thuộc bước 4 và 5 | Chủ sản phẩm. Mô hình so ảnh với category không đo được chất lượng ảnh |
 | D13 | 16/10 | Tiêu chí ảnh bìa ở B7: **0 ảnh bìa mà chủ sản phẩm chấm Hợp bị báo lạc đề**, thay cho 0 ảnh bìa bị báo lạc đề | 6/9 ảnh bìa mô hình gọi là lạc đề, chủ sản phẩm cũng gọi như vậy: ảnh bìa không mặc nhiên đúng |
+| D14 | 16/10 | Ngưỡng lạc đề: category của địa điểm **nằm ngoài top 2** (`off_rank 2`, `off_margin 0`) | Chủ sản phẩm duyệt. Đúng 79% khi gọi lạc đề, bắt 27/61, so với 74% và 14/61 của top 3, không gọi sai thêm ảnh bìa nào. Rank 1 bắt 52 nhưng sai 1/3 và gọi 1.528 ảnh là lạc đề (mục 4) |
 
 ## 10. Câu hỏi đang mở
 
@@ -292,6 +312,10 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
   phần đọc ảnh nhiều (bộ từ vựng 256 nghìn token của SigLIP 2) → câu trả lời
   đổi con số ở Q2. Nếu không thì câu mô tả cố định được tính sẵn, ngôn ngữ chỉ
   là chuyện câu nào cho kết quả tốt nhất (B6b).
+- **Q8.** Ba ảnh bìa chủ sản phẩm chấm Hợp vẫn bị gọi lạc đề ở hầu hết các
+  cặp ngưỡng (mục 4). Sửa câu mô tả (Phố cổ Hà Nội có thể khớp câu "đường
+  có xe máy" của nhóm lạc đề), hay không bao giờ báo lạc đề cho ảnh bìa mà
+  chỉ gợi ý "nên xem lại", hay nới D13?
 
 ## 11. Tiến độ
 
@@ -314,11 +338,10 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 - [x] **B4. Chạy** trên Mac của chủ sản phẩm (D7): `python eval.py`, rồi
   `--model clip`, theo `data/photo-eval/README.md`. Kết quả ở mục 4:
   SigLIP 2 hơn CLIP ở mọi chỉ số (D11).
-- [ ] **B5. Đo.** Đã làm (#980 và PR này): luật lạc đề mới (ngoài top 3
-  mới có thể lạc đề), câu tả mặt tiền, cache vector, trang mẫu có nút chấm,
-  lần chạy thứ hai và 106 ảnh chủ sản phẩm chấm (mục 4), `--marks` để so
-  từng cặp ngưỡng với phần chấm. Còn lại: tra Sam Saigon, Hội Quán và Bold
-  Brew trong CSV.
+- [x] **B5. Đo.** #980, #981 và PR chốt ngưỡng: luật theo hạng, câu tả mặt
+  tiền, cache vector, trang mẫu có nút chấm, 106 ảnh chủ sản phẩm chấm,
+  `--marks` so 18 cặp ngưỡng, chốt ngoài top 2 (D14). Sam Saigon bị bắt;
+  Hội Quán, Bold Brew và Memento được tha (mục 4).
   - tỉ lệ đoán đúng category của địa điểm ở top 1 và top 3, so với nhãn
     Vision hiện tại;
   - bảng nhầm lẫn giữa các category;
@@ -362,6 +385,10 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
   Chốt luôn ngưỡng cho ba mức Hợp / Chưa rõ / Lạc đề. Ghi kết quả vào mục 4
   và quyết định vào mục 9.
 
+  Trước khi chốt: **kiểm lại D14 trên mẫu mới** (`--seed 2`), khoảng 40 ảnh
+  chủ sản phẩm chưa chấm. Nếu độ đúng khi gọi lạc đề vẫn quanh 75–80% thì
+  giữ ngưỡng. Và trả lời Q8.
+
 ### Phương án B — Giai đoạn 2: tích hợp (chỉ khi B7 đạt)
 
 - [ ] **B8. Native.** Đưa phần xử lý ảnh của mô hình (bản Core ML) vào
@@ -400,6 +427,7 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 | 16/10/2026 | B4 chạy được với `--limit 20` (29 giây). Catalog thật là 6.211 ảnh, 351 ảnh có điểm Vision (mục 4). Thêm B6b và D10: thử câu mô tả tiếng Việt và tiếng Nhật trên SigLIP 2; Q7 về tìm ảnh bằng chữ |
 | 16/10/2026 | B4 xong: SigLIP 2 75,0% top 1 / 94,7% top 3, CLIP 70,0% / 92,9% (mục 4, D11). B5 phần đầu: luật lạc đề mới, câu tả mặt tiền, cache vector, trang mẫu có nút chấm, test cho `eval.py` chạy trong CI |
 | 16/10/2026 | B5: lần chạy hai (lạc đề 785 → 211, ảnh bìa lạc đề 130 → 26). Chủ sản phẩm chấm 106 ảnh: top 3 quá dễ dãi (chỉ bắt 23% ảnh lạc đề), 6/9 ảnh bìa bị báo là sai thật. D12, D13. `--marks` và `--off-rank` trong `eval.py` |
+| 16/10/2026 | B5 xong: `--marks` so 18 cặp ngưỡng với 106 ảnh đã chấm; chốt ngoài top 2 (D14): đúng 79%, bắt 27/61. Không cặp nào đạt D13 (Q8). `eval.py` kiểm tra file marks ngay khi khởi động |
 
 ## 13. Phương án đã loại
 

@@ -278,8 +278,22 @@ class Reading:
     vision_fit: bool | None         # the baseline, where Vision has labels
 
 
+# Off: the place's category outside the model's top two, whoever leads.
+# Chosen on 16 Oct 2026 from `--marks` against the owner's 106 marks
+# (docs/photo-critic.md D14). Of the eighteen pairs tried, rank 2 with no
+# margin agreed with the owner 79% of the times it said off and caught 27
+# of the owner's 61, against 74% and 14 for the top three it replaced,
+# wronging no more covers (3) and calling 560 of 6,239 photographs off.
+# Rank 1 caught 52 but was wrong one time in three and called 1,528 off; a
+# guide told "off" for nothing stops reading. With no margin the rank alone
+# decides, since a category outside the top two is behind by something.
+OFF_RANK = 2
+OFF_MARGIN = 0.0
+
+
 def read_photo(photo: Photo, img: list[float], groups: dict[str, list[list[float]]],
-               fit_margin: float, off_margin: float, off_rank: int = 3) -> Reading:
+               fit_margin: float = 0.0, off_margin: float = OFF_MARGIN,
+               off_rank: int = OFF_RANK) -> Reading:
     # `zip` would quietly compare the first n numbers of two vectors of
     # different lengths and every score after it would be noise.
     width = len(next(iter(groups.values()))[0])
@@ -311,9 +325,9 @@ def judge(photo: Photo, by_group: dict[str, float], ranked: list[str], margin: f
     # judged by the margin alone and called 791 of 6,211 photographs off
     # while only 327 had their category outside the top three, 132 covers
     # among them; the top three brought that to 211 and 26. The owner's
-    # marks then cut the other way: of 65 photographs this left unclear,
-    # 42 were off in the owner's eyes. So the rank is a threshold for
-    # `--marks` to choose (step B7), and 3 is only where it starts.
+    # marks then cut the other way: of 65 photographs the top three left
+    # unclear, 42 were off in the owner's eyes. Where it settled, and why,
+    # is at OFF_RANK.
     if set(photo.categories) & set(ranked[:off_rank]):
         return "unclear"
     if ranked[0] == "_off" or margin <= -off_margin:
@@ -514,6 +528,23 @@ def write_html(readings: list[Reading], summary: dict, model: str, path: Path,
 
 
 
+def load_marks(path: Path) -> dict[str, dict]:
+    """The owner's marks, read before anything else runs. They used to be
+    read after the photographs, and on 16 Oct 2026 a marks file holding
+    whatever the clipboard held instead of the page's Copy box stopped a
+    run two minutes in, with the table it was run for never printed and
+    the error scrolled out of sight."""
+    try:
+        marks = json.loads(path.read_text())
+    except (OSError, ValueError) as err:
+        sys.exit(f"{path}: not the page's marks ({err}). "
+                 f"Click Copy at the foot of the page, then: pbpaste > {path}")
+    if not isinstance(marks, dict) or not any(
+            isinstance(v, dict) and v.get("owner") in ("fit", "off") for v in marks.values()):
+        sys.exit(f"{path}: no Hợp or Lạc đề mark in it. Mark photographs on the page, then Copy again")
+    return marks
+
+
 def calibration_table(rows: list[dict]) -> str:
     """The calibration as text a person can paste back: one line a rule."""
     head = ["off_rank", "off_margin", "off_precision", "off_recall", "fit_but_owner_off",
@@ -539,10 +570,10 @@ def main() -> None:
     ap.add_argument("--limit", type=int, help="the first N catalog photographs only")
     ap.add_argument("--fit-margin", type=float, default=0.0,
                     help="own category ahead of every other by at least this: fit")
-    ap.add_argument("--off-margin", type=float, default=0.02,
+    ap.add_argument("--off-margin", type=float, default=OFF_MARGIN,
                     help="own category outside the top --off-rank, and another ahead by more than this "
                          "or the off-topic sentences first: off")
-    ap.add_argument("--off-rank", type=int, default=3,
+    ap.add_argument("--off-rank", type=int, default=OFF_RANK,
                     help="own category within this many of the top: never off")
     ap.add_argument("--marks", type=Path,
                     help="the owner's marks (the page's Copy box): how each threshold agrees with them")
@@ -551,6 +582,7 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=1, help="which random sample")
     ap.add_argument("--out", type=Path, default=HERE / "out")
     a = ap.parse_args()
+    marks = load_marks(a.marks) if a.marks else None
 
     prompts = json.loads((HERE / "prompts.json").read_text())
     known = set(prompts["categories"])
@@ -584,9 +616,9 @@ def main() -> None:
             print(f"{i}/{len(photos)}", file=sys.stderr)
 
     summary = summarise(readings)
-    if a.marks:
-        summary["marks"] = len(json.loads(a.marks.read_text()))
-        summary["calibration"] = calibrate(readings, json.loads(a.marks.read_text()), a.fit_margin)
+    if marks is not None:
+        summary["marks"] = len(marks)
+        summary["calibration"] = calibrate(readings, marks, a.fit_margin)
     stem = a.out / f"photo-fit-{model.name}"
     write_csv(readings, list(groups), stem.with_suffix(".csv"))
     write_html(readings, summary, model.name, stem.with_suffix(".html"), a.sample, a.seed)

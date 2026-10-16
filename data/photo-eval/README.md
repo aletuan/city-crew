@@ -77,9 +77,11 @@ anh chụp nên không vướng giấy phép.
   đúng: ảnh menu của một quán cà phê vẫn mang category "cafes".
 - **`verdicts`**: số ảnh rơi vào mỗi mức:
   - **Hợp**: category của địa điểm được đoán đầu tiên;
-  - **Chưa rõ**: nó đứng thứ hai hoặc thứ ba, hoặc ảnh là menu hay biển hiệu;
-  - **Lạc đề**: nó không lọt top 3, và category khác hơn nó quá
-    `--off-margin` (0,02), hoặc nhóm "trời, đường, xe" đứng đầu.
+  - **Chưa rõ**: nó đứng thứ hai, hoặc ảnh là menu hay biển hiệu;
+  - **Lạc đề**: nó không lọt top 2.
+
+  Đây là cặp ngưỡng `--off-rank 2 --off-margin 0`, chốt ngày 16/10 sau khi
+  so với 106 ảnh anh chấm (`docs/photo-critic.md` D14).
 
   Chốt ngưỡng là việc của B7, sau khi xem trang HTML.
 - **`covers`** / **`covers_off`**: số ảnh bìa, và số ảnh bìa bị coi là lạc
@@ -117,6 +119,8 @@ ngưỡng (`off_rank` = category phải nằm trong top mấy thì không bị g
   bao nhiêu ảnh bìa của cả catalog là lạc đề.
 
 Chọn được cặp nào thì chạy lại với `--off-rank` và `--off-margin` tương ứng.
+Nếu file `marks.json` không đúng (ví dụ clipboard đang chứa thứ khác),
+script báo lỗi ngay khi khởi động.
 Phần chấm cộng dồn trong trình duyệt, nên chấm thêm rồi Copy lại là đủ.
 
 ## Kiểm tra script
