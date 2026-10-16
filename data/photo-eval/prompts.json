@@ -1,0 +1,77 @@
+{
+  "_about": "Step B2 of docs/photo-critic.md. What each category's photographs are expected to show, as sentences an image-text model compares a photograph against. One key per category in app/src/lib/categories.ts (data/test/photo-eval-prompts.test.mjs holds them in step). English, because the candidate models (SigLIP 2, CLIP) were trained on English captions; written for Vietnamese and Melbourne places, the two catalogs there are. A category scores a photograph by its best-matching sentence, so a sentence is added for a kind of photo the category has, not to weight it.",
+  "categories": {
+    "cafes": [
+      "a photo of the inside of a coffee shop",
+      "a photo of a cup of Vietnamese iced coffee on a table",
+      "a photo of people sitting and chatting in a cafe",
+      "a photo of a barista making coffee at a counter",
+      "a photo of the entrance of a small cafe with plants"
+    ],
+    "focus": [
+      "a photo of people working on laptops in a cafe",
+      "a photo of a table with a laptop, a notebook and a drink",
+      "a photo of a quiet room with desks for studying",
+      "a photo of a student reading at a table with books"
+    ],
+    "eats": [
+      "a photo of a plate of food on a restaurant table",
+      "a photo of a bowl of Vietnamese noodle soup",
+      "a photo of the dining room of a restaurant",
+      "a photo of a chef cooking in a kitchen",
+      "a photo of people eating together at a table"
+    ],
+    "views": [
+      "a photo of a city skyline seen from a rooftop",
+      "a photo of a scenic view over a river or a lake",
+      "a photo of a rooftop terrace with a wide view",
+      "a photo of a city at sunset seen from above"
+    ],
+    "heritage": [
+      "a photo of an exhibition inside a museum",
+      "a photo of an old temple or pagoda",
+      "a photo of the front of a historic building",
+      "a photo of the inside of a church or a cathedral",
+      "a photo of statues and old works of art"
+    ],
+    "nature": [
+      "a photo of a park with trees and grass",
+      "a photo of a garden full of flowers",
+      "a photo of a lake surrounded by trees",
+      "a photo of a path through a forest"
+    ],
+    "markets": [
+      "a photo of the inside of a clothing store",
+      "a photo of the inside of a shopping mall",
+      "a photo of a busy local market with stalls",
+      "a photo of shelves of products in a shop",
+      "a photo of a small souvenir shop"
+    ],
+    "nightlife": [
+      "a photo of a cocktail bar at night",
+      "a photo of a bartender mixing a drink",
+      "a photo of a rooftop bar at night",
+      "a photo of glasses of beer in a pub",
+      "a photo of a club with colourful lights"
+    ],
+    "fun": [
+      "a photo of a cinema with rows of seats",
+      "a photo of a karaoke room",
+      "a photo of a bowling alley",
+      "a photo of an arcade full of games",
+      "a photo of a live music show"
+    ]
+  },
+  "offTopic": [
+    "a photo of the sky",
+    "a photo of a road with traffic and motorbikes",
+    "a photo of a parked car",
+    "a photo of an empty landscape with no buildings"
+  ],
+  "neutral": [
+    "a photo of a menu board",
+    "a photo of a printed menu",
+    "a photo of a sign with writing on it",
+    "a photo of a receipt"
+  ]
+}
