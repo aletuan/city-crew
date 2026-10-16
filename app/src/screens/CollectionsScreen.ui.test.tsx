@@ -383,23 +383,86 @@ describe('CollectionsScreen — signed in', () => {
   // The Trips screen's pill, in the header, on Yours once there is a
   // list: the dashed row at the foot was found only by scrolling past
   // every list to reach it.
-  it('the New pill in the header starts a new one, on Yours with lists only', () => {
+  it('the New pill in the header starts a new one, on Yours and on Community', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     const { navigation } = show();
     // The dashed row is gone; the pill carries its id for the smoke flows.
     expect(screen.queryByText('New collection')).toBeNull();
     fireEvent.click(screen.getByTestId('collection-new'));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
-    // Not on Community, where the lists are not yours to add to.
+    // Community keeps it too: the pill never added to their lists, it
+    // starts one of yours (owner, 16 Oct 2026).
     fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
-    expect(screen.queryByRole('button', { name: 'New collection' })).toBeNull();
+    fireEvent.click(screen.getByTestId('collection-new'));
+    expect(navigation.navigate).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps the pill off an empty library, whose card is the door', () => {
+  it('keeps the pill off an empty library, whose card is the door — but on its Community', () => {
     show();
+    // The greeting landed on Community, and the pill is there.
+    expect(screen.getByTestId('collection-new')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.queryByRole('button', { name: 'New collection' })).toBeNull();
     expect(screen.getByText('Create your first collection')).toBeTruthy();
+  });
+
+  // The form goes back to whichever tab sent it; on Community a private
+  // new list would be nowhere on screen.
+  it('lands on Yours once a list started from Community exists, and not before', () => {
+    const navigation = nav();
+    const at = (n: number) => Array.from({ length: n }, (_, i) => col(`m${i}`, ['a'], { owner_id: 'u1' }));
+    state.mine.data = at(1);
+    // Only Community shows someone else's list: which tab is on screen.
+    state.cols.data = [col('theirs', ['a'])];
+    const view = () => <CollectionsScreen navigation={navigation} route={{ params: { tab: 'community' } }} />;
+    const { rerender } = render(view());
+    const onCommunity = () => screen.queryByText('List theirs') !== null;
+    fireEvent.click(screen.getByTestId('collection-new'));
+    // Back with nothing made: a re-render alone does not move the reader.
+    rerender(view());
+    expect(onCommunity()).toBe(true);
+    // The reload lands with one more: Yours.
+    state.mine.data = at(2);
+    rerender(view());
+    expect(onCommunity()).toBe(false);
+    // Spent: a later list made elsewhere does not pull the reader again.
+    fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
+    state.mine.data = at(3);
+    rerender(view());
+    expect(onCommunity()).toBe(true);
+  });
+
+  it('drops the errand when the reader picks a tab by hand, and Yours starts none', () => {
+    const navigation = nav();
+    const at = (n: number) => Array.from({ length: n }, (_, i) => col(`m${i}`, ['a'], { owner_id: 'u1' }));
+    state.mine.data = at(1);
+    // Only Community shows someone else's list: which tab is on screen.
+    state.cols.data = [col('theirs', ['a'])];
+    const view = () => <CollectionsScreen navigation={navigation} route={{ params: { tab: 'community' } }} />;
+    const { rerender } = render(view());
+    const onCommunity = () => screen.queryByText('List theirs') !== null;
+    fireEvent.click(screen.getByTestId('collection-new'));
+    fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
+    state.mine.data = at(2);
+    rerender(view());
+    expect(onCommunity()).toBe(true);
+  });
+
+  it('starts no errand from Yours, even if Community is on screen when the list lands', () => {
+    const navigation = nav();
+    const at = (n: number) => Array.from({ length: n }, (_, i) => col(`m${i}`, ['a'], { owner_id: 'u1' }));
+    state.mine.data = at(1);
+    // Only Community shows someone else's list: which tab is on screen.
+    state.cols.data = [col('theirs', ['a'])];
+    const { rerender } = render(<CollectionsScreen navigation={navigation} route={{ params: {} }} />);
+    fireEvent.click(screen.getByTestId('collection-new'));
+    // Explore's "See all" re-aims the switch without a tap, so no tap
+    // clears anything on the way.
+    rerender(<CollectionsScreen navigation={navigation} route={{ params: { tab: 'community', at: 1 } }} />);
+    state.mine.data = at(2);
+    rerender(<CollectionsScreen navigation={navigation} route={{ params: { tab: 'community', at: 1 } }} />);
+    expect(screen.getByText('List theirs')).toBeTruthy();
   });
 
   // Your own published list is on Community too, as everyone sees it: the

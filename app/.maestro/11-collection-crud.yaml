@@ -64,13 +64,13 @@ env:
       - waitForAnimationToEnd:
           timeout: 5000
 
-# Create. The dashed "New collection" row sits at the foot of the list.
-- scrollUntilVisible:
-    element:
+# Create. The New pill sits in the header, on both tabs — at the top, so
+# no scroll: scrolling down toward it (the old dashed row's recipe) moves
+# the header away.
+- extendedWaitUntil:
+    visible:
       id: "collection-new"
-    direction: DOWN
     timeout: 15000
-- scroll
 - tapOn:
     id: "collection-new"
 - extendedWaitUntil:
