@@ -330,13 +330,38 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const blurbFrom = blurbCredit(place);
   const blurbHref = blurbLink(place);
   const blurbMark = blurbFrom && blurbIcon(blurbFrom);
-  // The words and the credit under them are one object to a reader: both
-  // are the quote, and a reader who wants the source taps whichever their
-  // thumb is nearest. So they share a handler rather than only the small
-  // grey line at the bottom carrying it.
+  // Only the credit opens the source (owner, 17 Oct 2026). The paragraph
+  // shared the handler until then, on the reading that words and credit
+  // are one quote and a thumb takes whichever is nearer; in use, a thumb
+  // resting on the words while reading — or starting a scroll on them —
+  // was thrown into Threads. The paragraph is for reading, and the name
+  // in the link colour is the one thing that says "this goes somewhere".
   const openBlurb = blurbHref
     ? () => open(blurbHref, t('Could not open the source', 'Không mở được nguồn', 'ソースを開けませんでした'))
     : undefined;
+  // The credit's words: the handle under a mark, the platform alone for
+  // Google, and the long form for a source with no mark (see the block).
+  const creditWords = !blurbFrom ? '' : blurbFrom.kind === 'threads'
+    ? (blurbFrom.name ?? 'Threads')
+    : blurbFrom.kind === 'google'
+      ? 'Google'
+      : (blurbFrom.name
+        ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`)
+        : blurbFrom.source);
+  // What VoiceOver says for it: the mark it cannot read, put back in words
+  // where the line names a person rather than the platform itself.
+  const creditLabel = blurbFrom?.kind === 'threads' && blurbFrom.name
+    ? t(`${creditWords} on Threads`, `${creditWords} trên Threads`, `${creditWords}（Threads）`)
+    : creditWords;
+  const creditLine = blurbFrom ? (
+    <Text style={[s.credit, blurbHref ? s.creditLink : null]}>
+      {blurbMark ? (
+        <Ionicons name={blurbMark} size={13} color={blurbHref ? colors.accent : colors.textTertiary} />
+      ) : null}
+      {blurbMark ? ' ' : ''}
+      {creditWords}
+    </Text>
+  ) : null;
   // Which row opens the grouped card decides where the hairlines fall:
   // every row below the first draws one above itself, whatever subset of
   // the four a place actually has.
@@ -939,22 +964,25 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ')}</Text>
               </View>
               <View style={s.whyBody}>
-                {/* Whose words those are, at the end of them. It was a line
-                    of its own under the paragraph; since 12 Oct 2026 it is
-                    the paragraph's last run, after two spaces — a pull
-                    quote's attribution, on the owner's reading that the
-                    extra line broke the paragraph's rhythm. Nested in the
-                    paragraph's Text so it wraps with it, and with no press
-                    handler of its own: the paragraph's handler covers the
-                    run (a nested Text with its own would merely shadow it
-                    — checked, not doubled), so one handler is the whole
-                    truth of what a tap does. At
-                    15pt against the paragraph's 16, in the link colour —
-                    one step down says "attribution", two said "footnote".
+                <Text style={s.desc} testID="detail-desc">{desc}</Text>
+                {/* Whose words those are, on a line of their own under
+                    them, starting at the paragraph's left edge (owner, 17
+                    Oct 2026). From 12 Oct it was the paragraph's last run,
+                    after two spaces — a pull quote's attribution, on the
+                    reading that a line of its own broke the paragraph's
+                    rhythm. On the phone the run wrapped wherever the
+                    sentence happened to end, and the mark could be left at
+                    the end of one line with the name alone on the next: a
+                    stray glyph, and a name with no platform. On its own
+                    line the two are never parted, and the press is the
+                    line alone (see `openBlurb`).
 
                     After the blurb rather than before it because the
                     sentence is what the reader came for; the attribution
-                    answers a question they only have once they have read it.
+                    answers a question they only have once they have read
+                    it. At 15pt against the paragraph's 16, in the link
+                    colour when it goes somewhere — one step down says
+                    "attribution", two said "footnote".
 
                     Google is credited by platform alone. The import copies
                     `editorialSummary`, which Google writes and signs with
@@ -970,40 +998,31 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     the Threads glyph says what "@gowithchinne on Threads"
                     said, in a third of the line. The @ goes with them — it
                     is a second marker for the thing the glyph already
-                    marks. An earlier draft of this argued
-                    an icon at 12.5pt is a smudge — it is not, because it
-                    rides inside the Text and takes its baseline, which is
-                    the thing that makes a glyph beside words read as one
-                    line rather than as two objects. A source with no mark
-                    keeps the long wording; there is nothing else to carry
-                    it. */}
-                <Text style={s.desc} onPress={openBlurb} testID="detail-desc">
-                  {desc}
-                  {blurbFrom ? (
-                    <Text
-                      style={[s.credit, blurbHref ? s.creditLink : null]}
-                      accessibilityRole={blurbHref ? 'link' : undefined}
-                      testID="blurb-credit"
-                    >
-                      {'  '}
-                      {blurbMark ? (
-                        <Ionicons
-                          name={blurbMark}
-                          size={13}
-                          color={blurbHref ? colors.accent : colors.textTertiary}
-                        />
-                      ) : null}
-                      {blurbMark ? ' ' : ''}
-                      {blurbFrom.kind === 'threads'
-                        ? (blurbFrom.name ?? 'Threads')
-                        : blurbFrom.kind === 'google'
-                          ? 'Google'
-                          : (blurbFrom.name
-                            ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`)
-                            : blurbFrom.source)}
-                    </Text>
-                  ) : null}
-                </Text>
+                    marks. The glyph rides inside the Text and takes its
+                    baseline, which is what makes a glyph beside words read
+                    as one line rather than two objects. VoiceOver cannot
+                    read a glyph, so the label says the platform the glyph
+                    shows. A source with no mark keeps the long wording;
+                    there is nothing else to carry it. */}
+                {creditLine && (openBlurb ? (
+                  <PressableScale
+                    style={s.creditRow}
+                    scaleTo={0.97}
+                    // The line is 19pt tall and as wide as a handle; this
+                    // makes it a 44pt target without drawing one.
+                    hitSlop={{ top: 12, bottom: 12, left: 8, right: 16 }}
+                    onPress={openBlurb}
+                    accessibilityRole="link"
+                    accessibilityLabel={creditLabel}
+                    testID="blurb-credit"
+                  >
+                    {creditLine}
+                  </PressableScale>
+                ) : (
+                  <View style={s.creditRow} accessibilityLabel={creditLabel} testID="blurb-credit">
+                    {creditLine}
+                  </View>
+                ))}
                 {descFallback ? (
                   <Text style={s.descFallback} testID="blurb-fallback">{descFallback}</Text>
                 ) : null}
@@ -1652,10 +1671,15 @@ const s = StyleSheet.create({
   pick: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
   pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.8, textTransform: 'uppercase' },
 
-  // The paragraph's last run (see the block): one step under its size,
-  // quieter than the sentence it attributes. The link colour is the only
-  // thing that marks the source as reachable — an underline in this face
-  // is a scar.
+  // The credit's line: 4 more than the body's 2-pt gap, so 6 between the
+  // paragraph's last line and it — close enough to read as the quote's
+  // signature, apart enough not to read as a seventh line of it.
+  // `flex-start` keeps the press to the credit's own width: a tap on the
+  // empty card beside a handle should not leave the app.
+  creditRow: { alignSelf: 'flex-start', marginTop: 4 },
+  // One step under the paragraph's size, quieter than the sentence it
+  // attributes. The link colour is the only thing that marks the source
+  // as reachable — an underline in this face is a scar.
   credit: { color: colors.textTertiary, fontSize: 15 },
   // Two steps down from the paragraph, where the credit is one: the
   // credit is part of the quote and this is a note about it.

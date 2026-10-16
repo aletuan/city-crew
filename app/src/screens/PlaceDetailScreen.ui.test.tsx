@@ -1941,11 +1941,16 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
       reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
     }));
     const credit = screen.getByTestId('blurb-credit');
-    // The paragraph's last run, not a line of its own (12 Oct 2026).
-    expect(screen.getByTestId('detail-desc').contains(credit)).toBe(true);
-    expect(screen.getByTestId('detail-desc').textContent).toMatch(/floors\.\s+.*gowithchinne$/);
+    // A line of its own under the paragraph (17 Oct 2026), so the mark and
+    // the name can never be wrapped apart — and the paragraph is the words
+    // alone.
+    expect(screen.getByTestId('detail-desc').contains(credit)).toBe(false);
+    expect(screen.getByTestId('detail-desc').textContent).toBe('Shaded courtyard, two quiet floors.');
+    expect(screen.getByTestId('detail-desc').nextElementSibling).toBe(credit);
+    // A link, named for VoiceOver with the platform the glyph shows.
+    expect(credit.getAttribute('role')).toBe('link');
+    expect(credit.getAttribute('aria-label')).toBe('gowithchinne on Threads');
     fireEvent.click(credit);
-    // Once, through the paragraph's own handler.
     expect(openURL).toHaveBeenCalledTimes(1);
     // The mark carries the platform, so the words stop repeating it —
     // and the @ goes with them, being a second marker for the same thing.
@@ -1982,10 +1987,10 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     );
   });
 
-  // The words and the credit are one object to a reader. Tapping the
-  // paragraph used to do nothing at all, which made the source look like
-  // it was only reachable through a 12.5pt grey line.
-  it('opens the source from the blurb itself, not only from the credit', () => {
+  // Only the credit leaves the app (owner, 17 Oct 2026). A thumb resting
+  // on the words while reading, or starting a scroll on them, was thrown
+  // into Threads.
+  it('leaves the blurb itself inert, even when the credit goes somewhere', () => {
     show(place({
       ...blurb,
       reviewer_source: 'threads',
@@ -1993,7 +1998,8 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
       reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
     }));
     fireEvent.click(screen.getByTestId('detail-desc'));
-    expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@gowithchinne/post/DdeLnFwj10o');
+    expect(openURL).not.toHaveBeenCalled();
+    expect(screen.getByTestId('detail-desc').closest('[role="button"], [role="link"]')).toBeNull();
   });
 
   it('leaves the blurb inert when there is nowhere to send anybody', () => {
@@ -2017,6 +2023,8 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     }));
     const credit = screen.getByTestId('blurb-credit');
     fireEvent.click(credit);
+    expect(credit.getAttribute('role')).not.toBe('link');
+    expect(credit.getAttribute('aria-label')).toBe('Threads');
     // No handle, so the mark's own name is the label — and the glyph is
     // still there, because the platform is the whole of what is known.
     expect(credit.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
