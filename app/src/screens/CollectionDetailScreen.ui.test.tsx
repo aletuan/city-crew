@@ -4,8 +4,8 @@
 // to it, and that every control does what its label says:
 //
 // - the owner's list has a padlock or "Public" in the byline, an overflow
-//   menu with Add / Edit / Reorder / Share / Make public|private / Delete,
-//   and "Plan a trip" at the end of a non-empty list;
+//   menu with Add / Plan a trip / Edit / Share / Make public|private /
+//   Delete, and Add and Plan in the dock once the card has scrolled away;
 // - somebody else's list credits its curator, offers a heart that likes or
 //   unlikes it, and a menu of Save a copy / Share / Report — never Edit or
 //   Delete;
@@ -354,9 +354,6 @@ describe('your own list', () => {
     expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
-  // The "Add place" slot that ended the list went on 15 Oct 2026: it was
-  // the menu's first row again. Adding is the menu's; the foot of the
-  // list is "Plan a trip" — see its own describe below.
   // The old dashed slot at the end of the list stays gone; adding is the
   // card's quiet button and the menu's row (owner, 16 Oct 2026).
   it('ends a non-empty list with no Add place slot', () => {
@@ -631,9 +628,8 @@ describe('reordering', () => {
     show();
     expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     for (const slug of ['pho', 'cafe', 'museum']) expect(card(slug).onLongPress).toBeTypeOf('function');
-    // The rest of the screen stays what it was: the menu, the plan button.
+    // The rest of the screen stays what it was: the menu.
     expect(button('More')).toBeTruthy();
-    expect(button('Plan a trip')).toBeTruthy();
     for (const label of ['Done', 'Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
   });
 
@@ -1411,28 +1407,53 @@ describe('signed out', () => {
 // where the Add place slot stood, wearing the planner's own paw. The
 // planner decides the city, so this button only sends the slug.
 describe('Plan a trip', () => {
-  it('ends the card, wears the paw, and sends the list to the planner as a fresh ask each time', () => {
+  // Never on the card (owner, 16 Oct 2026): the menu always, the dock once
+  // scrolled — see "the actions and the dock".
+  it('is not on the card', () => {
     show();
-    expect(screen.getByTestId('collection-desc').contains(button('Plan a trip'))).toBe(true);
-    expect(button('Plan a trip').querySelector('[data-icon="paw"]')).toBeTruthy();
-    fireEvent.click(button('Plan a trip'));
+    expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
+    expect(screen.queryByTestId('collection-add')).toBeNull();
+  });
+
+  it('is in the owner’s menu, under Add place, wearing the paw, and sends the list as a fresh ask each time', () => {
+    show();
+    openMenu();
+    const row = screen.getByTestId('collection-menu-plan');
+    expect(row.querySelector('[data-icon="paw-outline"]')).toBeTruthy();
+    const labels = [...document.querySelectorAll('[aria-modal] [role="button"]')].map((b) => b.textContent);
+    expect(labels.indexOf('Plan a trip')).toBe(labels.indexOf('Add place') + 1);
+    fireEvent.click(row);
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', { screen: 'IdeasHome', params: { from: 'old-quarter', at: expect.any(Number) } });
     const first = spies.goTo.mock.calls[0][1].params.at;
-    fireEvent.click(button('Plan a trip'));
+    openMenu();
+    fireEvent.click(screen.getByTestId('collection-menu-plan'));
     expect(spies.goTo.mock.calls[1][1].params.at).toBeGreaterThanOrEqual(first);
   });
 
   it('is not offered on a list with nothing to plan from', () => {
     state.mine = [collection({}, [])];
     show();
-    expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
+    openMenu();
+    expect(screen.queryByTestId('collection-menu-plan')).toBeNull();
+    expect(menuRow('Add place')).toBeTruthy();
   });
 
-  it('is offered on somebody else’s public list too', () => {
+  it('leads a visitor’s menu, above Save a copy', () => {
     state.mine = [];
     state.cols = [theirs()];
     show();
-    expect(button('Plan a trip')).toBeTruthy();
+    openMenu();
+    const labels = [...document.querySelectorAll('[aria-modal] [role="button"]')].map((b) => b.textContent);
+    expect(labels.filter(Boolean).slice(0, 2)).toEqual(['Plan a trip', 'Save a copy']);
+  });
+
+  it('is not in a visitor’s menu for an empty list', () => {
+    state.mine = [];
+    state.cols = [theirs({}, [])];
+    show();
+    openMenu();
+    expect(screen.queryByTestId('collection-menu-plan')).toBeNull();
+    expect(menuRow('Save a copy')).toBeTruthy();
   });
 });
 
@@ -1617,7 +1638,8 @@ describe('the chips', () => {
     state.mine = [collection({}, four)];
     show();
     fireEvent.click(chip('eats'));
-    expect(screen.getByTestId('collection-plan')).toBeTruthy();
+    openMenu();
+    expect(screen.getByTestId('collection-menu-plan')).toBeTruthy();
   });
 
   // A chosen kind the list no longer carries is let go, not kept as a
@@ -1667,7 +1689,7 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4 placesPlan a trip');
+    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4 places');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
@@ -1847,15 +1869,6 @@ describe('the actions and the dock', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
-  it('gives the owner a quiet Add beside the Plan, and Add goes to Explore', () => {
-    const { parent } = show();
-    const add = screen.getByTestId('collection-add');
-    expect(add.getAttribute('aria-label')).toBe('Add place');
-    expect(add.textContent).toBe('Add');
-    expect(screen.getByTestId('collection-desc').contains(add)).toBe(true);
-    fireEvent.click(add);
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
-  });
 
   it('keeps Add place in the ⋯ menu as well', () => {
     show();
@@ -1863,13 +1876,6 @@ describe('the actions and the dock', () => {
     expect(menuRow('Add place')).toBeTruthy();
   });
 
-  it('gives a visitor the Plan alone', () => {
-    state.mine = [];
-    state.cols = [theirs()];
-    show();
-    expect(screen.queryByTestId('collection-add')).toBeNull();
-    expect(button('Plan a trip')).toBeTruthy();
-  });
 
   it('rises into the dock once the card has gone and the bar has ducked', () => {
     state.ducked = true;
@@ -1881,7 +1887,10 @@ describe('the actions and the dock', () => {
     const dock = screen.getByTestId('collection-dock');
     fireEvent.click(screen.getByTestId('collection-dock-plan'));
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.objectContaining({ params: expect.objectContaining({ from: 'old-quarter' }) }));
-    fireEvent.click(screen.getByTestId('collection-dock-add'));
+    const add = screen.getByTestId('collection-dock-add');
+    // The quiet one: glass, its word short, its name whole for VoiceOver.
+    expect(add.getAttribute('aria-label')).toBe('Add place');
+    fireEvent.click(add);
     expect(parent.navigate).toHaveBeenCalledWith('Explore');
     expect(dock.textContent).toBe('AddPlan a trip');
   });
