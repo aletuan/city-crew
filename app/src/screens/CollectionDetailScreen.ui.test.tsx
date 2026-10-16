@@ -27,7 +27,7 @@
 // has its own rendering concerns and what this screen owes it is the tap.
 
 import React from 'react';
-import { Alert, PanResponder, type PanResponderCallbacks } from 'react-native';
+import { AccessibilityInfo, Alert, PanResponder, type PanResponderCallbacks } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
@@ -617,12 +617,14 @@ describe('reordering', () => {
    *  a real 700 ms wait was the flake under coverage, where the whole run
    *  slows and the beat is no longer a beat. */
   const pastTheBeat = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
+  let announce: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     cardProps.clear();
     responder.config = null;
+    announce = vi.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
   });
-  afterEach(() => { vi.useRealTimers(); });
+  afterEach(() => { vi.useRealTimers(); announce.mockRestore(); });
 
   it('lets the owner hold any card of the list as it is, with no mode to enter first', () => {
     show();
@@ -678,11 +680,14 @@ describe('reordering', () => {
     drop();
     expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
-    expect(screen.getByText('Saving…')).toBeTruthy();
+    expect(announce).not.toHaveBeenCalled();
     await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
-    expect(screen.getByText('Saved')).toBeTruthy();
+    // Said to VoiceOver, which cannot see the card land; nothing drawn
+    // beside the ⋯, where it used to push the title over on every drag.
+    expect(announce).toHaveBeenCalledWith('Order saved');
+    for (const label of ['Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
     expect(spies.mineReload).toHaveBeenCalled();
     expect(spies.colsReload).toHaveBeenCalled();
     // The menu is still there beside the report.
@@ -792,7 +797,7 @@ describe('reordering', () => {
     await pastTheBeat();
     expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
-    expect(screen.queryByText('Saving…')).toBeNull();
+    expect(announce).not.toHaveBeenCalled();
   });
 
   // Held, then let go without moving: the finger came up on the card's
@@ -863,7 +868,8 @@ describe('reordering', () => {
     await act(async () => { land(); await vi.advanceTimersByTimeAsync(0); });
     expect(spies.reorderCollection).toHaveBeenCalledTimes(2);
     expect(spies.reorderCollection).toHaveBeenLastCalledWith('old-quarter', ['cafe', 'museum', 'pho']);
-    expect(screen.getByText('Saved')).toBeTruthy();
+    // Once, when the last order is in, not once per write.
+    expect(announce).toHaveBeenCalledTimes(1);
   });
 
   it('goes back to the saved order and says so when the order cannot be saved', async () => {
@@ -873,8 +879,7 @@ describe('reordering', () => {
     await pastTheBeat();
     expect(alert).toHaveBeenCalledWith('Could not save the order', 'timeout');
     expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
-    expect(screen.queryByText('Saving…')).toBeNull();
-    expect(screen.queryByText('Saved')).toBeNull();
+    expect(announce).not.toHaveBeenCalled();
   });
 
   it('writes a waiting move when the screen goes', () => {
@@ -1896,15 +1901,63 @@ describe('the actions and the dock', () => {
     expect(dock.textContent).toBe('PlacePlan a trip');
   });
 
-  it('names the list in a visitor’s dock, beside the Plan', () => {
+  // Six on every side, so a button sits in the island as the island sits
+  // in the screen; the dock's own 18 / 10 / 8 are for a line of text.
+  const inset = () => {
+    const st = getComputedStyle(screen.getByTestId('collection-dock').firstElementChild!);
+    return [st.paddingTop, st.paddingRight, st.paddingBottom, st.paddingLeft];
+  };
+
+  it('holds its two buttons the same distance from every edge', () => {
+    state.ducked = true;
+    show();
+    pastTheCard();
+    settle();
+    expect(inset()).toEqual(['6px', '6px', '6px', '6px']);
+  });
+
+  it('offers a visitor the copy in the dock, beside the Plan', () => {
     state.ducked = true;
     state.mine = [];
     state.cols = [theirs()];
+    const { raw } = show();
+    pastTheCard();
+    settle();
+    expect(screen.getByTestId('collection-dock').textContent).toBe('Save a copyPlan a trip');
+    expect(screen.queryByTestId('collection-dock-add')).toBeNull();
+    expect(inset()).toEqual(['6px', '6px', '6px', '6px']);
+    // The same copy the ⋯ menu makes: the form, waiting, nothing written.
+    fireEvent.click(screen.getByTestId('collection-dock-copy'));
+    expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
+      copyFrom: expect.objectContaining({ sourceId: 'c1', cityId: 'hanoi' }),
+    });
+  });
+
+  it('asks a signed-out visitor to sign in before the copy', () => {
+    state.ducked = true;
+    state.uid = null;
+    state.mine = [];
+    state.cols = [theirs()];
+    const { raw } = show();
+    pastTheCard();
+    settle();
+    fireEvent.click(screen.getByTestId('collection-dock-copy'));
+    expect(spies.askToSignIn).toHaveBeenCalledWith('copy', expect.any(Function));
+    expect(raw.navigate).not.toHaveBeenCalledWith('CollectionForm', expect.anything());
+  });
+
+  it('names the list instead where there is no city to file a copy under', () => {
+    state.ducked = true;
+    state.mine = [];
+    state.cols = [theirs({ city_id: null } as Partial<Collection>)];
+    state.city = null;
     show();
     pastTheCard();
     settle();
     expect(screen.getByTestId('collection-dock').textContent).toBe('Old Quarter eatsPlan a trip');
-    expect(screen.queryByTestId('collection-dock-add')).toBeNull();
+    expect(screen.queryByTestId('collection-dock-copy')).toBeNull();
+    // A line of text keeps the dock's own lead-in.
+    expect(inset()[3]).toBe('18px');
   });
 
   it('stays away while the card is still on screen, or while the bar holds the dock', () => {
