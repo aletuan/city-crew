@@ -3,13 +3,15 @@
 // the photo's sheet, the dialog while the phone reads, and the card that
 // says it has finished.
 //
-// The words and the arithmetic are `lib/photoScore`'s; this only draws
-// them, so a threshold corrected there changes every one of these at once.
+// The words and the arithmetic are `lib/photoScore`'s, and the reasons
+// are the interpreter's of whichever scorer read the photograph; this
+// only draws them, so a threshold corrected there changes every one of
+// these at once.
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, type ColorValue, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { band, bandLabel, explainScore, toTen, type PhotoScore } from '../lib/photoScore';
+import { band, bandLabel, interpreterOf, toTen, type PhotoScore } from '../lib/photoScore';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 import { Card, PressableScale, useReducedMotion } from './ui';
@@ -150,11 +152,17 @@ export function ScoreBadge({ score, testID }: { score: PhotoScore; testID?: stri
   );
 }
 
-/** The score in the photo's sheet: the number, its word, and why. */
+/**
+ * The score in the photo's sheet: the number, its word, and why. A row
+ * from a scorer this build cannot interpret keeps its number and word,
+ * which every scorer shares, and says no reasons rather than reading its
+ * measurements on another scorer's scales.
+ */
 export function ScoreBlock({ score }: { score: PhotoScore }) {
   const { t } = useI18n();
   if (score.aesthetic == null) return null;
   const ten = toTen(score.aesthetic);
+  const how = interpreterOf(score.scorer);
   return (
     <View style={s.block} testID="score-block">
       <View style={s.blockTop}>
@@ -164,8 +172,12 @@ export function ScoreBlock({ score }: { score: PhotoScore }) {
           <Text style={s.bandText}>{bandLabel(band(ten), t)}</Text>
         </View>
       </View>
-      <Text style={s.blockWhy} testID="score-why">{explainScore(score, t)}</Text>
-      <Text style={s.blockSource}>{t('Measured on this phone by Apple Vision.', 'Đo trên máy bằng Apple Vision.', 'この端末でApple Visionが測定。')}</Text>
+      {how && (
+        <>
+          <Text style={s.blockWhy} testID="score-why">{how.explain(score, t)}</Text>
+          <Text style={s.blockSource} testID="score-source">{how.source(t)}</Text>
+        </>
+      )}
     </View>
   );
 }

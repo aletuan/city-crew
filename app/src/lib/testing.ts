@@ -73,6 +73,11 @@ export type Asked = {
    *  whether a second write from the same person is a conflict or a change
    *  of mind, which for a one-row-per-person table is the whole design. */
   upsert?: boolean;
+  /** The upsert's conflict target, when it names one. It must be a
+   *  unique constraint on exactly those columns or Postgres refuses the
+   *  write, so a target that drifted from the table's key is a guide
+   *  whose every save fails (`photo_scores`, keyed per scorer). */
+  onConflict?: string;
   /** The row cap, when one was asked for. A suggestion list that quietly
    *  stopped capping itself is a dropdown that grows without limit. */
   limit?: number;
@@ -109,7 +114,11 @@ export function fakeSupabase() {
       // Recorded as an insert carrying a flag rather than as its own verb:
       // what a test wants to assert about an upsert is the row, and every
       // existing assertion for a write already reads `op: 'insert'`.
-      upsert: (row: unknown) => { asked.op = 'insert'; asked.payload = row; asked.upsert = true; return b; },
+      upsert: (row: unknown, opts?: { onConflict?: string }) => {
+        asked.op = 'insert'; asked.payload = row; asked.upsert = true;
+        if (opts?.onConflict) asked.onConflict = opts.onConflict;
+        return b;
+      },
       delete: () => { asked.op = 'delete'; return b; },
       eq: (k: string, v: unknown) => { asked.filters.push([k, v]); return b; },
       in: (k: string, v: unknown) => { asked.filters.push([k, v]); return b; },

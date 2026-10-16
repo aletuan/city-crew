@@ -51,7 +51,7 @@ import { MAX_PER_PLACE } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
-import { bestOf, needsScore, scoreAll, toTen } from '../lib/photoScore';
+import { SHOWN, bestOf, needsScore, scoreAll, toTen, type PhotoScorer } from '../lib/photoScore';
 import { photoScorer } from '../lib/photoScoreNative';
 import { useSave } from '../lib/save';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
@@ -240,12 +240,12 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   // ── scoring ──
 
-  // Only what has not been read, or was read by an older scorer.
-  const unscored = shown.filter((p) => needsScore(p.score));
+  // Only what the shown scorer has not read, or read in an older version.
+  const unscored = shown.filter((p) => needsScore(p.score, SHOWN));
   const anyScored = unscored.length < shown.length;
   const best = bestOf(shown);
 
-  const startScoring = async (scorer: NonNullable<typeof photoScorer>, me: string) => {
+  const startScoring = async (scorer: PhotoScorer, me: string) => {
     stop.current = false;
     setScored(null);
     setScoring({ done: 0, total: unscored.length });
@@ -255,8 +255,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     await nextFrame();
     await nextFrame();
     const result = await scoreAll(unscored, {
-      read: (uri) => scorer.scoreAsync(uri),
-      save: (id, reading) => savePhotoScore(id, reading, me),
+      read: (uri) => scorer.read(uri),
+      save: (id, reading) => savePhotoScore(id, scorer, reading, me),
       onStep: (done) => setScoring((was) => ({ ...was, done, total: unscored.length })),
       stopped: () => stop.current,
     });
