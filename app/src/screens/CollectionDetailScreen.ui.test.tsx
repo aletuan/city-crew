@@ -3,17 +3,18 @@
 // One collection, opened. What is pinned here is who is allowed to do what
 // to it, and that every control does what its label says:
 //
-// - the owner's list has a padlock or "Public" in the byline, an overflow
-//   menu with Add / Plan a trip / Edit / Share / Make public|private /
-//   Delete, and Add and Plan in the dock once the card has scrolled away;
+// - the owner's list says Private or Public at the foot of its card, and
+//   that word opens the sheet that changes it; an overflow menu with Add /
+//   Plan a trip / Edit / Share / Delete, and Add and Plan in the dock once
+//   the card has scrolled away;
 // - somebody else's list credits its curator, offers a heart that likes or
 //   unlikes it, and a menu of Save a copy / Share / Report — never Edit or
 //   Delete;
 // - signed out, the heart and "Save a copy" open the sign-in sheet rather
 //   than failing;
-// - publishing refuses (as a sentence, not a Postgres code) while places
-//   are still under review, and otherwise flips the flag, reloads both
-//   catalogs and offers Undo;
+// - publishing is refused (as a sentence, not a Postgres code) while places
+//   are still under review — the Public row is dimmed and says why — and
+//   otherwise flips the flag, reloads both catalogs and offers Undo;
 // - reordering happens on the list itself: the owner holds a card and
 //   drags it to where it lands (or uses VoiceOver's Move up / Move down),
 //   a tip under the title says so, and the order saves itself a beat
@@ -226,6 +227,22 @@ const endModalFade = () => {
   }
 };
 
+/**
+ * Choose who can see the list: the word at the card's foot opens the
+ * sheet, and a row is pressed. The row runs its choice 220ms after the
+ * sheet starts to close (see `SheetRows`), so the clock is wound past it.
+ */
+const chooseVisibility = (key: 'public' | 'private') => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    fireEvent.click(screen.getByTestId(`sheet-action-${key}`));
+    act(() => { vi.advanceTimersByTime(220); });
+  } finally {
+    vi.useRealTimers();
+  }
+};
+
 /** Press a button in the last alert shown, by its label. */
 const pressInAlert = (label: string) => {
   const buttons = alert.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
@@ -305,7 +322,7 @@ describe('before the list is there', () => {
 });
 
 describe('your own list', () => {
-  it('prints the title, description, places in sort order and a private byline', () => {
+  it('prints the title, description, places in sort order, and Private at the card\u2019s foot', () => {
     state.mine = [collection({
       collection_places: [
         { sort_order: 2, places: { slug: 'pho' } },
@@ -318,8 +335,9 @@ describe('your own list', () => {
     expect(screen.getByText('Where we eat.')).toBeTruthy();
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
-    expect(screen.getByText('Private')).toBeTruthy();
-    expect(screen.getByTestId('collection-stats').textContent).toBe('3 places');
+    // In the foot, before the count — not under the title any more.
+    expect(screen.getByTestId('collection-stats').textContent).toBe('Private·3 places');
+    expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
     // No self-credit and no heart on your own list.
     expect(screen.queryByRole('button', { name: /like/i })).toBeNull();
@@ -335,7 +353,7 @@ describe('your own list', () => {
   it('says "place" for one, and "Public" once published', () => {
     state.mine = [collection({ is_public: true }, [PHO])];
     show();
-    expect(screen.getByText('Public')).toBeTruthy();
+    expect(screen.getByTestId('collection-visibility').textContent).toBe('Public');
     expect(screen.getByText(/1 place$/)).toBeTruthy();
     expect(screen.queryByText(/Private/)).toBeNull();
   });
@@ -375,7 +393,7 @@ describe('your own list', () => {
   it('offers the owner the full menu and nothing meant for visitors', () => {
     show();
     openMenu();
-    for (const label of ['Add place', 'Edit collection', 'Share', 'Make public', 'Delete collection']) {
+    for (const label of ['Add place', 'Edit collection', 'Share', 'Delete collection']) {
       expect(menuRow(label)).toBeTruthy();
     }
     // The order is changed on the list itself now, by holding a card.
@@ -384,12 +402,16 @@ describe('your own list', () => {
     expect(screen.queryByText('Report this list')).toBeNull();
   });
 
-  it('labels the publish row by the action it takes on a public list', () => {
-    state.mine = [collection({ is_public: true })];
-    show();
-    openMenu();
-    expect(menuRow('Make private')).toBeTruthy();
-    expect(screen.queryByText('Make public')).toBeNull();
+  it('keeps who can see the list out of the menu, either way round', () => {
+    for (const is_public of [false, true]) {
+      state.mine = [collection({ is_public })];
+      show();
+      openMenu();
+      expect(menuRow('Delete collection')).toBeTruthy();
+      expect(screen.queryByText('Make public')).toBeNull();
+      expect(screen.queryByText('Make private')).toBeNull();
+      cleanup();
+    }
   });
 
   it('Add place in the menu closes the menu and goes to Explore', async () => {
@@ -453,7 +475,7 @@ describe('your own list', () => {
     fireEvent.click(menuRow('Share'));
     expect(alert).toHaveBeenCalledWith(
       'Sharing is coming',
-      'This list is private. You can make it public from this menu — share links are on the way.',
+      'This list is private. Tap Private at the foot of its card to make it public — share links are on the way.',
     );
   });
 
@@ -467,10 +489,56 @@ describe('your own list', () => {
 });
 
 describe('publishing', () => {
+  it('asks who can see the list, says what each answer means, and ticks the one given', () => {
+    show();
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    expect(screen.getByText('Who can see this list?')).toBeTruthy();
+    const pub = screen.getByTestId('sheet-action-public');
+    const priv = screen.getByTestId('sheet-action-private');
+    expect(pub.textContent).toBe('PublicShown in Explore and in search');
+    expect(priv.textContent).toBe('PrivateOnly you can see it');
+    expect(priv.querySelector('[data-testid="sheet-selected"]')).toBeTruthy();
+    expect(pub.querySelector('[data-testid="sheet-selected"]')).toBeNull();
+    expect(priv.getAttribute('aria-selected')).toBe('true');
+    expect(pub.getAttribute('aria-selected')).not.toBe('true');
+  });
+
+  it('moves the tick to Public on a public list', () => {
+    state.mine = [collection({ is_public: true })];
+    show();
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    expect(screen.getByTestId('sheet-action-public').querySelector('[data-testid="sheet-selected"]')).toBeTruthy();
+    expect(screen.getByTestId('sheet-action-private').querySelector('[data-testid="sheet-selected"]')).toBeNull();
+  });
+
+  it('writes nothing when the answer chosen is the one already given', () => {
+    for (const is_public of [false, true]) {
+      state.mine = [collection({ is_public })];
+      show();
+      chooseVisibility(is_public ? 'public' : 'private');
+      expect(spies.setCollectionPublic).not.toHaveBeenCalled();
+      expect(screen.queryByText('Undo')).toBeNull();
+      cleanup();
+    }
+  });
+
+  it('draws the padlock or the globe as the foot\u2019s glyph, with a chevron and no pin', () => {
+    show();
+    let foot = screen.getByTestId('collection-stats');
+    expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
+    expect(foot.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
+    expect(foot.querySelector('[data-icon="location-outline"]')).toBeNull();
+    cleanup();
+    state.mine = [collection({ is_public: true })];
+    show();
+    foot = screen.getByTestId('collection-stats');
+    expect(foot.querySelector('[data-icon="globe-outline"]')).toBeTruthy();
+    expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeNull();
+  });
+
   it('makes a list public, reloads both catalogs and offers Undo', async () => {
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make public'));
+    chooseVisibility('public');
     expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true);
     expect(await screen.findByText('This collection is now public')).toBeTruthy();
     expect(spies.mineReload).toHaveBeenCalled();
@@ -485,16 +553,14 @@ describe('publishing', () => {
   it('makes a public list private again', async () => {
     state.mine = [collection({ is_public: true })];
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make private'));
+    chooseVisibility('private');
     expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false);
     expect(await screen.findByText('This collection is private again')).toBeTruthy();
   });
 
   it('dismisses the banner when it is tapped', async () => {
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make public'));
+    chooseVisibility('public');
     const banner = await screen.findByText('This collection is now public');
     fireEvent.click(banner);
     expect(screen.queryByText('This collection is now public')).toBeNull();
@@ -502,8 +568,7 @@ describe('publishing', () => {
 
   it('makes Undo a button of its own, not nested inside another', async () => {
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make public'));
+    chooseVisibility('public');
     await screen.findByText('This collection is now public');
     const undo = button('Undo');
     // A button inside a button is one element to VoiceOver.
@@ -519,22 +584,33 @@ describe('publishing', () => {
       place('museum', 'Fine Arts Museum', { is_published: false, review_status: 'flagged' } as Partial<Place>),
     ];
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make public'));
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    const row = screen.getByTestId('sheet-action-public');
+    // On the row reached for, in place of what Public would mean.
+    expect(row.textContent).toBe(
+      'PublicPrivate until every place is live — 1 place is not public yet, and 1 was not accepted.',
+    );
+    expect(row.getAttribute('aria-disabled')).toBe('true');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      fireEvent.click(row);
+      act(() => { vi.runAllTimers(); });
+    } finally {
+      vi.useRealTimers();
+    }
     expect(spies.setCollectionPublic).not.toHaveBeenCalled();
-    expect(screen.getByText(
-      'Private until every place is live — 1 place is not public yet, and 1 was not accepted.',
-    )).toBeTruthy();
-    // Nothing to undo: nothing happened.
+    // The sheet stays open over a refused tap, and nothing to undo.
+    expect(screen.getByTestId('sheet-action-public')).toBeTruthy();
     expect(screen.queryByText('Undo')).toBeNull();
+    // Private stays a live row.
+    expect(screen.getByTestId('sheet-action-private').getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('pluralises the blocker sentence', () => {
     const pending = { is_published: false, review_status: 'pending' } as Partial<Place>;
     state.places = [place('pho', 'Pho 10', pending), place('cafe', 'Cafe Giang', pending), MUSEUM];
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make public'));
+    fireEvent.click(screen.getByTestId('collection-visibility'));
     expect(screen.getByText('Private until every place is live — 2 places are not public yet.')).toBeTruthy();
   });
 
@@ -542,17 +618,28 @@ describe('publishing', () => {
     state.mine = [collection({ is_public: true })];
     state.places = [place('pho', 'Pho 10', { review_status: 'flagged' } as Partial<Place>), CAFE, MUSEUM];
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make private'));
+    // Public itself is live while it is the answer already given.
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    expect(screen.getByTestId('sheet-action-public').getAttribute('aria-disabled')).not.toBe('true');
+    expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
+    cleanup();
+    show();
+    chooseVisibility('private');
     expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false);
     expect(await screen.findByText('This collection is private again')).toBeTruthy();
+    // And Undo, which would publish it again, says why it cannot — as a
+    // banner, since there is no sheet to dim a row in.
+    spies.setCollectionPublic.mockClear();
+    fireEvent.click(button('Undo'));
+    expect(spies.setCollectionPublic).not.toHaveBeenCalled();
+    expect(screen.getByText('Private until every place is live — 1 was not accepted.')).toBeTruthy();
+    expect(screen.queryByText('Undo')).toBeNull();
   });
 
   it('says so when the write fails, and shows no banner', async () => {
     spies.setCollectionPublic.mockRejectedValueOnce(new Error('offline'));
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make public'));
+    chooseVisibility('public');
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not publish', 'offline'));
     expect(spies.mineReload).not.toHaveBeenCalled();
     expect(screen.queryByText('This collection is now public')).toBeNull();
@@ -562,8 +649,7 @@ describe('publishing', () => {
     state.mine = [collection({ is_public: true })];
     spies.setCollectionPublic.mockRejectedValueOnce(new Error('nope'));
     show();
-    openMenu();
-    fireEvent.click(menuRow('Make private'));
+    chooseVisibility('private');
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not make private', 'nope'));
   });
 });
@@ -1092,16 +1178,14 @@ describe('tips', () => {
     state.mine = [collection({ is_public: true })];
     show();
     await settle();
-    openMenu();
-    fireEvent.click(menuRow('Make private'));
+    chooseVisibility('private');
     await settle();
     expect(await retiredNow()).not.toContain('publish');
     cleanup();
     state.mine = [collection()];
     show();
     await settle();
-    openMenu();
-    fireEvent.click(menuRow('Make public'));
+    chooseVisibility('public');
     await settle();
     expect(await retiredNow()).toContain('publish');
   });

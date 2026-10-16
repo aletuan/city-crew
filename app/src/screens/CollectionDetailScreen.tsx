@@ -29,11 +29,12 @@ import { useCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
+import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import type { TipId } from '../lib/tips';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, display, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
 
@@ -671,7 +672,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // Deliberately inert, and now inert for two different reasons — which
   // is why the sentence branches. A private list has no address to send
   // anyone to — and the sentence is about this list, not all of yours,
-  // since "Make public" sits in the same menu. A published one is visible
+  // and says where its switch is. A published one is visible
   // to everybody but the app still has no link to hand over, because
   // nothing here registers a URL scheme or a web address for a
   // collection. Either way the honest placeholder
@@ -686,9 +687,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         'このコレクションは公開中ですが、送れるリンクはまだありません。共有機能は近日公開予定です。',
       )
       : t(
-        'This list is private. You can make it public from this menu — share links are on the way.',
-        'Bộ sưu tập này đang riêng tư. Bạn có thể công khai nó từ menu này — liên kết chia sẻ sẽ sớm có.',
-        'このコレクションは非公開です。このメニューから公開できます。共有リンクは近日公開予定です。',
+        'This list is private. Tap Private at the foot of its card to make it public — share links are on the way.',
+        'Bộ sưu tập này đang riêng tư. Bấm Riêng tư ở cuối thẻ giới thiệu để công khai — liên kết chia sẻ sẽ sớm có.',
+        'このコレクションは非公開です。紹介カードの下の「非公開」から公開できます。共有リンクは近日公開予定です。',
       ),
   );
 
@@ -811,34 +812,96 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     ],
   );
 
-  /* The line under the title — the owner's alone now (owner, 16 Oct
-     2026). The counts and the heart went down into the card, beside the
-     curator's face and the words they are about, so "who made this, what
-     is in it, how is it doing" reads as one block rather than a header
-     line and a card that each said half. What stays up here is the one
-     fact an owner checks before leaving the screen: whether anybody else
-     can see this list. A visitor's header is the title alone.
+  /* Who can see this list — at the foot of the card now, and the place
+     to change it (owner, 16 Oct 2026). It sat under the title as a
+     line of its own and was changed from the ⋯ menu, which split one
+     fact across two places: the header said what it was, a menu row
+     said how to make it the other thing. The header lost it so the
+     title stands alone the way a visitor's does, and the menu lost its
+     row so the way to the switch is the word that names the state —
+     tap "Private" to choose who sees it.
+
+     The owner's alone. A visitor only ever meets a public list, and a
+     word telling them so would be a fact about nothing they can change.
 
      The padlock the list already uses for the same fact, so a private
      collection looks the same wherever you meet it — and a globe once it
      is not private any more. Published reads in colour, because it is the
      state worth checking; Private stays grey, the resting state, which
-     does not need announcing.
+     does not need announcing. The chevron is what says the word opens
+     something; without it the row reads as a label.
 
-     No self-credit. `CollectionsScreen` already states it — your own
-     byline is the padlock's business, not a credit line. */
-  const byline = col && owned ? (
-    <View style={s.metaRow}>
+     Tapping opens a choice rather than flipping the switch: a word that
+     changes who can see your list on one touch is a word nobody would
+     dare tap to find out what it does. */
+  const [whoSees, setWhoSees] = useState(false);
+  const visibility = col && owned ? (
+    <PressableScale
+      style={s.visibility}
+      scaleTo={0.94}
+      haptic="selection"
+      hitSlop={{ top: 14, bottom: 14, left: 12, right: 8 }}
+      onPress={() => setWhoSees(true)}
+      accessibilityRole="button"
+      accessibilityHint={t(
+        'Choose who can see this list',
+        'Chọn ai có thể xem danh sách này',
+        'このリストを見られる人を選びます',
+      )}
+      testID="collection-visibility"
+    >
       <Ionicons
         name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
-        size={13}
+        size={15}
         color={isPublic ? colors.ok : colors.textTertiary}
       />
       <Text style={isPublic ? s.metaPublic : s.meta}>
         {isPublic ? t('Public', 'Công khai', '公開') : t('Private', 'Riêng tư', '非公開')}
       </Text>
-    </View>
-  ) : undefined;
+      <Ionicons name="chevron-down" size={13} color={colors.textTertiary} />
+    </PressableScale>
+  ) : null;
+
+  /* The two answers, each with what it means where the reader will meet
+     it. Choosing is doing: the sheet closes and the banner says what
+     happened and holds the Undo, as the menu row's did, so there is no
+     confirmation here either (see `setPublic`). The answer already true
+     carries the tick, and choosing it again changes nothing — a write
+     that re-saves the same boolean would raise a banner announcing a
+     change that did not happen.
+
+     No Cancel row. No other sheet in the app has one: the backdrop and
+     the grabber are the way out, and the backdrop is a control VoiceOver
+     names "Close".
+
+     While places are still under review Public is drawn but dimmed, with
+     the sentence the banner would have said as its description. Hidden,
+     the owner would be left looking for a switch; live, it would open
+     onto a refusal. Dimmed, the reason is on the row they reached for.
+     A public list that has since gained a pending place keeps the row
+     live — it is the tick, and there is nothing to refuse. */
+  const choose = (next: boolean) => () => { if (next !== isPublic) setPublic(next); };
+  const whoSeesRows: SheetAction[] = [
+    {
+      key: 'public',
+      icon: 'globe-outline',
+      title: t('Public', 'Công khai', '公開'),
+      desc: blocked && !isPublic
+        ? blockerSentence(blockers, t)
+        : t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます'),
+      disabled: blocked && !isPublic,
+      selected: isPublic,
+      onPress: choose(true),
+    },
+    {
+      key: 'private',
+      icon: 'lock-closed-outline',
+      title: t('Private', 'Riêng tư', '非公開'),
+      desc: t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます'),
+      selected: !isPublic,
+      onPress: choose(false),
+    },
+  ];
 
   /* One heart, and it is both the gesture and the tally — the shape the
      shelf card settled on: two marks for one meaning is one too many, and
@@ -888,15 +951,20 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     ) : null
   ) : null;
 
-  /* The card's foot: how many places, and the heart. Under a hairline,
-     the count at the start and the heart at the end — the two are
-     separate facts now that the handle is not between them, and the end
-     of the row is where a thumb finds a gesture. Drawn on every list,
-     yours included: the count is the one line every list has. */
+  /* The card's foot: who can see it, how many places, and the heart.
+     Under a hairline, the facts at the start and the heart at the end —
+     the end of the row is where a thumb finds a gesture. Drawn on every
+     list, yours included: the count is the one line every list has. On
+     your own the visibility leads, and the count follows after a dot
+     without its pin — the globe or padlock is already the row's glyph,
+     and two glyphs on one line of facts read as two controls. */
   const cardFoot = col ? (
     <View style={s.cardFoot} testID="collection-stats">
       <View style={s.footCount}>
-        <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+        {visibility}
+        {visibility
+          ? <Text style={s.meta}>·</Text>
+          : <Ionicons name="location-outline" size={15} color={colors.textTertiary} />}
         <Text style={s.meta}>
           {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
         </Text>
@@ -1289,7 +1357,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   return (
     <Screen
       title={title}
-      subtitle={byline}
       onBack={() => navigation.goBack()}
       backTestID="collection-back"
       right={headerRight}
@@ -1471,20 +1538,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 label={t('Share', 'Chia sẻ', '共有')}
                 onPress={() => act(share)}
               />
-              {/* Above Delete, below the rest: it is the one row that changes
-                  who else can see this, which is a heavier thing than editing
-                  a title and a lighter one than destroying the list.
-
-                  The label is the action, not the state. "Public" with a tick
-                  would leave you working out which way the row is pointing;
-                  the header already says which one you are in. */}
-              <MenuRow
-                icon={isPublic ? 'lock-closed-outline' : 'globe-outline'}
-                label={isPublic
-                  ? t('Make private', 'Chuyển riêng tư', '非公開にする')
-                  : t('Make public', 'Công khai', '公開する')}
-                onPress={() => act(() => setPublic(!isPublic))}
-              />
+              {/* No publish row: who can see the list is changed where it
+                  is said, at the foot of the card — see `visibility`. */}
               <MenuRow
                 icon="trash-outline"
                 label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除')}
@@ -1580,6 +1635,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         actions={curatorActions}
         onClose={() => setAboutCurator(false)}
       />
+      <ActionSheet
+        visible={whoSees}
+        onClose={() => setWhoSees(false)}
+        actions={whoSeesRows}
+        header={
+          <Text style={s.sheetTitle} accessibilityRole="header">
+            {t('Who can see this list?', 'Ai có thể xem danh sách này?', 'このリストを見られるのは？')}
+          </Text>
+        }
+      />
     </Screen>
   );
 }
@@ -1595,7 +1660,13 @@ const s = StyleSheet.create({
   // The 20pt was a workaround for long collection names truncating, which
   // `Screen` answers better: two lines at 26pt hold far more of a name
   // than one line at 20 ever did.
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  // The glyph, the word and the chevron, as one press. The 5 the header
+  // line it came from used, so the three still read as one phrase.
+  visibility: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // A question, so it is the sheet's whole header: the rows under it are
+  // the answers, and the title VoiceOver hears first. The size and face
+  // Visited's sheet titles use.
+  sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold, paddingHorizontal: 4 },
   meta: { color: colors.textTertiary, ...type.meta },
   // The heart and its tally, one fact. At the end of the card's foot now:
   // in the header it had to sit beside the count, or it read as a second
