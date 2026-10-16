@@ -62,7 +62,11 @@ const TIP_ICON = 'bulb-outline' as const;
  *  The menu is named by where it is and what it looks like, "the three-dot
  *  button (⋯) at the top right", not by the glyph alone. A bare "⋯" in a
  *  sentence read as an ellipsis, a gap in the text rather than a button to
- *  go and find. The glyph stays in brackets so the eye can match it. */
+ *  go and find. The glyph stays in brackets so the eye can match it.
+ *
+ *  Publishing is not in that menu any more: the tip names the word to
+ *  tap, Private, and where it is, so the eye goes to the card's foot
+ *  rather than to a menu that no longer has the row. */
 const TIPS: Record<TipId, (t: T) => string> = {
   reorder: (t) => t(
     'Hold a place, then drag it to change the order. Changes save on their own.',
@@ -70,9 +74,9 @@ const TIPS: Record<TipId, (t: T) => string> = {
     'スポットを長押ししてドラッグすると並び順を変えられます。変更は自動で保存されます。',
   ),
   publish: (t) => t(
-    'This list is private. Tap the three-dot button (⋯) at the top right and choose Make public so anyone can see it.',
-    'Bộ sưu tập này đang riêng tư. Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Công khai để ai cũng xem được.',
-    'このコレクションは非公開です。右上の「⋯」ボタンから「公開する」を選ぶと、誰でも見られます。',
+    'This list is private. Tap Private at the foot of the card under the title and choose Public so anyone can see it.',
+    'Bộ sưu tập này đang riêng tư. Bấm Riêng tư ở cuối thẻ giới thiệu rồi chọn Công khai để ai cũng xem được.',
+    'このコレクションは非公開です。紹介カードの下の「非公開」を押して「公開」を選ぶと、誰でも見られます。',
   ),
   edit: (t) => t(
     'To rename it or change the description, tap the three-dot button (⋯) at the top right and choose Edit collection.',

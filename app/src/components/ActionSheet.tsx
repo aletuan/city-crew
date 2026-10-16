@@ -70,6 +70,11 @@ export type SheetAction = {
    *  sheet over nothing: a row that looks live and does nothing teaches
    *  the reader not to trust rows. Its `desc` should say when. */
   disabled?: boolean;
+  /** The row that is already true — for a sheet that is a choice
+   *  between states rather than a list of acts (who can see a list:
+   *  Public or Private). A tick at the row's end, and said as selected,
+   *  so the reader sees where they are before choosing where to go. */
+  selected?: boolean;
   onPress: () => void;
 };
 
@@ -148,6 +153,9 @@ export function SheetRows({ actions, onClose, titlesOnly }: {
           accessibilityRole="button"
           accessibilityLabel={a.title}
           accessibilityHint={a.desc}
+          // `aria-selected`, which react-native-web keeps and
+          // `accessibilityState` it drops — see `Chip` in `ui`.
+          aria-selected={a.selected}
         >
           <View style={s.glyph} testID="sheet-glyph">
             <Ionicons
@@ -160,6 +168,11 @@ export function SheetRows({ actions, onClose, titlesOnly }: {
             <Text style={[s.rowTitle, a.destructive && s.rowTitleBad]}>{a.title}</Text>
             {!titlesOnly && <Text style={s.rowDesc}>{a.desc}</Text>}
           </View>
+          {a.selected && (
+            <View style={s.glyph} testID="sheet-selected">
+              <Ionicons name="checkmark" size={19} color={colors.accent} />
+            </View>
+          )}
         </PressableScale>
       ))}
     </View>
