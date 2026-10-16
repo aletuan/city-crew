@@ -25,6 +25,7 @@ import html
 import json
 import math
 import os
+import random
 import sys
 import urllib.parse
 import urllib.request
@@ -149,6 +150,50 @@ def load_image(photo: Photo, cache: Path):
     return Image.open(path).convert("RGB")
 
 
+class VectorCache:
+    """Each catalog photograph's image vector, per model, one JSON line
+    each. The first full run took 1 h 28 min on the owner's Mac, nearly all
+    of it in reading 6,211 photographs; the sentences, the rule and its
+    thresholds are what change between runs, and with the vectors kept a
+    run that changes only those takes seconds. Appended and flushed per
+    photograph, so a run stopped halfway keeps what it read, and a line cut
+    short by the stop is skipped on the next read.
+
+    Keyed by the photograph's address, as `load_image` keys the file: a
+    replaced photograph has a new address. The owner's test photographs
+    are not kept here, since a file can change under the same path and
+    there are only tens of them."""
+
+    def __init__(self, path: Path):
+        self.path = path
+        self.known: dict[str, list[float]] = {}
+        self.file = None
+        if path.exists():
+            for line in path.read_text().splitlines():
+                try:
+                    key, vec = json.loads(line)
+                except ValueError:
+                    continue
+                self.known[key] = vec
+
+    @staticmethod
+    def key(photo: Photo) -> str:
+        return hashlib.sha1(photo.uri.encode()).hexdigest()
+
+    def get(self, photo: Photo) -> list[float] | None:
+        return self.known.get(self.key(photo))
+
+    def put(self, photo: Photo, vec: list[float]) -> None:
+        if self.file is None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.file = self.path.open("a")
+        # Six places: the margins that decide a verdict are thousandths.
+        rounded = [round(x, 6) for x in vec]
+        self.file.write(json.dumps([self.key(photo), rounded]) + "\n")
+        self.file.flush()
+        self.known[self.key(photo)] = rounded
+
+
 # ── models ────────────────────────────────────────────────────────────
 
 class FakeModel:
@@ -251,7 +296,15 @@ def read_photo(photo: Photo, img: list[float], groups: dict[str, list[list[float
         verdict = "unclear"
     elif margin >= fit_margin:
         verdict = "fit"
-    elif margin <= -off_margin:
+    # Second or third is not off-topic. The first full run (16 Oct 2026)
+    # judged by the margin alone and called 791 of 6,211 photographs off
+    # while only 327 had their place's category outside the top three: a
+    # cafe's cake that scored `eats` a hair above `cafes` was off-topic,
+    # and so were 132 covers. A neighbouring category is a reason to look,
+    # not a verdict.
+    elif set(photo.categories) & set(ranked[:3]):
+        verdict = "unclear"
+    elif ranked[0] == "_off" or margin <= -off_margin:
         verdict = "off"
     else:
         verdict = "unclear"
@@ -275,6 +328,7 @@ def summarise(readings: list[Reading]) -> dict:
         s["top1"] = sum(r.ranked[0] in r.photo.categories for r in cat) / len(cat)
         s["top3"] = sum(bool(set(r.ranked[:3]) & set(r.photo.categories)) for r in cat) / len(cat)
         s["verdicts"] = dict(Counter(r.verdict for r in cat))
+        s["covers"] = sum(r.photo.cover for r in cat)
         s["covers_off"] = sum(r.photo.cover and r.verdict == "off" for r in cat)
         based = [r for r in cat if r.vision_fit is not None]
         s["vision_scored"] = len(based)
@@ -312,48 +366,103 @@ def write_csv(readings: list[Reading], groups: list[str], path: Path) -> None:
                         *(f"{r.by_group[g]:.4f}" for g in groups)])
 
 
-def write_html(readings: list[Reading], summary: dict, model: str, path: Path) -> None:
+# The owner marks a photograph Hợp / Chưa rõ / Lạc đề under it, and the
+# marks are copied out of the page: the first answers about the catalog
+# that a person gave rather than a rule (steps B5 and B7). Kept in the
+# browser only so that a reload does not lose them.
+MARKS_SCRIPT = """<script>
+const KEY='photo-fit-marks';let marks={};try{marks=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function show(){document.querySelectorAll('figure').forEach(f=>f.querySelectorAll('.pick button')
+ .forEach(b=>b.classList.toggle('on',marks[f.dataset.id]?.owner===b.dataset.v)));
+ document.getElementById('marks').value=JSON.stringify(marks)}
+document.addEventListener('click',e=>{const b=e.target.closest('.pick button');if(!b)return;
+ const f=b.closest('figure');marks[f.dataset.id]={place:f.dataset.slug,owner:b.dataset.v,model:f.dataset.verdict};
+ try{localStorage.setItem(KEY,JSON.stringify(marks))}catch(e){}show()});
+document.getElementById('copy').onclick=()=>navigator.clipboard.writeText(document.getElementById('marks').value);
+show();
+</script>"""
+
+
+def sampled(rows: list, n: int, rng) -> list:
+    """`n` of them at random, or all when `n` is 0. A page of all 6,211
+    photographs is one nobody reads to the end, and the end is where the
+    rarer kinds of mistake sit; a few of each kind, read through, is what
+    a person can check."""
+    return rows if n <= 0 or len(rows) <= n else rng.sample(rows, n)
+
+
+def confusions(cat: list[Reading], top: int) -> list[tuple[str, str, list[Reading]]]:
+    """The most frequent (place's category, model's first choice) pairs that
+    disagree, among single-category places: the mistakes worth a look."""
+    pairs: dict[tuple[str, str], list[Reading]] = defaultdict(list)
+    for r in cat:
+        if len(r.photo.categories) == 1 and r.ranked[0] != r.photo.categories[0]:
+            pairs[(r.photo.categories[0], r.ranked[0])].append(r)
+    best = sorted(pairs.items(), key=lambda kv: -len(kv[1]))[:top]
+    return [(own, guess, rows) for (own, guess), rows in best]
+
+
+def write_html(readings: list[Reading], summary: dict, model: str, path: Path,
+               sample: int = 0, seed: int = 1) -> None:
     e = html.escape
+    rng = random.Random(seed)
 
     def card(r: Reading) -> str:
         p = r.photo
-        top = " · ".join(f"{e(g)} {r.by_group[g]:.3f}" for g in r.ranked[:3])
+        top = " · ".join(f"<span class={'own' if g in p.categories else 'g'}>{e(g)} {r.by_group[g]:.3f}</span>"
+                         for g in r.ranked[:3])
         marks = []
         if p.cover:
-            marks.append("<b class=cover>bìa</b>")
+            marks.append("<b class=cover>BÌA</b>")
         if r.vision_fit is False:
             marks.append("<b class=vis>Vision: lệch</b>")
         if p.truth and r.ranked[0] != p.truth:
             marks.append("<b class=vis>sai</b>")
-        m = "" if r.margin is None else f"{r.margin:+.3f}"
-        return (f"<figure class={r.verdict}><img loading=lazy src='{e(p.uri)}'>"
-                f"<figcaption><b>{e(p.slug)}</b> [{e(', '.join(p.categories))}] {' '.join(marks)}<br>"
-                f"đoán: {top}<br>chênh {m} → <b>{r.verdict}</b></figcaption></figure>")
+        m = "—" if r.margin is None else f"{r.margin:+.3f}"
+        pick = "".join(f"<button data-v={v}>{t}</button>"
+                       for v, t in (("fit", "Hợp"), ("unclear", "Chưa rõ"), ("off", "Lạc đề")))
+        return (f"<figure class={r.verdict} data-id='{e(p.id)}' data-slug='{e(p.slug)}' data-verdict={r.verdict}>"
+                f"<img loading=lazy src='{e(p.uri)}'><figcaption><b>{e(p.slug)}</b> {' '.join(marks)}<br>"
+                f"mong đợi: <span class=own>{e(', '.join(p.categories) or '—')}</span><br>"
+                f"đoán: {top}<br>chênh {m} → <b>{r.verdict}</b>"
+                f"<div class=pick>{pick}</div></figcaption></figure>")
 
     def section(title: str, rows: list[Reading]) -> str:
         if not rows:
             return ""
-        return f"<h2>{e(title)} ({len(rows)})</h2><div class=grid>{''.join(card(r) for r in rows)}</div>"
+        shown = sorted(sampled(rows, sample, rng), key=lambda r: (r.margin is None, r.margin or 0))
+        count = f"{len(shown)} / {len(rows)}" if len(shown) < len(rows) else f"{len(rows)}"
+        return f"<h2>{e(title)} ({count})</h2><div class=grid>{''.join(card(r) for r in shown)}</div>"
 
-    cat = sorted((r for r in readings if r.photo.truth is None), key=lambda r: (r.margin is None, r.margin or 0))
+    cat = [r for r in readings if r.photo.truth is None]
     extra = [r for r in readings if r.photo.truth is not None]
     body = (
         f"<h1>Photo fit — {e(model)}</h1><pre>{e(json.dumps(summary, indent=2, ensure_ascii=False))}</pre>"
         + section("Ảnh thử của chủ sản phẩm", extra)
-        + section("Có vẻ lạc đề", [r for r in cat if r.verdict == "off"])
-        + section("Chưa rõ (chênh thấp nhất trước)", [r for r in cat if r.verdict == "unclear"])
+        # Covers first: a cover called off-topic is the one mistake B7
+        # allows none of.
+        + section("Ảnh bìa bị coi là lạc đề", [r for r in cat if r.verdict == "off" and r.photo.cover])
+        + section("Có vẻ lạc đề", [r for r in cat if r.verdict == "off" and not r.photo.cover])
+        + section("Chưa rõ", [r for r in cat if r.verdict == "unclear"])
+        + "".join(section(f"Địa điểm {own}, mô hình đoán {guess}", rows) for own, guess, rows in confusions(cat, 5))
         + section("Vision cho là lệch, mô hình cho là hợp", [r for r in cat if r.vision_fit is False and r.verdict == "fit"])
         + section("Hợp", [r for r in cat if r.verdict == "fit"])
+        + "<h2>Đánh giá của anh</h2><p>Bấm Hợp / Chưa rõ / Lạc đề dưới mỗi ảnh, rồi Copy khung này gửi lại.</p>"
+        "<textarea id=marks rows=6 readonly></textarea><button id=copy>Copy</button>"
     )
     path.write_text(
         "<!doctype html><meta charset=utf-8><title>Photo fit</title><style>"
         "body{font:14px system-ui;margin:16px;background:#111;color:#eee}"
-        ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}"
+        ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}"
         "figure{margin:0;background:#1d1d1d;border-radius:8px;overflow:hidden;border:2px solid #333}"
         "figure.off{border-color:#d55}figure.unclear{border-color:#c93}figure.fit{border-color:#3a6}"
-        "img{width:100%;aspect-ratio:1;object-fit:cover;display:block}figcaption{padding:8px;line-height:1.4}"
-        "b.cover{color:#fc6}b.vis{color:#f88}pre{background:#1d1d1d;padding:12px;overflow:auto}"
-        "</style>" + body)
+        "img{width:100%;aspect-ratio:1;object-fit:cover;display:block}figcaption{padding:8px;line-height:1.5}"
+        ".own{color:#7d7;font-weight:600}b.cover{color:#fc6}b.vis{color:#f88}"
+        ".pick button{margin:6px 4px 0 0;padding:4px 8px;border-radius:6px;border:1px solid #555;background:#222;color:#eee}"
+        ".pick button.on{background:#2b5;border-color:#2b5;color:#000}"
+        "pre,textarea{background:#1d1d1d;color:#eee;padding:12px;width:100%;box-sizing:border-box}"
+        "</style>" + body + MARKS_SCRIPT)
+
 
 
 # ── main ──────────────────────────────────────────────────────────────
@@ -370,7 +479,11 @@ def main() -> None:
     ap.add_argument("--fit-margin", type=float, default=0.0,
                     help="own category ahead of every other by at least this: fit")
     ap.add_argument("--off-margin", type=float, default=0.02,
-                    help="another ahead of every own category by more than this: off")
+                    help="own category outside the top three, and another ahead by more than this "
+                         "or the off-topic sentences first: off")
+    ap.add_argument("--sample", type=int, default=12,
+                    help="photographs per section of the HTML page, at random; 0 for all")
+    ap.add_argument("--seed", type=int, default=1, help="which random sample")
     ap.add_argument("--out", type=Path, default=HERE / "out")
     a = ap.parse_args()
 
@@ -389,13 +502,18 @@ def main() -> None:
 
     a.out.mkdir(parents=True, exist_ok=True)
     cache = a.out / "cache"
+    vectors = VectorCache(cache / f"vectors-{model.name}.jsonl")
     readings = []
     for i, p in enumerate(photos, 1):
-        try:
-            img = model.image(p, cache)
-        except Exception as err:  # noqa: BLE001 — one dead link is no reason to stop
-            print(f"skip {p.id}: {err}", file=sys.stderr)
-            continue
+        img = None if p.truth else vectors.get(p)
+        if img is None:
+            try:
+                img = model.image(p, cache)
+            except Exception as err:  # noqa: BLE001 — one dead link is no reason to stop
+                print(f"skip {p.id}: {err}", file=sys.stderr)
+                continue
+            if not p.truth:
+                vectors.put(p, img)
         readings.append(read_photo(p, img, groups, a.fit_margin, a.off_margin))
         if i % 50 == 0:
             print(f"{i}/{len(photos)}", file=sys.stderr)
@@ -403,7 +521,7 @@ def main() -> None:
     summary = summarise(readings)
     stem = a.out / f"photo-fit-{model.name}"
     write_csv(readings, list(groups), stem.with_suffix(".csv"))
-    write_html(readings, summary, model.name, stem.with_suffix(".html"))
+    write_html(readings, summary, model.name, stem.with_suffix(".html"), a.sample, a.seed)
     (stem.with_suffix(".json")).write_text(json.dumps(summary, indent=2, ensure_ascii=False))
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     print(f"\n→ {stem.with_suffix('.html')}")

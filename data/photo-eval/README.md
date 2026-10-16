@@ -36,14 +36,22 @@ python eval.py --extra ~/Pictures/citycrew-test   # thêm ảnh thử của anh 
 
 Kết quả nằm trong `out/` và không được commit:
 
-- `photo-fit-<model>.html`: **mở file này trong trình duyệt.** Ảnh xếp theo
-  ba nhóm "lạc đề", "chưa rõ", "hợp", có viền màu, và ảnh có độ chênh thấp
-  nhất xếp trước. Ảnh bìa được đánh dấu.
+- `photo-fit-<model>.html`: **mở file này trong trình duyệt.** Mỗi nhóm lấy
+  ngẫu nhiên 12 ảnh (`--sample 20` để xem nhiều hơn, `--sample 0` để xem hết,
+  `--seed 2` để đổi mẫu). Thứ tự các nhóm: ảnh bìa bị coi là lạc đề, lạc đề,
+  chưa rõ, năm cặp category hay nhầm nhất, rồi đến hợp. Mỗi ảnh ghi category
+  **mong đợi** (tô xanh), top 3 mô hình đoán kèm điểm, độ chênh và kết luận.
+- **Ba nút Hợp / Chưa rõ / Lạc đề dưới mỗi ảnh** để anh tự chấm. Phần chấm
+  được giữ lại khi tải lại trang. Bấm **Copy** ở cuối trang rồi gửi lại.
 - `photo-fit-<model>.csv`: điểm của từng ảnh với từng category.
 - `photo-fit-<model>.json`: bản tóm tắt các số đo, dùng để dán vào
   `docs/photo-critic.md` mục 4.
 
-Ảnh đã tải về được giữ trong `out/cache/`, nên những lần chạy sau nhanh hơn.
+Ảnh đã tải về và **vector của từng ảnh** được giữ trong `out/cache/`
+(`vectors-<model>.jsonl`). Lần chạy đầu với một mô hình mất khoảng 1,5 giờ
+cho toàn catalog. Từ lần sau, nếu chỉ đổi câu mô tả, luật hay ngưỡng thì chỉ
+mất vài giây, vì mô hình chỉ còn phải đọc lại các câu. Nếu chạy dở rồi dừng,
+lần sau chạy tiếp từ chỗ dừng.
 
 ## Ảnh thử của anh (B6)
 
@@ -67,10 +75,15 @@ anh chụp nên không vướng giấy phép.
 - **`top1` / `top3`**: tỉ lệ ảnh mà category đoán đầu tiên, hoặc một trong
   ba category đầu, trùng với category của địa điểm. Đây chỉ là thước đo gần
   đúng: ảnh menu của một quán cà phê vẫn mang category "cafes".
-- **`verdicts`**: số ảnh rơi vào mỗi mức Hợp / Chưa rõ / Lạc đề, theo ngưỡng
-  `--fit-margin` và `--off-margin`. Hai ngưỡng này chỉ là giá trị khởi đầu.
+- **`verdicts`**: số ảnh rơi vào mỗi mức:
+  - **Hợp**: category của địa điểm được đoán đầu tiên;
+  - **Chưa rõ**: nó đứng thứ hai hoặc thứ ba, hoặc ảnh là menu hay biển hiệu;
+  - **Lạc đề**: nó không lọt top 3, và category khác hơn nó quá
+    `--off-margin` (0,02), hoặc nhóm "trời, đường, xe" đứng đầu.
+
   Chốt ngưỡng là việc của B7, sau khi xem trang HTML.
-- **`covers_off`**: số ảnh bìa bị coi là lạc đề. Phải bằng **0** thì mới đạt.
+- **`covers`** / **`covers_off`**: số ảnh bìa, và số ảnh bìa bị coi là lạc
+  đề. `covers_off` phải bằng **0** thì mới đạt.
 - **`vision_fit`** so với **`model_fit_where_vision_scored`**: luật dựa trên
   nhãn Vision (bản thử ngày 16/10) so với mô hình, trên cùng những ảnh đã
   chấm.
@@ -80,3 +93,8 @@ anh chụp nên không vướng giấy phép.
 
 Xong thì gửi lại file `.json` (và ảnh chụp trang HTML nếu có chỗ đáng bàn) để
 ghi vào `docs/photo-critic.md` và chốt B7.
+
+## Kiểm tra script
+
+`python3 -m unittest test_eval` (không cần venv). `npm test` trong `data/`
+và CI cũng chạy phần này.
