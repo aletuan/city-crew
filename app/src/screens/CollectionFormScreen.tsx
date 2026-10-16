@@ -23,10 +23,10 @@ import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
-import { Chip, PressableScale, successHaptic } from '../components/ui';
+import { KindToggles } from '../components/KindPill';
+import { PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
-import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
@@ -436,22 +436,14 @@ export default function CollectionFormScreen({ navigation, route }: {
               'リストのスポットから。タップで非表示・再表示を切り替えます。',
             )}
           </Text>
-          <View style={s.kindsGrid}>
-            {offered.map((k) => {
-              const on = shownKinds.includes(k);
-              return (
-                <Chip
-                  key={k}
-                  label={categoryLabel(k, t)}
-                  icon={CATEGORIES[k].icon}
-                  iconColor={CATEGORIES[k].color}
-                  active={on}
-                  onPress={() => setKindPick(chooseKind(kindChoice, k, !on))}
-                  testID={`collection-kind-pick-${k}`}
-                />
-              );
-            })}
-          </View>
+          {/* Drawn as the list page draws them (`KindToggles`), so the
+              form previews the page; a hidden one fades in place. */}
+          <KindToggles
+            kinds={offered}
+            shown={shownKinds}
+            onToggle={(k, show) => setKindPick(chooseKind(kindChoice, k, show))}
+            testID="collection-kind-pick"
+          />
         </View>
       ) : null}
       {/* `choices` is only ever non-empty when there are members to draw
@@ -543,7 +535,6 @@ const s = StyleSheet.create({
   kindsHint: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, marginBottom: 10 },
   // Wrapped, all nine in view: a row that scrolls sideways hides most of
   // what it holds (the cover grid's note says the same of its chips).
-  kindsGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 },
   thumbImg: { width: '100%', height: '100%' },
   auto: {
     alignItems: 'center', justifyContent: 'center', gap: 3,

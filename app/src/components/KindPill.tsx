@@ -20,11 +20,17 @@
 // card, and anybody walking from a card to its pin has it.
 //
 // Not the glyph. The glyph is for where there is no word (the pin) or
-// where the chip is a control (Explore's filter row, which is the map's
-// legend, and the list form's toggles). Three of the nine glyphs do not
-// say their kind on sight — Views is a building, Culture a library,
-// Focus a book — so beside a word they add width and no meaning. A dot
-// is "information", a glyph is "something you can press, or the map".
+// where the chip is the map's legend (Explore's filter row). Three of
+// the nine glyphs do not say their kind on sight — Views is a building,
+// Culture a library, Focus a book — so beside a word they add width and
+// no meaning. A dot is "information", a glyph is "the map".
+//
+// ── the list form, too (owner, 16 Oct 2026) ──
+//
+// The form's show/hide toggles were `Chip`s — glyph, border, 40pt tall —
+// beside a list page that draws the same kinds as these pills. The owner
+// asked for the form to read like the page, so the toggles are pills now
+// (`KindToggles`) and a kind is no longer said two ways about one list.
 
 import React from 'react';
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -38,17 +44,19 @@ import { PressableScale } from './ui';
  * out. A key the table has not learned keeps its word, tidied, and has
  * no dot: a colour is a category's, and an unknown one has none to give.
  */
-export function KindPill({ kind, more = 0, chosen = false, testID }: {
+export function KindPill({ kind, more = 0, chosen = false, off = false, testID }: {
   kind: string; more?: number;
   /** Lit as a chosen filter — see `KindPills`. */
   chosen?: boolean;
+  /** Hidden by the list's owner — see `KindToggles`. */
+  off?: boolean;
   testID?: string;
 }) {
   const { t } = useI18n();
   const style = CATEGORIES[kind];
   return (
-    <View style={[s.pill, chosen && s.pillOn]} testID={testID}>
-      {style ? <View style={[s.dot, { backgroundColor: style.color }]} /> : null}
+    <View style={[s.pill, chosen && s.pillOn, off && s.pillOff]} testID={testID}>
+      {style ? <View style={[s.dot, { backgroundColor: off ? colors.textTertiary : style.color }]} /> : null}
       <Text style={[s.label, chosen && s.labelOn]} numberOfLines={1}>{categoryLabel(kind, t)}</Text>
       {more > 0 ? (
         <>
@@ -111,6 +119,49 @@ export function KindPills({ kinds, chosen = [], onPick, style, testID }: {
   );
 }
 
+/**
+ * The list form's show/hide row: the same pills, each a toggle. A shown
+ * kind is drawn exactly as the list page draws it — the form previews
+ * the page — and a hidden one stays in place, faded, its dot greyed: the
+ * colour is what ties a kind to its pins, and a hidden kind has no pins
+ * on the page. Nothing changes size, so the row never reflows on a tap.
+ *
+ * Not `KindPills`' `chosen`: there a lit pill is the exception (a
+ * filter); here shown is the rule and hidden the exception, and the
+ * accent would have lit every pill on a list nobody had touched.
+ */
+export function KindToggles({ kinds, shown, onToggle, testID }: {
+  kinds: readonly string[];
+  shown: readonly string[];
+  onToggle: (kind: string, show: boolean) => void;
+  testID?: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <View style={s.row} testID={testID}>
+      {kinds.map((k) => {
+        const on = shown.includes(k);
+        return (
+          <PressableScale
+            key={k}
+            onPress={() => onToggle(k, !on)}
+            haptic="selection"
+            scaleTo={0.94}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={categoryLabel(k, t)}
+            accessibilityState={{ selected: on }}
+            aria-selected={on}
+            testID={testID ? `${testID}-${k}` : undefined}
+          >
+            <KindPill kind={k} off={!on} testID={testID ? `${testID}-${k}-pill` : undefined} />
+          </PressableScale>
+        );
+      })}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   // Moved here whole from PlaceCard, where it was the vibe pill. No
   // border: a bordered pill beside a line of grey text read as a control
@@ -133,6 +184,10 @@ const s = StyleSheet.create({
   // from the pill's own resting glass, as `Chip`'s is from its clear one,
   // so the change is the same size on both.
   pillOn: { backgroundColor: colors.surfaceGlassStrong, borderColor: colors.borderGlass },
+  // Hidden, in the form: faded whole rather than struck through — a
+  // strike on a 13pt word in a 25pt pill reads as a rendering fault.
+  // 0.4 was the figure agreed with the owner (16 Oct 2026).
+  pillOff: { opacity: 0.4 },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
   // Full-strength text: one word on a card is the label, not an aside.
   label: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
