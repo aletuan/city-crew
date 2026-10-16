@@ -82,12 +82,39 @@ export type ScorerKey = { id: string; version: number };
  *  `id` and `version`. Apple Vision's is `photoScoreNative`'s. */
 export type PhotoScorer = ScorerKey & { read: (uri: string) => Promise<Reading> };
 
+/**
+ * One measured quality of a photograph, as the detailed analysis lists
+ * it: what it is, what was measured, and whether it helped. Not a score
+ * out of ten — no scorer measures composition or colour as a number, and
+ * a row that said "Composition 9.1" would be inventing one (owner, 16 Oct
+ * 2026, from the design review's seven bars).
+ */
+export type Detail = {
+  key: string;
+  label: string;
+  /** What was measured, in words. */
+  value: string;
+  tone: 'good' | 'warn' | 'plain';
+  /** Where the photograph stands among the catalog's on this quality,
+   *  0–1, higher better — only where higher is better. */
+  rank?: number;
+  /** The rank, said. */
+  note?: string;
+};
+
 /** What the app knows of one scorer's rows: how to say them. */
 export type Interpreter = ScorerKey & {
   /** The line saying who measured. */
   source: (t: T) => string;
   /** The sentence under the number: why. */
   explain: (score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T) => string;
+  /** The measured qualities, one row each. */
+  details: (score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T) => Detail[];
+  /** What would have helped, one line per thing that held it back. */
+  suggestions: (score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T) => string[];
+  /** Where the photograph's number stands among this scorer's rows in
+   *  the catalog, 0–1; null when it has none. */
+  standing: (score: Pick<PhotoScore, 'aesthetic'>) => number | null;
 };
 
 /** Every scorer whose rows the app can put into words, by name. */

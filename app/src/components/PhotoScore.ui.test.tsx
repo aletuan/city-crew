@@ -33,7 +33,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
 }));
 
-import { ScoreBadge, ScoreGlyph, ScoreTen, ScoreWhy, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
+import { ScoreBadge, ScoreDetails, ScoreGlyph, ScoreTen, ScoreWhy, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer: 'apple-vision', scorer_version: 1, aesthetic: 0.68, is_utility: false,
@@ -100,6 +100,68 @@ describe('ScoreWhy', () => {
   it('gives no reasons for a row with no number', () => {
     render(<ScoreWhy score={score({ aesthetic: null })} />);
     expect(screen.queryByTestId('score-why')).toBeNull();
+  });
+});
+
+describe('ScoreDetails', () => {
+  // Sharp, level, with a crowd and a tilted horizon to suggest about.
+  const measured = score({
+    aesthetic: 0.635,
+    signals: { brightness: 0.5, sharpness: 2768, tilt: 6, labels: [{ id: 'interior_room', p: 0.8 }], peopleArea: 0.4 },
+  });
+
+  it('is folded until opened, and opens from its head', () => {
+    const onToggle = vi.fn();
+    render(<ScoreDetails score={measured} open={false} onToggle={onToggle} />);
+    const toggle = screen.getByTestId('score-detail-toggle');
+    expect(toggle.textContent).toBe('Detailed analysis');
+    expect(toggle.querySelector('[data-icon="chevron-down"]')).not.toBeNull();
+    expect(screen.queryByTestId('score-detail-light')).toBeNull();
+    fireEvent.click(toggle);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens on where the number stands, then a row per measured quality', () => {
+    render(<ScoreDetails score={measured} open onToggle={() => {}} />);
+    expect(screen.getByTestId('score-detail-toggle').querySelector('[data-icon="chevron-up"]')).not.toBeNull();
+    expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 80% of the catalog\'s photos');
+    expect(screen.getByTestId('score-detail-light').textContent).toBe('LightWell lit');
+    expect(screen.getByTestId('score-detail-level').textContent).toBe('HorizonHorizon tilted 6°');
+  });
+
+  // Good and held back look different, so a guide can scan the column.
+  it('marks each row by whether it helped, held back, or neither', () => {
+    render(<ScoreDetails score={measured} open onToggle={() => {}} />);
+    const glyph = (key: string) => screen.getByTestId(`score-detail-${key}`).querySelector('[data-icon]')!.getAttribute('data-icon');
+    expect(glyph('light')).toBe('checkmark-circle');
+    expect(glyph('level')).toBe('alert-circle');
+    expect(glyph('green')).toBe('ellipse-outline');
+  });
+
+  // The bar is the photograph's place in the catalog, on focus alone.
+  it('draws a bar only where there is a rank, as wide as the rank', () => {
+    render(<ScoreDetails score={measured} open onToggle={() => {}} />);
+    expect(screen.getByTestId('score-detail-focus-rank').style.width).toBe('80%');
+    expect(screen.getByTestId('score-detail-focus').textContent).toContain('Sharper than 80% of the catalog\'s photos');
+    expect(screen.queryByTestId('score-detail-light-rank')).toBeNull();
+  });
+
+  it('suggests what would have helped, and only when something held it back', () => {
+    const { unmount } = render(<ScoreDetails score={measured} open onToggle={() => {}} />);
+    const tips = screen.getByTestId('score-tips');
+    expect(tips.textContent).toContain('To improve');
+    expect(tips.textContent).toContain('Straighten it');
+    expect(tips.textContent).toContain('fewer people');
+    unmount();
+    render(<ScoreDetails score={score({ signals: { brightness: 0.5 } })} open onToggle={() => {}} />);
+    expect(screen.queryByTestId('score-tips')).toBeNull();
+  });
+
+  it('is nothing for a scorer it cannot read, or a row with no number', () => {
+    const { rerender } = render(<ScoreDetails score={score({ scorer: 'later-model' })} open onToggle={() => {}} />);
+    expect(screen.queryByTestId('score-detail')).toBeNull();
+    rerender(<ScoreDetails score={score({ aesthetic: null })} open onToggle={() => {}} />);
+    expect(screen.queryByTestId('score-detail')).toBeNull();
   });
 });
 

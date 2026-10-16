@@ -60,7 +60,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetRows, type SheetAction } from './ActionSheet';
-import { ScoreTen, ScoreWhy } from './PhotoScore';
+import { ScoreDetails, ScoreTen, ScoreWhy } from './PhotoScore';
 import PhotoViewer, { settledPage } from './PhotoViewer';
 import { useSheetDrag } from './sheetDrag';
 import { PressableScale } from './ui';
@@ -111,6 +111,9 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   if (!visible) pager.current.open = false;
 
   const [full, setFull] = useState(false);
+  // The detailed analysis, open or folded: kept while the gallery is,
+  // so a guide who opened it reads it on every photograph they swipe to.
+  const [detail, setDetail] = useState(false);
 
   const rise = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -227,6 +230,8 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
             </View>
             {p.score && <ScoreTen score={p.score} />}
           </View>
+
+          {p.score && <ScoreDetails score={p.score} open={detail} onToggle={() => setDetail((was) => !was)} />}
 
           <SheetRows actions={visible ? actionsFor(p) : []} onClose={onClose} titlesOnly />
         </ScrollView>
