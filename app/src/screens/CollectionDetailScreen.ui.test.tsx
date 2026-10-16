@@ -53,6 +53,7 @@ const spies = vi.hoisted(() => ({
 
 const state = vi.hoisted(() => ({
   uid: 'me' as string | null,
+  profile: { handle: 'andy', avatar_url: '' } as { handle: string; avatar_url: string },
   mine: [] as unknown[],
   cols: [] as unknown[],
   places: [] as unknown[],
@@ -67,7 +68,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null, profile: state.profile }),
 }));
 vi.mock('../lib/i18n', () => ({
   // The real fallback order, so a test can switch language and the screen
@@ -236,6 +237,7 @@ beforeEach(() => {
   spies.blockUser.mockImplementation(async () => {});
   spies.profileLookup.mockImplementation(() => ({ data: null, loading: false }));
   state.uid = 'me';
+  state.profile = { handle: 'andy', avatar_url: '' };
   state.mine = [collection()];
   state.cols = [];
   state.places = [PHO, CAFE, MUSEUM];
@@ -405,8 +407,9 @@ describe('your own list', () => {
     const card = screen.getByTestId('collection-desc');
     expect(card.textContent).toContain('Where we eat.');
     expect(getComputedStyle(card).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    // The note glyph leads; the pencil is the menu's own framed one.
-    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    // Your face leads (owner, 16 Oct 2026); the pencil stays, the menu's own framed one.
+    expect(screen.getByTestId('collection-curator').textContent).toBe('@andy');
+    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
@@ -423,7 +426,7 @@ describe('your own list', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
     expect(screen.getByText('Add a few words about this list.')).toBeTruthy();
     const card = screen.getByTestId('collection-desc-empty');
-    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    expect(card.textContent).toMatch(/^@andyAdd a few words/);
     expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
     expect(card.getAttribute('role')).not.toBe('button');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
@@ -1769,13 +1772,32 @@ describe('the introduction card', () => {
     expect(sheetRow(/Report this list/)).toBeNull();
   });
 
-  it('gives your own list the note glyph and the count, and no curator', () => {
+  it('leads your own list with your own face and handle, from your profile, as no button', () => {
+    state.cols = [];
+    state.profile = { handle: 'andy', avatar_url: 'https://img/me.jpg' };
+    state.mine = [collection({ curator_handle: '@old-handle' })];
+    show();
+    const row = screen.getByTestId('collection-curator');
+    expect(row.textContent).toBe('@andy');
+    expect(row.getAttribute('role')).not.toBe('button');
+    expect(row.querySelector('img[src="https://img/me.jpg"]')).toBeTruthy();
+    const card = screen.getByTestId('collection-desc');
+    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
+    expect(screen.getByTestId('collection-stats')).toBeTruthy();
+    // Still nobody looked up, and still no credit in the header.
+    expect(spies.profileLookup).toHaveBeenCalledWith(null);
+    expect(screen.getAllByText('@andy')).toHaveLength(1);
+  });
+
+  it('draws a face slot for your own list with no photo, and the note glyph only with no handle', () => {
     state.cols = [];
     state.mine = [collection()];
     show();
+    expect(screen.getByTestId('collection-curator').querySelector('[data-icon="person-outline"]')).toBeTruthy();
+    cleanup();
+    state.profile = { handle: '', avatar_url: '' };
+    show();
     expect(screen.queryByTestId('collection-curator')).toBeNull();
-    const card = screen.getByTestId('collection-desc');
-    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
-    expect(screen.getByTestId('collection-stats')).toBeTruthy();
+    expect(screen.getByTestId('collection-desc').querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
   });
 });

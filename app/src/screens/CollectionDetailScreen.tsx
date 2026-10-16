@@ -261,7 +261,7 @@ function DraggableCard({
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const uid = session?.user?.id;
   const cols = useCollections();
   // Both catalogs, because a list of your own that is still private is in
@@ -985,14 +985,27 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       onPress: blockCurator,
     });
   }
+  /* ── your own face, too (owner, 16 Oct 2026) ──
+     Your own list leads with your face and handle as well, as the
+     owner’s view in the review drew it: the card reads the same from
+     both sides, and the reader sees what a visitor will see. From the
+     signed-in profile rather than `curator_handle`, which is a stamp
+     taken when the row was made and does not follow a changed handle.
+     Never a button: there is nothing to report or block about yourself.
+     A face slot always, since an account is always a person; the note
+     glyph comes back only for a profile with no handle yet. */
+  const ownTag = owned && profile?.handle ? atHandle(profile.handle) : '';
+  const faceTag = owned ? ownTag : curatorTag;
   const curatorFace = (
     <>
-      {holdForFace ? <Avatar url={curatorAvatar} size={28} /> : null}
-      <Text style={s.curatorTag} numberOfLines={1}>{curatorTag}</Text>
+      {owned
+        ? <Avatar url={profile?.avatar_url || null} size={28} />
+        : holdForFace ? <Avatar url={curatorAvatar} size={28} /> : null}
+      <Text style={s.curatorTag} numberOfLines={1}>{faceTag}</Text>
     </>
   );
-  const curatorRow = curatorTag ? (
-    curatorActions.length > 0 ? (
+  const curatorRow = faceTag ? (
+    !owned && curatorActions.length > 0 ? (
       <PressableScale
         style={s.curator}
         onPress={() => setAboutCurator(true)}
@@ -1167,9 +1180,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}
           >
             <View style={s.descTop}>
-              {/* The note glyph stays on your own list, where there is no
-                  face to lead with: it says "your words go here". */}
-              {owned ? (
+              {/* The note glyph, only on your own list and only when there
+                  is no handle to lead with: it says "your words go here". */}
+              {owned && !ownTag ? (
                 <Ionicons
                   name="document-text-outline"
                   size={20}
