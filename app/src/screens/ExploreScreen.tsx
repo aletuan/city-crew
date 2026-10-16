@@ -24,9 +24,9 @@ import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
 import { CitySwitcherModal } from '../components/CitySwitcher';
-import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarFrame, useTabBarLift } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, PressableScale, Skeleton, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
-import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
+import { DockSlot, useDockOffer } from '../components/DockSlot';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, chosenKind, pinTint, type CategoryStyle } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
@@ -153,65 +153,24 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
   onAdd: () => void;
 }) {
   const { t } = useI18n();
-  const lift = useTabBarLift();
-  const frame = useTabBarFrame();
   const light = useScheme().scheme === 'light';
-  const fade = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(fade, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? 220 : 140,
-      useNativeDriver: true,
-    }).start();
-  }, [visible, fade]);
-
+  // The dock's geometry, glass and arrival are `DockSlot`'s, shared with
+  // the collection page; what is Explore's is the offer inside it.
   return (
-    <Animated.View
-      pointerEvents={visible ? 'box-none' : 'none'}
-      style={[
-        s.nudgeWrap,
-        {
-          // The same number the bar uses, from the same hook. These were
-          // two copies of one formula, and when the bar came down to
-          // clear the home indicator rather than the whole safe-area
-          // inset, this one stayed 28pt higher — so the offer arrived in
-          // the dock the bar had left, and sat above it.
-          bottom: lift,
-          // And the bar's width, from its own hook for the same reason.
-          left: frame.left,
-          width: frame.width,
-          opacity: fade,
-          // Rises into the dock from below — the direction the bar left in.
-          transform: [{
-            translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }),
-          }],
-        },
-      ]}
-    >
-      <PressableScale
-        onPress={onSearch}
-        scaleTo={0.985}
-        style={[s.nudge, { shadowOpacity: light ? 0.16 : 0.35 }]}
-        accessibilityRole="button"
-      >
-        {/* Same clip-on-its-own-layer trick the bar uses: iOS draws
-            shadows outside bounds, so overflow:hidden on the shadowed
-            view would eat them. */}
-        <View style={s.nudgeClip}><GlassMaterial /></View>
-        <Ionicons name="search" size={18} color={colors.text} style={glassHalo(light)} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[s.nudgeTitle, glassHalo(light)]} numberOfLines={1}>
-            {t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
-          </Text>
-          <Text style={[s.nudgeSub, glassHalo(light)]} numberOfLines={1}>
-            {t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
-          </Text>
-        </View>
-        {/* `tall`: the 44 every other control has, and the same "Add" as
-            Gallery's header — see `AddPill`. */}
-        <AddPill tall label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
-      </PressableScale>
-    </Animated.View>
+    <DockSlot visible={visible} onPress={onSearch} accessibilityRole="button">
+      <Ionicons name="search" size={18} color={colors.text} style={glassHalo(light)} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[s.nudgeTitle, glassHalo(light)]} numberOfLines={1}>
+          {t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
+        </Text>
+        <Text style={[s.nudgeSub, glassHalo(light)]} numberOfLines={1}>
+          {t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
+        </Text>
+      </View>
+      {/* `tall`: the 44 every other control has, and the same "Add" as
+          Gallery's header — see `AddPill`. */}
+      <AddPill tall label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
+    </DockSlot>
   );
 }
 
@@ -1244,21 +1203,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const deep = shown.length > DEEP_AFTER + 2 && firstVisible >= DEEP_AFTER;
 
   // The offer may borrow the tab bar's dock only while the bar is away —
-  // the sharing rules live in lib/nudge.ts. The gate keeps no timer, so
-  // eligibility re-polls it once the settle time has passed.
-  const nudgeGate = useRef(createNudgeGate()).current;
-  const [nudge, setNudge] = useState(false);
-  useEffect(() => navigation.addListener('focus', () => {
-    nudgeGate.reset();
-    setNudge(false);
-  }), [navigation, nudgeGate]);
-  useEffect(() => {
-    const eligible = ducked && deep;
-    setNudge(nudgeGate.update(eligible, Date.now()));
-    if (!eligible) return;
-    const id = setTimeout(() => setNudge(nudgeGate.update(true, Date.now())), NUDGE_SETTLE_MS + 20);
-    return () => clearTimeout(id);
-  }, [ducked, deep, nudgeGate]);
+  // the sharing rules live in lib/nudge.ts, applied by `useDockOffer`.
+  const nudge = useDockOffer(ducked && deep, navigation);
 
   /**
    * The list header's measured height **is** the offset at which the
@@ -1824,37 +1770,6 @@ const s = StyleSheet.create({
 
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 
-  // The floating offer, wearing the tab bar's dock: same inset, same
-  // island radius, so the bottom slot reads as one place that changes
-  // content rather than two things fighting for it.
-  nudgeWrap: {
-    position: 'absolute',
-  },
-  nudge: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    minHeight: TAB_BAR_HEIGHT,
-    paddingLeft: 18, paddingRight: 10, paddingVertical: 8,
-    borderRadius: radius.tabBar,
-    shadowColor: '#000', shadowRadius: 18, shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-    // The same glass the bar is made of, because this *is* the bar's
-    // dock — it appears in the space the bar vacates, at the same lift,
-    // width, height and radius, and a solid panel arriving where a
-    // translucent one left reads as two different objects sharing a slot.
-    //
-    // It was opaque on the reasoning that photographs travel under it and
-    // a translucent bar over moving pictures smears. The bar has the same
-    // pictures moving under it and does not; what smeared was the heavy
-    // blur, which is now 38. If motion does turn out to be the difference
-    // on a real device, the fix is the blur, not a second material.
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
-    overflow: 'visible',
-  },
-  nudgeClip: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: radius.tabBar,
-    overflow: 'hidden',
-  },
   nudgeTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   // Full strength, where this was `textTertiary` — which is #6E695E, the
   // exact mid-tone that could not be read on thin glass over a

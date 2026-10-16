@@ -1,8 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, Pressable, StyleProp, StyleSheet,
-  Text, View,
-  ViewStyle,
+  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, type NativeScrollEvent,
+  type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,11 +9,12 @@ import PlaceCard from '../components/PlaceCard';
 import TipBox from '../components/TipBox';
 import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, Card, CONTROL_H, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
-import { useDuckOnScroll } from '../components/tabBarDuck';
+import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
+import { DockSlot, useDockOffer } from '../components/DockSlot';
 import { useAuth } from '../lib/auth';
 import { categoriesOf } from '../lib/categories';
 import { collectionKinds, narrowTo } from '../lib/collectionKinds';
@@ -1058,6 +1058,209 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </View>
   ) : null;
 
+  /* ── the list's two actions, at the card's foot and in the dock ──
+     (owner, 16 Oct 2026). Planning a trip from the list is what a reader
+     does with it once read, owner or not; adding a place is the owner's
+     everyday edit. Both were out of reach: Plan at the very end of the
+     list, under every photograph, and Add only in the ⋯ menu (where it
+     also stays, by the owner's call).
+
+     So they sit in two places that never show at once. At the top they
+     end the card, where the list is introduced. Once the card has
+     scrolled away and the tab bar has ducked, the same two rise into the
+     bar's dock — `DockSlot`, the slot Explore lends "Not finding it?" —
+     in thumb reach however deep the list goes. A short list never ducks
+     the bar, and its card never leaves the screen, so its actions are
+     always in sight there.
+
+     Plan only once there is a list to plan from: an empty one seeds
+     nothing, and its own card is already asking for the first place.
+     The planner decides the city (see IdeasScreen's `from`); `at` makes a
+     second press on the same list a new ask. The paw is the planner's own
+     mark. Add, until the in-place picker exists, goes to Explore, where
+     saving a place already offers this list by name.
+
+     Add is the quiet one — glass and a hairline, not a second gradient:
+     two filled buttons side by side read as two primaries, and the
+     gradient belongs to the action the list exists for. */
+  const plan = () => {
+    if (!col) return;
+    goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } });
+  };
+  const canPlan = !!col && members.length > 0;
+  const addButton = (testID: string) => (
+    <PressableScale
+      onPress={addPlace}
+      scaleTo={0.96}
+      haptic="selection"
+      style={s.addQuiet}
+      accessibilityRole="button"
+      accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+      testID={testID}
+    >
+      <Ionicons name="add" size={20} color={colors.text} />
+      <Text style={s.addQuietText}>{t('Add', 'Thêm', '追加')}</Text>
+    </PressableScale>
+  );
+  const planButton = (testID: string, wide?: boolean) => (
+    <GradientCta
+      wide={wide}
+      icon="paw"
+      label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+      onPress={plan}
+      testID={testID}
+    />
+  );
+  const cardActions = canPlan ? (
+    <View style={s.cardActions}>
+      {owned ? addButton('collection-add') : null}
+      {planButton('collection-plan', !owned)}
+    </View>
+  ) : null;
+
+  // Where the card ends in the list's content, measured, so the dock waits
+  // until it has actually gone rather than guessing from a row count.
+  const cardEnd = useRef(Number.POSITIVE_INFINITY);
+  const [pastCard, setPastCard] = useState(false);
+  const pastRef = useRef(false);
+  const onListScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    duckScroll?.(e);
+    const past = e.nativeEvent.contentOffset.y > cardEnd.current;
+    if (past !== pastRef.current) {
+      pastRef.current = past;
+      setPastCard(past);
+    }
+  };
+  const ducked = useTabBarDucked();
+  // Not while a card is held: the dock would rise under the finger.
+  const dock = useDockOffer(canPlan && ducked && pastCard && !lift, navigation);
+
+  /* ── the description, in a card ──
+      It was bare grey body text under the header, and read as one
+      more line of the header. The owner's review (15 Oct 2026) put it
+      in a card on `surfaceCard` — the surface the place screen's
+      address card and its "City Crew chọn" card already wear, so it
+      follows the look chosen in Profile and adds no colour of its
+      own. Not the accent as a surface: that is for state the reader
+      just made (`theme.ts`), and a description is not one.
+
+      The pencil is the owner's, and opens the same form the menu's
+      "Edit collection" does. Two doors to one action, which is what
+      took the "Add place" slot away the same day — but this one sits
+      on the text it changes, so it reads as "change this", not as a
+      second general button. 44pt to the thumb.
+
+      ── the two glyphs (owner, 15 Oct 2026) ──
+      The pencil was Ionicons' `pencil`, a single thin diagonal that
+      read at 17pt on a pale card as a stroke rather than a control.
+      It is `create-outline` now — the framed pencil the ⋯ menu's own
+      "Edit collection" row wears, so one action has one glyph and the
+      reader already knows it from the menu. And a note glyph leads
+      the card: on somebody else's list nothing said whose words these
+      were, and the card could read as the app's own copy. The page
+      with lines says "a note", which is the one fact it adds. Both at
+      20pt in `textSecondary`, the card's one secondary ink, each
+      centred on the first line (24 tall, so 2 down); the text column
+      gives up their 32pt, which a two-line note can spare.
+
+      ── the face, the foot (owner, 16 Oct 2026) ──
+      On somebody else's list the curator's face and handle now lead
+      the card where the note glyph was (see `curatorRow`), and every
+      card ends in a foot with the place count and the heart (see
+      `cardFoot`), both moved down from the header. So the card is
+      drawn on every list, a visitor's included: it always has at
+      least the count to say. Your own list leads with your own face
+      (see `ownTag`); the note glyph returns only without a handle.
+
+      An owner's list with no description still invites one: the line
+      and the pencil open the form.
+
+      Checked on the text `t` picks, not on a hand-listed pair of
+      columns: that left a Japanese-only description never drawn.
+
+      ── the chips (owner, 15 Oct 2026) ──
+      Under the words, in the same card, because they answer the same
+      question — what is this list — and one pencil edits both. They
+      are every kind the places carry, most places first, less what
+      the owner hid (`lib/collectionKinds`), drawn as `KindPill` — the
+      pill a place's card and page wear, a dot in the category's
+      colour and its word. They are also the list's filter (see "the
+      chips are the filter"), lit in the accent while chosen. */
+  /* ── in the list, not over it (owner, 16 Oct 2026) ──
+     The card scrolls away with the places now. Held above the list it
+     kept a sixth of the screen — a third with a long note — for words
+     read once on arrival, and every place card paid for it. The title
+     stays in the header, so the reader never loses which list this is.
+     The chips go with it: you filter first and then read, and a filter
+     row pinned over the places would be the same tax again. */
+  const introCard = col ? (
+    <View style={s.descWrap}>
+      <Card
+        style={s.descCard}
+        testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}
+      >
+        <View style={s.descTop}>
+          {/* The note glyph, only on your own list and only when there
+              is no handle to lead with: it says "your words go here". */}
+          {owned && !ownTag ? (
+            <Ionicons
+              name="document-text-outline"
+              size={20}
+              color={desc ? colors.textSecondary : colors.textTertiary}
+              style={s.descGlyph}
+            />
+          ) : null}
+          <View style={s.descBody}>
+            {curatorRow}
+            {desc ? (
+              <Text style={s.descText}>{desc}</Text>
+            ) : owned ? (
+              // The invitation: the line and the pencil open the form.
+              // Not the whole card, since the chips under the line are
+              // a filter and a tap meant for one would open the form.
+              <PressableScale
+                onPress={edit}
+                scaleTo={0.985}
+                haptic="selection"
+                accessibilityRole="button"
+                accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
+              >
+                <Text style={s.descEmpty}>
+                  {t(
+                    'Add a few words about this list.',
+                    'Thêm vài dòng về danh sách này.',
+                    'このリストについて一言添えましょう。',
+                  )}
+                </Text>
+              </PressableScale>
+            ) : null}
+            {kindRow}
+          </View>
+          {owned && (
+            <PressableScale
+              onPress={edit}
+              scaleTo={0.85}
+              haptic="selection"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
+              testID="collection-desc-edit"
+            >
+              <Ionicons
+                name="create-outline"
+                size={20}
+                color={desc ? colors.textSecondary : colors.textTertiary}
+                style={s.descGlyph}
+              />
+            </PressableScale>
+          )}
+        </View>
+        {cardFoot}
+          {cardActions}
+      </Card>
+    </View>
+  ) : null;
+
   return (
     <Screen
       title={title}
@@ -1123,122 +1326,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </View>
       )}
-      {/* ── the description, in a card ──
-          It was bare grey body text under the header, and read as one
-          more line of the header. The owner's review (15 Oct 2026) put it
-          in a card on `surfaceCard` — the surface the place screen's
-          address card and its "City Crew chọn" card already wear, so it
-          follows the look chosen in Profile and adds no colour of its
-          own. Not the accent as a surface: that is for state the reader
-          just made (`theme.ts`), and a description is not one.
-
-          The pencil is the owner's, and opens the same form the menu's
-          "Edit collection" does. Two doors to one action, which is what
-          took the "Add place" slot away the same day — but this one sits
-          on the text it changes, so it reads as "change this", not as a
-          second general button. 44pt to the thumb.
-
-          ── the two glyphs (owner, 15 Oct 2026) ──
-          The pencil was Ionicons' `pencil`, a single thin diagonal that
-          read at 17pt on a pale card as a stroke rather than a control.
-          It is `create-outline` now — the framed pencil the ⋯ menu's own
-          "Edit collection" row wears, so one action has one glyph and the
-          reader already knows it from the menu. And a note glyph leads
-          the card: on somebody else's list nothing said whose words these
-          were, and the card could read as the app's own copy. The page
-          with lines says "a note", which is the one fact it adds. Both at
-          20pt in `textSecondary`, the card's one secondary ink, each
-          centred on the first line (24 tall, so 2 down); the text column
-          gives up their 32pt, which a two-line note can spare.
-
-          ── the face, the foot (owner, 16 Oct 2026) ──
-          On somebody else's list the curator's face and handle now lead
-          the card where the note glyph was (see `curatorRow`), and every
-          card ends in a foot with the place count and the heart (see
-          `cardFoot`), both moved down from the header. So the card is
-          drawn on every list, a visitor's included: it always has at
-          least the count to say. Your own list keeps the note glyph.
-
-          An owner's list with no description still invites one: the line
-          and the pencil open the form.
-
-          Checked on the text `t` picks, not on a hand-listed pair of
-          columns: that left a Japanese-only description never drawn.
-
-          ── the chips (owner, 15 Oct 2026) ──
-          Under the words, in the same card, because they answer the same
-          question — what is this list — and one pencil edits both. They
-          are every kind the places carry, most places first, less what
-          the owner hid (`lib/collectionKinds`), drawn as `KindPill` — the
-          pill a place's card and page wear, a dot in the category's
-          colour and its word. They are also the list's filter (see "the
-          chips are the filter"), lit in the accent while chosen. */}
-      {col ? (
-        <View style={s.descWrap}>
-          <Card
-            style={s.descCard}
-            testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}
-          >
-            <View style={s.descTop}>
-              {/* The note glyph, only on your own list and only when there
-                  is no handle to lead with: it says "your words go here". */}
-              {owned && !ownTag ? (
-                <Ionicons
-                  name="document-text-outline"
-                  size={20}
-                  color={desc ? colors.textSecondary : colors.textTertiary}
-                  style={s.descGlyph}
-                />
-              ) : null}
-              <View style={s.descBody}>
-                {curatorRow}
-                {desc ? (
-                  <Text style={s.descText}>{desc}</Text>
-                ) : owned ? (
-                  // The invitation: the line and the pencil open the form.
-                  // Not the whole card, since the chips under the line are
-                  // a filter and a tap meant for one would open the form.
-                  <PressableScale
-                    onPress={edit}
-                    scaleTo={0.985}
-                    haptic="selection"
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
-                  >
-                    <Text style={s.descEmpty}>
-                      {t(
-                        'Add a few words about this list.',
-                        'Thêm vài dòng về danh sách này.',
-                        'このリストについて一言添えましょう。',
-                      )}
-                    </Text>
-                  </PressableScale>
-                ) : null}
-                {kindRow}
-              </View>
-              {owned && (
-                <PressableScale
-                  onPress={edit}
-                  scaleTo={0.85}
-                  haptic="selection"
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
-                  testID="collection-desc-edit"
-                >
-                  <Ionicons
-                    name="create-outline"
-                    size={20}
-                    color={desc ? colors.textSecondary : colors.textTertiary}
-                    style={s.descGlyph}
-                  />
-                </PressableScale>
-              )}
-            </View>
-            {cardFoot}
-          </Card>
-        </View>
-      ) : null}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
@@ -1250,7 +1337,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             // would otherwise both answer the same drag.
             scrollEnabled={!lift}
             CellRendererComponent={LiftCell}
-            onScroll={duckScroll}
+            onScroll={onListScroll}
             scrollEventThrottle={16}
             renderItem={({ item, index }) => {
               const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
@@ -1294,40 +1381,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   'このコレクションにはまだスポットがありません。',
                 )} />)
               : null}
-            // The door from a list to a day, at the end of the list — where
-            // the owner's "Add place" slot stood until 15 Oct 2026. That
-            // slot was the same action the ⋯ menu's first row already
-            // offers, and the owner's review drew the line: one place for
-            // adding (the menu), and the foot of the list for the thing a
-            // reader does with a list once they have read it. The planner
-            // has seeded plans from collections since 12 Oct 2026, but the
-            // only way to it was the Plan tab and a row to find there; it
-            // sat under the description for a day and read as a header
-            // control over a list it had not yet shown. Everyone gets it,
-            // guests included: the planner seeds from public lists too.
-            //
-            // The paw, the planner's own mark on its own button — not the
-            // sparkle it wore for that day, which has become every app's
-            // "AI" glyph and said nothing about whose planning this is.
-            // `goTo`, since the planner is a sibling tab's stack; `at`
-            // makes a second press on the same list a new ask. Only once
-            // there is a list to end: an empty list seeds nothing, and its
-            // own card is already asking for the first place. The planner
-            // decides the city (see IdeasScreen's `from`), so nothing here
-            // asks.
-            ListFooterComponent={col && members.length > 0
-              ? (
-                <View style={s.planFoot}>
-                  <GradientCta
-                    wide
-                    icon="paw"
-                    label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
-                    onPress={() => goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } })}
-                    testID="collection-plan"
-                  />
-                </View>
-              )
-              : null}
+            ListHeaderComponent={introCard ? (
+              <View
+                testID="collection-intro"
+                onLayout={(e) => {
+                  const { y, height } = e.nativeEvent.layout;
+                  cardEnd.current = y + height;
+                }}
+              >
+                {introCard}
+              </View>
+            ) : null}
             contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
           />
@@ -1450,6 +1514,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </View>
       </Modal>
+      <DockSlot visible={dock} style={s.dockIsland} testID="collection-dock">
+        {owned ? addButton('collection-dock-add') : (
+          <Text style={s.dockTitle} numberOfLines={1}>{title}</Text>
+        )}
+        <View style={s.dockGrow} />
+        {planButton('collection-dock-plan')}
+      </DockSlot>
       {reportSheet}
       <PersonSheet
         visible={aboutCurator}
@@ -1507,7 +1578,6 @@ const s = StyleSheet.create({
 
   // Full width at the foot of the list, in the page's margins, with the
   // room the dashed slot it replaced kept above it.
-  planFoot: { paddingHorizontal: space.page, paddingTop: 10 },
   // The chips and, while something is chosen, the count line under them.
   kindsBlock: { gap: 10 },
   filterCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -1534,6 +1604,23 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
   footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // Add and Plan at the card's end; a visitor's Plan alone spans it.
+  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 },
+  // The quiet one: the gradient button's height and pill, in glass and a
+  // hairline, so the row is one object with one primary.
+  addQuiet: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: CONTROL_H, paddingHorizontal: 20,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
+  },
+  addQuietText: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  // In the dock: the list's name where an owner has Add, so a visitor's
+  // island does not hold a lone button. 52 + 2 × 6 is the bar's 64.
+  dockTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
+  dockGrow: { flex: 1 },
+  dockIsland: { paddingVertical: 6 },
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   descEmpty: { color: colors.textTertiary, ...type.body, lineHeight: 24 },
   // A 20pt glyph centred on a 24pt first line.

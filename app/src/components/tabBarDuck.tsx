@@ -92,6 +92,15 @@ export function useTabBarDuck(): Duck {
 }
 
 /**
+ * Whether the bar is away right now — for a screen that lends its dock
+ * (`DockSlot`). False outside the provider rather than a throw: a pushed
+ * screen read on its own, as in its tests, simply never gets the dock.
+ */
+export function useTabBarDucked(): boolean {
+  return useContext(Ctx)?.ducked ?? false;
+}
+
+/**
  * The screen half: an onScroll handler for the tab-root scroll views.
  * Stable identity, so it is safe inside listeners created once. Returns
  * undefined outside the provider (a screen reused in a modal), where a

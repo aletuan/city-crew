@@ -53,6 +53,7 @@ const spies = vi.hoisted(() => ({
 
 const state = vi.hoisted(() => ({
   uid: 'me' as string | null,
+  ducked: false,
   profile: { handle: 'andy', avatar_url: '' } as { handle: string; avatar_url: string },
   mine: [] as unknown[],
   cols: [] as unknown[],
@@ -111,7 +112,7 @@ vi.mock('../lib/data', async (orig) => ({
 vi.mock('../components/reportFlow', () => ({
   useReport: () => ({ report: spies.report, canReport: spies.canReport, node: null }),
 }));
-vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined }));
+vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined, useTabBarDucked: () => state.ducked }));
 // A props-recorder for the card: its looks are its own suite's business.
 // Filed by slug on every render, so a test can play the accessibility
 // actions VoiceOver would on the card as last drawn.
@@ -181,10 +182,14 @@ const theirs = (over: Partial<Collection> = {}, members?: Place[]) => collection
   owner_id: 'curator', is_public: true, curator_handle: '@hanoicrew', ...over,
 }, members);
 
+const focusListeners: (() => void)[] = [];
 const nav = () => {
+  focusListeners.length = 0;
   const parent = { navigate: vi.fn() };
   const n = {
     navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent),
+    // The dock hands its slot back on focus; a test fires it through here.
+    addListener: vi.fn((_e: string, cb: () => void) => { focusListeners.push(cb); return () => {}; }),
   };
   return { n: n as unknown as Nav, parent, raw: n };
 };
@@ -237,6 +242,7 @@ beforeEach(() => {
   spies.blockUser.mockImplementation(async () => {});
   spies.profileLookup.mockImplementation(() => ({ data: null, loading: false }));
   state.uid = 'me';
+  state.ducked = false;
   state.profile = { handle: 'andy', avatar_url: '' };
   state.mine = [collection()];
   state.cols = [];
@@ -351,10 +357,11 @@ describe('your own list', () => {
   // The "Add place" slot that ended the list went on 15 Oct 2026: it was
   // the menu's first row again. Adding is the menu's; the foot of the
   // list is "Plan a trip" — see its own describe below.
-  it('ends a non-empty list with no Add place slot; adding is the menu’s', () => {
+  // The old dashed slot at the end of the list stays gone; adding is the
+  // card's quiet button and the menu's row (owner, 16 Oct 2026).
+  it('ends a non-empty list with no Add place slot', () => {
     show();
     expect(screen.queryByText('From search or your bookmarks')).toBeNull();
-    expect(screen.queryByText('Add place')).toBeNull();
   });
 
   it('greets an empty list with one invitation to Explore, and no footer', () => {
@@ -1404,8 +1411,9 @@ describe('signed out', () => {
 // where the Add place slot stood, wearing the planner's own paw. The
 // planner decides the city, so this button only sends the slug.
 describe('Plan a trip', () => {
-  it('ends the list, wears the paw, and sends the list to the planner as a fresh ask each time', () => {
+  it('ends the card, wears the paw, and sends the list to the planner as a fresh ask each time', () => {
     show();
+    expect(screen.getByTestId('collection-desc').contains(button('Plan a trip'))).toBe(true);
     expect(button('Plan a trip').querySelector('[data-icon="paw"]')).toBeTruthy();
     fireEvent.click(button('Plan a trip'));
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', { screen: 'IdeasHome', params: { from: 'old-quarter', at: expect.any(Number) } });
@@ -1659,7 +1667,7 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4 places');
+    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4 placesPlan a trip');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
@@ -1799,5 +1807,140 @@ describe('the introduction card', () => {
     show();
     expect(screen.queryByTestId('collection-curator')).toBeNull();
     expect(screen.getByTestId('collection-desc').querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+  });
+});
+
+// The list's two actions (owner, 16 Oct 2026): at the end of the card at
+// the top, and in the tab bar's dock once the card has scrolled away and
+// the bar has ducked — never both at once.
+describe('the actions and the dock', () => {
+  /** The props of the first committed element `pick` accepts. */
+  const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const fb = stack.pop()!;
+      const p = fb.memoizedProps;
+      if (p && typeof p === 'object' && pick(p)) return p;
+      if (fb.sibling) stack.push(fb.sibling);
+      if (fb.child) stack.push(fb.child);
+    }
+    throw new Error('nothing matched');
+  };
+  // The list's own `onScroll`, as the FlatList would call it.
+  const listScroll = (y: number) => act(() => {
+    const p = propsWhere((q) => typeof q.onScroll === 'function' && 'ListHeaderComponent' in q);
+    (p.onScroll as (e: unknown) => void)({ nativeEvent: { contentOffset: { x: 0, y } } });
+  });
+  /** Lay the card out 300 tall at the top, then scroll the list to `y`. */
+  const pastTheCard = (y = 400) => {
+    act(() => {
+      const p = propsWhere((q) => q.testID === 'collection-intro');
+      (p.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 8, height: 300 } } });
+    });
+    listScroll(y);
+  };
+  const settle = () => act(() => { vi.advanceTimersByTime(400); });
+
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('gives the owner a quiet Add beside the Plan, and Add goes to Explore', () => {
+    const { parent } = show();
+    const add = screen.getByTestId('collection-add');
+    expect(add.getAttribute('aria-label')).toBe('Add place');
+    expect(add.textContent).toBe('Add');
+    expect(screen.getByTestId('collection-desc').contains(add)).toBe(true);
+    fireEvent.click(add);
+    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+  });
+
+  it('keeps Add place in the ⋯ menu as well', () => {
+    show();
+    openMenu();
+    expect(menuRow('Add place')).toBeTruthy();
+  });
+
+  it('gives a visitor the Plan alone', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    expect(screen.queryByTestId('collection-add')).toBeNull();
+    expect(button('Plan a trip')).toBeTruthy();
+  });
+
+  it('rises into the dock once the card has gone and the bar has ducked', () => {
+    state.ducked = true;
+    const { parent } = show();
+    settle();
+    expect(screen.queryByTestId('collection-dock')).toBeNull();
+    pastTheCard();
+    settle();
+    const dock = screen.getByTestId('collection-dock');
+    fireEvent.click(screen.getByTestId('collection-dock-plan'));
+    expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.objectContaining({ params: expect.objectContaining({ from: 'old-quarter' }) }));
+    fireEvent.click(screen.getByTestId('collection-dock-add'));
+    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    expect(dock.textContent).toBe('AddPlan a trip');
+  });
+
+  it('names the list in a visitor’s dock, beside the Plan', () => {
+    state.ducked = true;
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    pastTheCard();
+    settle();
+    expect(screen.getByTestId('collection-dock').textContent).toBe('Old Quarter eatsPlan a trip');
+    expect(screen.queryByTestId('collection-dock-add')).toBeNull();
+  });
+
+  it('stays away while the card is still on screen, or while the bar holds the dock', () => {
+    state.ducked = true;
+    show();
+    pastTheCard(200);
+    settle();
+    expect(screen.queryByTestId('collection-dock')).toBeNull();
+    cleanup();
+    state.ducked = false;
+    show();
+    pastTheCard();
+    settle();
+    expect(screen.queryByTestId('collection-dock')).toBeNull();
+  });
+
+  it('goes when the reader scrolls back to the card', () => {
+    state.ducked = true;
+    show();
+    pastTheCard();
+    settle();
+    expect(screen.getByTestId('collection-dock')).toBeTruthy();
+    listScroll(100);
+    settle();
+    expect(screen.queryByTestId('collection-dock')).toBeNull();
+  });
+
+  it('never rises on a list with nothing to plan from', () => {
+    state.ducked = true;
+    state.mine = [collection({}, [])];
+    show();
+    pastTheCard();
+    settle();
+    expect(screen.queryByTestId('collection-dock')).toBeNull();
+  });
+
+  // Coming back to the screen hands the slot back to the bar, which
+  // reappears on arrival; the dock waits for the bar to leave again.
+  it('hands the dock back to the bar when the screen is focused again', () => {
+    state.ducked = true;
+    show();
+    pastTheCard();
+    settle();
+    expect(screen.getByTestId('collection-dock')).toBeTruthy();
+    act(() => focusListeners.forEach((cb) => cb()));
+    settle();
+    expect(screen.queryByTestId('collection-dock')).toBeNull();
   });
 });

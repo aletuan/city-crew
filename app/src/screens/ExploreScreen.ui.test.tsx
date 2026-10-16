@@ -1807,9 +1807,11 @@ describe('the scroll nudge', () => {
     throw new Error('no AddPill in the committed tree');
   };
   const long = () => Array.from({ length: 6 }, (_, i) => place(`p${i}`));
-  // Always mounted, so visibility is its fade: 0 is away, 1 is offered.
+  // Mounted only while offered or fading out (`DockSlot`): absent is
+  // away, and once there its fade says whether it has arrived.
   const shown = () => {
-    let el: HTMLElement | null = screen.getByText('Not finding it?');
+    let el: HTMLElement | null = screen.queryByText('Not finding it?');
+    if (!el) return false;
     while (el && !el.style.opacity) el = el.parentElement;
     return el?.style.opacity === '1';
   };
