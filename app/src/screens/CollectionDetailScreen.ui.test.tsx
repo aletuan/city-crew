@@ -47,7 +47,8 @@ const spies = vi.hoisted(() => ({
   note: vi.fn(),
   report: vi.fn(),
   canReport: vi.fn((_t: { kind: string; id: string; ownerId?: string | null }) => true),
-  profileLookup: vi.fn((_h: string | null) => ({ data: null as null | { avatar_url: string }, loading: false })),
+  profileLookup: vi.fn((_h: string | null) => ({ data: null as null | { id?: string; full_name?: string; avatar_url: string }, loading: false })),
+  blockUser: vi.fn(async (_id: string) => {}),
 }));
 
 const state = vi.hoisted(() => ({
@@ -104,6 +105,7 @@ vi.mock('../lib/data', async (orig) => ({
   reorderCollection: spies.reorderCollection,
   setCollectionPublic: spies.setCollectionPublic,
   useProfileByHandle: spies.profileLookup,
+  blockUser: spies.blockUser,
 }));
 vi.mock('../components/reportFlow', () => ({
   useReport: () => ({ report: spies.report, canReport: spies.canReport, node: null }),
@@ -231,6 +233,7 @@ beforeEach(() => {
   spies.reorderCollection.mockImplementation(async () => {});
   spies.setCollectionPublic.mockImplementation(async () => {});
   spies.canReport.mockImplementation(() => true);
+  spies.blockUser.mockImplementation(async () => {});
   spies.profileLookup.mockImplementation(() => ({ data: null, loading: false }));
   state.uid = 'me';
   state.mine = [collection()];
@@ -307,7 +310,8 @@ describe('your own list', () => {
     expect(screen.getByText('Where we eat.')).toBeTruthy();
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
-    expect(screen.getByText(/3 places\s+·\s+Private/)).toBeTruthy();
+    expect(screen.getByText('Private')).toBeTruthy();
+    expect(screen.getByTestId('collection-stats').textContent).toBe('3 places');
     expect(screen.queryByText('Public')).toBeNull();
     // No self-credit and no heart on your own list.
     expect(screen.queryByRole('button', { name: /like/i })).toBeNull();
@@ -1179,7 +1183,8 @@ describe("somebody else's list", () => {
   it('credits the curator, hides owner-only marks and says "No places" when empty', () => {
     state.cols = [theirs({}, [])];
     show();
-    expect(screen.getByText(/@hanoicrew\s+·\s+0 places/)).toBeTruthy();
+    expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
+    expect(screen.getByTestId('collection-stats').textContent).toContain('0 places');
     expect(screen.getByText('No places in this collection yet.')).toBeTruthy();
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
     expect(screen.queryByText('Public')).toBeNull();
@@ -1420,25 +1425,28 @@ describe('Plan a trip', () => {
   });
 });
 
-// A visitor reads the description in the same card, with no pencil; a
-// visitor's list with no description draws no card at all.
+// A visitor reads the description in the same card, with no pencil,
+// led by the curator rather than the note glyph; with no description the
+// card still carries the curator and the count (owner, 16 Oct 2026).
 describe('the description, for a visitor', () => {
   it('is the same card, without the pencil', () => {
     state.mine = [];
     state.cols = [theirs()];
     show();
     expect(screen.getByTestId('collection-desc').textContent).toContain('Where we eat.');
-    // The note glyph is for the visitor most of all: it says whose words.
-    expect(screen.getByTestId('collection-desc').querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    // The face says whose words, so the note glyph gives way to it.
+    expect(screen.getByTestId('collection-desc').querySelector('[data-icon="document-text-outline"]')).toBeNull();
+    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrewWhere we eat\./);
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
 
-  it('is nothing when there is none', () => {
+  it('is the curator and the count when there is none, and never an invitation', () => {
     state.mine = [];
     state.cols = [theirs({ desc_en: null })];
     show();
-    expect(screen.queryByTestId('collection-desc')).toBeNull();
+    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrew.*places/);
     expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
+    expect(screen.queryByText('Add a few words about this list.')).toBeNull();
   });
 });
 
@@ -1648,7 +1656,7 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('EatsCafésCultureNightlife');
+    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4 places');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
@@ -1664,5 +1672,110 @@ describe('the chips', () => {
     return waitFor(() => expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', expect.objectContaining({
       copyFrom: expect.objectContaining({ kinds: { hidden: ['eats'] } }),
     })));
+  });
+});
+
+// The card's head and foot (owner, 16 Oct 2026): the curator leads a
+// visitor's card, the count and the heart end every card, and the handle
+// opens a sheet to report the list or block the person behind it.
+describe('the introduction card', () => {
+  beforeEach(() => {
+    state.mine = [];
+    state.cols = [theirs()];
+  });
+  const sheetRow = (name: string | RegExp) => screen.queryByRole('button', { name });
+
+  it('keeps the heart in the foot, beside nothing but the count', () => {
+    show();
+    const foot = screen.getByTestId('collection-stats');
+    expect(foot.querySelector('[data-icon="heart-outline"]')).toBeTruthy();
+    expect(foot.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+  });
+
+  it('leaves a visitor\u2019s header with the title alone', () => {
+    show();
+    expect(screen.queryByText(/·/)).toBeNull();
+    expect(screen.getAllByText('@hanoicrew')).toHaveLength(1);
+  });
+
+  it('offers only the report for an editorial handle with nobody behind it', () => {
+    show();
+    fireEvent.click(screen.getByTestId('collection-curator'));
+    expect(sheetRow(/Report this list/)).toBeTruthy();
+    expect(sheetRow(/Block/)).toBeNull();
+  });
+
+  it('opens the report sheet for this list from the curator sheet', () => {
+    vi.useFakeTimers();
+    try {
+      show();
+      fireEvent.click(screen.getByTestId('collection-curator'));
+      fireEvent.click(sheetRow(/Report this list/)!);
+      vi.runAllTimers();
+      expect(spies.report).toHaveBeenCalledWith(expect.objectContaining({ kind: 'collection', ownerId: 'curator' }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('blocks the owner of the list once confirmed, where a person stands behind the handle', async () => {
+    spies.profileLookup.mockImplementation(() => ({ data: { id: 'curator', full_name: 'Thai Ba Son', avatar_url: '' }, loading: false }));
+    vi.useFakeTimers();
+    try {
+      show();
+      fireEvent.click(screen.getByTestId('collection-curator'));
+      // The sheet names the person, with the handle under the name.
+      expect(screen.getByText('Thai Ba Son')).toBeTruthy();
+      fireEvent.click(sheetRow(/Block @hanoicrew/)!);
+      vi.runAllTimers();
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(alert.mock.calls.at(-1)![0]).toBe('Block @hanoicrew?');
+    expect(spies.blockUser).not.toHaveBeenCalled();
+    pressInAlert('Block');
+    expect(spies.blockUser).toHaveBeenCalledWith('curator');
+    await waitFor(() => expect(alert.mock.calls.at(-1)![0]).toBe('@hanoicrew is blocked'));
+  });
+
+  it('says so when the block fails', async () => {
+    state.cachedAvatar = 'https://img/face.jpg';
+    spies.blockUser.mockImplementation(async () => { throw new Error('nope'); });
+    vi.useFakeTimers();
+    try {
+      show();
+      fireEvent.click(screen.getByTestId('collection-curator'));
+      fireEvent.click(sheetRow(/Block @hanoicrew/)!);
+      vi.runAllTimers();
+    } finally {
+      vi.useRealTimers();
+    }
+    pressInAlert('Block');
+    await waitFor(() => expect(alert.mock.calls.at(-1)![0]).toBe('Could not block'));
+  });
+
+  it('is not a button where there is nothing to do — signed out', () => {
+    state.uid = null;
+    spies.canReport.mockImplementation(() => false);
+    show();
+    expect(screen.getByTestId('collection-curator').getAttribute('role')).not.toBe('button');
+  });
+
+  it('closes the sheet when dismissed', () => {
+    show();
+    fireEvent.click(screen.getByTestId('collection-curator'));
+    fireEvent.click(screen.getAllByLabelText('Close').at(-1)!);
+    endModalFade();
+    expect(sheetRow(/Report this list/)).toBeNull();
+  });
+
+  it('gives your own list the note glyph and the count, and no curator', () => {
+    state.cols = [];
+    state.mine = [collection()];
+    show();
+    expect(screen.queryByTestId('collection-curator')).toBeNull();
+    const card = screen.getByTestId('collection-desc');
+    expect(card.querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    expect(screen.getByTestId('collection-stats')).toBeTruthy();
   });
 });
