@@ -234,14 +234,16 @@ describe('the read', () => {
     expect(tileIds()).toEqual(['a', 'b']);
   });
 
-  // No boundary between kinds: an upload and a Google row wear the same
-  // ⋯, and nothing on the tile says whose it is.
-  it('offers the menu on every tile alike', async () => {
+  // No boundary between kinds: an upload and a Google row open the same
+  // way, and nothing on the tile says whose it is. No ⋯ on any tile: a
+  // tap is the way in (owner, 16 Oct 2026).
+  it('opens every tile alike, and marks none with a ⋯', async () => {
     show([mine('d'), photo('g', { sort_order: 1 })]);
     await grid();
-    expect(screen.getByTestId('gallery-more-d')).toBeTruthy();
-    expect(screen.getByTestId('gallery-more-g')).toBeTruthy();
+    expect(screen.getByTestId('gallery-grid').querySelector('[data-icon="ellipsis-horizontal"]')).toBeNull();
     expect(screen.queryByText('Desk')).toBeNull();
+    fireEvent.click(screen.getByTestId('gallery-tile-g'));
+    expect(await screen.findByTestId('photo-sheet')).toBeTruthy();
   });
 
   it('invites the first photo when there is none', async () => {
@@ -368,6 +370,33 @@ describe('the menu on one photograph', () => {
     expect(screen.getByText('From Google')).toBeTruthy();
   });
 
+  // The picture is the sheet's subject: the one tapped, large, and named
+  // by its place in the gallery.
+  it('opens the photograph tapped, large, at its place in the gallery', async () => {
+    show([photo('a'), photo('b', { sort_order: 1 }), photo('c', { sort_order: 2 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-tile-b'));
+    const frame = await screen.findByTestId('photo-sheet-frame');
+    expect(frame.querySelector('img')!.getAttribute('src')).toBe('http://cdn/b.jpg');
+    expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 2/3');
+  });
+
+  // Coming back to the grid, the guide finds where they were.
+  it('rings the tile last opened, once its sheet has closed, and not while choosing', async () => {
+    show([photo('a'), photo('b', { sort_order: 1 })]);
+    await grid();
+    // The tile's look is on the pressable's inner view, its first child.
+    const ringed = (id: string) =>
+      getComputedStyle(screen.getByTestId(`gallery-tile-${id}`).firstElementChild!).borderTopWidth === '2.5px';
+    expect(ringed('a')).toBe(false);
+    fireEvent.click(screen.getByTestId('gallery-tile-b'));
+    fireEvent.click(await screen.findByTestId('photo-sheet-close'));
+    expect(ringed('b')).toBe(true);
+    expect(ringed('a')).toBe(false);
+    fireEvent.click(screen.getByTestId('gallery-select'));
+    expect(ringed('b')).toBe(false);
+  });
+
   it('asks before deleting, and removes on yes', async () => {
     show([mine('m')]);
     await grid();
@@ -398,13 +427,13 @@ describe('choosing several', () => {
     show([mine('m1', { sort_order: 0 }), photo('g', { sort_order: 1 }), mine('m2', { sort_order: 2 })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-select'));
-    // Every tile has a tick; the menu is gone while choosing.
+    // Every tile has a tick, and a tap is a tick, not the photograph.
     expect(screen.getByTestId('gallery-tick-g')).toBeTruthy();
-    expect(screen.queryByTestId('gallery-more-g')).toBeNull();
     fireEvent.click(screen.getByTestId('gallery-tile-m1'));
     fireEvent.click(screen.getByTestId('gallery-tile-g'));
     fireEvent.click(screen.getByTestId('gallery-tile-m2'));
     fireEvent.click(screen.getByTestId('gallery-tile-m1'));
+    expect(screen.queryByTestId('photo-sheet')).toBeNull();
     expect(screen.getByRole('button', { name: 'Delete 2' })).toBeTruthy();
     fireEvent.click(screen.getByTestId('gallery-delete-picked'));
     expect(alert.mock.calls.at(-1)![0]).toBe('Delete 2 photos?');
@@ -429,8 +458,10 @@ describe('choosing several', () => {
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
     fireEvent.click(screen.getByTestId('gallery-cancel'));
     expect(screen.queryByTestId('gallery-tick-a')).toBeNull();
-    expect(screen.getByTestId('gallery-more-a')).toBeTruthy();
     expect(data.removePlacePhoto).not.toHaveBeenCalled();
+    // Looking again: a tap opens the photograph.
+    fireEvent.click(screen.getByTestId('gallery-tile-a'));
+    expect(await screen.findByTestId('photo-sheet')).toBeTruthy();
   });
 });
 
@@ -757,17 +788,24 @@ describe('scoring', () => {
     show([photo('a', { score: read(0.68) }), photo('b', { sort_order: 1 })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
-    const block = await screen.findByTestId('score-block');
-    expect(block.textContent).toContain('8.4');
-    expect(block.textContent).toContain('Very good');
+    const ten = await screen.findByTestId('score-ten');
+    expect(ten.textContent).toContain('8.4');
+    expect(ten.textContent).toContain('Very good');
     expect(screen.getByTestId('score-why').textContent).toBe('Well lit.');
+    // In reading order: the number and why, then the rows.
+    const sheet = screen.getByTestId('photo-sheet');
+    const why = screen.getByTestId('score-why');
+    const cover = screen.getByRole('button', { name: 'Make it the cover' });
+    expect(why.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sheet.contains(why)).toBe(true);
   });
 
-  it('has no score block for a photo nobody has read', async () => {
+  it('says nothing of a score for a photo nobody has read', async () => {
     show([photo('a')]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
     await screen.findByRole('button', { name: 'Make it the cover' });
-    expect(screen.queryByTestId('score-block')).toBeNull();
+    expect(screen.queryByTestId('score-ten')).toBeNull();
+    expect(screen.queryByTestId('score-why')).toBeNull();
   });
 });
