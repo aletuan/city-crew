@@ -94,6 +94,31 @@ anh chụp nên không vướng giấy phép.
 Xong thì gửi lại file `.json` (và ảnh chụp trang HTML nếu có chỗ đáng bàn) để
 ghi vào `docs/photo-critic.md` và chốt B7.
 
+## So ngưỡng với phần chấm của anh (B7)
+
+Sau khi chấm trên trang và bấm **Copy**:
+
+```bash
+pbpaste > out/marks.json
+python eval.py --marks out/marks.json
+```
+
+Lệnh này chạy trong vài giây nhờ cache, và in một bảng, mỗi dòng là một cặp
+ngưỡng (`off_rank` = category phải nằm trong top mấy thì không bị gọi lạc
+đề, `off_margin` = độ chênh):
+
+- **`off_precision`**: trong số ảnh mô hình gọi lạc đề, bao nhiêu phần anh
+  cũng gọi lạc đề;
+- **`off_recall`**: trong số ảnh anh gọi lạc đề, mô hình bắt được bao nhiêu
+  phần;
+- **`covers_fit_called_off`**: ảnh bìa anh chấm Hợp mà mô hình gọi lạc đề.
+  Phải bằng **0**;
+- **`catalog_off`** / **`catalog_covers_off`**: luật đó gọi bao nhiêu ảnh,
+  bao nhiêu ảnh bìa của cả catalog là lạc đề.
+
+Chọn được cặp nào thì chạy lại với `--off-rank` và `--off-margin` tương ứng.
+Phần chấm cộng dồn trong trình duyệt, nên chấm thêm rồi Copy lại là đủ.
+
 ## Kiểm tra script
 
 `python3 -m unittest test_eval` (không cần venv). `npm test` trong `data/`
