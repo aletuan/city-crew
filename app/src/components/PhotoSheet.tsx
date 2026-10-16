@@ -35,18 +35,28 @@
 //
 // ── the frame's shape ──
 //
-// Sized to the photograph rather than cropping it: a landscape fills the
-// width at its own ratio, so nothing is lost, and anything squarer or
-// taller sits whole in a square on a dark ground. Cropping a portrait to
-// a landscape frame would cut off the very top and bottom a guide is
-// judging. Capped at half the screen, so the name, the score and the
-// rows are still on the first screen of a small phone. Until the picture
-// has arrived its ratio is unknown; 4:3, a phone's own, is the guess
-// that moves least for most of what a gallery holds.
+// One square for every photograph of the gallery, the picture whole in
+// it on a dark ground: a landscape with a band above and below, a
+// portrait with one either side. The first build sized the frame to each
+// picture, and the sheet grew and shrank as the guide swiped between a
+// portrait and a landscape, the rows jumping under it (owner, 16 Oct
+// 2026, from Bold Brew's 6/10 and 7/10). A frame that never moves is
+// worth the bands. Square rather than 4:3, because a portrait in a 4:3
+// frame is a strip down the middle; capped at half the screen, so the
+// name, the score and the rows are still on a small phone's first
+// screen. The whole picture at full size is the viewer's.
+//
+// ── the screen behind ──
+//
+// Blurred as well as dimmed (owner, 16 Oct 2026): behind this sheet is
+// the gallery's grid, photographs under a photograph, and dimmed alone it
+// read as two screens stacked, each asking to be looked at. Blurred, the
+// grid is a place to come back to rather than a second picture.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetRows, type SheetAction } from './ActionSheet';
@@ -58,19 +68,20 @@ import type { GalleryPhoto } from '../lib/gallery';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 
-/** A phone's own ratio, for the moment before the picture says its own. */
-const GUESS = 4 / 3;
 /** The most of the screen's height the picture may take. */
 const MAX_SHARE = 0.5;
-
 /**
- * The frame's height for a picture `aspect` wide per unit tall, in a
- * frame `width` across on a screen `screen` tall: the picture's own
- * height when it is wider than tall, a square when it is not, and never
- * more than half the screen.
+ * How far the screen behind is blurred, on expo-blur's 0–100. The tab
+ * bar's glass is 38 (`GlassMaterial`), a blur that keeps what is behind
+ * it legible; behind a sheet it should not be, so more than that. A
+ * first value, to be judged on a phone: jsdom draws no blur.
  */
-export function frameHeight(aspect: number, width: number, screen: number): number {
-  return Math.round(Math.min(width / Math.max(aspect, 1), screen * MAX_SHARE));
+const BLUR = 50;
+
+/** The frame's height, the same for every photograph: a square `width`
+ *  across, never more than half a screen `screen` tall. */
+export function frameHeight(width: number, screen: number): number {
+  return Math.round(Math.min(width, screen * MAX_SHARE));
 }
 
 export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose }: {
@@ -99,8 +110,6 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   if (visible && !pager.current.open) pager.current = { key: pager.current.key + 1, start: index, open: true };
   if (!visible) pager.current.open = false;
 
-  // Each picture's own shape, by id, as each arrives.
-  const [ratios, setRatios] = useState<Record<string, number>>({});
   const [full, setFull] = useState(false);
 
   const rise = useRef(new Animated.Value(1)).current;
@@ -118,7 +127,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   const at = shown.index;
   const p = all[at];
   const frameW = width - space.page * 2;
-  const frameH = frameHeight(ratios[p.id] ?? GUESS, frameW, height);
+  const frameH = frameHeight(frameW, height);
   const status = [
     p.is_cover ? t('Cover', 'Ảnh bìa', 'カバー') : null,
     p.is_hidden ? t('Hidden', 'Đã ẩn', '非表示') : null,
@@ -131,6 +140,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={full ? closeFull : onClose} statusBarTranslucent>
+      <BlurView intensity={BLUR} tint="dark" style={StyleSheet.absoluteFill} testID="photo-sheet-blur" />
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
       <Animated.View
         style={[s.sheet, {
@@ -180,10 +190,6 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
                     style={StyleSheet.absoluteFill}
                     contentFit="contain"
                     transition={150}
-                    onLoad={(e) => {
-                      const { width: w, height: h } = e.source;
-                      if (w > 0 && h > 0) setRatios((was) => ({ ...was, [ph.id]: w / h }));
-                    }}
                   />
                 </Pressable>
               ))}
@@ -232,7 +238,9 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
 }
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
+  // Lighter than the action sheets' 0.62: the blur does half the work of
+  // pushing the grid back, and both at full strength turn it to mud.
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.4)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bgElevated,
