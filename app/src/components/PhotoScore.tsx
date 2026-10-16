@@ -157,18 +157,23 @@ export function ScoreBadge({ score, testID }: { score: PhotoScore; testID?: stri
  * right of the photograph's name, where the design puts it (owner, 16
  * Oct 2026). Nothing for a row with no number.
  */
-export function ScoreTen({ score }: { score: PhotoScore }) {
+export function ScoreTen({ score, onDark }: {
+  score: PhotoScore;
+  /** Over a photograph (the full-screen viewer): the light inks, and the
+   *  number and its word on one line, since there is no name beside it. */
+  onDark?: boolean;
+}) {
   const { t } = useI18n();
   if (score.aesthetic == null) return null;
   const ten = toTen(score.aesthetic);
   return (
-    <View style={s.ten} testID="score-ten">
+    <View style={onDark ? s.tenRow : s.ten} testID="score-ten">
       <View style={s.tenLine}>
-        <Text style={s.tenBig}>{tenText(ten)}</Text>
-        <Text style={s.tenOutOf}>/10</Text>
+        <Text style={[s.tenBig, onDark && s.tenBigDark]}>{tenText(ten)}</Text>
+        <Text style={[s.tenOutOf, onDark && s.inkDark]}>/10</Text>
       </View>
-      <View style={s.bandPill}>
-        <Text style={s.bandText}>{bandLabel(band(ten), t)}</Text>
+      <View style={[s.bandPill, onDark && s.bandPillDark]}>
+        <Text style={[s.bandText, onDark && s.bandTextDark]}>{bandLabel(band(ten), t)}</Text>
       </View>
     </View>
   );
@@ -180,14 +185,14 @@ export function ScoreTen({ score }: { score: PhotoScore }) {
  * reading its measurements on another scorer's scales — its number,
  * which every scorer shares, is still `ScoreTen`'s to show.
  */
-export function ScoreWhy({ score }: { score: PhotoScore }) {
+export function ScoreWhy({ score, onDark }: { score: PhotoScore; onDark?: boolean }) {
   const { t } = useI18n();
   const how = interpreterOf(score.scorer);
   if (score.aesthetic == null || !how) return null;
   return (
     <View style={s.why}>
-      <Text style={s.whyText} testID="score-why">{how.explain(score, t)}</Text>
-      <Text style={s.whySource} testID="score-source">{how.source(t)}</Text>
+      <Text style={[s.whyText, onDark && s.whyTextDark]} testID="score-why">{how.explain(score, t)}</Text>
+      <Text style={[s.whySource, onDark && s.inkDark]} testID="score-source">{how.source(t)}</Text>
     </View>
   );
 }
@@ -321,6 +326,14 @@ const s = StyleSheet.create({
   },
   bandText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
   why: { gap: 6 },
+  // Over a photograph: `onPhoto`'s inks, and a translucent pill, since
+  // the accent wash vanishes into a dark scrim.
+  tenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tenBigDark: { color: onPhoto.text },
+  inkDark: { color: onPhoto.textSecondary },
+  bandPillDark: { backgroundColor: onPhoto.line },
+  bandTextDark: { color: onPhoto.text },
+  whyTextDark: { color: onPhoto.text },
   whyText: { color: colors.textSecondary, fontSize: 15, lineHeight: 21 },
   whySource: { color: colors.textTertiary, fontSize: 12 },
 

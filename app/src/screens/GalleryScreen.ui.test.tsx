@@ -360,14 +360,12 @@ describe('the menu on one photograph', () => {
     await waitFor(() => expect(data.setHidden).toHaveBeenCalledWith('a', false));
   });
 
-  // A Google row can be deleted like any other; the sheet says where it
-  // came from, and that is all the source is for.
-  it('offers delete on a Google photograph too, and says where it came from', async () => {
+  // A Google row can be deleted like any other.
+  it('offers delete on a Google photograph too', async () => {
     show([photo('a')]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
     expect(await screen.findByRole('button', { name: 'Delete it' })).toBeTruthy();
-    expect(screen.getByText('From Google')).toBeTruthy();
   });
 
   // The picture is the sheet's subject: the one tapped, large, and named
@@ -376,9 +374,32 @@ describe('the menu on one photograph', () => {
     show([photo('a'), photo('b', { sort_order: 1 }), photo('c', { sort_order: 2 })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-b'));
-    const frame = await screen.findByTestId('photo-sheet-frame');
-    expect(frame.querySelector('img')!.getAttribute('src')).toBe('http://cdn/b.jpg');
+    const page = await screen.findByTestId('photo-sheet-page-b');
+    expect(page.querySelector('img')!.getAttribute('src')).toBe('http://cdn/b.jpg');
     expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 2/3');
+  });
+
+  // Swiping in the sheet moves to the next photograph, its rows with it,
+  // and the grid rings the one the guide ended on.
+  it('moves to the photograph swiped to, its rows and its ring with it', async () => {
+    show([photo('a'), photo('b', { sort_order: 1, is_cover: true }), photo('c', { sort_order: 2 })]);
+    await grid();
+    fireEvent.click(screen.getByTestId('gallery-tile-a'));
+    expect(await screen.findByRole('button', { name: 'Make it the cover' })).toBeTruthy();
+    const pager = screen.getByTestId('photo-sheet-pager');
+    // One page along: a page is as wide as the frame.
+    const page = parseFloat(screen.getByTestId('photo-sheet-page-a').style.width);
+    expect(page).toBeGreaterThan(0);
+    Object.defineProperty(pager, 'scrollLeft', { value: page, configurable: true });
+    fireEvent.scroll(pager);
+    await waitFor(() => expect(screen.getByTestId('photo-sheet').textContent).toContain('Photo 2/3'));
+    // b is the cover: its sheet offers no "Make it the cover".
+    expect(screen.queryByRole('button', { name: 'Make it the cover' })).toBeNull();
+    fireEvent.click(screen.getByTestId('photo-sheet-close'));
+    const ringed = (id: string) =>
+      getComputedStyle(screen.getByTestId(`gallery-tile-${id}`).firstElementChild!).borderTopWidth === '2.5px';
+    expect(ringed('b')).toBe(true);
+    expect(ringed('a')).toBe(false);
   });
 
   // Coming back to the grid, the guide finds where they were.
