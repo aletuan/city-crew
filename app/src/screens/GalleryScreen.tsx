@@ -441,7 +441,12 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         {/* The rules, once, in the reader's language — the ones a menu
             cannot show because they are about what it does *not* offer. */}
         <Card style={s.tips}>
-          {/* Rewritten with the owner (15 Oct 2026). "The desk" is a
+          {/* Cut to one line each with the owner (16 Oct 2026): what
+              the screen shows by itself went — how to change the cover is
+              the sheet's own row, which photo of several becomes it shows
+              in the first tile, and which of two edits wins is the
+              database's business, not the guide's.
+              Rewritten with the owner before that (15 Oct 2026). "The desk" is a
               name only the team uses, so the second tip names City Crew.
               "JPG or PNG" went: the roll's HEIC is turned into JPEG on
               the way up, so the format was never the reader's to mind.
@@ -452,19 +457,19 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
               makes the newest photo the cover. */}
           <Text style={s.tipsTitle}>{t('Note', 'Chú ý', 'ご注意')}</Text>
           <Tip text={t(
-            'A photo you add becomes the cover (with several, the first one you picked). To change it, open another photo and make it the cover.',
-            'Ảnh bạn thêm sẽ thành ảnh bìa (thêm nhiều ảnh thì là ảnh chọn đầu tiên). Muốn đổi, mở ảnh khác rồi chọn Đặt làm ảnh bìa.',
-            '追加した写真がカバーになります（複数なら最初に選んだ1枚）。変えるには別の写真を開いてカバーにします。',
+            'A photo you add becomes the cover.',
+            'Ảnh mới thêm sẽ thành ảnh bìa.',
+            '追加した写真がカバーになります。',
           )} />
           <Tip text={t(
-            'The City Crew team can edit these photos too. The latest change is the one kept.',
-            'Đội ngũ City Crew cũng có thể chỉnh các ảnh này. Thay đổi mới nhất sẽ được giữ.',
-            'City Crewのチームもこれらの写真を編集できます。最新の変更が反映されます。',
+            'The City Crew team can edit these photos too.',
+            'Đội ngũ City Crew cũng có thể chỉnh các ảnh này.',
+            'City Crewのチームもこれらの写真を編集できます。',
           )} />
           <Tip text={t(
-            `You can add up to ${MAX_PER_PLACE} photos per place.`,
-            `Mỗi địa điểm bạn thêm được tối đa ${MAX_PER_PLACE} ảnh.`,
-            `1つの場所に追加できる写真は${MAX_PER_PLACE}枚までです。`,
+            `Up to ${MAX_PER_PLACE} photos per place.`,
+            `Tối đa ${MAX_PER_PLACE} ảnh cho mỗi địa điểm.`,
+            `1つの場所に${MAX_PER_PLACE}枚まで。`,
           )} />
         </Card>
       </ScrollView>
