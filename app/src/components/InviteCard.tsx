@@ -39,7 +39,7 @@ import { Avatar, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 
 export default function InviteCard({
-  trip, from, busy, onOpen, onAnswer,
+  trip, from, busy, onOpen, onAnswer, index = 0,
 }: {
   trip: Trip;
   /** Who asked. Null while the crew copy is still loading — the card draws
@@ -48,6 +48,8 @@ export default function InviteCard({
   busy: boolean;
   onOpen: () => void;
   onAnswer: (answer: 'accepted' | 'declined') => void;
+  /** Its place in the rail, for the e2e flow's `invite-accept-<i>`. */
+  index?: number;
 }) {
   const { t, lang } = useI18n();
   const stops = trip.trip_stops ?? [];
@@ -142,6 +144,7 @@ export default function InviteCard({
         <PressableScale
           onPress={() => { if (!busy) onAnswer('accepted'); }}
           accessibilityRole="button"
+          testID={`invite-accept-${index}`}
           containerStyle={{ flex: 1 }}
           style={[s.yes, busy && s.busy]}
         >

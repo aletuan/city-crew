@@ -1,0 +1,23 @@
+# Reusable: Profile → "Connect with friends" → the crew screen. Expects to
+# be signed in.
+#
+# By the row's text, not its id: `feature-row` is the id of every row in
+# that card (ProfileScreen's own tests find rows by it), so it names no
+# one row. The label is the glyph, the title, then the friend count, hence
+# the `.*` either side.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      text: ".*Connect with friends.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    text: ".*Connect with friends.*"
+- extendedWaitUntil:
+    visible:
+      id: "crew-tab-friends"
+    timeout: 15000

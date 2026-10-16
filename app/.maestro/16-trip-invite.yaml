@@ -1,0 +1,199 @@
+# Invite a friend to a trip, and the friend says yes: A plans a trip with
+# friends, invites B from the trip's crew, B finds the invitation on
+# Trips and accepts, the trip is on B's list as one B can leave but not
+# delete, and A's crew list reads B as coming. A deletes the trip, which
+# takes it off B's list too (`trip_invites` cascades on the trip).
+#
+# Vitest renders each of those screens alone; what only a device shows is
+# the round trip through RLS between two real accounts — the insert that
+# demands an accepted friendship, the read `on_trip` grants an invitee,
+# the answer only the invitee may write.
+#
+# Fixture, set once on 12 October and never touched by this flow: A
+# (TEST_EMAIL) and B (TEST_EMAIL_2) are accepted friends, and B is A's
+# only friend, so B is `invite-friend-0` in A's sheet. If A gains a
+# friend, the sheet's order is no longer B first.
+#
+# Every hop between the accounts is a sign-out and a sign-in, and a
+# relaunch first: the invitations are fetched when the signed-in account
+# changes, not when Trips comes into focus (lib/invitations), and
+# TripDetail has no back button with an id to leave by.
+#
+# Leaves no trip on either account and the device signed out.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+# A by hand, not by `ensure-signed-in`, which keeps any session it finds:
+# a run stopped while B was signed in would otherwise plan as B. See
+# 15-theme, where that happened.
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow: common/sign-in.yaml
+
+# Leftovers from a run that failed half way. Deleting A's trip also ends
+# whatever B held of it.
+- tapOn:
+    id: "tab-trips"
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    while:
+      visible:
+        id: "trip-upcoming-0"
+    commands:
+      - runFlow: common/delete-first-trip.yaml
+
+# ── A plans a trip with friends, as 05 does ──
+# "Friends", because a solo trip has no Invite button.
+- tapOn:
+    id: "tab-ideas"
+- extendedWaitUntil:
+    visible:
+      id: "ideas-company-friends"
+    timeout: 30000
+- tapOn:
+    id: "ideas-company-friends"
+- tapOn:
+    id: "ideas-cat-0"
+- tapOn:
+    id: "ideas-cat-1"
+    optional: true
+- tapOn:
+    id: "ideas-cat-2"
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "ideas-sketch"
+    direction: DOWN
+    timeout: 10000
+- scroll
+- tapOn:
+    id: "ideas-sketch"
+- extendedWaitUntil:
+    visible:
+      id: "plan-card-best"
+    timeout: 90000
+- tapOn:
+    id: "plan-card-best"
+- scrollUntilVisible:
+    element:
+      id: "plan-save"
+    direction: DOWN
+    timeout: 20000
+- scroll
+- tapOn:
+    id: "plan-save"
+- extendedWaitUntil:
+    visible:
+      id: "trip-upcoming-0"
+    timeout: 60000
+
+# ── A invites B ──
+- tapOn:
+    id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-invite"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn:
+    id: "trip-invite"
+- extendedWaitUntil:
+    visible:
+      id: "invite-friend-0"
+    timeout: 15000
+- tapOn:
+    id: "invite-friend-0"
+- tapOn:
+    id: "invite-send"
+# The crew list appears once somebody has been asked, and reads the row
+# back from the server (`invites.reload()` after the insert).
+- extendedWaitUntil:
+    visible:
+      id: "crew-said-0"
+      text: "Asked"
+    timeout: 20000
+
+# ── B finds the invitation on Trips, and says yes ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow:
+    file: common/sign-in.yaml
+    env:
+      TEST_EMAIL: ${TEST_EMAIL_2}
+      TEST_PASSWORD: ${TEST_PASSWORD_2}
+- tapOn:
+    id: "tab-trips"
+- extendedWaitUntil:
+    visible:
+      id: "invite-accept-0"
+    timeout: 30000
+- tapOn:
+    id: "invite-accept-0"
+# Accepted, it leaves the invitations and joins B's own trips.
+- extendedWaitUntil:
+    visible:
+      id: "trip-upcoming-0"
+    timeout: 30000
+- assertNotVisible:
+    id: "invite-accept-0"
+# B's copy is a guest's: the button at the foot is Leave, never Delete —
+# one id, chosen by `owned` (TripDetailScreen).
+- tapOn:
+    id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-leave"
+    direction: DOWN
+    timeout: 20000
+
+# ── A sees B coming, and deletes the trip ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow: common/sign-in.yaml
+- tapOn:
+    id: "tab-trips"
+- extendedWaitUntil:
+    visible:
+      id: "trip-upcoming-0"
+    timeout: 30000
+- tapOn:
+    id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "crew-said-0"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "crew-said-0"
+      text: "Coming"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trip-delete"
+    direction: DOWN
+    timeout: 20000
+# At the foot of the page it cannot be centred, and the first frame it
+# shows in can be under the floating tab bar: one more scroll lifts it.
+- scroll
+- tapOn:
+    id: "trip-delete"
+- tapOn:
+    text: "Delete|Xoá|削除"
+- extendedWaitUntil:
+    visible:
+      id: "tab-trips"
+    timeout: 15000
+- assertNotVisible:
+    id: "trip-upcoming-0"
+- runFlow: common/ensure-signed-out.yaml

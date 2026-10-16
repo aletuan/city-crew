@@ -147,7 +147,7 @@ export default function TripCrew({
         </View>
 
         {canInvite ? (
-          <PressableScale onPress={onInvite} accessibilityRole="button" style={s.ghost}>
+          <PressableScale onPress={onInvite} accessibilityRole="button" style={s.ghost} testID="trip-invite">
             <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
             <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
           </PressableScale>
@@ -160,7 +160,7 @@ export default function TripCrew({
           around a refusal — both need the name. */}
       {mine && invites.length > 0 ? (
         <View style={s.list}>
-          {[...crew.accepted, ...crew.pending, ...crew.declined].map((i) => {
+          {[...crew.accepted, ...crew.pending, ...crew.declined].map((i, n) => {
             const p = people[i.invitee_id];
             const said = i.status;
             return (
@@ -170,6 +170,7 @@ export default function TripCrew({
                   {p?.full_name || (p?.handle ? `@${p.handle}` : t('Someone', 'Ai đó', '誰か'))}
                 </Text>
                 <Text
+                  testID={`crew-said-${n}`}
                   style={[
                     s.said,
                     said === 'accepted' && { color: colors.ok },

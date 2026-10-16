@@ -480,9 +480,10 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
               {t('Invitations', 'Lời mời', '招待')} · {rail.length}
             </Text>
           )}
-          {rail.map(({ invite, trip }) => (
+          {rail.map(({ invite, trip }, i) => (
             <InviteCard
               key={trip.id}
+              index={i}
               trip={trip}
               from={people[invite.inviter_id] ?? null}
               busy={answering === trip.id}
