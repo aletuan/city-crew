@@ -14,7 +14,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 
-import { TabBarDuckProvider, useDuckOnScroll, useTabBarDuck } from './tabBarDuck';
+import { TabBarDuckProvider, useDuckOnScroll, useTabBarDuck, useTabBarDucked } from './tabBarDuck';
 
 /** A scroll event as a ScrollView would report it. */
 const scroll = (y: number, max?: number) => ({
@@ -147,8 +147,34 @@ describe('the hooks outside the provider', () => {
     expect(screen.getByText('no handler')).toBeTruthy();
   });
 
+  it('tells a screen lending its dock that the bar is here, rather than throwing', () => {
+    function Lender() { return <Text>{useTabBarDucked() ? 'away' : 'here'}</Text>; }
+    render(<Lender />);
+    expect(screen.getByText('here')).toBeTruthy();
+  });
+
   it('refuses the bar, loudly: it cannot work without one', () => {
     function Bar() { useTabBarDuck(); return null; }
     expect(() => render(<Bar />)).toThrow('useTabBarDuck outside TabBarDuckProvider');
+  });
+});
+
+// What a screen that lends the bar's dock reads (`DockSlot`): the same
+// flag the bar does.
+describe('useTabBarDucked', () => {
+  it('follows the bar away and back', () => {
+    function Lender({ events }: { events: ReturnType<typeof scroll>[] }) {
+      const onScroll = useDuckOnScroll();
+      return (
+        <>
+          <Text>{useTabBarDucked() ? 'away' : 'here'}</Text>
+          <Pressable accessibilityRole="button" onPress={() => events.forEach((e) => onScroll?.(e))}><Text>scroll</Text></Pressable>
+        </>
+      );
+    }
+    render(<TabBarDuckProvider><Lender events={[scroll(0), scroll(100), scroll(140)]} /></TabBarDuckProvider>);
+    expect(screen.getByText('here')).toBeTruthy();
+    feed();
+    expect(screen.getByText('away')).toBeTruthy();
   });
 });
