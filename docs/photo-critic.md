@@ -85,6 +85,13 @@ Với City Crew còn một mục tiêu riêng: ảnh phải **đại diện đư
   tăng gấp đôi.
 - **Catalog có 2.303 ảnh, trong đó 2.159 ảnh từ Google.** Chỉ khoảng 144 ảnh
   do guide tự tải lên (ảnh hưởng tới mục 8).
+- **Đo lại lúc chạy B4 (16/10, chiều): 6.211 ảnh của 996 địa điểm đã xuất
+  bản, mới 351 ảnh có điểm `apple-vision`.** Con số 277 ở đầu mục này là số
+  ảnh *đã chấm* lúc đó, không phải cả catalog. Hệ quả cho B4–B5:
+  - so với Vision chỉ làm được trên khoảng 6% ảnh (`vision_scored`);
+  - chạy cả catalog trên Mac mất khoảng 2,5 giờ (đo: 20 ảnh trong 29 giây,
+    tính cả tải ảnh), lần chạy sau nhanh hơn nhờ `out/cache/`;
+  - `--limit N` lấy N ảnh đầu theo `id`, là uuid, nên coi như mẫu ngẫu nhiên.
 
 ## 5. Quy trình 6 bước
 
@@ -205,6 +212,7 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 | D7 | 16/10 | Chạy đánh giá trên Mac của chủ sản phẩm | Chủ sản phẩm; container không kết nối được kho ảnh |
 | D8 | 16/10 | Chủ sản phẩm chụp hoặc cung cấp ảnh thử cho các category khó | Chủ sản phẩm |
 | D9 | 16/10 | Mô hình cho B: SigLIP 2 base, so với CLIP B/32. Loại MobileCLIP | Giấy phép: MobileCLIP chỉ cho nghiên cứu (mục 8) |
+| D10 | 16/10 | Thử câu mô tả tiếng Việt và tiếng Nhật trên SigLIP 2 (B6b). Chỉ khi không đủ tốt mới thử bản đa ngôn ngữ của SigLIP đời đầu | Chủ sản phẩm. SigLIP 2 đã học trên dữ liệu nhiều ngôn ngữ; CLIP gần như chỉ biết tiếng Anh nên không tham gia phép thử này |
 
 ## 10. Câu hỏi đang mở
 
@@ -214,6 +222,11 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 - **Q5.** Ngưỡng nào thì B được coi là đạt? Đề xuất ở B7.
 - **Q6.** Category Văn hóa, Mua sắm, Giải trí, Học tập: nếu B vẫn yếu thì chỉ
   dùng hai mức "Hợp" và "Chưa rõ", không bao giờ báo lạc đề?
+- **Q7.** Có định cho người dùng **gõ chữ để tìm ảnh** (tiếng Việt, tiếng
+  Nhật) không? Nếu có thì phần đọc chữ cũng phải nằm trên máy, và nặng hơn
+  phần đọc ảnh nhiều (bộ từ vựng 256 nghìn token của SigLIP 2) → câu trả lời
+  đổi con số ở Q2. Nếu không thì câu mô tả cố định được tính sẵn, ngôn ngữ chỉ
+  là chuyện câu nào cho kết quả tốt nhất (B6b).
 
 ## 11. Tiến độ
 
@@ -243,6 +256,29 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
     được tha.
 - [ ] **B6. Ảnh thử cho category khó** (D8): khoảng 10 ảnh mỗi loại, là ảnh
   của mình, xếp vào thư mục theo khoá category và chạy với `--extra`.
+- [ ] **B6b. Câu mô tả tiếng Việt và tiếng Nhật** (D10). Chạy sau B5, trên
+  cùng tập ảnh (catalog và ảnh thử B6), chỉ với SigLIP 2.
+  - **Vì sao.** Ảnh không có ngôn ngữ; ngôn ngữ chỉ nằm ở câu mô tả. Câu
+    tiếng Việt có thể bắt sát hơn những thứ tiếng Anh tả không trúng ("cà phê
+    sữa đá", "quán nhậu", "chợ"). Phép thử cũng cho biết mô hình hiểu tiếng
+    Việt và tiếng Nhật tới đâu, nếu sau này có tìm ảnh bằng chữ (Q7).
+  - **Cần làm trước:** `prompts.vi.json` và `prompts.ja.json`, cùng khoá và
+    cùng ý với `prompts.json`, viết lại cho tự nhiên chứ không dịch từng chữ;
+    cờ `--prompts` trong `eval.py`; test đồng bộ khoá mở rộng cho cả hai
+    file. (Tiếng Nhật cần người đọc được tiếng Nhật duyệt câu.)
+  - **Bốn lần chạy:** chỉ tiếng Anh (= B4), chỉ tiếng Việt, chỉ tiếng Nhật,
+    và tiếng Anh + tiếng Việt gộp (category lấy câu khớp nhất trong cả hai).
+  - **So sánh:** top 1, top 3, `covers_off`, bảng nhầm lẫn và
+    `extra_by_category`, từng category một.
+  - **Đề xuất ngưỡng, chờ chủ sản phẩm duyệt:**
+    - tiếng Việt / tiếng Nhật được coi là "đủ tốt" khi top 3 đạt ≥ 95% mức của
+      tiếng Anh và không làm ảnh bìa nào thành lạc đề;
+    - bản gộp chỉ được dùng nếu nó tăng top 3 hoặc giảm số ảnh lạc đề sai,
+      mà không làm hỏng ảnh bìa nào.
+  - **Nếu không đủ tốt:** chạy lại với `google/siglip-base-patch16-256-multilingual`
+    (SigLIP đời đầu, bản huấn luyện riêng cho nhiều ngôn ngữ; ⚠️ đối chiếu
+    giấy phép trên model card trước khi dùng). Đổi mô hình là đổi cả phần đọc
+    ảnh, nên phải chạy lại toàn bộ B4–B6 với mô hình đó, không chỉ phần chữ.
 - [ ] **B7. Chốt có làm tiếp hay không.** Ngưỡng đề xuất, chờ chủ sản phẩm
   duyệt:
   - top 3 khớp ≥ 85% trên toàn catalog;
@@ -288,6 +324,7 @@ Mô hình chính là **SigLIP 2 base** (Apache 2.0); **CLIP B/32** (MIT) chạy 
 | 16/10/2026 | Thiết kế bước 2 và các phương án A–D. Chọn đánh giá B trước. Tài liệu này ra đời (#975) |
 | 16/10/2026 | B1: MobileCLIP chỉ cho nghiên cứu → chọn SigLIP 2 / CLIP. B2–B3: `data/photo-eval/` (câu mô tả, script, hướng dẫn). Quyết định D6–D9 |
 | 16/10/2026 | B4, lần chạy đầu trên Mac: tải được mô hình và catalog, rồi lỗi vì transformers 5 trả embedding trong `pooler_output`. Script giờ nhận cả hai phiên bản, và dừng nếu véc-tơ ảnh và véc-tơ chữ khác độ dài |
+| 16/10/2026 | B4 chạy được với `--limit 20` (29 giây). Catalog thật là 6.211 ảnh, 351 ảnh có điểm Vision (mục 4). Thêm B6b và D10: thử câu mô tả tiếng Việt và tiếng Nhật trên SigLIP 2; Q7 về tìm ảnh bằng chữ |
 
 ## 13. Phương án đã loại
 
