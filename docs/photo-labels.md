@@ -190,7 +190,7 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
 | 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ✅ 17/10: vòng 3 (loại ảnh), 3b (sáu thuộc tính), 3c (24 ảnh mới: loại ảnh, thấy cả không gian, người). Kết quả ở mục 10. Dàn dựng chưa đo được vì chưa có ảnh nào chủ sản phẩm chọn "Có" |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ✅ 17/10: 6.467 ảnh, Haiku 5.5, định nghĩa v4 (mục 10). Ảnh thêm sau đó chưa được gán tự động: app và Data Desk chưa gọi `label-photos` |
-| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (đề xuất ở mục 11) | ☐ đề xuất 17/10, chờ chủ sản phẩm duyệt |
+| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (đề xuất ở mục 11) | ◐ 17/10: chủ sản phẩm duyệt phần A. Data Desk có trang `#/covers` (Cover review), câu trả lời lưu ở `cover_reviews`. Phần B và C chờ kết quả đo ở A |
 
 **Tiêu chí để một nhãn được hiện trong app (bước 6):**
 - `kind` trùng với chủ sản phẩm từ **90%** trở lên.
@@ -649,3 +649,27 @@ nhãn; hiện cây xanh hay dàn dựng.
 **Tiêu chí thành công:** ở phần A, ghi tỷ lệ người duyệt nhận gợi ý trên 50
 nơi đầu tiên. Có làm phần B hay không, chủ sản phẩm quyết dựa trên con số
 đó.
+
+**Chủ sản phẩm duyệt (17/10/2026):**
+- Làm **phần A** trước.
+- **Ảnh đồ ăn được làm ảnh bìa** ở quán cà phê và chỗ ăn uống (category
+  `cafes` hoặc `eats`). Với luật này, catalog còn **60 nơi** cần xem lại,
+  thay vì 199 nơi như trên.
+- **Chính sách quyền riêng tư** đã thêm đoạn về ảnh gửi tới Claude (PR
+  #1026).
+- **Ảnh mới:** gán nhãn bằng một job `pg_cron` chạy mỗi giờ
+  (`supabase/functions/label-photos/cron.sql`), theo mẫu của
+  `shrink-photos`. Dùng job thay cho trigger vì ảnh phải có trong bucket
+  trước, và một lần gọi lỗi sẽ tự được thử lại ở giờ sau.
+
+**Phần A đã làm:**
+- `dashboard/src/coverReview.js` chứa luật: ảnh nào đủ điều kiện, ảnh nào
+  được gợi ý, nơi nào cần hỏi.
+- Trang `#/covers` đặt ảnh bìa hiện tại cạnh ảnh gợi ý, kèm lý do. Người
+  duyệt chọn "Use the suggestion" hoặc "Keep the cover".
+- Câu trả lời được lưu ở bảng `cover_reviews`, mỗi nơi một dòng, chỉ
+  editor đọc và ghi được. Nơi nào đã chọn giữ ảnh bìa sẽ không hiện lại,
+  trừ khi ảnh bìa đổi.
+- Pill "N of M suggestions taken" là con số để đo. Khi đã có 50 câu trả
+  lời đầu tiên, ghi tỷ lệ vào đây.
+

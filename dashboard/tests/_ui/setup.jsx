@@ -79,6 +79,9 @@ const API_DEFAULTS = {
   patchPhoto: async () => ({ ok: true }),
   reorderPhotos: async () => ({ ok: true }),
   photoUris: async () => ({}),
+  coverPlaces: async () => [],
+  coverAnswers: async () => [],
+  answerCover: async () => ({ ok: true }),
   uploadPhoto: async () => ({ id: 'uploaded' }),
   deletePhoto: async () => ({ ok: true, left: [] }),
 };

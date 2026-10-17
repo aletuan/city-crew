@@ -10,6 +10,7 @@ import React from 'react';
 import App, { CityGate } from './App.jsx';
 import AddPlace from './components/AddPlace.jsx';
 import CityHero from './components/CityHero.jsx';
+import CoverReview from './components/CoverReview.jsx';
 import Contributors from './components/Contributors.jsx';
 import Reports from './components/Reports.jsx';
 import Coverage from './components/Coverage.jsx';
@@ -36,6 +37,7 @@ export const routes = [
       // between Hanoi and Saigon.
       { path: 'search-words', element: <SearchTerms /> },
       { path: 'reports', element: <Reports /> },
+      { path: 'covers', element: <CoverReview /> },
       { path: 'analytics/contributors', element: <Contributors /> },
       { path: 'analytics/coverage', element: <Coverage /> },
       // Not in the navigation: a measurement round, reached by its link.

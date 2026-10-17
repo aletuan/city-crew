@@ -439,6 +439,14 @@ for f in "$ROOT"/supabase/migrations/*_photo_scores_second_scorer.sql; do
 done
 run "$DB" -f "$HERE/photo_scores_second_scorer_test.sql"
 
+# Cover reviews (17 Oct 2026): the desk's answer to a suggested cover.
+# After the editors' gallery block, whose editor and guide it reuses.
+echo "→ cover reviews"
+for f in "$ROOT"/supabase/migrations/*_cover_reviews.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/cover_reviews_test.sql"
+
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
   run "$DB" -f "$f" >/dev/null

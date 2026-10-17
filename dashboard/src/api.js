@@ -613,6 +613,52 @@ export const api = {
     return { ok: true };
   },
 
+  /**
+   * Every place with its photographs and their labels, for the cover
+   * review (`coverReview.js`). Only the `claude-labels` row of each
+   * photograph comes back — Apple Vision's would be a second row in the
+   * same embed — and its `signals` are the labels. All of a city's places
+   * at once, or the catalog's: the review is a filter over the whole
+   * gallery of each place, not a page of them.
+   */
+  coverPlaces: async (city) => {
+    const rows = await everyRow(() => {
+      let q = supabase.from('places')
+        .select('id, slug, city_id, name_en, name_vi, categories, '
+          + 'place_photos(id, photo_uri, is_cover, is_hidden, sort_order, photo_scores(scorer, signals))')
+        .eq('place_photos.photo_scores.scorer', 'claude-labels');
+      if (city) q = q.eq('city_id', city);
+      return q.order('id');
+    });
+    return rows.map(({ place_photos: photos, name_en: en, name_vi: vi, ...p }) => ({
+      ...p,
+      name: en || vi || p.slug,
+      photos: (photos ?? []).map(({ photo_scores: scores, ...ph }) => ({ ...ph, labels: scores?.[0]?.signals ?? null })),
+    }));
+  },
+
+  /** The desk's answers so far, one per place (`cover_reviews`). */
+  coverAnswers: async () => everyRow(() => supabase.from('cover_reviews')
+    .select('place_id, cover_photo_id, suggested_photo_id, decision')
+    .order('place_id')),
+
+  /**
+   * Answer one review: `changed` makes the suggestion the cover first,
+   * then records the answer, so a failed cover change never leaves an
+   * answer saying it happened. Who answered, and when, the database
+   * stamps.
+   */
+  answerCover: async (review, decision) => {
+    if (decision === 'changed') await api.patchPhoto(review.suggestion.id, { is_cover: true });
+    db(await supabase.from('cover_reviews').upsert({
+      place_id: review.place.id,
+      cover_photo_id: review.cover.id,
+      suggested_photo_id: review.suggestion.id,
+      decision,
+    }, { onConflict: 'place_id' }).select('place_id'));
+    return { ok: true };
+  },
+
   /** Where each photograph is, by id: the photo-type round shows them
    *  in its own order, and a photograph deleted since is simply absent. */
   photoUris: async (ids) => {
