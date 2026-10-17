@@ -75,6 +75,30 @@ export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>[
   return t('Any time', 'Mọi giờ', '指定なし');
 }
 
+/**
+ * What a saved/visited row says it is: a checkbox for a reader who can
+ * tick it, a button for a guest it sends to sign in.
+ *
+ * It was a checkbox both ways, with `disabled` set for the guest — and
+ * the guest's row is not disabled: pressing it opens sign-in, and the
+ * screen says so with an accent "Sign in ›" where the box would be.
+ * VoiceOver read "checkbox, dimmed" over that door, so a reader who
+ * trusts the announcement never tried it, and TalkBack may decline to
+ * activate a node it has been told is disabled. "Unchecked" was wrong
+ * too: a guest has no box to be unchecked. (UX-01, 17 Oct 2026.)
+ *
+ * The guest's label is the row read left to right, name first, so a
+ * reader skimming the rows hears which one this is before what it
+ * needs. `aria-checked` beside the state for the same reason the radios
+ * carry it: react-native-web drops `accessibilityState`, and a test can
+ * only read what reaches the DOM.
+ */
+export function switchOrDoor(signedIn: boolean, checked: boolean, name: string, door: string, why: string) {
+  return signedIn
+    ? { accessibilityRole: 'checkbox' as const, accessibilityState: { checked }, 'aria-checked': checked, accessibilityLabel: name }
+    : { accessibilityRole: 'button' as const, accessibilityLabel: door, accessibilityHint: why };
+}
+
 export default function ExploreFilterSheet({
   visible,
   applied,
@@ -250,15 +274,16 @@ export default function ExploreFilterSheet({
             choose('savedOnly', !draft.savedOnly);
           }}
           testID="filter-saved"
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: draft.savedOnly, disabled: !signedIn }}
-          // Same reason as the sort rows: the tree otherwise reads the
-          // bookmark glyph, the words, "Sign in" and the chevron glyph
-          // as one comma-spliced label.
-          accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ')}
-          accessibilityHint={signedIn
-            ? undefined
-            : t('Sign in to use this', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして使う')}
+          // Same reason as the sort rows for naming it at all: the tree
+          // otherwise reads the bookmark glyph, the words, "Sign in" and
+          // the chevron glyph as one comma-spliced label.
+          {...switchOrDoor(
+            signedIn,
+            draft.savedOnly,
+            t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ'),
+            t('Bookmarked only, sign in', 'Chỉ nơi đã lưu, đăng nhập', 'ブックマークのみ、サインイン'),
+            t('Sign in to filter by saved places', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして保存済みで絞り込む'),
+          )}
           style={[s.row, draft.savedOnly && s.rowOn]}
         >
           <Ionicons
@@ -303,12 +328,13 @@ export default function ExploreFilterSheet({
                 choose('visitedOnly', !draft.visitedOnly);
               }}
               testID="filter-visited"
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: draft.visitedOnly, disabled: !signedIn }}
-              accessibilityLabel={t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ')}
-              accessibilityHint={signedIn
-                ? undefined
-                : t('Sign in to use this', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして使う')}
+              {...switchOrDoor(
+                signedIn,
+                draft.visitedOnly,
+                t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ'),
+                t('Visited only, sign in', 'Chỉ nơi đã check-in, đăng nhập', '訪問済みのみ、サインイン'),
+                t('Sign in to filter by places you checked in at', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして訪問済みで絞り込む'),
+              )}
               style={[s.row, draft.visitedOnly && s.rowOn]}
             >
               <Ionicons
