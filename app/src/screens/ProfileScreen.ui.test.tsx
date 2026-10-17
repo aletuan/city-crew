@@ -21,6 +21,7 @@
 import type { Pref } from '../lib/look';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CommonActions, StackRouter } from '@react-navigation/routers';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
@@ -564,15 +565,45 @@ describe('the three doors', () => {
     expect(screen.queryByText(/Reviews/)).toBeNull();
   });
 
-  it('opens the tab each number lives in', () => {
+  // UX-09: a bare `navigate(tab)` restored the tab where it was left, so
+  // "48 Saved places" opened whichever collection had been open. Each
+  // door now lands on its tab's list — popped back to, aimed at Yours for
+  // the two collection counts, with a fresh `at` that scrolls it to the top.
+  it('opens the list each number lives in, at its top, whatever was open there', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1234);
     const { parent } = draw();
+    const toList = { screen: 'CollectionsHome', params: { tab: 'yours', at: 1234 }, pop: true };
     fireEvent.click(screen.getByRole('button', { name: '0 Collections' }));
-    expect(parent.navigate).toHaveBeenLastCalledWith('Collections');
+    expect(parent.navigate).toHaveBeenLastCalledWith('Collections', toList);
     fireEvent.click(screen.getByRole('button', { name: '0 Saved places' }));
-    expect(parent.navigate).toHaveBeenLastCalledWith('Collections');
+    expect(parent.navigate).toHaveBeenLastCalledWith('Collections', toList);
     fireEvent.click(screen.getByRole('button', { name: '0 Trips' }));
-    expect(parent.navigate).toHaveBeenLastCalledWith('Trips');
+    expect(parent.navigate).toHaveBeenLastCalledWith('Trips', { screen: 'TripsHome', params: { at: 1234 }, pop: true });
     expect(parent.navigate).toHaveBeenCalledTimes(3);
+  });
+
+  it('takes the same door through the root when there is no parent', () => {
+    const r = nav();
+    r.raw.getParent.mockReturnValue(undefined as never);
+    render(<ProfileScreen navigation={r.n} />);
+    fireEvent.click(screen.getByRole('button', { name: '0 Trips' }));
+    expect(goTo).toHaveBeenCalledWith('Trips', expect.objectContaining({ screen: 'TripsHome', pop: true }));
+  });
+
+  // What `pop` buys, read off the router itself rather than assumed: in
+  // React Navigation 7 a `navigate` to a screen already beneath the top
+  // of a stack pushes a second copy of it, and only `pop` goes back to it.
+  it('relies on `pop` to close the collection that was open', () => {
+    const router = StackRouter({});
+    const options = { routeNames: ['CollectionsHome', 'CollectionDetail'], routeParamList: {}, routeGetIdList: {} };
+    const inDetail = router.getStateForAction(router.getInitialState(options), CommonActions.navigate('CollectionDetail', { slug: 'thao-dien' }), options)!;
+    const go = (pop: boolean) => router.getStateForAction(
+      inDetail as never,
+      CommonActions.navigate({ name: 'CollectionsHome', params: { tab: 'yours', at: 1 }, pop }),
+      options,
+    ) as { routes: { name: string }[] };
+    expect(go(true).routes.map((r) => r.name)).toEqual(['CollectionsHome']);
+    expect(go(false).routes.map((r) => r.name)).toEqual(['CollectionsHome', 'CollectionDetail', 'CollectionsHome']);
   });
 
   // UX-14: these read `data.length` off fetches still in flight, and a

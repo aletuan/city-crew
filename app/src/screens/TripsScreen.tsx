@@ -38,7 +38,7 @@
 // mock to avoid. The footer keeps the shape and fills it with what is
 // true — how many stops, what it costs.
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -294,7 +294,7 @@ function FirstTrip({ onPress }: { onPress: () => void }) {
   );
 }
 
-export default function TripsScreen({ navigation }: { navigation: Nav }) {
+export default function TripsScreen({ navigation, route }: { navigation: Nav; route?: { params?: { at?: number } } }) {
   const { t } = useI18n();
   const { session } = useAuth();
   const clearance = useTabBarClearance();
@@ -303,6 +303,12 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   // of the walk back that ExploreScreen's `tabPress` note describes.
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
+  // And from Profile's Trips count, which lands here with a fresh `at`:
+  // the list from its top, not where the reader last left it (UX-09).
+  const at = route?.params?.at;
+  useEffect(() => {
+    if (at) scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [at]);
   const trips = useMyTrips();
   const tripsFail = classifyLoadFail(trips.error);
 

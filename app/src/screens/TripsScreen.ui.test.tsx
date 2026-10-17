@@ -207,6 +207,25 @@ describe('nothing saved yet', () => {
   });
 });
 
+// UX-09: Profile's Trips count lands here with a fresh `at`, and the list
+// starts from its top rather than where the reader last left it.
+describe('arriving from Profile', () => {
+  it('scrolls back to the top on a fresh `at`, and not otherwise', () => {
+    state.trips = { loaded: true, error: null, data: [trip({ day: SOON })] };
+    const n = nav();
+    const { rerender } = render(<TripsScreen navigation={n} />);
+    const scroller = [...document.querySelectorAll('div')].find((d) => getComputedStyle(d).overflowY === 'auto' || d.className.includes('overflowY'))!;
+    scroller.scrollTop = 300;
+    rerender(<TripsScreen navigation={n} route={{ params: {} }} />);
+    expect(scroller.scrollTop).toBe(300);
+    rerender(<TripsScreen navigation={n} route={{ params: { at: 1 } }} />);
+    expect(scroller.scrollTop).toBe(0);
+    scroller.scrollTop = 300;
+    rerender(<TripsScreen navigation={n} route={{ params: { at: 2 } }} />);
+    expect(scroller.scrollTop).toBe(0);
+  });
+});
+
 describe('the two halves', () => {
   it('puts what is coming above what has been, each with its count, soonest and most recent first', () => {
     show([
