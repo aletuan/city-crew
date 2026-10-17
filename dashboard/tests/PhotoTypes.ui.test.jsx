@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { api } from '../src/api.js';
-import { SAMPLE } from '../src/photoTypes.js';
+import { SAMPLE, SAMPLE_1B } from '../src/photoTypes.js';
 import { findToast, renderDesk } from './_ui/desk.jsx';
 
 const KEY = 'citycrew.dashboard.photoTypes.r1';
@@ -113,6 +113,34 @@ describe('PhotoTypes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy answers' }));
     expect((await findToast()).textContent).toContain('use Copy');
     expect(select).toHaveBeenCalled();
+  });
+
+  it('shows no definitions on round 1', async () => {
+    api.photoUris.mockResolvedValue(uris);
+    renderDesk('/photo-types');
+    await screen.findByRole('img', { name: 'Photograph 1' });
+    expect(screen.queryByRole('list', { name: 'Definitions' })).toBeNull();
+  });
+
+  // Round 1b: the place-or-scenery half again, under the definitions,
+  // with answers kept apart from round 1's.
+  it('asks round 1b under the definitions, and keeps its answers apart', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ [SAMPLE[0]]: 'F' }));
+    api.photoUris.mockResolvedValue(uris);
+    renderDesk('/photo-types-1b');
+    const photo = await screen.findByRole('img', { name: 'Photograph 1' });
+    expect(photo.getAttribute('src')).toBe(uris[SAMPLE_1B[0]]);
+    expect(screen.getByText('1 / 57')).toBeTruthy();
+    expect(api.photoUris).toHaveBeenCalledWith(SAMPLE_1B);
+    const guide = screen.getByRole('list', { name: 'Definitions' });
+    expect(guide.textContent).toContain('Nhà thờ hay mặt tiền dưới trời xanh vẫn là Địa điểm');
+    expect(screen.getByRole('heading', { name: 'Photo types · 1b' })).toBeTruthy();
+    fireEvent.click(kinds().getByRole('button', { name: /Phong cảnh/ }));
+    expect(JSON.parse(localStorage.getItem('citycrew.dashboard.photoTypes.r1b'))).toEqual({ [SAMPLE_1B[0]]: 'S' });
+    expect(JSON.parse(localStorage.getItem(KEY))).toEqual({ [SAMPLE[0]]: 'F' });
+    fireEvent.click(screen.getByRole('button', { name: 'Answers ›' }));
+    expect(screen.getByLabelText('Answers').value).toBe(`S${'-'.repeat(56)}`);
+    expect(screen.getByText(/Round 1b\./)).toBeTruthy();
   });
 
   it('carries its own name in the page head', async () => {

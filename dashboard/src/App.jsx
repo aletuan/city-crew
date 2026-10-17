@@ -64,6 +64,10 @@ const PAGE_HEAD = {
     title: 'Photo types',
     sub: 'Food, place or scenery — one photograph at a time.',
   },
+  '/photo-types-1b': {
+    title: 'Photo types · 1b',
+    sub: 'Place or scenery again, under a definition.',
+  },
   // The editor. Its title is the room's name, not the place's, for the
   // same reason the three above are: these name the screen you are in,
   // and the place's own name is already the loudest thing on it — the

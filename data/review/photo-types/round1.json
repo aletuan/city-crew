@@ -610,5 +610,7 @@
    "place": "the-hanoi-social-club",
    "labels": "food:0.96 tableware:0.94 utensil:0.94 plate:0.94 seasonings:0.92"
   }
- ]
+ ],
+ "human": "FPFFFSFFPFSPFFPPFFFPPPFPPFPPFFPFFFPFPPPFPPSSPPFPSFPPFSSSSPFPFSSPPPPPSFFFFFFPFPFPFSFSPFFFFPFPPSPFSPPF",
+ "about_human": "The owner's round-1 answers, pasted 17 Oct 2026, in the same order."
 }

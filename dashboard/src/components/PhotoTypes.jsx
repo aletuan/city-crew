@@ -11,35 +11,44 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../App.jsx';
-import { KINDS, SAMPLE, encode, firstOpen } from '../photoTypes.js';
+import { GUIDE, KINDS, ROUNDS, encode, firstOpen } from '../photoTypes.js';
 
-const KEY = 'citycrew.dashboard.photoTypes.r1';
-
-/** What this browser kept of the round, or nothing — a private window
- *  or cleared site data starts it over rather than breaking it. */
-function load() {
+/** What this browser kept of a round, or nothing — a private window or
+ *  cleared site data starts it over rather than breaking it. */
+function load(key) {
   try {
-    return JSON.parse(localStorage.getItem(KEY)) ?? {};
+    return JSON.parse(localStorage.getItem(key)) ?? {};
   } catch {
     return {};
   }
 }
 
-export default function PhotoTypes() {
+/** The definitions, on the page of a round answered under them — above
+ *  the photograph, so they are read before each answer, not once. */
+function Guide() {
+  return (
+    <ul className="pt-guide" aria-label="Definitions">
+      {GUIDE.map((g) => <li key={g.key}>{g.text}</li>)}
+    </ul>
+  );
+}
+
+export default function PhotoTypes({ round = 'r1' }) {
+  const { key: KEY, sample: SAMPLE, guide } = ROUNDS[round];
   const toast = useToast();
-  const [labels, setLabels] = useState(load);
-  const [at, setAt] = useState(() => firstOpen(load()));
+  const [labels, setLabels] = useState(() => load(KEY));
+  const [at, setAt] = useState(() => firstOpen(SAMPLE, load(KEY)));
   const [uris, setUris] = useState(null);
 
   useEffect(() => {
     api.photoUris(SAMPLE)
       .then(setUris)
       .catch((err) => toast(`Couldn't load the photos: ${err.message}`));
-  }, [toast]);
+  }, [SAMPLE, toast]);
 
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(labels)); } catch { /* kept for this visit only */ }
-  }, [labels]);
+  }, [KEY, labels]);
 
   const answer = (key) => {
     setLabels((was) => ({ ...was, [SAMPLE[at]]: key }));
@@ -50,7 +59,7 @@ export default function PhotoTypes() {
   if (!uris) return <div className="empty">Loading…</div>;
 
   if (at >= SAMPLE.length) {
-    const line = encode(labels);
+    const line = encode(SAMPLE, labels);
     const copy = async () => {
       try {
         await navigator.clipboard.writeText(line);
@@ -65,7 +74,7 @@ export default function PhotoTypes() {
     return (
       <section className="pt">
         <h3 className="pt-title">{done} / {SAMPLE.length} answered</h3>
-        <p className="pt-note">One letter per photograph, in order: F food, P place, S scenery, U not sure, – none.</p>
+        <p className="pt-note">One letter per photograph, in order: F food, P place, S scenery, U not sure, – none.{guide ? ' Round 1b.' : ''}</p>
         <textarea id="pt-line" className="pt-line" readOnly value={line} rows={4} aria-label="Answers" />
         <div className="pt-actions">
           <button type="button" className="pt-btn pt-primary" onClick={copy}>Copy answers</button>
@@ -82,6 +91,7 @@ export default function PhotoTypes() {
   const next = uris[SAMPLE[at + 1]];
   return (
     <section className="pt">
+      {guide && <Guide />}
       <div className="pt-head">
         <button type="button" className="pt-back" onClick={() => setAt(at - 1)} disabled={at === 0}>‹ Back</button>
         <span className="pt-count">{at + 1} / {SAMPLE.length}</span>

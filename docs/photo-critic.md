@@ -260,7 +260,13 @@ D. Nhưng C trái nguyên tắc 4.
   Địa điểm, 10 Không chắc. Mẫu 100 ảnh (30 mỗi loại luật đoán, 10 Không
   chắc, xáo trộn) chấm tay ở Data Desk `#/photo-types`, trang không hiện
   lời đoán. Lời đoán của luật theo đúng thứ tự trang nằm ở
-  `data/review/photo-types/round1.json`.
+  `data/review/photo-types/round1.json`, cùng câu trả lời của chủ sản phẩm.
+  **Kết quả vòng 1:** luật nói Món ăn đúng **30/30**; Địa điểm đúng 21/30
+  (sót 6 ảnh món ăn mà Vision chỉ gắn nhãn bát đĩa, dao dĩa, ly); Phong cảnh
+  đúng **10/30** (17 ảnh là mặt tiền, nhà thờ, thư viện dưới trời xanh, chủ
+  sản phẩm gọi là Địa điểm). Vòng 1 chưa có định nghĩa cho hai loại này, nên
+  **vòng 1b** (`#/photo-types-1b`) hỏi lại 57 ảnh chủ sản phẩm gọi là Địa
+  điểm hoặc Phong cảnh, với định nghĩa theo chủ thể của ảnh hiện trên trang.
 
 ## 10. Việc tiếp theo
 
