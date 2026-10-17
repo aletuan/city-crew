@@ -249,10 +249,23 @@ export function schemeLabel(id: Pref, t: T): string {
     : t('Light', 'Sáng', 'ライト');
 }
 
-/** The second line on the Auto row: what the phone is doing right now.
- *  Without it the sheet can show a tick on Auto while the screen is
- *  plainly dark, and nothing on it explains which of the two won. */
-function systemNow(scheme: Scheme, t: T): string {
+/**
+ * The second line on the Auto row: what the phone is doing right now.
+ * Without it the sheet can show a tick on Auto while the screen is
+ * plainly dark, and nothing on it explains which of the two won.
+ *
+ * Only while Auto is the choice. `scheme` is the ground showing, which
+ * is the phone's only under Auto: with Light ticked on a dark phone it
+ * read "Following the phone · Light", a claim about the phone that was
+ * the reader's own pick read back (UX-03, 17 Oct 2026). Nor can the
+ * phone's own ground stand in there — while the app pins a ground,
+ * `Appearance` reports the pin, and a change the phone makes meanwhile
+ * fires no listener (see `setPref` in lib/theme). What cannot be known
+ * is not said: the line keeps what Auto does and drops which way it
+ * would land.
+ */
+function systemNow(following: boolean, scheme: Scheme, t: T): string {
+  if (!following) return t('Following the phone', 'Theo hệ thống', '端末に合わせる');
   return scheme === 'dark'
     ? t('Following the phone · Dark', 'Theo hệ thống · Tối', '端末に合わせる · ダーク')
     : t('Following the phone · Light', 'Theo hệ thống · Sáng', '端末に合わせる · ライト');
@@ -423,7 +436,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                     {schemeLabel(o.id, t)}
                   </Text>
                   {o.id === 'system' && (
-                    <Text style={s.rowNote}>{systemNow(scheme, t)}</Text>
+                    <Text style={s.rowNote}>{systemNow(pref === 'system', scheme, t)}</Text>
                   )}
                 </View>
                 {active && <Ionicons name="checkmark" size={18} color={colors.accent} testID={`theme-${o.id}-on`} />}
