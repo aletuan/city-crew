@@ -43,7 +43,8 @@ create policy "readers like public collections" on public.collection_likes
   for insert with check (
     -- Still yours to cast and nobody else's: without this a like can be
     -- filed under another name, which turns a count into a forgery.
-    auth.uid() = user_id
+    -- `(select …)`, asked once per statement: see 20260927120000_rls_ask_once.
+    (select auth.uid()) = user_id
     and exists (
       select 1 from public.collections c
       where c.id = collection_id
