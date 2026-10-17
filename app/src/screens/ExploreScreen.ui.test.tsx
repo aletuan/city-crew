@@ -15,6 +15,7 @@ import { Linking } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { switchOrDoor } from '../components/ExploreFilterSheet';
 import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
 import { CATEGORIES } from '../lib/categories';
@@ -865,6 +866,43 @@ describe('sort and filter', () => {
     expect(spies.askToSignIn).toHaveBeenCalledWith('saved');
   });
 
+  // UX-01: the guest's rows open sign-in, so they are announced as the
+  // buttons they are — not as checkboxes marked disabled, which told a
+  // VoiceOver reader not to try the one thing that works, and not as
+  // "unchecked", since a guest has no box to tick.
+  it('announces a guest\'s saved and visited rows as buttons that sign in, not disabled checkboxes', () => {
+    appFlags.set('place_checkin', true);
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    for (const [id, name] of [['filter-saved', 'Bookmarked only, sign in'], ['filter-visited', 'Visited only, sign in']]) {
+      const row = screen.getByTestId(id);
+      expect(row).toBe(screen.getByRole('button', { name }));
+      expect(row.getAttribute('aria-checked')).toBeNull();
+    }
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    // `disabled` never reaches the DOM — react-native-web drops
+    // `accessibilityState` and Pressable's `aria-disabled` alike — so
+    // the props are read before they get there. This is the half of the
+    // bug VoiceOver spoke ("dimmed") and the render cannot show.
+    const guest = switchOrDoor(false, false, 'Bookmarked only', 'Bookmarked only, sign in', 'why');
+    expect(guest).not.toHaveProperty('accessibilityState');
+    expect(guest).not.toHaveProperty('aria-disabled');
+  });
+
+  it('announces a signed-in reader\'s saved and visited rows as checkboxes that say whether they are ticked', () => {
+    appFlags.set('place_checkin', true);
+    state.uid = 'u1';
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    for (const name of ['Bookmarked only', 'Visited only']) {
+      const row = screen.getByRole('checkbox', { name, checked: false });
+      fireEvent.click(row);
+      expect(screen.getByRole('checkbox', { name, checked: true })).toBe(row);
+    }
+  });
+
   // The fourth question, behind the same flag as the Check-in pill: a
   // filter on a thing nobody on this build can do is a question with
   // one answer.
@@ -1356,10 +1394,9 @@ describe('the map’s quick filters', () => {
     expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
   });
 
-  // The sheet's saved-only row has no `aria-checked` of its own (that was
-  // only added to the Opening-hours segments), so what a test can read
-  // back is the same glyph swap the reader sees — the filled bookmark
-  // rather than the outline — on the row the disc's press chose.
+  // Both what a screen reader hears — the row's `aria-checked`, which it
+  // carries since UX-01 — and what the eye sees, the filled bookmark
+  // rather than the outline, on the row the disc's press chose.
   it('leaves the sheet’s Bookmarked only row showing checked after the disc set it', async () => {
     state.uid = 'u1';
     state.places.data = [place('a', { lat: 21, lng: 105 })];
@@ -1367,7 +1404,7 @@ describe('the map’s quick filters', () => {
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
     fireEvent.click(screen.getByTestId('explore-filter-pinned'));
-    const row = screen.getByRole('checkbox', { name: 'Bookmarked only' });
+    const row = screen.getByRole('checkbox', { name: 'Bookmarked only', checked: true });
     expect(row.querySelector('[data-icon="bookmark"]')).toBeTruthy();
   });
 });
