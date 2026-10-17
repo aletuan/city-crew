@@ -70,6 +70,25 @@ const COVER_OPEN = 88;
 //
 // Sign-in lives in the Profile tab's stack, not this one, so the jump goes
 // through the tab navigator above us.
+//
+// ── one row, since 17 Oct 2026 ──
+//
+// It was a card of its own: a 40pt icon well beside a title and two lines
+// of body, the button on a third row under them — about 150pt, which put
+// the first row of lists at 380pt on a 430pt-wide phone. A guest's first
+// screen was half invitation and half shelf. The owner chose a compact
+// banner (the "after the first row" alternative was turned down: a card
+// inside the photo grid reads as an ad, needs its own rule for the list
+// view, a search and an empty shelf, and on a 667pt-tall phone falls
+// below the fold, where a guest may never see it).
+//
+// Words and button on one row now, and the icon well gone. Measured
+// before it went: with a 32pt well and the button, the text column on a
+// 375–393pt phone is about 140pt, and the title at this size needs 155.
+// The words say "collection", and the tab below is lit, so the glyph was
+// the one thing on the card saying nothing new. The text may still wrap
+// on the narrowest phones rather than end in an ellipsis: a cut-off
+// invitation is worse than a line taller one.
 function GuestNotice({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -86,29 +105,23 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
         'サインインして自分のコレクションを作る',
       )}
     >
-      <View style={s.noticeHead}>
-        {/* The Collections tab's own glyph, so the card belongs to this
-            screen instead of reading as a generic account banner. */}
-        <View style={s.noticeIcon}>
-          <Ionicons name="bookmark" size={19} color={colors.accent} />
-        </View>
-        <View style={s.noticeCopy}>
-          <Text style={s.noticeTitle}>
-            {t('Start your own collection', 'Tạo bộ sưu tập của riêng bạn', '自分のコレクションを作る')}
-          </Text>
-          <Text style={s.noticeBody}>
-            {t(
-              'Sign in to save places you like and group them into lists.',
-              'Đăng nhập để lưu địa điểm bạn thích và nhóm lại thành danh sách.',
-              'サインインすると気になるスポットを保存し、リストにまとめられます。',
-            )}
-          </Text>
-        </View>
+      <View style={s.noticeCopy}>
+        <Text style={s.noticeTitle}>
+          {t('Start a collection', 'Tạo bộ sưu tập riêng', 'コレクションを作る')}
+        </Text>
+        <Text style={s.noticeBody}>
+          {t(
+            'Sign in to save and sort places.',
+            'Đăng nhập để lưu và sắp xếp địa điểm.',
+            'サインインして保存・整理。',
+          )}
+        </Text>
       </View>
       {/* A rounded rectangle at chip scale, the sheet's primary button
           scaled down. Sized to its label rather than stretched: the card is
           already the target, so this names the action — it does not need to
-          be the loudest object on the screen. */}
+          be the loudest object on the screen. At the row's end now, centred
+          on the two lines beside it. */}
       <LinearGradient {...gradAI} style={s.noticeChip}>
         <Text style={s.noticeChipText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
         <Ionicons name="arrow-forward" size={15} color={colors.accentInk} />
@@ -1576,29 +1589,22 @@ export default function CollectionsScreen({ navigation, route }: {
 const s = StyleSheet.create({
   // Margins stay on the Pressable; the card itself is what scales.
   noticeWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
+  // One row: the words, then the chip at the end. 14 above and below the
+  // two lines, so the banner is about 72pt where the card was 150.
   notice: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.card, paddingHorizontal: space.cardPadding, paddingVertical: 17,
+    borderRadius: radius.card, paddingHorizontal: space.cardPadding, paddingVertical: 14,
   },
-  noticeHead: { flexDirection: 'row', gap: 13 },
-  // Tinted well, not a filled disc: the filled accent shape belongs to the
-  // selected tab, and two of them on one screen both claim to be the
-  // thing you last touched.
-  noticeIcon: {
-    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
-  },
-  noticeCopy: { flex: 1, gap: 4 },
-  noticeTitle: { color: colors.text, ...type.cardTitle },
-  // A step down from `type.body`: this is the supporting line, and at body
-  // size it read as loud as the collection titles underneath it.
-  noticeBody: { color: colors.textSecondary, fontSize: 15, lineHeight: 20 },
+  noticeCopy: { flex: 1, gap: 2 },
+  // 16, a step under the card title's 18: the banner introduces the shelf
+  // rather than being an item on it, and at 18 it outranked the tiles.
+  noticeTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 21 },
+  // A step down again: the supporting line, read after the title.
+  noticeBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
   noticeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start',
-    // 40 + 13: the icon well and its gap, so the chip starts on the text's
-    // left edge rather than under the icon.
-    marginTop: 14, marginLeft: 53,
-    paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14,
   },
   noticeChipText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
 
