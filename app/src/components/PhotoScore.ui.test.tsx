@@ -10,6 +10,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { AccessibilityInfo, Animated } from 'react-native';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { PhotoScore } from '../lib/photoScore';
+import { colors } from '../theme';
+
+/** A token as the DOM reports it: `#rrggbb` becomes `rgb(r, g, b)`, and
+ *  an `rgba(…)` gains the spaces the browser puts in. */
+const rgb = (c: unknown) => {
+  const v = String(c);
+  if (!v.startsWith('#')) return v.replace(/,(?=\S)/g, ', ');
+  const n = parseInt(v.slice(1, 7), 16);
+  return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+};
 
 // Every loop started, and every one stopped. Under jsdom no frame of a
 // native-driven animation is drawn, so whether the bars are moving is
@@ -74,6 +84,21 @@ describe('ScoreTen', () => {
     render(<ScoreTen score={score({ aesthetic: -0.2 })} />);
     expect(screen.getByTestId('score-ten').textContent).toContain('Weak');
   });
+  // The rows' two tones and a neutral: green for the bands that say the
+  // photograph is good, amber for the one that says it is held back.
+  it('inks its word green, plain or amber by band', () => {
+    const pill = (aesthetic: number) => {
+      const { unmount } = render(<ScoreTen score={score({ aesthetic })} />);
+      const el = screen.getByTestId('score-band');
+      const out = [getComputedStyle(el).backgroundColor, getComputedStyle(el.firstElementChild as HTMLElement).color];
+      unmount();
+      return out;
+    };
+    expect(pill(0.68)).toEqual([rgb(colors.okSoft), rgb(colors.okInk)]);
+    expect(pill(0.4)).toEqual([rgb(colors.okSoft), rgb(colors.okInk)]);
+    expect(pill(0.1)).toEqual([rgb(colors.surfaceGlassStrong), rgb(colors.textSecondary)]);
+    expect(pill(-0.2)).toEqual([rgb(colors.warnSoft), rgb(colors.warnInk)]);
+  });
   // Its number is every scorer's to show, whoever read the row.
   it('shows the number of a scorer this build cannot interpret', () => {
     render(<ScoreTen score={score({ scorer: 'later-model' })} />);
@@ -137,17 +162,23 @@ describe('ScoreDetails', () => {
     expect(screen.queryByTestId('score-source')).toBeNull();
     rerender(<ScoreDetails score={measured} open onToggle={() => {}} />);
     const source = screen.getByTestId('score-source');
-    expect(source.textContent).toBe('Measured on this phone by Apple Vision.');
+    expect(source.textContent).toBe('Analysed on this phone by Apple Vision.');
+    expect(source.querySelector('[data-icon="information-circle-outline"]')).not.toBeNull();
     expect(source.nextElementSibling).toBeNull();
   });
 
-  // Good and held back look different, so a guide can scan the column.
-  it('marks each row by whether it helped, held back, or neither', () => {
+  // The glyph says what the row is about; the ink of its words, how it
+  // went — green, amber, or plain on every look.
+  it('marks each row with its quality, and inks its words by how it went', () => {
     render(<ScoreDetails score={measured} open onToggle={() => {}} />);
     const glyph = (key: string) => screen.getByTestId(`score-detail-${key}`).querySelector('[data-icon]')!.getAttribute('data-icon');
-    expect(glyph('light')).toBe('checkmark-circle');
-    expect(glyph('level')).toBe('alert-circle');
-    expect(glyph('green')).toBe('ellipse-outline');
+    expect(glyph('light')).toBe('sunny-outline');
+    expect(glyph('level')).toBe('remove-outline');
+    expect(glyph('green')).toBe('leaf-outline');
+    const ink = (key: string) => getComputedStyle(screen.getByTestId(`score-detail-${key}-value`)).color;
+    expect(ink('light')).toBe(rgb(colors.okInk));
+    expect(ink('level')).toBe(rgb(colors.warnInk));
+    expect(ink('green')).toBe(rgb(colors.textSecondary));
   });
 
   // The bar is the photograph's place in the catalog, on focus alone.

@@ -64,6 +64,7 @@ Riêng với City Crew, ảnh còn phải **đại diện được cho địa đ
 | #973 | Phân tích chi tiết: các dòng số đo thật, vị trí so với catalog (`lib/standing.ts`), gợi ý cải thiện |
 | #974 | Ảnh bìa nằm ô đầu lưới |
 | #987 | Sheet ảnh mở đầu bằng câu nhận xét; "Đo trên máy bằng Apple Vision" chuyển vào phân tích chi tiết |
+| 17/10 | Bảng "Photo Rating – Refined UI", phần làm được ngay (D10): mỗi dòng phân tích có icon riêng của tiêu chí; chữ đánh giá tô xanh `okInk` / cam `warnInk` theo kết quả; nhãn cạnh điểm cùng hai màu đó; ô gợi ý nền kính, bóng đèn cam; dòng nguồn có ⓘ, "Phân tích trên máy bằng Apple Vision." |
 
 Đến 16/10/2026 có **428 ảnh** đã chấm, tất cả do một người.
 
@@ -226,6 +227,8 @@ D. Nhưng C trái nguyên tắc 4.
 | D7 | 16/10 | "Lạc đề" = nội dung ảnh không khớp category. Ảnh xấu hay không đại diện được thuộc bước 4–5 | Chủ sản phẩm |
 | D8 | 16/10 | App không bao giờ hiện "lạc đề"; nếu có, chỉ hiện "Hợp với [category]" | Trên ảnh mới, "lạc đề" chỉ đúng 33%, "hợp" đúng 92% (mục 5.2) |
 | D9 | 16/10 | Dừng phép thử SigLIP 2 / CLIP và gỡ code của nó; giữ Apple Vision | Chủ sản phẩm: hướng đi chệch và thiếu kiểm soát |
+| D10 | 17/10 | Làm bảng "Refined UI" theo hai bước: (1) giao diện, chỉ với các tiêu chí đo được; (2) nhận biết loại ảnh (Món ăn / Địa điểm / Phong cảnh), bắt đầu bằng đề xuất một trang | Chủ sản phẩm. Thanh điểm cho bố cục, màu sắc, không gian, nhiễu trên bảng đó là D2 lần nữa |
+| D11 | 17/10 | Màu đánh giá theo nghĩa, không theo màu chủ đạo: tốt = `okInk`, cần chú ý = `warnInk`, đổi sắc theo theme nhưng giữ nghĩa. Thanh xếp hạng vẫn là màu chủ đạo, vì nó là vị trí trong catalog chứ không phải lời khen | Chủ sản phẩm. Ở theme mặc định màu chủ đạo là đỏ san hô: dấu "tốt" màu đỏ đọc thành cảnh báo |
 
 ## 9. Câu hỏi đang mở
 
@@ -236,6 +239,13 @@ D. Nhưng C trái nguyên tắc 4.
   "Chấm ảnh" lần đầu? Đề xuất: tải về khi cần, để người không chấm ảnh không
   phải gánh thêm dung lượng.
 - **Q3.** Có xem lại 16 ảnh bìa ở mục 5.2 (điểm 4) trong Data Desk không?
+- **Q4.** Nhận biết loại ảnh (bước 2 của D10). Category của địa điểm không
+  nói được nội dung ảnh: cùng một quán có ảnh món, mặt tiền và view. Hướng
+  đang xét: "Phong cảnh" theo luật khung cảnh đã có (`scene()`), "Món ăn"
+  theo nhãn đồ ăn của Vision cộng chủ thể chiếm phần lớn khung, còn lại là
+  "Địa điểm"; không chắc thì không hiện. Đo trên các ảnh đã chấm trước khi
+  viết code (nguyên tắc 7, 8). Nếu có, là icon trung tính, không phải nhãn
+  có màu (mục 11).
 
 ## 10. Việc tiếp theo
 
@@ -267,6 +277,17 @@ D. Nhưng C trái nguyên tắc 4.
   (mục 5.2).
 - **Coi ảnh bìa luôn đúng:** chủ sản phẩm gọi 16 ảnh bìa là không khớp
   category (mục 5.2).
+- Từ bảng "Refined UI" (17/10):
+  - **Thang nhãn 5 mức** (Xuất sắc … Cần cải thiện, cắt ở 9 / 7 / 5 / 3):
+    ảnh trong catalog nằm trong khoảng 5,4–9,4 (`AESTHETIC_SPREAD`), nên hai
+    mức dưới 5 gần như không bao giờ hiện. Giữ 4 mức của `band()`.
+  - **"Tái tạo ảnh đẹp hơn (AI)":** cần mô hình tạo ảnh trên server, tức là
+    ảnh rời máy (nguyên tắc 4), và ảnh một quán có thật bị AI vẽ lại có thể
+    không còn giống quán.
+  - **"Chia sẻ ảnh", "Tải xuống":** 86% ảnh là của Google, phần khác có ảnh
+    Threads của người khác (mục 6). Nếu làm, chỉ cho ảnh guide tự tải lên.
+  - **Menu thao tác riêng có nút Huỷ:** các hàng Đặt làm ảnh bìa / Ẩn / Xoá
+    đã nằm ngay trong sheet, một lần chạm thay vì hai.
 
 ## 12. Lịch sử ngắn
 
@@ -277,3 +298,4 @@ D. Nhưng C trái nguyên tắc 4.
 | 16/10/2026 | #975–#985: thiết kế bước 2 và phép thử SigLIP 2 / CLIP ngoài app (mục 5.2) |
 | 16/10/2026 | #987: sheet ảnh mở đầu bằng câu nhận xét |
 | 16/10/2026 | Dừng phép thử, gỡ `data/photo-eval/`, viết lại file này (D9) |
+| 17/10/2026 | Bảng "Refined UI": bước 1, giao diện phân tích chi tiết (D10, D11) |

@@ -26,6 +26,7 @@
 // lets that change deliberately: a row below it counts as unread, so a
 // better reading of the old rows is one number, not a migration.
 
+import type Ionicons from '@expo/vector-icons/Ionicons';
 import { appleVision } from './photoScoreVision';
 
 /** The measurements, as a scorer hands them over and the row keeps
@@ -92,6 +93,9 @@ export type PhotoScorer = ScorerKey & { read: (uri: string) => Promise<Reading> 
 export type Detail = {
   key: string;
   label: string;
+  /** The quality's own mark, drawn before its name — what the row is
+   *  about, not how it went; the value's ink says that. */
+  icon: keyof typeof Ionicons.glyphMap;
   /** What was measured, in words. */
   value: string;
   tone: 'good' | 'warn' | 'plain';

@@ -153,6 +153,26 @@ const GREEN_P = 0.3;
 type Dim = 'light' | 'focus' | 'subject' | 'level' | 'clutter' | 'green' | 'size';
 
 /**
+ * Each quality's mark (owner, 17 Oct 2026, from the "Refined UI" board):
+ * the row says what it is about with a glyph, and how it went with the
+ * colour of its words. It was one glyph per *tone* — a tick, a warning,
+ * a ring — so a column of seven rows was three shapes, and the reader
+ * had to read the label to find the one they were after. The board's
+ * marks where it has one (sun, target, picture); the rest named for the
+ * thing measured: the horizon a level line, distractions the people that
+ * are most of them, greenery a leaf, resolution the long side's arrows.
+ */
+const DIM_ICON = {
+  light: 'sunny-outline',
+  focus: 'locate-outline',
+  subject: 'image-outline',
+  level: 'remove-outline',
+  clutter: 'people-outline',
+  green: 'leaf-outline',
+  size: 'resize-outline',
+} as const satisfies Record<Dim, Detail['icon']>;
+
+/**
  * One thing measured and worth saying: which quality it is about, whether
  * it helped, how it is said, and — for what held the photograph back —
  * what would have helped. The sentence under the number and the detail
@@ -349,7 +369,7 @@ export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: 
     const minus = of.filter((f) => !f.plus);
     const said = minus.length ? minus : of;
     rows.push({
-      key, label, ...extra,
+      key, label, icon: DIM_ICON[key], ...extra,
       ...(said.length
         ? { value: capital(said.map((f) => f.say).join(sep)), tone: minus.length ? 'warn' : 'good' }
         : empty),
@@ -426,7 +446,10 @@ export function standingOf(score: Pick<PhotoScore, 'aesthetic'>): number | null 
 export const appleVision: Interpreter = {
   id: 'apple-vision',
   version: 1,
-  source: (t) => t('Measured on this phone by Apple Vision.', 'Đo trên máy bằng Apple Vision.', 'この端末でApple Visionが測定。'),
+  // "Analysed", the scoring dialog's own word ("Phân tích ngay trên
+  // máy"), so the promise made while the phone reads and the line under
+  // what it read are one sentence said twice (owner, 17 Oct 2026).
+  source: (t) => t('Analysed on this phone by Apple Vision.', 'Phân tích trên máy bằng Apple Vision.', 'この端末でApple Visionが分析。'),
   explain: explainScore,
   details: detailsOf,
   suggestions: suggestionsOf,

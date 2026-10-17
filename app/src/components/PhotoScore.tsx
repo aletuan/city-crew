@@ -167,14 +167,15 @@ export function ScoreTen({ score, onDark }: {
   const { t } = useI18n();
   if (score.aesthetic == null) return null;
   const ten = toTen(score.aesthetic);
+  const b = band(ten);
   return (
     <View style={onDark ? s.tenRow : s.ten} testID="score-ten">
       <View style={s.tenLine}>
         <Text style={[s.tenBig, onDark && s.tenBigDark]}>{tenText(ten)}</Text>
         <Text style={[s.tenOutOf, onDark && s.inkDark]}>/10</Text>
       </View>
-      <View style={[s.bandPill, onDark && s.bandPillDark]}>
-        <Text style={[s.bandText, onDark && s.bandTextDark]}>{bandLabel(band(ten), t)}</Text>
+      <View style={[s.bandPill, BAND_PILL[b], onDark && s.bandPillDark]} testID="score-band">
+        <Text style={[s.bandText, BAND_TEXT[b], onDark && s.bandTextDark]}>{bandLabel(b, t)}</Text>
       </View>
     </View>
   );
@@ -191,7 +192,7 @@ export function ScoreTen({ score, onDark }: {
  * already sits on the photograph, so the head says what the photograph
  * is like instead of which one it is.
  *
- * Who measured is not said here any more. "Measured on this phone by
+ * Who measured is not said here any more. "Analysed on this phone by
  * Apple Vision" is a technical fact a guide does not act on, so it moved
  * into the detailed analysis (`ScoreDetails`), where a reader who opens
  * it has asked for that depth — and where it still tells two scorers'
@@ -318,10 +319,35 @@ export function ScoredCard({ scored, failed, best, onClose }: {
   );
 }
 
-const TONE_ICON = {
-  good: { name: 'checkmark-circle', color: colors.accent },
-  warn: { name: 'alert-circle', color: colors.warnInk },
-  plain: { name: 'ellipse-outline', color: colors.textTertiary },
+/**
+ * How a row went, in the ink of its words (owner, 17 Oct 2026). The
+ * semantic tones and not the accent: the accent is the look's, and on
+ * the standard look it is coral — a "good" in it read as an alarm beside
+ * the amber of a "warn". `okInk` and `warnInk` are green and amber on
+ * every look, tinted to its ground and held to 4.5:1, so the meaning
+ * stays and only the shade moves. The words carry it too: the colour is
+ * a second telling, never the only one.
+ */
+const TONE_INK = {
+  good: colors.okInk,
+  warn: colors.warnInk,
+  plain: colors.textSecondary,
+} as const;
+
+/** The word beside the number, in the same two tones and a neutral:
+ *  "very good" and "good" read as the rows that helped do, "weak" as
+ *  the ones that held it back, and "fair" as neither. */
+const BAND_PILL = {
+  excellent: { backgroundColor: colors.okSoft },
+  good: { backgroundColor: colors.okSoft },
+  fair: { backgroundColor: colors.surfaceGlassStrong },
+  weak: { backgroundColor: colors.warnSoft },
+} as const;
+const BAND_TEXT = {
+  excellent: { color: colors.okInk },
+  good: { color: colors.okInk },
+  fair: { color: colors.textSecondary },
+  weak: { color: colors.warnInk },
 } as const;
 
 /**
@@ -371,15 +397,22 @@ export function ScoreDetails({ score, open, onToggle }: {
           {tips.length > 0 && (
             <View style={s.tips} testID="score-tips">
               <View style={s.tipsHead}>
-                <Ionicons name="bulb-outline" size={16} color={colors.accent} />
+                {/* Amber: every tip answers something that held the
+                    photograph back, which is what the amber rows say. */}
+                <Ionicons name="bulb-outline" size={16} color={colors.warnInk} />
                 <Text style={s.tipsTitle}>{t('To improve', 'Gợi ý cải thiện', '改善のヒント')}</Text>
               </View>
               {tips.map((tip) => <Text key={tip} style={s.tip}>{tip}</Text>)}
             </View>
           )}
           {/* Who measured, last: provenance for the reader who came this
-              far, moved here from under the sentence (see `ScoreWhy`). */}
-          <Text style={s.whySource} testID="score-source">{how.source(t)}</Text>
+              far, moved here from under the sentence (see `ScoreWhy`).
+              The ⓘ marks it as a note about the analysis, not a part of
+              it. */}
+          <View style={s.sourceRow} testID="score-source">
+            <Ionicons name="information-circle-outline" size={14} color={colors.textTertiary} />
+            <Text style={s.whySource}>{how.source(t)}</Text>
+          </View>
         </View>
       )}
     </View>
@@ -387,14 +420,13 @@ export function ScoreDetails({ score, open, onToggle }: {
 }
 
 function DetailRow({ d }: { d: Detail }) {
-  const icon = TONE_ICON[d.tone];
   return (
     <View style={s.row} testID={`score-detail-${d.key}`}>
-      <Ionicons name={icon.name} size={17} color={icon.color} />
+      <Ionicons name={d.icon} size={18} color={colors.textSecondary} />
       <View style={s.rowText}>
         <View style={s.rowLine}>
           <Text style={s.rowLabel}>{d.label}</Text>
-          <Text style={s.rowValue}>{d.value}</Text>
+          <Text style={[s.rowValue, { color: TONE_INK[d.tone] }]} testID={`score-detail-${d.key}-value`}>{d.value}</Text>
         </View>
         {d.rank !== undefined && (
           <View style={s.rank}>
@@ -425,11 +457,8 @@ const s = StyleSheet.create({
   tenLine: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   tenBig: { color: colors.text, fontSize: 30, fontFamily: display.semibold, fontVariant: ['tabular-nums'] },
   tenOutOf: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
-  bandPill: {
-    paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft,
-  },
-  bandText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
+  bandPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill },
+  bandText: { fontSize: 13, fontWeight: font.semibold },
 
   detail: {
     backgroundColor: colors.surfaceCard,
@@ -448,12 +477,14 @@ const s = StyleSheet.create({
   // Label left, what was measured right, wrapping under it when long.
   rowLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
   rowLabel: { color: colors.text, fontSize: 15, fontWeight: font.medium },
-  rowValue: { flexShrink: 1, color: colors.textSecondary, fontSize: 15, textAlign: 'right' },
+  rowValue: { flexShrink: 1, fontSize: 15, fontWeight: font.medium, textAlign: 'right' },
   rank: { gap: 4 },
   rankTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceGlassStrong, overflow: 'hidden' },
   rankFill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
   rankNote: { color: colors.textTertiary, fontSize: 12 },
-  tips: { gap: 6, padding: 12, borderRadius: 12, backgroundColor: colors.accentSoft },
+  // The look's glass, not the accent's wash: a block of its own on any
+  // look, without a colour that means something else here.
+  tips: { gap: 6, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceGlass },
   tipsHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tipsTitle: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
   tip: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
@@ -468,7 +499,8 @@ const s = StyleSheet.create({
   whyText: { color: colors.textSecondary, fontSize: 15, lineHeight: 21 },
   // The sheet's head: the text's own ink and a step up, opposite the number.
   whyLead: { color: colors.text, fontSize: 17, lineHeight: 23, fontWeight: font.semibold },
-  whySource: { color: colors.textTertiary, fontSize: 12 },
+  sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  whySource: { flexShrink: 1, color: colors.textTertiary, fontSize: 12 },
 
   scrim: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
