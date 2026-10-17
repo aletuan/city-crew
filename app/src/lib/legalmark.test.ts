@@ -121,7 +121,15 @@ describe('against the real documents', () => {
     // of the three services the phone talks to directly, two of them
     // linked. Per language that is three links and three emphases, and the
     // one false emphasis replaced by one true one.
-    expect(links).toBe(22);
-    expect(bolds).toBe(54);
+    //
+    // 22 became 24, and 54 became 56, when the privacy policy said that
+    // the catalog's photographs go to the same model the plans do — to
+    // label what each shows and to help write a place's description —
+    // which it had been doing without the policy saying so
+    // (docs/photo-labels.md §11). Per language, one link to Anthropic and
+    // one emphasis on the part a guide most needs to see: that the photos
+    // they add are among them.
+    expect(links).toBe(24);
+    expect(bolds).toBe(56);
   });
 });
