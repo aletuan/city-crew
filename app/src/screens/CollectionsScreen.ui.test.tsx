@@ -369,6 +369,18 @@ describe('CollectionsScreen — signed in', () => {
     show();
     expect(screen.getByText('4')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
+     // The pressable heart's size: one mark, two states.
+    expect(document.querySelector('[data-icon="heart"]')!.getAttribute('data-size')).toBe('15');
+  });
+
+  // The same list sits at the same height on both tabs: the meta row is
+  // as tall as a face whether it leads with one or with a padlock.
+  it('holds the tile\u2019s meta row at the avatar\u2019s height on either tab', () => {
+    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', is_public: false })];
+    show();
+    const foot = screen.getByTestId('collection-tile-foot');
+    expect(getComputedStyle(foot).minHeight).toBe('18px');
+    expect(foot.querySelector('[data-icon="lock-closed-outline"]')!.getAttribute('data-size')).toBe('14');
   });
 
   it('an own tile with nothing in it says so in words, and is named by its title', () => {
