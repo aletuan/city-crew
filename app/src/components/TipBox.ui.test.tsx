@@ -89,7 +89,7 @@ describe('one tip a visit', () => {
     ['publish', 'Bộ sưu tập này đang riêng tư. Bấm Riêng tư ở cuối thẻ giới thiệu rồi chọn Công khai để ai cũng xem được.'],
     ['edit', 'Muốn đổi tên hay mô tả? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Sửa bộ sưu tập.'],
     ['add', 'Bấm dấu trang trên thẻ địa điểm ở bất kỳ đâu để lưu vào đây, hoặc bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Thêm địa điểm.'],
-    ['copy', 'Thích danh sách này? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.'],
+    ['copy', 'Thích bộ sưu tập này? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.'],
   ] as const)('says the %s tip in words', async (id, text) => {
     render(<TipBox eligible={[id]} done={[]} />);
     await settle();
