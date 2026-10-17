@@ -72,6 +72,10 @@ const PAGE_HEAD = {
     title: 'Photo types · 2',
     sub: 'A hundred new photographs, under the definitions.',
   },
+  '/photo-types-3': {
+    title: 'Photo types · 3',
+    sub: 'What each photograph is, and the six things a cover is chosen by.',
+  },
   // The editor. Its title is the room's name, not the place's, for the
   // same reason the three above are: these name the screen you are in,
   // and the place's own name is already the loudest thing on it — the

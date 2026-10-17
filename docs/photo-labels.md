@@ -165,7 +165,7 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 | 2 | Skill `photo-labels` trong repo; chạy thử trên 3–5 địa điểm | ✅ 17/10: 21 địa điểm, 137 ảnh (mục 9) |
 | 2b | Edge Function gán nhãn ảnh mới, cùng định nghĩa với skill (mục 10) | ☐ |
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
-| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9) | ☐ |
+| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ☐ |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ☐ |
 | 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (có đề xuất riêng) | ☐ |
 

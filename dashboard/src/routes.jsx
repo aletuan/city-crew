@@ -15,6 +15,7 @@ import Reports from './components/Reports.jsx';
 import Coverage from './components/Coverage.jsx';
 import PlaceList from './components/PlaceList.jsx';
 import PhotoTypes from './components/PhotoTypes.jsx';
+import LabelRound from './components/LabelRound.jsx';
 import PlaceEditor from './components/PlaceEditor.jsx';
 import ScanCity from './components/ScanCity.jsx';
 import SearchTerms from './components/SearchTerms.jsx';
@@ -41,6 +42,7 @@ export const routes = [
       { path: 'photo-types', element: <PhotoTypes /> },
       { path: 'photo-types-1b', element: <PhotoTypes round="r1b" /> },
       { path: 'photo-types-2', element: <PhotoTypes round="r2" /> },
+      { path: 'photo-types-3', element: <LabelRound /> },
     ],
   },
 ];
