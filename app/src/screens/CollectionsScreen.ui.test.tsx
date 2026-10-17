@@ -215,7 +215,7 @@ describe('CollectionsScreen — as a guest', () => {
     const banner = screen.getByRole('button', { name: 'Sign in to build your own collections' });
     const row = banner.querySelector('[data-icon="arrow-forward"]')!.parentElement!.parentElement!;
     expect(getComputedStyle(row).flexDirection).toBe('row');
-    expect(row.textContent).toBe('Start a collectionSign in to save and sort places.Sign in');
+    expect(row.textContent).toBe('Start a collectionSign in to create and sort your own collections.Sign in');
     expect(banner.querySelector('[data-icon="bookmark"]')).toBeNull();
   });
 
