@@ -78,8 +78,10 @@ begin
 end $$;
 
 -- ── one row per photograph, until the second scorer ──────────────────
--- `photo_scores_one_per_photo` keeps the old upsert working; the
--- migration that adds a second scorer drops it, and this block with it.
+-- `photo_scores_one_per_photo` kept the old upsert working until the
+-- second scorer (`20261017120000_photo_scores_second_scorer.sql`) dropped
+-- it. run.sh applies that migration after this file, so this block still
+-- holds the table as it stood between the two.
 do $$
 begin
   begin
