@@ -201,11 +201,22 @@ beforeEach(async () => {
 describe('CollectionsScreen — as a guest', () => {
   it('leads with the sign-in card, which jumps to the Profile stack', () => {
     const { navigation } = show();
-    expect(screen.getByText('Start your own collection')).toBeTruthy();
+    expect(screen.getByText('Start a collection')).toBeTruthy();
     // No tabs for a guest: there is no library to switch to.
     expect(screen.queryByRole('tab')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in to build your own collections' }));
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
+  });
+
+  // One row since 17 Oct 2026: the words and the chip side by side, no
+  // icon well, so the first row of lists is not pushed half a screen down.
+  it('keeps the sign-in banner to one row: words, then the chip', () => {
+    show();
+    const banner = screen.getByRole('button', { name: 'Sign in to build your own collections' });
+    const row = banner.querySelector('[data-icon="arrow-forward"]')!.parentElement!.parentElement!;
+    expect(getComputedStyle(row).flexDirection).toBe('row');
+    expect(row.textContent).toBe('Start a collectionSign in to save and sort places.Sign in');
+    expect(banner.querySelector('[data-icon="bookmark"]')).toBeNull();
   });
 
   // Every city, as Yours is (owner, 15 Oct 2026): a list made in another
@@ -236,7 +247,7 @@ describe('CollectionsScreen — as a guest', () => {
     show();
     expect(screen.queryByText('List here')).toBeNull();
     // The guest card still leads the loading state.
-    expect(screen.getByText('Start your own collection')).toBeTruthy();
+    expect(screen.getByText('Start a collection')).toBeTruthy();
   });
 
   it('holds while the places catalog has not loaded, even if lists are in', () => {
@@ -360,7 +371,7 @@ describe('CollectionsScreen — signed in', () => {
     expect(icons('lock-closed-outline')).toBe(1);
     expect(icons('globe-outline')).toBeGreaterThanOrEqual(2); // the tab's glyph + the public tile
     // Signed in, the guest card is gone.
-    expect(screen.queryByText('Start your own collection')).toBeNull();
+    expect(screen.queryByText('Start a collection')).toBeNull();
   });
 
   // A curator may like their own list (owner, 17 Oct 2026), so your own
