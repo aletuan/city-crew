@@ -325,3 +325,49 @@ Chọn model nào cho catalog là quyết định của chủ sản phẩm, sau 
 quả vòng 3. Ở vòng 2, khoảng cách về loại ảnh giữa hai model là một ảnh,
 trong khi giá chênh khoảng 37 lần.
 
+### Vòng 3: kết quả (17/10/2026)
+
+Chủ sản phẩm chấm xong 137 ảnh sau khi cả ba bộ nhãn đã được khoá. Mã băm
+của cả ba vẫn khớp.
+
+**Chỉ đo được loại ảnh.** Cả 137 ảnh đều để sáu thuộc tính ở "Không", tức là
+chủ sản phẩm chỉ chọn loại ảnh. Vì vậy vòng này chưa đo được thuộc tính
+nào.
+
+**Loại ảnh, so với chủ sản phẩm:**
+
+| Ai gán | Trùng | Kappa | Bỏ các ảnh tự đánh dấu `unsure` |
+|---|---|---|---|
+| Skill | 117/137 (85%) | 0,79 | 112/129 (87%) |
+| Function, Opus 5.5 | 118/137 (86%) | 0,80 | 101/106 (95%) |
+| Function, Haiku 5.5 | 114/137 (83%) | 0,76 | 103/111 (93%) |
+
+**Ba nguồn của Claude gần như đồng ý với nhau:**
+- skill và Opus: 94%, kappa 0,92;
+- Opus và Haiku: 91%, kappa 0,86;
+- skill và Haiku: 88%, kappa 0,82.
+
+Vì vậy phần lệch với chủ sản phẩm không phải nhiễu ngẫu nhiên của từng
+model, mà là chỗ định nghĩa v1 khác cách chủ sản phẩm phân loại. Phần lớn
+nằm ở bốn nhóm:
+
+1. **Ngoài trời có cây cỏ, khuôn viên chiếm phần lớn khung, có nhà hay
+   công trình** (11 ảnh với skill, 11 với Opus): hiên dưới ô giữa vườn, nhà trên bãi cỏ,
+   sàn gỗ dưới tán cây, cổng chùa, tượng trong vườn, mái dinh nhìn ra rừng
+   cây, biển tên trước Royal Exhibition Building.
+   - Chủ sản phẩm chọn **Phong cảnh**.
+   - Định nghĩa v1 nói "hiên như một phần toà nhà" và "bảo tàng dưới trời
+     xanh" là **Mặt tiền**, nên cả ba nguồn chọn Mặt tiền.
+2. **Quầy hay ki-ốt có biển tên, nhìn từ phía khách** (3 ảnh): chủ sản
+   phẩm chọn **Mặt tiền**, cả ba nguồn chọn Nội thất.
+3. **Bàn hay quầy có đồ ăn, đồ uống nhưng thấy cả không gian** (3 ảnh): chủ
+   sản phẩm chọn **Đồ ăn**, cả ba nguồn chọn Nội thất.
+4. **Biển logo phát sáng** (1 ảnh): chủ sản phẩm chọn **Chữ**.
+
+Ngưỡng 90% ở mục 8 chưa đạt với cả ba nguồn. Bước tiếp theo là chủ sản
+phẩm quyết cách phân loại bốn nhóm này. Đổi định nghĩa là đổi nghĩa, nên
+`VERSION` lên 2 theo luật 3 ở mục 4. Sau đó đo lại:
+- chạy function trên chính 137 ảnh này;
+- và trên 100 ảnh vòng 2, để thấy định nghĩa mới không làm hỏng chỗ vòng 2
+  đã đúng.
+
