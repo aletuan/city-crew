@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { api } from '../src/api.js';
-import { SAMPLE_3, SAMPLE_3B } from '../src/labelRound.js';
+import { SAMPLE_3, SAMPLE_3B, SAMPLE_3C } from '../src/labelRound.js';
 import { findToast, renderDesk } from './_ui/desk.jsx';
 
 const KEY = 'citycrew.dashboard.photoLabels.r3';
@@ -168,5 +168,32 @@ describe('LabelRound', () => {
     expect(screen.getByText('2 / 40 answered')).toBeTruthy();
     expect(screen.getByText(/Round 3b\./)).toBeTruthy();
     expect(screen.getByLabelText('Answers').value).toBe(['000010', '000000', ...Array(38).fill('------')].join(' '));
+  });
+
+  // Round 3c: the kind and two criteria, each a row of three answers with
+  // none chosen; Next waits for all three.
+  it('asks round 3c the kind and two criteria outright, with nothing preset', async () => {
+    api.photoUris.mockResolvedValue(Object.fromEntries(SAMPLE_3C.map((id, i) => [id, `https://c/${i}.jpg`])));
+    renderDesk('/photo-types-3c');
+    await screen.findByRole('img', { name: 'Photograph 1' });
+    expect(screen.getByText('1 / 24')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Photo types · 3c' })).toBeTruthy();
+    const wide = within(screen.getByRole('radiogroup', { name: 'Thấy cả không gian' }));
+    const people = within(screen.getByRole('radiogroup', { name: 'Người' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Biển hiệu' })).toBeNull();
+    expect(wide.getAllByRole('radio').map((b) => b.textContent)).toEqual(['Có', 'Không', 'Không rõ']);
+    expect(document.querySelectorAll('[role="radio"][aria-checked="true"]')).toHaveLength(0);
+    fireEvent.click(kinds().getByRole('button', { name: /Nội thất/ }));
+    expect(next().disabled).toBe(true);
+    fireEvent.click(wide.getByRole('radio', { name: 'Có' }));
+    expect(next().disabled).toBe(true);
+    fireEvent.click(people.getByRole('radio', { name: 'Không rõ' }));
+    expect(people.getByRole('radio', { name: 'Không rõ' }).getAttribute('aria-checked')).toBe('true');
+    expect(next().disabled).toBe(false);
+    fireEvent.click(next());
+    expect(screen.getByText('2 / 24')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Answers ›' }));
+    expect(screen.getByText(/wide, people as 1 yes/)).toBeTruthy();
+    expect(screen.getByLabelText('Answers').value).toBe(['I1?', ...Array(23).fill('---')].join(' '));
   });
 });

@@ -44,6 +44,7 @@ export const routes = [
       { path: 'photo-types-2', element: <PhotoTypes round="r2" /> },
       { path: 'photo-types-3', element: <LabelRound /> },
       { path: 'photo-types-3b', element: <LabelRound round="r3b" /> },
+      { path: 'photo-types-3c', element: <LabelRound round="r3c" /> },
     ],
   },
 ];

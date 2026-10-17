@@ -18,11 +18,16 @@
 // answered; each chip carries its definition, since the criteria are the
 // whole of the round and round 3 showed they were passed over when they
 // sat beside the kinds.
+//
+// Round 3c asks two criteria and asks them outright: each is a row of
+// Có / Không / Không rõ with nothing chosen, and Next waits for the kind
+// and both rows. A preset "no" is cheaper to answer and impossible to
+// read back, which is what round 3 came back as.
 
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../App.jsx';
-import { ATTRS, GUIDE_3, KINDS_3, ROUNDS_3, STATES, code, encode3, firstOpen3, nextState } from '../labelRound.js';
+import { ATTRS, GUIDE_3, KINDS_3, ROUNDS_3, STATES, asked, code, encode3, firstOpen3, nextState } from '../labelRound.js';
 
 /** What this browser kept of the round, or nothing — a private window or
  *  cleared site data starts it over rather than breaking it. */
@@ -49,10 +54,11 @@ function Guide() {
 }
 
 export default function LabelRound({ round = 'r3' }) {
-  const { key: KEY, sample: SAMPLE_3, kinds } = ROUNDS_3[round];
+  const r = ROUNDS_3[round];
+  const { key: KEY, sample: SAMPLE_3, kinds, explicit } = r;
   const toast = useToast();
   const [answers, setAnswers] = useState(() => load(KEY));
-  const [at, setAt] = useState(() => firstOpen3(SAMPLE_3, load(KEY), kinds));
+  const [at, setAt] = useState(() => firstOpen3(SAMPLE_3, load(KEY), r));
   const [uris, setUris] = useState(null);
 
   useEffect(() => {
@@ -65,12 +71,12 @@ export default function LabelRound({ round = 'r3' }) {
     try { localStorage.setItem(KEY, JSON.stringify(answers)); } catch { /* kept for this visit only */ }
   }, [KEY, answers]);
 
-  const done = SAMPLE_3.filter((id) => code(answers[id], kinds)[0] !== '-').length;
+  const done = SAMPLE_3.filter((id) => code(answers[id], r)[0] !== '-').length;
 
   if (!uris) return <div className="empty">Loading…</div>;
 
   if (at >= SAMPLE_3.length) {
-    const line = encode3(SAMPLE_3, answers, kinds);
+    const line = encode3(SAMPLE_3, answers, r);
     const copy = async () => {
       try {
         await navigator.clipboard.writeText(line);
@@ -86,7 +92,9 @@ export default function LabelRound({ round = 'r3' }) {
       <section className="pt">
         <h3 className="pt-title">{done} / {SAMPLE_3.length} answered</h3>
         <p className="pt-note">
-          {kinds
+          {explicit
+            ? `One code per photograph, in order: the kind (F food, I interior, E exterior, V view, T text, O other, U not sure), then ${asked(r).map((x) => x.key).join(', ')} as 1 yes, 0 no, ? can't tell. Round 3c.`
+            : kinds
             ? 'One code per photograph, in order: the kind (F food, I interior, E exterior, V view, T text, O other, U not sure), then brand, wide, green, daylight, people, staged as 1 yes, 0 no, ? can\'t tell. Round 3.'
             : 'One code per photograph, in order: brand, wide, green, daylight, people, staged as 1 yes, 0 no, ? can\'t tell. Round 3b.'}
         </p>
@@ -133,7 +141,29 @@ export default function LabelRound({ round = 'r3' }) {
           </button>
         ))}
       </div>}
-      <div className={`lr-attrs${kinds ? '' : ' lr-attrs-only'}`} role="group" aria-label="Cover criteria">
+      {explicit ? (
+        <div className="lr-rows" role="group" aria-label="Cover criteria">
+          {asked(r).map((a) => (
+            <div key={a.key} className="lr-row" role="radiogroup" aria-label={a.vi}>
+              <div className="lr-row-head"><b>{a.vi}</b><small>{a.hint}</small></div>
+              <div className="lr-row-choices">
+                {[STATES[1], STATES[0], STATES[2]].map((st) => (
+                  <button
+                    key={st.key}
+                    type="button"
+                    role="radio"
+                    className={`pt-btn${mine.attrs?.[a.key] === st.key ? ' on' : ''}`}
+                    aria-checked={mine.attrs?.[a.key] === st.key}
+                    onClick={() => set({ attrs: { ...mine.attrs, [a.key]: st.key } })}
+                  >
+                    {st.vi}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : <div className={`lr-attrs${kinds ? '' : ' lr-attrs-only'}`} role="group" aria-label="Cover criteria">
         {ATTRS.map((a) => {
           const s = mine.attrs?.[a.key] ?? '0';
           return (
@@ -150,11 +180,11 @@ export default function LabelRound({ round = 'r3' }) {
             </button>
           );
         })}
-      </div>
+      </div>}
       <button
         type="button"
         className="pt-btn pt-primary lr-next"
-        disabled={kinds && !mine.kind}
+        disabled={explicit ? code(mine, r)[0] === '-' : kinds && !mine.kind}
         onClick={() => { if (!kinds) set({ seen: true }); setAt(at + 1); }}
       >
         Tiếp ›

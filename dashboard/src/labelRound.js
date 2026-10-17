@@ -206,11 +206,48 @@ export const SAMPLE_3B = [
   '9013553b-4bac-4c17-9aed-a0d1a2ccb024',
 ];
 
+/** Round 3c: 24 photographs no round has used, asking the kind and the
+ *  two criteria round 3b could not settle — wide, under its new name, and
+ *  people, under v3. Drawn by the rule in data/review/photo-types/
+ *  round3c.json from 60 photographs both models had labelled first, so
+ *  that half carry people; their answers were sealed before this page
+ *  existed. Every answer here is chosen, none preset: round 3 came back
+ *  all "no" because a preset answer cannot be told from a considered one. */
+export const SAMPLE_3C = [
+  '9c384997-d8d9-4368-9ef7-f9c7755fc225',
+  'a575d392-4c56-495e-a463-3d622da4cdce',
+  '3efa643b-f452-4abf-a820-f7049819e67c',
+  '8362d3df-c577-46d8-8e87-07bb8413b701',
+  '3fbad914-c256-4777-8870-07f2f9bea5cd',
+  'b11f3c88-b83d-49e6-983b-90f46309c94f',
+  '807a7e5f-6903-48aa-a71b-e20250b0a871',
+  '681663c0-1ce1-45ce-b538-13632642a3c9',
+  'f660388c-c913-4939-8906-3d39808bbe70',
+  '3dce9ca2-279a-4822-964a-3a4b1a12d10c',
+  '1894cb54-e217-40d6-b407-1bc0e4e50afa',
+  '96b1413d-c133-4173-b69b-6a8d668584cf',
+  '394c8623-b6a8-4b93-bb9b-5759816988c7',
+  '7a47bf0e-4439-41b0-a33c-706e4a25be19',
+  'acfbf300-e7c0-40c7-bd7c-3617d0c795a9',
+  '81429acc-5acc-40c0-adf4-c8279e778739',
+  '878b0257-6182-4912-ae64-82504765eebe',
+  'b94ad173-0a36-491a-8bc8-99d5e3b9ecbf',
+  '0b45829c-4e06-4da0-a2ac-6657dfe98926',
+  'd64a1b98-36ae-467e-91e4-c1e0ae279d8e',
+  '506d2388-9194-45d3-94da-94830d6a3e1f',
+  '3f4cba20-398d-41b3-8b0e-aec4f70b0e06',
+  '04ee0200-97bb-4d15-9a7f-c07f40026bb6',
+  '28f920c7-3b6f-4b34-a112-bcfea02b68cd',
+];
+
 /** Each round of this page: where its answers are kept, its photographs,
- *  and whether it asks the kind. */
+ *  whether it asks the kind, which criteria it asks (all six unless
+ *  named), and whether each criterion must be answered outright
+ *  (`explicit`) rather than stepped from a preset "no". */
 export const ROUNDS_3 = {
   r3: { key: 'citycrew.dashboard.photoLabels.r3', sample: SAMPLE_3, kinds: true },
   r3b: { key: 'citycrew.dashboard.photoLabels.r3b', sample: SAMPLE_3B, kinds: false },
+  r3c: { key: 'citycrew.dashboard.photoLabels.r3c', sample: SAMPLE_3C, kinds: true, ask: ['wide', 'people'], explicit: true },
 };
 
 /** What the photograph is, and the letter each answer is written as. The
@@ -259,27 +296,31 @@ export const GUIDE_3 = [
   'Khác: chân dung cận, một vật không thấy nơi chốn, ảnh hỏng.',
 ];
 
-/** The six criteria as the line writes them, e.g. `010100`. */
-const attrs = (a) => ATTRS.map((x) => a?.attrs?.[x.key] ?? '0').join('');
+/** The criteria a round asks, in the line's order. */
+export const asked = (r) => ATTRS.filter((x) => !r.ask || r.ask.includes(x.key));
 
 /** Whether a photograph has been answered: a kind where the round asks
  *  one, and otherwise Next pressed on it (`seen`), since a photograph whose
- *  six answers are all "no" looks the same answered or not. */
-const answered = (a, kinds) => (kinds ? !!a?.kind : !!a?.seen);
+ *  six answers are all "no" looks the same answered or not; and in an
+ *  explicit round, every criterion it asks. */
+const answered = (a, r) => (r.kinds ? !!a?.kind : !!a?.seen)
+  && (!r.explicit || asked(r).every((x) => a?.attrs?.[x.key]));
 
-/** An answer as the line writes it: the kind's letter and the six
- *  attributes, e.g. `I010100`, or the six alone in a round that does not
- *  ask the kind; dashes where there is no answer. */
-export const code = (a, kinds = true) => {
-  if (!answered(a, kinds)) return '-'.repeat((kinds ? 1 : 0) + ATTRS.length);
-  return (kinds ? a.kind : '') + attrs(a);
+/** An answer as the line writes it: the kind's letter where the round asks
+ *  one, then the criteria it asks, e.g. `I010100`, `010100` or `I10`;
+ *  dashes where there is no answer. A criterion left alone is "no" in a
+ *  stepped round and cannot be left alone in an explicit one. */
+export const code = (a, r = ROUNDS_3.r3) => {
+  const attrs = asked(r);
+  if (!answered(a, r)) return '-'.repeat((r.kinds ? 1 : 0) + attrs.length);
+  return (r.kinds ? a.kind : '') + attrs.map((x) => a.attrs?.[x.key] ?? '0').join('');
 };
 
 /** The answers as one line, a code per photograph in sample order. */
-export const encode3 = (sample, answers, kinds = true) => sample.map((id) => code(answers[id], kinds)).join(' ');
+export const encode3 = (sample, answers, r = ROUNDS_3.r3) => sample.map((id) => code(answers[id], r)).join(' ');
 
 /** Where to pick up: the first photograph not yet answered, or the end. */
-export function firstOpen3(sample, answers, kinds = true) {
-  const i = sample.findIndex((id) => !answered(answers[id], kinds));
+export function firstOpen3(sample, answers, r = ROUNDS_3.r3) {
+  const i = sample.findIndex((id) => !answered(answers[id], r));
   return i === -1 ? sample.length : i;
 }

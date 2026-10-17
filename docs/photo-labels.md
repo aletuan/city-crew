@@ -467,6 +467,21 @@ rõ".
   của chủ sản phẩm.
 - Lần đo tốn khoảng 0,6 USD cho cả hai model.
 
+**Vòng 3c (trang `#/photo-types-3c`): ảnh mới, đo sạch.** Chủ sản phẩm đồng
+ý làm thêm một vòng (17/10).
+- **Ảnh:** 24 ảnh chưa dùng ở vòng nào. Lấy từ 60 ảnh đã duyệt, đã lưu
+  trong bucket và chưa có điểm nào, theo thứ tự md5. Trong đó 12 ảnh có ít
+  nhất một model nói có người, và 12 ảnh không model nào nói vậy.
+- **Câu hỏi:** loại ảnh, "Thấy cả không gian" và "Người".
+- **Khoá trước:** câu trả lời v3 của cả hai model đã được ghi vào
+  `data/review/photo-types/round3c.json`, kèm sha256, trước khi có trang
+  chấm. Vì vậy vòng này đo được cả loại ảnh v2 lẫn hai thuộc tính v3 trên
+  ảnh chưa ai dùng để viết định nghĩa.
+- **Không đặt sẵn câu trả lời:** mỗi thuộc tính là một hàng ba nút Có,
+  Không, Không rõ, không nút nào được chọn trước. Nút Tiếp chỉ mở khi đã
+  trả lời đủ ba câu.
+- Gán nhãn 60 ảnh tốn khoảng 0,9 USD.
+
 - Câu trả lời v2 của cả hai model được lưu ở khoá `function_v2` trong
   `round3.json` và `round2.json`.
 
