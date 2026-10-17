@@ -891,7 +891,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       accessibilityRole="button"
       accessibilityHint={t(
         'Choose who can see this list',
-        'Chọn ai có thể xem danh sách này',
+        'Chọn ai có thể xem bộ sưu tập này',
         'このリストを見られる人を選びます',
       )}
       testID="collection-visibility"
@@ -1059,7 +1059,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 t(`${curatorTag} is blocked`, `Đã chặn ${curatorTag}`, `${curatorTag} をブロックしました`),
                 t(
                   'Their public lists stay on the shelf; they can no longer reach you.',
-                  'Danh sách công khai của họ vẫn hiện; họ không thể liên hệ bạn nữa.',
+                  'Bộ sưu tập công khai của họ vẫn hiện; họ không thể liên hệ bạn nữa.',
                   '公開リストは表示されたままですが、相手からは連絡できなくなります。',
                 ),
               ))
@@ -1077,7 +1077,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     curatorActions.push({
       key: 'report',
       icon: 'flag-outline',
-      title: t('Report this list', 'Báo cáo danh sách này', 'このリストを報告'),
+      title: t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告'),
       desc: t(
         'Tell the desk something here is wrong.',
         'Báo cho desk biết có điều gì không ổn ở đây.',
@@ -1331,7 +1331,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 <Text style={s.descEmpty}>
                   {t(
                     'Add a few words about this list.',
-                    'Thêm vài dòng về danh sách này.',
+                    'Thêm vài dòng về bộ sưu tập này.',
                     'このリストについて一言添えましょう。',
                   )}
                 </Text>
@@ -1579,7 +1579,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               {col && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id }) && (
                 <MenuRow
                   icon="flag-outline"
-                  label={t('Report this list', 'Báo cáo danh sách này', 'このリストを報告')}
+                  label={t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告')}
                   danger
                   onPress={() => act(() => report({
                     kind: 'collection',
@@ -1637,7 +1637,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         actions={whoSeesRows}
         header={
           <Text style={s.sheetTitle} accessibilityRole="header">
-            {t('Who can see this list?', 'Ai có thể xem danh sách này?', 'このリストを見られるのは？')}
+            {t('Who can see this list?', 'Ai có thể xem bộ sưu tập này?', 'このリストを見られるのは？')}
           </Text>
         }
       />

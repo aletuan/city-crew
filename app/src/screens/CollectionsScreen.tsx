@@ -181,7 +181,7 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
         <Text style={s.firstBody}>
           {t(
             'Group places into lists — date nights, crew weekends, coffee crawls.',
-            'Nhóm địa điểm thành danh sách — buổi hẹn tối, cuối tuần với hội bạn, tour cà phê.',
+            'Nhóm địa điểm thành bộ sưu tập — buổi hẹn tối, cuối tuần với hội bạn, tour cà phê.',
             'スポットをリストにまとめましょう — デートの夜、仲間との週末、カフェ巡り。',
           )}
         </Text>
@@ -195,7 +195,7 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
           onPress={onPress}
         />
         <Text style={s.firstFoot}>
-          {t('Only you can see your lists.', 'Chỉ mình bạn thấy danh sách của bạn.', 'リストはあなただけに表示されます。')}
+          {t('Only you can see your lists.', 'Chỉ mình bạn thấy bộ sưu tập của bạn.', 'リストはあなただけに表示されます。')}
         </Text>
       </View>
     </View>
@@ -236,7 +236,7 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
         <Text style={s.firstBody}>
           {t(
             'Yours can be the first — make a list, set it to Public, and it shows up here for everyone.',
-            'Bộ sưu tập của bạn có thể là đầu tiên — tạo một danh sách và đặt Công khai, nó sẽ hiện ở đây cho mọi người.',
+            'Bộ sưu tập của bạn có thể là đầu tiên — tạo một bộ sưu tập và đặt Công khai, nó sẽ hiện ở đây cho mọi người.',
             '最初の一つはあなたかも — リストを作って「公開」にすると、ここにみんなの目に並びます。',
           )}
         </Text>

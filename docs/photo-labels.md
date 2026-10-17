@@ -78,8 +78,11 @@ mà không làm hỏng nhãn cũ thì phải giữ bốn luật:
 3. **Thêm giá trị cho `kind`** (ví dụ tách `food` thành `food` và `drink`)
    hoặc đổi định nghĩa một khoá đang có: tăng `scorer_version`. Các dòng cũ
    khi đó tính là "chưa đọc" (`needsScore`), và skill gán nhãn lại.
-4. **Định nghĩa chỉ nằm ở một chỗ:** file
-   `.claude/skills/photo-labels/SKILL.md`. Bảng ở mục 3 là bản sao để đọc.
+4. **Định nghĩa chỉ nằm ở một chỗ:** `DEFINITIONS` trong
+   `supabase/functions/_shared/photoLabels.ts`, từ bước 2b (17/10). Edge
+   Function gửi đúng đoạn này cho model; skill đọc nó trước mỗi đợt. Bảng ở
+   mục 3 là bản sao để đọc. Một test giữ `write.py` của skill khớp với danh
+   sách loại, thuộc tính và `VERSION` trong file đó.
    Mỗi dòng ghi `v` (phiên bản bộ nhãn) trong `signals`, để biết nhãn được
    gán theo định nghĩa nào.
 
@@ -163,9 +166,9 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 |---|---|---|
 | 1 | Migration: bỏ `photo_scores_one_per_photo`, kèm test SQL | ✅ 17/10: `20261017120000_photo_scores_second_scorer.sql`, đã chạy trên live (lịch sử `20261017101738`) |
 | 2 | Skill `photo-labels` trong repo; chạy thử trên 3–5 địa điểm | ✅ 17/10: 21 địa điểm, 137 ảnh (mục 9) |
-| 2b | Edge Function gán nhãn ảnh mới, cùng định nghĩa với skill (mục 10) | ☐ |
+| 2b | Edge Function gán nhãn ảnh mới, cùng định nghĩa với skill (mục 10) | ◐ 17/10: `label-photos` đã triển khai và đo ở vòng 2; vòng 3 đã khoá, chờ chủ sản phẩm chấm. App chưa gọi |
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
-| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9) | ☐ |
+| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ☐ |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ☐ |
 | 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (có đề xuất riêng) | ☐ |
 
@@ -269,4 +272,56 @@ nhãn, app gọi function.
 
 Chủ sản phẩm quyết định không đổi chữ hiển thị trong app ở bước này
 (17/10).
+
+### Đo lần đầu (17/10/2026)
+
+Function đã triển khai, chạy ở chế độ `write: false` (không ghi gì vào
+catalog), `effort: low`, với hai model: Opus 5.5, model mặc định, và Haiku
+5.5, model mà `plan-assist` và `write-blurb` đang dùng. Định nghĩa được
+khoá trong `photoLabels.ts` trước khi chạy và không sửa sau khi xem kết
+quả.
+
+**Vòng 2: 100 ảnh, chỉ so loại ảnh với chủ sản phẩm.** Sáu loại được gộp về
+bốn chữ của vòng 2: `food` là F, `interior` và `exterior` là P, `view` là
+S, `text` và `other` là U.
+
+| Ai gán | Trùng chủ sản phẩm | Kappa |
+|---|---|---|
+| Skill (Claude trong phiên, bảng 3×3) | 96/100 | 0,92 |
+| Function, Opus 5.5 | 95/100 | 0,90 |
+| Function, Haiku 5.5 | 94/100 | 0,88 |
+
+Cả hai model đều vượt ngưỡng 90%.
+- Hai model sai gần như cùng một chỗ: bảng phấn trước mặt tiền, đồ uống
+  trước view ban đêm, menu có ảnh món.
+- Chỗ sai của function chỉ trùng skill ở một ảnh: ảnh 25, đồ uống trước view
+  ban đêm. Skill sai ở 25, 27, 69 và 87; Opus sai ở 4, 23, 25, 48 và 65.
+- Vì lỗi của hai nguồn phần lớn không trùng nhau, một ảnh mà cả hai đồng ý
+  thì đáng tin hơn ảnh chỉ một nguồn gán.
+
+Thuộc tính chưa đo được ở vòng 2, vì vòng đó không hỏi thuộc tính.
+
+**Vòng 3: 137 ảnh.**
+- Câu trả lời của cả hai model đã được khoá trong
+  `data/review/photo-types/round3.json` (khoá `function`, kèm sha256),
+  trước khi chủ sản phẩm chấm.
+- Khi chủ sản phẩm chấm xong sẽ có ba cặp để so: chủ sản phẩm với skill,
+  chủ sản phẩm với function (từng model), và skill với function. Mỗi cặp so
+  cả loại ảnh lẫn sáu thuộc tính, bằng kappa.
+
+**Chi phí và thời gian, đo từ `usage` của 237 lần gọi:**
+
+| | Opus 5.5 | Haiku 5.5 |
+|---|---|---|
+| Token vào mỗi ảnh | ~2.840 | ~2.840 |
+| Token ra mỗi ảnh | ~82 | ~132 |
+| Giá mỗi ảnh | ~1,3 cent | ~0,035 cent |
+| Ước tính toàn catalog (~6.300 ảnh) | ~82 USD | ~2,2 USD |
+| 137 ảnh, 4 ảnh song song | 102 giây | 100 giây |
+
+Toàn bộ lần đo này tốn khoảng 3,2 USD.
+
+Chọn model nào cho catalog là quyết định của chủ sản phẩm, sau khi có kết
+quả vòng 3. Ở vòng 2, khoảng cách về loại ảnh giữa hai model là một ảnh,
+trong khi giá chênh khoảng 37 lần.
 

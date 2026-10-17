@@ -56,6 +56,9 @@ const state = vi.hoisted(() => ({
   categories: [] as string[],
   mine: [] as { members: { slug: string }[] }[],
   trips: [] as { id: string }[],
+  // Loaded and fine unless a test says otherwise — the case every older
+  // test assumes.
+  counts: { mineLoaded: true, mineError: null as string | null, tripsLoaded: true, tripsError: null as string | null },
   city: { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as
     { short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'manual' as 'auto' | 'manual',
@@ -112,8 +115,9 @@ vi.mock('../lib/data', () => ({
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: state.checkins }) }));
 vi.mock('../lib/useActivityCount', () => ({ useActivityCount: () => state.feed }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) }));
-vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips }) }));
+const reloads = vi.hoisted(() => ({ mine: vi.fn(), trips: vi.fn() }));
+vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine, loaded: state.counts.mineLoaded, error: state.counts.mineError, reload: reloads.mine } }) }));
+vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips, loaded: state.counts.tripsLoaded, error: state.counts.tripsError, reload: reloads.trips }) }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, mode: state.mode }) }));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref: () => {}, ready: true, claimResume: () => state.resume }),
@@ -190,6 +194,7 @@ beforeEach(async () => {
   state.feed = 0;
   state.editor = false;
   state.trips = [];
+  state.counts = { mineLoaded: true, mineError: null, tripsLoaded: true, tripsError: null };
   spies.signOut.mockImplementation(async () => {});
   Object.assign(state, {
     lang: 'en' as Lang,
@@ -570,9 +575,48 @@ describe('the three doors', () => {
     expect(parent.navigate).toHaveBeenCalledTimes(3);
   });
 
-  it('reads zero trips while the list has not loaded', () => {
-    state.trips = null as unknown as { id: string }[];
+  // UX-14: these read `data.length` off fetches still in flight, and a
+  // reader with 11 lists and 55 trips signed in to three zeros. Not known
+  // yet is a dash; a zero is only ever an answer.
+  it('shows a dash, not a zero, for a count that has not loaded', () => {
+    state.counts = { mineLoaded: false, mineError: null, tripsLoaded: false, tripsError: null };
     draw();
+    for (const name of ['Collections', 'Saved places', 'Trips']) {
+      const tile = screen.getByRole('button', { name: `${name}, loading` });
+      expect(tile.textContent).toBe(`—${name}`);
+    }
+    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.queryByTestId('stats-failed')).toBeNull();
+  });
+
+  it('shows each count as its own fetch lands', () => {
+    state.trips = [{ id: 't1' }];
+    state.counts = { mineLoaded: false, mineError: null, tripsLoaded: true, tripsError: null };
+    draw();
+    expect(screen.getByRole('button', { name: 'Collections, loading' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '1 Trips' })).toBeTruthy();
+  });
+
+  it('says a failed load failed, and retries only what is missing', () => {
+    state.counts = { mineLoaded: true, mineError: null, tripsLoaded: false, tripsError: 'offline' };
+    draw();
+    expect(screen.getByText("Couldn't load your counts.")).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(reloads.trips).toHaveBeenCalledOnce();
+    expect(reloads.mine).not.toHaveBeenCalled();
+    cleanup();
+    reloads.trips.mockClear();
+    state.counts = { mineLoaded: false, mineError: 'offline', tripsLoaded: true, tripsError: null };
+    draw();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(reloads.mine).toHaveBeenCalledOnce();
+    expect(reloads.trips).not.toHaveBeenCalled();
+  });
+
+  it('says nothing when a refresh fails over counts already shown', () => {
+    state.counts = { mineLoaded: true, mineError: 'offline', tripsLoaded: true, tripsError: 'offline' };
+    draw();
+    expect(screen.queryByTestId('stats-failed')).toBeNull();
     expect(screen.getByRole('button', { name: '0 Trips' })).toBeTruthy();
   });
 

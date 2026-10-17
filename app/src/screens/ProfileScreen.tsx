@@ -518,8 +518,17 @@ function GuestHub({ navigation }: { navigation: Nav }) {
   );
 }
 
-/** One number and its word, a door into the tab that holds them. */
-function StatTile({ n, label, onPress }: { n: number; label: string; onPress: () => void }) {
+/**
+ * One number and its word, a door into the tab that holds them.
+ *
+ * `null` is "not known yet", and it is drawn as a dash, never as 0. The
+ * tiles used to read `data.length` straight off fetches still in flight,
+ * so a reader with 11 lists, 48 places and 55 trips signed in to three
+ * zeros — the same figures an empty account shows, and read as one
+ * (UX-14, 17 Oct 2026). A zero here is now only ever an answer.
+ */
+function StatTile({ n, label, onPress }: { n: number | null; label: string; onPress: () => void }) {
+  const { t } = useI18n();
   return (
     <PressableScale
       scaleTo={0.96}
@@ -527,9 +536,11 @@ function StatTile({ n, label, onPress }: { n: number; label: string; onPress: ()
       style={s.stat}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${n} ${label}`}
+      accessibilityLabel={n === null
+        ? `${label}, ${t('loading', 'đang tải', '読み込み中')}`
+        : `${n} ${label}`}
     >
-      <Text style={s.statN}>{n}</Text>
+      <Text style={[s.statN, n === null && s.statPending]}>{n ?? '—'}</Text>
       <Text style={s.statLabel} numberOfLines={1}>{label}</Text>
     </PressableScale>
   );
@@ -760,12 +771,33 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the reference's four: there is no review feature, and a count
           with no data behind it is the one number that must not appear. */}
       <View style={s.stats}>
-        <StatTile n={mine.data.length} label={t('Collections', 'Bộ sưu tập', 'コレクション')} onPress={() => hop('Collections', 'CollectionsHome')} />
+        <StatTile n={mine.loaded ? mine.data.length : null} label={t('Collections', 'Bộ sưu tập', 'コレクション')} onPress={() => hop('Collections', 'CollectionsHome')} />
         <View style={s.statDivider} />
-        <StatTile n={saved} label={t('Saved places', 'Địa điểm đã lưu', '保存した場所')} onPress={() => hop('Collections', 'CollectionsHome')} />
+        <StatTile n={mine.loaded ? saved : null} label={t('Saved places', 'Địa điểm đã lưu', '保存した場所')} onPress={() => hop('Collections', 'CollectionsHome')} />
         <View style={s.statDivider} />
-        <StatTile n={trips.data?.length ?? 0} label={t('Trips', 'Chuyến đi', 'トリップ')} onPress={() => hop('Trips', 'TripsHome')} />
+        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', 'トリップ')} onPress={() => hop('Trips', 'TripsHome')} />
       </View>
+      {/* A dash that stays a dash is a question the screen cannot answer,
+          and it says so — only for a count still unknown: a fetch that
+          fails over figures already on screen (a cached copy) leaves
+          those standing, and they are not wrong enough to interrupt. */}
+      {((!mine.loaded && mine.error) || (!trips.loaded && trips.error)) ? (
+        <View style={s.statsFailed} testID="stats-failed">
+          <Text style={s.statsFailedText}>
+            {t("Couldn't load your counts.", 'Không tải được số liệu.', '件数を読み込めませんでした。')}
+          </Text>
+          <PressableScale
+            onPress={() => {
+              if (!mine.loaded) mine.reload();
+              if (!trips.loaded) trips.reload();
+            }}
+            accessibilityRole="button"
+            hitSlop={10}
+          >
+            <Text style={s.statsRetry}>{t('Try again', 'Thử lại', '再試行')}</Text>
+          </PressableScale>
+        </View>
+      ) : null}
 
       <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介')}</Text>
       <Card style={s.featureCard}>
@@ -1200,6 +1232,12 @@ const s = StyleSheet.create({
   statN: { color: colors.text, fontSize: 22, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
   statLabel: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   statDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: colors.borderGlassSoft },
+  // The dash is a placeholder, so it takes the label's grey rather than
+  // the ink a real count is drawn in.
+  statPending: { color: colors.textTertiary },
+  statsFailed: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
+  statsFailedText: { color: colors.textSecondary, fontSize: 13 },
+  statsRetry: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
   editBtn: {
     alignSelf: 'flex-start',
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
