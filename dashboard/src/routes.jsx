@@ -40,6 +40,7 @@ export const routes = [
       // Not in the navigation: a measurement round, reached by its link.
       { path: 'photo-types', element: <PhotoTypes /> },
       { path: 'photo-types-1b', element: <PhotoTypes round="r1b" /> },
+      { path: 'photo-types-2', element: <PhotoTypes round="r2" /> },
     ],
   },
 ];

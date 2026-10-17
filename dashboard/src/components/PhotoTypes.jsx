@@ -74,7 +74,7 @@ export default function PhotoTypes({ round = 'r1' }) {
     return (
       <section className="pt">
         <h3 className="pt-title">{done} / {SAMPLE.length} answered</h3>
-        <p className="pt-note">One letter per photograph, in order: F food, P place, S scenery, U not sure, – none.{guide ? ' Round 1b.' : ''}</p>
+        <p className="pt-note">One letter per photograph, in order: F food, P place, S scenery, U not sure, – none.{round === 'r1' ? '' : ` Round ${round.slice(1)}.`}</p>
         <textarea id="pt-line" className="pt-line" readOnly value={line} rows={4} aria-label="Answers" />
         <div className="pt-actions">
           <button type="button" className="pt-btn pt-primary" onClick={copy}>Copy answers</button>
