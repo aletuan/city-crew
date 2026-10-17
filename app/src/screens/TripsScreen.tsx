@@ -492,13 +492,25 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
             />
           ))}
 
+          {/* The lede speaks to the half that exists. It said "your next
+              plans" over every list, and on an account whose 55 trips were
+              all behind it, it sat directly above "Been there · 55"
+              (UX-10, 17 Oct 2026). With nothing ahead it says so, which
+              is also the line that makes "New trip" above it the obvious
+              next move. */}
           {!!mine.length && (
             <Text style={s.lede}>
-              {t(
-                'Your next plans, in order.',
-                'Những kế hoạch sắp tới của bạn, theo thứ tự.',
-                'これからの予定を順番に。',
-              )}
+              {upcoming.length
+                ? t(
+                  'Your next plans, in order.',
+                  'Những kế hoạch sắp tới của bạn, theo thứ tự.',
+                  'これからの予定を順番に。',
+                )
+                : t(
+                  'No plans coming up.',
+                  'Bạn chưa có kế hoạch sắp tới.',
+                  'これからの予定はまだありません。',
+                )}
             </Text>
           )}
 
@@ -522,8 +534,12 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
           ))}
 
           {!!past.length && (
+            // "Past", not "Been there": a trip moves here when its day is
+            // over, and nothing records that anyone went. The heading
+            // states the date, the one thing the split knows — the pair
+            // to "Upcoming" (UX-10).
             <Text style={[s.section, !!upcoming.length && s.sectionAfter]}>
-              {t('Been there', 'Đã đi', '行った旅')} · {past.length}
+              {t('Past', 'Đã qua', 'これまで')} · {past.length}
             </Text>
           )}
           {past.map((trip) => (
