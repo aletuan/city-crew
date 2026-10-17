@@ -26,7 +26,8 @@ import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
-import { addDays, todayISO } from '../lib/day';
+import { addDays, fromISO, todayISO } from '../lib/day';
+import { dateline } from '../lib/format';
 import type { Trip, TripStopRow } from '../lib/data';
 import type { InviteRow } from '../lib/invites';
 import type { Place } from '../lib/types';
@@ -329,7 +330,10 @@ describe('the card', () => {
     expect(title.style.getPropertyValue('-webkit-line-clamp')).toBe('2');
     // The chip's row is the date's, and the title is not in it.
     const row = chip.parentElement!.parentElement!;
-    expect(row.textContent).toBe('Tue, 20 Oct · from 18:00Friends');
+    // The date is SOON's, three days from whenever this runs: written as
+    // the literal "Tue, 20 Oct" it held for one day, 17 Oct 2026 in Hanoi,
+    // and turned CI red at midnight there.
+    expect(row.textContent).toBe(`${dateline('en', fromISO(SOON)!)} · from 18:00Friends`);
   });
 
   it('has no cover and no badge when there is no picture and no company', () => {
