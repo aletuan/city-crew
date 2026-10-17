@@ -46,7 +46,7 @@ export function AuthScreen({ children }: { children: React.ReactNode }) {
  * the keyboard takes.
  *
  * `titleDetail`, not `title`: at 34pt beside a 44pt control, "Sign in"
- * fits and "Đặt tên danh sách" does not. It still wraps to two lines if a
+ * fits and "Bộ sưu tập mới" does not. It still wraps to two lines if a
  * translation needs it, which is why the row aligns to the top rather than
  * centring on a control whose height it cannot assume.
  *

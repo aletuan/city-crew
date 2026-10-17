@@ -90,7 +90,7 @@ const TIPS: Record<TipId, (t: T) => string> = {
   ),
   copy: (t) => t(
     'Like this list? Tap the three-dot button (⋯) at the top right and choose Save a copy to get your own version to change as you like.',
-    'Thích danh sách này? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.',
+    'Thích bộ sưu tập này? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.',
     'このリストが気に入ったら、右上の「⋯」ボタンの「コピーを保存」で自分用に編集できるコピーを作れます。',
   ),
 };

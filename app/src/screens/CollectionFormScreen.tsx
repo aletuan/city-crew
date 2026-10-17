@@ -217,7 +217,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？'),
         t(
           'What you changed on this list has not been saved.',
-          'Những gì bạn vừa đổi trên danh sách này chưa được lưu.',
+          'Những gì bạn vừa đổi trên bộ sưu tập này chưa được lưu.',
           'このリストの変更はまだ保存されていません。',
         ),
         [
@@ -347,8 +347,14 @@ export default function CollectionFormScreen({ navigation, route }: {
         title={copyFrom
           ? t('Save a copy', 'Lưu bản sao', 'コピーを保存')
           : editing
-            ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
-            : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
+            // Named for the thing the reader tapped "New" beside, in the
+            // word the tab and every row of it use. "Name your list"
+            // switched terms between the button and the form, and left a
+            // new reader to work out whether a list was a collection
+            // (UX-13, 17 Oct 2026). "Edit", not "Rename": the same form
+            // changes the description, the chips and the cover too.
+            ? t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')
+            : t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
         action={{
           label: copyFrom
             ? t('Save the copy', 'Lưu bản sao', 'コピーを保存')
@@ -383,12 +389,12 @@ export default function CollectionFormScreen({ navigation, route }: {
             : col?.is_public
               ? t(
                 'This list is public — its new name and description will show to everyone.',
-                'Danh sách này đang công khai — tên và mô tả mới sẽ hiện với mọi người.',
+                'Bộ sưu tập này đang công khai — tên và mô tả mới sẽ hiện với mọi người.',
                 'このリストは公開中です — 新しい名前と説明はすべての人に表示されます。',
               )
               : t(
                 'Only you can see this list until you make it public from its menu.',
-                'Chỉ mình bạn thấy danh sách này cho đến khi bạn công khai nó trong menu của danh sách.',
+                'Chỉ mình bạn thấy bộ sưu tập này cho đến khi bạn công khai nó trong menu của bộ sưu tập.',
                 'リストのメニューから公開するまで、このリストはあなただけに表示されます。',
               )}</Lede>
       <FieldRow
@@ -432,7 +438,7 @@ export default function CollectionFormScreen({ navigation, route }: {
           <Text style={s.kindsHint}>
             {t(
               'From the places in it. Tap one to hide it from the list, or show it again.',
-              'Lấy từ các địa điểm trong danh sách. Chạm để ẩn hoặc hiện lại.',
+              'Lấy từ các địa điểm trong bộ sưu tập. Chạm để ẩn hoặc hiện lại.',
               'リストのスポットから。タップで非表示・再表示を切り替えます。',
             )}
           </Text>
