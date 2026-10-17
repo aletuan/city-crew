@@ -1837,7 +1837,7 @@ describe('the scroll nudge', () => {
     while (stack.length) {
       const f = stack.pop()!;
       const p = f.memoizedProps;
-      if (p && typeof p === 'object' && p.label === 'Add' && typeof p.onPress === 'function') return p;
+      if (p && typeof p === 'object' && p.label === 'Place' && typeof p.onPress === 'function') return p;
       if (f.sibling) stack.push(f.sibling);
       if (f.child) stack.push(f.child);
     }
@@ -1868,10 +1868,12 @@ describe('the scroll nudge', () => {
     settle();
     expect(shown()).toBe(true);
     expect(screen.getByText('Search, or add your own')).toBeTruthy();
-    // The dock's "Add" is the 44pt one, as in Gallery's header: the dock
+    // The dock's pill is the 44pt one, as in Gallery's header: the dock
     // around it is a button to Search, so a small pill sent near misses
-    // there.
-    const add = screen.getByRole('button', { name: 'Add' });
+    // there. Its word is the noun, "+ Place", and VoiceOver hears the
+    // whole "Add place" (owner, 17 Oct 2026).
+    const add = screen.getByRole('button', { name: 'Add place' });
+    expect(add.textContent).toBe('Place');
     // Asked for by the prop: what `tall` draws is pinned in add.ui.test.
     expect(addPillProps().tall).toBe(true);
     fireEvent.click(add);
