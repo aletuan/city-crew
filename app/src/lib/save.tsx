@@ -136,7 +136,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     // empty while the first fetch is still out — which is exactly the
     // moment after launch a bookmark is likeliest to be tapped — and
     // branching on that emptiness sent people who *have* collections to
-    // "Name your list" as though they had none. `initial: false` is the
+    // "New collection" as though they had none. `initial: false` is the
     // other half of the same report: without it, reaching the form while
     // the Collections tab had never been opened made the form that
     // stack's first screen — nothing beneath it to go back to, and the

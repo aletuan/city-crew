@@ -233,7 +233,7 @@ export const navRef = createNavigationContainerRef<RootStackParamList>();
  *  the named screen the *initial* route of a stack that has not mounted
  *  yet — nothing beneath it to go back to, and the tab keeps showing it.
  *  That is how a bookmark tapped before the Collections tab was ever
- *  opened left the tab stuck on "Name your list" with every list
+ *  opened left the tab stuck on "New collection" with every list
  *  seemingly gone. */
 export function goTo(tab: string, params: object) {
   if (!navRef.isReady()) return;
