@@ -227,12 +227,12 @@ export const KINDS_3 = [
 
 /** The six cover criteria, in the order they are written in the line. */
 export const ATTRS = [
-  { key: 'brand', vi: 'Biển hiệu', hint: 'Tên, logo hay biển của quán đọc được' },
-  { key: 'wide', vi: 'Toàn cảnh', hint: 'Thấy cả nơi chốn: cả phòng, cả mặt tiền, không phải một món hay một góc' },
-  { key: 'green', vi: 'Cây xanh', hint: 'Cây cối chiếm một phần đáng kể của khung' },
+  { key: 'brand', vi: 'Biển hiệu', hint: 'Biển hay tên của chính quán đọc được. Logo in trên cốc, đĩa, phin không tính' },
+  { key: 'wide', vi: 'Thấy cả không gian', hint: 'Thấy cả phòng, cả mặt tiền hay cả sân, không phải cận một món hay một góc' },
+  { key: 'green', vi: 'Cây xanh', hint: 'Cây hay cây lá chiếm một phần đáng kể. Hoa, bình hoa, vài chậu nhỏ không tính' },
   { key: 'daylight', vi: 'Ánh sáng ngày', hint: 'Sáng chủ yếu nhờ trời: nắng, trời râm, cửa sổ. Đèn hay ban đêm là Không' },
-  { key: 'people', vi: 'Người', hint: 'Người là chủ thể hoặc chiếm phần lớn khung. Khách nhỏ ở xa là Không' },
-  { key: 'staged', vi: 'Dàn dựng', hint: 'Như ảnh quảng cáo: người mẫu tạo dáng, hoặc chữ in đè lên ảnh' },
+  { key: 'people', vi: 'Người', hint: 'Thấy bất kỳ người nào trong ảnh: khách, barista, người qua đường. Chỉ một bàn tay thì không tính' },
+  { key: 'staged', vi: 'Dàn dựng', hint: 'Có người mẫu tạo dáng cho ảnh. Chữ in đè lên ảnh không tính' },
 ];
 
 /** An attribute's answer, and the next one a tap moves it to. "No" first,

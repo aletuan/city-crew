@@ -34,7 +34,7 @@ describe('LabelRound', () => {
       'Đồ ănFood', 'Nội thấtInterior', 'Mặt tiềnExterior', 'Phong cảnhView', 'ChữText', 'KhácOther', 'Không chắcNot sure',
     ]);
     expect(criteria().getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Biển hiệu: Không', 'Toàn cảnh: Không', 'Cây xanh: Không', 'Ánh sáng ngày: Không', 'Người: Không', 'Dàn dựng: Không',
+      'Biển hiệu: Không', 'Thấy cả không gian: Không', 'Cây xanh: Không', 'Ánh sáng ngày: Không', 'Người: Không', 'Dàn dựng: Không',
     ]);
     expect(next().disabled).toBe(true);
     expect(document.querySelector('.pt-preload').getAttribute('src')).toBe('https://z/1.jpg');
@@ -47,7 +47,7 @@ describe('LabelRound', () => {
     api.photoUris.mockResolvedValue(uris);
     const first = renderDesk('/photo-types-3');
     await screen.findByRole('img', { name: 'Photograph 1' });
-    fireEvent.click(criteria().getByRole('button', { name: 'Toàn cảnh: Không' }));
+    fireEvent.click(criteria().getByRole('button', { name: 'Thấy cả không gian: Không' }));
     fireEvent.click(criteria().getByRole('button', { name: 'Ánh sáng ngày: Không' }));
     fireEvent.click(criteria().getByRole('button', { name: 'Ánh sáng ngày: Có' }));
     expect(criteria().getByRole('button', { name: 'Ánh sáng ngày: Không rõ' })).toBeTruthy();
@@ -67,7 +67,7 @@ describe('LabelRound', () => {
     expect(await screen.findByText('2 / 137')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '‹ Back' }));
     expect(screen.getByText('1 / 137')).toBeTruthy();
-    expect(criteria().getByRole('button', { name: 'Toàn cảnh: Có' })).toBeTruthy();
+    expect(criteria().getByRole('button', { name: 'Thấy cả không gian: Có' })).toBeTruthy();
     fireEvent.click(criteria().getByRole('button', { name: 'Ánh sáng ngày: Không rõ' }));
     expect(JSON.parse(localStorage.getItem(KEY))[SAMPLE_3[0]].attrs.daylight).toBe('0');
   });
@@ -153,7 +153,7 @@ describe('LabelRound', () => {
     expect(screen.getByRole('heading', { name: 'Photo types · 3b' })).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'What is this photograph?' })).toBeNull();
     expect(screen.queryByRole('list', { name: 'Definitions', hidden: true })).toBeNull();
-    expect(criteria().getByRole('button', { name: 'Người: Không' }).textContent).toContain('Người là chủ thể');
+    expect(criteria().getByRole('button', { name: 'Người: Không' }).textContent).toContain('Thấy bất kỳ người nào');
     expect(next().disabled).toBe(false);
     fireEvent.click(criteria().getByRole('button', { name: 'Người: Không' }));
     fireEvent.click(next());

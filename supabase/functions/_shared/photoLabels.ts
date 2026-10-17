@@ -1,5 +1,5 @@
 // What a photograph is, and the six things a cover is chosen by: the
-// photo labels, v2 (docs/photo-labels.md §3).
+// photo labels, v3 (docs/photo-labels.md §3).
 //
 // The one place they are defined. The `label-photos` function sends
 // DEFINITIONS to the model as its instructions; the `photo-labels` skill
@@ -13,7 +13,7 @@
 // key is added here and to the skill's query; a new kind, or a changed
 // meaning, bumps VERSION, and every older row is asked again.
 
-export const VERSION = 2;
+export const VERSION = 3;
 
 /** The scorer name the labels are stored under in `photo_scores`. */
 export const SCORER = "claude-labels";
@@ -31,7 +31,13 @@ export type Attr = typeof ATTRS[number];
  *  outdoor grounds with a building in them go by what fills the frame; a
  *  counter seen from the customer's side with the place's sign is the
  *  exterior; a table with food on it is food; a sign or logo that fills
- *  the frame is text. */
+ *  the frame is text. v3 (17 Oct 2026) does the same for the six
+ *  attributes after round 3b, where the owner's answers and all five
+ *  Claude answers parted on the meaning of the words, not on what was in
+ *  the frame: brand is the place's own sign or name, not a logo on a cup
+ *  or a plate; green is trees and leafy plants, not flowers or a few small
+ *  pots; any person visible is people; staged is a posed model only, and
+ *  text laid over a photograph is not staged. */
 export const DEFINITIONS = `You label one photograph of a place in a city guide: a café, a restaurant, a bar, a shop, a museum, a park. Answer from the photograph alone.
 
 KIND — exactly one, by the subject: what fills most of the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
@@ -45,12 +51,12 @@ KIND — exactly one, by the subject: what fills most of the frame and is in foc
 Set unsure to true whenever you would not bet on the kind.
 
 ATTRIBUTES — each "yes", "no", or "unknown" when the photograph cannot say (too dark, too cropped, black and white):
-- brand: a sign, logo or the place's name is legible in the frame. Another company's logo (a bottle, a poster) and a small watermark are not the place's brand.
-- wide: the frame takes in the place as a whole (a room, a front, a terrace), not one dish, one corner or one shelf.
-- green: plants or trees are a noticeable part of the frame, not a single sprig.
+- brand: the place's own sign or name is legible in the frame: a shop sign, a lit logo on its wall, its name over the door. A logo printed on a cup, a phin filter, a plate, a coaster or a bag, latte art, another company's logo and a small watermark are not brand.
+- wide: the frame takes in the place as a whole (a room, a front, a terrace, a courtyard), not one dish, one corner or one shelf.
+- green: trees or leafy plants are a noticeable part of the frame. Flowers, a vase, a single sprig or a few small pots are not green.
 - daylight: lit mainly by natural daylight (sun, overcast sky, a window). Lamps or night is "no". A close-up of a dish with no window or sky in frame often cannot say: "unknown".
-- people: one or more people are the subject or fill a large part of the frame. Passers-by in the distance are "no".
-- staged: it looks like an advertisement: a posed model, or text and graphics laid over the photograph.
+- people: any person can be seen in the frame, as the subject or not: a guest at a table, a barista behind the counter, a passer-by. A hand or arm reaching into a food photograph is not people.
+- staged: a posed model, someone placed in the frame for the photograph. Text or graphics laid over the photograph are not staged.
 
 note: one short sentence, only for a case worth explaining; otherwise an empty string.`;
 

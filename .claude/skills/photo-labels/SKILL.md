@@ -54,7 +54,7 @@ left join public.photo_scores s
 where not p.is_hidden
   and pl.slug = any(array['<slug>'])          -- or: pl.city_id = '<city>' / drop for all
   and (s.photo_id is null
-       or s.scorer_version < 2                 -- VERSION below
+       or s.scorer_version < 3                 -- VERSION below
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```
@@ -93,7 +93,7 @@ The script prints a path for each sheet and writes `index.json`, which
 maps each yellow number to its photo id. Read every sheet. A
 photograph reported `MISSING` gets no label; list it in the report.
 
-## 3. The labels, v2
+## 3. The labels, v3
 
 Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
 answer each photograph by them: one `kind`, and each of the six attributes
@@ -167,7 +167,7 @@ skill's and the desk's job, and it waits on round 3 (`docs/photo-labels.md`
 
 ## Growing the set
 
-`VERSION` is 2, in `photoLabels.ts`. The `signals` of every row carry
+`VERSION` is 3, in `photoLabels.ts`. The `signals` of every row carry
 `"v"`. Four rules, from `docs/photo-labels.md` §4:
 
 1. **Never reuse a key for a new meaning.** A new meaning gets a new key.
