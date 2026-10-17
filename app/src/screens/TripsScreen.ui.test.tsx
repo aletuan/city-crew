@@ -298,6 +298,21 @@ describe('the card', () => {
     expect(screen.getByText('Bởi Minh')).toBeTruthy();
   });
 
+  // UX-11: the title shared its row with the company chip and was cut to
+  // one line, so "A morning of coffee in Yên Hòa" read "A morning of
+  // coffee in…" — the place, the part that tells 55 trips apart, was the
+  // part cut. It gets the row and two lines; the chip goes to the date.
+  it('gives the title its own row, up to two lines, and puts the company beside the date', () => {
+    show([trip({ title: 'A morning of coffee in Yên Hòa', company: 'friends' })]);
+    const title = screen.getByText('A morning of coffee in Yên Hòa');
+    const chip = screen.getByText('Friends');
+    // react-native-web draws `numberOfLines` as a line clamp.
+    expect(title.style.getPropertyValue('-webkit-line-clamp')).toBe('2');
+    // The chip's row is the date's, and the title is not in it.
+    const row = chip.parentElement!.parentElement!;
+    expect(row.textContent).toBe('Tue, 20 Oct · from 18:00Friends');
+  });
+
   it('has no cover and no badge when there is no picture and no company', () => {
     show([trip({ company: null })]);
     expect(document.querySelector('img')).toBeNull();
