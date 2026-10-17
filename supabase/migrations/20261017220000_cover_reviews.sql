@@ -64,6 +64,11 @@ create trigger cover_reviews_stamp
   for each row execute function public.cover_reviews_stamp();
 
 alter table public.cover_reviews enable row level security;
+-- A project grants every new table in `public` to `anon` and
+-- `authenticated` in full, by default privilege. RLS would refuse what
+-- those grants allow, but the grants are taken back first so the table
+-- says what it means: nothing signed out, and no deleting an answer.
+revoke all on table public.cover_reviews from anon, authenticated;
 grant select, insert, update on table public.cover_reviews to authenticated;
 
 drop policy if exists "cover reviews read by editors" on public.cover_reviews;
