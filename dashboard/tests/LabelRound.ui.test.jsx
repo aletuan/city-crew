@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { api } from '../src/api.js';
-import { SAMPLE_3 } from '../src/labelRound.js';
+import { SAMPLE_3, SAMPLE_3B } from '../src/labelRound.js';
 import { findToast, renderDesk } from './_ui/desk.jsx';
 
 const KEY = 'citycrew.dashboard.photoLabels.r3';
@@ -137,5 +137,36 @@ describe('LabelRound', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy answers' }));
     expect((await findToast()).textContent).toContain('use Copy');
     expect(select).toHaveBeenCalled();
+  });
+
+  // Round 3b: the criteria alone. No kinds to choose, so Next is open from
+  // the start and is what marks a photograph answered; each chip carries
+  // its definition, and the answers are kept apart from round 3's.
+  it('asks round 3b the criteria alone, with their definitions, and keeps its answers apart', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ [SAMPLE_3[0]]: { kind: 'F' } }));
+    api.photoUris.mockResolvedValue(Object.fromEntries(SAMPLE_3B.map((id, i) => [id, `https://b/${i}.jpg`])));
+    renderDesk('/photo-types-3b');
+    const photo = await screen.findByRole('img', { name: 'Photograph 1' });
+    expect(photo.getAttribute('src')).toBe('https://b/0.jpg');
+    expect(screen.getByText('1 / 40')).toBeTruthy();
+    expect(api.photoUris).toHaveBeenCalledWith(SAMPLE_3B);
+    expect(screen.getByRole('heading', { name: 'Photo types · 3b' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'What is this photograph?' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Definitions', hidden: true })).toBeNull();
+    expect(criteria().getByRole('button', { name: 'Người: Không' }).textContent).toContain('Người là chủ thể');
+    expect(next().disabled).toBe(false);
+    fireEvent.click(criteria().getByRole('button', { name: 'Người: Không' }));
+    fireEvent.click(next());
+    expect(screen.getByText('2 / 40')).toBeTruthy();
+    fireEvent.click(next());
+    expect(JSON.parse(localStorage.getItem('citycrew.dashboard.photoLabels.r3b'))).toEqual({
+      [SAMPLE_3B[0]]: { attrs: { people: '1' }, seen: true },
+      [SAMPLE_3B[1]]: { seen: true },
+    });
+    expect(JSON.parse(localStorage.getItem(KEY))).toEqual({ [SAMPLE_3[0]]: { kind: 'F' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Answers ›' }));
+    expect(screen.getByText('2 / 40 answered')).toBeTruthy();
+    expect(screen.getByText(/Round 3b\./)).toBeTruthy();
+    expect(screen.getByLabelText('Answers').value).toBe(['000010', '000000', ...Array(38).fill('------')].join(' '));
   });
 });
