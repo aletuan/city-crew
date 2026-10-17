@@ -351,6 +351,55 @@ export type Database = {
           },
         ]
       }
+      cover_reviews: {
+        Row: {
+          cover_photo_id: string | null
+          decided_at: string
+          decided_by: string | null
+          decision: string
+          place_id: string
+          suggested_photo_id: string | null
+        }
+        Insert: {
+          cover_photo_id?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision: string
+          place_id: string
+          suggested_photo_id?: string | null
+        }
+        Update: {
+          cover_photo_id?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision?: string
+          place_id?: string
+          suggested_photo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cover_reviews_cover_photo_id_fkey"
+            columns: ["cover_photo_id"]
+            isOneToOne: false
+            referencedRelation: "place_photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cover_reviews_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: true
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cover_reviews_suggested_photo_id_fkey"
+            columns: ["suggested_photo_id"]
+            isOneToOne: false
+            referencedRelation: "place_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deck_traces: {
         Row: {
           channel: string | null

@@ -948,3 +948,63 @@ test('resizeImage honours a smaller limit when one is asked for', async () => {
   const thumb = await resizeWith(1000, 500, 400);
   assert.deepEqual([thumb.canvas.width, thumb.canvas.height], [400, 200]);
 });
+
+// ---- cover review: the places with their labels, the desk's answers,
+// and an answer written after the cover change it reports.
+
+test('coverPlaces asks for the labels row only, names each place, and hands each photograph its labels', async () => {
+  const { api, client } = await loadApi([{
+    data: [
+      { id: 'p1', slug: 'one', city_id: 'hue', name_en: '', name_vi: 'Một', categories: ['cafes'], place_photos: [
+        { id: 'a', is_cover: true, photo_scores: [{ scorer: 'claude-labels', signals: { kind: 'food' } }] },
+        { id: 'b', is_cover: false, photo_scores: [] },
+      ] },
+      { id: 'p2', slug: 'two', city_id: 'hue', name_en: null, name_vi: null, categories: [], place_photos: null },
+    ],
+    error: null,
+  }]);
+  const out = await api.coverPlaces('hue');
+  assert.equal(out[0].name, 'Một');
+  assert.deepEqual(out[0].photos.map((p) => p.labels), [{ kind: 'food' }, null]);
+  assert.equal(out[1].name, 'two');
+  assert.deepEqual(out[1].photos, []);
+  const chain = client.calls[0].chain;
+  assert.deepEqual(chain.find(([m, [col]]) => m === 'eq' && col === 'place_photos.photo_scores.scorer'),
+    ['eq', ['place_photos.photo_scores.scorer', 'claude-labels']]);
+  assert.deepEqual(chain.find(([m, [col]]) => m === 'eq' && col === 'city_id'), ['eq', ['city_id', 'hue']]);
+});
+
+test('coverPlaces without a city reads the whole catalog', async () => {
+  const { api, client } = await loadApi([{ data: [], error: null }]);
+  assert.deepEqual(await api.coverPlaces(null), []);
+  assert.equal(client.calls[0].chain.some(([m, [col]]) => m === 'eq' && col === 'city_id'), false);
+});
+
+test('coverAnswers reads the desk\'s answers', async () => {
+  const { api, client } = await loadApi([{ data: [{ place_id: 'p1', decision: 'kept' }], error: null }]);
+  assert.deepEqual(await api.coverAnswers(), [{ place_id: 'p1', decision: 'kept' }]);
+  assert.equal(client.calls[0].table, 'cover_reviews');
+});
+
+const review = { place: { id: 'p1' }, cover: { id: 'c' }, suggestion: { id: 's' } };
+
+test('answerCover "changed" makes the suggestion the cover, then records the answer', async () => {
+  const { api, client } = await loadApi([
+    { data: [{ place_id: 'p1' }], error: null }, // the suggestion's place
+    { data: [{ id: 'c' }], error: null },        // old cover unset
+    { data: [{ id: 's' }], error: null },        // suggestion set
+    { data: [{ place_id: 'p1' }], error: null }, // the answer
+  ]);
+  await api.answerCover(review, 'changed');
+  assert.deepEqual(client.calls.map((c) => c.table), ['place_photos', 'place_photos', 'place_photos', 'cover_reviews']);
+  assert.deepEqual(client.calls[3].chain.find(([m]) => m === 'upsert'), ['upsert', [
+    { place_id: 'p1', cover_photo_id: 'c', suggested_photo_id: 's', decision: 'changed' },
+    { onConflict: 'place_id' },
+  ]]);
+});
+
+test('answerCover "kept" touches no photograph, and a refused answer is an error', async () => {
+  const { api, client } = await loadApi([{ data: null, error: { message: 'denied' } }]);
+  await assert.rejects(() => api.answerCover(review, 'kept'), /denied/);
+  assert.deepEqual(client.calls.map((c) => c.table), ['cover_reviews']);
+});

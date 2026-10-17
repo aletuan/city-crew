@@ -60,6 +60,10 @@ const PAGE_HEAD = {
     title: 'Coverage',
     sub: 'Where the catalog actually is — published places per district, so thin quận stand out before users notice.',
   },
+  '/covers': {
+    title: 'Cover review',
+    sub: 'Covers that do not show their place, beside a photograph that does.',
+  },
   '/photo-types': {
     title: 'Photo types',
     sub: 'Food, place or scenery — one photograph at a time.',
@@ -490,6 +494,7 @@ export default function App() {
                 <NavLink to="/city" className={navCls}><CategoryIcon name="photo" size={17} />City hero</NavLink>
                 <NavLink to="/scan" className={navCls}><CategoryIcon name="radar" size={17} />Scan city</NavLink>
                 <NavLink to="/search-words" className={navCls}><CategoryIcon name="search" size={17} />Search words</NavLink>
+                <NavLink to="/covers" className={navCls}><CategoryIcon name="photo" size={17} />Cover review</NavLink>
                 {/* The count is the feature, not the link: a queue with a
                     day's deadline has to say so from wherever the desk
                     happens to be standing. */}
@@ -653,6 +658,7 @@ export default function App() {
                 <Link className="moremenu-item" to="/city" role="menuitem">City hero</Link>
                 <Link className="moremenu-item" to="/scan" role="menuitem">Scan city</Link>
                 <Link className="moremenu-item" to="/search-words" role="menuitem">Search words</Link>
+                <Link className="moremenu-item" to="/covers" role="menuitem">Cover review</Link>
                 <Link className="moremenu-item" to="/reports" role="menuitem">
                   Reports{waitingReports > 0 ? ` · ${waitingReports}` : ''}
                 </Link>

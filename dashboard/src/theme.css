@@ -1950,3 +1950,16 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .lr-next:disabled { opacity: 0.35; cursor: default; }
 .lr-guide { color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
 .lr-guide ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Cover review: the cover and the suggestion side by side, at the same
+   size, because the question is a comparison. */
+.cr-name { color: var(--text-primary); font-weight: 600; text-decoration: none; }
+.cr-name:hover { text-decoration: underline; }
+.cr-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.cr-shot { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.cr-shot img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: 12px; background: #000;
+}
+.cr-shot figcaption { color: var(--text-secondary); font-size: 13px; }
+
