@@ -442,7 +442,7 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
 
 export default function CollectionsScreen({ navigation, route }: {
   navigation: Nav;
-  route: { params?: { tab?: 'community'; at?: number } };
+  route: { params?: { tab?: 'yours' | 'community'; at?: number } };
 }) {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -597,8 +597,14 @@ export default function CollectionsScreen({ navigation, route }: {
   // as `tab`: the second "See all" carries the same tab as the first, and
   // a reader who had switched to Yours in between was left there, because
   // an unchanged value never re-ran this.
+  //
+  // And a fresh `at` starts the list from its top: the screen is the one
+  // left behind when the reader went into a collection, still scrolled
+  // to where they were, and a door that says "your collections" opens on
+  // the first of them (UX-09).
   useEffect(() => {
     if (route.params?.tab) setTab(route.params.tab);
+    if (route.params?.at) scrollRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
   }, [route.params?.tab, route.params?.at]);
   // An empty library greets with the community shelf instead of an empty
   // room — decided once per visit, the first time the answer lands, and

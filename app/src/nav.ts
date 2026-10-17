@@ -65,9 +65,10 @@ export type RootStackParamList = {
   ExploreHome: undefined;
   Search: undefined;
   /** `tab` lands the screen on a specific half — Explore's "See all"
-   *  points at the community shelf, not at your library. `at` is the
-   *  moment of the tap, so a repeat tap is a new param and re-aims. */
-  CollectionsHome: { tab?: 'community'; at?: number } | undefined;
+   *  points at the community shelf, Profile's counts at your library.
+   *  `at` is the moment of the tap, so a repeat tap is a new param: it
+   *  re-aims the half and scrolls back to the top. */
+  CollectionsHome: { tab?: 'yours' | 'community'; at?: number } | undefined;
   /** One screen for three verbs: params absent means "new", `slug` means
    *  "rename this one", `copyFrom` means "save a copy of somebody else's". */
   CollectionForm: {
@@ -136,7 +137,8 @@ export type RootStackParamList = {
    *  already shown are one of those inputs. Without it the rebuild is a
    *  different draw wearing the same lens. */
   PlanEdit: PlanAsk & { seed: number; lens: string; title?: string; avoid?: string[] };
-  TripsHome: undefined;
+  /** `at`, the moment of a tap from Profile's count: scroll to the top. */
+  TripsHome: { at?: number } | undefined;
   /** A saved trip, whole. Carries only the id: the row is already in
    *  memory from the list, and re-reading it there rather than serialising
    *  it through navigation is what keeps one copy of a trip in the app —
