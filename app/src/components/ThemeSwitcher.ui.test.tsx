@@ -109,6 +109,21 @@ describe('the two grounds, and the deferral', () => {
     expect(screen.queryByText('Following the phone · Dark')).toBeNull();
   });
 
+  // UX-03: with Light ticked on a dark phone the line said "· Light" —
+  // the reader's pick, not the phone's. While a ground is pinned the
+  // phone's own cannot be read, so the line names no ground at all.
+  // A look pins one too (`PINNED` in lib/look), so Coffee is the same case.
+  it('names no ground on the Auto row while another choice is ticked', () => {
+    for (const [pref, scheme] of [['light', 'light'], ['dark', 'dark'], ['coffee', 'dark']] as const) {
+      state.pref = pref;
+      state.scheme = scheme;
+      const { unmount } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      const auto = screen.getByText('Automatic').closest('[role="radio"]')!;
+      expect(auto.textContent).toBe('AutomaticFollowing the phone');
+      unmount();
+    }
+  });
+
   // The behavioural difference, kept: choosing repaints the whole screen
   // behind the sheet, which is the one moment both readings can be seen
   // against each other — closing on the tap would hide the result of
