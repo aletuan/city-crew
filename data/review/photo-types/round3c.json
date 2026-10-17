@@ -32,6 +32,9 @@
     "04ee0200-97bb-4d15-9a7f-c07f40026bb6",
     "28f920c7-3b6f-4b34-a112-bcfea02b68cd"
   ],
+  "owner": "F00 E10 F01 E10 F00 E10 E11 E10 I11 I11 V10 E10 F01 I10 I10 I11 E10 E11 F00 F00 F01 E10 I10 E11",
+  "owner_corrected": "F00 I10 F01 I10 F00 E10 E11 I10 I11 I11 V10 E10 F01 I10 I11 I11 E10 E11 F00 F00 F01 I10 I10 E11",
+  "about_owner": "The owner's answers, pasted 17 Oct 2026 after both models' were sealed (sha256 checked before scoring); the page asked every question with nothing preset. owner_corrected is the owner's own reading of five answers, given when Claude showed the photographs the owner and the models parted on, so it can only move towards the models: 2, 4 and 22 were mis-taps for interior; 8, an indoor counter under the café's lit sign, is interior by the owner's ruling that day (definitions v4), which also makes it agree with 23; 15 has guests at tables behind the glass, missed. Photographs the three agreed on were not shown again.",
   "function_v3": {
     "about": "label-photos under v3, write:false, effort low, 17 Oct 2026 ~13:15 UTC, before the owner saw these photographs.",
     "fn_opus": {
