@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { api } from '../src/api.js';
-import { SAMPLE_3, SAMPLE_3B } from '../src/labelRound.js';
+import { SAMPLE_3, SAMPLE_3B, SAMPLE_3C } from '../src/labelRound.js';
 import { findToast, renderDesk } from './_ui/desk.jsx';
 
 const KEY = 'citycrew.dashboard.photoLabels.r3';
@@ -34,7 +34,7 @@ describe('LabelRound', () => {
       'Đồ ănFood', 'Nội thấtInterior', 'Mặt tiềnExterior', 'Phong cảnhView', 'ChữText', 'KhácOther', 'Không chắcNot sure',
     ]);
     expect(criteria().getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Biển hiệu: Không', 'Toàn cảnh: Không', 'Cây xanh: Không', 'Ánh sáng ngày: Không', 'Người: Không', 'Dàn dựng: Không',
+      'Biển hiệu: Không', 'Thấy cả không gian: Không', 'Cây xanh: Không', 'Ánh sáng ngày: Không', 'Người: Không', 'Dàn dựng: Không',
     ]);
     expect(next().disabled).toBe(true);
     expect(document.querySelector('.pt-preload').getAttribute('src')).toBe('https://z/1.jpg');
@@ -47,7 +47,7 @@ describe('LabelRound', () => {
     api.photoUris.mockResolvedValue(uris);
     const first = renderDesk('/photo-types-3');
     await screen.findByRole('img', { name: 'Photograph 1' });
-    fireEvent.click(criteria().getByRole('button', { name: 'Toàn cảnh: Không' }));
+    fireEvent.click(criteria().getByRole('button', { name: 'Thấy cả không gian: Không' }));
     fireEvent.click(criteria().getByRole('button', { name: 'Ánh sáng ngày: Không' }));
     fireEvent.click(criteria().getByRole('button', { name: 'Ánh sáng ngày: Có' }));
     expect(criteria().getByRole('button', { name: 'Ánh sáng ngày: Không rõ' })).toBeTruthy();
@@ -67,7 +67,7 @@ describe('LabelRound', () => {
     expect(await screen.findByText('2 / 137')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '‹ Back' }));
     expect(screen.getByText('1 / 137')).toBeTruthy();
-    expect(criteria().getByRole('button', { name: 'Toàn cảnh: Có' })).toBeTruthy();
+    expect(criteria().getByRole('button', { name: 'Thấy cả không gian: Có' })).toBeTruthy();
     fireEvent.click(criteria().getByRole('button', { name: 'Ánh sáng ngày: Không rõ' }));
     expect(JSON.parse(localStorage.getItem(KEY))[SAMPLE_3[0]].attrs.daylight).toBe('0');
   });
@@ -153,7 +153,7 @@ describe('LabelRound', () => {
     expect(screen.getByRole('heading', { name: 'Photo types · 3b' })).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'What is this photograph?' })).toBeNull();
     expect(screen.queryByRole('list', { name: 'Definitions', hidden: true })).toBeNull();
-    expect(criteria().getByRole('button', { name: 'Người: Không' }).textContent).toContain('Người là chủ thể');
+    expect(criteria().getByRole('button', { name: 'Người: Không' }).textContent).toContain('Thấy bất kỳ người nào');
     expect(next().disabled).toBe(false);
     fireEvent.click(criteria().getByRole('button', { name: 'Người: Không' }));
     fireEvent.click(next());
@@ -168,5 +168,32 @@ describe('LabelRound', () => {
     expect(screen.getByText('2 / 40 answered')).toBeTruthy();
     expect(screen.getByText(/Round 3b\./)).toBeTruthy();
     expect(screen.getByLabelText('Answers').value).toBe(['000010', '000000', ...Array(38).fill('------')].join(' '));
+  });
+
+  // Round 3c: the kind and two criteria, each a row of three answers with
+  // none chosen; Next waits for all three.
+  it('asks round 3c the kind and two criteria outright, with nothing preset', async () => {
+    api.photoUris.mockResolvedValue(Object.fromEntries(SAMPLE_3C.map((id, i) => [id, `https://c/${i}.jpg`])));
+    renderDesk('/photo-types-3c');
+    await screen.findByRole('img', { name: 'Photograph 1' });
+    expect(screen.getByText('1 / 24')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Photo types · 3c' })).toBeTruthy();
+    const wide = within(screen.getByRole('radiogroup', { name: 'Thấy cả không gian' }));
+    const people = within(screen.getByRole('radiogroup', { name: 'Người' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Biển hiệu' })).toBeNull();
+    expect(wide.getAllByRole('radio').map((b) => b.textContent)).toEqual(['Có', 'Không', 'Không rõ']);
+    expect(document.querySelectorAll('[role="radio"][aria-checked="true"]')).toHaveLength(0);
+    fireEvent.click(kinds().getByRole('button', { name: /Nội thất/ }));
+    expect(next().disabled).toBe(true);
+    fireEvent.click(wide.getByRole('radio', { name: 'Có' }));
+    expect(next().disabled).toBe(true);
+    fireEvent.click(people.getByRole('radio', { name: 'Không rõ' }));
+    expect(people.getByRole('radio', { name: 'Không rõ' }).getAttribute('aria-checked')).toBe('true');
+    expect(next().disabled).toBe(false);
+    fireEvent.click(next());
+    expect(screen.getByText('2 / 24')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Answers ›' }));
+    expect(screen.getByText(/wide, people as 1 yes/)).toBeTruthy();
+    expect(screen.getByLabelText('Answers').value).toBe(['I1?', ...Array(23).fill('---')].join(' '));
   });
 });

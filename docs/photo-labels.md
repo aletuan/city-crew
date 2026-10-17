@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v2
+## 3. Bộ nhãn v3
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -54,6 +54,13 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 Ba ca "chưa quyết" của v1 nay đã có đáp án: tượng, đài phun nước hay vườn
 thì theo cái chiếm khung; hành lang có mái là Nội thất.
 
+**v3 (17/10/2026)** sửa định nghĩa thuộc tính theo vòng 3b (mục 10):
+- biển hiệu chỉ là biển hay tên của quán;
+- cây xanh không tính hoa và chậu nhỏ;
+- có người trong ảnh là "Có";
+- dàn dựng chỉ là người mẫu tạo dáng, không tính chữ in đè;
+- trên trang chấm, "Toàn cảnh" đổi tên thành "Thấy cả không gian".
+
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
 bằng thuộc tính `people`.
@@ -63,12 +70,12 @@ giá được.
 
 | Khoá | Câu hỏi | Liên quan ảnh bìa |
 |---|---|---|
-| `brand` | Thấy biển hiệu, logo hay tên quán đọc được? | Tiêu chí 2 |
-| `wide` | Góc rộng, thấy được toàn cảnh nơi chốn (không phải cận một món, một góc)? | Tiêu chí 1 |
-| `green` | Cây xanh chiếm một phần đáng kể của khung? | Tiêu chí 3 |
+| `brand` | Thấy biển hay tên của chính quán đọc được? Logo in trên cốc, phin, đĩa hay latte art không tính | Tiêu chí 2 |
+| `wide` | Thấy cả không gian: cả phòng, cả mặt tiền, cả sân (không phải cận một món, một góc)? | Tiêu chí 1 |
+| `green` | Cây hay cây lá chiếm một phần đáng kể của khung? Hoa, bình hoa, vài chậu nhỏ không tính | Tiêu chí 3 |
 | `daylight` | Ánh sáng tự nhiên ban ngày? | Tiêu chí 4 |
-| `people` | Người là chủ thể hoặc chiếm phần lớn khung? | Tiêu chí 5 |
-| `staged` | Trông như ảnh quảng cáo dàn dựng: có người mẫu tạo dáng, hoặc chữ in đè lên ảnh? | Tiêu chí 5 |
+| `people` | Thấy bất kỳ người nào trong ảnh (khách, barista, người qua đường)? Chỉ một bàn tay thì không tính | Tiêu chí 5 |
+| `staged` | Có người mẫu tạo dáng cho ảnh? Chữ in đè lên ảnh không tính | Tiêu chí 5 |
 
 Mỗi ảnh còn có thể có thêm:
 - `unsure: true`: nhãn có nhưng người gán không chắc. App bỏ qua những nhãn
@@ -411,6 +418,70 @@ sáu thuộc tính trên 40 ảnh lấy từ 137 ảnh của vòng 3, thay vì c
     tính, theo thứ tự md5.
 - Trang chỉ hỏi thuộc tính, và mỗi ô có kèm định nghĩa của nó. Vòng 3 cho
   thấy khi để chung với loại ảnh thì thuộc tính bị bỏ qua.
+
+### Vòng 3b: kết quả, và định nghĩa v3 (17/10/2026)
+
+Chủ sản phẩm chấm xong 40 ảnh. Câu trả lời được lưu ở
+`data/review/photo-types/round3b.json`.
+
+**So với v1 và v2:** lệch nhiều nhất ở nghĩa của từ, không phải ở việc
+model nhìn sai:
+- Biển hiệu: chủ sản phẩm không tính logo in trên cốc, phin, đĩa hay latte
+  art.
+- Cây xanh: chủ sản phẩm không tính hoa hay vài chậu cây nhỏ.
+- Người: chủ sản phẩm tính mọi người thấy trong ảnh. v1 và v2 chỉ tính khi
+  người là chủ thể.
+- Dàn dựng: chủ sản phẩm không tính chữ in đè. Chủ sản phẩm không chọn
+  "Có" ở ảnh nào.
+- Toàn cảnh: chủ sản phẩm chỉ chọn "Có" 2/40, vì đọc "Toàn cảnh" thành ảnh
+  panorama. Câu trả lời này đo một câu hỏi khác, nên không tính điểm.
+
+Chủ sản phẩm xác nhận cách hiểu cho người, dàn dựng và toàn cảnh. Cách hiểu
+cho biển hiệu và cây xanh lấy theo chính câu trả lời của chủ sản phẩm. Tất
+cả được ghi vào **v3** (mục 3). Trên trang chấm, ô "Toàn cảnh" đổi tên
+thành "Thấy cả không gian".
+
+**Đo lại với v3:** chỉ tính các cặp trả lời mà không bên nào chọn "Không
+rõ".
+
+| Thuộc tính | Opus 5.5, v2 | **Opus 5.5, v3** | Haiku 5.5, v3 |
+|---|---|---|---|
+| Biển hiệu | 81%, κ 0,54 | **92%, κ 0,77** | 89%, κ 0,71 |
+| Cây xanh | 85%, κ 0,63 | **98%, κ 0,93** | 84%, κ 0,63 |
+| Ánh sáng ngày | 87%, κ 0,74 | 84%, κ 0,69 | **91%, κ 0,81** |
+| Người | 75%, κ 0,34 | 77%, κ 0,56 | 80%, κ 0,61 |
+| Dàn dựng | 88% | 93% (chủ sản phẩm 0 "Có") | 97% |
+| Toàn cảnh | chưa đo | chưa đo | chưa đo |
+
+- Đạt ngưỡng 85% của mục 8:
+  - Opus: biển hiệu, cây xanh;
+  - Haiku: biển hiệu, ánh sáng ngày;
+  - Ánh sáng ngày của Opus (84%) và cây xanh của Haiku (84%) chỉ thiếu
+    một điểm.
+- **Người** chưa đạt. Với v3, các model chọn "Có" ở 8–9 ảnh mà chủ sản phẩm
+  chọn "Không", tức là giờ lệch theo chiều ngược lại.
+- **Dàn dựng** không đo được bằng kappa vì chủ sản phẩm không chọn "Có" ảnh
+  nào. 93–97% là tỷ lệ cùng chọn "Không".
+- **Toàn cảnh** cần một lần chấm lại dưới tên mới.
+- Số đo v3 là in-sample: định nghĩa được viết sau khi đã thấy câu trả lời
+  của chủ sản phẩm.
+- Lần đo tốn khoảng 0,6 USD cho cả hai model.
+
+**Vòng 3c (trang `#/photo-types-3c`): ảnh mới, đo sạch.** Chủ sản phẩm đồng
+ý làm thêm một vòng (17/10).
+- **Ảnh:** 24 ảnh chưa dùng ở vòng nào. Lấy từ 60 ảnh đã duyệt, đã lưu
+  trong bucket và chưa có điểm nào, theo thứ tự md5. Trong đó 12 ảnh có ít
+  nhất một model nói có người, và 12 ảnh không model nào nói vậy.
+- **Câu hỏi:** loại ảnh, "Thấy cả không gian" và "Người".
+- **Khoá trước:** câu trả lời v3 của cả hai model đã được ghi vào
+  `data/review/photo-types/round3c.json`, kèm sha256, trước khi có trang
+  chấm. Vì vậy vòng này đo được cả loại ảnh v2 lẫn hai thuộc tính v3 trên
+  ảnh chưa ai dùng để viết định nghĩa.
+- **Không đặt sẵn câu trả lời:** mỗi thuộc tính là một hàng ba nút Có,
+  Không, Không rõ, không nút nào được chọn trước. Nút Tiếp chỉ mở khi đã
+  trả lời đủ ba câu.
+- Gán nhãn 60 ảnh tốn khoảng 0,8 USD.
+
 - Câu trả lời v2 của cả hai model được lưu ở khoá `function_v2` trong
   `round3.json` và `round2.json`.
 

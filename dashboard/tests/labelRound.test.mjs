@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { ATTRS, KINDS_3, ROUNDS_3, SAMPLE_3, SAMPLE_3B, STATES, code, encode3, firstOpen3, nextState } from '../src/labelRound.js';
+import { ATTRS, KINDS_3, ROUNDS_3, SAMPLE_3, SAMPLE_3B, SAMPLE_3C, STATES, asked, code, encode3, firstOpen3, nextState } from '../src/labelRound.js';
 
 const sealed = JSON.parse(readFileSync(new URL('../../data/review/photo-types/round3.json', import.meta.url)));
 
@@ -81,9 +81,36 @@ test('each round keeps its answers apart, and only round 3 asks the kind', () =>
 });
 
 test('without the kind, a code is the six criteria once Next was pressed, dashes before', () => {
-  assert.equal(code({ seen: true, attrs: { people: '1', brand: '?' } }, false), '?00010');
-  assert.equal(code({ attrs: { people: '1' } }, false), '------');
-  assert.equal(encode3(SAMPLE_3B.slice(0, 2), { [SAMPLE_3B[1]]: { seen: true } }, false), '------ 000000');
-  assert.equal(firstOpen3(SAMPLE_3B, { [SAMPLE_3B[0]]: { seen: true } }, false), 1);
-  assert.equal(firstOpen3(SAMPLE_3B, Object.fromEntries(SAMPLE_3B.map((id) => [id, { seen: true }])), false), 40);
+  const r = ROUNDS_3.r3b;
+  assert.equal(code({ seen: true, attrs: { people: '1', brand: '?' } }, r), '?00010');
+  assert.equal(code({ attrs: { people: '1' } }, r), '------');
+  assert.equal(encode3(SAMPLE_3B.slice(0, 2), { [SAMPLE_3B[1]]: { seen: true } }, r), '------ 000000');
+  assert.equal(firstOpen3(SAMPLE_3B, { [SAMPLE_3B[0]]: { seen: true } }, r), 1);
+  assert.equal(firstOpen3(SAMPLE_3B, Object.fromEntries(SAMPLE_3B.map((id) => [id, { seen: true }])), r), 40);
+});
+
+// Round 3c: new photographs, the kind and two criteria, every answer
+// chosen. The sample and both models' sealed answers live in round3c.json.
+const sealed3c = JSON.parse(readFileSync(new URL('../../data/review/photo-types/round3c.json', import.meta.url)));
+
+test('round 3c is the 24 sealed photographs, new to every other round', () => {
+  assert.deepEqual(SAMPLE_3C, sealed3c.photos);
+  assert.equal(new Set(SAMPLE_3C).size, 24);
+  assert.ok(SAMPLE_3C.every((id) => !SAMPLE_3.includes(id)));
+  for (const fn of [sealed3c.function_v3.fn_opus, sealed3c.function_v3.fn_haiku]) {
+    assert.equal(createHash('sha256').update(fn.line).digest('hex'), fn.sha256);
+    assert.equal(fn.line.split(' ').length, 24);
+  }
+});
+
+test('round 3c asks the kind and wide and people, each outright', () => {
+  const r = ROUNDS_3.r3c;
+  assert.deepEqual(asked(r).map((x) => x.key), ['wide', 'people']);
+  assert.equal(asked(ROUNDS_3.r3).length, 6);
+  // A kind alone, or one of the two, is not an answer: nothing is preset.
+  assert.equal(code({ kind: 'I' }, r), '---');
+  assert.equal(code({ kind: 'I', attrs: { wide: '1' } }, r), '---');
+  assert.equal(code({ attrs: { wide: '1', people: '0' } }, r), '---');
+  assert.equal(code({ kind: 'I', attrs: { wide: '1', people: '?' } }, r), 'I1?');
+  assert.equal(firstOpen3(SAMPLE_3C, { [SAMPLE_3C[0]]: { kind: 'F', attrs: { wide: '0', people: '0' } } }, r), 1);
 });

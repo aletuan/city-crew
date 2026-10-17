@@ -1938,6 +1938,14 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .lr-attrs-only { grid-template-columns: 1fr 1fr; }
 .lr-attrs-only .lr-attr { min-height: 92px; justify-content: flex-start; padding: 10px; }
 .lr-attr small { font-size: 11px; line-height: 1.3; color: var(--text-tertiary); text-align: center; }
+/* Round 3c: each criterion a row of three answers, none chosen until
+   tapped, the definition beside the name. */
+.lr-rows { display: flex; flex-direction: column; gap: 10px; }
+.lr-row { display: flex; flex-direction: column; gap: 6px; }
+.lr-row-head { display: flex; flex-direction: column; gap: 2px; }
+.lr-row-head small { font-size: 12px; color: var(--text-tertiary); line-height: 1.35; }
+.lr-row-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lr-row-choices .pt-btn { min-height: 46px; font-size: 15px; }
 .lr-next { min-height: 52px; }
 .lr-next:disabled { opacity: 0.35; cursor: default; }
 .lr-guide { color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
