@@ -1203,21 +1203,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      ── the dock, as Explore's (owner, 17 Oct 2026) ──
      The two docks are one design now. Explore's says what it offers in a
      glyph and two lines, the whole island answering to that, and the
-     gradient "+ Thêm" at its right end. Here the sentence is the plan —
-     the paw, "Lên kế hoạch", and what it is for — and the pill is the
-     second act: "+ Thêm" for the owner, "Lưu bản sao" for a visitor, so
-     there is always one gradient pill, at the right, whoever is reading.
+     gradient "+ Địa điểm" at its right end. Here the sentence is the
+     plan — the paw, "Lên kế hoạch", and what it is for — and the pill is
+     the second act: "+ Địa điểm" for the owner, "Lưu bản sao" for a
+     visitor, so there is always one gradient pill, at the right,
+     whoever is reading.
 
-     It undoes two calls of 16 Oct, and says why. Plan was the gradient
-     and Add the quiet glass beside it, on the reading that the gradient
+     It undoes a call of 16 Oct, and says why. Plan was the gradient and
+     Add the quiet glass beside it, on the reading that the gradient
      belongs to what the list exists for; as a sentence that fills the
      island, Plan is no smaller than it was, and the owner wanted one
-     dock to learn, not two. And Add's word was the noun, "+ Địa điểm",
-     because "Thêm" on Explore adds a place the catalog does not have and
-     here adds one it has to this list. The owner chose "Thêm" anyway:
-     the act a reader sees is the same — a place comes in — and the
-     same button in the same place is what lets the hand stop reading.
-     The ⋯ menu keeps "Thêm địa điểm": a menu row is read as a sentence.
+     dock to learn, not two.
+
+     The pill's word is the noun on both docks (owner, 17 Oct 2026).
+     The first cut said "Thêm", Explore's word then; beside a sentence
+     about planning, "Thêm" alone read as "add to the plan", and the
+     owner moved both docks to "+ Địa điểm" rather than let them differ.
+     The glyph says add; the word says what. VoiceOver hears the whole
+     "Thêm địa điểm", which is what the ⋯ menu's row says too.
 
      A list with no city has no copy to offer (see the ⋯ menu), so a
      visitor's dock there is the sentence alone. */
@@ -1605,7 +1608,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           sub={t('Use this list for a trip', 'Dùng danh sách này cho chuyến đi', 'このリストで旅の計画を')}
         />
         {owned ? (
-          <AddPill tall label={t('Add', 'Thêm', '追加')} onPress={addPlace} testID="collection-dock-add" />
+          <AddPill
+            tall
+            label={t('Place', 'Địa điểm', 'スポット')}
+            accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+            onPress={addPlace}
+            testID="collection-dock-add"
+          />
         ) : copyCityId ? (
           <AddPill
             tall

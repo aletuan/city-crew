@@ -162,9 +162,17 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
         title={t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
         sub={t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
       />
-      {/* `tall`: the 44 every other control has, and the same "Add" as
-          Gallery's header — see `AddPill`. */}
-      <AddPill tall label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
+      {/* `tall`: the 44 every other control has — see `AddPill`. The
+          word is the noun, "+ Địa điểm", the collection dock's word too
+          (owner, 17 Oct 2026): the glyph says add, the word says what,
+          and the screen's own title is the same noun. VoiceOver hears
+          the whole verb phrase. */}
+      <AddPill
+        tall
+        label={t('Place', 'Địa điểm', 'スポット')}
+        accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+        onPress={onAdd}
+      />
     </DockSlot>
   );
 }

@@ -2045,15 +2045,17 @@ describe('the actions and the dock', () => {
     pastTheCard();
     settle();
     // Explore's shape (owner, 17 Oct 2026): the plan said in two lines,
-    // then the gradient "+ Thêm" — the very pill Explore's dock ends in.
+    // then the gradient "+ Địa điểm" — the very pill Explore's dock ends in.
     expect(screen.getByTestId('collection-dock').textContent)
-      .toBe('Plan a tripUse this list for a tripAdd');
+      .toBe('Plan a tripUse this list for a tripPlace');
     expect(island().querySelector('[data-icon="paw"]')).toBeTruthy();
     fireEvent.click(island());
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.objectContaining({ params: expect.objectContaining({ from: 'old-quarter' }) }));
     spies.goTo.mockClear();
     const add = screen.getByTestId('collection-dock-add');
     expect(add.querySelector('[data-icon="add"]')).toBeTruthy();
+    // The noun on screen, the whole act for VoiceOver.
+    expect(add.getAttribute('aria-label')).toBe('Add place');
     fireEvent.click(add);
     expect(parent.navigate).toHaveBeenCalledWith('Explore');
     // The pill is its own press, not the island's.
@@ -2067,7 +2069,7 @@ describe('the actions and the dock', () => {
     pastTheCard();
     settle();
     expect(screen.getByTestId('collection-dock').textContent)
-      .toBe('Lên kế hoạchDùng danh sách này cho chuyến điThêm');
+      .toBe('Lên kế hoạchDùng danh sách này cho chuyến điĐịa điểm');
   });
 
   it('offers a visitor the copy as the gradient pill', () => {
