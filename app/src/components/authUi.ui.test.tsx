@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render } from '../uitest/render';
+import { fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 
 // Read at call time, not at mock time, so one file can render all three.
@@ -34,7 +34,7 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 
-import { FormError, useFailSentences, useFailText } from './authUi';
+import { FieldRow, FormError, useFailSentences, useFailText } from './authUi';
 
 /** Every sentence in the table, as a phone set to `at` would read them. */
 function sentences(at: Lang): Record<string, string> {
@@ -120,5 +120,19 @@ describe('the banner itself', () => {
     expect(banner.getAttribute('aria-live')).toBe('polite');
     expect(banner.querySelector('[data-icon="alert-circle"]')).toBeTruthy();
     expect(banner.textContent).toContain('Email hoặc mật khẩu không đúng.');
+  });
+});
+
+// UX-07: the eye beside a password was "Toggle password visibility", in
+// English on every build, naming both directions and so neither.
+describe('the password eye', () => {
+  it('says which way a press goes, in the reader\'s language', () => {
+    lang = 'vi';
+    render(<FieldRow icon="lock-closed-outline" label="Mật khẩu" secure value="" onChangeText={() => {}} />);
+    const eye = screen.getByRole('button', { name: 'Hiện mật khẩu' });
+    fireEvent.click(eye);
+    expect(screen.getByRole('button', { name: 'Ẩn mật khẩu' })).toBe(eye);
+    fireEvent.click(eye);
+    expect(screen.getByRole('button', { name: 'Hiện mật khẩu' })).toBe(eye);
   });
 });

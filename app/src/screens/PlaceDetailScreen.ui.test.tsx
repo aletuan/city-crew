@@ -957,6 +957,17 @@ describe('PlaceDetailScreen — hero', () => {
 });
 
 describe('PlaceDetailScreen — floating controls', () => {
+  // UX-07: these two were English literals, read as "Back" and "Share"
+  // in the middle of a Vietnamese screen.
+  it('names Back and Share in the reader\'s language', () => {
+    state.lang = 'vi';
+    show();
+    expect(screen.getByTestId('detail-back')).toBe(screen.getByRole('button', { name: 'Quay lại' }));
+    expect(screen.getByRole('button', { name: 'Chia sẻ' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Share' })).toBeNull();
+  });
+
   it('goes back', () => {
     const n = show();
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
