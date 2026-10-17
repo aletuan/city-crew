@@ -334,6 +334,20 @@ const TONE_INK = {
   plain: colors.textSecondary,
 } as const;
 
+/**
+ * The bar's fill, the words' tones: green where something measured
+ * helped, amber where it held the photograph back, and a neutral grey
+ * where it did neither (owner, 17 Oct 2026). Composition passes every
+ * check on 88% of the catalog, and its full bar in green read as "good
+ * framing" beside the words "no problems found" — the bar saying more
+ * than the checks can.
+ */
+const BAR_FILL = {
+  good: colors.okInk,
+  warn: colors.warnInk,
+  plain: colors.textTertiary,
+} as const;
+
 /** The word beside the number, in the same two tones and a neutral:
  *  "very good" and "good" read as the rows that helped do, "weak" as
  *  the ones that held it back, and "fair" as neither. */
@@ -435,13 +449,11 @@ function DetailRow({ d }: { d: Detail }) {
           <Text style={s.rowLabel}>{d.label}</Text>
           <Text style={[s.rowValue, { color: TONE_INK[d.tone] }]} testID={`score-detail-${d.key}-value`}>{d.value}</Text>
         </View>
-        {/* Every row's bar, in the ink of its words: amber where the
-            quality held the photograph back, green otherwise — the
-            board's own two. What fills it is the row's to say
-            (`Detail.bar`). */}
+        {/* Every row's bar, in the ink of its words. What fills it is
+            the row's to say (`Detail.bar`). */}
         <View style={s.barTrack}>
           <View
-            style={[s.barFill, { width: `${Math.round(d.bar * 100)}%`, backgroundColor: d.tone === 'warn' ? colors.warnInk : colors.okInk }]}
+            style={[s.barFill, { width: `${Math.round(d.bar * 100)}%`, backgroundColor: BAR_FILL[d.tone] }]}
             testID={`score-detail-${d.key}-bar`}
           />
         </View>

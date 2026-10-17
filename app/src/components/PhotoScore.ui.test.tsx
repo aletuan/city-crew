@@ -181,9 +181,13 @@ describe('ScoreDetails', () => {
     expect(ink('composition')).toBe(rgb(colors.warnInk));
   });
 
-  it('inks a row that neither helped nor held back plainly', () => {
-    render(<ScoreDetails score={score({ signals: { brightness: 0.3 } })} open onToggle={() => {}} />);
+  // Neither helped nor held back: plain words, and a grey bar, so a full
+  // bar of "no problems found" does not read as praise.
+  it('inks a row that neither helped nor held back plainly, bar and all', () => {
+    render(<ScoreDetails score={score({ signals: { brightness: 0.3, peopleArea: 0 } })} open onToggle={() => {}} />);
     expect(getComputedStyle(screen.getByTestId('score-detail-light-value')).color).toBe(rgb(colors.textSecondary));
+    expect(getComputedStyle(screen.getByTestId('score-detail-composition-bar')).backgroundColor).toBe(rgb(colors.textTertiary));
+    expect(screen.getByTestId('score-detail-composition-bar').style.width).toBe('100%');
   });
 
   // A bar on every row, as full as the row says, amber where the
