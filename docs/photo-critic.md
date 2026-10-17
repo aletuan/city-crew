@@ -104,6 +104,14 @@ Bước 3 và bước 5 không cần mô hình mới, nên là những bước n
   là hợp. Trong 7 ảnh còn lại chỉ 1 ảnh lạc đề thật (Sam Saigon: trời và đường
   phố). 3 ảnh là mặt tiền hay lối vào hợp lệ nhưng bị báo nhầm (Hội Quán, Bold
   Brew, và Memento, ảnh bìa).
+- **Vùng chủ thể của Vision không phân biệt được ảnh** (434 ảnh, 17/10): diện
+  tích 10% ảnh dưới 0,40, trung vị 0,58, 10% ảnh trên 0,73; không ảnh nào có
+  chủ thể sát mép hay quá nhỏ. Lời khen "chủ thể rõ ràng" vì thế đúng với mọi
+  ảnh và đã bỏ (D12). Bố cục chỉ còn dựa vào độ nghiêng, người và chữ: 52/434
+  ảnh trượt một phép kiểm (35 cảnh nghiêng, 13 ảnh người chiếm khung, 4 ảnh
+  nhiều chữ).
+- **Độ phơi sáng phân hoá tốt** (434 ảnh, 17/10): 10% ảnh dưới 0,39, trung vị
+  0,76, 10% ảnh trên 0,94.
 - **Phân bố của catalog** (min, mỗi 10%, max) về độ nét và điểm Apple nằm
   trong `SHARPNESS_SPREAD` / `AESTHETIC_SPREAD`. Đo lại khi số ảnh đã chấm
   tăng gấp đôi.
@@ -229,6 +237,7 @@ D. Nhưng C trái nguyên tắc 4.
 | D9 | 16/10 | Dừng phép thử SigLIP 2 / CLIP và gỡ code của nó; giữ Apple Vision | Chủ sản phẩm: hướng đi chệch và thiếu kiểm soát |
 | D10 | 17/10 | Làm bảng "Refined UI" theo hai bước: (1) giao diện, chỉ với các tiêu chí đo được; (2) nhận biết loại ảnh (Món ăn / Địa điểm / Phong cảnh), bắt đầu bằng đề xuất một trang | Chủ sản phẩm. Thanh điểm cho bố cục, màu sắc, không gian, nhiễu trên bảng đó là D2 lần nữa |
 | D11 | 17/10 | Màu đánh giá theo nghĩa, không theo màu chủ đạo: tốt = `okInk`, cần chú ý = `warnInk`, đổi sắc theo theme nhưng giữ nghĩa. Thanh xếp hạng vẫn là màu chủ đạo, vì nó là vị trí trong catalog chứ không phải lời khen | Chủ sản phẩm. Ở theme mặc định màu chủ đạo là đỏ san hô: dấu "tốt" màu đỏ đọc thành cảnh báo |
+| D12 | 17/10 | Phân tích chi tiết còn ba dòng có thanh: **Ánh sáng** (độ phơi sáng: khoảng cách của độ sáng trung bình tới giữa thang, nhân tỷ lệ điểm ảnh không bị tối đen hay cháy trắng), **Độ nét** (vị trí trong catalog), **Bố cục** (tỷ lệ các phép kiểm khung hình đạt: chủ thể không sát mép, đường chân trời của cảnh không nghiêng, người và chữ không chiếm khung). Màu sắc và Không gian chưa có dòng, vì không có số đo; Màu sắc cần thêm phép đo vào module Swift (bản build mới). Cây xanh bỏ khỏi phần này, thuộc bước 5. Thanh tô theo kết quả, thay cho thanh màu chủ đạo của D11: xanh `okInk` khi đo được điều tốt, cam `warnInk` khi có lỗi, xám khi không khen không chê. Bố cục ghi "Không thấy lỗi" chứ không ghi "Tốt": các phép kiểm chỉ tìm lỗi, và 88% ảnh qua hết, nên một thanh đầy màu xanh sẽ nói quá | Chủ sản phẩm chọn "làm ngay ba dòng có thật" |
 
 ## 9. Câu hỏi đang mở
 
@@ -299,3 +308,4 @@ D. Nhưng C trái nguyên tắc 4.
 | 16/10/2026 | #987: sheet ảnh mở đầu bằng câu nhận xét |
 | 16/10/2026 | Dừng phép thử, gỡ `data/photo-eval/`, viết lại file này (D9) |
 | 17/10/2026 | Bảng "Refined UI": bước 1, giao diện phân tích chi tiết (D10, D11) |
+| 17/10/2026 | Ba dòng có thanh: Ánh sáng, Độ nét, Bố cục; gợi ý mang icon của tiêu chí (D12) |

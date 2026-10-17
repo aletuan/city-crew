@@ -334,6 +334,20 @@ const TONE_INK = {
   plain: colors.textSecondary,
 } as const;
 
+/**
+ * The bar's fill, the words' tones: green where something measured
+ * helped, amber where it held the photograph back, and a neutral grey
+ * where it did neither (owner, 17 Oct 2026). Composition passes every
+ * check on 88% of the catalog, and its full bar in green read as "good
+ * framing" beside the words "no problems found" — the bar saying more
+ * than the checks can.
+ */
+const BAR_FILL = {
+  good: colors.okInk,
+  warn: colors.warnInk,
+  plain: colors.textTertiary,
+} as const;
+
 /** The word beside the number, in the same two tones and a neutral:
  *  "very good" and "good" read as the rows that helped do, "weak" as
  *  the ones that held it back, and "fair" as neither. */
@@ -402,7 +416,14 @@ export function ScoreDetails({ score, open, onToggle }: {
                 <Ionicons name="bulb-outline" size={16} color={colors.warnInk} />
                 <Text style={s.tipsTitle}>{t('To improve', 'Gợi ý cải thiện', '改善のヒント')}</Text>
               </View>
-              {tips.map((tip) => <Text key={tip} style={s.tip}>{tip}</Text>)}
+              {/* Each under the mark of the quality it would help, so a
+                  tip reads back to its row without saying which. */}
+              {tips.map((tip) => (
+                <View key={tip.text} style={s.tipRow}>
+                  <Ionicons name={tip.icon} size={15} color={colors.textSecondary} style={s.tipIcon} />
+                  <Text style={s.tip}>{tip.text}</Text>
+                </View>
+              ))}
             </View>
           )}
           {/* Who measured, last: provenance for the reader who came this
@@ -428,14 +449,14 @@ function DetailRow({ d }: { d: Detail }) {
           <Text style={s.rowLabel}>{d.label}</Text>
           <Text style={[s.rowValue, { color: TONE_INK[d.tone] }]} testID={`score-detail-${d.key}-value`}>{d.value}</Text>
         </View>
-        {d.rank !== undefined && (
-          <View style={s.rank}>
-            <View style={s.rankTrack}>
-              <View style={[s.rankFill, { width: `${Math.round(d.rank * 100)}%` }]} testID={`score-detail-${d.key}-rank`} />
-            </View>
-            <Text style={s.rankNote}>{d.note}</Text>
-          </View>
-        )}
+        {/* Every row's bar, in the ink of its words. What fills it is
+            the row's to say (`Detail.bar`). */}
+        <View style={s.barTrack}>
+          <View
+            style={[s.barFill, { width: `${Math.round(d.bar * 100)}%`, backgroundColor: BAR_FILL[d.tone] }]}
+            testID={`score-detail-${d.key}-bar`}
+          />
+        </View>
       </View>
     </View>
   );
@@ -478,16 +499,17 @@ const s = StyleSheet.create({
   rowLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
   rowLabel: { color: colors.text, fontSize: 15, fontWeight: font.medium },
   rowValue: { flexShrink: 1, fontSize: 15, fontWeight: font.medium, textAlign: 'right' },
-  rank: { gap: 4 },
-  rankTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceGlassStrong, overflow: 'hidden' },
-  rankFill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
-  rankNote: { color: colors.textTertiary, fontSize: 12 },
+  barTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceGlassStrong, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3 },
   // The look's glass, not the accent's wash: a block of its own on any
   // look, without a colour that means something else here.
   tips: { gap: 6, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceGlass },
   tipsHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tipsTitle: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
-  tip: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  // Down to the first line's centre: 20pt lines, a 15pt glyph.
+  tipIcon: { marginTop: 2 },
+  tip: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   // Over a photograph: `onPhoto`'s inks, and a translucent pill, since
   // the accent wash vanishes into a dark scrim.
   tenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },

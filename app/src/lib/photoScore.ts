@@ -85,10 +85,11 @@ export type PhotoScorer = ScorerKey & { read: (uri: string) => Promise<Reading> 
 
 /**
  * One measured quality of a photograph, as the detailed analysis lists
- * it: what it is, what was measured, and whether it helped. Not a score
- * out of ten — no scorer measures composition or colour as a number, and
- * a row that said "Composition 9.1" would be inventing one (owner, 16 Oct
- * 2026, from the design review's seven bars).
+ * it: what it is, what was measured, whether it helped, and a bar. Not a
+ * score out of ten — a row that said "Composition 9.1" would be
+ * inventing one (owner, 16 Oct 2026). Each bar is a measurement the
+ * interpreter can name; a quality nothing measures has no row at all
+ * (colour and space, 17 Oct 2026: see `docs/photo-critic.md`, D12).
  */
 export type Detail = {
   key: string;
@@ -99,12 +100,15 @@ export type Detail = {
   /** What was measured, in words. */
   value: string;
   tone: 'good' | 'warn' | 'plain';
-  /** Where the photograph stands among the catalog's on this quality,
-   *  0–1, higher better — only where higher is better. */
-  rank?: number;
-  /** The rank, said. */
-  note?: string;
+  /** How full the row's bar is, 0–1, higher better. What it measures is
+   *  the row's own and is said where the row is made — never a score out
+   *  of ten that nothing measured. */
+  bar: number;
 };
+
+/** One thing that would have helped, under the mark of the quality it
+ *  would have helped. */
+export type Tip = { icon: Detail['icon']; text: string };
 
 /** What the app knows of one scorer's rows: how to say them. */
 export type Interpreter = ScorerKey & {
@@ -115,7 +119,7 @@ export type Interpreter = ScorerKey & {
   /** The measured qualities, one row each. */
   details: (score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T) => Detail[];
   /** What would have helped, one line per thing that held it back. */
-  suggestions: (score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T) => string[];
+  suggestions: (score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T) => Tip[];
   /** Where the photograph's number stands among this scorer's rows in
    *  the catalog, 0–1; null when it has none. */
   standing: (score: Pick<PhotoScore, 'aesthetic'>) => number | null;

@@ -40,8 +40,8 @@
 // nothing stood out. "Horizon tilted 4°" is true of the photograph; "a
 // cosy, inviting space" would be a guess dressed as a reading.
 
-import type { Detail, Interpreter, PhotoScore, Signals, T } from './photoScore';
-import { percentText, standingIn } from './standing';
+import type { Detail, Interpreter, PhotoScore, Signals, T, Tip } from './photoScore';
+import { standingIn } from './standing';
 
 // ── the thresholds — first guesses, every one ──
 //
@@ -135,41 +135,43 @@ const isRecord = (score: Pick<PhotoScore, 'is_utility' | 'signals'>) => {
   return !!score.is_utility
     && (writing(s) || (s.labels ?? []).some((l) => RECORD.has(l.id) && l.p >= RECORD_P));
 };
-/** A subject this far from the centre, on either axis, is at the edge. */
+/**
+ * A subject this far from the centre, on either axis, is at the edge.
+ *
+ * Kept, though on the 434 photographs read by 17 Oct 2026 it never
+ * fired: Vision's salient region is wide and central on almost every
+ * photograph (its area: a tenth under 0.40, the middle 0.58, a tenth
+ * over 0.73). For the same reason the subject no longer earns praise —
+ * "a clear subject" was said of every photograph whose region fell under
+ * 0.6, which is a fact about the detector, not the photograph — and its
+ * size is no longer a row.
+ */
 const EDGE = 0.35;
-/** A subject between these shares of the frame reads as one thing. */
-const SUBJECT = [0.05, 0.6] as const;
 /** Under this on the long side looks soft on a 3× phone, full width. */
 const LOW_RES = 800;
-/** Labels that mean greenery, at this confidence or more. Greenery is on
- *  the desk's cover list; nothing else Vision labels is, so nothing else
- *  is named. Wider than Vision's taxonomy may turn out to need — a name
- *  it never returns costs nothing — and to be narrowed against the
- *  labels the stored rows actually carry. */
-const GREEN = new Set(['plant', 'tree', 'foliage', 'grass', 'garden', 'flower', 'houseplant', 'potted_plant', 'shrub']);
-const GREEN_P = 0.3;
-
-/** The measured qualities the detail lists, one row each. */
-type Dim = 'light' | 'focus' | 'subject' | 'level' | 'clutter' | 'green' | 'size';
 
 /**
- * Each quality's mark (owner, 17 Oct 2026, from the "Refined UI" board):
- * the row says what it is about with a glyph, and how it went with the
- * colour of its words. It was one glyph per *tone* — a tick, a warning,
- * a ring — so a column of seven rows was three shapes, and the reader
- * had to read the label to find the one they were after. The board's
- * marks where it has one (sun, target, picture); the rest named for the
- * thing measured: the horizon a level line, distractions the people that
- * are most of them, greenery a leaf, resolution the long side's arrows.
+ * The qualities the detail lists, one row each (owner, 17 Oct 2026):
+ * the "Refined UI" board's four less the two nothing here measures —
+ * colour and space — with focus, the surest measurement there is, in
+ * their place. Everything else measured is said inside one of the three:
+ * resolution is how much detail there is, so it is focus; a tilted
+ * horizon and people or writing filling the frame are how the photograph
+ * is framed, so they are composition. Greenery is not a quality of a
+ * photograph at all — a plate of food is not worse for having no plant
+ * in it — and is the cover's business (step 5), not this list's.
+ */
+type Dim = 'light' | 'focus' | 'composition';
+
+/**
+ * Each quality's mark, the board's own: a sun, a target, the corners of
+ * a frame. The row says what it is about with its glyph and how it went
+ * with the colour of its words and its bar.
  */
 const DIM_ICON = {
   light: 'sunny-outline',
   focus: 'locate-outline',
-  subject: 'image-outline',
-  level: 'remove-outline',
-  clutter: 'people-outline',
-  green: 'leaf-outline',
-  size: 'resize-outline',
+  composition: 'scan-outline',
 } as const satisfies Record<Dim, Detail['icon']>;
 
 /**
@@ -238,7 +240,7 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
   if (scene(s) && tilt >= TILT[0] && tilt <= TILT[1]) {
     const n = Math.round(tilt);
     out.push({
-      dim: 'level', plus: false,
+      dim: 'composition', plus: false,
       say: t(`horizon tilted ${n}°`, `đường chân trời nghiêng ${n}°`, `水平が${n}°傾いている`),
       fix: t(
         'Straighten it: Edit → Crop in Photos levels the horizon.',
@@ -250,7 +252,7 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
 
   if ((s.peopleArea ?? 0) > PEOPLE) {
     out.push({
-      dim: 'clutter', plus: false,
+      dim: 'composition', plus: false,
       say: t('people fill much of the frame', 'người chiếm nhiều khung hình', '人物が大きく写っている'),
       fix: t(
         'Choose a moment with fewer people, or keep them small in the frame.',
@@ -262,7 +264,7 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
   // Said once in the sentence: a record's lead already names the writing.
   if (writing(s)) {
     out.push({
-      dim: 'clutter', plus: false, quiet: record,
+      dim: 'composition', plus: false, quiet: record,
       say: t('a lot of writing in frame', 'nhiều chữ trong khung', '文字が多い'),
       fix: t(
         'Step back or crop so signs and menus do not fill the frame.',
@@ -272,24 +274,17 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
     });
   }
 
-  if (s.subject) {
-    const { x, y, area } = s.subject;
-    if (Math.abs(x - 0.5) > EDGE || Math.abs(y - 0.5) > EDGE) {
-      out.push({
-        dim: 'subject', plus: false,
-        say: t('subject pushed to the edge', 'chủ thể lệch sát mép', '被写体が端に寄っている'),
-        fix: t('Bring the subject in from the edge.', 'Đưa chủ thể vào gần giữa khung hơn.', '被写体を中央寄りにしましょう。'),
-      });
-    } else if (area >= SUBJECT[0] && area <= SUBJECT[1]) {
-      out.push({ dim: 'subject', plus: true, say: t('a clear subject', 'chủ thể rõ ràng', '被写体がはっきりしている') });
-    }
+  if (s.subject && atEdge(s.subject)) {
+    out.push({
+      dim: 'composition', plus: false,
+      say: t('subject pushed to the edge', 'chủ thể lệch sát mép', '被写体が端に寄っている'),
+      fix: t('Bring the subject in from the edge.', 'Đưa chủ thể vào gần giữa khung hơn.', '被写体を中央寄りにしましょう。'),
+    });
   }
-
-  if (green(s)) out.push({ dim: 'green', plus: true, say: t('greenery in frame', 'có cây xanh', '緑がある') });
 
   if (s.width !== undefined && s.height !== undefined && Math.max(s.width, s.height) < LOW_RES) {
     out.push({
-      dim: 'size', plus: false, say: t('low resolution', 'độ phân giải thấp', '解像度が低い'),
+      dim: 'focus', plus: false, say: t('low resolution', 'độ phân giải thấp', '解像度が低い'),
       fix: t('Use the original photo, not a resized copy.', 'Dùng ảnh gốc, không dùng bản đã thu nhỏ.', '縮小版ではなく元の写真を使いましょう。'),
     });
   }
@@ -299,8 +294,8 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
 
 /** A scene with a horizon in it — see `SCENE`. */
 const scene = (s: Signals) => (s.labels ?? []).some((l) => SCENE.has(l.id) && l.p >= SCENE_P);
-/** Greenery in frame — see `GREEN`. */
-const green = (s: Signals) => (s.labels ?? []).some((l) => GREEN.has(l.id) && l.p >= GREEN_P);
+/** The salient region off centre — see `EDGE`. */
+const atEdge = (sub: NonNullable<Signals['subject']>) => Math.abs(sub.x - 0.5) > EDGE || Math.abs(sub.y - 0.5) > EDGE;
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -336,14 +331,23 @@ export function explainScore(score: Pick<PhotoScore, 'is_utility' | 'signals'>, 
 }
 // ── the detailed analysis ──
 //
-// The design review drew seven bars out of ten — light, composition,
-// focus, subject, colour, angle, distractions (owner, 16 Oct 2026).
-// Vision gives one number, not seven, and measures neither composition
-// nor colour at all, so those two rows are not here and the rest are
-// what was measured, said in words: "Nghiêng 6°", not "Góc chụp 8.8". A
-// bar appears only where higher is plainly better and there is a
-// catalog to stand in — focus — and it is the photograph's place among
-// the catalog's, not a score.
+// Three rows, each with a bar (owner, 17 Oct 2026, from the "Refined UI"
+// board, which drew one per quality). A bar has to be something
+// measured, and each row says what its bar is:
+//
+//   light        how close the photograph came to a full range of tone:
+//                its mean luma's distance from the middle, times the
+//                share of pixels not crushed to black or blown to white
+//                (`exposure`)
+//   focus        its place among the catalog's photographs for
+//                sharpness (`SHARPNESS_SPREAD`)
+//   composition  the share of the framing checks it passed — subject in
+//                from the edge, a scene's horizon level, people and
+//                writing not filling the frame (`framing`)
+//
+// Colour and space, the board's other two, are not here: nothing Vision
+// reports measures either, and a bar drawn for them would be a number
+// with nothing under it (D2, D12).
 
 /**
  * The catalog's spread of focus and of Vision's number: the least, every
@@ -355,8 +359,39 @@ export function explainScore(score: Pick<PhotoScore, 'is_utility' | 'signals'>, 
 const SHARPNESS_SPREAD = [67, 425, 701, 906, 1126, 1385, 1770, 2078, 2768, 3657, 11559] as const;
 const AESTHETIC_SPREAD = [0.072, 0.368, 0.408, 0.442, 0.479, 0.508, 0.555, 0.596, 0.635, 0.696, 0.881] as const;
 
-/** The measured qualities, one row each, in the order a guide reads a
- *  photograph: its light and focus, then what it shows, then its size. */
+/**
+ * Light as a bar, 0–1. Mean luma 0.5 is the middle of the range and the
+ * ends are black and white, so `1 − |b − 0.5| × 2` is how far the
+ * exposure stayed from either; the second factor takes off every pixel
+ * that lost its detail at either end. On the 434 photographs read by 17
+ * Oct 2026 it spreads a tenth under 0.39, the middle at 0.76 and a tenth
+ * over 0.94 — enough to tell a dim bar from a sunlit street.
+ */
+function exposure(b: number, shadows = 0, highlights = 0): number {
+  return (1 - Math.min(1, Math.abs(b - 0.5) * 2)) * Math.max(0, 1 - shadows - highlights);
+}
+
+/**
+ * Composition as the framing checks a photograph passed, and how many
+ * applied. A check applies only where its measurement exists — the
+ * horizon only on a scene that has one (`SCENE`). On the 434 photographs
+ * read by 17 Oct 2026, 52 failed one: 35 scenes tilted, 13 with people
+ * filling the frame, 4 with a lot of writing; none had its subject at
+ * the edge.
+ */
+function framing(s: Signals): { passed: number; of: number } {
+  const checks: boolean[] = [];
+  if (s.subject) checks.push(!atEdge(s.subject));
+  if (scene(s) && s.tilt !== undefined) {
+    const tilt = Math.abs(s.tilt);
+    checks.push(tilt < TILT[0] || tilt > TILT[1]);
+  }
+  if (s.peopleArea !== undefined) checks.push(s.peopleArea <= PEOPLE);
+  if (s.textLines !== undefined) checks.push(!writing(s));
+  return { passed: checks.filter(Boolean).length, of: checks.length };
+}
+
+/** The three rows, light first: the order a photograph is read in. */
 export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): Detail[] {
   const sig = score.signals ?? {};
   const all = facts(sig, t, isRecord(score));
@@ -364,12 +399,12 @@ export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: 
   const rows: Detail[] = [];
   /** A row read off the facts about `key`: what held it back if anything
    *  did, else what helped, else `empty` — measured, and unremarkable. */
-  const row = (key: Dim, label: string, empty: Pick<Detail, 'value' | 'tone'>, extra: Partial<Detail> = {}) => {
+  const row = (key: Dim, label: string, bar: number, empty: Pick<Detail, 'value' | 'tone'>) => {
     const of = all.filter((f) => f.dim === key);
     const minus = of.filter((f) => !f.plus);
     const said = minus.length ? minus : of;
     rows.push({
-      key, label, icon: DIM_ICON[key], ...extra,
+      key, label, icon: DIM_ICON[key], bar,
       ...(said.length
         ? { value: capital(said.map((f) => f.say).join(sep)), tone: minus.length ? 'warn' : 'good' }
         : empty),
@@ -377,44 +412,20 @@ export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: 
   };
 
   if (sig.brightness !== undefined) {
-    row('light', t('Light', 'Ánh sáng', '明るさ'),
+    row('light', t('Light', 'Ánh sáng', '明るさ'), exposure(sig.brightness, sig.shadows, sig.highlights),
       { value: t('Neither dark nor bright', 'Không tối, không quá sáng', '暗くも明るすぎもしない'), tone: 'plain' });
   }
   if (sig.sharpness !== undefined) {
-    const rank = standingIn(sig.sharpness, SHARPNESS_SPREAD);
-    const n = percentText(rank);
-    row('focus', t('Focus', 'Độ nét', 'ピント'), { value: t('Average', 'Trung bình', '標準的'), tone: 'plain' }, {
-      rank,
-      note: t(`Sharper than ${n}% of the catalog's photos`, `Nét hơn ${n}% ảnh trong catalog`, `カタログの${n}%の写真よりシャープ`),
-    });
+    row('focus', t('Focus', 'Độ nét', 'ピント'), standingIn(sig.sharpness, SHARPNESS_SPREAD),
+      { value: t('Average', 'Trung bình', '標準的'), tone: 'plain' });
   }
-  if (sig.subject) {
-    row('subject', t('Subject', 'Chủ thể', '被写体'), sig.subject.area < SUBJECT[0]
-      ? { value: t('Small in the frame', 'Nhỏ trong khung', '画面の中で小さい'), tone: 'plain' }
-      : { value: t('Fills most of the frame', 'Chiếm gần hết khung', '画面のほとんどを占める'), tone: 'plain' });
-  }
-  // Only of a scene with a horizon in it: on a close-up the "horizon" is
-  // a table's edge (`SCENE`).
-  if (scene(sig)) {
-    const tilt = Math.abs(sig.tilt ?? 0);
-    const n = Math.round(tilt);
-    row('level', t('Horizon', 'Đường chân trời', '水平'), sig.tilt === undefined
-      ? { value: t('None found', 'Không thấy', '見つからない'), tone: 'plain' }
-      : tilt < TILT[0]
-        ? { value: t('Level', 'Thẳng', '水平'), tone: 'good' }
-        : { value: t(`Tilted ${n}°, by the look of it on purpose`, `Nghiêng ${n}°, có vẻ cố ý`, `${n}°傾いている（意図的に見える）`), tone: 'plain' });
-  }
-  if (sig.peopleArea !== undefined || sig.textLines !== undefined) {
-    row('clutter', t('Distractions', 'Yếu tố gây nhiễu', '邪魔な要素'),
-      { value: t('Few people, little writing', 'Ít người, ít chữ', '人も文字も少ない'), tone: 'good' });
-  }
-  if (sig.labels !== undefined) {
-    row('green', t('Greenery', 'Cây xanh', '緑'), { value: t('None seen', 'Không thấy', '見当たらない'), tone: 'plain' });
-  }
-  if (sig.width !== undefined && sig.height !== undefined) {
-    const long = Math.max(sig.width, sig.height);
-    row('size', t('Resolution', 'Độ phân giải', '解像度'),
-      { value: t(`${long} px on the long side`, `Cạnh dài ${long} px`, `長辺${long}px`), tone: 'good' });
+  const frame = framing(sig);
+  if (frame.of > 0) {
+    // "Nothing wrong found", not "Good": the checks look for faults, and
+    // passing them all says the framing has none of those — not that it
+    // is good, which nothing here can see.
+    row('composition', t('Composition', 'Bố cục', '構図'), frame.passed / frame.of,
+      { value: t('No problems found', 'Không thấy lỗi', '問題なし'), tone: 'plain' });
   }
   return rows;
 }
@@ -425,11 +436,13 @@ export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: 
  * no fault under it would be advice for its own sake. A record's writing
  * is its subject, not a fault, and gets none.
  */
-export function suggestionsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): string[] {
-  const fixes = facts(score.signals ?? {}, t, isRecord(score))
-    .filter((f) => !f.plus && !f.quiet)
-    .map((f) => f.fix!);
-  return [...new Set(fixes)];
+export function suggestionsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): Tip[] {
+  const tips: Tip[] = [];
+  for (const f of facts(score.signals ?? {}, t, isRecord(score))) {
+    if (f.plus || f.quiet || tips.some((tip) => tip.text === f.fix)) continue;
+    tips.push({ icon: DIM_ICON[f.dim], text: f.fix! });
+  }
+  return tips;
 }
 
 /** Where Vision's number for this photograph stands in the catalog. */
