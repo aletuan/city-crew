@@ -7,7 +7,7 @@
 // hold: whether anybody is signed in, whether they have a list to put it
 // in, and whether that answer has arrived yet. The third is the one that
 // shipped wrong — `data.length === 0` is true while the first fetch is
-// still out, which sent people who *had* collections to "Name your list".
+// still out, which sent people who *had* collections to "New collection".
 //
 // It renders `AuthSheet` and `SaveSheet` itself, which is why this is a
 // rendered test rather than a test of a function.
@@ -220,7 +220,7 @@ describe('signed in with nowhere to put it', () => {
   // The bug this is here for: `data` is just as empty while the first
   // fetch is still out — the moment after launch a bookmark is likeliest
   // to be tapped — and branching on that emptiness sent people who *had*
-  // collections to "Name your list".
+  // collections to "New collection".
   it('does not mistake a load still in flight for having no lists', () => {
     world.mine = { ...world.mine, data: [], loaded: false, loading: true };
     mount();

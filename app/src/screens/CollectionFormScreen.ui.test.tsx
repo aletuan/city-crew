@@ -38,8 +38,9 @@ vi.mock('../lib/auth', () => ({
 vi.mock('../lib/city', () => ({
   useCity: () => ({ city: who.city }),
 }));
+const lang = vi.hoisted(() => ({ now: 'en' as 'en' | 'vi' }));
 vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+  useI18n: () => ({ lang: lang.now, setLang: () => {}, t: (en: string, vi?: string) => (lang.now === 'vi' ? vi ?? en : en) }),
 }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => catalog,
@@ -270,7 +271,7 @@ describe('what stops a submit before it writes', () => {
     const button = screen.getByRole('button', { name: 'Create collection' });
     expect(button.querySelector('[data-icon="checkmark"]')).toBeTruthy();
     expect(screen.getByTestId('collection-submit').querySelector('[data-icon="checkmark"]')).toBeTruthy();
-    expect(screen.getByText('Name your list').parentElement).toBe(button.parentElement);
+    expect(screen.getByText('New collection').parentElement).toBe(button.parentElement);
     expect(screen.queryByText(/Private until you say so/)).toBeNull();
   });
 
@@ -312,9 +313,25 @@ describe('what stops a submit before it writes', () => {
 describe('renaming a list', () => {
   const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
+  // UX-13: the form said "danh sách" one tap after a tab and a button
+  // that said "Bộ sưu tập"; it is named in the tab's word now.
+  it('is named in the word the Collections tab uses, new and edited alike', () => {
+    lang.now = 'vi';
+    try {
+      render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+      expect(screen.getByText('Bộ sưu tập mới')).toBeTruthy();
+      cleanup();
+      openRename([HEIM, SAM]);
+      expect(screen.getByText('Sửa bộ sưu tập')).toBeTruthy();
+      expect(screen.queryByText(/danh sách/i)).toBeNull();
+    } finally {
+      lang.now = 'en';
+    }
+  });
+
   it('opens on the list’s own words', () => {
     openRename([HEIM, SAM]);
-    expect(screen.getByText('Rename your list')).toBeTruthy();
+    expect(screen.getByText('Edit collection')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy();
   });
 
@@ -395,7 +412,7 @@ describe('renaming a list', () => {
     catalog.data = [HEIM, SAM];
     saved.data = [listOf([HEIM, SAM])];
     render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'someone-elses', title: 'Theirs' })} />);
-    expect(screen.getByText('Rename your list')).toBeTruthy();
+    expect(screen.getByText('Edit collection')).toBeTruthy();
     expect(screen.queryByText('COVER')).toBeNull();
   });
 
