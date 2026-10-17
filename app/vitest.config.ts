@@ -161,8 +161,9 @@ const SCREENS_FLOOR = { lines: 99, statements: 99, branches: 91, functions: 92 }
 // `AddBatchBar` at 94.39% lines and statements and 92.59% branches; that
 // file rose to 98.87 / 96.15 and the floor stayed, until 28 September.
 // Now: `WelcomeSheet` at 95.76% lines and statements, `SaveSheet` and
-// `SketchDeck` at 93.75% branches, `ExploreFilterSheet` at 90.9%
-// functions.
+// `SketchDeck` at 93.75% branches, `AvatarPicker` at 91.67% functions
+// (17 Oct, when `ExploreFilterSheet`'s Reset got a test and that file
+// left 90.9 for 100).
 //
 // The branches column started at 60, which was `InviteCard`'s — every
 // fallback on that card (a day it could not read, a stop with no place,
@@ -172,7 +173,7 @@ const SCREENS_FLOOR = { lines: 99, statements: 99, branches: 91, functions: 92 }
 // couple's evening imposes and the rows the crew copy had not loaded.
 // All three stand at 100 now; `SaveSheet` and `SketchDeck` (93.75) hold
 // that column, with `LegalSheet` (94.44) next.
-const COMPONENTS_FLOOR = { lines: 95, statements: 95, branches: 93, functions: 90 };
+const COMPONENTS_FLOOR = { lines: 95, statements: 95, branches: 93, functions: 91 };
 
 // The one component the gate does not hold, for the same reason `IMPURE`
 // exists: it cannot run where the tests run. `MiniMap` IS the native map

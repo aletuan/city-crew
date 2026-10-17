@@ -1,17 +1,24 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, LayoutAnimation, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ExploreFilters, ExploreSort, ExploreStatus } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
-import { Card, fireHaptic, GradientCta, PressableScale } from './ui';
+import { Card, fireHaptic, GradientCta, PressableScale, useReducedMotion } from './ui';
+import { SLIDE } from './SearchField';
 import { useSheetDrag } from './sheetDrag';
 
 /** What the sheet looks like with nothing chosen — the state Reset
  *  returns to, and the one it compares against to know it has anything
  *  to return from. */
 const NOTHING_APPLIED: ExploreFilters = { sort: 'recommended', status: 'any', savedOnly: false, visitedOnly: false };
+
+/** Whether Reset has anything to return from. */
+const isDirty = (f: ExploreFilters) => f.sort !== NOTHING_APPLIED.sort
+  || f.status !== NOTHING_APPLIED.status
+  || f.savedOnly !== NOTHING_APPLIED.savedOnly
+  || f.visitedOnly !== NOTHING_APPLIED.visitedOnly;
 
 const SORTS: ExploreSort[] = ['recommended', 'distance', 'rating'];
 const STATUSES: ExploreStatus[] = ['any', 'open', 'closed'];
@@ -127,6 +134,13 @@ export default function ExploreFilterSheet({
   const [draft, setDraft] = useState(applied);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const still = useReducedMotion();
+  // Configured before the render that moves things, and only for the
+  // renders that do: Reset arriving or leaving. A tap that changes the
+  // sort while another answer already holds Reset in place moves nothing,
+  // and a slide armed for it would animate whatever else that render
+  // happened to shift — the error line, say.
+  const slide = () => { if (!still) LayoutAnimation.configureNext(SLIDE); };
 
   useEffect(() => {
     if (!visible) { rise.setValue(1); return; }
@@ -138,7 +152,9 @@ export default function ExploreFilterSheet({
   const choose = <K extends keyof ExploreFilters>(key: K, value: ExploreFilters[K]) => {
     fireHaptic('selection');
     setError(null);
-    setDraft((current) => ({ ...current, [key]: value }));
+    const next = { ...draft, [key]: value };
+    if (isDirty(next) !== isDirty(draft)) slide();
+    setDraft(next);
   };
 
   const apply = async () => {
@@ -151,10 +167,7 @@ export default function ExploreFilterSheet({
   };
 
   const count = countFor(draft);
-  const dirty = draft.sort !== NOTHING_APPLIED.sort
-    || draft.status !== NOTHING_APPLIED.status
-    || draft.savedOnly !== NOTHING_APPLIED.savedOnly
-    || draft.visitedOnly !== NOTHING_APPLIED.visitedOnly;
+  const dirty = isDirty(draft);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
@@ -361,20 +374,40 @@ export default function ExploreFilterSheet({
         ) : null}
 
         {error ? <Text style={s.error} accessibilityRole="alert">{error}</Text> : null}
-        <View style={s.divider} />
+        {/* One track, always drawn, holding the button and — when there is
+            something to undo — Reset beside it. The owner's ask (17 Oct
+            2026): Reset inside one seamless block, arriving the way the
+            search box's Cancel does, with the button giving up the room
+            and taking it back.
+
+            The track stays when Reset is gone. Drawn only around the
+            pair, its 4pt of padding would come and go with Reset: three
+            things moving at once — the glass, the button's width, and
+            the button pushed in from both edges — and the sheet growing
+            8pt taller under the finger that just chose a filter. Kept,
+            the one thing that moves is the button's width. It is the
+            shape the sort and hours tracks above already take, so the
+            sheet ends in a fourth of a thing it has three of.
+
+            The hairline that sat above it went in the same change: the
+            track is its own edge, and the line was a second one. */}
         <View style={s.actions}>
           {/* Only when there is something to undo. A Reset standing
               beside an untouched sheet is a control that cannot do
               anything, and the reader has to work that out by pressing
-              it. It is drawn as words rather than as a second button for
-              the same reason: one action here is the action. */}
+              it. It is drawn as words on the track rather than as a
+              second button for the same reason: one action here is the
+              action. The mark is `refresh`, the circle that means "back
+              to how it was"; `arrow-undo` reads as taking back the last
+              tap, and Reset takes back all of them. */}
           {dirty ? (
             <PressableScale
-              onPress={() => { setDraft(NOTHING_APPLIED); setError(null); }}
+              onPress={() => { slide(); setDraft(NOTHING_APPLIED); setError(null); }}
               testID="filter-reset"
               accessibilityRole="button"
               style={s.reset}
             >
+              <Ionicons name="refresh" size={17} color={colors.textSecondary} />
               <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット')}</Text>
             </PressableScale>
           ) : null}
@@ -489,14 +522,19 @@ const s = StyleSheet.create({
   segmentText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
   segmentTextOn: { color: colors.accent, fontWeight: font.semibold },
 
-  divider: {
-    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
-    marginTop: space.headingToContent,
-  },
-
   error: { color: colors.bad, fontSize: 13, lineHeight: 18, marginTop: 10 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
-  reset: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 4 },
+  // The sort track's glass and padding, at the button's own radius: the
+  // 4pt it leaves round the button is the track's, and it is the same
+  // 4pt the search box leaves round its Cancel. 24pt above, so the sheet
+  // keeps its height: the line and its two 16s were 32, the track's
+  // padding adds 8, and the sheet already sits at the home indicator on
+  // a 390pt phone (see `sortLabel`).
+  actions: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4,
+    marginTop: space.headingToContent + 8,
+    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
+  },
+  reset: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingLeft: 12, paddingRight: 10 },
   resetText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
   applyWrap: { flex: 1 },
 });
