@@ -2047,7 +2047,7 @@ describe('the actions and the dock', () => {
     // Explore's shape (owner, 17 Oct 2026): the plan said in two lines,
     // then the gradient "+ Địa điểm" — the very pill Explore's dock ends in.
     expect(screen.getByTestId('collection-dock').textContent)
-      .toBe('Plan a tripUse this list for a tripPlace');
+      .toBe('Plan a tripUse it for a tripPlace');
     expect(island().querySelector('[data-icon="paw"]')).toBeTruthy();
     fireEvent.click(island());
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.objectContaining({ params: expect.objectContaining({ from: 'old-quarter' }) }));
@@ -2069,7 +2069,7 @@ describe('the actions and the dock', () => {
     pastTheCard();
     settle();
     expect(screen.getByTestId('collection-dock').textContent)
-      .toBe('Lên kế hoạchDùng danh sách này cho chuyến điĐịa điểm');
+      .toBe('Lên kế hoạchDùng cho chuyến điĐịa điểm');
   });
 
   it('offers a visitor the copy as the gradient pill', () => {
@@ -2080,7 +2080,7 @@ describe('the actions and the dock', () => {
     pastTheCard();
     settle();
     expect(screen.getByTestId('collection-dock').textContent)
-      .toBe('Plan a tripUse this list for a tripSave a copy');
+      .toBe('Plan a tripUse it for a tripSave a copy');
     expect(screen.queryByTestId('collection-dock-add')).toBeNull();
     const pill = screen.getByTestId('collection-dock-copy');
     // The ⋯ menu's copy glyph, not a plus.
@@ -2115,7 +2115,7 @@ describe('the actions and the dock', () => {
     show();
     pastTheCard();
     settle();
-    expect(screen.getByTestId('collection-dock').textContent).toBe('Plan a tripUse this list for a trip');
+    expect(screen.getByTestId('collection-dock').textContent).toBe('Plan a tripUse it for a trip');
     expect(screen.queryByTestId('collection-dock-copy')).toBeNull();
     fireEvent.click(island());
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.anything());

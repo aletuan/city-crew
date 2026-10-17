@@ -1605,7 +1605,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         <DockOffer
           icon="paw"
           title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
-          sub={t('Use this list for a trip', 'Dùng danh sách này cho chuyến đi', 'このリストで旅の計画を')}
+          // Short enough for one line beside the widest pill. "Dùng danh
+          // sách này cho chuyến đi" was cut to "…cho ch…" beside "Lưu bản
+          // sao" on the owner's phone (17 Oct 2026): about 23 characters
+          // fit there, fewer on a 375pt screen. "Danh sách này" was the
+          // part the screen already says.
+          sub={t('Use it for a trip', 'Dùng cho chuyến đi', '旅の計画に使う')}
         />
         {owned ? (
           <AddPill
