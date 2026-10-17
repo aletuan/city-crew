@@ -76,13 +76,14 @@ begin
     format('the select policy stopped scoping likes to their author: %s', qual);
 end $$;
 
--- Three things the insert policy has to hold, and all three decide what a
--- public number means. Without the first a like can be filed under
--- somebody else's name, which turns a count into a forgery. Without the
--- second a private list collects votes for a shelf it is not on. Without
--- the third a curator can vote for themselves, and at nine owned lists and
--- a handful of accounts that one vote is enough to take the front of a
--- shelf that claims to show what readers chose.
+-- Two things the insert policy has to hold, and both decide what a public
+-- number means. Without the first a like can be filed under somebody
+-- else's name, which turns a count into a forgery. Without the second a
+-- private list collects votes for a shelf it is not on.
+--
+-- A curator may like their own list (20261017090000). What keeps that
+-- vote off the front of the shelf is no longer this policy but the
+-- `others` figure below, which the shelf sorts by.
 do $$
 declare chk text;
 begin
@@ -93,15 +94,8 @@ begin
     format('the insert policy stopped tying a like to its caster: %s', chk);
   assert chk like '%is_public%',
     format('the insert policy no longer requires the list to be public: %s', chk);
-  assert chk like '%owner_id%',
-    format('the insert policy stopped excluding your own list: %s', chk);
-  -- The operator, and it is not a style note. Fifteen of the collections
-  -- are the desk's and carry `owner_id is null`; `<>` against null is
-  -- null, which `with check` refuses. Simplified to `<>`, this policy
-  -- would break liking on every editorial list on the shelf while looking
-  -- entirely correct.
-  assert upper(chk) like '%IS DISTINCT FROM%',
-    format('the owner clause uses a plain comparison, so an unowned desk list can no longer be liked: %s', chk);
+  assert chk not like '%owner_id%',
+    format('the insert policy still refuses a curator their own list: %s', chk);
 end $$;
 
 -- --------------------------------------------------------------- counting
@@ -124,16 +118,14 @@ begin
 end $$;
 
 -- And the behaviour, which needs no RLS to check.
--- The owner clause, run against the two shapes it has to tell apart.
 --
--- Not the policy — the harness is not a client and RLS does not apply to
--- it — but the expression inside the policy, which is where the whole risk
--- of this rule sits. A desk list has no owner and must stay likeable by
--- everyone; a list with an owner must be likeable by everyone except them.
--- Asserting the operator by name above says the right words are there;
--- this says they answer correctly against a real null.
+-- `others` against the three shapes it has to tell apart: a list with an
+-- owner who liked it, the same list's other readers, and a desk list with
+-- no owner at all. The last is where the whole risk sits — `<>` against a
+-- null owner is null, a `filter` drops it, and every like on every
+-- editorial list would leave the ranking while the total looked right.
 do $$
-declare mine uuid; desk uuid; u1 uuid; u2 uuid; ok bool;
+declare mine uuid; desk uuid; u1 uuid; u2 uuid; t int; o int;
 begin
   insert into auth.users default values returning id into u1;
   insert into auth.users default values returning id into u2;
@@ -142,14 +134,17 @@ begin
   insert into public.collections (slug, is_public, city_id, owner_id)
     values ('t-own-mine', true, 'hanoi', u1) returning id into mine;
 
-  select (owner_id is distinct from u1) into ok from public.collections where id = desk;
-  assert ok, 'a list the desk wrote stopped being likeable — the null owner is being read as a match';
+  -- The owner and one reader like the owner's list; both like the desk's.
+  insert into public.collection_likes (collection_id, user_id)
+    values (mine, u1), (mine, u2), (desk, u1), (desk, u2);
 
-  select (owner_id is distinct from u1) into ok from public.collections where id = mine;
-  assert not ok, 'a curator can still like their own list';
+  select likes, others into t, o from public.collection_like_counts() where collection_id = mine;
+  assert t = 2, format('the total on a self-liked list is %s, not the 2 the heart should print', t);
+  assert o = 1, format('the ranking figure on a self-liked list is %s; the owner''s own vote is in it', o);
 
-  select (owner_id is distinct from u2) into ok from public.collections where id = mine;
-  assert ok, 'somebody else lost the ability to like a list they did not write';
+  select likes, others into t, o from public.collection_like_counts() where collection_id = desk;
+  assert t = 2 and o = 2,
+    format('a desk list counted %s / %s; a null owner is being read as a match', t, o);
 
   delete from public.collections where slug like 't-own-%';
   delete from auth.users where id in (u1, u2);
@@ -173,9 +168,9 @@ begin
   select likes into n from public.collection_like_counts() where collection_id = pub;
   assert n = 2, format('a public list with two likes counted %s', n);
 
-  -- One vote per person, whoever they are. With the self-like rule gone
-  -- this is the only thing between a count and a tally somebody runs up
-  -- by tapping twice, so it is worth proving rather than assuming.
+  -- One vote per person, whoever they are — the owner included. This is
+  -- the only thing between a count and a tally somebody runs up by
+  -- tapping twice, so it is worth proving rather than assuming.
   begin
     insert into public.collection_likes (collection_id, user_id) values (pub, u1);
     raise exception 'a second like from the same person was accepted';

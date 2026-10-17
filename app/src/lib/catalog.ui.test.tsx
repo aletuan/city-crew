@@ -87,7 +87,12 @@ beforeEach(() => {
   world.likesFor = [];
   // Counted a second ago, so a tap made now is newer than the tally and
   // shows in it — the rule `countsNow` keeps.
-  world.likeCounts = fetch({ data: { 'hue-noodles': 3 } as unknown as unknown[], loadedAt: Date.now() - 1000 });
+  // Three shown, two ranked: the owner's own like is in the first and not
+  // the second.
+  world.likeCounts = fetch({
+    data: { shown: { 'hue-noodles': 3 }, ranked: { 'hue-noodles': 2 } } as unknown as unknown[],
+    loadedAt: Date.now() - 1000,
+  });
   world.myLikes = fetch({ data: [] });
   writes.like.mockReset().mockResolvedValue(true);
   writes.unlike.mockReset().mockResolvedValue(true);
@@ -208,6 +213,9 @@ describe('the heart', () => {
     expect(writes.like).toHaveBeenCalledWith('c1', 'u1');
     expect(seen.myLikes).toContain('c1');
     expect(seen.likes['hue-noodles']).toBe(4);
+    // The ranking waits for the server: moving the list would reorder the
+    // shelf under the thumb that tapped it.
+    expect(seen.rankLikes['hue-noodles']).toBe(2);
     // Nothing is asked again until the write has landed.
     expect(world.likeCounts.reload).not.toHaveBeenCalled();
     await act(async () => { answer(true); await done; });

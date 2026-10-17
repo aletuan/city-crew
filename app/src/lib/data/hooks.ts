@@ -15,7 +15,7 @@ import { CACHE_CATALOG, cacheKey } from './cache';
 import { type Fetch, useFetch, usePersistedFetch } from './fetch';
 import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlaces } from './places';
 import {
-  fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes,
+  fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes, type LikeTally,
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
@@ -61,9 +61,13 @@ export const useCategoryTermsQuery = () => {
   return useFetch(fetcher, {} as Record<string, string[]>);
 };
 
+// One empty tally for every reader, so a render with nothing loaded hands
+// the shelf the same object twice rather than a new one each time.
+const NO_TALLY: LikeTally = { shown: {}, ranked: {} };
+
 export const useLikeCountsQuery = () => {
   const fetcher = useCallback(() => fetchLikeCounts(), []);
-  return useFetch(fetcher, {} as Record<string, number>);
+  return useFetch(fetcher, NO_TALLY);
 };
 
 // The reader's own answers — this, their lists and their preferences —
