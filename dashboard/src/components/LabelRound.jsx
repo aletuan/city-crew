@@ -12,19 +12,23 @@
 // The definitions are folded under the photograph rather than above it as
 // in round 2: thirteen lines above the photograph would push it off a
 // phone's screen, and by the tenth photograph they are known.
+//
+// Round 3b asks the six criteria alone, the kinds being answered already.
+// With no kind to choose, Next is always open and marks the photograph
+// answered; each chip carries its definition, since the criteria are the
+// whole of the round and round 3 showed they were passed over when they
+// sat beside the kinds.
 
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../App.jsx';
-import { ATTRS, GUIDE_3, KINDS_3, SAMPLE_3, STATES, encode3, firstOpen3, nextState } from '../labelRound.js';
-
-const KEY = 'citycrew.dashboard.photoLabels.r3';
+import { ATTRS, GUIDE_3, KINDS_3, ROUNDS_3, STATES, code, encode3, firstOpen3, nextState } from '../labelRound.js';
 
 /** What this browser kept of the round, or nothing — a private window or
  *  cleared site data starts it over rather than breaking it. */
-function load() {
+function load(key) {
   try {
-    return JSON.parse(localStorage.getItem(KEY)) ?? {};
+    return JSON.parse(localStorage.getItem(key)) ?? {};
   } catch {
     return {};
   }
@@ -44,28 +48,29 @@ function Guide() {
   );
 }
 
-export default function LabelRound() {
+export default function LabelRound({ round = 'r3' }) {
+  const { key: KEY, sample: SAMPLE_3, kinds } = ROUNDS_3[round];
   const toast = useToast();
-  const [answers, setAnswers] = useState(load);
-  const [at, setAt] = useState(() => firstOpen3(SAMPLE_3, load()));
+  const [answers, setAnswers] = useState(() => load(KEY));
+  const [at, setAt] = useState(() => firstOpen3(SAMPLE_3, load(KEY), kinds));
   const [uris, setUris] = useState(null);
 
   useEffect(() => {
     api.photoUris(SAMPLE_3)
       .then(setUris)
       .catch((err) => toast(`Couldn't load the photos: ${err.message}`));
-  }, [toast]);
+  }, [SAMPLE_3, toast]);
 
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(answers)); } catch { /* kept for this visit only */ }
-  }, [answers]);
+  }, [KEY, answers]);
 
-  const done = SAMPLE_3.filter((id) => answers[id]?.kind).length;
+  const done = SAMPLE_3.filter((id) => code(answers[id], kinds)[0] !== '-').length;
 
   if (!uris) return <div className="empty">Loading…</div>;
 
   if (at >= SAMPLE_3.length) {
-    const line = encode3(SAMPLE_3, answers);
+    const line = encode3(SAMPLE_3, answers, kinds);
     const copy = async () => {
       try {
         await navigator.clipboard.writeText(line);
@@ -81,8 +86,9 @@ export default function LabelRound() {
       <section className="pt">
         <h3 className="pt-title">{done} / {SAMPLE_3.length} answered</h3>
         <p className="pt-note">
-          One code per photograph, in order: the kind (F food, I interior, E exterior, V view, T text, O other, U not sure),
-          then brand, wide, green, daylight, people, staged as 1 yes, 0 no, ? can't tell. Round 3.
+          {kinds
+            ? 'One code per photograph, in order: the kind (F food, I interior, E exterior, V view, T text, O other, U not sure), then brand, wide, green, daylight, people, staged as 1 yes, 0 no, ? can\'t tell. Round 3.'
+            : 'One code per photograph, in order: brand, wide, green, daylight, people, staged as 1 yes, 0 no, ? can\'t tell. Round 3b.'}
         </p>
         <textarea id="pt-line" className="pt-line" readOnly value={line} rows={6} aria-label="Answers" />
         <div className="pt-actions">
@@ -113,7 +119,7 @@ export default function LabelRound() {
           : <p className="pt-gone">This photograph has been deleted — answer “Không chắc”.</p>}
       </div>
       {next && <img className="pt-preload" src={next} alt="" aria-hidden="true" />}
-      <div className="pt-kinds lr-kinds" role="group" aria-label="What is this photograph?">
+      {kinds && <div className="pt-kinds lr-kinds" role="group" aria-label="What is this photograph?">
         {KINDS_3.map((k) => (
           <button
             key={k.key}
@@ -126,8 +132,8 @@ export default function LabelRound() {
             <span>{k.en}</span>
           </button>
         ))}
-      </div>
-      <div className="lr-attrs" role="group" aria-label="Cover criteria">
+      </div>}
+      <div className={`lr-attrs${kinds ? '' : ' lr-attrs-only'}`} role="group" aria-label="Cover criteria">
         {ATTRS.map((a) => {
           const s = mine.attrs?.[a.key] ?? '0';
           return (
@@ -140,14 +146,20 @@ export default function LabelRound() {
             >
               <b>{a.vi}</b>
               <span>{stateName(s)}</span>
+              {!kinds && <small>{a.hint}</small>}
             </button>
           );
         })}
       </div>
-      <button type="button" className="pt-btn pt-primary lr-next" disabled={!mine.kind} onClick={() => setAt(at + 1)}>
+      <button
+        type="button"
+        className="pt-btn pt-primary lr-next"
+        disabled={kinds && !mine.kind}
+        onClick={() => { if (!kinds) set({ seen: true }); setAt(at + 1); }}
+      >
         Tiếp ›
       </button>
-      <Guide />
+      {kinds && <Guide />}
     </section>
   );
 }

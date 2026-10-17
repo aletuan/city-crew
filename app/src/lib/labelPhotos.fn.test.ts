@@ -168,7 +168,7 @@ describe('a measurement (write: false)', () => {
       model: 'claude-opus-5-5', effort: 'low', write: false,
       labels: [{
         id: A,
-        signals: { v: 1, kind: 'interior', brand: true, wide: true, green: false, daylight: null, people: false, staged: false, by: 'fn', model: 'claude-opus-5-5' },
+        signals: { v: VERSION, kind: 'interior', brand: true, wide: true, green: false, daylight: null, people: false, staged: false, by: 'fn', model: 'claude-opus-5-5' },
       }],
       failed: [], labelled: [], missing: [C], unstored: [B],
       usage: { input_tokens: 1500, output_tokens: 120 },
@@ -239,13 +239,13 @@ describe('labelling (write, the default)', () => {
       {
         data: [
           // Complete at this version: skipped.
-          { photo_id: A, scorer_version: 1, signals: { v: 1, kind: 'food', brand: false, wide: false, green: false, daylight: null, people: false, staged: false } },
+          { photo_id: A, scorer_version: VERSION, signals: { v: VERSION, kind: 'food', brand: false, wide: false, green: false, daylight: null, people: false, staged: false } },
           // A key missing: asked again.
-          { photo_id: B, scorer_version: 1, signals: { v: 1, kind: 'food' } },
+          { photo_id: B, scorer_version: VERSION, signals: { v: VERSION, kind: 'food' } },
           // An older version: asked again.
-          { photo_id: C, scorer_version: 0, signals: { kind: 'food', brand: false, wide: false, green: false, daylight: null, people: false, staged: false } },
+          { photo_id: C, scorer_version: VERSION - 1, signals: { kind: 'food', brand: false, wide: false, green: false, daylight: null, people: false, staged: false } },
           // A row with no signals at all: asked again.
-          { photo_id: D, scorer_version: 1, signals: null },
+          { photo_id: D, scorer_version: VERSION, signals: null },
         ],
         error: null,
       },
@@ -263,7 +263,7 @@ describe('labelling (write, the default)', () => {
     expect(w).toMatchObject({ table: 'photo_scores', upsert: true, onConflict: 'photo_id,scorer' });
     const rows = w.payload as { photo_id: string; scorer: string; scorer_version: number; signals: Record<string, unknown> }[];
     expect(rows.map((r) => r.photo_id)).toEqual([B, C, D]);
-    expect(rows[0]).toMatchObject({ scorer: 'claude-labels', scorer_version: 1 });
+    expect(rows[0]).toMatchObject({ scorer: 'claude-labels', scorer_version: VERSION });
     expect(rows[0].signals).toMatchObject({ unsure: true, note: 'A covered gallery.', by: 'fn' });
   });
 
@@ -271,7 +271,7 @@ describe('labelling (write, the default)', () => {
     h.fake.replies(
       session, editor,
       { data: [photo(A)], error: null },
-      { data: [{ photo_id: A, scorer_version: 2, signals: { kind: 'view', brand: false, wide: true, green: true, daylight: true, people: false, staged: false } }], error: null },
+      { data: [{ photo_id: A, scorer_version: VERSION + 1, signals: { kind: 'view', brand: false, wide: true, green: true, daylight: true, people: false, staged: false } }], error: null },
     );
     const out = await (await call({ photo_ids: [A] })).json();
     expect(out.labelled).toEqual([A]);

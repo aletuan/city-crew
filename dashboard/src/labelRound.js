@@ -154,6 +154,65 @@ export const SAMPLE_3 = [
   '2405fddd-f041-4b40-bb26-9274428abfd6',
 ];
 
+/** Round 3b: the six criteria only, on 40 of round 3's photographs. Round
+ *  3 measured no criterion — every answer came back at "no", the kind
+ *  alone chosen — and the owner chose this over answering all 137 again
+ *  (17 Oct 2026). The 40 are drawn by a written rule, so the rare criteria
+ *  can be measured at all: every photograph any of the five Claude answers
+ *  (the skill, both models under v1 and v2) called people or staged (27),
+ *  then photographs where those answers disagree on some criterion, in md5
+ *  order, to 40; and the whole shuffled by md5 again. The kinds are
+ *  already answered, so the page does not ask them. */
+export const SAMPLE_3B = [
+  '1714c98b-f3d5-47fb-9c83-e5ba3df88dc3',
+  'd7592737-6c62-495e-bff0-06c4964b3642',
+  'bf9d0033-d6c2-41f1-859d-9b923026703d',
+  'f3899ff8-fd62-4a09-90bd-1affddf33eef',
+  'fcfc34a4-9fee-4353-8c18-a6f8c8af87f3',
+  '122568f2-8549-4ce9-9710-6b79df5f610a',
+  '1f83ae29-ff5d-4b8b-9610-2cc10f190001',
+  'a2e11c3a-b261-45b3-b353-761aec77ec4c',
+  '3da11d92-f5bc-4d37-9094-8a273ab772cd',
+  'b1c0c636-196e-487d-a53a-c9de5cd0ad3c',
+  '6d1eb616-8422-4ce1-8ee3-cdfccf4f91b0',
+  '770993c7-9e25-4e10-a770-5270ab49ae4d',
+  '4aad806f-2cb2-4e0e-8f41-9d435097c6f3',
+  '505f92c8-4e58-4410-a668-376ea9bb0728',
+  'dab9a957-7caa-4a3c-b82e-a6d9b11c6a44',
+  '54e826f9-19b3-4e5e-9a5d-78cde44de592',
+  'b62f93d6-3bdc-43fe-927a-5bc3d09ef654',
+  'dba6f1b9-89b2-4a70-b3fd-aafc85d52217',
+  '0bdd422d-ab3a-4e74-afd4-f3cea858e44b',
+  '7cdb9cf0-f365-48dc-bfe2-430f83b90558',
+  '094ee2b7-74ec-485d-b4d4-7f3401244240',
+  '2172b170-393e-4c7c-b16b-be58758097f1',
+  'e3b67b65-3000-4f8b-b51a-d5791d27d40a',
+  '956ec754-5650-43ce-89e3-65f19021b29f',
+  '4dbe2b63-b8ae-42eb-ad5b-423726fa4566',
+  'b930d5bc-97c3-4805-b544-2508cc193505',
+  '106c3191-5e6b-4977-a67e-ae80b4cbd2b9',
+  'd413cbf9-5cdf-4908-9122-3313326e6054',
+  'af9ced5d-cb30-4868-b192-675349e03211',
+  '91092061-521d-4d4c-bf29-9608e8f0c099',
+  'e56aa951-9b93-4d0d-84af-7d2ab6ad702c',
+  '23e74659-c28b-4495-8438-57e22e3158f3',
+  'a3337395-8f88-4aa9-9bf4-3f913a90ec0d',
+  '2302f5de-e593-438d-ae2f-3c480c74b5d8',
+  'be5d09da-73d5-453d-8fa3-b470f57196ed',
+  '142213c6-54db-435a-8cc7-e09fe21ea4d8',
+  '780c8581-c6f4-467a-b59b-9cb60b35a379',
+  'c570f3e1-e39f-4657-ad20-36c1541e772b',
+  '57bf4e0e-b54a-4766-8909-ce4c970f78e0',
+  '9013553b-4bac-4c17-9aed-a0d1a2ccb024',
+];
+
+/** Each round of this page: where its answers are kept, its photographs,
+ *  and whether it asks the kind. */
+export const ROUNDS_3 = {
+  r3: { key: 'citycrew.dashboard.photoLabels.r3', sample: SAMPLE_3, kinds: true },
+  r3b: { key: 'citycrew.dashboard.photoLabels.r3b', sample: SAMPLE_3B, kinds: false },
+};
+
 /** What the photograph is, and the letter each answer is written as. The
  *  definitions are the skill's (.claude/skills/photo-labels/SKILL.md). */
 export const KINDS_3 = [
@@ -200,15 +259,27 @@ export const GUIDE_3 = [
   'Khác: chân dung cận, một vật không thấy nơi chốn, ảnh hỏng.',
 ];
 
+/** The six criteria as the line writes them, e.g. `010100`. */
+const attrs = (a) => ATTRS.map((x) => a?.attrs?.[x.key] ?? '0').join('');
+
+/** Whether a photograph has been answered: a kind where the round asks
+ *  one, and otherwise Next pressed on it (`seen`), since a photograph whose
+ *  six answers are all "no" looks the same answered or not. */
+const answered = (a, kinds) => (kinds ? !!a?.kind : !!a?.seen);
+
 /** An answer as the line writes it: the kind's letter and the six
- *  attributes, e.g. `I010100`; seven dashes where there is none. */
-export const code = (a) => (a?.kind ? a.kind + ATTRS.map((x) => a.attrs?.[x.key] ?? '0').join('') : '-'.repeat(1 + ATTRS.length));
+ *  attributes, e.g. `I010100`, or the six alone in a round that does not
+ *  ask the kind; dashes where there is no answer. */
+export const code = (a, kinds = true) => {
+  if (!answered(a, kinds)) return '-'.repeat((kinds ? 1 : 0) + ATTRS.length);
+  return (kinds ? a.kind : '') + attrs(a);
+};
 
 /** The answers as one line, a code per photograph in sample order. */
-export const encode3 = (sample, answers) => sample.map((id) => code(answers[id])).join(' ');
+export const encode3 = (sample, answers, kinds = true) => sample.map((id) => code(answers[id], kinds)).join(' ');
 
-/** Where to pick up: the first photograph with no kind, or the end. */
-export function firstOpen3(sample, answers) {
-  const i = sample.findIndex((id) => !answers[id]?.kind);
+/** Where to pick up: the first photograph not yet answered, or the end. */
+export function firstOpen3(sample, answers, kinds = true) {
+  const i = sample.findIndex((id) => !answered(answers[id], kinds));
   return i === -1 ? sample.length : i;
 }
