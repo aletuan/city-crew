@@ -1090,11 +1090,11 @@ export default function CollectionsScreen({ navigation, route }: {
                                 no verb in any of them. On your own tab neither
                                 appears — the byline would only say your own
                                 name, so the padlock speaks instead. */}
-                            <View style={s.gcardFoot}>
+                            <View style={s.gcardFoot} testID="collection-tile-foot">
                               {item.own && (
                                 <Ionicons
                                   name={c.is_public ? 'globe-outline' : 'lock-closed-outline'}
-                                  size={12}
+                                  size={14}
                                   color={c.is_public ? colors.ok : onPhoto.textSecondary}
                                 />
                               )}
@@ -1159,7 +1159,11 @@ export default function CollectionsScreen({ navigation, route }: {
                                 item.own || mineToo(c) ? (
                                   likesWorthShowing(likes[c.slug]) ? (
                                     <View style={[s.gcardLikes, { marginLeft: 'auto' }]}>
-                                      <Ionicons name="heart" size={13} color={onPhoto.textSecondary} />
+                                      {/* 15, the pressable heart's size: one
+                                          mark in two states, not two marks
+                                          (owner, 17 Oct 2026). The ink says
+                                          which state; the size never does. */}
+                                      <Ionicons name="heart" size={15} color={onPhoto.textSecondary} />
                                       <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
                                     </View>
                                   ) : null
@@ -1369,7 +1373,7 @@ export default function CollectionsScreen({ navigation, route }: {
                               // own row, for the tile's reason.
                               likesWorthShowing(likes[c.slug]) ? (
                                 <View style={[s.likesWrap, s.likesRow]}>
-                                  <Ionicons name="heart" size={13} color={colors.textTertiary} />
+                                  <Ionicons name="heart" size={15} color={colors.textTertiary} />
                                   <Text style={s.meta}>
                                     {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
                                   </Text>
@@ -1542,7 +1546,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                 curator's like on their own list, so there is
                                 no state here to draw: a number, and a mark
                                 standing in for its word. */}
-                            <Ionicons name="heart" size={13} color={colors.textTertiary} />
+                            <Ionicons name="heart" size={15} color={colors.textTertiary} />
                             <Text style={s.meta}>
                               {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
                             </Text>
@@ -1650,7 +1654,11 @@ const s = StyleSheet.create({
   gcardText: { padding: 12, gap: 2 },
   gcardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 19 },
   gcardBy: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.medium, flexShrink: 1 },
-  gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  // As tall as the avatar on every tile (owner, 17 Oct 2026). A
+  // community tile leads with an 18pt face, your own with a 14pt glyph,
+  // and the shorter row sat the title 2–3pt lower on one tab than the
+  // other — the same list moved as you switched tabs.
+  gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, minHeight: 18 },
   gcardMeta: { color: onPhoto.textSecondary, fontSize: 13 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
