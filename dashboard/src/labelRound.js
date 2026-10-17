@@ -1,0 +1,214 @@
+// Photo labels, round 3: what a photograph is and the six things a cover
+// is chosen by, said by a person, to measure Claude's labels against
+// (docs/photo-labels.md, step 4).
+//
+// The 137 photographs are every one the photo-labels skill labelled in
+// its trial (17 Oct 2026, 21 places). Claude's answers were written to
+// photo_scores before this page existed, and their line is sealed in
+// data/review/photo-types/round3.json with its sha256; this page never
+// reads them. The order is shuffled (by md5 of the id and a fixed salt) so
+// that one place's photographs do not come in a run, where the first
+// answer would steer the rest.
+//
+// As in rounds 1 and 2, the answers stay on the phone that gave them and
+// leave it as one line to paste back. Nothing is written to the database.
+
+/** The 137 photographs, in the order they are asked. */
+export const SAMPLE_3 = [
+  '6cef79f8-b450-487e-8f02-a54538178ed2',
+  'b2d52bd7-f05e-48fb-9429-f715776ebdf4',
+  'bb0b7640-5ce3-49f5-9742-80613f13143b',
+  '053379ac-bcf0-4963-bc47-8a7d52f5c2ca',
+  '835b7c70-450d-49e6-b444-c5fb8d71cecd',
+  '4e424da9-03f1-4154-861b-508869546c43',
+  'f508dbab-a75f-4b1d-a24d-b30a67612b88',
+  '92d278dd-b6bb-4d25-a1d9-cc3306e751b3',
+  '76df4f3c-aa6e-421f-b74a-22b4b85b0411',
+  '24f6fd94-f5bd-4615-9ab3-5b6c69beaf5e',
+  '91092061-521d-4d4c-bf29-9608e8f0c099',
+  '7cecd732-9212-45b8-aab7-869bb2f11e47',
+  'e998b070-506e-4952-b552-3e5bf2043a7f',
+  '87d2fb7e-7d4f-4147-a9ba-16c979c26f53',
+  '770993c7-9e25-4e10-a770-5270ab49ae4d',
+  '4aad806f-2cb2-4e0e-8f41-9d435097c6f3',
+  '1185f872-d4df-467b-b5a5-2e115db50ce6',
+  '7f82d0c9-8e07-4ff8-b9f5-5521413c21f0',
+  '0bdd422d-ab3a-4e74-afd4-f3cea858e44b',
+  '3440873d-3c40-4254-a84f-0a69901507d3',
+  '2302f5de-e593-438d-ae2f-3c480c74b5d8',
+  'f3899ff8-fd62-4a09-90bd-1affddf33eef',
+  '52047743-556d-4cea-a7fb-1d962f278db6',
+  'b4723598-d018-4a71-87c2-e92389d443f5',
+  '0713d222-b13e-41b1-93de-6351d6a74bb2',
+  'b62f93d6-3bdc-43fe-927a-5bc3d09ef654',
+  'dd386b66-ab07-42bb-b043-f326143a3b04',
+  'e56aa951-9b93-4d0d-84af-7d2ab6ad702c',
+  '69b68fcd-8790-4fd0-99b8-7f62b71de944',
+  '8b4803d1-c238-41fd-96f8-2525a00de68f',
+  '1f83ae29-ff5d-4b8b-9610-2cc10f190001',
+  '2172b170-393e-4c7c-b16b-be58758097f1',
+  '779ed29c-fe0b-4152-8b26-8e38ed8d7f1c',
+  '505f92c8-4e58-4410-a668-376ea9bb0728',
+  '038d422d-5e01-4a7c-9338-b43a889bd8d1',
+  '1ccb5fbc-e8a7-4cf5-ba8b-35a7942ef9f3',
+  'c9757630-1596-4e7c-980b-950455f54f84',
+  'd437ff1b-2363-4096-bb4a-584e7386fafe',
+  '956ec754-5650-43ce-89e3-65f19021b29f',
+  '54e826f9-19b3-4e5e-9a5d-78cde44de592',
+  '7cdb9cf0-f365-48dc-bfe2-430f83b90558',
+  '4dbe2b63-b8ae-42eb-ad5b-423726fa4566',
+  '8963f936-3018-47e4-affe-ce527b65160a',
+  '42984deb-5883-49a5-a7dc-43bce5f24c2e',
+  '142213c6-54db-435a-8cc7-e09fe21ea4d8',
+  '145db5af-a6b4-4907-8eec-b9d494e2f7d7',
+  '9013553b-4bac-4c17-9aed-a0d1a2ccb024',
+  '2e001f79-4ca5-49a1-92ed-d670b8812dc9',
+  '7c0e7fc0-19d2-4bd8-8081-38629421cda3',
+  'd135ac3b-0a05-4c9f-83be-c02ca0ada013',
+  'e076282a-59df-474e-a511-8b90e37a2766',
+  '5ba4f913-bfb0-46e5-a440-cde21005fc34',
+  '6d75b9ce-5a13-4efb-bd9f-395cadd75fa5',
+  '74b798f4-3952-4297-8981-14934f0927a4',
+  '1690e162-212b-450c-867d-9264e9efb94f',
+  'dcbcdf3c-bbbd-4c65-bc72-6cb6292b3c65',
+  '65dca091-47a4-4a0b-8da6-f9552b265354',
+  '780c8581-c6f4-467a-b59b-9cb60b35a379',
+  '4e20b0c8-d78a-406b-a191-7b27ff144384',
+  '12707133-d37b-45b4-97a8-2c8d72477f16',
+  'ce592a4c-3d0f-45a5-ab1e-4578940eb2e3',
+  'ee2eb1c4-2850-4b1b-ba2b-251922f0eed3',
+  '6d1eb616-8422-4ce1-8ee3-cdfccf4f91b0',
+  '5021f243-bd43-4e62-bc2f-2f7d19ea5edd',
+  'ed9b11af-3b24-4a3a-92fe-03c0572130b0',
+  '975d5b8f-674b-47df-8917-69dd15cf7b43',
+  '0a003892-5c35-4c94-971d-5a0c25d34de4',
+  'e3b67b65-3000-4f8b-b51a-d5791d27d40a',
+  'a82c8798-e79d-476f-a728-e0b36fcd55d2',
+  '4d69b3da-57b0-40cb-a2f1-173174a8238f',
+  'b1acae6c-f1ed-4b20-a044-62ee659ca895',
+  '50d4ecba-67e7-4422-8045-2d23b95b8b9a',
+  '122568f2-8549-4ce9-9710-6b79df5f610a',
+  '333bad8e-73a6-4c2c-b47d-d66b590bee25',
+  '10639480-5f59-4b95-ba1f-0f348b188de3',
+  'bf9d0033-d6c2-41f1-859d-9b923026703d',
+  '550dbabd-585d-415b-9585-8ff816056271',
+  'f38e657b-c4ce-42ee-916c-d7221e0bec10',
+  'd8399e91-78e7-4bd0-9752-20e1087f02ac',
+  'a615b470-a156-4fee-a38b-e48d68cfe0cf',
+  'be5d09da-73d5-453d-8fa3-b470f57196ed',
+  '1714c98b-f3d5-47fb-9c83-e5ba3df88dc3',
+  '3da11d92-f5bc-4d37-9094-8a273ab772cd',
+  'b3ba28c1-3ad1-49c7-9fe8-537a2323620d',
+  '094ee2b7-74ec-485d-b4d4-7f3401244240',
+  'e69232bf-dcef-47b8-8efe-3b4dfe463f26',
+  '49a0a65a-0a3b-4f0e-8680-321b13749b93',
+  'ab4cfc15-1789-47c5-8dd5-fc35f98d9833',
+  'dba6f1b9-89b2-4a70-b3fd-aafc85d52217',
+  'b87b606f-0d0e-4909-953f-78a038017845',
+  '08bbadae-8051-4a84-a209-0e8b77887061',
+  '61e85ec0-c4f2-4d89-b676-c376210698cc',
+  'd7592737-6c62-495e-bff0-06c4964b3642',
+  '78b7e0e9-b30d-425e-a4de-471d06721082',
+  'd413cbf9-5cdf-4908-9122-3313326e6054',
+  '5423f655-2642-4102-aaf8-5b24d1e72ca8',
+  '5aa5d1b2-fc9f-4cf6-a9b9-d40d6a9d23bf',
+  '23e74659-c28b-4495-8438-57e22e3158f3',
+  'f02f5868-13c2-486a-9530-6626390183ac',
+  'c394613a-3c6f-4e0d-9c38-dff91b93b29d',
+  'b1c0c636-196e-487d-a53a-c9de5cd0ad3c',
+  '0c25f052-16a5-407e-a405-85a6b34757d4',
+  'cd527c8b-5bf9-48c3-bde2-c11595032f78',
+  'c96bcf9a-17fe-4eda-8080-fc1aa9f729f6',
+  '3fa42286-926c-40f3-b527-a67c65bd7f70',
+  'af9ced5d-cb30-4868-b192-675349e03211',
+  '3f602190-79ed-4b76-aa67-d3d2b11d3975',
+  'd8e8956e-f22c-4b70-94d2-ca26cd562638',
+  'fcfc34a4-9fee-4353-8c18-a6f8c8af87f3',
+  '11b1c83d-f78e-4a6d-8613-eeea304e82ec',
+  '0d45e824-5a9d-4a57-a01e-6bab3c68a1ab',
+  '57bf4e0e-b54a-4766-8909-ce4c970f78e0',
+  'cd1df386-34d0-454c-9f9e-4fa7a401621d',
+  'e581e4ab-abe0-4c60-b7d9-731b54d8f1ff',
+  '921b4d58-02b8-482b-a502-fe712f079634',
+  'debebf83-2f38-420c-b1bd-4838a09fdb5b',
+  'b930d5bc-97c3-4805-b544-2508cc193505',
+  'abf41300-efa5-4e6a-a95a-e318df9c4d06',
+  '40554e3c-40b4-4ab7-8ab8-285e54d8e19e',
+  '54274bd2-4ae3-457e-b90a-3201411a5663',
+  'dab9a957-7caa-4a3c-b82e-a6d9b11c6a44',
+  '002e21eb-20e7-4d94-b4b9-7d1ef6f6743d',
+  '8dd2329e-0b30-46b3-b68e-e4861af25b6d',
+  'c4a19f12-a52c-444f-810d-d0f48eee52bf',
+  '5608e653-a214-41b9-ac6c-49457701d197',
+  'a2853e79-4816-495c-838e-bb24bb6f6fb4',
+  '92ef5a44-f6ad-4464-844a-6f738ef9d837',
+  'a2e11c3a-b261-45b3-b353-761aec77ec4c',
+  'da1f6153-8c3a-434c-b82b-860763101bb9',
+  'c570f3e1-e39f-4657-ad20-36c1541e772b',
+  '6613a1cc-2b97-41f8-8614-384c257f6baf',
+  'a3337395-8f88-4aa9-9bf4-3f913a90ec0d',
+  '106c3191-5e6b-4977-a67e-ae80b4cbd2b9',
+  '3c1688a2-c938-4e49-b46b-28f5c5b74dd0',
+  'a693a748-83aa-4d85-b9bf-e7ae8417d7b2',
+  '19e6c266-77d6-46af-9ee5-8262b5f1f207',
+  '2405fddd-f041-4b40-bb26-9274428abfd6',
+];
+
+/** What the photograph is, and the letter each answer is written as. The
+ *  definitions are the skill's (.claude/skills/photo-labels/SKILL.md). */
+export const KINDS_3 = [
+  { key: 'F', vi: 'Đồ ăn', en: 'Food' },
+  { key: 'I', vi: 'Nội thất', en: 'Interior' },
+  { key: 'E', vi: 'Mặt tiền', en: 'Exterior' },
+  { key: 'V', vi: 'Phong cảnh', en: 'View' },
+  { key: 'T', vi: 'Chữ', en: 'Text' },
+  { key: 'O', vi: 'Khác', en: 'Other' },
+  { key: 'U', vi: 'Không chắc', en: 'Not sure' },
+];
+
+/** The six cover criteria, in the order they are written in the line. */
+export const ATTRS = [
+  { key: 'brand', vi: 'Biển hiệu', hint: 'Tên, logo hay biển của quán đọc được' },
+  { key: 'wide', vi: 'Toàn cảnh', hint: 'Thấy cả nơi chốn: cả phòng, cả mặt tiền, không phải một món hay một góc' },
+  { key: 'green', vi: 'Cây xanh', hint: 'Cây cối chiếm một phần đáng kể của khung' },
+  { key: 'daylight', vi: 'Ánh sáng ngày', hint: 'Sáng chủ yếu nhờ trời: nắng, trời râm, cửa sổ. Đèn hay ban đêm là Không' },
+  { key: 'people', vi: 'Người', hint: 'Người là chủ thể hoặc chiếm phần lớn khung. Khách nhỏ ở xa là Không' },
+  { key: 'staged', vi: 'Dàn dựng', hint: 'Như ảnh quảng cáo: người mẫu tạo dáng, hoặc chữ in đè lên ảnh' },
+];
+
+/** An attribute's answer, and the next one a tap moves it to. "No" first,
+ *  because most photographs are no on most of the six (in the trial, people
+ *  was yes on 6 of 137 and brand on 22): one tap per yes, two for "can't
+ *  tell". The cost is that an attribute nobody looked at reads as no, so
+ *  the round is scored by agreement on the yeses (kappa), not by raw
+ *  agreement, which "no" everywhere would win. */
+export const STATES = [
+  { key: '0', vi: 'Không' },
+  { key: '1', vi: 'Có' },
+  { key: '?', vi: 'Không rõ' },
+];
+export const nextState = (s) => STATES[(STATES.findIndex((x) => x.key === s) + 1) % STATES.length].key;
+
+/** The definitions of the kinds, shown folded under the photograph. */
+export const GUIDE_3 = [
+  'Xét theo chủ thể: thứ chiếm phần lớn khung và được lấy nét, không xét ảnh có trời hay cây.',
+  'Đồ ăn: đồ ăn, đồ uống là chủ thể, kể cả khi phía sau có view.',
+  'Nội thất: bên trong quán: phòng, bàn ghế, quầy, kệ, cầu thang. Có người trong quán vẫn là Nội thất.',
+  'Mặt tiền: nơi chốn nhìn từ ngoài: mặt tiền, lối vào, biển hiệu, toà nhà, hiên như một phần toà nhà. Nhà thờ, bảo tàng dưới trời xanh vẫn là Mặt tiền.',
+  'Phong cảnh: cảnh vật là chủ thể: trời, nước, cây, toàn cảnh thành phố. Vườn hay công viên chính là nơi chốn, chụp như phong cảnh, là Phong cảnh.',
+  'Chữ: menu, bảng, poster: thứ để đọc hơn là để nhìn.',
+  'Khác: chân dung cận, một vật không thấy nơi chốn, ảnh hỏng.',
+];
+
+/** An answer as the line writes it: the kind's letter and the six
+ *  attributes, e.g. `I010100`; seven dashes where there is none. */
+export const code = (a) => (a?.kind ? a.kind + ATTRS.map((x) => a.attrs?.[x.key] ?? '0').join('') : '-'.repeat(1 + ATTRS.length));
+
+/** The answers as one line, a code per photograph in sample order. */
+export const encode3 = (sample, answers) => sample.map((id) => code(answers[id])).join(' ');
+
+/** Where to pick up: the first photograph with no kind, or the end. */
+export function firstOpen3(sample, answers) {
+  const i = sample.findIndex((id) => !answers[id]?.kind);
+  return i === -1 ? sample.length : i;
+}

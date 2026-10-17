@@ -10,9 +10,11 @@ labels are judgements, not measurements, and live beside Apple Vision's
 measurements in `photo_scores`, as a second scorer
 (`docs/photo-labels.md`).
 
-**This file holds the definitions.** `docs/photo-labels.md` §3 copies them
-for reading, but a change is made here first, under the rules in "Growing
-the set" below.
+**The definitions are not in this file.** They are `DEFINITIONS` in
+`supabase/functions/_shared/photoLabels.ts`, the same text the
+`label-photos` Edge Function sends its model, so the two halves of the
+`claude-labels` scorer answer the same questions. Read it before every
+batch. A change is made there, under the rules in "Growing the set" below.
 
 **Answer from the photograph alone.** Do not read Vision's stored labels,
 rule v0, the place's category or its name before labelling. Those are the
@@ -93,46 +95,11 @@ photograph reported `MISSING` gets no label; list it in the report.
 
 ## 3. The labels, v1
 
-**`kind`** — exactly one, by the **subject**: what fills the frame and is
-in focus. Never by whether the photograph merely contains sky or a tree.
-
-| value | when |
-|---|---|
-| `food` | Food or drink is the subject, even with a view behind it. A tray of drinks counts; a bar back-wall of bottles does not |
-| `interior` | Inside the place: rooms, seating, counters, shelves, a staircase. People in the room do not change it |
-| `exterior` | The place from outside: the front, the entrance, the sign, the building, a terrace seen as part of the building |
-| `view` | Scenery is the subject: sky, water, greenery, a skyline, a sunset. Any building is only a frame (a railing, a window edge). A garden or park that is the place itself, shown as landscape, is `view` |
-| `text` | A menu, a board, a poster: something to read rather than look at |
-| `other` | None of the above: a close portrait, an object with no place in it, a blank or broken image |
-
-Edge cases settled by the owner's rounds:
-- A church, library or museum under a blue sky is `exterior` or
-  `interior`, never `view`.
-- A barista at work or guests at a counter is `interior`.
-- Drinks on a table in front of a city view are `food`.
-
-Not yet settled. Mark these `unsure` until round 3 settles them:
-- A monument in grounds: a fountain, a statue, a tank on display.
-- A covered gallery looking into a courtyard.
-- A garden that fills the frame, with a building only glimpsed: steps
-  through it, benches in it, a pavilion among trees.
-
-**Attributes** — `true`, `false`, or `null` when the photograph cannot
-say (too dark, too cropped):
-
-| key | true when |
-|---|---|
-| `brand` | A sign, logo or the place's name is legible in the frame |
-| `wide` | The frame takes in the place as a whole (a room, a front, a terrace), not one dish, one corner or one shelf |
-| `green` | Plants or trees are a noticeable part of the frame, not a single sprig |
-| `daylight` | Lit mainly by natural daylight (sun, overcast sky, a window). Lamps or night makes it `false`. A close-up of a dish with no window or sky in frame often cannot say: `null` (31 of 137 in the trial) |
-| `people` | One or more people are the subject or fill a large part of the frame. Passers-by in the distance are `false` |
-| `staged` | It looks like an advertisement: a posed model, or text and graphics laid over the photograph |
-
-Optional keys:
-- `"unsure": true` when you would not bet on the `kind`. The app ignores
-  unsure rows.
-- `"note"` holds one short sentence, only for a case worth explaining.
+Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
+answer each photograph by them: one `kind`, and each of the six attributes
+yes, no or can't tell. Mark the kind `unsure` whenever you would not bet
+on it, and always for the cases the file lists as not yet settled. Add a
+note only for a case worth explaining.
 
 ## 4. Write
 
@@ -201,16 +168,18 @@ skill's and the desk's job, and it waits on round 3 (`docs/photo-labels.md`
 
 ## Growing the set
 
-`VERSION` is 1. The `signals` of every row carry `"v"`. Four rules, from
-`docs/photo-labels.md` §4:
+`VERSION` is 1, in `photoLabels.ts`. The `signals` of every row carry
+`"v"`. Four rules, from `docs/photo-labels.md` §4:
 
 1. **Never reuse a key for a new meaning.** A new meaning gets a new key.
-2. **Adding a key changes nothing else.** Add it to the table in §3, to
-   the `?&` list in step 1, and to `ATTRS` in `write.py`. Rows without the key come back from the query
-   and are asked only for what they lack; the merge in step 4 keeps the
-   rest.
+2. **Adding a key changes nothing else.** Add it to `ATTRS` and
+   `DEFINITIONS` in `photoLabels.ts`, to the `?&` list in step 1, and to
+   `ATTRS` in `write.py` (a test fails until the two lists agree).
+   Rows without the key come back from the query and are asked only for
+   what they lack; the merge in step 4 keeps the rest.
 3. **A new `kind` value, or a changed definition, means a new version.**
-   Bump `VERSION` in `write.py` and the `scorer_version` in the query in
-   step 1. Every older row then comes back to be labelled again.
-4. **Write the change here first,** then copy it into
+   Bump `VERSION` in `photoLabels.ts` and `write.py`, and the
+   `scorer_version` in the query in step 1. Every older row then comes
+   back to be labelled again.
+4. **Write the change in `photoLabels.ts` first,** then copy it into
    `docs/photo-labels.md` §3, in the same PR.
