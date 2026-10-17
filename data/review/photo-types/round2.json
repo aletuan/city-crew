@@ -311,5 +311,9 @@
   {
    "id": "ec92ef13-434e-43fa-8ac0-4fce19da8e2a"
   }
- ]
+ ],
+ "owner": "PPPPPPPFPPFPFFPPFPPPFPSPPPFFPPPFFPUFFFPPPPFPPFPFFFPPPFFPPPPFFPFPSPPFPPPPFPFPFPFFPPPFPPPPPPPPFPPFPPFP",
+ "about_owner": "The owner's answers, pasted 17 Oct 2026 after Claude's were committed; same order.",
+ "rule": "PPPPPPPFPPFPPFPPFPPPPPPPPPPPPPPPPPPPFPPPPPPPPFPPFFPPPFFPPPPFFPFPPPPPPPPPFPPPPPPPPPPPPPPPPPPPPPPFPPFP",
+ "about_rule": "Rule v0 (rule_v0.py) on the same photographs, computed after both answered."
 }
