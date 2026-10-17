@@ -480,7 +480,7 @@ rõ".
 - **Không đặt sẵn câu trả lời:** mỗi thuộc tính là một hàng ba nút Có,
   Không, Không rõ, không nút nào được chọn trước. Nút Tiếp chỉ mở khi đã
   trả lời đủ ba câu.
-- Gán nhãn 60 ảnh tốn khoảng 0,9 USD.
+- Gán nhãn 60 ảnh tốn khoảng 0,8 USD.
 
 - Câu trả lời v2 của cả hai model được lưu ở khoá `function_v2` trong
   `round3.json` và `round2.json`.
