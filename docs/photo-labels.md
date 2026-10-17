@@ -190,7 +190,7 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
 | 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ✅ 17/10: vòng 3 (loại ảnh), 3b (sáu thuộc tính), 3c (24 ảnh mới: loại ảnh, thấy cả không gian, người). Kết quả ở mục 10. Dàn dựng chưa đo được vì chưa có ảnh nào chủ sản phẩm chọn "Có" |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ✅ 17/10: 6.467 ảnh, Haiku 5.5, định nghĩa v4 (mục 10). Ảnh thêm sau đó chưa được gán tự động: app và Data Desk chưa gọi `label-photos` |
-| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (có đề xuất riêng) | ☐ |
+| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (đề xuất ở mục 11) | ☐ đề xuất 17/10, chờ chủ sản phẩm duyệt |
 
 **Tiêu chí để một nhãn được hiện trong app (bước 6):**
 - `kind` trùng với chủ sản phẩm từ **90%** trở lên.
@@ -571,3 +571,81 @@ Bảng tính trên 6.455 ảnh, trước 12 ảnh cuối. Tỷ lệ phần trăm
   Theo ngưỡng ở mục 8, nó chưa được hiện trong app.
 - Khoảng 11% ảnh (694) được đánh `unsure` về loại. Tỷ lệ này cao nhất ở
   ảnh phong cảnh (187/325) và mặt tiền (182/1.085).
+
+## 11. Bước 6: đề xuất (17/10/2026)
+
+Đề xuất này viết trước khi có code (nguyên tắc 8 của `photo-critic.md`).
+Chủ sản phẩm duyệt xong mới làm.
+
+**Mục đích.** Giúp người chọn ảnh bìa, bằng cách **gợi ý** chứ không tự đổi
+ảnh bìa. Đây là bước 5 của `photo-critic.md`: điểm "hợp làm bìa" là một
+trục riêng, không gộp vào điểm đẹp (D4).
+
+**Điểm "hợp làm bìa"**, lấy theo tiêu chí ảnh bìa của skill Threads và chốt
+trước khi đo:
+- **Điều kiện:** loại ảnh là Mặt tiền, Nội thất hoặc Phong cảnh, và có
+  "Thấy cả không gian" (tiêu chí 1).
+- **Cộng 1 điểm** cho mỗi tiêu chí: có biển hiệu (tiêu chí 2), ánh sáng
+  ngày (tiêu chí 4), không có người (tiêu chí 5).
+- **Không tính** cây xanh (Haiku đạt 84%, dưới ngưỡng 85%) và dàn dựng
+  (chưa đo được). Thêm hai thuộc tính này vào thì kết quả đo bên dưới gần
+  như không đổi (74% so với 73%).
+- Ảnh có nhãn `unsure` vẫn được tính. Đây là một câu hỏi để chủ sản phẩm
+  quyết.
+
+**Đã đo trên catalog**, ở 1.000 địa điểm có từ 3 ảnh hiện trở lên và đúng
+một ảnh bìa (trung bình 6,4 ảnh mỗi nơi; ảnh cùng điểm thì chia đều thứ
+hạng):
+
+| | Ảnh bìa đứng đầu | Ảnh bìa trong top 3 |
+|---|---|---|
+| **Điểm hợp làm bìa** | **34%** | **73%** |
+| Chọn ngẫu nhiên | 17% | 52% |
+| Điểm đẹp của Apple Vision (42 nơi, mục 5.1 của `photo-critic.md`) | 14% | 62% |
+
+- Theo loại của ảnh bìa hiện tại, tỷ lệ lọt top 3 là: Mặt tiền 88%, Nội
+  thất 80%, Phong cảnh 73%, Đồ ăn 39%.
+- **185 ảnh bìa là ảnh đồ ăn.** Ở **199 nơi**, ảnh bìa không phải ảnh
+  thấy cả không gian, trong khi nơi đó có ảnh khác đạt điều kiện. Đây là
+  những nơi gợi ý có ích nhất.
+- **Cần thận trọng khi đọc kết quả:**
+  - Một phần ảnh bìa do chính skill Threads chọn theo những tiêu chí này,
+    nên kết quả hơi vòng tròn.
+  - Ảnh guide tải lên tự thành ảnh bìa (trigger
+    `guide_upload_becomes_cover`), nên ở ảnh tải lên tỷ lệ chỉ còn 61%.
+  - Lần đo sạch là ở phần A bên dưới: người duyệt nhận hay bỏ từng gợi ý.
+
+**Hiện gì.** Ba phần, làm theo thứ tự. Chủ sản phẩm chọn làm đến đâu:
+
+| | Ở đâu | Hiện gì | Cần trước |
+|---|---|---|---|
+| **A** | Data Desk | Danh sách "Ảnh bìa nên xem lại": 199 nơi kể trên, mỗi nơi có ảnh bìa hiện tại cạnh ảnh được gợi ý, kèm lý do (thấy cả mặt tiền, có biển, ánh sáng ngày). Người duyệt bấm Đổi hoặc Giữ, và câu trả lời được lưu lại để đo | Không có |
+| **B** | Gallery trong app (guide và editor) | Dấu "Gợi ý bìa" trên ảnh có điểm cao nhất khi ảnh đó chưa phải ảnh bìa, cùng một dòng lý do. Bấm vào là hành động "Đặt làm ảnh bìa" đã có | Chính sách quyền riêng tư, và kết quả đo ở A |
+| **C** | Sheet ảnh | Một icon trung tính cho loại ảnh, ẩn khi `unsure`. Ghi "Nhãn do Claude gán", tách khỏi dòng "Phân tích trên máy bằng Apple Vision" | Chính sách quyền riêng tư |
+
+**Không làm ở bước này:** tự đổi ảnh bìa; xếp hạng danh sách công khai theo
+nhãn; hiện cây xanh hay dàn dựng.
+
+**Điều kiện trước khi app hiện nhãn:**
+1. **Chính sách quyền riêng tư.** 950 ảnh do guide tải lên đã được gửi tới
+   Anthropic để gán nhãn ở bước 5. Trong khi đó `legal.ts` viết rằng ngoài
+   Supabase, phần viết kế hoạch và các dịch vụ được liệt kê thì "không chia
+   sẻ dữ liệu với bất kỳ ai". Cần thêm một đoạn, chủ sản phẩm duyệt câu chữ.
+   Bản nháp:
+   - *vi:* "Ảnh trong danh mục, kể cả ảnh bạn thêm cho một địa điểm, cũng
+     được gửi qua máy chủ của chúng tôi tới model Claude của Anthropic, để
+     ghi nhận ảnh chụp gì (món ăn, bên trong, bên ngoài, cảnh) và có hợp làm
+     ảnh bìa không. Chỉ ảnh được gửi, không kèm gì nhận dạng bạn. Anthropic
+     xử lý với vai trò nhà cung cấp dịch vụ và không dùng để huấn luyện
+     model."
+   - *en:* bản dịch tương ứng.
+2. **Ảnh mới.** Hiện chưa có gì gọi `label-photos` khi ảnh được thêm. Ảnh
+   guide tải lên lại tự thành ảnh bìa, nên phải có nhãn. Đề xuất: một
+   trigger trên `place_photos` gọi function qua `pg_net` khi ảnh đã lưu vào
+   bucket, dùng một ops token có sẵn như `shrink-photos`. Việc này cần một
+   migration riêng.
+3. **Điều khoản Google (C1)** vẫn mở (mục 7).
+
+**Tiêu chí thành công:** ở phần A, ghi tỷ lệ người duyệt nhận gợi ý trên 50
+nơi đầu tiên. Có làm phần B hay không, chủ sản phẩm quyết dựa trên con số
+đó.
