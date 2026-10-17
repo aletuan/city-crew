@@ -354,6 +354,18 @@ describe('the date picker', () => {
     expect([toISO(max), max.getHours(), max.getMinutes()]).toEqual([addDays(TODAY, 365), 23, 59]);
   });
 
+  // PLAN-07: the grid was labelled in the phone's language, so a
+  // Vietnamese screen opened on "October / MON TUE" under "Xong".
+  it.each([['en', 'en-GB'], ['vi', 'vi-VN'], ['ja', 'ja-JP']] as const)(
+    'labels the calendar in the app\'s language: %s → %s',
+    (lang, locale) => {
+      state.lang = lang;
+      renderScreen();
+      fireEvent.click(screen.getByTestId('ideas-day-chevron'));
+      expect(picker.props?.locale).toBe(locale);
+    },
+  );
+
   // The glyph at the row's end is a control, not a picture of one. It
   // ends this row because it ends the row above it, and a reader who
   // aims at it has to land somewhere.
