@@ -283,12 +283,13 @@ function SettingsCard() {
             back to them. Under Preferences, with how the app speaks and
             looks: whether it offers tips is the same kind of choice. It
             first went under App, and read there as something about the
-            build. "Tip", not "mẹo", in the Vietnamese: the word the owner
-            reads it by. The glyph is "again", not the tips' own circled
+            build. "Gợi ý" in the Vietnamese since 17 Oct 2026 (UX-07); it
+            was the loanword "tip" until the owner moved it, and not "mẹo",
+            which reads as a trick. The glyph is "again", not the tips' own circled
             "i", which About wears. */}
         <SettingRow
           icon="refresh-outline"
-          label={t('Show tips again', 'Bật lại các tip', 'ヒントをもう一度表示')}
+          label={t('Show tips again', 'Bật lại các gợi ý', 'ヒントをもう一度表示')}
           value={tipsBack ? t('Done', 'Đã bật lại', 'オンにしました') : undefined}
           onPress={() => {
             void resetTips(session?.user?.id).then(() => {
