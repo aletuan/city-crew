@@ -267,6 +267,19 @@ D. Nhưng C trái nguyên tắc 4.
   sản phẩm gọi là Địa điểm). Vòng 1 chưa có định nghĩa cho hai loại này, nên
   **vòng 1b** (`#/photo-types-1b`) hỏi lại 57 ảnh chủ sản phẩm gọi là Địa
   điểm hoặc Phong cảnh, với định nghĩa theo chủ thể của ảnh hiện trên trang.
+  **Kết quả vòng 1b:** Phong cảnh vẫn chỉ đúng **9/30**; chủ sản phẩm đổi ý
+  9/57 ảnh so với vòng 1. Định nghĩa làm câu trả lời nhất quán hơn, nhưng
+  nhãn Vision không tách được "toà nhà dưới trời" khỏi "khung cảnh".
+  **Vòng 2 (`#/photo-types-2`, 100 ảnh mới, ngẫu nhiên):** Claude chấm trước,
+  chỉ nhìn ảnh, câu trả lời commit kèm sha256 trước khi chủ sản phẩm chấm
+  (`data/review/photo-types/round2.json`). Claude và chủ sản phẩm trùng
+  **96/100**, kappa **0,92**; khác nhau ở 2 ảnh đồ uống trước view hay trên
+  quầy bar, và 2 ảnh có người (Claude chọn Không rõ, chủ sản phẩm chọn Địa
+  điểm). Luật v0 trên ảnh mới: nói Món ăn **16/16 đúng**, nhưng chỉ bắt được
+  16/33 ảnh món ăn (48%); không gọi ảnh nào là Phong cảnh.
+  → Phân loại ảnh là việc mô hình hiểu ảnh làm tốt gần như người (cách C,
+  mục 7), còn nhãn Vision chỉ làm được nửa phần Món ăn. Cách C trái nguyên
+  tắc 4; 200 nhãn tay của hai vòng là dữ liệu khởi đầu cho cách D.
 
 ## 10. Việc tiếp theo
 
