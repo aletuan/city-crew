@@ -60,6 +60,10 @@ const PAGE_HEAD = {
     title: 'Coverage',
     sub: 'Where the catalog actually is — published places per district, so thin quận stand out before users notice.',
   },
+  '/photo-types': {
+    title: 'Photo types',
+    sub: 'Food, place or scenery — one photograph at a time.',
+  },
   // The editor. Its title is the room's name, not the place's, for the
   // same reason the three above are: these name the screen you are in,
   // and the place's own name is already the loudest thing on it — the

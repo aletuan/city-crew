@@ -14,6 +14,7 @@ import Contributors from './components/Contributors.jsx';
 import Reports from './components/Reports.jsx';
 import Coverage from './components/Coverage.jsx';
 import PlaceList from './components/PlaceList.jsx';
+import PhotoTypes from './components/PhotoTypes.jsx';
 import PlaceEditor from './components/PlaceEditor.jsx';
 import ScanCity from './components/ScanCity.jsx';
 import SearchTerms from './components/SearchTerms.jsx';
@@ -36,6 +37,8 @@ export const routes = [
       { path: 'reports', element: <Reports /> },
       { path: 'analytics/contributors', element: <Contributors /> },
       { path: 'analytics/coverage', element: <Coverage /> },
+      // Not in the navigation: a measurement round, reached by its link.
+      { path: 'photo-types', element: <PhotoTypes /> },
     ],
   },
 ];

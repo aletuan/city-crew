@@ -613,6 +613,13 @@ export const api = {
     return { ok: true };
   },
 
+  /** Where each photograph is, by id: the photo-type round shows them
+   *  in its own order, and a photograph deleted since is simply absent. */
+  photoUris: async (ids) => {
+    const rows = db(await supabase.from('place_photos').select('id, photo_uri').in('id', ids));
+    return Object.fromEntries(rows.map((r) => [r.id, r.photo_uri]));
+  },
+
   reorderPhotos: async (slug, ids) => {
     for (const [i, id] of ids.entries()) {
       db(await supabase.from('place_photos').update({ sort_order: i }).eq('id', id).select('id'));

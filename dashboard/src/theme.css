@@ -1874,3 +1874,41 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .place-editor .rbtn { flex: 1; }
   .place-editor .save-state { font-size: 12px; }
 }
+
+/* ── Photo types (#/photo-types) ──
+   A phone first: the photograph as large as the screen allows, and four
+   answers a thumb can reach without moving the hand. */
+.pt { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.pt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pt-count { color: var(--text-secondary); font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.pt-back {
+  min-height: 40px; padding: 0 12px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border-glass-soft); background: var(--surface-glass); color: var(--text-primary);
+}
+.pt-back:disabled { opacity: 0.35; cursor: default; }
+.pt-frame {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 240px; border-radius: var(--radius-card); overflow: hidden; background: #000;
+}
+.pt-photo { display: block; width: 100%; max-height: 58vh; object-fit: contain; }
+.pt-preload { display: none; }
+.pt-gone { color: var(--text-secondary); padding: 24px; text-align: center; }
+.pt-kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pt-btn {
+  min-height: 64px; padding: 8px 12px; border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: 1px solid var(--border-glass); background: var(--surface-glass); color: var(--text-primary);
+}
+.pt-btn b { font-size: 17px; font-weight: 600; }
+.pt-btn span { font-size: 12px; color: var(--text-tertiary); }
+.pt-btn.on { border-color: var(--ok); background: rgba(74, 222, 128, 0.14); }
+.pt-primary { border-color: var(--ok); }
+.pt-title { margin: 0; font-size: 20px; }
+.pt-note { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+.pt-line {
+  width: 100%; box-sizing: border-box; padding: 12px; border-radius: var(--radius-input);
+  border: 1px solid var(--border-control); background: var(--bg-input); color: var(--text-primary);
+  font-family: var(--font-data); font-size: 15px; letter-spacing: 0.08em; word-break: break-all;
+}
+.pt-actions { display: flex; gap: 10px; }
+.pt-actions .pt-btn { flex: 1; min-height: 52px; }

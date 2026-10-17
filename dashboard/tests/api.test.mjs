@@ -562,6 +562,16 @@ test('moderateCollection names the list and which way the switch goes', async ()
   assert.deepEqual(client.calls[0].args, { target: 'c1', hide: false });
 });
 
+test('photoUris answers id → address for the ids asked, and only those', async () => {
+  const { api, client } = await loadApi([{
+    data: [{ id: 'a', photo_uri: 'https://x/a.jpg' }, { id: 'b', photo_uri: 'https://x/b.jpg' }],
+    error: null,
+  }]);
+  assert.deepEqual(await api.photoUris(['a', 'b', 'gone']), { a: 'https://x/a.jpg', b: 'https://x/b.jpg' });
+  assert.equal(client.calls[0].table, 'place_photos');
+  assert.deepEqual(client.calls[0].chain.find(([m]) => m === 'in'), ['in', ['id', ['a', 'b', 'gone']]]);
+});
+
 test('categoryTerms answers category → terms, and a null terms column is an empty list', async () => {
   const { api } = await loadApi([{
     data: [{ category: 'fun', terms: ['cinema'] }, { category: 'food', terms: null }],
