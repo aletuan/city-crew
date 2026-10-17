@@ -13,11 +13,12 @@
 // one barely-visible beat behind, so the two never cross mid-dock.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Animated, type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { useScheme } from '../lib/theme';
-import { colors, radius } from '../theme';
-import { GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarFrame, useTabBarLift } from './ui';
+import { colors, font, radius } from '../theme';
+import { GlassMaterial, glassHalo, PressableScale, TAB_BAR_HEIGHT, useTabBarFrame, useTabBarLift } from './ui';
 
 /**
  * Whether the dock may show: `eligible` held through the gate's settle
@@ -53,7 +54,10 @@ export function useDockOffer(
  */
 export function DockSlot({ visible, onPress, accessibilityRole, style, testID, children }: {
   visible: boolean;
-  onPress?: () => void;
+  /** The island is a press, always: both docks now say their offer in a
+   *  sentence the whole island answers to (owner, 17 Oct 2026). The
+   *  collection's held two buttons and no press of its own until then. */
+  onPress: () => void;
   accessibilityRole?: 'button';
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -101,22 +105,51 @@ export function DockSlot({ visible, onPress, accessibilityRole, style, testID, c
         },
       ]}
     >
-      {onPress ? (
-        <PressableScale onPress={onPress} scaleTo={0.985} style={island} accessibilityRole={accessibilityRole}>
-          {glass}
-          {children}
-        </PressableScale>
-      ) : (
-        <View style={island}>
-          {glass}
-          {children}
-        </View>
-      )}
+      <PressableScale onPress={onPress} scaleTo={0.985} style={island} accessibilityRole={accessibilityRole}>
+        {glass}
+        {children}
+      </PressableScale>
     </Animated.View>
   );
 }
 
+/**
+ * What the dock offers, said in a glyph and two lines: what it is, then
+ * what it is for. Explore's "Not finding it?" first; the collection
+ * page's "Plan a trip" since 17 Oct 2026, on the owner's ask that the two
+ * docks be one design — a sentence on the left that the whole island
+ * answers to, and the gradient pill at the right for the second act —
+ * "+ Địa điểm" on both, where a place is what it adds.
+ * Shared, so the two cannot drift apart a point at a time.
+ *
+ * The halo, because the glass under these words is thin and whatever
+ * scrolls beneath it is unknown.
+ */
+export function DockOffer({ icon, title, sub }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  sub: string;
+}) {
+  const light = useScheme().scheme === 'light';
+  return (
+    <>
+      <Ionicons name={icon} size={18} color={colors.text} style={glassHalo(light)} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[s.title, glassHalo(light)]} numberOfLines={1}>{title}</Text>
+        <Text style={[s.sub, glassHalo(light)]} numberOfLines={1}>{sub}</Text>
+      </View>
+    </>
+  );
+}
+
 const s = StyleSheet.create({
+  title: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  // Full strength, where this was `textTertiary` — which is #6E695E, the
+  // exact mid-tone that could not be read on thin glass over a
+  // photograph. Size and weight carry the hierarchy instead of colour:
+  // 13 regular under 15 semibold is already two steps down, and it is
+  // the pair of steps that survives an unknown ground.
+  sub: { color: colors.text, fontSize: 13, opacity: 0.72 },
   wrap: { position: 'absolute' },
   dock: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

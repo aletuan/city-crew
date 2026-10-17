@@ -2034,6 +2034,9 @@ describe('the actions and the dock', () => {
   });
 
 
+  // The whole island is the press, as Explore's is.
+  const island = () => screen.getByTestId('collection-dock').firstElementChild as HTMLElement;
+
   it('rises into the dock once the card has gone and the bar has ducked', () => {
     state.ducked = true;
     const { parent } = show();
@@ -2041,48 +2044,54 @@ describe('the actions and the dock', () => {
     expect(screen.queryByTestId('collection-dock')).toBeNull();
     pastTheCard();
     settle();
-    const dock = screen.getByTestId('collection-dock');
-    fireEvent.click(screen.getByTestId('collection-dock-plan'));
+    // Explore's shape (owner, 17 Oct 2026): the plan said in two lines,
+    // then the gradient "+ Địa điểm" — the very pill Explore's dock ends in.
+    expect(screen.getByTestId('collection-dock').textContent)
+      .toBe('Plan a tripUse this list for a tripPlace');
+    expect(island().querySelector('[data-icon="paw"]')).toBeTruthy();
+    fireEvent.click(island());
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.objectContaining({ params: expect.objectContaining({ from: 'old-quarter' }) }));
+    spies.goTo.mockClear();
     const add = screen.getByTestId('collection-dock-add');
-    // The quiet one: glass, the noun beside its "+" — not Explore's "Add",
-    // which adds a place the catalog lacks — its name whole for VoiceOver.
+    expect(add.querySelector('[data-icon="add"]')).toBeTruthy();
+    // The noun on screen, the whole act for VoiceOver.
     expect(add.getAttribute('aria-label')).toBe('Add place');
     fireEvent.click(add);
     expect(parent.navigate).toHaveBeenCalledWith('Explore');
-    expect(dock.textContent).toBe('PlacePlan a trip');
+    // The pill is its own press, not the island's.
+    expect(spies.goTo).not.toHaveBeenCalled();
   });
 
-  // Six on every side, so a button sits in the island as the island sits
-  // in the screen; the dock's own 18 / 10 / 8 are for a line of text.
-  const inset = () => {
-    const st = getComputedStyle(screen.getByTestId('collection-dock').firstElementChild!);
-    return [st.paddingTop, st.paddingRight, st.paddingBottom, st.paddingLeft];
-  };
-
-  it('holds its two buttons the same distance from every edge', () => {
+  it('says it in the owner\u2019s chosen words, in Vietnamese', () => {
+    state.lang = 'vi';
     state.ducked = true;
     show();
     pastTheCard();
     settle();
-    expect(inset()).toEqual(['6px', '6px', '6px', '6px']);
+    expect(screen.getByTestId('collection-dock').textContent)
+      .toBe('Lên kế hoạchDùng danh sách này cho chuyến điĐịa điểm');
   });
 
-  it('offers a visitor the copy in the dock, beside the Plan', () => {
+  it('offers a visitor the copy as the gradient pill', () => {
     state.ducked = true;
     state.mine = [];
     state.cols = [theirs()];
     const { raw } = show();
     pastTheCard();
     settle();
-    expect(screen.getByTestId('collection-dock').textContent).toBe('Save a copyPlan a trip');
+    expect(screen.getByTestId('collection-dock').textContent)
+      .toBe('Plan a tripUse this list for a tripSave a copy');
     expect(screen.queryByTestId('collection-dock-add')).toBeNull();
-    expect(inset()).toEqual(['6px', '6px', '6px', '6px']);
+    const pill = screen.getByTestId('collection-dock-copy');
+    // The ⋯ menu's copy glyph, not a plus.
+    expect(pill.querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
+    expect(pill.querySelector('[data-icon="add"]')).toBeNull();
     // The same copy the ⋯ menu makes: the form, waiting, nothing written.
-    fireEvent.click(screen.getByTestId('collection-dock-copy'));
+    fireEvent.click(pill);
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       copyFrom: expect.objectContaining({ sourceId: 'c1', cityId: 'hanoi' }),
     });
+    expect(spies.goTo).not.toHaveBeenCalled();
   });
 
   it('asks a signed-out visitor to sign in before the copy', () => {
@@ -2098,7 +2107,7 @@ describe('the actions and the dock', () => {
     expect(raw.navigate).not.toHaveBeenCalledWith('CollectionForm', expect.anything());
   });
 
-  it('names the list instead where there is no city to file a copy under', () => {
+  it('is the plan alone where there is no city to file a copy under', () => {
     state.ducked = true;
     state.mine = [];
     state.cols = [theirs({ city_id: null } as Partial<Collection>)];
@@ -2106,10 +2115,10 @@ describe('the actions and the dock', () => {
     show();
     pastTheCard();
     settle();
-    expect(screen.getByTestId('collection-dock').textContent).toBe('Old Quarter eatsPlan a trip');
+    expect(screen.getByTestId('collection-dock').textContent).toBe('Plan a tripUse this list for a trip');
     expect(screen.queryByTestId('collection-dock-copy')).toBeNull();
-    // A line of text keeps the dock's own lead-in.
-    expect(inset()[3]).toBe('18px');
+    fireEvent.click(island());
+    expect(spies.goTo).toHaveBeenCalledWith('Ideas', expect.anything());
   });
 
   it('stays away while the card is still on screen, or while the bar holds the dock', () => {
