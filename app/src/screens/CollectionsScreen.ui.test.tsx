@@ -600,6 +600,24 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.queryByText('List mine1')).toBeNull();
   });
 
+  // UX-09: Profile's counts land on Yours with a fresh `at`. The screen
+  // is the one left behind when the reader went into a collection, still
+  // scrolled to where they were; it starts again from the top.
+  it('lands on Yours, from the top, when Profile\'s count sends it', () => {
+    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
+    state.cols.data = [col('theirs', ['a'])];
+    const navigation = nav();
+    const { rerender } = render(
+      <CollectionsScreen navigation={navigation} route={{ params: { tab: 'community' } }} />,
+    );
+    const scroller = screen.getByText('List theirs').closest('[class*="overflowY"]') as HTMLElement;
+    scroller.scrollTop = 400;
+    rerender(<CollectionsScreen navigation={navigation} route={{ params: { tab: 'yours', at: 5 } }} />);
+    expect(screen.getByText('List mine1')).toBeTruthy();
+    expect(screen.queryByText('List theirs')).toBeNull();
+    expect(scroller.scrollTop).toBe(0);
+  });
+
   it('switching tabs swaps the shelf', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     state.cols.data = [col('theirs', ['a'])];

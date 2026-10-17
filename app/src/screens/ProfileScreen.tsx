@@ -724,11 +724,26 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // and "where"). A tab navigator is the parent when the screen is in the
   // app; the root ref is the way out when it is not, naming each tab's
   // first screen (see the guest link's note on `getParent()?.`).
+  //
+  // To the tab's list, at its top, every time — not to wherever the tab
+  // was last left. A bare `navigate(tab)` restored that tab's stack, so
+  // "48 Saved places" opened whichever collection the reader had been in
+  // (UX-09, 17 Oct 2026): a door whose room depended on history. `pop`
+  // closes what was open above the list — React Navigation 7's
+  // `navigate` no longer goes back to a screen already in the stack on
+  // its own — `at` is a fresh param the list reads as "scroll to the
+  // top", and Collections is aimed at Yours, the half these counts are of.
   const hop = (tab: 'Collections' | 'Trips', first: 'CollectionsHome' | 'TripsHome') => {
     fireHaptic('selection');
+    const at = Date.now();
+    const params = {
+      screen: first,
+      params: tab === 'Collections' ? { tab: 'yours', at } : { at },
+      pop: true,
+    };
     const parent = navigation.getParent();
-    if (parent) parent.navigate(tab);
-    else goTo(tab, { screen: first });
+    if (parent) parent.navigate(tab, params);
+    else goTo(tab, params);
   };
 
   return (
