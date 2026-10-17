@@ -109,6 +109,9 @@ function Section({ title, cols, children }: {
   );
 }
 
+/** The date picker's locale for each app language — see its note. */
+const PICKER_LOCALE: Record<'en' | 'vi' | 'ja', string> = { en: 'en-GB', vi: 'vi-VN', ja: 'ja-JP' };
+
 export default function IdeasScreen({ navigation, route }: {
   navigation: Nav;
   /** Optional, since the tab mounts this screen with no params at all. */
@@ -835,6 +838,18 @@ export default function IdeasScreen({ navigation, route }: {
               value={fromISO(day) ?? new Date()}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              // In the app's language, not the phone's. Left to the phone,
+              // a Vietnamese screen opened "October 2026 / MON TUE…" under
+              // a "Xong" button on a phone set to English (PLAN-07, 17 Oct
+              // 2026). English is the British reading, the one `dateline`
+              // already writes ("Tue, 20 Oct") and the one that starts the
+              // week on Monday, as Vietnamese and the old grid did.
+              //
+              // iOS only: Android's dialog takes no locale and follows the
+              // system. The prop only names how the grid is labelled — the
+              // day still comes back as a Date and goes through `toISO`, so
+              // which day was picked does not depend on it.
+              locale={PICKER_LOCALE[lang]}
               // The past is refused rather than clamped after the fact:
               // there is no plan to sketch for last Tuesday, and a picker
               // that lets you choose one and then silently moves you is
