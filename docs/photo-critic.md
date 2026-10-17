@@ -255,6 +255,12 @@ D. Nhưng C trái nguyên tắc 4.
   "Địa điểm"; không chắc thì không hiện. Đo trên các ảnh đã chấm trước khi
   viết code (nguyên tắc 7, 8). Nếu có, là icon trung tính, không phải nhãn
   có màu (mục 11).
+  **Vòng 1 (17/10):** luật v0 (`data/review/photo-types/rule_v0.py`) chốt
+  trước khi có nhãn tay, đoán trên 434 ảnh: 84 Món ăn, 30 Phong cảnh, 310
+  Địa điểm, 10 Không chắc. Mẫu 100 ảnh (30 mỗi loại luật đoán, 10 Không
+  chắc, xáo trộn) chấm tay ở Data Desk `#/photo-types`, trang không hiện
+  lời đoán. Lời đoán của luật theo đúng thứ tự trang nằm ở
+  `data/review/photo-types/round1.json`.
 
 ## 10. Việc tiếp theo
 

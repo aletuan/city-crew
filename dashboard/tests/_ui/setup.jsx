@@ -78,6 +78,7 @@ const API_DEFAULTS = {
   scanCity: async () => ({ imported: [], skipped_existing: 0, errors: [] }),
   patchPhoto: async () => ({ ok: true }),
   reorderPhotos: async () => ({ ok: true }),
+  photoUris: async () => ({}),
   uploadPhoto: async () => ({ id: 'uploaded' }),
   deletePhoto: async () => ({ ok: true, left: [] }),
 };

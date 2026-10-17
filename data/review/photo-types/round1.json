@@ -1,0 +1,614 @@
+{
+ "round": 1,
+ "frozen": "2026-10-17",
+ "about": "Rule v0's answer for each photograph of the Data Desk round (#/photo-types), in the page's order. Frozen before any hand label was seen; the page never shows it. Score the pasted line against `rule` position by position. The rule itself is rule_v0.py beside this file.",
+ "letters": {
+  "F": "food",
+  "P": "place",
+  "S": "scenery",
+  "U": "unsure"
+ },
+ "rule": "FUFPUSFFPFSSFFSSSFUPPUFPSFPPFPPFSFSFSPSFPSSSSSFPSSPPPPUUPPUSFSSSSSPPSPPFFFFPFPFPPPFSPFFFFPFUPSSUUSSF",
+ "photos": [
+  {
+   "id": "2e2be6be-057d-46f3-92a7-bdea0e55dd63",
+   "rule": "F",
+   "place": "l-entrecote-social-meating",
+   "labels": "utensil:0.92 tableware:0.92 drink:0.91 liquid:0.91 wine:0.91"
+  },
+  {
+   "id": "3aa180c5-d2ee-4534-b7ba-45a32a2e0418",
+   "rule": "U",
+   "place": "bup-sky-cuisine-asian-fusion",
+   "labels": "outdoor:0.84 structure:0.79 sky:0.77 night_sky:0.77 building:0.67"
+  },
+  {
+   "id": "0dc516a9-dc77-4a76-8c61-7eaeebc842b2",
+   "rule": "F",
+   "place": "the-hanoi-social-club",
+   "labels": "structure:0.92 wood_processed:0.92 tableware:0.91 utensil:0.91 plate:0.91"
+  },
+  {
+   "id": "ab108496-bd57-41a8-a3ab-c6029ff861da",
+   "rule": "P",
+   "place": "mono-coffee-lab-ho-xuan-huong",
+   "labels": "structure:0.95 wood_processed:0.93 utensil:0.92 tableware:0.92 drinking_glass:0.90"
+  },
+  {
+   "id": "909f5459-de9d-4690-98dd-338e1a80c4ca",
+   "rule": "U",
+   "place": "son-sushi-bar",
+   "labels": "structure:0.93 food:0.92 condiment:0.88 seasonings:0.88 furniture:0.86"
+  },
+  {
+   "id": "509a615b-9d14-4551-acca-087d4ab03654",
+   "rule": "S",
+   "place": "royal-botanic-gardens-victoria-melbourne-gardens",
+   "labels": "outdoor:0.95 blue_sky:0.95 sky:0.95 plant:0.74 palm_tree:0.69"
+  },
+  {
+   "id": "3a9445b5-2132-4175-b55b-1648abd139cf",
+   "rule": "F",
+   "place": "mono-coffee-lab-ho-xuan-huong",
+   "labels": "coffee:0.91 drink:0.91 liquid:0.91 tableware:0.88 utensil:0.88"
+  },
+  {
+   "id": "7230a143-e17c-4c98-a262-a90b6d6a322c",
+   "rule": "F",
+   "place": "bottari",
+   "labels": "tableware:0.92 utensil:0.92 cup:0.85 coffee:0.83 drink:0.83"
+  },
+  {
+   "id": "ab1b7dc8-e211-473d-a03e-ec192e7ff05c",
+   "rule": "P",
+   "place": "mellow-coffee",
+   "labels": "structure:0.90 wood_processed:0.84 conveyance:0.66 portal:0.66 window:0.66"
+  },
+  {
+   "id": "d54807f0-047b-4c5c-992f-6d980f78262c",
+   "rule": "F",
+   "place": "tron-xin-chao",
+   "labels": "tableware:0.78 utensil:0.78 drinking_glass:0.76 liquid:0.67 frozen:0.64"
+  },
+  {
+   "id": "8fe75ea3-0798-459f-b354-cbb54fd2c642",
+   "rule": "S",
+   "place": "royal-botanic-gardens-victoria-melbourne-gardens",
+   "labels": "outdoor:0.94 blue_sky:0.94 sky:0.94 plant:0.92 foliage:0.91"
+  },
+  {
+   "id": "7715a348-66ba-41d9-abb8-76432d76740e",
+   "rule": "S",
+   "place": "kumo-desserts-melbourne",
+   "labels": "outdoor:0.81 land:0.81 people:0.80 adult:0.80 path:0.72"
+  },
+  {
+   "id": "586ee3b2-ca1f-4b4b-88d6-c23f25205bd6",
+   "rule": "F",
+   "place": "pome-cafe",
+   "labels": "tableware:0.95 utensil:0.95 plate:0.88 drinking_glass:0.86 food:0.84"
+  },
+  {
+   "id": "fcf257e5-60fe-4a8b-9da3-1cbc9285e5f1",
+   "rule": "F",
+   "place": "floral-notes-coffee-wine",
+   "labels": "tableware:0.96 utensil:0.96 structure:0.94 wood_processed:0.94 plate:0.88"
+  },
+  {
+   "id": "60582cfd-655f-45cb-ab88-18ee928ab5dd",
+   "rule": "S",
+   "place": "ozone-sky-lounge-restaurant-hanoi",
+   "labels": "people:0.90 adult:0.89 outdoor:0.73 night_sky:0.73 sky:0.73"
+  },
+  {
+   "id": "e84ae6ca-aebe-4f98-b5f8-2d7c41739991",
+   "rule": "S",
+   "place": "deep-sii-van-bao",
+   "labels": "outdoor:0.81 structure:0.79 sky:0.78 blue_sky:0.78 people:0.75"
+  },
+  {
+   "id": "9b35ad75-6029-4c5a-b447-040cb6a39d57",
+   "rule": "S",
+   "place": "bottari",
+   "labels": "outdoor:0.87 land:0.78 sky:0.74 blue_sky:0.73 tableware:0.72"
+  },
+  {
+   "id": "a814a84a-f8e7-4f55-bd5b-c9aa7442fe6f",
+   "rule": "F",
+   "place": "bup-sky-cuisine-asian-fusion",
+   "labels": "tableware:0.99 utensil:0.99 drinking_glass:0.92 plate:0.91 fork:0.77"
+  },
+  {
+   "id": "3697c665-9342-4a21-bd6d-95390a146741",
+   "rule": "U",
+   "place": "ashtray-bespoke",
+   "labels": "liquid:0.62 frozen:0.62 ice:0.62 water:0.62 drinking_glass:0.50"
+  },
+  {
+   "id": "30daec93-8ce7-4f99-aa14-22bcb66f9a19",
+   "rule": "P",
+   "place": "pome-cafe",
+   "labels": "structure:0.78 furniture:0.73 table:0.73 plant:0.57 decorative_plant:0.55"
+  },
+  {
+   "id": "2210afd3-478e-439a-8e80-34d88b077962",
+   "rule": "P",
+   "place": "memento-saigon",
+   "labels": "structure:0.68 furniture:0.62 table:0.62 people:0.53 adult:0.53"
+  },
+  {
+   "id": "3ae163d5-0a09-4c82-8f64-99113b2c2a21",
+   "rule": "U",
+   "place": "cha-mo-coffee",
+   "labels": "structure:0.86 conveyance:0.84 portal:0.84 outdoor:0.81 sky:0.79"
+  },
+  {
+   "id": "9642f019-1d39-4fd6-a8f8-71e6d6444b92",
+   "rule": "F",
+   "place": "tan-lab",
+   "labels": "tableware:0.95 utensil:0.95 plate:0.88 cup:0.85 drink:0.47"
+  },
+  {
+   "id": "54f06784-bc25-4149-b318-c33b54d70a85",
+   "rule": "P",
+   "place": "kho-4-coffee-lab",
+   "labels": "structure:0.64 people:0.63 adult:0.63 fence:0.63 plant:0.55"
+  },
+  {
+   "id": "4e35f639-467e-4cd9-9a97-e613c231d564",
+   "rule": "S",
+   "place": "shrine-of-remembrance",
+   "labels": "outdoor:0.82 sky:0.81 cloudy:0.75 blue_sky:0.63 land:0.44"
+  },
+  {
+   "id": "d2d9ccb7-a591-4613-bf8a-5a6f59893e71",
+   "rule": "F",
+   "place": "infinite-wasabi",
+   "labels": "structure:0.93 wood_processed:0.93 food:0.82 condiment:0.73 seasonings:0.73"
+  },
+  {
+   "id": "44532e62-9850-4a10-89b4-b662f9891172",
+   "rule": "P",
+   "place": "marianne-s-pizza",
+   "labels": "structure:0.87 wood_processed:0.81 conveyance:0.68 portal:0.68 window:0.68"
+  },
+  {
+   "id": "39bfe4d3-fd82-4810-8f34-477a1df2ddc8",
+   "rule": "P",
+   "place": "l-entrecote-social-meating",
+   "labels": "structure:0.82 conveyance:0.82 portal:0.82 door:0.81 payphone:0.47"
+  },
+  {
+   "id": "4326ab81-5a36-4eb6-b7e6-10d98431767e",
+   "rule": "F",
+   "place": "every-half-coffee-roasters-pho-cha-ca",
+   "labels": "utensil:0.96 tableware:0.96 drinking_glass:0.90 plate:0.85 fork:0.59"
+  },
+  {
+   "id": "c87e6610-ce99-4332-8bb8-2ec8425d9d3d",
+   "rule": "P",
+   "place": "9981-coffee-wine-tapas-cafe-nha-tho-lon-ha-noi",
+   "labels": "utensil:0.91 tableware:0.91 structure:0.90 drinking_glass:0.86 wood_processed:0.83"
+  },
+  {
+   "id": "6a29e9ea-310b-45d0-a1d8-bd460f74ff4a",
+   "rule": "P",
+   "place": "mellow-coffee",
+   "labels": "structure:0.75 plant:0.70 decorative_plant:0.70 outdoor:0.63 building:0.63"
+  },
+  {
+   "id": "8c7d4c5c-c805-42ce-b16b-c1fe9d0775ee",
+   "rule": "F",
+   "place": "hoi-quan-coffee",
+   "labels": "tableware:0.88 utensil:0.88 drinking_glass:0.88 liquid:0.74 drink:0.74"
+  },
+  {
+   "id": "23a34e50-207d-4b52-923c-a2b659f04725",
+   "rule": "S",
+   "place": "royal-botanic-gardens-victoria-melbourne-gardens",
+   "labels": "outdoor:0.95 blue_sky:0.91 sky:0.91 land:0.79 grass:0.74"
+  },
+  {
+   "id": "98b289e6-9c6b-4ca0-ab10-c5ef8246d212",
+   "rule": "F",
+   "place": "kumo-desserts-melbourne",
+   "labels": "tableware:0.92 utensil:0.92 food:0.92 structure:0.90 wood_processed:0.90"
+  },
+  {
+   "id": "e3ba5148-5341-4ce4-a091-8529d2300fb8",
+   "rule": "S",
+   "place": "pizza-4p-s-ben-thanh",
+   "labels": "outdoor:0.89 sky:0.86 blue_sky:0.77 structure:0.75 cloudy:0.74"
+  },
+  {
+   "id": "6c62c06d-03c4-4ea1-8f7d-07b831bb4776",
+   "rule": "F",
+   "place": "sushi-ichi-1",
+   "labels": "structure:0.90 wood_processed:0.90 food:0.87 sushi:0.83 seafood:0.65"
+  },
+  {
+   "id": "1c598f80-50d4-4fae-8408-7a94a216eedc",
+   "rule": "S",
+   "place": "nhan-eatery-wine",
+   "labels": "outdoor:0.95 blue_sky:0.95 sky:0.95 plant:0.92 foliage:0.92"
+  },
+  {
+   "id": "df7824d4-3e36-4853-bbfb-d1e8ff4da595",
+   "rule": "P",
+   "place": "off-street-fine-coffee",
+   "labels": "art:0.90 decoration:0.90 frame:0.90 structure:0.73 furniture:0.64"
+  },
+  {
+   "id": "6181f888-52e1-43e1-8336-915c830583ac",
+   "rule": "S",
+   "place": "sam-saigon",
+   "labels": "outdoor:0.88 sky:0.87 blue_sky:0.87 structure:0.60 conveyance:0.57"
+  },
+  {
+   "id": "bd1f11d9-059d-4c5a-bb70-c516f8b1ab72",
+   "rule": "F",
+   "place": "deep-sii-van-bao",
+   "labels": "tableware:0.97 utensil:0.97 plate:0.94 drinking_glass:0.74 cup:0.67"
+  },
+  {
+   "id": "a145a399-3ac6-4eca-b55d-70e0315e5659",
+   "rule": "P",
+   "place": "mai-haus-coffee-and-working-space",
+   "labels": "structure:0.98 wood_processed:0.91 people:0.85 adult:0.85 furniture:0.80"
+  },
+  {
+   "id": "999969fd-703d-4f70-86e2-17ddcee2d031",
+   "rule": "S",
+   "place": "kho-4-coffee-lab",
+   "labels": "outdoor:0.92 sky:0.92 cloudy:0.89 structure:0.86 conveyance:0.86"
+  },
+  {
+   "id": "71a813cd-e344-40af-8adb-d118d87477a1",
+   "rule": "S",
+   "place": "royal-botanic-gardens-victoria-melbourne-gardens",
+   "labels": "outdoor:0.88 plant:0.88 palm_tree:0.88 tree:0.88 sky:0.88"
+  },
+  {
+   "id": "543453aa-9555-4496-bfee-86ec060fe471",
+   "rule": "S",
+   "place": "shrine-of-remembrance",
+   "labels": "outdoor:0.61 sky:0.60 cloudy:0.60 structure:0.42 dome:0.42"
+  },
+  {
+   "id": "5e5019f5-c19b-47b2-8c76-9e9594d82008",
+   "rule": "S",
+   "place": "state-library-victoria",
+   "labels": "outdoor:0.94 sky:0.93 cloudy:0.89 structure:0.85 art:0.82"
+  },
+  {
+   "id": "1f4ddcef-e1c9-4403-b287-8c868238431e",
+   "rule": "S",
+   "place": "house-of-merlin-cocktail-bar-eatery",
+   "labels": "outdoor:0.91 blue_sky:0.91 sky:0.91 structure:0.87 conveyance:0.86"
+  },
+  {
+   "id": "1a63697b-3c83-4d26-9380-475768d07df2",
+   "rule": "F",
+   "place": "foco-kitchen-bar",
+   "labels": "utensil:0.61 tableware:0.61 plate:0.61 document:0.24 printed_page:0.24"
+  },
+  {
+   "id": "f9bb4f09-776e-4d34-a435-0982daadd2dd",
+   "rule": "P",
+   "place": "off-street-fine-coffee",
+   "labels": "structure:0.79 furniture:0.73 table:0.73 machine:0.69 appliance:0.68"
+  },
+  {
+   "id": "073ff5ac-ee55-4790-bea7-7501b2b735e3",
+   "rule": "S",
+   "place": "sunrise-lounge-rooftop-sky-bar",
+   "labels": "outdoor:0.89 sky:0.89 blue_sky:0.89 people:0.88 adult:0.88"
+  },
+  {
+   "id": "0042499a-ac3c-4922-88b4-13370257230c",
+   "rule": "S",
+   "place": "backyard-specialty-coffee-shop",
+   "labels": "structure:0.89 wood_processed:0.85 outdoor:0.74 sky:0.71 blue_sky:0.70"
+  },
+  {
+   "id": "a2c021dd-4151-4232-be06-0f27de23cdc1",
+   "rule": "P",
+   "place": "ozone-sky-lounge-restaurant-hanoi",
+   "labels": "people:0.69 adult:0.69 light:0.33 candle:0.33 art:0.31"
+  },
+  {
+   "id": "b1f6ab04-3e0a-489b-9078-a75e9d743332",
+   "rule": "P",
+   "place": "sushi-ichi-1",
+   "labels": "structure:0.81 furniture:0.78 table:0.78 wood_processed:0.57 material:0.19"
+  },
+  {
+   "id": "3d298df1-4f2f-49b6-8a91-be7831a2418a",
+   "rule": "P",
+   "place": "cha-mo-coffee",
+   "labels": "structure:0.89 furniture:0.79 table:0.79 wood_processed:0.78 plant:0.54"
+  },
+  {
+   "id": "4eb693e4-5d14-42b5-a3ee-36b0b79e5331",
+   "rule": "P",
+   "place": "royal-botanic-gardens-victoria-melbourne-gardens",
+   "labels": "plant:0.77 foliage:0.67 ferns:0.65 structure:0.33 outdoor:0.33"
+  },
+  {
+   "id": "9a8b5853-7ee1-4051-b3ba-3a97fa4ffc6c",
+   "rule": "U",
+   "place": "st-mary-star-of-the-sea",
+   "labels": "outdoor:0.74 land:0.74 grass:0.71 structure:0.70 arch:0.67"
+  },
+  {
+   "id": "8f90f60a-2d68-461b-8bc9-17411bbb154b",
+   "rule": "U",
+   "place": "st-paul-s-cathedral-melbourne",
+   "labels": "outdoor:0.88 blue_sky:0.88 sky:0.88 structure:0.78 arch:0.76"
+  },
+  {
+   "id": "91a8d12c-ab15-4505-8ef2-bceb81f59f84",
+   "rule": "P",
+   "place": "bold-brew-cafe-work-date-huynh-thuc-khang",
+   "labels": "plant:0.83 foliage:0.83 structure:0.56 fence:0.54 conveyance:0.29"
+  },
+  {
+   "id": "a574b2bc-e796-4362-9384-220592f614fa",
+   "rule": "P",
+   "place": "noi-premium-wood-fire-dining-restaurant-bar",
+   "labels": "interior_room:0.80 restaurant:0.80 structure:0.67 furniture:0.64 table:0.64"
+  },
+  {
+   "id": "c40cb7e9-05b1-4445-9acd-a257872f4ed0",
+   "rule": "U",
+   "place": "nhan-eatery-wine",
+   "labels": "utensil:0.89 tableware:0.89 plate:0.84 structure:0.66 furniture:0.63"
+  },
+  {
+   "id": "6b860ef9-00b2-4b84-b2bc-30b39ad5b0fd",
+   "rule": "S",
+   "place": "st-paul-s-cathedral-melbourne",
+   "labels": "outdoor:0.98 sky:0.98 blue_sky:0.93 cloudy:0.91 structure:0.43"
+  },
+  {
+   "id": "24533a39-1eb0-4a73-95bd-8dc2be9ef92c",
+   "rule": "F",
+   "place": "eureka-89-dining-events",
+   "labels": "tableware:0.92 utensil:0.92 fork:0.85 plate:0.80 material:0.44"
+  },
+  {
+   "id": "93d9553e-8582-4c05-bffc-3af43f357ffe",
+   "rule": "S",
+   "place": "shrine-of-remembrance",
+   "labels": "structure:0.79 conveyance:0.79 stairs:0.79 outdoor:0.74 sky:0.67"
+  },
+  {
+   "id": "72bb88b8-289c-4af7-80e1-c3e85ed8e6f4",
+   "rule": "S",
+   "place": "national-gallery-of-victoria",
+   "labels": "outdoor:0.96 sky:0.96 blue_sky:0.89 cloudy:0.88 land:0.26"
+  },
+  {
+   "id": "170fc447-ecc8-4e14-93df-712f31f1dc28",
+   "rule": "S",
+   "place": "state-library-victoria",
+   "labels": "outdoor:0.98 structure:0.95 sky:0.95 blue_sky:0.89 cloudy:0.86"
+  },
+  {
+   "id": "9780d05d-403f-414a-b5ce-58dde7d7d794",
+   "rule": "S",
+   "place": "st-paul-s-cathedral-melbourne",
+   "labels": "outdoor:0.72 sky:0.72 cloudy:0.72 light:0.32 lamppost:0.32"
+  },
+  {
+   "id": "a5e5dc88-8096-4a61-b2ca-e160aa8e1de6",
+   "rule": "S",
+   "place": "laluna-cafe-brunch-midtown",
+   "labels": "outdoor:0.98 sky:0.98 cloudy:0.93 blue_sky:0.92 structure:0.85"
+  },
+  {
+   "id": "adb469e9-6845-4b49-81ee-c79191faff1a",
+   "rule": "P",
+   "place": "kho-4-coffee-lab",
+   "labels": "structure:0.89 furniture:0.83 table:0.83 conveyance:0.74 portal:0.74"
+  },
+  {
+   "id": "117cee66-be07-4296-baa5-c2958fbdf397",
+   "rule": "P",
+   "place": "state-library-victoria",
+   "labels": "structure:0.78 wood_processed:0.65 furniture:0.53 table:0.53 arch:0.51"
+  },
+  {
+   "id": "6b981aa1-35da-41a3-a3ef-99d057f34016",
+   "rule": "S",
+   "place": "maia-beach-bar",
+   "labels": "outdoor:0.99 sky:0.99 umbrella:0.95 utensil:0.95 cloudy:0.94"
+  },
+  {
+   "id": "bcb09e2e-a37d-4926-a7a7-885d1b3071d8",
+   "rule": "P",
+   "place": "hoi-quan-coffee",
+   "labels": "structure:0.36 wood_processed:0.36 machine:0.25 appliance:0.25 material:0.20"
+  },
+  {
+   "id": "a5f6d2db-fbd2-4b2a-84c1-5646b9b4049e",
+   "rule": "P",
+   "place": "bloomwood-galleria",
+   "labels": "structure:0.72 wood_processed:0.72 material:0.56 raw_glass:0.56 textile:0.17"
+  },
+  {
+   "id": "beeacad8-d45f-4030-a324-4fdb4ec30e32",
+   "rule": "F",
+   "place": "chat-bistro",
+   "labels": "food:0.99 vegetable:0.99 carrot:0.96 bean:0.94 pea:0.94"
+  },
+  {
+   "id": "8c855c54-ad92-4489-850e-7f350ac2f8a7",
+   "rule": "F",
+   "place": "mono-coffee-lab-ho-xuan-huong",
+   "labels": "tableware:0.88 utensil:0.88 cup:0.61 drink:0.35 liquid:0.35"
+  },
+  {
+   "id": "a3d5fc3b-6f20-4e9d-98eb-4e196c4fd7a1",
+   "rule": "F",
+   "place": "taptap-brunch",
+   "labels": "structure:0.89 utensil:0.89 tableware:0.89 wood_processed:0.85 plate:0.81"
+  },
+  {
+   "id": "2625b14c-3870-4838-8b0f-5bbddfb806bd",
+   "rule": "F",
+   "place": "eureka-89-dining-events",
+   "labels": "tableware:0.94 utensil:0.94 plate:0.93 fork:0.49 food:0.42"
+  },
+  {
+   "id": "a902bb0c-82cf-4bec-b8b5-df9405957e7b",
+   "rule": "P",
+   "place": "foco-kitchen-bar",
+   "labels": "structure:0.89 furniture:0.83 table:0.83 art:0.82 decoration:0.82"
+  },
+  {
+   "id": "33d9b4d9-a386-458b-a5c1-d72b97349d68",
+   "rule": "F",
+   "place": "house-of-merlin-cocktail-bar-eatery",
+   "labels": "food:0.85 pizza:0.83 utensil:0.76 cutting_board:0.75 structure:0.63"
+  },
+  {
+   "id": "c1f68313-a64c-4701-9dca-328e0e5fe55f",
+   "rule": "P",
+   "place": "house-of-merlin-cocktail-bar-eatery",
+   "labels": "people:0.86 adult:0.86 material:0.58 brick:0.58 structure:0.38"
+  },
+  {
+   "id": "578b6362-c4a0-4500-8aa8-5fa6ef2208ee",
+   "rule": "F",
+   "place": "mono-coffee-lab-ho-xuan-huong",
+   "labels": "structure:0.91 wood_processed:0.91 tableware:0.86 utensil:0.86 fork:0.81"
+  },
+  {
+   "id": "ecfeb5ae-02ef-4e52-81a1-e59a928eca84",
+   "rule": "P",
+   "place": "national-gallery-of-victoria",
+   "labels": "art:0.62 statue:0.62 people:0.35 adult:0.35 material:0.29"
+  },
+  {
+   "id": "2a13861b-3642-489b-9389-d7858a3206ae",
+   "rule": "P",
+   "place": "bengal-rooftop",
+   "labels": "lamp:0.88 light:0.88 tableware:0.76 utensil:0.76 drinking_glass:0.76"
+  },
+  {
+   "id": "d63225a0-f574-482c-ba87-dd20ecb02f7a",
+   "rule": "P",
+   "place": "shrine-of-remembrance",
+   "labels": "structure:0.75 outdoor:0.53 sky:0.52 cloudy:0.47 blue_sky:0.39"
+  },
+  {
+   "id": "2489fbb4-d6a6-4174-9995-341454642ef9",
+   "rule": "F",
+   "place": "attica",
+   "labels": "tableware:0.87 utensil:0.87 plate:0.87 material:0.26 textile:0.26"
+  },
+  {
+   "id": "72f69510-0419-43b8-a0da-42c2e4a85719",
+   "rule": "S",
+   "place": "shrine-of-remembrance",
+   "labels": "outdoor:0.98 sky:0.94 blue_sky:0.90 land:0.88 grass:0.88"
+  },
+  {
+   "id": "7bbc7697-6b5d-4a11-941e-a428e394345b",
+   "rule": "P",
+   "place": "backyard-specialty-coffee-shop",
+   "labels": "plant:0.87 decorative_plant:0.87 machine:0.81 vehicle:0.81 motorcycle:0.80"
+  },
+  {
+   "id": "51be20f7-f94c-4523-a174-3ce395e87a73",
+   "rule": "F",
+   "place": "kumo-desserts-melbourne",
+   "labels": "structure:0.92 wood_processed:0.92 utensil:0.86 tableware:0.86 plate:0.86"
+  },
+  {
+   "id": "d63e9b29-46b7-41b0-9771-6456c23db3be",
+   "rule": "F",
+   "place": "9981-coffee-wine-tapas-cafe-nha-tho-lon-ha-noi",
+   "labels": "utensil:0.66 tableware:0.66 plate:0.62 fork:0.45 structure:0.42"
+  },
+  {
+   "id": "3035e7fc-d1be-42fb-bbf4-28f31e596d90",
+   "rule": "F",
+   "place": "gogyo-fitzroy",
+   "labels": "structure:0.95 wood_processed:0.95 tableware:0.88 utensil:0.88 plate:0.85"
+  },
+  {
+   "id": "c0a84117-1cd7-4f89-9ca1-5a70531c43eb",
+   "rule": "F",
+   "place": "house-of-merlin-cocktail-bar-eatery",
+   "labels": "tableware:0.88 utensil:0.88 drinking_glass:0.88 liquid:0.81 drink:0.81"
+  },
+  {
+   "id": "1d97033f-6e6d-46e1-af35-2e887f8e50c1",
+   "rule": "P",
+   "place": "sunrise-lounge-rooftop-sky-bar",
+   "labels": "material:0.87 textile:0.87 people:0.85 adult:0.85 interior_room:0.83"
+  },
+  {
+   "id": "93cf4968-969b-4d27-b15b-9c14c4c6a519",
+   "rule": "F",
+   "place": "attica",
+   "labels": "food:0.72 seafood:0.72 shellfish:0.72 lobster:0.72 tableware:0.46"
+  },
+  {
+   "id": "f17a5aed-cd35-49b4-a92b-df78b0f1cee6",
+   "rule": "U",
+   "place": "national-gallery-of-victoria",
+   "labels": "outdoor:0.92 blue_sky:0.92 sky:0.92 structure:0.77 arch:0.71"
+  },
+  {
+   "id": "1bbf66c3-3bfd-4edb-906f-771864d34a6c",
+   "rule": "P",
+   "place": "bar-hop-hanoi",
+   "labels": "structure:0.53 furniture:0.48 table:0.45 wood_processed:0.41 light:0.35"
+  },
+  {
+   "id": "eca691ec-98c0-4bb0-950c-f7cd018cf142",
+   "rule": "S",
+   "place": "st-mary-star-of-the-sea",
+   "labels": "outdoor:0.89 structure:0.76 sky:0.75 blue_sky:0.75 land:0.74"
+  },
+  {
+   "id": "a53d73e8-40f0-48ec-a533-4c85c0f8f4cd",
+   "rule": "S",
+   "place": "every-half-coffee-roasters-pho-cha-ca",
+   "labels": "outdoor:0.90 sky:0.87 cloudy:0.87 structure:0.82 wood_processed:0.74"
+  },
+  {
+   "id": "b28b6938-3659-45e5-82bc-6bf6ec82afe5",
+   "rule": "U",
+   "place": "ann-dessert-by-trang-le",
+   "labels": "tableware:0.62 utensil:0.62 bowl:0.56 outdoor:0.54 land:0.54"
+  },
+  {
+   "id": "f9ab6ce4-692a-4199-bea2-50cd3745769c",
+   "rule": "U",
+   "place": "maia-beach-bar",
+   "labels": "outdoor:0.84 sky:0.84 sunset_sunrise:0.84 liquid:0.60 water:0.60"
+  },
+  {
+   "id": "5e23c21e-fa5e-4a7b-b1b5-60e643ae5be4",
+   "rule": "S",
+   "place": "st-mary-star-of-the-sea",
+   "labels": "outdoor:0.78 land:0.71 road:0.70 street:0.70 sky:0.60"
+  },
+  {
+   "id": "d64ad209-4edb-40de-9793-828e84778009",
+   "rule": "S",
+   "place": "royal-botanic-gardens-victoria-melbourne-gardens",
+   "labels": "outdoor:0.77 sky:0.77 blue_sky:0.77 structure:0.70 rocks:0.69"
+  },
+  {
+   "id": "2a1e01a2-9785-4eff-9fd6-6cfe162ba423",
+   "rule": "F",
+   "place": "the-hanoi-social-club",
+   "labels": "food:0.96 tableware:0.94 utensil:0.94 plate:0.94 seasonings:0.92"
+  }
+ ]
+}
