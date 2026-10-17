@@ -175,10 +175,13 @@ export default function TipBox({ eligible, done, reader }: {
       <Ionicons name={TIP_ICON} size={18} color={colors.accent} style={s.icon} />
       {/* The word is gone from the screen but not from VoiceOver, which
           does not read the glyph: without it a tip is heard as one more
-          sentence of the page. "Tip" in the Vietnamese too, not "Mẹo",
-          the word the Profile row that brings them back uses ("Hiện lại
-          các tip"). */}
-      <Text style={s.text} accessibilityLabel={`${t('Tip', 'Tip', 'ヒント')}: ${TIPS[shown](t)}`}>
+          sentence of the page. "Gợi ý" in the Vietnamese, the word the
+          Profile row that brings them back uses ("Bật lại các gợi ý").
+          It was the loanword "Tip" until 17 Oct 2026 (UX-07), when the
+          owner moved it: VoiceOver read it with English vowels, in the
+          middle of a Vietnamese sentence. Not "Mẹo", which reads as a
+          trick rather than a pointer. */}
+      <Text style={s.text} accessibilityLabel={`${t('Tip', 'Gợi ý', 'ヒント')}: ${TIPS[shown](t)}`}>
         {TIPS[shown](t)}
       </Text>
       <PressableScale
@@ -189,7 +192,7 @@ export default function TipBox({ eligible, done, reader }: {
         haptic="selection"
         hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel={t('Dismiss tip', 'Ẩn tip', 'ヒントを閉じる')}
+        accessibilityLabel={t('Dismiss tip', 'Ẩn gợi ý', 'ヒントを閉じる')}
       >
         <Ionicons name="close" size={18} color={colors.textTertiary} />
       </PressableScale>

@@ -56,13 +56,13 @@ describe('one tip a visit', () => {
     expect(screen.getByText('Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.')).toBeTruthy();
   });
 
-  // The glyph says "tip" on screen; the word is for VoiceOver only. "Tip",
-  // as Profile's "Bật lại các tip" says, not "Mẹo".
+  // The glyph says "tip" on screen; the word is for VoiceOver only.
+  // "Gợi ý", as Profile's "Bật lại các gợi ý" says (UX-07), not "Mẹo".
   it('says "Tip" to a screen reader and not on screen', async () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();
-    expect(screen.queryByText(/Tip|Mẹo/)).toBeNull();
-    expect(screen.getByLabelText('Tip: Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.')).toBeTruthy();
+    expect(screen.queryByText(/Tip|Gợi ý|Mẹo/)).toBeNull();
+    expect(screen.getByLabelText('Gợi ý: Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.')).toBeTruthy();
   });
 
   // The bulb, the mark a reader knows for a tip, not the circled "i"
@@ -145,7 +145,7 @@ describe('retiring', () => {
   it('goes at once when closed, and is never shown again', async () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn gợi ý' }));
     expect(showing()).toBeNull();
     expect((await stored()).retired).toEqual(['reorder']);
     const seen = [];
@@ -157,7 +157,7 @@ describe('retiring', () => {
   it('carries on with the others after one is closed', async () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn gợi ý' }));
     expect(await visit()).toBe('publish');
   });
 
@@ -214,7 +214,7 @@ describe('when storage misbehaves', () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();
     expect(showing()).toBe('reorder');
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn gợi ý' }));
     await settle();
     expect(showing()).toBeNull();
     vi.mocked(AsyncStorage.setItem).mockReset();
@@ -266,7 +266,7 @@ describe('whose record', () => {
 
   it('keeps one account\'s closed tip from another account', async () => {
     const a = await visitAs('a');
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn gợi ý' }));
     a.view.unmount();
     expect((await visitAs('a')).tip).toBeNull();
     cleanupAll();

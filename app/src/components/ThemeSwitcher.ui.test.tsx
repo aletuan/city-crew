@@ -24,12 +24,13 @@ const state = vi.hoisted(() => ({
   pref: 'light' as Pref,
   look: 'standard' as Look,
   looks: true,
+  lang: 'en' as 'en' | 'vi',
 }));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref, look: state.look, looks: state.looks }),
 }));
 vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+  useI18n: () => ({ lang: state.lang, setLang: () => {}, t: (en: string, vi?: string) => (state.lang === 'vi' ? vi ?? en : en) }),
 }));
 const who = vi.hoisted(() => ({ userId: undefined as string | null | undefined }));
 const saveTheme = vi.hoisted(() => vi.fn(async () => {}));
@@ -49,6 +50,7 @@ beforeEach(async () => {
   state.pref = 'light';
   state.look = 'standard';
   state.looks = true;
+  state.lang = 'en';
   who.userId = undefined;
   named.value = [];
   saveTheme.mockClear();
@@ -201,6 +203,15 @@ describe('the looks', () => {
     }
     throw new Error('no Modal in the committed tree');
   };
+
+  // UX-07: "Giao diện" in Vietnamese since 17 Oct 2026; the loanword was
+  // the one English word heading a Vietnamese sheet.
+  it('heads the sheet Giao diện in Vietnamese', () => {
+    state.lang = 'vi';
+    render(<ThemeSwitcherModal visible onClose={() => {}} />);
+    expect(screen.getByText('Giao diện')).toBeTruthy();
+    expect(screen.queryByText('Theme')).toBeNull();
+  });
 
   it('offers the looks after the grounds, with their own marks', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
