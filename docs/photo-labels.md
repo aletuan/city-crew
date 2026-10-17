@@ -189,7 +189,7 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 | 2b | Edge Function gán nhãn ảnh mới, cùng định nghĩa với skill (mục 10) | ◐ 17/10: `label-photos` đã triển khai (định nghĩa v4, bản 5) và đo ở vòng 2, 3, 3b, 3c. App chưa gọi |
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
 | 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ✅ 17/10: vòng 3 (loại ảnh), 3b (sáu thuộc tính), 3c (24 ảnh mới: loại ảnh, thấy cả không gian, người). Kết quả ở mục 10. Dàn dựng chưa đo được vì chưa có ảnh nào chủ sản phẩm chọn "Có" |
-| 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ☐ |
+| 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ✅ 17/10: 6.467 ảnh, Haiku 5.5, định nghĩa v4 (mục 10). Ảnh thêm sau đó chưa được gán tự động: app và Data Desk chưa gọi `label-photos` |
 | 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (có đề xuất riêng) | ☐ |
 
 **Tiêu chí để một nhãn được hiện trong app (bước 6):**
@@ -528,3 +528,46 @@ không bên nào chọn "Không rõ".
 - **v4** chỉ đổi luật quầy, và cả hai model đã trả lời đúng theo luật mới
   ngay từ v3. Vì vậy v4 không được đo lại. Các dòng v1 của skill (137 ảnh)
   sẽ được gán lại theo v4.
+
+### Gán nhãn toàn catalog (bước 5, 17/10/2026)
+
+Chủ sản phẩm chọn **Haiku 5.5**, sau vòng 3c. Ở vòng đó Haiku ngang hoặc
+hơn Opus ở cả loại ảnh, "Thấy cả không gian" và "Người", với giá bằng
+khoảng 1/37.
+
+**Cách chạy:**
+- Database gọi `label-photos` qua `pg_net`, mỗi yêu cầu 24 ảnh, với một
+  ops token tạo ngay trong database. Token không ra khỏi database và được
+  cho hết hạn ngay sau đợt chạy.
+- Chạy từng đợt 15–80 yêu cầu song song, theo thứ tự thành phố rồi địa
+  điểm. Mỗi đợt bỏ qua các ảnh đã có nhãn v4 và các ảnh đang chờ trong hàng
+  đợi, nên ảnh lỗi tự được thử lại ở đợt sau.
+- 80 yêu cầu cùng lúc làm 2 yêu cầu bị 503. 60 yêu cầu chỉ bị 1. Hai ảnh
+  lỗi vì API tải ảnh quá lâu. Tất cả đều xong ở đợt sau.
+
+**Kết quả:**
+- 6.467 ảnh đã lưu trong bucket, ở 9 thành phố, có nhãn v4
+  (`"by": "fn"`, `"model": "claude-haiku-5-5"`). Chạy trong khoảng 15
+  phút.
+- 137 dòng v1 của skill đã được thay bằng nhãn của function. Bản v1 vẫn
+  còn trong `round3.json`.
+- Token: khoảng 19,4 triệu vào và 0,78 triệu ra, tức khoảng 3.000 vào và
+  120 ra mỗi ảnh. Theo giá mỗi ảnh đo ở trên, tổng chi phí khoảng 2,3 USD.
+
+| Loại ảnh | Số ảnh | Biển hiệu | Thấy cả không gian | Cây xanh | Ánh sáng ngày | Người |
+|---|---|---|---|---|---|---|
+| Đồ ăn | 2.647 | 7% | 7% | 11% | 26% | 19% |
+| Nội thất | 2.228 | 22% | 90% | 46% | 30% | 46% |
+| Mặt tiền | 1.085 | 76% | 94% | 78% | 66% | 52% |
+| Phong cảnh | 325 | 7% | 95% | 92% | 80% | 47% |
+| Chữ | 110 | 57% | 7% | 14% | 23% | 12% |
+| Khác | 60 | 15% | 28% | 32% | 36% | 46% |
+
+Bảng tính trên 6.455 ảnh, trước 12 ảnh cuối. Tỷ lệ phần trăm chỉ tính trên các ảnh có câu trả lời Có hoặc Không.
+
+**Cần lưu ý:**
+- Haiku chọn **dàn dựng** cho 185 ảnh, trong đó 127 là ảnh đồ ăn.
+  Thuộc tính này chưa được đo, vì chủ sản phẩm chưa chọn "Có" ở ảnh nào.
+  Theo ngưỡng ở mục 8, nó chưa được hiện trong app.
+- Khoảng 11% ảnh (694) được đánh `unsure` về loại. Tỷ lệ này cao nhất ở
+  ảnh phong cảnh (187/325) và mặt tiền (182/1.085).
