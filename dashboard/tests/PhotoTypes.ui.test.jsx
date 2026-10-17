@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { api } from '../src/api.js';
-import { SAMPLE, SAMPLE_1B } from '../src/photoTypes.js';
+import { SAMPLE, SAMPLE_1B, SAMPLE_2 } from '../src/photoTypes.js';
 import { findToast, renderDesk } from './_ui/desk.jsx';
 
 const KEY = 'citycrew.dashboard.photoTypes.r1';
@@ -141,6 +141,19 @@ describe('PhotoTypes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Answers ›' }));
     expect(screen.getByLabelText('Answers').value).toBe(`S${'-'.repeat(56)}`);
     expect(screen.getByText(/Round 1b\./)).toBeTruthy();
+  });
+
+  it('asks round 2 under the definitions, with answers of its own', async () => {
+    api.photoUris.mockResolvedValue(Object.fromEntries(SAMPLE_2.map((id, i) => [id, `https://y/${i}.jpg`])));
+    renderDesk('/photo-types-2');
+    const photo = await screen.findByRole('img', { name: 'Photograph 1' });
+    expect(photo.getAttribute('src')).toBe('https://y/0.jpg');
+    expect(screen.getByText('1 / 100')).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Definitions' })).toBeTruthy();
+    fireEvent.click(kinds().getByRole('button', { name: /Món ăn/ }));
+    expect(JSON.parse(localStorage.getItem('citycrew.dashboard.photoTypes.r2'))).toEqual({ [SAMPLE_2[0]]: 'F' });
+    fireEvent.click(screen.getByRole('button', { name: 'Answers ›' }));
+    expect(screen.getByText(/Round 2\./)).toBeTruthy();
   });
 
   it('carries its own name in the page head', async () => {

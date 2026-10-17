@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GUIDE, KINDS, ROUNDS, SAMPLE, SAMPLE_1B, encode, firstOpen } from '../src/photoTypes.js';
+import { GUIDE, KINDS, ROUNDS, SAMPLE, SAMPLE_1B, SAMPLE_2, encode, firstOpen } from '../src/photoTypes.js';
 
 test('the sample is a hundred photographs, none twice', () => {
   assert.equal(SAMPLE.length, 100);
@@ -39,4 +39,12 @@ test('each round keeps its answers apart, and only 1b shows the definitions', ()
   assert.equal(ROUNDS.r1.guide, false);
   assert.equal(ROUNDS.r1b.guide, true);
   assert.deepEqual(GUIDE.map((g) => g.key), ['P', 'S', 'F', 'U']);
+});
+
+// Round 2 shows nothing a round before it showed.
+test('round 2 is a hundred photographs none of round 1 held', () => {
+  assert.equal(SAMPLE_2.length, 100);
+  assert.equal(new Set(SAMPLE_2).size, 100);
+  assert.ok(SAMPLE_2.every((id) => !SAMPLE.includes(id)));
+  assert.equal(ROUNDS.r2.guide, true);
 });
