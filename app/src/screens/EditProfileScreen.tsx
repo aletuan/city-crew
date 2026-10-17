@@ -390,8 +390,6 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
               <Toggle
                 value={history}
                 onValueChange={setHistory}
-                trackColor={{ false: colors.borderGlass, true: colors.accentFaint }}
-                thumbColor={colors.text}
                 accessibilityLabel={t('Personalise my experience', 'Nâng cao trải nghiệm cá nhân', '体験をパーソナライズ')}
               />
             </View>

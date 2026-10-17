@@ -23,7 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import {
-  LEGACY_REORDER_KEY, markShown, parseLog, pickTip, retire, tipsKey, type TipId, type TipLog,
+  LEGACY_REORDER_KEY, markShown, parseLog, pickTip, retire, tipsKey, tipsOn, turnOff, type TipId, type TipLog,
 } from '../lib/tips';
 import { colors, radius, space, type } from '../theme';
 import { PressableScale } from './ui';
@@ -95,17 +95,38 @@ const TIPS: Record<TipId, (t: T) => string> = {
   ),
 };
 
-/**
- * Every tip back, for one reader: Profile's "Show tips again". Forgets
- * the reader's record, and the old reorder flag too, which would otherwise
- * retire that tip again on the next read. The next visit to a list starts
- * from the first tip that applies, as a first visit does.
- */
-export async function resetTips(reader: string | null | undefined): Promise<void> {
-  await Promise.all([
-    AsyncStorage.removeItem(tipsKey(reader)),
-    AsyncStorage.removeItem(LEGACY_REORDER_KEY),
+/** One reader's record, as the box itself would read it. */
+async function readLog(reader: string | null | undefined): Promise<TipLog> {
+  const [raw, legacy] = await Promise.all([
+    AsyncStorage.getItem(tipsKey(reader)),
+    AsyncStorage.getItem(LEGACY_REORDER_KEY),
   ]);
+  return parseLog(raw, legacy);
+}
+
+/** Profile's "Show tips" switch, read off the record — see `tipsOn`. */
+export async function readTipsOn(reader: string | null | undefined): Promise<boolean> {
+  return tipsOn(await readLog(reader));
+}
+
+/**
+ * Profile's "Show tips" switch, set, for one reader.
+ *
+ * On forgets the reader's record, and the old reorder flag too, which
+ * would otherwise retire that tip again on the next read: the next visit
+ * to a list starts from the first tip that applies, as a first visit
+ * does. Off keeps the record and marks it, so turning tips back on later
+ * is the one way they return.
+ */
+export async function setTipsOn(reader: string | null | undefined, on: boolean): Promise<void> {
+  if (on) {
+    await Promise.all([
+      AsyncStorage.removeItem(tipsKey(reader)),
+      AsyncStorage.removeItem(LEGACY_REORDER_KEY),
+    ]);
+    return;
+  }
+  await AsyncStorage.setItem(tipsKey(reader), JSON.stringify(turnOff(await readLog(reader))));
 }
 
 export default function TipBox({ eligible, done, reader }: {
