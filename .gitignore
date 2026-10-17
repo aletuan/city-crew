@@ -1,6 +1,9 @@
 .env
 .DS_Store
-.claude/
+.claude/*
+# The repo's own skills are shared with every session on the repo
+# (docs/photo-labels.md §6); the rest of .claude/ is one machine's settings.
+!.claude/skills/
 .playwright-mcp/
 *.jpeg
 data/.env
