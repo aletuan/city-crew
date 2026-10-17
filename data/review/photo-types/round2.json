@@ -334,5 +334,24 @@
    },
    "seconds": 79
   }
+ },
+ "function_v2": {
+  "about": "The function under definitions v2, 17 Oct 2026 ~12:10 UTC, to check that v2 did not undo what round 2 had right.",
+  "claude-opus-5-5": {
+   "line": "PPPPPPPFPPFPFFPPFPPPFPPPFPFFPPPFFPUFFFPPPPFPPFPUFFPPPFFPPPPFFPFPSPPFPPPPFPFPFPFFPPPFPPPPPPSPFPPFPPFP",
+   "usage": {
+    "input_tokens": 290859,
+    "output_tokens": 7902
+   },
+   "seconds": 69
+  },
+  "claude-haiku-5-5": {
+   "line": "PPPUPPPFPPFPFFPPFPPPFPSPFPFFPPPFFPUFFFPPPPFPPFPFFFPPPFFPPPPFFPFPSPPFPPPPFPFSFPFFPPPFPPPPPPSPFPPFPPFP",
+   "usage": {
+    "input_tokens": 290859,
+    "output_tokens": 10872
+   },
+   "seconds": 56
+  }
  }
 }

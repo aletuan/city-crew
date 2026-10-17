@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v1
+## 3. Bộ nhãn v2
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -37,12 +37,22 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 
 | Giá trị | Nghĩa | Ở các vòng chấm tay |
 |---|---|---|
-| `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view | F |
-| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà | P |
-| `exterior` | Mặt tiền, lối vào, biển hiệu nhìn từ ngoài | P |
-| `view` | Cảnh vật là chủ thể (trời, nước, cây, toàn cảnh thành phố); công trình nếu có chỉ là khung viền | S |
-| `text` | Menu, bảng chữ, ảnh quảng cáo nhiều chữ | U |
+| `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
+| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Hành lang có mái nhìn ra sân trong là Nội thất | P |
+| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ phía khách, là Mặt tiền | P |
+| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, vườn, bãi cỏ, khuôn viên, toàn cảnh thành phố. Nhà, hiên, cổng, tượng đứng giữa khuôn viên chiếm phần lớn khung vẫn là Phong cảnh | S |
+| `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung | U |
 | `other` | Không thuộc loại nào ở trên | U |
+
+**v2 (17/10/2026)** thêm bốn quyết định của chủ sản phẩm sau vòng 3 (mục 10):
+- ảnh ngoài trời có cả công trình và cây cỏ thì xét cái nào chiếm phần lớn
+  khung;
+- quầy có biển tên là Mặt tiền;
+- bàn có đồ ăn là Đồ ăn;
+- biển logo là Chữ.
+
+Ba ca "chưa quyết" của v1 nay đã có đáp án: tượng, đài phun nước hay vườn
+thì theo cái chiếm khung; hành lang có mái là Nội thất.
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -370,4 +380,37 @@ phẩm quyết cách phân loại bốn nhóm này. Đổi định nghĩa là đ
 - chạy function trên chính 137 ảnh này;
 - và trên 100 ảnh vòng 2, để thấy định nghĩa mới không làm hỏng chỗ vòng 2
   đã đúng.
+
+### Định nghĩa v2: đo lại (17/10/2026)
+
+Chủ sản phẩm quyết bốn nhóm (mục 3). Function chạy lại với v2 trên cả hai
+vòng, `write: false`. Lần chạy tốn khoảng 3,2 USD.
+
+| | Vòng 3, v1 | Vòng 3, v2 | Vòng 2, v1 | Vòng 2, v2 |
+|---|---|---|---|---|
+| Opus 5.5 | 118/137, κ 0,80 | **127/137 (93%), κ 0,90** | 95/100, κ 0,90 | 96/100, κ 0,92 |
+| Haiku 5.5 | 114/137, κ 0,76 | **125/137 (91%), κ 0,88** | 94/100, κ 0,88 | 96/100, κ 0,92 |
+
+- Với v2, Opus đúng **105/105** ảnh mà nó không đánh dấu `unsure`. Mười
+  ảnh lệch còn lại đều nằm trong 32 ảnh nó tự nói là không chắc.
+- Vòng 2 không tệ đi mà còn nhích lên. Như vậy v2 không đổi điều vòng 2
+  đã đúng.
+- **Lưu ý:** con số vòng 3 với v2 là đo trên chính những ảnh đã dùng để
+  viết v2, nên dễ đẹp hơn thực tế. Một vòng nhỏ trên ảnh mới sẽ cho con
+  số sạch. Vòng 3b (thuộc tính) không đo được việc này, vì nó lấy ảnh từ
+  137 ảnh cũ.
+
+**Vòng 3b: thuộc tính (trang `#/photo-types-3b`).** Chủ sản phẩm chọn chấm
+sáu thuộc tính trên 40 ảnh lấy từ 137 ảnh của vòng 3, thay vì chấm lại cả
+137 ảnh (17/10).
+- Cách lấy 40 ảnh được viết thành luật, và một test tính lại để mẫu không
+  lệch khỏi luật:
+  - lấy mọi ảnh mà ít nhất một trong năm bộ câu trả lời của Claude nói có
+    người hoặc dàn dựng (27 ảnh): skill, cùng hai model với v1 và với v2;
+  - thêm cho đủ 40 những ảnh mà các bộ đó lệch nhau ở ít nhất một thuộc
+    tính, theo thứ tự md5.
+- Trang chỉ hỏi thuộc tính, và mỗi ô có kèm định nghĩa của nó. Vòng 3 cho
+  thấy khi để chung với loại ảnh thì thuộc tính bị bỏ qua.
+- Câu trả lời v2 của cả hai model được lưu ở khoá `function_v2` trong
+  `round3.json` và `round2.json`.
 

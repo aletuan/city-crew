@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { ATTRS, KINDS_3, SAMPLE_3, STATES, code, encode3, firstOpen3, nextState } from '../src/labelRound.js';
+import { ATTRS, KINDS_3, ROUNDS_3, SAMPLE_3, SAMPLE_3B, STATES, code, encode3, firstOpen3, nextState } from '../src/labelRound.js';
 
 const sealed = JSON.parse(readFileSync(new URL('../../data/review/photo-types/round3.json', import.meta.url)));
 
@@ -54,4 +54,36 @@ test('firstOpen3 is the first photograph without a kind, or the end', () => {
   assert.equal(firstOpen3(SAMPLE_3, {}), 0);
   assert.equal(firstOpen3(SAMPLE_3, { [SAMPLE_3[0]]: { kind: 'F' }, [SAMPLE_3[1]]: { attrs: {} } }), 1);
   assert.equal(firstOpen3(SAMPLE_3, Object.fromEntries(SAMPLE_3.map((id) => [id, { kind: 'U' }]))), 137);
+});
+
+// Round 3b: the criteria alone, on 40 of round 3's photographs drawn by
+// the rule labelRound.js writes down. Recomputed here from the sealed
+// answers, so the sample cannot drift from the rule that justifies it.
+test('round 3b is the 40 photographs its rule draws from round 3, none twice', () => {
+  const md5 = (id) => createHash('md5').update(`${id}photo-labels-round-3b`).digest('hex');
+  const lines = [sealed.claude, sealed.function.fn_opus.line, sealed.function.fn_haiku.line,
+    sealed.function_v2.fn_opus.line, sealed.function_v2.fn_haiku.line].map((l) => l.split(' '));
+  const rare = sealed.photos.filter((_, n) => lines.some((l) => l[n][5] === '1' || l[n][6] === '1'));
+  const contested = sealed.photos
+    .filter((id, n) => !rare.includes(id) && [1, 2, 3, 4, 5, 6].some((a) => new Set(lines.map((l) => l[n][a])).size > 1))
+    .sort((x, y) => md5(x).localeCompare(md5(y)));
+  const drawn = [...rare, ...contested.slice(0, 40 - rare.length)].sort((x, y) => md5(x).localeCompare(md5(y)));
+  assert.deepEqual(SAMPLE_3B, drawn);
+  assert.equal(new Set(SAMPLE_3B).size, 40);
+  assert.ok(SAMPLE_3B.every((id) => SAMPLE_3.includes(id)));
+});
+
+test('each round keeps its answers apart, and only round 3 asks the kind', () => {
+  assert.notEqual(ROUNDS_3.r3.key, ROUNDS_3.r3b.key);
+  assert.equal(ROUNDS_3.r3.kinds, true);
+  assert.equal(ROUNDS_3.r3b.kinds, false);
+  assert.equal(ROUNDS_3.r3b.sample, SAMPLE_3B);
+});
+
+test('without the kind, a code is the six criteria once Next was pressed, dashes before', () => {
+  assert.equal(code({ seen: true, attrs: { people: '1', brand: '?' } }, false), '?00010');
+  assert.equal(code({ attrs: { people: '1' } }, false), '------');
+  assert.equal(encode3(SAMPLE_3B.slice(0, 2), { [SAMPLE_3B[1]]: { seen: true } }, false), '------ 000000');
+  assert.equal(firstOpen3(SAMPLE_3B, { [SAMPLE_3B[0]]: { seen: true } }, false), 1);
+  assert.equal(firstOpen3(SAMPLE_3B, Object.fromEntries(SAMPLE_3B.map((id) => [id, { seen: true }])), false), 40);
 });

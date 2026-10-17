@@ -1,5 +1,5 @@
 // What a photograph is, and the six things a cover is chosen by: the
-// photo labels, v1 (docs/photo-labels.md §3).
+// photo labels, v2 (docs/photo-labels.md §3).
 //
 // The one place they are defined. The `label-photos` function sends
 // DEFINITIONS to the model as its instructions; the `photo-labels` skill
@@ -13,7 +13,7 @@
 // key is added here and to the skill's query; a new kind, or a changed
 // meaning, bumps VERSION, and every older row is asked again.
 
-export const VERSION = 1;
+export const VERSION = 2;
 
 /** The scorer name the labels are stored under in `photo_scores`. */
 export const SCORER = "claude-labels";
@@ -24,25 +24,25 @@ export type Kind = typeof KINDS[number];
 export const ATTRS = ["brand", "wide", "green", "daylight", "people", "staged"] as const;
 export type Attr = typeof ATTRS[number];
 
-/** The definitions, as the model reads them. Written as the owner settled
- *  them in rounds 1, 1b and 2 (17 Oct 2026), and the cases round 3 has not
- *  settled yet said as such, so they come back marked unsure rather than
- *  decided one way by accident. */
+/** The definitions, as the model reads them. v1 was written from the
+ *  owner's rounds 1, 1b and 2; v2 (17 Oct 2026) adds the owner's four
+ *  rulings after round 3, where all three Claude sources agreed with each
+ *  other (kappa 0.82-0.92) and not with the owner on the same groups:
+ *  outdoor grounds with a building in them go by what fills the frame; a
+ *  counter seen from the customer's side with the place's sign is the
+ *  exterior; a table with food on it is food; a sign or logo that fills
+ *  the frame is text. */
 export const DEFINITIONS = `You label one photograph of a place in a city guide: a café, a restaurant, a bar, a shop, a museum, a park. Answer from the photograph alone.
 
-KIND — exactly one, by the subject: what fills the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
-- food: food or drink is the subject, even with a view behind it. A tray of drinks counts; a bar's back wall of bottles does not. Drinks on a table in front of a city view are food.
-- interior: inside the place: rooms, seating, counters, shelves, a staircase. People in the room do not change it; a barista at work or guests at a counter is interior.
-- exterior: the place from outside: the front, the entrance, the sign, the building, a terrace seen as part of the building. A church, library or museum under a blue sky is exterior, never view.
-- view: scenery is the subject: sky, water, greenery, a skyline, a sunset; any building is only a frame. A garden or park that is the place itself, shown as landscape, is view.
-- text: a menu, a board, a poster: something to read rather than look at.
+KIND — exactly one, by the subject: what fills most of the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
+- food: food or drink is the subject, even with a view behind it. A tray of drinks counts; a bar's back wall of bottles does not. Drinks on a table in front of a city view are food. Food or drinks on a table are food even when part of the room shows around them.
+- interior: inside the place: rooms, seating, counters, shelves, a staircase, with no food or drink as the subject. People in the room do not change it. A covered gallery looking into a courtyard is interior.
+- exterior: the place from outside, where the building, its front, its entrance or its sign fills most of the frame. A counter or kiosk seen from the customer's side with the place's sign on it is exterior. A church, library or museum whose building fills most of the frame is exterior even under a blue sky.
+- view: scenery fills most of the frame: sky, water, greenery, a garden, a lawn, grounds, a skyline, a sunset. A building, a terrace, a gate, a statue or a monument standing in grounds that fill most of the frame does not change it: that is view.
+- text: a menu, a board, a poster, or a sign or logo that fills the frame: something to read rather than look at.
 - other: none of the above: a close portrait, an object with no place in it, a blank or broken image.
 
-Not yet settled — choose the closer kind and set unsure to true:
-- a monument in grounds: a fountain, a statue, a tank on display;
-- a covered gallery looking into a courtyard;
-- a garden that fills the frame with a building only glimpsed.
-Also set unsure to true whenever you would not bet on the kind.
+Set unsure to true whenever you would not bet on the kind.
 
 ATTRIBUTES — each "yes", "no", or "unknown" when the photograph cannot say (too dark, too cropped, black and white):
 - brand: a sign, logo or the place's name is legible in the frame. Another company's logo (a bottle, a poster) and a small watermark are not the place's brand.

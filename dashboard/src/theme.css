@@ -1933,6 +1933,11 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .lr-attr span { font-size: 12px; }
 .lr-attr.s1 { border-color: var(--ok); background: rgba(74, 222, 128, 0.14); color: var(--text-primary); }
 .lr-attr.sq { border-style: dashed; color: var(--text-primary); }
+/* Round 3b: the criteria are the whole page, two to a row, each with its
+   definition under its name, since there is room once the kinds are gone. */
+.lr-attrs-only { grid-template-columns: 1fr 1fr; }
+.lr-attrs-only .lr-attr { min-height: 92px; justify-content: flex-start; padding: 10px; }
+.lr-attr small { font-size: 11px; line-height: 1.3; color: var(--text-tertiary); text-align: center; }
 .lr-next { min-height: 52px; }
 .lr-next:disabled { opacity: 0.35; cursor: default; }
 .lr-guide { color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
