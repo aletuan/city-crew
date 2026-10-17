@@ -172,10 +172,14 @@ function TripCard({ trip, past, onPress, testID }: {
         </View>
       )}
       <View style={s.cardBody}>
-        <View style={s.head}>
-          <Text style={s.title} numberOfLines={1}>{trip.title}</Text>
-          <CompanyChip company={trip.company} />
-        </View>
+        {/* The title has the card's width to itself and up to two lines.
+            It shared a row with the company chip and was cut to one, and
+            what the cut took was the part that tells trips apart: the
+            planner names them "A morning of coffee in Yên Hòa", so a list
+            of 55 read as a column of "A morning of coffee in…" (UX-11,
+            17 Oct 2026). The chip moved down to the date, the other
+            line about the shape of the day. */}
+        <Text style={s.title} numberOfLines={2}>{trip.title}</Text>
 
         {/* The glyph earns its place by being the one thing on the card that
             says "this is a date" at a glance, in a list where every card
@@ -197,6 +201,10 @@ function TripCard({ trip, past, onPress, testID }: {
               start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`) : null,
             ])}
           </Text>
+          {/* At the row's far end, and onto a line of its own when large
+              type leaves no room beside the date — the row wraps rather
+              than cutting the day short. */}
+          <CompanyChip company={trip.company} />
         </View>
 
         <View style={s.stops}>
@@ -492,13 +500,25 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
             />
           ))}
 
+          {/* The lede speaks to the half that exists. It said "your next
+              plans" over every list, and on an account whose 55 trips were
+              all behind it, it sat directly above "Been there · 55"
+              (UX-10, 17 Oct 2026). With nothing ahead it says so, which
+              is also the line that makes "New trip" above it the obvious
+              next move. */}
           {!!mine.length && (
             <Text style={s.lede}>
-              {t(
-                'Your next plans, in order.',
-                'Những kế hoạch sắp tới của bạn, theo thứ tự.',
-                'これからの予定を順番に。',
-              )}
+              {upcoming.length
+                ? t(
+                  'Your next plans, in order.',
+                  'Những kế hoạch sắp tới của bạn, theo thứ tự.',
+                  'これからの予定を順番に。',
+                )
+                : t(
+                  'No plans coming up.',
+                  'Bạn chưa có kế hoạch sắp tới.',
+                  'これからの予定はまだありません。',
+                )}
             </Text>
           )}
 
@@ -522,8 +542,12 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
           ))}
 
           {!!past.length && (
+            // "Past", not "Been there": a trip moves here when its day is
+            // over, and nothing records that anyone went. The heading
+            // states the date, the one thing the split knows — the pair
+            // to "Upcoming" (UX-10).
             <Text style={[s.section, !!upcoming.length && s.sectionAfter]}>
-              {t('Been there', 'Đã đi', '行った旅')} · {past.length}
+              {t('Past', 'Đã qua', 'これまで')} · {past.length}
             </Text>
           )}
           {past.map((trip) => (
@@ -597,8 +621,7 @@ const s = StyleSheet.create({
    *  and the error — where `s.card` would paint a second surface inside
    *  the first. */
   pad: { padding: space.cardPadding },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { flex: 1, color: colors.text, ...type.cardTitle },
+  title: { color: colors.text, ...type.cardTitle },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -607,8 +630,8 @@ const s = StyleSheet.create({
   },
   badgeText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
 
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  meta: { ...CAPTION, color: colors.textSecondary, flex: 1 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 6, rowGap: 6, marginTop: 8 },
+  meta: { ...CAPTION, color: colors.textSecondary, flexShrink: 1, marginRight: 'auto' },
 
   stops: { marginTop: 14, gap: ROW_GAP },
   // `alignItems: center` and a fixed row height, so the dot lands on the
