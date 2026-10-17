@@ -183,12 +183,10 @@ describe('the button', () => {
     expect(cta().querySelector('[data-icon="paw"]')).toBeTruthy();
   });
 
-  // Dimmed, and said so to VoiceOver, until the draft is whole. No line
-  // under it any more (15 Oct 2026): the empty questions are on screen.
+  // Dimmed, and said so to VoiceOver, until the draft is whole.
   it('is dimmed until both company and a category are chosen', () => {
     renderScreen();
     expect(cta().getAttribute('aria-disabled')).toBe('true');
-    expect(screen.queryByText(/one thing you fancy/)).toBeNull();
     tap('Friends');
     expect(cta().getAttribute('aria-disabled')).toBe('true');
     tap('Cafés');
@@ -196,6 +194,24 @@ describe('the button', () => {
     // Untoggling the only category dims it again.
     tap('Cafés');
     expect(cta().getAttribute('aria-disabled')).toBe('true');
+  });
+
+  // UX-06: the line under the dimmed button names what is still missing,
+  // and only that — the half already answered drops out of it, and the
+  // whole line goes once the button lights.
+  it('says under the dimmed button which question is still unanswered', () => {
+    renderScreen();
+    const line = () => screen.queryByTestId('ideas-sketch-missing')?.textContent ?? null;
+    expect(line()).toBe("Pick who's going and one thing you fancy to make a plan.");
+    tap('Friends');
+    expect(line()).toBe('Pick one thing you fancy to make a plan.');
+    tap('Friends');
+    tap('Cafés');
+    expect(line()).toBe("Pick who's going to make a plan.");
+    tap('Friends');
+    expect(line()).toBeNull();
+    tap('Cafés');
+    expect(line()).toBe('Pick one thing you fancy to make a plan.');
   });
 
   // `pointerEvents="none"` stops a finger and nothing else: VoiceOver's

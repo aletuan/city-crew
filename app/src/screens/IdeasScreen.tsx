@@ -770,12 +770,47 @@ export default function IdeasScreen({ navigation, route }: {
               }}
             />
           </View>
-          {/* No line under a dimmed button. One said "just pick who's
-              going and one thing you fancy" until 15 Oct 2026, and the
-              owner asked for it to go: the two empty questions are on
-              the screen, and the dimmed button already says the day is
-              not whole. The button's own `aria-disabled` keeps VoiceOver
-              told. */}
+          {/* The line under a dimmed button, back (17 Oct 2026, UX-06)
+              and now naming only what is still missing.
+
+              It went on 15 Oct: the two empty questions are on the
+              screen, and the dimmed button already says the day is not
+              whole. The review showed what that left out. The questions
+              are on the screen above the fold, not beside the button —
+              scrolled down to the button, neither is in view — and
+              `aria-disabled` tells VoiceOver *that* the button is off,
+              never *why*. A dimmed button that cannot say what it waits
+              for is a lock without a keyhole.
+
+              The old line was one sentence for every state, so with
+              "Friends" already picked it still asked for who's going.
+              This one drops whichever half is answered. A full sentence
+              rather than "Still to pick: …" — the owner chose it over
+              the terser list and over a question in the hero's voice.
+              Polite live region, so TalkBack reads the change as a
+              chip is tapped; VoiceOver reads it as the next element
+              after the button. */}
+          {!ready && (
+            <Text style={s.ctaHint} accessibilityLiveRegion="polite" testID="ideas-sketch-missing">
+              {draft.company === null && draft.categories.length === 0
+                ? t(
+                  "Pick who's going and one thing you fancy to make a plan.",
+                  'Chọn người đi cùng và một thứ bạn thích để lên kế hoạch.',
+                  '誰と行くかと、気になるものを1つ選ぶとプランを立てられます。',
+                )
+                : draft.company === null
+                  ? t(
+                    "Pick who's going to make a plan.",
+                    'Chọn người đi cùng để lên kế hoạch.',
+                    '誰と行くかを選ぶとプランを立てられます。',
+                  )
+                  : t(
+                    'Pick one thing you fancy to make a plan.',
+                    'Chọn một thứ bạn thích để lên kế hoạch.',
+                    '気になるものを1つ選ぶとプランを立てられます。',
+                  )}
+            </Text>
+          )}
         </View>
       </ScrollView>
 
@@ -955,9 +990,10 @@ const s = StyleSheet.create({
 
   cta: { paddingHorizontal: space.page, marginTop: 4, gap: 10 },
   ctaOff: { opacity: 0.4 },
+  ctaHint: { color: colors.textTertiary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
 
   // Under the card, not inside it: the card is the control and this is a
-  // consequence of it.
+  // consequence of it, the same relation `ctaHint` has to the button.
   //
   // `space.page`, like every other top-level element here. This screen has
   // no container padding — the scroll view runs edge to edge and the lede,
