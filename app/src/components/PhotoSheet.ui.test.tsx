@@ -285,4 +285,52 @@ describe('PhotoSheet', () => {
     fireEvent.click(screen.getByTestId('score-detail-toggle'));
     expect(screen.queryByTestId('score-detail-light')).toBeNull();
   });
+
+  // A dock under the scroll, the same with the analysis open or folded,
+  // scored or not: the act stays one tap from the reading (owner, 17 Oct
+  // 2026).
+  it('docks the actions as one strip under the scroll, analysis open or not', () => {
+    const actions = [
+      row({ short: 'Cover' }),
+      row({ key: 'hide', icon: 'eye-off-outline', title: 'Hide it', short: 'Hide' }),
+      row({ key: 'delete', icon: 'trash-outline', title: 'Delete it', destructive: true }),
+    ];
+    render(<PhotoSheet {...props({ photos: [photo({ score })], actionsFor: () => actions })} />);
+    const strip = screen.getByTestId('sheet-strip');
+    const labels = () => [...screen.getByTestId('sheet-strip').querySelectorAll('[role="button"]')].map((b) => b.textContent);
+    // A word each, the title where there is no shorter one; VoiceOver
+    // still hears the whole title.
+    expect(labels()).toEqual(['Cover', 'Hide', 'Delete it']);
+    expect(screen.getByTestId('sheet-action-cover').getAttribute('aria-label')).toBe('Make it the cover');
+    expect(screen.getByTestId('sheet-action-delete').querySelector('[data-icon="trash-outline"]')).toBeTruthy();
+    // Outside the scroll, so it stays in reach at any length.
+    const scroll = screen.getByTestId('photo-sheet-frame').closest('[class]')!.parentElement!;
+    expect(scroll.contains(strip)).toBe(false);
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(labels()).toEqual(['Cover', 'Hide', 'Delete it']);
+  });
+
+  it('docks the strip for an unscored photograph too, and draws no dock with nothing to do', () => {
+    const { rerender } = render(<PhotoSheet {...props({ actionsFor: () => [row()] })} />);
+    expect(screen.getByTestId('sheet-strip')).toBeTruthy();
+    rerender(<PhotoSheet {...props({ actionsFor: () => [] })} />);
+    expect(screen.queryByTestId('sheet-strip')).toBeNull();
+  });
+
+  it('closes the sheet first, then acts', () => {
+    vi.useFakeTimers();
+    try {
+      const onPress = vi.fn();
+      const onClose = vi.fn();
+      render(<PhotoSheet {...props({ photos: [photo({ score })], actionsFor: () => [row({ onPress })], onClose })} />);
+      fireEvent.click(screen.getByTestId('sheet-action-cover'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onPress).not.toHaveBeenCalled();
+      act(() => { vi.advanceTimersByTime(220); });
+      expect(onPress).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
 });

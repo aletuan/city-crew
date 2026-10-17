@@ -39,6 +39,7 @@ export const routes = [
       { path: 'analytics/coverage', element: <Coverage /> },
       // Not in the navigation: a measurement round, reached by its link.
       { path: 'photo-types', element: <PhotoTypes /> },
+      { path: 'photo-types-1b', element: <PhotoTypes round="r1b" /> },
     ],
   },
 ];

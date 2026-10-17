@@ -62,7 +62,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SheetRows, type SheetAction } from './ActionSheet';
+import { SheetStrip, type SheetAction } from './ActionSheet';
 import { ScoreDetails, ScoreTen, ScoreWhy } from './PhotoScore';
 import PhotoViewer, { settledPage } from './PhotoViewer';
 import { useSheetDrag } from './sheetDrag';
@@ -165,7 +165,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
         <ScrollView
           bounces={false}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 16 }]}
+          contentContainerStyle={[s.body, { paddingBottom: 16 }]}
         >
           <View style={[s.frame, { height: frameH }]} testID="photo-sheet-frame">
             <ScrollView
@@ -232,9 +232,21 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
           </View>
 
           {p.score && <ScoreDetails score={p.score} open={detail} onToggle={() => setDetail((was) => !was)} />}
-
-          <SheetRows actions={visible ? actionsFor(p) : []} onClose={onClose} titlesOnly />
         </ScrollView>
+
+        {/* The actions as a dock, pinned under the scroll (owner, 17 Oct
+            2026, from the "Bottom Action Dock" board). They were three
+            full rows at the foot of the scroll: a screen down once the
+            analysis was open, and folding them only then made the sheet
+            change shape under the reader. Always the strip, always in
+            reach — the analysis is what decides a cover or a hide, so the
+            act stays one tap from the reading at any length. The dock's
+            own padding clears the home indicator. */}
+        {visible && actionsFor(p).length > 0 && (
+          <View style={[s.dock, { paddingBottom: insets.bottom + 10 }]}>
+            <SheetStrip actions={actionsFor(p)} onClose={onClose} />
+          </View>
+        )}
       </Animated.View>
 
       {full && <PhotoViewer photos={all} index={at} onIndex={onIndex} onClose={closeFull} />}
@@ -255,6 +267,7 @@ const s = StyleSheet.create({
   // The handle's touch area is the strip, not the 4pt bar: a pull has
   // to be easy to start.
   handle: { alignItems: 'center', paddingTop: 10, paddingBottom: 8 },
+  dock: { paddingHorizontal: space.page, paddingTop: 8 },
   grabber: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary },
   body: { paddingHorizontal: space.page, gap: 14 },
 

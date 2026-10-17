@@ -56,6 +56,9 @@ export type SheetAction = {
   key: string;
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
+  /** The title in a word or two, for `SheetStrip`, where three share a
+   *  row; the full title is still what VoiceOver says. */
+  short?: string;
   /** What it will actually do, in a sentence. The half an alert menu
    *  cannot carry, and the half that tells two red rows apart. */
   desc: string;
@@ -113,21 +116,17 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
 }
 
 /**
- * The rows, on their card: what `ActionSheet` draws under its header,
- * lifted out so a sheet with a body of its own (the photograph's,
- * `PhotoSheet`) lists what can be done the same way.
+ * The rows, on their card: what `ActionSheet` draws under its header.
  *
- * `titlesOnly` drops the sentence under each title from the screen and
- * keeps it for VoiceOver. For a sheet whose header already shows the
- * thing the rows act on at full size, where the sentence repeats what
- * the picture above it makes plain (owner, 16 Oct 2026, from the photo
- * sheet's design); the menus about a person keep theirs, which is where
- * two red rows had to be told apart.
+ * It took a `titlesOnly` for the photo sheet, whose picture made each
+ * row's sentence redundant (16 Oct 2026); the photo sheet docks its
+ * actions in a `SheetStrip` now (17 Oct), and every sheet left keeps its
+ * sentences — the menus about a person, where two red rows had to be
+ * told apart.
  */
-export function SheetRows({ actions, onClose, titlesOnly }: {
+export function SheetRows({ actions, onClose }: {
   actions: SheetAction[];
   onClose: () => void;
-  titlesOnly?: boolean;
 }) {
   // No card when there is nothing to put in it. The check-in sheet's
   // rows are all in its header once the day's cap is reached, and an
@@ -139,7 +138,7 @@ export function SheetRows({ actions, onClose, titlesOnly }: {
         <PressableScale
           key={a.key}
           testID={`sheet-action-${a.key}`}
-          style={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff, titlesOnly && s.rowShort]}
+          style={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff]}
           scaleTo={a.disabled ? 1 : 0.985}
           // The sheet goes first, always. A dialog raised over a sheet
           // that is still animating out is the stacked-modal bug every
@@ -166,13 +165,50 @@ export function SheetRows({ actions, onClose, titlesOnly }: {
           </View>
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={[s.rowTitle, a.destructive && s.rowTitleBad]}>{a.title}</Text>
-            {!titlesOnly && <Text style={s.rowDesc}>{a.desc}</Text>}
+            <Text style={s.rowDesc}>{a.desc}</Text>
           </View>
           {a.selected && (
             <View style={s.glyph} testID="sheet-selected">
               <Ionicons name="checkmark" size={19} color={colors.accent} />
             </View>
           )}
+        </PressableScale>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * The same actions as `SheetRows`, side by side in one card: a glyph over
+ * a word or two each — a dock, for a sheet whose actions should stay in
+ * reach under something being read. The photo sheet's (owner, 17 Oct
+ * 2026), pinned under the photograph and its analysis: the analysis is
+ * what tells a guide to hide a photograph or make it the cover, and three
+ * full rows at the foot of the scroll put that a screen away. About a
+ * third of the rows' height. The caller draws it only with something in
+ * it.
+ */
+export function SheetStrip({ actions, onClose }: {
+  actions: SheetAction[];
+  onClose: () => void;
+}) {
+  return (
+    <View style={[s.group, s.strip]} testID="sheet-strip">
+      {actions.map((a, i) => (
+        <PressableScale
+          key={a.key}
+          testID={`sheet-action-${a.key}`}
+          containerStyle={s.stripCell}
+          style={[s.stripItem, i > 0 && s.stripDivider]}
+          scaleTo={0.96}
+          // The sheet first, as in `SheetRows`.
+          onPress={() => { onClose(); setTimeout(a.onPress, 220); }}
+          accessibilityRole="button"
+          accessibilityLabel={a.title}
+          accessibilityHint={a.desc}
+        >
+          <Ionicons name={a.icon} size={19} color={a.destructive ? colors.bad : colors.text} />
+          <Text style={[s.stripLabel, a.destructive && s.rowTitleBad]} numberOfLines={1}>{a.short ?? a.title}</Text>
         </PressableScale>
       ))}
     </View>
@@ -218,9 +254,6 @@ const s = StyleSheet.create({
   // 0.45, the figure the dimmed CTAs already use, so "not yet" reads the
   // same on a row as on a button.
   rowOff: { opacity: 0.45 },
-  // A title alone is one line: the 14pt above and below that suits a
-  // title and its sentence leaves a lone title floating, so 12.
-  rowShort: { paddingVertical: 12 },
   // The old well's 44pt footprint, a 26pt box with room for a 19pt
   // glyph's whole line, lifted so its middle is the 19pt title line's.
   glyph: {
@@ -230,4 +263,10 @@ const s = StyleSheet.create({
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
   rowTitleBad: { color: colors.bad },
   rowDesc: { color: colors.textTertiary, fontSize: 14, lineHeight: 18 },
+
+  strip: { flexDirection: 'row' },
+  stripCell: { flex: 1 },
+  stripItem: { alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10, paddingHorizontal: 6 },
+  stripDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.borderGlassSoft },
+  stripLabel: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
 });
