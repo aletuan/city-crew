@@ -145,7 +145,7 @@ const text = () => document.body.textContent ?? '';
 /** Section headings, top to bottom. */
 const sections = () => [...document.querySelectorAll('div')]
   .map((el) => el.textContent ?? '')
-  .filter((s) => /^(Invitations|Upcoming|Been there) · \d+$/.test(s));
+  .filter((s) => /^(Invitations|Upcoming|Past) · \d+$/.test(s));
 
 beforeEach(() => {
   state.uid = 'u1';
@@ -215,16 +215,27 @@ describe('the two halves', () => {
       trip({ id: 'soon', title: 'Soon', day: SOON }),
       trip({ id: 'last', title: 'Last week', day: GONE }),
     ]);
-    expect(sections()).toEqual(['Upcoming · 2', 'Been there · 2']);
+    expect(sections()).toEqual(['Upcoming · 2', 'Past · 2']);
     const titles = ['Soon', 'Far ahead', 'Last week', 'Long ago'].map((s) => text().indexOf(s));
     expect([...titles].sort((a, b) => a - b)).toEqual(titles);
     expect(screen.getByText('Your next plans, in order.')).toBeTruthy();
   });
 
-  it('draws only the half that exists', () => {
+  // UX-10: the lede said "your next plans" over a list that was all
+  // behind the reader. Three states, one line each.
+  it('draws only the half that exists, and says there is nothing ahead', () => {
     show([trip({ day: GONE })]);
-    expect(sections()).toEqual(['Been there · 1']);
+    expect(sections()).toEqual(['Past · 1']);
     expect(screen.queryByText(/Upcoming/)).toBeNull();
+    expect(screen.getByText('No plans coming up.')).toBeTruthy();
+    expect(screen.queryByText('Your next plans, in order.')).toBeNull();
+  });
+
+  it('keeps the next-plans line when only upcoming trips exist', () => {
+    show([trip({ day: SOON })]);
+    expect(sections()).toEqual(['Upcoming · 1']);
+    expect(screen.getByText('Your next plans, in order.')).toBeTruthy();
+    expect(screen.queryByText('No plans coming up.')).toBeNull();
   });
 
   // Today is still upcoming: an evening you are on does not become a
@@ -285,6 +296,21 @@ describe('the card', () => {
     state.credit = true;
     show([trip({ trip_stops: [stop(shot)] })]);
     expect(screen.getByText('Bởi Minh')).toBeTruthy();
+  });
+
+  // UX-11: the title shared its row with the company chip and was cut to
+  // one line, so "A morning of coffee in Yên Hòa" read "A morning of
+  // coffee in…" — the place, the part that tells 55 trips apart, was the
+  // part cut. It gets the row and two lines; the chip goes to the date.
+  it('gives the title its own row, up to two lines, and puts the company beside the date', () => {
+    show([trip({ title: 'A morning of coffee in Yên Hòa', company: 'friends' })]);
+    const title = screen.getByText('A morning of coffee in Yên Hòa');
+    const chip = screen.getByText('Friends');
+    // react-native-web draws `numberOfLines` as a line clamp.
+    expect(title.style.getPropertyValue('-webkit-line-clamp')).toBe('2');
+    // The chip's row is the date's, and the title is not in it.
+    const row = chip.parentElement!.parentElement!;
+    expect(row.textContent).toBe('Tue, 20 Oct · from 18:00Friends');
   });
 
   it('has no cover and no badge when there is no picture and no company', () => {

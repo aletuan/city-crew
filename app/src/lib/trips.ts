@@ -138,7 +138,7 @@ function inDayOrder(a: Dated, b: Dated, dir: 1 | -1): number {
  * For the tab bar's dot: lit on the day of a trip and only then. The
  * reading is `splitTrips`'s — a trip is "today" while that function would
  * still file it under upcoming, grace included, so the dot goes out at
- * the same moment the card moves to Been there and not before. A trip
+ * the same moment the card moves to Past and not before. A trip
  * whose stops carry no time stays all day; nothing says it is over.
  *
  * Today only, not the week ahead that Activity and the reminder look at:
