@@ -273,7 +273,7 @@ function SettingsCard() {
             wear their own mark (`schemeIcon`). */}
         <SettingRow
           icon={schemeIcon(pref, scheme)}
-          label={t('Theme', 'Theme', 'テーマ')}
+          label={t('Theme', 'Giao diện', 'テーマ')}
           value={schemeLabel(pref, t)}
           onPress={() => setThemeOpen(true)}
           testID="profile-theme"

@@ -806,13 +806,13 @@ describe('settings card', () => {
     spies.duck = undefined;
   });
 
-  // "Theme" in Vietnamese too — the owner's word, kept as the loanword —
-  // now that the choice is more than light and dark.
-  it('names the row Theme, in Vietnamese as in English', () => {
+  // "Giao diện" in Vietnamese since 17 Oct 2026 (UX-07); the loanword
+  // "Theme" was the one English word left heading a Vietnamese screen.
+  it('names the row Giao diện in Vietnamese', () => {
     state.lang = 'vi';
     draw();
-    expect(screen.getByText('Theme')).toBeTruthy();
-    expect(screen.queryByText('Giao diện')).toBeNull();
+    expect(screen.getByText('Giao diện')).toBeTruthy();
+    expect(screen.queryByText('Theme')).toBeNull();
   });
 
   it('heads the members settings "Preferences" and the app card "App"', () => {

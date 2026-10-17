@@ -3,8 +3,11 @@
 // switchers, because it is the same kind of choice.
 //
 // "Theme", not "Appearance", since 10 Oct 2026, when it stopped being only
-// light or dark — the owner's word for it, kept as the English loanword in
-// Vietnamese rather than "Giao diện", and テーマ in Japanese.
+// light or dark, and テーマ in Japanese. Vietnamese kept the English
+// loanword until 17 Oct 2026, when the owner moved it to "Giao diện"
+// (UX-07): it was the one English word heading a Vietnamese screen, and
+// VoiceOver read it with English vowels. "Giao diện" covers grounds and
+// looks alike, which "Appearance" in English did not.
 //
 // Three rows, and Auto is the first of them because it is the default.
 // This sheet once carried a note saying the opposite — two rows, no
@@ -395,7 +398,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
             list that scrolls, and keeps its own gesture. */}
         <View {...handlers} testID="sheet-grab">
           <View style={s.handle} />
-          <Text style={s.title}>{t('Theme', 'Theme', 'テーマ')}</Text>
+          <Text style={s.title}>{t('Theme', 'Giao diện', 'テーマ')}</Text>
         </View>
         <ScrollView style={{ maxHeight: room }} bounces={false} showsVerticalScrollIndicator={false}>
         {grounds.map((o, i) => {

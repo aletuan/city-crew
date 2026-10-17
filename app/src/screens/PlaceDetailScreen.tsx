@@ -454,7 +454,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
             <PressableScale
               onPress={() => navigation.goBack()} scaleTo={0.9}
-              containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Back"
+              containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab}
+              // In the reader's language, like every other control: these
+              // two were English literals, and VoiceOver read "Back" and
+              // "Share" in the middle of a Vietnamese screen (UX-07).
+              accessibilityLabel={t('Back', 'Quay lại', '戻る')}
               accessibilityRole="button"
               testID="detail-back"
             >
@@ -462,7 +466,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </PressableScale>
             <PressableScale
               onPress={share} scaleTo={0.9}
-              containerStyle={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Share"
+              containerStyle={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} style={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有')}
               accessibilityRole="button"
             >
               <Ionicons name="share-outline" size={20} color={onPhoto.text} />

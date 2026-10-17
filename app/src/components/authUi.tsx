@@ -198,6 +198,7 @@ export function FieldRow({ icon, label, secure, strength, error, grouped, ...inp
    */
   grouped?: boolean;
 } & TextInputProps) {
+  const { t } = useI18n();
   const [hidden, setHidden] = useState(true);
   return (
     <View>
@@ -226,7 +227,18 @@ export function FieldRow({ icon, label, secure, strength, error, grouped, ...inp
           />
         </View>
         {secure ? (
-          <Pressable onPress={() => setHidden((h) => !h)} hitSlop={10} accessibilityLabel="Toggle password visibility">
+          <Pressable
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={10}
+            accessibilityRole="button"
+            // Named for what a press does now, in the reader's language.
+            // It was "Toggle password visibility", in English on every
+            // build (UX-07) — and a toggle named for both directions says
+            // neither: the reader still has to find out which way it is.
+            accessibilityLabel={hidden
+              ? t('Show password', 'Hiện mật khẩu', 'パスワードを表示')
+              : t('Hide password', 'Ẩn mật khẩu', 'パスワードを隠す')}
+          >
             <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={21} color={colors.textTertiary} />
           </Pressable>
         ) : null}
