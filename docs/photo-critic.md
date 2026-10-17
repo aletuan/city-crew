@@ -238,6 +238,7 @@ D. Nhưng C trái nguyên tắc 4.
 | D10 | 17/10 | Làm bảng "Refined UI" theo hai bước: (1) giao diện, chỉ với các tiêu chí đo được; (2) nhận biết loại ảnh (Món ăn / Địa điểm / Phong cảnh), bắt đầu bằng đề xuất một trang | Chủ sản phẩm. Thanh điểm cho bố cục, màu sắc, không gian, nhiễu trên bảng đó là D2 lần nữa |
 | D11 | 17/10 | Màu đánh giá theo nghĩa, không theo màu chủ đạo: tốt = `okInk`, cần chú ý = `warnInk`, đổi sắc theo theme nhưng giữ nghĩa. Thanh xếp hạng vẫn là màu chủ đạo, vì nó là vị trí trong catalog chứ không phải lời khen | Chủ sản phẩm. Ở theme mặc định màu chủ đạo là đỏ san hô: dấu "tốt" màu đỏ đọc thành cảnh báo |
 | D12 | 17/10 | Phân tích chi tiết còn ba dòng có thanh: **Ánh sáng** (độ phơi sáng: khoảng cách của độ sáng trung bình tới giữa thang, nhân tỷ lệ điểm ảnh không bị tối đen hay cháy trắng), **Độ nét** (vị trí trong catalog), **Bố cục** (tỷ lệ các phép kiểm khung hình đạt: chủ thể không sát mép, đường chân trời của cảnh không nghiêng, người và chữ không chiếm khung). Màu sắc và Không gian chưa có dòng, vì không có số đo; Màu sắc cần thêm phép đo vào module Swift (bản build mới). Cây xanh bỏ khỏi phần này, thuộc bước 5. Thanh tô theo kết quả, thay cho thanh màu chủ đạo của D11: xanh `okInk` khi đo được điều tốt, cam `warnInk` khi có lỗi, xám khi không khen không chê. Bố cục ghi "Không thấy lỗi" chứ không ghi "Tốt": các phép kiểm chỉ tìm lỗi, và 88% ảnh qua hết, nên một thanh đầy màu xanh sẽ nói quá | Chủ sản phẩm chọn "làm ngay ba dòng có thật" |
+| D13 | 17/10 | Hiểu ảnh (loại ảnh và tiêu chí ảnh bìa) giao cho Claude gán nhãn phía City Crew, chạy bằng skill trong phiên Claude (cách A); Apple Vision giữ việc đo trên máy. Gán nhãn mọi ảnh, kể cả ảnh Google. Đề xuất đầy đủ: `docs/photo-labels.md` | Chủ sản phẩm, sau vòng 2: Claude trùng chủ sản phẩm 96/100, nhãn Vision chỉ bắt được nửa số ảnh món ăn |
 
 ## 9. Câu hỏi đang mở
 
@@ -283,6 +284,7 @@ D. Nhưng C trái nguyên tắc 4.
 
 ## 10. Việc tiếp theo
 
+- [ ] **Gán nhãn ảnh bằng Claude** (D13): các bước ở `docs/photo-labels.md`, mục 8.
 - [ ] **Bước 3: chặn trần điểm khi có lỗi kỹ thuật nặng.** Đã có số đo độ nét
   và độ sáng; còn thiếu luật chặn trần và ngưỡng đo trên catalog.
 - [ ] **Bước 5: điểm "hợp làm bìa".** Kiểm chứng bằng việc ảnh bìa thật có lọt
