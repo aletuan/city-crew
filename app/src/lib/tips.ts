@@ -17,7 +17,15 @@
 // read three times and neither acted on nor closed is one the reader
 // already knows or does not want: the fourth showing is only noise. When
 // every tip has retired, nothing is shown, until the reader asks for them
-// again from Profile (`resetTips`).
+// again from Profile.
+//
+// THE SWITCH (17 Oct 2026). Profile's "Show tips" is a switch, and it
+// reads this record rather than a setting of its own: on while some tip
+// is still due, off once none is — whether the reader turned it off or
+// every tip ran out on its own. A switch left on over tips that will
+// never show would be a promise the screen does not keep. Off by hand is
+// `off`, and it holds for tips a later build adds; on again is a fresh
+// record, every tip from its first showing.
 //
 // Pure, so the rule can be tested without a clock or a store. `seq` is a
 // counter rather than a time: the order tips were shown in is the whole
@@ -36,9 +44,11 @@ export type TipLog = {
   shown: Partial<Record<TipId, number>>;
   /** Closed, or acted on: never shown again. */
   retired: TipId[];
+  /** Turned off from Profile: nothing is shown, whatever is still due. */
+  off: boolean;
 };
 
-export const EMPTY_LOG: TipLog = { seq: 0, last: {}, shown: {}, retired: [] };
+export const EMPTY_LOG: TipLog = { seq: 0, last: {}, shown: {}, retired: [], off: false };
 
 /**
  * How many times one tip is shown before it stops on its own. Three, the
@@ -102,6 +112,7 @@ export function parseLog(raw: string | null, legacyReorder: string | null = null
         // none, which costs at most three more showings each.
         shown: counts(v?.shown),
         retired: Array.isArray(v?.retired) ? v.retired.filter(isTipId) : [],
+        off: v?.off === true,
       };
     } catch {
       log = EMPTY_LOG;
@@ -110,12 +121,17 @@ export function parseLog(raw: string | null, legacyReorder: string | null = null
   return legacyReorder !== null ? retire(log, 'reorder') : log;
 }
 
-/** The tip to show from the ones that apply, or null if all have retired. */
+/** Still to be shown: not retired, and not yet shown its fill. */
+const due = (log: TipLog, id: TipId) => !log.retired.includes(id) && (log.shown[id] ?? 0) < MAX_SHOWS;
+
+/** The tip to show from the ones that apply, or null if all have retired
+ *  or the reader has turned tips off. */
 export function pickTip(eligible: readonly TipId[], log: TipLog): TipId | null {
+  if (log.off) return null;
   let best: TipId | null = null;
   let bestAt = Infinity;
   for (const id of eligible) {
-    if (log.retired.includes(id) || (log.shown[id] ?? 0) >= MAX_SHOWS) continue;
+    if (!due(log, id)) continue;
     const at = log.last[id] ?? -1;
     // Strictly older wins, so a tie goes to the screen's own order.
     if (at < bestAt) { best = id; bestAt = at; }
@@ -136,4 +152,15 @@ export function markShown(log: TipLog, id: TipId): TipLog {
 /** The log once `id` will not be shown again. */
 export function retire(log: TipLog, id: TipId): TipLog {
   return log.retired.includes(id) ? log : { ...log, retired: [...log.retired, id] };
+}
+
+/** What Profile's switch shows: on while some tip is still due and the
+ *  reader has not turned them off. */
+export function tipsOn(log: TipLog): boolean {
+  return !log.off && TIP_IDS.some((id) => due(log, id));
+}
+
+/** The log once the reader has turned tips off. */
+export function turnOff(log: TipLog): TipLog {
+  return { ...log, off: true };
 }

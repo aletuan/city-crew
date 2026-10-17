@@ -912,7 +912,8 @@ describe('settings, without the welcome switch', () => {
   it('has no always-show-welcome row', () => {
     draw();
     expect(screen.queryByText('Always show welcome')).toBeNull();
-    expect(screen.queryByRole('switch')).toBeNull();
+    // The one switch on the page is the tips' (17 Oct 2026).
+    expect(screen.getAllByRole('switch').map((el) => el.getAttribute('aria-label'))).toEqual(['Show tips']);
   });
 });
 
@@ -954,62 +955,81 @@ describe('about row', () => {
   });
 });
 
-// The last row of Preferences: every collection tip back, for whoever is
-// reading. See `lib/tips` for why they retire and `TipBox.resetTips` for
-// what this does.
-describe('show tips again', () => {
+// The last row of Preferences: the collection tips, on or off, for
+// whoever is reading. See `lib/tips` for why the switch reads the record
+// and `TipBox.setTipsOn` for what each way does.
+describe('show tips', () => {
   const storage = async () => (await import('@react-native-async-storage/async-storage')).default;
-  const retiredAll = JSON.stringify({ seq: 9, last: {}, shown: {}, retired: ['reorder', 'publish', 'edit', 'add'] });
+  const allRun = JSON.stringify({ seq: 9, last: {}, shown: {}, retired: ['reorder', 'publish', 'edit', 'add', 'copy'] });
+  const tipsSwitch = () => screen.getByRole('switch', { name: 'Show tips' }) as HTMLInputElement;
 
   // With how the app speaks and looks, not under App, where it read as
   // something about the build.
-  it.each([['signed in', true], ['a guest', false]])('sits last in Preferences, after Appearance, %s', (_who, signedIn) => {
+  it.each([['signed in', true], ['a guest', false]])('sits last in Preferences, after Theme, %s', async (_who, signedIn) => {
     if (!signedIn) state.session = null;
     draw();
-    const appearance = button('Theme');
-    const again = button('Show tips again');
-    expect(again.parentElement).toBe(appearance.parentElement);
-    expect(appearance.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(again.nextElementSibling).toBeNull();
-    expect(again.parentElement).not.toBe(button('About City Crew').parentElement);
-    // Appearance is no longer the last row, so it keeps its divider, and
-    // the new last row draws none. Read off react-native-web's atomic
-    // class for the property: jsdom does not resolve those rules.
-    const divided = (row: HTMLElement) => row.outerHTML.includes('r-borderBottomWidth');
-    expect(divided(appearance)).toBe(true);
-    expect(divided(again)).toBe(false);
+    const theme = button('Theme');
+    const row = screen.getByTestId('profile-tips');
+    expect(row.parentElement).toBe(theme.parentElement);
+    expect(theme.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(row.nextElementSibling).toBeNull();
+    // Theme is no longer the last row, so it keeps its divider, and the
+    // switch row draws none. Read off react-native-web's atomic class for
+    // the property: jsdom does not resolve those rules.
+    const divided = (r: HTMLElement) => r.outerHTML.includes('r-borderBottomWidth');
+    expect(divided(theme)).toBe(true);
+    expect(divided(row)).toBe(false);
+    // The tips' own bulb, and a line saying which tips.
+    expect(row.querySelector('[data-icon="bulb-outline"]')).toBeTruthy();
+    expect(row.textContent).toContain('Short how-tos in your collections.');
+    await waitFor(() => expect(tipsSwitch().disabled).toBe(false));
   });
 
-  // "gợi ý" since 17 Oct 2026 (UX-07), not the loanword "tip" and not
-  // "mẹo"; and "bật lại", the verb its done-state ("Đã bật lại") answers to.
-  it('is called "Bật lại các gợi ý" in Vietnamese', () => {
+  // "gợi ý" since 17 Oct 2026 (UX-07), not the loanword "tip" and not "mẹo".
+  it('is called "Hiện gợi ý" in Vietnamese', () => {
     state.lang = 'vi';
     draw();
-    expect(screen.getByText('Bật lại các gợi ý')).toBeTruthy();
-    expect(screen.queryByText('Bật lại các tip')).toBeNull();
-    expect(screen.queryByText('Hiện lại các mẹo')).toBeNull();
+    expect(screen.getByText('Hiện gợi ý')).toBeTruthy();
+    expect(screen.queryByText(/\btip\b|mẹo/i)).toBeNull();
   });
 
-  it('brings back the signed-in reader\'s tips, and says so on the row', async () => {
+  it('is on for a reader with tips still to see, and turning it off keeps them away', async () => {
     const s = await storage();
-    await s.setItem('tips.v1:me', retiredAll);
-    await s.setItem('tips.v1', retiredAll);
     draw();
-    expect(button('Show tips again').textContent).not.toContain('Done');
-    await act(async () => { press('Show tips again'); });
-    expect(await s.getItem('tips.v1:me')).toBeNull();
-    // Not the guest's record: that is somebody else's.
-    expect(await s.getItem('tips.v1')).toBe(retiredAll);
-    await waitFor(() => expect(button('Show tips again').textContent).toContain('Done'));
+    await waitFor(() => expect(tipsSwitch().checked).toBe(true));
+    await act(async () => { fireEvent.click(tipsSwitch()); });
+    expect(tipsSwitch().checked).toBe(false);
+    await waitFor(async () => expect(JSON.parse((await s.getItem('tips.v1:me'))!).off).toBe(true));
   });
 
-  it('brings back a guest\'s tips', async () => {
+  // The owner's point: a switch left on over tips that will never show
+  // again is a promise the screen does not keep.
+  it('reads off once every tip has run its course, and on again brings them back', async () => {
+    const s = await storage();
+    await s.setItem('tips.v1:me', allRun);
+    await s.setItem('tips.v1', allRun);
+    draw();
+    await waitFor(() => expect(tipsSwitch().checked).toBe(false));
+    await act(async () => { fireEvent.click(tipsSwitch()); });
+    expect(tipsSwitch().checked).toBe(true);
+    await waitFor(async () => expect(await s.getItem('tips.v1:me')).toBeNull());
+    // Not the guest's record: that is somebody else's.
+    expect(await s.getItem('tips.v1')).toBe(allRun);
+  });
+
+  it('is a guest\'s own switch', async () => {
     state.session = null;
     const s = await storage();
-    await s.setItem('tips.v1', retiredAll);
+    await s.setItem('tips.v1', allRun);
     draw();
-    await act(async () => { press('Show tips again'); });
-    expect(await s.getItem('tips.v1')).toBeNull();
+    await waitFor(() => expect(tipsSwitch().checked).toBe(false));
+    await act(async () => { fireEvent.click(tipsSwitch()); });
+    await waitFor(async () => expect(await s.getItem('tips.v1')).toBeNull());
+  });
+
+  it('cannot be pressed before the record has been read', () => {
+    draw();
+    expect(tipsSwitch().disabled).toBe(true);
   });
 });
 
