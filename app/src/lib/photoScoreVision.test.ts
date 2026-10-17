@@ -176,13 +176,13 @@ describe('explainScore', () => {
   });
 
   describe('the subject', () => {
-    it('is clear when it is one thing near the middle', () => {
-      expect(why({ subject: { x: 0.5, y: 0.5, area: 0.05 } })).toBe('A clear subject.');
-      expect(why({ subject: { x: 0.85, y: 0.15, area: 0.6 } })).toBe('A clear subject.');
-    });
-    it('says nothing when it is a speck or the whole frame', () => {
-      expect(why({ subject: { x: 0.5, y: 0.5, area: 0.04 } })).toBe('Nothing measured stands out either way.');
-      expect(why({ subject: { x: 0.5, y: 0.5, area: 0.61 } })).toBe('Nothing measured stands out either way.');
+    // Vision's salient region is wide and central on almost every
+    // photograph (17 Oct 2026), so its size praises nothing: said of all
+    // of them, "a clear subject" told a guide nothing.
+    it('earns no praise for its size, whatever it is', () => {
+      for (const area of [0.04, 0.05, 0.3, 0.6, 0.61]) {
+        expect(why({ subject: { x: 0.5, y: 0.5, area } })).toBe('Nothing measured stands out either way.');
+      }
     });
     it('is at the edge past 0.35 from the centre on either axis', () => {
       expect(why({ subject: { x: 0.86, y: 0.5, area: 0.2 } })).toBe('Held back by: subject pushed to the edge.');
@@ -190,10 +190,10 @@ describe('explainScore', () => {
     });
   });
 
-  it('names greenery from Vision\'s labels at 0.3 or more, and no other label', () => {
-    expect(why({ labels: [{ id: 'tree', p: 0.3 }] })).toBe('Greenery in frame.');
-    expect(why({ labels: [{ id: 'tree', p: 0.29 }, { id: 'cafe', p: 0.9 }] }))
-      .toBe('Nothing measured stands out either way.');
+  // A plate of food is not worse for having no plant in it: greenery is
+  // the cover's question, not the photograph's (owner, 17 Oct 2026).
+  it('says nothing of greenery', () => {
+    expect(why({ labels: [{ id: 'tree', p: 0.9 }, { id: 'plant', p: 0.9 }] })).toBe('Nothing measured stands out either way.');
   });
 
   it('names a low resolution by the long side, and only when both sides are known', () => {
@@ -214,27 +214,20 @@ describe('detailsOf', () => {
   const one = (signals: Signals, key: string, over: Partial<PhotoScore> = {}) =>
     rows(signals, over).find((d) => d.key === key);
 
-  it('lists only what was measured, in reading order', () => {
+  // The board's four less colour and space, which nothing measures, with
+  // focus in their place (owner, 17 Oct 2026).
+  it('lists light, focus and composition, each with its own mark, and nothing else', () => {
     expect(rows({})).toEqual([]);
     const all = rows({
       brightness: 0.5, sharpness: 1500, subject: { x: 0.5, y: 0.5, area: 0.3 }, tilt: 1,
-      peopleArea: 0, textLines: 0, labels: ROOM, width: 1600, height: 1200,
+      peopleArea: 0, textLines: 0, labels: [...ROOM, { id: 'plant', p: 0.9 }], width: 1600, height: 1200,
     });
-    expect(all.map((d) => d.key)).toEqual(['light', 'focus', 'subject', 'level', 'clutter', 'green', 'size']);
-    // Each its own mark, so the column is seven shapes and not three.
-    expect(all.map((d) => d.icon)).toEqual([
-      'sunny-outline', 'locate-outline', 'image-outline', 'remove-outline', 'people-outline', 'leaf-outline', 'resize-outline',
-    ]);
+    expect(all.map((d) => d.key)).toEqual(['light', 'focus', 'composition']);
+    expect(all.map((d) => d.icon)).toEqual(['sunny-outline', 'locate-outline', 'scan-outline']);
+    expect(all.map((d) => d.label)).toEqual(['Light', 'Focus', 'Composition']);
   });
 
-  // No composition and no colour: Vision measures neither (owner, 16 Oct).
-  it('never lists a quality nobody measured', () => {
-    const keys = rows({ brightness: 0.5, sharpness: 1500, labels: ROOM }).map((d) => d.key);
-    expect(keys).not.toContain('composition');
-    expect(keys).not.toContain('colour');
-  });
-
-  it('says what held a quality back before what helped it', () => {
+  it('says what held the light back before what helped it', () => {
     expect(one({ brightness: 0.5 }, 'light')).toMatchObject({ value: 'Well lit', tone: 'good' });
     expect(one({ brightness: 0.1, shadows: 0.5 }, 'light'))
       .toMatchObject({ value: 'A little dark, shadows lose detail', tone: 'warn' });
@@ -243,52 +236,51 @@ describe('detailsOf', () => {
     expect(one({ brightness: 0.3 }, 'light')).toMatchObject({ value: 'Neither dark nor bright', tone: 'plain' });
   });
 
-  // The bar is the photograph's place in the catalog, not a score.
-  it('ranks focus among the catalog\'s photographs', () => {
-    const sharp = one({ sharpness: 2768 }, 'focus')!;
-    expect(sharp).toMatchObject({ value: 'Sharp', tone: 'good', note: 'Sharper than 80% of the catalog\'s photos' });
-    expect(sharp.rank).toBeCloseTo(0.8, 6);
+  // The bar: distance from the middle of the range, times the pixels that
+  // kept their detail.
+  it('fills the light bar by exposure', () => {
+    expect(one({ brightness: 0.5 }, 'light')!.bar).toBe(1);
+    expect(one({ brightness: 0.25 }, 'light')!.bar).toBeCloseTo(0.5, 6);
+    expect(one({ brightness: 0.5, shadows: 0.2, highlights: 0.1 }, 'light')!.bar).toBeCloseTo(0.7, 6);
+    expect(one({ brightness: 0, shadows: 1 }, 'light')!.bar).toBe(0);
+  });
+
+  it('fills the focus bar by its place in the catalog, and counts resolution as focus', () => {
+    expect(one({ sharpness: 2768 }, 'focus')).toMatchObject({ value: 'Sharp', tone: 'good' });
+    expect(one({ sharpness: 2768 }, 'focus')!.bar).toBeCloseTo(0.8, 6);
     expect(one({ sharpness: 300 }, 'focus')).toMatchObject({ value: 'A little soft', tone: 'warn' });
-    expect(one({ sharpness: 1385 }, 'focus')).toMatchObject({ value: 'Average', tone: 'plain', note: 'Sharper than 50% of the catalog\'s photos' });
+    expect(one({ sharpness: 1385 }, 'focus')).toMatchObject({ value: 'Average', tone: 'plain' });
+    expect(one({ sharpness: 1385 }, 'focus')!.bar).toBeCloseTo(0.5, 6);
+    expect(one({ sharpness: 2768, width: 600, height: 500 }, 'focus')).toMatchObject({ value: 'Low resolution', tone: 'warn' });
   });
 
-  it('says where the subject is, and when it is too small or too big to be one', () => {
-    expect(one({ subject: { x: 0.5, y: 0.5, area: 0.3 } }, 'subject')).toMatchObject({ value: 'A clear subject', tone: 'good' });
-    expect(one({ subject: { x: 0.95, y: 0.5, area: 0.3 } }, 'subject')).toMatchObject({ value: 'Subject pushed to the edge', tone: 'warn' });
-    expect(one({ subject: { x: 0.5, y: 0.5, area: 0.01 } }, 'subject')).toMatchObject({ value: 'Small in the frame', tone: 'plain' });
-    expect(one({ subject: { x: 0.5, y: 0.5, area: 0.9 } }, 'subject')).toMatchObject({ value: 'Fills most of the frame', tone: 'plain' });
+  // Composition is the framing checks it passed, of those that applied.
+  it('fills the composition bar by the framing checks passed, and names what failed', () => {
+    expect(one({ subject: { x: 0.5, y: 0.5, area: 0.6 }, peopleArea: 0, textLines: 0 }, 'composition'))
+      .toMatchObject({ value: 'No problems found', tone: 'plain', bar: 1 });
+    expect(one({ subject: { x: 0.5, y: 0.5, area: 0.6 }, tilt: 6, labels: ROOM, peopleArea: 0.4 }, 'composition'))
+      .toMatchObject({ value: 'Horizon tilted 6°, people fill much of the frame', tone: 'warn' });
+    expect(one({ subject: { x: 0.5, y: 0.5, area: 0.6 }, tilt: 6, labels: ROOM, peopleArea: 0.4 }, 'composition')!.bar)
+      .toBeCloseTo(1 / 3, 6);
+    expect(one({ subject: { x: 0.95, y: 0.5, area: 0.3 } }, 'composition'))
+      .toMatchObject({ value: 'Subject pushed to the edge', tone: 'warn', bar: 0 });
+    expect(one({ textLines: 12 }, 'composition')).toMatchObject({ value: 'A lot of writing in frame', bar: 0 });
   });
 
-  // Only of a scene: on a close-up the "horizon" is a table's edge.
-  it('reads the horizon of a scene only', () => {
-    expect(one({ tilt: 6 }, 'level')).toBeUndefined();
-    expect(one({ tilt: 6, labels: ROOM }, 'level')).toMatchObject({ value: 'Horizon tilted 6°', tone: 'warn' });
-    expect(one({ tilt: 1, labels: ROOM }, 'level')).toMatchObject({ value: 'Level', tone: 'good' });
-    expect(one({ labels: ROOM }, 'level')).toMatchObject({ value: 'None found', tone: 'plain' });
-    expect(one({ tilt: -25, labels: ROOM }, 'level')).toMatchObject({ value: 'Tilted 25°, by the look of it on purpose', tone: 'plain' });
-  });
-
-  it('names what distracts, and says so when nothing does', () => {
-    expect(one({ peopleArea: 0, textLines: 0 }, 'clutter')).toMatchObject({ value: 'Few people, little writing', tone: 'good' });
-    expect(one({ peopleArea: 0.3 }, 'clutter')).toMatchObject({ value: 'People fill much of the frame', tone: 'warn' });
-    expect(one({ textLines: 12 }, 'clutter')).toMatchObject({ value: 'A lot of writing in frame', tone: 'warn' });
+  // A horizon is a check only on a scene that has one: on a close-up the
+  // "horizon" is a table's edge, and a deliberate tilt is not a slip.
+  it('counts the horizon only on a scene, and passes a deliberate tilt', () => {
+    expect(one({ tilt: 6 }, 'composition')).toBeUndefined();
+    expect(one({ tilt: 6, labels: ROOM }, 'composition')).toMatchObject({ bar: 0, tone: 'warn' });
+    expect(one({ tilt: 1, labels: ROOM }, 'composition')).toMatchObject({ bar: 1 });
+    expect(one({ tilt: -25, labels: ROOM }, 'composition')).toMatchObject({ bar: 1, tone: 'plain' });
+    expect(one({ labels: ROOM }, 'composition')).toBeUndefined();
   });
 
   // The sentence leaves a record's writing to its lead; the row still lists it.
   it('lists a record\'s writing, which the sentence says another way', () => {
     const record = { textLines: 20, labels: [{ id: 'menu', p: 0.6 }] };
-    expect(one(record, 'clutter', { is_utility: true })).toMatchObject({ value: 'A lot of writing in frame', tone: 'warn' });
-  });
-
-  it('says greenery is there, or not seen', () => {
-    expect(one({ labels: [{ id: 'plant', p: 0.6 }] }, 'green')).toMatchObject({ value: 'Greenery in frame', tone: 'good' });
-    expect(one({ labels: [] }, 'green')).toMatchObject({ value: 'None seen', tone: 'plain' });
-  });
-
-  it('gives the size of the long side, and says when it is too small', () => {
-    expect(one({ width: 1600, height: 1200 }, 'size')).toMatchObject({ value: '1600 px on the long side', tone: 'good' });
-    expect(one({ width: 600, height: 500 }, 'size')).toMatchObject({ value: 'Low resolution', tone: 'warn' });
-    expect(one({ width: 1600 }, 'size')).toBeUndefined();
+    expect(one(record, 'composition', { is_utility: true })).toMatchObject({ value: 'A lot of writing in frame', tone: 'warn' });
   });
 
   it('reads a missing `signals` as nothing measured', () => {
@@ -297,8 +289,9 @@ describe('detailsOf', () => {
 
   it('speaks Vietnamese', () => {
     const vi = rows({ sharpness: 2768, tilt: 6, labels: ROOM }, {}, vi_);
-    expect(vi.find((d) => d.key === 'focus')).toMatchObject({ label: 'Độ nét', value: 'Rõ nét', note: 'Nét hơn 80% ảnh trong catalog' });
-    expect(vi.find((d) => d.key === 'level')).toMatchObject({ label: 'Đường chân trời', value: 'Đường chân trời nghiêng 6°' });
+    expect(vi.find((d) => d.key === 'focus')).toMatchObject({ label: 'Độ nét', value: 'Rõ nét' });
+    expect(vi.find((d) => d.key === 'composition')).toMatchObject({ label: 'Bố cục', value: 'Đường chân trời nghiêng 6°' });
+    expect(rows({ peopleArea: 0 }, {}, vi_)[0]).toMatchObject({ value: 'Không thấy lỗi' });
   });
 });
 
@@ -311,20 +304,22 @@ describe('suggestionsOf', () => {
 
   it('suggests one thing for each that held it back', () => {
     expect(tips({ sharpness: 200, tilt: 6, labels: ROOM, peopleArea: 0.4 })).toEqual([
-      'Hold the phone steady and tap the subject to focus.',
-      'Straighten it: Edit → Crop in Photos levels the horizon.',
-      'Choose a moment with fewer people, or keep them small in the frame.',
+      { icon: 'locate-outline', text: 'Hold the phone steady and tap the subject to focus.' },
+      { icon: 'scan-outline', text: 'Straighten it: Edit → Crop in Photos levels the horizon.' },
+      { icon: 'scan-outline', text: 'Choose a moment with fewer people, or keep them small in the frame.' },
     ]);
-    expect(tips({ brightness: 0.9 })).toEqual(['Avoid shooting into the light.']);
-    expect(tips({ highlights: 0.4 })).toEqual(['Keep bright windows and lamps from filling the frame.']);
-    expect(tips({ textLines: 12 })).toEqual(['Step back or crop so signs and menus do not fill the frame.']);
-    expect(tips({ subject: { x: 0.02, y: 0.5, area: 0.2 } })).toEqual(['Bring the subject in from the edge.']);
-    expect(tips({ width: 500, height: 400 })).toEqual(['Use the original photo, not a resized copy.']);
+    const text = (signals: Signals) => tips(signals).map((tip) => tip.text);
+    expect(tips({ brightness: 0.9 })).toEqual([{ icon: 'sunny-outline', text: 'Avoid shooting into the light.' }]);
+    expect(text({ highlights: 0.4 })).toEqual(['Keep bright windows and lamps from filling the frame.']);
+    expect(text({ textLines: 12 })).toEqual(['Step back or crop so signs and menus do not fill the frame.']);
+    expect(text({ subject: { x: 0.02, y: 0.5, area: 0.2 } })).toEqual(['Bring the subject in from the edge.']);
+    // Resolution is how much detail there is: a focus tip.
+    expect(tips({ width: 500, height: 400 })).toEqual([{ icon: 'locate-outline', text: 'Use the original photo, not a resized copy.' }]);
   });
 
   // Dark and shadows are one fault with one fix: said once.
   it('says a fix once, however many faults it answers', () => {
-    expect(tips({ brightness: 0.1, shadows: 0.5 })).toEqual(['Choose a photo taken in more light.']);
+    expect(tips({ brightness: 0.1, shadows: 0.5 })).toEqual([{ icon: 'sunny-outline', text: 'Choose a photo taken in more light.' }]);
   });
 
   // A menu's writing is what it is of, not a fault.

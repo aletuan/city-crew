@@ -133,7 +133,7 @@ describe('ScoreDetails', () => {
   // Sharp, level, with a crowd and a tilted horizon to suggest about.
   const measured = score({
     aesthetic: 0.635,
-    signals: { brightness: 0.5, sharpness: 2768, tilt: 6, labels: [{ id: 'interior_room', p: 0.8 }], peopleArea: 0.4 },
+    signals: { brightness: 0.5, sharpness: 2768, tilt: 6, labels: [{ id: 'interior_room', p: 0.8 }], peopleArea: 0.4, textLines: 0 },
   });
 
   it('is folded until opened, and opens from its head', () => {
@@ -152,7 +152,8 @@ describe('ScoreDetails', () => {
     expect(screen.getByTestId('score-detail-toggle').querySelector('[data-icon="chevron-up"]')).not.toBeNull();
     expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 80% of the catalog\'s photos');
     expect(screen.getByTestId('score-detail-light').textContent).toBe('LightWell lit');
-    expect(screen.getByTestId('score-detail-level').textContent).toBe('HorizonHorizon tilted 6°');
+    expect(screen.getByTestId('score-detail-composition').textContent).toBe('CompositionHorizon tilted 6°, people fill much of the frame');
+    expect(screen.queryByTestId('score-detail-green')).toBeNull();
   });
 
   // Who measured, for the reader who opened the analysis — last, and only
@@ -173,20 +174,28 @@ describe('ScoreDetails', () => {
     render(<ScoreDetails score={measured} open onToggle={() => {}} />);
     const glyph = (key: string) => screen.getByTestId(`score-detail-${key}`).querySelector('[data-icon]')!.getAttribute('data-icon');
     expect(glyph('light')).toBe('sunny-outline');
-    expect(glyph('level')).toBe('remove-outline');
-    expect(glyph('green')).toBe('leaf-outline');
+    expect(glyph('focus')).toBe('locate-outline');
+    expect(glyph('composition')).toBe('scan-outline');
     const ink = (key: string) => getComputedStyle(screen.getByTestId(`score-detail-${key}-value`)).color;
     expect(ink('light')).toBe(rgb(colors.okInk));
-    expect(ink('level')).toBe(rgb(colors.warnInk));
-    expect(ink('green')).toBe(rgb(colors.textSecondary));
+    expect(ink('composition')).toBe(rgb(colors.warnInk));
   });
 
-  // The bar is the photograph's place in the catalog, on focus alone.
-  it('draws a bar only where there is a rank, as wide as the rank', () => {
+  it('inks a row that neither helped nor held back plainly', () => {
+    render(<ScoreDetails score={score({ signals: { brightness: 0.3 } })} open onToggle={() => {}} />);
+    expect(getComputedStyle(screen.getByTestId('score-detail-light-value')).color).toBe(rgb(colors.textSecondary));
+  });
+
+  // A bar on every row, as full as the row says, amber where the
+  // quality held the photograph back and green otherwise.
+  it('draws every row\'s bar, as full as its measurement, in its tone', () => {
     render(<ScoreDetails score={measured} open onToggle={() => {}} />);
-    expect(screen.getByTestId('score-detail-focus-rank').style.width).toBe('80%');
-    expect(screen.getByTestId('score-detail-focus').textContent).toContain('Sharper than 80% of the catalog\'s photos');
-    expect(screen.queryByTestId('score-detail-light-rank')).toBeNull();
+    const bar = (key: string) => screen.getByTestId(`score-detail-${key}-bar`);
+    expect(bar('light').style.width).toBe('100%');
+    expect(bar('focus').style.width).toBe('80%');
+    expect(bar('composition').style.width).toBe('33%');
+    expect(getComputedStyle(bar('focus')).backgroundColor).toBe(rgb(colors.okInk));
+    expect(getComputedStyle(bar('composition')).backgroundColor).toBe(rgb(colors.warnInk));
   });
 
   it('suggests what would have helped, and only when something held it back', () => {
@@ -195,6 +204,9 @@ describe('ScoreDetails', () => {
     expect(tips.textContent).toContain('To improve');
     expect(tips.textContent).toContain('Straighten it');
     expect(tips.textContent).toContain('fewer people');
+    // The bulb heads the box; each tip wears its quality's mark.
+    const marks = [...tips.querySelectorAll('[data-icon]')].map((el) => el.getAttribute('data-icon'));
+    expect(marks).toEqual(['bulb-outline', 'scan-outline', 'scan-outline']);
     unmount();
     render(<ScoreDetails score={score({ signals: { brightness: 0.5 } })} open onToggle={() => {}} />);
     expect(screen.queryByTestId('score-tips')).toBeNull();
