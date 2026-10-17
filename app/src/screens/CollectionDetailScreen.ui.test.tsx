@@ -363,12 +363,25 @@ describe('your own list', () => {
     expect(screen.queryByText(/Private/)).toBeNull();
   });
 
-  it('shows the like tally to the owner of a public list, but not as a button', () => {
+  // A curator may like their own list (owner, 17 Oct 2026): the same
+  // heart, pressable, at any count.
+  it('gives the owner of a public list the same heart, and it likes', () => {
     state.mine = [collection({ is_public: true })];
     state.likes = { 'old-quarter': 7 };
     show();
     expect(screen.getByText('7')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /like/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Like' }));
+    expect(spies.toggleLike).toHaveBeenCalledWith(expect.objectContaining({ slug: 'old-quarter' }));
+  });
+
+  it('draws the owner\u2019s heart before anybody has liked the list', () => {
+    state.mine = [collection({ is_public: true })];
+    state.likes = {};
+    show();
+    const heart = screen.getByRole('button', { name: 'Like' });
+    expect(heart.querySelector('[data-icon="heart-outline"]')).toBeTruthy();
+    // And no zero beside it.
+    expect(heart.textContent).toBe('');
   });
 
   it('opens a place from its card', () => {

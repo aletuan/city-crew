@@ -34,6 +34,8 @@ const state = vi.hoisted(() => ({
   },
   cols: { loaded: true, data: [] as unknown[] },
   likes: {} as Record<string, number>,
+  // What a shelf ranks by, when a test needs it to differ from the shown count.
+  rankLikes: undefined as Record<string, number> | undefined,
   myLikes: [] as string[],
   uid: null as string | null,
   saved: new Set<string>(),
@@ -76,7 +78,9 @@ vi.mock('../lib/city', () => ({
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.places, reload: spies.reload }),
   useCollections: () => state.cols,
-  useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
+  useLikes: () => ({
+    likes: state.likes, rankLikes: state.rankLikes ?? state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike,
+  }),
 }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
@@ -317,6 +321,7 @@ beforeEach(async () => {
   state.places = { loading: false, loaded: true, error: null, data: [], reload: () => {} };
   state.cols = { loaded: true, data: [] };
   state.likes = {};
+  state.rankLikes = undefined;
   state.myLikes = [];
   state.uid = null;
   state.saved = new Set();
@@ -1738,20 +1743,31 @@ describe('the community shelf', () => {
 
   // The shelf draws every public list, the reader's own included — a
   // list you published and cannot find on the front door reads as a list
-  // that did not publish. What it must not draw on your own is a heart
-  // you can press: the database refuses a like on your own list, so a
-  // pressable one there is a control that can only fail. Same shape as
-  // the collection's own screen: grey, inert, and still counting.
-  it('counts the likes on the reader’s own list without offering the heart', () => {
+  // that did not publish. And your own wears the same heart as everybody
+  // else's (owner, 17 Oct 2026): a curator may like their own list.
+  it('offers the reader’s own list the same heart, at any count', () => {
     state.uid = 'u1';
     state.places.data = [place('p1')];
     state.cols.data = [collection('mine', ['p1'], { owner_id: 'u1' } as Partial<Collection>)];
-    state.likes = { mine: 4 };
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.getByText('List mine')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
-    expect(screen.getByText('4')).toBeTruthy();
-    expect(shelfCard('List mine').querySelector('[data-icon="heart"]')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Like this collection' }));
+    expect(spies.toggleLike).toHaveBeenCalledWith({ id: 'id-mine', slug: 'mine' });
+  });
+
+  // Ranked by everybody's likes but the owner's, shown with all of them.
+  it('orders the shelf by the ranking figure, and prints the whole count', () => {
+    state.places.data = [place('p1')];
+    state.cols.data = [collection('selfish', ['p1']), collection('liked', ['p1'])];
+    // More on `selfish`'s heart, two of them its owner's — so by the shown
+    // count it would lead, and by everybody else's it follows.
+    state.likes = { selfish: 3, liked: 2 };
+    state.rankLikes = { selfish: 1, liked: 2 };
+    render(<ExploreScreen navigation={nav()} />);
+    const liked = screen.getByText('List liked');
+    const selfish = screen.getByText('List selfish');
+    expect(liked.compareDocumentPosition(selfish) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(shelfCard('List selfish').textContent).toContain('3');
   });
 
   it('still offers the heart on somebody else’s list', () => {

@@ -28,6 +28,9 @@ const cat = vi.hoisted(() => ({
   places: [] as unknown[],
   cols: [] as unknown[],
   terms: {} as Record<string, string[]>,
+  // The count a heart shows, and the one a shelf ranks by.
+  likes: {} as Record<string, number>,
+  rankLikes: {} as Record<string, number>,
 }));
 
 // The Google half, as a plain object the tests set before rendering. The
@@ -56,7 +59,7 @@ vi.mock('../lib/city', () => ({
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ data: cat.places }),
   useCollections: () => ({ data: cat.cols }),
-  useLikes: () => ({ likes: {} }),
+  useLikes: () => ({ likes: cat.likes, rankLikes: cat.rankLikes }),
   useSearchTerms: () => cat.terms,
 }));
 vi.mock('../lib/candidates', () => ({
@@ -193,6 +196,8 @@ beforeEach(async () => {
   cat.places = [cong, pho, museum, pending];
   cat.cols = [crawl, gallery, saigon];
   cat.terms = { heritage: ['temple'] };
+  cat.likes = {};
+  cat.rankLikes = {};
   Object.assign(g, {
     results: null, known: {}, searching: false, adding: null,
     batch: { running: false, state: {}, done: 0, total: 0 },
@@ -227,6 +232,25 @@ describe('the zero-state', () => {
     // Shopping exists only as the reader's own pending submission.
     expect(screen.queryByText('Shopping')).toBeNull();
     expect(screen.queryByText('Nightlife')).toBeNull();
+  });
+
+  // A curator's like of their own list is not a reader recommending its
+  // places: "most popular" scores lists by everybody's likes but the
+  // owner's (owner, 17 Oct 2026).
+  it('weighs a list by the likes it ranks by, not the ones its heart shows', () => {
+    const a = place({ slug: 'a', name_en: 'Alpha Cafe', created_at: '2026-01-01T00:00:00Z' } as Partial<Place>);
+    const b = place({ slug: 'b', name_en: 'Bravo Cafe', created_at: '2026-01-01T00:00:00Z' } as Partial<Place>);
+    cat.places = [a, b];
+    cat.cols = [
+      collection({ slug: 'la', collection_places: members('a') }),
+      collection({ slug: 'lb', collection_places: members('b') }),
+    ];
+    // More hearts on Alpha's list, but most of them its owner's.
+    cat.likes = { la: 5, lb: 3 };
+    cat.rankLikes = { la: 1, lb: 3 };
+    mount();
+    const popular = textAfter('Most popular');
+    expect(popular.indexOf('Bravo Cafe')).toBeLessThan(popular.indexOf('Alpha Cafe'));
   });
 
   it('prints the brand alone on a row, leaving the ward after the dash to the line below', () => {

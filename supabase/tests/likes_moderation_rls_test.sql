@@ -20,8 +20,9 @@ update public.collections set is_public = true where id = 'd3000000-0000-0000-00
 
 -- ════════════════════════════════════════════════════ collection likes
 
--- A fan likes a public list, in their own name. Not a private one, not in
--- somebody else's name, and a curator cannot applaud their own list.
+-- A fan likes a public list, in their own name. Not a private one, and not
+-- in somebody else's name. A curator may like their own list since
+-- 20261017090000 — the shelf ranks by everybody else's likes instead.
 do $$
 declare refused int := 0;
 begin
@@ -41,13 +42,16 @@ begin
   end;
   reset role;
 
+  -- The curator's own like goes in, and comes straight back out: the
+  -- checks below are about what the curator can learn of *other* people's
+  -- likes, and a row of their own would be one they may read.
   set local role rls_client;
   set local test.uid = 'd3000000-0000-0000-0000-00000000000a';
-  begin
-    insert into public.collection_likes (collection_id, user_id)
-    values ('d3000000-0000-0000-0000-0000000000c1', 'd3000000-0000-0000-0000-00000000000a');
-  exception when insufficient_privilege then refused := refused + 1;
-  end;
+  insert into public.collection_likes (collection_id, user_id)
+  values ('d3000000-0000-0000-0000-0000000000c1', 'd3000000-0000-0000-0000-00000000000a');
+  delete from public.collection_likes
+   where collection_id = 'd3000000-0000-0000-0000-0000000000c1'
+     and user_id = 'd3000000-0000-0000-0000-00000000000a';
   reset role;
 
   set local role rls_client;
@@ -59,7 +63,7 @@ begin
   end;
   reset role;
 
-  assert refused = 4, format('%s of 4 improper likes were refused', refused);
+  assert refused = 3, format('%s of 3 improper likes were refused', refused);
 end $$;
 
 -- A like is private to the person who gave it; the curator hears about it

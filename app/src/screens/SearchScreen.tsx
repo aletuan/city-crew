@@ -183,10 +183,12 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // `usePlaces` includes the reader's own still-pending submissions, and
   // "most popular" must not recommend a place nobody else can open yet.
   // The scoring itself lives in lib/popular; see the essay there.
-  const { likes } = useLikes();
+  // The ranking figure: a curator's like of their own list is not a reader
+  // recommending its places.
+  const { rankLikes } = useLikes();
   const popular = useMemo(
-    () => rankPopular(places.filter(isLive), cols.data, likes),
-    [places, cols.data, likes],
+    () => rankPopular(places.filter(isLive), cols.data, rankLikes),
+    [places, cols.data, rankLikes],
   );
 
   // The zero-state's fourth section: the catalog's newest arrivals, for

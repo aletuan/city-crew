@@ -441,10 +441,14 @@ describe('fetchLikeCounts', () => {
   // learn a list has forty likes, nobody may learn who the forty are.
   it('takes the totals from a function and the slugs from the table', async () => {
     fake().replies(
-      { data: [{ collection_id: 'c-1', likes: 4 }, { collection_id: 'c-2', likes: 1 }] },
+      { data: [{ collection_id: 'c-1', likes: 4, others: 3 }, { collection_id: 'c-2', likes: 1, others: 1 }] },
       { data: [{ id: 'c-1', slug: 'coffee' }, { id: 'c-2', slug: 'views' }] },
     );
-    expect(await fetchLikeCounts()).toEqual({ coffee: 4, views: 1 });
+    // Every like on the heart; everybody's but the owner's for the shelf.
+    expect(await fetchLikeCounts()).toEqual({
+      shown: { coffee: 4, views: 1 },
+      ranked: { coffee: 3, views: 1 },
+    });
 
     const [rpc, table] = fake().log;
     expect(rpc).toMatchObject({ op: 'rpc', fn: 'collection_like_counts' });
@@ -452,33 +456,43 @@ describe('fetchLikeCounts', () => {
     expect(table.filters).toEqual([['is_public', true]]);
   });
 
+  // A server still on the old function returns no `others`. The total is
+  // what ranked the shelf there, so it ranks it here too.
+  it('ranks by the total where the server has no ranking figure yet', async () => {
+    fake().replies(
+      { data: [{ collection_id: 'c-1', likes: 4 }] },
+      { data: [{ id: 'c-1', slug: 'coffee' }] },
+    );
+    expect(await fetchLikeCounts()).toEqual({ shown: { coffee: 4 }, ranked: { coffee: 4 } });
+  });
+
   it('drops a count whose collection it cannot name', async () => {
     fake().replies(
       { data: [{ collection_id: 'gone', likes: 9 }] },
       { data: [{ id: 'c-1', slug: 'coffee' }] },
     );
-    expect(await fetchLikeCounts()).toEqual({});
+    expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
   });
 
-  // Failure is an empty map: every count then reads as zero, `rankByLikes`
+  // Failure is empty maps: every count then reads as zero, `rankByLikes`
   // falls back to the order the shelf had before likes existed, and no
   // heart shows a tally — the state the feature ships in anyway.
   it('answers an empty map when the function failed', async () => {
     fake().replies({ error: { message: 'no such function' } }, { data: [] });
-    expect(await fetchLikeCounts()).toEqual({});
+    expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
   });
 
   it('answers an empty map when the slug lookup failed', async () => {
     fake().replies({ data: [] }, { error: { message: 'timeout' } });
-    expect(await fetchLikeCounts()).toEqual({});
+    expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
   });
 
   it('answers an empty map when either side returned nothing', async () => {
     fake().replies({ data: null }, { data: [] });
-    expect(await fetchLikeCounts()).toEqual({});
+    expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
     fake().reset();
     fake().replies({ data: [] }, { data: null });
-    expect(await fetchLikeCounts()).toEqual({});
+    expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
   });
 });
 

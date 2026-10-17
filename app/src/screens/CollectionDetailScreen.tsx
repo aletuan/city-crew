@@ -955,46 +955,38 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      control's label. Outline is a list you have not liked, filled is one
      you have, and the figure beside it is how many people agree.
 
-     Pressable for everyone except the curator. A curator cannot like
-     their own list — the database enforces it, and `!owned` here is the
-     app's half of the same rule, so the reader never meets a heart that
-     does nothing. The owner gets the same shape grey and inert, because
-     they still want to know how the list is doing. Signed out it stays
-     pressable and opens the sign-in sheet; see `onHeart`. `hitSlop` buys
-     a 15pt glyph a 44pt target without drawing a disc.
+     Pressable for everyone, the curator included (owner, 17 Oct 2026):
+     you may like your own list, as on any social app. The shelf sorts by
+     everybody's likes but yours (`rankLikes`), so the vote fills your
+     heart and moves the number without moving the list up. Signed out it
+     stays pressable and opens the sign-in sheet; see `onHeart`. `hitSlop`
+     buys a 15pt glyph a 44pt target without drawing a disc.
 
      It prints from one: a `0` reads as "nobody liked this" rather than
      "no votes yet", and below that the heart draws bare — exactly when it
      is most obviously an invitation. */
   const heart = col && isPublic && col.id ? (
-    !owned ? (
-      <PressableScale
-        style={s.like}
-        scaleTo={0.82}
-        haptic="none"
-        hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
-        onPress={onHeart}
-        accessibilityRole="button"
-        accessibilityState={{ selected: liked }}
-        accessibilityLabel={liked
-          ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
-          : t('Like', 'Thích', 'いいね')}
-      >
-        <Ionicons
-          name={liked ? 'heart' : 'heart-outline'}
-          size={15}
-          color={liked ? colors.accent : colors.textTertiary}
-        />
-        {likesWorthShowing(likes[col.slug])
-          ? <Text style={s.meta}>{likes[col.slug]}</Text>
-          : null}
-      </PressableScale>
-    ) : likesWorthShowing(likes[col.slug]) ? (
-      <View style={s.like}>
-        <Ionicons name="heart" size={15} color={colors.textTertiary} />
-        <Text style={s.meta}>{likes[col.slug]}</Text>
-      </View>
-    ) : null
+    <PressableScale
+      style={s.like}
+      scaleTo={0.82}
+      haptic="none"
+      hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
+      onPress={onHeart}
+      accessibilityRole="button"
+      accessibilityState={{ selected: liked }}
+      accessibilityLabel={liked
+        ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
+        : t('Like', 'Thích', 'いいね')}
+    >
+      <Ionicons
+        name={liked ? 'heart' : 'heart-outline'}
+        size={15}
+        color={liked ? colors.accent : colors.textTertiary}
+      />
+      {likesWorthShowing(likes[col.slug])
+        ? <Text style={s.meta}>{likes[col.slug]}</Text>
+        : null}
+    </PressableScale>
   ) : null;
 
   /* The card's foot: who can see it, how many places, and the heart.

@@ -471,7 +471,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const cols = useCollections();
-  const { likes, myLikes, toggleLike } = useLikes();
+  const { likes, rankLikes, myLikes, toggleLike } = useLikes();
   const uid = useAuth().session?.user?.id;
   const { askToSignIn } = useSave();
 
@@ -500,9 +500,11 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   // Most liked first, and the shelf's old order underneath it — see
   // `rankByLikes`. While every count is zero, which is the state this
   // ships in, the result is byte-for-byte the shelf that was here before.
+  // By everybody's likes but the owner's own — `rankLikes`; the heart on
+  // each card still prints the whole count.
   const visible = rankByLikes(
     cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id)),
-    likes,
+    rankLikes,
   );
 
   const coverFor = (c: Collection) =>
@@ -570,10 +572,6 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
             const members = membersOf(c, places);
             const count = members.length;
             const badge = collectionBadge(members);
-            // Your own published lists are on this shelf now — see
-            // `fetchCollections` — and the heart is the one thing that
-            // has to know it.
-            const owned = !!c.owner_id && c.owner_id === uid;
             return (
               <PressableScale
                 key={c.slug}
@@ -633,26 +631,16 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                         44pt without a disc: the glyph can stay small
                         because the touchable does not have to.
 
-                        Pressable for everyone except the curator. A
-                        curator cannot like their own list — the database
-                        enforces it — so on your own the same shape is
-                        drawn dimmed and inert: you still want to know
-                        how the list is doing, and a heart that can only
-                        fail is worse than no heart at all. This shelf
-                        used not to need the check, because the query
-                        left your own lists out; it left them out of the
-                        shelf entirely, which is the bug that brought
-                        them back. The collection's own screen carries
-                        the same rule, drawn the same way, and the
-                        Collections grid a third copy. */}
-                    {c.id && owned ? (
-                      likesWorthShowing(likes[c.slug]) ? (
-                        <View style={[s.shelfLikes, s.shelfLikeHit]}>
-                          <Ionicons name="heart" size={15} color={onPhoto.textSecondary} />
-                          <Text style={s.shelfCardMeta}>{likes[c.slug]}</Text>
-                        </View>
-                      ) : null
-                    ) : c.id ? (
+                        Pressable for everyone, the curator included
+                        (owner, 17 Oct 2026). Until then your own list
+                        wore a dimmed, inert heart, because the database
+                        refused a curator's like; it takes it now, as
+                        every other social app does, and keeps the vote
+                        out of the order instead — the shelf sorts by
+                        `rankLikes`, which leaves the owner's like out.
+                        The collection's own screen and the Collections
+                        grid draw the same heart by the same rule. */}
+                    {c.id ? (
                       <PressableScale
                         containerStyle={s.shelfLikeHit}
                         style={s.shelfLikes}
