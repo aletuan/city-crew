@@ -32,7 +32,7 @@ def parse(line: str) -> tuple[str, dict]:
     n, kind, vals, rest = parts[0], parts[1], parts[2:8], parts[8:]
     if kind not in KINDS or len(vals) != len(ATTRS) or any(v not in VALUE for v in vals):
         raise SystemExit(f'bad line: {line}')
-    signals = {'v': VERSION, 'kind': kind, **{k: VALUE[v] for k, v in zip(ATTRS, vals)}}
+    signals = {'v': VERSION, 'kind': kind, **{k: VALUE[v] for k, v in zip(ATTRS, vals)}, 'by': 'skill'}
     for token in rest:
         if token == 'note':  # optional marker before the note
             continue

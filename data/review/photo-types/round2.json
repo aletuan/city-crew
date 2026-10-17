@@ -315,5 +315,24 @@
  "owner": "PPPPPPPFPPFPFFPPFPPPFPSPPPFFPPPFFPUFFFPPPPFPPFPFFFPPPFFPPPPFFPFPSPPFPPPPFPFPFPFFPPPFPPPPPPPPFPPFPPFP",
  "about_owner": "The owner's answers, pasted 17 Oct 2026 after Claude's were committed; same order.",
  "rule": "PPPPPPPFPPFPPFPPFPPPPPPPPPPPPPPPPPPPFPPPPPPPPFPPFFPPPFFPPPPFFPFPPPPPPPPPFPPPPPPPPPPPPPPPPPPPPPPFPPFP",
- "about_rule": "Rule v0 (rule_v0.py) on the same photographs, computed after both answered."
+ "about_rule": "Rule v0 (rule_v0.py) on the same photographs, computed after both answered.",
+ "function": {
+  "about": "The label-photos Edge Function, write:false, effort low, 17 Oct 2026 ~11:35 UTC, after the owner answered (the owner line was already in this file, and the definitions were frozen in _shared/photoLabels.ts before the run). Its six kinds folded into the round's letters: food F, interior and exterior P, view S, text and other U.",
+  "claude-opus-5-5": {
+   "line": "PPPUPPPFPPFPFFPPFPPPFPPPFPFFPPPFFPUFFFPPPPFPPFPUFFPPPFFPPPPFFPFPPPPFPPPPFPFPFPFFPPPFPPPPPPPPFPPFPPFP",
+   "usage": {
+    "input_tokens": 288359,
+    "output_tokens": 8078
+   },
+   "seconds": 80
+  },
+  "claude-haiku-5-5": {
+   "line": "PPPUPPPFPPFPFFUPFPPPFPPPFPFFPPPFFPUFFFPPPPFPPFPUFFPPPFFPPPPFFPFPSPPFPPPPFPFPFPFFPPPFPPPPPPSPFPPFPPFP",
+   "usage": {
+    "input_tokens": 288359,
+    "output_tokens": 12923
+   },
+   "seconds": 79
+  }
+ }
 }
