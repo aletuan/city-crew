@@ -33,8 +33,8 @@ describe('appleVision', () => {
   });
   it('explains with this file\'s sentence, and says who measured', () => {
     expect(appleVision.explain(row({ brightness: 0.5 }), en)).toBe('Well lit.');
-    expect(appleVision.source(en)).toBe('Measured on this phone by Apple Vision.');
-    expect(appleVision.source(vi_)).toBe('Đo trên máy bằng Apple Vision.');
+    expect(appleVision.source(en)).toBe('Analysed on this phone by Apple Vision.');
+    expect(appleVision.source(vi_)).toBe('Phân tích trên máy bằng Apple Vision.');
   });
 });
 
@@ -221,6 +221,10 @@ describe('detailsOf', () => {
       peopleArea: 0, textLines: 0, labels: ROOM, width: 1600, height: 1200,
     });
     expect(all.map((d) => d.key)).toEqual(['light', 'focus', 'subject', 'level', 'clutter', 'green', 'size']);
+    // Each its own mark, so the column is seven shapes and not three.
+    expect(all.map((d) => d.icon)).toEqual([
+      'sunny-outline', 'locate-outline', 'image-outline', 'remove-outline', 'people-outline', 'leaf-outline', 'resize-outline',
+    ]);
   });
 
   // No composition and no colour: Vision measures neither (owner, 16 Oct).
