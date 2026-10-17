@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v3
+## 3. Bộ nhãn v4
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -38,8 +38,8 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | Giá trị | Nghĩa | Ở các vòng chấm tay |
 |---|---|---|
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
-| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Hành lang có mái nhìn ra sân trong là Nội thất | P |
-| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ phía khách, là Mặt tiền | P |
+| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Hành lang có mái nhìn ra sân trong là Nội thất | P |
+| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền | P |
 | `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, vườn, bãi cỏ, khuôn viên, toàn cảnh thành phố. Nhà, hiên, cổng, tượng đứng giữa khuôn viên chiếm phần lớn khung vẫn là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung | U |
 | `other` | Không thuộc loại nào ở trên | U |
@@ -60,6 +60,9 @@ thì theo cái chiếm khung; hành lang có mái là Nội thất.
 - có người trong ảnh là "Có";
 - dàn dựng chỉ là người mẫu tạo dáng, không tính chữ in đè;
 - trên trang chấm, "Toàn cảnh" đổi tên thành "Thấy cả không gian".
+
+**v4 (17/10/2026)** thu hẹp luật quầy của v2 sau vòng 3c (mục 10): chỉ quầy
+hay ki-ốt nhìn từ ngoài đường mới là Mặt tiền; quầy trong nhà là Nội thất.
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -115,10 +118,10 @@ Bảng `photo_scores` đã được thiết kế để có bộ chấm thứ hai
 | Cột | Giá trị |
 |---|---|
 | `scorer` | `claude-labels` |
-| `scorer_version` | `1` (luật 3 ở mục 4) |
+| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `4` (luật 3 ở mục 4) |
 | `aesthetic`, `is_utility` | `null`: bộ chấm này không chấm điểm đẹp |
 | `scored_by` | `null`: skill ghi nhãn qua Supabase MCP, không qua tài khoản người dùng |
-| `signals` | `{ "v": 1, "kind": …, "brand": …, … }` |
+| `signals` | `{ "v": 4, "kind": …, "brand": …, … }` |
 
 **Migration cần có:** bỏ ràng buộc `photo_scores_one_per_photo`.
 
@@ -183,9 +186,9 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 |---|---|---|
 | 1 | Migration: bỏ `photo_scores_one_per_photo`, kèm test SQL | ✅ 17/10: `20261017120000_photo_scores_second_scorer.sql`, đã chạy trên live (lịch sử `20261017101738`) |
 | 2 | Skill `photo-labels` trong repo; chạy thử trên 3–5 địa điểm | ✅ 17/10: 21 địa điểm, 137 ảnh (mục 9) |
-| 2b | Edge Function gán nhãn ảnh mới, cùng định nghĩa với skill (mục 10) | ◐ 17/10: `label-photos` đã triển khai và đo ở vòng 2; vòng 3 đã khoá, chờ chủ sản phẩm chấm. App chưa gọi |
+| 2b | Edge Function gán nhãn ảnh mới, cùng định nghĩa với skill (mục 10) | ◐ 17/10: `label-photos` đã triển khai (định nghĩa v4, bản 5) và đo ở vòng 2, 3, 3b, 3c. App chưa gọi |
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
-| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ☐ |
+| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ✅ 17/10: vòng 3 (loại ảnh), 3b (sáu thuộc tính), 3c (24 ảnh mới: loại ảnh, thấy cả không gian, người). Kết quả ở mục 10. Dàn dựng chưa đo được vì chưa có ảnh nào chủ sản phẩm chọn "Có" |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ☐ |
 | 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (có đề xuất riêng) | ☐ |
 
@@ -485,3 +488,43 @@ rõ".
 - Câu trả lời v2 của cả hai model được lưu ở khoá `function_v2` trong
   `round3.json` và `round2.json`.
 
+### Vòng 3c: kết quả, và định nghĩa v4 (17/10/2026)
+
+Chủ sản phẩm chấm xong 24 ảnh. Hai dòng câu trả lời của model được kiểm
+tra lại sha256 trước khi chấm điểm, và khớp. Câu trả lời của chủ sản phẩm
+được lưu ở `data/review/photo-types/round3c.json`, khoá `owner`.
+
+**Đính chính.** Claude mở lại những ảnh mà chủ sản phẩm và cả hai model
+trả lời khác nhau, và hỏi lại chủ sản phẩm (khoá `owner_corrected`):
+- Ảnh 2 (sảnh bảo tàng), 4 (khán phòng nhà hát) và 22 (góc ngồi trong
+  nhà): bấm nhầm Mặt tiền, đúng là Nội thất.
+- Ảnh 8: quầy T Roaster trong nhà, biển chữ sáng trên tường. Chủ sản phẩm
+  chọn Mặt tiền theo luật quầy của v2, nhưng lại chọn Nội thất cho ảnh 23,
+  một quầy tương tự. Chủ sản phẩm quyết định quầy trong nhà là Nội thất;
+  luật này thành **v4** (mục 3).
+- Ảnh 15: có khách ngồi ở bàn phía sau lớp kính; bị bỏ sót, đúng là "Có".
+
+Vì chỉ những ảnh lệch được đem hỏi lại, bản đính chính chỉ có thể nghiêng
+về phía model. Cả hai cột được ghi dưới đây. Chỉ tính các cặp trả lời mà
+không bên nào chọn "Không rõ".
+
+| | Opus 5.5, gốc | Haiku 5.5, gốc | **Opus 5.5, đính chính** | **Haiku 5.5, đính chính** |
+|---|---|---|---|---|
+| Loại ảnh | 20/24 (83%), κ 0,76 | 20/24 (83%), κ 0,76 | **24/24** | **24/24** |
+| Thấy cả không gian | 22/24 (92%), κ 0,81 | 24/24 | 22/24 (92%), κ 0,81 | **24/24** |
+| Người | 20/23 (87%), κ 0,74 | 22/24 (92%), κ 0,83 | 21/23 (91%), κ 0,83 | **23/24 (96%), κ 0,92** |
+
+- Đây là lần đo đầu tiên trên ảnh chưa ai dùng để viết định nghĩa. Mọi
+  thuộc tính được hỏi đều đạt ngưỡng 85% của mục 8, kể cả trên câu trả
+  lời gốc. Loại ảnh chỉ đạt ngưỡng 90% sau khi đính chính.
+- Hai model trùng nhau 24/24 về loại ảnh.
+- **Người:** ảnh duy nhất cả hai model vẫn lệch là ảnh 23, nơi chỉ thấy
+  một phần đầu người sau máy pha cà phê. Opus còn nói "Có" ở ảnh 1, có tay
+  và một phần thân người phía sau bát ăn; Haiku và chủ sản phẩm nói "Không".
+  Ở vòng 3b, model chọn "Có" nhiều hơn chủ sản phẩm 8–9 ảnh; ở đây chỉ còn
+  1–2.
+- **Thấy cả không gian:** Opus nói "Không" ở ảnh 8 (quầy) và 14 (góc bar
+  với tường đĩa than), còn chủ sản phẩm và Haiku nói "Có".
+- **v4** chỉ đổi luật quầy, và cả hai model đã trả lời đúng theo luật mới
+  ngay từ v3. Vì vậy v4 không được đo lại. Các dòng v1 của skill (137 ảnh)
+  sẽ được gán lại theo v4.

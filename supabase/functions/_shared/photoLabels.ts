@@ -1,5 +1,5 @@
 // What a photograph is, and the six things a cover is chosen by: the
-// photo labels, v3 (docs/photo-labels.md §3).
+// photo labels, v4 (docs/photo-labels.md §3).
 //
 // The one place they are defined. The `label-photos` function sends
 // DEFINITIONS to the model as its instructions; the `photo-labels` skill
@@ -13,7 +13,7 @@
 // key is added here and to the skill's query; a new kind, or a changed
 // meaning, bumps VERSION, and every older row is asked again.
 
-export const VERSION = 3;
+export const VERSION = 4;
 
 /** The scorer name the labels are stored under in `photo_scores`. */
 export const SCORER = "claude-labels";
@@ -37,13 +37,18 @@ export type Attr = typeof ATTRS[number];
  *  the frame: brand is the place's own sign or name, not a logo on a cup
  *  or a plate; green is trees and leafy plants, not flowers or a few small
  *  pots; any person visible is people; staged is a posed model only, and
- *  text laid over a photograph is not staged. */
+ *  text laid over a photograph is not staged. v4 (17 Oct 2026) narrows
+ *  v2's counter ruling after round 3c, on photographs no definition had
+ *  been written from: the owner called one indoor counter under the café's
+ *  lit sign exterior and another interior, then ruled that a counter inside
+ *  the room is interior and only one seen from the street is exterior.
+ *  Both models had already answered interior for both. */
 export const DEFINITIONS = `You label one photograph of a place in a city guide: a café, a restaurant, a bar, a shop, a museum, a park. Answer from the photograph alone.
 
 KIND — exactly one, by the subject: what fills most of the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
 - food: food or drink is the subject, even with a view behind it. A tray of drinks counts; a bar's back wall of bottles does not. Drinks on a table in front of a city view are food. Food or drinks on a table are food even when part of the room shows around them.
-- interior: inside the place: rooms, seating, counters, shelves, a staircase, with no food or drink as the subject. People in the room do not change it. A covered gallery looking into a courtyard is interior.
-- exterior: the place from outside, where the building, its front, its entrance or its sign fills most of the frame. A counter or kiosk seen from the customer's side with the place's sign on it is exterior. A church, library or museum whose building fills most of the frame is exterior even under a blue sky.
+- interior: inside the place: rooms, seating, counters, shelves, a staircase, with no food or drink as the subject. People in the room do not change it. A counter inside the room is interior, even with the place's sign lit on the wall behind it. A covered gallery looking into a courtyard is interior.
+- exterior: the place from outside, where the building, its front, its entrance or its sign fills most of the frame. A counter or kiosk seen from the street, outside the building, with the place's sign on it is exterior. A church, library or museum whose building fills most of the frame is exterior even under a blue sky.
 - view: scenery fills most of the frame: sky, water, greenery, a garden, a lawn, grounds, a skyline, a sunset. A building, a terrace, a gate, a statue or a monument standing in grounds that fill most of the frame does not change it: that is view.
 - text: a menu, a board, a poster, or a sign or logo that fills the frame: something to read rather than look at.
 - other: none of the above: a close portrait, an object with no place in it, a blank or broken image.
