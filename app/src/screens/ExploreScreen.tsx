@@ -24,9 +24,9 @@ import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
 import { CitySwitcherModal } from '../components/CitySwitcher';
-import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, PressableScale, Skeleton, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Skeleton, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
-import { DockSlot, useDockOffer } from '../components/DockSlot';
+import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, chosenKind, pinTint, type CategoryStyle } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
@@ -153,20 +153,15 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
   onAdd: () => void;
 }) {
   const { t } = useI18n();
-  const light = useScheme().scheme === 'light';
-  // The dock's geometry, glass and arrival are `DockSlot`'s, shared with
-  // the collection page; what is Explore's is the offer inside it.
+  // The dock's geometry, glass and arrival are `DockSlot`'s, and so is
+  // the way the offer is set; what is Explore's is the words.
   return (
     <DockSlot visible={visible} onPress={onSearch} accessibilityRole="button">
-      <Ionicons name="search" size={18} color={colors.text} style={glassHalo(light)} />
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[s.nudgeTitle, glassHalo(light)]} numberOfLines={1}>
-          {t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
-        </Text>
-        <Text style={[s.nudgeSub, glassHalo(light)]} numberOfLines={1}>
-          {t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
-        </Text>
-      </View>
+      <DockOffer
+        icon="search"
+        title={t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
+        sub={t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
+      />
       {/* `tall`: the 44 every other control has, and the same "Add" as
           Gallery's header — see `AddPill`. */}
       <AddPill tall label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
@@ -1769,14 +1764,6 @@ const s = StyleSheet.create({
   filterBadgeText: { color: colors.accentInk, fontSize: 9, fontWeight: font.bold },
 
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
-
-  nudgeTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
-  // Full strength, where this was `textTertiary` — which is #6E695E, the
-  // exact mid-tone that could not be read on thin glass over a
-  // photograph. Size and weight carry the hierarchy instead of colour:
-  // 13 regular under 15 semibold is already two steps down, and it is
-  // the pair of steps that survives an unknown ground.
-  nudgeSub: { color: colors.text, fontSize: 13, opacity: 0.72 },
 
   // The pinned filter row. Its top padding is inline — FILTER_PAD plus
   // the safe-area inset — because pinned it is the top edge of the whole

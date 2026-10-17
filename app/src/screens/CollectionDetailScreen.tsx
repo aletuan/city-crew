@@ -10,12 +10,13 @@ import PlaceCard from '../components/PlaceCard';
 import TipBox from '../components/TipBox';
 import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, Card, CONTROL_H, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
-import { DockSlot, useDockOffer } from '../components/DockSlot';
+import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
+import { AddPill } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { categoriesOf } from '../lib/categories';
 import { collectionKinds, narrowTo } from '../lib/collectionKinds';
@@ -1199,64 +1200,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      mark. Add, until the in-place picker exists, goes to Explore, where
      saving a place already offers this list by name.
 
-     In the dock, Add is the quiet one — glass and a hairline, not a
-     second gradient: two filled buttons side by side read as two
-     primaries, and the gradient belongs to the action the list exists
-     for.
+     ── the dock, as Explore's (owner, 17 Oct 2026) ──
+     The two docks are one design now. Explore's says what it offers in a
+     glyph and two lines, the whole island answering to that, and the
+     gradient "+ Thêm" at its right end. Here the sentence is the plan —
+     the paw, "Lên kế hoạch", and what it is for — and the pill is the
+     second act: "+ Thêm" for the owner, "Lưu bản sao" for a visitor, so
+     there is always one gradient pill, at the right, whoever is reading.
 
-     Its word is the noun, "+ Địa điểm", not the verb (owner, 16 Oct
-     2026). The glyph already says add. "Thêm" alone was the very word
-     on Explore's dock, where it adds a place the catalog does not have;
-     here it adds one the catalog has to this list, and the same word
-     in two looks for two acts read as one button drawn inconsistently.
-     The ⋯ menu keeps "Thêm địa điểm": a menu row is read as a sentence. */
+     It undoes two calls of 16 Oct, and says why. Plan was the gradient
+     and Add the quiet glass beside it, on the reading that the gradient
+     belongs to what the list exists for; as a sentence that fills the
+     island, Plan is no smaller than it was, and the owner wanted one
+     dock to learn, not two. And Add's word was the noun, "+ Địa điểm",
+     because "Thêm" on Explore adds a place the catalog does not have and
+     here adds one it has to this list. The owner chose "Thêm" anyway:
+     the act a reader sees is the same — a place comes in — and the
+     same button in the same place is what lets the hand stop reading.
+     The ⋯ menu keeps "Thêm địa điểm": a menu row is read as a sentence.
+
+     A list with no city has no copy to offer (see the ⋯ menu), so a
+     visitor's dock there is the sentence alone. */
   const plan = () => {
     if (!col) return;
     goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } });
   };
   const canPlan = !!col && members.length > 0;
-  const addButton = (testID: string) => (
-    <PressableScale
-      onPress={addPlace}
-      scaleTo={0.96}
-      haptic="selection"
-      style={s.addQuiet}
-      accessibilityRole="button"
-      accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
-      testID={testID}
-    >
-      <Ionicons name="add" size={20} color={colors.text} />
-      <Text style={s.addQuietText}>{t('Place', 'Địa điểm', 'スポット')}</Text>
-    </PressableScale>
-  );
-  /* A visitor's quiet one is the copy: the thing they can do to a list
-     that is not theirs, as the owner's is the place they add (owner, 16
-     Oct 2026). The ⋯ menu's own glyph, so one act wears one mark
-     wherever it is met; and the verb kept, unlike "+ Địa điểm", because
-     two stacked squares do not say "save" the way "+" says "add". */
-  const copyButton = (testID: string) => (
-    <PressableScale
-      onPress={copy}
-      scaleTo={0.96}
-      haptic="selection"
-      style={s.addQuiet}
-      accessibilityRole="button"
-      accessibilityLabel={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
-      testID={testID}
-    >
-      <Ionicons name="duplicate-outline" size={18} color={colors.text} />
-      <Text style={s.addQuietText}>{t('Save a copy', 'Lưu bản sao', 'コピーを保存')}</Text>
-    </PressableScale>
-  );
-  const planButton = (testID: string) => (
-    <GradientCta
-      icon="paw"
-      label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
-      onPress={plan}
-      testID={testID}
-    />
-  );
-
   // Where the card ends in the list's content, measured, so the dock waits
   // until it has actually gone rather than guessing from a row count.
   const cardEnd = useRef(Number.POSITIVE_INFINITY);
@@ -1629,19 +1598,23 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </View>
       </Modal>
-      <DockSlot
-        visible={dock}
-        style={[s.dockIsland, !owned && !copyCityId && s.dockIslandTitled]}
-        testID="collection-dock"
-      >
-        {owned ? addButton('collection-dock-add') : copyCityId ? copyButton('collection-dock-copy') : (
-          // A list with no city to file a copy under has no copy to offer
-          // (see the ⋯ menu), so its name keeps the island from holding a
-          // lone button.
-          <Text style={s.dockTitle} numberOfLines={1}>{title}</Text>
-        )}
-        <View style={s.dockGrow} />
-        {planButton('collection-dock-plan')}
+      <DockSlot visible={dock} onPress={plan} accessibilityRole="button" testID="collection-dock">
+        <DockOffer
+          icon="paw"
+          title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+          sub={t('Use this list for a trip', 'Dùng danh sách này cho chuyến đi', 'このリストで旅の計画を')}
+        />
+        {owned ? (
+          <AddPill tall label={t('Add', 'Thêm', '追加')} onPress={addPlace} testID="collection-dock-add" />
+        ) : copyCityId ? (
+          <AddPill
+            tall
+            icon="duplicate-outline"
+            label={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
+            onPress={copy}
+            testID="collection-dock-copy"
+          />
+        ) : null}
       </DockSlot>
       {reportSheet}
       <PersonSheet
@@ -1737,30 +1710,6 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
   footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  // The quiet one: the gradient button's height and pill, in glass and a
-  // hairline, so the row is one object with one primary.
-  addQuiet: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    minHeight: CONTROL_H, paddingHorizontal: 20,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
-  },
-  addQuietText: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
-  // In the dock: the list's name, only where there is no copy to offer.
-  dockTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
-  dockGrow: { flex: 1 },
-  // The same 6 on all four sides, so each button sits in the island the
-  // way the island sits in the screen (owner, 16 Oct 2026). The dock's
-  // own 18 / 10 / 8 suit Explore's line of text; around two buttons they
-  // left the Add three times further from its edge than from the top.
-  // 52 + 2 × 6 is the bar's 64, and 26 + 6 is the island's 32 radius:
-  // a 6pt ring keeps each pill's curve concentric with the island's.
-  // Each side named: the dock's own `paddingLeft` and `paddingVertical`
-  // would outrank a bare `padding`.
-  dockIsland: { paddingVertical: 6, paddingLeft: 6, paddingRight: 6 },
-  // A line of text wants the dock's own lead-in, not a button's.
-  dockIslandTitled: { paddingLeft: 18 },
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   descEmpty: { color: colors.textTertiary, ...type.body, lineHeight: 24 },
   // A 20pt glyph centred on a 24pt first line.
