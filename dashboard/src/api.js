@@ -47,6 +47,32 @@ async function invoke(name, body) {
 }
 
 const PAGE_SIZE = 24;
+
+/**
+ * Every row a query matches, a thousand at a time.
+ *
+ * PostgREST answers at most `max_rows` rows a request — 1000 on this
+ * project — and says nothing when it stops: the response is a clean 200
+ * holding the first thousand. Any read here that wants a whole table was
+ * right until the catalog passed that size and has been quietly short
+ * since. It passed it on 17 Oct 2026 — 1011 places, and the desk's
+ * header read "1000 places · 1000 approved".
+ *
+ * So the read asks again from where the last page ended, until a page
+ * comes back short. `build` makes a fresh query each time — a builder is
+ * spent once awaited — and must order the rows totally (end on a unique
+ * column), or an offset can skip one row and repeat another between two
+ * pages.
+ */
+const MAX_ROWS = 1000;
+async function everyRow(build) {
+  const out = [];
+  for (let from = 0; ; from += MAX_ROWS) {
+    const page = db(await build().range(from, from + MAX_ROWS - 1));
+    out.push(...page);
+    if (page.length < MAX_ROWS) return out;
+  }
+}
 const SORT_COLUMNS = { created_at: 'created_at', rating_count: 'rating_count', rating: 'rating' };
 
 /**
@@ -189,55 +215,64 @@ export const api = {
   places: async (params = {}) => {
     const sortColumn = SORT_COLUMNS[params.sort] ?? 'created_at';
     const ascending = params.dir === 'asc';
-    let query = supabase
-      .from('places')
-      .select(
-        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, channel, added_by, submitted_by, place_photos(photo_uri, is_cover, is_hidden, sort_order)',
-        { count: 'exact' },
-      )
-      .order(sortColumn, { ascending, nullsFirst: false })
-      .order('slug') // stable tiebreaker
-      // The photos come back ordered too, because the line below has to
-      // pick one of them the way the app does. See the note there.
-      .order('sort_order', { referencedTable: 'place_photos' });
-    if (params.city) query = query.eq('city_id', params.city);
-    if (params.status) query = query.eq('review_status', params.status);
-    if (params.category) query = query.contains('categories', [params.category]);
-    if (params.vibe) query = query.contains('vibe_tags', [params.vibe]);
-    // The one filter the chip rows cannot express: a place with no tags at
-    // all is absent from every chip's count, so the row meant to find
-    // things is exactly where it does not appear. Generated in Postgres —
-    // see the needs_classification migration.
-    if (params.needs) query = query.eq('needs_classification', true);
-    // Threads handles are filled in by hand, one at a time — `import-place.ts`
-    // leaves the column null because Google Places does not return it. So the
-    // useful half of this filter is `no`: it is the queue of venues nobody has
-    // looked up yet. The chip rows above cannot express it, for the same
-    // reason `needs_classification` exists — a null is not a tag, so a place
-    // missing the field is absent from every chip that could find it.
-    //
-    // `is null` and not `= ''` because the two are the same state here and
-    // only one of them can reach the table: `stamp_threads_handle` rewrites a
-    // blank to null before the row lands. If that trigger is ever dropped,
-    // this filter starts counting empty strings as filled — `countThreads`
-    // already treats them as missing, and the two would disagree.
-    if (params.threads === 'yes') query = query.not('threads_handle', 'is', null);
-    if (params.threads === 'no') query = query.is('threads_handle', null);
-    // A model's draft nobody has read, in one language: the `machine` flag
-    // the fold sets beside the text in `i18n`. Read through PostgREST's
-    // JSON path, so no column needs adding per language. The code goes
-    // into that path, so only a code LANGS knows is allowed to.
-    if (params.machine && objectLangs().some((l) => l.code === params.machine)) {
-      query = query.eq(`i18n->${params.machine}->>machine`, 'true');
-    }
-    if (params.channel) query = query.eq('channel', params.channel);
-    if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
-    if (!params.all) {
+    // A function rather than one query, because `all` reads it a thousand
+    // rows at a time — see `everyRow` — and a builder is spent once awaited.
+    const build = () => {
+      let query = supabase
+        .from('places')
+        .select(
+          'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, channel, added_by, submitted_by, place_photos(photo_uri, is_cover, is_hidden, sort_order)',
+          { count: 'exact' },
+        )
+        .order(sortColumn, { ascending, nullsFirst: false })
+        .order('slug') // stable tiebreaker
+        // The photos come back ordered too, because the line below has to
+        // pick one of them the way the app does. See the note there.
+        .order('sort_order', { referencedTable: 'place_photos' });
+      if (params.city) query = query.eq('city_id', params.city);
+      if (params.status) query = query.eq('review_status', params.status);
+      if (params.category) query = query.contains('categories', [params.category]);
+      if (params.vibe) query = query.contains('vibe_tags', [params.vibe]);
+      // The one filter the chip rows cannot express: a place with no tags at
+      // all is absent from every chip's count, so the row meant to find
+      // things is exactly where it does not appear. Generated in Postgres —
+      // see the needs_classification migration.
+      if (params.needs) query = query.eq('needs_classification', true);
+      // Threads handles are filled in by hand, one at a time — `import-place.ts`
+      // leaves the column null because Google Places does not return it. So the
+      // useful half of this filter is `no`: it is the queue of venues nobody has
+      // looked up yet. The chip rows above cannot express it, for the same
+      // reason `needs_classification` exists — a null is not a tag, so a place
+      // missing the field is absent from every chip that could find it.
+      //
+      // `is null` and not `= ''` because the two are the same state here and
+      // only one of them can reach the table: `stamp_threads_handle` rewrites a
+      // blank to null before the row lands. If that trigger is ever dropped,
+      // this filter starts counting empty strings as filled — `countThreads`
+      // already treats them as missing, and the two would disagree.
+      if (params.threads === 'yes') query = query.not('threads_handle', 'is', null);
+      if (params.threads === 'no') query = query.is('threads_handle', null);
+      // A model's draft nobody has read, in one language: the `machine` flag
+      // the fold sets beside the text in `i18n`. Read through PostgREST's
+      // JSON path, so no column needs adding per language. The code goes
+      // into that path, so only a code LANGS knows is allowed to.
+      if (params.machine && objectLangs().some((l) => l.code === params.machine)) {
+        query = query.eq(`i18n->${params.machine}->>machine`, 'true');
+      }
+      if (params.channel) query = query.eq('channel', params.channel);
+      if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
+      return query;
+    };
+    let data;
+    let count;
+    if (params.all) {
+      data = await everyRow(build);
+    } else {
       const page = Math.max(1, Number(params.page) || 1);
-      query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+      const res = await build().range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+      if (res.error) throw new Error(res.error.message);
+      ({ data, count } = res);
     }
-    const { data, error, count } = await query;
-    if (error) throw new Error(error.message);
     const rows = data.map((r) => {
       // Cover first, and failing that the lowest `sort_order` — which is
       // `photosOf`'s rule in the app, and has to be this one too.
@@ -381,15 +416,18 @@ export const api = {
    * a different promise from the one the rest of the column makes.
    */
   cityCounts: async () => {
-    const rows = db(await supabase.from('places').select('city_id'));
+    const rows = await everyRow(() => supabase.from('places').select('city_id').order('slug'));
     return rows.reduce((acc, r) => ((acc[r.city_id] = (acc[r.city_id] ?? 0) + 1), acc), {});
   },
 
   progress: async (city) => {
-    let query = supabase.from('places')
-      .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification, threads_handle, i18n');
-    if (city) query = query.eq('city_id', city);
-    const rows = db(await query);
+    const rows = await everyRow(() => {
+      let query = supabase.from('places')
+        .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification, threads_handle, i18n')
+        .order('slug');
+      if (city) query = query.eq('city_id', city);
+      return query;
+    });
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
     // Counts for the multi-valued columns: one place can add to several keys.
     const byTag = (key) => rows.reduce((acc, r) => {
@@ -453,13 +491,14 @@ export const api = {
     const since = new Date();
     since.setHours(0, 0, 0, 0);
     since.setDate(since.getDate() - (days - 1));
-    const rows = db(await supabase.from('places')
+    const rows = await everyRow(() => supabase.from('places')
       .select('added_by, city_id, created_at')
       .eq('channel', 'mobile')
       .eq('review_status', 'approved')
       .eq('is_published', true)
       .not('added_by', 'is', null)
-      .gte('created_at', since.toISOString()));
+      .gte('created_at', since.toISOString())
+      .order('slug'));
     const ids = [...new Set(rows.map((r) => r.added_by))];
     let profiles = {};
     if (ids.length) {
@@ -533,9 +572,10 @@ export const api = {
    *  in one round trip — the screen re-cuts per city without refetching.
    *  Published only, because coverage measures what a user can actually
    *  open, not what the desk is still deciding about. */
-  coverage: async () => db(await supabase.from('places')
+  coverage: async () => everyRow(() => supabase.from('places')
     .select('slug, name_en, address, neighborhood_en, lat, lng, city_id')
-    .eq('is_published', true)),
+    .eq('is_published', true)
+    .order('slug')),
 
   // Keyed by google_place_id — global, not city-scoped, matching the
   // fetch-place import guard's own duplicate check. Lets "Add a place"

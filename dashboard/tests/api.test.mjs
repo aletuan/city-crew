@@ -235,7 +235,76 @@ test('places() with all:true skips pagination and returns a plain array', async 
   }]);
   const result = await api.places({ all: true });
   assert.ok(Array.isArray(result));
-  assert.equal(client.calls[0].chain.some(([m]) => m === 'range'), false);
+  // Not the 24-row page: the first thousand, and a short page ends it.
+  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'range' && a[0] === 0 && a[1] === 999));
+  assert.equal(client.calls.length, 1);
+});
+
+// ---- whole-table reads past PostgREST's 1000-row cap (17 Oct 2026: 1011
+// places, and the desk's header read "1000 places · 1000 approved").
+
+const thousand = (make) => Array.from({ length: 1000 }, (_, i) => make(i));
+
+test('progress() reads past the 1000-row page, in a total order', async () => {
+  const first = thousand((i) => ({ slug: `p${i}`, review_status: 'approved', is_published: true }));
+  const rest = Array.from({ length: 11 }, (_, i) => ({ slug: `q${i}`, review_status: 'approved', is_published: true }));
+  const { api, client } = await loadApi([{ data: first, error: null }, { data: rest, error: null }]);
+  const result = await api.progress();
+  assert.equal(result.total, 1011);
+  assert.equal(result.by_status.approved, 1011);
+  // The second page starts where the first ended.
+  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'range' && a[0] === 0 && a[1] === 999));
+  assert.ok(client.calls[1].chain.some(([m, a]) => m === 'range' && a[0] === 1000 && a[1] === 1999));
+  // Ordered on a unique column, so an offset cannot skip or repeat a row.
+  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'order' && a[0] === 'slug'));
+  // And a page exactly as long as the cap is not taken for the end.
+  assert.equal(client.calls.length, 2);
+});
+
+test('progress() asks once more after an exactly full page, and stops at the empty one', async () => {
+  const first = thousand((i) => ({ slug: `p${i}`, review_status: 'pending' }));
+  const { api, client } = await loadApi([{ data: first, error: null }, { data: [], error: null }]);
+  assert.equal((await api.progress()).total, 1000);
+  assert.equal(client.calls.length, 2);
+});
+
+test('a failed page fails the read, rather than counting what came before it', async () => {
+  const first = thousand((i) => ({ slug: `p${i}`, review_status: 'pending' }));
+  const { api } = await loadApi([{ data: first, error: null }, { data: null, error: { message: 'timeout' } }]);
+  await assert.rejects(() => api.progress(), /timeout/);
+});
+
+test('cityCounts, coverage, contributors and places({all}) read past the cap too', async () => {
+  const cities = await loadApi([
+    { data: thousand(() => ({ city_id: 'hcmc' })), error: null },
+    { data: [{ city_id: 'hue' }], error: null },
+  ]);
+  assert.deepEqual(await cities.api.cityCounts(), { hcmc: 1000, hue: 1 });
+
+  const cov = await loadApi([
+    { data: thousand((i) => ({ slug: `c${i}` })), error: null },
+    { data: [{ slug: 'last' }], error: null },
+  ]);
+  assert.equal((await cov.api.coverage()).length, 1001);
+
+  const contrib = await loadApi([
+    { data: thousand(() => ({ added_by: 'u1', city_id: 'hcmc', created_at: '2026-10-17' })), error: null },
+    { data: [{ added_by: 'u1', city_id: 'hue', created_at: '2026-10-17' }], error: null },
+    { data: [{ id: 'u1', handle: 'trang' }], error: null },
+  ]);
+  assert.equal((await contrib.api.contributors()).rows.length, 1001);
+
+  const all = await loadApi([
+    { data: thousand((i) => ({ slug: `a${i}`, place_photos: [], added_by: null })), error: null },
+    { data: [{ slug: 'z', place_photos: [], added_by: null }], error: null },
+  ]);
+  assert.equal((await all.api.places({ all: true })).length, 1001);
+
+  // Every one of them in a total order: without a unique last key, two
+  // pages taken by offset can skip one row and repeat another.
+  for (const { client } of [cities, cov, contrib, all]) {
+    assert.ok(client.calls[0].chain.some(([m, a]) => m === 'order' && a[0] === 'slug'));
+  }
 });
 
 test('places() picks the cover photo, falling back to the first visible one, and counts only visible photos', async () => {
