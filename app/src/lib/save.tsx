@@ -69,14 +69,14 @@ type Save = {
    * Collections tab showed two: the sheet's copy was fetched before the
    * second list existed and had no reason to look again.
    */
-  mine: { data: Collection[]; loading: boolean; loaded: boolean; reload: () => void };
+  mine: { data: Collection[]; loading: boolean; loaded: boolean; error: string | null; reload: () => void };
 };
 
 const Ctx = createContext<Save>({
   save: () => {},
   askToSignIn: () => {},
   isSaved: () => false,
-  mine: { data: [], loading: false, loaded: false, reload: () => {} },
+  mine: { data: [], loading: false, loaded: false, error: null, reload: () => {} },
 });
 
 export const useSave = () => useContext(Ctx);
@@ -202,9 +202,9 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     askToSignIn,
     isSaved: (slug) => savedSlugs.has(slug),
     mine: {
-      data: mine.data, loading: mine.loading, loaded: mine.loaded, reload: mine.reload,
+      data: mine.data, loading: mine.loading, loaded: mine.loaded, error: mine.error, reload: mine.reload,
     },
-  }), [save, askToSignIn, savedSlugs, mine.data, mine.loading, mine.loaded, mine.reload]);
+  }), [save, askToSignIn, savedSlugs, mine.data, mine.loading, mine.loaded, mine.error, mine.reload]);
 
   return (
     <Ctx.Provider value={value}>
