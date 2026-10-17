@@ -111,8 +111,10 @@ Bảng `photo_scores` đã được thiết kế để có bộ chấm thứ hai
 
 ## 6. Skill `photo-labels`
 
-Đặt trong repo, ở `.claude/skills/photo-labels/SKILL.md`, để mọi phiên làm
-việc trên repo đều dùng được.
+Đặt trong repo, ở `.claude/skills/photo-labels/`, để mọi phiên làm việc
+trên repo đều dùng được. Gồm `SKILL.md` (định nghĩa và các bước),
+`sheets.py` (bảng 3×3) và `write.py` (biến nhãn viết tắt thành một câu
+lệnh ghi). `.gitignore` bỏ qua `.claude/` trừ thư mục `skills/`.
 
 - **Đầu vào:** slug một địa điểm, một thành phố, hoặc "mọi ảnh chưa có nhãn".
 - **Các bước:**
@@ -160,9 +162,10 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 | # | Bước | Trạng thái |
 |---|---|---|
 | 1 | Migration: bỏ `photo_scores_one_per_photo`, kèm test SQL | ✅ 17/10: `20261017120000_photo_scores_second_scorer.sql`, đã chạy trên live (lịch sử `20261017101738`) |
-| 2 | Skill `photo-labels` trong repo; chạy thử trên 3–5 địa điểm | ☐ |
+| 2 | Skill `photo-labels` trong repo; chạy thử trên 3–5 địa điểm | ✅ 17/10: 21 địa điểm, 137 ảnh (mục 9) |
+| 2b | Edge Function gán nhãn ảnh mới, cùng định nghĩa với skill (mục 10) | ☐ |
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
-| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời | ☐ |
+| 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9) | ☐ |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ☐ |
 | 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (có đề xuất riêng) | ☐ |
 
@@ -170,3 +173,100 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 - `kind` trùng với chủ sản phẩm từ **90%** trở lên.
 - Mỗi thuộc tính trùng từ **85%** trở lên, đo ở vòng 3.
 - Thuộc tính nào không đạt thì vẫn được lưu, nhưng không hiện trong app.
+
+## 9. Chạy thử (bước 2, 17/10/2026)
+
+Chủ sản phẩm yêu cầu chạy trên nhiều hơn 5 địa điểm. Hai đợt:
+
+- **Đợt 1:** 5 địa điểm chọn tay, 39 ảnh. Có quán cà phê, nhà hàng, di
+  tích và công viên.
+- **Đợt 2:** 16 địa điểm chọn ngẫu nhiên. Chia theo thành phố, mỗi nơi có
+  từ 5 đến 10 ảnh đang hiện, tổng 98 ảnh. Có đủ HCM, Hà Nội, Melbourne, Đà
+  Lạt, Đà Nẵng, Huế và Hội An.
+
+Tổng cộng 137 ảnh: 119 ảnh Google và 18 ảnh tải lên. Không ảnh nào lỗi tải.
+
+| Loại | Số ảnh |
+|---|---|
+| `food` | 57 |
+| `interior` | 36 |
+| `exterior` | 34 |
+| `view` | 7 |
+| `text` | 3 |
+
+**`unsure`: 8 ảnh.** Bảy ảnh rơi vào ba ca mà định nghĩa v1 chưa phân xử.
+Skill ghi ba ca này là "chưa quyết" và để vòng 3 quyết:
+- vật trưng bày giữa khuôn viên (3 ảnh): đài phun nước, tượng, xe tăng;
+- vườn là chính, nhà chỉ lấp ló (3 ảnh): bậc đá qua vườn, vườn hoa có ghế,
+  chòi giữa cây;
+- hành lang có mái nhìn ra sân trong (1 ảnh).
+
+Ảnh còn lại là bảng menu treo trên tủ bánh: nửa chữ, nửa trưng bày.
+
+**Thuộc tính:**
+- `daylight` để `null` ở 31/137 ảnh. Phần lớn là ảnh cận món ăn, trong
+  khung không có cửa sổ hay bầu trời nên không xác định được nguồn sáng.
+  Đây là thuộc tính yếu nhất, và vòng 3 cần đo riêng.
+- `brand` chỉ `null` ở 1 ảnh: chữ Hán trên cổng chùa mà người gán nhãn
+  không đọc chắc được.
+
+**Ảnh bìa:**
+- Cả 21 địa điểm đều có ít nhất một ảnh `exterior` hoặc `wide`.
+- Có 4 địa điểm đang dùng ảnh món ăn làm bìa, dù đều có sẵn ảnh rộng:
+  - `briques` và `fefe-roastery` có cả ảnh mặt tiền thấy rõ tên quán;
+  - `salmon-kat` có ảnh mặt tiền;
+  - `3-con-muc` có ảnh nội thất rộng.
+- Có 2 địa điểm dùng ảnh nội thất chụp hẹp làm bìa, dù có ảnh rộng hơn:
+  `il-grillo` và `the-hummingbird-cafe-roastery`.
+
+Đây là việc bước 5 của `photo-critic.md` sẽ làm tự động. Skill này không
+đổi ảnh bìa.
+
+**Độ chính xác chưa đo được ở bước này.** Nhãn chỉ có một nguồn là chính
+skill, chưa có câu trả lời của chủ sản phẩm để so. Tuy vậy cả 137 nhãn đã
+được ghi vào database (`scored_at` 17/10) trước khi chủ sản phẩm xem ảnh,
+tức là đã được khoá. Vòng 3 có thể dùng ngay 137 ảnh này thay cho 100 ảnh
+mới, để đo cả `kind` lẫn sáu thuộc tính.
+
+**Bài học khi chạy, đã ghi vào skill:**
+- Kết quả MCP không ghi được ra file. Danh sách ảnh của các địa điểm đã
+  duyệt lấy qua REST bằng khoá công khai.
+- Tên file ảnh lấy từ Threads có mô tả nội dung ảnh, nên không được đọc
+  trước khi gán nhãn.
+- `write.py` ghi cả đợt bằng một mảng `jsonb`: 15 KB cho 98 dòng, so với
+  21 KB nếu viết `VALUES`.
+
+## 10. Edge Function (bước 2b): đề xuất
+
+Chủ sản phẩm chọn **kết hợp** hai cách (17/10). Skill vẫn dùng cho ảnh cũ,
+cho vòng chấm và cho việc gán lại khi tăng version. Còn Edge Function lo
+cho **ảnh mới**: khi chấm ảnh một địa điểm trong app mà còn ảnh chưa có
+nhãn, app gọi function.
+
+**Những gì đã có sẵn:**
+- Secret `ANTHROPIC_API_KEY`.
+- `write-blurb` đã gửi ảnh catalog, kể cả ảnh Google, tới Claude qua URL.
+- `legal.ts` đã nêu tên Anthropic là nhà cung cấp dịch vụ.
+
+**Năm điều phải giữ:**
+1. **Một nguồn định nghĩa.** Định nghĩa chuyển từ `SKILL.md` sang
+   `supabase/functions/_shared/photoLabels.ts`, gồm prompt, danh sách khoá,
+   `VERSION` và hàm kiểm tra JSON. Skill đọc file đó. Luật 4 ở mục 4 đổi
+   theo, trong cùng PR.
+2. **Ghi rõ ai gán nhãn:** `"by": "fn"` hoặc `"by": "skill"` trong
+   `signals`. Con số 96/100 là của Claude trong phiên làm việc, nhìn bảng
+   3×3. Model của function chưa được đo, nên phải lọc riêng được nhãn của
+   nó.
+3. **Đo trước khi bật.** Cho function chạy lại 100 ảnh vòng 2 và so với
+   câu trả lời của chủ sản phẩm. Ngưỡng như mục 8: `kind` từ 90% trở lên.
+   Chưa đạt thì function không ghi.
+4. **App chỉ gửi id ảnh.**
+   - Function tự đọc URL từ database và kiểm tra quyền bằng
+     `_shared/gate.ts`.
+   - Ảnh đã có nhãn thì bỏ qua, nên gọi hai lần không tốn thêm.
+   - App gọi xong đi tiếp, không chờ kết quả.
+5. **Phủ test 100%** bằng `*.fn.test.ts`, như mọi Edge Function khác.
+
+Chủ sản phẩm quyết định không đổi chữ hiển thị trong app ở bước này
+(17/10).
+
