@@ -432,6 +432,12 @@ for f in "$ROOT"/supabase/migrations/*_photo_scores_per_scorer.sql; do
 done
 run "$DB" -f "$HERE/photo_scores_test.sql"
 run "$DB" -f "$HERE/photo_scores_per_scorer_test.sql"
+# The second scorer (17 Oct 2026), after both: they hold the table as it
+# was, one row per photograph, and this drops that rule.
+for f in "$ROOT"/supabase/migrations/*_photo_scores_second_scorer.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/photo_scores_second_scorer_test.sql"
 
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do

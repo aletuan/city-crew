@@ -159,7 +159,7 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 
 | # | Bước | Trạng thái |
 |---|---|---|
-| 1 | Migration: bỏ `photo_scores_one_per_photo`, kèm test SQL | ☐ |
+| 1 | Migration: bỏ `photo_scores_one_per_photo`, kèm test SQL | ✅ 17/10: `20261017120000_photo_scores_second_scorer.sql`, đã chạy trên live (lịch sử `20261017101738`) |
 | 2 | Skill `photo-labels` trong repo; chạy thử trên 3–5 địa điểm | ☐ |
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
 | 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời | ☐ |
