@@ -45,9 +45,10 @@ import { PressableScale, useReducedMotion } from './ui';
  * stand between the tap and the keyboard. Configured before the render
  * that moves things, which is how `LayoutAnimation` works, so it runs
  * from the two places that change it: the focus that opens and the tap
- * that closes.
+ * that closes. Exported because the filter sheet's Reset makes room the
+ * same way, and two speeds for one gesture would read as two gestures.
  */
-const SLIDE = LayoutAnimation.create(200, LayoutAnimation.Types.easeOut, LayoutAnimation.Properties.opacity);
+export const SLIDE = LayoutAnimation.create(200, LayoutAnimation.Types.easeOut, LayoutAnimation.Properties.opacity);
 
 export default function SearchField({
   value, onChangeText, placeholder, inputRef, autoFocus, onSubmitEditing, onFocus, cancel,

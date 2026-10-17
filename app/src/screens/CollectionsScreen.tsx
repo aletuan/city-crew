@@ -89,6 +89,12 @@ const COVER_OPEN = 88;
 // the one thing on the card saying nothing new. The text may still wrap
 // on the narrowest phones rather than end in an ellipsis: a cut-off
 // invitation is worse than a line taller one.
+//
+// The line under the title names collections, not places (owner, same
+// day): "save and sort places" described the bookmark, and the card
+// beside a shelf of lists invites a list. It repeats the title's words
+// on purpose; a shorter split — "Your own collections" over "Sign in to
+// create and sort." — was offered and turned down for this one.
 function GuestNotice({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -111,9 +117,9 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
         </Text>
         <Text style={s.noticeBody}>
           {t(
-            'Sign in to save and sort places.',
-            'Đăng nhập để lưu và sắp xếp địa điểm.',
-            'サインインして保存・整理。',
+            'Sign in to create and sort your own collections.',
+            'Đăng nhập để tạo và sắp xếp bộ sưu tập riêng của bạn.',
+            'サインインして自分のコレクションを作成・整理。',
           )}
         </Text>
       </View>
