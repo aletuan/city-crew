@@ -363,14 +363,33 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.queryByText('Start your own collection')).toBeNull();
   });
 
-  it('your own public tile shows its likes as a tally, never a pressable heart', () => {
+  // A curator may like their own list (owner, 17 Oct 2026), so your own
+  // public tile wears the same heart as everybody else's.
+  it('your own public tile wears the pressable heart, and it likes', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     state.likes = { mine1: 4 };
     show();
     expect(screen.getByText('4')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
-     // The pressable heart's size: one mark, two states.
-    expect(document.querySelector('[data-icon="heart"]')!.getAttribute('data-size')).toBe('15');
+    const heart = screen.getByRole('button', { name: 'Like this collection' });
+    expect(heart.querySelector('[data-icon="heart-outline"]')!.getAttribute('data-size')).toBe('15');
+    fireEvent.click(heart);
+    expect(spies.toggleLike).toHaveBeenCalledWith(expect.objectContaining({ slug: 'mine1' }));
+  });
+
+  // At any count, on the row shape too — and never on a private list.
+  it('your own public row offers the heart before anybody has liked it', () => {
+    state.mine.data = [
+      col('mine1', ['a'], { owner_id: 'u1' }),
+      col('shut', ['a'], { owner_id: 'u1', is_public: false }),
+    ];
+    state.likes = {};
+    show();
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    const hearts = screen.getAllByRole('button', { name: 'Like this collection' });
+    expect(hearts).toHaveLength(1);
+    expect(screen.queryByText(/likes?$/)).toBeNull();
+    fireEvent.click(hearts[0]);
+    expect(spies.toggleLike).toHaveBeenCalledWith(expect.objectContaining({ slug: 'mine1' }));
   });
 
   // The same list sits at the same height on both tabs: the meta row is
@@ -482,7 +501,7 @@ describe('CollectionsScreen — signed in', () => {
   // and a list that answers both belongs on both. It used to be filtered
   // out, and on a city where the only public list was the owner's the
   // shelf read "0 collections" under a card promising it would show.
-  it('shows your own published list on Community, with your byline and a tally for a heart', () => {
+  it('shows your own published list on Community, with your byline and the same heart', () => {
     const own = col('mine1', ['a'], { owner_id: 'u1', curator_handle: 'me', is_public: true });
     state.mine.data = [own];
     state.cols.data = [own, col('theirs', ['a'], { curator_handle: 'them' })];
@@ -491,13 +510,12 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getByText('List theirs')).toBeTruthy();
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.getByText('@me')).toBeTruthy();
-    // One heart control, theirs; yours is a count the database would
-    // refuse a press on.
-    expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(1);
+    // Two heart controls, yours and theirs: a curator may like their own.
+    expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(2);
     expect(screen.getByText('2')).toBeTruthy();
     // The same on the row shape.
     fireEvent.click(screen.getByRole('button', { name: 'List view' }));
-    expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(2);
     expect(screen.getByText('2 likes')).toBeTruthy();
     state.likes = {};
   });

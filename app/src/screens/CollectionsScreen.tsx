@@ -432,12 +432,11 @@ export default function CollectionsScreen({ navigation, route }: {
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
   const { mine, askToSignIn } = useSave();
-  // Counts for both tabs; the heart itself only on the community grid.
-  // Your own rows still refuse it — a tappable heart inside a swipeable
-  // row is a third gesture competing for the same thumb — but a
-  // community card does not swipe, so there it is the same control the
-  // Explore shelf taps, backed by the same provider, one copy of the
-  // truth.
+  // One heart on every public list, yours included (owner, 17 Oct 2026):
+  // a curator may like their own list, and the shelves rank by everyone's
+  // likes but theirs (`rankLikes`, read where a shelf is sorted). It is
+  // the control the Explore shelf taps, backed by the same provider, one
+  // copy of the truth.
   const { likes, myLikes, toggleLike } = useLikes();
   const { data: places, loading: placesLoading, loaded: placesLoaded } = usePlaces();
   const tabClearance = useTabBarClearance();
@@ -507,12 +506,9 @@ export default function CollectionsScreen({ navigation, route }: {
   // list set to Public "shows up here" — which, under that filter, it
   // never would. The two tabs answer two questions, "what do I keep" and
   // "what does everyone see here", and a list that is the answer to both
-  // belongs on both. A curator's own card wears their own byline and a
-  // tally for a heart, since the database refuses a curator's like on
-  // their own list — see the tile.
+  // belongs on both. A curator's own card wears their own byline, and the
+  // same heart as everybody else's.
   const community = cols.data.filter((c) => membersOf(c, places).length > 0);
-  /** Yours, on the community shelf: drawn as everyone sees it, bar the heart. */
-  const mineToo = (c: Collection) => !!me && c.owner_id === me;
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
@@ -1142,55 +1138,34 @@ export default function CollectionsScreen({ navigation, route }: {
                                   list is one nobody may like, and a heart
                                   on it would be an invitation to nothing.
 
-                                  And on your own tile, a tally rather than
-                                  a control — the detail screen's rule, for
-                                  the detail screen's reason. The database
-                                  refuses a curator's like on their own
-                                  list, so a pressable heart here could only
-                                  fill for a beat and snap back; this file
-                                  is the one place that draws your own
-                                  published lists as cards, so it inherits
-                                  the same check. Inert, it also earns the
-                                  tally's discipline: at zero it draws
-                                  nothing, because a bare heart is exactly
-                                  an invitation and the one it invites is
-                                  impossible. */}
+                                  On your own tile too, the same control
+                                  (owner, 17 Oct 2026): a curator may like
+                                  their own list, and it draws at any count
+                                  — the list nobody has liked yet is the
+                                  one that most needs the invitation. */}
                               {c.id && c.is_public ? (
-                                item.own || mineToo(c) ? (
-                                  likesWorthShowing(likes[c.slug]) ? (
-                                    <View style={[s.gcardLikes, { marginLeft: 'auto' }]}>
-                                      {/* 15, the pressable heart's size: one
-                                          mark in two states, not two marks
-                                          (owner, 17 Oct 2026). The ink says
-                                          which state; the size never does. */}
-                                      <Ionicons name="heart" size={15} color={onPhoto.textSecondary} />
-                                      <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
-                                    </View>
-                                  ) : null
-                                ) : (
-                                  <PressableScale
-                                    containerStyle={{ marginLeft: 'auto' }}
-                                    style={s.gcardLikes}
-                                    scaleTo={0.82}
-                                    haptic="none"
-                                    hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
-                                    onPress={() => onHeart(c)}
-                                    accessibilityRole="button"
-                                    accessibilityState={{ selected: my }}
-                                    accessibilityLabel={my
-                                      ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                                      : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
-                                  >
-                                    <Ionicons
-                                      name={my ? 'heart' : 'heart-outline'}
-                                      size={15}
-                                      color={my ? onPhoto.accent : onPhoto.text}
-                                    />
-                                    {likesWorthShowing(likes[c.slug]) && (
-                                      <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
-                                    )}
-                                  </PressableScale>
-                                )
+                                <PressableScale
+                                  containerStyle={{ marginLeft: 'auto' }}
+                                  style={s.gcardLikes}
+                                  scaleTo={0.82}
+                                  haptic="none"
+                                  hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
+                                  onPress={() => onHeart(c)}
+                                  accessibilityRole="button"
+                                  accessibilityState={{ selected: my }}
+                                  accessibilityLabel={my
+                                    ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                                    : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                                >
+                                  <Ionicons
+                                    name={my ? 'heart' : 'heart-outline'}
+                                    size={15}
+                                    color={my ? onPhoto.accent : onPhoto.text}
+                                  />
+                                  {likesWorthShowing(likes[c.slug]) && (
+                                    <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
+                                  )}
+                                </PressableScale>
                               ) : null}
                             </View>
                           </View>
@@ -1367,19 +1342,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                 now, and the list nobody has liked yet is
                                 precisely the one that needs one. Only the
                                 number keeps the old rule. */}
-                            {c.id && c.is_public && mineToo(c) ? (
-                              // Your own list, as everyone sees it — except
-                              // the heart, which is a tally here as on your
-                              // own row, for the tile's reason.
-                              likesWorthShowing(likes[c.slug]) ? (
-                                <View style={[s.likesWrap, s.likesRow]}>
-                                  <Ionicons name="heart" size={15} color={colors.textTertiary} />
-                                  <Text style={s.meta}>
-                                    {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
-                                  </Text>
-                                </View>
-                              ) : null
-                            ) : c.id && c.is_public ? (
+                            {c.id && c.is_public ? (
                               <PressableScale
                                 containerStyle={s.likesWrap}
                                 style={s.likesRow}
@@ -1509,49 +1472,45 @@ export default function CollectionsScreen({ navigation, route }: {
                             word "likes", so the number is read rather than
                             decoded.
 
-                            Absent counts and zero both draw nothing —
-                            `likesWorthShowing` explains why, and a private
-                            list is always the absent case: the counts come
-                            from a function that returns public rows only,
-                            because a private list is one nobody may like. So
-                            the line never appears under a padlock, and never
-                            claims that a list nobody *could* like is a list
-                            nobody *did*. */}
-                        {likesWorthShowing(likes[own.slug]) && (
-                          <View style={s.likesRow}>
-                            {/* A count, and grey because of it. Your own
-                                tile wears the neutral mark and somebody
-                                else's wears coral, and that difference in
-                                hue is the whole of how a tally is told from
-                                a state — here, on the tiles, and on the
-                                community row beside this one.
+                            The heart draws on every public list of yours, at
+                            any count, and you may press it (owner, 17 Oct
+                            2026): a curator may like their own list, and the
+                            shelves rank by everybody's likes but theirs. The
+                            number keeps `likesWorthShowing`'s rule. A private
+                            list has none: the counts come from a function
+                            that returns public rows only, because a private
+                            list is one nobody else can see to like.
 
-                                This heart was `accentFaint`: the same coral,
-                                dimmed, on the argument that dimness reads as
-                                warmth rather than as a second thing to read.
-                                It does, on charcoal. On paper the token
-                                resolves to #D27161 under an accent of
-                                #C4402C, and a dimmed coral is just coral —
-                                so the distinction lived only in the dark
-                                theme and said "you liked your own list" in
-                                the light one. Grey says nothing of the kind
-                                in either.
-
-                                Filled and 13pt, both unchanged: an outline
-                                heart that small spends most of its ink on a
-                                hairline and reads as a smudge — and the
-                                outline now belongs to the community row,
-                                where it means "not yet". Your own list
-                                cannot mean that. The database refuses a
-                                curator's like on their own list, so there is
-                                no state here to draw: a number, and a mark
-                                standing in for its word. */}
-                            <Ionicons name="heart" size={15} color={colors.textTertiary} />
-                            <Text style={s.meta}>
-                              {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
-                            </Text>
-                          </View>
-                        )}
+                            A button inside a row that swipes, as the
+                            community row already has inside a row that
+                            opens: a tap is not a pan, and `hitSlop` stops at
+                            the heart's own line. */}
+                        {own.id && own.is_public ? (
+                          <PressableScale
+                            containerStyle={s.likesWrap}
+                            style={s.likesRow}
+                            scaleTo={0.82}
+                            haptic="none"
+                            hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
+                            onPress={() => onHeart(own)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: myLikes.includes(own.id) }}
+                            accessibilityLabel={myLikes.includes(own.id)
+                              ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                              : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                          >
+                            <Ionicons
+                              name={myLikes.includes(own.id) ? 'heart' : 'heart-outline'}
+                              size={15}
+                              color={myLikes.includes(own.id) ? colors.accent : colors.textTertiary}
+                            />
+                            {likesWorthShowing(likes[own.slug]) && (
+                              <Text style={s.meta}>
+                                {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
+                              </Text>
+                            )}
+                          </PressableScale>
+                        ) : null}
                       </View>
                     </View>
                   </Card>

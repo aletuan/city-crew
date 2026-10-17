@@ -1146,6 +1146,7 @@ export type Database = {
         Returns: {
           collection_id: string
           likes: number
+          others: number
         }[]
       }
       copies_of_mine: {

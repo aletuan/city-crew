@@ -157,6 +157,11 @@ export async function fetchMyCollections(ownerId: string): Promise<Collection[]>
   return withMembers(data);
 }
 
+/** Two readings of one count. `shown` is every like, the number a heart
+ *  prints beside it. `ranked` leaves out the owner's own like, and is what
+ *  a shelf sorts by — see `fetchLikeCounts`. */
+export type LikeTally = { shown: Record<string, number>; ranked: Record<string, number> };
+
 /**
  * How many people liked each public collection, keyed by slug.
  *
@@ -170,25 +175,35 @@ export async function fetchMyCollections(ownerId: string): Promise<Collection[]>
  * Returned by slug because that is what every screen and `rankByLikes`
  * key on; the function speaks in ids, so this is where the two meet.
  *
- * Failure is an empty map, never a throw. Every count then reads as zero,
+ * Twice over since 17 Oct 2026, when a curator could like their own list
+ * again: `shown` is the total, and `ranked` is `others`, the likes from
+ * anyone but the owner — so a self-like fills the heart and moves the
+ * tally without moving the list up a shelf that claims to show what
+ * readers chose. A server still on the old function has no `others`, and
+ * there the total stands in, which is what it meant before.
+ *
+ * Failure is empty maps, never a throw. Every count then reads as zero,
  * `rankByLikes` falls back to the order the shelf had before likes
  * existed, and no heart shows a tally — which is exactly the state the
  * feature ships in anyway.
  */
-export async function fetchLikeCounts(): Promise<Record<string, number>> {
+export async function fetchLikeCounts(): Promise<LikeTally> {
   const [counts, ids] = await Promise.all([
     supabase.rpc('collection_like_counts'),
     supabase.from('collections').select('id, slug').eq('is_public', true),
   ]);
-  if (counts.error || ids.error || !counts.data || !ids.data) return {};
+  if (counts.error || ids.error || !counts.data || !ids.data) return { shown: {}, ranked: {} };
   const slugOf = new Map<string, string>();
   for (const row of ids.data as { id: string; slug: string }[]) slugOf.set(row.id, row.slug);
-  const out: Record<string, number> = {};
-  for (const row of counts.data as { collection_id: string; likes: number }[]) {
+  const shown: Record<string, number> = {};
+  const ranked: Record<string, number> = {};
+  for (const row of counts.data as { collection_id: string; likes: number; others?: number }[]) {
     const slug = slugOf.get(row.collection_id);
-    if (slug) out[slug] = row.likes;
+    if (!slug) continue;
+    shown[slug] = row.likes;
+    ranked[slug] = row.others ?? row.likes;
   }
-  return out;
+  return { shown, ranked };
 }
 
 /**
@@ -213,7 +228,7 @@ export async function fetchMyLikes(meId: string): Promise<string[]> {
  * Like, or take a like back.
  *
  * The insert can legitimately fail and the caller should not treat that
- * as breakage: the policy refuses a like on your own list, and the
+ * as breakage: the policy refuses a like on a private list, and the
  * primary key refuses a second one from the same person. Both are the
  * rules working. What the caller needs back is whether the state changed,
  * so it knows whether to refetch.

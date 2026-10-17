@@ -191,12 +191,14 @@ run "$DB" -f "$HERE/channel_guard_test.sql"
 # migration needs `collections` to already exist, which the user-collections
 # block above has done by here.
 echo "→ collection likes"
-# The second file narrows the insert policy so a curator cannot like their
-# own list, and is named for what it does rather than for the table — so it
-# has to be listed, not globbed for. Order matters: it replaces a policy the
-# first one creates.
+# The second file narrowed the insert policy so a curator could not like
+# their own list; the third widens it back and moves the curator's vote out
+# of the ranking instead. Both are named for what they do rather than for
+# the table — so they are listed, not globbed for. Order matters: each
+# replaces a policy the one before it made.
 for f in "$ROOT"/supabase/migrations/*_collection_likes.sql \
-         "$ROOT"/supabase/migrations/*_own_collection_not_likeable.sql; do
+         "$ROOT"/supabase/migrations/*_own_collection_not_likeable.sql \
+         "$ROOT"/supabase/migrations/*_self_likes_shown_not_ranked.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/collection_likes_test.sql"

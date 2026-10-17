@@ -119,7 +119,8 @@ export default function IdeasScreen({ navigation, route }: {
   const { data: places } = usePlaces();
   const { mine, askToSignIn } = useSave();
   const cols = useCollections();
-  const { likes } = useLikes();
+  // The ranking figure, which leaves out a curator's like of their own list.
+  const { rankLikes } = useLikes();
   const uid = useAuth().session?.user?.id;
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -228,10 +229,10 @@ export default function IdeasScreen({ navigation, route }: {
     [mine.data, places, city?.id],
   );
   const community = useMemo(
-    () => rankByLikes(cols.data.filter((c) => !(uid && c.owner_id === uid)), likes)
+    () => rankByLikes(cols.data.filter((c) => !(uid && c.owner_id === uid)), rankLikes)
       .map((c) => inCity(c, places, city?.id))
       .filter((x) => x.members.length > 0),
-    [cols.data, likes, uid, places, city?.id],
+    [cols.data, rankLikes, uid, places, city?.id],
   );
   /** Whether the community's lists are open — all of them, or the ones
    *  past the first three. Not remembered between visits: the screen

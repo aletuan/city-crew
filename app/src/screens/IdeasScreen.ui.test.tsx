@@ -44,6 +44,8 @@ const state = vi.hoisted(() => ({
   mine: [] as unknown[],
   cols: [] as unknown[],
   likes: {} as Record<string, number>,
+  // What a shelf ranks by, when a test needs it to differ from the shown count.
+  rankLikes: undefined as Record<string, number> | undefined,
   uid: null as string | null,
   me: null as Pos,
   members: {} as Record<string, unknown[]>,
@@ -67,7 +69,7 @@ vi.mock('../lib/city', () => ({
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ data: state.places }),
   useCollections: () => ({ data: state.cols }),
-  useLikes: () => ({ likes: state.likes }),
+  useLikes: () => ({ likes: state.likes, rankLikes: state.rankLikes ?? state.likes }),
 }));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }) }));
 const askToSignIn = vi.hoisted(() => vi.fn());
@@ -131,6 +133,7 @@ beforeEach(() => {
   state.mine = [];
   state.cols = [];
   state.likes = {};
+  state.rankLikes = undefined;
   state.uid = null;
   state.me = null;
   state.members = {};
@@ -810,6 +813,20 @@ describe('start from what you love', () => {
     expect(screen.getByText('Community')).toBeTruthy();
     expect(names()).toEqual(['Phở run', 'My public one', 'Loud nights', 'Quiet corners']);
     expect(more()).toBeNull();
+  });
+
+  // Ranked by everybody's likes but the curator's own (owner, 17 Oct 2026).
+  it('orders the community by the ranking figure, not the shown count', () => {
+    state.uid = 'me';
+    state.mine = [coll('pho', 'Phở run')];
+    state.cols = [coll('quiet', 'Quiet corners'), coll('loud', 'Loud nights')];
+    // Loud's heart shows more, but most of it is its own curator's.
+    state.likes = { loud: 9, quiet: 2 };
+    state.rankLikes = { loud: 1, quiet: 2 };
+    state.members = { pho: [here()], quiet: [here()], loud: [here()] };
+    renderScreen();
+    fireEvent.click(more()!);
+    expect(names()).toEqual(['Phở run', 'Quiet corners', 'Loud nights']);
   });
 
   // A guest owns nothing, and an account whose lists are all elsewhere

@@ -54,6 +54,18 @@ type Catalog = {
    * not the server has heard about it — see `toggleLike`.
    */
   likes: Record<string, number>;
+  /**
+   * The counts a shelf is sorted by: every like but the list owner's own
+   * (17 Oct 2026). A curator may like their own list, and the heart and
+   * tally show it — but a shelf that claims to show what readers chose is
+   * not ordered by the author's vote. See `fetchLikeCounts`.
+   *
+   * Server answers only, no pending taps laid over: a tap moves the
+   * heart and the number at once, but moving the list it is on would
+   * reorder the shelf under the thumb that tapped it. The new order
+   * arrives with the refetch the tap already triggers.
+   */
+  rankLikes: Record<string, number>;
   myLikes: string[];
   /**
    * Like a list, or take a like back. The only way to do either.
@@ -83,6 +95,7 @@ const EMPTY: Catalog = {
   terms: mergeTerms(BUILT_IN, null),
   curatorAvatars: {},
   likes: {},
+  rankLikes: {},
   myLikes: [],
   toggleLike: async () => {},
 };
@@ -227,7 +240,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
 
   const liked = useMemo(() => likedNow(myLikes.data, pending), [myLikes.data, pending]);
   const counts = useMemo(
-    () => countsNow(likeCounts.data, likeCounts.loadedAt, pending),
+    () => countsNow(likeCounts.data.shown, likeCounts.loadedAt, pending),
     [likeCounts.data, likeCounts.loadedAt, pending],
   );
 
@@ -258,7 +271,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   }, [meId, liked, likeCounts.reload, myLikes.reload]);
 
   const value = useMemo<Catalog>(() => ({
-    places, collections, terms, likes: counts, myLikes: liked, toggleLike,
+    places, collections, terms, likes: counts, rankLikes: likeCounts.data.ranked, myLikes: liked, toggleLike,
     curatorAvatars: curatorAvatars.data,
   // Each field, not each wrapper: a Fetch object is new every render, so depending on it would
   // rebuild the context value — and re-render every consumer — on renders where nothing loaded.
@@ -266,7 +279,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   }), [
     places.data, places.loading, places.error, places.loadedAt, places.reload,
     collections.data, collections.loading, collections.error, collections.loadedAt, collections.reload,
-    terms, counts, liked, toggleLike,
+    terms, counts, likeCounts.data.ranked, liked, toggleLike,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -295,9 +308,11 @@ export const useCuratorAvatar = (handle: string | null | undefined) => {
   return handle ? map[normalizeHandle(handle)] ?? null : null;
 };
 
-/** Like counts by slug, your own likes by id, and the one way to change
- *  either. All three already include the tap you just made. */
+/** Like counts by slug, the counts a shelf ranks by, your own likes by
+ *  id, and the one way to change them. The shown counts and your likes
+ *  already include the tap you just made; the ranking waits for the
+ *  server. */
 export const useLikes = () => {
-  const { likes, myLikes, toggleLike } = useCatalog();
-  return { likes, myLikes, toggleLike };
+  const { likes, rankLikes, myLikes, toggleLike } = useCatalog();
+  return { likes, rankLikes, myLikes, toggleLike };
 };
