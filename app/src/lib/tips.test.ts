@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_LOG, markShown, MAX_SHOWS, parseLog, pickTip, retire, TIPS_KEY, tipsKey, type TipId, type TipLog } from './tips';
+import { EMPTY_LOG, markShown, MAX_SHOWS, parseLog, pickTip, retire, TIP_IDS, TIPS_KEY, tipsKey, tipsOn, turnOff, type TipId, type TipLog } from './tips';
 
 const ALL: TipId[] = ['reorder', 'publish', 'edit', 'add'];
 
@@ -58,7 +58,7 @@ describe('pickTip', () => {
 describe('markShown and retire', () => {
   it('stamps the tip with the counter, then moves the counter on', () => {
     const log = markShown(markShown(EMPTY_LOG, 'edit'), 'add');
-    expect(log).toEqual({ seq: 2, last: { edit: 0, add: 1 }, shown: { edit: 1, add: 1 }, retired: [] });
+    expect(log).toEqual({ seq: 2, last: { edit: 0, add: 1 }, shown: { edit: 1, add: 1 }, retired: [], off: false });
   });
 
   it('retires a tip once however often it is asked', () => {
@@ -71,8 +71,8 @@ describe('markShown and retire', () => {
     const log = markShown(EMPTY_LOG, 'edit');
     retire(log, 'add');
     markShown(log, 'add');
-    expect(log).toEqual({ seq: 1, last: { edit: 0 }, shown: { edit: 1 }, retired: [] });
-    expect(EMPTY_LOG).toEqual({ seq: 0, last: {}, shown: {}, retired: [] });
+    expect(log).toEqual({ seq: 1, last: { edit: 0 }, shown: { edit: 1 }, retired: [], off: false });
+    expect(EMPTY_LOG).toEqual({ seq: 0, last: {}, shown: {}, retired: [], off: false });
   });
 });
 
@@ -99,9 +99,9 @@ describe('parseLog', () => {
       last: { edit: 3, rename: 4, add: 'x' },
       shown: { edit: 2, rename: 1, add: 'x' },
       retired: ['publish', 'rename', 5],
-    }))).toEqual({ seq: 0, last: { edit: 3 }, shown: { edit: 2 }, retired: ['publish'] });
+    }))).toEqual({ seq: 0, last: { edit: 3 }, shown: { edit: 2 }, retired: ['publish'], off: false });
     // A record from before the cap: no counts, so its tips count from none.
-    expect(parseLog(JSON.stringify({ seq: 4, retired: 'publish' }))).toEqual({ seq: 4, last: {}, shown: {}, retired: [] });
+    expect(parseLog(JSON.stringify({ seq: 4, retired: 'publish' }))).toEqual({ seq: 4, last: {}, shown: {}, retired: [], off: false });
   });
 
   // The reorder tip's own flag, from before there was more than one tip.
@@ -144,5 +144,31 @@ describe('the cap', () => {
     expect(log.shown).toEqual({ edit: 2, add: 1 });
     expect(pickTip(['edit'], log)).toBe('edit');
     expect(pickTip(['edit'], markShown(log, 'edit'))).toBeNull();
+  });
+});
+
+// Profile's switch reads the record: on while a tip is due, off once
+// none is — by hand, or because every tip ran its course.
+describe('the switch', () => {
+  it('is on for a fresh record', () => {
+    expect(tipsOn(EMPTY_LOG)).toBe(true);
+  });
+
+  it('turns off by itself once every tip has retired or been shown its fill', () => {
+    let log = EMPTY_LOG;
+    for (const id of TIP_IDS.slice(0, -1)) log = retire(log, id);
+    expect(tipsOn(log)).toBe(true);
+    const last = TIP_IDS[TIP_IDS.length - 1];
+    for (let i = 0; i < MAX_SHOWS - 1; i++) log = markShown(log, last);
+    expect(tipsOn(log)).toBe(true);
+    expect(tipsOn(markShown(log, last))).toBe(false);
+  });
+
+  it('turned off, shows nothing even with tips still due, and says so after a reload', () => {
+    const off = turnOff(EMPTY_LOG);
+    expect(tipsOn(off)).toBe(false);
+    expect(pickTip(TIP_IDS, off)).toBeNull();
+    expect(parseLog(JSON.stringify(off)).off).toBe(true);
+    expect(parseLog(JSON.stringify({ ...off, off: 'yes' })).off).toBe(false);
   });
 });

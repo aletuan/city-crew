@@ -21,7 +21,7 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 
-import TipBox, { resetTips } from './TipBox';
+import TipBox, { readTipsOn, setTipsOn } from './TipBox';
 
 const OWNER: TipId[] = ['reorder', 'publish', 'edit', 'add'];
 /** Let storage answer. */
@@ -81,7 +81,7 @@ describe('one tip a visit', () => {
 
   it('writes down what it showed, so the next visit knows', async () => {
     await visit();
-    expect(await stored()).toEqual({ seq: 1, last: { reorder: 0 }, shown: { reorder: 1 }, retired: [] });
+    expect(await stored()).toEqual({ seq: 1, last: { reorder: 0 }, shown: { reorder: 1 }, retired: [], off: false });
   });
 
   // Each tip says what it is about, in the reader's language.
@@ -293,14 +293,15 @@ describe('the cap', () => {
   });
 });
 
-// Profile's "Show tips again".
-describe('showing them again', () => {
-  it('brings back every tip for that reader, and only that reader', async () => {
-    await AsyncStorage.setItem(tipsKey('a'), JSON.stringify({ seq: 9, last: {}, shown: {}, retired: OWNER }));
+// Profile's "Show tips" switch.
+describe('the switch', () => {
+  it('turned on, brings back every tip for that reader, and only that reader', async () => {
+    await AsyncStorage.setItem(tipsKey('a'), JSON.stringify({ seq: 9, last: {}, shown: {}, retired: OWNER, off: true }));
     await AsyncStorage.setItem(tipsKey('b'), JSON.stringify({ seq: 9, last: {}, shown: {}, retired: OWNER }));
-    await resetTips('a');
+    await setTipsOn('a', true);
     expect(await AsyncStorage.getItem(tipsKey('a'))).toBeNull();
     expect(await AsyncStorage.getItem(tipsKey('b'))).not.toBeNull();
+    expect(await readTipsOn('a')).toBe(true);
     const view = render(<TipBox reader="a" eligible={OWNER} done={[]} />);
     await settle();
     expect(showing()).toBe('reorder');
@@ -308,10 +309,23 @@ describe('showing them again', () => {
   });
 
   // The old flag would retire the reorder tip again on the next read.
-  it('forgets the old reorder flag too', async () => {
+  it('turned on, forgets the old reorder flag too', async () => {
     await AsyncStorage.setItem(LEGACY_REORDER_KEY, '1');
-    await resetTips(null);
+    await setTipsOn(null, true);
     expect(await AsyncStorage.getItem(LEGACY_REORDER_KEY)).toBeNull();
     expect(await visit()).toBe('reorder');
+  });
+
+  it('turned off, shows no tip, keeps the record, and reads back off', async () => {
+    expect(await visit()).toBe('reorder');
+    await setTipsOn(null, false);
+    expect(await readTipsOn(null)).toBe(false);
+    expect(JSON.parse((await AsyncStorage.getItem(tipsKey(null)))!).shown).toEqual({ reorder: 1 });
+    expect(await visit()).toBeNull();
+  });
+
+  it('reads off once every tip has run its course, without being turned off', async () => {
+    await AsyncStorage.setItem(tipsKey(null), JSON.stringify({ seq: 9, last: {}, shown: {}, retired: [...OWNER, 'copy'] }));
+    expect(await readTipsOn(null)).toBe(false);
   });
 });

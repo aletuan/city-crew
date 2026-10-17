@@ -556,7 +556,19 @@ export function Chip({ label, active, onPress, icon, iconColor, testID }: {
  * Everything else is the platform's, props and all.
  */
 export function Toggle(props: React.ComponentProps<typeof Switch>) {
-  return <Switch {...props} style={[{ alignSelf: 'center' }, props.style]} />;
+  return (
+    <Switch
+      // The app's colours, not the platform's green: the track takes the
+      // look's accent and the thumb its ink, so a switch is coffee on
+      // Coffee and rose on Rose like every other chosen thing. Here so
+      // that the second switch (Profile's tips, 17 Oct 2026) could not
+      // come out in different colours from the first.
+      trackColor={{ false: colors.borderGlass, true: colors.accentFaint }}
+      thumbColor={colors.text}
+      {...props}
+      style={[{ alignSelf: 'center' }, props.style]}
+    />
+  );
 }
 
 /**

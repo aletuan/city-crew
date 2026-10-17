@@ -12,8 +12,8 @@ import {
   type NativeScrollEvent, type NativeSyntheticEvent,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, CountBadge, fireHaptic, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
-import { resetTips } from '../components/TipBox';
+import { AmbientWarmth, Card, CountBadge, fireHaptic, PressableScale, Screen, Toggle, useTabBarClearance } from '../components/ui';
+import { readTipsOn, setTipsOn } from '../components/TipBox';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
@@ -140,6 +140,45 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
 }
 
 /**
+ * A setting that is on or off: the label, a line saying what it governs,
+ * and the switch where a value row has its value.
+ *
+ * `SettingRow`'s label, not `FeatureRow`'s title: this is still a
+ * setting, and a setting's name is regular weight (see `SettingRow`). The
+ * second line is `FeatureRow`'s, because it is a sentence rather than a
+ * value. The switch is the control; the row around it is not a button,
+ * so there is one thing to find and one thing VoiceOver names.
+ */
+function SwitchRow({ icon, label, sub, value, onChange, last, testID }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  sub: string;
+  /** Null while it is being read: drawn off, and not to be pressed. */
+  value: boolean | null;
+  onChange: (on: boolean) => void;
+  last?: boolean;
+  testID?: string;
+}) {
+  return (
+    <View style={[s.twoLineRow, !last && s.featureRowDivider]} testID={testID}>
+      <RowGlyph name={icon} line={TITLE_LINE} />
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={[s.settingLabel, { lineHeight: TITLE_LINE }]}>{label}</Text>
+        <Text style={s.featureSub}>{sub}</Text>
+      </View>
+      <Toggle
+        value={value ?? false}
+        disabled={value === null}
+        onValueChange={onChange}
+        accessibilityLabel={label}
+        accessibilityHint={sub}
+        style={s.rowEnd}
+      />
+    </View>
+  );
+}
+
+/**
  * A setting and what it is currently set to.
  *
  * Not `FeatureRow`, though it was for a while and the difference is
@@ -243,9 +282,16 @@ function SettingsCard() {
   // The same reader the collection screen keys its tips by: the session,
   // or nobody for a guest.
   const { session } = useAuth();
-  // Said on the row itself once it has worked, until the reader leaves:
-  // a row that changes nothing on screen reads as a tap that missed.
-  const [tipsBack, setTipsBack] = useState(false);
+  const reader = session?.user?.id ?? null;
+  // Null until the record has been read. Read again on every focus: tips
+  // retire while the reader is in Collections, and the last one going is
+  // what turns this switch off (see `tipsOn`).
+  const [tips, setTips] = useState<boolean | null>(null);
+  useFocusEffect(useCallback(() => {
+    let live = true;
+    readTipsOn(reader).then((on) => { if (live) setTips(on); }, () => {});
+    return () => { live = false; };
+  }, [reader]));
 
   return (
     <>
@@ -278,25 +324,41 @@ function SettingsCard() {
           onPress={() => setThemeOpen(true)}
           testID="profile-theme"
         />
-        {/* The tips under a collection's title retire once read three
-            times, closed or acted on (see `lib/tips`), and this is the way
-            back to them. Under Preferences, with how the app speaks and
-            looks: whether it offers tips is the same kind of choice. It
-            first went under App, and read there as something about the
-            build. "Gợi ý" in the Vietnamese since 17 Oct 2026 (UX-07); it
-            was the loanword "tip" until the owner moved it, and not "mẹo",
-            which reads as a trick. The glyph is "again", not the tips' own circled
-            "i", which About wears. */}
-        <SettingRow
-          icon="refresh-outline"
-          label={t('Show tips again', 'Bật lại các gợi ý', 'ヒントをもう一度表示')}
-          value={tipsBack ? t('Done', 'Đã bật lại', 'オンにしました') : undefined}
-          onPress={() => {
-            void resetTips(session?.user?.id).then(() => {
-              successHaptic();
-              setTipsBack(true);
-            });
+        {/* The tips under a collection's title, as a switch. Under
+            Preferences, with how the app speaks and looks: whether it
+            offers tips is the same kind of choice. It first went under
+            App, and read there as something about the build.
+
+            It was a row with an action, "Show tips again", and the owner
+            asked for a switch (17 Oct 2026): a row that only ever turns
+            something back on cannot say whether it is on, and cannot turn
+            it off. The switch reads the record rather than keeping a
+            setting of its own — off once every tip has run its course,
+            not only when turned off — so it never shows on over tips
+            that will not appear (`tipsOn` in lib/tips). On again brings
+            every tip back from its first showing, which is what the
+            old row did.
+
+            "Gợi ý" in the Vietnamese since 17 Oct 2026 (UX-07), not the
+            loanword "tip" and not "mẹo", which reads as a trick. The glyph
+            is the tips' own bulb, so the switch and the boxes it governs
+            wear one mark. Two lines where the other settings have one:
+            a switch has no value to show on the right, and "Show tips"
+            alone does not say which tips. */}
+        <SwitchRow
+          icon="bulb-outline"
+          label={t('Show tips', 'Hiện gợi ý', 'ヒントを表示')}
+          sub={t(
+            'Short how-tos in your collections.',
+            'Hướng dẫn ngắn khi dùng bộ sưu tập.',
+            'コレクションの使い方を短く案内します。',
+          )}
+          value={tips}
+          onChange={(on) => {
+            setTips(on);
+            void setTipsOn(reader, on);
           }}
+          testID="profile-tips"
           last
         />
       </Card>
