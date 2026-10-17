@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { AccessibilityInfo, LayoutAnimation } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
 import type { PhotoScore } from '../lib/photoScore';
@@ -284,5 +285,73 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('score-detail-light')).toBeTruthy();
     fireEvent.click(screen.getByTestId('score-detail-toggle'));
     expect(screen.queryByTestId('score-detail-light')).toBeNull();
+  });
+
+  // Folded, not hidden: the analysis is what decides the act, so the act
+  // stays one tap from it (owner, 17 Oct 2026).
+  it('folds the rows into one strip while the analysis is open, and back as it closes', () => {
+    const actions = [
+      row({ short: 'Cover' }),
+      row({ key: 'hide', icon: 'eye-off-outline', title: 'Hide it', short: 'Hide' }),
+      row({ key: 'delete', icon: 'trash-outline', title: 'Delete it', destructive: true }),
+    ];
+    render(<PhotoSheet {...props({ photos: [photo({ score })], actionsFor: () => actions })} />);
+    expect(screen.queryByTestId('sheet-strip')).toBeNull();
+    expect(screen.getByTestId('sheet-action-cover').textContent).toBe('Make it the cover');
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    const strip = screen.getByTestId('sheet-strip');
+    // A word each, the title where there is no shorter one; VoiceOver
+    // still hears the whole title.
+    expect([...strip.querySelectorAll('[role="button"]')].map((b) => b.textContent)).toEqual(['Cover', 'Hide', 'Delete it']);
+    expect(screen.getByTestId('sheet-action-cover').getAttribute('aria-label')).toBe('Make it the cover');
+    expect(screen.getByTestId('sheet-action-delete').querySelector('[data-icon="trash-outline"]')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.queryByTestId('sheet-strip')).toBeNull();
+  });
+
+  it('closes the sheet first, then acts, from the strip as from the rows', () => {
+    vi.useFakeTimers();
+    try {
+      const onPress = vi.fn();
+      const onClose = vi.fn();
+      render(<PhotoSheet {...props({ photos: [photo({ score })], actionsFor: () => [row({ onPress })], onClose })} />);
+      fireEvent.click(screen.getByTestId('score-detail-toggle'));
+      fireEvent.click(screen.getByTestId('sheet-action-cover'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onPress).not.toHaveBeenCalled();
+      act(() => { vi.advanceTimersByTime(220); });
+      expect(onPress).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('slides the rows into the strip and back, and not under Reduce Motion', async () => {
+    const spy = vi.spyOn(LayoutAnimation, 'configureNext');
+    const { unmount } = render(<PhotoSheet {...props({ photos: [photo({ score })], actionsFor: () => [row()] })} />);
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(spy).toHaveBeenCalledTimes(2);
+    unmount();
+    spy.mockClear();
+    const still = vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    render(<PhotoSheet {...props({ photos: [photo({ score })], actionsFor: () => [row()] })} />);
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+    still.mockRestore();
+  });
+
+  // The analysis stays open across a swipe; a photograph with none to
+  // show keeps its full rows.
+  it('keeps the full rows for an unscored photograph while the analysis is open', () => {
+    const photos = [photo({ id: 'p1', score }), photo({ id: 'p2', photo_uri: 'http://cdn/p2.jpg' })];
+    const { rerender } = render(<PhotoSheet {...props({ photos, actionsFor: () => [row()] })} />);
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.getByTestId('sheet-strip')).toBeTruthy();
+    rerender(<PhotoSheet {...props({ photos, index: 1, actionsFor: () => [row()] })} />);
+    expect(screen.queryByTestId('sheet-strip')).toBeNull();
+    expect(screen.getByTestId('sheet-action-cover').textContent).toBe('Make it the cover');
   });
 });

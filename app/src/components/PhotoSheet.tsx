@@ -57,16 +57,17 @@
 // grid is a place to come back to rather than a second picture.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, LayoutAnimation, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SheetRows, type SheetAction } from './ActionSheet';
+import { SheetRows, SheetStrip, type SheetAction } from './ActionSheet';
 import { ScoreDetails, ScoreTen, ScoreWhy } from './PhotoScore';
 import PhotoViewer, { settledPage } from './PhotoViewer';
+import { SLIDE } from './SearchField';
 import { useSheetDrag } from './sheetDrag';
-import { PressableScale } from './ui';
+import { PressableScale, useReducedMotion } from './ui';
 import type { GalleryPhoto } from '../lib/gallery';
 import { useI18n } from '../lib/i18n';
 import { colors, font, onPhoto, radius, space } from '../theme';
@@ -117,6 +118,13 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   // The detailed analysis, open or folded: kept while the gallery is,
   // so a guide who opened it reads it on every photograph they swipe to.
   const [detail, setDetail] = useState(false);
+  const still = useReducedMotion();
+  // The rows fold into a strip as the analysis opens and come back as it
+  // closes: one movement, the search box's own slide, not two jumps.
+  const toggleDetail = () => {
+    if (!still) LayoutAnimation.configureNext(SLIDE);
+    setDetail((was) => !was);
+  };
 
   const rise = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -231,9 +239,16 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
             {p.score && <ScoreTen score={p.score} />}
           </View>
 
-          {p.score && <ScoreDetails score={p.score} open={detail} onToggle={() => setDetail((was) => !was)} />}
+          {p.score && <ScoreDetails score={p.score} open={detail} onToggle={toggleDetail} />}
 
-          <SheetRows actions={visible ? actionsFor(p) : []} onClose={onClose} titlesOnly />
+          {/* Folded to one strip while the analysis is open, not hidden:
+              the analysis is what decides a cover or a hide, and the
+              action should be one tap from the reading that prompted it
+              (owner, 17 Oct 2026). A photograph with no score has no
+              analysis to open, so it always has its rows. */}
+          {detail && p.score
+            ? <SheetStrip actions={visible ? actionsFor(p) : []} onClose={onClose} />
+            : <SheetRows actions={visible ? actionsFor(p) : []} onClose={onClose} titlesOnly />}
         </ScrollView>
       </Animated.View>
 

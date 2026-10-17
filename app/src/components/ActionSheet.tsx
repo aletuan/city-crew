@@ -56,6 +56,9 @@ export type SheetAction = {
   key: string;
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
+  /** The title in a word or two, for `SheetStrip`, where three share a
+   *  row; the full title is still what VoiceOver says. */
+  short?: string;
   /** What it will actually do, in a sentence. The half an alert menu
    *  cannot carry, and the half that tells two red rows apart. */
   desc: string;
@@ -179,6 +182,43 @@ export function SheetRows({ actions, onClose, titlesOnly }: {
   );
 }
 
+/**
+ * The same actions as `SheetRows`, side by side in one card: a glyph over
+ * a word or two each. For a sheet whose rows have to give way to
+ * something being read above them — the photo sheet with its analysis
+ * open (owner, 17 Oct 2026), where three full rows pushed the reading
+ * down a screen, and hiding them would have split reading from acting:
+ * the analysis is what tells a guide to hide a photograph or make it the
+ * cover. About a third of the rows' height.
+ */
+export function SheetStrip({ actions, onClose }: {
+  actions: SheetAction[];
+  onClose: () => void;
+}) {
+  if (!actions.length) return null;
+  return (
+    <View style={[s.group, s.strip]} testID="sheet-strip">
+      {actions.map((a, i) => (
+        <PressableScale
+          key={a.key}
+          testID={`sheet-action-${a.key}`}
+          containerStyle={s.stripCell}
+          style={[s.stripItem, i > 0 && s.stripDivider]}
+          scaleTo={0.96}
+          // The sheet first, as in `SheetRows`.
+          onPress={() => { onClose(); setTimeout(a.onPress, 220); }}
+          accessibilityRole="button"
+          accessibilityLabel={a.title}
+          accessibilityHint={a.desc}
+        >
+          <Ionicons name={a.icon} size={19} color={a.destructive ? colors.bad : colors.text} />
+          <Text style={[s.stripLabel, a.destructive && s.rowTitleBad]} numberOfLines={1}>{a.short ?? a.title}</Text>
+        </PressableScale>
+      ))}
+    </View>
+  );
+}
+
 /** The card a sheet's header is drawn on, shared so the two headers
  *  that exist sit on the same surface as the rows beneath them. */
 export const sheetHeader = {
@@ -230,4 +270,10 @@ const s = StyleSheet.create({
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
   rowTitleBad: { color: colors.bad },
   rowDesc: { color: colors.textTertiary, fontSize: 14, lineHeight: 18 },
+
+  strip: { flexDirection: 'row' },
+  stripCell: { flex: 1 },
+  stripItem: { alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10, paddingHorizontal: 6 },
+  stripDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.borderGlassSoft },
+  stripLabel: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
 });

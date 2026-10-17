@@ -215,24 +215,28 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     cover: {
       key: a, icon: 'star-outline' as const,
       title: t('Make it the cover', 'Đặt làm ảnh bìa', 'カバーにする'),
+      short: t('Cover', 'Ảnh bìa', 'カバー'),
       desc: t('The picture that stands for the place, first wherever it appears.', 'Ảnh đại diện cho địa điểm, đứng đầu ở mọi nơi.', 'この場所を代表する写真になり、どこでも先頭に出ます。'),
       onPress: () => { void run(() => setCover(photo.id)); },
     },
     hide: {
       key: a, icon: 'eye-off-outline' as const,
       title: t('Hide it', 'Ẩn ảnh', '非表示にする'),
+      short: t('Hide', 'Ẩn', '非表示'),
       desc: t('Readers stop seeing it. You can show it again.', 'Người xem không thấy nữa. Bạn hiện lại được.', '読者には見えなくなります。再表示できます。'),
       onPress: () => { void run(() => setHidden(photo.id, true)); },
     },
     unhide: {
       key: a, icon: 'eye-outline' as const,
       title: t('Show it again', 'Hiện lại', '再表示する'),
+      short: t('Show', 'Hiện lại', '再表示'),
       desc: t('Back on the place for everyone.', 'Trở lại địa điểm với mọi người.', 'この場所に再び表示されます。'),
       onPress: () => { void run(() => setHidden(photo.id, false)); },
     },
     delete: {
       key: a, icon: 'trash-outline' as const, destructive: true,
       title: t('Delete it', 'Xoá ảnh', '削除する'),
+      short: t('Delete', 'Xoá', '削除'),
       desc: t('Gone from the place, for good.', 'Xoá hẳn khỏi địa điểm.', 'この場所から完全に消えます。'),
       onPress: () => confirmDelete([photo.id]),
     },
