@@ -120,6 +120,16 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('score-source').textContent).toBe('Photo analysed by Apple Vision and Claude.');
   });
 
+  // Other has its mark like the rest, so the head keeps its shape (owner,
+  // 18 Oct 2026); with no spread of its own, it stands among the catalog.
+  it('names Other with its frame, standing among the whole catalog', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ kind: 'other', score })] })} />);
+    const kind = screen.getByTestId('photo-sheet-kind');
+    expect(kind.textContent).toBe('Other');
+    expect(kind.querySelector('[data-icon="scan-outline"]')).not.toBeNull();
+    expect(screen.getByTestId('score-standing').textContent).toContain("of the catalog's photos");
+  });
+
   it('says no kind when the labels have none to say', () => {
     render(<PhotoSheet {...props({ photos: [photo({ kind: null, score })] })} />);
     expect(screen.queryByTestId('photo-sheet-kind')).toBeNull();

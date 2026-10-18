@@ -1400,5 +1400,10 @@ khác, phần lớn chỗ sai vẫn là ba ranh giới đã sửa ở v10 đến
 Sân vườn, Mặt tiền với Nội thất, và Phong cảnh với Văn hóa.
 
 Cả 189 ảnh được ghi với `"by": "owner"` ở phiên bản 13. Từ đây kho ảnh không
-còn nhãn `unsure` nào. Có 449 nhãn của chủ sản phẩm, và 15 ảnh mang loại Khác
-nên không hiện biểu tượng.
+còn nhãn `unsure` nào. Có 449 nhãn của chủ sản phẩm, và 15 ảnh mang loại Khác.
+
+Cùng ngày, theo yêu cầu của chủ sản phẩm, loại Khác có biểu tượng riêng (một
+khung ảnh trống, `scan-outline`) và tên "Khác" trong trang ảnh, như mọi loại
+khác. Trước đó đầu trang ảnh Khác là chỗ duy nhất không có biểu tượng, nên bố
+cục bị lệch (`app/src/lib/photoKind.ts`). Ảnh `unsure` và ảnh chưa có nhãn vẫn
+không hiện loại.
