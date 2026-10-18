@@ -1950,6 +1950,23 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .lr-next:disabled { opacity: 0.35; cursor: default; }
 .lr-guide { color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
 .lr-guide ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+/* Round 4: two photographs and which is better. Side by side where there
+   is room, one above the other on a phone, where side by side would make
+   each a thumbnail. */
+.pp-question { margin: 0; font-size: 17px; }
+.pp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pp-shot { position: relative; margin: 0; border-radius: 10px; overflow: hidden; background: var(--surface-glass); }
+.pp .pt-photo { max-height: 62vh; }
+.pp-letter {
+  position: absolute; top: 8px; left: 8px; padding: 2px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6); color: #fff; font-weight: 700; font-size: 15px;
+}
+.pp-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pp-choices .pt-btn { min-height: 56px; }
+@media (max-width: 640px) {
+  .pp-pair { grid-template-columns: 1fr; }
+  .pp .pt-photo { max-height: 34vh; }
+}
 
 /* Cover review: the cover and the suggestion side by side, at the same
    size, because the question is a comparison. */
