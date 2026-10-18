@@ -48,24 +48,39 @@ describe('fetchGallery', () => {
     fake().replies({ data: [] });
     await fetchGallery('place-1');
     expect(fake().log[0].filters).toEqual([
-      ['place_id', 'place-1'], ['photo_scores.scorer', 'apple-vision'], ['labels.scorer', 'claude-labels'],
+      ['place_id', 'place-1'], ['score.scorer', 'apple-vision'], ['labels.scorer', 'claude-labels'],
     ]);
+  });
+
+  // Two embeds of one table: a filter that names the table rather than an
+  // embed's own name narrows both, and the labels came back empty on every
+  // photograph (gallery.ts, above COLS). Every embed of photo_scores is
+  // named, and every filter names an embed that the select declares.
+  it('names each embed of the scores table, and filters each by its own name', async () => {
+    fake().replies({ data: [] });
+    await fetchGallery('place-1');
+    const cols = String(fake().log[0].payload);
+    const named = [...cols.matchAll(/(\w+):photo_scores\(/g)].map((m) => m[1]);
+    expect(named).toEqual(['score', 'labels']);
+    expect(cols.match(/photo_scores\(/g)).toHaveLength(2);
+    const embeds = fake().log[0].filters.map(([col]) => col).filter((c) => c.includes('.')).map((c) => c.split('.')[0]);
+    expect(embeds).toEqual(['score', 'labels']);
   });
 
   // The score is embedded, so the gallery costs one read and not two.
   it('carries each photograph\'s score, as an object whichever way PostgREST embeds it', async () => {
     const sc = { scorer: 'apple-vision', scorer_version: 1, aesthetic: 0.4, is_utility: false, signals: {} };
     fake().replies({ data: [
-      { id: 'a', photo_scores: sc },
-      { id: 'b', photo_scores: [sc] },
-      { id: 'c', photo_scores: [] },
-      { id: 'd', photo_scores: null },
+      { id: 'a', score: sc },
+      { id: 'b', score: [sc] },
+      { id: 'c', score: [] },
+      { id: 'd', score: null },
     ] });
     const got = await fetchGallery('place-1');
     expect(got.map((p) => p.score)).toEqual([sc, sc, null, null]);
     // The embed's own key does not survive into the photograph.
-    expect(got[0]).not.toHaveProperty('photo_scores');
-    expect(String(fake().log[0].payload)).toMatch(/photo_scores\(scorer, scorer_version, aesthetic, is_utility, signals\)/);
+    expect(Object.keys(got[0]).sort()).toEqual(['id', 'kind', 'score']);
+    expect(String(fake().log[0].payload)).toMatch(/score:photo_scores\(scorer, scorer_version, aesthetic, is_utility, signals\)/);
   });
 
   // The labels ride in the same read, under their own name, and come out
