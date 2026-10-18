@@ -108,7 +108,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   // The tab is read now, while the reader is still on it; by the time the
   // sign-in form is done they are on Profile.
   const ask = useCallback((why: SignInWhy, run?: () => void) => {
-    holdResume({ tab: navRef.isReady() ? focusedTab(navRef.getRootState()) : null, run, at: Date.now() });
+    holdResume({ tab: navRef.isReady() ? focusedTab(navRef.getRootState()) : null, kind: why === 'save' ? 'save' : undefined, run, at: Date.now() });
     setSignInWhy(why);
     setAuthSheet(true);
   }, []);

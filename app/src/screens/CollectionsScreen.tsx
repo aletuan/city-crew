@@ -17,6 +17,7 @@ import { AmbientWarmth, Avatar, Card, Chip, Empty, fireHaptic, GradientCta, Pres
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill } from '../components/add';
+import { holdResume } from '../lib/resume';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
@@ -104,7 +105,13 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
     <PressableScale
       containerStyle={s.noticeWrap}
       style={s.notice}
-      onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false })}
+      onPress={() => {
+        holdResume({
+          tab: 'Collections', kind: 'collection', at: Date.now(),
+          run: () => navigation.navigate('CollectionForm'),
+        });
+        navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false });
+      }}
       accessibilityRole="button"
       accessibilityLabel={t(
         'Sign in to build your own collections',

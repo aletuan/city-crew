@@ -329,7 +329,7 @@ describe('finishing what the reader started', () => {
     render(<SignInScreen navigation={navigation} />);
     fill('reader@example.com', 'hunter2');
     submit();
-    await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+    await waitFor(() => expect(navigation.popToTop.mock.calls.length + navigation.goBack.mock.calls.length).toBe(1));
   };
 
   it('goes back to the tab and finishes the act there', async () => {
@@ -359,17 +359,20 @@ describe('finishing what the reader started', () => {
     const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
     const run = vi.fn();
     holdResume({ tab: 'Profile', run, at: Date.now() });
-    await signInWith(nav());
+    const navigation = nav();
+    await signInWith(navigation);
     await waitFor(() => expect(run).toHaveBeenCalledOnce());
+    expect(navigation.goBack).toHaveBeenCalledOnce();
+    expect(navigation.popToTop).not.toHaveBeenCalled();
     expect(go).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
 
-  it('goes nowhere when nothing was pending', async () => {
+  it('opens Explore when nothing was pending', async () => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
     const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
     await signInWith(nav());
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    expect(go).not.toHaveBeenCalled();
+    await waitFor(() => expect(go).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' }));
     vi.restoreAllMocks();
   });
 });

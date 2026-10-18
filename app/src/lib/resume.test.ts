@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  dropResume, focusedTab, holdResume, RESUME_TTL_MS, returnTab, takeResume,
+  dropResume, focusedTab, holdResume, peekResume, RESUME_TTL_MS, returnTab, takeResume,
 } from './resume';
 
 const T0 = 1_000_000;
@@ -63,5 +63,18 @@ describe('returnTab', () => {
   it('goes nowhere from Profile, or from an unknown tab', () => {
     expect(returnTab({ tab: 'Profile', at: T0 })).toBeNull();
     expect(returnTab({ tab: null, at: T0 })).toBeNull();
+  });
+});
+
+
+describe('peekResume', () => {
+  it('reads the intent without consuming it, and hides expired intents', () => {
+    holdResume({ tab: 'Explore', kind: 'save', at: T0 });
+    expect(peekResume(T0)?.kind).toBe('save');
+    expect(peekResume(T0)?.kind).toBe('save');
+    expect(peekResume(T0 - 1)).toBeNull();
+    expect(peekResume(T0 + RESUME_TTL_MS + 1)).toBeNull();
+    expect(takeResume(T0)?.kind).toBe('save');
+    expect(peekResume(T0)).toBeNull();
   });
 });
