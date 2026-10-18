@@ -1290,3 +1290,31 @@ Hai ảnh còn lại (10 và 12) cả hai mô hình đều trả lời đúng.
   từ chối với lỗi "credit balance is too low". Phải nạp thêm tín dụng mới
   đo tiếp được. Trong lúc đó, lượt gán tự động mỗi giờ cho ảnh mới cũng bị
   từ chối. Lượt đó tự chạy lại ở giờ sau, nên không mất gì.
+
+**Đo trên phần còn lại của catalog, và kết quả duyệt v12 (18/10/2026).**
+Sau khi nạp thêm tín dụng, Haiku gán v12 cho cả 1.430 ảnh nói ở trên, không
+ghi gì vào catalog và không ảnh nào lỗi.
+- Phần lớn nhãn không đổi: 670 Mặt tiền, 218 Sân vườn và 130 Phong cảnh giữ
+  nguyên, đều chắc chắn.
+- Chỉ **65 ảnh** có nhãn v12 chắc chắn mà khác nhãn đang có. 28 ảnh đổi
+  loại, phần lớn là Sân vườn thành Mặt tiền vì bàn ghế ở vỉa hè. 37 ảnh giữ
+  loại cũ nhưng trước đây là `unsure`.
+- 120 ảnh trước đây chắc chắn thì v12 lại `unsure`. Những ảnh này giữ nguyên
+  nhãn cũ, không ghi.
+
+Chủ sản phẩm duyệt 65 ảnh đó và sửa 7:
+- 28 ảnh đổi loại: đúng 25. Ba ảnh sửa là Quán Đương thành Sân vườn (không
+  phải Đồ ăn), Miền Du Mục thành Phong cảnh, và một ảnh người cầm cốc ở
+  Nerd.society thành Khác.
+- 37 ảnh nay đã chắc: đúng 33. Bảo tàng Mỹ thuật, cổng Làng lụa và nhà thờ
+  Scots' được sửa thành Văn hóa. Ảnh hồ bơi trên đồi ở Dalat Flower Plateau
+  được sửa thành Phong cảnh.
+
+Cả 65 ảnh được ghi với `"by": "owner"`; ảnh bị sửa có ghi chú nói loại mà
+mô hình đã chọn. Đến đây có 192 nhãn của chủ sản phẩm và còn 234 nhãn
+`unsure`.
+
+**Còn mở:** ba lần sửa Mặt tiền thành Văn hóa cho thấy bảo tàng, nhà thờ và
+cổng làng nghề vẫn là ranh giới Claude chưa nắm. Theo §3, thư viện, bảo tàng
+và trung tâm thương mại là Mặt tiền, nhưng chủ sản phẩm vừa xếp Bảo tàng Mỹ
+thuật là Văn hóa. Cần chủ sản phẩm chốt trước khi viết v13.
