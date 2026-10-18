@@ -1,0 +1,1474 @@
+{
+  "round": "4",
+  "drawn": "2026-10-18",
+  "question": "Of two photographs of one kind at one place, which is the better photograph? The kind is named above the pair; the criteria are the owner's, approved 18 Oct 2026 (docs/photo-labels.md §12; supabase/functions/_shared/photoBeauty.ts).",
+  "rule": "Approved places; stored, visible photographs with a claude-labels v4 kind of food, interior or exterior not marked unsure, an apple-vision aesthetic and is_utility not true, and not the cover or the suggestion of any cover review. Per place and kind, the first two by md5(id || 'photo-labels-round-4') make the pair, A then B, kept where a place has two. Places in md5(place_id || kind || 'photo-labels-round-4') order: every front (15, all there were), then 23 interiors at places not yet used, then 22 food pairs at places not yet used (all there were): 60 pairs at 60 places. Asked in md5(a || 'photo-labels-round-4-order') order.",
+  "about_rule": "§12 proposed about 20 pairs of each kind and no photograph from an earlier round. Excluding the 361 photographs of rounds 1 to 3c left 5 front pairs, since the Vision-scored photographs are the ones those rounds were drawn from; those rounds asked the kind and the cover criteria, never which photograph is better, so this round allows them. Cover review photographs stay out: that page did ask which of two photographs to show.",
+  "letters": "A or B: the better photograph; = even; - not answered.",
+  "pairs": [
+    {
+      "kind": "E",
+      "a": "93d9553e-8582-4c05-bffc-3af43f357ffe",
+      "b": "d63225a0-f574-482c-ba87-dd20ecb02f7a",
+      "place": "shrine-of-remembrance"
+    },
+    {
+      "kind": "F",
+      "a": "0dc516a9-dc77-4a76-8c61-7eaeebc842b2",
+      "b": "2a1e01a2-9785-4eff-9fd6-6cfe162ba423",
+      "place": "the-hanoi-social-club"
+    },
+    {
+      "kind": "E",
+      "a": "a76fae32-06c3-471a-8823-a82b5b39b293",
+      "b": "5496fe4d-538a-44ad-bb8f-b73a632a8c32",
+      "place": "ann-dessert-by-trang-le"
+    },
+    {
+      "kind": "I",
+      "a": "7db832ce-ee95-4828-bd7f-0c334e4bbedc",
+      "b": "7f9737ea-8461-45d8-8733-fa76b205141d",
+      "place": "market-lane-coffee-mitchell-house"
+    },
+    {
+      "kind": "I",
+      "a": "951ab3cb-5a72-4320-9cc9-926a1d1eab9c",
+      "b": "2210afd3-478e-439a-8e80-34d88b077962",
+      "place": "memento-saigon"
+    },
+    {
+      "kind": "E",
+      "a": "1ca4e884-c961-4fbf-b39c-5fd1723b6b99",
+      "b": "ad7d6e29-782a-42bd-bfc0-004a8e307d52",
+      "place": "cang-ca-coffee-roasters"
+    },
+    {
+      "kind": "F",
+      "a": "6c62c06d-03c4-4ea1-8f7d-07b831bb4776",
+      "b": "cb25a4dc-697b-494b-a10b-74059148e142",
+      "place": "sushi-ichi-1"
+    },
+    {
+      "kind": "F",
+      "a": "085b494d-344a-4dfc-8887-17d6e5f0f516",
+      "b": "12c3f28e-7bc1-4d77-938a-299a9ea8bd45",
+      "place": "the-running-bean-ngo-thi-nham-coffee-and-brunch"
+    },
+    {
+      "kind": "E",
+      "a": "5e23c21e-fa5e-4a7b-b1b5-60e643ae5be4",
+      "b": "9a8b5853-7ee1-4051-b3ba-3a97fa4ffc6c",
+      "place": "st-mary-star-of-the-sea"
+    },
+    {
+      "kind": "I",
+      "a": "8c4e0c60-243e-4ec0-a674-714b34ba240d",
+      "b": "84eb9568-f5cf-448f-bb18-f7a7c84a1b13",
+      "place": "mellow-coffee"
+    },
+    {
+      "kind": "I",
+      "a": "29f7a6e1-5859-412f-8bb8-a58ea1bae232",
+      "b": "1bbf66c3-3bfd-4edb-906f-771864d34a6c",
+      "place": "bar-hop-hanoi"
+    },
+    {
+      "kind": "I",
+      "a": "d6896b41-7e51-4a3e-a6e4-b3c00d61f843",
+      "b": "9b452354-cce3-43a6-86ff-d32f1f9f45a0",
+      "place": "l-entrecote-social-meating"
+    },
+    {
+      "kind": "F",
+      "a": "9cd151ce-de33-4fa9-9842-4a45650abee2",
+      "b": "49cc7c31-c599-48dc-ba6f-5fae86dfc267",
+      "place": "ashtray-bespoke"
+    },
+    {
+      "kind": "F",
+      "a": "d15f68ff-3f20-4d0c-8d82-36c9b86f17ba",
+      "b": "4f4b6772-8eb8-4b2c-8a2f-7cd724fd2291",
+      "place": "marianne-s-pizza"
+    },
+    {
+      "kind": "I",
+      "a": "e1c74613-ca51-426e-b280-21d76bf9d754",
+      "b": "a574b2bc-e796-4362-9384-220592f614fa",
+      "place": "noi-premium-wood-fire-dining-restaurant-bar"
+    },
+    {
+      "kind": "E",
+      "a": "72bb88b8-289c-4af7-80e1-c3e85ed8e6f4",
+      "b": "f17a5aed-cd35-49b4-a92b-df78b0f1cee6",
+      "place": "national-gallery-of-victoria"
+    },
+    {
+      "kind": "E",
+      "a": "3ae163d5-0a09-4c82-8f64-99113b2c2a21",
+      "b": "e0bb4477-bffb-44ae-a14c-e0178dc39fe4",
+      "place": "cha-mo-coffee"
+    },
+    {
+      "kind": "E",
+      "a": "8f90f60a-2d68-461b-8bc9-17411bbb154b",
+      "b": "9780d05d-403f-414a-b5ce-58dde7d7d794",
+      "place": "st-paul-s-cathedral-melbourne"
+    },
+    {
+      "kind": "E",
+      "a": "c78663df-3d5a-440e-be59-5072f8b60d9d",
+      "b": "d6d69846-8412-4fe3-8920-da4429ece5ae",
+      "place": "every-half-coffee-roasters-pho-cha-ca"
+    },
+    {
+      "kind": "F",
+      "a": "d54807f0-047b-4c5c-992f-6d980f78262c",
+      "b": "071dd43a-745a-41b4-b466-fc04e9447207",
+      "place": "tron-xin-chao"
+    },
+    {
+      "kind": "F",
+      "a": "88e44ced-2693-4b90-a148-307c31e3c2d7",
+      "b": "aac427d5-4fbd-4083-888f-f5f2924051f5",
+      "place": "hem-hoi-an-cocktail-bar"
+    },
+    {
+      "kind": "E",
+      "a": "a92c16f0-b93d-498c-823d-496347a6a7b5",
+      "b": "ac8491ca-c1b8-46ca-b881-ab9c67fd1519",
+      "place": "mono-coffee-lab-ho-xuan-huong"
+    },
+    {
+      "kind": "I",
+      "a": "9446c864-8e3b-4c77-9828-14e8b09aef11",
+      "b": "26bf3ba5-0ed1-459a-8a5f-a2d65dc1c231",
+      "place": "gain-hanoi-coffee"
+    },
+    {
+      "kind": "F",
+      "a": "c92196c5-a9ae-40ca-865a-72bc625c8ac0",
+      "b": "a5f6d2db-fbd2-4b2a-84c1-5646b9b4049e",
+      "place": "bloomwood-galleria"
+    },
+    {
+      "kind": "I",
+      "a": "cde61939-1379-4d48-b499-6bfb3e1f0305",
+      "b": "7f462103-84b7-44fe-8868-6bfbcf419df3",
+      "place": "kho-4-coffee-lab"
+    },
+    {
+      "kind": "F",
+      "a": "6af9627f-a7af-4cec-b4a8-7189327091df",
+      "b": "d63e9b29-46b7-41b0-9771-6456c23db3be",
+      "place": "9981-coffee-wine-tapas-cafe-nha-tho-lon-ha-noi"
+    },
+    {
+      "kind": "I",
+      "a": "94bd5450-7fe0-483e-8895-b1b8a1ba5067",
+      "b": "fb6327f3-c578-4deb-8e4f-e34423b9ea76",
+      "place": "laluna-cafe-brunch-midtown"
+    },
+    {
+      "kind": "F",
+      "a": "182da842-e1f2-40fb-814b-62ef9fd7ea7e",
+      "b": "c84341c1-5b78-497a-889b-302465faf7d8",
+      "place": "eureka-89-dining-events"
+    },
+    {
+      "kind": "E",
+      "a": "3125bdc8-0294-422c-869c-77a59866e9cb",
+      "b": "bcb8b60e-35be-4f25-9c64-6990617b70e4",
+      "place": "off-street-fine-coffee"
+    },
+    {
+      "kind": "E",
+      "a": "2604cdf5-4311-419d-8b38-e32989b4f537",
+      "b": "88138b46-b50e-4d1f-a827-d8aad1c54a51",
+      "place": "bold-brew-cafe-work-date-42-tran-phu"
+    },
+    {
+      "kind": "I",
+      "a": "b8bfe4b9-d521-47b2-ac42-6008ffcb70b9",
+      "b": "f7b86afa-669e-4122-9acb-5ec74e9a68e6",
+      "place": "nhan-eatery-wine"
+    },
+    {
+      "kind": "E",
+      "a": "33001810-b9f5-4efc-88c9-71f7ed07cdd2",
+      "b": "ae8f9ef5-585d-4e56-a4be-c4522f5822f3",
+      "place": "pome-cafe"
+    },
+    {
+      "kind": "F",
+      "a": "6ebc9e94-8558-4272-8ee2-e3bd90cf8e7e",
+      "b": "deef1086-9d9f-45b9-9ed6-c65c6f3730a3",
+      "place": "terraco-sky-bar"
+    },
+    {
+      "kind": "I",
+      "a": "bb37df4d-73c3-4d9a-9eef-7fea585aaf44",
+      "b": "edab5e98-df56-4494-8694-70830e684099",
+      "place": "inbook-english-and-french-international-bookstor"
+    },
+    {
+      "kind": "I",
+      "a": "8164fbc2-79fa-4619-8f87-b61ba4656fb5",
+      "b": "eb8250e6-4ab2-4716-9596-f9f164a26280",
+      "place": "foco-kitchen-bar"
+    },
+    {
+      "kind": "E",
+      "a": "544dcccd-4a21-4b39-a80e-80b515ce5f17",
+      "b": "e84ae6ca-aebe-4f98-b5f8-2d7c41739991",
+      "place": "deep-sii-van-bao"
+    },
+    {
+      "kind": "I",
+      "a": "069f76fb-4bfa-44c3-b9ef-3f3bca3f7d89",
+      "b": "7fcda699-e2eb-485e-ace9-df2edcbc2a35",
+      "place": "floral-notes-coffee-wine"
+    },
+    {
+      "kind": "F",
+      "a": "45fbf53d-2e43-4791-94a5-08ba4cfaf9d7",
+      "b": "76cd90fd-e1f9-4d2e-bf11-06a2e1bd6ae6",
+      "place": "pizza-4p-s-ben-thanh"
+    },
+    {
+      "kind": "F",
+      "a": "9cad7070-da85-4b40-9b38-5916ae2a26fe",
+      "b": "fa6fdaee-9bb3-404c-ac89-7332d09d18a8",
+      "place": "the-midday-workspace"
+    },
+    {
+      "kind": "E",
+      "a": "5e5019f5-c19b-47b2-8c76-9e9594d82008",
+      "b": "170fc447-ecc8-4e14-93df-712f31f1dc28",
+      "place": "state-library-victoria"
+    },
+    {
+      "kind": "F",
+      "a": "af946b23-75ea-41e6-a840-e7f414eabe02",
+      "b": "7230a143-e17c-4c98-a262-a90b6d6a322c",
+      "place": "bottari"
+    },
+    {
+      "kind": "I",
+      "a": "42963a01-c940-4273-a597-4c5f91b61eb9",
+      "b": "bc34cca6-eea2-4dac-b14a-611f7e26891c",
+      "place": "o3-brunswick"
+    },
+    {
+      "kind": "F",
+      "a": "93cf4968-969b-4d27-b15b-9c14c4c6a519",
+      "b": "a2fe4a3a-0b69-40c8-9014-9aeff92a793f",
+      "place": "attica"
+    },
+    {
+      "kind": "I",
+      "a": "16b9d977-d764-428a-a51e-a473c68342fa",
+      "b": "2f3c5982-f55f-448f-bda6-b2c1f601aee6",
+      "place": "maia-beach-bar"
+    },
+    {
+      "kind": "F",
+      "a": "69ea8deb-435b-475a-9607-1bbb0d50a564",
+      "b": "94ba025f-da1f-4d47-8a00-53217559f6a3",
+      "place": "infinite-wasabi"
+    },
+    {
+      "kind": "I",
+      "a": "cd860c5a-07a1-4889-9fe7-b48c7e568a3a",
+      "b": "46d6c88a-6608-49cc-aa9b-77ec78309000",
+      "place": "taptap-brunch"
+    },
+    {
+      "kind": "F",
+      "a": "bf48e029-3089-4578-8dea-f271dc768320",
+      "b": "9642f019-1d39-4fd6-a8f8-71e6d6444b92",
+      "place": "tan-lab"
+    },
+    {
+      "kind": "I",
+      "a": "2917bb75-d399-4a65-b11e-0eb0691493ae",
+      "b": "dbe65a09-2b23-4149-aa6f-00a31924532d",
+      "place": "museum-of-local-products"
+    },
+    {
+      "kind": "I",
+      "a": "5bd200e8-cc79-4539-9196-b2674c49ed2b",
+      "b": "3aa180c5-d2ee-4534-b7ba-45a32a2e0418",
+      "place": "bup-sky-cuisine-asian-fusion"
+    },
+    {
+      "kind": "F",
+      "a": "c0a84117-1cd7-4f89-9ca1-5a70531c43eb",
+      "b": "33d9b4d9-a386-458b-a5c1-d72b97349d68",
+      "place": "house-of-merlin-cocktail-bar-eatery"
+    },
+    {
+      "kind": "I",
+      "a": "b9b1b75d-87a5-48b5-af21-f7a9437089e9",
+      "b": "bee25dd6-5175-46c4-a4d2-7b675e6d315b",
+      "place": "blackout-rooftop-bar"
+    },
+    {
+      "kind": "E",
+      "a": "d7aa36e7-1dc7-4be6-8bdb-6cfecb12bab3",
+      "b": "8a5e2c5a-8e09-456f-8ed5-a4195ac2215a",
+      "place": "chat-bistro"
+    },
+    {
+      "kind": "I",
+      "a": "8a5202fd-5fa9-400a-b522-7d9d132db83c",
+      "b": "0f4ad60b-66e1-4eed-93d8-5bbbcc716bda",
+      "place": "bengal-rooftop"
+    },
+    {
+      "kind": "F",
+      "a": "feafeb22-879a-43a8-92c5-de8c632e925c",
+      "b": "f37fac83-71bb-43b5-b255-86b19e1be9ee",
+      "place": "kumo-desserts-melbourne"
+    },
+    {
+      "kind": "F",
+      "a": "df699b4f-8e77-440a-bc79-863b2e87722f",
+      "b": "8c7d4c5c-c805-42ce-b16b-c1fe9d0775ee",
+      "place": "hoi-quan-coffee"
+    },
+    {
+      "kind": "I",
+      "a": "965a7b61-1c3d-402e-a4d0-a8cb7df6232a",
+      "b": "7f9df0d1-560f-4e28-99e1-824af12c9d75",
+      "place": "sam-saigon"
+    },
+    {
+      "kind": "I",
+      "a": "c7c99867-6947-43ba-8d5c-6a238a614cf9",
+      "b": "a3df5fe2-3927-4794-bff8-bbdbb9f145f9",
+      "place": "bold-brew-cafe-work-date-huynh-thuc-khang"
+    },
+    {
+      "kind": "I",
+      "a": "a1fd7e6d-8dea-45fd-9d67-3b6ca513f9eb",
+      "b": "06510944-1590-421b-ba4f-a7bbbfd2f24a",
+      "place": "ashtray-terracotta"
+    },
+    {
+      "kind": "F",
+      "a": "3035e7fc-d1be-42fb-bbf4-28f31e596d90",
+      "b": "26b09aec-03b3-4693-b513-ad7558d631ab",
+      "place": "gogyo-fitzroy"
+    },
+    {
+      "kind": "F",
+      "a": "289f33a5-eeb8-4a1b-a22d-25287478b398",
+      "b": "909f5459-de9d-4690-98dd-338e1a80c4ca",
+      "place": "son-sushi-bar"
+    }
+  ],
+  "scoring": "Written before the owner answers. For each judge: agreement = pairs where the judge's letter is the owner's, over the pairs the owner answered A or B (owner's = left out, as §12 says). A judge's = on such a pair is reported two ways: as a miss (strict), and left out (where it picks), with the share of the owner's pairs it picked. A judge passes at 75% where it picks, provided it picks at least two thirds of the owner's pairs; 50% is chance.",
+  "vision": {
+    "about": "Apple Vision's aesthetic score (photo_scores, scorer apple-vision), the higher of the two. No ties.",
+    "line": "BAAAAABAAABBBBAABBABBBAAAABABABBBBABBABBAAABAAAABABAAABABABB",
+    "sha256": "20c960f5c3f0d4ab9515e3f5f13c41c036b4a3afa24ee3193ae50fd32c2e105d",
+    "aesthetic": {
+      "93d9553e-8582-4c05-bffc-3af43f357ffe": 0.6787,
+      "d63225a0-f574-482c-ba87-dd20ecb02f7a": 0.8809,
+      "0dc516a9-dc77-4a76-8c61-7eaeebc842b2": 0.5503,
+      "2a1e01a2-9785-4eff-9fd6-6cfe162ba423": 0.5366,
+      "a76fae32-06c3-471a-8823-a82b5b39b293": 0.4417,
+      "5496fe4d-538a-44ad-bb8f-b73a632a8c32": 0.418,
+      "7db832ce-ee95-4828-bd7f-0c334e4bbedc": 0.4258,
+      "7f9737ea-8461-45d8-8733-fa76b205141d": 0.2834,
+      "951ab3cb-5a72-4320-9cc9-926a1d1eab9c": 0.5005,
+      "2210afd3-478e-439a-8e80-34d88b077962": 0.4758,
+      "1ca4e884-c961-4fbf-b39c-5fd1723b6b99": 0.3835,
+      "ad7d6e29-782a-42bd-bfc0-004a8e307d52": 0.3823,
+      "6c62c06d-03c4-4ea1-8f7d-07b831bb4776": 0.5474,
+      "cb25a4dc-697b-494b-a10b-74059148e142": 0.666,
+      "085b494d-344a-4dfc-8887-17d6e5f0f516": 0.584,
+      "12c3f28e-7bc1-4d77-938a-299a9ea8bd45": 0.543,
+      "5e23c21e-fa5e-4a7b-b1b5-60e643ae5be4": 0.605,
+      "9a8b5853-7ee1-4051-b3ba-3a97fa4ffc6c": 0.5503,
+      "8c4e0c60-243e-4ec0-a674-714b34ba240d": 0.564,
+      "84eb9568-f5cf-448f-bb18-f7a7c84a1b13": 0.5479,
+      "29f7a6e1-5859-412f-8bb8-a58ea1bae232": 0.2351,
+      "1bbf66c3-3bfd-4edb-906f-771864d34a6c": 0.5024,
+      "d6896b41-7e51-4a3e-a6e4-b3c00d61f843": 0.3938,
+      "9b452354-cce3-43a6-86ff-d32f1f9f45a0": 0.3972,
+      "9cd151ce-de33-4fa9-9842-4a45650abee2": 0.2118,
+      "49cc7c31-c599-48dc-ba6f-5fae86dfc267": 0.4548,
+      "d15f68ff-3f20-4d0c-8d82-36c9b86f17ba": 0.5225,
+      "4f4b6772-8eb8-4b2c-8a2f-7cd724fd2291": 0.6602,
+      "e1c74613-ca51-426e-b280-21d76bf9d754": 0.623,
+      "a574b2bc-e796-4362-9384-220592f614fa": 0.5698,
+      "72bb88b8-289c-4af7-80e1-c3e85ed8e6f4": 0.6206,
+      "f17a5aed-cd35-49b4-a92b-df78b0f1cee6": 0.4949,
+      "3ae163d5-0a09-4c82-8f64-99113b2c2a21": 0.4585,
+      "e0bb4477-bffb-44ae-a14c-e0178dc39fe4": 0.5044,
+      "8f90f60a-2d68-461b-8bc9-17411bbb154b": 0.6475,
+      "9780d05d-403f-414a-b5ce-58dde7d7d794": 0.71,
+      "c78663df-3d5a-440e-be59-5072f8b60d9d": 0.5684,
+      "d6d69846-8412-4fe3-8920-da4429ece5ae": 0.5347,
+      "d54807f0-047b-4c5c-992f-6d980f78262c": 0.5459,
+      "071dd43a-745a-41b4-b466-fc04e9447207": 0.5996,
+      "88e44ced-2693-4b90-a148-307c31e3c2d7": 0.2434,
+      "aac427d5-4fbd-4083-888f-f5f2924051f5": 0.7134,
+      "a92c16f0-b93d-498c-823d-496347a6a7b5": 0.303,
+      "ac8491ca-c1b8-46ca-b881-ab9c67fd1519": 0.458,
+      "9446c864-8e3b-4c77-9828-14e8b09aef11": 0.5195,
+      "26bf3ba5-0ed1-459a-8a5f-a2d65dc1c231": 0.4534,
+      "c92196c5-a9ae-40ca-865a-72bc625c8ac0": 0.7051,
+      "a5f6d2db-fbd2-4b2a-84c1-5646b9b4049e": 0.4038,
+      "cde61939-1379-4d48-b499-6bfb3e1f0305": 0.5273,
+      "7f462103-84b7-44fe-8868-6bfbcf419df3": 0.4548,
+      "6af9627f-a7af-4cec-b4a8-7189327091df": 0.5566,
+      "d63e9b29-46b7-41b0-9771-6456c23db3be": 0.4666,
+      "94bd5450-7fe0-483e-8895-b1b8a1ba5067": 0.5181,
+      "fb6327f3-c578-4deb-8e4f-e34423b9ea76": 0.644,
+      "182da842-e1f2-40fb-814b-62ef9fd7ea7e": 0.4976,
+      "c84341c1-5b78-497a-889b-302465faf7d8": 0.4912,
+      "3125bdc8-0294-422c-869c-77a59866e9cb": 0.3167,
+      "bcb8b60e-35be-4f25-9c64-6990617b70e4": 0.3423,
+      "2604cdf5-4311-419d-8b38-e32989b4f537": 0.5562,
+      "88138b46-b50e-4d1f-a827-d8aad1c54a51": 0.4143,
+      "b8bfe4b9-d521-47b2-ac42-6008ffcb70b9": 0.4165,
+      "f7b86afa-669e-4122-9acb-5ec74e9a68e6": 0.5635,
+      "33001810-b9f5-4efc-88c9-71f7ed07cdd2": 0.4392,
+      "ae8f9ef5-585d-4e56-a4be-c4522f5822f3": 0.5615,
+      "6ebc9e94-8558-4272-8ee2-e3bd90cf8e7e": 0.4053,
+      "deef1086-9d9f-45b9-9ed6-c65c6f3730a3": 0.9189,
+      "bb37df4d-73c3-4d9a-9eef-7fea585aaf44": 0.427,
+      "edab5e98-df56-4494-8694-70830e684099": 0.6128,
+      "8164fbc2-79fa-4619-8f87-b61ba4656fb5": 0.5903,
+      "eb8250e6-4ab2-4716-9596-f9f164a26280": 0.4351,
+      "544dcccd-4a21-4b39-a80e-80b515ce5f17": 0.3123,
+      "e84ae6ca-aebe-4f98-b5f8-2d7c41739991": 0.3679,
+      "069f76fb-4bfa-44c3-b9ef-3f3bca3f7d89": 0.4517,
+      "7fcda699-e2eb-485e-ace9-df2edcbc2a35": 0.4546,
+      "45fbf53d-2e43-4791-94a5-08ba4cfaf9d7": 0.4932,
+      "76cd90fd-e1f9-4d2e-bf11-06a2e1bd6ae6": 0.4656,
+      "9cad7070-da85-4b40-9b38-5916ae2a26fe": 0.3496,
+      "fa6fdaee-9bb3-404c-ac89-7332d09d18a8": 0.7065,
+      "5e5019f5-c19b-47b2-8c76-9e9594d82008": 0.6118,
+      "170fc447-ecc8-4e14-93df-712f31f1dc28": 0.6396,
+      "af946b23-75ea-41e6-a840-e7f414eabe02": 0.6899,
+      "7230a143-e17c-4c98-a262-a90b6d6a322c": 0.5435,
+      "42963a01-c940-4273-a597-4c5f91b61eb9": 0.4443,
+      "bc34cca6-eea2-4dac-b14a-611f7e26891c": 0.3352,
+      "93cf4968-969b-4d27-b15b-9c14c4c6a519": 0.771,
+      "a2fe4a3a-0b69-40c8-9014-9aeff92a793f": 0.3943,
+      "16b9d977-d764-428a-a51e-a473c68342fa": 0.4033,
+      "2f3c5982-f55f-448f-bda6-b2c1f601aee6": 0.6563,
+      "69ea8deb-435b-475a-9607-1bbb0d50a564": 0.7939,
+      "94ba025f-da1f-4d47-8a00-53217559f6a3": 0.6436,
+      "cd860c5a-07a1-4889-9fe7-b48c7e568a3a": 0.5137,
+      "46d6c88a-6608-49cc-aa9b-77ec78309000": 0.5122,
+      "bf48e029-3089-4578-8dea-f271dc768320": 0.6157,
+      "9642f019-1d39-4fd6-a8f8-71e6d6444b92": 0.6113,
+      "2917bb75-d399-4a65-b11e-0eb0691493ae": 0.5332,
+      "dbe65a09-2b23-4149-aa6f-00a31924532d": 0.4492,
+      "5bd200e8-cc79-4539-9196-b2674c49ed2b": 0.3743,
+      "3aa180c5-d2ee-4534-b7ba-45a32a2e0418": 0.6016,
+      "c0a84117-1cd7-4f89-9ca1-5a70531c43eb": 0.6113,
+      "33d9b4d9-a386-458b-a5c1-d72b97349d68": 0.5605,
+      "b9b1b75d-87a5-48b5-af21-f7a9437089e9": 0.5327,
+      "bee25dd6-5175-46c4-a4d2-7b675e6d315b": 0.7314,
+      "d7aa36e7-1dc7-4be6-8bdb-6cfecb12bab3": 0.3811,
+      "8a5e2c5a-8e09-456f-8ed5-a4195ac2215a": 0.3677,
+      "8a5202fd-5fa9-400a-b522-7d9d132db83c": 0.4055,
+      "0f4ad60b-66e1-4eed-93d8-5bbbcc716bda": 0.2998,
+      "feafeb22-879a-43a8-92c5-de8c632e925c": 0.7451,
+      "f37fac83-71bb-43b5-b255-86b19e1be9ee": 0.6426,
+      "df699b4f-8e77-440a-bc79-863b2e87722f": 0.3887,
+      "8c7d4c5c-c805-42ce-b16b-c1fe9d0775ee": 0.6646,
+      "965a7b61-1c3d-402e-a4d0-a8cb7df6232a": 0.4497,
+      "7f9df0d1-560f-4e28-99e1-824af12c9d75": 0.4041,
+      "c7c99867-6947-43ba-8d5c-6a238a614cf9": 0.4314,
+      "a3df5fe2-3927-4794-bff8-bbdbb9f145f9": 0.5469,
+      "a1fd7e6d-8dea-45fd-9d67-3b6ca513f9eb": 0.521,
+      "06510944-1590-421b-ba4f-a7bbbfd2f24a": 0.3989,
+      "3035e7fc-d1be-42fb-bbf4-28f31e596d90": 0.4692,
+      "26b09aec-03b3-4693-b513-ad7558d631ab": 0.4775,
+      "289f33a5-eeb8-4a1b-a22d-25287478b398": 0.4714,
+      "909f5459-de9d-4690-98dd-338e1a80c4ca": 0.5142
+    }
+  },
+  "haiku": {
+    "about": "rate-photos v1 (photoBeauty VERSION 1), effort low, each photograph alone, 18 Oct 2026 01:38 UTC, before the owner saw these pairs. The higher score; = where the two are equal. scores: [score, why].",
+    "model": "claude-haiku-5-5",
+    "line": "BA=B==B=B=BBAAB=A=BBB=BAAABBBBBBBBABA=BABA===AB=BABBAAB=B==A",
+    "sha256": "df0e488b1560d784aaac86f1abd6b61d75fb9a19a66c41b903b92767aba47f5d",
+    "scores": {
+      "93d9553e-8582-4c05-bffc-3af43f357ffe": [
+        6,
+        "The photo is sharp, straight and in soft daylight with natural colour, but as a storefront it is a memorial with a clear entrance and inscription, though the flat grey sky and the statue in the foreground make it an ordinary rather than outstanding view of the place's feel."
+      ],
+      "d63225a0-f574-482c-ba87-dd20ecb02f7a": [
+        8,
+        "The entrance, columns and steps are clear, sharp, well lit in daylight with natural colours and straight framing, though the sign is not prominent and the building is viewed from a low angle with a small figure at the door."
+      ],
+      "0dc516a9-dc77-4a76-8c61-7eaeebc842b2": [
+        7,
+        "The salad is sharp, colourful and fills the frame with appetising pomegranate, roasted squash and feta, but the warm side light casts some harsh shadows and loose pomegranate seeds and the rim of the plate add some clutter."
+      ],
+      "2a1e01a2-9785-4eff-9fd6-6cfe162ba423": [
+        6,
+        "The burger is sharp and appetising with fresh toppings, but the composition is cluttered with a sprawl of sprouts and avocado, the burger is not the dominant subject filling the frame, and the top-down angle is slightly awkward against the wooden table."
+      ],
+      "a76fae32-06c3-471a-8823-a82b5b39b293": [
+        8,
+        "The sign, entrance and blue storefront are clear, sharp, well lit by daylight and full of character, though the photo is taken slightly from below with a fan and some clutter in the foreground."
+      ],
+      "5496fe4d-538a-44ad-bb8f-b73a632a8c32": [
+        8,
+        "The sign and blue entrance are clearly visible, the frontage is straight and well lit by daylight with inviting character, though parked scooters at the edges and a slightly soft focus and on-screen navigation arrows keep it from the top tier."
+      ],
+      "7db832ce-ee95-4828-bd7f-0c334e4bbedc": [
+        5,
+        "The space has pleasant warm lighting, depth, and a tidy tiled café with a clear counter focus, but the wide-angle view tilts the verticals noticeably and two staff and a customer fill much of the frame, making it an ordinary shot."
+      ],
+      "7f9737ea-8461-45d8-8733-fa76b205141d": [
+        6,
+        "Sharp, warm and tidy with a strong focal lamp and depth down the cafe, but the wide-angle lens tilts the verticals and the bright ceiling and staff figure pull it toward ordinary."
+      ],
+      "951ab3cb-5a72-4320-9cc9-926a1d1eab9c": [
+        7,
+        "The warm lamps and fairy lights, the atmospheric forest mural, and the green velvet chairs give a cosy, intentional mood with a clear focal point, though the wall and window lines lean and the room is slightly cluttered with a heater and stool in the corner."
+      ],
+      "2210afd3-478e-439a-8e80-34d88b077962": [
+        7,
+        "Sharp, atmospheric warm lamplight with a strong sense of depth and a striking painted mural, though the verticals lean slightly and a staff member plus a partial figure at the edge add some clutter."
+      ],
+      "1ca4e884-c961-4fbf-b39c-5fd1723b6b99": [
+        5,
+        "The sign and entrance are visible and the light is good, but a large parasol and seated people block much of the doorway and the frame is slightly tilted, so it is only an ordinary storefront shot."
+      ],
+      "ad7d6e29-782a-42bd-bfc0-004a8e307d52": [
+        5,
+        "The sign and entrance are readable and the scene has street character with a seated customer, but the photo is tilted with converging verticals, the wall and wires clutter the frame, and the sign is partly cut off by the awning and the sign next door."
+      ],
+      "6c62c06d-03c4-4ea1-8f7d-07b831bb4776": [
+        3,
+        "Overlaid text across the upper middle of the photo breaks the no-text rule, and the cluttered background with a grill and dishes plus the sushi arranged at a diagonal across a busy scene weakens the composition, though the sushi itself looks fresh and appetising."
+      ],
+      "cb25a4dc-697b-494b-a10b-74059148e142": [
+        7,
+        "The nigiri on the dark slate plate is sharp, appetising and well lit with natural colour, but the shallow angle leaves the sushi pieces spread across the frame and the blurred bowl and dish in the background add some clutter."
+      ],
+      "085b494d-344a-4dfc-8887-17d6e5f0f516": [
+        6,
+        "The spread of dishes is appetising and fairly sharp with natural colour, but it is an overhead cluttered table shot where no single dish fills most of the frame and the background and table items distract."
+      ],
+      "12c3f28e-7bc1-4d77-938a-299a9ea8bd45": [
+        6,
+        "The skillet dish is appetising and sharp at eye level with soft light, but it occupies only part of the frame, and the cluttered background with bread, salad bowls, cutlery caddy and a bright window pulls attention away from the food."
+      ],
+      "5e23c21e-fa5e-4a7b-b1b5-60e643ae5be4": [
+        4,
+        "This aerial shot is sharp, well exposed and naturally coloured, but as a storefront photo the church's entrance and signage are not clearly visible, and the high drone angle makes it read more as a townscape than a storefront."
+      ],
+      "9a8b5853-7ee1-4051-b3ba-3a97fa4ffc6c": [
+        6,
+        "The church is sharp, evenly lit by overcast daylight and clearly shows its architecture, but it is shot from an angled side view so the main entrance and sign are not the clear focus and the photo is slightly tilted."
+      ],
+      "8c4e0c60-243e-4ec0-a674-714b34ba240d": [
+        7,
+        "Warm pendant lamps and a tidy, inviting layout with depth and a clear focal counter make it a good interior, though the verticals lean slightly and the foreground cushion and table edge crowd the frame a bit."
+      ],
+      "84eb9568-f5cf-448f-bb18-f7a7c84a1b13": [
+        7,
+        "Sharp, warm and tidy with a clear focal point at the espresso machine and counter, and the space has depth, though the verticals lean slightly and the warm lighting tints the colours a little."
+      ],
+      "29f7a6e1-5859-412f-8bb8-a58ea1bae232": [
+        6,
+        "Warm, intentional lamp and candle light with a tidy bar and clear depth, but the whole frame has a heavy orange colour cast and the verticals lean slightly, so it is only an ordinary result."
+      ],
+      "1bbf66c3-3bfd-4edb-906f-771864d34a6c": [
+        8,
+        "Sharp, warmly lit nook with straight wall lines, a clear focal point of the pendant lamp and tables, and a tidy, uncluttered space with no people, though the framing is slightly tilted and the depth is modest."
+      ],
+      "d6896b41-7e51-4a3e-a6e4-b3c00d61f843": [
+        5,
+        "The space has warm lamps and depth, but it is crowded with diners filling much of the frame, the verticals lean slightly, and the lighting is somewhat dim and uneven with a cluttered foreground."
+      ],
+      "9b452354-cce3-43a6-86ff-d32f1f9f45a0": [
+        8,
+        "Sharp, warmly lit room with tidy tables, a clear focal point and good depth, though the slight converging verticals and the bright window glare on the left keep it from the top tier."
+      ],
+      "9cd151ce-de33-4fa9-9842-4a45650abee2": [
+        5,
+        "The frothy cocktail with dried petal garnish is clearly the subject and looks inviting, but the photo is dim with warm yellow cast, a cluttered background of bottles and a crate, a water glass competing for space, and it is slightly soft and not shot to fill the frame."
+      ],
+      "49cc7c31-c599-48dc-ba6f-5fae86dfc267": [
+        3,
+        "The dim, warm-brown scene is cluttered with glasses, a jigger, a lamp and a bartender in view, and the small bowl of pink snacks is a minor subject that fills little of the frame, with harsh shadows across the wood and a dark, murky exposure."
+      ],
+      "d15f68ff-3f20-4d0c-8d82-36c9b86f17ba": [
+        6,
+        "The steak on the sizzling stone slab is appetising and sharp with good colour, but the frame is cluttered with a vase, chairs, a gold cup and a knife, the steak is not filling most of the frame, and the harsh overhead light gives a hard shadow."
+      ],
+      "4f4b6772-8eb8-4b2c-8a2f-7cd724fd2291": [
+        5,
+        "The sliced steak and potato wedges are appetising and fill the frame, but a pizza slice and cutter crowd the top right, the dim warm lighting is murky, and the angle is a loose three-quarter view rather than a clean eye-level or overhead shot."
+      ],
+      "e1c74613-ca51-426e-b280-21d76bf9d754": [
+        7,
+        "Sharp, well-exposed, warm lamplit room with strong depth and a striking focal chandelier, though the wide-angle view bends vertical lines slightly and the tables and chairs make the frame busy."
+      ],
+      "a574b2bc-e796-4362-9384-220592f614fa": [
+        8,
+        "Sharp, warmly lit restaurant with a striking bird-and-lantern ceiling feature, clean lines and depth, though the foreground tables are slightly cropped and the verticals lean a touch."
+      ],
+      "72bb88b8-289c-4af7-80e1-c3e85ed8e6f4": [
+        6,
+        "The building's name and sign are readable and the daylight is good, but the photo is taken from an angle so the entrance is largely out of frame, the building is tilted with converging lines, and a large banner covers the facade, so it shows the building more than a clear storefront."
+      ],
+      "f17a5aed-cd35-49b4-a92b-df78b0f1cee6": [
+        6,
+        "The NGV sign and entrance arch are clearly visible in good daylight and the photo is sharp, but it is taken at an angle so the building looks tilted and the entrance is small and off to the side, with the fountain spray and pool taking up much of the frame."
+      ],
+      "3ae163d5-0a09-4c82-8f64-99113b2c2a21": [
+        7,
+        "The lit Chà mơ sign and the courtyard entrance with warm evening light convey the place well, but a parked scooter cuts into the bottom-right corner and the photo is slightly tilted upward, with the entrance partly hidden under the sign board."
+      ],
+      "e0bb4477-bffb-44ae-a14c-e0178dc39fe4": [
+        4,
+        "The sign and entrance are clear and the scene is straight and well lit with a warm feel, but it is a 3D render with a visible watermark logo at the bottom and extra text overlaid on the photo, which breaks the no-text rule."
+      ],
+      "8f90f60a-2d68-461b-8bc9-17411bbb154b": [
+        6,
+        "The cathedral is sharp, well lit in daylight with natural colour, but the entrance is partly hidden by a pole, traffic lights, and a banner covers the facade, and the sign is not clearly readable."
+      ],
+      "9780d05d-403f-414a-b5ce-58dde7d7d794": [
+        6,
+        "The grand sandstone cathedral is sharp, well exposed and conveys the place's character, but it is taken from a low angle with converging verticals, the main entrance is only partly visible at the left edge, and parked cars and a flagpole clutter the foreground."
+      ],
+      "c78663df-3d5a-440e-be59-5072f8b60d9d": [
+        6,
+        "The sign \"EVERY HALF\" and the building are clearly visible and the light is soft daylight with natural colour, but the frame is tilted with converging verticals, a scooter partly blocks the entrance corner, and the shop's sign is cramped to the storefront's upper edge."
+      ],
+      "d6d69846-8412-4fe3-8920-da4429ece5ae": [
+        8,
+        "The sign and entrance are clearly visible in daylight with a straight, untilted frame and a warm, inviting feel, though a branch cuts into the left edge and the sign's first letters are partly cropped."
+      ],
+      "d54807f0-047b-4c5c-992f-6d980f78262c": [
+        4,
+        "The drinks are sharp and appetising, but the frame is cluttered with laptops, a phone, and straws, the drinks fill only part of the frame, and the harsh overhead light casts hard shadows on the table."
+      ],
+      "071dd43a-745a-41b4-b466-fc04e9447207": [
+        6,
+        "The matcha drinks are clearly the subject with vivid green and an appealing layered look, but the shot is taken from an oblique angle, the background holds cluttered keychains and a denim sleeve, and the photo is slightly soft and not perfectly tidy."
+      ],
+      "88e44ced-2693-4b90-a148-307c31e3c2d7": [
+        4,
+        "The food is small and off-centre in the foreground while the frame is cluttered with chairs, glasses, an ashtray and a hand, and the dim, warm lighting is murky and the shot is taken at an awkward angle."
+      ],
+      "aac427d5-4fbd-4083-888f-f5f2924051f5": [
+        6,
+        "The cocktail is sharp and clearly the subject with a pleasing salted rim and red garnish, but it fills only a small part of the frame and the warm yellow backdrop is heavily blurred and colour-cast, making it an ordinary but attractive drink shot."
+      ],
+      "a92c16f0-b93d-498c-823d-496347a6a7b5": [
+        6,
+        "The mono coffee lab sign and the balcony seating give a clear sense of the place, but the photo is taken from below at a tilt, the entrance is hidden behind the railing and tree, and the sign is cropped at the bottom edge."
+      ],
+      "ac8491ca-c1b8-46ca-b881-ab9c67fd1519": [
+        6,
+        "The cafe's warm interior and tree-shaded terrace give it real character and daylight, but the parasol cuts across the frame and the sign is small and partly hidden, so the entrance and name are not clearly visible."
+      ],
+      "9446c864-8e3b-4c77-9828-14e8b09aef11": [
+        6,
+        "The space has good depth and warm lamp light with a clear counter focal point, but the image is slightly soft, the walls lean and distort at the edges, and the lighting is uneven with a harsh flare from the right."
+      ],
+      "26bf3ba5-0ed1-459a-8a5f-a2d65dc1c231": [
+        7,
+        "Sharp, warmly lit room with good depth, a tidy layout, and a clear focal point in the long tiled table and lamps, though the verticals lean slightly and the left foreground is a bit dark."
+      ],
+      "c92196c5-a9ae-40ca-865a-72bc625c8ac0": [
+        6,
+        "The drink and skewered croissants are appetising and fairly central with soft light, but the image is slightly soft on the skewer, a hand and a cluttered plate intrude at the edge, and the background is busy."
+      ],
+      "a5f6d2db-fbd2-4b2a-84c1-5646b9b4049e": [
+        4,
+        "A bakery display case with many pastries crowded together and reflections on the glass, plus glare and cluttered price labels and tags over the items, so no single dish is the clear subject, though the pastries look fresh and appetising."
+      ],
+      "cde61939-1379-4d48-b499-6bfb3e1f0305": [
+        7,
+        "Sharp, well-lit multi-level café with warm natural light, depth across the balconies and a clear focal point at the counter and plants, though the vertical lines lean slightly and a few people and the railing clutter the frame a bit."
+      ],
+      "7f462103-84b7-44fe-8868-6bfbcf419df3": [
+        3,
+        "Two people fill the lower half of the frame and a logo watermark sits over the top right corner, though the espresso machine is sharp and the warm light is pleasant."
+      ],
+      "6af9627f-a7af-4cec-b4a8-7189327091df": [
+        6,
+        "The frosted pink slush drink is clearly the subject with appetising colour and a sheen, but the cluttered background (wooden door, fan, stir stick and picks) and the busy garnish hold it back from a clean, guide-worthy shot."
+      ],
+      "d63e9b29-46b7-41b0-9771-6456c23db3be": [
+        4,
+        "The overhead angle and latte art are appealing, but the photo is cluttered with a busy red perforated table, a chair, and floor, the food and coffee are small in the frame rather than filling it, and the \"Bavai\" text engraved on the table plus harsh-ish direct light reduce its guide-worthiness."
+      ],
+      "94bd5450-7fe0-483e-8895-b1b8a1ba5067": [
+        5,
+        "The space has warm uplighting and a pleasant lamp with a clear focal point, but the wide-angle distortion bends the verticals, the sky and buildings are washed out, and the foreground table cuts across the frame awkwardly."
+      ],
+      "fb6327f3-c578-4deb-8e4f-e34423b9ea76": [
+        7,
+        "Sharp, well-exposed, tidy room with warm pendant lamps and a curved cove light giving depth and a clear focal point of the oval table and plant, though the windows are slightly bright and the verticals lean a little."
+      ],
+      "182da842-e1f2-40fb-814b-62ef9fd7ea7e": [
+        5,
+        "The dishes are small and spread across a busy table with wine glasses, bread and cutlery, so the food is not the clear dominant subject, though the plates look appetising, the light is soft, and the overhead angle suits the dish."
+      ],
+      "c84341c1-5b78-497a-889b-302465faf7d8": [
+        6,
+        "The plated canapés are sharp, appetising and well coloured with edible flowers, but the frame is cluttered with a bottle, a dirty dish with smeared sauce and cutlery at the edges, and the overhead-ish angle with some harsh shine on the plate makes it an ordinary rather than polished shot."
+      ],
+      "3125bdc8-0294-422c-869c-77a59866e9cb": [
+        6,
+        "The photo is sharp and well lit with natural colour, and the interior and counter convey a café feel, but the place's sign is not visible, the entrance is partly obscured by reflections, and a red flag and clutter on the right distract from the storefront."
+      ],
+      "bcb8b60e-35be-4f25-9c64-6990617b70e4": [
+        7,
+        "The sign and open entrance are clear and the warm interior and daylight give a welcoming feel, but the heavy foliage in front and the slight tilt of the frame keep it from being top tier."
+      ],
+      "2604cdf5-4311-419d-8b38-e32989b4f537": [
+        6,
+        "The entrance is clearly visible and the warm evening lighting and chandelier convey the place's feel, but the sign is not readable, the plants crowd the frame and partly block the doorway, and the image is slightly tilted."
+      ],
+      "88138b46-b50e-4d1f-a827-d8aad1c54a51": [
+        7,
+        "The lit Bold brew sign and the cafe interior are clearly visible in attractive evening lighting, but the photo is tilted, with converging verticals, and the entrance is less clearly framed than it could be."
+      ],
+      "b8bfe4b9-d521-47b2-ac42-6008ffcb70b9": [
+        7,
+        "Warm, intentional lamp light and a tidy, uncluttered cafe corner with a clear focal point in the pendant lamp and shelving make it a good interior, though the verticals lean slightly and the frame is a bit dim and soft in places."
+      ],
+      "f7b86afa-669e-4122-9acb-5ec74e9a68e6": [
+        8,
+        "Warm lamps, a clear sense of depth through the arched opening and bar line, tidy space with a striking bird-of-paradise arrangement as focal point, and no people; slight softness and a mildly warm cast keep it from a higher score."
+      ],
+      "33001810-b9f5-4efc-88c9-71f7ed07cdd2": [
+        6,
+        "The place has charming atmosphere with bamboo lanterns and ironwork, but the sign is hidden behind the tree and the photo is tilted and cluttered, so the entrance is only partly clear."
+      ],
+      "ae8f9ef5-585d-4e56-a4be-c4522f5822f3": [
+        8,
+        "The POME CAFE sign and open entrance are clearly visible, the warm lantern and tree lighting gives an inviting evening atmosphere, and the frame is straight and sharp, though the sign is somewhat small and a dog and a promotional banner add clutter."
+      ],
+      "6ebc9e94-8558-4272-8ee2-e3bd90cf8e7e": [
+        4,
+        "The drinks are sharp enough and appetising, but the photo is soft and slightly blurred, the drinks are small in a frame dominated by the night skyline and railing, and the angle is casual rather than composed."
+      ],
+      "deef1086-9d9f-45b9-9ed6-c65c6f3730a3": [
+        7,
+        "The cocktail in the metal julep cup is sharp, appetising and the clear subject with warm, soft light and a garnished look, but the dark, cluttered background with jars, jiggers and a bottle, plus scattered dried garnishes on the tray, makes it less tidy than a guide would prefer and the cup does not fill most of the frame."
+      ],
+      "bb37df4d-73c3-4d9a-9eef-7fea585aaf44": [
+        6,
+        "Sharp, warm and tidy with a clear focal point on the recommendation wall, but the foreground book and blue frame cut across the bottom and the wall is slightly tilted, so it is an ordinary rather than outstanding interior shot."
+      ],
+      "edab5e98-df56-4494-8694-70830e684099": [
+        8,
+        "Sharp, well-exposed, and tidy with strong one-point depth down the long bookshelf aisle and a clear focal point in the tulips and bronze statue, though the converging verticals lean slightly and a standing visitor and a small text sign in the corner slightly detract."
+      ],
+      "8164fbc2-79fa-4619-8f87-b61ba4656fb5": [
+        6,
+        "Warm, intentional lighting and a richly detailed backbar give depth and a clear focal point, but two staff members and the chairs in the foreground crowd the frame and the image is slightly soft and tilted, with the walls leaning."
+      ],
+      "eb8250e6-4ab2-4716-9596-f9f164a26280": [
+        4,
+        "Warm lamps and backlit bottle shelves give atmosphere and depth, but a seated woman fills the centre of the frame, the verticals lean, and the scene is somewhat murky and cluttered at the edges."
+      ],
+      "544dcccd-4a21-4b39-a80e-80b515ce5f17": [
+        6,
+        "The sign and interior glow are clear and the evening lighting is warm, but the photo is taken at a slight angle, the sign is partly washed by the window reflections, and a cluster of seated people and a cable on the ground crowd the entrance."
+      ],
+      "e84ae6ca-aebe-4f98-b5f8-2d7c41739991": [
+        7,
+        "The sign 'Deep Sii' and open entrance are clearly visible in good daylight with a straight, inviting view and a sense of the cafe's feel, though the photo is slightly soft and the tree shadows and a seated customer partly clutter the frame."
+      ],
+      "069f76fb-4bfa-44c3-b9ef-3f3bca3f7d89": [
+        7,
+        "Sharp, tidy and well lit with warm wood tones and a clear focal point in the aquarium and bar, though the vertical lines lean slightly and the wide-angle view adds some distortion."
+      ],
+      "7fcda699-e2eb-485e-ace9-df2edcbc2a35": [
+        4,
+        "The space has pleasant warm tones and a nice depth of rooms, but a large paper bag with printed brand text sits in the foreground, covering much of the frame and breaking the no-text rule, while the verticals lean slightly and the foreground glasses and bag clutter the view."
+      ],
+      "45fbf53d-2e43-4791-94a5-08ba4cfaf9d7": [
+        5,
+        "The pizza is sharp, well exposed and shot from above, but it fills only part of the frame and the background is cluttered with a pepper sauce caddy, napkins, a pizza server and empty place settings."
+      ],
+      "76cd90fd-e1f9-4d2e-bf11-06a2e1bd6ae6": [
+        5,
+        "The crab pasta and burrata salad are appetising and sharp, but several dishes compete for the frame, the background is cluttered with a napkin, glass and table edge, and the overhead lighting casts some harsh shadows."
+      ],
+      "9cad7070-da85-4b40-9b38-5916ae2a26fe": [
+        3,
+        "This is a wide shot of a bakery display case with many small pastries, not a single dish filling the frame; reflections, glare, busy background with people and lights, and handwritten labels clutter the view."
+      ],
+      "fa6fdaee-9bb3-404c-ac89-7332d09d18a8": [
+        6,
+        "Six bagel sandwiches shot from directly above look fresh and sharp, but harsh direct sunlight casts strong shadows across the plates and the frame is crowded with six separate dishes rather than one subject filling it."
+      ],
+      "5e5019f5-c19b-47b2-8c76-9e9594d82008": [
+        7,
+        "The photo is sharp, well exposed and naturally coloured, with the grand columned entrance and building name clearly visible, but a statue and the central steps partly crowd the view and banners overlay the facade, so it is good rather than outstanding."
+      ],
+      "170fc447-ecc8-4e14-93df-712f31f1dc28": [
+        5,
+        "The photo is sharp, well exposed and in natural colour, but the building's entrance is partly hidden by hanging banners and the view is taken from the lawn at an angle, so the sign and doorway are not clearly visible, though the grand facade and daylight give it character."
+      ],
+      "af946b23-75ea-41e6-a840-e7f414eabe02": [
+        6,
+        "The glass of layered chocolate drink is sharp and clearly the subject with appetising cocoa dusting, but a table stand and card in the background clutter the frame, the harsh shadows fall across the table, and the glass sits small with the saucer and spoon taking space."
+      ],
+      "7230a143-e17c-4c98-a262-a90b6d6a322c": [
+        7,
+        "The latte with its leaf-pattern foam and cocoa dusting is sharp, softly lit and shot from above, but the pink hydrangea and wooden table with a spoon and window clutter the frame and the drink fills only part of it."
+      ],
+      "42963a01-c940-4273-a597-4c5f91b61eb9": [
+        7,
+        "Sharp, well-lit, natural colour and a good sense of depth in a tidy warehouse café, with the vintage tram and bar as focal points, though the wide angle leans verticals slightly and a person stands at the counter."
+      ],
+      "bc34cca6-eea2-4dac-b14a-611f7e26891c": [
+        6,
+        "The space is deep, well lit with warm lamps and a striking suspended plane, but it is crowded with people in the foreground blocking much of the frame, and the converging verticals lean slightly."
+      ],
+      "93cf4968-969b-4d27-b15b-9c14c4c6a519": [
+        6,
+        "The lobster is sharp and appetising with a golden crust, but the dim, busy restaurant background with blurred people and a harsh shadow on the plate keep it from being a clean, guide-worthy shot."
+      ],
+      "a2fe4a3a-0b69-40c8-9014-9aeff92a793f": [
+        6,
+        "The lobster in sauce is appetising and fairly sharp, but the dish fills only part of the frame, the background is cluttered with other plates and a cup, and the lighting is dim and slightly murky."
+      ],
+      "16b9d977-d764-428a-a51e-a473c68342fa": [
+        6,
+        "The bamboo ceiling, warm pendant lamps and glowing sign give atmosphere and depth, but the frame is tilted with converging verticals, the image is slightly soft, the bluish cast from the neon sign is strong, and a staff member and seated patron add clutter."
+      ],
+      "2f3c5982-f55f-448f-bda6-b2c1f601aee6": [
+        6,
+        "Warm, intentional lamp-like lighting and a clear focal point at the back bar give depth, but the blurred bamboo foreground, heavy orange cast, murky dark corners, and the 'maia' sign overlaid on the bar lower the score."
+      ],
+      "69ea8deb-435b-475a-9607-1bbb0d50a564": [
+        6,
+        "Shot from directly above with fresh colours and sharp detail, but it is a crowded table of many dishes rather than one subject filling the frame, with cluttered plates and edge items cut off."
+      ],
+      "94ba025f-da1f-4d47-8a00-53217559f6a3": [
+        6,
+        "Appetising salmon dishes shot from directly above with fresh colour, but the frame is crowded with three plates and a bowl, so no single dish fills most of it, and the wooden table and slightly uneven overhead light add clutter."
+      ],
+      "cd860c5a-07a1-4889-9fe7-b48c7e568a3a": [
+        7,
+        "Sharp, warm and tidy with a strong focal tree and wall lamps giving depth and intent, though the verticals lean slightly and the ceiling fan and cluttered foreground tables pull it down a little."
+      ],
+      "46d6c88a-6608-49cc-aa9b-77ec78309000": [
+        6,
+        "Bright, airy courtyard with pleasant plants and wicker lights, but it is a covered outdoor-style patio rather than a true interior, the foreground chairs are cut off and blurred leaves intrude, and the verticals lean noticeably."
+      ],
+      "bf48e029-3089-4578-8dea-f271dc768320": [
+        2,
+        "Text overlay with a price and menu name is laid over the photograph, which breaks the no-text rule, and the dark, murky background and side angle on the glass of iced coffee further weaken it."
+      ],
+      "9642f019-1d39-4fd6-a8f8-71e6d6444b92": [
+        7,
+        "The latte with its heart-shaped foam is sharp, appetising and at eye level with soft light and natural colour, but the cup fills only part of the frame and the cluttered background of jars, a grinder and a label reduces the tidiness."
+      ],
+      "2917bb75-d399-4a65-b11e-0eb0691493ae": [
+        7,
+        "The space has good depth, warm yellow walls, tidy furnishings and sharp detail with straight verticals, though the wide-angle view bends the lines slightly and the ceiling spotlights add some harshness."
+      ],
+      "dbe65a09-2b23-4149-aa6f-00a31924532d": [
+        7,
+        "Sharp, warm and well exposed with a clear sense of depth through the courtyard and tidy bamboo furniture as focal point, though the camera tilts so verticals lean and a cropped dark pillar intrudes on the right edge."
+      ],
+      "5bd200e8-cc79-4539-9196-b2674c49ed2b": [
+        6,
+        "Sharp with warm column lights and a strong night city view creating depth, but the tilted verticals from the wide angle, the blue-cast and grainy sky, and the glass railing reflections keep it an ordinary rather than guide-worthy shot."
+      ],
+      "3aa180c5-d2ee-4534-b7ba-45a32a2e0418": [
+        7,
+        "Sharp, well-lit warm candles and a striking city skyline give depth and a clear focal table, though the sign text and the bright lit sign cropped at the top plus some converging verticals slightly weaken it."
+      ],
+      "c0a84117-1cd7-4f89-9ca1-5a70531c43eb": [
+        6,
+        "The cocktail is sharp, appetising and well lit against a dark backdrop, but the second glass cropped at the left edge clutters the frame and the dark background is heavy, while the drink fills the frame well."
+      ],
+      "33d9b4d9-a386-458b-a5c1-d72b97349d68": [
+        4,
+        "The pizza is sharp and appetising with good colour, but the text caption and logo overlaid on the photo break the no-text rule, and the cluttered props (pizza cutter, bowls, mushrooms, tomatoes) weaken the tidy background and the dish does not fill the frame."
+      ],
+      "b9b1b75d-87a5-48b5-af21-f7a9437089e9": [
+        6,
+        "The moody purple and neon lighting and the depth through the room are appealing, but the heavy violet colour cast, the slightly soft focus, the tilted verticals on the right, and the bright white projector box on the wall keep it an ordinary interior shot."
+      ],
+      "bee25dd6-5175-46c4-a4d2-7b675e6d315b": [
+        7,
+        "Sharp, well-exposed bar interior with warm and neon lighting, straight verticals, depth through the city-view windows and a clear focal point on the glowing SHOTS sign, though the red neon, octopus sculpture and furniture make the space a bit busy and there is a logo-style sign rather than a neutral subject."
+      ],
+      "d7aa36e7-1dc7-4be6-8bdb-6cfecb12bab3": [
+        4,
+        "The entrance and sign are visible and the evening lighting is warm, but a crowd of seated people and parked bikes with blue covers block much of the view, and the sign is small and partly hidden."
+      ],
+      "8a5e2c5a-8e09-456f-8ed5-a4195ac2215a": [
+        6,
+        "The warm, inviting evening scene with tables and plants conveys the place's feel, but the photo is soft and slightly blurred, the sign is small and hard to read at the left edge, and tangled power lines and a tilted framing clutter the view."
+      ],
+      "8a5202fd-5fa9-400a-b522-7d9d132db83c": [
+        6,
+        "The scene is sharp with a warm lamp and a clear focal point on the small table, and the space has depth, but the verticals are slightly tilted, the foreground armchair is murky dark, and the frame is cluttered by the heavy chair on the left."
+      ],
+      "0f4ad60b-66e1-4eed-93d8-5bbbcc716bda": [
+        5,
+        "The moody red lighting and arched windows create atmosphere and depth with a clear focal wall of records and a painting, but the image is quite dark and murky in the foreground, with heavy red colour cast and the chairs and tables crowding the lower frame."
+      ],
+      "feafeb22-879a-43a8-92c5-de8c632e925c": [
+        7,
+        "The dessert is sharp, well lit with soft light, and appetising with a clean beige backdrop, but the wheat sprig and small crumbs on the plate add some clutter and the angle is slightly off eye level."
+      ],
+      "f37fac83-71bb-43b5-b255-86b19e1be9ee": [
+        6,
+        "The foreground dessert is sharp and appetising with soft even light, but three plates crowd the frame, the background is cluttered with diners and table edges, and the front plate is cut off at the bottom, so the dish does not fill most of the frame."
+      ],
+      "df699b4f-8e77-440a-bc79-863b2e87722f": [
+        6,
+        "The plum-garnished cocktail is sharp and appetising with a nice foam head, but the drink fills only part of the frame, the background has a cluttered window and plant, a stray person's arm intrudes at the left, and the mixed indoor lighting gives a slightly warm cast with a harsh shadow on the tray."
+      ],
+      "8c7d4c5c-c805-42ce-b16b-c1fe9d0775ee": [
+        7,
+        "The drink and garnish are sharp, appetising and fill the frame with soft, even light and natural amber colour, but the dark tray and cluttered background behind the glass and the slightly tilted angle hold it back from a top score."
+      ],
+      "965a7b61-1c3d-402e-a4d0-a8cb7df6232a": [
+        6,
+        "The warm backlit shelves and long wooden bar give depth and a clear focal point, but the scene is quite dark overall, a blurred figure crosses the right edge, and the sign text overlay is part of the venue's own signage rather than a watermark, while the verticals are reasonably straight."
+      ],
+      "7f9df0d1-560f-4e28-99e1-824af12c9d75": [
+        6,
+        "The moody bar interior has warm, intentional lighting, depth and a clear focal point in the curved counter and ring light, but it is fairly dark, the verticals lean slightly, and a staff member and an air conditioning unit intrude on the frame."
+      ],
+      "c7c99867-6947-43ba-8d5c-6a238a614cf9": [
+        6,
+        "The warm, cosy cafe counter and cup-cubby wall give a clear point of focus and depth, but the photo is tilted upward with converging verticals, the orange cast is heavy, and the lower-left and right edges are cluttered with chairs and a bag."
+      ],
+      "a3df5fe2-3927-4794-bff8-bbdbb9f145f9": [
+        7,
+        "The space has good depth, a warm and tidy layout with a clear focal point in the arched bookshelves and fern, and sharp, well-exposed detail, though the vertical lines lean slightly and the foreground chairs crowd the frame edges."
+      ],
+      "a1fd7e6d-8dea-45fd-9d67-3b6ca513f9eb": [
+        6,
+        "Warm lamp and a pleasing palm-framed window give depth and a clear focal sofa, but the converging walls and tilted verticals are noticeable and the piano and table edges clutter the frame somewhat, with the exposure a bit uneven."
+      ],
+      "06510944-1590-421b-ba4f-a7bbbfd2f24a": [
+        6,
+        "Sharp with warm intentional lamp light and a clear sense of depth, but the scene is quite dark and murky in the corners, the red-orange cast is heavy, and a plush toy in the foreground crowds the left edge."
+      ],
+      "3035e7fc-d1be-42fb-bbf4-28f31e596d90": [
+        6,
+        "The fried chicken pieces and charred lemon look appetising and the dish fills the plate, but the dim, warm-cast lighting, a glass and another plate cluttering the edges, and a harsh shadow along the plate's lower side keep it an ordinary shot."
+      ],
+      "26b09aec-03b3-4693-b513-ad7558d631ab": [
+        6,
+        "The black ramen is sharp, appetising and shot from above, but the bowl is cluttered by a side plate, a napkin and glasses, and the dark broth with its speckled surface looks somewhat murky under harsh-ish lighting."
+      ],
+      "289f33a5-eeb8-4a1b-a22d-25287478b398": [
+        6,
+        "The sushi is sharp, colourful and fills the frame, but the harsh overhead light, the steel prep surface and the cluttered arrangement of rolls and garnishes keep it an ordinary photo rather than a polished one."
+      ],
+      "909f5459-de9d-4690-98dd-338e1a80c4ca": [
+        5,
+        "The sushi is sharp and fairly appetising, but the dish fills only part of the frame, the background shows a chair, bar clutter and a sake bottle and dipping dishes that distract, and the overhead angle with harsh shadows and a slightly dim, warm cast keeps it ordinary."
+      ]
+    }
+  },
+  "opus": {
+    "about": "As haiku, with Opus 5.5, in the same minute.",
+    "model": "claude-opus-5-5",
+    "line": "==AB=ABA===B=ABBA=ABBBBAAABBBBBBBBABABBAB=A===B=BABBA=BABABA",
+    "sha256": "91162cc1a6b43412860474fc8f506f477f77576bb0d179e4b9f5943ebbdb52c2",
+    "scores": {
+      "93d9553e-8582-4c05-bffc-3af43f357ffe": [
+        8,
+        "A sharp, straight, symmetrical frontal view of the monument with its inscription and steps clearly visible and nothing blocking it, held back only by flat overcast light and an entrance that isn't distinctly visible."
+      ],
+      "d63225a0-f574-482c-ba87-dd20ecb02f7a": [
+        8,
+        "A sharp, well-exposed, straight, symmetrical daylight view of the Shrine's entrance with clear sky and no obstructions conveys the place grandly, though there is no clearly legible sign and the colours are slightly punchy."
+      ],
+      "0dc516a9-dc77-4a76-8c61-7eaeebc842b2": [
+        7,
+        "A sharp, colourful, appetising salad that fills the frame on a tidy wooden table, held back by harsh direct sunlight with hot highlights and a slightly warm, oversaturated cast."
+      ],
+      "2a1e01a2-9785-4eff-9fd6-6cfe162ba423": [
+        7,
+        "A sharp, well-lit, colourful plate that fills the frame with fresh-looking ingredients, held back by a slightly awkward high three-quarter angle and the plate edge being cropped."
+      ],
+      "a76fae32-06c3-471a-8823-a82b5b39b293": [
+        8,
+        "The sign, blue entrance and inviting seating are sharp, well lit and full of character, though the low wide angle adds slight distortion and clutter at the edges."
+      ],
+      "5496fe4d-538a-44ad-bb8f-b73a632a8c32": [
+        7,
+        "A sharp, straight, well-lit frontal view with a clear sign, entrance and inviting interior, but the carousel arrow buttons overlaid on the image and the motorbikes clipping the edges hold it back."
+      ],
+      "7db832ce-ee95-4828-bd7f-0c334e4bbedc": [
+        5,
+        "The bright, sharp, warmly lit café has good depth, but the wide-angle lens bends the verticals, the oversized lamp crowds the top of the frame, and three people fill much of the centre."
+      ],
+      "7f9737ea-8461-45d8-8733-fa76b205141d": [
+        6,
+        "An appealing, well-lit cafe with good depth and a striking pendant lamp, but the ultra-wide angle visibly distorts and tilts the verticals, and the busy counters, giant overhead lamp and foreground stool crowd the frame."
+      ],
+      "951ab3cb-5a72-4320-9cc9-926a1d1eab9c": [
+        7,
+        "A striking forest mural, green velvet chairs and fairy lights give a strong focal point and atmosphere, but the cables, heater and AC unit add clutter and the verticals lean slightly from the wide angle."
+      ],
+      "2210afd3-478e-439a-8e80-34d88b077962": [
+        7,
+        "An atmospheric interior with good depth, a striking mural and intentional warm lighting, held back by a slightly dim, noisy rendering, some lean in the verticals, and a staff member cut off at the right edge."
+      ],
+      "1ca4e884-c961-4fbf-b39c-5fd1723b6b99": [
+        7,
+        "The sign is clear and sharp in good daylight and the sidewalk seating conveys the café's feel, but the umbrella and seated customers block much of the entrance."
+      ],
+      "ad7d6e29-782a-42bd-bfc0-004a8e307d52": [
+        6,
+        "The glass entrance is visible and the street-side stool seating with the weathered yellow wall conveys a local Hanoi feel, but the small sign is read at a sharp oblique angle, verticals lean, and messy wiring plus flat overcast light keep it ordinary."
+      ],
+      "6c62c06d-03c4-4ea1-8f7d-07b831bb4776": [
+        5,
+        "The sushi is sharp, fresh and appetising under soft light, but a text caption is laid over the image, the platter fills only part of the frame, and the background is busy with clutter."
+      ],
+      "cb25a4dc-697b-494b-a10b-74059148e142": [
+        8,
+        "Fresh, glossy nigiri with natural colour and soft light fill the frame, though the slightly soft focus at the edges (possibly artificial blur) and a somewhat busy background keep it short of top marks."
+      ],
+      "085b494d-344a-4dfc-8887-17d6e5f0f516": [
+        7,
+        "A sharp, well-lit and appetising spread with fresh colours and a tidy table, though as a multi-dish overview from a high angle no single dish fills the frame, and the menu and shelving creep in at the edges."
+      ],
+      "12c3f28e-7bc1-4d77-938a-299a9ea8bd45": [
+        6,
+        "The sizzling steak-and-egg skillet is sharp, appetising and softly lit, but it fills only part of the frame, the 45-degree angle suits neither eye level nor overhead, and a cut-off salad, cutlery caddy, napkins and chairs clutter the composition."
+      ],
+      "5e23c21e-fa5e-4a7b-b1b5-60e643ae5be4": [
+        7,
+        "A sharp, well-exposed daylight aerial that conveys the church and its setting beautifully, but the high distant angle leaves the entrances small and shows no clear sign, as a storefront shot needs."
+      ],
+      "9a8b5853-7ee1-4051-b3ba-3a97fa4ffc6c": [
+        7,
+        "A sharp, well-exposed, unobstructed view of the church's side with visible doors that conveys its grand character, held back by flat overcast light, a converging-angle perspective, and a sign plaque too small to read."
+      ],
+      "8c4e0c60-243e-4ec0-a674-714b34ba240d": [
+        7,
+        "A warm, well-lit cafe with good depth and a clear focus on the counter, though the low wide-angle view gives some vertical distortion and the foreground cushion and table crowd the bottom of the frame."
+      ],
+      "84eb9568-f5cf-448f-bb18-f7a7c84a1b13": [
+        7,
+        "A cosy, well-composed café counter with warm intentional lighting and a clear focal point, held back by a strong yellow cast and some shelf clutter."
+      ],
+      "29f7a6e1-5859-412f-8bb8-a58ea1bae232": [
+        7,
+        "Warm intentional lamp and candle light with good depth along the bar and a clear focus on the backlit shelves, but a strong orange cast, slightly tilted verticals and a handbag intruding at the right edge hold it back."
+      ],
+      "1bbf66c3-3bfd-4edb-906f-771864d34a6c": [
+        7,
+        "A sharp, straight-on shot of a cosy wood-panelled nook, with a clear focal point in the paper lantern and green bench, held back by dim, slightly murky light, a flat shallow composition and drinks left on the table."
+      ],
+      "d6896b41-7e51-4a3e-a6e4-b3c00d61f843": [
+        6,
+        "Sharp, warmly lit dining room with good depth and an empty yellow table as a focal point, but the low ceiling and ductwork dominate the upper half, the diners are busy, and the right-side shelving clutters the frame."
+      ],
+      "9b452354-cce3-43a6-86ff-d32f1f9f45a0": [
+        8,
+        "Warm golden natural light, sharp detail, tidy table setting with good depth and a clear focus, though the strong orange warmth and slight converging verticals keep it from top marks."
+      ],
+      "9cd151ce-de33-4fa9-9842-4a45650abee2": [
+        4,
+        "The foamy cocktail with rose petals is reasonably sharp and the clear subject, but a strong yellow-green cast from dim bar light, a large water glass crowding half the frame, and a cluttered background of napkins and bar items hold it back."
+      ],
+      "49cc7c31-c599-48dc-ba6f-5fae86dfc267": [
+        4,
+        "The atmospheric bar scene is sharp, but the drinks and snack bowl are small in the frame among clutter (phone, POS terminal, bar mat, bartender), the warm cast is heavy and the light is dim and contrasty."
+      ],
+      "d15f68ff-3f20-4d0c-8d82-36c9b86f17ba": [
+        7,
+        "A sharp, well-exposed and appetising grilled steak on a stone slab fills the frame with a tidy setting, though the angled three-quarter view and the busy restaurant background keep it from top marks."
+      ],
+      "4f4b6772-8eb8-4b2c-8a2f-7cd724fd2291": [
+        6,
+        "The sliced steak platter is sharp, juicy and appetising and fills the frame, but the half-eaten pizza intruding on the right, the warm indoor cast, the harsh overhead light and the casual three-quarter angle keep it ordinary."
+      ],
+      "e1c74613-ca51-426e-b280-21d76bf9d754": [
+        8,
+        "A sharp, warmly lit restaurant interior with strong depth and a striking bird chandelier as its focal point, held back slightly by a dense field of tables and a few mildly leaning verticals at the edges."
+      ],
+      "a574b2bc-e796-4362-9384-220592f614fa": [
+        9,
+        "A sharp, deep, symmetrical restaurant view with straight verticals, warm intentional lighting and a striking bird-sculpture ceiling as focal point, held back only by slightly dark foreground corners and a mild warm cast."
+      ],
+      "72bb88b8-289c-4af7-80e1-c3e85ed8e6f4": [
+        7,
+        "Sharp, well-exposed daylight shot with the gallery's name sign and colourful exhibition banner conveying its character, but the angled corner view leaves the entrance small and hard to make out at the far left."
+      ],
+      "f17a5aed-cd35-49b4-a92b-df78b0f1cee6": [
+        8,
+        "Sharp, well-exposed daylight shot of the NGV with its large sign, arched entrance and moat fountains conveying the place's character, though the steep angle makes the entrance small and distant."
+      ],
+      "3ae163d5-0a09-4c82-8f64-99113b2c2a21": [
+        8,
+        "The glowing sign and inviting gravel courtyard with warm dusk lighting convey the place's feel well, held back slightly by a motorbike intruding at the corner and some slight converging verticals."
+      ],
+      "e0bb4477-bffb-44ae-a14c-e0178dc39fe4": [
+        6,
+        "The entrance and 'Chà mơ' sign are sharp, straight, well lit and unobstructed with an inviting feel, but a 'RUSTISM' watermark is laid over the image, and the image appears to be a 3D architectural render rather than a real photograph of the place."
+      ],
+      "8f90f60a-2d68-461b-8bc9-17411bbb154b": [
+        6,
+        "The cathedral is sharp, well lit in daylight and conveys a strong sense of place, but tram wires, poles and traffic lights cut across the facade and the entrances are small and partly obscured at the bottom of the frame."
+      ],
+      "9780d05d-403f-414a-b5ce-58dde7d7d794": [
+        6,
+        "The cathedral exterior is sharp and well lit under an overcast sky, but the colours look over-saturated, the wide angle leans the towers, and the entrance is obscured by the tree, flagpoles and parked cars, with no clear sign."
+      ],
+      "c78663df-3d5a-440e-be59-5072f8b60d9d": [
+        8,
+        "A sharp, straight, well-composed corner view with a clear 'Every Half' sign, a visible entrance and an inviting atmosphere, held back slightly by the flat overcast light and a small sign at ground level."
+      ],
+      "d6d69846-8412-4fe3-8920-da4429ece5ae": [
+        6,
+        "A sharp, straight daylight shot of an attractive café front with a visible sign, but the large 'EVERY HALF' text overlaid on the window is added graphic text, which breaks a core criterion."
+      ],
+      "d54807f0-047b-4c5c-992f-6d980f78262c": [
+        4,
+        "The drinks are sharp and appealing, but two laptops, a phone and wrapped straws clutter the frame, the drinks fill only a modest part of it, and the high three-quarter angle and hard shadows keep it ordinary."
+      ],
+      "071dd43a-745a-41b4-b466-fc04e9447207": [
+        6,
+        "The matcha lattes with popcorn topping are sharp, colourful and fill the frame, but the cluttered background of keychains, a jeans-clad leg and metal water cups, plus a casual three-quarter angle, keep it ordinary."
+      ],
+      "88e44ced-2693-4b90-a148-307c31e3c2d7": [
+        3,
+        "A cluttered snapshot with no clear subject—wine glasses, popcorn, ashtray, a stray hand and a bag edge compete in the frame—under dim, warm night light."
+      ],
+      "aac427d5-4fbd-4083-888f-f5f2924051f5": [
+        6,
+        "The cocktail and tomato garnish are sharp and appealing at eye level, but the drink fills only a modest part of the frame, the bright backlit wall pulls the eye and slightly blows out, and a strong yellow cast tints the whole scene."
+      ],
+      "a92c16f0-b93d-498c-823d-496347a6a7b5": [
+        7,
+        "An atmospheric, sharp, naturally coloured facade with a clear 'mono coffee lab' sign and inviting interior glimpses, held back because the ground-level entrance is cut off and the image is slightly dim."
+      ],
+      "ac8491ca-c1b8-46ca-b881-ab9c67fd1519": [
+        8,
+        "A sharp, well-lit, straight shot that strongly conveys the cafe's leafy, relaxed atmosphere, though the umbrella and seated patrons partly obscure the entrance and the logo sign is small and minimal."
+      ],
+      "9446c864-8e3b-4c77-9828-14e8b09aef11": [
+        6,
+        "A characterful, tidy café with good depth and warm details, but the harsh bare fluorescent tube, flat greyish night lighting, a slight warm cast and empty, unfocused composition keep it ordinary."
+      ],
+      "26bf3ba5-0ed1-459a-8a5f-a2d65dc1c231": [
+        7,
+        "Warm, intentional lamp light, straight verticals and real depth through the doorway make an atmospheric, tidy interior, held back by fairly dark, murky foreground corners and a slightly busy counter."
+      ],
+      "c92196c5-a9ae-40ca-865a-72bc625c8ac0": [
+        7,
+        "The sharp, appetising drink with its dripping mini-croissant skewer clearly fills the frame in soft, natural light, but a finger in the corner, a second plate and a busy café background keep it from the top marks."
+      ],
+      "a5f6d2db-fbd2-4b2a-84c1-5646b9b4049e": [
+        5,
+        "A sharp, well-lit display of appetising pastries, but it is a busy counter shot with no single subject, cluttered by price labels, a wooden rail cutting across the frame and glass reflections."
+      ],
+      "cde61939-1379-4d48-b499-6bfb3e1f0305": [
+        8,
+        "The multi-level view gives great depth, the natural light is lovely, and the industrial details are sharp, though the verticals lean slightly and the busy, diagonal composition weakens the point of focus."
+      ],
+      "7f462103-84b7-44fe-8868-6bfbcf419df3": [
+        5,
+        "The espresso machine is a sharp, well-lit focal point, but the overhead angle gives little sense of the space, two baristas fill much of the lower frame, the counter is cluttered with cables and a phone, and a logo watermark is overlaid."
+      ],
+      "6af9627f-a7af-4cec-b4a8-7189327091df": [
+        7,
+        "A sharp, vivid frozen drink that fills the frame at eye level in soft natural light, held back slightly by a busy background with clutter and a bright window."
+      ],
+      "d63e9b29-46b7-41b0-9771-6456c23db3be": [
+        5,
+        "A sharp, well-lit overhead shot of a croissant and latte art, but the food fills little of the tall frame, with the busy red perforated table, chair and photographer's shoes at the edges cluttering the composition."
+      ],
+      "94bd5450-7fe0-483e-8895-b1b8a1ba5067": [
+        6,
+        "The warm lamp lighting and the glowing Laluna sign give it atmosphere and a focal point, but the wide-angle distortion tilts the verticals, the foreground table and menu clutter the frame, and the sky edges toward blown."
+      ],
+      "fb6327f3-c578-4deb-8e4f-e34423b9ea76": [
+        9,
+        "Sharp, well-balanced exposure with detailed windows, straight verticals, clear depth, tidy styling and a strong focal point in the long table under warm pendants."
+      ],
+      "182da842-e1f2-40fb-814b-62ef9fd7ea7e": [
+        6,
+        "An appealing overhead table spread with sharp, attractive plating, but the dark exposure, the harsh lamp-lit shadows and the scattered subject (several dishes, glasses, a used side plate and the city view) keep it ordinary."
+      ],
+      "c84341c1-5b78-497a-889b-302465faf7d8": [
+        7,
+        "The canapés are sharp, colourful and fill the frame under soft light, but a used sauce dish, a bottle and another plate clutter the background, and the angled view is neither eye level nor overhead."
+      ],
+      "3125bdc8-0294-422c-869c-77a59866e9cb": [
+        7,
+        "A sharp, well-lit, straight view of an inviting café front with the barista counter and stools conveying its feel, held back by the lack of a clearly visible shop sign (only a small number plaque) and reflections on the glass."
+      ],
+      "bcb8b60e-35be-4f25-9c64-6990617b70e4": [
+        8,
+        "The sign is clearly legible and the open front shows a warm, inviting coffee bar with plants and seating, sharp and well lit, though the angled view and the foreground foliage keep it short of excellent."
+      ],
+      "2604cdf5-4311-419d-8b38-e32989b4f537": [
+        7,
+        "An inviting, sharp, well-lit evening entrance with strong atmosphere, but the sign is barely legible and partly hidden behind foliage."
+      ],
+      "88138b46-b50e-4d1f-a827-d8aad1c54a51": [
+        8,
+        "A sharp, attractively lit evening shot with a clearly readable glowing sign and an inviting view of the interior and seating, held back slightly by a modest angle and the entrance itself not being clearly shown."
+      ],
+      "b8bfe4b9-d521-47b2-ac42-6008ffcb70b9": [
+        7,
+        "Warm intentional lamp light, straight verticals and a clear focal pendant give a cozy sense of space, though the strong warm/pink cast, the slightly dim lower foreground and the prominent air conditioner hold it back."
+      ],
+      "f7b86afa-669e-4122-9acb-5ec74e9a68e6": [
+        8,
+        "A sharp, warmly lit bar interior with strong depth through the archway, straight verticals and a clear focal point in the counter and bird-of-paradise vase, held back slightly by a warm yellow cast and windows near blowout."
+      ],
+      "33001810-b9f5-4efc-88c9-71f7ed07cdd2": [
+        6,
+        "The photo is sharp, naturally coloured and full of atmosphere with its ornate gate and bamboo lanterns, but no clear sign identifies the place, and the tree and the tight crop leave the entrance only partly shown."
+      ],
+      "ae8f9ef5-585d-4e56-a4be-c4522f5822f3": [
+        9,
+        "An inviting evening shot with warm lantern lighting, a clearly lit sign and open entrance, sharp and straight, with the dog and greenery adding charm; only the slightly warm tone and dark edges hold it back."
+      ],
+      "6ebc9e94-8558-4272-8ee2-e3bd90cf8e7e": [
+        5,
+        "Two cocktails against an attractive night skyline are clearly the subject, but the drinks are somewhat soft with grainy night-mode noise, they fill only part of the frame with a lot of empty dark table, and the lighting is flat and murky."
+      ],
+      "deef1086-9d9f-45b9-9ed6-c65c6f3730a3": [
+        8,
+        "A sharp, warmly lit cocktail with frosted condensation and appetising garnishes clearly dominates the frame, though the background jars and jiggers add some clutter and the colour is slightly warm."
+      ],
+      "bb37df4d-73c3-4d9a-9eef-7fea585aaf44": [
+        5,
+        "The charming chalkboard wall of sticky-note recommendations gives a clear focal point with warm, decent light, but the shallow, flat view offers little sense of the space, and the blurry book display and flowers crowding the foreground make it feel cluttered."
+      ],
+      "edab5e98-df56-4494-8694-70830e684099": [
+        8,
+        "Strong symmetrical depth down the long table and bookshelves, with tulips as foreground focus, good balanced light and straight verticals, though the window is slightly bright and a small sign is cut off at the bottom."
+      ],
+      "8164fbc2-79fa-4619-8f87-b61ba4656fb5": [
+        8,
+        "A sharp, straight-on bar shot with warm, intentional backlit shelving and a clear focal point, though the strong orange cast and the busy bar-top clutter keep it from top marks."
+      ],
+      "eb8250e6-4ab2-4716-9596-f9f164a26280": [
+        6,
+        "Warm intentional bar lighting and good depth, but a seated woman dominates the centre of the frame, the bartender is cropped at the edge, and the counter is somewhat cluttered, with a strong orange cast."
+      ],
+      "544dcccd-4a21-4b39-a80e-80b515ce5f17": [
+        7,
+        "An inviting evening shot with clearly lit signs and a lively interior that conveys the café's feel, held back slightly by the angled framing, some bright blown-out areas and customers partly crowding the entrance."
+      ],
+      "e84ae6ca-aebe-4f98-b5f8-2d7c41739991": [
+        8,
+        "Sharp, straight, daylight shot with the 'Deep Sii' sign and open entrance clearly visible and customers conveying atmosphere, though overhead wires and harsh shadows slightly detract."
+      ],
+      "069f76fb-4bfa-44c3-b9ef-3f3bca3f7d89": [
+        7,
+        "A sharp, tidy cafe interior with good depth, warm wood tones and clear focal points in the aquarium and paintings, held back slightly by a mildly blown light strip and a faint cool cast on the walls."
+      ],
+      "7fcda699-e2eb-485e-ace9-df2edcbc2a35": [
+        5,
+        "Warm, well-lit café with good depth and a clear focal point in the branded bag, but the ultra-wide lens tilts and distorts the verticals, and the foreground glasses and chair add clutter, leaving it a casual snapshot."
+      ],
+      "45fbf53d-2e43-4791-94a5-08ba4cfaf9d7": [
+        6,
+        "The pizza is sharp, well lit and appetising, but it fills only part of the frame, the high angle is neither eye level nor directly overhead, and the condiment caddy, napkin basket and table setting crowd the background."
+      ],
+      "76cd90fd-e1f9-4d2e-bf11-06a2e1bd6ae6": [
+        7,
+        "The sharp, well-exposed spread of fresh, appetising dishes (crab pasta, burrata salad, soup) is let down by a busy table with a napkin, tongs, a water spill and a cropped glass, plus a casual three-quarter angle rather than overhead or eye level."
+      ],
+      "9cad7070-da85-4b40-9b38-5916ae2a26fe": [
+        5,
+        "The pastry display is sharp and colourful with legible chalk labels, but the food fills only a band of the frame amid a busy café background, glass reflections and floor, so it reads as an ordinary counter snapshot rather than a focused food photograph."
+      ],
+      "fa6fdaee-9bb3-404c-ac89-7332d09d18a8": [
+        7,
+        "A sharp, tidy overhead spread of appetising bagel sandwiches filling the frame, held back by harsh direct sunlight that casts hard shadows and glare on the metal plates."
+      ],
+      "5e5019f5-c19b-47b2-8c76-9e9594d82008": [
+        8,
+        "Sharp, bright daylight shot of the State Library facade with lively steps and lawn conveys the place well, though the statue partly blocks the entrance and the name inscription is small."
+      ],
+      "170fc447-ecc8-4e14-93df-712f31f1dc28": [
+        7,
+        "A sharp, well-lit, straight daylight view of the State Library's portico and lawn that conveys the place well, though the entrance sits small and distant behind a large foreground of grass and there is no clear sign."
+      ],
+      "af946b23-75ea-41e6-a840-e7f414eabe02": [
+        6,
+        "The chocolate-swirled drink is sharp and appealing on a clean wooden table, but the table-number stand intrudes at the top of the frame, hard shadows fall across the scene, and the high three-quarter angle is neither eye level nor overhead."
+      ],
+      "7230a143-e17c-4c98-a262-a90b6d6a322c": [
+        7,
+        "A sharp, naturally lit latte with neat art and a tidy, attractive setting, though the drink fills only a modest part of the frame and the three-quarter angle is neither eye level nor overhead."
+      ],
+      "42963a01-c940-4273-a597-4c5f91b61eb9": [
+        8,
+        "A sharp, well-exposed wide shot with strong depth, straight verticals and a clear focal counter plus the quirky train, held back slightly by the wide-angle stretch at the edges and some busy clutter on the right."
+      ],
+      "bc34cca6-eea2-4dac-b14a-611f7e26891c": [
+        8,
+        "A sharp, well-exposed warehouse café with strong depth, straight verticals, and a striking suspended plane and glowing tent as focal points, held back only by the busy clutter of seated patrons in the foreground."
+      ],
+      "93cf4968-969b-4d27-b15b-9c14c4c6a519": [
+        8,
+        "A sharp, eye-level shot of a vivid lobster dish that fills the frame against a softly blurred background, held back slightly by somewhat punchy, over-processed colour and diners visible behind."
+      ],
+      "a2fe4a3a-0b69-40c8-9014-9aeff92a793f": [
+        6,
+        "The lobster in sauce is sharp, appetising and naturally coloured, but it fills only part of the frame, the 45-degree angle suits it poorly, and a busy background of bread, a second plate, a cup and cutlery adds clutter."
+      ],
+      "16b9d977-d764-428a-a51e-a473c68342fa": [
+        7,
+        "An atmospheric bar with a striking bamboo ceiling, warm intentional lighting, good depth and a clear focal point in the counter and neon sign, held back by some countertop clutter, slightly tilted verticals and a bright foreground edge."
+      ],
+      "2f3c5982-f55f-448f-bda6-b2c1f601aee6": [
+        7,
+        "A sharp, well-lit back bar with a strong focal point and layered depth from the blurred foreground, held back by a heavy orange cast and some clutter of glasses and boxes on the counter."
+      ],
+      "69ea8deb-435b-475a-9607-1bbb0d50a564": [
+        8,
+        "A sharp, well-lit overhead spread with appetising glossy teriyaki chicken as a clear centrepiece and a tidy layout, though the busy multi-dish table means no single dish fills the frame."
+      ],
+      "94ba025f-da1f-4d47-8a00-53217559f6a3": [
+        8,
+        "A sharp, well-exposed overhead spread of fresh, colourful salmon dishes that fills the frame appetisingly, held back slightly by crowded cropping at the edges and a stray item in the corner."
+      ],
+      "cd860c5a-07a1-4889-9fe7-b48c7e568a3a": [
+        7,
+        "A sharp, well-lit café interior with straight verticals, warm lamps, natural colour and a strong focal point in the tree growing through the space, held back slightly by the prominent air cooler and fairly dense furniture in the foreground."
+      ],
+      "46d6c88a-6608-49cc-aa9b-77ec78309000": [
+        7,
+        "Strong depth and an inviting focal point in the rattan seating and plants, but the bright back wall is near blown, an out-of-focus foreground element intrudes at the lower right, and the dark chairs crowd the front."
+      ],
+      "bf48e029-3089-4578-8dea-f271dc768320": [
+        5,
+        "A sharp, moody, well-lit iced black coffee on a wooden board with a clean dark background, but the menu-style text and price overlaid on the image break a core criterion."
+      ],
+      "9642f019-1d39-4fd6-a8f8-71e6d6444b92": [
+        7,
+        "A sharp, well-lit latte with crisp latte art in a charming blue-and-white cup, though the busy café counter background and the phone edge add clutter and the cup fills only the lower half of the frame."
+      ],
+      "2917bb75-d399-4a65-b11e-0eb0691493ae": [
+        7,
+        "A sharp, well-lit interior with warm yellow walls, good depth through to the back doorway and a clear focal point in the slab table, held back by wide-angle distortion that tilts the verticals at the edges and a slightly busy foreground."
+      ],
+      "dbe65a09-2b23-4149-aa6f-00a31924532d": [
+        7,
+        "An atmospheric courtyard with strong depth, natural light and a clear focal point in the bamboo tea table, held back by wide-angle distortion tilting the verticals and a dark foreground pillar cutting into the right side."
+      ],
+      "5bd200e8-cc79-4539-9196-b2674c49ed2b": [
+        7,
+        "An atmospheric rooftop bar at night with good depth, a clear city-view focal point and well-handled exposure, held back slightly by the rain-speckled tables, a slight tilt in the columns and rather busy rows of chairs."
+      ],
+      "3aa180c5-d2ee-4534-b7ba-45a32a2e0418": [
+        8,
+        "A sharp, well-exposed rooftop dining scene with strong depth, warm candlelight and a clear focal table against the skyline, held back slightly by the leaning columns, the wide-angle distortion and the busy, cool city half of the frame."
+      ],
+      "c0a84117-1cd7-4f89-9ca1-5a70531c43eb": [
+        7,
+        "An appealing, sharp eye-level cocktail with a garnish and moody bar backdrop, though a second glass intruding at the lower left and the large dark empty area keep it from the top tier."
+      ],
+      "33d9b4d9-a386-458b-a5c1-d72b97349d68": [
+        5,
+        "A sharp, well-lit, appetising pizza with tidy styling, but the overlaid logo watermark and caption text bar break a core criterion and pull the score down."
+      ],
+      "b9b1b75d-87a5-48b5-af21-f7a9437089e9": [
+        7,
+        "A tidy, sharp bar interior with good depth, a clear focal point in the neon sign and an octopus sculpture, and a city view, held back by a strong purple cast from the LED lighting and slightly leaning verticals."
+      ],
+      "bee25dd6-5175-46c4-a4d2-7b675e6d315b": [
+        9,
+        "A professionally shot, symmetrical bar interior with straight verticals, strong depth to the night-city windows, sharp detail, and intentional warm and red lighting balanced without blown highlights; the neon 'SHOTS' sign is part of the decor, not an overlay."
+      ],
+      "d7aa36e7-1dc7-4be6-8bdb-6cfecb12bab3": [
+        4,
+        "It conveys a lively evening atmosphere, but the entrance is crowded with a large posed group, the sign is small and hard to read, and covered motorbikes in the foreground block the bottom of the frame."
+      ],
+      "8a5e2c5a-8e09-456f-8ed5-a4195ac2215a": [
+        5,
+        "The warm evening lighting and inviting entrance convey atmosphere, but the image is soft with some blur, the sign is small and hard to read, and tangled power lines clutter the top."
+      ],
+      "8a5202fd-5fa9-400a-b522-7d9d132db83c": [
+        7,
+        "A sharp, tidy, moodily lit seating nook with a clear focal point in the table lamp and painting, held back by the very dark left foreground chair and a limited sense of the wider space."
+      ],
+      "0f4ad60b-66e1-4eed-93d8-5bbbcc716bda": [
+        5,
+        "The red-lit record wall gives a strong focal point and the verticals are straight, but the frame is very dark with a heavy red cast, and the murky, cluttered foreground chairs drag it down."
+      ],
+      "feafeb22-879a-43a8-92c5-de8c632e925c": [
+        7,
+        "A sharp, softly lit, tidy studio shot of a Biscoff soufflé pancake on a clean neutral backdrop, held back by a slightly flat, pale colour palette, a three-quarter angle, and a dish that fills only part of the frame."
+      ],
+      "f37fac83-71bb-43b5-b255-86b19e1be9ee": [
+        7,
+        "Three appetising soufflé pancake plates are sharp, well lit and naturally coloured at a suitable angle, but a person's blurred clothing at the top edge and the slightly busy multi-plate arrangement keep it from the top tier."
+      ],
+      "df699b4f-8e77-440a-bc79-863b2e87722f": [
+        6,
+        "The plum-garnished cocktail is sharp and appealing, but a person's arm and body at the left edge, the busy background with plant and street, and the three-quarter angle keep it an ordinary shot."
+      ],
+      "8c7d4c5c-c805-42ce-b16b-c1fe9d0775ee": [
+        7,
+        "A sharp, well-exposed, fresh-looking drink with lemon and star fruit garnish fills the frame, though the angled view and the busy reflective tray and counter background keep it from top marks."
+      ],
+      "965a7b61-1c3d-402e-a4d0-a8cb7df6232a": [
+        8,
+        "A moody, intentionally lit tea bar with strong depth, a clear focal counter and backlit shelves, and straight verticals, held back only by a motion-blurred figure on the right and some murky dark corners."
+      ],
+      "7f9df0d1-560f-4e28-99e1-824af12c9d75": [
+        7,
+        "A moody, well-composed bar with a strong focal point in the curved counter and halo light and straight verticals, though it leans dark with murky corners and a prominent ceiling AC unit."
+      ],
+      "c7c99867-6947-43ba-8d5c-6a238a614cf9": [
+        5,
+        "Nice depth through the counter opening to the café and a strong cup-shelf feature, but a heavy orange cast, wide-angle distortion bending the verticals, a prominent air-conditioner, and a cluttered counter keep it ordinary."
+      ],
+      "a3df5fe2-3927-4794-bff8-bbdbb9f145f9": [
+        8,
+        "A tidy, well-lit café with straight verticals, strong depth through the arches to the bookshelves, and a clear focal point, held back slightly by a large expanse of dark floor and the warm orange ceiling dominating the frame."
+      ],
+      "a1fd7e6d-8dea-45fd-9d67-3b6ca513f9eb": [
+        7,
+        "A sharp, well-lit and tidy cafe corner with a clear focal point in the sofa, palm window and logo wall, held back by noticeable wide-angle distortion that leans the verticals and stretches the foreground table."
+      ],
+      "06510944-1590-421b-ba4f-a7bbbfd2f24a": [
+        6,
+        "The moody pendant-lit lounge has good depth and a neon focal point, but it is quite dark with a strong red cast, and an out-of-focus plush toy clutters the left foreground."
+      ],
+      "3035e7fc-d1be-42fb-bbf4-28f31e596d90": [
+        6,
+        "The fried chicken with charred lemon is sharp, golden and appetising and fills much of the frame, but the harsh flash-like light, dim edges and clutter of glasses and plates around the dish keep it ordinary."
+      ],
+      "26b09aec-03b3-4693-b513-ad7558d631ab": [
+        7,
+        "A sharp, well-lit overhead shot of black garlic ramen and a side plate of toppings that fills the frame appetisingly, held back by the murky-looking oil-flecked broth, smeared bowl rim and slightly cluttered table edges."
+      ],
+      "289f33a5-eeb8-4a1b-a22d-25287478b398": [
+        7,
+        "A sharp, colourful, appetising sushi platter that fills the frame, held back by the plain steel-counter background, the tray cropped at the edge and an oblique angle that is neither eye level nor overhead."
+      ],
+      "909f5459-de9d-4690-98dd-338e1a80c4ca": [
+        5,
+        "The sushi is sharp and appetising, but the plate fills only part of the frame and the cluttered bar tools in the foreground and chairs behind make the composition messy, with flat overhead flash-like light."
+      ]
+    }
+  }
+}

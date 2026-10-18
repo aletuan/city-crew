@@ -838,3 +838,47 @@ nội thất đẹp nhất của quán. Ý tưởng của chủ sản phẩm, 18
 **Nếu đạt:** Data Desk, và có thể cả app, chỉ ra "ảnh đẹp nhất của loại X"
 ở mỗi quán. Editor vẫn là người chọn loại.
 
+
+**Chủ sản phẩm duyệt tiêu chí, 18/10/2026**, đúng như bản nháp ở trên. Ảnh
+quán bar chụp buổi tối không bị trừ điểm: tiêu chí nội thất đã cho "đèn ấm
+có chủ ý", tiêu chí mặt tiền đã cho "đèn buổi tối đẹp".
+
+**Đã chuẩn bị (18/10/2026):**
+
+- **Cặp ảnh.** Có 60 cặp ở 60 quán: 15 mặt tiền (lấy hết số có), 23 nội
+  thất và 22 đồ ăn (cũng lấy hết số có). Luật chọn và danh sách cặp nằm ở
+  `data/review/photo-types/round4.json`.
+- **Khác với đề xuất, và vì sao.**
+  - Đề xuất là mỗi loại khoảng 20 cặp và không dùng ảnh của các vòng
+    trước. Nhưng ảnh có điểm Apple Vision lại chính là những ảnh các vòng
+    1–3c đã chọn, nên bỏ chúng đi thì chỉ còn 5 cặp mặt tiền.
+  - Các vòng đó chỉ hỏi loại ảnh và các tiêu chí bìa, chưa từng hỏi ảnh nào
+    đẹp hơn, nên vòng này dùng lại được.
+  - Ảnh từ trang "Cover review" thì vẫn bỏ ra, vì trang đó có hỏi nên dùng
+    ảnh nào trong hai ảnh.
+- **Claude chấm.**
+  - Hàm `rate-photos` chấm ảnh, theo tiêu chí ở
+    `supabase/functions/_shared/photoBeauty.ts`, là bản tiếng Anh của tiêu
+    chí đã duyệt, dịch từng ý.
+  - Mỗi ảnh được chấm riêng, theo loại mà nhãn ảnh đã xác định. Hàm không
+    ghi gì vào cơ sở dữ liệu.
+  - Đã chấm cả 120 ảnh hai lần, bằng Haiku 5.5 và Opus 5.5, lúc 01:38 UTC.
+    Không ảnh nào lỗi. Mỗi lần tốn khoảng 254 nghìn token đầu vào.
+- **Khoá kết quả.** Có ba dòng kết quả: Apple Vision, Haiku và Opus. Mỗi dòng
+  khoá bằng sha256 trong `round4.json`, cùng với điểm từng ảnh.
+- **Hoà điểm.** Điểm của Claude là số nguyên từ 1 đến 10, nên hai ảnh trong
+  cặp có thể bằng điểm: Haiku hoà 16 cặp, Opus hoà 14. Apple Vision không
+  hoà cặp nào.
+- **Cách tính điểm, viết trước khi chủ sản phẩm trả lời.**
+  - Mỗi bên được tính độ trùng với chủ sản phẩm theo hai cách:
+    - **nghiêm:** cặp bên đó hoà điểm tính là sai;
+    - **chỉ tính cặp bên đó chọn:** bỏ các cặp hoà.
+  - Đạt khi trùng từ 75% trở lên trên những cặp bên đó chọn, và bên đó phải
+    chọn ít nhất 2/3 số cặp chủ sản phẩm đã chọn.
+- **Trước khi chủ sản phẩm trả lời, giữa các máy với nhau:**
+  - Haiku và Opus chọn giống nhau 35/36 cặp, ở những cặp cả hai cùng chọn.
+  - Apple Vision chỉ trùng với Haiku 28/44 cặp và với Opus 31/46 cặp.
+  - Như vậy hai mô hình Claude đồng ý với nhau, còn Apple Vision thì khác
+    hẳn. Vòng này sẽ cho biết bên nào gần với mắt chủ sản phẩm hơn.
+- **Trang chấm:** Data Desk, `#/photo-pairs-4`. Trang không cho biết máy đã
+  chọn ảnh nào.
