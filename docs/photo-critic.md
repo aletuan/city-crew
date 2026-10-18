@@ -75,7 +75,7 @@ Riêng với City Crew, ảnh còn phải **đại diện được cho địa đ
 | 1 | Quan sát | Ảnh có gì: các số đo thô | ✅ có (Vision v1) |
 | 2 | Độ phù hợp với địa điểm | Ảnh có hợp với category của địa điểm không | ⏸ đã thử, tạm dừng (mục 5.2) |
 | 3 | Lọc lỗi kỹ thuật | Mờ nặng, tối hoặc cháy nặng, độ phân giải thấp → chặn trần điểm | ⚠️ đã đo, chưa chặn trần |
-| 4 | Tiêu chí theo bối cảnh | Lỗi nào nặng tuỳ category và kiểu ảnh. Ví dụ quán **Về đêm** thì nới tay với ảnh tối | ⚠️ mới có luật "chỉ nói nghiêng khi là khung cảnh" |
+| 4 | Tiêu chí theo bối cảnh | Lỗi nào nặng tuỳ category và kiểu ảnh. Ví dụ quán **Về đêm** thì nới tay với ảnh tối | 📝 tiêu chí riêng cho cả 8 loại ảnh đã duyệt (D14, mục 5.3), chưa có code |
 | 5 | Điểm "hợp làm bìa" | Một con số riêng, không gộp vào điểm đẹp (D4) | ❌ chưa làm |
 | 6 | Giải thích và hướng dẫn | Giọng văn theo bối cảnh, gợi ý cụ thể | ✅ bản đầu (#973), chưa theo bối cảnh |
 
@@ -174,6 +174,106 @@ hỏi hẹp hơn mục đích ở mục 1. Kết quả cũng cho thấy phần m
 ảnh lạc đề, chưa làm được. Code (`data/photo-eval/`, PR #976–#985) đã gỡ;
 commit cuối còn giữ nó là `d73d6efed23b90379c252e107012a03dde28e361`.
 
+### 5.3 Tiêu chí chấm theo loại ảnh (chủ sản phẩm duyệt, 18/10/2026)
+
+**Vì sao.** App đang chấm mọi ảnh trên cùng một thang Apple Vision: một
+điểm 0–10 và ba dòng Ánh sáng, Độ nét, Bố cục, với cùng ngưỡng cho một ly
+latte và một mặt tiền. Chủ sản phẩm (18/10): mỗi loại ảnh một tiêu chí chấm
+riêng, không giữ một thang chung. Loại ảnh lấy từ nhãn Claude
+(`docs/photo-labels.md` §3). Ảnh có nhãn `unsure` hay `other` thì không có
+loại, nên vẫn chỉ có điểm Apple Vision như hiện nay.
+
+**Nguồn.** Đồ ăn, Nội thất và Mặt tiền là bộ tiêu chí chủ sản phẩm duyệt
+cho vòng 4 (`docs/photo-labels.md` §12), giữ nguyên từng ý. Năm loại sau
+vòng 4 (Sân vườn, Văn hóa, Cảnh, Chữ, Ảnh ghép) được viết cùng kiểu và duyệt
+cùng ngày. Bản tiếng Anh gửi cho mô hình của ba loại đầu nằm ở
+`supabase/functions/_shared/photoBeauty.ts`. Năm loại còn lại được thêm vào
+đó khi làm bước này.
+
+*Chung cho mọi loại:*
+- Ảnh nét ở chủ thể, không rung, không nhoè.
+- Đủ sáng: không tối om, không cháy trắng mất chi tiết.
+- Màu tự nhiên, không ám màu nặng, không filter quá tay.
+- Không có chữ hay watermark đè lên ảnh. Loại Chữ, menu không xét ý này.
+
+*Đồ ăn & uống:*
+- Món là chủ thể rõ ràng và chiếm phần lớn khung.
+- Trông ngon: màu tươi, có độ bóng hay độ tươi, không nhão, không tàn.
+- Bố cục gọn, nền không bừa (khăn giấy vò, đĩa bẩn, đồ thừa).
+- Ánh sáng mềm, không có bóng gắt che món.
+- Góc chụp hợp với món: ngang tầm hoặc từ trên xuống.
+
+*Nội thất:*
+- Đường thẳng đứng (cột, tường, khung cửa) không nghiêng, không méo.
+- Có chiều sâu, thấy được cảm giác không gian.
+- Ánh sáng đẹp: tự nhiên, hoặc đèn ấm có chủ ý. Không tối om, cửa sổ không
+  cháy trắng.
+- Gọn gàng, không bừa bộn, không có người che phần lớn khung.
+- Có một điểm nhấn: quầy, cây, chi tiết thiết kế.
+
+*Mặt tiền:*
+- Thấy rõ lối vào và biển tên quán.
+- Thẳng, không nghiêng.
+- Không bị xe, người hay dây điện che phần lớn.
+- Ánh sáng tốt, ban ngày hoặc đèn buổi tối đẹp.
+- Thể hiện được không khí của quán, không chỉ là một bức tường.
+
+*Sân vườn:*
+- Bàn ghế của quán là chủ thể, thấy rõ chỗ ngồi.
+- Có cây xanh tươi, chiếm phần đáng kể của khung.
+- Thấy cả sân hay cả hiên, có chiều sâu, không chỉ một góc bàn.
+- Ánh sáng ban ngày, hoặc đèn tối ấm có chủ ý. Không tối om.
+- Gọn, không đông người, bàn ghế không bừa.
+
+*Văn hóa:*
+- Thấy trọn công trình, không cắt mất mái hay chân.
+- Đường thẳng đứng không nghiêng, không méo.
+- Ánh sáng ban ngày, trời không cháy trắng.
+- Không bị đám đông, xe hay dây điện che.
+- Thấy được nét riêng: mái, cổng, chi tiết kiến trúc.
+
+*Cảnh:*
+- Đường chân trời thẳng.
+- Trời và nước còn chi tiết, không cháy trắng.
+- Có điểm nhấn hay tiền cảnh, không chỉ một khoảng trống.
+- Ánh sáng đẹp (nắng, bình minh, hoàng hôn), màu tự nhiên.
+- Không bị đám đông che.
+
+*Chữ, menu:*
+- Đọc được rõ: nét, đủ sáng, không chói đèn hay loá phản chiếu.
+- Chụp thẳng, không xiên, không méo.
+- Thấy trọn menu hay biển, không bị cắt.
+
+*Ảnh ghép:*
+- Ô nào cũng nét và đủ sáng.
+- Các ô cho thấy những điều khác nhau của quán (mặt tiền, không gian, món),
+  không lặp lại nhau.
+- Chia ô gọn, không quá 4 ô nhỏ.
+- Đủ độ phân giải để xem trên điện thoại.
+
+Ảnh bar chụp buổi tối không bị trừ điểm vì tối: Nội thất cho "đèn ấm có chủ
+ý", Mặt tiền cho "đèn buổi tối đẹp", Sân vườn cho "đèn tối ấm có chủ ý".
+Ánh sáng ban ngày chỉ là một tiêu chí ở Văn hóa và Cảnh.
+
+**Cách chấm (đã duyệt cùng ngày).**
+- Claude xét **từng tiêu chí riêng**: đạt hay chưa đạt, kèm một câu lý do.
+  Điểm của ảnh là tỷ lệ tiêu chí đạt (cả các tiêu chí chung), đổi ra thang 10.
+- **Vì sao không giữ Apple Vision.** Vision không đo được "trông ngon", "có
+  điểm nhấn" hay "thấy rõ chỗ ngồi". Ở vòng 4 nó chỉ trùng chủ sản phẩm 66%.
+- **Vì sao không chấm gộp một số 1–10 như vòng 4.** Ở vòng 4, Haiku chấm gộp
+  trùng chủ sản phẩm 72%, chưa tới mốc 75%, và hoà điểm ở 16 cặp. Chấm từng
+  tiêu chí cho app một lý do để hiện, ví dụ "Chưa đạt: cửa sổ cháy trắng",
+  thay cho một con số không giải thích được.
+- **Kiểm chứng trước khi vào app.** Đo trên 47 cặp chủ sản phẩm đã chọn ở
+  vòng 4 (`data/review/photo-types/round4.json`). Mốc đặt trước: **75%** trên
+  những cặp có chọn, và phải chọn ít nhất 2/3 số cặp, giống vòng 4. Không đạt
+  thì báo lại, không đưa vào app.
+- Chấm cả catalog bằng Haiku tốn khoảng vài đô. Kết quả lưu thành một bộ
+  chấm riêng trong `photo_scores`, không đè lên điểm Apple Vision.
+- Vòng 4 chỉ có cặp Đồ ăn, Nội thất và Mặt tiền. Năm loại còn lại chưa có
+  phép đo nào. Cần một vòng chấm tay nhỏ cho chúng trước khi điểm của chúng
+  hiện trong app.
+
 ## 6. Pháp lý và giấy phép
 
 ⚠️ = chưa đối chiếu nguyên văn.
@@ -239,6 +339,7 @@ D. Nhưng C trái nguyên tắc 4.
 | D11 | 17/10 | Màu đánh giá theo nghĩa, không theo màu chủ đạo: tốt = `okInk`, cần chú ý = `warnInk`, đổi sắc theo theme nhưng giữ nghĩa. Thanh xếp hạng vẫn là màu chủ đạo, vì nó là vị trí trong catalog chứ không phải lời khen | Chủ sản phẩm. Ở theme mặc định màu chủ đạo là đỏ san hô: dấu "tốt" màu đỏ đọc thành cảnh báo |
 | D12 | 17/10 | Phân tích chi tiết còn ba dòng có thanh: **Ánh sáng** (độ phơi sáng: khoảng cách của độ sáng trung bình tới giữa thang, nhân tỷ lệ điểm ảnh không bị tối đen hay cháy trắng), **Độ nét** (vị trí trong catalog), **Bố cục** (tỷ lệ các phép kiểm khung hình đạt: chủ thể không sát mép, đường chân trời của cảnh không nghiêng, người và chữ không chiếm khung). Màu sắc và Không gian chưa có dòng, vì không có số đo; Màu sắc cần thêm phép đo vào module Swift (bản build mới). Cây xanh bỏ khỏi phần này, thuộc bước 5. Thanh tô theo kết quả, thay cho thanh màu chủ đạo của D11: xanh `okInk` khi đo được điều tốt, cam `warnInk` khi có lỗi, xám khi không khen không chê. Bố cục ghi "Không thấy lỗi" chứ không ghi "Tốt": các phép kiểm chỉ tìm lỗi, và 88% ảnh qua hết, nên một thanh đầy màu xanh sẽ nói quá | Chủ sản phẩm chọn "làm ngay ba dòng có thật" |
 | D13 | 17/10 | Hiểu ảnh (loại ảnh và tiêu chí ảnh bìa) giao cho Claude gán nhãn phía City Crew, chạy bằng skill trong phiên Claude (cách A); Apple Vision giữ việc đo trên máy. Gán nhãn mọi ảnh, kể cả ảnh Google. Đề xuất đầy đủ: `docs/photo-labels.md` | Chủ sản phẩm, sau vòng 2: Claude trùng chủ sản phẩm 96/100, nhãn Vision chỉ bắt được nửa số ảnh món ăn |
+| D14 | 18/10 | Mỗi loại ảnh một bộ tiêu chí chấm riêng (mục 5.3), thay cho một thang Apple Vision chung. Claude xét từng tiêu chí đạt hay chưa đạt; điểm là tỷ lệ tiêu chí đạt. Chỉ vào app khi trùng chủ sản phẩm từ 75% trở lên trên các cặp của vòng 4 | Chủ sản phẩm duyệt tiêu chí cho cả 8 loại. Vision không đo được phần lớn các tiêu chí; ở vòng 4 Vision trùng 66%, Claude chấm gộp một số trùng 72% |
 
 ## 9. Câu hỏi đang mở
 
@@ -293,11 +394,18 @@ D. Nhưng C trái nguyên tắc 4.
   khi đem gợi ý cho chủ sản phẩm duyệt, chỉ **9/61 (15%)** được nhận
   (`docs/photo-labels.md` §11). Điểm này xếp hạng được, nhưng chưa đủ để
   đề xuất đổi ảnh bìa.
-- [ ] **Bước 4: tiêu chí theo bối cảnh** (category và kiểu ảnh).
+- [ ] **Bước 4: tiêu chí theo loại ảnh** (D14, mục 5.3). Tiêu chí đã duyệt
+  cho cả 8 loại. Còn lại, theo thứ tự:
+  1. Thêm năm loại còn lại vào `_shared/photoBeauty.ts`, và cho `rate-photos`
+     trả lời từng tiêu chí đạt hay chưa đạt thay cho một số 1–10.
+  2. Đo trên 47 cặp vòng 4, với mốc đặt trước 75%.
+  3. Một vòng chấm tay nhỏ cho Sân vườn, Văn hóa, Cảnh, Chữ và Ảnh ghép.
+  4. Chấm cả catalog bằng Haiku, rồi app hiện điểm và lý do theo loại.
 - [ ] **Bước 6: giọng văn theo bối cảnh.**
 - [ ] Nút để guide "sửa loại / độ phù hợp": thành nguồn dữ liệu có nhãn của
   City Crew, dùng được cho cách D.
-- [ ] Gỡ ràng buộc tạm `photo_scores_one_per_photo` khi có bộ chấm thứ hai.
+- [x] Gỡ ràng buộc tạm `photo_scores_one_per_photo` khi có bộ chấm thứ hai
+  (`20261017120000_photo_scores_second_scorer.sql`, khi nhãn Claude thành bộ chấm thứ hai).
 
 ## 11. Phương án đã loại
 
@@ -340,3 +448,4 @@ D. Nhưng C trái nguyên tắc 4.
 | 16/10/2026 | Dừng phép thử, gỡ `data/photo-eval/`, viết lại file này (D9) |
 | 17/10/2026 | Bảng "Refined UI": bước 1, giao diện phân tích chi tiết (D10, D11) |
 | 17/10/2026 | Ba dòng có thanh: Ánh sáng, Độ nét, Bố cục; gợi ý mang icon của tiêu chí (D12) |
+| 18/10/2026 | Chủ sản phẩm duyệt tiêu chí chấm riêng cho 8 loại ảnh và cách chấm từng tiêu chí (D14, mục 5.3) |
