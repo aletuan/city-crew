@@ -1375,3 +1375,30 @@ Chủ sản phẩm duyệt cả 40 ảnh trên một trang và sửa 18 ảnh. C
 `"by": "owner"`; ảnh Hoàng thành có loại nhưng các thuộc tính để trống. Từ
 đây mọi ảnh bìa đều có biểu tượng loại. Có 260 nhãn của chủ sản phẩm, và còn
 189 nhãn `unsure` ở những ảnh không phải ảnh bìa.
+
+### 189 nhãn `unsure` còn lại (18/10/2026)
+
+Chủ sản phẩm duyệt 189 ảnh không phải ảnh bìa mà Claude chưa chắc, trên một
+trang, và sửa 65 ảnh. Còn 124 ảnh giữ loại Claude đoán, nghĩa là đúng 66%.
+Theo loại Claude đoán:
+
+| Claude đoán | số ảnh | bị sửa | sửa thành |
+|---|---|---|---|
+| Khác | 26 | **26** | Nội thất 12, Phong cảnh 5, Đồ ăn 3, Văn hóa 3, Mặt tiền 3 |
+| Phong cảnh | 52 | 12 | Mặt tiền 6, Văn hóa 3, Sân vườn 3 |
+| Nội thất | 40 | 9 | Mặt tiền 7, Sân vườn 2 |
+| Mặt tiền | 35 | 9 | Sân vườn 5, Văn hóa 3, Phong cảnh 1 |
+| Sân vườn | 23 | 6 | Phong cảnh 3, Mặt tiền 3 |
+| Đồ ăn | 9 | 1 | Phong cảnh |
+| Chữ | 2 | 1 | Mặt tiền |
+| Văn hóa | 1 | 1 | Phong cảnh |
+| Ảnh ghép | 1 | 0 | |
+
+Không ảnh nào trong 26 ảnh Claude đoán là Khác thật sự là Khác. Khi chưa
+chắc, Claude dùng Khác như một chỗ trú, chứ không phải câu trả lời. Ở các loại
+khác, phần lớn chỗ sai vẫn là ba ranh giới đã sửa ở v10 đến v13: Mặt tiền với
+Sân vườn, Mặt tiền với Nội thất, và Phong cảnh với Văn hóa.
+
+Cả 189 ảnh được ghi với `"by": "owner"` ở phiên bản 13. Từ đây kho ảnh không
+còn nhãn `unsure` nào. Có 449 nhãn của chủ sản phẩm, và 15 ảnh mang loại Khác
+nên không hiện biểu tượng.
