@@ -21,6 +21,14 @@ vi.mock('../lib/i18n', () => ({
 // jsdom's window has no size to React Native; an iPhone 15's points
 // instead, so the frame has a width to be a share of.
 const PHONE = vi.hoisted(() => ({ width: 393, height: 852, scale: 3, fontScale: 1 }));
+// Zero, as everywhere in the suite, but settable: one test needs the
+// home indicator's inset to tell "on it" from "10pt above it".
+const INSETS = vi.hoisted(() => ({ top: 0, bottom: 0, left: 0, right: 0 }));
+vi.mock('react-native-safe-area-context', () => ({
+  SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => INSETS,
+}));
 vi.mock('react-native', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   useWindowDimensions: () => PHONE,
@@ -340,6 +348,22 @@ describe('PhotoSheet', () => {
     expect(scroll.contains(strip)).toBe(false);
     fireEvent.click(screen.getByTestId('score-detail-toggle'));
     expect(labels()).toEqual(['Cover', 'Hide', 'Delete it']);
+  });
+
+  // On the home indicator's inset, not 10pt above it (owner, 18 Oct
+  // 2026); a phone with no inset keeps 10pt off the edge.
+  it('sits the dock on the inset, keeping 10pt where there is none', () => {
+    const dock = () => getComputedStyle(screen.getByTestId('sheet-strip').parentElement!).paddingBottom;
+    const { unmount } = render(<PhotoSheet {...props({ actionsFor: () => [row()] })} />);
+    expect(dock()).toBe('10px');
+    unmount();
+    INSETS.bottom = 34;
+    try {
+      render(<PhotoSheet {...props({ actionsFor: () => [row()] })} />);
+      expect(dock()).toBe('34px');
+    } finally {
+      INSETS.bottom = 0;
+    }
   });
 
   it('docks the strip for an unscored photograph too, and draws no dock with nothing to do', () => {

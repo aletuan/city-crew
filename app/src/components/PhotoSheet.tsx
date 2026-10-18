@@ -255,10 +255,13 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
             analysis was open, and folding them only then made the sheet
             change shape under the reader. Always the strip, always in
             reach — the analysis is what decides a cover or a hide, so the
-            act stays one tap from the reading at any length. The dock's
-            own padding clears the home indicator. */}
+            act stays one tap from the reading at any length. It sits on
+            the home indicator's inset, not 10pt above it: the extra lift
+            read as the strip floating high (owner, 18 Oct 2026). A phone
+            with no inset still gets the 10pt, or the strip would touch
+            the screen's edge. */}
         {visible && actionsFor(p).length > 0 && (
-          <View style={[s.dock, { paddingBottom: insets.bottom + 10 }]}>
+          <View style={[s.dock, { paddingBottom: Math.max(insets.bottom, 10) }]}>
             <SheetStrip actions={actionsFor(p)} onClose={onClose} />
           </View>
         )}
