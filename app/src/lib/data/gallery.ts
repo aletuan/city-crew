@@ -25,16 +25,24 @@ const LABELS = 'claude-labels';
 // The score rides along embedded: the gallery is the one screen that
 // shows it, so it costs no other read. Only the shown scorer's row — see
 // the filter in `fetchGallery`. The photo labels ride along the same way,
-// as a second embed of the same table under its own name (`labels`),
-// narrowed to their own scorer: the sheet names a photograph's kind from
-// them (`photoKind`).
+// as a second embed of the same table, narrowed to their own scorer: the
+// sheet names a photograph's kind from them (`photoKind`).
+//
+// Both embeds carry a name of their own (`score`, `labels`), and each
+// filter names its embed by it. With the score left as bare
+// `photo_scores`, PostgREST read `photo_scores.scorer` as a filter on
+// every embed of that table — measured against the project on 18 Oct
+// 2026: `labels` came back empty on every photograph, since no row is
+// both scorers, and the score embed came back unfiltered, holding both
+// rows in whatever order they arrived. So the sheet showed no kind, and
+// the score was right only while Vision's row happened to come first.
 const COLS = 'id, photo_uri, is_cover, is_hidden, sort_order, source, storage_path, '
-  + 'photo_scores(scorer, scorer_version, aesthetic, is_utility, signals), '
+  + 'score:photo_scores(scorer, scorer_version, aesthetic, is_utility, signals), '
   + 'labels:photo_scores(signals)';
 
 /** One embedded row, whichever shape PostgREST gave it. */
 type Embed<R> = R | R[] | null | undefined;
-type Row = Omit<GalleryPhoto, 'score' | 'kind'> & { photo_scores?: Embed<PhotoScore>; labels?: Embed<{ signals: unknown }> };
+type Row = Omit<GalleryPhoto, 'score' | 'kind'> & { score?: Embed<PhotoScore>; labels?: Embed<{ signals: unknown }> };
 const one = <R,>(e: Embed<R>): R | null => (Array.isArray(e) ? e[0] : e) ?? null;
 
 /**
@@ -58,11 +66,11 @@ export async function fetchGallery(placeId: string): Promise<GalleryPhoto[]> {
     // the shown scorer has not read still comes back, with no score. The
     // table keys a row on (photo, scorer) since 16 Oct 2026, so without it
     // a second scorer's row could be the one that arrived.
-    .eq('photo_scores.scorer', SHOWN.id)
+    .eq('score.scorer', SHOWN.id)
     .eq('labels.scorer', LABELS)
     .order('sort_order');
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as Row[]).map(({ photo_scores: sc, labels, ...photo }) => ({
+  return ((data ?? []) as unknown as Row[]).map(({ score: sc, labels, ...photo }) => ({
     ...photo,
     // An object, as PostgREST embeds a one-to-one (it still is, while
     // `photo_scores_one_per_photo` stands); an array, as it embeds a
