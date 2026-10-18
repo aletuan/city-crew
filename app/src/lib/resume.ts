@@ -40,6 +40,8 @@ export const RESUME_TTL_MS = 15 * 60 * 1000;
 export type Resume = {
   /** The tab the reader was on when asked, or null when unknown. */
   tab: string | null;
+  /** Copy for the final sign-up action. Other intents return to their screen. */
+  kind?: 'save' | 'collection';
   /** The act to finish, when finishing it is safe to do unasked. */
   run?: () => void;
   /** When it was asked. */
@@ -65,10 +67,15 @@ export function dropResume(): void {
  * clock that has moved backwards cannot say how old the act is.
  */
 export function takeResume(now: number, ttl: number = RESUME_TTL_MS): Resume | null {
-  const r = pending;
+  const r = peekResume(now, ttl);
   pending = null;
-  if (!r || r.at > now || now - r.at > ttl) return null;
   return r;
+}
+
+/** Read the destination without consuming it on the welcome screen. */
+export function peekResume(now: number, ttl: number = RESUME_TTL_MS): Resume | null {
+  const r = pending;
+  return !r || r.at > now || now - r.at > ttl ? null : r;
 }
 
 /**

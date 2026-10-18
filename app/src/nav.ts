@@ -178,7 +178,7 @@ export type RootStackParamList = {
 export type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 /**
- * Leave an auth screen for the tab it lives in.
+ * Leave auth for the pending task, or the Places home when none exists.
  *
  * `popToTop()` was not enough, and the reason is the trap `goTo` documents
  * below. A screen reached in a stack that had never mounted can be that
@@ -194,9 +194,11 @@ export type Nav = NativeStackNavigationProp<RootStackParamList>;
  * screen. Every one of these lives only in `ProfileStack`, so the root to
  * fall back to is never in question.
  */
-export function leaveAuth(navigation: Nav) {
+export function leaveAuth(navigation: Nav, fallback: 'Explore' | 'Profile' = 'Explore') {
+  const r = takeResume(Date.now());
   const deep = (navigation.getState()?.routes.length ?? 1) > 1;
-  if (deep) navigation.popToTop();
+  if (deep && r?.tab === 'Profile') navigation.goBack();
+  else if (deep) navigation.popToTop();
   else navigation.replace('ProfileHome');
   // Then whatever the sheet sent the reader here in the middle of — see
   // `lib/resume`. Taken here and not on the session: a new account has
@@ -208,12 +210,16 @@ export function leaveAuth(navigation: Nav) {
   // who is asking through its screen's latest render, and a frame is what
   // gives that render the time to happen. Run any sooner and the act sees
   // a guest, and raises the sheet it is meant to be finishing.
-  const r = takeResume(Date.now());
-  if (!r) return;
+
   requestAnimationFrame(() => {
-    const tab = returnTab(r);
-    if (tab && navRef.isReady()) (navRef.navigate as (name: string) => void)(tab);
-    if (r.run) requestAnimationFrame(r.run);
+    if (r?.tab) {
+      const tab = returnTab(r);
+      if (tab && navRef.isReady()) (navRef.navigate as (name: string) => void)(tab);
+    } else if (fallback === 'Explore') {
+      // A fresh visit to Places, not a detail left in that tab earlier.
+      goTo('Explore', { screen: 'ExploreHome' });
+    }
+    if (r?.run) requestAnimationFrame(r.run);
   });
 }
 export type RootRoute<T extends keyof RootStackParamList> = RouteProp<RootStackParamList, T>;

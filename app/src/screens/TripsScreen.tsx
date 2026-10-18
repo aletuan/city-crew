@@ -48,6 +48,7 @@ import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
+import { holdResume } from '../lib/resume';
 import { useAuth } from '../lib/auth';
 import { fromISO, minutesOf, toISO } from '../lib/day';
 import { type Trip, type TripStopRow } from '../lib/data';
@@ -419,7 +420,10 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           <GradientCta
             icon="log-in-outline"
             label={t('Sign in', 'Đăng nhập', 'サインイン')}
-            onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false })}
+            onPress={() => {
+              holdResume({ tab: 'Trips', at: Date.now() });
+              navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false });
+            }}
           />
         </View>
       </Screen>

@@ -13,6 +13,7 @@ import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
 import { FloatingPlane, HeartDoodle } from '../components/welcomeArt';
 import { isHandleFree, useAuth } from '../lib/auth';
+import { peekResume } from '../lib/resume';
 import { fixedOnForm } from '../lib/authfail';
 import { cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
@@ -405,6 +406,14 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   }
 
   if (step === 'welcome') {
+    const pending = peekResume(Date.now());
+    const continueLabel = pending?.kind === 'save'
+      ? t('Continue saving place', 'Tiếp tục lưu địa điểm', '場所の保存を続ける')
+      : pending?.kind === 'collection'
+        ? t('Continue creating collection', 'Tiếp tục tạo bộ sưu tập', 'コレクションの作成を続ける')
+        : pending
+          ? t('Return to what you were doing', 'Quay lại việc đang làm', '続きに戻る')
+          : t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる');
     return (
       <AuthScreen>
         {/* No marks here. The bar answers "how much longer", and the
@@ -467,7 +476,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           )}</Text>
         <PrimaryButton
           arrow
-          label={t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる')}
+          label={continueLabel}
           onPress={() => leaveAuth(navigation)}
           testID="signup-welcome-continue"
         />
@@ -500,8 +509,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         label={t('Display name', 'Tên hiển thị', '表示名')}
         placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力')}
         value={name}
+        error={error === 'need_name' ? failText(error) : null}
         onChangeText={(v) => {
           setName(v);
+          if (v.trim()) setError((current) => current === 'need_name' ? null : current);
           if (!handleTouched) setHandle(suggestHandle(v));
         }}
         autoComplete="name"
@@ -564,7 +575,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         returnKeyType="done"
         testID="signup-confirm"
       />
-      {error ? <FormError>{failText(error)}</FormError> : null}
+      {error && error !== 'need_name' ? <FormError>{failText(error)}</FormError> : null}
       <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} testID="signup-submit" />
       {/* This line used to be a joke — "you agree to keep your crew's
           plans awesome" — sitting in exactly the place where the two

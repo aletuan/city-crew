@@ -22,6 +22,8 @@
 // `vitest.config.ts` exists for.
 
 import React from 'react';
+import { dropResume, takeResume } from '../lib/resume';
+beforeEach(() => { dropResume(); });
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -170,6 +172,7 @@ describe('signed out', () => {
     expect(screen.queryByText('No trips yet')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(n.parent.navigate).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
+    expect(takeResume(Date.now())?.tab).toBe('Trips');
   });
 });
 

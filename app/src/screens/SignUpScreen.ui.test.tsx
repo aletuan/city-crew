@@ -14,7 +14,9 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
-import type { Nav } from '../nav';
+import { navRef, type Nav } from '../nav';
+import { dropResume, holdResume, peekResume } from '../lib/resume';
+beforeEach(() => { dropResume(); });
 
 // A session that does not exist until an account is made, which is what
 // the screen now depends on: it holds the taste until one lands and
@@ -715,6 +717,8 @@ describe('the ways out', () => {
   });
 
   it('starts exploring by leaving the auth stack behind', async () => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
     const navigation = nav();
     render(<SignUpScreen navigation={navigation} />);
     fillForm();
@@ -724,5 +728,56 @@ describe('the ways out', () => {
     // Two routes under this one, so `leaveAuth` pops to the tab root.
     expect(navigation.popToTop).toHaveBeenCalled();
     expect(navigation.replace).not.toHaveBeenCalled();
+    await waitFor(() => expect(go).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' }));
+    vi.restoreAllMocks();
+  });
+});
+
+
+describe('welcome resumes the pending intent', () => {
+  it.each([
+    ['save', 'Continue saving place'],
+    ['collection', 'Continue creating collection'],
+    [undefined, 'Return to what you were doing'],
+  ] as const)('keeps %s pending until the welcome button is pressed', async (kind, label) => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    const run = vi.fn();
+    holdResume({ tab: 'Collections', kind, run, at: Date.now() });
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+    const button = await screen.findByRole('button', { name: label });
+    expect(run).not.toHaveBeenCalled();
+    expect(peekResume(Date.now())).not.toBeNull();
+    fireEvent.click(button);
+    await waitFor(() => expect(run).toHaveBeenCalledOnce());
+    expect(go).toHaveBeenCalledWith('Collections');
+    expect(peekResume(Date.now())).toBeNull();
+    vi.restoreAllMocks();
+  });
+});
+
+
+describe('correcting the display name', () => {
+  it('keeps the missing-name error for whitespace, then clears it without resubmitting', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    submit();
+    expect(await screen.findByText('Tell us what to call you.')).toBeTruthy();
+    expect(screen.queryByTestId('auth-error')).toBeNull();
+    type(field.name(), '   ');
+    expect(screen.getByText('Tell us what to call you.')).toBeTruthy();
+    type(field.name(), 'Minh Anh');
+    expect(screen.queryByText('Tell us what to call you.')).toBeNull();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('does not clear an email error when the display name changes', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Minh Anh');
+    submit();
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    type(field.name(), 'Minh');
+    expect(screen.getByText('Enter your email address.')).toBeTruthy();
   });
 });
