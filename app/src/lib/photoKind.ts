@@ -21,10 +21,16 @@
 // rates food and drink higher than rooms on average (0.568 against
 // 0.481), so against the whole catalog a fair coffee photograph read as
 // a poor photograph (`photoScoreVision.ts`, `KIND_SPREAD`).
+//
+// `garden` came with the labels' v5 (owner, 18 Oct 2026): of the 725
+// photographs v4 would not bet on, half were a courtyard, a terrace or a
+// rooftop with the place's seats in it — neither a front, nor a room,
+// nor scenery. It has no spread of its own yet, so its standing is
+// against the catalog.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
 
-export const KINDS = ['food', 'interior', 'exterior', 'view', 'text'] as const;
+export const KINDS = ['food', 'interior', 'exterior', 'garden', 'view', 'text'] as const;
 export type PhotoKind = typeof KINDS[number];
 
 type T = (en: string, vi: string, ja: string) => string;
@@ -43,6 +49,7 @@ export const KIND_ICON: Record<PhotoKind, keyof typeof Ionicons.glyphMap> = {
   food: 'restaurant-outline',
   interior: 'home-outline',
   exterior: 'storefront-outline',
+  garden: 'leaf-outline',
   view: 'image-outline',
   text: 'document-text-outline',
 };
@@ -55,6 +62,7 @@ export function kindName(kind: PhotoKind, t: T): string {
     case 'food': return t('Food & drink', 'Đồ ăn & uống', '料理・ドリンク');
     case 'interior': return t('Inside', 'Nội thất', '店内');
     case 'exterior': return t('Front', 'Mặt tiền', '外観');
+    case 'garden': return t('Garden & terrace', 'Sân vườn', '庭・テラス');
     case 'view': return t('View', 'Cảnh', '景色');
     case 'text': return t('Menu & signs', 'Chữ, menu', 'メニュー・文字');
   }
@@ -67,6 +75,7 @@ export function kindNoun(kind: PhotoKind, t: T): string {
     case 'food': return t('food and drink', 'đồ ăn & uống', '料理・ドリンク');
     case 'interior': return t('interior', 'nội thất', '店内');
     case 'exterior': return t('storefront', 'mặt tiền', '外観');
+    case 'garden': return t('garden and terrace', 'sân vườn', '庭・テラス');
     case 'view': return t('view', 'cảnh', '景色');
     case 'text': return t('menu and sign', 'chữ, menu', 'メニュー・文字');
   }

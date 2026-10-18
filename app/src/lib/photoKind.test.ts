@@ -26,15 +26,15 @@ describe('kindOf', () => {
 
 describe('the words', () => {
   it('names every kind in the three languages, with its own mark', () => {
-    expect(KINDS.map((k) => kindName(k, en))).toEqual(['Food & drink', 'Inside', 'Front', 'View', 'Menu & signs']);
-    expect(KINDS.map((k) => kindName(k, vi))).toEqual(['Đồ ăn & uống', 'Nội thất', 'Mặt tiền', 'Cảnh', 'Chữ, menu']);
-    expect(KINDS.map((k) => kindName(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '景色', 'メニュー・文字']);
+    expect(KINDS.map((k) => kindName(k, en))).toEqual(['Food & drink', 'Inside', 'Front', 'Garden & terrace', 'View', 'Menu & signs']);
+    expect(KINDS.map((k) => kindName(k, vi))).toEqual(['Đồ ăn & uống', 'Nội thất', 'Mặt tiền', 'Sân vườn', 'Cảnh', 'Chữ, menu']);
+    expect(KINDS.map((k) => kindName(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '庭・テラス', '景色', 'メニュー・文字']);
     expect(new Set(KINDS.map((k) => KIND_ICON[k])).size).toBe(KINDS.length);
   });
   it('says each kind as it sits inside a sentence', () => {
-    expect(KINDS.map((k) => kindNoun(k, en))).toEqual(['food and drink', 'interior', 'storefront', 'view', 'menu and sign']);
-    expect(KINDS.map((k) => kindNoun(k, vi))).toEqual(['đồ ăn & uống', 'nội thất', 'mặt tiền', 'cảnh', 'chữ, menu']);
-    expect(KINDS.map((k) => kindNoun(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '景色', 'メニュー・文字']);
+    expect(KINDS.map((k) => kindNoun(k, en))).toEqual(['food and drink', 'interior', 'storefront', 'garden and terrace', 'view', 'menu and sign']);
+    expect(KINDS.map((k) => kindNoun(k, vi))).toEqual(['đồ ăn & uống', 'nội thất', 'mặt tiền', 'sân vườn', 'cảnh', 'chữ, menu']);
+    expect(KINDS.map((k) => kindNoun(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '庭・テラス', '景色', 'メニュー・文字']);
   });
   it('names both readers once a kind is shown', () => {
     expect(bothSources(vi)).toBe('Phân tích ảnh bằng Apple Vision và Claude.');

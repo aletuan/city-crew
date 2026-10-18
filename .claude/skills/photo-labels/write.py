@@ -21,8 +21,8 @@ import json
 import shlex
 import sys
 
-VERSION = 4
-KINDS = ('food', 'interior', 'exterior', 'view', 'text', 'other')
+VERSION = 5
+KINDS = ('food', 'interior', 'exterior', 'garden', 'view', 'text', 'other')
 ATTRS = ('brand', 'wide', 'green', 'daylight', 'people', 'staged')
 VALUE = {'t': True, 'f': False, 'n': None}
 

@@ -6,11 +6,16 @@
 --
 -- ── what it does ──
 --
--- Every hour, pick up to 240 stored photographs with no complete label at
--- the current version — `scorer_version` below is `VERSION` in
--- `_shared/photoLabels.ts`, and moves with it — and hand them to
--- `label-photos` with Haiku 5.5, 24 to a request. When nothing is missing
--- the pass makes no calls at all.
+-- Every hour, pick up to 240 stored photographs with no label at version
+-- 4 or later and hand them to `label-photos` with Haiku 5.5, 24 to a
+-- request; the function labels them at the current `VERSION`. When
+-- nothing is missing the pass makes no calls at all.
+--
+-- The 4 does not follow `VERSION` up to 5 (18 Oct 2026). v5 added the
+-- `garden` kind, and the owner had the photographs v4 was unsure of, or
+-- called `other`, asked again — not the 5,800 it was sure of, whose kinds
+-- v5 does not change. Raising this would ask every one of them again, at
+-- 240 an hour.
 --
 -- Why a pass and not a trigger on insert: a photograph is labelled from
 -- its file in the bucket, which `storage_path` names only once the file
