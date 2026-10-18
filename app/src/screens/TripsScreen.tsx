@@ -399,32 +399,45 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
             <Ionicons name="map" size={27} color={colors.accent} />
           </View>
           <Text style={s.firstTitle}>
-            {t('Sign in to keep your trips', 'Đăng nhập để lưu chuyến đi', 'サインインして旅程を保存')}
+            {t('Where to next?', 'Đi đâu tiếp theo?', '次はどこへ？')}
           </Text>
-          {/* What signing in buys, not what staying out costs — and the
-              old sentence was worse than merely glum: it promised that a
-              plan "stays on this phone until you do", and nothing here
-              keeps one. A trip lives in the `trips` table from the moment
-              it is saved; storage on the phone is a cache of that, keyed
-              per account. Built signed out, a plan is simply lost — which
-              is why the warning belongs at the moment somebody presses
-              save, and already lives there (see PlanEditScreen's caption),
-              rather than on a tab that is standing empty anyway. */}
           <Text style={s.firstBody}>
             {t(
-              'Keep your plans and pick them up any time, on any device.',
-              'Lưu kế hoạch của bạn và xem lại bất cứ lúc nào, trên mọi thiết bị.',
-              'プランを保存して、いつでもどの端末からでも見返せます。',
+              'Plan a trip your way.',
+              'Lên lịch trình theo cách bạn thích.',
+              '自分らしい旅を計画しましょう。',
             )}
           </Text>
           <GradientCta
-            icon="log-in-outline"
-            label={t('Sign in', 'Đăng nhập', 'サインイン')}
+            wide
+            icon="sparkles-outline"
+            label={t('Try planning a trip', 'Thử lên kế hoạch', '旅の計画を試す')}
+            onPress={() => navigation.getParent()?.navigate('Ideas', { screen: 'IdeasHome' })}
+          />
+          <Text style={s.guestHint}>
+            {t(
+              'No account needed',
+              'Không cần tài khoản',
+              'アカウント不要',
+            )}
+          </Text>
+        </View>
+        <View style={s.guestReturning}>
+          <Text style={s.guestHint}>
+            {t('Already have an account?', 'Đã có tài khoản?', 'アカウントをお持ちですか？')}
+          </Text>
+          <PressableScale
+            accessibilityRole="button"
+            style={s.guestSignIn}
             onPress={() => {
               holdResume({ tab: 'Trips', at: Date.now() });
               navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false });
             }}
-          />
+          >
+            <Text style={s.guestSignInText}>
+              {t('Sign in', 'Đăng nhập', 'サインイン')}
+            </Text>
+          </PressableScale>
         </View>
       </Screen>
     );
@@ -707,4 +720,9 @@ const s = StyleSheet.create({
     color: colors.textSecondary, fontSize: 15, lineHeight: 21,
     textAlign: 'center', marginBottom: 6,
   },
+  guestHint: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  guestReturning: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginHorizontal: space.page, marginBottom: space.titleToContent },
+  guestSignIn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 },
+  guestSignInText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold, textAlign: 'center' },
+
 });
