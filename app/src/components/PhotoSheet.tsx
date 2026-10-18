@@ -148,8 +148,13 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   const p = all[at];
   const frameW = width - space.page * 2;
   const frameH = frameHeight(frameW, height);
+  // The cover is a star beside the kind once there is a kind to sit
+  // beside (owner, 18 Oct 2026, from the "Cover Photo UI" board): the
+  // word under the standing was a third line saying one bit. With no
+  // kind it stays a word, since a lone star in the head would mark
+  // nothing.
   const status = [
-    p.is_cover ? t('Cover', 'Ảnh bìa', 'カバー') : null,
+    p.is_cover && !p.kind ? t('Cover', 'Ảnh bìa', 'カバー') : null,
     p.is_hidden ? t('Hidden', 'Đã ẩn', '非表示') : null,
   ].filter(Boolean).join(' · ');
   const count = `${at + 1}/${all.length}`;
@@ -243,6 +248,11 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
                 <View style={s.kind} testID="photo-sheet-kind">
                   <Ionicons name={KIND_ICON[p.kind]} size={20} color={colors.text} />
                   <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
+                  {p.is_cover && (
+                    <View accessibilityLabel={t('Cover', 'Ảnh bìa', 'カバー')} testID="photo-sheet-cover">
+                      <Ionicons name="star" size={16} color={colors.okInk} />
+                    </View>
+                  )}
                 </View>
               ) : null}
               {p.score && (
