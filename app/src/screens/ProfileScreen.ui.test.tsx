@@ -979,9 +979,9 @@ describe('show tips', () => {
     const divided = (r: HTMLElement) => r.outerHTML.includes('r-borderBottomWidth');
     expect(divided(theme)).toBe(true);
     expect(divided(row)).toBe(false);
-    // The tips' own bulb, and a line saying which tips.
+    // The tips' own bulb, with a single-line label.
     expect(row.querySelector('[data-icon="bulb-outline"]')).toBeTruthy();
-    expect(row.textContent).toContain('Short how-tos in your collections.');
+    expect(row.textContent).not.toContain('Short how-tos in your collections.');
     await waitFor(() => expect(tipsSwitch().disabled).toBe(false));
   });
 
