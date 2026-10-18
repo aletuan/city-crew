@@ -7,7 +7,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
-import TipBox from '../components/TipBox';
 import { KindPills } from '../components/KindPill';
 import {
   AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
@@ -35,7 +34,6 @@ import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
-import type { TipId } from '../lib/tips';
 import { colors, display, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
@@ -474,38 +472,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // have to dismiss twice.
   const act = (run: () => void) => { setMenu(false); run(); };
 
-  // The moves a tip explains that have been made on this visit. Their
-  // tips retire (see `TipBox`): once you have done it, you know how.
-  const [done, setDone] = useState<TipId[]>([]);
-  const did = (id: TipId) => setDone((d) => (d.includes(id) ? d : [...d, id]));
-
   // Explore is where places are, and saving one from there already offers
   // this list by name. A picker that wrote straight back into this
   // collection would be better, and is a screen rather than a button.
   const addPlace = () => {
-    did('add');
     navigation.getParent()?.navigate('Explore');
   };
 
-  // The edit tip retires when an edit is saved, not when the form opens.
-  // Opening it and backing out is a look, not a lesson, and it retired the
-  // tip for good. The form writes and reloads the list this screen reads,
-  // so a saved edit arrives here as a changed title, description or cover:
-  // the effect runs on that change, and only one the form was opened for
-  // counts.
-  const editFields = col
-    ? `${title}\n${desc}\n${col.cover?.id ?? ''}\n${col.kinds_hidden ?? []}\n${col.kinds_added ?? []}`
-    : null;
-  const editing = useRef(false);
-  useEffect(() => {
-    if (!editing.current) return;
-    editing.current = false;
-    did('edit');
-  }, [editFields]);
-
   const edit = () => {
     if (!col) return;
-    editing.current = true;
     navigation.navigate('CollectionForm', { slug: col.slug, title, desc });
   };
 
@@ -540,7 +515,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         mine.reload();
         cols.reload();
         showBanner(next ? 'public' : 'private');
-        if (next) did('publish');
       })
       .catch((e: Error) => Alert.alert(
         next
@@ -699,8 +673,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // screen would be a move among places the reader cannot see, and the
   // list's real order is the one that saves.
   const canArrange = owned && drafted.length > 1 && !narrowed;
-  // A card has moved on this visit: the reorder tip has been acted on.
-  const moved = saveState !== 'idle';
 
   // ── the card in the finger ──
   //
@@ -793,7 +765,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     const cityId = copyCityId;
     if (!cityId) return;
     const sourceDesc = t(col.desc_en, col.desc_vi, col.desc_ja)?.trim() || '';
-    did('copy');
     navigation.navigate('CollectionForm', {
       copyFrom: {
         sourceId: col.id,
@@ -809,20 +780,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     });
   };
   copyRef.current = copy;
-
-  // The tips true of this list as it stands, in the order a first visit
-  // meets them. Held back until everything has loaded: a list whose owner
-  // is not known yet would be offered the visitor's tip.
-  const tipsHere: TipId[] = !col || loading ? [] : owned
-    ? [
-      ...(canArrange ? ['reorder' as const] : []),
-      // Not while places are still under review: the tip would point at a
-      // switch that says no.
-      ...(!isPublic && !blocked ? ['publish' as const] : []),
-      'edit',
-      'add',
-    ]
-    : copyCityId ? ['copy'] : [];
 
   const remove = () => Alert.alert(
     t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？'),
@@ -1377,11 +1334,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       right={headerRight}
     >
       <AmbientWarmth />
-      {/* Under the title, before anything else: one tip a visit, about
-          what can be done with this list. */}
-      {/* Keyed by the reader, so another account signing in starts from
-          its own record rather than the last one's chosen tip. */}
-      <TipBox key={uid ?? 'guest'} reader={uid} eligible={tipsHere} done={moved ? [...done, 'reorder'] : done} />
       {/* What just happened, for three seconds — see `showBanner`. Above
           the description rather than floating over the list: it is about
           the collection as a whole, and a toast that covers the first

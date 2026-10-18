@@ -12,3 +12,11 @@ Mỗi bước hiển thị tiến độ x/4. Tiếp theo chuyển sang phần gi
 ## TODO
 
 - Khi có website hướng dẫn sản phẩm với URL chính thức, bổ sung link “Hướng dẫn sử dụng City Crew” ở bước cuối. Không hiển thị link giả trong lúc chưa có website.
+
+## Hồ sơ và xem lại
+
+“Hiện hướng dẫn” thay thế setting gợi ý Collection; không còn các hộp TipBox trong Collection. Switch bật/tắt lưu độc lập với tiến độ: hoàn tất 4/4 vẫn bật, không tự phát lại. “Xem lại hướng dẫn” xuất hiện khi bật và đưa người dùng về Explorer, bắt đầu từ 1/4. Bật switch chỉ hiện lời mời có nút “Bắt đầu”, không tự chuyển màn hình. Lời mời có thể đóng và không tự hết hạn.
+
+Bỏ qua, × hoặc đóng lớp hướng dẫn sẽ tắt switch và hiện thông báo cách bật lại trong Hồ sơ trong 10 giây, kèm nút đóng và thông báo cho trình đọc màn hình. Bấm control thật kết thúc lượt hướng dẫn, ghi tiến độ và thực hiện hành động; không tắt setting. Người dùng có thể chủ động xem lại sau đó. Đăng nhập/mở lại app không tự phát tiếp một lượt đang dở.
+
+Trạng thái lưu trên thiết bị theo ID tài khoản (`highlight.v1:<uid>`), khách có key riêng. Không dùng email để định danh và không kế thừa record gợi ý Collection cũ. Khi xoá tài khoản thành công, record được xoá; đăng ký lại với cùng email tạo ID mới và onboarding bắt đầu lại (vẫn tôn trọng pending action nếu có trong lần đăng ký mới). Không tự khởi chạy cho tài khoản cũ chỉ vì chưa có record. Trạng thái chưa đồng bộ giữa các thiết bị.

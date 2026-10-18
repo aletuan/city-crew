@@ -400,8 +400,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The account is gone server-side; the local sign-out only clears
     // this device's stored session, and failing at that must not make a
     // completed deletion look like it did not happen.
+    // Guidance belongs to an account ID, never an email or this device.
+    // Remove its local record too; registering again gets a fresh ID and tour.
+    if (userId) await AsyncStorage.removeItem(`highlight.v1:${userId}`).catch(() => {});
     await supabase.auth.signOut().catch(() => {});
-  }, []);
+  }, [userId]);
 
   const value = useMemo<Auth>(() => {
     return {

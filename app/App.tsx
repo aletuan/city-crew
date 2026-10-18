@@ -37,7 +37,7 @@ import WelcomeSheet from './src/components/WelcomeSheet';
 import ShareShield from './src/components/ShareShield';
 import { SignupTourProvider } from './src/components/SignupTour';
 import { TabBarDuckProvider } from './src/components/tabBarDuck';
-import { navRef, type RootStackParamList } from './src/nav';
+import { goTo, navRef, type RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import AddPlaceScreen from './src/screens/AddPlaceScreen';
@@ -372,7 +372,7 @@ function Root() {
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
                       <TabBarDuckProvider>
-                        <SignupTourProvider getRoute={() => navRef.getCurrentRoute()?.name}><Tabs /></SignupTourProvider>
+                        <SignupTourProvider onReplay={() => goTo('Explore', { screen: 'ExploreHome' })} getRoute={() => navRef.getCurrentRoute()?.name}><Tabs /></SignupTourProvider>
                       </TabBarDuckProvider>
                     </SaveProvider>
                     </CheckinsProvider>
