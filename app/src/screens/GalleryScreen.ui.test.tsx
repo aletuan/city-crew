@@ -808,20 +808,23 @@ describe('scoring', () => {
     expect(screen.queryByTestId('scored-card')).toBeNull();
   });
 
-  it('puts the number and its reasons in the photo\'s sheet, above what can be done to it', async () => {
+  // The reasons are the analysis rows', not a sentence in the head that
+  // said them twice (owner, 18 Oct 2026).
+  it('puts the number in the photo\'s sheet above what can be done to it, and its reasons in the analysis', async () => {
     show([photo('a', { score: read(0.68) }), photo('b', { sort_order: 1 })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
     const ten = await screen.findByTestId('score-ten');
     expect(ten.textContent).toContain('8.4');
     expect(ten.textContent).toContain('Very good');
-    expect(screen.getByTestId('score-why').textContent).toBe('Well lit.');
-    // In reading order: the number and why, then the rows.
+    expect(screen.queryByTestId('score-why')).toBeNull();
+    // In reading order: the number, then the rows.
     const sheet = screen.getByTestId('photo-sheet');
-    const why = screen.getByTestId('score-why');
     const cover = screen.getByRole('button', { name: 'Make it the cover' });
-    expect(why.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(sheet.contains(why)).toBe(true);
+    expect(ten.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sheet.contains(ten)).toBe(true);
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.getByText('Well lit')).toBeTruthy();
   });
 
   it('says nothing of a score for a photo nobody has read', async () => {

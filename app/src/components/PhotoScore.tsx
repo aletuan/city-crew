@@ -188,10 +188,9 @@ export function ScoreTen({ score, onDark }: {
  * scorer's scales — its number, which every scorer shares, is still
  * `ScoreTen`'s to show.
  *
- * `lead`: the sentence is the head of the photo sheet, opposite the
- * number, where "Ảnh 2/6" used to be (owner, 16 Oct 2026) — the count
- * already sits on the photograph, so the head says what the photograph
- * is like instead of which one it is.
+ * Shown in the full-screen viewer, which has no analysis rows. The photo
+ * sheet led with it from 16 Oct 2026 and dropped it on 18 Oct: built from
+ * the same findings as the rows under it, it said them twice (owner).
  *
  * Who measured is not said here any more. "Analysed on this phone by
  * Apple Vision" is a technical fact a guide does not act on, so it moved
@@ -199,13 +198,13 @@ export function ScoreTen({ score, onDark }: {
  * it has asked for that depth — and where it still tells two scorers'
  * numbers apart once there is more than one.
  */
-export function ScoreWhy({ score, onDark, lead }: { score: PhotoScore; onDark?: boolean; lead?: boolean }) {
+export function ScoreWhy({ score, onDark }: { score: PhotoScore; onDark?: boolean }) {
   const { t } = useI18n();
   const how = interpreterOf(score.scorer);
   if (score.aesthetic == null || !how) return null;
   return (
     <Text
-      style={[s.whyText, lead && s.whyLead, onDark && s.whyTextDark]}
+      style={[s.whyText, onDark && s.whyTextDark]}
       testID="score-why"
     >
       {how.explain(score, t)}
@@ -533,8 +532,6 @@ const s = StyleSheet.create({
   bandTextDark: { color: onPhoto.text },
   whyTextDark: { color: onPhoto.text },
   whyText: { color: colors.textSecondary, fontSize: 15, lineHeight: 21 },
-  // The sheet's head: the text's own ink and a step up, opposite the number.
-  whyLead: { color: colors.text, fontSize: 17, lineHeight: 23, fontWeight: font.semibold },
   sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   whySource: { flexShrink: 1, color: colors.textTertiary, fontSize: 12 },
 
