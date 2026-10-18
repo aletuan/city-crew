@@ -156,6 +156,22 @@ describe('ScoreDetails', () => {
     expect(screen.queryByTestId('score-detail-green')).toBeNull();
   });
 
+  // With a sure kind, the number stands among that kind (0.635 is 80%
+  // of the catalog, 90% of interiors), and both readers are named.
+  it('places the number among its own kind, and names Claude beside Vision', () => {
+    render(<ScoreDetails score={measured} kind="interior" open onToggle={() => {}} />);
+    expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 90% of the catalog\'s interior photos');
+    expect(screen.getByTestId('score-source').textContent).toBe('Photo analysed by Apple Vision and Claude.');
+  });
+
+  // A kind too few to have a spread of its own: the catalog's standing,
+  // still with both readers named, since the kind is shown above.
+  it('falls back to the whole catalog for a kind with no spread', () => {
+    render(<ScoreDetails score={measured} kind="view" open onToggle={() => {}} />);
+    expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 80% of the catalog\'s photos');
+    expect(screen.getByTestId('score-source').textContent).toBe('Photo analysed by Apple Vision and Claude.');
+  });
+
   // Who measured, for the reader who opened the analysis — last, and only
   // once it is open.
   it('says who measured, last, once opened', () => {

@@ -1,0 +1,78 @@
+// What a photograph shows, as the photo sheet says it (docs/photo-labels.md
+// §11, part C; owner, 18 Oct 2026).
+//
+// The kind comes from the photo labels — the `claude-labels` row of
+// `photo_scores`, written on City Crew's side by the `label-photos`
+// function — not from anything the phone measured. It is the one label
+// the sheet shows: on 24 photographs no definition had been written from
+// (round 3c), the model and the owner agreed on all 24 kinds, where the
+// attributes still miss in ways a guide would see (a hand counted as a
+// person, a few street trees as greenery).
+//
+// A kind is said only when it is sure. The model marks one `unsure`
+// whenever it would not bet on it — 11% of the catalog — and `other` is
+// "none of these", which tells a guide nothing; both say nothing here,
+// as does a photograph not labelled yet (a guide's upload waits up to an
+// hour for the hourly pass, `label-photos/cron.sql`).
+//
+// The kind does two things in the sheet. It names what the photograph
+// is, beside the reasons; and it lets "scores higher than X%" compare a
+// latte with lattes instead of with the whole catalog — Apple Vision
+// rates food and drink higher than rooms on average (0.568 against
+// 0.481), so against the whole catalog a fair coffee photograph read as
+// a poor photograph (`photoScoreVision.ts`, `KIND_SPREAD`).
+
+import type Ionicons from '@expo/vector-icons/Ionicons';
+
+export const KINDS = ['food', 'interior', 'exterior', 'view', 'text'] as const;
+export type PhotoKind = typeof KINDS[number];
+
+type T = (en: string, vi: string, ja: string) => string;
+
+/** The kind a sheet may say, or null: not labelled, labelled unsure, or
+ *  none of the kinds above. */
+export function kindOf(labels: unknown): PhotoKind | null {
+  if (!labels || typeof labels !== 'object') return null;
+  const l = labels as { kind?: unknown; unsure?: unknown };
+  if (l.unsure === true) return null;
+  return KINDS.find((k) => k === l.kind) ?? null;
+}
+
+/** The mark beside each kind: Ionicons outlines, like the analysis rows. */
+export const KIND_ICON: Record<PhotoKind, keyof typeof Ionicons.glyphMap> = {
+  food: 'restaurant-outline',
+  interior: 'home-outline',
+  exterior: 'storefront-outline',
+  view: 'image-outline',
+  text: 'document-text-outline',
+};
+
+/** A kind's name, as the label under the reasons. The Vietnamese is the
+ *  label rounds' own words (`dashboard/src/labelRound.js`), which the
+ *  owner answered in. */
+export function kindName(kind: PhotoKind, t: T): string {
+  switch (kind) {
+    case 'food': return t('Food & drink', 'Đồ ăn & uống', '料理・ドリンク');
+    case 'interior': return t('Inside', 'Nội thất', '店内');
+    case 'exterior': return t('Front', 'Mặt tiền', '外観');
+    case 'view': return t('View', 'Cảnh', '景色');
+    case 'text': return t('Menu & signs', 'Chữ, menu', 'メニュー・文字');
+  }
+}
+
+/** The same, as it sits inside a sentence: "higher than 40% of the
+ *  catalog's food and drink photos". */
+export function kindNoun(kind: PhotoKind, t: T): string {
+  switch (kind) {
+    case 'food': return t('food and drink', 'đồ ăn & uống', '料理・ドリンク');
+    case 'interior': return t('interior', 'nội thất', '店内');
+    case 'exterior': return t('storefront', 'mặt tiền', '外観');
+    case 'view': return t('view', 'cảnh', '景色');
+    case 'text': return t('menu and sign', 'chữ, menu', 'メニュー・文字');
+  }
+}
+
+/** Who said what, once a kind is shown: Apple Vision measured, Claude
+ *  named the kind (owner's words, 18 Oct 2026). */
+export const bothSources = (t: T) =>
+  t('Photo analysed by Apple Vision and Claude.', 'Phân tích ảnh bằng Apple Vision và Claude.', 'Apple VisionとClaudeで写真を分析。');

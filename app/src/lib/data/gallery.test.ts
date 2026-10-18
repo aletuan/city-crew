@@ -21,7 +21,7 @@ describe('fetchGallery', () => {
   // gallery could see them.
   it('reads every photograph on the place, source included, in order', async () => {
     fake().replies({ data: [{ id: 'a', sort_order: 0 }] });
-    expect(await fetchGallery('place-1')).toEqual([{ id: 'a', sort_order: 0, score: null }]);
+    expect(await fetchGallery('place-1')).toEqual([{ id: 'a', sort_order: 0, score: null, kind: null }]);
     const q = fake().log[0];
     expect(q).toMatchObject({ table: 'place_photos', op: 'select' });
     expect(q.filters[0]).toEqual(['place_id', 'place-1']);
@@ -47,7 +47,9 @@ describe('fetchGallery', () => {
   it('asks for the shown scorer\'s score alone', async () => {
     fake().replies({ data: [] });
     await fetchGallery('place-1');
-    expect(fake().log[0].filters).toEqual([['place_id', 'place-1'], ['photo_scores.scorer', 'apple-vision']]);
+    expect(fake().log[0].filters).toEqual([
+      ['place_id', 'place-1'], ['photo_scores.scorer', 'apple-vision'], ['labels.scorer', 'claude-labels'],
+    ]);
   });
 
   // The score is embedded, so the gallery costs one read and not two.
@@ -64,6 +66,22 @@ describe('fetchGallery', () => {
     // The embed's own key does not survive into the photograph.
     expect(got[0]).not.toHaveProperty('photo_scores');
     expect(String(fake().log[0].payload)).toMatch(/photo_scores\(scorer, scorer_version, aesthetic, is_utility, signals\)/);
+  });
+
+  // The labels ride in the same read, under their own name, and come out
+  // as the kind the sheet may say — nothing when unsure or none.
+  it('carries each photograph\'s kind from its labels, and only a sure one', async () => {
+    fake().replies({ data: [
+      { id: 'a', labels: { signals: { kind: 'food' } } },
+      { id: 'b', labels: [{ signals: { kind: 'exterior' } }] },
+      { id: 'c', labels: [{ signals: { kind: 'view', unsure: true } }] },
+      { id: 'd', labels: [] },
+      { id: 'e' },
+    ] });
+    const got = await fetchGallery('place-1');
+    expect(got.map((p) => p.kind)).toEqual(['food', 'exterior', null, null, null]);
+    expect(got[0]).not.toHaveProperty('labels');
+    expect(String(fake().log[0].payload)).toContain('labels:photo_scores(signals)');
   });
 
   it('is an empty gallery, not a crash, when the reply carries no rows', async () => {

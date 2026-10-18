@@ -12,6 +12,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, type ColorValue, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { band, bandLabel, interpreterOf, toTen, type Detail, type PhotoScore } from '../lib/photoScore';
+import { bothSources, kindNoun, type PhotoKind } from '../lib/photoKind';
 import { percentText } from '../lib/standing';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
@@ -372,14 +373,19 @@ const BAND_TEXT = {
  * sheet's to keep, so it stays open as the guide swipes on. Nothing for a
  * scorer this build cannot read, or a row with no number.
  */
-export function ScoreDetails({ score, open, onToggle }: {
+export function ScoreDetails({ score, kind, open, onToggle }: {
   score: PhotoScore;
+  /** What the photograph shows, when the photo labels are sure of it
+   *  (`photoKind`): the standing is then among its own kind, where the
+   *  scorer has a spread for it, and the source names both readers. */
+  kind?: PhotoKind | null;
   open: boolean;
   onToggle: () => void;
 }) {
   const { t } = useI18n();
   const how = interpreterOf(score.scorer);
   if (score.aesthetic == null || !how) return null;
+  const among = kind ? how.standingAmong(score, kind) : null;
   const standing = how.standing(score);
   const rows = how.details(score, t);
   const tips = how.suggestions(score, t);
@@ -398,7 +404,15 @@ export function ScoreDetails({ score, open, onToggle }: {
       </PressableScale>
       {open && (
         <View style={s.detailBody}>
-          {standing !== null && (
+          {among !== null && kind ? (
+            <Text style={s.standing} testID="score-standing">
+              {t(
+                `Scores higher than ${percentText(among)}% of the catalog's ${kindNoun(kind, t)} photos`,
+                `Điểm cao hơn ${percentText(among)}% ảnh ${kindNoun(kind, t)} trong catalog`,
+                `カタログの${kindNoun(kind, t)}写真の${percentText(among)}%より高得点`,
+              )}
+            </Text>
+          ) : standing !== null && (
             <Text style={s.standing} testID="score-standing">
               {t(
                 `Scores higher than ${percentText(standing)}% of the catalog's photos`,
@@ -432,7 +446,7 @@ export function ScoreDetails({ score, open, onToggle }: {
               it. */}
           <View style={s.sourceRow} testID="score-source">
             <Ionicons name="information-circle-outline" size={14} color={colors.textTertiary} />
-            <Text style={s.whySource}>{how.source(t)}</Text>
+            <Text style={s.whySource}>{kind ? bothSources(t) : how.source(t)}</Text>
           </View>
         </View>
       )}
