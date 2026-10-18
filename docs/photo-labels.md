@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v9
+## 3. Bộ nhãn v10
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -38,9 +38,9 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | Giá trị | Nghĩa | Ở các vòng chấm tay |
 |---|---|---|
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
-| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Hành lang có mái nhìn ra sân trong là Nội thất | P |
-| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Thư viện, bảo tàng, trung tâm thương mại là Mặt tiền; đền chùa, nhà thờ, tượng đài là Văn hóa | P |
-| `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Nhìn từ đường như mặt tiền thì là Mặt tiền; có mái và tường bao thì là Nội thất | (từ v5, thu hẹp ở v6) |
+| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Chỉ khi chụp từ trong phòng: cùng căn phòng đó nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền | P |
+| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Thư viện, bảo tàng, trung tâm thương mại là Mặt tiền; đền chùa, nhà thờ, tượng đài là Văn hóa. Căn phòng nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền, kể cả khi phòng chiếm cả khung | P |
+| `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Cổng của quán nhìn vào sân có cây xanh và bàn ghế là Sân vườn. Hiên, hè hay giàn có mái, mở ra ngoài ít nhất một phía, có chỗ ngồi của quán, là Sân vườn. Nhìn từ đường như mặt tiền thì là Mặt tiền; kín tường hay kính mọi phía thì là Nội thất | (từ v5, thu hẹp ở v6, thêm ở v9 và v10) |
 | `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
 | `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó | U |
@@ -82,6 +82,11 @@ thể của ảnh (mục 13).
 **v9 (18/10/2026)** thêm vào Sân vườn: cổng hay lối vào của chính quán, nhìn
 vào sân có cây xanh và bàn ghế của quán, là Sân vườn (mục 13). Nhãn chủ sản
 phẩm sửa tay (`"by": "owner"`) không bao giờ bị gán lại.
+
+**v10 (18/10/2026)** chốt hai ranh giới mà phần lớn nhãn `unsure` còn lại
+vướng phải, theo quyết định của chủ sản phẩm: hiên có mái che, mở ra ngoài,
+có chỗ ngồi của quán là Sân vườn; căn phòng chụp từ ngoài qua kính là Mặt
+tiền (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -1149,3 +1154,33 @@ tiền, chủ yếu mặt tiền có bàn ngoài vỉa hè hay cổng không th�
 Chờ chủ sản phẩm duyệt tấm ảnh ghép trước khi gán lại các ảnh Mặt tiền,
 Phong cảnh và `unsure`.
 
+
+### Định nghĩa v10: hiên có mái và chụp qua kính (18/10/2026)
+
+**Vì sao.** Sau v9 còn 367 nhãn `unsure`, nên app không hiện loại cho những
+ảnh đó. Đọc ghi chú của chúng, hai nhóm lớn vướng cùng một chỗ: 72 ghi chú
+nhắc mái che (hiên, hè, giàn, mái hiên), 50 nhắc kính hay cửa sổ. Chủ sản
+phẩm quyết định:
+- **Hiên có mái che là Sân vườn**, nếu mở ra ngoài ít nhất một phía và có
+  chỗ ngồi của quán. Kín tường hay kính mọi phía thì vẫn là Nội thất.
+- **Chụp từ ngoài qua kính vào phòng là Mặt tiền**, kể cả khi căn phòng
+  chiếm cả khung. Nội thất chỉ khi chụp từ bên trong.
+
+Câu v2 "hành lang có mái nhìn ra sân trong là Nội thất" được bỏ, vì nó nói
+ngược lại quy tắc thứ nhất. `VERSION` lên 10; `label-photos` bản 11.
+
+**Đo trước khi ghi** (Haiku, không ghi), trên 398 ảnh: cả 367 nhãn `unsure`
+và 38 ảnh cổng của v9 (một ảnh cổng là nhãn của chủ sản phẩm, không hỏi lại):
+- **89 trong 367 nhãn `unsure` nay đã chắc**: 49 Sân vườn, 14 Mặt tiền,
+  8 Phong cảnh, 7 Văn hóa, 5 Nội thất, 3 Đồ ăn, 3 Ảnh ghép.
+- Ở hai nhóm mà v10 nhắm tới, 41 trong 122 ảnh nay đã chắc. Phần còn lại
+  vẫn `unsure`, chủ yếu là sân thượng mà toàn cảnh chiếm nửa khung, và
+  mặt tiền có vài bàn ngoài vỉa hè.
+- 31 ảnh cổng trước đây là Mặt tiền chắc chắn: 15 vẫn vậy, 6 thành Mặt tiền
+  `unsure`, 7 thành Sân vườn chắc, 3 thành Sân vườn `unsure`.
+- Haiku không trả lời giống hệt nhau giữa hai lần chạy, nên một phần thay
+  đổi ở những ảnh mà v10 không chạm tới là dao động của mô hình, không phải
+  của định nghĩa.
+
+126 ảnh (38 ảnh cổng và 88 ảnh khác nay đã chắc) được đưa lên một trang để
+chủ sản phẩm duyệt. Chưa gán lại catalog cho đến khi có câu trả lời.

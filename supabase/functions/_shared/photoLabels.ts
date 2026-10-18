@@ -1,5 +1,5 @@
 // What a photograph is, and the six things a cover is chosen by: the
-// photo labels, v9 (docs/photo-labels.md §3).
+// photo labels, v10 (docs/photo-labels.md §3).
 //
 // The one place they are defined. The `label-photos` function sends
 // DEFINITIONS to the model as its instructions; the `photo-labels` skill
@@ -13,7 +13,7 @@
 // key is added here and to the skill's query; a new kind, or a changed
 // meaning, bumps VERSION, and every older row is asked again.
 
-export const VERSION = 9;
+export const VERSION = 10;
 
 /** The scorer name the labels are stored under in `photo_scores`. */
 export const SCORER = "claude-labels";
@@ -65,14 +65,18 @@ export type Attr = typeof ATTRS[number];
  *  ruling on Bold Brew's red gate: a tree canopy over the place's own
  *  gate, its courtyard tables beyond, read as view or exterior; the owner
  *  called it garden, "because the gate is the house's", and added that a
- *  garden usually has greenery. */
+ *  garden usually has greenery. v10 (18 Oct 2026) settles the two
+ *  boundaries most of the remaining unsure labels sat on: a covered
+ *  terrace or veranda open to the outside is garden (65 unsure labels
+ *  named a roof), and a room seen from outside through glass or a window
+ *  is exterior (27 named the glass) — both the owner's rulings. */
 export const DEFINITIONS = `You label one photograph of a place in a city guide: a café, a restaurant, a bar, a shop, a museum, a park. Answer from the photograph alone.
 
 KIND — exactly one, by the subject: what fills most of the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
 - food: food or drink is the subject, even with a view behind it. A tray of drinks counts; a bar's back wall of bottles does not. Drinks on a table in front of a city view are food. Food or drinks on a table are food even when part of the room shows around them.
-- interior: inside the place: rooms, seating, counters, shelves, a staircase, with no food or drink as the subject. People in the room do not change it. A counter inside the room is interior, even with the place's sign lit on the wall behind it. A covered gallery looking into a courtyard is interior.
-- exterior: the place from outside, where the building, its front, its entrance or its sign fills most of the frame. A counter or kiosk seen from the street, outside the building, with the place's sign on it is exterior. A library, museum or mall whose building fills most of the frame is exterior even under a blue sky; a temple, a church or a monument is heritage.
-- garden: the place's own open-air seating is the subject: its tables, chairs, sofas, benches or loungers on a courtyard, a garden, a terrace, a rooftop, a balcony, a deck or by a pool. A path, steps, a bridge, a jetty or a lawn with no seats, or a few seats at the edge of a frame that scenery fills, is not garden: that is view. A public park, a lake shore or grounds open to everyone are view, benches and all. The place's own gate or entrance seen from outside, opening onto its courtyard or garden, with greenery and its seats beyond, is garden even when trees fill much of the frame. Otherwise, seen from the street as the place's front, it is exterior; under a roof with walls around, it is interior.
+- interior: inside the place: rooms, seating, counters, shelves, a staircase, with no food or drink as the subject. People in the room do not change it. A counter inside the room is interior, even with the place's sign lit on the wall behind it. Taken from inside the room only: the same room seen from outside, through its glass front or a window, is exterior.
+- exterior: the place from outside, where the building, its front, its entrance or its sign fills most of the frame. A counter or kiosk seen from the street, outside the building, with the place's sign on it is exterior. A library, museum or mall whose building fills most of the frame is exterior even under a blue sky; a temple, a church or a monument is heritage. A room seen from outside through glass or a window is exterior, even when the room fills the view.
+- garden: the place's own open-air seating is the subject: its tables, chairs, sofas, benches or loungers on a courtyard, a garden, a terrace, a rooftop, a balcony, a deck or by a pool. A path, steps, a bridge, a jetty or a lawn with no seats, or a few seats at the edge of a frame that scenery fills, is not garden: that is view. A public park, a lake shore or grounds open to everyone are view, benches and all. The place's own gate or entrance seen from outside, opening onto its courtyard or garden, with greenery and its seats beyond, is garden even when trees fill much of the frame. A covered terrace, veranda, porch or pergola, open to the outside on at least one side, with the place's seats, is garden, roof and all. Otherwise, seen from the street as the place's front, it is exterior; closed in by walls or glass on every side, it is interior.
 - heritage: a monument or a place of worship is the subject, seen from outside: a temple, a pagoda, a shrine, a church, a tomb or mausoleum, a citadel or a royal palace, a historic gate or tower, a statue, a memorial. It stays heritage standing in its grounds, so long as it is what the photograph is of. Inside such a building is interior. A park, a garden, a lawn or a lake with no such structure as its subject is view, even inside a heritage site.
 - view: scenery fills most of the frame: sky, water, greenery, a lawn, a park, grounds, a path or a bridge through them, a skyline, a sunset. A building or a monument small in scenery that fills the frame does not change it: that is view. A rooftop or terrace whose tables and chairs are the subject is garden; the same terrace with the skyline filling the frame and its seats only at the edge is view.
 - text: a menu, a board, a poster, or a sign or logo that fills the frame: something to read rather than look at. A poster or banner whose words are its point is text, even with photographs in it.
