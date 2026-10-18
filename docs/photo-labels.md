@@ -1352,3 +1352,26 @@ ngờ được chủ sản phẩm giữ là Văn hóa: OKKIO Caffe trong Bảo t
 Thư viện Bang Victoria, nhà thi đấu Lâm Viên và ảnh in cũ của The Refinery.
 Cả 28 ảnh được ghi với `"by": "owner"`. Đến đây có 220 nhãn của chủ sản
 phẩm, 156 ảnh Văn hóa chắc chắn, và còn 227 nhãn `unsure`.
+
+### Ảnh bìa chưa có biểu tượng loại (18/10/2026)
+
+Sau v13 còn 40 ảnh bìa không hiện biểu tượng loại:
+- 38 ảnh có nhãn `unsure`.
+- 1 ảnh là Khác (hộp sô-cô-la ở Maison Marou).
+- 1 ảnh chưa có nhãn nào, vì không nằm trong kho ảnh (Hoàng thành Thăng Long).
+
+Chủ sản phẩm duyệt cả 40 ảnh trên một trang và sửa 18 ảnh. Các nhóm sửa:
+- **Thành Văn hóa:** Công viên APEC, I-Museum, Hoàng thành, Hosier Lane, nhà
+  thờ ở 99/81 Coffee.
+- **Thành Phong cảnh:** Thảo Cầm Viên, và ba ảnh bàn ghế trước hồ, biển hay
+  phố (OKKIO Tự Do, Pépé La Poule, Sea & Sun 3).
+- **Thành Đồ ăn:** bàn tiệc ở Salmonoid, quầy đồ uống ở The 9 Sky, hộp sô-cô-la
+  ở Maison Marou.
+- **Từ Nội thất hay Phong cảnh thành Mặt tiền:** Hachibei, Thaiyen, Wego trong
+  sảnh, lối vào Toriki, A Dopo.
+- **Thành Sân vườn:** sân sỏi ở Hi Haven.
+
+22 ảnh còn lại giữ loại Claude đoán, coi như đúng. Cả 40 ảnh được ghi với
+`"by": "owner"`; ảnh Hoàng thành có loại nhưng các thuộc tính để trống. Từ
+đây mọi ảnh bìa đều có biểu tượng loại. Có 260 nhãn của chủ sản phẩm, và còn
+189 nhãn `unsure` ở những ảnh không phải ảnh bìa.
