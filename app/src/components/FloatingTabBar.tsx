@@ -33,6 +33,7 @@
 // The solid glyphs live in a window inside it, so a glyph is solid
 // exactly where the pill covers it, half and half mid-flight.
 
+import { useTourAnchor } from './SignupTour';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -123,6 +124,7 @@ const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionico
 };
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const collectionAnchor = useTourAnchor('collections', () => navigation.navigate('Collections'));
   const light = useScheme().scheme === 'light';
   const duck = useTabBarDuck();
 
@@ -365,6 +367,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           return (
             <PressableScale
               key={route.key}
+              anchorRef={route.name === 'Collections' ? collectionAnchor : undefined}
               // The whole cell is the target; the pill over it is only
               // the mark.
               containerStyle={s.tab}

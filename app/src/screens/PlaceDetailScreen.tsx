@@ -12,6 +12,7 @@
 // swallows it), the ink under the clock (`useOwnedStatusBar`), and the
 // two scrims that keep white glyphs readable over an unknown photograph.
 
+import { useTourAnchor } from '../components/SignupTour';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet,
@@ -144,6 +145,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // still loading would fire a request for every place you open.
   const elsewhere = usePlaceBySlug(!catalogLoading && !inCatalog ? route.params.slug : null);
   const place = inCatalog ?? elsewhere.data ?? undefined;
+  const saveAnchor = useTourAnchor('save', () => { if (place) save(place); }, () => navigation.isFocused());
   const loading = catalogLoading || elsewhere.loading;
   const [photoIndex, setPhotoIndex] = useState(0);
   // Back to the first page when the cover changes under the reader. The
@@ -476,6 +478,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 heart wired to component state: it filled in, it meant
                 nothing, and it forgot on the way back. */}
             <PressableScale
+              anchorRef={saveAnchor}
               onPress={() => save(place)} scaleTo={0.9} haptic="selection"
               containerStyle={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} style={s.fab}
               accessibilityRole="button"

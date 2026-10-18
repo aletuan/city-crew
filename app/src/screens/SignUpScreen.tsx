@@ -8,12 +8,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, StepDots, SwitchRow, useFailText,
 } from '../components/authUi';
+import { useSignupTour } from '../components/SignupTour';
 import LegalSheet from '../components/LegalSheet';
 import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
 import { FloatingPlane, HeartDoodle } from '../components/welcomeArt';
 import { isHandleFree, useAuth } from '../lib/auth';
-import { peekResume } from '../lib/resume';
+import { hasResume, peekResume } from '../lib/resume';
 import { fixedOnForm } from '../lib/authfail';
 import { cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
@@ -41,6 +42,8 @@ export const HANDLE_CHECK_MS = 500;
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { signUp, confirmSignUp, session } = useAuth();
+  const tour = useSignupTour();
+  const hadPending = useRef(hasResume());
   const failText = useFailText();
   const [name, setName] = useState('');
   // Suggested from the name until the moment it is edited, then left
@@ -283,6 +286,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
     run(async () => {
       // Held for the effect above: with confirmation on there is no
       // session yet, so the write waits for one rather than being lost.
+      hadPending.current ||= hasResume();
       before.current = session?.user?.id ?? null;
       setPendingTaste([...chosen]);
       const { needsConfirm } = await signUp(name.trim(), normalizeHandle(handle), email.trim(), password);
@@ -477,7 +481,11 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         <PrimaryButton
           arrow
           label={continueLabel}
-          onPress={() => leaveAuth(navigation)}
+          onPress={() => {
+            const eligible = !hadPending.current && !hasResume();
+            leaveAuth(navigation);
+            if (eligible && session?.user.id) tour.start(session.user.id);
+          }}
           testID="signup-welcome-continue"
         />
       </AuthScreen>

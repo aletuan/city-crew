@@ -22,6 +22,12 @@ import { CATEGORIES } from '../lib/categories';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
 
+const tourState = vi.hoisted(() => ({ step: -1, next: vi.fn() }));
+vi.mock('../components/SignupTour', async orig => ({
+  ...(await orig<Record<string, unknown>>()), useSignupTour: () => tourState,
+}));
+beforeEach(() => { tourState.step = -1; tourState.next.mockClear(); });
+
 type City = Record<string, unknown> & { id: string; short_en: string };
 
 const state = vi.hoisted(() => ({
@@ -1963,5 +1969,45 @@ describe('the scroll nudge', () => {
     act(() => { navigation.focus(); });
     settle();
     expect(shown()).toBe(false);
+  });
+});
+
+describe('signup highlight tour', () => {
+  it('returns a remembered map view to the list before looking for search', async () => {
+    await AsyncStorage.setItem('citycrew.explore.view', 'map');
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    const view = render(<ExploreScreen navigation={navigation} />);
+    await screen.findByTestId('places-map');
+    tourState.step = 0; view.rerender(<ExploreScreen navigation={navigation} />);
+    await screen.findByTestId('explore-list');
+    expect(screen.queryByTestId('places-map')).toBeNull();
+  });
+  it('scrolls to search and filter, then opens a real place and returns home', () => {
+    state.places.data = [place('p1')];
+    const navigation = nav();
+    const view = render(<ExploreScreen navigation={navigation} />);
+    const ref = spies.useScrollToTop.mock.calls.at(-1)?.[0] as { current: { getScrollResponder: () => unknown } };
+    const scroll = vi.fn();
+    vi.spyOn(ref.current, 'getScrollResponder').mockReturnValue({ scrollTo: scroll });
+    tourState.step = 0;
+    measureHeader(600);
+    expect(scroll).toHaveBeenLastCalledWith({ y: 0, animated: false });
+    tourState.step = 1; view.rerender(<ExploreScreen navigation={navigation} />);
+    expect(scroll).toHaveBeenLastCalledWith({ y: 520, animated: false });
+    tourState.step = 2; view.rerender(<ExploreScreen navigation={navigation} />);
+    expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'p1' });
+    tourState.step = 3; view.rerender(<ExploreScreen navigation={navigation} />);
+    expect(spies.goTo).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' });
+    expect(scroll).toHaveBeenLastCalledWith({ y: 0, animated: false });
+    tourState.step = -1; view.rerender(<ExploreScreen navigation={navigation} />);
+  });
+  it('skips the save example when there are no real places', () => {
+    state.places.data = [];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    tourState.step = 2; measureHeader(600);
+    expect(tourState.next).toHaveBeenCalledOnce();
+    expect(navigation.navigate).not.toHaveBeenCalled();
   });
 });

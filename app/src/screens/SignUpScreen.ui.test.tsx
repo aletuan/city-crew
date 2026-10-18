@@ -32,6 +32,12 @@ const auth = vi.hoisted(() => {
     confirmSignUp: vi.fn(async () => { land(); }),
   };
 });
+const startTour = vi.hoisted(() => vi.fn());
+vi.mock('../components/SignupTour', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useSignupTour: () => ({ start: startTour }),
+}));
+beforeEach(() => { startTour.mockClear(); });
 const savePreferences = vi.hoisted(() => vi.fn(async () => {}));
 const isHandleFree = vi.hoisted(() => vi.fn(async () => true));
 vi.mock('../lib/auth', () => ({
@@ -749,11 +755,13 @@ describe('welcome resumes the pending intent', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
     const button = await screen.findByRole('button', { name: label });
     expect(run).not.toHaveBeenCalled();
+    expect(startTour).not.toHaveBeenCalled();
     expect(peekResume(Date.now())).not.toBeNull();
     fireEvent.click(button);
     await waitFor(() => expect(run).toHaveBeenCalledOnce());
     expect(go).toHaveBeenCalledWith('Collections');
     expect(peekResume(Date.now())).toBeNull();
+    expect(startTour).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
 });
@@ -779,5 +787,31 @@ describe('correcting the display name', () => {
     expect(await screen.findByText('Enter your email address.')).toBeTruthy();
     type(field.name(), 'Minh');
     expect(screen.getByText('Enter your email address.')).toBeTruthy();
+  });
+});
+
+describe('signup-only guide eligibility', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockImplementation(async () => { auth.state.session = { user: { id: 'u1' } }; return { needsConfirm: false }; });
+    isHandleFree.mockResolvedValue(true);
+  });
+  it('starts only after the new account leaves welcome without a pending action', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+    const button = await screen.findByTestId('signup-welcome-continue');
+    expect(startTour).not.toHaveBeenCalled();
+    fireEvent.click(button);
+    expect(startTour).toHaveBeenCalledWith('u1');
+  });
+  it('never starts for an expired or consumed intent captured before registration', async () => {
+    holdResume({ tab: 'Explore', kind: 'save', at: Date.now() - 3600000 });
+    render(<SignUpScreen navigation={nav()} />);
+    dropResume();
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+    fireEvent.click(await screen.findByTestId('signup-welcome-continue'));
+    expect(startTour).not.toHaveBeenCalled();
   });
 });
