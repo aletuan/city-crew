@@ -41,6 +41,7 @@
 // cosy, inviting space" would be a guess dressed as a reading.
 
 import type { Detail, Interpreter, PhotoScore, Signals, T, Tip } from './photoScore';
+import type { PhotoKind } from './photoKind';
 import { standingIn } from './standing';
 
 // ── the thresholds — first guesses, every one ──
@@ -360,6 +361,22 @@ const SHARPNESS_SPREAD = [67, 425, 701, 906, 1126, 1385, 1770, 2078, 2768, 3657,
 const AESTHETIC_SPREAD = [0.072, 0.368, 0.408, 0.442, 0.479, 0.508, 0.555, 0.596, 0.635, 0.696, 0.881] as const;
 
 /**
+ * Vision's number again, the same deciles, kind by kind: the 434
+ * photographs it had read by 18 Oct 2026 that also carry a photo label
+ * (`docs/photo-labels.md` §11). Vision rates them unevenly — food and
+ * drink average 0.568, rooms 0.481, fronts 0.483 — so a photograph is
+ * placed among its own kind where that kind has a spread to place it in.
+ * Three do: food and drink (154), interiors (172) and fronts (81). Views
+ * (19) and writing (6) are too few for ten deciles to mean anything, and
+ * fall back to the whole catalog's spread above. Read again with it.
+ */
+const KIND_SPREAD: Partial<Record<PhotoKind, readonly number[]>> = {
+  food: [0.212, 0.423, 0.468, 0.497, 0.537, 0.571, 0.605, 0.636, 0.669, 0.709, 0.919],
+  interior: [0.235, 0.367, 0.398, 0.424, 0.449, 0.473, 0.498, 0.523, 0.563, 0.614, 0.783],
+  exterior: [0.303, 0.352, 0.387, 0.417, 0.439, 0.453, 0.485, 0.535, 0.572, 0.632, 0.881],
+};
+
+/**
  * Light as a bar, 0–1. Mean luma 0.5 is the middle of the range and the
  * ends are black and white, so `1 − |b − 0.5| × 2` is how far the
  * exposure stayed from either; the second factor takes off every pixel
@@ -450,6 +467,13 @@ export function standingOf(score: Pick<PhotoScore, 'aesthetic'>): number | null 
   return score.aesthetic == null ? null : standingIn(score.aesthetic, AESTHETIC_SPREAD);
 }
 
+/** Where it stands among the catalog's photographs of the same kind;
+ *  null for a kind with no spread of its own (`KIND_SPREAD`). */
+export function standingAmongOf(score: Pick<PhotoScore, 'aesthetic'>, kind: PhotoKind): number | null {
+  const spread = KIND_SPREAD[kind];
+  return score.aesthetic == null || !spread ? null : standingIn(score.aesthetic, spread);
+}
+
 /**
  * Apple Vision, as the registry knows it. `version` is the reading's,
  * not the sentence's: raise it only when the module measures something
@@ -467,4 +491,5 @@ export const appleVision: Interpreter = {
   details: detailsOf,
   suggestions: suggestionsOf,
   standing: standingOf,
+  standingAmong: standingAmongOf,
 };

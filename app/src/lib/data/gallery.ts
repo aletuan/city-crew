@@ -13,18 +13,29 @@
 
 import { supabase } from '../supabase';
 import type { GalleryPhoto } from '../gallery';
+import { kindOf } from '../photoKind';
 import { SHOWN, type PhotoScore, type Reading, type ScorerKey } from '../photoScore';
+
+/** The photo labels' scorer name (`supabase/functions/_shared/photoLabels.ts`). */
+const LABELS = 'claude-labels';
 
 /** The catalog's photo columns plus `source`, which the sheet prints. */
 // `storage_path` rides along for one reason: a delete hands it to the
 // bucket once the row is gone (`removePlacePhoto`).
 // The score rides along embedded: the gallery is the one screen that
 // shows it, so it costs no other read. Only the shown scorer's row — see
-// the filter in `fetchGallery`.
+// the filter in `fetchGallery`. The photo labels ride along the same way,
+// as a second embed of the same table under its own name (`labels`),
+// narrowed to their own scorer: the sheet names a photograph's kind from
+// them (`photoKind`).
 const COLS = 'id, photo_uri, is_cover, is_hidden, sort_order, source, storage_path, '
-  + 'photo_scores(scorer, scorer_version, aesthetic, is_utility, signals)';
+  + 'photo_scores(scorer, scorer_version, aesthetic, is_utility, signals), '
+  + 'labels:photo_scores(signals)';
 
-type Row = Omit<GalleryPhoto, 'score'> & { photo_scores?: PhotoScore | PhotoScore[] | null };
+/** One embedded row, whichever shape PostgREST gave it. */
+type Embed<R> = R | R[] | null | undefined;
+type Row = Omit<GalleryPhoto, 'score' | 'kind'> & { photo_scores?: Embed<PhotoScore>; labels?: Embed<{ signals: unknown }> };
+const one = <R,>(e: Embed<R>): R | null => (Array.isArray(e) ? e[0] : e) ?? null;
 
 /**
  * Every photograph on the place, hidden ones included.
@@ -48,15 +59,17 @@ export async function fetchGallery(placeId: string): Promise<GalleryPhoto[]> {
     // table keys a row on (photo, scorer) since 16 Oct 2026, so without it
     // a second scorer's row could be the one that arrived.
     .eq('photo_scores.scorer', SHOWN.id)
+    .eq('labels.scorer', LABELS)
     .order('sort_order');
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as Row[]).map(({ photo_scores: sc, ...photo }) => ({
+  return ((data ?? []) as unknown as Row[]).map(({ photo_scores: sc, labels, ...photo }) => ({
     ...photo,
     // An object, as PostgREST embeds a one-to-one (it still is, while
     // `photo_scores_one_per_photo` stands); an array, as it embeds a
     // one-to-many, which it will be once that constraint goes. This
     // should not depend on which it decided.
-    score: (Array.isArray(sc) ? sc[0] : sc) ?? null,
+    score: one(sc),
+    kind: kindOf(one(labels)?.signals),
   }));
 }
 

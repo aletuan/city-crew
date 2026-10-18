@@ -190,7 +190,7 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
 | 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ✅ 17/10: vòng 3 (loại ảnh), 3b (sáu thuộc tính), 3c (24 ảnh mới: loại ảnh, thấy cả không gian, người). Kết quả ở mục 10. Dàn dựng chưa đo được vì chưa có ảnh nào chủ sản phẩm chọn "Có" |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ✅ 17/10: 6.467 ảnh, Haiku 5.5, định nghĩa v4 (mục 10). Ảnh thêm sau đó chưa được gán tự động: app và Data Desk chưa gọi `label-photos` |
-| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (đề xuất ở mục 11) | ◐ 17/10: phần A xong. Data Desk có trang `#/covers` (Cover review), câu trả lời lưu ở `cover_reviews`. 18/10: chủ sản phẩm duyệt 61 nơi, nhận 9 gợi ý (15%); luật ảnh bìa hiện tại không đủ để làm phần B (mục 11). Phần C chưa làm |
+| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (đề xuất ở mục 11) | ◐ 17/10: phần A xong. Data Desk có trang `#/covers` (Cover review), câu trả lời lưu ở `cover_reviews`. 18/10: chủ sản phẩm duyệt 61 nơi, nhận 9 gợi ý (15%); luật ảnh bìa hiện tại không đủ để làm phần B (mục 11); chủ sản phẩm chờ thêm dữ liệu rồi mới tìm luật mới. Phần C làm 18/10: sheet ảnh trong app hiện loại ảnh và so điểm trong cùng loại |
 
 **Tiêu chí để một nhãn được hiện trong app (bước 6):**
 - `kind` trùng với chủ sản phẩm từ **90%** trở lên.
@@ -724,4 +724,41 @@ bằng luật nào, là việc chủ sản phẩm quyết sau.
 Trang Cover review vẫn chạy. Job gán nhãn mỗi giờ đưa ảnh mới vào, nên
 những nơi mới bị gắn cờ sẽ hiện ở đó. Những nơi đã chọn giữ ảnh bìa không
 hiện lại.
+
+### Phần C (18/10/2026)
+
+Chủ sản phẩm duyệt phần C ở mức "nhãn loại và so sánh trong cùng loại".
+Lý do: một nhãn đơn thuần chỉ nhắc lại điều guide đã thấy trong ảnh, còn
+phép so sánh thì cho biết điều mà nhìn ảnh không thấy được.
+
+**Trong sheet ảnh của app:**
+- **Nhãn loại ảnh** nằm dưới câu nhận xét, kèm icon: Đồ ăn & uống, Nội
+  thất, Mặt tiền, Cảnh, Chữ, menu. Không hiện nhãn khi model đánh dấu
+  `unsure` (khoảng 11% số ảnh), khi loại là `other`, hoặc khi ảnh chưa có
+  nhãn (ảnh guide vừa tải lên phải chờ tối đa một giờ).
+- **"Điểm cao hơn X%"** so ảnh với các ảnh cùng loại trong catalog. Thang
+  so sánh đo trên 434 ảnh vừa có điểm Apple Vision vừa có nhãn (18/10).
+  - Apple Vision chấm ảnh đồ ăn cao hơn ảnh nội thất: trung bình 0,568 so
+    với 0,481. So với cả catalog, một ảnh cà phê bình thường vì thế trông
+    như một ảnh kém.
+  - Chỉ ba loại đủ ảnh để có thang riêng: đồ ăn & uống (154), nội thất
+    (172), mặt tiền (81). Cảnh (19) và chữ (6) vẫn so với cả catalog.
+  - Các thang này nằm ở `KIND_SPREAD` trong
+    `app/src/lib/photoScoreVision.ts`. Đo lại khi catalog lớn gấp đôi.
+- **Dòng nguồn** đổi thành "Phân tích ảnh bằng Apple Vision và Claude."
+  khi ảnh có nhãn loại, theo câu chữ chủ sản phẩm chọn. Ảnh không có nhãn
+  vẫn ghi "Phân tích trên máy bằng Apple Vision."
+- **Chưa hiện thuộc tính.** Ngay ở một quán (Backyard, Hải Phòng) đã có
+  hai lỗi mà guide sẽ thấy: một bàn tay bị tính là "có người", vài cây
+  ngoài đường bị tính là "cây xanh".
+
+**Rủi ro:** chủ sản phẩm xác nhận đã cân nhắc và chấp nhận (18/10), gồm
+cả điều khoản Google (C1). Chính sách quyền riêng tư đã nói việc ảnh được
+gửi tới Claude (PR #1026).
+
+**Kỹ thuật:**
+- Chỉ sửa JavaScript, lên bằng EAS Update.
+- Thư viện ảnh đọc nhãn trong cùng truy vấn với điểm Apple Vision, dưới tên
+  embed `labels`.
+- Code ở `app/src/lib/photoKind.ts`.
 

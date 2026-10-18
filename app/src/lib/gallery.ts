@@ -22,6 +22,7 @@
 // Plain TypeScript, tested from `gallery.test.ts`.
 
 import { canAddPhoto } from './guide';
+import type { PhotoKind } from './photoKind';
 import type { PhotoScore } from './photoScore';
 
 /** A photograph as the gallery reads it. `source` is printed, never
@@ -38,6 +39,9 @@ export type GalleryPhoto = {
   storage_path: string | null;
   /** Vision's reading, once somebody has asked for it (`photoScore`). */
   score?: PhotoScore | null;
+  /** What it shows, from the photo labels, when they are sure
+   *  (`photoKind`). */
+  kind?: PhotoKind | null;
 };
 
 /** Who may open the gallery at all: the same three conditions that let a

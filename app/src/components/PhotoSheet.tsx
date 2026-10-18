@@ -36,6 +36,15 @@
 // the number, so no gap opens below a name one line tall next to a
 // number and its word two lines tall.
 //
+// ── what the photograph shows ──
+//
+// Under the reasons, the photograph's kind — food and drink, inside, the
+// front, a view, writing — from the photo labels, with its mark (owner,
+// 18 Oct 2026, docs/photo-labels.md §11 part C). Said only when the
+// labels are sure of it (`photoKind`). Its larger use is below, in the
+// detailed analysis: "higher than X%" compares the photograph with its
+// own kind, and the source line names Claude beside Apple Vision.
+//
 // ── the frame's shape ──
 //
 // One square for every photograph of the gallery, the picture whole in
@@ -69,6 +78,7 @@ import { useSheetDrag } from './sheetDrag';
 import { PressableScale } from './ui';
 import type { GalleryPhoto } from '../lib/gallery';
 import { useI18n } from '../lib/i18n';
+import { KIND_ICON, kindName } from '../lib/photoKind';
 import { colors, font, onPhoto, radius, space } from '../theme';
 
 /** The most of the screen's height the picture may take. */
@@ -226,12 +236,18 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
           <View style={s.head}>
             <View style={s.name}>
               {p.score && <ScoreWhy score={p.score} lead />}
+              {p.kind ? (
+                <View style={s.kind} testID="photo-sheet-kind">
+                  <Ionicons name={KIND_ICON[p.kind]} size={15} color={colors.textSecondary} />
+                  <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
+                </View>
+              ) : null}
               {status ? <Text style={s.status} numberOfLines={1} testID="photo-sheet-status">{status}</Text> : null}
             </View>
             {p.score && <ScoreTen score={p.score} />}
           </View>
 
-          {p.score && <ScoreDetails score={p.score} open={detail} onToggle={() => setDetail((was) => !was)} />}
+          {p.score && <ScoreDetails score={p.score} kind={p.kind} open={detail} onToggle={() => setDetail((was) => !was)} />}
         </ScrollView>
 
         {/* The actions as a dock, pinned under the scroll (owner, 17 Oct
@@ -292,4 +308,6 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   name: { flex: 1, gap: 8 },
   status: { color: colors.textTertiary, fontSize: 14 },
+  kind: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kindText: { color: colors.textSecondary, fontSize: 14 },
 });

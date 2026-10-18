@@ -100,6 +100,25 @@ describe('PhotoSheet', () => {
     expect(screen.queryByTestId('photo-sheet-status')).toBeNull();
   });
 
+  // What it shows, from the photo labels, with its mark — and nothing
+  // where the labels are not sure (owner, 18 Oct 2026).
+  it('names what the photograph shows, and passes the kind to the analysis', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ kind: 'food', score })] })} />);
+    const kind = screen.getByTestId('photo-sheet-kind');
+    expect(kind.textContent).toBe('Food & drink');
+    expect(kind.querySelector('[data-icon="restaurant-outline"]')).not.toBeNull();
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.getByTestId('score-standing').textContent).toContain('food and drink photos');
+    expect(screen.getByTestId('score-source').textContent).toBe('Photo analysed by Apple Vision and Claude.');
+  });
+
+  it('says no kind when the labels have none to say', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ kind: null, score })] })} />);
+    expect(screen.queryByTestId('photo-sheet-kind')).toBeNull();
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.getByTestId('score-source').textContent).toBe('Analysed on this phone by Apple Vision.');
+  });
+
   it('says a hidden photograph is hidden, and a hidden cover both', () => {
     render(<PhotoSheet {...props({ photos: [photo({ is_hidden: true, is_cover: true })] })} />);
     expect(screen.getByTestId('photo-sheet-status').textContent).toBe('Cover · Hidden');

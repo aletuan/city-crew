@@ -27,6 +27,7 @@
 // better reading of the old rows is one number, not a migration.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
+import type { PhotoKind } from './photoKind';
 import { appleVision } from './photoScoreVision';
 
 /** The measurements, as a scorer hands them over and the row keeps
@@ -123,6 +124,9 @@ export type Interpreter = ScorerKey & {
   /** Where the photograph's number stands among this scorer's rows in
    *  the catalog, 0–1; null when it has none. */
   standing: (score: Pick<PhotoScore, 'aesthetic'>) => number | null;
+  /** The same among the catalog's photographs of one kind (`photoKind`);
+   *  null where this scorer has no spread for that kind. */
+  standingAmong: (score: Pick<PhotoScore, 'aesthetic'>, kind: PhotoKind) => number | null;
 };
 
 /** Every scorer whose rows the app can put into words, by name. */

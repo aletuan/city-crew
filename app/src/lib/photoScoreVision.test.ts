@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appleVision, detailsOf, explainScore, standingOf, suggestionsOf } from './photoScoreVision';
+import { appleVision, detailsOf, explainScore, standingAmongOf, standingOf, suggestionsOf } from './photoScoreVision';
 import type { PhotoScore, Signals, T } from './photoScore';
 
 // The sentence under Apple Vision's number: what its measurements mean,
@@ -30,6 +30,7 @@ describe('appleVision', () => {
     expect(appleVision.details).toBe(detailsOf);
     expect(appleVision.suggestions).toBe(suggestionsOf);
     expect(appleVision.standing).toBe(standingOf);
+    expect(appleVision.standingAmong).toBe(standingAmongOf);
   });
   it('explains with this file\'s sentence, and says who measured', () => {
     expect(appleVision.explain(row({ brightness: 0.5 }), en)).toBe('Well lit.');
@@ -342,3 +343,20 @@ describe('standingOf', () => {
     expect(standingOf({ aesthetic: null })).toBeNull();
   });
 });
+
+// Kind by kind, where a kind has a spread: the same number stands lower
+// among food and drink, which Vision rates higher, than among rooms.
+describe('standingAmongOf', () => {
+  it('places the number among its own kind', () => {
+    expect(standingAmongOf({ aesthetic: 0.571 }, 'food')).toBeCloseTo(0.5, 6);
+    expect(standingAmongOf({ aesthetic: 0.473 }, 'interior')).toBeCloseTo(0.5, 6);
+    expect(standingAmongOf({ aesthetic: 0.453 }, 'exterior')).toBeCloseTo(0.5, 6);
+    expect(standingAmongOf({ aesthetic: 0.55 }, 'food')!).toBeLessThan(standingAmongOf({ aesthetic: 0.55 }, 'interior')!);
+  });
+  it('is nothing for a kind too few to have a spread, or a row with no number', () => {
+    expect(standingAmongOf({ aesthetic: 0.5 }, 'view')).toBeNull();
+    expect(standingAmongOf({ aesthetic: 0.5 }, 'text')).toBeNull();
+    expect(standingAmongOf({ aesthetic: null }, 'food')).toBeNull();
+  });
+});
+
