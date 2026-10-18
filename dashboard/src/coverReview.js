@@ -44,6 +44,7 @@ export const KIND_LABEL = {
   heritage: 'Heritage',
   view: 'View',
   text: 'Text',
+  collage: 'Collage',
   other: 'Other',
 };
 

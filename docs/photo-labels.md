@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v7
+## 3. Bộ nhãn v8
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -43,7 +43,8 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Nhìn từ đường như mặt tiền thì là Mặt tiền; có mái và tường bao thì là Nội thất | (từ v5, thu hẹp ở v6) |
 | `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
 | `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh | S |
-| `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung | U |
+| `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó | U |
+| `collage` | Hai ảnh trở lên ghép thành một: lưới, chia đôi, xếp tầng, dù mỗi khung chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép. Không bao giờ là ảnh bìa | (từ v8) |
 | `other` | Không thuộc loại nào ở trên | U |
 
 **v2 (17/10/2026)** thêm bốn quyết định của chủ sản phẩm sau vòng 3 (mục 10):
@@ -74,6 +75,9 @@ Lối đi, sàn gỗ không ghế, công viên công cộng là Phong cảnh (m�
 
 **v7 (18/10/2026)** thêm loại `heritage` (Văn hóa): công trình văn hóa là chủ
 thể của ảnh (mục 13).
+
+**v8 (18/10/2026)** thêm loại `collage` (Ảnh ghép), không phải ảnh bìa (mục
+13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -129,10 +133,10 @@ Bảng `photo_scores` đã được thiết kế để có bộ chấm thứ hai
 | Cột | Giá trị |
 |---|---|
 | `scorer` | `claude-labels` |
-| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `7` (luật 3 ở mục 4) |
+| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `8` (luật 3 ở mục 4) |
 | `aesthetic`, `is_utility` | `null`: bộ chấm này không chấm điểm đẹp |
 | `scored_by` | `null`: skill ghi nhãn qua Supabase MCP, không qua tài khoản người dùng |
-| `signals` | `{ "v": 7, "kind": …, "brand": …, … }` |
+| `signals` | `{ "v": 8, "kind": …, "brand": …, … }` |
 
 **Migration cần có:** bỏ ràng buộc `photo_scores_one_per_photo`.
 
@@ -1089,4 +1093,34 @@ giữa bãi cỏ, `unsure`), 15/15 ảnh cảnh vẫn là Phong cảnh.
 - Mặt tiền chắc chắn giảm từ 943 xuống 715: 79 sang Văn hóa, 37 sang Sân
   vườn (quán có bàn ghế ngoài vỉa hè), 78 thành `unsure`.
 - Số ảnh `unsure` trên cả catalog gần như không đổi: 481 (7%).
+
+### Định nghĩa v8: Ảnh ghép (18/10/2026)
+
+**Vì sao.** Ảnh ghép (lưới mặt tiền, ly cà phê và phòng) được gán theo khung
+nổi bật nhất, nên có thể lọt vào danh sách ảnh bìa. Trong ghi chú, model đã
+tự nói "collage", "panel" hay "stacked" ở 106 ảnh. Chủ sản phẩm duyệt thêm
+loại Ảnh ghép.
+
+**Quyết định:** `collage` là hai ảnh trở lên ghép thành một, dù mỗi khung
+chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép; poster hay
+banner mà chữ là ý chính vẫn là Chữ. Ảnh ghép không bao giờ là ảnh bìa:
+Data Desk đưa nơi có ảnh bìa là ảnh ghép vào trang "Ảnh bìa nên xem lại".
+`VERSION` lên 8, `label-photos` bản 9.
+
+**Đo trước khi ghi** (Haiku, không ghi): 16 ảnh có ghi chú nhắc "collage"
+hay "panel", cộng 8 ảnh thường. Mình xem cả 16: 8 ảnh là ảnh ghép thật và
+Haiku gọi đúng cả 8; 8 ảnh còn lại là một ảnh đơn (vách gỗ *panel*, một
+poster) và Haiku không gọi là ảnh ghép. 8 ảnh thường cũng không thành ảnh
+ghép. 24/24.
+
+**Gán lại 1.527 ảnh**: mọi nhãn `unsure`, mọi nhãn không có ghi chú, và mọi
+ghi chú có các chữ trên. Không lỗi.
+
+- Ảnh ghép: **41 ảnh chắc chắn**, 3 `unsure`. 27 đến từ nhãn `unsure`, 14
+  từ ghi chú có chữ "collage".
+- 971 nhãn không có ghi chú: không ảnh nào thành ảnh ghép. Model gần như
+  luôn ghi chú khi gặp ảnh ghép, nên không cần hỏi lại 5.000 ảnh còn lại.
+- Số ảnh `unsure` trên cả catalog giảm từ 481 xuống 368 (6%).
+- 12 nơi đang dùng ảnh ghép làm ảnh bìa, ví dụ Cam Coffee, Pin & Rest,
+  Tulpa Cocktails Bar, Rosie Posie 2.
 
