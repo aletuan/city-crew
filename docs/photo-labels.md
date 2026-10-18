@@ -928,3 +928,11 @@ manh mối cho vòng sau, chưa phải kết quả:
 - Nghĩa là các bên chấm đáng tin khi một ảnh rõ ràng hơn hẳn ảnh kia, và
   không đáng tin khi hai ảnh gần nhau. Muốn biết luật "chỉ chọn khi cách
   biệt lớn" có thật hay không thì phải đo trên những cặp mới.
+
+**Chủ sản phẩm quyết định (18/10/2026): dừng ở đây.** Editor vẫn tự chọn ảnh
+bìa như hiện nay. Hàm `rate-photos` giữ nguyên như đã triển khai, không ghi
+gì vào cơ sở dữ liệu và không chạy định kỳ. Nếu sau này muốn kiểm chứng luật
+"cách biệt lớn" ở trên, các bước là:
+1. Cho Haiku chấm cả catalog. Chi phí khoảng vài đô.
+2. Làm vòng 5 chỉ với những cặp mới có điểm cách nhau từ 3 trở lên.
+3. Đặt trước mốc đạt, như vòng này.
