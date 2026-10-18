@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSeen, POPULAR_SHOWN, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from './lookLabels';
+import { orderLooks, parseSeen, POPULAR_SHOWN, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from './lookLabels';
 import { PINNED, type Pinned } from './look';
 
 const looks = Object.keys(PINNED) as Pinned[];
@@ -55,5 +55,33 @@ describe('unseenLooks', () => {
     // An empty memory is not the same as none: a sheet that once showed
     // no looks (the web build) and now shows fourteen has fourteen new.
     expect(unseenLooks([], looks)).toEqual(looks);
+  });
+});
+
+// The sheet's order (18 Oct 2026): the worn look, the popular ones, the
+// rest — the last two in the catalogue's order.
+describe('orderLooks', () => {
+  const L: Pinned[] = ['coffee', 'rose', 'blush', 'slate', 'cosmic', 'wine'];
+
+  it('is the catalogue untouched with nothing worn and nothing popular', () => {
+    expect(orderLooks(L, null, [])).toEqual(L);
+  });
+
+  it('puts the worn look first, then the popular in the catalogue\'s order, then the rest in it', () => {
+    // The server's rank is wine, slate; the front reads slate, wine.
+    expect(orderLooks(L, 'cosmic', ['wine', 'slate'])).toEqual(['cosmic', 'slate', 'wine', 'coffee', 'rose', 'blush']);
+  });
+
+  it('shows a look that is both worn and popular once, first', () => {
+    expect(orderLooks(L, 'wine', ['wine', 'rose'])).toEqual(['wine', 'rose', 'coffee', 'blush', 'slate', 'cosmic']);
+  });
+
+  it('ignores a worn or popular id that is not on the sheet', () => {
+    expect(orderLooks(L, 'navy', ['maroon'])).toEqual(L);
+  });
+
+  // Two looks trading places in the server's rank moves nothing.
+  it('does not move when the popular looks only change rank', () => {
+    expect(orderLooks(L, null, ['wine', 'rose'])).toEqual(orderLooks(L, null, ['rose', 'wine']));
   });
 });
