@@ -47,7 +47,9 @@ key. A missing key means "not yet asked", not `false`.
 
 A sure v4 kind counts as current. v5 only added `garden`, and the owner
 had the photographs v4 was unsure of, or called `other`, asked again —
-not the 5,800 it was sure of (`label-photos/cron.sql`, 18 Oct 2026).
+not the 5,800 it was sure of (`label-photos/cron.sql`, 18 Oct 2026). v6
+only narrowed `garden`, so it asks again only the photographs v5 called
+a garden.
 
 ```sql
 select p.id, p.photo_uri as uri, pl.slug
@@ -59,8 +61,9 @@ where not p.is_hidden
   and pl.slug = any(array['<slug>'])          -- or: pl.city_id = '<city>' / drop for all
   and (s.photo_id is null
        or s.scorer_version < 4
-       or (s.scorer_version < 5                -- VERSION below
+       or (s.scorer_version < 5
            and (s.signals->>'unsure' = 'true' or s.signals->>'kind' = 'other'))
+       or (s.scorer_version < 6 and s.signals->>'kind' = 'garden')   -- VERSION below
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```
@@ -99,7 +102,7 @@ The script prints a path for each sheet and writes `index.json`, which
 maps each yellow number to its photo id. Read every sheet. A
 photograph reported `MISSING` gets no label; list it in the report.
 
-## 3. The labels, v4
+## 3. The labels, v6
 
 Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
 answer each photograph by them: one `kind`, and each of the six attributes
