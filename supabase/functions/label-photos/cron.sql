@@ -15,8 +15,9 @@
 -- `garden` kind, and the owner had the photographs v4 was unsure of, or
 -- called `other`, asked again — not the 5,800 it was sure of, whose kinds
 -- v5 does not change. Raising this would ask every one of them again, at
--- 240 an hour. Nor up to 6: v6 only narrowed `garden`, and the gardens
--- were asked again by hand once (docs/photo-labels.md §13).
+-- 240 an hour. Nor up to 6 or 7: v6 narrowed `garden` and v7 added
+-- `heritage`, and the photographs each could change were asked again by
+-- hand once (docs/photo-labels.md §13).
 --
 -- Why a pass and not a trigger on insert: a photograph is labelled from
 -- its file in the bucket, which `storage_path` names only once the file

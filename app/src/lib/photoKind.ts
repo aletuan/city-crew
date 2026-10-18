@@ -27,10 +27,17 @@
 // rooftop with the place's seats in it — neither a front, nor a room,
 // nor scenery. It has no spread of its own yet, so its standing is
 // against the catalog.
+//
+// `heritage` came with v7 (owner, 18 Oct 2026, "Văn hóa"): a temple, a
+// tomb, a church or a monument as the photograph's subject. It goes by
+// what the frame shows, not by the place, so a park's lawn is still a
+// view. Its words and mark are the Culture category's (`categories.ts`),
+// the places such photographs come from. Like the garden, it is measured
+// against the catalog.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
 
-export const KINDS = ['food', 'interior', 'exterior', 'garden', 'view', 'text'] as const;
+export const KINDS = ['food', 'interior', 'exterior', 'garden', 'heritage', 'view', 'text'] as const;
 export type PhotoKind = typeof KINDS[number];
 
 type T = (en: string, vi: string, ja: string) => string;
@@ -50,6 +57,7 @@ export const KIND_ICON: Record<PhotoKind, keyof typeof Ionicons.glyphMap> = {
   interior: 'home-outline',
   exterior: 'storefront-outline',
   garden: 'leaf-outline',
+  heritage: 'library-outline',
   view: 'image-outline',
   text: 'document-text-outline',
 };
@@ -63,6 +71,7 @@ export function kindName(kind: PhotoKind, t: T): string {
     case 'interior': return t('Inside', 'Nội thất', '店内');
     case 'exterior': return t('Front', 'Mặt tiền', '外観');
     case 'garden': return t('Garden & terrace', 'Sân vườn', '庭・テラス');
+    case 'heritage': return t('Culture', 'Văn hóa', '文化');
     case 'view': return t('View', 'Cảnh', '景色');
     case 'text': return t('Menu & signs', 'Chữ, menu', 'メニュー・文字');
   }
@@ -76,6 +85,7 @@ export function kindNoun(kind: PhotoKind, t: T): string {
     case 'interior': return t('interior', 'nội thất', '店内');
     case 'exterior': return t('storefront', 'mặt tiền', '外観');
     case 'garden': return t('garden and terrace', 'sân vườn', '庭・テラス');
+    case 'heritage': return t('culture', 'văn hóa', '文化');
     case 'view': return t('view', 'cảnh', '景色');
     case 'text': return t('menu and sign', 'chữ, menu', 'メニュー・文字');
   }

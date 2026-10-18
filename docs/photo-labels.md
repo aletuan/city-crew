@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v6
+## 3. Bộ nhãn v7
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -39,9 +39,10 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 |---|---|---|
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
 | `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Hành lang có mái nhìn ra sân trong là Nội thất | P |
-| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền | P |
+| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Thư viện, bảo tàng, trung tâm thương mại là Mặt tiền; đền chùa, nhà thờ, tượng đài là Văn hóa | P |
 | `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Nhìn từ đường như mặt tiền thì là Mặt tiền; có mái và tường bao thì là Nội thất | (từ v5, thu hẹp ở v6) |
-| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà, hiên, cổng, tượng đứng giữa khuôn viên chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh | S |
+| `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
+| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung | U |
 | `other` | Không thuộc loại nào ở trên | U |
 
@@ -70,6 +71,9 @@ sản phẩm: sân vườn là một ảnh bìa hợp lệ. Lý do và kết qu�
 
 **v6 (18/10/2026)** thu hẹp Sân vườn: chỉ khi chỗ ngồi của quán là chủ thể.
 Lối đi, sàn gỗ không ghế, công viên công cộng là Phong cảnh (mục 13).
+
+**v7 (18/10/2026)** thêm loại `heritage` (Văn hóa): công trình văn hóa là chủ
+thể của ảnh (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -125,10 +129,10 @@ Bảng `photo_scores` đã được thiết kế để có bộ chấm thứ hai
 | Cột | Giá trị |
 |---|---|
 | `scorer` | `claude-labels` |
-| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `6` (luật 3 ở mục 4) |
+| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `7` (luật 3 ở mục 4) |
 | `aesthetic`, `is_utility` | `null`: bộ chấm này không chấm điểm đẹp |
 | `scored_by` | `null`: skill ghi nhãn qua Supabase MCP, không qua tài khoản người dùng |
-| `signals` | `{ "v": 6, "kind": …, "brand": …, … }` |
+| `signals` | `{ "v": 7, "kind": …, "brand": …, … }` |
 
 **Migration cần có:** bỏ ràng buộc `photo_scores_one_per_photo`.
 
@@ -1052,4 +1056,37 @@ không lỗi:
   tượng ở Huyền Không, Nhà thờ Đức Bà, Cầu Ánh Sao) thì Haiku vẫn gọi là
   Phong cảnh, đúng theo câu "cổng, tượng đứng giữa khuôn viên". Đó là câu
   hỏi về nhóm Di tích ở trên, chưa quyết.
+
+### Định nghĩa v7: Văn hóa (18/10/2026)
+
+**Vì sao.** Cổng lăng, tượng Phật ở chùa, nhà thờ sau tượng Đức Mẹ: khi
+công trình chiếm khung thì là Mặt tiền, khi khuôn viên chiếm khung thì là
+Phong cảnh. Di tích của catalog vì thế bị chia đôi giữa mặt tiền quán cà phê
+và cảnh hồ. Chủ sản phẩm đề xuất nhãn "Văn hóa", và còn phân vân công viên
+có phải là công trình văn hóa không.
+
+**Quyết định:** nhãn xét theo **thứ ảnh chụp**, không theo địa điểm. Ảnh có
+chủ thể là đền, chùa, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay
+tháp cổ, tượng, đài tưởng niệm thì là Văn hóa, kể cả khi đứng giữa khuôn
+viên. Bãi cỏ hay hồ trong công viên là Phong cảnh; tháp Chăm trong cùng
+công viên đó là Văn hóa. Vì vậy câu hỏi "công viên có phải công trình văn
+hóa" không cần trả lời. Thư viện, bảo tàng, trung tâm thương mại vẫn là
+Mặt tiền. Chữ và icon lấy theo nhóm Culture / Văn hóa / 文化 sẵn có của
+app (`categories.ts`). Văn hóa là ảnh bìa hợp lệ khi thấy cả công trình.
+`VERSION` lên 7, `label-photos` bản 8.
+
+**Đo trước khi ghi** (Haiku, không ghi), trên 24 ảnh mình đã đọc trong 139
+ảnh Phong cảnh: 8/9 ảnh công trình ra Văn hóa (ảnh trượt là lăng Bác nhỏ
+giữa bãi cỏ, `unsure`), 15/15 ảnh cảnh vẫn là Phong cảnh.
+
+**Gán lại 1.564 ảnh**: mọi ảnh Mặt tiền, Phong cảnh, Khác, và mọi nhãn
+`unsure`. Nhãn chắc chắn Đồ ăn, Nội thất, Sân vườn, Chữ được giữ. Không lỗi.
+
+- Văn hóa: **119 ảnh chắc chắn**, 19 `unsure`. Phần lớn đến từ Mặt tiền (91)
+  và Phong cảnh (23). Xem ngẫu nhiên 16 ảnh: cả 16 đều là công trình văn
+  hóa. Một ảnh là Nhà hát Thành phố nhìn từ OKKIO Tự Do: nhãn đúng với thứ
+  ảnh chụp, nhưng ảnh không cho thấy chính quán.
+- Mặt tiền chắc chắn giảm từ 943 xuống 715: 79 sang Văn hóa, 37 sang Sân
+  vườn (quán có bàn ghế ngoài vỉa hè), 78 thành `unsure`.
+- Số ảnh `unsure` trên cả catalog gần như không đổi: 481 (7%).
 
