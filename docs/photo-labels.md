@@ -762,3 +762,79 @@ gửi tới Claude (PR #1026).
   embed `labels`.
 - Code ở `app/src/lib/photoKind.ts`.
 
+## 12. Vòng 4: ảnh nào đẹp hơn, trong cùng một loại (đề xuất, 18/10/2026)
+
+Đề xuất này viết trước khi có code (nguyên tắc 8 của `photo-critic.md`).
+Chủ sản phẩm duyệt bộ tiêu chí trước khi chạy.
+
+**Vì sao.** Ở phần A, chọn **loại** ảnh nào làm bìa hoá ra là khẩu vị của
+editor, và mỗi kiểu quán một khác:
+
+| Loại địa điểm | Bìa đồ ăn & uống | Bìa nội thất | Bìa mặt tiền |
+|---|---|---|---|
+| Quán cà phê (536) | 11% | 44% | 40% |
+| Nhà hàng (318) | 37% | 40% | 20% |
+| Quán bar (75) | 12% | 67% | 16% |
+
+Câu hỏi máy có thể giúp là câu hỏi khác: **trong một loại, ảnh nào đẹp
+nhất?** Editor chọn loại ("quán này dùng ảnh nội thất"), máy chỉ ra ảnh
+nội thất đẹp nhất của quán. Ý tưởng của chủ sản phẩm, 18/10.
+
+**Chưa biết:**
+- Điểm Apple Vision có hiểu "đẹp" giống chủ sản phẩm không? Phép đo trước
+  chỉ cho thấy nó không đoán được ảnh bìa, chưa đo nó có chọn được ảnh
+  đẹp không.
+- Apple Vision mới chấm 434 trong 6.473 ảnh, vì nó chỉ chạy trên điện
+  thoại.
+- Claude chấm được cả catalog ở phía máy chủ, theo tiêu chí riêng cho
+  từng loại ảnh.
+
+**Tiêu chí "đẹp" (bản nháp, chủ sản phẩm duyệt):**
+
+*Chung cho mọi loại:*
+- Ảnh nét ở chủ thể, không rung, không nhoè.
+- Đủ sáng: không tối om, không cháy trắng mất chi tiết.
+- Màu tự nhiên, không ám màu nặng, không filter quá tay.
+- Không có chữ hay watermark đè lên ảnh.
+
+*Đồ ăn & uống:*
+- Món là chủ thể rõ ràng và chiếm phần lớn khung.
+- Trông ngon: màu tươi, có độ bóng hay độ tươi, không nhão, không tàn.
+- Bố cục gọn, nền không bừa (khăn giấy vò, đĩa bẩn, đồ thừa).
+- Ánh sáng mềm, không có bóng gắt che món.
+- Góc chụp hợp với món: ngang tầm hoặc từ trên xuống.
+
+*Nội thất:*
+- Đường thẳng đứng (cột, tường, khung cửa) không nghiêng, không méo.
+- Có chiều sâu, thấy được cảm giác không gian.
+- Ánh sáng đẹp: tự nhiên, hoặc đèn ấm có chủ ý. Không tối om, cửa sổ
+  không cháy trắng.
+- Gọn gàng, không bừa bộn, không có người che phần lớn khung.
+- Có một điểm nhấn: quầy, cây, chi tiết thiết kế.
+
+*Mặt tiền:*
+- Thấy rõ lối vào và biển tên quán.
+- Thẳng, không nghiêng.
+- Không bị xe, người hay dây điện che phần lớn.
+- Ánh sáng tốt, ban ngày hoặc đèn buổi tối đẹp.
+- Thể hiện được không khí của quán, không chỉ là một bức tường.
+
+**Cách đo (Data Desk, trang `#/photo-pairs-4`):**
+- **60 cặp**, mỗi cặp là hai ảnh **cùng quán, cùng loại**, cả hai đều có
+  nhãn chắc chắn và đều đã có điểm Apple Vision. Gồm khoảng 20 cặp đồ ăn,
+  20 nội thất và 19 mặt tiền; mỗi cặp ở một quán khác nhau.
+- Chọn cặp theo thứ tự md5, như các vòng trước. Không dùng ảnh nào đã có
+  mặt ở vòng trước.
+- **Chủ sản phẩm chọn ảnh đẹp hơn**, hoặc "ngang nhau". Trang không cho
+  biết máy đã chọn gì.
+- **Khoá trước bằng sha256**, trước khi chủ sản phẩm thấy ảnh:
+  - Lựa chọn của Apple Vision: ảnh có điểm cao hơn.
+  - Lựa chọn của Claude. Claude chấm **từng ảnh riêng lẻ** theo tiêu chí
+    của loại ảnh đó, với điểm tổng 1–10, rồi so hai điểm. Chấm từng ảnh
+    chứ không cho xem cả cặp, vì cách này mới chạy được cho cả catalog.
+- **Thước đo:** tỷ lệ trùng với chủ sản phẩm, không tính các cặp "ngang
+  nhau". Chọn bừa được 50%. Đạt từ **75%** trở lên thì đủ tin để dùng.
+
+**Nếu đạt:** Data Desk, và có thể cả app, chỉ ra "ảnh đẹp nhất của loại X"
+ở mỗi quán. Editor vẫn là người chọn loại.
+
