@@ -8,6 +8,7 @@
 // where it is needed — bookmarking a place — rather than from a
 // permanent control in a corner.
 
+import { useSignupTour, useTourAnchor } from '../components/SignupTour';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, Linking, Platform, Pressable, ScrollView, SectionList, StyleSheet, Text, useWindowDimensions, View,
@@ -247,6 +248,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   onSearch: () => void;
   scrollY: Animated.Value;
 }) {
+  const searchAnchor = useTourAnchor('search', onSearch);
   const { t, lang } = useI18n();
   const { city } = useCity();
   const insets = useSafeAreaInsets();
@@ -391,6 +393,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           style={s.heroSearch}
           accessibilityRole="button"
           accessibilityLabel={t('Search', 'Tìm kiếm', '検索')}
+          anchorRef={searchAnchor}
           testID="explore-search"
         >
           <Ionicons name="search-outline" size={22} color={onPhoto.text} />
@@ -1205,6 +1208,27 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * collections at all.
    */
   const [headerH, setHeaderH] = useState(0);
+  const tour = useSignupTour();
+  const filterAnchor = useTourAnchor('filter', () => setFilterOpen(true));
+  const pinnedFilterAnchor = useTourAnchor('filter', () => setFilterOpen(true));
+  const tourHandled = useRef(-1);
+  useEffect(() => {
+    if (tour.step < 0) { tourHandled.current = -1; return; }
+    if (mapMode) { pickView('list'); return; }
+    if (holding || headerH === 0 || tourHandled.current === tour.step) return;
+    tourHandled.current = tour.step;
+    if (tour.step === 2) {
+      // A real catalog entry, never a fabricated tutorial place or a write.
+      if (shown[0]) navigation.navigate('PlaceDetail', { slug: shown[0].slug });
+      else tour.next();
+    } else {
+      if (tour.step === 3) goTo('Explore', { screen: 'ExploreHome' });
+      listRef.current?.getScrollResponder()?.scrollTo({
+        y: tour.step === 1 ? Math.max(0, headerH - insets.top - 80) : 0,
+        animated: false,
+      });
+    }
+  }, [tour, holding, headerH, shown, navigation, mapMode, pickView, insets.top]);
   // The floating bar's own measured height, in map mode: there the bar
   // stands in permanently for the list's scrolled-away copy, and the map
   // beneath it has to start clear of it rather than guess its height.
@@ -1257,6 +1281,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           accessibilityState={{ selected: filterCount > 0 }}
           hitSlop={4}
           style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
+          anchorRef={floating ? pinnedFilterAnchor : filterAnchor}
           testID={floating ? 'explore-filter-pinned' : 'explore-filter'}
         >
           {/* Ink at rest, coral once something is applied — and that is

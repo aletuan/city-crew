@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  dropResume, focusedTab, holdResume, peekResume, RESUME_TTL_MS, returnTab, takeResume,
+  hasResume, dropResume, focusedTab, holdResume, peekResume, RESUME_TTL_MS, returnTab, takeResume,
 } from './resume';
 
 const T0 = 1_000_000;
@@ -77,4 +77,13 @@ describe('peekResume', () => {
     expect(takeResume(T0)?.kind).toBe('save');
     expect(peekResume(T0)).toBeNull();
   });
+});
+
+it('remembers expired intent for signup eligibility until explicitly consumed or dropped', () => {
+  expect(hasResume()).toBe(false);
+  holdResume({ tab: 'Explore', at: T0 });
+  expect(peekResume(T0 + RESUME_TTL_MS + 1)).toBeNull();
+  expect(hasResume()).toBe(true);
+  takeResume(T0 + RESUME_TTL_MS + 1);
+  expect(hasResume()).toBe(false);
 });
