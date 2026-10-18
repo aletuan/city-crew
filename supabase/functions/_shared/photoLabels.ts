@@ -1,5 +1,5 @@
 // What a photograph is, and the six things a cover is chosen by: the
-// photo labels, v7 (docs/photo-labels.md §3).
+// photo labels, v8 (docs/photo-labels.md §3).
 //
 // The one place they are defined. The `label-photos` function sends
 // DEFINITIONS to the model as its instructions; the `photo-labels` skill
@@ -13,12 +13,12 @@
 // key is added here and to the skill's query; a new kind, or a changed
 // meaning, bumps VERSION, and every older row is asked again.
 
-export const VERSION = 7;
+export const VERSION = 8;
 
 /** The scorer name the labels are stored under in `photo_scores`. */
 export const SCORER = "claude-labels";
 
-export const KINDS = ["food", "interior", "exterior", "garden", "heritage", "view", "text", "other"] as const;
+export const KINDS = ["food", "interior", "exterior", "garden", "heritage", "view", "text", "collage", "other"] as const;
 export type Kind = typeof KINDS[number];
 
 export const ATTRS = ["brand", "wide", "green", "daylight", "people", "staged"] as const;
@@ -57,7 +57,11 @@ export type Attr = typeof ATTRS[number];
  *  and view when grounds did, so the catalog's monuments were split
  *  between a café's front and a lake. The owner named it "Văn hóa". It
  *  goes by what the photograph shows, not by the place: a lawn in a park
- *  is view, a Cham tower in the same park is heritage. */
+ *  is view, a Cham tower in the same park is heritage. v8 (18 Oct 2026)
+ *  adds `collage`: a grid of a café's front, a latte and a room was
+ *  labelled by whichever panel led, and the model said so in 106 notes.
+ *  The owner made it a kind, and one a cover may be: a grid is how some
+ *  places choose to show themselves. */
 export const DEFINITIONS = `You label one photograph of a place in a city guide: a café, a restaurant, a bar, a shop, a museum, a park. Answer from the photograph alone.
 
 KIND — exactly one, by the subject: what fills most of the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
@@ -67,7 +71,8 @@ KIND — exactly one, by the subject: what fills most of the frame and is in foc
 - garden: the place's own open-air seating is the subject: its tables, chairs, sofas, benches or loungers on a courtyard, a garden, a terrace, a rooftop, a balcony, a deck or by a pool. A path, steps, a bridge, a jetty or a lawn with no seats, or a few seats at the edge of a frame that scenery fills, is not garden: that is view. A public park, a lake shore or grounds open to everyone are view, benches and all. Seen from the street as the place's front, it is exterior; under a roof with walls around, it is interior.
 - heritage: a monument or a place of worship is the subject, seen from outside: a temple, a pagoda, a shrine, a church, a tomb or mausoleum, a citadel or a royal palace, a historic gate or tower, a statue, a memorial. It stays heritage standing in its grounds, so long as it is what the photograph is of. Inside such a building is interior. A park, a garden, a lawn or a lake with no such structure as its subject is view, even inside a heritage site.
 - view: scenery fills most of the frame: sky, water, greenery, a lawn, a park, grounds, a path or a bridge through them, a skyline, a sunset. A building or a monument small in scenery that fills the frame does not change it: that is view. A rooftop or terrace whose tables and chairs are the subject is garden; the same terrace with the skyline filling the frame and its seats only at the edge is view.
-- text: a menu, a board, a poster, or a sign or logo that fills the frame: something to read rather than look at.
+- text: a menu, a board, a poster, or a sign or logo that fills the frame: something to read rather than look at. A poster or banner whose words are its point is text, even with photographs in it.
+- collage: two or more photographs joined into one image: a grid, a split frame, stacked panels, whatever each panel shows. One photograph with text or a logo laid over it is not a collage.
 - other: none of the above: a close portrait, an object with no place in it, a blank or broken image.
 
 Set unsure to true whenever you would not bet on the kind.

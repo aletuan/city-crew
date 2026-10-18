@@ -34,10 +34,14 @@
 // view. Its words and mark are the Culture category's (`categories.ts`),
 // the places such photographs come from. Like the garden, it is measured
 // against the catalog.
+//
+// `collage` came with v8 (owner, 18 Oct 2026, "Ảnh ghép"): several
+// photographs in one frame. It can be a cover, as any of the place
+// kinds can (owner, same day); its standing is against the catalog.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
 
-export const KINDS = ['food', 'interior', 'exterior', 'garden', 'heritage', 'view', 'text'] as const;
+export const KINDS = ['food', 'interior', 'exterior', 'garden', 'heritage', 'view', 'text', 'collage'] as const;
 export type PhotoKind = typeof KINDS[number];
 
 type T = (en: string, vi: string, ja: string) => string;
@@ -60,6 +64,7 @@ export const KIND_ICON: Record<PhotoKind, keyof typeof Ionicons.glyphMap> = {
   heritage: 'library-outline',
   view: 'image-outline',
   text: 'document-text-outline',
+  collage: 'grid-outline',
 };
 
 /** A kind's name, as the label under the reasons. The Vietnamese is the
@@ -74,6 +79,7 @@ export function kindName(kind: PhotoKind, t: T): string {
     case 'heritage': return t('Culture', 'Văn hóa', '文化');
     case 'view': return t('View', 'Cảnh', '景色');
     case 'text': return t('Menu & signs', 'Chữ, menu', 'メニュー・文字');
+    case 'collage': return t('Collage', 'Ảnh ghép', 'コラージュ');
   }
 }
 
@@ -88,6 +94,7 @@ export function kindNoun(kind: PhotoKind, t: T): string {
     case 'heritage': return t('culture', 'văn hóa', '文化');
     case 'view': return t('view', 'cảnh', '景色');
     case 'text': return t('menu and sign', 'chữ, menu', 'メニュー・文字');
+    case 'collage': return t('collage', 'ảnh ghép', 'コラージュ');
   }
 }
 

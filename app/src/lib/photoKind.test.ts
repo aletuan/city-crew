@@ -26,15 +26,15 @@ describe('kindOf', () => {
 
 describe('the words', () => {
   it('names every kind in the three languages, with its own mark', () => {
-    expect(KINDS.map((k) => kindName(k, en))).toEqual(['Food & drink', 'Inside', 'Front', 'Garden & terrace', 'Culture', 'View', 'Menu & signs']);
-    expect(KINDS.map((k) => kindName(k, vi))).toEqual(['Đồ ăn & uống', 'Nội thất', 'Mặt tiền', 'Sân vườn', 'Văn hóa', 'Cảnh', 'Chữ, menu']);
-    expect(KINDS.map((k) => kindName(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '庭・テラス', '文化', '景色', 'メニュー・文字']);
+    expect(KINDS.map((k) => kindName(k, en))).toEqual(['Food & drink', 'Inside', 'Front', 'Garden & terrace', 'Culture', 'View', 'Menu & signs', 'Collage']);
+    expect(KINDS.map((k) => kindName(k, vi))).toEqual(['Đồ ăn & uống', 'Nội thất', 'Mặt tiền', 'Sân vườn', 'Văn hóa', 'Cảnh', 'Chữ, menu', 'Ảnh ghép']);
+    expect(KINDS.map((k) => kindName(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '庭・テラス', '文化', '景色', 'メニュー・文字', 'コラージュ']);
     expect(new Set(KINDS.map((k) => KIND_ICON[k])).size).toBe(KINDS.length);
   });
   it('says each kind as it sits inside a sentence', () => {
-    expect(KINDS.map((k) => kindNoun(k, en))).toEqual(['food and drink', 'interior', 'storefront', 'garden and terrace', 'culture', 'view', 'menu and sign']);
-    expect(KINDS.map((k) => kindNoun(k, vi))).toEqual(['đồ ăn & uống', 'nội thất', 'mặt tiền', 'sân vườn', 'văn hóa', 'cảnh', 'chữ, menu']);
-    expect(KINDS.map((k) => kindNoun(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '庭・テラス', '文化', '景色', 'メニュー・文字']);
+    expect(KINDS.map((k) => kindNoun(k, en))).toEqual(['food and drink', 'interior', 'storefront', 'garden and terrace', 'culture', 'view', 'menu and sign', 'collage']);
+    expect(KINDS.map((k) => kindNoun(k, vi))).toEqual(['đồ ăn & uống', 'nội thất', 'mặt tiền', 'sân vườn', 'văn hóa', 'cảnh', 'chữ, menu', 'ảnh ghép']);
+    expect(KINDS.map((k) => kindNoun(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '庭・テラス', '文化', '景色', 'メニュー・文字', 'コラージュ']);
   });
   it('names both readers once a kind is shown', () => {
     expect(bothSources(vi)).toBe('Phân tích ảnh bằng Apple Vision và Claude.');

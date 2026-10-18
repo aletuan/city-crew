@@ -1,6 +1,6 @@
 ---
 name: photo-labels
-description: Label a City Crew place's photographs — what each shows (food, interior, exterior, garden, heritage, view, text, other) and the cover criteria (brand, wide, green, daylight, people, staged) — by looking at them, and store the labels as the `claude-labels` scorer in Supabase `photo_scores`. Use for one place by slug, a city, or every photograph not yet labelled; and after the Threads skill adds photographs to a place.
+description: Label a City Crew place's photographs — what each shows (food, interior, exterior, garden, heritage, view, text, collage, other) and the cover criteria (brand, wide, green, daylight, people, staged) — by looking at them, and store the labels as the `claude-labels` scorer in Supabase `photo_scores`. Use for one place by slug, a city, or every photograph not yet labelled; and after the Threads skill adds photographs to a place.
 ---
 
 # Photo labels
@@ -50,7 +50,10 @@ had the photographs v4 was unsure of, or called `other`, asked again —
 not the 5,800 it was sure of (`label-photos/cron.sql`, 18 Oct 2026). v6
 only narrowed `garden`. v7 added `heritage`, which takes from exterior and
 view, so it asks again those two kinds, `other`, and every unsure label;
-a sure food, interior, garden or text label stays current.
+a sure food, interior, garden or text label stays current. v8 added
+`collage`, which can hide under any kind; it asks again every unsure
+label, every label with no note, and every note that already said
+"collage", "panel" or "stacked".
 
 ```sql
 select p.id, p.photo_uri as uri, pl.slug
@@ -62,9 +65,12 @@ where not p.is_hidden
   and pl.slug = any(array['<slug>'])          -- or: pl.city_id = '<city>' / drop for all
   and (s.photo_id is null
        or s.scorer_version < 4
-       or (s.scorer_version < 7                -- VERSION below
+       or (s.scorer_version < 7
            and (s.signals->>'unsure' = 'true'
                 or s.signals->>'kind' in ('exterior', 'view', 'other')))
+       or (s.scorer_version < 8                -- VERSION below
+           and (s.signals->>'unsure' = 'true' or not s.signals ? 'note'
+                or s.signals->>'note' ~* 'collage|panel|diptych|stacked'))
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```
@@ -103,7 +109,7 @@ The script prints a path for each sheet and writes `index.json`, which
 maps each yellow number to its photo id. Read every sheet. A
 photograph reported `MISSING` gets no label; list it in the report.
 
-## 3. The labels, v7
+## 3. The labels, v8
 
 Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
 answer each photograph by them: one `kind`, and each of the six attributes
