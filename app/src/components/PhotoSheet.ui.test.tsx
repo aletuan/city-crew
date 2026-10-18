@@ -13,7 +13,7 @@ import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
 import type { PhotoScore } from '../lib/photoScore';
 import type { SheetAction } from './ActionSheet';
-import { space } from '../theme';
+import { colors, space } from '../theme';
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
@@ -132,6 +132,21 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('photo-sheet-status').textContent).toBe('Cover · Hidden');
   });
 
+  // With a kind, the cover is a star beside it and not a word under the
+  // standing (owner, 18 Oct 2026); without one it stays the word.
+  it('marks the cover with a star beside the kind', () => {
+    const { rerender } = render(<PhotoSheet {...props({ photos: [photo({ kind: 'interior', score, is_cover: true })] })} />);
+    const star = screen.getByTestId('photo-sheet-cover');
+    expect(star.querySelector('[data-icon="star"]')!.getAttribute('data-color')).toBe(colors.okInk);
+    expect(star.getAttribute('aria-label')).toBe('Cover');
+    expect(screen.getByTestId('photo-sheet-kind').contains(star)).toBe(true);
+    expect(screen.queryByTestId('photo-sheet-status')).toBeNull();
+    rerender(<PhotoSheet {...props({ photos: [photo({ kind: 'interior', score, is_cover: true, is_hidden: true })] })} />);
+    expect(screen.getByTestId('photo-sheet-status').textContent).toBe('Hidden');
+    rerender(<PhotoSheet {...props({ photos: [photo({ kind: 'interior', score })] })} />);
+    expect(screen.queryByTestId('photo-sheet-cover')).toBeNull();
+  });
+
   // One frame for every photograph: the sheet does not grow or shrink as
   // the guide swipes from a portrait to a landscape (owner, 16 Oct 2026).
   it('keeps one frame, whichever photograph is open', () => {
@@ -163,7 +178,7 @@ describe('PhotoSheet', () => {
   // no sentence of reasons, which the analysis rows already say, no
   // "Photo n/m" and no "who measured" (owner, 16 and 18 Oct 2026).
   it('leads with what the photograph is, the number beside it, and no sentence', () => {
-    render(<PhotoSheet {...props({ photos: [photo({ kind: 'interior', score, is_cover: true })] })} />);
+    render(<PhotoSheet {...props({ photos: [photo({ kind: 'interior', score, is_hidden: true })] })} />);
     const kind = screen.getByTestId('photo-sheet-kind');
     const ten = screen.getByTestId('score-ten');
     const status = screen.getByTestId('photo-sheet-status');
