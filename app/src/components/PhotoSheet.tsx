@@ -26,25 +26,25 @@
 //
 // ── what the head says ──
 //
-// What the photograph is like, in a sentence, beside its score — and
-// whether it is the cover or hidden. Not "Ảnh 4/6" (owner, 16 Oct 2026):
-// the count is already on the photograph, and saying it twice gave the
-// head's biggest type to the one fact the reader could see anyway. Where
-// it came from was cut the same day: the icon and
-// "Đã tải lên" told a guide nothing they act on — every row offers the
-// same actions whoever added it. The reasons sit under the name, beside
-// the number, so no gap opens below a name one line tall next to a
-// number and its word two lines tall.
+// What the photograph is, beside its score — and whether it is the cover
+// or hidden (owner, 18 Oct 2026, from the "Photo Review" board: picture,
+// then what it shows, then the number). The kind comes from the photo
+// labels, with its mark, and is said only when the labels are sure of it
+// (`photoKind`); otherwise the number stands alone. Its larger use is in
+// the detailed analysis: "higher than X%" compares the photograph with
+// its own kind, and the source line names Claude beside Apple Vision.
 //
-// ── what the photograph shows ──
+// No sentence of reasons. The head used to lead with one ("Held back by:
+// a little dark"), and the owner saw it said again under the bars: it was
+// built from the very findings the Light, Focus and Composition rows
+// print, so the head repeated the analysis in a line it could not
+// explain. The rows say it once, each beside the bar it belongs to. The
+// full-screen viewer keeps the sentence, having no rows to say it.
 //
-// Under the reasons, the photograph's kind — food and drink, inside, the
-// front, a view, writing — from the photo labels, with its mark (owner,
-// 18 Oct 2026, docs/photo-labels.md §11 part C). Said only when the
-// labels are sure of it (`photoKind`). Its larger use is below, in the
-// detailed analysis: "higher than X%" compares the photograph with its
-// own kind, and the source line names Claude beside Apple Vision.
-//
+// Not "Ảnh 4/6" (owner, 16 Oct 2026): the count is already on the
+// photograph. Where it came from was cut the same day: the icon and
+// "Đã tải lên" told a guide nothing they act on.
+
 // ── the frame's shape ──
 //
 // One square for every photograph of the gallery, the picture whole in
@@ -72,7 +72,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetStrip, type SheetAction } from './ActionSheet';
-import { ScoreDetails, ScoreTen, ScoreWhy } from './PhotoScore';
+import { ScoreDetails, ScoreTen } from './PhotoScore';
 import PhotoViewer, { settledPage } from './PhotoViewer';
 import { useSheetDrag } from './sheetDrag';
 import { PressableScale } from './ui';
@@ -235,10 +235,9 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
 
           <View style={s.head}>
             <View style={s.name}>
-              {p.score && <ScoreWhy score={p.score} lead />}
               {p.kind ? (
                 <View style={s.kind} testID="photo-sheet-kind">
-                  <Ionicons name={KIND_ICON[p.kind]} size={15} color={colors.textSecondary} />
+                  <Ionicons name={KIND_ICON[p.kind]} size={20} color={colors.text} />
                   <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
                 </View>
               ) : null}
@@ -308,6 +307,8 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   name: { flex: 1, gap: 8 },
   status: { color: colors.textTertiary, fontSize: 14 },
-  kind: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  kindText: { color: colors.textSecondary, fontSize: 14 },
+  // The head's type, opposite the number: the sentence's ink and size
+  // before it, since the kind took its place.
+  kind: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  kindText: { color: colors.text, fontSize: 17, lineHeight: 23, fontWeight: font.semibold },
 });

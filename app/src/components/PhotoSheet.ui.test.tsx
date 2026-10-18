@@ -151,22 +151,35 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('photo-sheet-blur')).toBeTruthy();
   });
 
-  // The reasons lead the head, the number beside them, the status under
-  // them; no "Photo n/m" and no "who measured" (owner, 16 Oct 2026).
-  it('leads with the reasons, the number beside them', () => {
-    render(<PhotoSheet {...props({ photos: [photo({ score, is_cover: true })] })} />);
-    const why = screen.getByTestId('score-why');
+  // The kind leads the head, the number beside it, the status under it;
+  // no sentence of reasons, which the analysis rows already say, no
+  // "Photo n/m" and no "who measured" (owner, 16 and 18 Oct 2026).
+  it('leads with what the photograph is, the number beside it, and no sentence', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ kind: 'interior', score, is_cover: true })] })} />);
+    const kind = screen.getByTestId('photo-sheet-kind');
     const ten = screen.getByTestId('score-ten');
     const status = screen.getByTestId('photo-sheet-status');
     expect(ten.textContent).toContain('8.4');
-    expect(why.textContent).toBe('Well lit.');
-    const column = why.parentElement!;
+    expect(kind.textContent).toBe('Inside');
+    const column = kind.parentElement!;
     expect(column.contains(status)).toBe(true);
-    expect(column.firstElementChild).toBe(why);
+    expect(column.firstElementChild).toBe(kind);
     expect(column.contains(ten)).toBe(false);
     expect(column.parentElement!.contains(ten)).toBe(true);
+    expect(screen.queryByTestId('score-why')).toBeNull();
+    expect(screen.queryByText('Well lit.')).toBeNull();
     expect(screen.queryByText(/^Photo \d/)).toBeNull();
     expect(screen.queryByTestId('score-source')).toBeNull();
+    // What the sentence said is in the analysis, beside its bar.
+    fireEvent.click(screen.getByTestId('score-detail-toggle'));
+    expect(screen.getByText('Well lit')).toBeTruthy();
+  });
+
+  it('shows the number alone where the labels name no kind', () => {
+    render(<PhotoSheet {...props({ photos: [photo({ kind: null, score })] })} />);
+    expect(screen.getByTestId('score-ten').textContent).toContain('8.4');
+    expect(screen.queryByTestId('photo-sheet-kind')).toBeNull();
+    expect(screen.queryByTestId('score-why')).toBeNull();
   });
 
   it('says nothing of a score for a photograph nobody has read', () => {
