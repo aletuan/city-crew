@@ -176,7 +176,7 @@ export function Lede({ children }: { children: string }) {
  * the reader to work out which of five fields it is about — and the one
  * this was written for named a value three fields further up.
  */
-export function FieldRow({ icon, label, secure, strength, error, grouped, ...input }: {
+export function FieldRow({ icon, label, secure, strength, error, invalid, grouped, ...input }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   secure?: boolean;
@@ -184,6 +184,8 @@ export function FieldRow({ icon, label, secure, strength, error, grouped, ...inp
    *  only — grading a password that already exists helps nobody. */
   strength?: boolean;
   error?: string | null;
+  /** Mark a field whose error is explained in the form banner, without adding a row. */
+  invalid?: boolean;
   /**
    * Drawn as one row of a card rather than as a field of its own: no
    * border, no fill, no glyph. For a stack of fields that belong to one
@@ -202,7 +204,7 @@ export function FieldRow({ icon, label, secure, strength, error, grouped, ...inp
   const [hidden, setHidden] = useState(true);
   return (
     <View>
-      <View style={[grouped ? s.fieldFlat : s.field, !grouped && !!error && s.fieldBad]}>
+      <View style={[grouped ? s.fieldFlat : s.field, !grouped && (!!error || invalid) && s.fieldBad]}>
         {/* The glyph turns with the border. Colour alone should never
             carry a message, which is why the sentence below exists — but
             two signals agreeing is what makes the field findable in a

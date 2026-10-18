@@ -163,11 +163,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('signed out', () => {
-  // Not an empty list — a different question, so it gets the whole screen.
-  it('asks to sign in instead of showing an empty list, and goes to the sign-in screen', () => {
+  it('lets guests open the planner without starting an authentication flow', () => {
+    state.uid = null;
+    const n = show([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Try planning a trip' }));
+    expect(n.parent.navigate).toHaveBeenCalledExactlyOnceWith('Ideas', { screen: 'IdeasHome' });
+    expect(takeResume(Date.now())).toBeNull();
+  });
+
+  it('offers returning users sign-in and remembers the Trips destination', () => {
     state.uid = null;
     const n = show([trip()]);
-    expect(screen.getByText('Sign in to keep your trips')).toBeTruthy();
+    expect(screen.getByText('Where to next?')).toBeTruthy();
     expect(screen.queryByText('Old Quarter crawl')).toBeNull();
     expect(screen.queryByText('No trips yet')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
