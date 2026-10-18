@@ -315,9 +315,9 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           title={t('What are you into?', 'Bạn thích gì?', '好みを教えてください')}
         />
         <Lede>{t(
-            'Pick a few and Search and Explore will lean towards them. You can change this any time in your profile.',
-            'Chọn vài mục, Tìm kiếm và Khám phá sẽ nghiêng về những thứ đó. Đổi lúc nào cũng được trong hồ sơ.',
-            'いくつか選ぶと、検索と探索がその傾向に寄ります。プロフィールでいつでも変更できます。',
+            'Choose up to 5 interests for suggestions that suit you. You can change them later in your profile.',
+            'Chọn tối đa 5 sở thích để nhận gợi ý phù hợp. Bạn có thể thay đổi sau trong hồ sơ.',
+            'あなたに合った提案を受け取るために、興味のあるものを5つまで選んでください。あとからプロフィールで変更できます。',
           )}</Lede>
         <TastePicker chosen={taste} onChange={setTaste} />
         {/* Said here, before anything is recorded, and that is the whole
@@ -333,9 +333,9 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             the button they have to reach either way. */}
         <Text style={s.privacyNote}>
           {t(
-            'City Crew remembers the places you open, so a place you passed over stops coming back. Turn it off any time in Edit profile.',
-            'City Crew ghi nhớ những nơi bạn mở, để chỗ bạn đã bỏ qua thôi quay lại. Tắt lúc nào cũng được trong Sửa hồ sơ.',
-            'City Crew は開いた場所を記憶し、一度見送った場所が出にくくなります。プロフィール編集でいつでもオフにできます。',
+            'City Crew uses your interests, trips and activity history to suggest more relevant content. You can turn off activity recording in Profile → Edit profile.',
+            'City Crew sử dụng sở thích, hành trình và lịch sử hoạt động để gợi ý nội dung phù hợp hơn. Bạn có thể tắt việc ghi nhớ hoạt động trong Hồ sơ → Sửa hồ sơ.',
+            'City Crew は好みや旅程、アクティビティ履歴をもとに、あなたに合ったコンテンツを提案します。アクティビティの記録は「プロフィール」→「プロフィール編集」でオフにできます。',
           )}
         </Text>
         {/* The account is made here now, so this is where its failures
@@ -543,6 +543,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
         placeholder={t("We'll never share your email.", 'Email của bạn được giữ kín.', 'メールアドレスは公開されません。')}
         value={email}
+        invalid={error === 'need_email' || error === 'bad_email' || error === 'email_taken'}
         onChangeText={(v) => setEmail(cleanEmail(v))}
         keyboardType="email-address"
         autoCapitalize="none"
