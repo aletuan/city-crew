@@ -6,7 +6,9 @@
 // photograph whose kind is the front, the inside, the garden or the
 // view, and which takes in the place as a whole (`wide`). The garden —
 // a courtyard, a terrace, a rooftop with the place's seats — is the
-// labels' v5 kind, and a cover by the owner's word (18 Oct 2026). At a café or a place to eat the
+// labels' v5 kind, and a cover by the owner's word (18 Oct 2026); so is
+// the heritage, v7's temple, tomb or monument, the establishing shot of a
+// place that is one. At a café or a place to eat the
 // owner also takes the food (17 Oct 2026: "Được, với quán ăn uống") — a
 // signature dish is what such a place is chosen for.
 //
@@ -31,7 +33,7 @@
 /** Categories where a photograph of the food may be the cover. */
 export const FOOD_CATEGORIES = ['cafes', 'eats'];
 
-const PLACE_KINDS = ['exterior', 'interior', 'garden', 'view'];
+const PLACE_KINDS = ['exterior', 'interior', 'garden', 'heritage', 'view'];
 
 /** What the desk calls each kind, in the words the label rounds used. */
 export const KIND_LABEL = {
@@ -39,6 +41,7 @@ export const KIND_LABEL = {
   interior: 'Inside',
   exterior: 'Front',
   garden: 'Garden',
+  heritage: 'Heritage',
   view: 'View',
   text: 'Text',
   other: 'Other',

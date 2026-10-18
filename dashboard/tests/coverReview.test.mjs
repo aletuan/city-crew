@@ -16,7 +16,7 @@ test('a place is a food place when any of its categories is a café or a place t
 });
 
 test('an establishing view qualifies anywhere; the food only at a food place; nothing unlabelled', () => {
-  for (const kind of ['exterior', 'interior', 'garden', 'view']) {
+  for (const kind of ['exterior', 'interior', 'garden', 'heritage', 'view']) {
     assert.equal(qualifies(L(kind, { wide: true }), false), true, kind);
     assert.equal(qualifies(L(kind, { wide: false }), false), false, `${kind} but only part of it`);
     // "Can't tell" is not "yes".
@@ -40,6 +40,7 @@ test('why the cover does not qualify, in a few words', () => {
   assert.equal(why(null), 'Not labelled');
   assert.equal(why(L('interior')), 'Inside, but only part of it');
   assert.equal(why(L('garden')), 'Garden, but only part of it');
+  assert.equal(why(L('heritage')), 'Heritage, but only part of it');
   assert.equal(why(L('food')), 'Food');
   assert.equal(why(L('text')), 'Text');
   assert.equal(why({ kind: 'diagram' }), 'diagram');
