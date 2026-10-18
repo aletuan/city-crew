@@ -190,7 +190,7 @@ sản phẩm, không nằm trong repo. Thêm một bước sau bước chọn �
 | 3 | Đoạn cập nhật cho skill Threads, chủ sản phẩm dán vào tài khoản | ☐ |
 | 4 | **Vòng chấm 3:** chủ sản phẩm chấm các thuộc tính trên 100 ảnh mới, Claude chấm trước và khoá câu trả lời. 137 ảnh của bước 2 đã được khoá sẵn (mục 9). Trang chấm: Data Desk `#/photo-types-3`; câu trả lời của Claude và mã sha256 ở `data/review/photo-types/round3.json` | ✅ 17/10: vòng 3 (loại ảnh), 3b (sáu thuộc tính), 3c (24 ảnh mới: loại ảnh, thấy cả không gian, người). Kết quả ở mục 10. Dàn dựng chưa đo được vì chưa có ảnh nào chủ sản phẩm chọn "Có" |
 | 5 | Gán nhãn toàn bộ catalog, theo từng thành phố | ✅ 17/10: 6.467 ảnh, Haiku 5.5, định nghĩa v4 (mục 10). Ảnh thêm sau đó chưa được gán tự động: app và Data Desk chưa gọi `label-photos` |
-| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (đề xuất ở mục 11) | ◐ 17/10: chủ sản phẩm duyệt phần A. Data Desk có trang `#/covers` (Cover review), câu trả lời lưu ở `cover_reviews`. Phần B và C chờ kết quả đo ở A |
+| 6 | App đọc nhãn: loại ảnh và điểm "hợp làm bìa" (đề xuất ở mục 11) | ◐ 17/10: phần A xong. Data Desk có trang `#/covers` (Cover review), câu trả lời lưu ở `cover_reviews`. 18/10: chủ sản phẩm duyệt 61 nơi, nhận 9 gợi ý (15%); luật ảnh bìa hiện tại không đủ để làm phần B (mục 11). Phần C chưa làm |
 
 **Tiêu chí để một nhãn được hiện trong app (bước 6):**
 - `kind` trùng với chủ sản phẩm từ **90%** trở lên.
@@ -670,6 +670,58 @@ nơi đầu tiên. Có làm phần B hay không, chủ sản phẩm quyết dự
 - Câu trả lời được lưu ở bảng `cover_reviews`, mỗi nơi một dòng, chỉ
   editor đọc và ghi được. Nơi nào đã chọn giữ ảnh bìa sẽ không hiện lại,
   trừ khi ảnh bìa đổi.
-- Pill "N of M suggestions taken" là con số để đo. Khi đã có 50 câu trả
-  lời đầu tiên, ghi tỷ lệ vào đây.
+- Pill "N of M suggestions taken" là con số để đo.
+
+### Phần A: kết quả (18/10/2026)
+
+Chủ sản phẩm trả lời cả **61 nơi** trên trang, từ 23:59 ngày 17/10 đến
+00:03 ngày 18/10 (UTC), trung bình khoảng 4 giây mỗi nơi. Đó cũng là cách
+một ảnh bìa thật sự được nhìn: như một thumbnail.
+
+**Nhận gợi ý 9/61 (15%), giữ ảnh bìa 52/61 (85%).** Chín nơi đổi ảnh bìa:
+80plus Coffee Roastery, TapTap Brunch, The Old Well Tiki Bar, Vườn Khói,
+Maiden Cocktail Bar, nonê pasta, Rehab Station, The Deck Saigon, La Poste.
+
+| Nhóm | Số nơi | Đổi |
+|---|---|---|
+| Ảnh bìa là nội thất, chỉ một góc | 22 | 3 |
+| Ảnh bìa là mặt tiền, chỉ một phần | 15 | 2 |
+| Ảnh bìa là đồ ăn, đồ uống (phần lớn ở quán bar) | 10 | 2 |
+| Ảnh bìa là "khác" | 5 | 2 |
+| Ảnh bìa là chữ, logo | 4 | 0 |
+| Ảnh bìa là cảnh | 4 | 0 |
+| Ảnh bìa chưa có nhãn | 1 | 0 |
+| Ảnh bìa do guide tải lên | 21 | 5 |
+| Ảnh bìa từ Google | 40 | 4 |
+| Gợi ý có ánh sáng ngày | 29 | 3 |
+| Gợi ý không có ánh sáng ngày | 22 | 5 |
+| Gợi ý đạt cả 3 tiêu chí (biển, ánh sáng ngày, không người) | 10 | 1 |
+
+**Đọc kết quả:**
+- **Nhãn đúng, luật sai.** Nhãn "thấy cả không gian" trùng với chủ sản
+  phẩm 92–100% ở vòng 3c. Cái không khớp là giả định của luật: ảnh bìa
+  phải thấy trọn nơi chốn (tiêu chí 1 của skill Threads). Với chủ sản
+  phẩm, một góc quán, một phần mặt tiền hay một ly cocktail ở quán bar
+  vẫn là ảnh bìa tốt.
+- **Ba tiêu chí xếp hạng không giúp chọn ảnh.** Gợi ý có ánh sáng ngày được
+  nhận ít hơn gợi ý không có (10% so với 23%): quán bar và nhà hàng hợp
+  với ảnh tối. Gợi ý đạt cả ba tiêu chí chỉ được nhận 1/10.
+- **Quán bar dùng ảnh đồ uống làm bìa là đúng:** 8/10 ảnh bìa đồ ăn, đồ uống
+  được giữ. Luật "đồ ăn làm bìa" lẽ ra nên tính cả `nightlife`.
+- Hai nhóm có tỷ lệ đổi cao hơn là ảnh bìa model gọi là "khác" (2/5) và
+  ảnh bìa do guide tải lên (5/21, so với 4/40 ảnh Google). Ảnh guide tải
+  lên tự thành ảnh bìa (`guide_upload_becomes_cover`). Cả hai nhóm quá
+  nhỏ để dựng thành luật.
+- **Giới hạn:** một người chấm, một lần. Chỉ những nơi luật đã gắn cờ mới
+  được hỏi, nên số liệu này đo độ chính xác của cờ "ảnh bìa chưa đạt",
+  không đo được những ảnh bìa tệ mà luật bỏ sót.
+
+**Phần B** là gợi ý ảnh bìa ngay trong app: một dấu "Gợi ý bìa" trên ảnh
+điểm cao nhất ở thư viện ảnh của guide. Với tỷ lệ nhận 15%, cứ 6 gợi ý thì
+5 sai, nên phần B **chưa làm** với luật hiện tại. Có làm lại hay không,
+bằng luật nào, là việc chủ sản phẩm quyết sau.
+
+Trang Cover review vẫn chạy. Job gán nhãn mỗi giờ đưa ảnh mới vào, nên
+những nơi mới bị gắn cờ sẽ hiện ở đó. Những nơi đã chọn giữ ảnh bìa không
+hiện lại.
 
