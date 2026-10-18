@@ -288,7 +288,11 @@ D. Nhưng C trái nguyên tắc 4.
 - [ ] **Bước 3: chặn trần điểm khi có lỗi kỹ thuật nặng.** Đã có số đo độ nét
   và độ sáng; còn thiếu luật chặn trần và ngưỡng đo trên catalog.
 - [ ] **Bước 5: điểm "hợp làm bìa".** Kiểm chứng bằng việc ảnh bìa thật có lọt
-  top 3 thường hơn mức 62% hiện nay không.
+  top 3 thường hơn mức 62% hiện nay không. 17–18/10: điểm dựng từ nhãn
+  Claude đưa ảnh bìa thật vào top 3 ở **73%** số nơi (1.000 nơi). Nhưng
+  khi đem gợi ý cho chủ sản phẩm duyệt, chỉ **9/61 (15%)** được nhận
+  (`docs/photo-labels.md` §11). Điểm này xếp hạng được, nhưng chưa đủ để
+  đề xuất đổi ảnh bìa.
 - [ ] **Bước 4: tiêu chí theo bối cảnh** (category và kiểu ảnh).
 - [ ] **Bước 6: giọng văn theo bối cảnh.**
 - [ ] Nút để guide "sửa loại / độ phù hợp": thành nguồn dữ liệu có nhãn của
