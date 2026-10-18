@@ -1470,5 +1470,35 @@
         "The sushi is sharp and appetising, but the plate fills only part of the frame and the cluttered bar tools in the foreground and chairs behind make the composition messy, with flat overhead flash-like light."
       ]
     }
+  },
+  "owner": "B=B=A===ABABB=BAAABABBBAABBABABBBBABBABA=A=B=A=BBBBBBA=ABB==",
+  "about_owner": "The owner's answers from #/photo-pairs-4, pasted 18 Oct 2026 after the three lines were sealed (sha256 checked before scoring). 47 pairs decided (18 A, 29 B), 13 even, 11 of them food.",
+  "result": {
+    "about": "Scored by the rule in `scoring`, written before the owner answered.",
+    "vision": {
+      "agree": 31,
+      "of": 47,
+      "picks": 47,
+      "strict": "31/47 (66%)",
+      "where_it_picks": "31/47 (66%)",
+      "passes": false
+    },
+    "haiku": {
+      "agree": 26,
+      "of": 47,
+      "picks": 36,
+      "strict": "26/47 (55%)",
+      "where_it_picks": "26/36 (72%)",
+      "passes": false
+    },
+    "opus": {
+      "agree": 23,
+      "of": 47,
+      "picks": 35,
+      "strict": "23/47 (49%)",
+      "where_it_picks": "23/35 (66%)",
+      "passes": false
+    },
+    "exploratory": "Found after looking at the answers, so a lead for the next round and not a result: where the two Vision scores differ by 0.1 or more (23 of the 47 decided pairs), Vision agrees with the owner on 20 (87%); under 0.1, 11 of 24 (46%, chance). Where Haiku's scores differ by 3 or more, 5 of 6; Opus's, 7 of 7."
   }
 }

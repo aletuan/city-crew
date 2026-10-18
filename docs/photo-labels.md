@@ -882,3 +882,49 @@ có chủ ý", tiêu chí mặt tiền đã cho "đèn buổi tối đẹp".
     hẳn. Vòng này sẽ cho biết bên nào gần với mắt chủ sản phẩm hơn.
 - **Trang chấm:** Data Desk, `#/photo-pairs-4`. Trang không cho biết máy đã
   chọn ảnh nào.
+
+**Kết quả vòng 4 (18/10/2026).** Chủ sản phẩm trả lời đủ 60 cặp, sau khi
+ba dòng kết quả của máy đã khoá. Trước khi tính điểm, tôi đã kiểm tra lại
+sha256 của cả ba dòng. Chủ sản phẩm chọn hẳn một ảnh ở 47 cặp (18 A, 29 B)
+và cho "ngang nhau" ở 13 cặp. 11 trong 13 cặp "ngang nhau" là ảnh đồ ăn,
+tức là một nửa số cặp đồ ăn.
+
+Bảng dưới tính trên 47 cặp chủ sản phẩm có chọn. Cột "Có chọn" là số cặp
+bên đó không hoà điểm.
+
+| Bên chấm | Có chọn | Trùng khi có chọn | Tính chặt (hoà là sai) | Đạt? |
+|---|---|---|---|---|
+| Apple Vision | 47/47 | **31/47 (66%)**, CI 95% 52–78% | 66% | Không |
+| Haiku 5.5 | 36/47 (77%) | **26/36 (72%)**, CI 56–84% | 55% | Không, thiếu 3 điểm phần trăm |
+| Opus 5.5 | 35/47 (74%) | **23/35 (66%)**, CI 49–79% | 49% | Không |
+
+Theo từng loại, ở những cặp bên đó có chọn:
+
+| Bên chấm | Mặt tiền | Nội thất | Đồ ăn |
+|---|---|---|---|
+| Apple Vision | 8/14 | 15/22 | 8/11 |
+| Haiku | 8/10 | 13/16 | 5/10 |
+| Opus | 7/11 | 12/15 | 4/9 |
+
+**Đọc kết quả:**
+- **Không bên nào qua mốc 75% đã đặt trước.** Cả ba đều hơn chọn bừa:
+  khả năng đạt được mức đó nếu chỉ chọn bừa là 0,02 với Vision, 0,006
+  với Haiku và 0,04 với Opus. Nhưng chưa bên nào đủ tốt để tự chọn ảnh
+  thay editor.
+- **Haiku gần mốc nhất**, và ở nội thất đạt 13/16. Phần kéo cả ba xuống
+  là đồ ăn: chủ sản phẩm thấy một nửa số cặp đồ ăn là ngang nhau, còn ở
+  những cặp có chọn thì Claude chỉ trùng khoảng một nửa.
+- **Opus không hơn Haiku.** Hai mô hình đồng ý với nhau 35/36 cặp, nên mô
+  hình lớn hơn không mua được gì ở câu hỏi này.
+
+**Một gợi ý, tìm ra sau khi đã xem câu trả lời.** Vì tìm sau nên nó chỉ là
+manh mối cho vòng sau, chưa phải kết quả:
+- **Vision đúng khi hai điểm cách xa nhau.** Ở 23 cặp mà hai điểm Vision
+  lệch nhau từ 0,1 trở lên, Vision trùng với chủ sản phẩm 20 cặp (87%).
+  Ở 24 cặp lệch nhau dưới 0,1, Vision chỉ trùng 11 cặp (46%), ngang chọn
+  bừa.
+- **Claude cũng vậy.** Khi hai điểm cách nhau từ 3 trở lên, Haiku trùng 5/6
+  cặp, Opus trùng 7/7 cặp.
+- Nghĩa là các bên chấm đáng tin khi một ảnh rõ ràng hơn hẳn ảnh kia, và
+  không đáng tin khi hai ảnh gần nhau. Muốn biết luật "chỉ chọn khi cách
+  biệt lớn" có thật hay không thì phải đo trên những cặp mới.
