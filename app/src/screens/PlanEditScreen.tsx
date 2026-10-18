@@ -255,10 +255,16 @@ export default function PlanEditScreen({ navigation, route }: {
   // one. Leaving with them used to drop them without a word — the header's
   // Back and iOS's swipe alike, since both go through `beforeRemove`.
   const edited = stops !== null;
+  // An emptied plan leaves without asking. There is nothing in it to
+  // lose — the plan it was cut down from is still on the options screen
+  // the way out leads to — and "Choose another option" answered by
+  // "Discard your changes?" would be a door that argues (PLAN-02).
+  const emptied = useRef(false);
+  emptied.current = current.length === 0;
   useEffect(() => {
     if (!edited) return undefined;
     return navigation.addListener('beforeRemove', (e) => {
-      if (saved.current) return;
+      if (saved.current || emptied.current) return;
       e.preventDefault();
       Alert.alert(
         t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？'),
@@ -366,8 +372,12 @@ export default function PlanEditScreen({ navigation, route }: {
     // the caption under the button to say why — the same dead control the
     // bookmark and the heart were cured of. They raise the sign-in sheet
     // with the thing reached for named in its title; so does this.
-    if (!session?.user?.id) { askToSignIn('trip'); return; }
+    //
+    // Nothing to save is asked first: a guest with an empty plan was
+    // invited to sign in to save it (PLAN-02). The button is not offered
+    // then either; this is the guard behind it.
     if (!city || !current.length) return;
+    if (!session?.user?.id) { askToSignIn('trip'); return; }
     setSaving(true);
     try {
       const tripId = await saveTrip({
@@ -513,6 +523,7 @@ export default function PlanEditScreen({ navigation, route }: {
             than as a letter-spaced eyebrow. "Hold", not "drag": the hold is
             what tells a move apart from a tap and a scroll, and a reader
             told to drag drags at once and scrolls. */}
+        {current.length > 0 && (
         <View style={s.hint}>
           <Ionicons name="move-outline" size={15} color={colors.textTertiary} />
           <Text style={s.hintText}>
@@ -521,6 +532,7 @@ export default function PlanEditScreen({ navigation, route }: {
               : t('Nudge the time with − and +.', 'Chỉnh giờ bằng − và +.', '時刻は − と + で調整。')}
           </Text>
         </View>
+        )}
 
         {current.map((stop, i) => {
           return (
@@ -600,15 +612,32 @@ export default function PlanEditScreen({ navigation, route }: {
         {/* With the summary line gone, the air it carried above Save is
             the wrapper's. */}
         <View style={s.save} />
-        <GradientCta
-          icon="checkmark"
-          wide
-          label={saving
-            ? t('Saving…', 'Đang lưu…', '保存中…')
-            : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存')}
-          onPress={() => { if (!saving) void onSave(); }}
-          testID="plan-save"
-        />
+        {/* An emptied plan has nothing to save, so it is not offered: the
+            button used to stay lit, a guest's tap asked them to sign in
+            to save nothing, and a reader's tap did nothing at all
+            (PLAN-02, 17 Oct 2026). What is offered is the way back to the
+            options this one was picked from — the plan was chosen there,
+            and choosing again is the one useful next step. No undo: the
+            owner's call, and the options are one tap away. */}
+        {current.length > 0 ? (
+          <GradientCta
+            icon="checkmark"
+            wide
+            label={saving
+              ? t('Saving…', 'Đang lưu…', '保存中…')
+              : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存')}
+            onPress={() => { if (!saving) void onSave(); }}
+            testID="plan-save"
+          />
+        ) : (
+          <GradientCta
+            icon="arrow-back"
+            wide
+            label={t('Choose another option', 'Chọn lại phương án', '別のプランを選ぶ')}
+            onPress={() => navigation.goBack()}
+            testID="plan-choose-again"
+          />
+        )}
 
         {/* A line under the button only for the guest, who has no other
             way to know the tap will raise a sign-in sheet rather than
@@ -620,7 +649,7 @@ export default function PlanEditScreen({ navigation, route }: {
             "stay editable after saving", which TripDetail, being
             view-only, never kept; a caption that has been wrong once and
             redundant once is a caption the button does not need. */}
-        {!session?.user?.id && (
+        {!session?.user?.id && current.length > 0 && (
           <Text style={s.note}>
             {t(
               'Sign in to save this trip.',
