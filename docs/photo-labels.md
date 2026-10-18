@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v8
+## 3. Bộ nhãn v9
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -78,6 +78,10 @@ thể của ảnh (mục 13).
 
 **v8 (18/10/2026)** thêm loại `collage` (Ảnh ghép), là ảnh bìa hợp lệ (mục
 13).
+
+**v9 (18/10/2026)** thêm vào Sân vườn: cổng hay lối vào của chính quán, nhìn
+vào sân có cây xanh và bàn ghế của quán, là Sân vườn (mục 13). Nhãn chủ sản
+phẩm sửa tay (`"by": "owner"`) không bao giờ bị gán lại.
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -133,10 +137,10 @@ Bảng `photo_scores` đã được thiết kế để có bộ chấm thứ hai
 | Cột | Giá trị |
 |---|---|
 | `scorer` | `claude-labels` |
-| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `8` (luật 3 ở mục 4) |
+| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `9` (luật 3 ở mục 4) |
 | `aesthetic`, `is_utility` | `null`: bộ chấm này không chấm điểm đẹp |
 | `scored_by` | `null`: skill ghi nhãn qua Supabase MCP, không qua tài khoản người dùng |
-| `signals` | `{ "v": 8, "kind": …, "brand": …, … }` |
+| `signals` | `{ "v": 9, "kind": …, "brand": …, … }` |
 
 **Migration cần có:** bỏ ràng buộc `photo_scores_one_per_photo`.
 
@@ -1125,4 +1129,23 @@ ghi chú có các chữ trên. Không lỗi.
 - 12 nơi đang dùng ảnh ghép làm ảnh bìa, ví dụ Cam Coffee, Pin & Rest,
   Tulpa Cocktails Bar, Rosie Posie 2. Data Desk không đưa chúng lên trang
   "Ảnh bìa nên xem lại".
+
+### Định nghĩa v9: cổng nhìn vào sân vườn (18/10/2026)
+
+**Vì sao.** Ảnh cổng đỏ của Bold Brew Cafe, tán cây che gần hết, bàn ghế
+trong sân phía sau, bị gán Phong cảnh `unsure`. Chủ sản phẩm sửa thành Sân
+vườn "vì thấy cổng nhà", và thêm: sân vườn thường có cả cây xanh. Nhãn đó
+được ghi tay với `"by": "owner"`; `label-photos` (bản 10) và skill không
+bao giờ hỏi lại một nhãn như vậy.
+
+**Quy tắc:** cổng hay lối vào của chính quán, nhìn từ ngoài vào sân hoặc
+vườn có cây xanh và bàn ghế của quán, là Sân vườn, kể cả khi cây che phần
+lớn khung. Không đủ những điều đó thì vẫn là Mặt tiền. `VERSION` lên 9.
+
+**Đo trước khi ghi** (Haiku, không ghi), trên 39 ảnh có ghi chú nhắc cổng
+hay lối vào cùng sân hoặc bàn ghế, và ảnh Bold Brew: Bold Brew ra Sân vườn
+chắc chắn; 5 ảnh Sân vườn chắc, 6 ảnh Sân vườn `unsure`; còn lại là Mặt
+tiền, chủ yếu mặt tiền có bàn ngoài vỉa hè hay cổng không thấy chỗ ngồi.
+Chờ chủ sản phẩm duyệt tấm ảnh ghép trước khi gán lại các ảnh Mặt tiền,
+Phong cảnh và `unsure`.
 

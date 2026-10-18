@@ -280,6 +280,19 @@ describe('labelling (write, the default)', () => {
     expect(writes()).toEqual([]);
   });
 
+  // The owner's ruling on a photograph outlives every later version.
+  it('never asks again about a label the owner set by hand', async () => {
+    h.fake.replies(
+      session, editor,
+      { data: [photo(A)], error: null },
+      { data: [{ photo_id: A, scorer_version: VERSION - 1, signals: { kind: 'garden', by: 'owner' } }], error: null },
+    );
+    const out = await (await call({ photo_ids: [A] })).json();
+    expect(out.labelled).toEqual([A]);
+    expect(h.beta).not.toHaveBeenCalled();
+    expect(writes()).toEqual([]);
+  });
+
   it('reads no labels when nothing it was given is stored', async () => {
     h.fake.replies(session, editor, { data: null, error: null });
     const out = await (await call({ photo_ids: [A] })).json();

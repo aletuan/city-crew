@@ -122,15 +122,18 @@ Deno.serve(async (req) => {
     const unstored = (ids as string[]).filter((id) => found.has(id) && !found.get(id)!.storage_path);
     let todo = (ids as string[]).filter((id) => found.get(id)?.storage_path && found.get(id)!.photo_uri);
 
-    // Already labelled, completely, at this version: nothing to do. Only
-    // when writing — a measurement asks again on purpose.
+    // Already labelled, completely, at this version: nothing to do. Nor
+    // is a label the owner set by hand (`"by": "owner"`), at any version:
+    // a model asked again would only undo a ruling. Only when writing — a
+    // measurement asks again on purpose.
     const labelled: string[] = [];
     if (write && todo.length) {
       const { data: have } = await admin.from("photo_scores")
         .select("photo_id, scorer_version, signals").eq("scorer", SCORER).in("photo_id", todo);
       const done = new Set((have ?? [])
         .filter((s: { scorer_version: number; signals: Record<string, unknown> | null }) =>
-          s.scorer_version >= VERSION && ["kind", ...ATTRS].every((k) => k in (s.signals ?? {})))
+          s.signals?.by === "owner" ||
+          (s.scorer_version >= VERSION && ["kind", ...ATTRS].every((k) => k in (s.signals ?? {}))))
         .map((s: { photo_id: string }) => s.photo_id));
       labelled.push(...todo.filter((id) => done.has(id)));
       todo = todo.filter((id) => !done.has(id));
