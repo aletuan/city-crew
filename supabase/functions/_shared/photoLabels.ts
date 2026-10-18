@@ -1,5 +1,5 @@
 // What a photograph is, and the six things a cover is chosen by: the
-// photo labels, v5 (docs/photo-labels.md §3).
+// photo labels, v6 (docs/photo-labels.md §3).
 //
 // The one place they are defined. The `label-photos` function sends
 // DEFINITIONS to the model as its instructions; the `photo-labels` skill
@@ -13,7 +13,7 @@
 // key is added here and to the skill's query; a new kind, or a changed
 // meaning, bumps VERSION, and every older row is asked again.
 
-export const VERSION = 5;
+export const VERSION = 6;
 
 /** The scorer name the labels are stored under in `photo_scores`. */
 export const SCORER = "claude-labels";
@@ -47,15 +47,19 @@ export type Attr = typeof ATTRS[number];
  *  v4, 367 named a courtyard, garden, terrace, rooftop or balcony — the
  *  place's own outdoor seating, which no kind held, so the model wavered
  *  between interior, exterior and view. The owner made it a kind of its
- *  own, and one a cover may be. */
+ *  own, and one a cover may be. v6 (18 Oct 2026) narrows it to seating:
+ *  v5 let a path or a deck count, and "greenery filling the frame does not
+ *  change it", so a forest trail, a lake jetty and a park bench read as a
+ *  garden. Of 21 photographs read as garden by v5's words, the owner saw
+ *  12 as scenery: what a cover wants from a garden is the place's seats. */
 export const DEFINITIONS = `You label one photograph of a place in a city guide: a café, a restaurant, a bar, a shop, a museum, a park. Answer from the photograph alone.
 
 KIND — exactly one, by the subject: what fills most of the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
 - food: food or drink is the subject, even with a view behind it. A tray of drinks counts; a bar's back wall of bottles does not. Drinks on a table in front of a city view are food. Food or drinks on a table are food even when part of the room shows around them.
 - interior: inside the place: rooms, seating, counters, shelves, a staircase, with no food or drink as the subject. People in the room do not change it. A counter inside the room is interior, even with the place's sign lit on the wall behind it. A covered gallery looking into a courtyard is interior.
 - exterior: the place from outside, where the building, its front, its entrance or its sign fills most of the frame. A counter or kiosk seen from the street, outside the building, with the place's sign on it is exterior. A church, library or museum whose building fills most of the frame is exterior even under a blue sky.
-- garden: the place's own open-air space where its guests sit or walk: a courtyard, a garden, a terrace, a rooftop, a balcony, a leafy passage to its seats, with the place's tables, chairs, benches or paths in the frame. Greenery filling much of the frame does not change it while the place's seating or paths are part of what is shown. Seen from the street as the place's front, it is exterior; under a roof with walls around, it is interior.
-- view: scenery fills most of the frame: sky, water, greenery, a lawn, a park, grounds, a skyline, a sunset, with none of the place's own seating as part of what is shown. A building, a gate, a statue or a monument standing in grounds that fill most of the frame does not change it: that is view. A rooftop or terrace with its seating in the frame is garden; the skyline beyond it alone is view.
+- garden: the place's own open-air seating is the subject: its tables, chairs, sofas, benches or loungers on a courtyard, a garden, a terrace, a rooftop, a balcony, a deck or by a pool. A path, steps, a bridge, a jetty or a lawn with no seats, or a few seats at the edge of a frame that scenery fills, is not garden: that is view. A public park, a lake shore or grounds open to everyone are view, benches and all. Seen from the street as the place's front, it is exterior; under a roof with walls around, it is interior.
+- view: scenery fills most of the frame: sky, water, greenery, a lawn, a park, grounds, a path or a bridge through them, a skyline, a sunset. A building, a gate, a statue or a monument standing in grounds that fill most of the frame does not change it: that is view. A rooftop or terrace whose tables and chairs are the subject is garden; the same terrace with the skyline filling the frame and its seats only at the edge is view.
 - text: a menu, a board, a poster, or a sign or logo that fills the frame: something to read rather than look at.
 - other: none of the above: a close portrait, an object with no place in it, a blank or broken image.
 

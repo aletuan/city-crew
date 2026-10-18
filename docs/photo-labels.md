@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v5
+## 3. Bộ nhãn v6
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -40,8 +40,8 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
 | `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Hành lang có mái nhìn ra sân trong là Nội thất | P |
 | `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền | P |
-| `garden` | Không gian ngoài trời của chính quán, nơi khách ngồi hay đi lại: sân trong, vườn, sân thượng, ban công, lối đi rợp cây dẫn tới chỗ ngồi, có bàn ghế hay lối đi của quán trong khung. Cây phủ nhiều khung không đổi loại khi chỗ ngồi vẫn là một phần chủ thể. Nhìn từ đường như mặt tiền thì là Mặt tiền; có mái và tường bao thì là Nội thất | (từ v5) |
-| `view` | Cảnh vật chiếm phần lớn khung, không có chỗ ngồi của quán làm chủ thể: trời, nước, cây, bãi cỏ, khuôn viên, toàn cảnh thành phố. Nhà, hiên, cổng, tượng đứng giữa khuôn viên chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng có bàn ghế là Sân vườn; chỉ có toàn cảnh phía xa là Phong cảnh | S |
+| `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Nhìn từ đường như mặt tiền thì là Mặt tiền; có mái và tường bao thì là Nội thất | (từ v5, thu hẹp ở v6) |
+| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà, hiên, cổng, tượng đứng giữa khuôn viên chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung | U |
 | `other` | Không thuộc loại nào ở trên | U |
 
@@ -67,6 +67,9 @@ hay ki-ốt nhìn từ ngoài đường mới là Mặt tiền; quầy trong nh�
 
 **v5 (18/10/2026)** thêm loại `garden` (Sân vườn), theo quyết định của chủ
 sản phẩm: sân vườn là một ảnh bìa hợp lệ. Lý do và kết quả ở mục 13.
+
+**v6 (18/10/2026)** thu hẹp Sân vườn: chỉ khi chỗ ngồi của quán là chủ thể.
+Lối đi, sàn gỗ không ghế, công viên công cộng là Phong cảnh (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -122,10 +125,10 @@ Bảng `photo_scores` đã được thiết kế để có bộ chấm thứ hai
 | Cột | Giá trị |
 |---|---|
 | `scorer` | `claude-labels` |
-| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `5` (luật 3 ở mục 4) |
+| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `6` (luật 3 ở mục 4) |
 | `aesthetic`, `is_utility` | `null`: bộ chấm này không chấm điểm đẹp |
 | `scored_by` | `null`: skill ghi nhãn qua Supabase MCP, không qua tài khoản người dùng |
-| `signals` | `{ "v": 5, "kind": …, "brand": …, … }` |
+| `signals` | `{ "v": 6, "kind": …, "brand": …, … }` |
 
 **Migration cần có:** bỏ ràng buộc `photo_scores_one_per_photo`.
 
@@ -1008,4 +1011,45 @@ chờ chủ sản phẩm quyết định:
 | Bàn tiệc trang trí: sinh nhật, cầu hôn | 9 | bóng bay, chữ đèn |
 | Động vật | 9 | mèo của quán, hổ, hươu cao cổ ở sở thú |
 | Hồ bơi | 9 | hồ bơi resort; phần lớn đã thành Sân vườn |
+
+### Định nghĩa v6: Sân vườn chỉ khi chỗ ngồi là chủ thể (18/10/2026)
+
+**Vì sao.** Chủ sản phẩm hỏi về 139 ảnh v4 chắc chắn là Phong cảnh. Đọc lại
+từng ảnh theo chữ của v5 thì 21 ảnh thành Sân vườn. Nhưng xem ảnh, chủ sản
+phẩm thấy 12 trong số đó là phong cảnh: lối mòn trong rừng, sàn gỗ bên hồ,
+cổng cưới, sân thượng mà hồ chiếm cả khung và ghế chỉ ở mép. v5 tính cả
+"lối đi" và nói "cây phủ nhiều khung không đổi loại", nên đã gọi những ảnh
+đó là Sân vườn. Ảnh công viên có ghế đá cũng vướng đúng câu đó.
+
+**Chủ sản phẩm duyệt:** Sân vườn chỉ khi bàn ghế, ghế nằm hay chỗ ngồi của
+quán là chủ thể. Lối đi, cầu, sàn gỗ không ghế, hay vài ghế ở mép khung mà
+cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng
+là Phong cảnh. `VERSION` lên 6, `label-photos` bản 7.
+
+**Đo trước khi ghi**, Haiku, trên 21 ảnh chủ sản phẩm đã chia:
+- 6/9 ảnh "chỗ ngồi là chủ thể" ra Sân vườn (4 ảnh `unsure`). Ba ảnh
+  trượt là hai sân hiên của A Dopo và vườn của Memory Station: ghế chiếm
+  nửa dưới nhưng đồi và thành phố chiếm phần còn lại.
+- 11/12 ảnh "cảnh chiếm phần lớn" ra Phong cảnh. Ảnh còn lại là lối sân
+  trong của The Collective, có ghế ở góc.
+
+**Gán lại 540 ảnh** (mọi ảnh Sân vườn của v5 và mọi ảnh Phong cảnh trước v6),
+không lỗi:
+
+| Trước | Sau v6 |
+|---|---|
+| 240 Sân vườn chắc | 174 vẫn Sân vườn chắc, 48 Sân vườn `unsure`, 11 Phong cảnh `unsure`, 7 sang loại khác `unsure` |
+| 95 Sân vườn `unsure` | 8 Sân vườn chắc, 35 vẫn `unsure`, 33 Phong cảnh, 19 sang loại khác |
+| 139 Phong cảnh chắc (v4) | 116 vẫn Phong cảnh chắc, 14 Phong cảnh `unsure`, 9 Sân vườn |
+| 66 Phong cảnh (v5) | 58 vẫn Phong cảnh, 3 sang loại khác |
+
+- Sân vườn chắc chắn còn 183 ảnh (từ 240). Xem bằng mắt 15 ảnh chọn ngẫu
+  nhiên: cả 15 đều có bàn ghế của quán làm chủ thể.
+- Số ảnh `unsure` trên cả catalog tăng từ 403 lên 475 (7%). Ranh giới
+  hẹp hơn thì nhiều ảnh nằm sát ranh giới hơn; ứng dụng không hiện nhãn
+  cho những ảnh này, như trước.
+- Những ảnh mà chính mình đọc là Mặt tiền (cổng lăng Minh Mạng, Thiệu Trị,
+  tượng ở Huyền Không, Nhà thờ Đức Bà, Cầu Ánh Sao) thì Haiku vẫn gọi là
+  Phong cảnh, đúng theo câu "cổng, tượng đứng giữa khuôn viên". Đó là câu
+  hỏi về nhóm Di tích ở trên, chưa quyết.
 
