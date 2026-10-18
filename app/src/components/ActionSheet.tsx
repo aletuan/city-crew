@@ -187,6 +187,12 @@ export function SheetRows({ actions, onClose }: {
  * full rows at the foot of the scroll put that a screen away. About a
  * third of the rows' height. The caller draws it only with something in
  * it.
+ *
+ * A `selected` action is the state already true — the photograph that is
+ * the cover: its glyph in the analysis's green, as the star beside the
+ * kind is, and its tap refused rather than closing the sheet over
+ * nothing. It keeps its slot so the dock does not change shape from one
+ * photograph to the next (owner, 18 Oct 2026).
  */
 export function SheetStrip({ actions, onClose }: {
   actions: SheetAction[];
@@ -200,14 +206,16 @@ export function SheetStrip({ actions, onClose }: {
           testID={`sheet-action-${a.key}`}
           containerStyle={s.stripCell}
           style={[s.stripItem, i > 0 && s.stripDivider]}
-          scaleTo={0.96}
+          scaleTo={a.selected ? 1 : 0.96}
           // The sheet first, as in `SheetRows`.
           onPress={() => { onClose(); setTimeout(a.onPress, 220); }}
+          disabled={a.disabled || a.selected}
           accessibilityRole="button"
           accessibilityLabel={a.title}
           accessibilityHint={a.desc}
+          aria-selected={a.selected}
         >
-          <Ionicons name={a.icon} size={19} color={a.destructive ? colors.bad : colors.text} />
+          <Ionicons name={a.icon} size={19} color={a.destructive ? colors.bad : a.selected ? colors.okInk : colors.text} />
           <Text style={[s.stripLabel, a.destructive && s.rowTitleBad]} numberOfLines={1}>{a.short ?? a.title}</Text>
         </PressableScale>
       ))}
