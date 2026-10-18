@@ -70,9 +70,12 @@
 // this one, and a swipe is what a page is for. The owner's mockup had
 // both, and agreed to neither.
 //
-// The sheet opens on the page the worn look is on. Opening on the first
-// page would show a reader wearing Cosmic a sheet with no tick on it, and
-// the tick is the one thing a settings sheet owes on arrival.
+// The worn look is the first card, so the sheet opens on the first page
+// with the tick on it — the one thing a settings sheet owes on arrival.
+// It used to open on whichever page the worn look sat on in the
+// catalogue; since 18 Oct 2026 the worn look and the popular ones lead
+// the grid (`orderLooks`, whose header in `lib/lookLabels` has why), and
+// the first page is always the right one.
 //
 // And the next page shows its edge. The count said there were three pages
 // and nothing said *swipe*: the owner's screenshot of the first cut had a
@@ -84,10 +87,10 @@
 // says there is more *and* which way it is, which neither dots nor a
 // count can.
 //
-// TWO WORDS on a few cards since 12 Oct 2026, and the grid in its one
-// order. The owner asked whether the looks could be ordered by how often
-// they are chosen; the answer, with the research behind it, is the header
-// of `lib/lookLabels`. "Popular" goes on the first three looks the server
+// TWO WORDS on a few cards since 12 Oct 2026, and since 18 Oct the
+// popular looks at the front of the grid too, after the worn one — the
+// order and the research behind it are the header of `lib/lookLabels`.
+// "Popular" goes on the first three looks the server
 // names as worn by at least a fifth of the accounts that chose a theme,
 // and by at least two (`popular_themes`: a share, since two of three
 // readers is popular and twenty of ten thousand is not; names and no
@@ -124,7 +127,7 @@
 // nearly met and read as missed rather than meant. Half-and-half is a
 // tag; one axis crossed, the other kept.
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -133,7 +136,7 @@ import { useAuth } from '../lib/auth';
 import { fetchPopularThemes, saveTheme } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
-import { parseSeen, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from '../lib/lookLabels';
+import { orderLooks, parseSeen, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from '../lib/lookLabels';
 import { Pref, Return, Scheme, useScheme } from '../lib/theme';
 import { colors, font, PALETTES, pillInk, radius, space } from '../theme';
 import { PressableScale } from './ui';
@@ -306,7 +309,10 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   const uid = useAuth().userId;
   const remember = (id: Pref) => (typeof uid === 'string' ? () => saveTheme(uid, id) : undefined);
   const grounds = OPTIONS.filter((o) => lookOf(o.id) === 'standard');
-  const palettes = looks ? OPTIONS.filter((o) => isLook(o.id)) : [];
+  // The catalogue, in its own order: what "New" compares against and
+  // what `orderLooks` arranges.
+  const catalogue = looks ? OPTIONS.filter((o) => isLook(o.id)) : [];
+  const ids = catalogue.map((o) => o.id as Pinned);
   // What the sheet may take before its list scrolls: the window less the
   // status bar's inset and the sheet's own chrome — handle, title and the
   // home indicator, about 100pt. On every phone this ships to the nine
@@ -320,27 +326,26 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   // the test runner, which lays out at no width at all.
   const pageW = Math.max(width - space.cardPadding * 2 - PEEK, 1);
   const stride = pageW + PAGE_GAP;
-  const pages: typeof palettes[] = [];
-  for (let i = 0; i < palettes.length; i += PER_PAGE) pages.push(palettes.slice(i, i + PER_PAGE));
-  // Where the worn look is, or the first page from a ground: that page
-  // is the one the strip opens on (`contentOffset`), and the one the
-  // count names until a swipe lands somewhere else.
-  const worn = Math.floor(Math.max(0, palettes.findIndex((o) => o.id === pref)) / PER_PAGE);
-  const [page, setPage] = useState(worn);
-  useEffect(() => { if (visible) setPage(worn); }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
   // The two words (see the header). Both are asked for on each opening:
   // the names from the server, which is one small call and may have moved
   // since the last opening, and the ids last shown from the phone — which
   // are then replaced by the ids shown now, so "New" lasts this opening.
   // `live` keeps an answer that arrives after the sheet closed from
   // landing on the next opening's state.
-  const ids = palettes.map((o) => o.id as Pinned);
+  //
+  // The names are also asked for once as the sheet first mounts, closed:
+  // the order below is taken as the sheet opens, and without the names in
+  // hand by then the first opening would have no popular front.
   const [named, setNamed] = useState<string[]>([]);
   const [unseen, setUnseen] = useState<Pinned[]>([]);
+  const asked = useRef(false);
   useEffect(() => {
+    if (visible || !asked.current) {
+      asked.current = true;
+      fetchPopularThemes().then((n) => setNamed(n), () => {});
+    }
     if (!visible) return;
     let live = true;
-    fetchPopularThemes().then((n) => { if (live) setNamed(n); });
     AsyncStorage.getItem(SEEN_LOOKS_KEY)
       .then((raw) => {
         if (live) setUnseen(unseenLooks(parseSeen(raw), ids));
@@ -352,6 +357,22 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
     return () => { live = false; };
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
   const popular = popularLooks(named, ids);
+  // The grid's order, taken as the sheet opens and held while it is open:
+  // a fresher answer from the server lands on the words at once, and on
+  // the order at the next opening — cards must not move under a finger.
+  // A ground tapped inside the sheet repaints in place and moves no card;
+  // a look tapped restarts the app.
+  const order = useMemo(
+    () => orderLooks(ids, isLook(pref) ? pref as Pinned : null, popular),
+    [visible], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const palettes = order.map((id) => catalogue.find((o) => o.id === id)!);
+  const pages: typeof palettes[] = [];
+  for (let i = 0; i < palettes.length; i += PER_PAGE) pages.push(palettes.slice(i, i + PER_PAGE));
+  // The first page, where the worn look now always is; the count names it
+  // until a swipe lands somewhere else.
+  const [page, setPage] = useState(0);
+  useEffect(() => { if (visible) setPage(0); }, [visible]);
   const wordOn = (id: Pinned): 'popular' | 'new' | null =>
     popular.includes(id) ? 'popular' : unseen.includes(id) ? 'new' : null;
   // A card that changes the look restarts the app. The choice waits in
@@ -473,7 +494,6 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
               snapToAlignment="start"
               decelerationRate="fast"
               contentContainerStyle={{ gap: PAGE_GAP, paddingRight: PEEK }}
-              contentOffset={{ x: worn * stride, y: 0 }}
               // Clamped and rounded as the carousel's is: a momentum end
               // reported past the last page cannot name a page that is
               // not there.
