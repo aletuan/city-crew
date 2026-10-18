@@ -53,7 +53,9 @@ view, so it asks again those two kinds, `other`, and every unsure label;
 a sure food, interior, garden or text label stays current. v8 added
 `collage`, which can hide under any kind; it asks again every unsure
 label, every label with no note, and every note that already said
-"collage", "panel" or "stacked".
+"collage", "panel" or "stacked". v9 let the place's own gate onto a green
+courtyard be garden; it asks again exterior, view and unsure labels. A
+label the owner set by hand (`"by": "owner"`) is never asked again.
 
 ```sql
 select p.id, p.photo_uri as uri, pl.slug
@@ -62,15 +64,19 @@ join public.places pl on pl.id = p.place_id
 left join public.photo_scores s
   on s.photo_id = p.id and s.scorer = 'claude-labels'
 where not p.is_hidden
+  and coalesce(s.signals->>'by', '') <> 'owner'   -- the owner's rulings stay
   and pl.slug = any(array['<slug>'])          -- or: pl.city_id = '<city>' / drop for all
   and (s.photo_id is null
        or s.scorer_version < 4
        or (s.scorer_version < 7
            and (s.signals->>'unsure' = 'true'
                 or s.signals->>'kind' in ('exterior', 'view', 'other')))
-       or (s.scorer_version < 8                -- VERSION below
+       or (s.scorer_version < 8
            and (s.signals->>'unsure' = 'true' or not s.signals ? 'note'
                 or s.signals->>'note' ~* 'collage|panel|diptych|stacked'))
+       or (s.scorer_version < 9                -- VERSION below
+           and (s.signals->>'unsure' = 'true'
+                or s.signals->>'kind' in ('exterior', 'view')))
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```
@@ -109,7 +115,7 @@ The script prints a path for each sheet and writes `index.json`, which
 maps each yellow number to its photo id. Read every sheet. A
 photograph reported `MISSING` gets no label; list it in the report.
 
-## 3. The labels, v8
+## 3. The labels, v9
 
 Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
 answer each photograph by them: one `kind`, and each of the six attributes
