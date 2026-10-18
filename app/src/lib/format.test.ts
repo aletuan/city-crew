@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, longDateline, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -760,5 +760,21 @@ describe('numericDate', () => {
     expect(numericDate('en', jan)).toBe('4 Jan');
     expect(numericDate('ja', fri)).toBe('9/25');
     expect(numericDate('ja', jan)).toBe('1/4');
+  });
+});
+
+// The planner's day row, which has the width for the whole date (PLAN-04).
+describe('longDateline', () => {
+  it('spells the weekday and names the month', () => {
+    const mon = new Date(2026, 9, 19);
+    expect(longDateline('vi', mon)).toBe('Thứ Hai, 19 tháng 10');
+    expect(longDateline('en', mon)).toBe('Monday, 19 October');
+    expect(longDateline('ja', mon)).toBe('10月19日（月）');
+  });
+
+  it('writes Sunday out in Vietnamese, and a single-digit day and month as they are said', () => {
+    const sun = new Date(2026, 0, 4);
+    expect(longDateline('vi', sun)).toBe('Chủ Nhật, 4 tháng 1');
+    expect(longDateline('en', sun)).toBe('Sunday, 4 January');
   });
 });

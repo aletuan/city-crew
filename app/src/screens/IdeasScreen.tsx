@@ -37,7 +37,7 @@ import { useAuth } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { type Collection, coverOf, membersOf, type Place } from '../lib/data';
 import { rankByLikes } from '../lib/likes';
-import { clockOf, dateline } from '../lib/format';
+import { clockOf, longDateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
@@ -395,7 +395,7 @@ export default function IdeasScreen({ navigation, route }: {
   // that has to go is the one that says nothing a calendar could not.
   // Somebody about to open a date picker wants to see which date they are
   // opening it on.
-  const dayLabel = dateline(lang, fromISO(day) ?? new Date());
+  const dayLabel = longDateline(lang, fromISO(day) ?? new Date());
 
   const ready = canPlan(draft);
 
@@ -531,38 +531,43 @@ export default function IdeasScreen({ navigation, route }: {
               <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
             </PressableScale>
             <View style={s.divider} />
-            <View style={s.whenRow}>
-              {/* The date used to be a label here, printed from
-                  `new Date()` and not in the draft at all — while sitting
-                  in the same card, directly under a row that *is* a
-                  control, with the same icon and layout. It read as
-                  tappable and was not. */}
-              {/* `containerStyle`, not `style`: PressableScale puts `style`
-                  on its inner animated view and only `containerStyle` on
-                  the Pressable itself. The row above gets away without it
-                  by being a direct child of the Card, which is a column,
-                  so it stretches. This one is inside a row, so without a
-                  flex on the *outer* element the pressable shrank to its
-                  icon and the date inside it collapsed to nothing. */}
-              <PressableScale
-                onPress={() => setPicking(true)}
-                containerStyle={s.dayBox}
-                style={s.dayHit}
-                accessibilityRole="button"
-              >
-                <Ionicons name="calendar-outline" size={19} color={colors.accent} />
-                <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
-              </PressableScale>
-              {/* One control, not two chips side by side. Day and Evening
-                  are the two halves of one answer and swapping between
-                  them is a single decision; drawn as separate chips they
-                  read as two independent switches, and nothing said that
-                  turning one on turns the other off.
+            {/* The day, a row of its own (PLAN-04, 18 Oct 2026). It
+                shared one with Day and Evening, and the Vietnamese date
+                was cut to "Thứ 7, 17…" on an iPhone 17 at the default
+                size — the part cut was the day of the month. A row of
+                its own is the row above's grammar: glyph, words, chevron,
+                the whole row the press. With the width it is the whole
+                date, "Thứ Bảy, 17 tháng 10" (`longDateline`).
 
-                  A bordered track on the page's own ground, recessed
-                  inside the card the way a switch is recessed into a
-                  panel — so the pair reads as one object with a moving
-                  part rather than as two buttons that happen to touch. */}
+                The date used to be a label here, printed from
+                `new Date()` and not in the draft at all — while sitting
+                in the same card, directly under a row that *is* a
+                control, with the same icon and layout. It read as
+                tappable and was not. */}
+            <PressableScale
+              onPress={() => setPicking(true)}
+              style={s.whereRow}
+              accessibilityRole="button"
+              testID="ideas-day"
+            >
+              <Ionicons name="calendar-outline" size={19} color={colors.accent} />
+              <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
+              <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+            </PressableScale>
+            <View style={s.divider} />
+            {/* One control, not two chips side by side. Day and Evening
+                are the two halves of one answer and swapping between
+                them is a single decision; drawn as separate chips they
+                read as two independent switches, and nothing said that
+                turning one on turns the other off.
+
+                A bordered track on the page's own ground, recessed
+                inside the card the way a switch is recessed into a
+                panel — so the pair reads as one object with a moving
+                part rather than as two buttons that happen to touch.
+                The card's full width since it has a row to itself, the
+                two halves equal. */}
+            <View style={s.whenRow}>
               <View style={s.segment} accessibilityRole="radiogroup">
                 {([
                   ['day', t('Day', 'Ban ngày', '昼')],
@@ -576,6 +581,7 @@ export default function IdeasScreen({ navigation, route }: {
                       haptic="selection"
                       scaleTo={0.96}
                       hitSlop={{ top: 3, bottom: 3 }}
+                      containerStyle={s.segCell}
                       style={[s.segItem, on && s.segItemOn]}
                       accessibilityRole="radio"
                       aria-checked={on}
@@ -585,29 +591,6 @@ export default function IdeasScreen({ navigation, route }: {
                   );
                 })}
               </View>
-              {/* The chevron ends this row because it ends the one above
-                  it. Both rows of this card are "tap to change", and a
-                  card whose two rows disagree about where that is said
-                  makes the reader check each one. It was tucked beside
-                  the date for a while on the argument that at the edge it
-                  would seem to belong to the Day/Evening control — but
-                  that control is plainly its own bordered object, and a
-                  ragged right edge costs more than the ambiguity it
-                  avoided.
-
-                  Its own tap target, opening the same picker, so the
-                  glyph is not a picture of an affordance. Hidden from
-                  VoiceOver: the date beside it is already the button, and
-                  a second nameless one on the same row is noise. */}
-              <PressableScale
-                onPress={() => setPicking(true)}
-                hitSlop={10}
-                testID="ideas-day-chevron"
-                accessible={false}
-                importantForAccessibility="no-hide-descendants"
-              >
-                <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
-              </PressableScale>
             </View>
           </Card>
           {/* Only when the clock has moved the start, which is only ever
@@ -841,9 +824,10 @@ export default function IdeasScreen({ navigation, route }: {
               // In the app's language, not the phone's. Left to the phone,
               // a Vietnamese screen opened "October 2026 / MON TUE…" under
               // a "Xong" button on a phone set to English (PLAN-07, 17 Oct
-              // 2026). English is the British reading, the one `dateline`
-              // already writes ("Tue, 20 Oct") and the one that starts the
-              // week on Monday, as Vietnamese and the old grid did.
+              // 2026). English is the British reading, the one the row
+              // above writes ("Monday, 19 October", `longDateline`) and the
+              // one that starts the week on Monday, as Vietnamese and the
+              // old grid did.
               //
               // iOS only: Android's dialog takes no locale and follows the
               // system. The prop only names how the grid is labelled — the
@@ -949,13 +933,13 @@ const s = StyleSheet.create({
 
   whenCard: { marginHorizontal: space.page, paddingVertical: 4 },
   whereRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 14 },
-  whenRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 10 },
+  whenRow: { paddingHorizontal: 14, paddingVertical: 10 },
   whereText: { color: colors.text, fontSize: 16, fontWeight: font.medium, flex: 1 },
   // One track, two halves — the pill the app gives a chosen control, on a
   // recessed ground so the pair reads as a single switch rather than as
   // two buttons that happen to be adjacent.
   segment: {
-    flexDirection: 'row', padding: 3,
+    flexDirection: 'row', gap: 3, padding: 3,
     borderRadius: radius.pill, backgroundColor: colors.bg,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
@@ -966,6 +950,7 @@ const s = StyleSheet.create({
     minHeight: 38, paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
   },
+  segCell: { flex: 1 },
   segItemOn: { backgroundColor: colors.accentSoft },
   segText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
   segTextOn: { color: colors.accent, fontWeight: font.semibold },
@@ -1024,11 +1009,6 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page,
   },
 
-  // The whole left of the row is the target, not the words alone: a date
-  // you have to hit exactly is a worse row than one you can tap across.
-  // The box takes the room; the row inside it lays the icon and date out.
-  dayBox: { flex: 1 },
-  dayHit: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 2 },
 
   pickScrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.32)' },
   // Centred rather than a bottom sheet: the calendar is a square of dense

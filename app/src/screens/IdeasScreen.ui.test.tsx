@@ -27,7 +27,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import { addDays, toISO } from '../lib/day';
-import { dateline } from '../lib/format';
+import { longDateline } from '../lib/format';
 import type { Nav } from '../nav';
 
 type Pos = { lat: number; lng: number } | null;
@@ -108,7 +108,7 @@ const TODAY = toISO(at(12));
 const TOMORROW = addDays(TODAY, 1);
 const line = (iso: string) => {
   const [y, mo, d] = iso.split('-').map(Number);
-  return dateline('en', new Date(y, mo - 1, d, 12));
+  return longDateline('en', new Date(y, mo - 1, d, 12));
 };
 
 const renderScreen = (params?: { from?: string; at?: number }) => {
@@ -361,26 +361,29 @@ describe('the date picker', () => {
     (lang, locale) => {
       state.lang = lang;
       renderScreen();
-      fireEvent.click(screen.getByTestId('ideas-day-chevron'));
+      fireEvent.click(screen.getByTestId('ideas-day'));
       expect(picker.props?.locale).toBe(locale);
     },
   );
 
-  // The glyph at the row's end is a control, not a picture of one. It
-  // ends this row because it ends the row above it, and a reader who
-  // aims at it has to land somewhere.
-  it('opens from the chevron at the row’s end as well as from the date', () => {
+  // PLAN-04: the day has a row of its own — the row above's grammar,
+  // glyph, date and chevron, the whole row one button — and the date in
+  // full, where it was cut to "Thứ 7, 17…" beside Day and Evening.
+  it('gives the day a row of its own, the whole row the press, the chevron inside it', () => {
     renderScreen();
-    fireEvent.click(screen.getByTestId('ideas-day-chevron'));
+    const row = screen.getByRole('button', { name: line(TODAY) });
+    expect(row).toBe(screen.getByTestId('ideas-day'));
+    expect(row.querySelector('[data-icon="chevron-forward"]')).toBeTruthy();
+    expect(row.contains(screen.getByRole('radiogroup'))).toBe(false);
+    fireEvent.click(row);
     expect(picker.props).not.toBeNull();
   });
 
-  // And says nothing while doing it: the date beside it is already the
-  // button, and a second nameless one on the same row is noise.
-  it('keeps the chevron out of the accessibility tree', () => {
+  it('writes the day in full, in the app\'s language', () => {
+    state.lang = 'vi';
     renderScreen();
-    const named = screen.getAllByRole('button', { name: line(TODAY) });
-    expect(named).toHaveLength(1);
+    expect(screen.getByTestId('ideas-day').textContent).toBe(longDateline('vi', new Date(`${TODAY}T12:00`)));
+    expect(screen.getByTestId('ideas-day').textContent).toMatch(/^(Thứ (Hai|Ba|Tư|Năm|Sáu|Bảy)|Chủ Nhật), \d+ tháng \d+$/);
   });
 
   it('takes a picked day into the draft and the button, and closes (not iOS)', () => {

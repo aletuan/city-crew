@@ -62,6 +62,33 @@ export function dateline(lang: string, now: Date): string {
   return `${DAYS_EN[now.getDay()].slice(0, 3)}, ${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
+const MONTHS_EN_LONG = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/**
+ * A day in full: "Thứ Hai, 19 tháng 10" / "Monday, 19 October" /
+ * "10月19日（月）".
+ *
+ * For the one place a day has a row to itself — the planner's "when",
+ * since 18 Oct 2026, when the date left the row it shared with Day and
+ * Evening and was being cut to "Thứ 7, 17…" (PLAN-04). With the width,
+ * the owner asked for the whole date: the weekday spelled and the month
+ * named, which reads as a day where "19/10" is decoded.
+ *
+ * This is a second form, after `dateline` above was made the one form
+ * on 9 Oct. The difference is deliberate and the owner's: the planner
+ * names the day in full where it is chosen, and the plan screens after
+ * it keep the short form in their narrower cells. Sunday is "Chủ Nhật"
+ * here — the reason `dateline` writes "CN" is a cell this row is not.
+ */
+export function longDateline(lang: string, now: Date): string {
+  if (lang === 'vi') return `${DAYS_VI[now.getDay()]}, ${now.getDate()} tháng ${now.getMonth() + 1}`;
+  if (lang === 'ja') return `${now.getMonth() + 1}月${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
+  return `${DAYS_EN[now.getDay()]}, ${now.getDate()} ${MONTHS_EN_LONG[now.getMonth()]}`;
+}
+
 /**
  * The hero's line: the weekday and the day of the month, and no more —
  * "Sunday 4" / "Chủ Nhật 4" / "4日（日）".
