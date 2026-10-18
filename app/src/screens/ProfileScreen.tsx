@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AmbientWarmth, Card, CountBadge, fireHaptic, PressableScale, Screen, Toggle, useTabBarClearance } from '../components/ui';
-import { readTipsOn, setTipsOn } from '../components/TipBox';
+import { useSignupTour } from '../components/SignupTour';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
@@ -275,19 +275,7 @@ function SettingsCard() {
   useEffect(() => { if (back.sheet) back.spendSheet(); }, [back]);
   const { scheme, pref } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
-  // The same reader the collection screen keys its tips by: the session,
-  // or nobody for a guest.
-  const { session } = useAuth();
-  const reader = session?.user?.id ?? null;
-  // Null until the record has been read. Read again on every focus: tips
-  // retire while the reader is in Collections, and the last one going is
-  // what turns this switch off (see `tipsOn`).
-  const [tips, setTips] = useState<boolean | null>(null);
-  useFocusEffect(useCallback(() => {
-    let live = true;
-    readTipsOn(reader).then((on) => { if (live) setTips(on); }, () => {});
-    return () => { live = false; };
-  }, [reader]));
+  const tour = useSignupTour();
 
   return (
     <>
@@ -320,36 +308,21 @@ function SettingsCard() {
           onPress={() => setThemeOpen(true)}
           testID="profile-theme"
         />
-        {/* The tips under a collection's title, as a switch. Under
-            Preferences, with how the app speaks and looks: whether it
-            offers tips is the same kind of choice. It first went under
-            App, and read there as something about the build.
-
-            It was a row with an action, "Show tips again", and the owner
-            asked for a switch (17 Oct 2026): a row that only ever turns
-            something back on cannot say whether it is on, and cannot turn
-            it off. The switch reads the record rather than keeping a
-            setting of its own — off once every tip has run its course,
-            not only when turned off — so it never shows on over tips
-            that will not appear (`tipsOn` in lib/tips). On again brings
-            every tip back from its first showing, which is what the
-            old row did.
-
-            "Gợi ý" in the Vietnamese since 17 Oct 2026 (UX-07), not the
-            loanword "tip" and not "mẹo", which reads as a trick. The glyph
-            is the tips' own bulb, so the switch and the boxes it governs
-            wear one mark. */}
         <SwitchRow
           icon="bulb-outline"
-          label={t('Show tips', 'Hiện gợi ý', 'ヒントを表示')}
-          value={tips}
-          onChange={(on) => {
-            setTips(on);
-            void setTipsOn(reader, on);
-          }}
+          label={t('Show guide', 'Hiện hướng dẫn', 'ガイドを表示')}
+          value={tour.enabled}
+          onChange={tour.setEnabled}
           testID="profile-tips"
-          last
+          last={!tour.enabled}
         />
+        {tour.enabled && <SettingRow
+          icon="refresh-outline"
+          label={t('Replay guide', 'Xem lại hướng dẫn', 'ガイドをもう一度見る')}
+          onPress={tour.replay}
+          testID="profile-replay-guide"
+          last
+        />}
       </Card>
       <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
       <LanguageSwitcherModal visible={langOpen} onClose={() => setLangOpen(false)} />

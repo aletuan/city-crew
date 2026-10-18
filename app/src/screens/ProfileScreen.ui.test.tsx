@@ -26,6 +26,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/rend
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
 
+const guide = vi.hoisted(() => ({ enabled: false, setEnabled: vi.fn(), replay: vi.fn() }));
+vi.mock('../components/SignupTour', () => ({ useSignupTour: () => guide }));
+
 type Lang = 'en' | 'vi' | 'ja';
 
 // `Alert` from react-native-web is a silent no-op, so a failed sign-out is
@@ -188,6 +191,7 @@ const button = (start: string) =>
 const press = (start: string) => fireEvent.click(button(start));
 
 beforeEach(async () => {
+  guide.enabled = false; guide.setEnabled.mockClear(); guide.replay.mockClear();
   vi.clearAllMocks();
   state.resume = null;
   state.guide = false;
@@ -913,7 +917,7 @@ describe('settings, without the welcome switch', () => {
     draw();
     expect(screen.queryByText('Always show welcome')).toBeNull();
     // The one switch on the page is the tips' (17 Oct 2026).
-    expect(screen.getAllByRole('switch').map((el) => el.getAttribute('aria-label'))).toEqual(['Show tips']);
+    expect(screen.getAllByRole('switch').map((el) => el.getAttribute('aria-label'))).toEqual(['Show guide']);
   });
 });
 
@@ -955,81 +959,25 @@ describe('about row', () => {
   });
 });
 
-// The last row of Preferences: the collection tips, on or off, for
-// whoever is reading. See `lib/tips` for why the switch reads the record
-// and `TipBox.setTipsOn` for what each way does.
-describe('show tips', () => {
-  const storage = async () => (await import('@react-native-async-storage/async-storage')).default;
-  const allRun = JSON.stringify({ seq: 9, last: {}, shown: {}, retired: ['reorder', 'publish', 'edit', 'add', 'copy'] });
-  const tipsSwitch = () => screen.getByRole('switch', { name: 'Show tips' }) as HTMLInputElement;
-
-  // With how the app speaks and looks, not under App, where it read as
-  // something about the build.
-  it.each([['signed in', true], ['a guest', false]])('sits last in Preferences, after Theme, %s', async (_who, signedIn) => {
-    if (!signedIn) state.session = null;
+describe('highlight settings', () => {
+  it('shows the guide switch without a subtitle', () => {
     draw();
-    const theme = button('Theme');
-    const row = screen.getByTestId('profile-tips');
-    expect(row.parentElement).toBe(theme.parentElement);
-    expect(theme.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(row.nextElementSibling).toBeNull();
-    // Theme is no longer the last row, so it keeps its divider, and the
-    // switch row draws none. Read off react-native-web's atomic class for
-    // the property: jsdom does not resolve those rules.
-    const divided = (r: HTMLElement) => r.outerHTML.includes('r-borderBottomWidth');
-    expect(divided(theme)).toBe(true);
-    expect(divided(row)).toBe(false);
-    // The tips' own bulb, with a single-line label.
-    expect(row.querySelector('[data-icon="bulb-outline"]')).toBeTruthy();
-    expect(row.textContent).not.toContain('Short how-tos in your collections.');
-    await waitFor(() => expect(tipsSwitch().disabled).toBe(false));
+    expect(screen.getByRole('switch', { name: 'Show guide' })).toBeTruthy();
+    expect(screen.getByTestId('profile-tips').textContent).not.toContain('Short how-tos');
+    fireEvent.click(screen.getByRole('switch', { name: 'Show guide' }));
+    expect(guide.setEnabled).toHaveBeenCalledWith(true);
   });
-
-  // "gợi ý" since 17 Oct 2026 (UX-07), not the loanword "tip" and not "mẹo".
-  it('is called "Hiện gợi ý" in Vietnamese', () => {
-    state.lang = 'vi';
+  it('offers replay when enabled, and can turn guidance off', () => {
+    guide.enabled = true;
     draw();
-    expect(screen.getByText('Hiện gợi ý')).toBeTruthy();
-    expect(screen.queryByText(/\btip\b|mẹo/i)).toBeNull();
+    press('Replay guide');
+    expect(guide.replay).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('switch', { name: 'Show guide' }));
+    expect(guide.setEnabled).toHaveBeenCalledWith(false);
   });
-
-  it('is on for a reader with tips still to see, and turning it off keeps them away', async () => {
-    const s = await storage();
-    draw();
-    await waitFor(() => expect(tipsSwitch().checked).toBe(true));
-    await act(async () => { fireEvent.click(tipsSwitch()); });
-    expect(tipsSwitch().checked).toBe(false);
-    await waitFor(async () => expect(JSON.parse((await s.getItem('tips.v1:me'))!).off).toBe(true));
-  });
-
-  // The owner's point: a switch left on over tips that will never show
-  // again is a promise the screen does not keep.
-  it('reads off once every tip has run its course, and on again brings them back', async () => {
-    const s = await storage();
-    await s.setItem('tips.v1:me', allRun);
-    await s.setItem('tips.v1', allRun);
-    draw();
-    await waitFor(() => expect(tipsSwitch().checked).toBe(false));
-    await act(async () => { fireEvent.click(tipsSwitch()); });
-    expect(tipsSwitch().checked).toBe(true);
-    await waitFor(async () => expect(await s.getItem('tips.v1:me')).toBeNull());
-    // Not the guest's record: that is somebody else's.
-    expect(await s.getItem('tips.v1')).toBe(allRun);
-  });
-
-  it('is a guest\'s own switch', async () => {
-    state.session = null;
-    const s = await storage();
-    await s.setItem('tips.v1', allRun);
-    draw();
-    await waitFor(() => expect(tipsSwitch().checked).toBe(false));
-    await act(async () => { fireEvent.click(tipsSwitch()); });
-    await waitFor(async () => expect(await s.getItem('tips.v1')).toBeNull());
-  });
-
-  it('cannot be pressed before the record has been read', () => {
-    draw();
-    expect(tipsSwitch().disabled).toBe(true);
+  it('uses the Vietnamese label', () => {
+    state.lang = 'vi'; draw();
+    expect(screen.getByText('Hiện hướng dẫn')).toBeTruthy();
   });
 });
 
