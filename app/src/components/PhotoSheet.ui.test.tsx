@@ -176,6 +176,14 @@ describe('PhotoSheet', () => {
     expect(column.parentElement!.contains(ten)).toBe(true);
     expect(screen.queryByTestId('score-why')).toBeNull();
     expect(screen.queryByText('Well lit.')).toBeNull();
+    // Where the number stands, under the kind's words, unfolded — not in
+    // the analysis (owner, 18 Oct 2026).
+    const standing = screen.getByTestId('score-standing');
+    expect(standing.textContent).toMatch(/^Higher than \d+% of interior photos$/);
+    expect(column.contains(standing)).toBe(true);
+    expect(kind.compareDocumentPosition(standing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(getComputedStyle(standing.parentElement!).marginLeft).toBe('28px');
+    expect(screen.queryByTestId('score-detail-light')).toBeNull();
     expect(screen.queryByText(/^Photo \d/)).toBeNull();
     expect(screen.queryByTestId('score-source')).toBeNull();
     // What the sentence said is in the analysis, beside its bar.
@@ -183,11 +191,14 @@ describe('PhotoSheet', () => {
     expect(screen.getByText('Well lit')).toBeTruthy();
   });
 
-  it('shows the number alone where the labels name no kind', () => {
+  it('shows the number and the catalog\'s standing where the labels name no kind', () => {
     render(<PhotoSheet {...props({ photos: [photo({ kind: null, score })] })} />);
     expect(screen.getByTestId('score-ten').textContent).toContain('8.4');
     expect(screen.queryByTestId('photo-sheet-kind')).toBeNull();
     expect(screen.queryByTestId('score-why')).toBeNull();
+    const standing = screen.getByTestId('score-standing');
+    expect(standing.textContent).toMatch(/^Higher than \d+% of the catalog's photos$/);
+    expect(getComputedStyle(standing.parentElement!).marginLeft).not.toBe('28px');
   });
 
   it('says nothing of a score for a photograph nobody has read', () => {

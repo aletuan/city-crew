@@ -367,18 +367,61 @@ const BAND_TEXT = {
 } as const;
 
 /**
- * The detailed analysis, folded under the reasons (design review, 16 Oct
- * 2026): where the number stands in the catalog, each measured quality
- * with what was measured, and what would have helped. Folded by default,
- * since the sentence above already says the most of it; `open` is the
- * sheet's to keep, so it stays open as the guide swipes on. Nothing for a
- * scorer this build cannot read, or a row with no number.
+ * Where the number stands: higher than how many of the catalog's
+ * photographs — of its own kind, when the photo labels are sure of it and
+ * the scorer has a spread for that kind, else of them all. Under the head,
+ * beside the number it explains (owner, 18 Oct 2026): 7.3 alone does not
+ * say whether that is high, and folded inside the analysis it was a tap
+ * away from the number it belonged to. A line of secondary type and not
+ * the board's box, which held a sentence this sheet no longer has.
+ *
+ * The band's word and this line can seem to disagree — "Good", higher
+ * than 40% of interiors — and both are true: the band is the absolute
+ * scale, this the catalog's interiors, which are good on the whole. The
+ * owner saw the pair before choosing it. Nothing where there is no spread
+ * to stand in.
+ */
+export function ScoreStanding({ score, kind }: { score: PhotoScore; kind?: PhotoKind | null }) {
+  const { t } = useI18n();
+  const how = interpreterOf(score.scorer);
+  if (score.aesthetic == null || !how) return null;
+  const among = kind ? how.standingAmong(score, kind) : null;
+  const standing = how.standing(score);
+  if (kind && among !== null) {
+    return (
+      <Text style={s.standing} testID="score-standing">
+        {t(
+          `Higher than ${percentText(among)}% of ${kindNoun(kind, t)} photos`,
+          `Cao hơn ${percentText(among)}% ảnh ${kindNoun(kind, t)}`,
+          `${kindNoun(kind, t)}写真の${percentText(among)}%より高い`,
+        )}
+      </Text>
+    );
+  }
+  if (standing === null) return null;
+  return (
+    <Text style={s.standing} testID="score-standing">
+      {t(
+        `Higher than ${percentText(standing)}% of the catalog's photos`,
+        `Cao hơn ${percentText(standing)}% ảnh trong catalog`,
+        `カタログの${percentText(standing)}%の写真より高い`,
+      )}
+    </Text>
+  );
+}
+
+/**
+ * The detailed analysis, folded under the head (design review, 16 Oct
+ * 2026): each measured quality with what was measured, and what would
+ * have helped. Where the number stands moved up beside it
+ * (`ScoreStanding`). `open` is the sheet's to keep, so it stays open as
+ * the guide swipes on. Nothing for a scorer this build cannot read, or a
+ * row with no number.
  */
 export function ScoreDetails({ score, kind, open, onToggle }: {
   score: PhotoScore;
   /** What the photograph shows, when the photo labels are sure of it
-   *  (`photoKind`): the standing is then among its own kind, where the
-   *  scorer has a spread for it, and the source names both readers. */
+   *  (`photoKind`): the source then names both readers. */
   kind?: PhotoKind | null;
   open: boolean;
   onToggle: () => void;
@@ -386,8 +429,6 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
   const { t } = useI18n();
   const how = interpreterOf(score.scorer);
   if (score.aesthetic == null || !how) return null;
-  const among = kind ? how.standingAmong(score, kind) : null;
-  const standing = how.standing(score);
   const rows = how.details(score, t);
   const tips = how.suggestions(score, t);
   return (
@@ -405,23 +446,6 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
       </PressableScale>
       {open && (
         <View style={s.detailBody}>
-          {among !== null && kind ? (
-            <Text style={s.standing} testID="score-standing">
-              {t(
-                `Scores higher than ${percentText(among)}% of the catalog's ${kindNoun(kind, t)} photos`,
-                `Điểm cao hơn ${percentText(among)}% ảnh ${kindNoun(kind, t)} trong catalog`,
-                `カタログの${kindNoun(kind, t)}写真の${percentText(among)}%より高得点`,
-              )}
-            </Text>
-          ) : standing !== null && (
-            <Text style={s.standing} testID="score-standing">
-              {t(
-                `Scores higher than ${percentText(standing)}% of the catalog's photos`,
-                `Điểm cao hơn ${percentText(standing)}% ảnh trong catalog`,
-                `カタログの${percentText(standing)}%の写真より高得点`,
-              )}
-            </Text>
-          )}
           {rows.map((d) => <DetailRow key={d.key} d={d} />)}
           {tips.length > 0 && (
             <View style={s.tips} testID="score-tips">

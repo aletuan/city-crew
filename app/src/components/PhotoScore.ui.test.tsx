@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AccessibilityInfo, Animated } from 'react-native';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { PhotoScore } from '../lib/photoScore';
+import { appleVision } from '../lib/photoScoreVision';
 import { colors } from '../theme';
 
 /** A token as the DOM reports it: `#rrggbb` becomes `rgb(r, g, b)`, and
@@ -43,7 +44,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
 }));
 
-import { ScoreBadge, ScoreDetails, ScoreGlyph, ScoreTen, ScoreWhy, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
+import { ScoreBadge, ScoreDetails, ScoreGlyph, ScoreStanding, ScoreTen, ScoreWhy, ScoredCard, ScoringDialog, tenText, thereAndBack } from './PhotoScore';
 
 const score = (over: Partial<PhotoScore> = {}): PhotoScore => ({
   scorer: 'apple-vision', scorer_version: 1, aesthetic: 0.68, is_utility: false,
@@ -71,6 +72,45 @@ describe('ScoreBadge', () => {
   it('is nothing for a row with no number', () => {
     render(<ScoreBadge score={score({ aesthetic: null })} testID="b" />);
     expect(screen.queryByTestId('b')).toBeNull();
+  });
+});
+
+describe('ScoreStanding', () => {
+  // ScoreDetails' photograph: 0.635 on Vision's scale.
+  const measured = score({ aesthetic: 0.635 });
+
+  it('says where the number stands in the catalog', () => {
+    render(<ScoreStanding score={measured} />);
+    expect(screen.getByTestId('score-standing').textContent).toBe('Higher than 80% of the catalog\'s photos');
+  });
+
+  // With a sure kind, among that kind (0.635 is 80% of the catalog, 90%
+  // of interiors).
+  it('places the number among its own kind', () => {
+    render(<ScoreStanding score={measured} kind="interior" />);
+    expect(screen.getByTestId('score-standing').textContent).toBe('Higher than 90% of interior photos');
+  });
+
+  // A kind too few to have a spread of its own: the catalog's standing.
+  it('falls back to the whole catalog for a kind with no spread', () => {
+    render(<ScoreStanding score={measured} kind="view" />);
+    expect(screen.getByTestId('score-standing').textContent).toBe('Higher than 80% of the catalog\'s photos');
+  });
+
+  it('says nothing with no number, no scorer it can read, or no spread', () => {
+    const { rerender } = render(<ScoreStanding score={score({ aesthetic: null })} />);
+    expect(screen.queryByTestId('score-standing')).toBeNull();
+    rerender(<ScoreStanding score={score({ scorer: 'nobody-yet' })} />);
+    expect(screen.queryByTestId('score-standing')).toBeNull();
+    // A scorer with no spread to stand in: Vision has one, but the
+    // interpreter's contract allows none.
+    const spy = vi.spyOn(appleVision, 'standing').mockReturnValue(null);
+    try {
+      rerender(<ScoreStanding score={measured} />);
+      expect(screen.queryByTestId('score-standing')).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
@@ -149,10 +189,12 @@ describe('ScoreDetails', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('opens on where the number stands, then a row per measured quality', () => {
+  // Where the number stands is the head's now (`ScoreStanding`), not
+  // the analysis's first line (owner, 18 Oct 2026).
+  it('opens on a row per measured quality, the standing no longer among them', () => {
     render(<ScoreDetails score={measured} open onToggle={() => {}} />);
     expect(screen.getByTestId('score-detail-toggle').querySelector('[data-icon="chevron-up"]')).not.toBeNull();
-    expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 80% of the catalog\'s photos');
+    expect(screen.queryByTestId('score-standing')).toBeNull();
     // The name and its verdict, then the words under the bar.
     expect(screen.getByTestId('score-detail-light').textContent).toBe('LightGoodWell lit');
     expect(screen.getByTestId('score-detail-composition').textContent).toBe('CompositionCould improveHorizon tilted 6°, people fill much of the frame');
@@ -165,19 +207,9 @@ describe('ScoreDetails', () => {
     expect(screen.queryByTestId('score-detail-green')).toBeNull();
   });
 
-  // With a sure kind, the number stands among that kind (0.635 is 80%
-  // of the catalog, 90% of interiors), and both readers are named.
-  it('places the number among its own kind, and names Claude beside Vision', () => {
+  // With a sure kind, both readers are named; without one, Vision alone.
+  it('names Claude beside Vision when a kind is shown', () => {
     render(<ScoreDetails score={measured} kind="interior" open onToggle={() => {}} />);
-    expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 90% of the catalog\'s interior photos');
-    expect(screen.getByTestId('score-source').textContent).toBe('Photo analysed by Apple Vision and Claude.');
-  });
-
-  // A kind too few to have a spread of its own: the catalog's standing,
-  // still with both readers named, since the kind is shown above.
-  it('falls back to the whole catalog for a kind with no spread', () => {
-    render(<ScoreDetails score={measured} kind="view" open onToggle={() => {}} />);
-    expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 80% of the catalog\'s photos');
     expect(screen.getByTestId('score-source').textContent).toBe('Photo analysed by Apple Vision and Claude.');
   });
 
