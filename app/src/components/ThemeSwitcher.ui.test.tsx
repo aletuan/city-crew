@@ -329,29 +329,17 @@ describe('the looks', () => {
       expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
     });
 
-    // The tick is the one thing a settings sheet owes on arrival, so the
-    // strip opens where the worn look is, and the count says so.
-    it('opens on the page of the look being worn', () => {
-      state.pref = 'cosmic';
-      state.look = 'cosmic';
-      render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(strip().contentOffset).toEqual({ x: stride(), y: 0 });
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 2/5');
-      expect(screen.getByTestId('look-page-1').querySelector('[data-icon="checkmark"]')).toBeTruthy();
-
-      cleanup();
+    // The tick is the one thing a settings sheet owes on arrival, and
+    // since 18 Oct 2026 the worn look is the first card: the sheet opens
+    // on the first page with the tick on it.
+    it('leads with the look being worn, on the first page', () => {
       state.pref = 'royal';
       state.look = 'royal';
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(strip().contentOffset).toEqual({ x: stride() * 2, y: 0 });
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 3/5');
-
-      // And the first page from a ground, which is on no page.
-      cleanup();
-      state.pref = 'system';
-      state.look = 'standard';
-      render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(strip().contentOffset).toEqual({ x: 0, y: 0 });
+      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
+      const first = screen.getByTestId('look-page-0').querySelector('[role="radio"]')!;
+      expect(first.getAttribute('data-testid')).toBe('theme-royal');
+      expect(first.querySelector('[data-icon="checkmark"]')).toBeTruthy();
     });
 
     // Closed on page three and opened again: the count starts over from
@@ -520,16 +508,67 @@ describe('the looks', () => {
       expect(said('popular')).toEqual(['wine']);
     });
 
-    it('asks again on each opening, and not while closed', async () => {
+    // The order (18 Oct 2026): the worn look, the popular ones in the
+    // catalogue's order, then the rest in it — see `orderLooks`.
+    const shownOrder = () => [...document.querySelectorAll('[data-testid^="look-page-"] [role="radio"]')]
+      .map((el) => el.getAttribute('data-testid')!.replace(/^theme-/, ''));
+
+    it('puts the popular looks at the front, after the worn one, from the next opening', async () => {
+      state.pref = 'cosmic';
+      state.look = 'cosmic';
+      named.value = ['wine', 'coffee', 'dark'];
       const { rerender } = render(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
       await settled();
-      expect(fetchPopularThemes).not.toHaveBeenCalled();
       rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
+      expect(shownOrder().slice(0, 4)).toEqual(['cosmic', 'coffee', 'wine', 'rose']);
+      expect(shownOrder()).toHaveLength(ALL.length);
+      expect([...shownOrder()].sort()).toEqual([...ALL].sort());
+    });
+
+    // The names land after the sheet opens: they label the cards at once,
+    // and order them only at the next opening — no card moves under a finger.
+    it('holds its order while open, and takes new names at the next opening', async () => {
+      const { rerender } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(shownOrder().slice(0, 2)).toEqual(['coffee', 'rose']);
+      named.value = ['wine'];
+      rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
+      await settled();
+      rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      // Closing does not ask; this opening does, and its answer labels
+      // the card at once…
+      expect(said('popular')).toEqual(['wine']);
+      // …and the order was taken before it landed.
+      expect(shownOrder()[0]).toBe('coffee');
       rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
       rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
+      expect(shownOrder()[0]).toBe('wine');
+    });
+
+    // Once as the sheet first mounts, closed — so the first opening has
+    // its popular front — and again on each opening; never on a close.
+    it('asks once as it mounts and again on each opening', async () => {
+      const { rerender } = render(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
+      await settled();
+      expect(fetchPopularThemes).toHaveBeenCalledTimes(1);
+      rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
+      await settled();
       expect(fetchPopularThemes).toHaveBeenCalledTimes(2);
+      rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(fetchPopularThemes).toHaveBeenCalledTimes(3);
+    });
+
+    // A mount that is already open asks once, not twice.
+    it('asks once when it mounts open', async () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(fetchPopularThemes).toHaveBeenCalledTimes(1);
     });
 
     // The word is a pill in the tab bar's colours, hung over the swatch's
