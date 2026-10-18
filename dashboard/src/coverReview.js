@@ -3,8 +3,10 @@
 //
 // A place's cover should let somebody grasp the place at a glance: the
 // Threads skill's first cover criterion. In the labels that is a
-// photograph whose kind is the front, the inside or the view, and which
-// takes in the place as a whole (`wide`). At a café or a place to eat the
+// photograph whose kind is the front, the inside, the garden or the
+// view, and which takes in the place as a whole (`wide`). The garden —
+// a courtyard, a terrace, a rooftop with the place's seats — is the
+// labels' v5 kind, and a cover by the owner's word (18 Oct 2026). At a café or a place to eat the
 // owner also takes the food (17 Oct 2026: "Được, với quán ăn uống") — a
 // signature dish is what such a place is chosen for.
 //
@@ -29,13 +31,14 @@
 /** Categories where a photograph of the food may be the cover. */
 export const FOOD_CATEGORIES = ['cafes', 'eats'];
 
-const PLACE_KINDS = ['exterior', 'interior', 'view'];
+const PLACE_KINDS = ['exterior', 'interior', 'garden', 'view'];
 
 /** What the desk calls each kind, in the words the label rounds used. */
 export const KIND_LABEL = {
   food: 'Food',
   interior: 'Inside',
   exterior: 'Front',
+  garden: 'Garden',
   view: 'View',
   text: 'Text',
   other: 'Other',

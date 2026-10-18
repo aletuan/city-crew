@@ -1,6 +1,6 @@
 ---
 name: photo-labels
-description: Label a City Crew place's photographs — what each shows (food, interior, exterior, view, text, other) and the cover criteria (brand, wide, green, daylight, people, staged) — by looking at them, and store the labels as the `claude-labels` scorer in Supabase `photo_scores`. Use for one place by slug, a city, or every photograph not yet labelled; and after the Threads skill adds photographs to a place.
+description: Label a City Crew place's photographs — what each shows (food, interior, exterior, garden, view, text, other) and the cover criteria (brand, wide, green, daylight, people, staged) — by looking at them, and store the labels as the `claude-labels` scorer in Supabase `photo_scores`. Use for one place by slug, a city, or every photograph not yet labelled; and after the Threads skill adds photographs to a place.
 ---
 
 # Photo labels
@@ -45,6 +45,10 @@ A photograph needs labelling when it is not hidden and has no
 `claude-labels` row at the current version, or has one that is missing a
 key. A missing key means "not yet asked", not `false`.
 
+A sure v4 kind counts as current. v5 only added `garden`, and the owner
+had the photographs v4 was unsure of, or called `other`, asked again —
+not the 5,800 it was sure of (`label-photos/cron.sql`, 18 Oct 2026).
+
 ```sql
 select p.id, p.photo_uri as uri, pl.slug
 from public.place_photos p
@@ -54,7 +58,9 @@ left join public.photo_scores s
 where not p.is_hidden
   and pl.slug = any(array['<slug>'])          -- or: pl.city_id = '<city>' / drop for all
   and (s.photo_id is null
-       or s.scorer_version < 4                 -- VERSION below
+       or s.scorer_version < 4
+       or (s.scorer_version < 5                -- VERSION below
+           and (s.signals->>'unsure' = 'true' or s.signals->>'kind' = 'other'))
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```

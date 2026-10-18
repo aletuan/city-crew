@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v4
+## 3. Bộ nhãn v5
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -40,7 +40,8 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
 | `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Hành lang có mái nhìn ra sân trong là Nội thất | P |
 | `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền | P |
-| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, vườn, bãi cỏ, khuôn viên, toàn cảnh thành phố. Nhà, hiên, cổng, tượng đứng giữa khuôn viên chiếm phần lớn khung vẫn là Phong cảnh | S |
+| `garden` | Không gian ngoài trời của chính quán, nơi khách ngồi hay đi lại: sân trong, vườn, sân thượng, ban công, lối đi rợp cây dẫn tới chỗ ngồi, có bàn ghế hay lối đi của quán trong khung. Cây phủ nhiều khung không đổi loại khi chỗ ngồi vẫn là một phần chủ thể. Nhìn từ đường như mặt tiền thì là Mặt tiền; có mái và tường bao thì là Nội thất | (từ v5) |
+| `view` | Cảnh vật chiếm phần lớn khung, không có chỗ ngồi của quán làm chủ thể: trời, nước, cây, bãi cỏ, khuôn viên, toàn cảnh thành phố. Nhà, hiên, cổng, tượng đứng giữa khuôn viên chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng có bàn ghế là Sân vườn; chỉ có toàn cảnh phía xa là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung | U |
 | `other` | Không thuộc loại nào ở trên | U |
 
@@ -63,6 +64,9 @@ thì theo cái chiếm khung; hành lang có mái là Nội thất.
 
 **v4 (17/10/2026)** thu hẹp luật quầy của v2 sau vòng 3c (mục 10): chỉ quầy
 hay ki-ốt nhìn từ ngoài đường mới là Mặt tiền; quầy trong nhà là Nội thất.
+
+**v5 (18/10/2026)** thêm loại `garden` (Sân vườn), theo quyết định của chủ
+sản phẩm: sân vườn là một ảnh bìa hợp lệ. Lý do và kết quả ở mục 13.
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -118,10 +122,10 @@ Bảng `photo_scores` đã được thiết kế để có bộ chấm thứ hai
 | Cột | Giá trị |
 |---|---|
 | `scorer` | `claude-labels` |
-| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `4` (luật 3 ở mục 4) |
+| `scorer_version` | `VERSION` trong `photoLabels.ts`, hiện là `5` (luật 3 ở mục 4) |
 | `aesthetic`, `is_utility` | `null`: bộ chấm này không chấm điểm đẹp |
 | `scored_by` | `null`: skill ghi nhãn qua Supabase MCP, không qua tài khoản người dùng |
-| `signals` | `{ "v": 4, "kind": …, "brand": …, … }` |
+| `signals` | `{ "v": 5, "kind": …, "brand": …, … }` |
 
 **Migration cần có:** bỏ ràng buộc `photo_scores_one_per_photo`.
 
@@ -733,9 +737,10 @@ phép so sánh thì cho biết điều mà nhìn ảnh không thấy được.
 
 **Trong sheet ảnh của app:**
 - **Nhãn loại ảnh** nằm dưới câu nhận xét, kèm icon: Đồ ăn & uống, Nội
-  thất, Mặt tiền, Cảnh, Chữ, menu. Không hiện nhãn khi model đánh dấu
-  `unsure` (khoảng 11% số ảnh), khi loại là `other`, hoặc khi ảnh chưa có
-  nhãn (ảnh guide vừa tải lên phải chờ tối đa một giờ).
+  thất, Mặt tiền, Sân vườn (từ v5, mục 13), Cảnh, Chữ, menu. Không hiện
+  nhãn khi model đánh dấu `unsure` (11% số ảnh theo v4, 6% sau v5), khi
+  loại là `other`, hoặc khi ảnh chưa có nhãn (ảnh guide vừa tải lên phải
+  chờ tối đa một giờ).
 - **"Điểm cao hơn X%"** so ảnh với các ảnh cùng loại trong catalog. Thang
   so sánh đo trên 434 ảnh vừa có điểm Apple Vision vừa có nhãn (18/10).
   - Apple Vision chấm ảnh đồ ăn cao hơn ảnh nội thất: trung bình 0,568 so
@@ -936,3 +941,71 @@ gì vào cơ sở dữ liệu và không chạy định kỳ. Nếu sau này mu�
 1. Cho Haiku chấm cả catalog. Chi phí khoảng vài đô.
 2. Làm vòng 5 chỉ với những cặp mới có điểm cách nhau từ 3 trở lên.
 3. Đặt trước mốc đạt, như vòng này.
+
+## 13. Sân vườn: định nghĩa v5 (18/10/2026)
+
+**Vì sao.** Sau khi gán cả catalog theo v4, 725 ảnh (11%) bị đánh `unsure`
+về loại. Đọc lời ghi chú của model thì 367 ảnh trong số đó nhắc tới sân
+trong, vườn, sân thượng, hiên hay ban công có bàn ghế của quán. Không có
+loại nào cho chúng: Mặt tiền là nhìn từ đường, Nội thất là có mái và tường,
+Phong cảnh là không có chỗ ngồi của quán. Riêng loại Phong cảnh thì 59% số
+ảnh bị đánh `unsure`.
+
+**Chủ sản phẩm quyết định:** thêm loại Sân vườn, và tính nó là một ảnh bìa
+hợp lệ như Mặt tiền, Nội thất và Phong cảnh (khi thấy cả không gian,
+`wide`).
+
+**Đã làm:**
+- `DEFINITIONS` trong `photoLabels.ts` thêm `garden`, và câu về Phong cảnh
+  nói rõ: sân thượng có bàn ghế là Sân vườn. `VERSION` lên 5. `label-photos`
+  triển khai lại (bản 6).
+- Gán lại 736 ảnh bằng Haiku 5.5: mọi ảnh v4 bị `unsure`, cộng 11 ảnh
+  `other`. Không gán lại khoảng 5.800 ảnh v4 đã chắc chắn: v5 không đổi
+  loại của chúng. Vì vậy lượt chạy mỗi giờ (`label-photos/cron.sql`) vẫn chỉ
+  tìm ảnh chưa có nhãn từ v4 trở lên.
+- App hiện nhãn "Sân vườn" (icon lá). Sân vườn chưa có thang so sánh riêng,
+  nên "cao hơn X%" so với cả catalog. Data Desk tính Sân vườn là ảnh bìa
+  hợp lệ ở trang "Ảnh bìa nên xem lại".
+
+**Kết quả trên 736 ảnh:**
+
+| Loại v5 | Chắc | `unsure` |
+|---|---|---|
+| Sân vườn | 240 | 94 |
+| Nội thất | 32 | 88 |
+| Mặt tiền | 14 | 82 |
+| Phong cảnh | 9 | 57 |
+| Đồ ăn & uống | 18 | 30 |
+| Chữ | 12 | 11 |
+| Khác | 8 | 41 |
+
+- 333 ảnh nay đã chắc chắn về loại, trong đó 240 là Sân vườn. Số ảnh
+  `unsure` trên cả catalog giảm từ 725 (11%) còn 403 (6%).
+- Sân vườn đến từ cả ba loại cũ: 85 ảnh trước là Nội thất, 85 ảnh là
+  Phong cảnh, 69 ảnh là Mặt tiền.
+- Xem bằng mắt 11 ảnh Sân vườn chắc chắn, chọn ngẫu nhiên: cả 11 đều là
+  sân thượng, sân trong hay hiên có bàn ghế của quán.
+
+**403 ảnh vẫn chưa chắc.** Đọc ghi chú thì phần lớn là ca ở ranh giới hai
+loại, không phải loại mới:
+- hiên có mái che, nằm giữa Sân vườn và Nội thất (khoảng 65 ảnh);
+- sân thượng có toàn cảnh thành phố phía sau, giữa Sân vườn và Phong cảnh;
+- ảnh chụp qua cửa kính (khoảng 20 ảnh).
+
+Những nhóm ảnh không thuộc loại nào hiện có, đếm thô theo từ khoá trong ghi
+chú (một ảnh có thể rơi vào hai nhóm). Chưa nhóm nào được thêm thành loại;
+chờ chủ sản phẩm quyết định:
+
+| Nhóm | Khoảng | Ví dụ |
+|---|---|---|
+| Ảnh ghép nhiều khung | 30 | ảnh ghép bốn khung: mặt tiền, đồ ăn, nội thất |
+| Di tích, đền chùa, tượng đài, cổng | 50 | lăng, chùa, tượng trong công viên, cổng đá |
+| Đồ vật, hàng trưng bày, chi tiết trang trí | 55 | kệ sô-cô-la, tượng mèo, đèn chùm, chai rượu |
+| Quầy pha chế, máy móc, người đang làm | 55 | máy espresso cận cảnh, lò pizza, barista |
+| Đường phố, hẻm graffiti, đám đông | 30 | phố đi bộ, hẻm vẽ tranh tường |
+| Ảnh đồ hoạ: banner, poster, chữ in đè, tranh vẽ, ảnh chụp màn hình | 25 | banner khuyến mãi, ảnh render |
+| Người là chủ thể: tạo dáng, selfie, nhóm, cưới | 17 | người mẫu, ảnh nhóm nhân viên |
+| Bàn tiệc trang trí: sinh nhật, cầu hôn | 9 | bóng bay, chữ đèn |
+| Động vật | 9 | mèo của quán, hổ, hươu cao cổ ở sở thú |
+| Hồ bơi | 9 | hồ bơi resort; phần lớn đã thành Sân vườn |
+
