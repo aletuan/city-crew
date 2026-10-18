@@ -15,10 +15,11 @@
 -- `garden` kind, and the owner had the photographs v4 was unsure of, or
 -- called `other`, asked again — not the 5,800 it was sure of, whose kinds
 -- v5 does not change. Raising this would ask every one of them again, at
--- 240 an hour. Nor up to 6, 7, 8, 9, 10 or 11: v6 narrowed `garden`, v7
--- added `heritage`, v8 `collage`, v9 the gate onto a garden, v10 the
--- covered terrace and the room seen through glass, v11 the seats along
--- the street front, and the
+-- 240 an hour. Nor up to 6 through 12: v6 narrowed `garden`, v7 added
+-- `heritage`, v8 `collage`, v9 the gate onto a garden, v10 the covered
+-- terrace and the room seen through glass, v11 the seats along the
+-- street front, v12 the gate filling the frame and the seats before a
+-- view, and the
 -- photographs each could change were asked again by hand once
 -- (docs/photo-labels.md §13).
 --

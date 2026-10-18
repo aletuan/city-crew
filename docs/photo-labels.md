@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v11
+## 3. Bộ nhãn v12
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -39,10 +39,10 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 |---|---|---|
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
 | `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Chỉ khi chụp từ trong phòng: cùng căn phòng đó nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền | P |
-| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Thư viện, bảo tàng, trung tâm thương mại là Mặt tiền; đền chùa, nhà thờ, tượng đài là Văn hóa. Căn phòng nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền, kể cả khi phòng chiếm cả khung. Bàn ghế của quán ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không | P |
-| `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Cổng của quán nhìn vào sân có cây xanh và bàn ghế là Sân vườn. Sân vườn là chỗ ngồi bên trong khuôn viên quán: sân trong, vườn, hiên hay sân quay vào chúng, sân thượng. Hiên, hè hay giàn có mái ở đó, mở ra ngoài ít nhất một phía, là Sân vườn. Bàn ghế ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không; kín tường hay kính mọi phía thì là Nội thất | (từ v5, thu hẹp ở v6, thêm ở v9 và v10, chỉnh ở v11) |
+| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Thư viện, bảo tàng, trung tâm thương mại là Mặt tiền; đền chùa, nhà thờ, tượng đài là Văn hóa. Căn phòng nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền, kể cả khi phòng chiếm cả khung. Bàn ghế của quán ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không. Cổng, lối vào hay mặt nhà chiếm phần lớn khung là Mặt tiền, kể cả thấy sân hay bàn ghế phía sau | P |
+| `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Cổng của quán chỉ là Sân vườn khi cây che gần hết cổng và thấy bàn ghế trong sân phía sau, như Bold Brew. Sân vườn là chỗ ngồi bên trong khuôn viên quán: sân trong, vườn, hiên hay sân quay vào chúng, sân thượng. Hiên, hè hay giàn có mái ở đó, mở ra ngoài ít nhất một phía, là Sân vườn. Bàn ghế ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không; kín tường hay kính mọi phía thì là Nội thất | (từ v5, thu hẹp ở v6, thêm ở v9 và v10, chỉnh ở v11) |
 | `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
-| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh | S |
+| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh. Bàn ghế của quán trước bãi biển, sông, toàn cảnh thành phố hay khu vườn cảnh chiếm phần lớn khung là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó | U |
 | `collage` | Hai ảnh trở lên ghép thành một: lưới, chia đôi, xếp tầng, dù mỗi khung chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép. Là ảnh bìa hợp lệ | (từ v8) |
 | `other` | Không thuộc loại nào ở trên | U |
@@ -91,6 +91,10 @@ tiền (mục 13).
 **v11 (18/10/2026)** sửa ranh giới mà v10 làm mờ, theo xác nhận của chủ sản
 phẩm: Sân vườn là chỗ ngồi bên trong khuôn viên quán; bàn ghế ở vỉa hè hay
 dọc mặt nhà nhìn ra đường là Mặt tiền, kể cả có mái (mục 13).
+
+**v12 (18/10/2026)** thêm hai ranh giới chủ sản phẩm xác nhận: cổng hay mặt
+nhà chiếm phần lớn khung là Mặt tiền, kể cả thấy sân phía sau; bàn ghế trước
+cảnh chiếm phần lớn khung là Phong cảnh (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -1250,3 +1254,39 @@ Hai ảnh còn lại là ảnh 10 và 12, chủ sản phẩm đã khoá từ tr�
   thành phố hay khu vườn kiểu Nhật chiếm phần lớn khung, và chủ sản phẩm gọi
   những ảnh này là Phong cảnh, không phải Sân vườn.
 - Hai ranh giới này đang chờ chủ sản phẩm xác nhận trước khi viết v12.
+
+### Định nghĩa v12: cổng chiếm khung là Mặt tiền, bàn ghế trước cảnh là Phong cảnh (18/10/2026)
+
+**Quy tắc** (chủ sản phẩm xác nhận):
+- Cổng, lối vào hay mặt nhà chiếm phần lớn khung là Mặt tiền, kể cả thấy sân
+  hay bàn ghế phía sau (TRINH, Ngụm 2, Người Thương Ơi, ảnh 10 và 12). Cổng
+  chỉ là Sân vườn khi cây che gần hết cổng, như ảnh Bold Brew.
+- Bàn ghế của quán trước bãi biển, sông, toàn cảnh thành phố hay khu vườn
+  cảnh chiếm phần lớn khung là Phong cảnh.
+
+`VERSION` lên 12, `label-photos` bản 13.
+
+**Đo trước khi ghi**, không ghi, trên cùng 126 ảnh chủ sản phẩm đã duyệt:
+
+| Bên chấm | 24 ảnh sửa | 100 ảnh giữ | Tổng | Trùng và chắc | Chắc mà sai |
+|---|---|---|---|---|---|
+| Haiku, v11 | 4 | 90 | 96/126 | 62 | |
+| Haiku, v12 | 11 | 85 | 98/126 | 63 | 12 |
+| Opus, v11 | 12 | 85 | 98/126 | 36 | |
+| Opus, v12 | 15 | 80 | 97/126 | 36 | 7 |
+
+Hai ảnh còn lại (10 và 12) cả hai mô hình đều trả lời đúng.
+
+**Đọc kết quả.**
+- v12 sửa được gần gấp ba số ảnh sửa so với v11 (Haiku 11 so với 4), nhưng
+  mất thêm 5 ảnh mà chủ sản phẩm đã giữ.
+- Đây là 126 ảnh khó nhất của catalog: trước đây chúng đều là nhãn `unsure`
+  hoặc ảnh cổng. Trên những ảnh này, một mô hình chạy lại cùng định nghĩa
+  cũng đổi ý ở không ít ảnh. Vì thế gán lại catalog vẫn qua bước chủ sản
+  phẩm duyệt, như v10.
+- **Chưa đo được phần còn lại của catalog.** Lần đo không ghi trên 1.430 ảnh
+  có thể bị v12 đổi loại (Mặt tiền, Sân vườn, Phong cảnh, cùng mọi nhãn
+  `unsure` chưa phải của chủ sản phẩm) dừng ở nửa đầu: cả 720 ảnh đều bị API
+  từ chối với lỗi "credit balance is too low". Phải nạp thêm tín dụng mới
+  đo tiếp được. Trong lúc đó, lượt gán tự động mỗi giờ cho ảnh mới cũng bị
+  từ chối. Lượt đó tự chạy lại ở giờ sau, nên không mất gì.

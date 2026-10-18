@@ -59,7 +59,9 @@ made a covered terrace open to the outside garden, and a room seen from
 outside through glass exterior; it asks again interior, exterior, garden,
 view and unsure labels. v11 put the place's seats on the pavement or
 along its front with exterior, roof or no roof; it asks again exterior,
-garden and unsure labels. A
+garden and unsure labels. v12 made the place's gate or front filling the
+frame exterior, and seats before a beach or a skyline view; it asks again
+exterior, garden, view and unsure labels. A
 label the owner set by hand (`"by": "owner"`) is never asked again.
 
 ```sql
@@ -85,9 +87,12 @@ where not p.is_hidden
        or (s.scorer_version < 10
            and (s.signals->>'unsure' = 'true'
                 or s.signals->>'kind' in ('interior', 'exterior', 'garden', 'view')))
-       or (s.scorer_version < 11               -- VERSION below
+       or (s.scorer_version < 11
            and (s.signals->>'unsure' = 'true'
                 or s.signals->>'kind' in ('exterior', 'garden')))
+       or (s.scorer_version < 12               -- VERSION below
+           and (s.signals->>'unsure' = 'true'
+                or s.signals->>'kind' in ('exterior', 'garden', 'view')))
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```
@@ -126,7 +131,7 @@ The script prints a path for each sheet and writes `index.json`, which
 maps each yellow number to its photo id. Read every sheet. A
 photograph reported `MISSING` gets no label; list it in the report.
 
-## 3. The labels, v11
+## 3. The labels, v12
 
 Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
 answer each photograph by them: one `kind`, and each of the six attributes
