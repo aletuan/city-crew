@@ -34,6 +34,10 @@
 // the detailed analysis: "higher than X%" compares the photograph with
 // its own kind, and the source line names Claude beside Apple Vision.
 //
+// Under the kind, where the number stands among the catalog's
+// photographs (`ScoreStanding`): the one fact that says what 7.3 means,
+// moved out of the folded analysis (owner, 18 Oct 2026).
+//
 // No sentence of reasons. The head used to lead with one ("Held back by:
 // a little dark"), and the owner saw it said again under the bars: it was
 // built from the very findings the Light, Focus and Composition rows
@@ -72,7 +76,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetStrip, type SheetAction } from './ActionSheet';
-import { ScoreDetails, ScoreTen } from './PhotoScore';
+import { ScoreDetails, ScoreStanding, ScoreTen } from './PhotoScore';
 import PhotoViewer, { settledPage } from './PhotoViewer';
 import { useSheetDrag } from './sheetDrag';
 import { PressableScale } from './ui';
@@ -241,6 +245,11 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
                   <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
                 </View>
               ) : null}
+              {p.score && (
+                <View style={p.kind ? s.underKind : null}>
+                  <ScoreStanding score={p.score} kind={p.kind} />
+                </View>
+              )}
               {status ? <Text style={s.status} numberOfLines={1} testID="photo-sheet-status">{status}</Text> : null}
             </View>
             {p.score && <ScoreTen score={p.score} />}
@@ -308,7 +317,9 @@ const s = StyleSheet.create({
   countText: { color: onPhoto.text, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
 
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  name: { flex: 1, gap: 8 },
+  name: { flex: 1, gap: 4 },
+  // Under the kind's words, not its mark: 20pt glyph and 8pt gap.
+  underKind: { marginLeft: 28 },
   status: { color: colors.textTertiary, fontSize: 14 },
   // The head's type, opposite the number: the sentence's ink and size
   // before it, since the kind took its place.
