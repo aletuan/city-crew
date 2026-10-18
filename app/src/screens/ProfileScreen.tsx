@@ -140,19 +140,17 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
 }
 
 /**
- * A setting that is on or off: the label, a line saying what it governs,
- * and the switch where a value row has its value.
+ * A setting that is on or off: the label and the switch where a value
+ * row has its value.
  *
  * `SettingRow`'s label, not `FeatureRow`'s title: this is still a
  * setting, and a setting's name is regular weight (see `SettingRow`). The
- * second line is `FeatureRow`'s, because it is a sentence rather than a
- * value. The switch is the control; the row around it is not a button,
+ * switch is the control; the row around it is not a button,
  * so there is one thing to find and one thing VoiceOver names.
  */
-function SwitchRow({ icon, label, sub, value, onChange, last, testID }: {
+function SwitchRow({ icon, label, value, onChange, last, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  sub: string;
   /** Null while it is being read: drawn off, and not to be pressed. */
   value: boolean | null;
   onChange: (on: boolean) => void;
@@ -164,14 +162,12 @@ function SwitchRow({ icon, label, sub, value, onChange, last, testID }: {
       <RowGlyph name={icon} line={TITLE_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={[s.settingLabel, { lineHeight: TITLE_LINE }]}>{label}</Text>
-        <Text style={s.featureSub}>{sub}</Text>
       </View>
       <Toggle
         value={value ?? false}
         disabled={value === null}
         onValueChange={onChange}
         accessibilityLabel={label}
-        accessibilityHint={sub}
         style={s.rowEnd}
       />
     </View>
@@ -342,17 +338,10 @@ function SettingsCard() {
             "Gợi ý" in the Vietnamese since 17 Oct 2026 (UX-07), not the
             loanword "tip" and not "mẹo", which reads as a trick. The glyph
             is the tips' own bulb, so the switch and the boxes it governs
-            wear one mark. Two lines where the other settings have one:
-            a switch has no value to show on the right, and "Show tips"
-            alone does not say which tips. */}
+            wear one mark. */}
         <SwitchRow
           icon="bulb-outline"
           label={t('Show tips', 'Hiện gợi ý', 'ヒントを表示')}
-          sub={t(
-            'Short how-tos in your collections.',
-            'Hướng dẫn ngắn khi dùng bộ sưu tập.',
-            'コレクションの使い方を短く案内します。',
-          )}
           value={tips}
           onChange={(on) => {
             setTips(on);
