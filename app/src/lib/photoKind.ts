@@ -10,10 +10,9 @@
 // person, a few street trees as greenery).
 //
 // A kind is said only when it is sure. The model marks one `unsure`
-// whenever it would not bet on it — 11% of the catalog — and `other` is
-// "none of these", which tells a guide nothing; both say nothing here,
-// as does a photograph not labelled yet (a guide's upload waits up to an
-// hour for the hourly pass, `label-photos/cron.sql`).
+// whenever it would not bet on it, and that says nothing here, as does a
+// photograph not labelled yet (a guide's upload waits up to an hour for
+// the hourly pass, `label-photos/cron.sql`).
 //
 // The kind does two things in the sheet. It names what the photograph
 // is, beside the reasons; and it lets "scores higher than X%" compare a
@@ -38,16 +37,24 @@
 // `collage` came with v8 (owner, 18 Oct 2026, "Ảnh ghép"): several
 // photographs in one frame. It can be a cover, as any of the place
 // kinds can (owner, same day); its standing is against the catalog.
+//
+// `other` is said too (owner, 18 Oct 2026). It was left out as "none of
+// these", which tells a guide nothing, but then the one head in the sheet
+// with no mark was the odd one out: the score moved up a line and the
+// star had nowhere to sit. Once the owner had looked at every unsure
+// label, 15 photographs were left as Other (docs/photo-labels.md §13), so
+// this was no longer a rare case. It has no spread, so its standing is
+// against the catalog.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
 
-export const KINDS = ['food', 'interior', 'exterior', 'garden', 'heritage', 'view', 'text', 'collage'] as const;
+export const KINDS = ['food', 'interior', 'exterior', 'garden', 'heritage', 'view', 'text', 'collage', 'other'] as const;
 export type PhotoKind = typeof KINDS[number];
 
 type T = (en: string, vi: string, ja: string) => string;
 
 /** The kind a sheet may say, or null: not labelled, labelled unsure, or
- *  none of the kinds above. */
+ *  a kind this build does not know. */
 export function kindOf(labels: unknown): PhotoKind | null {
   if (!labels || typeof labels !== 'object') return null;
   const l = labels as { kind?: unknown; unsure?: unknown };
@@ -55,7 +62,12 @@ export function kindOf(labels: unknown): PhotoKind | null {
   return KINDS.find((k) => k === l.kind) ?? null;
 }
 
-/** The mark beside each kind: Ionicons outlines, like the analysis rows. */
+/** The mark beside each kind: Ionicons outlines, like the analysis rows.
+ *  Other's is an empty frame, four corners with nothing in them, because
+ *  the owner asked for a picture frame. Ionicons' own picture frame,
+ *  `image-outline`, is already View's. `images-outline` is several
+ *  photographs, which reads as Collage, and `easel-outline` is a painting,
+ *  which reads as Culture. */
 export const KIND_ICON: Record<PhotoKind, keyof typeof Ionicons.glyphMap> = {
   food: 'restaurant-outline',
   interior: 'home-outline',
@@ -65,6 +77,7 @@ export const KIND_ICON: Record<PhotoKind, keyof typeof Ionicons.glyphMap> = {
   view: 'image-outline',
   text: 'document-text-outline',
   collage: 'grid-outline',
+  other: 'scan-outline',
 };
 
 /** A kind's name, as the label under the reasons. The Vietnamese is the
@@ -80,6 +93,7 @@ export function kindName(kind: PhotoKind, t: T): string {
     case 'view': return t('View', 'Cảnh', '景色');
     case 'text': return t('Menu & signs', 'Chữ, menu', 'メニュー・文字');
     case 'collage': return t('Collage', 'Ảnh ghép', 'コラージュ');
+    case 'other': return t('Other', 'Khác', 'その他');
   }
 }
 
@@ -95,6 +109,7 @@ export function kindNoun(kind: PhotoKind, t: T): string {
     case 'view': return t('view', 'cảnh', '景色');
     case 'text': return t('menu and sign', 'chữ, menu', 'メニュー・文字');
     case 'collage': return t('collage', 'ảnh ghép', 'コラージュ');
+    case 'other': return t('other', 'khác', 'その他');
   }
 }
 
