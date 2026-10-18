@@ -326,7 +326,16 @@ const s = StyleSheet.create({
   },
   countText: { color: onPhoto.text, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
 
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  // The head is inset by the analysis card's own inset, its 1pt border
+  // plus its padding, on both sides (owner, 18 Oct 2026, from the "Căn
+  // chỉnh hàng thông tin" board). It used to start at the page's edge:
+  // the kind's mark sat 17pt left of the Light, Focus and Composition
+  // marks below it, and its name 17pt left of theirs, so two columns of
+  // marks and two of words ran down one sheet. Inset, the 20pt mark and
+  // 8pt gap put the name at 45pt, where the rows' 18pt mark and 10pt gap
+  // put theirs. On the right, the number ends where the rows' verdicts
+  // end, so both margins match.
+  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: space.cardPadding + 1 },
   name: { flex: 1, gap: 4 },
   // Under the kind's words, not its mark: 20pt glyph and 8pt gap.
   underKind: { marginLeft: 28 },
