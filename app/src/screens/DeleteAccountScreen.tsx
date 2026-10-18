@@ -61,7 +61,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       // guest was signing in to do (`lib/resume`), and the reader leaving
       // here has just stopped being anybody who could do it.
       dropResume();
-      leaveAuth(navigation);
+      leaveAuth(navigation, 'Profile');
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

@@ -16,6 +16,8 @@
 // for real, because the filtering they do is the behaviour being pinned.
 
 import React from 'react';
+import { dropResume, takeResume } from '../lib/resume';
+beforeEach(() => { dropResume(); });
 import { Alert, Keyboard } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -206,6 +208,12 @@ describe('CollectionsScreen — as a guest', () => {
     expect(screen.queryByRole('tab')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in to build your own collections' }));
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
+    const pending = takeResume(Date.now());
+    expect(pending?.tab).toBe('Collections');
+    expect(pending?.kind).toBe('collection');
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    pending?.run?.();
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
   });
 
   // One row since 17 Oct 2026: the words and the chip side by side, no
