@@ -54,7 +54,10 @@ a sure food, interior, garden or text label stays current. v8 added
 `collage`, which can hide under any kind; it asks again every unsure
 label, every label with no note, and every note that already said
 "collage", "panel" or "stacked". v9 let the place's own gate onto a green
-courtyard be garden; it asks again exterior, view and unsure labels. A
+courtyard be garden; it asks again exterior, view and unsure labels. v10
+made a covered terrace open to the outside garden, and a room seen from
+outside through glass exterior; it asks again interior, exterior, garden,
+view and unsure labels. A
 label the owner set by hand (`"by": "owner"`) is never asked again.
 
 ```sql
@@ -74,9 +77,12 @@ where not p.is_hidden
        or (s.scorer_version < 8
            and (s.signals->>'unsure' = 'true' or not s.signals ? 'note'
                 or s.signals->>'note' ~* 'collage|panel|diptych|stacked'))
-       or (s.scorer_version < 9                -- VERSION below
+       or (s.scorer_version < 9
            and (s.signals->>'unsure' = 'true'
                 or s.signals->>'kind' in ('exterior', 'view')))
+       or (s.scorer_version < 10               -- VERSION below
+           and (s.signals->>'unsure' = 'true'
+                or s.signals->>'kind' in ('interior', 'exterior', 'garden', 'view')))
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```
@@ -115,7 +121,7 @@ The script prints a path for each sheet and writes `index.json`, which
 maps each yellow number to its photo id. Read every sheet. A
 photograph reported `MISSING` gets no label; list it in the report.
 
-## 3. The labels, v9
+## 3. The labels, v10
 
 Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
 answer each photograph by them: one `kind`, and each of the six attributes
