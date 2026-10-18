@@ -1344,3 +1344,11 @@ chưa phải của chủ sản phẩm:
     đấu Lâm Viên và ảnh in cũ của The Refinery.
   - 6 ảnh Mặt tiền trước đây `unsure` nay đã chắc.
 - Các ảnh này lên trang duyệt cho chủ sản phẩm, như các lần trước.
+
+**Kết quả duyệt v13 (18/10/2026).** Chủ sản phẩm duyệt 28 ảnh và chỉ sửa
+một ảnh: bãi cỏ ở Làng Củi Lũ (Driftwood Village) là Sân vườn, không phải
+Mặt tiền. Như vậy 27/28 ảnh trùng với chủ sản phẩm. Các ca tôi thấy đáng
+ngờ được chủ sản phẩm giữ là Văn hóa: OKKIO Caffe trong Bảo tàng Mỹ thuật,
+Thư viện Bang Victoria, nhà thi đấu Lâm Viên và ảnh in cũ của The Refinery.
+Cả 28 ảnh được ghi với `"by": "owner"`. Đến đây có 220 nhãn của chủ sản
+phẩm, 156 ảnh Văn hóa chắc chắn, và còn 227 nhãn `unsure`.
