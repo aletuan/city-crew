@@ -88,6 +88,10 @@ const PAGE_HEAD = {
     title: 'Photo types · 3c',
     sub: 'Twenty-four new photographs: the kind, the whole space, and people.',
   },
+  '/photo-pairs-4': {
+    title: 'Photo pairs · 4',
+    sub: 'Two photographs of one kind at one place: which is the better photograph?',
+  },
   // The editor. Its title is the room's name, not the place's, for the
   // same reason the three above are: these name the screen you are in,
   // and the place's own name is already the loudest thing on it — the
