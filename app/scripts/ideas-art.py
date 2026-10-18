@@ -7,6 +7,11 @@ Writes assets/ideas-art-dark.webp and assets/ideas-art-light.webp
 (600×572, WebP with alpha) — see src/components/IdeasHeaderArt.tsx for
 how they are laid out and why they are transparent.
 
+Historical source-render pipeline: the light asset was subsequently
+art-directed for CAT-01 (no edge flowerpot, softer pavement, clearer
+cats). Running this script with the old renders replaces that revision;
+it does not reproduce the current light painting.
+
 Each source is a 1536×1024 render on a flat ground close to the page
 colour, the painting in its right half. The steps, for each:
 
