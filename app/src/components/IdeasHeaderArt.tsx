@@ -41,6 +41,10 @@
 // colour (`scripts/ideas-art.py`): the flat ground is alpha 0, the
 // painting's own fade is partial alpha, and what shows through is the
 // page itself, glow and all. There is no edge left to see.
+// The CAT-01 light revision keeps that transparent 600×572 frame, but
+// removes the edge flowerpot and softens the pavement in the asset.
+// Its alpha comes from the revised artwork, not the original keying
+// script; the layout and the dark painting do not need to change.
 //
 // ── when it is not there ──
 //
