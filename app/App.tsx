@@ -35,6 +35,7 @@ import FloatingTabBar from './src/components/FloatingTabBar';
 import { AppBoundary, ScreenBoundary } from './src/components/ScreenBoundary';
 import WelcomeSheet from './src/components/WelcomeSheet';
 import ShareShield from './src/components/ShareShield';
+import { SignupTourProvider } from './src/components/SignupTour';
 import { TabBarDuckProvider } from './src/components/tabBarDuck';
 import { navRef, type RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
@@ -371,7 +372,7 @@ function Root() {
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
                       <TabBarDuckProvider>
-                        <Tabs />
+                        <SignupTourProvider getRoute={() => navRef.getCurrentRoute()?.name}><Tabs /></SignupTourProvider>
                       </TabBarDuckProvider>
                     </SaveProvider>
                     </CheckinsProvider>

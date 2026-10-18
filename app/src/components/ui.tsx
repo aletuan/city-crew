@@ -159,7 +159,8 @@ export function successHaptic() {
  * a small haptic tap — the default press feedback for cards and buttons.
  * `style` lands on the animated inner view, so pass layout styles as usual.
  */
-export function PressableScale({ children, style, containerStyle, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: PressableProps & {
+export function PressableScale({ children, style, containerStyle, anchorRef, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: PressableProps & {
+  anchorRef?: React.Ref<View>;
   haptic?: HapticKind;
   scaleTo?: number;
   /**
@@ -197,6 +198,7 @@ export function PressableScale({ children, style, containerStyle, haptic = 'ligh
   return (
     <Pressable
       {...rest}
+      ref={anchorRef}
       style={containerStyle}
       onPressIn={(e) => { springTo(scaleTo); onPressIn?.(e); }}
       onPressOut={(e) => { springTo(1); onPressOut?.(e); }}

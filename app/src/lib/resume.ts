@@ -55,6 +55,9 @@ export function holdResume(r: Resume): void {
   pending = r;
 }
 
+/** Even an expired task means the guest arrived with an intention. */
+export function hasResume(): boolean { return pending !== null; }
+
 /** Forget it: the reader said "not now". */
 export function dropResume(): void {
   pending = null;
