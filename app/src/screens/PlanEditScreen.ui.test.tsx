@@ -574,6 +574,48 @@ describe('editing', () => {
     expect(screen.getByText('Nothing left in this plan.')).toBeTruthy();
   });
 
+  // PLAN-02: an emptied plan kept its time hint and a lit Save — a
+  // guest's tap asked them to sign in to save nothing, a reader's did
+  // nothing. Now the hint goes, and the way out is to choose again.
+  describe('emptied', () => {
+    const emptyIt = () => {
+      planTrips.mockImplementation(() => [plan('classic', [stop(CAFE, 18 * 60, 60)])]);
+    };
+
+    it('drops the hint and Save, and offers the options again, which leave without asking', () => {
+      emptyIt();
+      const navigation = renderScreen();
+      expect(screen.getByText('Nudge the time with − and +.')).toBeTruthy();
+      press('close', 0);
+      expect(screen.getByText('Nothing left in this plan.')).toBeTruthy();
+      expect(screen.queryByText(/Nudge the time|Hold a stop/)).toBeNull();
+      expect(screen.queryByTestId('plan-save')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Choose another option' }));
+      expect(navigation.goBack).toHaveBeenCalledTimes(1);
+      // The way out does not argue: nothing in an empty plan to discard.
+      expect(navigation.leave()).toBe(false);
+      expect(alert).not.toHaveBeenCalled();
+    });
+
+    it('does not ask a guest to sign in to save nothing', () => {
+      auth.current = { session: null, profile: { avatar_url: null } };
+      emptyIt();
+      renderScreen();
+      press('close', 0);
+      expect(screen.queryByText('Sign in to save this trip.')).toBeNull();
+      expect(screen.queryByTestId('plan-save')).toBeNull();
+      expect(askToSignIn).not.toHaveBeenCalled();
+    });
+
+    // The guard still stands for a plan with something in it.
+    it('still asks before leaving a plan that was edited and is not empty', () => {
+      planTrips.mockImplementation(() => [plan('classic', [stop(CAFE, 18 * 60, 60), stop(DINNER, 19 * 60 + 30, 60)])]);
+      const navigation = renderScreen();
+      press('close', 0);
+      expect(navigation.leave()).toBe(true);
+    });
+  });
+
   it('retires a model title once the order changes but keeps the sentences', async () => {
     const navigation = renderScreen();
     act11y(1, 'moveDown');
@@ -711,12 +753,15 @@ describe('saving', () => {
     expect(saveTrip).not.toHaveBeenCalled();
   });
 
+  // Not by refusing a tap any more: an emptied plan offers no Save at all
+  // (PLAN-02), and the way it offers instead writes nothing.
   it('does not write a plan the reader emptied', async () => {
     const navigation = renderScreen();
     press('close', 0);
     press('close', 0);
     press('close', 0);
-    save();
+    expect(screen.queryByRole('button', { name: /Save to Trips/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose another option' }));
     await act(async () => {});
     expect(saveTrip).not.toHaveBeenCalled();
     expect(navigation.popToTop).not.toHaveBeenCalled();
