@@ -1184,3 +1184,34 @@ và 38 ảnh cổng của v9 (một ảnh cổng là nhãn của chủ sản ph�
 
 126 ảnh (38 ảnh cổng và 88 ảnh khác nay đã chắc) được đưa lên một trang để
 chủ sản phẩm duyệt. Chưa gán lại catalog cho đến khi có câu trả lời.
+
+**Kết quả duyệt v10 (18/10/2026).** Chủ sản phẩm duyệt cả 126 ảnh trên
+trang và sửa 24 ảnh. Những ảnh không bị sửa được coi là Claude đúng. Cả 126
+ảnh được ghi với `"by": "owner"`; ảnh bị sửa có ghi chú nói loại mà mô hình
+đã chọn. Ảnh 10 (Chà Mơ) và 12 (Déglacer) trên tờ ảnh cổng của v9 đã được chủ
+sản phẩm chốt là Mặt tiền và khoá từ trước. Sau đợt này còn 281 nhãn
+`unsure`, trước đó là 367.
+
+| Claude v10 nói | Ảnh | Giữ nguyên | Chủ sản phẩm sửa thành |
+|---|---|---|---|
+| Sân vườn | 62 | 42 | 15 Mặt tiền, 4 Phong cảnh, 1 Nội thất |
+| Mặt tiền | 37 | 36 | 1 Phong cảnh |
+| Phong cảnh | 9 | 8 | 1 Sân vườn |
+| Văn hóa | 7 | 7 | |
+| Nội thất | 5 | 3 | 1 Phong cảnh, 1 Sân vườn |
+| Đồ ăn | 3 | 3 | |
+| Ảnh ghép | 3 | 2 | 1 Đồ ăn |
+
+Trùng tổng cộng 101/126 (80%). Trừ Sân vườn thì các loại khác trùng 59/64
+(92%); riêng Sân vườn chỉ trùng 42/62 (68%).
+
+**Đọc kết quả.** Gần như mọi lần sửa Sân vườn thành Mặt tiền rơi vào cùng
+một kiểu ảnh: bàn ghế đặt ở vỉa hè hoặc ngay trước mặt nhà, nhìn ra đường.
+Ví dụ là Saveur, Mlem, Antico Fornaio, MONO Hồ Xuân Hương và TAN. corner. Ở
+đó mặt tiền là chủ thể, kể cả khi có mái hiên. Luật v10 "hiên có mái là Sân
+vườn" đã kéo những ảnh này sang Sân vườn. Đề xuất cho v11 (chờ chủ sản phẩm
+xác nhận): Sân vườn là chỗ ngồi bên trong khuôn viên quán (sân trong, vườn,
+hiên quay vào sân, sân thượng); chỗ ngồi ở vỉa hè hay dọc mặt nhà nhìn ra
+đường là Mặt tiền, kể cả có mái. Chưa gán lại các nhãn chắc chắn khác theo v10
+cho đến khi có v11, vì v10 sẽ kéo thêm các mặt tiền có bàn vỉa hè sang Sân
+vườn.
