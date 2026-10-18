@@ -11,7 +11,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, type ColorValue, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { band, bandLabel, interpreterOf, toTen, type Detail, type PhotoScore } from '../lib/photoScore';
+import { band, bandLabel, interpreterOf, toTen, type Detail, type PhotoScore, type T } from '../lib/photoScore';
 import { bothSources, kindNoun, type PhotoKind } from '../lib/photoKind';
 import { percentText } from '../lib/standing';
 import { useI18n } from '../lib/i18n';
@@ -155,14 +155,16 @@ export function ScoreBadge({ score, testID }: { score: PhotoScore; testID?: stri
 }
 
 /**
- * The number in the photo's sheet, out of ten with its word beneath —
- * right of the photograph's name, where the design puts it (owner, 16
- * Oct 2026). Nothing for a row with no number.
+ * The number in the photo's sheet, out of ten with its word beside it —
+ * right of what the photograph shows, where the design puts it (owner, 16
+ * Oct 2026). One line, not the word beneath: the head is the kind on one
+ * side and the score on the other, and a word on a second line made the
+ * score twice the kind's height for one pill (owner, 18 Oct 2026).
+ * Nothing for a row with no number.
  */
 export function ScoreTen({ score, onDark }: {
   score: PhotoScore;
-  /** Over a photograph (the full-screen viewer): the light inks, and the
-   *  number and its word on one line, since there is no name beside it. */
+  /** Over a photograph (the full-screen viewer): the light inks. */
   onDark?: boolean;
 }) {
   const { t } = useI18n();
@@ -170,7 +172,7 @@ export function ScoreTen({ score, onDark }: {
   const ten = toTen(score.aesthetic);
   const b = band(ten);
   return (
-    <View style={onDark ? s.tenRow : s.ten} testID="score-ten">
+    <View style={s.tenRow} testID="score-ten">
       <View style={s.tenLine}>
         <Text style={[s.tenBig, onDark && s.tenBigDark]}>{tenText(ten)}</Text>
         <Text style={[s.tenOutOf, onDark && s.inkDark]}>/10</Text>
@@ -453,14 +455,36 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
   );
 }
 
+/**
+ * Each row's verdict, one word from the row's own tone: what held the
+ * photograph back, what helped, or neither (owner, 18 Oct 2026, from the
+ * "Photo Review" board, which drew "Khá" and "Trung bình" there). The
+ * board's grades would need cut-offs on the bars that nobody has
+ * measured; the tone is already what the findings said.
+ */
+function verdictOf(tone: Detail['tone'], t: T): string {
+  switch (tone) {
+    case 'good': return t('Good', 'Tốt', '良い');
+    case 'warn': return t('Could improve', 'Cần cải thiện', '改善の余地あり');
+    case 'plain': return t('Fine', 'Ổn', '問題なし');
+  }
+}
+
+/**
+ * Three tiers: the name and its verdict, the bar, then what was measured
+ * in words (owner, 18 Oct 2026). The words sat on the name's line, right
+ * of it, and a long finding — "a little dark, highlights blown out" —
+ * wrapped against the name; under the bar it has the row's width.
+ */
 function DetailRow({ d }: { d: Detail }) {
+  const { t } = useI18n();
   return (
     <View style={s.row} testID={`score-detail-${d.key}`}>
       <Ionicons name={d.icon} size={18} color={colors.textSecondary} />
       <View style={s.rowText}>
         <View style={s.rowLine}>
           <Text style={s.rowLabel}>{d.label}</Text>
-          <Text style={[s.rowValue, { color: TONE_INK[d.tone] }]} testID={`score-detail-${d.key}-value`}>{d.value}</Text>
+          <Text style={[s.rowVerdict, { color: TONE_INK[d.tone] }]} testID={`score-detail-${d.key}-verdict`}>{verdictOf(d.tone, t)}</Text>
         </View>
         {/* Every row's bar, in the ink of its words. What fills it is
             the row's to say (`Detail.bar`). */}
@@ -470,6 +494,7 @@ function DetailRow({ d }: { d: Detail }) {
             testID={`score-detail-${d.key}-bar`}
           />
         </View>
+        <Text style={s.rowValue} testID={`score-detail-${d.key}-value`}>{d.value}</Text>
       </View>
     </View>
   );
@@ -487,7 +512,6 @@ const s = StyleSheet.create({
   // badges lines up the way the tiles above them do.
   badgeText: { color: onPhoto.text, fontSize: 12, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
 
-  ten: { alignItems: 'flex-end', gap: 4 },
   tenLine: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   tenBig: { color: colors.text, fontSize: 30, fontFamily: display.semibold, fontVariant: ['tabular-nums'] },
   tenOutOf: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
@@ -508,10 +532,11 @@ const s = StyleSheet.create({
   standing: { color: colors.textSecondary, fontSize: 14 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowText: { flex: 1, gap: 6 },
-  // Label left, what was measured right, wrapping under it when long.
-  rowLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
+  // The name left, its verdict right; what was measured under the bar.
+  rowLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   rowLabel: { color: colors.text, fontSize: 15, fontWeight: font.medium },
-  rowValue: { flexShrink: 1, fontSize: 15, fontWeight: font.medium, textAlign: 'right' },
+  rowVerdict: { fontSize: 14, fontWeight: font.semibold },
+  rowValue: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   barTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceGlassStrong, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3 },
   // The look's glass, not the accent's wash: a block of its own on any
@@ -523,9 +548,9 @@ const s = StyleSheet.create({
   // Down to the first line's centre: 20pt lines, a 15pt glyph.
   tipIcon: { marginTop: 2 },
   tip: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  tenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // Over a photograph: `onPhoto`'s inks, and a translucent pill, since
   // the accent wash vanishes into a dark scrim.
-  tenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   tenBigDark: { color: onPhoto.text },
   inkDark: { color: onPhoto.textSecondary },
   bandPillDark: { backgroundColor: onPhoto.line },

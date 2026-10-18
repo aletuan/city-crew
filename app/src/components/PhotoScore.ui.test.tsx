@@ -75,10 +75,12 @@ describe('ScoreBadge', () => {
 });
 
 describe('ScoreTen', () => {
-  it('is the number out of ten, with the word for its band beneath', () => {
+  // The word beside the number, on one line (owner, 18 Oct 2026).
+  it('is the number out of ten, with the word for its band beside it', () => {
     render(<ScoreTen score={score()} />);
     const ten = screen.getByTestId('score-ten');
     expect(ten.textContent).toBe('8.4/10Very good');
+    expect(getComputedStyle(ten).flexDirection).toBe('row');
   });
   it('takes its word from the band the number falls in', () => {
     render(<ScoreTen score={score({ aesthetic: -0.2 })} />);
@@ -151,8 +153,15 @@ describe('ScoreDetails', () => {
     render(<ScoreDetails score={measured} open onToggle={() => {}} />);
     expect(screen.getByTestId('score-detail-toggle').querySelector('[data-icon="chevron-up"]')).not.toBeNull();
     expect(screen.getByTestId('score-standing').textContent).toBe('Scores higher than 80% of the catalog\'s photos');
-    expect(screen.getByTestId('score-detail-light').textContent).toBe('LightWell lit');
-    expect(screen.getByTestId('score-detail-composition').textContent).toBe('CompositionHorizon tilted 6°, people fill much of the frame');
+    // The name and its verdict, then the words under the bar.
+    expect(screen.getByTestId('score-detail-light').textContent).toBe('LightGoodWell lit');
+    expect(screen.getByTestId('score-detail-composition').textContent).toBe('CompositionCould improveHorizon tilted 6°, people fill much of the frame');
+    const light = screen.getByTestId('score-detail-light');
+    const order = ['score-detail-light-verdict', 'score-detail-light-bar', 'score-detail-light-value']
+      .map((id) => screen.getByTestId(id));
+    expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(light.contains(order[2])).toBe(true);
     expect(screen.queryByTestId('score-detail-green')).toBeNull();
   });
 
@@ -186,22 +195,27 @@ describe('ScoreDetails', () => {
 
   // The glyph says what the row is about; the ink of its words, how it
   // went — green, amber, or plain on every look.
-  it('marks each row with its quality, and inks its words by how it went', () => {
+  it('marks each row with its quality, and inks its verdict by how it went', () => {
     render(<ScoreDetails score={measured} open onToggle={() => {}} />);
     const glyph = (key: string) => screen.getByTestId(`score-detail-${key}`).querySelector('[data-icon]')!.getAttribute('data-icon');
     expect(glyph('light')).toBe('sunny-outline');
     expect(glyph('focus')).toBe('locate-outline');
     expect(glyph('composition')).toBe('scan-outline');
-    const ink = (key: string) => getComputedStyle(screen.getByTestId(`score-detail-${key}-value`)).color;
-    expect(ink('light')).toBe(rgb(colors.okInk));
-    expect(ink('composition')).toBe(rgb(colors.warnInk));
+    const verdict = (key: string) => screen.getByTestId(`score-detail-${key}-verdict`);
+    expect(verdict('light').textContent).toBe('Good');
+    expect(getComputedStyle(verdict('light')).color).toBe(rgb(colors.okInk));
+    expect(verdict('composition').textContent).toBe('Could improve');
+    expect(getComputedStyle(verdict('composition')).color).toBe(rgb(colors.warnInk));
+    // The words under the bar are the reading, not the verdict: one ink.
+    expect(getComputedStyle(screen.getByTestId('score-detail-composition-value')).color).toBe(rgb(colors.textSecondary));
   });
 
   // Neither helped nor held back: plain words, and a grey bar, so a full
   // bar of "no problems found" does not read as praise.
   it('inks a row that neither helped nor held back plainly, bar and all', () => {
     render(<ScoreDetails score={score({ signals: { brightness: 0.3, peopleArea: 0 } })} open onToggle={() => {}} />);
-    expect(getComputedStyle(screen.getByTestId('score-detail-light-value')).color).toBe(rgb(colors.textSecondary));
+    expect(screen.getByTestId('score-detail-light-verdict').textContent).toBe('Fine');
+    expect(getComputedStyle(screen.getByTestId('score-detail-light-verdict')).color).toBe(rgb(colors.textSecondary));
     expect(getComputedStyle(screen.getByTestId('score-detail-composition-bar')).backgroundColor).toBe(rgb(colors.textTertiary));
     expect(screen.getByTestId('score-detail-composition-bar').style.width).toBe('100%');
   });
