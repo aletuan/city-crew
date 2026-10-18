@@ -54,16 +54,18 @@ export type GalleryAction = 'cover' | 'hide' | 'unhide' | 'delete';
  * What the ⋯ menu on a tile offers, in the order it offers it.
  *
  * Never empty: every photograph on the place is the keeper's to change.
- * A hidden one offers its way back; a visible one offers the cover
- * (unless it already is) and the way out. Delete is last on both.
+ * A hidden one offers its way back; a visible one offers the cover and
+ * the way out. Delete is last on both. The cover keeps its cover slot,
+ * held rather than offered (the screen draws it so), so the photo
+ * sheet's dock is three slots on every visible photograph and does not
+ * change shape as the guide swipes onto the cover (owner, 18 Oct 2026).
  */
 export function galleryActions(photo: GalleryPhoto): GalleryAction[] {
   const out: GalleryAction[] = [];
   if (photo.is_hidden) {
     out.push('unhide');
   } else {
-    if (!photo.is_cover) out.push('cover');
-    out.push('hide');
+    out.push('cover', 'hide');
   }
   out.push('delete');
   return out;

@@ -24,8 +24,9 @@ describe('what the menu offers', () => {
     }
   });
 
-  it('does not offer to set the cover on the cover', () => {
-    expect(galleryActions(photo({ is_cover: true }))).toEqual(['hide', 'delete']);
+  // Held, not offered: the screen draws it as the cover it already is.
+  it('keeps the cover slot on the cover', () => {
+    expect(galleryActions(photo({ is_cover: true }))).toEqual(['cover', 'hide', 'delete']);
   });
 
   // No veto: hidden by anybody, the way back is offered.

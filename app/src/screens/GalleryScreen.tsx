@@ -212,11 +212,21 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   );
 
   const actionRow = (photo: GalleryPhoto, a: GalleryAction): SheetAction => ({
+    // On the cover, its own slot held: the star filled as it is beside
+    // the kind, said as selected, and its tap refused by the strip — the
+    // one act here would set what is already set.
     cover: {
-      key: a, icon: 'star-outline' as const,
-      title: t('Make it the cover', 'Đặt làm ảnh bìa', 'カバーにする'),
+      key: a,
+      ...(photo.is_cover ? {
+        icon: 'star' as const, selected: true,
+        title: t('It is the cover', 'Đang là ảnh bìa', 'カバーです'),
+        desc: t('The picture that stands for the place.', 'Ảnh đại diện cho địa điểm.', 'この場所を代表する写真です。'),
+      } : {
+        icon: 'star-outline' as const,
+        title: t('Make it the cover', 'Đặt làm ảnh bìa', 'カバーにする'),
+        desc: t('The picture that stands for the place, first wherever it appears.', 'Ảnh đại diện cho địa điểm, đứng đầu ở mọi nơi.', 'この場所を代表する写真になり、どこでも先頭に出ます。'),
+      }),
       short: t('Cover', 'Ảnh bìa', 'カバー'),
-      desc: t('The picture that stands for the place, first wherever it appears.', 'Ảnh đại diện cho địa điểm, đứng đầu ở mọi nơi.', 'この場所を代表する写真になり、どこでも先頭に出ます。'),
       onPress: () => { void run(() => setCover(photo.id)); },
     },
     hide: {

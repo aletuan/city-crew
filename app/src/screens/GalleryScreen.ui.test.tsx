@@ -22,6 +22,7 @@ import type { GalleryPhoto } from '../lib/gallery';
 import type { PhotoScore, Reading, ScorerKey } from '../lib/photoScore';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
+import { colors } from '../theme';
 
 // A phone's width, so the cell arithmetic has something to divide.
 vi.hoisted(() => {
@@ -329,12 +330,22 @@ describe('the menu on one photograph', () => {
     expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 
-  it('does not offer to set the cover on the cover', async () => {
+  // Three slots on the cover too: its own held, the star filled green, a
+  // tap that changes nothing (owner, 18 Oct 2026).
+  it('holds the cover slot on the cover, and does nothing with it', async () => {
     show([mine('m', { is_cover: true })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-m'));
     expect(await screen.findByRole('button', { name: 'Hide it' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Make it the cover' })).toBeNull();
+    const held = screen.getByRole('button', { name: 'It is the cover' });
+    expect(held.getAttribute('aria-selected')).toBe('true');
+    expect(held.getAttribute('aria-disabled')).toBe('true');
+    expect(held.querySelector('[data-icon="star"]')!.getAttribute('data-color')).toBe(colors.okInk);
+    expect(screen.getByTestId('sheet-strip').querySelectorAll('[role="button"]')).toHaveLength(3);
+    fireEvent.click(held);
+    expect(data.setCover).not.toHaveBeenCalled();
+    expect(screen.getByTestId('photo-sheet')).toBeTruthy();
   });
 
   it('hides through guide_set_hidden', async () => {
