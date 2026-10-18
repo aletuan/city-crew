@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v12
+## 3. Bộ nhãn v13
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -39,9 +39,9 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 |---|---|---|
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
 | `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Chỉ khi chụp từ trong phòng: cùng căn phòng đó nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền | P |
-| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Thư viện, bảo tàng, trung tâm thương mại là Mặt tiền; đền chùa, nhà thờ, tượng đài là Văn hóa. Căn phòng nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền, kể cả khi phòng chiếm cả khung. Bàn ghế của quán ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không. Cổng, lối vào hay mặt nhà chiếm phần lớn khung là Mặt tiền, kể cả thấy sân hay bàn ghế phía sau | P |
+| `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Cửa hàng, quán, thư viện, trung tâm thương mại hiện đại là Mặt tiền; bảo tàng, đền chùa, nhà thờ, tượng đài, công trình cổ, cổng hay nhà ở làng nghề là Văn hóa. Căn phòng nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền, kể cả khi phòng chiếm cả khung. Bàn ghế của quán ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không. Cổng, lối vào hay mặt nhà chiếm phần lớn khung là Mặt tiền, kể cả thấy sân hay bàn ghế phía sau | P |
 | `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Cổng của quán chỉ là Sân vườn khi cây che gần hết cổng và thấy bàn ghế trong sân phía sau, như Bold Brew. Sân vườn là chỗ ngồi bên trong khuôn viên quán: sân trong, vườn, hiên hay sân quay vào chúng, sân thượng. Hiên, hè hay giàn có mái ở đó, mở ra ngoài ít nhất một phía, là Sân vườn. Bàn ghế ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không; kín tường hay kính mọi phía thì là Nội thất | (từ v5, thu hẹp ở v6, thêm ở v9 và v10, chỉnh ở v11) |
-| `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
+| `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm, bảo tàng, toà nhà cổ hay nhà Pháp được ghé thăm vì chính nó, cổng hay nhà ở làng nghề. Quán, cửa hàng hay khách sạn nằm trong toà nhà cổ vẫn là Mặt tiền. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
 | `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh. Bàn ghế của quán trước bãi biển, sông, toàn cảnh thành phố hay khu vườn cảnh chiếm phần lớn khung là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó | U |
 | `collage` | Hai ảnh trở lên ghép thành một: lưới, chia đôi, xếp tầng, dù mỗi khung chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép. Là ảnh bìa hợp lệ | (từ v8) |
@@ -95,6 +95,10 @@ dọc mặt nhà nhìn ra đường là Mặt tiền, kể cả có mái (mục 
 **v12 (18/10/2026)** thêm hai ranh giới chủ sản phẩm xác nhận: cổng hay mặt
 nhà chiếm phần lớn khung là Mặt tiền, kể cả thấy sân phía sau; bàn ghế trước
 cảnh chiếm phần lớn khung là Phong cảnh (mục 13).
+
+**v13 (18/10/2026)** chuyển bảo tàng, toà nhà cổ và làng nghề từ Mặt tiền
+sang Văn hóa, theo xác nhận của chủ sản phẩm; Mặt tiền chỉ còn quán, cửa
+hàng, thư viện và trung tâm thương mại hiện đại (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -1318,3 +1322,25 @@ mô hình đã chọn. Đến đây có 192 nhãn của chủ sản phẩm và c
 cổng làng nghề vẫn là ranh giới Claude chưa nắm. Theo §3, thư viện, bảo tàng
 và trung tâm thương mại là Mặt tiền, nhưng chủ sản phẩm vừa xếp Bảo tàng Mỹ
 thuật là Văn hóa. Cần chủ sản phẩm chốt trước khi viết v13.
+
+### Định nghĩa v13: bảo tàng và làng nghề là Văn hóa (18/10/2026)
+
+**Quy tắc** (chủ sản phẩm xác nhận):
+- **Văn hóa:** bảo tàng, đền chùa, nhà thờ, toà nhà cổ hay nhà Pháp được ghé
+  thăm vì chính nó, cổng hay nhà ở làng nghề.
+- **Mặt tiền:** quán, cửa hàng, thư viện, trung tâm thương mại hiện đại.
+  Quán, cửa hàng hay khách sạn nằm trong toà nhà cổ vẫn là Mặt tiền. Câu này
+  thêm vào để các quán trong biệt thự Pháp không bị kéo sang Văn hóa.
+
+`VERSION` lên 13, `label-photos` bản 14.
+
+**Đo trước khi ghi** (Haiku, không ghi), trên cả 902 nhãn Mặt tiền và Văn hóa
+chưa phải của chủ sản phẩm:
+- 664 Mặt tiền và 121 Văn hóa giữ nguyên, đều chắc.
+- **28 ảnh** có nhãn v13 chắc mà khác nhãn đang có:
+  - 22 ảnh đổi loại. Trong đó 20 ảnh Mặt tiền thành Văn hóa: bảo tàng, Bưu
+    điện Thành phố, Nhà hát Thành phố, Dinh Bảo Đại, nhà tù Hỏa Lò, Thư viện
+    Bang Victoria, nhà thờ. Có cả vài ca đáng ngờ, như OKKIO Caffe, nhà thi
+    đấu Lâm Viên và ảnh in cũ của The Refinery.
+  - 6 ảnh Mặt tiền trước đây `unsure` nay đã chắc.
+- Các ảnh này lên trang duyệt cho chủ sản phẩm, như các lần trước.
