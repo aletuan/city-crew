@@ -1,17 +1,37 @@
 // The two words the Theme sheet may put on a look's card — "Popular" and
 // "New" — and the rules for which cards get them (12 Oct 2026).
 //
-// ── why labels and not an order ──
+// ── the order: a short front, then the catalogue (18 Oct 2026) ──
 //
-// The owner asked whether the looks could be ordered by how often they
-// are chosen. The grid stays in its one order: a picker of fourteen cards
-// lives on spatial memory ("Cosmic is page two, top right"), and a grid
-// that reshuffles under the finger is the personalised menu Office 2000
-// shipped and withdrew (Findlater & McGrenere, 2004: a static menu beats
-// an adaptive one, and a split menu — a short "recent" row over a fixed
-// list — beats both). So the sheet opens on the worn look's page, which
-// is the split menu's "recent" in one card, and two or three cards carry
-// a word. A word informs; a position persuades.
+// The owner asked on 12 Oct whether the looks could be ordered by how
+// often they are chosen, and the answer then was no: a picker of a
+// couple of dozen cards lives on spatial memory ("Cosmic is page two, top
+// right"), and a grid that reshuffles under the finger is the personalised
+// menu Office 2000 shipped and withdrew (Findlater & McGrenere, 2004: a
+// static menu beats an adaptive one, and a split menu — a short adaptive
+// front over a fixed list — beats both). So the sheet opened on the worn
+// look's page and two or three cards carried a word.
+//
+// On 18 Oct the owner asked for the split menu itself, to put the popular
+// looks where they are most likely chosen: the look being worn first,
+// then the popular ones, then every other look in the catalogue's order
+// (`orderLooks`). What keeps it from being the reshuffling grid:
+//
+//  - the popular front is in the catalogue's order, not the server's
+//    rank, so two looks trading places in a dozen accounts' choices moves
+//    nothing; only a look joining or leaving the front does;
+//  - the front is at most `POPULAR_SHOWN` looks and the worn one, and the
+//    server's floor (a fifth of those who chose, and at least two) is
+//    what admits a look to it — the guard against a few early choices
+//    taking the front for good, since a front is chosen more because it
+//    is the front;
+//  - the order is taken once, as the sheet opens, and held while it is
+//    open (see the sheet): the names arrive a moment later, and cards
+//    jumping under a finger is the one thing this must never do.
+//
+// The cost, stated: a look moving to the front shifts every look after
+// it in the catalogue one cell, so "page two" can become page three when
+// the front changes. Rare, and the price of the front.
 //
 // ── Popular ──
 //
@@ -90,4 +110,19 @@ export function unseenLooks(seen: string[] | null, looks: readonly Pinned[]): Pi
 /** What to keep after an opening: the ids it showed. */
 export function serializeSeen(looks: readonly Pinned[]): string {
   return JSON.stringify(looks);
+}
+
+/**
+ * The cards in the order the sheet shows them: the look being worn, then
+ * the popular looks, then the rest — the last two in the catalogue's own
+ * order. See the header for why the front is in the catalogue's order
+ * and not the server's. `worn` is null when a ground is worn, which is
+ * on no card.
+ */
+export function orderLooks(looks: readonly Pinned[], worn: Pinned | null, popular: readonly Pinned[]): Pinned[] {
+  const front = new Set<Pinned>(popular);
+  const lead = worn && looks.includes(worn) ? [worn] : [];
+  const hot = looks.filter((id) => front.has(id) && id !== worn);
+  const rest = looks.filter((id) => !front.has(id) && id !== worn);
+  return [...lead, ...hot, ...rest];
 }
