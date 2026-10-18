@@ -1321,20 +1321,26 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               // The invitation: the line and the pencil open the form.
               // Not the whole card, since the chips under the line are
               // a filter and a tap meant for one would open the form.
+              //
+              // Drawn as an action, not as words. It was a sentence in
+              // the description's own face one grey lighter — "Thêm vài
+              // dòng về bộ sưu tập này." — and the owner read it as the
+              // description (18 Oct 2026): on the sand ground the two
+              // greys are a shade apart, and a sentence about the list
+              // reads as one. Now a plus and two words in the accent,
+              // the colour this app gives the things a tap changes,
+              // at the caption's size: it is a control in the place
+              // the words will go, not the words.
               <PressableScale
                 onPress={edit}
-                scaleTo={0.985}
+                scaleTo={0.96}
                 haptic="selection"
                 accessibilityRole="button"
-                accessibilityLabel={t('Add a description', 'Thêm mô tả', '説明を追加')}
+                style={s.descAdd}
+                testID="collection-desc-add"
               >
-                <Text style={s.descEmpty}>
-                  {t(
-                    'Add a few words about this list.',
-                    'Thêm vài dòng về bộ sưu tập này.',
-                    'このリストについて一言添えましょう。',
-                  )}
-                </Text>
+                <Ionicons name="add" size={17} color={colors.accent} />
+                <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加')}</Text>
               </PressableScale>
             ) : null}
             {kindRow}
@@ -1717,7 +1723,9 @@ const s = StyleSheet.create({
   },
   footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
-  descEmpty: { color: colors.textTertiary, ...type.body, lineHeight: 24 },
+  // `alignSelf` keeps the press to the words, as the curator row's does.
+  descAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24 },
+  descAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   // A 20pt glyph centred on a 24pt first line.
   descGlyph: { marginTop: 2 },
 

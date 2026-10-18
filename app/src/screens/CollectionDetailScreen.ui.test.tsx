@@ -468,9 +468,13 @@ describe('your own list', () => {
     const { raw } = show();
     expect(screen.queryByTestId('collection-desc')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
-    expect(screen.getByText('Add a few words about this list.')).toBeTruthy();
     const card = screen.getByTestId('collection-desc-empty');
-    expect(card.textContent).toMatch(/^@andyAdd a few words/);
+    expect(card.textContent).toMatch(/^@andyAdd a description/);
+    // An action, not a sentence that could pass for the description: a
+    // plus and the words, in the accent (18 Oct 2026).
+    const add = screen.getByTestId('collection-desc-add');
+    expect(add.querySelector('[data-icon="add"]')?.getAttribute('data-color')).toBe(String(colors.accent));
+    expect(screen.queryByText(/Add a few words/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
     expect(card.getAttribute('role')).not.toBe('button');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
@@ -1648,7 +1652,7 @@ describe('the description, for a visitor', () => {
     show();
     expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrew.*places/);
     expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
-    expect(screen.queryByText('Add a few words about this list.')).toBeNull();
+    expect(screen.queryByText('Add a description')).toBeNull();
   });
 });
 
