@@ -52,9 +52,12 @@ export const KIND_LABEL = {
 export const isFoodPlace = (categories) => (categories ?? []).some((c) => FOOD_CATEGORIES.includes(c));
 
 /** Whether a photograph, by its labels, may be this place's cover. A
- *  photograph with no labels may not: it has not been read. */
+ *  photograph with no labels may not: it has not been read. A collage
+ *  may, whole or not: a grid is how some places choose to show themselves,
+ *  and `wide` answers for one panel of it (owner, 18 Oct 2026). */
 export function qualifies(labels, foodPlace) {
   if (!labels) return false;
+  if (labels.kind === 'collage') return true;
   if (PLACE_KINDS.includes(labels.kind) && labels.wide === true) return true;
   return foodPlace && labels.kind === 'food';
 }
@@ -64,6 +67,7 @@ export function qualifies(labels, foodPlace) {
 export function reasons(labels, foodPlace) {
   const out = [];
   if (PLACE_KINDS.includes(labels.kind) && labels.wide === true) out.push('Whole place');
+  else if (labels.kind === 'collage') out.push('A collage');
   else if (foodPlace && labels.kind === 'food') out.push('The food');
   if (labels.brand === true) out.push('Its sign');
   if (labels.daylight === true) out.push('Daylight');

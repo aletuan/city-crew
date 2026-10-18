@@ -26,6 +26,9 @@ test('an establishing view qualifies anywhere; the food only at a food place; no
   assert.equal(qualifies(L('food'), false), false);
   assert.equal(qualifies(L('text', { wide: true }), true), false);
   assert.equal(qualifies(null, true), false);
+  // A collage may be the cover, whole or not, at any place (owner, 18 Oct).
+  assert.equal(qualifies(L('collage', { wide: false }), false), true);
+  assert.deepEqual(reasons(L('collage', { brand: true }), false), ['A collage', 'Its sign']);
 });
 
 test('the reasons are the criteria met, in the Threads skill\'s order', () => {
@@ -43,9 +46,7 @@ test('why the cover does not qualify, in a few words', () => {
   assert.equal(why(L('heritage')), 'Heritage, but only part of it');
   assert.equal(why(L('food')), 'Food');
   assert.equal(why(L('text')), 'Text');
-  // Several photographs in one frame is never a cover, whatever leads it.
-  assert.equal(why(L('collage', { wide: true })), 'Collage');
-  assert.equal(qualifies(L('collage', { wide: true }), true), false);
+  assert.equal(why({ kind: 'collage' }), 'Collage');
   assert.equal(why({ kind: 'diagram' }), 'diagram');
 });
 

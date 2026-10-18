@@ -44,7 +44,7 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
 | `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh | S |
 | `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó | U |
-| `collage` | Hai ảnh trở lên ghép thành một: lưới, chia đôi, xếp tầng, dù mỗi khung chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép. Không bao giờ là ảnh bìa | (từ v8) |
+| `collage` | Hai ảnh trở lên ghép thành một: lưới, chia đôi, xếp tầng, dù mỗi khung chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép. Là ảnh bìa hợp lệ | (từ v8) |
 | `other` | Không thuộc loại nào ở trên | U |
 
 **v2 (17/10/2026)** thêm bốn quyết định của chủ sản phẩm sau vòng 3 (mục 10):
@@ -76,7 +76,7 @@ Lối đi, sàn gỗ không ghế, công viên công cộng là Phong cảnh (m�
 **v7 (18/10/2026)** thêm loại `heritage` (Văn hóa): công trình văn hóa là chủ
 thể của ảnh (mục 13).
 
-**v8 (18/10/2026)** thêm loại `collage` (Ảnh ghép), không phải ảnh bìa (mục
+**v8 (18/10/2026)** thêm loại `collage` (Ảnh ghép), là ảnh bìa hợp lệ (mục
 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
@@ -1097,14 +1097,15 @@ giữa bãi cỏ, `unsure`), 15/15 ảnh cảnh vẫn là Phong cảnh.
 ### Định nghĩa v8: Ảnh ghép (18/10/2026)
 
 **Vì sao.** Ảnh ghép (lưới mặt tiền, ly cà phê và phòng) được gán theo khung
-nổi bật nhất, nên có thể lọt vào danh sách ảnh bìa. Trong ghi chú, model đã
+nổi bật nhất, nên nhãn nói sai thứ ảnh chụp. Trong ghi chú, model đã
 tự nói "collage", "panel" hay "stacked" ở 106 ảnh. Chủ sản phẩm duyệt thêm
 loại Ảnh ghép.
 
 **Quyết định:** `collage` là hai ảnh trở lên ghép thành một, dù mỗi khung
 chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép; poster hay
-banner mà chữ là ý chính vẫn là Chữ. Ảnh ghép không bao giờ là ảnh bìa:
-Data Desk đưa nơi có ảnh bìa là ảnh ghép vào trang "Ảnh bìa nên xem lại".
+banner mà chữ là ý chính vẫn là Chữ. Chủ sản phẩm cho ảnh ghép là ảnh bìa
+hợp lệ, dù có thấy cả không gian hay không: có quán chọn lưới ảnh để giới
+thiệu mình, và `wide` chỉ trả lời cho một khung của nó.
 `VERSION` lên 8, `label-photos` bản 9.
 
 **Đo trước khi ghi** (Haiku, không ghi): 16 ảnh có ghi chú nhắc "collage"
@@ -1122,5 +1123,6 @@ ghi chú có các chữ trên. Không lỗi.
   luôn ghi chú khi gặp ảnh ghép, nên không cần hỏi lại 5.000 ảnh còn lại.
 - Số ảnh `unsure` trên cả catalog giảm từ 481 xuống 368 (6%).
 - 12 nơi đang dùng ảnh ghép làm ảnh bìa, ví dụ Cam Coffee, Pin & Rest,
-  Tulpa Cocktails Bar, Rosie Posie 2.
+  Tulpa Cocktails Bar, Rosie Posie 2. Data Desk không đưa chúng lên trang
+  "Ảnh bìa nên xem lại".
 

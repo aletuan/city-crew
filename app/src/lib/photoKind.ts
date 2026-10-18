@@ -36,8 +36,8 @@
 // against the catalog.
 //
 // `collage` came with v8 (owner, 18 Oct 2026, "Ảnh ghép"): several
-// photographs in one frame. The sheet says so, since it is a fact a guide
-// can act on — a collage is never a good cover.
+// photographs in one frame. It can be a cover, as any of the place
+// kinds can (owner, same day); its standing is against the catalog.
 
 import type Ionicons from '@expo/vector-icons/Ionicons';
 

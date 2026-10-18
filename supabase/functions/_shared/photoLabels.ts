@@ -59,9 +59,9 @@ export type Attr = typeof ATTRS[number];
  *  goes by what the photograph shows, not by the place: a lawn in a park
  *  is view, a Cham tower in the same park is heritage. v8 (18 Oct 2026)
  *  adds `collage`: a grid of a café's front, a latte and a room was
- *  labelled by whichever panel led, so it could pass for a cover, and the
- *  model said so in 106 notes. The owner made it a kind, and not one a
- *  cover may be. */
+ *  labelled by whichever panel led, and the model said so in 106 notes.
+ *  The owner made it a kind, and one a cover may be: a grid is how some
+ *  places choose to show themselves. */
 export const DEFINITIONS = `You label one photograph of a place in a city guide: a café, a restaurant, a bar, a shop, a museum, a park. Answer from the photograph alone.
 
 KIND — exactly one, by the subject: what fills most of the frame and is in focus. Never by whether the photograph merely contains sky or a tree.
