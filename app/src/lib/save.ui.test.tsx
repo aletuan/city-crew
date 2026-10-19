@@ -45,7 +45,11 @@ const logPlaceEvent = vi.hoisted(() => vi.fn(async () => {}));
 const reload = vi.hoisted(() => vi.fn());
 
 vi.mock('../nav', () => ({ goTo, navRef }));
-vi.mock('./auth', () => ({ useAuth: () => ({ session: world.session, userId: world.userId }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ session: world.session, userId: world.userId }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./city', () => ({ useCity: () => ({ city: { id: 'hanoi' } }) }));
 vi.mock('./i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),

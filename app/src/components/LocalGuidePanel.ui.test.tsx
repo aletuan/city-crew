@@ -36,12 +36,16 @@ vi.mock('../lib/i18n', () => ({
 
 // The grant is read from a store now, not fetched — see `lib/guideGrant`.
 vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.granted, useIsEditor: () => state.editor }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({
-    session: state.uid ? { user: { id: state.uid } } : null,
-    profile: { full_name: state.name },
-  }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({
+      session: state.uid ? { user: { id: state.uid } } : null,
+      profile: { full_name: state.name },
+    }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 
 import LocalGuidePanel from './LocalGuidePanel';
 

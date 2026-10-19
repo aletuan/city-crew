@@ -40,12 +40,16 @@ vi.mock('../components/SignupTour', async (orig) => ({
 beforeEach(() => { startTour.mockClear(); });
 const savePreferences = vi.hoisted(() => vi.fn(async () => {}));
 const isHandleFree = vi.hoisted(() => vi.fn(async () => true));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({
-    signUp: auth.signUp, confirmSignUp: auth.confirmSignUp, session: auth.state.session,
-  }),
-  isHandleFree,
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({
+      signUp: auth.signUp, confirmSignUp: auth.confirmSignUp, session: auth.state.session,
+    }),
+    isHandleFree,
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 const signUp = auth.signUp;
 // Only the write is swapped; everything else in the barrel stays real.
 vi.mock('../lib/data', async (orig) => ({

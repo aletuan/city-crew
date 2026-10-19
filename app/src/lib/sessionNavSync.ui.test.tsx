@@ -18,7 +18,11 @@ const nav = vi.hoisted(() => ({
   resetRoot: vi.fn(),
 }));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ userId: world.userId }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ userId: world.userId }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../nav', () => ({ navRef: nav }));
 
 import { SessionNavSync } from './sessionNavSync';

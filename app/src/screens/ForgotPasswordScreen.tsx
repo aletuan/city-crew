@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
-import { useAuth } from '../lib/auth';
+import { useAuthActions } from '../lib/auth';
 import { cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
@@ -20,7 +20,7 @@ const RESEND_SECONDS = 60;
 
 export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { requestReset, resetPassword } = useAuth();
+  const { requestReset, resetPassword } = useAuthActions();
   const failText = useFailText();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');

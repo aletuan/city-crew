@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -173,7 +173,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // a guest never learns exists, and the bookmark and the like are both
   // drawn for guests and open the sign-in sheet on a tap. So this does
   // the same — see `checkIn`.
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   const showCheckin = useFlag('place_checkin');
   // The reader's visits — the one copy the whole app shares, so the

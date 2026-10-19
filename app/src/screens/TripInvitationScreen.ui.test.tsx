@@ -34,9 +34,13 @@ const state = vi.hoisted(() => ({
   people: {} as Record<string, { full_name?: string | null; handle?: string | null; avatar_url?: string | null }>,
 }));
 
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.me ? { user: { id: state.me } } : null }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: state.me ? { user: { id: state.me } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 // English unless a test asks otherwise — the vi/ja strings are checked
 // only where a sentence is built rather than looked up.
 vi.mock('../lib/i18n', () => ({

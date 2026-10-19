@@ -15,7 +15,7 @@
 // the fourth costs a query, and only when recording is switched on.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import { useCatalog, usePlaces } from './catalog';
 import { useCity } from './city';
 import { fetchPassedOver, logPlaceEvent, useMyPreferences, type EventKind } from './data';
@@ -132,7 +132,7 @@ function useOwnSignals(uid: string | null) {
  * re-render on each.
  */
 export function usePlanProfile(): PlanProfile {
-  const { session, userId } = useAuth();
+  const { session, userId } = useSession();
   const uid = session?.user?.id ?? userId ?? null;
   const { saved, suggested, liked } = useOwnSignals(uid);
   const prefs = useMyPreferences(uid);
@@ -211,7 +211,7 @@ export function usePlanProfile(): PlanProfile {
 export function useBrowseTaste(): Taste | null {
   // The early id, as the catalog uses: a taste that waited for the session
   // re-sorted a list the reader could already see. See `Auth.userId`.
-  const { session, userId } = useAuth();
+  const { session, userId } = useSession();
   const uid = session?.user?.id ?? userId ?? null;
   const { saved, suggested, liked } = useOwnSignals(uid);
   const prefs = useMyPreferences(uid);
@@ -246,7 +246,7 @@ export function useBrowseTaste(): Taste | null {
  * one that is a guarantee; this one is only a courtesy to the network.
  */
 export function useNoteEvent(): (placeSlug: string, kind: EventKind) => void {
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   const { city } = useCity();
   const prefs = useMyPreferences(uid);

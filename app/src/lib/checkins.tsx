@@ -22,7 +22,7 @@
 // this one's back, and a launch is soon enough to hear about that.
 
 import React, { createContext, useCallback, useContext, useMemo } from 'react';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import type { Checkin } from './checkin';
 import { CACHE_CATALOG, cacheKey } from './data/cache';
 import { fetchMyCheckins, usePersistedFetch, type Fetch } from './data';
@@ -34,7 +34,7 @@ const NO_FETCH: Fetch<Checkin[]> = {
 const Ctx = createContext<Fetch<Checkin[]>>(NO_FETCH);
 
 export function CheckinsProvider({ children }: { children: React.ReactNode }) {
-  const { ready, session } = useAuth();
+  const { ready, session } = useSession();
   const meId = session?.user?.id ?? null;
 
   // Held, not answered, until auth has decided who is asking — the trap

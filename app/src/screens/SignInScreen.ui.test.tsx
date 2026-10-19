@@ -14,7 +14,11 @@ import { navRef, type Nav } from '../nav';
 import { dropResume, holdResume } from '../lib/resume';
 
 const signIn = vi.hoisted(() => vi.fn());
-vi.mock('../lib/auth', () => ({ useAuth: () => ({ signIn }) }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ signIn }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

@@ -97,16 +97,20 @@ vi.mock('../lib/useGuideGrant', () => ({
   useIsEditor: () => state.editor,
   useIsGuideAnywhere: () => state.guide,
 }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({
-    ready: state.ready,
-    session: state.session,
-    email: state.email,
-    profile: state.profile,
-    memberSince: state.memberSince,
-    signOut: spies.signOut,
-  }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({
+      ready: state.ready,
+      session: state.session,
+      email: state.email,
+      profile: state.profile,
+      memberSince: state.memberSince,
+      signOut: spies.signOut,
+    }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/data', () => ({
   // Own collections carry their members, which is the only path the
   // screen relies on (it passes an empty catalog on purpose).

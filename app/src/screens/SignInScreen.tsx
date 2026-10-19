@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useAuthActions } from '../lib/auth';
 import { cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
@@ -13,7 +13,7 @@ import { leaveAuth, type Nav } from '../nav';
 
 export default function SignInScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { signIn } = useAuth();
+  const { signIn } = useAuthActions();
   const failText = useFailText();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

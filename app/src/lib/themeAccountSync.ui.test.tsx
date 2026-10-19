@@ -22,7 +22,11 @@ const data = vi.hoisted(() => ({
   saveTheme: vi.fn(async () => {}),
 }));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ userId: world.userId }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ userId: world.userId }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./theme', () => ({
   useScheme: () => ({ pref: world.pref, look: world.look, ready: world.ready, setPref }),
 }));

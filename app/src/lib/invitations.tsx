@@ -21,7 +21,7 @@ import React, {
 } from 'react';
 import { AppState } from 'react-native';
 import { type Fetch, fetchCrewCounts, fetchInvites, useFetch } from './data';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import { shouldRefresh } from './stale';
 import { waitingCount, type InviteRow } from './invites';
 
@@ -48,7 +48,7 @@ const NO_FETCH: Fetch<never[]> = {
 const Ctx = createContext<Invitations>({ invites: NO_FETCH, waiting: 0, crewCounts: {} });
 
 export function InvitationsProvider({ children }: { children: React.ReactNode }) {
-  const { ready, session } = useAuth();
+  const { ready, session } = useSession();
   const meId = session?.user?.id ?? null;
 
   // Held, not answered, until auth has decided who is asking — the same

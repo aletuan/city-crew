@@ -25,7 +25,7 @@ import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
 import { KindToggles } from '../components/KindPill';
 import { PressableScale, successHaptic } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
@@ -75,7 +75,7 @@ export default function CollectionFormScreen({ navigation, route }: {
 }) {
   const { t, lang } = useI18n();
   const { width } = useWindowDimensions();
-  const { session } = useAuth();
+  const { session } = useSession();
   const { city } = useCity();
   const mine = useMyLists();
   const editing = route.params?.slug;

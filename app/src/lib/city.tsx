@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+import { useAuthEvent } from './auth';
 import { supabase } from './supabase';
 // Pure arithmetic, kept where a test runner can reach it.
 import { nearestTo } from './geo';
@@ -579,9 +580,10 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
    * the case this exists for — a storage-only fix would arrive one launch
    * too late for the reader who just met it.
    */
-  useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== 'SIGNED_OUT') return;
+  //
+  // Heard through `useAuthEvent` rather than from Supabase directly: the
+  // auth provider is the one place that subscribes (SOLID review, D).
+  useAuthEvent('SIGNED_OUT', () => {
       (async () => {
         const raw = await AsyncStorage.getItem(KEY).catch(() => null);
         let stored: { id?: string; mode?: 'auto' | 'manual' } = {};
@@ -598,9 +600,7 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
         // same minute, without a restart — gets the city they are in.
         if (now.current.mode === 'auto') void followFreshFix(now.current.cities);
       })();
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [followFreshFix]);
+  });
 
   const setCity = useCallback((id: string, mode: 'auto' | 'manual' = 'manual') => {
     setCityId(id);

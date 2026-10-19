@@ -11,7 +11,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../lib/auth';
+import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, space } from '../theme';
 import { PressableScale, successHaptic } from './ui';
@@ -31,7 +31,9 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
 }) {
   const { t } = useI18n();
   const failText = useFailText();
-  const { profile, email, setAvatar, clearAvatar } = useAuth();
+  const { email } = useSession();
+  const { profile } = useProfile();
+  const { setAvatar, clearAvatar } = useAuthActions();
   const insets = useSafeAreaInsets();
   const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);

@@ -76,7 +76,7 @@ import { PressableScale } from './ui';
 import { SwitchRow } from './authUi';
 import { goTo } from '../nav';
 import { launchSettled } from '../lib/launch';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import welcomeLogo from '../../assets/welcome-logo.png';
 
 /** Written once, on the way out. */
@@ -103,7 +103,7 @@ export default function WelcomeSheet() {
   const [unseen, setUnseen] = useState(false);
   // And until the reader is known to be a guest. Undefined is "not known
   // yet", and waits; an id is an account, and never sees it.
-  const { userId } = useAuth();
+  const { userId } = useSession();
   const wanted = unseen && userId === null;
   // And then until the launch has settled, or the fallback has run out.
   const settled = useSyncExternalStore(launchSettled.subscribe, launchSettled.get);

@@ -87,9 +87,13 @@ vi.mock('../lib/catalog', () => ({
     likes: state.likes, rankLikes: state.rankLikes ?? state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike,
   }),
 }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: vi.fn(), askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.has(slug) });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };

@@ -32,6 +32,7 @@ const world = vi.hoisted(() => ({
   places: null as unknown as F,
   collections: null as unknown as F,
   authCb: null as null | ((event: string) => void),
+  authOn: {} as Record<string, () => void>,
   appStateCb: null as null | ((s: string) => void),
   sessionResolved: 0,
   me: 'u1' as string | null,
@@ -55,9 +56,16 @@ const auth = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock('./auth', () => ({
-  useAuth: () => ({ session: world.me ? { user: { id: world.me } } : null, userId: world.userId }),
-}));
+vi.mock('./auth', () => {
+  const m = {
+    useAuth: () => ({ session: world.me ? { user: { id: world.me } } : null, userId: world.userId }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  // The provider hears auth events through `useAuthEvent` now; the test
+  // keeps firing them by name, into whichever handler registered for it.
+  const useAuthEvent = (kind: string, fn: () => void) => { world.authOn[kind] = fn; };
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent };
+});
 vi.mock('./supabase', () => ({ supabase: { auth } }));
 vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
@@ -78,7 +86,8 @@ const OLD = Date.now() - 10 * 60 * 1000;
 beforeEach(() => {
   world.places = fetch();
   world.collections = fetch();
-  world.authCb = null;
+  world.authOn = {};
+  world.authCb = (event: string) => world.authOn[event]?.();
   world.appStateCb = null;
   world.sessionResolved = 0;
   world.me = 'u1';

@@ -33,7 +33,7 @@ import { useReport } from '../components/reportFlow';
 import {
   Avatar, Card, Empty, PressableScale, RoundIconButton, Screen, successHaptic, UnderlineTabs, useTabBarClearance,
 } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import {
   acceptFriendRequest, blockUser, fetchProfilesById,
   fetchSuggestedFriends, type FriendProfile, profileByHandle, removeFriendship,
@@ -54,7 +54,7 @@ type Tab = 'requests' | 'friends';
 
 export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const me = session?.user?.id ?? null;
   const tabClearance = useTabBarClearance();
   // One copy for the whole app — edges, faces and counts arrive from the

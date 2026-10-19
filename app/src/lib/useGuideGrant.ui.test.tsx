@@ -20,9 +20,13 @@ const world = vi.hoisted(() => ({ uid: 'u1' as string | null }));
 const fetchGuideCities = vi.hoisted(() => vi.fn(async () => [] as (string | null)[]));
 const fetchIsEditor = vi.hoisted(() => vi.fn(async () => false));
 
-vi.mock('./auth', () => ({
-  useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null }),
-}));
+vi.mock('./auth', () => {
+  const m = {
+    useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./data', () => ({ fetchGuideCities, fetchIsEditor }));
 
 import { guideGrant } from './guideGrant';

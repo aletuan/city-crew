@@ -23,7 +23,7 @@ import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useRef,
 } from 'react';
 import { AppState } from 'react-native';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import { CACHE_CATALOG, cacheKey } from './data/cache';
 import { fetchMyTrips, usePersistedFetch, type Fetch, type Trip } from './data';
 import { shouldRefresh } from './stale';
@@ -35,7 +35,7 @@ const NO_FETCH: Fetch<Trip[]> = {
 const Ctx = createContext<Fetch<Trip[]>>(NO_FETCH);
 
 export function MyTripsProvider({ children }: { children: React.ReactNode }) {
-  const { ready, session } = useAuth();
+  const { ready, session } = useSession();
   const meId = session?.user?.id ?? null;
 
   // Held, not answered, until auth has decided who is asking — the trap

@@ -25,7 +25,7 @@ import AboutSheet from '../components/AboutSheet';
 import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
-import { useAuth } from '../lib/auth';
+import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { visitSummary } from '../lib/checkin';
 import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
 import { useMyTrips } from '../lib/mytrips';
@@ -613,7 +613,9 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   // For the one border here that must resolve in JS — see `reqDot`.
   const { scheme } = useScheme();
-  const { email, profile, memberSince, signOut, session } = useAuth();
+  const { email, session } = useSession();
+  const { profile, memberSince } = useProfile();
+  const { signOut } = useAuthActions();
   const [busy, setBusy] = useState(false);
   // The visits, for the one number the row below shows — the app's one
   // copy, so a check-in made a moment ago on a place's screen is already
@@ -1096,7 +1098,7 @@ const ProfileReturn = createContext<{
 
 export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { ready, session } = useAuth();
+  const { ready, session } = useSession();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step

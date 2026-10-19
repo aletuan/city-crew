@@ -18,7 +18,11 @@ import type { Nav } from '../nav';
 
 const requestReset = vi.hoisted(() => vi.fn());
 const resetPassword = vi.hoisted(() => vi.fn());
-vi.mock('../lib/auth', () => ({ useAuth: () => ({ requestReset, resetPassword }) }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ requestReset, resetPassword }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

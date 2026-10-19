@@ -32,7 +32,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen, DangerButton, FormError, Lede, useFailText } from '../components/authUi';
 import { Avatar, Card, PressableScale } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { dropResume } from '../lib/resume';
@@ -42,7 +42,9 @@ import { leaveAuth, type Nav } from '../nav';
 
 export default function DeleteAccountScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { email, profile, deleteAccount } = useAuth();
+  const { email } = useSession();
+  const { profile } = useProfile();
+  const { deleteAccount } = useAuthActions();
   const failText = useFailText();
   const takeout = useTakeout();
   const [busy, setBusy] = useState(false);

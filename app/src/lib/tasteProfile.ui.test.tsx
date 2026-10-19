@@ -33,9 +33,13 @@ const spies = vi.hoisted(() => ({
   logPlaceEvent: vi.fn(async () => {}),
 }));
 
-vi.mock('./auth', () => ({
-  useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null, userId: world.userId }),
-}));
+vi.mock('./auth', () => {
+  const m = {
+    useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null, userId: world.userId }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./catalog', () => ({
   usePlaces: () => ({ data: world.places }),
   useCatalog: () => ({ collections: { data: world.collections }, myLikes: world.myLikes }),

@@ -16,7 +16,7 @@ import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { AddPill } from '../components/add';
-import { useAuth } from '../lib/auth';
+import { useProfile, useSession } from '../lib/auth';
 import { categoriesOf } from '../lib/categories';
 import { collectionKinds, narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
@@ -277,7 +277,8 @@ function DraggableCard({
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
-  const { session, profile } = useAuth();
+  const { session } = useSession();
+  const { profile } = useProfile();
   const uid = session?.user?.id;
   const cols = useCollections();
   // Both catalogs, because a list of your own that is still private is in

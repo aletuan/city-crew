@@ -66,9 +66,13 @@ const crew = vi.hoisted(() => ({
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 
 const auth = vi.hoisted(() => ({ me: 'me' as string | null }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: auth.me ? { user: { id: auth.me } } : null }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: auth.me ? { user: { id: auth.me } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 
 // Language-aware so the Japanese title field can be seen to be read.
 const i18n = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi' | 'ja' }));
