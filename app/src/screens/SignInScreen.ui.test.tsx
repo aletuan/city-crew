@@ -380,3 +380,42 @@ describe('finishing what the reader started', () => {
     vi.restoreAllMocks();
   });
 });
+
+
+describe('correcting an email after validation', () => {
+  it('clears a missing-email error only after a nonempty cleaned value', () => {
+    render(<SignInScreen navigation={nav()} />);
+    submit();
+    fill('   ', '');
+    expect(screen.getByText('Enter your email address.')).toBeTruthy();
+    fill('qa@example.com', '');
+    expect(screen.queryByTestId('auth-error')).toBeNull();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it('keeps a malformed-email error until the corrected address is valid', () => {
+    render(<SignInScreen navigation={nav()} />);
+    fill('qa@', '');
+    submit();
+    fill('qa@example', '');
+    expect(screen.getByText("That email address doesn't look right.")).toBeTruthy();
+    fill('qa@ example.com', '');
+    expect(screen.queryByTestId('auth-error')).toBeNull();
+    submit();
+    expect(screen.getByText('Enter your password.')).toBeTruthy();
+    fill('other@example.com', '');
+    expect(screen.getByText('Enter your password.')).toBeTruthy();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it('does not hide a server error when only the email changes', async () => {
+    signIn.mockRejectedValue(new Error('invalid_credentials'));
+    render(<SignInScreen navigation={nav()} />);
+    fill('qa@example.com', 'password');
+    submit();
+    const error = await screen.findByTestId('auth-error');
+    const message = error.textContent;
+    fill('other@example.com', 'password');
+    expect(screen.getByTestId('auth-error').textContent).toBe(message);
+  });
+});

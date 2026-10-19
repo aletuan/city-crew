@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { AppStatusBar } from './src/components/ui/surfaces';
 import {
   SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold, useFonts,
 } from '@expo-google-fonts/space-grotesk';
@@ -270,7 +270,7 @@ const navTheme = {
 
 /** Everything below the theme, so the scheme is readable from here down. */
 function Root() {
-  const { scheme, ready, resume } = useScheme();
+  const { ready, resume } = useScheme();
   // The launch's switches — see `lib/flags.ts`. Fired once and not
   // awaited: the first frame is held for fonts and the theme, not for
   // this, and a switch that arrives a beat after the cards do is fine.
@@ -320,7 +320,7 @@ function Root() {
               <NavigationContainer theme={navTheme} ref={navRef} initialState={landingState(resume)}>
                 {/* Dark type on paper, light type on charcoal — the one
                     thing the window's interface style does not carry. */}
-                <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
+                <AppStatusBar />
                 {/* Both above the navigators: the catalog because five
                     screens read the same two lists, the save sheets
                     because they belong to no single screen — a card on
