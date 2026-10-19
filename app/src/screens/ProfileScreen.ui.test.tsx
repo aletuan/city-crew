@@ -26,7 +26,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/rend
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
 
-const guide = vi.hoisted(() => ({ enabled: false, setEnabled: vi.fn(), replay: vi.fn() }));
+const guide = vi.hoisted(() => ({ enabled: false, setEnabled: vi.fn(), replay: vi.fn(), notice: null as 'ready' | 'off' | null, noticeTop: null as number | null }));
 vi.mock('../components/SignupTour', () => ({ useSignupTour: () => guide }));
 
 type Lang = 'en' | 'vi' | 'ja';
@@ -191,7 +191,7 @@ const button = (start: string) =>
 const press = (start: string) => fireEvent.click(button(start));
 
 beforeEach(async () => {
-  guide.enabled = false; guide.setEnabled.mockClear(); guide.replay.mockClear();
+  guide.enabled = false; guide.setEnabled.mockClear(); guide.replay.mockClear(); guide.notice = null; guide.noticeTop = null;
   vi.clearAllMocks();
   state.resume = null;
   state.guide = false;
@@ -966,6 +966,27 @@ describe('highlight settings', () => {
     expect(screen.getByTestId('profile-tips').textContent).not.toContain('Short how-tos');
     fireEvent.click(screen.getByRole('switch', { name: 'Show guide' }));
     expect(guide.setEnabled).toHaveBeenCalledWith(true);
+  });
+  // The invitation floats above the tab bar; the page scrolls the switch
+  // above it when it would be covered, and leaves the page alone when not.
+  it('scrolls the guide switch above the invitation, and only when it is covered', async () => {
+    guide.enabled = true; guide.notice = 'ready'; guide.noticeTop = 600;
+    const rect = (top: number) => ({ top, left: 0, width: 300, height: 52, bottom: top + 52, right: 300, x: 0, y: top, toJSON: () => ({}) });
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(rect(580) as DOMRect);
+    const scroll = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scroll', { value: scroll, configurable: true, writable: true });
+    try {
+      draw();
+      await waitFor(() => expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ top: 580 + 52 + 12 - 600 })));
+      cleanup(); scroll.mockClear();
+      spy.mockReturnValue(rect(300) as DOMRect);
+      draw();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(scroll).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+      delete (HTMLElement.prototype as unknown as { scroll?: unknown }).scroll;
+    }
   });
   it('offers replay when enabled, and can turn guidance off', () => {
     guide.enabled = true;
