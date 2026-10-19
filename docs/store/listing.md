@@ -571,6 +571,50 @@ Data Desk), test. Từ bản này VI có localization riêng trên App Store Con
 • スポットページを整理：ハイライトは独立した行に、雰囲気はチップで、出典は引用の最後に。
 ```
 
+## Release notes v1.0.10 (What's New)
+
+Viết từ các PR merge sau build 1.0.9 (35) — #976 → #1074. Không có thay đổi
+native (package.json, app.json ngoài số version, modules/ đều giữ nguyên), nên
+mọi thứ dưới đây đã tới máy 1.0.9 qua EAS Update; bản này là binary mới để
+làm mốc. Không có mặt ở đây: photo labels / critic / cover review (Data Desk,
+server, chỉ editor và local guide), docs, test.
+
+### EN
+
+```
+• After you sign up, a short guide shows where to search, filter, save a place and find your collections. Replay it or turn it off in Profile.
+• Collection pages: the curator, the number of places and who can see the list sit in the card at the top. Add places or plan a trip from the bar below.
+• You can like your own public collection.
+• Profile: tap a count to open that list.
+• The trip date picker follows the app's language.
+• Friends' photos load faster and look sharper.
+• Fixed: after signing in, the app carries on with what you started.
+```
+
+### VI
+
+```
+• Sau khi đăng ký, một hướng dẫn ngắn chỉ chỗ tìm kiếm, lọc, lưu địa điểm và mở bộ sưu tập. Xem lại hoặc tắt trong Hồ sơ.
+• Trang bộ sưu tập: người tạo, số địa điểm và ai được xem nằm trong thẻ đầu trang. Thêm địa điểm hoặc lên kế hoạch từ thanh bên dưới.
+• Bạn có thể thích bộ sưu tập công khai của chính mình.
+• Hồ sơ: chạm vào một con số để mở danh sách đó.
+• Lịch chọn ngày của kế hoạch theo ngôn ngữ của app.
+• Ảnh đại diện của bạn bè tải nhanh hơn và nét hơn.
+• Sửa lỗi: sau khi đăng nhập, app làm tiếp việc bạn đang làm dở.
+```
+
+### JA
+
+```
+• 登録後、検索・絞り込み・スポットの保存・コレクションの場所を短いガイドで案内します。プロフィールから再表示やオフができます。
+• コレクションページ：作成者、スポット数、公開範囲を上部のカードにまとめました。下のバーからスポット追加やプラン作成ができます。
+• 自分の公開コレクションにも「いいね」できます。
+• プロフィール：数字をタップするとその一覧が開きます。
+• プランの日付ピッカーはアプリの言語で表示されます。
+• 友だちのプロフィール写真が速く、鮮明に表示されます。
+• 修正：サインイン後、途中だった操作をそのまま続けられます。
+```
+
 ## Release notes v1.0.9 (What's New)
 
 Viết từ các PR merge sau build 1.0.8 (33) — #918 → #959. Bản này phải build mới
