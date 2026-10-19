@@ -41,28 +41,22 @@ export function EyebrowText({ children }: { children: React.ReactNode }) {
   return <Text style={s.eyebrow}>{children}</Text>;
 }
 
-/**
- * Own the status bar's ink while this screen is focused, and hand it back
- * on the way out.
- *
- * Two screens now put photography under the clock — Explore's hero and a
- * place's — and both need the same three things: light ink while a photo
- * is up there, the scheme's own ink the moment the screen leaves, and
- * none of it costing a render mid-transition. A mounted `<StatusBar>`
- * fails the third: expo's component applies on mount and on unmount, and
- * the unmount lands in the middle of a push, snapping the ink with no
- * animation. `setStatusBarStyle` fades, and renders nothing.
- *
- * `want` returns the ink this screen needs, or **null for "the scheme's
- * own"** — which is what the app-level `<StatusBar>` asserts everywhere
- * else, and what both callers want the moment their photograph is no
- * longer the thing under the clock.
- *
- * It is called rather than captured: the listeners below are built once,
- * so a screen whose answer changes while it sits there — Explore's, which
- * turns over as the hero scrolls past — keeps that state in a ref and
- * calls the returned `apply`.
- */
+// One imperative owner avoids mixing a mounted native StatusBar's deferred
+// update with screen effects: on reload that deferred default overwrote
+// Explore's white ink. The default must also respect a screen that focused
+// before it mounted, and a late blur must not erase the next screen's ink.
+let statusBarOwner: (() => StatusBarStyle) | null = null;
+
+export function AppStatusBar() {
+  const { scheme } = useScheme();
+  useEffect(() => {
+    setStatusBarStyle(statusBarOwner?.() ?? (scheme === 'light' ? 'dark' : 'light'), true);
+  }, [scheme]);
+  return null;
+}
+
+/** Focused photo screens supply light ink; null uses the current theme.
+ * Call the returned function when scrolling changes what is under the clock. */
 export function useOwnedStatusBar(want: () => StatusBarStyle | null): () => void {
   const navigation = useNavigation();
   const wantRef = useRef(want);
@@ -72,18 +66,25 @@ export function useOwnedStatusBar(want: () => StatusBarStyle | null): () => void
   lightRef.current = light;
   const focusedRef = useRef(false);
   const own = useRef(() => (lightRef.current ? 'dark' : 'light') as StatusBarStyle).current;
+  const resolve = useRef(() => wantRef.current() ?? own()).current;
   const apply = useRef(() => {
-    if (focusedRef.current) setStatusBarStyle(wantRef.current() ?? own(), true);
+    if (focusedRef.current && statusBarOwner === resolve) setStatusBarStyle(resolve(), true);
   }).current;
   useEffect(() => {
-    const focus = () => { focusedRef.current = true; apply(); };
-    const blur = () => { focusedRef.current = false; setStatusBarStyle(own(), true); };
+    const focus = () => { focusedRef.current = true; statusBarOwner = resolve; apply(); };
+    const blur = () => {
+      focusedRef.current = false;
+      if (statusBarOwner === resolve) {
+        statusBarOwner = null;
+        setStatusBarStyle(own(), true);
+      }
+    };
     // The first focus event can land before these listeners exist.
     if (navigation.isFocused()) focus();
     const a = navigation.addListener('focus', focus);
     const b = navigation.addListener('blur', blur);
-    return () => { a(); b(); };
-  }, [navigation, apply, own]);
+    return () => { a(); b(); blur(); };
+  }, [navigation, apply, own, resolve]);
   // The scheme can flip while this screen holds the bar.
   useEffect(apply, [light, apply]);
   return apply;

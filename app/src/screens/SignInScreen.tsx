@@ -76,7 +76,16 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         // Whitespace stripped as it is typed, not trimmed at submit: the
         // space the iOS keyboard adds after an autocomplete lands after
         // the `@`, where no trim reaches. See `lib/email`.
-        onChangeText={(v) => setEmail(cleanEmail(v))}
+        onChangeText={(v) => {
+          const next = cleanEmail(v);
+          setEmail(next);
+          // Editing an address only resolves the error it actually fixes.
+          setError((current) => (
+            (current === 'need_email' && next !== '') ||
+            (current === 'bad_email' && emailShapeOk(next))
+          ) ? null : current);
+        }}
+        invalid={error === 'need_email' || error === 'bad_email'}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
