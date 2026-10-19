@@ -1,6 +1,14 @@
 # Reusable: fill the Sign in screen with the test account and submit.
 # Expects to start on that screen; ends on Profile, signed in.
 #
+# A sign-in with nothing waiting on it lands on Explore, not back on
+# Profile (`leaveAuth` in nav.ts, since #1056): the reader who came for an
+# account goes to the app's front door. A sign-in that a gesture asked for
+# (save, like, plan…) goes back to that gesture's tab instead — none of the
+# callers of this file start one, so Explore is the answer here. The flow
+# checks it lands there, then walks to Profile, where every caller expects
+# to be.
+#
 # TEST_EMAIL and TEST_PASSWORD come from `-e` on the command line — see
 # README.md. They are never written into a flow.
 appId: host.exp.Exponent
@@ -22,6 +30,19 @@ appId: host.exp.Exponent
 - tapOn:
     text: "Not Now"
     optional: true
+# Explore keeps its scroll position, and a list scrolled down has ducked
+# the tab bar (see lib/duck.ts): scrolling up brings the bar home before
+# the tab can be read or tapped.
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 30000
+- assertVisible:
+    id: "tab-explore"
+    selected: true
+- tapOn:
+    id: "tab-profile"
 - scrollUntilVisible:
     element:
       id: "profile-sign-out"

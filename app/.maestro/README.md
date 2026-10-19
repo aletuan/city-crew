@@ -25,7 +25,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `01-explore.yaml` | First place card renders, list scrolls down and back up, city switcher opens, another city is chosen, default city restored. |
 | `02-place-detail.yaml` | Opens the first card, asserts name, address and hero photo, goes back to Explore. |
 | `03-search.yaml` | Opens search, types `cafe`, opens the first hit, comes back, clears the query. |
-| `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
+| `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in and lands on Explore (nothing was waiting on the sign-in — see `leaveAuth`); a cold start is still signed in; signs out. |
 | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
 | `08-explore-filter.yaml` | Pins the location to Hanoi; sorts Explore by distance, then adds "open now"; the filter button's count shows both; Reset clears them and the list is back. The map toggle is not covered — Expo Go on iOS draws no map. |
