@@ -1,6 +1,6 @@
 # Sign in: a wrong password is refused with a message, the right one gets
-# in, the session survives a relaunch, and signing out returns to the guest
-# Profile. Uses the dedicated test account — see README.md.
+# in and lands on Explore, the session survives a relaunch, and signing out
+# returns to the guest Profile. Uses the dedicated test account — see README.md.
 appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
@@ -38,6 +38,19 @@ env:
 - tapOn:
     text: "Not Now"
     optional: true
+# Nothing was waiting on this sign-in, so it lands on Explore (`leaveAuth`
+# in nav.ts, since #1056) — scrolled up first, since Explore keeps its
+# position and a list scrolled down ducks the tab bar.
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 30000
+- assertVisible:
+    id: "tab-explore"
+    selected: true
+- tapOn:
+    id: "tab-profile"
 - scrollUntilVisible:
     element:
       id: "profile-sign-out"
