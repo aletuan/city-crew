@@ -290,7 +290,7 @@ export default defineConfig({
       // `src/components` carries its own floor — see "the components'
       // floor" above.
       allowExternal: true,
-      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/components/*.tsx', 'src/components/ui/*.tsx', 'src/lib/*.tsx', '../supabase/functions/*/*.ts'].map(at),
+      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/screens/*/*.tsx', 'src/components/*.tsx', 'src/components/ui/*.tsx', 'src/lib/*.tsx', '../supabase/functions/*/*.ts'].map(at),
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE, ...NATIVE_ONLY].map(at),
       thresholds: {
         // Each file on its own — see "per file, not on average" above. The
@@ -304,6 +304,10 @@ export default defineConfig({
         // A floor, not a target: the figures the screens stood at when their
         // tests last grew, rounded down. See "the screens floor" above.
         'src/screens/*.tsx': SCREENS_FLOOR,
+        // A screen's parts, one directory down since 19 Oct 2026 when
+        // Profile and Explore were split (screens/profile, screens/explore).
+        // Still the screen's code, so the screen's floor.
+        'src/screens/*/*.tsx': SCREENS_FLOOR,
         // The same shape for the components — see "the components' floor".
         'src/components/*.tsx': COMPONENTS_FLOOR,
         // The design system, one directory down since 19 Oct 2026 when

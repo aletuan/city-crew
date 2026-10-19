@@ -172,9 +172,12 @@ Ghi ra để không ai tưởng là có chủ ý:
   19/10/2026 thành `components/ui/` theo năm mối quan tâm (layout, haptics,
   motion, controls, surfaces); `ui/index.ts` xuất lại mọi tên nên không nơi
   gọi nào phải sửa.
-- **Màn hình to** — trung bình ~717 dòng một file so với ~163 ở `lib/`;
-  `ExploreScreen.tsx` gần 1.700. Sàn coverage giữ chúng đúng, nhưng không
-  giữ chúng dễ đọc.
+- **Màn hình to** — trung bình ~717 dòng một file so với ~163 ở `lib/`.
+  Ngày 19/10/2026 `ProfileScreen` (1.338 → 87 dòng) và `ExploreScreen`
+  (1.856 → ~1.040) được tách phần con ra `screens/profile/` và
+  `screens/explore/`; `PlaceDetailScreen`, `CollectionsScreen` và
+  `CollectionDetailScreen` vẫn gần 1.800 dòng. Sàn coverage giữ chúng
+  đúng, nhưng không giữ chúng dễ đọc.
 - **`lib/save.tsx`** nằm sai tầng, như trên.
 - **Không có luật nào canh `lib/*.ts` không import React.** Cổng coverage
   canh gián tiếp — một hook không đạt 100% trong Node — và `IMPURE` là nơi
