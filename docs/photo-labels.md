@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v13
+## 3. Bộ nhãn v14
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -38,12 +38,12 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | Giá trị | Nghĩa | Ở các vòng chấm tay |
 |---|---|---|
 | `food` | Đồ ăn hoặc đồ uống là chủ thể, kể cả khi phía sau có view. Đồ ăn trên bàn vẫn là Đồ ăn dù thấy một phần không gian | F |
-| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Chỉ khi chụp từ trong phòng: cùng căn phòng đó nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền | P |
+| `interior` | Không gian bên trong: bàn ghế, quầy, kiến trúc trong nhà, không có đồ ăn làm chủ thể. Quầy trong nhà là Nội thất, kể cả khi biển tên quán sáng trên tường phía sau. Tường, tranh tường, biển neon hay biển vẽ, đèn lồng hay mái ngói trang trí trong phòng là Nội thất, kể cả khi chiếm cả khung: có trần và đèn thì đồ trang trí là căn phòng. Tường gạch, mái ngói hay đèn lồng dựng trong nhà để trang trí không làm ảnh thành bên ngoài. Chỉ khi chụp từ trong phòng: cùng căn phòng đó nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền | P |
 | `exterior` | Toà nhà, mặt tiền, lối vào hay biển hiệu chiếm phần lớn khung. Quầy hay ki-ốt có biển tên, nhìn từ ngoài đường, là Mặt tiền. Cửa hàng, quán, thư viện, trung tâm thương mại hiện đại là Mặt tiền; bảo tàng, đền chùa, nhà thờ, tượng đài, công trình cổ, cổng hay nhà ở làng nghề là Văn hóa. Căn phòng nhìn từ ngoài qua kính hay cửa sổ là Mặt tiền, kể cả khi phòng chiếm cả khung. Bàn ghế của quán ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không. Cổng, lối vào hay mặt nhà chiếm phần lớn khung là Mặt tiền, kể cả thấy sân hay bàn ghế phía sau | P |
 | `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Cổng của quán chỉ là Sân vườn khi cây che gần hết cổng và thấy bàn ghế trong sân phía sau, như Bold Brew. Sân vườn là chỗ ngồi bên trong khuôn viên quán: sân trong, vườn, hiên hay sân quay vào chúng, sân thượng. Hiên, hè hay giàn có mái ở đó, mở ra ngoài ít nhất một phía, là Sân vườn. Bàn ghế ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không; kín tường hay kính mọi phía thì là Nội thất | (từ v5, thu hẹp ở v6, thêm ở v9 và v10, chỉnh ở v11) |
 | `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm, bảo tàng, toà nhà cổ hay nhà Pháp được ghé thăm vì chính nó, cổng hay nhà ở làng nghề. Quán, cửa hàng hay khách sạn nằm trong toà nhà cổ vẫn là Mặt tiền. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
-| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh. Bàn ghế của quán trước bãi biển, sông, toàn cảnh thành phố hay khu vườn cảnh chiếm phần lớn khung là Phong cảnh | S |
-| `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó | U |
+| `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Nhà thờ hay công trình nhìn từ cửa sổ, cửa vòm hay ban công của quán là Phong cảnh khi chỉ là một phần của khung cảnh, giữa cây, phố và nhà khác, hay chỉ thấy thoáng qua ô cửa; khi mặt công trình chiếm rõ khung và là thứ ảnh chụp, là Văn hóa. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh. Bàn ghế của quán trước bãi biển, sông, toàn cảnh thành phố hay khu vườn cảnh chiếm phần lớn khung là Phong cảnh | S |
+| `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó. Biển neon hay biển vẽ treo giữa đồ trang trí của phòng là Nội thất: Chữ là để đọc, trang trí là để nhìn | U |
 | `collage` | Hai ảnh trở lên ghép thành một: lưới, chia đôi, xếp tầng, dù mỗi khung chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép. Là ảnh bìa hợp lệ | (từ v8) |
 | `other` | Không thuộc loại nào ở trên | U |
 
@@ -99,6 +99,11 @@ cảnh chiếm phần lớn khung là Phong cảnh (mục 13).
 **v13 (18/10/2026)** chuyển bảo tàng, toà nhà cổ và làng nghề từ Mặt tiền
 sang Văn hóa, theo xác nhận của chủ sản phẩm; Mặt tiền chỉ còn quán, cửa
 hàng, thư viện và trung tâm thương mại hiện đại (mục 13).
+
+**v14 (19/10/2026)** thêm hai ranh giới từ lần duyệt 11 ảnh chưa chắc: đồ
+trang trí trong phòng (tranh tường, biển neon, mái ngói dựng trong nhà) là Nội
+thất; nhà thờ nhìn qua cửa sổ của quán là Phong cảnh, trừ khi mặt công trình
+chiếm rõ khung (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -1407,3 +1412,45 @@ khung ảnh trống, `scan-outline`) và tên "Khác" trong trang ảnh, như m�
 khác. Trước đó đầu trang ảnh Khác là chỗ duy nhất không có biểu tượng, nên bố
 cục bị lệch (`app/src/lib/photoKind.ts`). Ảnh `unsure` và ảnh chưa có nhãn vẫn
 không hiện loại.
+
+### 11 ảnh chưa chắc mới và v14 (19/10/2026)
+
+Hàng giờ, job `label-photos` gán nhãn 277 ảnh mới thêm ngày 18/10, trong đó
+11 ảnh Claude chưa chắc. Chủ sản phẩm duyệt cả 11 trên một trang và sửa 2,
+cả hai là đồ trang trí trong phòng ở A Mà Kitchen:
+- tranh tường bà A Mà dưới mái ngói dựng trong nhà: Claude đoán Mặt tiền;
+- biển neon chữ Hoa: Claude đoán Chữ.
+
+Chủ sản phẩm chốt cả hai là Nội thất. 9 ảnh còn lại giữ loại Claude đoán,
+trong đó có ba ảnh nhìn ra Nhà Thờ Lớn từ cửa sổ của 99/81, vẫn là Phong cảnh.
+Ảnh mặt nhà thờ nhìn rõ từ ban công cùng quán thì trước đó chủ sản phẩm đã
+chốt là Văn hóa. Hai lần chốt đó cho ra ranh giới của v14: công trình là thứ
+ảnh chụp thì là Văn hóa, còn khi chỉ là một phần khung cảnh hay thoáng qua ô
+cửa thì là Phong cảnh. Cả 11 ảnh được ghi với `"by": "owner"`, và kho ảnh
+không còn nhãn `unsure` nào.
+
+**Đo v14** trên 458 ảnh có nhãn của chủ sản phẩm, toàn là ảnh khó đã duyệt
+tay. Dùng Haiku, `write: false`. v14 chạy hai lần để biết mức dao động:
+
+| Chủ sản phẩm nói | Số ảnh | v13 | v14 lần 1 | v14 lần 2 |
+|---|---|---|---|---|
+| Mặt tiền | 151 | 125 | 119 | 121 |
+| Sân vườn | 89 | 52 | 58 | 56 |
+| Phong cảnh | 85 | 56 | 54 | 58 |
+| Nội thất | 60 | 34 | 42 | 38 |
+| Văn hóa | 46 | 35 | 35 | 32 |
+| Đồ ăn | 20 | 8 | 8 | 13 |
+| Ảnh ghép | 4 | 2 | 4 | 3 |
+| Chữ | 3 | 3 | 3 | 3 |
+| **Tổng** | **458** | **315** | **323** | **324** |
+
+Giữa hai lần chạy cùng v14, 55 ảnh (12%) đổi loại. Vì vậy chênh lệch vài ảnh
+ở một loại là dao động của mô hình, không phải tác động của luật. Mặt tiền
+giảm 4 đến 6 ảnh, nằm trong mức dao động đó (9 ảnh Mặt tiền đổi loại giữa hai
+lần v14). Nội thất tăng 4 đến 8 ảnh ở cả hai lần, đúng chỗ luật mới nhắm tới:
+tranh tường A Mà thành Nội thất. v14 vẫn chưa nhận ra ảnh mặt nhà thờ là Văn
+hóa; ca đó cần chủ sản phẩm duyệt, như các ảnh `unsure` khác.
+
+Ba lần đo tốn khoảng 0,75 USD. Không gán lại cả kho: v14 chỉ áp cho ảnh mới
+mà job hàng giờ gán nhãn, và ảnh có nhãn của chủ sản phẩm không bao giờ bị hỏi
+lại.

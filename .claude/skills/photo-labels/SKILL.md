@@ -63,7 +63,10 @@ garden and unsure labels. v12 made the place's gate or front filling the
 frame exterior, and seats before a beach or a skyline view; it asks again
 exterior, garden, view and unsure labels. v13 moved museums, historic
 buildings and craft villages from exterior to heritage; it asks again
-exterior, heritage and unsure labels. A
+exterior, heritage and unsure labels. v14 put decor inside a room (a mural,
+a neon sign, an indoor eave) with interior, and a monument seen through the
+place's window with view unless it fills the frame; it asks again exterior,
+text, view, heritage and unsure labels. A
 label the owner set by hand (`"by": "owner"`) is never asked again.
 
 ```sql
@@ -95,9 +98,12 @@ where not p.is_hidden
        or (s.scorer_version < 12
            and (s.signals->>'unsure' = 'true'
                 or s.signals->>'kind' in ('exterior', 'garden', 'view')))
-       or (s.scorer_version < 13               -- VERSION below
+       or (s.scorer_version < 13
            and (s.signals->>'unsure' = 'true'
                 or s.signals->>'kind' in ('exterior', 'heritage')))
+       or (s.scorer_version < 14               -- VERSION below
+           and (s.signals->>'unsure' = 'true'
+                or s.signals->>'kind' in ('exterior', 'text', 'view', 'heritage')))
        or not (s.signals ?& array['kind','brand','wide','green','daylight','people','staged']))
 order by pl.slug, p.sort_order;
 ```
@@ -136,7 +142,7 @@ The script prints a path for each sheet and writes `index.json`, which
 maps each yellow number to its photo id. Read every sheet. A
 photograph reported `MISSING` gets no label; list it in the report.
 
-## 3. The labels, v13
+## 3. The labels, v14
 
 Read `DEFINITIONS` in `supabase/functions/_shared/photoLabels.ts`, then
 answer each photograph by them: one `kind`, and each of the six attributes
