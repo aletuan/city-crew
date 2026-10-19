@@ -85,6 +85,17 @@ import { useI18n } from '../lib/i18n';
 import { KIND_ICON, kindName } from '../lib/photoKind';
 import { colors, font, onPhoto, radius, space } from '../theme';
 
+/** The head's lines: the kind's, then the 14pt lines under it (the
+ *  standing and the status), with the gap between each. Fixed line
+ *  heights, so the height held for them is a number and not the font's
+ *  guess. */
+const KIND_LINE = 23;
+const TEXT_LINE = 20;
+const HEAD_GAP = 4;
+/** The standing wraps to two lines at most: the longest, in Vietnamese,
+ *  takes two. */
+const STANDING_LINES = 2;
+
 /** The most of the screen's height the picture may take. */
 const MAX_SHARE = 0.5;
 /**
@@ -243,7 +254,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
           </View>
 
           <View style={s.head}>
-            <View style={s.name}>
+            <View style={s.name} testID="photo-sheet-name">
               {p.kind ? (
                 <View style={s.kind} testID="photo-sheet-kind">
                   <Ionicons name={KIND_ICON[p.kind]} size={20} color={colors.text} />
@@ -257,7 +268,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               ) : null}
               {p.score && (
                 <View style={p.kind ? s.underKind : null}>
-                  <ScoreStanding score={p.score} kind={p.kind} />
+                  <ScoreStanding score={p.score} kind={p.kind} lines={STANDING_LINES} />
                 </View>
               )}
               {status ? <Text style={s.status} numberOfLines={1} testID="photo-sheet-status">{status}</Text> : null}
@@ -336,12 +347,21 @@ const s = StyleSheet.create({
   // put theirs. On the right, the number ends where the rows' verdicts
   // end, so both margins match.
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: space.cardPadding + 1 },
-  name: { flex: 1, gap: 4 },
+  // The words beside the number keep one height, so the sheet stays still
+  // as the guide swipes (owner, 19 Oct 2026). Without it the head grew
+  // and shrank by a line: "Higher than 20% of interior photos" fits on
+  // one line, and the Vietnamese for food and drink ("Cao hơn 90% ảnh đồ
+  // ăn & uống") takes two, so the whole sheet rose a line between two
+  // photographs of one gallery. The height is the tallest head there is: the
+  // kind, two lines of standing and the hidden line, which the owner chose
+  // to hold room for over a gap under most photographs. A photograph with
+  // no kind, no score or no status keeps the same height, empty below.
+  name: { flex: 1, gap: HEAD_GAP, minHeight: KIND_LINE + HEAD_GAP + STANDING_LINES * TEXT_LINE + HEAD_GAP + TEXT_LINE },
   // Under the kind's words, not its mark: 20pt glyph and 8pt gap.
   underKind: { marginLeft: 28 },
-  status: { color: colors.textTertiary, fontSize: 14 },
+  status: { color: colors.textTertiary, fontSize: 14, lineHeight: TEXT_LINE },
   // The head's type, opposite the number: the sentence's ink and size
   // before it, since the kind took its place.
   kind: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  kindText: { color: colors.text, fontSize: 17, lineHeight: 23, fontWeight: font.semibold },
+  kindText: { color: colors.text, fontSize: 17, lineHeight: KIND_LINE, fontWeight: font.semibold },
 });
