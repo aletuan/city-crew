@@ -1412,3 +1412,45 @@ khung ảnh trống, `scan-outline`) và tên "Khác" trong trang ảnh, như m�
 khác. Trước đó đầu trang ảnh Khác là chỗ duy nhất không có biểu tượng, nên bố
 cục bị lệch (`app/src/lib/photoKind.ts`). Ảnh `unsure` và ảnh chưa có nhãn vẫn
 không hiện loại.
+
+### 11 ảnh chưa chắc mới và v14 (19/10/2026)
+
+Hàng giờ, job `label-photos` gán nhãn 277 ảnh mới thêm ngày 18/10, trong đó
+11 ảnh Claude chưa chắc. Chủ sản phẩm duyệt cả 11 trên một trang và sửa 2,
+cả hai là đồ trang trí trong phòng ở A Mà Kitchen:
+- tranh tường bà A Mà dưới mái ngói dựng trong nhà: Claude đoán Mặt tiền;
+- biển neon chữ Hoa: Claude đoán Chữ.
+
+Chủ sản phẩm chốt cả hai là Nội thất. 9 ảnh còn lại giữ loại Claude đoán,
+trong đó có ba ảnh nhìn ra Nhà Thờ Lớn từ cửa sổ của 99/81, vẫn là Phong cảnh.
+Ảnh mặt nhà thờ nhìn rõ từ ban công cùng quán thì trước đó chủ sản phẩm đã
+chốt là Văn hóa. Hai lần chốt đó cho ra ranh giới của v14: công trình là thứ
+ảnh chụp thì là Văn hóa, còn khi chỉ là một phần khung cảnh hay thoáng qua ô
+cửa thì là Phong cảnh. Cả 11 ảnh được ghi với `"by": "owner"`, và kho ảnh
+không còn nhãn `unsure` nào.
+
+**Đo v14** trên 458 ảnh có nhãn của chủ sản phẩm, toàn là ảnh khó đã duyệt
+tay. Dùng Haiku, `write: false`. v14 chạy hai lần để biết mức dao động:
+
+| Chủ sản phẩm nói | Số ảnh | v13 | v14 lần 1 | v14 lần 2 |
+|---|---|---|---|---|
+| Mặt tiền | 151 | 125 | 119 | 121 |
+| Sân vườn | 89 | 52 | 58 | 56 |
+| Phong cảnh | 85 | 56 | 54 | 58 |
+| Nội thất | 60 | 34 | 42 | 38 |
+| Văn hóa | 46 | 35 | 35 | 32 |
+| Đồ ăn | 20 | 8 | 8 | 13 |
+| Ảnh ghép | 4 | 2 | 4 | 3 |
+| Chữ | 3 | 3 | 3 | 3 |
+| **Tổng** | **458** | **315** | **323** | **324** |
+
+Giữa hai lần chạy cùng v14, 55 ảnh (12%) đổi loại. Vì vậy chênh lệch vài ảnh
+ở một loại là dao động của mô hình, không phải tác động của luật. Mặt tiền
+giảm 4 đến 6 ảnh, nằm trong mức dao động đó (9 ảnh Mặt tiền đổi loại giữa hai
+lần v14). Nội thất tăng 4 đến 8 ảnh ở cả hai lần, đúng chỗ luật mới nhắm tới:
+tranh tường A Mà thành Nội thất. v14 vẫn chưa nhận ra ảnh mặt nhà thờ là Văn
+hóa; ca đó cần chủ sản phẩm duyệt, như các ảnh `unsure` khác.
+
+Ba lần đo tốn khoảng 0,75 USD. Không gán lại cả kho: v14 chỉ áp cho ảnh mới
+mà job hàng giờ gán nhãn, và ảnh có nhãn của chủ sản phẩm không bao giờ bị hỏi
+lại.
