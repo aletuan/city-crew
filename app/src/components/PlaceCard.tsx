@@ -143,8 +143,8 @@ export default function PlaceCard({
               ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
               : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
             hitSlop={8}
-            containerStyle={s.saveSlot}
-            style={s.saveFab}
+            style={s.saveSlot}
+            contentStyle={s.saveFab}
           >
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}

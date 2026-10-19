@@ -123,7 +123,7 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
   return (
     <PressableScale
       scaleTo={0.98}
-      style={[s.twoLineRow, !last && s.featureRowDivider]}
+      contentStyle={[s.twoLineRow, !last && s.featureRowDivider]}
       onPress={onPress}
       accessibilityRole="button"
       testID="feature-row"
@@ -210,7 +210,7 @@ function SettingRow({ icon, label, value, onPress, last, testID }: {
   return (
     <PressableScale
       scaleTo={0.98}
-      style={[s.featureRow, !last && s.featureRowDivider]}
+      contentStyle={[s.featureRow, !last && s.featureRowDivider]}
       onPress={onPress}
       testID={testID}
       accessibilityRole="button"
@@ -572,8 +572,8 @@ function StatTile({ n, label, onPress }: { n: number | null; label: string; onPr
   return (
     <PressableScale
       scaleTo={0.96}
-      containerStyle={{ flex: 1 }}
-      style={s.stat}
+      style={{ flex: 1 }}
+      contentStyle={s.stat}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={n === null
@@ -752,7 +752,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
             <View style={s.roleHalo}>
               <PressableScale
                 scaleTo={0.9}
-                style={[s.roleDisc, role.dress]}
+                contentStyle={[s.roleDisc, role.dress]}
                 accessibilityRole="button"
                 accessibilityLabel={role.name}
                 accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します')}
@@ -810,7 +810,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           <View style={s.heroActions}>
             <PressableScale
               scaleTo={0.94}
-              style={s.editBtn}
+              contentStyle={s.editBtn}
               onPress={() => navigation.navigate('EditProfile')}
               accessibilityRole="button"
             >
@@ -946,7 +946,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           mark. */}
       <Card style={s.featureCard}>
         <PressableScale
-          style={[s.twoLineRow, s.featureRowDivider]}
+          contentStyle={[s.twoLineRow, s.featureRowDivider]}
           onPress={() => navigation.navigate('Crew')}
           accessibilityRole="button"
           testID="feature-row"
@@ -1004,7 +1004,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
       <AppCard />
 
       <PressableScale
-        style={s.signOutBtn}
+        contentStyle={s.signOutBtn}
         accessibilityRole="button"
         // The label stays while the spinner stands in for the word, so the
         // control keeps its name for a screen reader mid-request.
@@ -1064,7 +1064,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           one landed on changed with the language. The reasoning is at
           the top of `DeleteAccountScreen`. */}
       <PressableScale
-        style={s.deleteBtn}
+        contentStyle={s.deleteBtn}
         accessibilityRole="button"
         onPress={() => navigation.navigate('DeleteAccount')}
         testID="profile-delete-account"

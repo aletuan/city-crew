@@ -262,8 +262,8 @@ export default function TripInvitationScreen({ navigation, route }: {
               <PressableScale
                 onPress={() => answer('accepted')}
                 accessibilityRole="button"
-                containerStyle={{ flex: 1 }}
-                style={[s.yes, busy && s.busy]}
+                style={{ flex: 1 }}
+                contentStyle={[s.yes, busy && s.busy]}
               >
                 <Ionicons name="checkmark" size={17} color={colors.accentInk} />
                 <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する')}</Text>
@@ -271,8 +271,8 @@ export default function TripInvitationScreen({ navigation, route }: {
               <PressableScale
                 onPress={() => answer('declined')}
                 accessibilityRole="button"
-                containerStyle={{ flex: 1 }}
-                style={[s.no, busy && s.busy]}
+                style={{ flex: 1 }}
+                contentStyle={[s.no, busy && s.busy]}
               >
                 <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません')}</Text>
               </PressableScale>

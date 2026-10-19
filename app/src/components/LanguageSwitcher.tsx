@@ -50,7 +50,7 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
               {i > 0 && <View style={s.sep} />}
               <PressableScale
                 haptic="selection"
-                style={[s.row, active && s.rowOn]}
+                contentStyle={[s.row, active && s.rowOn]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 onPress={() => { setLang(l.id); onClose(); }}

@@ -180,7 +180,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
           />
         </View>
 
-        <PressableScale haptic="selection" style={s.locWell} onPress={locate}>
+        <PressableScale haptic="selection" contentStyle={s.locWell} onPress={locate}>
           <Ionicons name="navigate-outline" size={19} color={colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={s.rowTitle}>
@@ -214,7 +214,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                 {i > 0 && <View style={s.sep} />}
                 <PressableScale
                   haptic="selection"
-                  style={[s.row, active && s.rowOn]}
+                  contentStyle={[s.row, active && s.rowOn]}
                   onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
                   accessibilityRole="button"
                   // `aria-*` rather than `accessibilityState`, which

@@ -166,7 +166,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   // under the line, and a fraction over sends the last to the next row.
   // The leftover — under a point — sits at the end of each row.
   //
-  // Width and height stay on `style` rather than `containerStyle`, where
+  // Width and height stay on `contentStyle` rather than `style`, where
   // `PressableScale`'s note sends a width. The note is about a width that
   // has to survive its parent's layout; here the Pressable shrink-wraps
   // the sized view inside it, which is what the 64pt thumbs did before.
@@ -467,7 +467,7 @@ export default function CollectionFormScreen({ navigation, route }: {
               // `accessibilityState` — the same pairing `Chip` and `Tile`
               // carry, and the note there is the one to read.
               aria-selected={coverId == null}
-              style={[s.thumb, { width: tile, height: tile }, s.auto, coverId == null && s.thumbOn]}
+              contentStyle={[s.thumb, { width: tile, height: tile }, s.auto, coverId == null && s.thumbOn]}
             >
               {/* The chip wears the picture Auto would use, so "what is
                   the cover right now" has a visible answer even before
@@ -504,7 +504,7 @@ export default function CollectionFormScreen({ navigation, route }: {
                   : localized(place, 'name', lang)}
                 accessibilityState={{ selected: coverId === ph.id }}
                 aria-selected={coverId === ph.id}
-                style={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}
+                contentStyle={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}
               >
                 <Image source={{ uri: ph.photo_uri }} style={s.thumbImg} contentFit="cover" transition={120} />
               </PressableScale>

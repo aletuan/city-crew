@@ -101,7 +101,7 @@ export default function StopCard({
       <StopHero place={place} onPress={onOpen} onHold={onHold} onRelease={onRelease} testID="stop-hero" />
       <View style={s.cardBody}>
         <PressableScale
-          style={s.identity}
+          contentStyle={s.identity}
           onPress={onOpen}
           onLongPress={onHold ? (e) => onHold(e.nativeEvent.pageY) : undefined}
           delayLongPress={LIFT_AFTER_MS}
@@ -173,7 +173,7 @@ export default function StopCard({
               haptic="selection"
               onPress={() => onNudge(-NUDGE_MIN)}
               testID={earlierTestID}
-              containerStyle={s.step}
+              style={s.step}
               hitSlop={STEP_SLOP}
               accessibilityRole="button"
               accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${place.name_en}`, `Đến ${place.name_en} sớm ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分早く着く`)}
@@ -184,7 +184,7 @@ export default function StopCard({
             <PressableScale
               haptic="selection"
               onPress={() => onNudge(NUDGE_MIN)}
-              containerStyle={s.step}
+              style={s.step}
               hitSlop={STEP_SLOP}
               accessibilityRole="button"
               accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${place.name_en}`, `Đến ${place.name_en} muộn ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分遅く着く`)}
@@ -198,7 +198,7 @@ export default function StopCard({
           <View style={s.tools}>
             <PressableScale
               onPress={onRemove}
-              containerStyle={s.tool}
+              style={s.tool}
               hitSlop={TOOL_SLOP}
               accessibilityRole="button"
               accessibilityLabel={t(`Remove ${place.name_en}`, `Bỏ ${place.name_en}`, `${place.name_en}を外す`)}

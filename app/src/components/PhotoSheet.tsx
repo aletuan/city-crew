@@ -232,7 +232,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               ))}
             </ScrollView>
             <PressableScale
-              style={[s.round, s.close]}
+              contentStyle={[s.round, s.close]}
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel={t('Close', 'Đóng', '閉じる')}
@@ -244,7 +244,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               <Text style={s.countText}>{count}</Text>
             </View>
             <PressableScale
-              style={[s.round, s.expand]}
+              contentStyle={[s.round, s.expand]}
               onPress={() => setFull(true)}
               accessibilityRole="button"
               accessibilityLabel={t('Full screen', 'Toàn màn hình', '全画面')}

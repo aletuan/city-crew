@@ -109,14 +109,14 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
           />
         ) : null}
         <Text style={s.title}>{TITLES[why](t)}</Text>
-        {/* The width has to go on the Pressable itself (containerStyle), not
+        {/* The width has to go on the Pressable itself (`style`), not
             on the animated child: the sheet centres its children, so an
             un-stretched Pressable shrink-wraps the label and "100%" inside
             it then resolves against that shrunken box. */}
         <PressableScale
           onPress={onSignIn}
           accessibilityRole="button"
-          containerStyle={{ alignSelf: 'stretch' }}
+          style={{ alignSelf: 'stretch' }}
         >
           <LinearGradient {...gradAI} style={s.primary}>
             {/* Both words: a reader without an account reads "Sign in" as
@@ -124,7 +124,7 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
             <Text style={s.primaryText}>{t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録')}</Text>
           </LinearGradient>
         </PressableScale>
-        <PressableScale onPress={onClose} accessibilityRole="button" style={s.secondary}>
+        <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.secondary}>
           <Text style={s.secondaryText}>{t('Not now', 'Để sau', '今はしない')}</Text>
         </PressableScale>
       </Animated.View>

@@ -103,8 +103,8 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
   if (session) return null;
   return (
     <PressableScale
-      containerStyle={s.noticeWrap}
-      style={s.notice}
+      style={s.noticeWrap}
+      contentStyle={s.notice}
       onPress={() => {
         holdResume({
           tab: 'Collections', kind: 'collection', at: Date.now(),
@@ -423,8 +423,8 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
                 onPress={() => act(onEdit)}
                 accessibilityRole="button"
                 accessibilityLabel={editLabel}
-                containerStyle={s.actionWrap}
-                style={[s.action, s.actionEdit]}
+                style={s.actionWrap}
+                contentStyle={[s.action, s.actionEdit]}
               >
                 <Ionicons name="create-outline" size={22} color={colors.text} />
               </PressableScale>
@@ -432,8 +432,8 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
                 onPress={() => act(onDelete)}
                 accessibilityRole="button"
                 accessibilityLabel={deleteLabel}
-                containerStyle={s.actionWrap}
-                style={[s.action, s.actionDelete]}
+                style={s.actionWrap}
+                contentStyle={[s.action, s.actionDelete]}
               >
                 <Ionicons name="trash-outline" size={22} color={colors.bad} />
               </PressableScale>
@@ -911,7 +911,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 {(['row', 'tile'] as const).map((v) => (
                   <PressableScale
                     key={v}
-                    style={[s.viewBtn, view === v && s.viewBtnOn]}
+                    contentStyle={[s.viewBtn, view === v && s.viewBtnOn]}
                     scaleTo={0.9}
                     haptic="selection"
                     // 26×22 drawn, and the two halves touch, so the slop
@@ -980,7 +980,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 {suggestions.map((term) => (
                   <PressableScale
                     key={term}
-                    style={s.suggestion}
+                    contentStyle={s.suggestion}
                     scaleTo={0.97}
                     onPress={() => { setQuery(term); answered(); }}
                     accessibilityRole="button"
@@ -1079,7 +1079,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       return (
                         <PressableScale
                           key={c.slug}
-                          style={[s.gcard, { width: gcardW, height: gcardH }]}
+                          contentStyle={[s.gcard, { width: gcardW, height: gcardH }]}
                           onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
                           testID={item.own ? undefined : `collection-card-${item.at + j}`}
                           accessibilityRole="button"
@@ -1178,8 +1178,8 @@ export default function CollectionsScreen({ navigation, route }: {
                                   one that most needs the invitation. */}
                               {c.id && c.is_public ? (
                                 <PressableScale
-                                  containerStyle={{ marginLeft: 'auto' }}
-                                  style={s.gcardLikes}
+                                  style={{ marginLeft: 'auto' }}
+                                  contentStyle={s.gcardLikes}
                                   scaleTo={0.82}
                                   haptic="none"
                                   hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
@@ -1377,8 +1377,8 @@ export default function CollectionsScreen({ navigation, route }: {
                                 number keeps the old rule. */}
                             {c.id && c.is_public ? (
                               <PressableScale
-                                containerStyle={s.likesWrap}
-                                style={s.likesRow}
+                                style={s.likesWrap}
+                                contentStyle={s.likesRow}
                                 scaleTo={0.82}
                                 haptic="none"
                                 hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
@@ -1520,8 +1520,8 @@ export default function CollectionsScreen({ navigation, route }: {
                             the heart's own line. */}
                         {own.id && own.is_public ? (
                           <PressableScale
-                            containerStyle={s.likesWrap}
-                            style={s.likesRow}
+                            style={s.likesWrap}
+                            contentStyle={s.likesRow}
                             scaleTo={0.82}
                             haptic="none"
                             hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}

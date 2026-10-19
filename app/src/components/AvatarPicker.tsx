@@ -149,7 +149,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
           {profile.avatar_url ? (
             <Row icon="trash-outline" label={t('Remove photo', 'Xóa ảnh', '写真を削除')} onPress={remove} danger />
           ) : null}
-          <PressableScale onPress={() => setSheet(false)} accessibilityRole="button" style={s.cancel}>
+          <PressableScale onPress={() => setSheet(false)} accessibilityRole="button" contentStyle={s.cancel}>
             <Text style={s.cancelText}>{t('Cancel', 'Huỷ', 'キャンセル')}</Text>
           </PressableScale>
         </View>
@@ -165,7 +165,7 @@ function Row({ icon, label, onPress, danger }: {
   danger?: boolean;
 }) {
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button" containerStyle={{ alignSelf: 'stretch' }} style={s.row}>
+    <PressableScale onPress={onPress} accessibilityRole="button" style={{ alignSelf: 'stretch' }} contentStyle={s.row}>
       <Ionicons name={icon} size={20} color={danger ? colors.bad : colors.accent} />
       <Text style={[s.rowText, danger && { color: colors.bad }]}>{label}</Text>
     </PressableScale>

@@ -152,7 +152,7 @@ export default function LegalSheet({ id, onClose }: {
           <PressableScale
             onPress={onClose}
             haptic="selection"
-            style={st.x}
+            contentStyle={st.x}
             accessibilityRole="button"
             accessibilityLabel={close}
           >

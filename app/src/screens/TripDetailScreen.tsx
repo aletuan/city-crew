@@ -454,7 +454,7 @@ export default function TripDetailScreen({ navigation, route }: {
                 <View style={s.divider} />
                 <PressableScale
                   onPress={() => { Linking.openURL(mapRoute.url).catch(() => {}); }}
-                  style={s.route}
+                  contentStyle={s.route}
                   accessibilityRole="button"
                 >
                   <Ionicons name="navigate-outline" size={16} color={colors.accent} />
@@ -522,7 +522,7 @@ export default function TripDetailScreen({ navigation, route }: {
 
         <PressableScale
           onPress={owned ? confirmDelete : confirmLeave}
-          style={s.delete}
+          contentStyle={s.delete}
           accessibilityRole="button"
           testID={owned ? 'trip-delete' : 'trip-leave'}
         >

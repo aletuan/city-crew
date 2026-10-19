@@ -347,7 +347,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
         <PressableScale
           onPress={onSearch}
           scaleTo={0.9}
-          style={s.heroSearch}
+          contentStyle={s.heroSearch}
           accessibilityRole="button"
           accessibilityLabel={t('Search', 'Tìm kiếm', '検索')}
           anchorRef={searchAnchor}
@@ -371,8 +371,8 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
             accessibilityRole="button"
             accessibilityLabel={t('Choose a city', 'Chọn thành phố', '都市を選択')}
             testID="explore-city"
-            containerStyle={{ alignSelf: 'flex-start' }}
-            style={s.heroCity}
+            style={{ alignSelf: 'flex-start' }}
+            contentStyle={s.heroCity}
           >
             <Ionicons name="location-outline" size={13} color={onPhoto.textSecondary} />
             <Text style={s.heroDateText}>{t(city.short_en, city.short_vi, city.short_ja)}</Text>
@@ -400,7 +400,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
                 'コレクションとスポットを自由に閲覧 — アカウント不要。',
               )}
         </Text>
-        <PressableScale onPress={onStart} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+        <PressableScale onPress={onStart} accessibilityRole="button" contentStyle={{ alignSelf: 'flex-start', marginTop: 4 }}>
           <LinearGradient {...gradAI} style={s.heroCta}>
             <Text style={s.heroCtaText}>
               {/* One word, and the arrow beside it already says
@@ -535,7 +535,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
             return (
               <PressableScale
                 key={c.slug}
-                style={[s.shelfCard, { width: cardW, height: cardH }]}
+                contentStyle={[s.shelfCard, { width: cardW, height: cardH }]}
                 onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
               >
                 {uri
@@ -602,8 +602,8 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                         grid draw the same heart by the same rule. */}
                     {c.id ? (
                       <PressableScale
-                        containerStyle={s.shelfLikeHit}
-                        style={s.shelfLikes}
+                        style={s.shelfLikeHit}
+                        contentStyle={s.shelfLikes}
                         scaleTo={0.82}
                         haptic="none"
                         hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
@@ -1237,7 +1237,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             : t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え')}
           accessibilityState={{ selected: filterCount > 0 }}
           hitSlop={4}
-          style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
+          contentStyle={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
           anchorRef={floating ? pinnedFilterAnchor : filterAnchor}
           testID={floating ? 'explore-filter-pinned' : 'explore-filter'}
         >
@@ -1277,8 +1277,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           // from, and the way back has to say so — a reader who could
           // find the map and not the way out is the failure this fixes.
           <PressableScale
-            style={s.viewBtn}
-            containerStyle={s.viewBtnSlot}
+            contentStyle={s.viewBtn}
+            style={s.viewBtnSlot}
             scaleTo={0.94}
             haptic="selection"
             hitSlop={6}
@@ -1465,7 +1465,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間')}: ${statusLabel(appliedFilters.status, t)}`}
                     accessibilityState={{ selected: appliedFilters.status !== 'any' }}
                     hitSlop={4}
-                    style={[s.mapCell, appliedFilters.status !== 'any' && s.mapCellOn]}
+                    contentStyle={[s.mapCell, appliedFilters.status !== 'any' && s.mapCellOn]}
                   >
                     <Ionicons
                       name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
@@ -1481,7 +1481,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ')}
                     accessibilityState={{ selected: appliedFilters.savedOnly }}
                     hitSlop={4}
-                    style={[s.mapCell, appliedFilters.savedOnly && s.mapCellOn]}
+                    contentStyle={[s.mapCell, appliedFilters.savedOnly && s.mapCellOn]}
                   >
                     <Ionicons
                       name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
@@ -1503,7 +1503,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                         accessibilityLabel={t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ')}
                         accessibilityState={{ selected: appliedFilters.visitedOnly }}
                         hitSlop={4}
-                        style={[s.mapCell, appliedFilters.visitedOnly && s.mapCellOn]}
+                        contentStyle={[s.mapCell, appliedFilters.visitedOnly && s.mapCellOn]}
                       >
                         <Ionicons
                           name={appliedFilters.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}

@@ -93,7 +93,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
         // A card's press, not a button's: 0.97 on something this wide
         // moves its edges 5pt and reads as a lurch (InviteCard uses this).
         scaleTo={0.985}
-        style={[s.panel, s.head]}
+        contentStyle={[s.panel, s.head]}
         testID="guide-open-gallery"
       >
         {/* The app's own mark rather than a camera glyph.

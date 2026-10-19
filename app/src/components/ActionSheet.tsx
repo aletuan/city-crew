@@ -138,7 +138,7 @@ export function SheetRows({ actions, onClose }: {
         <PressableScale
           key={a.key}
           testID={`sheet-action-${a.key}`}
-          style={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff]}
+          contentStyle={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff]}
           scaleTo={a.disabled ? 1 : 0.985}
           // The sheet goes first, always. A dialog raised over a sheet
           // that is still animating out is the stacked-modal bug every
@@ -204,8 +204,8 @@ export function SheetStrip({ actions, onClose }: {
         <PressableScale
           key={a.key}
           testID={`sheet-action-${a.key}`}
-          containerStyle={s.stripCell}
-          style={[s.stripItem, i > 0 && s.stripDivider]}
+          style={s.stripCell}
+          contentStyle={[s.stripItem, i > 0 && s.stripDivider]}
           scaleTo={a.selected ? 1 : 0.96}
           // The sheet first, as in `SheetRows`.
           onPress={() => { onClose(); setTimeout(a.onPress, 220); }}

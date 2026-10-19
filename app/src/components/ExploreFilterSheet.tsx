@@ -186,7 +186,7 @@ export default function ExploreFilterSheet({
             testID="filter-close"
             accessibilityRole="button"
             accessibilityLabel={t('Close filters', 'Đóng bộ lọc', 'フィルターを閉じる')}
-            style={s.close}
+            contentStyle={s.close}
           >
             <Ionicons name="close" size={19} color={colors.text} />
           </PressableScale>
@@ -222,8 +222,8 @@ export default function ExploreFilterSheet({
                 // this the segment's label is the icon's glyph, a comma
                 // and then the words.
                 accessibilityLabel={sortLabel(value, t)}
-                containerStyle={s.segmentCell}
-                style={[s.segment, s.segmentWithMark, active && s.segmentOn]}
+                style={s.segmentCell}
+                contentStyle={[s.segment, s.segmentWithMark, active && s.segmentOn]}
               >
                 <Ionicons
                   name={sortIcon(value)}
@@ -259,8 +259,8 @@ export default function ExploreFilterSheet({
                 // react-native-web drops `accessibilityState` from the DOM
                 // entirely; `aria-checked` is what a test can actually read.
                 aria-checked={active}
-                containerStyle={s.segmentCell}
-                style={[s.segment, active && s.segmentOn]}
+                style={s.segmentCell}
+                contentStyle={[s.segment, active && s.segmentOn]}
               >
                 <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
                   {statusLabel(value, t)}
@@ -297,7 +297,7 @@ export default function ExploreFilterSheet({
             t('Bookmarked only, sign in', 'Chỉ nơi đã lưu, đăng nhập', 'ブックマークのみ、サインイン'),
             t('Sign in to filter by saved places', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして保存済みで絞り込む'),
           )}
-          style={[s.row, draft.savedOnly && s.rowOn]}
+          contentStyle={[s.row, draft.savedOnly && s.rowOn]}
         >
           <Ionicons
             name={draft.savedOnly ? 'bookmark' : 'bookmark-outline'}
@@ -348,7 +348,7 @@ export default function ExploreFilterSheet({
                 t('Visited only, sign in', 'Chỉ nơi đã check-in, đăng nhập', '訪問済みのみ、サインイン'),
                 t('Sign in to filter by places you checked in at', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして訪問済みで絞り込む'),
               )}
-              style={[s.row, draft.visitedOnly && s.rowOn]}
+              contentStyle={[s.row, draft.visitedOnly && s.rowOn]}
             >
               <Ionicons
                 name={draft.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
@@ -405,7 +405,7 @@ export default function ExploreFilterSheet({
               onPress={() => { slide(); setDraft(NOTHING_APPLIED); setError(null); }}
               testID="filter-reset"
               accessibilityRole="button"
-              style={s.reset}
+              contentStyle={s.reset}
             >
               <Ionicons name="refresh" size={17} color={colors.textSecondary} />
               <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット')}</Text>

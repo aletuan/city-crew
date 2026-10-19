@@ -262,7 +262,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                 {suggestions.map((term) => (
                   <PressableScale
                     key={term}
-                    style={s.suggestion}
+                    contentStyle={s.suggestion}
                     scaleTo={0.97}
                     onPress={() => { setQuery(term); answered(); }}
                     accessibilityRole="button"
@@ -332,7 +332,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                     return (
                       <PressableScale
                         key={v.id}
-                        style={[s.row, i > 0 && s.rowDivider]}
+                        contentStyle={[s.row, i > 0 && s.rowDivider]}
                         onPress={opens ? () => { noteSearch(); navigation.navigate('PlaceDetail', { slug: v.place_slug }); } : undefined}
                         // A button only when it goes somewhere — the same
                         // condition as the chevron, so what VoiceOver hears
@@ -358,7 +358,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                             onPress={() => setMenuFor(v)}
                             scaleTo={0.85}
                             hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                            containerStyle={s.rowEnd}
+                            style={s.rowEnd}
                             accessibilityRole="button"
                             accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
                           >

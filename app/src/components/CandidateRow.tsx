@@ -112,7 +112,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
       </View>
 
       {openable ? (
-        <PressableScale onPress={() => onOpen(openable)} scaleTo={0.94} style={s.viewBtn}>
+        <PressableScale onPress={() => onOpen(openable)} scaleTo={0.94} contentStyle={s.viewBtn}>
           <Text style={s.viewText}>{t('View', 'Xem', '見る')}</Text>
         </PressableScale>
       ) : mine || locksRow(item) ? null : busy ? (

@@ -101,7 +101,7 @@ export default function SearchField({
           onPress={() => { slide(); cancel.onPress(); }}
           scaleTo={0.94}
           haptic="selection"
-          style={s.cancel}
+          contentStyle={s.cancel}
           accessibilityRole="button"
           accessibilityLabel={cancel.label}
           testID={testID.cancel}

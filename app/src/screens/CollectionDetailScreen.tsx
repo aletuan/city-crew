@@ -840,7 +840,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const [whoSees, setWhoSees] = useState(false);
   const visibility = col && owned ? (
     <PressableScale
-      style={s.visibility}
+      contentStyle={s.visibility}
       scaleTo={0.94}
       haptic="selection"
       hitSlop={{ top: 14, bottom: 14, left: 12, right: 8 }}
@@ -924,7 +924,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      is most obviously an invitation. */
   const heart = col && isPublic && col.id ? (
     <PressableScale
-      style={s.like}
+      contentStyle={s.like}
       scaleTo={0.82}
       haptic="none"
       hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
@@ -1079,7 +1079,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const curatorRow = faceTag ? (
     !owned && curatorActions.length > 0 ? (
       <PressableScale
-        style={s.curator}
+        contentStyle={s.curator}
         onPress={() => setAboutCurator(true)}
         scaleTo={0.97}
         haptic="selection"
@@ -1293,7 +1293,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 scaleTo={0.96}
                 haptic="selection"
                 accessibilityRole="button"
-                style={s.descAdd}
+                contentStyle={s.descAdd}
                 testID="collection-desc-add"
               >
                 <Ionicons name="add" size={17} color={colors.accent} />
