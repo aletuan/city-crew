@@ -12,6 +12,8 @@
 // enough already, or not made smaller by encoding, which still earns the
 // `shrunk` mark — the rename of a non-JPEG together with its row, and
 // that one file failing is written down and the next one still runs.
+// And the faces: rewritten at 288px only while the profile still draws
+// the file, never grown, and re-stamped so phones let the old one go.
 //
 // Loaded unchanged, as the other `.fn.test.ts` files load theirs: `Deno`
 // captures the handler, and the `npm:` Supabase client is `lib/testing`'s.
@@ -407,6 +409,104 @@ describe('a photo', () => {
     h.magick.throws = 'corrupt image';
     h.fake.replies(...editor(), one('a/r1.png'), file(100 * KB));
     expect((await body(await call({}))).errors).toEqual([{ id: 'r1', error: 'corrupt image' }]);
+  });
+});
+
+// The faces. One per person at a fixed path, rewritten only while the
+// profile still draws it, and re-stamped so a phone's cache lets go.
+describe('an avatar', () => {
+  const FACE = 'https://storage.test/avatars/p1/avatar.jpg';
+  const profile = (url: string | null) => ({ data: url === null ? null : { avatar_url: url }, error: null });
+  const profileUpdates = () => h.fake.log.filter((a) => a.table === 'profiles' && a.op === 'update');
+
+  beforeEach(() => { h.magick = { ...h.magick, width: 512, height: 512, out: new Uint8Array(20 * KB) }; });
+
+  it('is fitted inside 288px, written back in place with the mark, and its URL re-stamped', async () => {
+    h.fake.replies(...editor(), profile(`${FACE}?v=1`), file(70 * KB), ok, ok);
+    const out = await body(await call({ avatars: ['p1'] }));
+    expect(h.fake.log.find((a) => a.table === 'profiles' && a.op === 'select'))
+      .toMatchObject({ payload: 'avatar_url', filters: [['id', 'p1']], maybe: true });
+    expect(h.images[0].calls).toEqual(['autoOrient', 'resize 288x288', 'strip']);
+    expect(h.images[0]).toMatchObject({ quality: 80, format: 'JPEG' });
+    expect(uploads()).toEqual([expect.objectContaining({
+      table: 'avatars',
+      payload: { path: 'p1/avatar.jpg', opts: { contentType: 'image/jpeg', upsert: true, metadata: { shrunk: '1' } } },
+    })]);
+    const [saved] = profileUpdates();
+    expect(saved.filters).toEqual([['id', 'p1']]);
+    const stamp = (saved.payload as { avatar_url: string }).avatar_url;
+    expect(stamp).toMatch(new RegExp(`^${FACE.replace(/[.?/]/g, '\\$&')}\\?v=\\d+$`));
+    expect(stamp).not.toBe(`${FACE}?v=1`);
+    expect(out).toMatchObject({ done: 1, skipped: 0, failed: 0, cursor: 'p1', bytes_before: 70 * KB, bytes_after: 20 * KB });
+    expect(out.rows).toEqual([{ id: 'p1', ms: expect.any(Number), before: 70 * KB, after: 20 * KB }]);
+    expect(h.fake.log.some((a) => a.table === 'place_photos')).toBe(false);
+  });
+
+  it('is fitted when only one side is over', async () => {
+    h.magick = { ...h.magick, width: 288, height: 400 };
+    h.fake.replies(...editor(), profile(FACE), file(70 * KB), ok, ok);
+    expect((await body(await call({ avatars: ['p1'] }))).done).toBe(1);
+  });
+
+  // A person who cleared their face, or changed it to a file elsewhere,
+  // keeps what they chose: nothing is downloaded and nothing written.
+  it('is left alone when the profile no longer draws it, or there is no profile', async () => {
+    for (const url of ['', 'https://storage.test/avatars/p2/avatar.jpg?v=3', null]) {
+      h.fake.reset();
+      h.fake.replies(...editor(), profile(url));
+      const out = await body(await call({ avatars: ['p1'] }));
+      expect(out, String(url)).toMatchObject({ done: 0, skipped: 1, failed: 0 });
+      expect(h.fake.log.some((a) => a.fn === 'download' || a.fn === 'upload')).toBe(false);
+    }
+  });
+
+  it('is left alone when it is already no larger than 288px', async () => {
+    h.magick = { ...h.magick, width: 288, height: 288 };
+    h.fake.replies(...editor(), profile(FACE), file(30 * KB));
+    const out = await body(await call({ avatars: ['p1'] }));
+    expect(out).toMatchObject({ done: 0, skipped: 1, bytes_before: 30 * KB, bytes_after: 30 * KB });
+    expect(uploads()).toEqual([]);
+    expect(profileUpdates()).toEqual([]);
+  });
+
+  it('keeps its own bytes when encoding would not shrink it', async () => {
+    h.magick.out = new Uint8Array(30 * KB);
+    h.fake.replies(...editor(), profile(FACE), file(30 * KB));
+    expect(await body(await call({ avatars: ['p1'] }))).toMatchObject({ done: 0, skipped: 1, bytes_after: 30 * KB });
+    expect(uploads()).toEqual([]);
+  });
+
+  it('takes eight at most, and reports each failure by its step', async () => {
+    h.fake.replies(...editor(), ...Array.from({ length: 8 }, () => ({ data: null, error: { message: 'rls' } })));
+    const out = await body(await call({ avatars: Array.from({ length: 10 }, (_, i) => `p${i}`) }));
+    expect(out.errors).toHaveLength(8);
+    expect(out.errors[0]).toEqual({ id: 'p0', error: 'profiles: rls' });
+    expect(out.cursor).toBe('p7');
+
+    h.fake.reset();
+    h.fake.replies(...editor(), profile(FACE), { data: null, error: { message: 'Object not found' } });
+    expect((await body(await call({ avatars: ['p1'] }))).errors).toEqual([{ id: 'p1', error: 'download: Object not found' }]);
+
+    h.fake.reset();
+    h.fake.replies(...editor(), profile(FACE), { data: null, error: null });
+    expect((await body(await call({ avatars: ['p1'] }))).errors).toEqual([{ id: 'p1', error: 'download: no body' }]);
+
+    h.fake.reset();
+    h.fake.replies(...editor(), profile(FACE), file(70 * KB), { error: { message: 'quota' } });
+    expect((await body(await call({ avatars: ['p1'] }))).errors).toEqual([{ id: 'p1', error: 'upload: quota' }]);
+    expect(profileUpdates()).toEqual([]);
+
+    h.fake.reset();
+    h.fake.replies(...editor(), profile(FACE), file(70 * KB), ok, { error: { message: 'denied' } });
+    const last = await body(await call({ avatars: ['p1'] }));
+    expect(last).toMatchObject({ done: 0, errors: [{ id: 'p1', error: 'profiles: denied' }] });
+  });
+
+  it('reports an empty list as an empty run', async () => {
+    h.fake.replies(...editor());
+    expect(await body(await call({ avatars: [] }))).toEqual({
+      done: 0, skipped: 0, failed: 0, cursor: null, bytes_before: 0, bytes_after: 0, rows: [], errors: [],
+    });
   });
 });
 
