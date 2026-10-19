@@ -45,9 +45,10 @@ vi.mock('../lib/i18n', () => ({
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => catalog,
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ mine: { data: saved.data, reload } }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: saved.data, reload } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 // The seam under test: the screen must hand the saved place to the event
 // hook. What the hook then does with consent and the network is pinned by
 // `logPlaceEvent`'s own tests.

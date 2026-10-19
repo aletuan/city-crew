@@ -41,7 +41,10 @@ vi.mock('react-native', async (orig) => {
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ save: () => {}, isSaved: () => false }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ save: () => {}, isSaved: () => false });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: { user: { id: 'me' } } }) }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: [], reload: () => {}, loadedAt: Date.now() } }) }));
 vi.mock('../lib/invitations', () => ({ useInvitations: () => ({ waiting: 0 }) }));

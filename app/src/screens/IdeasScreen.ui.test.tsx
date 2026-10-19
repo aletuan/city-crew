@@ -73,7 +73,10 @@ vi.mock('../lib/catalog', () => ({
 }));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }) }));
 const askToSignIn = vi.hoisted(() => vi.fn());
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine, reload: vi.fn() }, askToSignIn }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: state.mine, reload: vi.fn() }, askToSignIn });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/data', () => ({
   membersOf: (c: { slug: string }) => state.members[c.slug] ?? [],
   coverOf: (p: { photo?: string }) => (p.photo ? { photo_uri: p.photo } : null),

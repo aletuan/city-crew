@@ -103,9 +103,10 @@ vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEdi
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ save: spies.save, askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.includes(slug) }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ save: spies.save, askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.includes(slug) });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 // Two switches now, and they are not the same answer. `place_price` ships
 // off, which is what the screen draws for everybody until a row in

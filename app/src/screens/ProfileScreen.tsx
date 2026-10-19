@@ -34,7 +34,7 @@ import { useMyCheckins } from '../lib/checkins';
 import { useActivityCount } from '../lib/useActivityCount';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
-import { useSave } from '../lib/save';
+import { useMyLists } from '../lib/save';
 import { CATEGORIES } from '../lib/categories';
 import { useCity } from '../lib/city';
 import type { LegalId } from '../lib/legal';
@@ -687,7 +687,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // carrying their members, so `membersOf` returns them without
   // consulting anything — passing the real catalog would mean this
   // screen waiting on a fetch it otherwise has no use for.
-  const { mine } = useSave();
+  const mine = useMyLists();
   const saved = useMemo(() => {
     const seen = new Set<string>();
     for (const c of mine.data) for (const p of membersOf(c, [])) seen.add(p.slug);

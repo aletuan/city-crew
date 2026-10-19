@@ -90,9 +90,10 @@ vi.mock('../lib/catalog', () => ({
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ save: vi.fn(), askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.has(slug) }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ save: vi.fn(), askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.has(slug) });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('expo-location', () => ({
   Accuracy: { Low: 1 },
   getForegroundPermissionsAsync: spies.getForegroundPermissionsAsync,

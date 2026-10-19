@@ -120,7 +120,10 @@ vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: state.checkins
 vi.mock('../lib/useActivityCount', () => ({ useActivityCount: () => state.feed }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 const reloads = vi.hoisted(() => ({ mine: vi.fn(), trips: vi.fn() }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine, loaded: state.counts.mineLoaded, error: state.counts.mineError, reload: reloads.mine } }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: state.mine, loaded: state.counts.mineLoaded, error: state.counts.mineError, reload: reloads.mine } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips, loaded: state.counts.tripsLoaded, error: state.counts.tripsError, reload: reloads.trips }) }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, mode: state.mode }) }));
 vi.mock('../lib/theme', () => ({

@@ -31,7 +31,7 @@ import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
-import { useSave } from '../lib/save';
+import { useMyLists, useSaveActions } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space, type } from '../theme';
@@ -286,7 +286,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // copy, so a place saved from anywhere shows here. A published list of
   // your own is now in both, and `find` takes the first — `mine`, which
   // is the fuller row.
-  const { mine, askToSignIn } = useSave();
+  const mine = useMyLists();
+  const { askToSignIn } = useSaveActions();
   // Reporting, raised from the overflow menu — see components/reportFlow.
   const { report, canReport, node: reportSheet } = useReport();
   const { data: places, loading: placesLoading } = usePlaces();

@@ -61,9 +61,10 @@ vi.mock('../lib/catalog', () => ({
   useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
   usePlaces: () => ({ data: state.places, loading: state.placesLoading, loaded: state.placesLoaded }),
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ mine: { ...state.mine, reload: spies.mineReload }, askToSignIn: spies.askToSignIn }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { ...state.mine, reload: spies.mineReload }, askToSignIn: spies.askToSignIn });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 // Only the two calls that leave the device are stood in for; the rest of
 // the module is the real membership and city arithmetic.
 vi.mock('../lib/data', async (orig) => ({

@@ -41,7 +41,7 @@ import { clockOf, dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
-import { useSave } from '../lib/save';
+import { useMyLists, useSaveActions } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
 import { cityAround } from '../lib/geo';
 import type { Nav } from '../nav';
@@ -120,7 +120,8 @@ export default function IdeasScreen({ navigation, route }: {
   const { t, lang } = useI18n();
   const { city, cities, setCity } = useCity();
   const { data: places } = usePlaces();
-  const { mine, askToSignIn } = useSave();
+  const mine = useMyLists();
+  const { askToSignIn } = useSaveActions();
   const cols = useCollections();
   // The ranking figure, which leaves out a curator's like of their own list.
   const { rankLikes } = useLikes();

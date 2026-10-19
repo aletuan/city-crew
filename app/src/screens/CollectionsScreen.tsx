@@ -27,7 +27,7 @@ import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import { COLLECTION_RECENTS_KEY, parseRecents, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { collectionCities, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
-import { useSave } from '../lib/save';
+import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
@@ -458,7 +458,8 @@ export default function CollectionsScreen({ navigation, route }: {
   const colsFail = classifyLoadFail(cols.error);
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
-  const { mine, askToSignIn } = useSave();
+  const mine = useMyLists();
+  const { askToSignIn } = useSaveActions();
   // One heart on every public list, yours included (owner, 17 Oct 2026):
   // a curator may like their own list, and the shelves rank by everyone's
   // likes but theirs (`rankLikes`, read where a shelf is sorted). It is

@@ -50,7 +50,7 @@ import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
-import { useSave } from '../lib/save';
+import { useMyLists } from '../lib/save';
 import { summaryLine } from '../lib/sketch';
 import { sharedArea, stopFacts } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
@@ -102,7 +102,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const p = route.params;
   const { data: places } = usePlaces();
   const { city } = useCity();
-  const { mine } = useSave();
+  const mine = useMyLists();
   const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();
 
