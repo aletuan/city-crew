@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
-  LOOK_KEY, PREFS, RETURN_KEY, RETURN_TTL_MS, canHoldLook, landingState, lookOf, storeOf, needsRestart,
+  LOOK_DEFS, LOOK_KEY, PINNED, PREFS, RETURN_KEY, RETURN_TTL_MS, canHoldLook, landingState, lookOf, storeOf, needsRestart,
   parseLook, parsePref, pinnedScheme, readLook, takeReturn, writeLook, writeReturn,
 } from './look';
 
@@ -176,5 +178,33 @@ describe('the return after a restart', () => {
   it('opens the navigator on the tab the reader left, and nowhere in particular otherwise', () => {
     expect(landingState({ tab: 'Profile', at: NOW })).toEqual({ index: 0, routes: [{ name: 'Profile' }] });
     expect(landingState(null)).toBeUndefined();
+  });
+});
+
+// One row per look (19 Oct 2026, the SOLID review's O): the ground, the
+// glyph and the names live in `LOOK_DEFS`, and what used to be kept apart
+// is read off it.
+describe('LOOK_DEFS', () => {
+  const glyphs = JSON.parse(readFileSync(
+    join(__dirname, '../../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/Ionicons.json'),
+    'utf8',
+  )) as Record<string, number>;
+
+  it('pins each look to the ground its row names, in the row order the sheet uses', () => {
+    expect(Object.keys(PINNED)).toEqual(Object.keys(LOOK_DEFS));
+    for (const [id, def] of Object.entries(LOOK_DEFS)) expect(PINNED[id as keyof typeof PINNED]).toBe(def.ground);
+    expect(PREFS.slice(3)).toEqual(Object.keys(LOOK_DEFS));
+  });
+
+  it('gives every look a glyph Ionicons has, and a name in all three languages', () => {
+    for (const [id, def] of Object.entries(LOOK_DEFS)) {
+      expect(glyphs[def.icon], `${id}: ${def.icon}`).toBeTypeOf('number');
+      for (const word of [def.name.en, def.name.vi, def.name.ja]) expect(word.trim(), id).not.toBe('');
+    }
+  });
+
+  it('gives no two looks the same glyph', () => {
+    const icons = Object.values(LOOK_DEFS).map((d) => d.icon);
+    expect(new Set(icons).size).toBe(icons.length);
   });
 });
