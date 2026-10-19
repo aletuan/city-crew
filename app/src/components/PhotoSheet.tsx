@@ -157,6 +157,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   const all = shown.photos;
   const at = shown.index;
   const p = all[at];
+  const scored = all.some((ph) => ph.score);
   const frameW = width - space.page * 2;
   const frameH = frameHeight(frameW, height);
   // The cover is a star beside the kind once there is a kind to sit
@@ -254,7 +255,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
           </View>
 
           <View style={s.head}>
-            <View style={s.name} testID="photo-sheet-name">
+            <View style={[s.name, scored && s.nameHeld]} testID="photo-sheet-name">
               {p.kind ? (
                 <View style={s.kind} testID="photo-sheet-kind">
                   <Ionicons name={KIND_ICON[p.kind]} size={20} color={colors.text} />
@@ -352,11 +353,15 @@ const s = StyleSheet.create({
   // and shrank by a line: "Higher than 20% of interior photos" fits on
   // one line, and the Vietnamese for food and drink ("Cao hơn 90% ảnh đồ
   // ăn & uống") takes two, so the whole sheet rose a line between two
-  // photographs of one gallery. The height is the tallest head there is: the
-  // kind, two lines of standing and the hidden line, which the owner chose
-  // to hold room for over a gap under most photographs. A photograph with
-  // no kind, no score or no status keeps the same height, empty below.
-  name: { flex: 1, gap: HEAD_GAP, minHeight: KIND_LINE + HEAD_GAP + STANDING_LINES * TEXT_LINE + HEAD_GAP + TEXT_LINE },
+  // photographs of one gallery. The height held is the kind and two lines
+  // of standing, and only in a gallery with a score to stand: a gallery
+  // the phone has not analysed shows the kind alone on every photograph,
+  // and holding room there left 68pt of nothing above the dock. A first
+  // build held a third line for "hidden" as well; the owner found the gap
+  // under every ordinary photograph too wide for a line only a hidden one
+  // shows (19 Oct 2026), so a hidden photograph grows by that line.
+  name: { flex: 1, gap: HEAD_GAP },
+  nameHeld: { minHeight: KIND_LINE + HEAD_GAP + STANDING_LINES * TEXT_LINE },
   // Under the kind's words, not its mark: 20pt glyph and 8pt gap.
   underKind: { marginLeft: 28 },
   status: { color: colors.textTertiary, fontSize: 14, lineHeight: TEXT_LINE },
