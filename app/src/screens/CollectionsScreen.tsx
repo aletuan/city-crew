@@ -7,7 +7,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type AccessibilityProps, Alert, Animated, Keyboard, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
@@ -25,7 +24,8 @@ import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendPr
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
-import { COLLECTION_RECENTS_KEY, parseRecents, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
 import { collectionCities, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
@@ -33,6 +33,9 @@ import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { accentFade, colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
+
+/** The two layouts the list remembers. */
+const TILE_OR_ROW = oneOf('tile', 'row');
 
 /** What `renderRightActions` hands back, and what the card animates from. */
 type Drag = ReturnType<Animated.Value['interpolate']>;
@@ -693,16 +696,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // What this box remembered, in its own drawer — the visits screen's
   // mechanism, for its reasons: kept when a search *worked* (a card
   // opened, or the return key), never on a keystroke.
-  const [recents, setRecents] = useState<string[]>([]);
-  useEffect(() => {
-    AsyncStorage.getItem(COLLECTION_RECENTS_KEY)
-      .then((raw) => setRecents(parseRecents(raw)))
-      .catch(() => {});
-  }, []);
-  const keepRecents = (next: string[]) => {
-    setRecents(next);
-    AsyncStorage.setItem(COLLECTION_RECENTS_KEY, JSON.stringify(next)).catch(() => {});
-  };
+  const [recents, keepRecents] = useStored(COLLECTION_RECENTS_KEY, NO_RECENTS, RECENTS);
   const noteSearch = () => {
     const next = rememberSearch(recents, query);
     if (next !== recents) keepRecents(next);
@@ -814,16 +808,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // were budgeted for twenty-three. At 320 this comes out at 99, and the
   // column keeps 145.
   const coverW = Math.min(COVER, Math.round((winW - space.page * 2) * 0.36));
-  const [view, setView] = useState<'tile' | 'row'>('tile');
-  useEffect(() => {
-    AsyncStorage.getItem(VIEW_KEY)
-      .then((v) => { if (v === 'row' || v === 'tile') setView(v); })
-      .catch(() => {});
-  }, []);
-  const pickView = (v: 'tile' | 'row') => {
-    setView(v);
-    AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
-  };
+  const [view, pickView] = useStored<'tile' | 'row'>(VIEW_KEY, 'tile', TILE_OR_ROW);
 
   // SectionList knows nothing of columns, so the grid packs itself: two
   // cards per row-item, and the odd last card keeps a spacer where its

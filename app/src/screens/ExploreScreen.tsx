@@ -20,7 +20,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
@@ -43,6 +42,7 @@ import { bestFirst } from '../lib/rank';
 import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
 import { countsByCity } from '../lib/cityCounts';
 import { cycleStatus, parseView, VIEW_KEY, type ExploreView } from '../lib/exploreView';
+import { type Codec, useStored } from '../lib/stored';
 import { canDrawMap } from '../components/MiniMap';
 import { Toast, type ToastNote } from '../components/Toast';
 import PlacesMap from '../components/PlacesMap';
@@ -60,6 +60,9 @@ import { goTo, type Nav } from '../nav';
 import { startupTrace } from '../lib/trace';
 import { launchSettled } from '../lib/launch';
 import { reportStartup } from '../lib/tracereport';
+
+/** The list or the map, as remembered: anything stored that is not "map" reads as the list. */
+const VIEW_CODEC: Codec<ExploreView> = { parse: parseView, format: (v) => v };
 
 
 /**
@@ -739,17 +742,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // remembers its tiles-or-rows: one word in storage, read once on
   // mount. Until it has been read the list shows, which is also the
   // default, so a reader who never chose sees no flicker.
-  const [view, setView] = useState<ExploreView>('list');
-  useEffect(() => {
-    // Only a value that was actually stored may set the view — the same
-    // guard Collections keeps. A null read on a fresh install must not
-    // land after a tap and undo it.
-    AsyncStorage.getItem(VIEW_KEY).then((v) => { if (v != null) setView(parseView(v)); }).catch(() => {});
-  }, []);
-  const pickView = useCallback((v: ExploreView) => {
-    setView(v);
-    AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
-  }, []);
+  // `useStored` keeps the order rule this screen used to keep for itself:
+  // a read that lands after a tap does not undo it.
+  const [view, pickView] = useStored<ExploreView>(VIEW_KEY, 'list', VIEW_CODEC);
   // Where the binary cannot draw a map there is no map mode, and no
   // switch to reach it by. `view` may still say 'map' from a device that
   // could; the list is what shows.
