@@ -13,6 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useScheme } from '../../lib/theme';
 import { colors, display, font, glass, radius, space, type } from '../../theme';
 import { BackButton } from './controls';
+import { avatarSource } from '../avatarImages';
 
 /** Soft pulsing placeholder shown while content loads. */
 export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
@@ -420,10 +421,13 @@ export const glassHalo = (light: boolean) => ({
  */
 export function Avatar({ url, size }: { url?: string | null; size: number }) {
   const round = { width: size, height: size, borderRadius: size / 2 };
-  if (url) {
+  // A photograph by address, or one of the animals bundled with the app
+  // (`lib/avatars`) by name.
+  const source = avatarSource(url);
+  if (source) {
     return (
       <Image
-        source={{ uri: url }}
+        source={source}
         style={[round, s.avatarBlank]}
         cachePolicy="memory-disk"
         contentFit="cover"

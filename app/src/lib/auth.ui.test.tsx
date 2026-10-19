@@ -479,6 +479,39 @@ describe('the avatar', () => {
   });
 });
 
+// The bundled animals: a name written to the row, nothing uploaded, and
+// the photograph it replaces taken out of the public bucket afterwards.
+describe('a preset face', () => {
+  it('saves the animal by name, uploads nothing, then removes the old photograph', async () => {
+    await mount({ signedIn: session('u1'), fetched: row({ avatar_url: 'https://old/u1/avatar.jpg?v=1' }) });
+    h.fake.replies({ data: null }, { data: null });
+    await act(async () => { await seen.api.setAvatarPreset('koala'); });
+    const saved = h.fake.log.filter((a) => a.table === 'profiles' && a.op === 'update');
+    expect(saved).toEqual([expect.objectContaining({ payload: { avatar_url: 'preset:koala' }, filters: [['id', 'u1']] })]);
+    expect(manipulateAsync).not.toHaveBeenCalled();
+    const storage = h.fake.log.filter((a) => a.op === 'storage');
+    expect(storage).toEqual([expect.objectContaining({ table: 'avatars', fn: 'remove', payload: ['u1/avatar.jpg'] })]);
+    // The row moves first: a delete that ran before a refused save would
+    // leave the profile pointing at a file that is gone.
+    expect(h.fake.log.indexOf(saved[0])).toBeLessThan(h.fake.log.indexOf(storage[0]));
+    expect(seen.api.profile.avatar_url).toBe('preset:koala');
+  });
+
+  it('keeps the photograph, and says why, when the row was not saved', async () => {
+    await mount({ signedIn: session('u1'), fetched: row({ avatar_url: 'https://old' }) });
+    h.fake.replies({ error: { message: 'permission denied' } });
+    await expect(seen.api.setAvatarPreset('emu')).rejects.toThrow('permission denied');
+    expect(h.fake.log.some((a) => a.op === 'storage')).toBe(false);
+    expect(seen.api.profile.avatar_url).toBe('https://old');
+  });
+
+  it('refuses without an account', async () => {
+    await mount();
+    await expect(seen.api.setAvatarPreset('emu')).rejects.toThrow('not_signed_in');
+    expect(h.fake.log.some((a) => a.table === 'profiles' && a.op === 'update')).toBe(false);
+  });
+});
+
 describe('isHandleFree', () => {
   it('asks nothing for an empty handle', async () => {
     await expect(isHandleFree('  @ ')).resolves.toBe(false);

@@ -23,6 +23,7 @@ import {
 import { CACHE_CATALOG, cacheKey, packCache, unpackCache } from './data/cache';
 import { splitFriendships, type FriendshipRow } from './friends';
 import { useSession } from './auth';
+import { isRemote } from './avatars';
 import { shouldRefresh } from './stale';
 
 type CrewData = {
@@ -177,12 +178,13 @@ export function CrewProvider({ children }: { children: React.ReactNode }) {
   // the disk on its own once the row had mounted. Warming them as the
   // profiles land puts them in memory before anybody taps "Kết nối bạn
   // bè". Each address once per session: `avatar_url` carries a stamp
-  // that changes with the picture, so a new face is a new address.
+  // that changes with the picture, so a new face is a new address. An
+  // animal from `lib/avatars` is in the app already and is skipped.
   const warmed = useRef(new Set<string>());
   useEffect(() => {
     const urls = Object.values(people)
       .map((p) => p.avatar_url)
-      .filter((u) => u && !warmed.current.has(u));
+      .filter((u) => isRemote(u) && !warmed.current.has(u));
     if (!urls.length) return;
     for (const u of urls) warmed.current.add(u);
     Image.prefetch(urls, 'memory-disk').catch(() => {});

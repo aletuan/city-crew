@@ -15,3 +15,9 @@ declare module '*.webp' {
   const asset: number;
   export default asset;
 }
+// The preset faces (`lib/avatars`): painted pictures with no
+// transparency, at a quarter of the PNG.
+declare module '*.jpg' {
+  const asset: number;
+  export default asset;
+}

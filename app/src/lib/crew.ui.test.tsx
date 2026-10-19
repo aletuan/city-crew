@@ -214,16 +214,18 @@ describe('absorb', () => {
 
 // The pictures go into memory as the profiles land, so the Crew rows
 // open with their faces; an address already warmed is not asked twice,
-// and a profile with no picture asks nothing.
+// and a profile with no picture, or an animal the app ships with, asks
+// nothing.
 describe('the faces, warmed', () => {
   it('prefetches each new picture once, into memory', async () => {
     const prefetch = vi.mocked(Image.prefetch);
     prefetch.mockClear();
     world.session = { user: { id: 'u5' } };
-    world.edges = [edge('u5', 'f1'), edge('u5', 'f2')];
+    world.edges = [edge('u5', 'f1'), edge('u5', 'f2'), edge('u5', 'f3')];
     fetchProfilesById.mockImplementationOnce(async () => ({
       f1: { id: 'f1', handle: 'f1', full_name: 'f1', avatar_url: 'https://cdn/f1.jpg?v=1' },
       f2: { id: 'f2', handle: 'f2', full_name: 'f2', avatar_url: '' },
+      f3: { id: 'f3', handle: 'f3', full_name: 'f3', avatar_url: 'preset:koala' },
     }));
     mount();
     await waitFor(() => expect(prefetch).toHaveBeenCalledWith(['https://cdn/f1.jpg?v=1'], 'memory-disk'));
