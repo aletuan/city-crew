@@ -66,9 +66,9 @@ buildings and craft villages from exterior to heritage; it asks again
 exterior, heritage and unsure labels. v14 put decor inside a room (a mural,
 a neon sign, an indoor eave) with interior, and a monument seen through the
 place's window with view unless it fills the frame; it asks again exterior,
-text, view, heritage and unsure labels. v15 put the kinds in an order to
-check, settled a close shot of the place's sign (exterior with its front in
-view, text alone), and made other the last resort; it asks again exterior,
+text, view, heritage and unsure labels. v15 settled a close shot of the
+place's sign (exterior with its front in view, text alone) and made other
+the last resort; it asks again exterior,
 text, other and unsure labels. A
 label the owner set by hand (`"by": "owner"`) is never asked again.
 

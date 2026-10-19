@@ -105,12 +105,11 @@ trang trí trong phòng (tranh tường, biển neon, mái ngói dựng trong nh
 thất; nhà thờ nhìn qua cửa sổ của quán là Phong cảnh, trừ khi mặt công trình
 chiếm rõ khung (mục 13).
 
-**v15 (19/10/2026)** viết lại phần loại ảnh thành **thứ tự xét**: Ảnh ghép →
-Chữ → Đồ ăn → Văn hóa → rồi đến chính địa điểm theo chỗ đứng chụp (Mặt tiền
-từ phía đường, Sân vườn trong khuôn viên, Nội thất trong phòng) → Phong cảnh
-→ Khác, lấy loại đầu tiên khớp. Giữ nguyên mọi quyết định cũ, bỏ các câu lặp,
-và thêm một quyết định của chủ sản phẩm: biển hiệu gắn trên mặt quán là Mặt
-tiền, biển hay logo đứng riêng là Chữ. Khác là lựa chọn cuối cùng (mục 13).
+**v15 (19/10/2026)** giữ nguyên văn v14 và thêm hai điều: quyết định của chủ
+sản phẩm về biển hiệu (biển gắn trên mặt quán, còn thấy tường, cửa hay cửa
+sổ, là Mặt tiền; biển hay logo đứng riêng là Chữ), và Khác là lựa chọn cuối
+cùng. Một bản v15 đầu tiên viết lại cả phần loại ảnh thành thứ tự xét và bỏ
+các câu lặp; đo ra kém v14 nên không dùng (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
