@@ -11,7 +11,6 @@
 // state — loading, failed, empty, filtered — can be set up directly.
 
 import React from 'react';
-import { Linking } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
@@ -532,51 +531,24 @@ describe('the hero photograph', () => {
     expect(heroSrc()).toBe('city.jpg');
   });
 
-  it('names the photographer whenever it draws that cover', () => {
-    state.city = { ...hanoi, hero_photo_uri: 'city.jpg', hero_photo_credit: '@studio' };
-    state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
-    render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByText('@studio')).toBeTruthy();
-  });
-
-  // The credit belongs to the city's photograph, not to the hero. A place
-  // photo comes from Google with its attribution shown on the place's own
-  // screen, so repeating a name here would credit the wrong picture.
-  it('shows no credit when the photograph came from a place', () => {
-    state.city = { ...hanoi, hero_photo_credit: '@studio' };
-    state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
-    render(<ExploreScreen navigation={nav()} />);
-    expect(heroSrc()).toBe('a.jpg');
-    expect(screen.queryByText('@studio')).toBeNull();
-  });
-
-  // One switch for both credits — `photo_attribution` in `app_flags`,
-  // the same row the place photos answer to. It was written for Google's
-  // terms and now governs a photograph somebody handed us as well, which
-  // is a deliberate sharing rather than an accident.
-  it('hides the credit when the shared attribution switch is off', () => {
-    appFlags.set('photo_attribution', false);
-    state.city = { ...hanoi, hero_photo_uri: 'city.jpg', hero_photo_credit: '@studio' };
-    state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
-    render(<ExploreScreen navigation={nav()} />);
-    // The photograph stays; only the name over it goes.
-    expect(heroSrc()).toBe('city.jpg');
-    expect(screen.queryByText('@studio')).toBeNull();
-  });
-
-  it('opens the photographer’s link when the credit carries one', () => {
-    const openURL = vi.spyOn(Linking, 'openURL').mockImplementation(async () => true);
+  it('never renders a city cover source during flag hydration or later updates', () => {
     state.city = {
-      ...hanoi,
-      hero_photo_uri: 'city.jpg',
-      hero_photo_credit: '@studio',
-      hero_photo_credit_uri: 'https://example.test/studio',
+      ...hanoi, name: 'Hải Phòng', hero_photo_uri: 'city.jpg',
+      hero_photo_credit: '@studio', hero_photo_credit_uri: 'https://example.test/studio',
     };
     state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
+    // The default is true before the server responds. That first frame was
+    // the flash; checking only the eventual false value would miss it.
+    expect(appFlags.get('photo_attribution')).toBe(true);
     render(<ExploreScreen navigation={nav()} />);
-    fireEvent.click(screen.getByText('@studio'));
-    expect(openURL).toHaveBeenCalledWith('https://example.test/studio');
-    openURL.mockRestore();
+    const hidden = () => {
+      expect(heroSrc()).toBe('city.jpg');
+      expect(screen.queryByText('@studio')).toBeNull();
+      expect(screen.queryByRole('link', { name: /studio/ })).toBeNull();
+    };
+    hidden();
+    act(() => appFlags.set('photo_attribution', false)); hidden();
+    act(() => appFlags.set('photo_attribution', true)); hidden();
   });
 
   it('falls back to the pinned place once the cover is removed', () => {

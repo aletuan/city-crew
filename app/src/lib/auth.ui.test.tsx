@@ -338,8 +338,10 @@ describe('the steps that must not run out of order', () => {
 
   it('reports a finished deletion as finished even when the local sign-out after it fails', async () => {
     await mount({ signedIn: session('u1'), fetched: row() });
+    await AsyncStorage.setItem('highlight.v1:u1', JSON.stringify({ enabled: false }));
     h.fake.replies({ data: { ok: true } }, { throws: new Error('storage locked') });
     await expect(seen.api.deleteAccount()).resolves.toBeUndefined();
+    expect(await AsyncStorage.getItem('highlight.v1:u1')).toBeNull();
     const fns = h.fake.log.map((a) => a.fn).filter(Boolean);
     expect(fns.slice(-2)).toEqual(['delete-account', 'signOut']);
   });
