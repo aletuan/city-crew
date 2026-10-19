@@ -38,7 +38,11 @@ const saveTheme = vi.hoisted(() => vi.fn(async () => {}));
  *  a test says. */
 const named = vi.hoisted(() => ({ value: [] as string[] }));
 const fetchPopularThemes = vi.hoisted(() => vi.fn(async () => named.value));
-vi.mock('../lib/auth', () => ({ useAuth: () => ({ userId: who.userId }) }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ userId: who.userId }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/data', () => ({ saveTheme, fetchPopularThemes }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -38,7 +38,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useI18n } from '../lib/i18n';
@@ -159,7 +159,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // every switch, which kept the badge honest at the price of a request
   // per tap — and now that the whole app hangs off one copy, that same
   // eagerness would have refetched faces and counts with it.
-  const { session } = useAuth();
+  const { session } = useSession();
   const me = session?.user?.id;
   const { ships } = useCrew();
   const { reload } = ships;

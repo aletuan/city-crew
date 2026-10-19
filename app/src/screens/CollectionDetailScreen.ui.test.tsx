@@ -70,9 +70,13 @@ const state = vi.hoisted(() => ({
   lang: 'en' as 'en' | 'vi' | 'ja',
 }));
 
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null, profile: state.profile }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null, profile: state.profile }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/i18n', () => ({
   // The real fallback order, so a test can switch language and the screen
   // chooses its text the way it does in the app.

@@ -49,7 +49,7 @@ import {
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { holdResume } from '../lib/resume';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { fromISO, minutesOf, toISO } from '../lib/day';
 import { type Trip, type TripStopRow } from '../lib/data';
 import { useMyTrips } from '../lib/mytrips';
@@ -297,7 +297,7 @@ function FirstTrip({ onPress }: { onPress: () => void }) {
 
 export default function TripsScreen({ navigation, route }: { navigation: Nav; route?: { params?: { at?: number } } }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const clearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step

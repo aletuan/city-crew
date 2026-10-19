@@ -40,13 +40,17 @@ const reads = vi.hoisted(() => ({
   }]))),
 }));
 
-vi.mock('./auth', () => ({
-  useAuth: () => ({
-    session: world.uid ? { user: { id: world.uid, created_at: '2026-08-01T00:00:00Z' } } : null,
-    email: 'minh@example.com',
-    profile: { handle: 'Minh', full_name: 'Minh Le', bio: '', location: '', interests: '', avatar_url: '' },
-  }),
-}));
+vi.mock('./auth', () => {
+  const m = {
+    useAuth: () => ({
+      session: world.uid ? { user: { id: world.uid, created_at: '2026-08-01T00:00:00Z' } } : null,
+      email: 'minh@example.com',
+      profile: { handle: 'Minh', full_name: 'Minh Le', bio: '', location: '', interests: '', avatar_url: '' },
+    }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
 vi.mock('./data', () => ({
   fetchMyCollections: reads.fetchMyCollections,

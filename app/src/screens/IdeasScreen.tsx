@@ -33,7 +33,7 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import IdeasHeaderArt from '../components/IdeasHeaderArt';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { type City, useCity, useMyPosition } from '../lib/city';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { type Collection, coverOf, membersOf, type Place } from '../lib/data';
 import { rankByLikes } from '../lib/likes';
@@ -125,7 +125,7 @@ export default function IdeasScreen({ navigation, route }: {
   const cols = useCollections();
   // The ranking figure, which leaves out a curator's like of their own list.
   const { rankLikes } = useLikes();
-  const uid = useAuth().session?.user?.id;
+  const uid = useSession().session?.user?.id;
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step

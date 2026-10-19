@@ -35,7 +35,9 @@ vi.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
 }));
 
-import { AuthProvider, isHandleFree, LAST_READER_KEY, useAuth, type Profile } from './auth';
+import {
+  AuthProvider, isHandleFree, LAST_READER_KEY, useAuth, useAuthActions, useAuthEvent, useProfile, useSession, type Profile,
+} from './auth';
 
 type Api = ReturnType<typeof useAuth>;
 /** What the provider last handed its consumers. Written from an effect,
@@ -519,5 +521,93 @@ describe('token refresh', () => {
     expect(remove).toHaveBeenCalled();
     expect(timers().at(-1)).toBe('stopAutoRefresh');
     spy.mockRestore();
+  });
+});
+
+// The SOLID review's split (19 Oct 2026): three hooks along the lines the
+// callers drew, and one place that hears Supabase's session events.
+describe('the three halves', () => {
+  const renders = { session: 0 };
+  const halves = {} as {
+    session: ReturnType<typeof useSession>;
+    profile: ReturnType<typeof useProfile>;
+    actions: ReturnType<typeof useAuthActions>;
+  };
+  function SessionOnly() {
+    const s = useSession();
+    useEffect(() => { renders.session += 1; halves.session = s; });
+    return null;
+  }
+  function ProfileOnly() {
+    const p = useProfile();
+    useEffect(() => { halves.profile = p; });
+    return null;
+  }
+  function ActionsOnly() {
+    const a = useAuthActions();
+    useEffect(() => { halves.actions = a; });
+    return null;
+  }
+
+  async function mountHalves() {
+    h.fake.replies({ data: { session: session('u1') } });
+    h.fake.replies({ data: row({ bio: '' }) });
+    render(<AuthProvider><Probe /><SessionOnly /><ProfileOnly /><ActionsOnly /></AuthProvider>);
+    await waitFor(() => expect(seen.api.ready).toBe(true));
+    await waitFor(() => expect(seen.api.profile.handle).toBe('ana'));
+  }
+
+  it('hands each caller its own half, and useAuth all three', async () => {
+    await mountHalves();
+    expect(Object.keys(halves.session).sort()).toEqual(['email', 'ready', 'session', 'userId']);
+    expect(Object.keys(halves.profile).sort()).toEqual(['memberSince', 'profile']);
+    expect(Object.keys(halves.actions)).toContain('signOut');
+    expect(Object.keys(halves.actions)).not.toContain('session');
+    expect(halves.session.userId).toBe('u1');
+    expect(halves.profile.memberSince?.toISOString()).toBe('2026-01-02T03:04:05.000Z');
+    expect(seen.api.signOut).toBe(halves.actions.signOut);
+  });
+
+  // The point of the split: a profile edit no longer redraws the callers
+  // that only asked who is signed in.
+  it('does not redraw a session-only caller when the profile changes', async () => {
+    renders.session = 0;
+    await mountHalves();
+    const before = renders.session;
+    h.fake.replies({ data: null });
+    await act(async () => { await seen.api.updateProfile({ bio: 'Pho first' }); });
+    expect(halves.profile.profile.bio).toBe('Pho first');
+    expect(renders.session).toBe(before);
+  });
+});
+
+describe('useAuthEvent', () => {
+  it('hands on the one event asked for, and stops once unmounted', async () => {
+    const refreshed = vi.fn();
+    function Listener() {
+      useAuthEvent('TOKEN_REFRESHED', refreshed);
+      return null;
+    }
+    h.fake.replies({ data: { session: null } });
+    const view = render(<AuthProvider><Probe /><Listener /></AuthProvider>);
+    await waitFor(() => expect(seen.api.ready).toBe(true));
+    await act(async () => { h.fake.fireAuth('SIGNED_IN', null); h.fake.fireAuth('SIGNED_OUT', null); });
+    expect(refreshed).not.toHaveBeenCalled();
+    await act(async () => { h.fake.fireAuth('TOKEN_REFRESHED', null); });
+    expect(refreshed).toHaveBeenCalledTimes(1);
+    view.unmount();
+    h.fake.fireAuth('TOKEN_REFRESHED', null);
+    expect(refreshed).toHaveBeenCalledTimes(1);
+  });
+
+  it('never runs outside a provider, where there is no session to report on', () => {
+    const fn = vi.fn();
+    function Listener() {
+      useAuthEvent('SIGNED_OUT', fn);
+      return null;
+    }
+    render(<Listener />);
+    h.fake.fireAuth('SIGNED_OUT', null);
+    expect(fn).not.toHaveBeenCalled();
   });
 });

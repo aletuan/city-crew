@@ -35,7 +35,7 @@ import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
 import StopRow from '../components/StopRow';
-import { useAuth } from '../lib/auth';
+import { useProfile, useSession } from '../lib/auth';
 import { fromISO } from '../lib/day';
 import {
   answerInvite, deleteTrip, sendInvites, withdrawInvites,
@@ -73,7 +73,8 @@ export default function TripDetailScreen({ navigation, route }: {
   route: RootRoute<'TripDetail'>;
 }) {
   const { t, lang } = useI18n();
-  const { session, profile } = useAuth();
+  const { session } = useSession();
+  const { profile } = useProfile();
   const clearance = useTabBarClearance();
   const trips = useMyTrips();
 

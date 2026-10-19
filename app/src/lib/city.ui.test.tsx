@@ -33,6 +33,25 @@ vi.mock('./supabase', async () => {
   return { supabase: h.fake.client };
 });
 
+// The city hears the session through the auth provider's `useAuthEvent`.
+// This stands it on the fake client's own auth stream, so `fireAuth` still
+// reaches the city the way the real provider would hand it on.
+vi.mock('./auth', async () => {
+  const { useEffect, useRef } = await import('react');
+  return {
+    useAuthEvent: (kind: string, fn: () => void) => {
+      const latest = useRef(fn);
+      latest.current = fn;
+      useEffect(() => {
+        const { data } = h.fake!.client.auth.onAuthStateChange((event: string) => {
+          if (event === kind) latest.current();
+        });
+        return () => data.subscription.unsubscribe();
+      }, [kind]);
+    },
+  };
+});
+
 import { CityProvider, useCity, useMyPosition } from './city';
 
 const KEY = 'citycrew.city';

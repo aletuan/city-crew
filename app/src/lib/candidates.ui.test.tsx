@@ -45,7 +45,11 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock('./i18n', () => ({ useI18n: () => ({ t: (en: string) => en }) }));
-vi.mock('./auth', () => ({ useAuth: () => ({ session: h.session }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ session: h.session }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./save', () => {
   const useSave = () => ({ askToSignIn: h.askToSignIn });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };

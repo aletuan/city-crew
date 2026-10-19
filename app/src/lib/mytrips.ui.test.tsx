@@ -27,7 +27,11 @@ const world = vi.hoisted(() => ({
 // A copy per call, the way a network answer is a fresh array every time.
 const fetchMyTrips = vi.hoisted(() => vi.fn(async () => [...world.trips]));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ ready: world.ready, session: world.session }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ ready: world.ready, session: world.session }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchMyTrips,

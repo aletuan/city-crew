@@ -132,7 +132,7 @@ import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWin
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { fetchPopularThemes, saveTheme } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
@@ -306,7 +306,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   // The account's copy of a choice, when there is an account: the theme
   // follows the account since 12 Oct 2026 (`lib/themeAccountSync`). A
   // guest's choice stays on the device.
-  const uid = useAuth().userId;
+  const uid = useSession().userId;
   const remember = (id: Pref) => (typeof uid === 'string' ? () => saveTheme(uid, id) : undefined);
   const grounds = OPTIONS.filter((o) => lookOf(o.id) === 'standard');
   // The catalogue, in its own order: what "New" compares against and

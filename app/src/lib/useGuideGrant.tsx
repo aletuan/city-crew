@@ -1,7 +1,7 @@
 // The React half of `guideGrant.ts`, and the one mount that fills it.
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchGuideCities, fetchIsEditor } from './data';
 import { cacheKey, packCache, unpackCache } from './data/cache';
@@ -26,7 +26,7 @@ import { guideGrant, type Grant } from './guideGrant';
  * screen. See `guideGrant.ts`.
  */
 export function useIsGuide(cityId?: string | null): boolean {
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.get(uid, cityId));
 }
@@ -37,7 +37,7 @@ export function useIsGuide(cityId?: string | null): boolean {
  * imported. Read from the same store, loaded by the same one request.
  */
 export function useIsEditor(): boolean {
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.isEditor(uid));
 }
@@ -45,7 +45,7 @@ export function useIsEditor(): boolean {
 /** Whether the reader is a local guide of any city — the profile's badge
  *  question, not a place's. See `anywhere` on the store. */
 export function useIsGuideAnywhere(): boolean {
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.anywhere(uid));
 }
@@ -53,7 +53,7 @@ export function useIsGuideAnywhere(): boolean {
 /** Whether this launch's question about the reader has been answered.
  *  Until it has, the profile holds the room its badge would take. */
 export function useGrantSettled(): boolean {
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.settled(uid));
 }
@@ -103,7 +103,7 @@ const remember = (uid: string) => async () => {
  * why a remembered yes can never outlive the database's no.
  */
 export function GuideGrantSync() {
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   useEffect(() => {
     if (!uid) { void guideGrant.load(uid, askGrant); return; }

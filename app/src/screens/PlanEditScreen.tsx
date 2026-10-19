@@ -99,7 +99,7 @@ import {
   type Narration,
 } from '../lib/assist';
 import { DEFAULT_TZ } from '../lib/clock';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -151,7 +151,7 @@ export default function PlanEditScreen({ navigation, route }: {
   const p = route.params;
   const { data: places } = usePlaces();
   const { city } = useCity();
-  const { session } = useAuth();
+  const { session } = useSession();
   const mine = useMyLists();
   const { askToSignIn } = useSaveActions();
   const cols = useCollections();

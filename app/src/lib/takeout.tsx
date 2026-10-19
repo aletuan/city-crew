@@ -19,7 +19,7 @@
 // straight to the system share sheet creates neither.
 
 import { useCallback, useState } from 'react';
-import { useAuth } from './auth';
+import { useProfile, useSession } from './auth';
 import { useI18n } from './i18n';
 import {
   fetchFriendships, fetchMyBlocks, fetchMyCheckins, fetchMyCollections, fetchMyTrips,
@@ -65,7 +65,8 @@ function othersIn(
 }
 
 export function useTakeout() {
-  const { session, email, profile } = useAuth();
+  const { session, email } = useSession();
+  const { profile } = useProfile();
   const { lang } = useI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

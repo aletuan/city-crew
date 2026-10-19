@@ -35,7 +35,7 @@ import { useSky } from '../lib/sky';
 import { dayline } from '../lib/format';
 import { Collection, coverOf, fetchPlaceIndex, membersOf, Place, PlaceIndexRow, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useSaveActions } from '../lib/save';
 import { useMyCheckins } from '../lib/checkins';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
@@ -432,7 +432,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { city } = useCity();
   const cols = useCollections();
   const { likes, rankLikes, myLikes, toggleLike } = useLikes();
-  const uid = useAuth().session?.user?.id;
+  const uid = useSession().session?.user?.id;
   const { askToSignIn } = useSaveActions();
 
   // Signed out, the tap is an invitation rather than a failure: the same
@@ -638,7 +638,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city, cities, setCity } = useCity();
-  const { session } = useAuth();
+  const { session } = useSession();
   const { isSaved, askToSignIn } = useSaveActions();
   const { loading, loaded, error, data: places, reload } = usePlaces();
   // The pull spinner belongs to the pull. `loading` alone also covers

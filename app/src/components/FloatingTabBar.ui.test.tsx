@@ -23,7 +23,11 @@ const crew = vi.hoisted(() => ({
 }));
 const invitations = vi.hoisted(() => ({ waiting: 0 }));
 const trips = vi.hoisted(() => ({ data: [] as { id: string; title: string; day: string; trip_stops: { arrive_min: number | null; dwell_min: number | null }[] }[] }));
-vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: auth.session }) }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ session: auth.session }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 vi.mock('../lib/invitations', () => ({ useInvitations: () => invitations }));
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => trips }));

@@ -47,9 +47,13 @@ const spies = vi.hoisted(() => ({
   answerInvite: vi.fn(async (_id: string, _said: string) => {}),
 }));
 
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/city', () => ({
   useCity: () => ({
     cities: [

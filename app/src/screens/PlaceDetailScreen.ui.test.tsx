@@ -100,9 +100,13 @@ vi.mock('../lib/checkins', () => ({
 }));
 // The grant is read from a store now, not fetched — see `lib/guideGrant`.
 vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => false }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: spies.save, askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.includes(slug) });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };

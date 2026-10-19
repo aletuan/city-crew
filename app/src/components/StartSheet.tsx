@@ -71,7 +71,7 @@ import { Chip, GradientCta, PressableScale, SelectTick } from './ui';
 import { type City, useCity, useMyPosition } from '../lib/city';
 import { cityAround } from '../lib/geo';
 import { findSpots, nameOf, SignedOutError, type Spot } from '../lib/findplace';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { ctaMode } from '../lib/spots';
 import { useI18n } from '../lib/i18n';
 import { areaCentre, areasNear, nearestAreaKm } from '../lib/trip';
@@ -106,7 +106,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
 }) {
   const { t, lang } = useI18n();
   const { city, cities, mode, setCity, followMyLocation } = useCity();
-  const signedIn = !!useAuth().session;
+  const signedIn = !!useSession().session;
   /** A pin that fell in no catalog city, by the name it came with; `me`
    *  when the pin is the reader, for whom "use your current location" is
    *  not a way out. */

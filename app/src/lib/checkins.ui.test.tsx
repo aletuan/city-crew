@@ -19,7 +19,11 @@ const world = vi.hoisted(() => ({
 }));
 const fetchMyCheckins = vi.hoisted(() => vi.fn(async () => [...world.rows]));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ ready: world.ready, session: world.session }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ ready: world.ready, session: world.session }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchMyCheckins,

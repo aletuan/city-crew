@@ -45,7 +45,11 @@ vi.mock('react-native', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   Alert: { alert },
 }));
-vi.mock('../lib/auth', () => ({ useAuth: () => auth.current }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => auth.current };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/city', () => ({ useCity: () => cityState.current }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),

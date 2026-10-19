@@ -44,7 +44,7 @@ import { AuthHeader, AuthScreen, FieldRow, FormError, useFailText } from '../com
 import AvatarPicker from '../components/AvatarPicker';
 import TastePicker from '../components/TastePicker';
 import { Card, PressableScale, successHaptic, Toggle } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { CATEGORIES } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { clearMyHistory, savePreferences, useMyPreferences } from '../lib/data';
@@ -57,7 +57,9 @@ import type { Nav } from '../nav';
 export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
-  const { profile, session, updateProfile } = useAuth();
+  const { session } = useSession();
+  const { profile } = useProfile();
+  const { updateProfile } = useAuthActions();
   const failText = useFailText();
   const [name, setName] = useState(profile.full_name);
   const [handle, setHandle] = useState(profile.handle);

@@ -22,7 +22,7 @@ import {
 } from './data';
 import { CACHE_CATALOG, cacheKey, packCache, unpackCache } from './data/cache';
 import { splitFriendships, type FriendshipRow } from './friends';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import { shouldRefresh } from './stale';
 
 type CrewData = {
@@ -53,7 +53,7 @@ const EMPTY: CrewData = {
 const Ctx = createContext<CrewData>(EMPTY);
 
 export function CrewProvider({ children }: { children: React.ReactNode }) {
-  const { ready, session } = useAuth();
+  const { ready, session } = useSession();
   const meId = session?.user?.id ?? null;
 
   // Held, not answered, until auth has decided who is asking. The places

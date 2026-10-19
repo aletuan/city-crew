@@ -14,7 +14,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { Alert } from 'react-native';
 import AuthSheet from '../components/AuthSheet';
 import SaveSheet from '../components/SaveSheet';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import {
   addPlaceToCollection, Collection, type Fetch, holds, logPlaceEvent, nextSortOrder, Place, removePlaceFromCollection,
   useMyCollections, useMyPreferences,
@@ -107,7 +107,7 @@ export function useSave(): SaveActions & { mine: MyLists } {
 
 export function SaveProvider({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
-  const { session, userId } = useAuth();
+  const { session, userId } = useSession();
   // The early id, so the lists hydrate with the catalog rather than a
   // session read later — see `Auth.userId`. `save` itself still asks the
   // session: opening a sheet is an act, not a read.

@@ -83,9 +83,13 @@ vi.mock('../lib/photoScoreNative', () => ({
   },
 }));
 vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => state.editor }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.catalog, reload: data.reload }),
   useCollections: () => ({ reload: data.reloadLists }),

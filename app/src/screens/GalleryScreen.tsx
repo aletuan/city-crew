@@ -45,7 +45,7 @@ import { AddPill } from '../components/add';
 import { ScoreBadge, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { fetchGallery, fetchPlaceId, removePlacePhoto, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
 import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryPhoto } from '../lib/gallery';
@@ -70,7 +70,7 @@ const GAP = 6;
 export default function GalleryScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'Gallery'> }) {
   const { t, lang } = useI18n();
   const { slug } = route.params;
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   const { width } = useWindowDimensions();
   const tabClearance = useTabBarClearance();

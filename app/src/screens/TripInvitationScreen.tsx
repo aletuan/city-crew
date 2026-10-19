@@ -27,7 +27,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AmbientWarmth, Avatar, Card, Empty, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { fromISO } from '../lib/day';
 import { answerInvite } from '../lib/data';
@@ -53,7 +53,7 @@ export default function TripInvitationScreen({ navigation, route }: {
   route: RootRoute<'TripInvitation'>;
 }) {
   const { t, lang } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const { people } = useCrew();
   const { invites, crewCounts } = useInvitations();
   const clearance = useTabBarClearance();

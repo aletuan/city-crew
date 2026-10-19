@@ -13,7 +13,7 @@ import LegalSheet from '../components/LegalSheet';
 import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
 import { FloatingPlane, HeartDoodle } from '../components/welcomeArt';
-import { isHandleFree, useAuth } from '../lib/auth';
+import { isHandleFree, useAuthActions, useSession } from '../lib/auth';
 import { hasResume, peekResume } from '../lib/resume';
 import { fixedOnForm } from '../lib/authfail';
 import { cleanEmail, emailShapeOk } from '../lib/email';
@@ -41,7 +41,8 @@ export const HANDLE_CHECK_MS = 500;
 
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const { signUp, confirmSignUp, session } = useAuth();
+  const { session } = useSession();
+  const { signUp, confirmSignUp } = useAuthActions();
   const tour = useSignupTour();
   const hadPending = useRef(hasResume());
   const failText = useFailText();

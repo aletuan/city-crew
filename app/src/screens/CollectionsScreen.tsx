@@ -18,7 +18,7 @@ import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill } from '../components/add';
 import { holdResume } from '../lib/resume';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
@@ -99,7 +99,7 @@ const COVER_OPEN = 88;
 // the verbs. The title already names the thing they act on.
 function GuestNotice({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   if (session) return null;
   return (
     <PressableScale
@@ -452,7 +452,7 @@ export default function CollectionsScreen({ navigation, route }: {
   route: { params?: { tab?: 'yours' | 'community'; at?: number } };
 }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const { cities } = useCity();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);

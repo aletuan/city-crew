@@ -28,7 +28,7 @@ import { AuthHeader, AuthScreen } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
 import { Avatar, Card, Empty, PressableScale, successHaptic } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { APPLAUSE_DAYS } from '../lib/activityWindow';
 import { numericDate } from '../lib/format';
 import { useCollections } from '../lib/catalog';
@@ -52,7 +52,7 @@ import type { Nav } from '../nav';
 
 export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const me = session?.user?.id ?? null;
   // Edges and faces from the one shared copy — answered on Crew, gone
   // from here the same moment, and no fetch of this screen's own. The
