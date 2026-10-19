@@ -82,7 +82,8 @@ export type Profile = {
  *  a 3x phone; a 4MB camera original would be paid for on mobile data and
  *  thrown away by the renderer. It was 512 until 19 Oct 2026: the crew
  *  list's eight faces averaged 70 KB each for a 44pt circle, and arrived
- *  after the names. `shrink-photos` brought the stored ones down to this. */
+ *  after the names. `shrink-photos` brought the 18 stored ones down to
+ *  this the same day: 70 KB to 16 KB on average, 142 KB to 27 KB at most. */
 const AVATAR_PX = 288;
 const AVATAR_QUALITY = 0.8;
 
