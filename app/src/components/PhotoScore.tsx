@@ -381,7 +381,7 @@ const BAND_TEXT = {
  * owner saw the pair before choosing it. Nothing where there is no spread
  * to stand in.
  */
-export function ScoreStanding({ score, kind }: { score: PhotoScore; kind?: PhotoKind | null }) {
+export function ScoreStanding({ score, kind, lines }: { score: PhotoScore; kind?: PhotoKind | null; lines?: number }) {
   const { t } = useI18n();
   const how = interpreterOf(score.scorer);
   if (score.aesthetic == null || !how) return null;
@@ -389,7 +389,7 @@ export function ScoreStanding({ score, kind }: { score: PhotoScore; kind?: Photo
   const standing = how.standing(score);
   if (kind && among !== null) {
     return (
-      <Text style={s.standing} testID="score-standing">
+      <Text style={s.standing} numberOfLines={lines} testID="score-standing">
         {t(
           `Higher than ${percentText(among)}% of ${kindNoun(kind, t)} photos`,
           `Cao hơn ${percentText(among)}% ảnh ${kindNoun(kind, t)}`,
@@ -400,7 +400,7 @@ export function ScoreStanding({ score, kind }: { score: PhotoScore; kind?: Photo
   }
   if (standing === null) return null;
   return (
-    <Text style={s.standing} testID="score-standing">
+    <Text style={s.standing} numberOfLines={lines} testID="score-standing">
       {t(
         `Higher than ${percentText(standing)}% of the catalog's photos`,
         `Cao hơn ${percentText(standing)}% ảnh trong catalog`,
@@ -553,7 +553,7 @@ const s = StyleSheet.create({
   },
   detailTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   detailBody: { paddingHorizontal: space.cardPadding, paddingBottom: space.cardPadding, gap: 12 },
-  standing: { color: colors.textSecondary, fontSize: 14 },
+  standing: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowText: { flex: 1, gap: 6 },
   // The name left, its verdict right; what was measured under the bar.
