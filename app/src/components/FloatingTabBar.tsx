@@ -370,8 +370,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               anchorRef={route.name === 'Collections' ? collectionAnchor : undefined}
               // The whole cell is the target; the pill over it is only
               // the mark.
-              containerStyle={s.tab}
-              style={s.tabInner}
+              style={s.tab}
+              contentStyle={s.tabInner}
               // The glyph gives a little under the finger; the pill is
               // what answers (`press` below), as Threads' does.
               scaleTo={0.92}

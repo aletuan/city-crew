@@ -484,8 +484,8 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
               // <button>, which is not valid HTML).
               <View style={s.recentRow}>
                 <PressableScale
-                  containerStyle={s.recentHit}
-                  style={s.recentMain}
+                  style={s.recentHit}
+                  contentStyle={s.recentMain}
                   scaleTo={0.97}
                   onPress={() => setQuery(item.term)}
                   accessibilityRole="button"
@@ -552,7 +552,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             const meta = [area, when].filter(Boolean).join(' · ');
             return (
               <PressableScale
-                style={s.row}
+                contentStyle={s.row}
                 onPress={() => navigation.navigate('PlaceDetail', { slug: pl.slug })}
               >
                 <Card style={s.card}>
@@ -638,7 +638,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           }
           return (
             <PressableScale
-              style={s.row}
+              contentStyle={s.row}
               onPress={() => {
                 noteSearch();
                 navigation.navigate('CollectionDetail', { slug: item.collection.slug });

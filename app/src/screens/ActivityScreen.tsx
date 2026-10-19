@@ -254,7 +254,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                       light theme is a darker brick that read as a
                       different app sitting in this one. */}
                   <PressableScale
-                    containerStyle={[s.half, pending.has(r.requester) && s.working]}
+                    style={[s.half, pending.has(r.requester) && s.working]}
                     onPress={() => answer(r.requester, true)}
                     disabled={pending.has(r.requester)}
                     aria-disabled={pending.has(r.requester)}
@@ -266,8 +266,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     </LinearGradient>
                   </PressableScale>
                   <PressableScale
-                    containerStyle={[s.half, pending.has(r.requester) && s.working]}
-                    style={s.decline}
+                    style={[s.half, pending.has(r.requester) && s.working]}
+                    contentStyle={s.decline}
                     onPress={() => answer(r.requester, false)}
                     disabled={pending.has(r.requester)}
                     aria-disabled={pending.has(r.requester)}
@@ -317,7 +317,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                 return (
                   <PressableScale
                     key={`${item.kind}-${item.collection_id}-${item.at}`}
-                    style={[s.row, i > 0 && s.rowDivider]}
+                    contentStyle={[s.row, i > 0 && s.rowDivider]}
                     onPress={title ? () => navigation.navigate('CollectionDetail', { slug: slugFor(item.collection_id, [...mine.data, ...cols.data]) ?? '' }) : undefined}
                     // A button only when it goes somewhere — VoiceOver has to
                     // hear that this row opens the list.

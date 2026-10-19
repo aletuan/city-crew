@@ -572,7 +572,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             onPress={locate}
             scaleTo={0.985}
             haptic="selection"
-            style={s.meRow}
+            contentStyle={s.meRow}
             accessibilityRole="button"
             accessibilityLabel={t('Current location', 'Vị trí hiện tại', '現在地')}
             aria-selected={onMe}

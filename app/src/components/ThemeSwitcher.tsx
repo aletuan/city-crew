@@ -442,7 +442,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
               {i > 0 && <View style={s.sep} />}
               <PressableScale
                 haptic="selection"
-                style={[s.row, active && s.rowOn]}
+                contentStyle={[s.row, active && s.rowOn]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 // The sheet stays open — see the note in the header.
@@ -514,8 +514,8 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                       <PressableScale
                         key={o.id}
                         haptic="selection"
-                        containerStyle={s.cardCell}
-                        style={[s.card, active && s.rowOn]}
+                        style={s.cardCell}
+                        contentStyle={[s.card, active && s.rowOn]}
                         accessibilityRole="radio"
                         accessibilityState={{ selected: active }}
                         onPress={() => choose(o.id)}

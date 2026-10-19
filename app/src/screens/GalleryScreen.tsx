@@ -395,8 +395,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   accessibilityRole="button"
                   accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示')}` : ''}${p.score?.aesthetic != null ? ` · ${tenText(toTen(p.score.aesthetic))}/10` : ''}`}
                   accessibilityState={picks ? { selected: picked.includes(p.id) } : undefined}
-                  containerStyle={{ width: cell, height: cell }}
-                  style={[s.tile, !picks && lastOpened === p.id && s.tileLast]}
+                  style={{ width: cell, height: cell }}
+                  contentStyle={[s.tile, !picks && lastOpened === p.id && s.tileLast]}
                   testID={`gallery-tile-${p.id}`}
                 >
                   <Image source={{ uri: p.photo_uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
@@ -525,7 +525,7 @@ function Tool({ icon, glyph, label, onPress, destructive, testID }: {
       scaleTo={0.94}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={[s.tool, destructive && s.toolBad]}
+      contentStyle={[s.tool, destructive && s.toolBad]}
       testID={testID}
     >
       {glyph ?? <Ionicons name={icon} size={15} color={ink} />}
@@ -563,7 +563,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlassStrong,
   },
   // Not `flex: 1`: the waiting tile is given its cell outright, like the
-  // pressables around it get theirs through `containerStyle`.
+  // pressables around it get theirs through their outer `style`.
   waiting: { flex: 0, alignItems: 'center', justifyContent: 'center', gap: 8 },
   waitingText: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   hiddenVeil: {

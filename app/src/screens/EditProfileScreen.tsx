@@ -404,7 +404,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
               spacing. A thumb travelling to the switch passes over it,
               and the two do not undo equally: the switch can be flipped
               back and the history cannot be brought back. */}
-          <PressableScale onPress={confirmClear} style={s.clearRow} accessibilityRole="button">
+          <PressableScale onPress={confirmClear} contentStyle={s.clearRow} accessibilityRole="button">
             <Ionicons name="trash-outline" size={18} color={colors.bad} />
             <Text style={s.clearText}>
               {cleared

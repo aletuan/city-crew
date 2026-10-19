@@ -133,7 +133,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
               did this phone not get it?" */}
           <Row label="Runtime" value={info.runtime ?? '—'} />
         </View>
-        <PressableScale onPress={share} accessibilityRole="button" style={s.share}>
+        <PressableScale onPress={share} accessibilityRole="button" contentStyle={s.share}>
           <Ionicons name="share-outline" size={18} color={colors.accent} />
           <Text style={s.shareText}>{t('Share these details', 'Chia sẻ thông tin này', 'この情報を共有')}</Text>
         </PressableScale>
@@ -142,7 +142,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
             the row above it: glyph and word, the same size and weight, in
             the quieter colour, so the two read as a pair of rows rather
             than a link and a stray word. */}
-        <PressableScale onPress={onClose} haptic="selection" accessibilityRole="button" style={s.done}>
+        <PressableScale onPress={onClose} haptic="selection" accessibilityRole="button" contentStyle={s.done}>
           <Ionicons name="close" size={18} color={colors.textSecondary} />
           <Text style={s.doneText}>{close}</Text>
         </PressableScale>

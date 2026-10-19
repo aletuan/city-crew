@@ -263,7 +263,7 @@ export default function WelcomeSheet() {
           onPress={dismiss}
           accessibilityRole="button"
           testID="welcome-dismiss"
-          containerStyle={{ alignSelf: 'stretch' }}
+          style={{ alignSelf: 'stretch' }}
         >
           <LinearGradient {...gradAI} style={s.primary}>
             <Text style={s.primaryText}>

@@ -52,7 +52,7 @@ export function LoadFailBanner({ kind, onRetry, testID }: {
         {loadFailText(kind, t)} {loadFailStale(t)}
       </Text>
       {onRetry && kind !== 'expired' ? (
-        <PressableScale onPress={onRetry} accessibilityRole="button" style={s.retryPill} scaleTo={0.94}>
+        <PressableScale onPress={onRetry} accessibilityRole="button" contentStyle={s.retryPill} scaleTo={0.94}>
           <Text style={s.retryPillText}>{t('Try again', 'Thử lại', '再試行')}</Text>
         </PressableScale>
       ) : null}
@@ -79,7 +79,7 @@ export function LoadFailEmpty({ kind, onRetry, testID }: {
       <Ionicons name={ICON[kind]} size={28} color={colors.textTertiary} />
       <Text style={s.emptyText}>{loadFailText(kind, t)}</Text>
       {onRetry && kind !== 'expired' ? (
-        <PressableScale onPress={onRetry} accessibilityRole="button" style={s.retry} scaleTo={0.96}>
+        <PressableScale onPress={onRetry} accessibilityRole="button" contentStyle={s.retry} scaleTo={0.96}>
           <Ionicons name="refresh" size={16} color={colors.text} />
           <Text style={s.retryText}>{t('Try again', 'Thử lại', '再試行')}</Text>
         </PressableScale>

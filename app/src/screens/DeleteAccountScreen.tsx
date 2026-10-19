@@ -242,7 +242,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       <Card style={s.card}>
         <PressableScale
           scaleTo={0.98}
-          style={s.twoLineRow}
+          contentStyle={s.twoLineRow}
           onPress={takeout.busy ? undefined : takeout.run}
           accessibilityRole="button"
           accessibilityState={{ busy: takeout.busy }}

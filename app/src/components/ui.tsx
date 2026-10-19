@@ -157,39 +157,38 @@ export function successHaptic() {
 /**
  * Pressable that sinks slightly under the finger (spring scale) and gives
  * a small haptic tap — the default press feedback for cards and buttons.
- * `style` lands on the animated inner view, so pass layout styles as usual.
+ *
+ * ── a Pressable, prop for prop (19 Oct 2026) ──
+ *
+ * It takes `PressableProps`, so every prop must mean what it means on a
+ * Pressable — and until this date `style` did not. It landed on the
+ * animated view inside, the outer element took a `containerStyle`, and a
+ * reader who trusted the type got it backwards: four buttons shipped with
+ * their glyph stacked on their word, and a day row lost its text to a
+ * `flex: 1` that had nothing to divide. The SOLID review of 18 Oct named
+ * it (Liskov: a wrapper must stand in for what it wraps); every call site
+ * was renamed by one codemod, `style` → `contentStyle` and
+ * `containerStyle` → `style`, with no change on screen.
  */
-export function PressableScale({ children, style, containerStyle, anchorRef, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: PressableProps & {
+export function PressableScale({ children, style, contentStyle, anchorRef, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: Omit<PressableProps, 'style'> & {
   anchorRef?: React.Ref<View>;
   haptic?: HapticKind;
   scaleTo?: number;
   /**
-   * Styles for the view the children actually live in — **everything about
-   * how this element lays its own contents out and what it looks like**:
-   * `flexDirection`, `gap`, `padding`, `backgroundColor`, `borderRadius`.
-   *
-   * This is the half that gets mixed up, and it fails in a way that looks
-   * like a styling accident rather than a wiring one. Put `flexDirection:
-   * 'row'` in `containerStyle` and it lands on the Pressable, whose only
-   * child is the animated view — so the row has one item and lays it out
-   * perfectly, while the icon and label inside stack in a column. Four
-   * buttons in this app shipped with their glyph sitting on top of their
-   * word for exactly this reason.
+   * The outer element, as on any Pressable — **anything that positions
+   * this element within its parent**: `flex`, `alignSelf`, `width`,
+   * absolute position. A plain style, not Pressable's function form: the
+   * pressed state here is the spring, not a restyle.
    */
   style?: StyleProp<ViewStyle>;
   /**
-   * Styles that must stay on the outer Pressable rather than the animated
-   * view inside it — absolute position, and **anything that positions this
-   * element within its parent**: `flex`, `alignSelf`, `width`.
-   *
-   * `flex` is the one that bites, because it fails quietly. Put `flex: 1`
-   * in `style` and it lands on the inner view, whose parent is the
-   * Pressable, which has itself shrunk to fit its content — so the flex
-   * has nothing to divide and any flexing child collapses to zero. A
-   * pressable row in a column parent stretches anyway and looks fine; the
-   * same row inside a *row* loses its text and only its icon survives.
+   * The view the children live in, which is the one that scales —
+   * **how this element lays out and paints its own contents**:
+   * `flexDirection`, `gap`, `padding`, `backgroundColor`, `borderRadius`.
+   * A row's `flexDirection: 'row'` belongs here; on `style` it lays out
+   * the one animated child and leaves the icon and label stacked.
    */
-  containerStyle?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -199,12 +198,12 @@ export function PressableScale({ children, style, containerStyle, anchorRef, hap
     <Pressable
       {...rest}
       ref={anchorRef}
-      style={containerStyle}
+      style={style}
       onPressIn={(e) => { springTo(scaleTo); onPressIn?.(e); }}
       onPressOut={(e) => { springTo(1); onPressOut?.(e); }}
       onPress={(e) => { fireHaptic(haptic); onPress?.(e); }}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+      <Animated.View style={[contentStyle, { transform: [{ scale }] }]}>{children}</Animated.View>
     </Pressable>
   );
 }
@@ -525,7 +524,7 @@ export function Chip({ label, active, onPress, icon, iconColor, testID }: {
       onPress={onPress}
       haptic="selection"
       scaleTo={0.94}
-      style={[s.chip, onPress && s.chipTap, active && s.chipOn]}
+      contentStyle={[s.chip, onPress && s.chipTap, active && s.chipOn]}
       accessibilityRole={onPress ? 'button' : undefined}
       aria-selected={onPress ? !!active : undefined}
       testID={testID}
@@ -614,8 +613,8 @@ export function Tile({ label, icon, iconColor, active, onPress, testID }: {
       onPress={onPress}
       haptic="selection"
       scaleTo={0.97}
-      containerStyle={{ flex: 1 }}
-      style={[s.tile, active && s.tileOn]}
+      style={{ flex: 1 }}
+      contentStyle={[s.tile, active && s.tileOn]}
       accessibilityRole="button"
       // `aria-selected` rather than `accessibilityState`, which
       // react-native-web drops — see `Chip`.
@@ -709,7 +708,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
         return (
           <PressableScale
             key={key}
-            style={[s.tabItem, on && s.tabItemOn]}
+            contentStyle={[s.tabItem, on && s.tabItemOn]}
             scaleTo={0.97}
             haptic="selection"
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
@@ -938,7 +937,7 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color, testID
     <PressableScale
       onPress={onPress}
       scaleTo={0.92}
-      style={s.backBtn}
+      contentStyle={s.backBtn}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -1019,7 +1018,7 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
       aria-busy={!!busy}
       aria-disabled={!!(busy || disabled)}
       testID={testID}
-      containerStyle={wide ? { alignSelf: 'stretch' } : undefined}
+      style={wide ? { alignSelf: 'stretch' } : undefined}
     >
       {/* Dimmed for everyone, not only as a second opinion beside the
           spin. Reduced motion holds the glyph still — `useLoop` parks it

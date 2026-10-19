@@ -161,8 +161,8 @@ export default function InviteSheet({
                   accessibilityRole="checkbox"
                   testID={`invite-friend-${row}`}
                   accessibilityState={{ checked: on, disabled: r.locked || benched }}
-                  containerStyle={{ alignSelf: 'stretch' }}
-                  style={[s.row, (r.locked || benched) && s.rowLocked]}
+                  style={{ alignSelf: 'stretch' }}
+                  contentStyle={[s.row, (r.locked || benched) && s.rowLocked]}
                 >
                   <Avatar url={p?.avatar_url} size={44} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -234,7 +234,7 @@ export default function InviteSheet({
           onPress={() => { if (!sending && moved) onSend(invite, withdraw); }}
         />
 
-        <PressableScale onPress={onClose} accessibilityRole="button" style={s.later}>
+        <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.later}>
           <Text style={s.laterText}>{t('Not now', 'Để sau', 'あとで')}</Text>
         </PressableScale>
       </Animated.View>

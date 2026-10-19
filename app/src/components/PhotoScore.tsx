@@ -262,7 +262,7 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
             onPress={onCancel}
             disabled={stopping}
             scaleTo={0.96}
-            style={s.dialogCancel}
+            contentStyle={s.dialogCancel}
             accessibilityRole="button"
             accessibilityLabel={t('Cancel', 'Huỷ', 'キャンセル')}
             testID="scoring-cancel"
@@ -434,7 +434,7 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
   return (
     <View style={s.detail} testID="score-detail">
       <PressableScale
-        style={s.detailHead}
+        contentStyle={s.detailHead}
         scaleTo={0.99}
         onPress={onToggle}
         accessibilityRole="button"

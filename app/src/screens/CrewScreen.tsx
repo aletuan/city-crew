@@ -509,7 +509,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     {found.map((f, i) => (
                       <PressableScale
                         key={f.id}
-                        style={[s.typeRow, i > 0 && s.rowDivider]}
+                        contentStyle={[s.typeRow, i > 0 && s.rowDivider]}
                         scaleTo={0.97}
                         onPress={() => { setHandle(f.handle); setFound([]); setNote(null); }}
                         accessibilityRole="button"
@@ -559,7 +559,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                       </View>
                       <View style={s.answers}>
                         <PressableScale
-                          containerStyle={[s.half, pending.has(r.requester) && s.working]}
+                          style={[s.half, pending.has(r.requester) && s.working]}
                           onPress={() => answer(r.requester, true)}
                           disabled={pending.has(r.requester)}
                           aria-disabled={pending.has(r.requester)}
@@ -572,8 +572,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           </LinearGradient>
                         </PressableScale>
                         <PressableScale
-                          containerStyle={[s.half, pending.has(r.requester) && s.working]}
-                          style={s.decline}
+                          style={[s.half, pending.has(r.requester) && s.working]}
+                          contentStyle={s.decline}
                           onPress={() => answer(r.requester, false)}
                           disabled={pending.has(r.requester)}
                           aria-disabled={pending.has(r.requester)}
@@ -608,7 +608,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                             {t('waiting on their answer', 'đang chờ trả lời', '返事待ち')}
                           </Text>
                         </View>
-                        <PressableScale style={s.quietBtn} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
+                        <PressableScale contentStyle={s.quietBtn} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
                           <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す')}</Text>
                         </PressableScale>
                       </View>
@@ -642,7 +642,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         <PressableScale
                           onPress={() => askSuggested(sg.other)}
                           scaleTo={0.94}
-                          containerStyle={pending.has(sg.other) ? s.working : undefined}
+                          style={pending.has(sg.other) ? s.working : undefined}
                           disabled={pending.has(sg.other)}
                           aria-disabled={pending.has(sg.other)}
                           accessibilityRole="button"
@@ -678,7 +678,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                   return (
                     <PressableScale
                       key={id}
-                      style={[s.row, i > 0 && s.rowDivider]}
+                      contentStyle={[s.row, i > 0 && s.rowDivider]}
                       onLongPress={() => openFriendSheet(known(id), mutual[id])}
                       accessibilityLabel={p ? atHandle(p.handle) : id}
                       testID={`crew-friend-${i}`}
@@ -736,8 +736,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.meta} numberOfLines={1}>{p ? atHandle(p.handle) : ''}</Text>
                         </View>
                         <PressableScale
-                          style={s.quietBtn}
-                          containerStyle={pending.has(id) ? s.working : undefined}
+                          contentStyle={s.quietBtn}
+                          style={pending.has(id) ? s.working : undefined}
                           onPress={() => confirmUnblock(known(id))}
                           disabled={pending.has(id)}
                           aria-disabled={pending.has(id)}

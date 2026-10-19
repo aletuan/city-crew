@@ -147,7 +147,7 @@ export default function TripCrew({
         </View>
 
         {canInvite ? (
-          <PressableScale onPress={onInvite} accessibilityRole="button" style={s.ghost} testID="trip-invite">
+          <PressableScale onPress={onInvite} accessibilityRole="button" contentStyle={s.ghost} testID="trip-invite">
             <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
             <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
           </PressableScale>

@@ -72,7 +72,7 @@ const endOfDay = (iso: string): Date | undefined => {
  *  what it opens is below, not elsewhere. */
 function MoreRow({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <PressableScale onPress={onPress} style={s.more} accessibilityRole="button" testID="seeds-more" hitSlop={6}>
+    <PressableScale onPress={onPress} contentStyle={s.more} accessibilityRole="button" testID="seeds-more" hitSlop={6}>
       <Text style={s.moreText}>{label}</Text>
       <Ionicons name="chevron-down" size={16} color={colors.accent} />
     </PressableScale>
@@ -408,7 +408,7 @@ export default function IdeasScreen({ navigation, route }: {
         {i > 0 ? <View style={s.divider} /> : null}
         <PressableScale
           onPress={() => set('from', toggle(draft.from, c.slug))}
-          style={s.fromRow}
+          contentStyle={s.fromRow}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: on }}
         >
@@ -525,7 +525,7 @@ export default function IdeasScreen({ navigation, route }: {
         <View style={{ marginBottom: space.titleToContent }}>
           <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…')}</Text>
           <Card style={s.whenCard}>
-            <PressableScale onPress={() => setSheet(true)} style={s.whereRow} accessibilityRole="button">
+            <PressableScale onPress={() => setSheet(true)} contentStyle={s.whereRow} accessibilityRole="button">
               <Ionicons name="location-outline" size={19} color={colors.accent} />
               <Text style={s.whereText} numberOfLines={1}>{whereLabel}</Text>
               <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
@@ -537,17 +537,17 @@ export default function IdeasScreen({ navigation, route }: {
                   in the same card, directly under a row that *is* a
                   control, with the same icon and layout. It read as
                   tappable and was not. */}
-              {/* `containerStyle`, not `style`: PressableScale puts `style`
-                  on its inner animated view and only `containerStyle` on
-                  the Pressable itself. The row above gets away without it
+              {/* The flex on `style`, the Pressable itself, and the row on
+                  `contentStyle`, the animated view inside. The row above
+                  gets away without it
                   by being a direct child of the Card, which is a column,
                   so it stretches. This one is inside a row, so without a
                   flex on the *outer* element the pressable shrank to its
                   icon and the date inside it collapsed to nothing. */}
               <PressableScale
                 onPress={() => setPicking(true)}
-                containerStyle={s.dayBox}
-                style={s.dayHit}
+                style={s.dayBox}
+                contentStyle={s.dayHit}
                 accessibilityRole="button"
               >
                 <Ionicons name="calendar-outline" size={19} color={colors.accent} />
@@ -576,7 +576,7 @@ export default function IdeasScreen({ navigation, route }: {
                       haptic="selection"
                       scaleTo={0.96}
                       hitSlop={{ top: 3, bottom: 3 }}
-                      style={[s.segItem, on && s.segItemOn]}
+                      contentStyle={[s.segItem, on && s.segItemOn]}
                       accessibilityRole="radio"
                       aria-checked={on}
                     >

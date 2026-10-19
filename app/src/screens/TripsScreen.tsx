@@ -145,7 +145,7 @@ function TripCard({ trip, past, onPress, testID }: {
   const cover = tripCover(stops);
 
   return (
-    <PressableScale onPress={onPress} scaleTo={0.985} style={[s.card, past && s.cardPast]} testID={testID}>
+    <PressableScale onPress={onPress} scaleTo={0.985} contentStyle={[s.card, past && s.cardPast]} testID={testID}>
       {/* The one picture that says which trip this is.
           ── why the card has a band and PlaceCard has a hero ──
 
@@ -428,7 +428,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           </Text>
           <PressableScale
             accessibilityRole="button"
-            style={s.guestSignIn}
+            contentStyle={s.guestSignIn}
             onPress={() => {
               holdResume({ tab: 'Trips', at: Date.now() });
               navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false });
