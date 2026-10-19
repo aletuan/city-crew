@@ -165,7 +165,9 @@ export type RootStackParamList = {
   Visited: undefined;
   SignIn: undefined;
   SignUp: undefined;
-  ForgotPassword: undefined;
+  /** `email`: what Sign in already held, so the reader does not type it
+   *  twice. Filled in, still editable, and nothing is sent until asked. */
+  ForgotPassword: { email?: string } | undefined;
   EditProfile: undefined;
   /** Closing the account. A route rather than the two alerts it replaced:
    *  what makes a destructive tap deliberate here is having navigated to

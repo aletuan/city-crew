@@ -46,6 +46,35 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); });
 
 describe('the address recovery is asked for', () => {
+  // Sign in hands over what it held, so the reader does not type it twice
+  // — filled in, still editable, and nothing sent until asked.
+  it('starts from the address Sign in held, and sends nothing until asked', async () => {
+    requestReset.mockResolvedValue(undefined);
+    render(<ForgotPasswordScreen navigation={nav()} route={{ params: { email: 'reader@example.com' } } as never} />);
+    const email = screen.getByPlaceholderText('Enter your email') as HTMLInputElement;
+    expect(email.value).toBe('reader@example.com');
+    expect(requestReset).not.toHaveBeenCalled();
+    type('other@example.com');
+    send();
+    await waitFor(() => expect(requestReset).toHaveBeenCalledWith('other@example.com'));
+  });
+
+  // The error a correction fixes goes with it, as on Sign in (19 Oct 2026).
+  it('clears "enter your email" once there is an address, and "not an address" once it is one', async () => {
+    render(<ForgotPasswordScreen navigation={nav()} />);
+    send();
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    type('qa@');
+    expect(screen.queryByText('Enter your email address.')).toBeNull();
+    send();
+    expect(await screen.findByText("That email address doesn't look right.")).toBeTruthy();
+    type('qa@example');
+    expect(screen.getByText("That email address doesn't look right.")).toBeTruthy();
+    type('qa@example.com');
+    expect(screen.queryByText("That email address doesn't look right.")).toBeNull();
+    expect(requestReset).not.toHaveBeenCalled();
+  });
+
   it('sends what was typed', async () => {
     requestReset.mockResolvedValue(undefined);
     render(<ForgotPasswordScreen navigation={nav()} />);

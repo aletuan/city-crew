@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanEmail, emailShapeOk } from './email';
+import { afterEmailEdit, cleanEmail, emailShapeOk } from './email';
 
 describe('cleanEmail', () => {
   // The incident, verbatim: the iOS keyboard's space after an
@@ -44,5 +44,27 @@ describe('emailShapeOk', () => {
     expect(emailShapeOk('a@@b.co')).toBe(false);        // two of them
     expect(emailShapeOk('a b@c.co')).toBe(false);       // whitespace
     expect(emailShapeOk('ngotiennam@ gmail.com')).toBe(false); // the incident, unstripped
+  });
+});
+
+describe('afterEmailEdit', () => {
+  it('clears "enter your email" once there is anything in the field, and not before', () => {
+    expect(afterEmailEdit('need_email', 'q')).toBeNull();
+    expect(afterEmailEdit('need_email', '')).toBe('need_email');
+  });
+
+  it('clears "not an address" only once the address is shaped like one', () => {
+    expect(afterEmailEdit('bad_email', 'qa@example')).toBe('bad_email');
+    expect(afterEmailEdit('bad_email', 'qa@example.com')).toBeNull();
+  });
+
+  it('clears "already taken" on any edit — it was about another address', () => {
+    expect(afterEmailEdit('email_taken', 'qa@example.co')).toBeNull();
+  });
+
+  it('leaves every other error, and no error, as it was', () => {
+    expect(afterEmailEdit('need_password', 'qa@example.com')).toBe('need_password');
+    expect(afterEmailEdit('need_name', 'qa@example.com')).toBe('need_name');
+    expect(afterEmailEdit(null, 'qa@example.com')).toBeNull();
   });
 });

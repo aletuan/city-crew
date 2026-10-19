@@ -304,7 +304,17 @@ describe('the ways out of this screen', () => {
     const navigation = nav();
     render(<SignInScreen navigation={navigation} />);
     fireEvent.click(screen.getByText('Forgot password?'));
-    expect(navigation.navigate).toHaveBeenCalledWith('ForgotPassword');
+    expect(navigation.navigate).toHaveBeenCalledWith('ForgotPassword', { email: '' });
+  });
+
+  // The address already typed goes with the reader, so the recovery form
+  // does not ask for it twice (19 Oct 2026).
+  it('carries the address already typed to the password reset', () => {
+    const navigation = nav();
+    render(<SignInScreen navigation={navigation} />);
+    fill('qa@ example.com', '');
+    fireEvent.click(screen.getByText('Forgot password?'));
+    expect(navigation.navigate).toHaveBeenCalledWith('ForgotPassword', { email: 'qa@example.com' });
   });
 
   // `replace`, not `navigate`: somebody who came here and meant to register
