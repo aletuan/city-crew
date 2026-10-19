@@ -7,7 +7,7 @@ Chỉ bắt đầu khi tài khoản mới hoàn tất màn chào mừng và khô
 3. Lưu: “Thêm địa điểm vào bộ sưu tập để dễ tìm lại”. Dùng địa điểm thật trong danh sách; không tự ghi dữ liệu. Nếu danh sách trống, bỏ qua bước này.
 4. Bộ sưu tập: “Những địa điểm bạn đã lưu nằm ở đây”. Chỉ có nút Hoàn tất, không có Bỏ qua hướng dẫn.
 
-Mỗi bước hiển thị tiến độ x/4. Tiếp theo chuyển sang phần giới thiệu kế tiếp. Bỏ qua hoặc chạm ra ngoài kết thúc toàn bộ hướng dẫn. Thẻ không có nút ×: số bước nằm cùng dòng với tiêu đề, và phía sau có một lớp tối nhẹ để vòng sáng và thẻ nổi lên. Bấm nút được highlight kết thúc hướng dẫn và thực hiện hành động thật của nút đó. Vị trí lấy từ nút đang hiển thị; màu lấy từ theme của ứng dụng.
+Mỗi bước hiển thị tiến độ x/4. Tiếp theo chuyển sang phần giới thiệu kế tiếp. Bỏ qua hoặc chạm ra ngoài kết thúc toàn bộ hướng dẫn. Thẻ không có nút ×: số bước nằm cùng dòng với tiêu đề, và phía sau có một lớp tối nhẹ để vòng sáng và thẻ nổi lên. Bấm nút được highlight kết thúc hướng dẫn và thực hiện hành động thật của nút đó. Vị trí lấy từ nút đang hiển thị; màu lấy từ theme của ứng dụng. Mỗi bước chỉ hiện khi hai lần đo cách nhau 100ms cho cùng một vị trí, để thẻ không vẽ ở chỗ cũ rồi nhảy theo khi màn hình còn đang cuộn (bước 2) hay trang còn đang trượt vào (bước 3); đã hiện rồi thì thẻ bám theo nút ngay khi người dùng cuộn.
 
 ## TODO
 

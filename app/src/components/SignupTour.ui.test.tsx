@@ -5,7 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { View } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { SignupTourProvider, useSignupTour, useTourAnchor } from './SignupTour';
-const state = vi.hoisted(() => ({ uid: 'new', route: 'ExploreHome', offscreen: false, y: 60, anchors: true, x: 40, w: 40, h: 40, duplicate: false, focused: true, bottom: 0 }));
+const state = vi.hoisted(() => ({ uid: 'new', route: 'ExploreHome', offscreen: false, y: 60, anchors: true, x: 40, w: 40, h: 40, duplicate: false, focused: true, bottom: 0, readings: [] as number[] }));
 // A home indicator to measure against: the setup's insets are all zero.
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -20,7 +20,7 @@ const getRoute = () => state.route;
 function Anchor({ id }: { id: 'search' | 'filter' | 'save' | 'collections' }) {
   const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined);
   useEffect(() => {
-    ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.y, state.w, state.h) } as unknown as View;
+    ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.readings.shift() ?? state.y, state.w, state.h) } as unknown as View;
   }, [ref]);
   return null;
 }
@@ -33,7 +33,7 @@ function Controls() {
 }
 const onReplay = vi.fn();
 const tree = () => <SignupTourProvider onReplay={onReplay} getRoute={getRoute}><Controls /></SignupTourProvider>;
-beforeEach(async () => { for (const id of ['new', 'recreated', 'guest']) await AsyncStorage.removeItem(`highlight.v1:${id}`); onReplay.mockClear(); state.uid = 'new'; state.route = 'ExploreHome'; state.offscreen = false; state.y = 60; state.anchors = true; state.x = 40; state.w = 40; state.h = 40; state.duplicate = false; state.focused = true; state.bottom = 0; pressed.mockClear(); });
+beforeEach(async () => { for (const id of ['new', 'recreated', 'guest']) await AsyncStorage.removeItem(`highlight.v1:${id}`); onReplay.mockClear(); state.uid = 'new'; state.route = 'ExploreHome'; state.offscreen = false; state.y = 60; state.anchors = true; state.x = 40; state.w = 40; state.h = 40; state.duplicate = false; state.focused = true; state.bottom = 0; state.readings = []; pressed.mockClear(); });
 const start = async () => { fireEvent.click(screen.getByText('Start')); await screen.findByText('1/4'); };
 it('does not start on sign-in; runs four steps and finishes without a skip on the last step', async () => {
   render(tree()); expect(screen.queryByTestId('signup-tour')).toBeNull();
@@ -127,6 +127,18 @@ it('is inert outside its provider', () => {
   function Outside() { useTourAnchor('search', pressed); const tour = useSignupTour(); return <button onClick={() => { tour.start('new'); tour.next(); tour.finish(); }}>Outside</button>; }
   render(<Outside />); fireEvent.click(screen.getByText('Outside'));
   expect(screen.queryByTestId('signup-tour')).toBeNull();
+});
+
+// A target still moving when its step begins: Explore scrolls the filter
+// button up as step 2 opens, and the first reading catches it lower down.
+// The card waits for two readings that agree, so it is first drawn where
+// the button comes to rest, never where it was.
+it('waits for a target to hold still before drawing the step', async () => {
+  state.readings = [500, 300];
+  render(tree()); fireEvent.click(screen.getByText('Start'));
+  await screen.findByText('1/4');
+  expect(screen.getByTestId('signup-tour-target').style.top).toBe('56px');
+  expect(state.readings).toEqual([]);
 });
 
 it('tracks a moving or resizing control and handles both filter copies without stale geometry', async () => {
@@ -265,6 +277,8 @@ it('expires the skip reminder without reopening the guide', async () => {
     render(tree());
     await act(async () => {});
     fireEvent.click(screen.getByText('Start'));
+    // The step is drawn once its target has held still for SETTLE_MS.
+    await act(async () => { vi.advanceTimersByTime(100); });
     fireEvent.click(screen.getByText('Bỏ qua hướng dẫn'));
     expect(screen.getByTestId('guide-notice')).toBeTruthy();
     await act(async () => { vi.advanceTimersByTime(10000); });

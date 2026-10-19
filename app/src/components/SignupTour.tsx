@@ -15,6 +15,12 @@ type Rect = { x: number; y: number; width: number; height: number };
 const targets: Target[] = ['search', 'filter', 'save', 'collections'];
 const noop = () => {};
 const always = () => true;
+const same = (a: Rect, b: Rect) => a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+/** Two readings this far apart must agree before a step is drawn. Long
+ *  enough to see a native stack push still moving (it lasts about 350ms,
+ *  so two readings inside it differ) and for a scroll asked for without
+ *  animation to have landed; short enough that the wait is not felt. */
+const SETTLE_MS = 100;
 type Notice = 'off' | 'ready';
 const Context = createContext({ enabled: null as boolean | null, setEnabled: (_on: boolean) => {}, replay: noop, step: -1, start: (_uid: string) => {}, finish: noop, next: noop,
   register: (_id: Target, _anchor: Anchor): (() => void) => noop, notice: null as Notice | null, noticeTop: null as number | null });
@@ -42,6 +48,8 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   const [step, setStep] = useState(-1);
   const [owner, setOwner] = useState<string | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
+  const shown = useRef(rect);
+  shown.current = rect;
   const [tipHeight, setTipHeight] = useState(190);
   const anchors = useRef(new Map<Target, Set<Anchor>>());
   const current = useRef<Anchor | null>(null);
@@ -116,6 +124,15 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   useEffect(() => {
     if (step < 0) return;
     let alive = true;
+    // A step appears only once its target holds still: two readings
+    // SETTLE_MS apart that agree. Step 2's filter button is still on its
+    // way up when the step begins (Explore scrolls it into place in the
+    // same commit), and step 3's save button slides in with the place's
+    // page; the first reading caught the old place, the card was drawn
+    // there and jumped 250ms later (owner, 19 Oct 2026). Once shown, a
+    // move is followed at once: that is the reader scrolling.
+    let settling: Rect | null = null;
+    let settle: ReturnType<typeof setTimeout> | undefined;
     // Re-measure while visible: scrolling, rotation, font size and the floating
     // tab bar can move the actual target. Never leave a ring at an old position.
     const measure = () => {
@@ -125,11 +142,11 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
       // page; asking for Explore there showed nothing (owner, 19 Oct 2026).
       const route = getRoute();
       const expected = step === 2 ? 'PlaceDetail' : step === 3 ? route : 'ExploreHome';
-      if (route !== expected) { setRect(null); return; }
+      if (route !== expected) { settling = null; setRect(null); return; }
       const entries = [...(anchors.current.get(targets[step]) ?? [])].filter(a => a.ref.current && a.focused());
       let remaining = entries.length;
       let candidate: { anchor: Anchor; rect: Rect } | null = null;
-      if (!remaining) { setRect(null); return; }
+      if (!remaining) { settling = null; setRect(null); return; }
       entries.forEach(anchor => anchor.ref.current!.measureInWindow((x, y, w, h) => {
         if (!alive) return;
         // The bottom bound is the screen's edge, not the home indicator's
@@ -144,12 +161,19 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
         if (remaining) return;
         current.current = candidate?.anchor ?? null;
         const measured = candidate?.rect ?? null;
-        setRect(old => old && measured && old.x === measured.x && old.y === measured.y
-          && old.width === measured.width && old.height === measured.height ? old : measured);
+        const held = !!measured && !!settling && same(settling, measured);
+        settling = measured;
+        if (!measured) { setRect(null); return; }
+        if (shown.current || held) {
+          setRect(old => old && same(old, measured) ? old : measured);
+          return;
+        }
+        clearTimeout(settle);
+        settle = setTimeout(measure, SETTLE_MS);
       }));
     };
     measure(); const timer = setInterval(measure, 250);
-    return () => { alive = false; clearInterval(timer); };
+    return () => { alive = false; clearInterval(timer); clearTimeout(settle); };
   }, [step, width, height, insets.top, insets.bottom, getRoute]);
   const value = useMemo(() => ({ step, start, finish, next, register, enabled, setEnabled, replay, notice, noticeTop }),
     [step, start, finish, next, register, enabled, setEnabled, replay, notice, noticeTop]);
