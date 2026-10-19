@@ -111,8 +111,12 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     // Re-measure while visible: scrolling, rotation, font size and the floating
     // tab bar can move the actual target. Never leave a ring at an old position.
     const measure = () => {
+      // Search and filter live on Explore, save on a place's page. The
+      // collections tab lives in the floating bar, which is on every screen
+      // the guide passes through, so step 4 follows step 3 on the place's
+      // page; asking for Explore there showed nothing (owner, 19 Oct 2026).
       const route = getRoute();
-      const expected = step === 2 ? 'PlaceDetail' : 'ExploreHome';
+      const expected = step === 2 ? 'PlaceDetail' : step === 3 ? route : 'ExploreHome';
       if (route !== expected) { setRect(null); return; }
       const entries = [...(anchors.current.get(targets[step]) ?? [])].filter(a => a.ref.current && a.focused());
       let remaining = entries.length;
@@ -120,7 +124,12 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
       if (!remaining) { setRect(null); return; }
       entries.forEach(anchor => anchor.ref.current!.measureInWindow((x, y, w, h) => {
         if (!alive) return;
-        if (w > 0 && h > 0 && x >= 0 && y >= insets.top && x + w <= width && y + h <= height - insets.bottom) {
+        // The bottom bound is the screen's edge, not the home indicator's
+        // inset: the floating bar sits partly inside that inset by design
+        // (`useTabBarLift`), and on a Pro Max its foot is at 916 of 932,
+        // past the 898 the inset left. A bar that has ducked away slides
+        // below the edge and still fails this.
+        if (w > 0 && h > 0 && x >= 0 && y >= insets.top && x + w <= width && y + h <= height) {
           candidate = { anchor, rect: { x, y, width: w, height: h } };
         }
         remaining -= 1;

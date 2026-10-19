@@ -5,7 +5,13 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { View } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { SignupTourProvider, useSignupTour, useTourAnchor } from './SignupTour';
-const state = vi.hoisted(() => ({ uid: 'new', route: 'ExploreHome', offscreen: false, y: 60, anchors: true, x: 40, w: 40, h: 40, duplicate: false, focused: true }));
+const state = vi.hoisted(() => ({ uid: 'new', route: 'ExploreHome', offscreen: false, y: 60, anchors: true, x: 40, w: 40, h: 40, duplicate: false, focused: true, bottom: 0 }));
+// A home indicator to measure against: the setup's insets are all zero.
+vi.mock('react-native-safe-area-context', () => ({
+  SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: state.bottom, left: 0, right: 0 }),
+}));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }) }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ t: (_en: string, vi: string) => vi }) }));
 vi.mock('react-native', async orig => ({ ...(await orig<Record<string, unknown>>()), useWindowDimensions: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }) }));
@@ -27,7 +33,7 @@ function Controls() {
 }
 const onReplay = vi.fn();
 const tree = () => <SignupTourProvider onReplay={onReplay} getRoute={getRoute}><Controls /></SignupTourProvider>;
-beforeEach(async () => { for (const id of ['new', 'recreated', 'guest']) await AsyncStorage.removeItem(`highlight.v1:${id}`); onReplay.mockClear(); state.uid = 'new'; state.route = 'ExploreHome'; state.offscreen = false; state.y = 60; state.anchors = true; state.x = 40; state.w = 40; state.h = 40; state.duplicate = false; state.focused = true; pressed.mockClear(); });
+beforeEach(async () => { for (const id of ['new', 'recreated', 'guest']) await AsyncStorage.removeItem(`highlight.v1:${id}`); onReplay.mockClear(); state.uid = 'new'; state.route = 'ExploreHome'; state.offscreen = false; state.y = 60; state.anchors = true; state.x = 40; state.w = 40; state.h = 40; state.duplicate = false; state.focused = true; state.bottom = 0; pressed.mockClear(); });
 const start = async () => { fireEvent.click(screen.getByText('Start')); await screen.findByText('1/4'); };
 it('does not start on sign-in; runs four steps and finishes without a skip on the last step', async () => {
   render(tree()); expect(screen.queryByTestId('signup-tour')).toBeNull();
@@ -38,7 +44,8 @@ it('does not start on sign-in; runs four steps and finishes without a skip on th
   state.route = 'PlaceDetail';
   fireEvent.click(screen.getByText('Tiếp theo'));
   await screen.findByText('3/4');
-  state.route = 'ExploreHome';
+  // Step 4's target is the collections tab in the floating bar, there on
+  // the place's page too: Next must not need a way back to Explore.
   fireEvent.click(screen.getByText('Tiếp theo'));
   await screen.findByText('4/4');
   expect(screen.queryByText('Bỏ qua hướng dẫn')).toBeNull();
@@ -48,6 +55,20 @@ it('does not start on sign-in; runs four steps and finishes without a skip on th
   expect(screen.queryByTestId('signup-tour')).toBeNull();
   expect(pressed).not.toHaveBeenCalled();
   await waitFor(async () => expect(JSON.parse((await AsyncStorage.getItem('highlight.v1:new'))!)).toMatchObject({ enabled: true, progress: 4 }));
+});
+// The floating bar sits partly inside the home indicator's inset, so its
+// tab must count as on screen there; a bar ducked below the edge must not.
+it('rings the collections tab inside the bottom inset, but not once it has slid away', async () => {
+  state.bottom = 34;
+  render(tree()); await start();
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/4');
+  state.route = 'PlaceDetail';
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/4');
+  state.y = 844 - 16 - 40; // foot at 828, inside the 810 the inset leaves
+  fireEvent.click(screen.getByText('Tiếp theo'));
+  await screen.findByText('4/4');
+  state.y = 850; // ducked: below the screen's edge
+  await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
 });
 it('skips the entire guide and does not reopen for the same account', async () => {
   render(tree()); await start();
