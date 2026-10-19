@@ -17,6 +17,7 @@ import { authFail, obfuscatedSignUp } from './authfail';
 import { cacheKey, packCache, unpackCache } from './data/cache';
 import { supabase } from './supabase';
 import { normalizeHandle } from './handle';
+import { presetUrl, type AvatarPreset } from './avatars';
 
 /**
  * Postgres constraint violations, as something a screen can branch on.
@@ -149,6 +150,8 @@ type Auth = {
   /** Compress, upload and save in one step — the avatar is its own object,
    *  not a field of the edit form. */
   setAvatar: (localUri: string) => Promise<void>;
+  /** Wear one of the bundled animals (`lib/avatars`) instead of a photo. */
+  setAvatarPreset: (key: AvatarPreset) => Promise<void>;
   clearAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
   /** Delete the account and everything personal under it. The server
@@ -164,7 +167,7 @@ const Ctx = createContext<Auth>({
   ready: false, session: null, userId: undefined, email: null, profile: EMPTY_PROFILE, memberSince: null,
   signIn: async () => {}, signUp: async () => ({ needsConfirm: false }),
   confirmSignUp: async () => {}, requestReset: async () => {}, resetPassword: async () => {},
-  updateProfile: async () => {}, setAvatar: async () => {}, clearAvatar: async () => {},
+  updateProfile: async () => {}, setAvatar: async () => {}, setAvatarPreset: async () => {}, clearAvatar: async () => {},
   signOut: async () => {},
   deleteAccount: async () => {},
 });
@@ -374,6 +377,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile((p) => ({ ...p, avatar_url: url }));
   }, [session]);
 
+  // A name in the row, and no upload: the animal ships with the app, so
+  // the bucket's one-write-a-minute rule never comes into it. The photo
+  // it replaces goes from the bucket after the row has moved — a face
+  // somebody stopped wearing should not stay public — and a failed delete
+  // leaves an orphan nobody can reach, as in `clearAvatar`.
+  const setAvatarPreset = useCallback(async (key: AvatarPreset) => {
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('not_signed_in');
+    const url = presetUrl(key);
+    const { error } = await withTimeout(
+      Promise.resolve(supabase.from('profiles').update({ avatar_url: url }).eq('id', uid)),
+      20_000,
+      'slow_save',
+    );
+    if (error) throw new Error(error.message);
+    setProfile((p) => ({ ...p, avatar_url: url }));
+    await supabase.storage.from('avatars').remove([`${uid}/avatar.jpg`]);
+  }, [session]);
+
   const clearAvatar = useCallback(async () => {
     const uid = session?.user?.id;
     // Without a session there is no row to clear. This used to go out as
@@ -419,10 +441,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       memberSince: session?.user?.created_at ? new Date(session.user.created_at) : null,
       signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
-      setAvatar, clearAvatar, signOut, deleteAccount,
+      setAvatar, setAvatarPreset, clearAvatar, signOut, deleteAccount,
     };
   }, [ready, session, userId, profile, signIn, signUp, confirmSignUp, requestReset, resetPassword,
-      updateProfile, setAvatar, clearAvatar, signOut, deleteAccount]);
+      updateProfile, setAvatar, setAvatarPreset, clearAvatar, signOut, deleteAccount]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

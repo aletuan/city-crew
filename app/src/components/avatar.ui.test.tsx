@@ -25,3 +25,14 @@ it('reads the picture from memory, over the blank disc', () => {
   const style = StyleSheet.flatten((img as unknown as Record<string, { style: never }>)[key].style);
   expect(style).toMatchObject({ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceGlass });
 });
+
+// The bundled animals (`lib/avatars`) by name, and a name this build does
+// not know as the blank disc rather than an address to fetch.
+it('draws a preset animal from the app, and an unknown one as the blank disc', () => {
+  const { container, unmount } = render(<Avatar url="preset:kookaburra" size={44} />);
+  expect(container.querySelector('img')!.getAttribute('src')).toMatch(/assets\/avatars\/kookaburra\.jpg$/);
+  unmount();
+  const other = render(<Avatar url="preset:dingo" size={44} />);
+  expect(other.container.querySelector('img')).toBeNull();
+  expect(other.container.querySelector('[data-icon="person-outline"]')).toBeTruthy();
+});

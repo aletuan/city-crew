@@ -17,12 +17,13 @@ import { fireEvent, render, screen, waitFor } from '../uitest/render';
 
 const setAvatar = vi.hoisted(() => vi.fn(async (_uri: string) => {}));
 const clearAvatar = vi.hoisted(() => vi.fn(async () => {}));
+const setAvatarPreset = vi.hoisted(() => vi.fn(async (_key: string) => {}));
 const account = vi.hoisted(() => ({
   email: 'trang@example.com' as string | null,
   profile: { full_name: 'Trang', avatar_url: '' as string | null },
 }));
 vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ profile: account.profile, email: account.email, setAvatar, clearAvatar }),
+  useAuth: () => ({ profile: account.profile, email: account.email, setAvatar, setAvatarPreset, clearAvatar }),
 }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -53,6 +54,7 @@ beforeEach(() => {
   setAvatar.mockClear();
   setAvatar.mockImplementation(async () => {});
   clearAvatar.mockClear();
+  setAvatarPreset.mockClear();
   account.email = 'trang@example.com';
   account.profile = { full_name: 'Trang', avatar_url: '' };
   picker.launchImageLibraryAsync.mockResolvedValue(cancelled);
@@ -215,7 +217,7 @@ describe('the sheet', () => {
   it('can be put away without choosing', () => {
     render(<AvatarPicker />);
     openSheet();
-    fireEvent.click(row('Cancel'));
+    fireEvent.click(row('Close'));
     settleModal();
 
     expect(screen.queryByText('Profile photo')).toBeNull();
@@ -228,7 +230,7 @@ describe('the sheet', () => {
     openSheet();
     // The scrim: the one pressable with no name, standing just before the
     // sheet in the Modal — a tap anywhere on the page is "never mind".
-    const scrim = screen.getByText('Profile photo').parentElement!.previousElementSibling as HTMLElement;
+    const scrim = screen.getByTestId('avatar-sheet').previousElementSibling as HTMLElement;
     fireEvent.click(scrim);
     settleModal();
     expect(screen.queryByText('Profile photo')).toBeNull();
@@ -242,5 +244,81 @@ describe('the sheet', () => {
     fireEvent.click(row('Choose from library'));
     settleModal();
     expect(screen.queryByText('Profile photo')).toBeNull();
+  });
+});
+
+// The eight animals: browsed in the grid, committed by the one button,
+// and drawn from the app itself rather than fetched.
+describe('the animals', () => {
+  const cell = (key: string) => screen.getByTestId(`avatar-preset-${key}`);
+  const use = () => screen.getByTestId('avatar-use');
+
+  it('offers all eight, by name, with none chosen and the button dim for a photograph', () => {
+    account.profile.avatar_url = 'https://x/trang.jpg';
+    render(<AvatarPicker />);
+    openSheet();
+    for (const name of ['Koala', 'Kangaroo', 'Wombat', 'Quokka', 'Platypus', 'Echidna', 'Kookaburra', 'Emu']) {
+      expect(row(name).getAttribute('aria-selected'), name).toBe('false');
+    }
+    expect(use().getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('ticks the one tapped, and only that one, and wears it on the button', async () => {
+    render(<AvatarPicker />);
+    openSheet();
+    fireEvent.click(cell('koala'));
+    fireEvent.click(cell('wombat'));
+    expect(cell('wombat').getAttribute('aria-selected')).toBe('true');
+    expect(cell('koala').getAttribute('aria-selected')).toBe('false');
+    expect(cell('wombat').querySelector('[data-icon="checkmark"]')).toBeTruthy();
+    expect(cell('koala').querySelector('[data-icon="checkmark"]')).toBeNull();
+    // A tap in the grid is a look, not a decision.
+    expect(setAvatarPreset).not.toHaveBeenCalled();
+    expect(use().getAttribute('aria-disabled')).not.toBe('true');
+    fireEvent.click(use());
+    settleModal();
+    await waitFor(() => expect(setAvatarPreset).toHaveBeenCalledWith('wombat'));
+    expect(screen.queryByText('Profile photo')).toBeNull();
+    expect(alerted()).toEqual([]);
+  });
+
+  it('opens on the animal worn, with nothing to commit until another is chosen', () => {
+    account.profile.avatar_url = 'preset:emu';
+    render(<AvatarPicker />);
+    openSheet();
+    expect(cell('emu').getAttribute('aria-selected')).toBe('true');
+    expect(use().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(use());
+    expect(setAvatarPreset).not.toHaveBeenCalled();
+    fireEvent.click(cell('quokka'));
+    expect(use().getAttribute('aria-disabled')).not.toBe('true');
+  });
+
+  it('draws the animal worn in the circle, from the app, and still offers removal', () => {
+    account.profile.avatar_url = 'preset:koala';
+    const { container } = render(<AvatarPicker />);
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(/assets\/avatars\/koala\.jpg$/);
+    expect(screen.queryByText('T')).toBeNull();
+    openSheet();
+    expect(row('Remove photo')).toBeTruthy();
+  });
+
+  // A row written by a newer build, naming an animal this one lacks:
+  // the letter, never a broken picture.
+  it('falls back to the letter for an animal this build does not have', () => {
+    account.profile.avatar_url = 'preset:dingo';
+    const { container } = render(<AvatarPicker />);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('T')).toBeTruthy();
+  });
+
+  it('says why when the animal could not be saved', async () => {
+    setAvatarPreset.mockRejectedValueOnce(new Error('permission denied'));
+    render(<AvatarPicker />);
+    openSheet();
+    fireEvent.click(cell('emu'));
+    fireEvent.click(use());
+    settleModal();
+    await waitFor(() => expect(alerted()).toEqual([['Could not update your photo', 'Permission denied']]));
   });
 });

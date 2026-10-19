@@ -15,6 +15,7 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
+import { avatarSource } from './avatarImages';
 import { useScheme } from '../lib/theme';
 import { colors, display, font, glass, gradAI, labelScaleCap, radius, space, type } from '../theme';
 
@@ -1102,10 +1103,13 @@ export function SelectTick({ on }: { on: boolean }) {
  */
 export function Avatar({ url, size }: { url?: string | null; size: number }) {
   const round = { width: size, height: size, borderRadius: size / 2 };
-  if (url) {
+  // A photograph by address, or one of the animals bundled with the app
+  // (`lib/avatars`) by name.
+  const source = avatarSource(url);
+  if (source) {
     return (
       <Image
-        source={{ uri: url }}
+        source={source}
         style={[round, s.avatarBlank]}
         cachePolicy="memory-disk"
         contentFit="cover"
