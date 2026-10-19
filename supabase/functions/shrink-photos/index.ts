@@ -47,6 +47,21 @@
 // each time. Size says whether a file is big; only the mark says it
 // has been here.
 //
+// ── the avatars ──
+//
+//   POST { avatars: ["<profile id>", …] }     these people's faces
+//   → the same report, one row per person
+//
+// The app stored faces at 512px, for a circle that is 96pt at its
+// largest (`EditProfileScreen`), 288 device pixels on a 3x phone; the
+// crew list draws 44pt. The 18 in the bucket averaged 70 KB on 19 Oct
+// 2026, the largest 142 KB. `auth.tsx` uploads at 288px from then on,
+// and this brought the ones already stored down to it. A face is
+// rewritten only while its profile still points at it — a person who
+// cleared theirs keeps the file nobody draws, and does not get it back
+// — and its URL takes a fresh stamp, as an upload's does, so the
+// phones that cached the old file fetch the new one.
+//
 // Who may call it: an editor, or the database with the job's token —
 // see `_shared/gate.ts`.
 
@@ -86,6 +101,13 @@ const JPEG_QUALITY = 74;
 /** A JPEG this small is already what this would produce; leave it be. */
 const SMALL_ENOUGH = 240 * 1024;
 
+/** The largest circle a face is drawn in, 96pt, at 3x; the same width
+ *  `auth.tsx` uploads at. Faces are square, cropped by the picker. */
+const AVATAR_PX = 288;
+/** `auth.tsx`'s `AVATAR_QUALITY`, 0.8, on ImageMagick's scale. */
+const AVATAR_QUALITY = 80;
+const AVATARS = "avatars";
+
 const extOf = (path: string) => path.slice(path.lastIndexOf(".") + 1).toLowerCase();
 
 /** The photo, re-encoded: fit within MAX_PX, JPEG, metadata dropped once
@@ -101,6 +123,70 @@ function shrink(bytes: Uint8Array): Uint8Array {
   });
 }
 
+/** A face brought down to AVATAR_PX, or null when it is no larger. */
+function shrinkAvatar(bytes: Uint8Array): Uint8Array | null {
+  return ImageMagick.read(bytes, (img) => {
+    if (img.width <= AVATAR_PX && img.height <= AVATAR_PX) return null;
+    img.autoOrient();
+    img.resize(AVATAR_PX, AVATAR_PX);
+    img.strip();
+    img.quality = AVATAR_QUALITY;
+    img.format = MagickFormat.Jpeg;
+    return img.write((data) => new Uint8Array(data));
+  });
+}
+
+type Admin = ReturnType<typeof createClient>;
+
+async function shrinkAvatars(admin: Admin, ids: string[]) {
+  const store = admin.storage.from(AVATARS);
+  const rows: { id: string; ms: number; before: number; after: number }[] = [];
+  const errors: { id: string; error: string }[] = [];
+  let done = 0, skipped = 0, bytesBefore = 0, bytesAfter = 0;
+
+  for (const id of ids) {
+    const t0 = performance.now();
+    try {
+      const path = `${id}/avatar.jpg`;
+      const { data: { publicUrl } } = store.getPublicUrl(path);
+      const { data: profile, error: readErr } = await admin.from("profiles")
+        .select("avatar_url").eq("id", id).maybeSingle();
+      if (readErr) throw new Error(`profiles: ${readErr.message}`);
+      const url = (profile as { avatar_url?: string } | null)?.avatar_url ?? "";
+      if (url.split("?")[0] !== publicUrl) { skipped++; continue; }
+
+      const { data: blob, error: dlErr } = await store.download(path);
+      if (dlErr || !blob) throw new Error(`download: ${dlErr?.message ?? "no body"}`);
+      const original = new Uint8Array(await blob.arrayBuffer());
+      bytesBefore += original.length;
+      const out = shrinkAvatar(original);
+      if (!out || out.length >= original.length) {
+        bytesAfter += original.length;
+        skipped++;
+        continue;
+      }
+
+      const { error: upErr } = await store.upload(path, out, {
+        contentType: "image/jpeg", upsert: true, metadata: { shrunk: "1" },
+      });
+      if (upErr) throw new Error(`upload: ${upErr.message}`);
+      const { error: dbErr } = await admin.from("profiles")
+        .update({ avatar_url: `${publicUrl}?v=${Date.now()}` }).eq("id", id);
+      if (dbErr) throw new Error(`profiles: ${dbErr.message}`);
+      bytesAfter += out.length;
+      done++;
+      rows.push({ id, ms: Math.round(performance.now() - t0), before: original.length, after: out.length });
+    } catch (e) {
+      errors.push({ id, error: String((e as Error).message ?? e).slice(0, 200) });
+    }
+  }
+
+  return {
+    done, skipped, failed: errors.length, cursor: ids.at(-1) ?? null,
+    bytes_before: bytesBefore, bytes_after: bytesAfter, rows, errors,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -112,8 +198,9 @@ Deno.serve(async (req) => {
   );
   if (!(await opsOrEditor(admin, req, TOKEN_NAME))) return json({ error: "not allowed" }, 403);
 
-  let body: { limit?: number; after?: string; ids?: string[] } = {};
+  let body: { limit?: number; after?: string; ids?: string[]; avatars?: string[] } = {};
   try { body = await req.json(); } catch (_) { /* empty body is fine */ }
+  if (Array.isArray(body.avatars)) return json(await shrinkAvatars(admin, body.avatars.slice(0, MAX_LIMIT)));
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(body.limit) || DEFAULT_LIMIT));
 
   let q = admin.from("place_photos")

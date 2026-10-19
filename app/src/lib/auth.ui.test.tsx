@@ -421,7 +421,7 @@ describe('the avatar', () => {
 
     expect(manipulateAsync).toHaveBeenCalledWith(
       'file:///camera.jpg',
-      [{ resize: { width: 512 } }],
+      [{ resize: { width: 288 } }],
       expect.objectContaining({ format: 'jpeg', base64: true }),
     );
     expect(bucketCalls()).toEqual([expect.objectContaining({
