@@ -1665,7 +1665,7 @@ const s = StyleSheet.create({
   // The visits screen's box and panel, to the point: the same row, the
   // same Cancel inside the box, the same card of groups, so the two screens
   // that let a reader narrow a list of their own do it with one grammar.
-  // The header's own subtitle type (ui.tsx `s.subtitle`), in the page's
+  // The header's own subtitle type (`s.subtitle` in ui/surfaces.tsx), in the page's
   // margins. The header ends 14 under the title; -6 brings this line to
   // the 8 a subtitle sits under its title in that header.
   scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },
