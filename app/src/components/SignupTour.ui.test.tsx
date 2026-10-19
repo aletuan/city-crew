@@ -70,6 +70,15 @@ it('rings the collections tab inside the bottom inset, but not once it has slid 
   state.y = 850; // ducked: below the screen's edge
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
 });
+// The compact card (owner, 19 Oct 2026): the count on the title's line,
+// no × row, and a light scrim so the ring and the card lead.
+it('keeps the count beside the title, with no close button of its own, over a light scrim', async () => {
+  render(tree()); await start();
+  expect(screen.getByText('1/4').parentElement).toBe(screen.getByText('Tìm nơi bạn muốn đến').parentElement);
+  expect(screen.queryByText('×')).toBeNull();
+  expect(screen.getAllByLabelText('Đóng hướng dẫn')).toHaveLength(1);
+  expect(getComputedStyle(screen.getByLabelText('Đóng hướng dẫn')).backgroundColor).toBe('rgba(6, 5, 8, 0.25)');
+});
 it('skips the entire guide and does not reopen for the same account', async () => {
   render(tree()); await start();
   fireEvent.click(screen.getByText('Bỏ qua hướng dẫn'));
