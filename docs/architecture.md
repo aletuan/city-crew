@@ -39,7 +39,7 @@ Google, khoá Claude, service role) — không phải để "có backend".
 | tầng | thư mục | là gì | được import |
 |---|---|---|---|
 | Màn hình | `src/screens/` | một màn một file; ghép component, đọc provider và hook dữ liệu | components, lib, `nav.ts`, `theme.ts` |
-| Component | `src/components/` | UI dùng lại; `ui.tsx` là design system | lib, `theme.ts`, `nav.ts` — **không** screens |
+| Component | `src/components/` | UI dùng lại; `ui/` là design system | lib, `theme.ts`, `nav.ts` — **không** screens |
 | Provider | `src/lib/*.tsx` | trạng thái dùng chung: 9 React context (auth, thành phố, catalog, crew, trips…) và vài hook | lib, lib/data |
 | Dữ liệu | `src/lib/data/` | mọi câu hỏi tới Postgres/Storage, mỗi aggregate một file, `index.ts` là barrel | `lib/supabase.ts`, lib thuần |
 | Nghiệp vụ thuần | `src/lib/*.ts` | planner, xếp hạng, giờ mở cửa, định dạng… — không React, chạy được trong Node | lib thuần |
@@ -168,8 +168,10 @@ Không có tầng nào giữa dashboard và database.
 
 Ghi ra để không ai tưởng là có chủ ý:
 
-- **`components/ui.tsx`** — 1.208 dòng, năm mối quan tâm (hằng số layout,
-  hook, haptics, primitive, hiệu ứng) mà màn nào cũng import.
+- ~~**`components/ui.tsx`** — 1.208 dòng, năm mối quan tâm~~ Đã tách ngày
+  19/10/2026 thành `components/ui/` theo năm mối quan tâm (layout, haptics,
+  motion, controls, surfaces); `ui/index.ts` xuất lại mọi tên nên không nơi
+  gọi nào phải sửa.
 - **Màn hình to** — trung bình ~717 dòng một file so với ~163 ở `lib/`;
   `ExploreScreen.tsx` gần 1.700. Sàn coverage giữ chúng đúng, nhưng không
   giữ chúng dễ đọc.

@@ -673,7 +673,7 @@ const s = StyleSheet.create({
   // Vietnamese company label takes a second line rather than running off
   // the page. 8pt between chips both ways.
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
-  // The filter chip's shape (`Chip` in ui.tsx) at the filter chip's
+  // The filter chip's shape (`Chip` in ui/controls.tsx) at the filter chip's
   // measurements, filled rather than outlined because these are read, not
   // pressed — the outline is what the filter row uses to say "tap me".
   chip: {
