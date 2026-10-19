@@ -50,7 +50,7 @@
 // its stops itself.
 
 import { DynamicColorIOS, Platform, Settings, type ColorValue } from 'react-native';
-import { readLook, storeOf, type Look } from './lib/look';
+import { readLook, storeOf, type Look, type Pinned } from './lib/look';
 
 /**
  * A colour that knows both themes.
@@ -1380,7 +1380,9 @@ export const PALETTES = {
   chocolate: CHOCOLATE, cosmic: COSMIC, duck: DUCK, honey: HONEY, royal: ROYAL,
   plum: PLUM, violet: VIOLET, wine: WINE,
   maroon: MAROON, amber: AMBER, neon: NEON, ember: EMBER, sand: SAND,
-} as const;
+// Every look in `LOOK_DEFS` must have its palette here: a look added there
+// and not here is a compile error, not a card drawn in no colours.
+} as const satisfies Record<Pinned | 'paper' | 'charcoal', Palette>;
 
 /** Each look's two sides: the light half and the dark half of every pair. */
 export const LOOKS: Record<Look, { light: Palette; dark: Palette }> = {
