@@ -20,6 +20,7 @@ import type { FriendProfile } from './data';
 import type { FriendshipRow } from './friends';
 import { appStateStub } from '../uitest/appState';
 import { STALE_MS } from './stale';
+import { Image } from 'expo-image';
 
 const world = vi.hoisted(() => ({
   ready: true,
@@ -204,6 +205,27 @@ describe('absorb', () => {
     fireEvent.click(screen.getByText('absorb'));
     await waitFor(() => expect(screen.getByTestId('faces').textContent).toBe('f1,s9'));
     expect(fetchProfilesById).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The pictures go into memory as the profiles land, so the Crew rows
+// open with their faces; an address already warmed is not asked twice,
+// and a profile with no picture asks nothing.
+describe('the faces, warmed', () => {
+  it('prefetches each new picture once, into memory', async () => {
+    const prefetch = vi.mocked(Image.prefetch);
+    prefetch.mockClear();
+    world.session = { user: { id: 'u5' } };
+    world.edges = [edge('u5', 'f1'), edge('u5', 'f2')];
+    fetchProfilesById.mockImplementationOnce(async () => ({
+      f1: { id: 'f1', handle: 'f1', full_name: 'f1', avatar_url: 'https://cdn/f1.jpg?v=1' },
+      f2: { id: 'f2', handle: 'f2', full_name: 'f2', avatar_url: '' },
+    }));
+    mount();
+    await waitFor(() => expect(prefetch).toHaveBeenCalledWith(['https://cdn/f1.jpg?v=1'], 'memory-disk'));
+    fireEvent.click(screen.getByText('absorb'));
+    await waitFor(() => expect(screen.getByTestId('faces').textContent).toContain('s9'));
+    expect(prefetch).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1089,6 +1089,16 @@ export function SelectTick({ on }: { on: boolean }) {
  * `accessible={false}`: this always sits beside the name or the handle it
  * belongs to, and VoiceOver announcing an image before that line adds a
  * word to every row and information to none of them.
+ *
+ * `memory-disk`, because `expo-image` defaults to `disk` alone: every
+ * mount read the file back and decoded it again, so the eight faces of
+ * the crew list arrived after the names on every visit, not only the
+ * first. The owner saw it on 19 Oct 2026. `CrewProvider` prefetches into
+ * the same memory cache, which is why the two policies have to match.
+ *
+ * The blank disc sits behind the picture, too. A face still on its way
+ * used to be a hole the colour of the card; now it is the same circle a
+ * person with no photo has, and the picture fades in over it.
  */
 export function Avatar({ url, size }: { url?: string | null; size: number }) {
   const round = { width: size, height: size, borderRadius: size / 2 };
@@ -1096,7 +1106,8 @@ export function Avatar({ url, size }: { url?: string | null; size: number }) {
     return (
       <Image
         source={{ uri: url }}
-        style={round}
+        style={[round, s.avatarBlank]}
+        cachePolicy="memory-disk"
         contentFit="cover"
         transition={150}
         accessible={false}

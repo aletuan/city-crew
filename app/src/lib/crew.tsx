@@ -14,6 +14,7 @@ import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { AppState } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Fetch, fetchFriendships, fetchMutualSaves, fetchMyBlocks, fetchProfilesById,
@@ -169,6 +170,23 @@ export function CrewProvider({ children }: { children: React.ReactNode }) {
   // The two loadedAt stamps are when there is something new to look up.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ships.loadedAt, blocks.loadedAt]);
+
+  // The faces, fetched ahead of the screens that draw them. The names
+  // were already here when Crew opened, from the snapshot or the lookup
+  // above; the pictures were not, and each circle went to the network or
+  // the disk on its own once the row had mounted. Warming them as the
+  // profiles land puts them in memory before anybody taps "Kết nối bạn
+  // bè". Each address once per session: `avatar_url` carries a stamp
+  // that changes with the picture, so a new face is a new address.
+  const warmed = useRef(new Set<string>());
+  useEffect(() => {
+    const urls = Object.values(people)
+      .map((p) => p.avatar_url)
+      .filter((u) => u && !warmed.current.has(u));
+    if (!urls.length) return;
+    for (const u of urls) warmed.current.add(u);
+    Image.prefetch(urls, 'memory-disk').catch(() => {});
+  }, [people]);
 
   // Signing out takes the crew with it — the faces belong to the session,
   // and the reset re-arms hydration for whoever signs in next.
