@@ -55,7 +55,7 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { SHOWN, bestOf, needsScore, scoreAll, toTen, type PhotoScorer } from '../lib/photoScore';
 import { photoScorer } from '../lib/photoScoreNative';
-import { useSave } from '../lib/save';
+import { useMyLists } from '../lib/save';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -81,7 +81,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // that one is not in the catalog. Same two-step `PlaceDetail` takes.
   const { loading: catalogLoading, data: places, reload: reloadPlaces } = usePlaces();
   const { reload: reloadLists } = useCollections();
-  const { mine } = useSave();
+  const mine = useMyLists();
   // Everything on screen that draws this place's photographs, read again
   // after a write. Not only the catalog: a collection carries its places
   // embedded whole (`withMembers`), photographs and all, so a list holding

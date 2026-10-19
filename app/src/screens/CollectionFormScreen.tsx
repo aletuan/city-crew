@@ -34,7 +34,7 @@ import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { coverOf, membersOf, photosOf } from '../lib/place';
-import { useSave } from '../lib/save';
+import { useMyLists } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, radius, space } from '../theme';
 import type { Place } from '../lib/types';
@@ -77,7 +77,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   const { width } = useWindowDimensions();
   const { session } = useAuth();
   const { city } = useCity();
-  const { mine } = useSave();
+  const mine = useMyLists();
   const editing = route.params?.slug;
   const addPlaceSlug = route.params?.addPlaceSlug;
   const copyFrom = route.params?.copyFrom;

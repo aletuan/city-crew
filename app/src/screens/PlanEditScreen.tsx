@@ -116,7 +116,7 @@ import {
 import { planTrips } from '../lib/planner';
 import { startMinOf } from '../lib/remind';
 import { scheduleTripReminder } from '../lib/reminders';
-import { useSave } from '../lib/save';
+import { useMyLists, useSaveActions } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
 import { summaryLine } from '../lib/sketch';
 import { useFlag } from '../lib/useFlag';
@@ -152,7 +152,8 @@ export default function PlanEditScreen({ navigation, route }: {
   const { data: places } = usePlaces();
   const { city } = useCity();
   const { session } = useAuth();
-  const { mine, askToSignIn } = useSave();
+  const mine = useMyLists();
+  const { askToSignIn } = useSaveActions();
   const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();
   const note = useNoteEvent();

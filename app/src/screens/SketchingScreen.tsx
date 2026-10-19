@@ -46,7 +46,7 @@ import { useI18n } from '../lib/i18n';
 import { narratableOf, NARRATION_HOLD_MS, prefetchNarration } from '../lib/assist';
 import { planTrips } from '../lib/planner';
 import { legsOf } from '../lib/travel';
-import { useSave } from '../lib/save';
+import { useMyLists } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
   DECK_HOLD_MS, deckSpan, findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS,
@@ -214,7 +214,7 @@ export default function SketchingScreen({ navigation, route }: {
   // is, with the one remedy that can work: asking again.
   const failed = !loading && !!error && places.length === 0;
   const { city } = useCity();
-  const { mine } = useSave();
+  const mine = useMyLists();
   const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();
 

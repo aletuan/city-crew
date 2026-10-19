@@ -46,7 +46,10 @@ const h = vi.hoisted(() => ({
 
 vi.mock('./i18n', () => ({ useI18n: () => ({ t: (en: string) => en }) }));
 vi.mock('./auth', () => ({ useAuth: () => ({ session: h.session }) }));
-vi.mock('./save', () => ({ useSave: () => ({ askToSignIn: h.askToSignIn }) }));
+vi.mock('./save', () => {
+  const useSave = () => ({ askToSignIn: h.askToSignIn });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('./city', () => ({
   useCity: () => ({ city: h.city }),
   useMyPosition: () => h.me,

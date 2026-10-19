@@ -36,7 +36,7 @@ import { dayline } from '../lib/format';
 import { Collection, coverOf, fetchPlaceIndex, membersOf, Place, PlaceIndexRow, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useAuth } from '../lib/auth';
-import { useSave } from '../lib/save';
+import { useSaveActions } from '../lib/save';
 import { useMyCheckins } from '../lib/checkins';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { bestFirst } from '../lib/rank';
@@ -433,7 +433,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const cols = useCollections();
   const { likes, rankLikes, myLikes, toggleLike } = useLikes();
   const uid = useAuth().session?.user?.id;
-  const { askToSignIn } = useSave();
+  const { askToSignIn } = useSaveActions();
 
   // Signed out, the tap is an invitation rather than a failure: the same
   // sheet the bookmark opens, because "sign in to keep this" is the same
@@ -639,7 +639,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city, cities, setCity } = useCity();
   const { session } = useAuth();
-  const { isSaved, askToSignIn } = useSave();
+  const { isSaved, askToSignIn } = useSaveActions();
   const { loading, loaded, error, data: places, reload } = usePlaces();
   // The pull spinner belongs to the pull. `loading` alone also covers
   // refreshes nobody asked to watch — the launch cache's background

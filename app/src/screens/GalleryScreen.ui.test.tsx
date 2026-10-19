@@ -90,9 +90,10 @@ vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.catalog, reload: data.reload }),
   useCollections: () => ({ reload: data.reloadLists }),
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ mine: { reload: data.reloadMine } }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { reload: data.reloadMine } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/data', () => ({
   usePlaceBySlug: () => state.elsewhere,
   fetchPlaceId: data.fetchPlaceId,

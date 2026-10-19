@@ -41,7 +41,10 @@ vi.mock('./catalog', () => ({
   useCatalog: () => ({ collections: { data: world.collections }, myLikes: world.myLikes }),
 }));
 vi.mock('./city', () => ({ useCity: () => ({ city: world.city }) }));
-vi.mock('./save', () => ({ useSave: () => ({ mine: { data: world.mine } }) }));
+vi.mock('./save', () => {
+  const useSave = () => ({ mine: { data: world.mine } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('./data', () => ({
   fetchPassedOver: spies.fetchPassedOver,
   logPlaceEvent: spies.logPlaceEvent,

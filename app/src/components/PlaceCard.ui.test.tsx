@@ -31,9 +31,10 @@ vi.mock('../lib/i18n', () => ({
 // The save flow is a provider over data, auth and city. What the card owes
 // it is one call with one place, which is what is pinned here; the flow's
 // own branching is `lib/save`'s to answer for.
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ save, isSaved: (slug: string) => state.saved.has(slug) }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ save, isSaved: (slug: string) => state.saved.has(slug) });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 
 import PlaceCard from './PlaceCard';
 import { CATEGORIES } from '../lib/categories';

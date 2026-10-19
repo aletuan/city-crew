@@ -22,7 +22,7 @@ import { fetchPassedOver, logPlaceEvent, useMyPreferences, type EventKind } from
 import { membersOf } from './place';
 import { CATEGORIES } from './categories';
 import { cleanTaste } from './tastepick';
-import { useSave } from './save';
+import { useMyLists } from './save';
 import { tasteFrom } from './taste';
 import type { Taste } from './planner';
 
@@ -85,7 +85,7 @@ export type PlanProfile = {
  */
 function useOwnSignals(uid: string | null) {
   const { data: places } = usePlaces();
-  const { mine } = useSave();
+  const mine = useMyLists();
   const { collections, myLikes } = useCatalog();
 
   // Flattened across collections, and `tally` counts each place once — a

@@ -16,7 +16,7 @@ import AuthSheet from '../components/AuthSheet';
 import SaveSheet from '../components/SaveSheet';
 import { useAuth } from './auth';
 import {
-  addPlaceToCollection, Collection, holds, logPlaceEvent, nextSortOrder, Place, removePlaceFromCollection,
+  addPlaceToCollection, Collection, type Fetch, holds, logPlaceEvent, nextSortOrder, Place, removePlaceFromCollection,
   useMyCollections, useMyPreferences,
 } from './data';
 import { useCity } from './city';
@@ -40,7 +40,16 @@ import { dropResume, focusedTab, holdResume } from './resume';
  */
 export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search' | 'trip' | 'start' | 'checkin';
 
-type Save = {
+/**
+ * What a screen can do about saving — the acts, without the lists.
+ *
+ * Split from the lists on 19 Oct 2026 (the SOLID review, I): of fifteen
+ * callers, five read only the lists and four only the acts, and every one
+ * of them took all four members. `useSaveActions` and `useMyLists` give a
+ * caller the half it uses; `useSave` stays as both, for the callers not
+ * yet moved.
+ */
+type SaveActions = {
   /** Open whatever this person needs next in order to save this place. */
   save: (place: Place) => void;
   /**
@@ -61,25 +70,40 @@ type Save = {
   askToSignIn: (why?: SignInWhy, resume?: () => void) => void;
   /** Is the place in any of their lists? Drives the bookmark's fill. */
   isSaved: (placeSlug: string) => boolean;
-  /**
-   * The user's own collections — the single copy in the app.
-   *
-   * Screens read this rather than calling `useMyCollections` themselves.
-   * Two copies is how the save sheet came to show one list while the
-   * Collections tab showed two: the sheet's copy was fetched before the
-   * second list existed and had no reason to look again.
-   */
-  mine: { data: Collection[]; loading: boolean; loaded: boolean; error: string | null; reload: () => void };
 };
 
-const Ctx = createContext<Save>({
+/**
+ * The user's own collections — the single copy in the app.
+ *
+ * Screens read this rather than calling `useMyCollections` themselves.
+ * Two copies is how the save sheet came to show one list while the
+ * Collections tab showed two: the sheet's copy was fetched before the
+ * second list existed and had no reason to look again.
+ *
+ * The whole `Fetch`, not a hand-copied part of it. The copy this was
+ * until 19 Oct 2026 had left `error` out, and Profile's counts could not
+ * tell a list still loading from one that had failed (UX-14).
+ */
+type MyLists = Fetch<Collection[]>;
+
+const NO_LISTS: MyLists = {
+  data: [], loading: false, loaded: false, error: null, loadedAt: null, fromCache: false, reload: () => {},
+};
+const ActionsCtx = createContext<SaveActions>({
   save: () => {},
   askToSignIn: () => {},
   isSaved: () => false,
-  mine: { data: [], loading: false, loaded: false, error: null, reload: () => {} },
 });
+const ListsCtx = createContext<MyLists>(NO_LISTS);
 
-export const useSave = () => useContext(Ctx);
+/** The acts: `save`, `askToSignIn`, `isSaved`. */
+export const useSaveActions = () => useContext(ActionsCtx);
+/** The reader's own collections, as a `Fetch`. */
+export const useMyLists = () => useContext(ListsCtx);
+/** Both halves, as one object — the shape every caller had before the split. */
+export function useSave(): SaveActions & { mine: MyLists } {
+  return { ...useSaveActions(), mine: useMyLists() };
+}
 
 export function SaveProvider({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
@@ -197,17 +221,19 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     ask(why, resume);
   }, [ask]);
 
-  const value = useMemo<Save>(() => ({
+  const actions = useMemo<SaveActions>(() => ({
     save,
     askToSignIn,
     isSaved: (slug) => savedSlugs.has(slug),
-    mine: {
-      data: mine.data, loading: mine.loading, loaded: mine.loaded, error: mine.error, reload: mine.reload,
-    },
-  }), [save, askToSignIn, savedSlugs, mine.data, mine.loading, mine.loaded, mine.error, mine.reload]);
+  }), [save, askToSignIn, savedSlugs]);
+  const lists = useMemo<MyLists>(() => ({
+    data: mine.data, loading: mine.loading, loaded: mine.loaded, error: mine.error,
+    loadedAt: mine.loadedAt, fromCache: mine.fromCache, reload: mine.reload,
+  }), [mine.data, mine.loading, mine.loaded, mine.error, mine.loadedAt, mine.fromCache, mine.reload]);
 
   return (
-    <Ctx.Provider value={value}>
+    <ListsCtx.Provider value={lists}>
+    <ActionsCtx.Provider value={actions}>
       {children}
       <AuthSheet
         visible={authSheet}
@@ -230,6 +256,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
           if (place) goTo('Collections', { screen: 'CollectionForm', initial: false, params: { addPlaceSlug: place.slug } });
         }}
       />
-    </Ctx.Provider>
+    </ActionsCtx.Provider>
+    </ListsCtx.Provider>
   );
 }

@@ -56,7 +56,10 @@ vi.mock('../lib/i18n', () => ({
 const NO_COLS = vi.hoisted(() => ({ data: [] as unknown[] }));
 vi.mock('../lib/catalog', () => ({ usePlaces: () => ({ data: PLACES }), useCollections: () => NO_COLS }));
 const askToSignIn = vi.hoisted(() => vi.fn());
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() }, askToSignIn }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: mine.current, reload: vi.fn() }, askToSignIn });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/tasteProfile', () => ({
   useNoteEvent: () => note,
   usePlanProfile: () => ({ taste: null, budgetVnd: 400000 }),

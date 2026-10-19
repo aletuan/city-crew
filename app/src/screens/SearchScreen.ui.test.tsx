@@ -70,9 +70,10 @@ vi.mock('../lib/candidates', () => ({
   useCandidates: () => ({ ...g, awayFrom: () => '' }),
 }));
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => null }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ save: vi.fn(), isSaved: () => false }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ save: vi.fn(), isSaved: () => false });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 
 import SearchScreen from './SearchScreen';
 

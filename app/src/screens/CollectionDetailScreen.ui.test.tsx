@@ -92,14 +92,15 @@ vi.mock('../lib/catalog', () => ({
   useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
   useCuratorAvatar: () => state.cachedAvatar,
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({
+vi.mock('../lib/save', () => {
+  const useSave = () => ({
     mine: { data: state.mine, loading: state.mineLoading, reload: spies.mineReload },
     askToSignIn: spies.askToSignIn,
     isSaved: () => false,
     save: vi.fn(),
-  }),
-}));
+  });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city }) }));
 vi.mock('../nav', () => ({ goTo: spies.goTo }));
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
