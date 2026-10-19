@@ -16,7 +16,7 @@ import { FloatingPlane, HeartDoodle } from '../components/welcomeArt';
 import { isHandleFree, useAuthActions, useSession } from '../lib/auth';
 import { hasResume, peekResume } from '../lib/resume';
 import { fixedOnForm } from '../lib/authfail';
-import { cleanEmail, emailShapeOk } from '../lib/email';
+import { afterEmailEdit, cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import type { LegalId } from '../lib/legal';
 import { NO_PREFERENCES, savePreferences } from '../lib/data';
@@ -553,7 +553,14 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         placeholder={t('Enter your email address', 'Nhập địa chỉ email', 'メールアドレスを入力')}
         value={email}
         invalid={error === 'need_email' || error === 'bad_email' || error === 'email_taken'}
-        onChangeText={(v) => setEmail(cleanEmail(v))}
+        // The error this edit fixes goes with it, and the red with it —
+        // "enter your email" stood over qa@example.com until the next
+        // press (19 Oct 2026). The message stays where it is shown.
+        onChangeText={(v) => {
+          const next = cleanEmail(v);
+          setEmail(next);
+          setError((current) => afterEmailEdit(current, next));
+        }}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}

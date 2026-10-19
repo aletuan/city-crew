@@ -819,3 +819,48 @@ describe('signup-only guide eligibility', () => {
     expect(startTour).not.toHaveBeenCalled();
   });
 });
+
+// The error a correction fixes goes with it (19 Oct 2026): "enter your
+// email" stood over qa@example.com until the next press, while the name
+// field above already cleared its own. One rule for all three auth forms
+// — see `afterEmailEdit` in lib/email.
+describe('correcting the email after the form named it', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    isHandleFree.mockResolvedValue(true);
+  });
+
+  it('clears "enter your email" as soon as there is an address', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    submit();
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    type(field.email(), 'qa@example.com');
+    expect(screen.queryByText('Enter your email address.')).toBeNull();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('keeps "not an address" until the address is shaped like one', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.email(), 'qa@');
+    submit();
+    expect(await screen.findByText("That email address doesn't look right.")).toBeTruthy();
+    type(field.email(), 'qa@example');
+    expect(screen.getByText("That email address doesn't look right.")).toBeTruthy();
+    type(field.email(), 'qa@example.com');
+    expect(screen.queryByText("That email address doesn't look right.")).toBeNull();
+  });
+
+  it('clears "already taken" once the address is changed', async () => {
+    signUp.mockImplementationOnce(async () => { throw new Error('email_taken'); });
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+    const taken = 'An account already uses this email. Sign in instead.';
+    expect(await screen.findByText(taken)).toBeTruthy();
+    type(field.email(), 'a2@b.co');
+    expect(screen.queryByText(taken)).toBeNull();
+  });
+});

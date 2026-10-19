@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useAuthActions } from '../lib/auth';
-import { cleanEmail, emailShapeOk } from '../lib/email';
+import { afterEmailEdit, cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
 import { leaveAuth, type Nav } from '../nav';
@@ -79,11 +79,9 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         onChangeText={(v) => {
           const next = cleanEmail(v);
           setEmail(next);
-          // Editing an address only resolves the error it actually fixes.
-          setError((current) => (
-            (current === 'need_email' && next !== '') ||
-            (current === 'bad_email' && emailShapeOk(next))
-          ) ? null : current);
+          // Editing an address only resolves the error it actually fixes —
+          // the rule all three auth forms share (`afterEmailEdit`).
+          setError((current) => afterEmailEdit(current, next));
         }}
         invalid={error === 'need_email' || error === 'bad_email'}
         keyboardType="email-address"
@@ -106,7 +104,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         testID="signin-password"
       />
       <View style={s.metaRow}>
-        <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8} testID="signin-forgot">
+        <Pressable onPress={() => navigation.navigate('ForgotPassword', { email })} hitSlop={8} testID="signin-forgot">
           <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?', 'パスワードをお忘れですか？')}</Text>
         </Pressable>
       </View>
