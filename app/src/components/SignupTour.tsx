@@ -174,18 +174,20 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     <Modal visible={step >= 0 && !!rect && owner === uid} transparent animationType="none" statusBarTranslucent onRequestClose={dismiss}
       onShow={() => AccessibilityInfo.announceForAccessibility(`${step + 1}/4. ${titles[step]}. ${descriptions[step]}`)}>
       <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
-        <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityLabel={t('Close guide', 'Đóng hướng dẫn', 'ガイドを閉じる')} />
+        <Pressable style={[StyleSheet.absoluteFill, s.scrim]} onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('Close guide', 'Đóng hướng dẫn', 'ガイドを閉じる')} />
         {rect && <Pressable testID="signup-tour-target" accessibilityRole="button" accessibilityLabel={titles[step]}
           onPress={() => { const action = current.current?.press; persist(true, step + 1); finish(); if (action) requestAnimationFrame(action); }}
           style={[s.ring, { left: rect.x - 4, top: rect.y - 4, width: rect.width + 8, height: rect.height + 8 }]} />}
         <View testID="signup-tour" style={[s.card, { left, top, width: cardWidth, maxHeight: cardMaxHeight }]}
           onLayout={e => setTipHeight(e.nativeEvent.layout.height)}>
           <ScrollView bounces={false}>
+            {/* The count on the title's line, and no × (owner, 19 Oct 2026):
+                the × had a 44pt row to itself, a quarter of a 185pt card,
+                for a third way to close beside Skip and a tap outside. */}
             <View style={s.heading}>
               <Text style={s.count}>{step + 1}/4</Text>
-              <Pressable onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('Close guide', 'Đóng hướng dẫn', 'ガイドを閉じる')} style={s.close}><Text style={s.closeText}>×</Text></Pressable>
+              <Text style={s.title} accessibilityRole="header">{titles[step]}</Text>
             </View>
-            <Text style={s.title} accessibilityRole="header">{titles[step]}</Text>
             <Text style={s.body}>{descriptions[step]}</Text>
             <View style={s.actions}>
               {step < 3 && <Pressable onPress={dismiss} accessibilityRole="button" style={s.skip}><Text style={s.skipText}>{t('Skip guide', 'Bỏ qua hướng dẫn', 'ガイドをスキップ')}</Text></Pressable>}
@@ -203,13 +205,14 @@ const s = StyleSheet.create({
   notice: { position: 'absolute', zIndex: 100, left: 16, right: 16, padding: 16, backgroundColor: colors.surfaceCard, borderColor: colors.borderGlassSoft, borderWidth: 1, borderRadius: radius.card },
   ring: { position: 'absolute', borderWidth: 2, borderColor: colors.accent, borderRadius: radius.pill },
   card: { position: 'absolute', backgroundColor: colors.surfaceCard, borderColor: colors.borderGlassSoft, borderWidth: 1, borderRadius: radius.card, padding: 16 },
-  heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Light enough that the page still reads as the place being shown; dark
+  // enough that the card and the ring are what the eye lands on.
+  scrim: { backgroundColor: 'rgba(6,5,8,0.25)' },
+  heading: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 },
   count: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
-  close: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  closeText: { color: colors.textSecondary, fontSize: 26 },
-  title: { color: colors.text, fontSize: 18, fontWeight: font.semibold, marginBottom: 8 },
+  title: { flexShrink: 1, color: colors.text, fontSize: 18, fontWeight: font.semibold },
   body: { color: colors.textSecondary, fontSize: 15, lineHeight: 22 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 14 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   skip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4, marginRight: 'auto' },
   skipText: { color: colors.textSecondary, fontSize: 13 },
   next: { borderRadius: radius.pill, overflow: 'hidden' },
