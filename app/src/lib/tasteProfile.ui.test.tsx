@@ -33,15 +33,22 @@ const spies = vi.hoisted(() => ({
   logPlaceEvent: vi.fn(async () => {}),
 }));
 
-vi.mock('./auth', () => ({
-  useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null, userId: world.userId }),
-}));
+vi.mock('./auth', () => {
+  const m = {
+    useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null, userId: world.userId }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./catalog', () => ({
   usePlaces: () => ({ data: world.places }),
   useCatalog: () => ({ collections: { data: world.collections }, myLikes: world.myLikes }),
 }));
 vi.mock('./city', () => ({ useCity: () => ({ city: world.city }) }));
-vi.mock('./save', () => ({ useSave: () => ({ mine: { data: world.mine } }) }));
+vi.mock('./save', () => {
+  const useSave = () => ({ mine: { data: world.mine } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('./data', () => ({
   fetchPassedOver: spies.fetchPassedOver,
   logPlaceEvent: spies.logPlaceEvent,

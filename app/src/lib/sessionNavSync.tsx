@@ -8,11 +8,11 @@
 
 import { useEffect, useRef } from 'react';
 import { navRef } from '../nav';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import { accountEnded, stacksToRoot } from './sessionNav';
 
 export function SessionNavSync() {
-  const { userId } = useAuth();
+  const { userId } = useSession();
   // Who was signed in on the last render. A ref and not state: the
   // comparison is a side effect's business, and a state would re-render
   // the tree once more for nothing.

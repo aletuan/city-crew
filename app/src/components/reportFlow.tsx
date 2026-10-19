@@ -17,7 +17,7 @@
 import React, { useState } from 'react';
 import { Alert } from 'react-native';
 import PersonSheet, { type PersonAction } from './PersonSheet';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { submitReport } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { reportable, REPORT_REASONS, type ReportReason } from '../lib/report';
@@ -43,7 +43,7 @@ const ICONS: Record<ReportReason, PersonAction['icon']> = {
 
 export function useReport() {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const me = session?.user?.id ?? null;
   const [target, setTarget] = useState<ReportTarget | null>(null);
 

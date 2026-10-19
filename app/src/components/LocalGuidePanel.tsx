@@ -41,7 +41,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import welcomeLogo from '../../assets/welcome-logo.png';
-import { useAuth } from '../lib/auth';
+import { useProfile, useSession } from '../lib/auth';
 import { greetingName } from '../lib/greet';
 import { useI18n } from '../lib/i18n';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
@@ -57,7 +57,8 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
   testID?: string;
 }) {
   const { t } = useI18n();
-  const { session, profile } = useAuth();
+  const { session } = useSession();
+  const { profile } = useProfile();
   const uid = session?.user?.id ?? null;
   const who = greetingName(profile?.full_name);
   // Read, not fetched. `useIsGuide` answers from a store the launch
@@ -93,7 +94,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
         // A card's press, not a button's: 0.97 on something this wide
         // moves its edges 5pt and reads as a lurch (InviteCard uses this).
         scaleTo={0.985}
-        style={[s.panel, s.head]}
+        contentStyle={[s.panel, s.head]}
         testID="guide-open-gallery"
       >
         {/* The app's own mark rather than a camera glyph.

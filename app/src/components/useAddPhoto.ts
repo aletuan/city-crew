@@ -16,7 +16,7 @@ import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { addPlacePhoto, fetchMyPhotoCounts, removePhotoFile, uploadPlacePhoto } from '../lib/data';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
@@ -39,7 +39,7 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
   onAdded: () => void;
 }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   // The place's city, not the person's: a grant that names Đà Nẵng
   // does not reach a café in Huế, and the insert policy says so too.

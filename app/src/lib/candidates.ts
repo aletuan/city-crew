@@ -20,8 +20,8 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Keyboard } from 'react-native';
-import { useAuth } from './auth';
-import { useSave } from './save';
+import { useSession } from './auth';
+import { useSaveActions } from './save';
 import { useCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
 import { distanceKm, fmtDistance } from './geo';
@@ -58,10 +58,10 @@ export function useCandidates(): Candidates {
   const { t } = useI18n();
   const { city } = useCity();
   const me = useMyPosition();
-  const { session } = useAuth();
+  const { session } = useSession();
   const meId = session?.user?.id;
   const places = usePlaces();
-  const { askToSignIn } = useSave();
+  const { askToSignIn } = useSaveActions();
 
   const [results, setResults] = useState<Candidate[] | null>(null);
   const [known, setKnown] = useState<Record<string, Known>>({});

@@ -7,22 +7,24 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
-import { useAuth } from '../lib/auth';
-import { cleanEmail, emailShapeOk } from '../lib/email';
+import { useAuthActions } from '../lib/auth';
+import { afterEmailEdit, cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { PASSWORD_MIN } from '../lib/password';
 import { colors, font } from '../theme';
-import { leaveAuth, type Nav } from '../nav';
+import { leaveAuth, type Nav, type RootRoute } from '../nav';
 
 /** Supabase's own limit is one recovery email per address per minute. */
 const RESEND_SECONDS = 60;
 
-export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }) {
+export default function ForgotPasswordScreen({ navigation, route }: { navigation: Nav; route?: RootRoute<'ForgotPassword'> }) {
   const { t } = useI18n();
-  const { requestReset, resetPassword } = useAuth();
+  const { requestReset, resetPassword } = useAuthActions();
   const failText = useFailText();
-  const [email, setEmail] = useState('');
+  // What Sign in already held, filled in rather than asked for again.
+  // Editable, and nothing is sent until the reader asks.
+  const [email, setEmail] = useState(() => cleanEmail(route?.params?.email ?? ''));
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [step, setStep] = useState<'email' | 'reset'>('email');
@@ -179,7 +181,13 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
         value={email}
         // Stripped as it is typed rather than trimmed at submit — the
         // keyboard's space lands inside the address. See `lib/email`.
-        onChangeText={(v) => setEmail(cleanEmail(v))}
+        // The error this edit fixes goes with it, as on Sign in.
+        onChangeText={(v) => {
+          const next = cleanEmail(v);
+          setEmail(next);
+          setError((current) => afterEmailEdit(current, next));
+        }}
+        invalid={step === 'email' && (error === 'need_email' || error === 'bad_email')}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}

@@ -45,7 +45,7 @@ import { AddPill } from '../components/add';
 import { ScoreBadge, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { fetchGallery, fetchPlaceId, removePlacePhoto, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
 import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryPhoto } from '../lib/gallery';
@@ -55,7 +55,7 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { SHOWN, bestOf, needsScore, scoreAll, toTen, type PhotoScorer } from '../lib/photoScore';
 import { photoScorer } from '../lib/photoScoreNative';
-import { useSave } from '../lib/save';
+import { useMyLists } from '../lib/save';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -70,7 +70,7 @@ const GAP = 6;
 export default function GalleryScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'Gallery'> }) {
   const { t, lang } = useI18n();
   const { slug } = route.params;
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   const { width } = useWindowDimensions();
   const tabClearance = useTabBarClearance();
@@ -81,7 +81,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // that one is not in the catalog. Same two-step `PlaceDetail` takes.
   const { loading: catalogLoading, data: places, reload: reloadPlaces } = usePlaces();
   const { reload: reloadLists } = useCollections();
-  const { mine } = useSave();
+  const mine = useMyLists();
   // Everything on screen that draws this place's photographs, read again
   // after a write. Not only the catalog: a collection carries its places
   // embedded whole (`withMembers`), photographs and all, so a list holding
@@ -395,8 +395,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   accessibilityRole="button"
                   accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示')}` : ''}${p.score?.aesthetic != null ? ` · ${tenText(toTen(p.score.aesthetic))}/10` : ''}`}
                   accessibilityState={picks ? { selected: picked.includes(p.id) } : undefined}
-                  containerStyle={{ width: cell, height: cell }}
-                  style={[s.tile, !picks && lastOpened === p.id && s.tileLast]}
+                  style={{ width: cell, height: cell }}
+                  contentStyle={[s.tile, !picks && lastOpened === p.id && s.tileLast]}
                   testID={`gallery-tile-${p.id}`}
                 >
                   <Image source={{ uri: p.photo_uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
@@ -525,7 +525,7 @@ function Tool({ icon, glyph, label, onPress, destructive, testID }: {
       scaleTo={0.94}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={[s.tool, destructive && s.toolBad]}
+      contentStyle={[s.tool, destructive && s.toolBad]}
       testID={testID}
     >
       {glyph ?? <Ionicons name={icon} size={15} color={ink} />}
@@ -563,7 +563,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlassStrong,
   },
   // Not `flex: 1`: the waiting tile is given its cell outright, like the
-  // pressables around it get theirs through `containerStyle`.
+  // pressables around it get theirs through their outer `style`.
   waiting: { flex: 0, alignItems: 'center', justifyContent: 'center', gap: 8 },
   waitingText: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   hiddenVeil: {

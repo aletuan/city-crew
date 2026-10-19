@@ -45,36 +45,70 @@
 /** The ground: one of the two halves of every colour pair. */
 export type Scheme = 'dark' | 'light';
 /**
- * The looks that are one palette worn on both sides, and the ground each
- * pins the window to. The blur's tint, the status bar and every
- * scheme-picked value read the ground, and they have to agree with the
- * colours: a navy page under a light status bar would lose the clock.
- * The order is the sheet's.
+ * Everything one look is, in one row: the ground it pins the window to,
+ * the glyph its card and Profile's row wear, and its name in the app's
+ * three languages. The order is the sheet's.
+ *
+ * ── one row per look (19 Oct 2026) ──
+ *
+ * A look used to be four entries in three files — the ground here, the
+ * glyph in the sheet's option list, the name in a twenty-branch `if` in
+ * `schemeLabel`, the palette in `theme.ts` — and the `if` fell through to
+ * "Light" for a look it had not been told about. The SOLID review (O)
+ * asked that adding a look be one row: this one, and its palette, which
+ * `theme.ts` must now give every look here or fail to compile.
+ *
+ * The ground: the blur's tint, the status bar and every scheme-picked
+ * value read it, and they have to agree with the colours — a navy page
+ * under a light status bar would lose the clock.
+ *
+ * The glyphs name what each look is of: a cup for the coffee brown, a
+ * flower for the rose, a heart for the blush, a cloud for the slate grey,
+ * a star for the midnight sky, a boat for the navy, an ice cream for the
+ * chocolate, a planet for the cosmic purple, a leaf for the teal, a bolt
+ * for the honey yellow, a diamond for the royal blue, a fruit for the
+ * plum, sparkles for the violet, a glass for the wine, a rose for the
+ * maroon, a sun behind cloud for the amber, a bulb for the neon, a flame
+ * for the ember, footsteps for the sand — not a leaf, which Duck's teal
+ * already wears. Ionicons names, kept as text so this file stays pure;
+ * a test holds each to a glyph that exists.
  */
-export const PINNED = {
-  coffee: 'dark',
-  rose: 'light',
-  blush: 'light',
-  slate: 'light',
-  midnight: 'dark',
-  navy: 'dark',
-  chocolate: 'dark',
-  cosmic: 'dark',
-  duck: 'light',
-  honey: 'dark',
-  royal: 'dark',
-  plum: 'dark',
-  violet: 'dark',
-  wine: 'dark',
-  maroon: 'dark',
-  amber: 'light',
-  neon: 'dark',
-  ember: 'dark',
-  sand: 'light',
-} as const satisfies Record<string, Scheme>;
+export const LOOK_DEFS = {
+  coffee: { ground: 'dark', icon: 'cafe-outline', name: { en: 'Coffee', vi: 'Nâu cafe', ja: 'コーヒー' } },
+  rose: { ground: 'light', icon: 'flower-outline', name: { en: 'Rose', vi: 'Hồng', ja: 'ローズ' } },
+  blush: { ground: 'light', icon: 'heart-outline', name: { en: 'Blush', vi: 'Hồng phấn', ja: 'ブラッシュ' } },
+  slate: { ground: 'light', icon: 'cloud-outline', name: { en: 'Slate', vi: 'Xanh xám', ja: 'スレート' } },
+  midnight: { ground: 'dark', icon: 'star-outline', name: { en: 'Midnight', vi: 'Xanh than', ja: 'ミッドナイト' } },
+  navy: { ground: 'dark', icon: 'boat-outline', name: { en: 'Navy', vi: 'Xanh navy', ja: 'ネイビー' } },
+  chocolate: { ground: 'dark', icon: 'ice-cream-outline', name: { en: 'Chocolate', vi: 'Sô-cô-la', ja: 'チョコレート' } },
+  cosmic: { ground: 'dark', icon: 'planet-outline', name: { en: 'Cosmic', vi: 'Vũ trụ', ja: 'コズミック' } },
+  duck: { ground: 'light', icon: 'leaf-outline', name: { en: 'Teal', vi: 'Xanh cổ vịt', ja: 'ティール' } },
+  honey: { ground: 'dark', icon: 'flash-outline', name: { en: 'Honey', vi: 'Mật ong', ja: 'ハニー' } },
+  royal: { ground: 'dark', icon: 'diamond-outline', name: { en: 'Royal', vi: 'Hoàng gia', ja: 'ロイヤル' } },
+  plum: { ground: 'dark', icon: 'nutrition-outline', name: { en: 'Plum', vi: 'Mận', ja: 'プラム' } },
+  violet: { ground: 'dark', icon: 'sparkles-outline', name: { en: 'Violet', vi: 'Tím', ja: 'バイオレット' } },
+  wine: { ground: 'dark', icon: 'wine-outline', name: { en: 'Wine', vi: 'Rượu vang', ja: 'ワイン' } },
+  maroon: { ground: 'dark', icon: 'rose-outline', name: { en: 'Maroon', vi: 'Đỏ mận', ja: 'マルーン' } },
+  amber: { ground: 'light', icon: 'partly-sunny-outline', name: { en: 'Amber', vi: 'Vàng đậm', ja: 'アンバー' } },
+  neon: { ground: 'dark', icon: 'bulb-outline', name: { en: 'Neon', vi: 'Hồng neon', ja: 'ネオン' } },
+  ember: { ground: 'dark', icon: 'flame-outline', name: { en: 'Ember', vi: 'Cam cháy', ja: 'エンバー' } },
+  sand: { ground: 'light', icon: 'footsteps-outline', name: { en: 'Sand', vi: 'Be cát', ja: 'サンド' } },
+} as const satisfies Record<string, LookDef>;
+
+/** One look, as `LOOK_DEFS` holds it. */
+export type LookDef = {
+  ground: Scheme;
+  icon: string;
+  name: { en: string; vi: string; ja: string };
+};
+
+/** Each look and the ground it pins, read off `LOOK_DEFS`. */
+export const PINNED = Object.fromEntries(
+  Object.entries(LOOK_DEFS).map(([id, def]) => [id, def.ground]),
+) as { readonly [K in keyof typeof LOOK_DEFS]: (typeof LOOK_DEFS)[K]['ground'] };
 
 /** A look other than the standard one. */
-export type Pinned = keyof typeof PINNED;
+export type Pinned = keyof typeof LOOK_DEFS;
 /** What the person chose in the Theme sheet, and what is stored. */
 export type Pref = Scheme | 'system' | Pinned;
 /** The set of colours the pairs are built from. */

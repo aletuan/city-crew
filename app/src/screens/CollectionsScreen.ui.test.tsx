@@ -52,18 +52,23 @@ const spies = vi.hoisted(() => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, cities: [] }) }));
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ ...state.cols, reload: spies.colsReload }),
   useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
   usePlaces: () => ({ data: state.places, loading: state.placesLoading, loaded: state.placesLoaded }),
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ mine: { ...state.mine, reload: spies.mineReload }, askToSignIn: spies.askToSignIn }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { ...state.mine, reload: spies.mineReload }, askToSignIn: spies.askToSignIn });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 // Only the two calls that leave the device are stood in for; the rest of
 // the module is the real membership and city arithmetic.
 vi.mock('../lib/data', async (orig) => ({

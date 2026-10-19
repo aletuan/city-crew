@@ -70,7 +70,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   ].filter((f): f is string => !!f).join(', ');
 
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={spoken} containerStyle={s.gutter} style={s.card}>
+    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={spoken} style={s.gutter} contentStyle={s.card}>
       {cover
         ? <Image source={{ uri: cover.photo_uri }} style={s.thumb} contentFit="cover" />
         : <View style={[s.thumb, { backgroundColor: colors.surfaceGlass }]} />}
@@ -89,7 +89,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
 }
 
 const s = StyleSheet.create({
-  // The inset lives on the outer Pressable (`containerStyle`), not the
+  // The inset lives on the outer Pressable (`style`), not the
   // animated inner view: that keeps the page gutters outside the tap
   // target, so a press beside the strip does not open the place.
   gutter: { marginHorizontal: space.page },

@@ -17,7 +17,11 @@ const goTo = vi.hoisted(() => vi.fn());
 vi.mock('../nav', () => ({ goTo }));
 // `Auth.userId`: undefined not known yet, null a guest, an id an account.
 const reader = vi.hoisted(() => ({ userId: null as string | null | undefined }));
-vi.mock('../lib/auth', () => ({ useAuth: () => ({ userId: reader.userId }) }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ userId: reader.userId }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 
 import WelcomeSheet from './WelcomeSheet';
 import { launchSettled } from '../lib/launch';

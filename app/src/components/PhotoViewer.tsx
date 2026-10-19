@@ -112,7 +112,7 @@ export default function PhotoViewer({ photos, index, onIndex, onClose }: {
         <>
           <View style={[s.top, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
             <PressableScale
-              style={s.round}
+              contentStyle={s.round}
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel={t('Close', 'Đóng', '閉じる')}

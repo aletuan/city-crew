@@ -12,7 +12,7 @@
 // trip accepted on another phone a moment before the network says so.
 
 import { useEffect, useMemo } from 'react';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import { useI18n } from './i18n';
 import { useInvitations } from './invitations';
 import { useMyTrips } from './mytrips';
@@ -20,7 +20,7 @@ import { tripsToRemind } from './remind';
 import { syncTripReminders } from './reminders';
 
 export function ReminderSync() {
-  const { session } = useAuth();
+  const { session } = useSession();
   const me = session?.user?.id ?? null;
   const trips = useMyTrips();
   const { invites } = useInvitations();

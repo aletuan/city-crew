@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -48,7 +48,7 @@ import { useI18n } from '../lib/i18n';
 import { localized, localizedLang } from '../lib/localized';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
-import { useSave } from '../lib/save';
+import { useSaveActions } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
@@ -132,7 +132,7 @@ const HISTORY_ROW = 48;
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
   const { city, cities } = useCity();
-  const { save, isSaved, askToSignIn } = useSave();
+  const { save, isSaved, askToSignIn } = useSaveActions();
   const { width } = useWindowDimensions();
   const { loading: catalogLoading, data: places } = usePlaces();
   const inCatalog = useMemo(
@@ -173,7 +173,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // a guest never learns exists, and the bookmark and the like are both
   // drawn for guests and open the sign-in sheet on a tap. So this does
   // the same — see `checkIn`.
-  const { session } = useAuth();
+  const { session } = useSession();
   const uid = session?.user?.id ?? null;
   const showCheckin = useFlag('place_checkin');
   // The reader's visits — the one copy the whole app shares, so the
@@ -456,7 +456,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
             <PressableScale
               onPress={() => navigation.goBack()} scaleTo={0.9}
-              containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab}
+              style={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} contentStyle={s.fab}
               // In the reader's language, like every other control: these
               // two were English literals, and VoiceOver read "Back" and
               // "Share" in the middle of a Vietnamese screen (UX-07).
@@ -468,7 +468,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </PressableScale>
             <PressableScale
               onPress={share} scaleTo={0.9}
-              containerStyle={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} style={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有')}
+              style={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} contentStyle={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有')}
               accessibilityRole="button"
             >
               <Ionicons name="share-outline" size={20} color={onPhoto.text} />
@@ -480,7 +480,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <PressableScale
               anchorRef={saveAnchor}
               onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-              containerStyle={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} style={s.fab}
+              style={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} contentStyle={s.fab}
               accessibilityRole="button"
               accessibilityState={{ selected: saved }}
               // Two ids for the two states, so a smoke flow can wait on the
@@ -793,7 +793,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 accessibilityLabel={latestVisit
                   ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション')
                   : t('Check in', 'Check-in', 'チェックイン')}
-                containerStyle={s.checkinSlot}
+                style={s.checkinSlot}
                 // ── worn ──
                 // Filled once a visit is written, bare outline until then.
                 // It was `accentSoft` first, and on the phone a 10% tint
@@ -814,7 +814,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 // The rest label is a verb because a button is one: "Check
                 // in", not the noun. Vietnamese has no such split and keeps
                 // "Check-in".
-                style={[s.checkin, latestVisit && s.checkinOn]}
+                contentStyle={[s.checkin, latestVisit && s.checkinOn]}
                 testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
               >
                 <Ionicons name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
@@ -1013,7 +1013,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     there is nothing else to carry it. */}
                 {creditLine && (openBlurb ? (
                   <PressableScale
-                    style={s.creditRow}
+                    contentStyle={s.creditRow}
                     scaleTo={0.97}
                     // The line is 19pt tall and as wide as a handle; this
                     // makes it a 44pt target without drawing one.
@@ -1106,8 +1106,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       accessibilityRole="button"
                       accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
                       hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                      containerStyle={s.goSlot}
-                      style={s.go}
+                      style={s.goSlot}
+                      contentStyle={s.go}
                       testID="detail-directions"
                     >
                       <Ionicons name="navigate" size={18} color={colors.accent} />
@@ -1211,8 +1211,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     accessibilityRole="button"
                     accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    containerStyle={s.goOnMap}
-                    style={s.goDisc}
+                    style={s.goOnMap}
+                    contentStyle={s.goDisc}
                     testID="detail-directions"
                   >
                     <Ionicons name="navigate" size={18} color={colors.accent} />
@@ -1713,8 +1713,8 @@ const s = StyleSheet.create({
     marginLeft: GUTTER, marginBottom: 16,
     borderRadius: radius.card - 8, overflow: 'hidden',
   },
-  // `containerStyle`, not `style`: PressableScale puts `style` on its inner
-  // animated view and only `containerStyle` on the Pressable.
+  // On the Pressable itself — PressableScale's `style`, not its
+  // `contentStyle`, which is the animated view inside.
   //
   // The in-row position, which is now the fallback — a card with no map to
   // stand the button on. `marginLeft` is the gap the row never had: the

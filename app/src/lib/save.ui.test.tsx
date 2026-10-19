@@ -12,7 +12,7 @@
 // It renders `AuthSheet` and `SaveSheet` itself, which is why this is a
 // rendered test rather than a test of a function.
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -24,6 +24,7 @@ const world = vi.hoisted(() => ({
   mine: {
     data: [] as unknown[], loading: false, loaded: true,
     error: null as string | null, reload: () => {},
+    loadedAt: null as number | null, fromCache: false,
   },
   historyOn: false,
   userId: undefined as string | null | undefined,
@@ -44,7 +45,11 @@ const logPlaceEvent = vi.hoisted(() => vi.fn(async () => {}));
 const reload = vi.hoisted(() => vi.fn());
 
 vi.mock('../nav', () => ({ goTo, navRef }));
-vi.mock('./auth', () => ({ useAuth: () => ({ session: world.session, userId: world.userId }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ session: world.session, userId: world.userId }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./city', () => ({ useCity: () => ({ city: { id: 'hanoi' } }) }));
 vi.mock('./i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -67,7 +72,7 @@ vi.mock('./data', async (orig) => ({
   logPlaceEvent,
 }));
 
-import { SaveProvider, useSave } from './save';
+import { SaveProvider, useMyLists, useSave, useSaveActions } from './save';
 import { dropResume, takeResume } from './resume';
 
 const place = { slug: 'cong-caphe', name_en: 'Cong Caphe', name_vi: 'Cộng' } as unknown as Place;
@@ -100,7 +105,7 @@ beforeEach(() => {
   world.userId = undefined;
   world.listsFor = [];
   world.prefsFor = [];
-  world.mine = { data: [], loading: false, loaded: true, error: null, reload: () => {} };
+  world.mine = { data: [], loading: false, loaded: true, error: null, reload: () => {}, loadedAt: null, fromCache: false };
   world.historyOn = false;
   goTo.mockClear();
   navRef.ready = true;
@@ -114,6 +119,51 @@ beforeEach(() => {
 // The lists hydrate with the catalog rather than a session read later:
 // a bookmark that filled in a round trip after the card it sits on read
 // as the app loading twice. See `Auth.userId`.
+// The SOLID review's split (19 Oct 2026): the lists and the acts are two
+// hooks, the lists are the whole `Fetch`, and `useSave` is still both.
+describe('the two halves', () => {
+  // Read off a holder, written after render: a component must not change
+  // what it does not own while it renders.
+  const seen: {
+    lists?: ReturnType<typeof useMyLists>;
+    acts?: ReturnType<typeof useSaveActions>;
+    both?: ReturnType<typeof useSave>;
+  } = {};
+  function Probe() {
+    const lists = useMyLists();
+    const acts = useSaveActions();
+    const both = useSave();
+    useEffect(() => { Object.assign(seen, { lists, acts, both }); });
+    return null;
+  }
+
+  it('hands out the lists as the whole Fetch, error and loadedAt included', () => {
+    world.mine = { ...world.mine, error: 'offline', loadedAt: 1234, fromCache: true, data: [list('weekend', ['cong-caphe'])] };
+    render(<SaveProvider><Probe /></SaveProvider>);
+    expect(seen.lists).toMatchObject({ error: 'offline', loadedAt: 1234, fromCache: true, loading: false });
+    expect(seen.lists!.data.map((c) => c.slug)).toEqual(['weekend']);
+    expect(seen.lists!.reload).toBe(reload);
+  });
+
+  it('hands out the acts on their own, and both as useSave', () => {
+    world.mine = { ...world.mine, data: [list('weekend', ['cong-caphe'])] };
+    render(<SaveProvider><Probe /></SaveProvider>);
+    expect(Object.keys(seen.acts!).sort()).toEqual(['askToSignIn', 'isSaved', 'save']);
+    expect(seen.acts!.isSaved('cong-caphe')).toBe(true);
+    expect(seen.both!.save).toBe(seen.acts!.save);
+    expect(seen.both!.mine.data.map((c) => c.slug)).toEqual(['weekend']);
+  });
+
+  it('reads as nothing saved and nothing loaded outside a provider', () => {
+    render(<Probe />);
+    expect(seen.lists).toMatchObject({ data: [], loaded: false, error: null, loadedAt: null });
+    expect(seen.acts!.isSaved('anything')).toBe(false);
+    seen.acts!.save({} as never);
+    seen.acts!.askToSignIn();
+    seen.lists!.reload();
+  });
+});
+
 describe('whose lists, before the session is read', () => {
   it('the reader the last launch remembered — lists and preferences both', () => {
     world.session = null;

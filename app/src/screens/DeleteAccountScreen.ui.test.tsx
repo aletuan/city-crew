@@ -23,9 +23,13 @@ const account = vi.hoisted(() => ({
   email: 'trang@example.com' as string | null,
   profile: { handle: 'trang', full_name: 'Trang', location: '', bio: '', interests: '', avatar_url: '' },
 }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ deleteAccount, email: account.email, profile: account.profile }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ deleteAccount, email: account.email, profile: account.profile }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

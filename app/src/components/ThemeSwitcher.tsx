@@ -132,10 +132,10 @@ import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWin
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { fetchPopularThemes, saveTheme } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
+import { LOOK_DEFS, lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
 import { orderLooks, parseSeen, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from '../lib/lookLabels';
 import { Pref, Return, Scheme, useScheme } from '../lib/theme';
 import { colors, font, PALETTES, pillInk, radius, space } from '../theme';
@@ -149,34 +149,11 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'system', icon: 'phone-portrait-outline' },
   { id: 'dark', icon: 'moon-outline' },
   { id: 'light', icon: 'sunny-outline' },
-  // The looks name what they are of: a cup for the coffee brown, a
-  // flower for the rose, a heart for the blush, a cloud for the slate
-  // grey, a star for the midnight sky, a boat for the navy, an ice cream
-  // for the chocolate, a planet for the cosmic purple, a leaf for the
-  // teal, a bolt for the honey yellow, a diamond for the royal blue, a
-  // fruit for the plum, sparkles for the violet, a glass for the wine, a
-  // rose for the maroon, a sun behind cloud for the amber, a bulb for the
-  // neon, a flame for the ember, footsteps for the sand — not a leaf,
-  // which Duck's teal already wears.
-  { id: 'coffee', icon: 'cafe-outline' },
-  { id: 'rose', icon: 'flower-outline' },
-  { id: 'blush', icon: 'heart-outline' },
-  { id: 'slate', icon: 'cloud-outline' },
-  { id: 'midnight', icon: 'star-outline' },
-  { id: 'navy', icon: 'boat-outline' },
-  { id: 'chocolate', icon: 'ice-cream-outline' },
-  { id: 'cosmic', icon: 'planet-outline' },
-  { id: 'duck', icon: 'leaf-outline' },
-  { id: 'honey', icon: 'flash-outline' },
-  { id: 'royal', icon: 'diamond-outline' },
-  { id: 'plum', icon: 'nutrition-outline' },
-  { id: 'violet', icon: 'sparkles-outline' },
-  { id: 'wine', icon: 'wine-outline' },
-  { id: 'maroon', icon: 'rose-outline' },
-  { id: 'amber', icon: 'partly-sunny-outline' },
-  { id: 'neon', icon: 'bulb-outline' },
-  { id: 'ember', icon: 'flame-outline' },
-  { id: 'sand', icon: 'footsteps-outline' },
+  // The looks, from the one row each keeps in `lib/look`.
+  ...(Object.keys(LOOK_DEFS) as Pinned[]).map((id) => ({
+    id: id as Pref,
+    icon: LOOK_DEFS[id].icon as keyof typeof Ionicons.glyphMap,
+  })),
 ];
 
 const isLook = (id: Pref): id is Pinned => Object.prototype.hasOwnProperty.call(PINNED, id);
@@ -228,25 +205,10 @@ export function schemeIcon(pref: Pref, scheme: Scheme): keyof typeof Ionicons.gl
 /** The label for a setting, in the app's three languages. */
 export function schemeLabel(id: Pref, t: T): string {
   if (id === 'system') return t('Automatic', 'Tự động', '自動');
-  if (id === 'coffee') return t('Coffee', 'Nâu cafe', 'コーヒー');
-  if (id === 'rose') return t('Rose', 'Hồng', 'ローズ');
-  if (id === 'blush') return t('Blush', 'Hồng phấn', 'ブラッシュ');
-  if (id === 'slate') return t('Slate', 'Xanh xám', 'スレート');
-  if (id === 'midnight') return t('Midnight', 'Xanh than', 'ミッドナイト');
-  if (id === 'navy') return t('Navy', 'Xanh navy', 'ネイビー');
-  if (id === 'chocolate') return t('Chocolate', 'Sô-cô-la', 'チョコレート');
-  if (id === 'cosmic') return t('Cosmic', 'Vũ trụ', 'コズミック');
-  if (id === 'duck') return t('Teal', 'Xanh cổ vịt', 'ティール');
-  if (id === 'honey') return t('Honey', 'Mật ong', 'ハニー');
-  if (id === 'royal') return t('Royal', 'Hoàng gia', 'ロイヤル');
-  if (id === 'plum') return t('Plum', 'Mận', 'プラム');
-  if (id === 'violet') return t('Violet', 'Tím', 'バイオレット');
-  if (id === 'wine') return t('Wine', 'Rượu vang', 'ワイン');
-  if (id === 'maroon') return t('Maroon', 'Đỏ mận', 'マルーン');
-  if (id === 'amber') return t('Amber', 'Vàng đậm', 'アンバー');
-  if (id === 'neon') return t('Neon', 'Hồng neon', 'ネオン');
-  if (id === 'ember') return t('Ember', 'Cam cháy', 'エンバー');
-  if (id === 'sand') return t('Sand', 'Be cát', 'サンド');
+  if (isLook(id)) {
+    const { en, vi, ja } = LOOK_DEFS[id].name;
+    return t(en, vi, ja);
+  }
   return id === 'dark'
     ? t('Dark', 'Tối', 'ダーク')
     : t('Light', 'Sáng', 'ライト');
@@ -306,7 +268,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   // The account's copy of a choice, when there is an account: the theme
   // follows the account since 12 Oct 2026 (`lib/themeAccountSync`). A
   // guest's choice stays on the device.
-  const uid = useAuth().userId;
+  const uid = useSession().userId;
   const remember = (id: Pref) => (typeof uid === 'string' ? () => saveTheme(uid, id) : undefined);
   const grounds = OPTIONS.filter((o) => lookOf(o.id) === 'standard');
   // The catalogue, in its own order: what "New" compares against and
@@ -442,7 +404,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
               {i > 0 && <View style={s.sep} />}
               <PressableScale
                 haptic="selection"
-                style={[s.row, active && s.rowOn]}
+                contentStyle={[s.row, active && s.rowOn]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 // The sheet stays open — see the note in the header.
@@ -514,8 +476,8 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                       <PressableScale
                         key={o.id}
                         haptic="selection"
-                        containerStyle={s.cardCell}
-                        style={[s.card, active && s.rowOn]}
+                        style={s.cardCell}
+                        contentStyle={[s.card, active && s.rowOn]}
                         accessibilityRole="radio"
                         accessibilityState={{ selected: active }}
                         onPress={() => choose(o.id)}

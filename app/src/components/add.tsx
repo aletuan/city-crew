@@ -59,7 +59,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
 }) {
   return (
     <View style={s.slotWrap}>
-      <PressableScale onPress={onPress} accessibilityRole="button" style={s.slot} testID={testID}>
+      <PressableScale onPress={onPress} accessibilityRole="button" contentStyle={s.slot} testID={testID}>
         <View style={s.slotIcon}>
           <Ionicons name="add" size={26} color={colors.accent} />
         </View>

@@ -6,7 +6,7 @@
 // as long as the email templates include {{ .Token }}. The session
 // persists in AsyncStorage and refreshes while the app is foregrounded.
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AuthError, Session } from '@supabase/supabase-js';
@@ -163,16 +163,63 @@ type Auth = {
 
 const EMPTY_PROFILE: Profile = { handle: '', full_name: '', location: '', bio: '', interests: '', avatar_url: '' };
 
-const Ctx = createContext<Auth>({
-  ready: false, session: null, userId: undefined, email: null, profile: EMPTY_PROFILE, memberSince: null,
+/**
+ * ── three halves, one provider (19 Oct 2026) ──
+ *
+ * `Auth` has sixteen members and fifty callers, and twenty-three of those
+ * read only `session`. As one context, every one of them drew again when
+ * the profile changed — a new avatar, a saved bio — for a value they never
+ * read. The SOLID review (I) split it along the lines the callers already
+ * drew: who is signed in, what their profile says, and what can be done.
+ * `useAuth` stays as all three, for the callers that use more than one.
+ */
+export type AuthSession = Pick<Auth, 'ready' | 'session' | 'userId' | 'email'>;
+export type AuthProfile = Pick<Auth, 'profile' | 'memberSince'>;
+export type AuthActions = Omit<Auth, keyof AuthSession | keyof AuthProfile>;
+
+/**
+ * The two session events another provider acts on: `SIGNED_OUT` releases
+ * the city a guest pinned (`city.tsx`), `TOKEN_REFRESHED` retries a
+ * catalog read the old token lost (`catalog.tsx`). They used to subscribe
+ * to Supabase themselves; this provider is now the one place that does,
+ * and hands the event on (SOLID review, D).
+ */
+export type AuthEventKind = 'SIGNED_OUT' | 'TOKEN_REFRESHED';
+type Subscribe = (kind: AuthEventKind, fn: () => void) => () => void;
+
+const SessionCtx = createContext<AuthSession>({ ready: false, session: null, userId: undefined, email: null });
+const ProfileCtx = createContext<AuthProfile>({ profile: EMPTY_PROFILE, memberSince: null });
+const ActionsCtx = createContext<AuthActions>({
   signIn: async () => {}, signUp: async () => ({ needsConfirm: false }),
   confirmSignUp: async () => {}, requestReset: async () => {}, resetPassword: async () => {},
   updateProfile: async () => {}, setAvatar: async () => {}, setAvatarPreset: async () => {}, clearAvatar: async () => {},
   signOut: async () => {},
   deleteAccount: async () => {},
 });
+const EventsCtx = createContext<Subscribe>(() => () => {});
 
-export const useAuth = () => useContext(Ctx);
+/** Who is signed in: `ready`, `session`, `userId`, `email`. */
+export const useSession = () => useContext(SessionCtx);
+/** What their profile says: `profile`, `memberSince`. */
+export const useProfile = () => useContext(ProfileCtx);
+/** What can be done: sign in and out, sign up, reset, edit, delete. */
+export const useAuthActions = () => useContext(ActionsCtx);
+/** All of it, as one object — the shape every caller had before the split. */
+export function useAuth(): Auth {
+  return { ...useSession(), ...useProfile(), ...useAuthActions() };
+}
+
+/**
+ * Run `fn` each time the session reports `kind`, for as long as the
+ * caller is mounted. Outside an `AuthProvider` it never runs: there is no
+ * session to report on.
+ */
+export function useAuthEvent(kind: AuthEventKind, fn: () => void) {
+  const subscribe = useContext(EventsCtx);
+  const latest = useRef(fn);
+  latest.current = fn;
+  useEffect(() => subscribe(kind, () => latest.current()), [subscribe, kind]);
+}
 
 /** Whose session this device held last — see `Auth.userId`. */
 export const LAST_READER_KEY = 'citycrew.auth.lastReader';
@@ -182,12 +229,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [ready, setReady] = useState(false);
 
+  // Who is listening for which event — see `useAuthEvent`.
+  const listeners = useRef(new Map<AuthEventKind, Set<() => void>>());
+  const subscribe = useCallback<Subscribe>((kind, fn) => {
+    const set = listeners.current.get(kind) ?? new Set();
+    listeners.current.set(kind, set);
+    set.add(fn);
+    return () => { set.delete(fn); };
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s);
+      listeners.current.get(event as AuthEventKind)?.forEach((fn) => fn());
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -432,19 +491,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut().catch(() => {});
   }, [userId]);
 
-  const value = useMemo<Auth>(() => {
-    return {
-      ready,
-      session,
-      userId,
-      email: session?.user?.email ?? null,
-      profile,
-      memberSince: session?.user?.created_at ? new Date(session.user.created_at) : null,
-      signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
-      setAvatar, setAvatarPreset, clearAvatar, signOut, deleteAccount,
-    };
-  }, [ready, session, userId, profile, signIn, signUp, confirmSignUp, requestReset, resetPassword,
+  const sessionValue = useMemo<AuthSession>(
+    () => ({ ready, session, userId, email: session?.user?.email ?? null }),
+    [ready, session, userId],
+  );
+  const createdAt = session?.user?.created_at;
+  const profileValue = useMemo<AuthProfile>(
+    () => ({ profile, memberSince: createdAt ? new Date(createdAt) : null }),
+    [profile, createdAt],
+  );
+  const actions = useMemo<AuthActions>(() => ({
+    signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
+    setAvatar, setAvatarPreset, clearAvatar, signOut, deleteAccount,
+  }), [signIn, signUp, confirmSignUp, requestReset, resetPassword,
       updateProfile, setAvatar, setAvatarPreset, clearAvatar, signOut, deleteAccount]);
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <EventsCtx.Provider value={subscribe}>
+      <SessionCtx.Provider value={sessionValue}>
+        <ProfileCtx.Provider value={profileValue}>
+          <ActionsCtx.Provider value={actions}>{children}</ActionsCtx.Provider>
+        </ProfileCtx.Provider>
+      </SessionCtx.Provider>
+    </EventsCtx.Provider>
+  );
 }

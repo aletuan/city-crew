@@ -18,7 +18,11 @@ import { fireEvent, render, screen, waitFor } from '../uitest/render';
 
 const submitReport = vi.hoisted(() => vi.fn(async () => {}));
 const auth = vi.hoisted(() => ({ session: { user: { id: 'me' } } as { user: { id: string } } | null }));
-vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: auth.session }) }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ session: auth.session }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   submitReport,

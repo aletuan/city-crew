@@ -7,7 +7,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -30,7 +29,8 @@ import { DEFAULT_TZ } from '../lib/clock';
 import { openFragment, openState } from '../lib/format';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
-import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
 import { newestPlaces } from '../lib/newest';
 import { openNowPlaces } from '../lib/opennow';
 import { useBrowseTaste } from '../lib/tasteProfile';
@@ -110,16 +110,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // them, and this screen only ferries the list to and from storage. A
   // read that fails (fresh install, cleared storage) is an empty memory,
   // not an error.
-  const [recents, setRecents] = useState<string[]>([]);
-  useEffect(() => {
-    AsyncStorage.getItem(RECENTS_KEY)
-      .then((raw) => setRecents(parseRecents(raw)))
-      .catch(() => {});
-  }, []);
-  const keepRecents = (next: string[]) => {
-    setRecents(next);
-    AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(next)).catch(() => {});
-  };
+  const [recents, keepRecents] = useStored(RECENTS_KEY, NO_RECENTS, RECENTS);
   // A search is worth remembering when it *worked* — the reader opened
   // one of its results. Called from every result row's onPress; blank
   // queries no-op inside rememberSearch.
@@ -484,8 +475,8 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
               // <button>, which is not valid HTML).
               <View style={s.recentRow}>
                 <PressableScale
-                  containerStyle={s.recentHit}
-                  style={s.recentMain}
+                  style={s.recentHit}
+                  contentStyle={s.recentMain}
                   scaleTo={0.97}
                   onPress={() => setQuery(item.term)}
                   accessibilityRole="button"
@@ -552,7 +543,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             const meta = [area, when].filter(Boolean).join(' · ');
             return (
               <PressableScale
-                style={s.row}
+                contentStyle={s.row}
                 onPress={() => navigation.navigate('PlaceDetail', { slug: pl.slug })}
               >
                 <Card style={s.card}>
@@ -638,7 +629,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           }
           return (
             <PressableScale
-              style={s.row}
+              contentStyle={s.row}
               onPress={() => {
                 noteSearch();
                 navigation.navigate('CollectionDetail', { slug: item.collection.slug });

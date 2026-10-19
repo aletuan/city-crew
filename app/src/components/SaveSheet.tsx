@@ -65,8 +65,8 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: on }}
                 testID={`save-row-${i}`}
-                containerStyle={{ alignSelf: 'stretch' }}
-                style={s.row}
+                style={{ alignSelf: 'stretch' }}
+                contentStyle={s.row}
               >
                 <View style={[s.tick, on && s.tickOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.accentInk} /> : null}
@@ -87,8 +87,8 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
         <PressableScale
           onPress={onNew}
           accessibilityRole="button"
-          containerStyle={{ alignSelf: 'stretch' }}
-          style={s.newRow}
+          style={{ alignSelf: 'stretch' }}
+          contentStyle={s.newRow}
         >
           <View style={s.newIcon}>
             <Ionicons name="add" size={19} color={colors.accent} />
@@ -96,7 +96,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
           <Text style={s.newText}>{t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}</Text>
         </PressableScale>
 
-        <PressableScale onPress={onClose} accessibilityRole="button" style={s.done} testID="save-done">
+        <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.done} testID="save-done">
           <Text style={s.doneText}>{t('Done', 'Xong', '完了')}</Text>
         </PressableScale>
       </Animated.View>

@@ -16,7 +16,7 @@ import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { AddPill } from '../components/add';
-import { useAuth } from '../lib/auth';
+import { useProfile, useSession } from '../lib/auth';
 import { categoriesOf } from '../lib/categories';
 import { collectionKinds, narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
@@ -31,7 +31,7 @@ import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
-import { useSave } from '../lib/save';
+import { useMyLists, useSaveActions } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space, type } from '../theme';
@@ -277,7 +277,8 @@ function DraggableCard({
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
-  const { session, profile } = useAuth();
+  const { session } = useSession();
+  const { profile } = useProfile();
   const uid = session?.user?.id;
   const cols = useCollections();
   // Both catalogs, because a list of your own that is still private is in
@@ -286,7 +287,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // copy, so a place saved from anywhere shows here. A published list of
   // your own is now in both, and `find` takes the first — `mine`, which
   // is the fuller row.
-  const { mine, askToSignIn } = useSave();
+  const mine = useMyLists();
+  const { askToSignIn } = useSaveActions();
   // Reporting, raised from the overflow menu — see components/reportFlow.
   const { report, canReport, node: reportSheet } = useReport();
   const { data: places, loading: placesLoading } = usePlaces();
@@ -840,7 +842,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const [whoSees, setWhoSees] = useState(false);
   const visibility = col && owned ? (
     <PressableScale
-      style={s.visibility}
+      contentStyle={s.visibility}
       scaleTo={0.94}
       haptic="selection"
       hitSlop={{ top: 14, bottom: 14, left: 12, right: 8 }}
@@ -924,7 +926,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      is most obviously an invitation. */
   const heart = col && isPublic && col.id ? (
     <PressableScale
-      style={s.like}
+      contentStyle={s.like}
       scaleTo={0.82}
       haptic="none"
       hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
@@ -1079,7 +1081,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const curatorRow = faceTag ? (
     !owned && curatorActions.length > 0 ? (
       <PressableScale
-        style={s.curator}
+        contentStyle={s.curator}
         onPress={() => setAboutCurator(true)}
         scaleTo={0.97}
         haptic="selection"
@@ -1293,7 +1295,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 scaleTo={0.96}
                 haptic="selection"
                 accessibilityRole="button"
-                style={s.descAdd}
+                contentStyle={s.descAdd}
                 testID="collection-desc-add"
               >
                 <Ionicons name="add" size={17} color={colors.accent} />

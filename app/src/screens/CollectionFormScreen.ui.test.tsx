@@ -32,9 +32,13 @@ const who = vi.hoisted(() => ({
 const catalog = vi.hoisted(() => ({ data: [] as unknown[] }));
 const saved = vi.hoisted(() => ({ data: [] as unknown[] }));
 
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: who.session }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: who.session }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/city', () => ({
   useCity: () => ({ city: who.city }),
 }));
@@ -45,9 +49,10 @@ vi.mock('../lib/i18n', () => ({
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => catalog,
 }));
-vi.mock('../lib/save', () => ({
-  useSave: () => ({ mine: { data: saved.data, reload } }),
-}));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: saved.data, reload } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 // The seam under test: the screen must hand the saved place to the event
 // hook. What the hook then does with consent and the network is pinned by
 // `logPlaceEvent`'s own tests.

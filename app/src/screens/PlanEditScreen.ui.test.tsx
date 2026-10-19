@@ -45,7 +45,11 @@ vi.mock('react-native', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   Alert: { alert },
 }));
-vi.mock('../lib/auth', () => ({ useAuth: () => auth.current }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => auth.current };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/city', () => ({ useCity: () => cityState.current }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -56,7 +60,10 @@ vi.mock('../lib/i18n', () => ({
 const NO_COLS = vi.hoisted(() => ({ data: [] as unknown[] }));
 vi.mock('../lib/catalog', () => ({ usePlaces: () => ({ data: PLACES }), useCollections: () => NO_COLS }));
 const askToSignIn = vi.hoisted(() => vi.fn());
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() }, askToSignIn }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: mine.current, reload: vi.fn() }, askToSignIn });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/tasteProfile', () => ({
   useNoteEvent: () => note,
   usePlanProfile: () => ({ taste: null, budgetVnd: 400000 }),

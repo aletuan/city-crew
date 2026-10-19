@@ -29,7 +29,7 @@
 
 import { useEffect, useRef } from 'react';
 import { navRef } from '../nav';
-import { useAuth } from './auth';
+import { useSession } from './auth';
 import { fetchTheme, saveTheme } from './data';
 import { isPref, needsRestart } from './look';
 import { useScheme } from './theme';
@@ -43,7 +43,7 @@ function currentTab(): string | undefined {
 }
 
 export function ThemeAccountSync() {
-  const { userId } = useAuth();
+  const { userId } = useSession();
   const { pref, look, ready, setPref } = useScheme();
   // Read at the moment of the sign-in, not re-run on every change of
   // theme: a choice made on this device after the read is the account's

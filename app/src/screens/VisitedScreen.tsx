@@ -40,9 +40,8 @@
 // to delete yet, and one screen teaching a gesture the others do not
 // honour is a trap.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, ScrollView, StyleSheet, Text, type TextInput, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
@@ -58,7 +57,8 @@ import { removeCheckin } from '../lib/data';
 import { clockOf, numericDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
-import { parseRecents, RECENTS_SHOWN, rememberSearch, VISIT_RECENTS_KEY } from '../lib/recents';
+import { RECENTS_SHOWN, rememberSearch, VISIT_RECENTS_KEY } from '../lib/recents';
+import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
 import { colors, display, font, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -130,16 +130,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   // pressed — a deliberate act either way, never a keystroke, which would
   // keep the seven prefixes of one word. Offered narrowed by what is
   // typed so far, and never the word already in the box.
-  const [recents, setRecents] = useState<string[]>([]);
-  useEffect(() => {
-    AsyncStorage.getItem(VISIT_RECENTS_KEY)
-      .then((raw) => setRecents(parseRecents(raw)))
-      .catch(() => {});
-  }, []);
-  const keepRecents = (next: string[]) => {
-    setRecents(next);
-    AsyncStorage.setItem(VISIT_RECENTS_KEY, JSON.stringify(next)).catch(() => {});
-  };
+  const [recents, keepRecents] = useStored(VISIT_RECENTS_KEY, NO_RECENTS, RECENTS);
   const noteSearch = () => {
     const next = rememberSearch(recents, query);
     if (next !== recents) keepRecents(next);
@@ -262,7 +253,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                 {suggestions.map((term) => (
                   <PressableScale
                     key={term}
-                    style={s.suggestion}
+                    contentStyle={s.suggestion}
                     scaleTo={0.97}
                     onPress={() => { setQuery(term); answered(); }}
                     accessibilityRole="button"
@@ -332,7 +323,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                     return (
                       <PressableScale
                         key={v.id}
-                        style={[s.row, i > 0 && s.rowDivider]}
+                        contentStyle={[s.row, i > 0 && s.rowDivider]}
                         onPress={opens ? () => { noteSearch(); navigation.navigate('PlaceDetail', { slug: v.place_slug }); } : undefined}
                         // A button only when it goes somewhere — the same
                         // condition as the chevron, so what VoiceOver hears
@@ -358,7 +349,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                             onPress={() => setMenuFor(v)}
                             scaleTo={0.85}
                             hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                            containerStyle={s.rowEnd}
+                            style={s.rowEnd}
                             accessibilityRole="button"
                             accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
                           >

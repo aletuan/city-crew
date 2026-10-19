@@ -27,7 +27,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AmbientWarmth, Avatar, Card, Empty, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { fromISO } from '../lib/day';
 import { answerInvite } from '../lib/data';
@@ -53,7 +53,7 @@ export default function TripInvitationScreen({ navigation, route }: {
   route: RootRoute<'TripInvitation'>;
 }) {
   const { t, lang } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const { people } = useCrew();
   const { invites, crewCounts } = useInvitations();
   const clearance = useTabBarClearance();
@@ -262,8 +262,8 @@ export default function TripInvitationScreen({ navigation, route }: {
               <PressableScale
                 onPress={() => answer('accepted')}
                 accessibilityRole="button"
-                containerStyle={{ flex: 1 }}
-                style={[s.yes, busy && s.busy]}
+                style={{ flex: 1 }}
+                contentStyle={[s.yes, busy && s.busy]}
               >
                 <Ionicons name="checkmark" size={17} color={colors.accentInk} />
                 <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する')}</Text>
@@ -271,8 +271,8 @@ export default function TripInvitationScreen({ navigation, route }: {
               <PressableScale
                 onPress={() => answer('declined')}
                 accessibilityRole="button"
-                containerStyle={{ flex: 1 }}
-                style={[s.no, busy && s.busy]}
+                style={{ flex: 1 }}
+                contentStyle={[s.no, busy && s.busy]}
               >
                 <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません')}</Text>
               </PressableScale>

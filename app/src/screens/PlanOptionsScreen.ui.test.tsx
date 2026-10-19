@@ -44,7 +44,10 @@ vi.mock('../lib/i18n', () => ({
 // render is a plan recomputed each render — which rendered again.
 const NO_COLS = vi.hoisted(() => ({ data: [] as unknown[] }));
 vi.mock('../lib/catalog', () => ({ usePlaces: () => ({ data: PLACES }), useCollections: () => NO_COLS }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() } }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: mine.current, reload: vi.fn() } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/tasteProfile', () => ({
   usePlanProfile: () => ({ taste: null, budgetVnd: 400000 }),
 }));

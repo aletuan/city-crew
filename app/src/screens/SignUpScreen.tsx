@@ -13,10 +13,10 @@ import LegalSheet from '../components/LegalSheet';
 import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
 import { FloatingPlane, HeartDoodle } from '../components/welcomeArt';
-import { isHandleFree, useAuth } from '../lib/auth';
+import { isHandleFree, useAuthActions, useSession } from '../lib/auth';
 import { hasResume, peekResume } from '../lib/resume';
 import { fixedOnForm } from '../lib/authfail';
-import { cleanEmail, emailShapeOk } from '../lib/email';
+import { afterEmailEdit, cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import type { LegalId } from '../lib/legal';
 import { NO_PREFERENCES, savePreferences } from '../lib/data';
@@ -41,7 +41,8 @@ export const HANDLE_CHECK_MS = 500;
 
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const { signUp, confirmSignUp, session } = useAuth();
+  const { session } = useSession();
+  const { signUp, confirmSignUp } = useAuthActions();
   const tour = useSignupTour();
   const hadPending = useRef(hasResume());
   const failText = useFailText();
@@ -515,7 +516,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         icon="person-outline"
         label={t('Display name', 'Tên hiển thị', '表示名')}
-        placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力')}
+        placeholder={t('What should we call you?', 'Bạn muốn được gọi là gì?', '何とお呼びすればよいですか？')}
         value={name}
         error={error === 'need_name' ? failText(error) : null}
         onChangeText={(v) => {
@@ -549,10 +550,17 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         icon="mail-outline"
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
-        placeholder={t("We'll never share your email.", 'Email của bạn được giữ kín.', 'メールアドレスは公開されません。')}
+        placeholder={t('Enter your email address', 'Nhập địa chỉ email', 'メールアドレスを入力')}
         value={email}
         invalid={error === 'need_email' || error === 'bad_email' || error === 'email_taken'}
-        onChangeText={(v) => setEmail(cleanEmail(v))}
+        // The error this edit fixes goes with it, and the red with it —
+        // "enter your email" stood over qa@example.com until the next
+        // press (19 Oct 2026). The message stays where it is shown.
+        onChangeText={(v) => {
+          const next = cleanEmail(v);
+          setEmail(next);
+          setError((current) => afterEmailEdit(current, next));
+        }}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}

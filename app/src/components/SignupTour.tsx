@@ -4,7 +4,7 @@ import { AccessibilityInfo, Modal, Pressable, ScrollView, StyleSheet, Text, useW
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space } from '../theme';
 import { TAB_BAR_HEIGHT, useTabBarLift } from './ui';
@@ -41,7 +41,7 @@ export function useTourAnchor(id: Target, press: () => void, focused: () => bool
 /** Automatic entry belongs to the successful signup welcome screen; replay
  * belongs to Profile. A session appearing never starts either entry point. */
 export function SignupTourProvider({ children, getRoute, onReplay = noop }: { children: React.ReactNode; getRoute: () => string | undefined; onReplay?: () => void }) {
-  const { session } = useAuth();
+  const { session } = useSession();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();

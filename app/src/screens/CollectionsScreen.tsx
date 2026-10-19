@@ -7,7 +7,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type AccessibilityProps, Alert, Animated, Keyboard, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
@@ -18,21 +17,25 @@ import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill } from '../components/add';
 import { holdResume } from '../lib/resume';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
-import { COLLECTION_RECENTS_KEY, parseRecents, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
 import { collectionCities, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
-import { useSave } from '../lib/save';
+import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { accentFade, colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
+
+/** The two layouts the list remembers. */
+const TILE_OR_ROW = oneOf('tile', 'row');
 
 /** What `renderRightActions` hands back, and what the card animates from. */
 type Drag = ReturnType<Animated.Value['interpolate']>;
@@ -99,12 +102,12 @@ const COVER_OPEN = 88;
 // the verbs. The title already names the thing they act on.
 function GuestNotice({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   if (session) return null;
   return (
     <PressableScale
-      containerStyle={s.noticeWrap}
-      style={s.notice}
+      style={s.noticeWrap}
+      contentStyle={s.notice}
       onPress={() => {
         holdResume({
           tab: 'Collections', kind: 'collection', at: Date.now(),
@@ -423,8 +426,8 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
                 onPress={() => act(onEdit)}
                 accessibilityRole="button"
                 accessibilityLabel={editLabel}
-                containerStyle={s.actionWrap}
-                style={[s.action, s.actionEdit]}
+                style={s.actionWrap}
+                contentStyle={[s.action, s.actionEdit]}
               >
                 <Ionicons name="create-outline" size={22} color={colors.text} />
               </PressableScale>
@@ -432,8 +435,8 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
                 onPress={() => act(onDelete)}
                 accessibilityRole="button"
                 accessibilityLabel={deleteLabel}
-                containerStyle={s.actionWrap}
-                style={[s.action, s.actionDelete]}
+                style={s.actionWrap}
+                contentStyle={[s.action, s.actionDelete]}
               >
                 <Ionicons name="trash-outline" size={22} color={colors.bad} />
               </PressableScale>
@@ -452,13 +455,14 @@ export default function CollectionsScreen({ navigation, route }: {
   route: { params?: { tab?: 'yours' | 'community'; at?: number } };
 }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session } = useSession();
   const { cities } = useCity();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
-  const { mine, askToSignIn } = useSave();
+  const mine = useMyLists();
+  const { askToSignIn } = useSaveActions();
   // One heart on every public list, yours included (owner, 17 Oct 2026):
   // a curator may like their own list, and the shelves rank by everyone's
   // likes but theirs (`rankLikes`, read where a shelf is sorted). It is
@@ -692,16 +696,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // What this box remembered, in its own drawer — the visits screen's
   // mechanism, for its reasons: kept when a search *worked* (a card
   // opened, or the return key), never on a keystroke.
-  const [recents, setRecents] = useState<string[]>([]);
-  useEffect(() => {
-    AsyncStorage.getItem(COLLECTION_RECENTS_KEY)
-      .then((raw) => setRecents(parseRecents(raw)))
-      .catch(() => {});
-  }, []);
-  const keepRecents = (next: string[]) => {
-    setRecents(next);
-    AsyncStorage.setItem(COLLECTION_RECENTS_KEY, JSON.stringify(next)).catch(() => {});
-  };
+  const [recents, keepRecents] = useStored(COLLECTION_RECENTS_KEY, NO_RECENTS, RECENTS);
   const noteSearch = () => {
     const next = rememberSearch(recents, query);
     if (next !== recents) keepRecents(next);
@@ -813,16 +808,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // were budgeted for twenty-three. At 320 this comes out at 99, and the
   // column keeps 145.
   const coverW = Math.min(COVER, Math.round((winW - space.page * 2) * 0.36));
-  const [view, setView] = useState<'tile' | 'row'>('tile');
-  useEffect(() => {
-    AsyncStorage.getItem(VIEW_KEY)
-      .then((v) => { if (v === 'row' || v === 'tile') setView(v); })
-      .catch(() => {});
-  }, []);
-  const pickView = (v: 'tile' | 'row') => {
-    setView(v);
-    AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
-  };
+  const [view, pickView] = useStored<'tile' | 'row'>(VIEW_KEY, 'tile', TILE_OR_ROW);
 
   // SectionList knows nothing of columns, so the grid packs itself: two
   // cards per row-item, and the odd last card keeps a spacer where its
@@ -911,7 +897,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 {(['row', 'tile'] as const).map((v) => (
                   <PressableScale
                     key={v}
-                    style={[s.viewBtn, view === v && s.viewBtnOn]}
+                    contentStyle={[s.viewBtn, view === v && s.viewBtnOn]}
                     scaleTo={0.9}
                     haptic="selection"
                     // 26×22 drawn, and the two halves touch, so the slop
@@ -980,7 +966,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 {suggestions.map((term) => (
                   <PressableScale
                     key={term}
-                    style={s.suggestion}
+                    contentStyle={s.suggestion}
                     scaleTo={0.97}
                     onPress={() => { setQuery(term); answered(); }}
                     accessibilityRole="button"
@@ -1079,7 +1065,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       return (
                         <PressableScale
                           key={c.slug}
-                          style={[s.gcard, { width: gcardW, height: gcardH }]}
+                          contentStyle={[s.gcard, { width: gcardW, height: gcardH }]}
                           onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
                           testID={item.own ? undefined : `collection-card-${item.at + j}`}
                           accessibilityRole="button"
@@ -1178,8 +1164,8 @@ export default function CollectionsScreen({ navigation, route }: {
                                   one that most needs the invitation. */}
                               {c.id && c.is_public ? (
                                 <PressableScale
-                                  containerStyle={{ marginLeft: 'auto' }}
-                                  style={s.gcardLikes}
+                                  style={{ marginLeft: 'auto' }}
+                                  contentStyle={s.gcardLikes}
                                   scaleTo={0.82}
                                   haptic="none"
                                   hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
@@ -1377,8 +1363,8 @@ export default function CollectionsScreen({ navigation, route }: {
                                 number keeps the old rule. */}
                             {c.id && c.is_public ? (
                               <PressableScale
-                                containerStyle={s.likesWrap}
-                                style={s.likesRow}
+                                style={s.likesWrap}
+                                contentStyle={s.likesRow}
                                 scaleTo={0.82}
                                 haptic="none"
                                 hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
@@ -1520,8 +1506,8 @@ export default function CollectionsScreen({ navigation, route }: {
                             the heart's own line. */}
                         {own.id && own.is_public ? (
                           <PressableScale
-                            containerStyle={s.likesWrap}
-                            style={s.likesRow}
+                            style={s.likesWrap}
+                            contentStyle={s.likesRow}
                             scaleTo={0.82}
                             haptic="none"
                             hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
@@ -1665,7 +1651,7 @@ const s = StyleSheet.create({
   // The visits screen's box and panel, to the point: the same row, the
   // same Cancel inside the box, the same card of groups, so the two screens
   // that let a reader narrow a list of their own do it with one grammar.
-  // The header's own subtitle type (ui.tsx `s.subtitle`), in the page's
+  // The header's own subtitle type (`s.subtitle` in ui/surfaces.tsx), in the page's
   // margins. The header ends 14 under the title; -6 brings this line to
   // the 8 a subtitle sits under its title in that header.
   scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },

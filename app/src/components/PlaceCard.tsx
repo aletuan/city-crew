@@ -13,7 +13,7 @@ import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
-import { useSave } from '../lib/save';
+import { useSaveActions } from '../lib/save';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
@@ -45,7 +45,7 @@ export default function PlaceCard({
   onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
 }) {
   const { t, lang } = useI18n();
-  const { save, isSaved } = useSave();
+  const { save, isSaved } = useSaveActions();
   const saved = isSaved(place.slug);
   const cover = coverOf(place);
   const reviews = fmtCount(place.rating_count);
@@ -143,8 +143,8 @@ export default function PlaceCard({
               ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
               : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
             hitSlop={8}
-            containerStyle={s.saveSlot}
-            style={s.saveFab}
+            style={s.saveSlot}
+            contentStyle={s.saveFab}
           >
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}

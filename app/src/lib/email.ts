@@ -36,3 +36,24 @@ export function cleanEmail(raw: string): string {
 export function emailShapeOk(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+/**
+ * The form's error once the address has been edited to `next`: the one
+ * the edit actually fixes is cleared, every other stands.
+ *
+ * - `need_email` goes once there is anything in the field;
+ * - `bad_email` goes once the address is shaped like one;
+ * - `email_taken` goes on any edit — it was about the address that was
+ *   in the field, and that address is no longer there.
+ *
+ * Sign in kept this rule inline, and Sign up and Forgot password kept
+ * none: an error said "enter your email" over a field that held
+ * qa@example.com until the button was pressed again (19 Oct 2026). One
+ * rule here, for all three forms, so they answer the same way.
+ */
+export function afterEmailEdit(current: string | null, next: string): string | null {
+  if (current === 'need_email' && next !== '') return null;
+  if (current === 'bad_email' && emailShapeOk(next)) return null;
+  if (current === 'email_taken') return null;
+  return current;
+}

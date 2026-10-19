@@ -25,7 +25,7 @@ import { countsNow, likedNow, NO_PENDING, settled, type Pending } from './likes'
 import { CATEGORIES } from './categories';
 import { normalizeHandle } from './handle';
 import { mergeTerms, type TermMap } from './search';
-import { useAuth } from './auth';
+import { useAuthEvent, useSession } from './auth';
 import { classifyLoadFail } from './loadfail';
 import { shouldRefresh } from './stale';
 import { supabase } from './supabase';
@@ -106,7 +106,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // The places query needs to know who is reading, so it can include the
   // reader's own suggestions — and it waits to know, rather than asking as
   // a guest first. See `Auth.userId`.
-  const { session, userId } = useAuth();
+  const { session, userId } = useSession();
   const meId = session?.user?.id ?? userId;
   const places = usePlacesQuery(meId);
   // The collections query needs nobody. It answers "every public list",
@@ -203,15 +203,13 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // refresh lands, any read that failed *because* the token was old is
   // asked again — that one and no other, since a dropped connection is
   // not cured by a new token.
-  useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== 'TOKEN_REFRESHED') return;
-      for (const f of [latest.current.places, latest.current.collections]) {
-        if (!f.loading && classifyLoadFail(f.error) === 'expired') f.reload();
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  // Heard through the auth provider, the one place that subscribes to
+  // Supabase (SOLID review, D).
+  useAuthEvent('TOKEN_REFRESHED', () => {
+    for (const f of [latest.current.places, latest.current.collections]) {
+      if (!f.loading && classifyLoadFail(f.error) === 'expired') f.reload();
+    }
+  });
 
   // Depend on the fields rather than on the objects: `useFetch` returns a
   // fresh object every render, so memoising on it would memoise nothing.

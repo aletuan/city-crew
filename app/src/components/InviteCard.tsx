@@ -145,8 +145,8 @@ export default function InviteCard({
           onPress={() => { if (!busy) onAnswer('accepted'); }}
           accessibilityRole="button"
           testID={`invite-accept-${index}`}
-          containerStyle={{ flex: 1 }}
-          style={[s.yes, busy && s.busy]}
+          style={{ flex: 1 }}
+          contentStyle={[s.yes, busy && s.busy]}
         >
           <Ionicons name="checkmark" size={16} color={colors.accentInk} />
           <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する')}</Text>
@@ -154,14 +154,14 @@ export default function InviteCard({
         <PressableScale
           onPress={() => { if (!busy) onAnswer('declined'); }}
           accessibilityRole="button"
-          containerStyle={{ flex: 1 }}
-          style={[s.no, busy && s.busy]}
+          style={{ flex: 1 }}
+          contentStyle={[s.no, busy && s.busy]}
         >
           <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません')}</Text>
         </PressableScale>
       </View>
 
-      <PressableScale onPress={onOpen} accessibilityRole="button" style={s.more}>
+      <PressableScale onPress={onOpen} accessibilityRole="button" contentStyle={s.more}>
         <Text style={s.moreText}>
           {t('See the whole plan', 'Xem toàn bộ kế hoạch', '予定をすべて見る')}
         </Text>

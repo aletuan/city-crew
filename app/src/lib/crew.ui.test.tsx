@@ -37,7 +37,11 @@ const fetchMutualSaves = vi.hoisted(() => vi.fn(async (others: string[]) => Obje
   others.map((id) => [id, 2]),
 )));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ ready: world.ready, session: world.session }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ ready: world.ready, session: world.session }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 // The fetch hooks stay real on purpose: these tests exercise the actual
 // usePersistedFetch machinery — the cache envelope, the fresh-answer-wins
 // rule — with only the network swapped out.

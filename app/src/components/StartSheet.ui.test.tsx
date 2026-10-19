@@ -37,7 +37,11 @@ const world = vi.hoisted(() => ({
 }));
 const SignedOutError = vi.hoisted(() => class SignedOutError extends Error {});
 vi.mock('../lib/findplace', () => ({ findSpots, nameOf, SignedOutError }));
-vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: world.session }) }));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ session: world.session }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 const setCity = vi.hoisted(() => vi.fn());
 const followMyLocation = vi.hoisted(() => vi.fn(async () => true));
 vi.mock('../lib/city', () => ({

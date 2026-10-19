@@ -110,8 +110,8 @@ export default function StopRow({
             // column's width, the inner spaces the lines — `PressableScale`
             // documents this exact trap.
             <PressableScale
-              containerStyle={s.pressOuter}
-              style={s.lines}
+              style={s.pressOuter}
+              contentStyle={s.lines}
               onPress={onPress}
               accessibilityRole="button"
               accessibilityLabel={pressLabel}

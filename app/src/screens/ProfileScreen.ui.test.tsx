@@ -97,16 +97,20 @@ vi.mock('../lib/useGuideGrant', () => ({
   useIsEditor: () => state.editor,
   useIsGuideAnywhere: () => state.guide,
 }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({
-    ready: state.ready,
-    session: state.session,
-    email: state.email,
-    profile: state.profile,
-    memberSince: state.memberSince,
-    signOut: spies.signOut,
-  }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({
+      ready: state.ready,
+      session: state.session,
+      email: state.email,
+      profile: state.profile,
+      memberSince: state.memberSince,
+      signOut: spies.signOut,
+    }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/data', () => ({
   // Own collections carry their members, which is the only path the
   // screen relies on (it passes an empty catalog on purpose).
@@ -120,7 +124,10 @@ vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: state.checkins
 vi.mock('../lib/useActivityCount', () => ({ useActivityCount: () => state.feed }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 const reloads = vi.hoisted(() => ({ mine: vi.fn(), trips: vi.fn() }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine, loaded: state.counts.mineLoaded, error: state.counts.mineError, reload: reloads.mine } }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: state.mine, loaded: state.counts.mineLoaded, error: state.counts.mineError, reload: reloads.mine } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips, loaded: state.counts.tripsLoaded, error: state.counts.tripsError, reload: reloads.trips }) }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, mode: state.mode }) }));
 vi.mock('../lib/theme', () => ({
@@ -867,6 +874,40 @@ describe('settings card', () => {
     state.resume = { tab: 'Trips', at: Date.now() };
     draw();
     expect(screen.queryByText('close-theme')).toBeNull();
+  });
+
+  // Back to where the page was, once the content is tall enough to hold
+  // it — and only once: a later growth is the reader's own page now.
+  // jsdom lays nothing out, so the size change is reached where the screen
+  // passes its handler.
+  it('scrolls back to where the restart left the page, once the page is tall enough', () => {
+    state.resume = { tab: 'Profile', sheet: 'theme', y: 300, at: Date.now() };
+    draw();
+    const el = screen.getByTestId('profile-scroll');
+    const sized = (h: number) => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && p.testID === 'profile-scroll' && typeof p.onContentSizeChange === 'function') {
+          act(() => { (p.onContentSizeChange as (w: number, h: number) => void)(390, h); });
+          return;
+        }
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error('no scroll view');
+    };
+    sized(200);
+    expect(el.scrollTop).toBe(0);
+    sized(500);
+    expect(el.scrollTop).toBe(300);
+    el.scrollTop = 40;
+    sized(900);
+    expect(el.scrollTop).toBe(40);
   });
 
   // What the sheet is told when it asks: this tab, this sheet, and how far

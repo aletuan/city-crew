@@ -28,7 +28,7 @@
 // the container ref rather than a stack's navigator — see `nav.ts`.
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = join(__dirname, '..');
@@ -85,7 +85,16 @@ describe('every stack registers what its screens navigate to', () => {
     // presentational pieces another screen renders. Nothing to check.
     if (!inStacks) continue;
 
-    const body = readFileSync(join(ROOT, 'src/screens', file), 'utf8');
+    // A screen's parts live beside it in a directory of its own name —
+    // `ProfileScreen` and `screens/profile/` — since 19 Oct 2026, and the
+    // navigation they do is the screen's. Read without them, Profile's
+    // calls had left this file and its check quietly stopped running.
+    const partsDir = join(ROOT, 'src/screens', component.replace(/Screen$/, '').toLowerCase());
+    const parts = existsSync(partsDir)
+      ? readdirSync(partsDir).filter((f) => /\.tsx?$/.test(f) && !/\.test\./.test(f))
+        .map((f) => readFileSync(join(partsDir, f), 'utf8'))
+      : [];
+    const body = [readFileSync(join(ROOT, 'src/screens', file), 'utf8'), ...parts].join('\n');
     const targets = [...body.matchAll(/navigation\.(?:navigate|replace|push)\(\s*'(\w+)'/g)]
       .map((m) => m[1]);
     if (!targets.length) continue;

@@ -25,7 +25,7 @@ import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
 import { KindToggles } from '../components/KindPill';
 import { PressableScale, successHaptic } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
@@ -34,7 +34,7 @@ import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { coverOf, membersOf, photosOf } from '../lib/place';
-import { useSave } from '../lib/save';
+import { useMyLists } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, radius, space } from '../theme';
 import type { Place } from '../lib/types';
@@ -75,9 +75,9 @@ export default function CollectionFormScreen({ navigation, route }: {
 }) {
   const { t, lang } = useI18n();
   const { width } = useWindowDimensions();
-  const { session } = useAuth();
+  const { session } = useSession();
   const { city } = useCity();
-  const { mine } = useSave();
+  const mine = useMyLists();
   const editing = route.params?.slug;
   const addPlaceSlug = route.params?.addPlaceSlug;
   const copyFrom = route.params?.copyFrom;
@@ -166,7 +166,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   // under the line, and a fraction over sends the last to the next row.
   // The leftover — under a point — sits at the end of each row.
   //
-  // Width and height stay on `style` rather than `containerStyle`, where
+  // Width and height stay on `contentStyle` rather than `style`, where
   // `PressableScale`'s note sends a width. The note is about a width that
   // has to survive its parent's layout; here the Pressable shrink-wraps
   // the sized view inside it, which is what the 64pt thumbs did before.
@@ -467,7 +467,7 @@ export default function CollectionFormScreen({ navigation, route }: {
               // `accessibilityState` — the same pairing `Chip` and `Tile`
               // carry, and the note there is the one to read.
               aria-selected={coverId == null}
-              style={[s.thumb, { width: tile, height: tile }, s.auto, coverId == null && s.thumbOn]}
+              contentStyle={[s.thumb, { width: tile, height: tile }, s.auto, coverId == null && s.thumbOn]}
             >
               {/* The chip wears the picture Auto would use, so "what is
                   the cover right now" has a visible answer even before
@@ -504,7 +504,7 @@ export default function CollectionFormScreen({ navigation, route }: {
                   : localized(place, 'name', lang)}
                 accessibilityState={{ selected: coverId === ph.id }}
                 aria-selected={coverId === ph.id}
-                style={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}
+                contentStyle={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}
               >
                 <Image source={{ uri: ph.photo_uri }} style={s.thumbImg} contentFit="cover" transition={120} />
               </PressableScale>

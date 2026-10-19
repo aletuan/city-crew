@@ -5,15 +5,15 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
-import { useAuth } from '../lib/auth';
-import { cleanEmail, emailShapeOk } from '../lib/email';
+import { useAuthActions } from '../lib/auth';
+import { afterEmailEdit, cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
 import { leaveAuth, type Nav } from '../nav';
 
 export default function SignInScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { signIn } = useAuth();
+  const { signIn } = useAuthActions();
   const failText = useFailText();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -76,7 +76,14 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         // Whitespace stripped as it is typed, not trimmed at submit: the
         // space the iOS keyboard adds after an autocomplete lands after
         // the `@`, where no trim reaches. See `lib/email`.
-        onChangeText={(v) => setEmail(cleanEmail(v))}
+        onChangeText={(v) => {
+          const next = cleanEmail(v);
+          setEmail(next);
+          // Editing an address only resolves the error it actually fixes —
+          // the rule all three auth forms share (`afterEmailEdit`).
+          setError((current) => afterEmailEdit(current, next));
+        }}
+        invalid={error === 'need_email' || error === 'bad_email'}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -97,7 +104,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         testID="signin-password"
       />
       <View style={s.metaRow}>
-        <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8} testID="signin-forgot">
+        <Pressable onPress={() => navigation.navigate('ForgotPassword', { email })} hitSlop={8} testID="signin-forgot">
           <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?', 'パスワードをお忘れですか？')}</Text>
         </Pressable>
       </View>

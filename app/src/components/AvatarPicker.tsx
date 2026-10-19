@@ -19,7 +19,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../lib/auth';
+import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { AVATAR_PRESETS, presetOf, type AvatarPreset } from '../lib/avatars';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
@@ -41,7 +41,9 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
 }) {
   const { t } = useI18n();
   const failText = useFailText();
-  const { profile, email, setAvatar, setAvatarPreset, clearAvatar } = useAuth();
+  const { email } = useSession();
+  const { profile } = useProfile();
+  const { setAvatar, setAvatarPreset, clearAvatar } = useAuthActions();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [sheet, setSheet] = useState(false);
@@ -172,6 +174,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
               accessibilityLabel={t('Close', 'Đóng', '閉じる')}
               hitSlop={8}
               style={s.close}
+              contentStyle={s.closeFace}
             >
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </PressableScale>
@@ -219,7 +222,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
           </View>
           {/* Nothing to remove until there is something there. */}
           {profile.avatar_url ? (
-            <PressableScale onPress={remove} accessibilityRole="button" style={s.remove}>
+            <PressableScale onPress={remove} accessibilityRole="button" contentStyle={s.remove}>
               <Text style={s.removeText}>{t('Remove photo', 'Xóa ảnh', '写真を削除')}</Text>
             </PressableScale>
           ) : null}
@@ -239,7 +242,7 @@ function Source({ icon, label, a11y, onPress }: {
 }) {
   return (
     <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y}
-      containerStyle={{ flex: 1 }} style={s.source}>
+      style={{ flex: 1 }} contentStyle={s.source}>
       <Ionicons name={icon} size={20} color={colors.accent} />
       <Text style={s.sourceText}>{label}</Text>
     </PressableScale>
@@ -293,7 +296,9 @@ const s = StyleSheet.create({
   // The title centred on the sheet, the × at its edge without pushing it.
   head: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.bold },
-  close: { position: 'absolute', right: 0, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  // On the outer box, so the target sits where the mark does.
+  close: { position: 'absolute', right: 0 },
+  closeFace: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, justifyContent: 'center' },
   // The ring is drawn by every cell, clear until chosen, so choosing one
   // does not move the picture inside it by the ring's width.

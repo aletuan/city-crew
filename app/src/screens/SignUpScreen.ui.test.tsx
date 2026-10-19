@@ -40,12 +40,16 @@ vi.mock('../components/SignupTour', async (orig) => ({
 beforeEach(() => { startTour.mockClear(); });
 const savePreferences = vi.hoisted(() => vi.fn(async () => {}));
 const isHandleFree = vi.hoisted(() => vi.fn(async () => true));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({
-    signUp: auth.signUp, confirmSignUp: auth.confirmSignUp, session: auth.state.session,
-  }),
-  isHandleFree,
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({
+      signUp: auth.signUp, confirmSignUp: auth.confirmSignUp, session: auth.state.session,
+    }),
+    isHandleFree,
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 const signUp = auth.signUp;
 // Only the write is swapped; everything else in the barrel stays real.
 vi.mock('../lib/data', async (orig) => ({
@@ -79,7 +83,7 @@ describe('the legal sheet over the form', () => {
     const navigation = nav();
     render(<SignUpScreen navigation={navigation} />);
 
-    const email = screen.getByPlaceholderText("We'll never share your email.");
+    const email = screen.getByPlaceholderText("Enter your email address");
     fireEvent.change(email, { target: { value: 'reader@example.com' } });
 
     fireEvent.click(screen.getByText('Terms of Service'));
@@ -103,7 +107,7 @@ describe('the legal sheet over the form', () => {
   // mounted here rather than pushed onto the stack.
   it('hands the form back exactly as it was', async () => {
     render(<SignUpScreen navigation={nav()} />);
-    const name = screen.getByPlaceholderText('Enter your full name');
+    const name = screen.getByPlaceholderText('What should we call you?');
     fireEvent.change(name, { target: { value: 'Nguyễn Văn A' } });
 
     fireEvent.click(screen.getByText('Terms of Service'));
@@ -129,8 +133,8 @@ describe('the legal sheet over the form', () => {
 // is not currently saying.
 
 const fillForm = () => {
-  fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Trang' } });
-  fireEvent.change(screen.getByPlaceholderText("We'll never share your email."), { target: { value: 'a@b.co' } });
+  fireEvent.change(screen.getByPlaceholderText('What should we call you?'), { target: { value: 'Trang' } });
+  fireEvent.change(screen.getByPlaceholderText("Enter your email address"), { target: { value: 'a@b.co' } });
   fireEvent.change(screen.getByPlaceholderText('Use at least 8 characters'), { target: { value: 'password1' } });
   fireEvent.change(screen.getByPlaceholderText('Type your password again'), { target: { value: 'password1' } });
   fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
@@ -293,15 +297,15 @@ describe('the email field', () => {
   // trim. The field refuses to hold it at all.
   it('strips the space the keyboard slips in', () => {
     render(<SignUpScreen navigation={nav()} />);
-    const email = screen.getByPlaceholderText("We'll never share your email.");
+    const email = screen.getByPlaceholderText("Enter your email address");
     fireEvent.change(email, { target: { value: 'ngotiennam@ gmail.com' } });
     expect((email as HTMLInputElement).value).toBe('ngotiennam@gmail.com');
   });
 
   it('names a malformed address on the form, before anything is sent', async () => {
     render(<SignUpScreen navigation={nav()} />);
-    fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Trang' } });
-    fireEvent.change(screen.getByPlaceholderText("We'll never share your email."), { target: { value: 'trang@gmail' } });
+    fireEvent.change(screen.getByPlaceholderText('What should we call you?'), { target: { value: 'Trang' } });
+    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), { target: { value: 'trang@gmail' } });
     fireEvent.change(screen.getByPlaceholderText('Use at least 8 characters'), { target: { value: 'password1' } });
     fireEvent.change(screen.getByPlaceholderText('Type your password again'), { target: { value: 'password1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
@@ -393,9 +397,9 @@ describe('the step bar', () => {
 // to the fact that nothing was asked of the server to produce it.
 
 const field = {
-  name: () => screen.getByPlaceholderText('Enter your full name'),
+  name: () => screen.getByPlaceholderText('What should we call you?'),
   handle: () => screen.getByPlaceholderText('yourname'),
-  email: () => screen.getByPlaceholderText("We'll never share your email."),
+  email: () => screen.getByPlaceholderText("Enter your email address"),
   password: () => screen.getByPlaceholderText('Use at least 8 characters'),
   confirm: () => screen.getByPlaceholderText('Type your password again'),
 };
@@ -813,5 +817,50 @@ describe('signup-only guide eligibility', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
     fireEvent.click(await screen.findByTestId('signup-welcome-continue'));
     expect(startTour).not.toHaveBeenCalled();
+  });
+});
+
+// The error a correction fixes goes with it (19 Oct 2026): "enter your
+// email" stood over qa@example.com until the next press, while the name
+// field above already cleared its own. One rule for all three auth forms
+// — see `afterEmailEdit` in lib/email.
+describe('correcting the email after the form named it', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    isHandleFree.mockResolvedValue(true);
+  });
+
+  it('clears "enter your email" as soon as there is an address', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    submit();
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    type(field.email(), 'qa@example.com');
+    expect(screen.queryByText('Enter your email address.')).toBeNull();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('keeps "not an address" until the address is shaped like one', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.email(), 'qa@');
+    submit();
+    expect(await screen.findByText("That email address doesn't look right.")).toBeTruthy();
+    type(field.email(), 'qa@example');
+    expect(screen.getByText("That email address doesn't look right.")).toBeTruthy();
+    type(field.email(), 'qa@example.com');
+    expect(screen.queryByText("That email address doesn't look right.")).toBeNull();
+  });
+
+  it('clears "already taken" once the address is changed', async () => {
+    signUp.mockImplementationOnce(async () => { throw new Error('email_taken'); });
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+    const taken = 'An account already uses this email. Sign in instead.';
+    expect(await screen.findByText(taken)).toBeTruthy();
+    type(field.email(), 'a2@b.co');
+    expect(screen.queryByText(taken)).toBeNull();
   });
 });

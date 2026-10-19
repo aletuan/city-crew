@@ -79,7 +79,7 @@ describe('the calendar glyph', () => {
   });
 
   it('is the accent in the header subtitle too, which holds its name in a prop', () => {
-    const ui = readFileSync(join(ROOT, 'components/ui.tsx'), 'utf8');
+    const ui = readFileSync(join(ROOT, 'components/ui/surfaces.tsx'), 'utf8');
     const body = /export function IconSubtitle\([\s\S]*?\n\}\n/.exec(ui)?.[0];
     expect(body).toBeTruthy();
     expect(body).toMatch(/<Ionicons\s+name=\{icon\}[^>]*?color=\{colors\.accent\}/);

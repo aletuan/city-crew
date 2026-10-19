@@ -147,7 +147,7 @@ export function AuthHeader({ onBack, title, action }: {
           aria-busy={!!action.busy}
           aria-disabled={!!action.disabled}
           testID={action.testID}
-          style={[s.headerAction, lit ? s.headerActionOn : s.headerActionOff]}
+          contentStyle={[s.headerAction, lit ? s.headerActionOn : s.headerActionOff]}
         >
           {action.busy
             ? <ActivityIndicator color={colors.accentInk} />

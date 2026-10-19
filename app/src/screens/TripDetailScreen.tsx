@@ -35,7 +35,7 @@ import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
 import StopRow from '../components/StopRow';
-import { useAuth } from '../lib/auth';
+import { useProfile, useSession } from '../lib/auth';
 import { fromISO } from '../lib/day';
 import {
   answerInvite, deleteTrip, sendInvites, withdrawInvites,
@@ -73,7 +73,8 @@ export default function TripDetailScreen({ navigation, route }: {
   route: RootRoute<'TripDetail'>;
 }) {
   const { t, lang } = useI18n();
-  const { session, profile } = useAuth();
+  const { session } = useSession();
+  const { profile } = useProfile();
   const clearance = useTabBarClearance();
   const trips = useMyTrips();
 
@@ -454,7 +455,7 @@ export default function TripDetailScreen({ navigation, route }: {
                 <View style={s.divider} />
                 <PressableScale
                   onPress={() => { Linking.openURL(mapRoute.url).catch(() => {}); }}
-                  style={s.route}
+                  contentStyle={s.route}
                   accessibilityRole="button"
                 >
                   <Ionicons name="navigate-outline" size={16} color={colors.accent} />
@@ -522,7 +523,7 @@ export default function TripDetailScreen({ navigation, route }: {
 
         <PressableScale
           onPress={owned ? confirmDelete : confirmLeave}
-          style={s.delete}
+          contentStyle={s.delete}
           accessibilityRole="button"
           testID={owned ? 'trip-delete' : 'trip-leave'}
         >

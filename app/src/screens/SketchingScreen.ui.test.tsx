@@ -56,7 +56,10 @@ vi.mock('../lib/i18n', () => ({
 }));
 vi.mock('../lib/catalog', () => ({ usePlaces: () => catalog.current, useCollections: () => ({ data: cols.current }) }));
 vi.mock('../lib/city', () => ({ useCity: () => cityState.current }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() } }) }));
+vi.mock('../lib/save', () => {
+  const useSave = () => ({ mine: { data: mine.current, reload: vi.fn() } });
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+});
 vi.mock('../lib/tasteProfile', () => ({
   usePlanProfile: () => profile,
 }));

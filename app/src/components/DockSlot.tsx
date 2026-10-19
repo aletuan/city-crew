@@ -105,7 +105,7 @@ export function DockSlot({ visible, onPress, accessibilityRole, style, testID, c
         },
       ]}
     >
-      <PressableScale onPress={onPress} scaleTo={0.985} style={island} accessibilityRole={accessibilityRole}>
+      <PressableScale onPress={onPress} scaleTo={0.985} contentStyle={island} accessibilityRole={accessibilityRole}>
         {glass}
         {children}
       </PressableScale>

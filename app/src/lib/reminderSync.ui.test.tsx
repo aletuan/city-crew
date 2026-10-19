@@ -15,7 +15,11 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('./reminders', () => ({ syncTripReminders: sync }));
-vi.mock('./auth', () => ({ useAuth: () => ({ session: { user: { id: 'me' } } }) }));
+vi.mock('./auth', () => {
+  const m = { useAuth: () => ({ session: { user: { id: 'me' } } }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('./i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
 vi.mock('./mytrips', () => ({ useMyTrips: () => state.trips }));
 vi.mock('./invitations', () => ({ useInvitations: () => ({ invites: state.invites }) }));

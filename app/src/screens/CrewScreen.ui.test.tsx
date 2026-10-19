@@ -53,9 +53,13 @@ const crew = vi.hoisted(() => ({
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: { user: { id: 'me' } } }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ session: { user: { id: 'me' } } }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

@@ -22,9 +22,13 @@ const account = vi.hoisted(() => ({
   email: 'trang@example.com' as string | null,
   profile: { full_name: 'Trang', avatar_url: '' as string | null },
 }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ profile: account.profile, email: account.email, setAvatar, setAvatarPreset, clearAvatar }),
-}));
+vi.mock('../lib/auth', () => {
+  const m = {
+    useAuth: () => ({ profile: account.profile, email: account.email, setAvatar, setAvatarPreset, clearAvatar }),
+  };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

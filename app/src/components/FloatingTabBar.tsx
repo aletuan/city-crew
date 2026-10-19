@@ -38,7 +38,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useI18n } from '../lib/i18n';
@@ -159,7 +159,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // every switch, which kept the badge honest at the price of a request
   // per tap — and now that the whole app hangs off one copy, that same
   // eagerness would have refetched faces and counts with it.
-  const { session } = useAuth();
+  const { session } = useSession();
   const me = session?.user?.id;
   const { ships } = useCrew();
   const { reload } = ships;
@@ -370,8 +370,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               anchorRef={route.name === 'Collections' ? collectionAnchor : undefined}
               // The whole cell is the target; the pill over it is only
               // the mark.
-              containerStyle={s.tab}
-              style={s.tabInner}
+              style={s.tab}
+              contentStyle={s.tabInner}
               // The glyph gives a little under the finger; the pill is
               // what answers (`press` below), as Threads' does.
               scaleTo={0.92}
