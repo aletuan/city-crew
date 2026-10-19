@@ -516,7 +516,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         icon="person-outline"
         label={t('Display name', 'Tên hiển thị', '表示名')}
-        placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力')}
+        placeholder={t('What should we call you?', 'Bạn muốn được gọi là gì?', '何とお呼びすればよいですか？')}
         value={name}
         error={error === 'need_name' ? failText(error) : null}
         onChangeText={(v) => {
@@ -550,7 +550,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         icon="mail-outline"
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
-        placeholder={t("We'll never share your email.", 'Email của bạn được giữ kín.', 'メールアドレスは公開されません。')}
+        placeholder={t('Enter your email address', 'Nhập địa chỉ email', 'メールアドレスを入力')}
         value={email}
         invalid={error === 'need_email' || error === 'bad_email' || error === 'email_taken'}
         onChangeText={(v) => setEmail(cleanEmail(v))}

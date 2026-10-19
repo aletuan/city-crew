@@ -83,7 +83,7 @@ describe('the legal sheet over the form', () => {
     const navigation = nav();
     render(<SignUpScreen navigation={navigation} />);
 
-    const email = screen.getByPlaceholderText("We'll never share your email.");
+    const email = screen.getByPlaceholderText("Enter your email address");
     fireEvent.change(email, { target: { value: 'reader@example.com' } });
 
     fireEvent.click(screen.getByText('Terms of Service'));
@@ -107,7 +107,7 @@ describe('the legal sheet over the form', () => {
   // mounted here rather than pushed onto the stack.
   it('hands the form back exactly as it was', async () => {
     render(<SignUpScreen navigation={nav()} />);
-    const name = screen.getByPlaceholderText('Enter your full name');
+    const name = screen.getByPlaceholderText('What should we call you?');
     fireEvent.change(name, { target: { value: 'Nguyễn Văn A' } });
 
     fireEvent.click(screen.getByText('Terms of Service'));
@@ -133,8 +133,8 @@ describe('the legal sheet over the form', () => {
 // is not currently saying.
 
 const fillForm = () => {
-  fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Trang' } });
-  fireEvent.change(screen.getByPlaceholderText("We'll never share your email."), { target: { value: 'a@b.co' } });
+  fireEvent.change(screen.getByPlaceholderText('What should we call you?'), { target: { value: 'Trang' } });
+  fireEvent.change(screen.getByPlaceholderText("Enter your email address"), { target: { value: 'a@b.co' } });
   fireEvent.change(screen.getByPlaceholderText('Use at least 8 characters'), { target: { value: 'password1' } });
   fireEvent.change(screen.getByPlaceholderText('Type your password again'), { target: { value: 'password1' } });
   fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
@@ -297,15 +297,15 @@ describe('the email field', () => {
   // trim. The field refuses to hold it at all.
   it('strips the space the keyboard slips in', () => {
     render(<SignUpScreen navigation={nav()} />);
-    const email = screen.getByPlaceholderText("We'll never share your email.");
+    const email = screen.getByPlaceholderText("Enter your email address");
     fireEvent.change(email, { target: { value: 'ngotiennam@ gmail.com' } });
     expect((email as HTMLInputElement).value).toBe('ngotiennam@gmail.com');
   });
 
   it('names a malformed address on the form, before anything is sent', async () => {
     render(<SignUpScreen navigation={nav()} />);
-    fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Trang' } });
-    fireEvent.change(screen.getByPlaceholderText("We'll never share your email."), { target: { value: 'trang@gmail' } });
+    fireEvent.change(screen.getByPlaceholderText('What should we call you?'), { target: { value: 'Trang' } });
+    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), { target: { value: 'trang@gmail' } });
     fireEvent.change(screen.getByPlaceholderText('Use at least 8 characters'), { target: { value: 'password1' } });
     fireEvent.change(screen.getByPlaceholderText('Type your password again'), { target: { value: 'password1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
@@ -397,9 +397,9 @@ describe('the step bar', () => {
 // to the fact that nothing was asked of the server to produce it.
 
 const field = {
-  name: () => screen.getByPlaceholderText('Enter your full name'),
+  name: () => screen.getByPlaceholderText('What should we call you?'),
   handle: () => screen.getByPlaceholderText('yourname'),
-  email: () => screen.getByPlaceholderText("We'll never share your email."),
+  email: () => screen.getByPlaceholderText("Enter your email address"),
   password: () => screen.getByPlaceholderText('Use at least 8 characters'),
   confirm: () => screen.getByPlaceholderText('Type your password again'),
 };
