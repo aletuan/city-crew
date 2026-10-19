@@ -26,7 +26,7 @@ Hiểu ảnh là việc của một mô hình hiểu ảnh. Apple Vision vẫn g
 | 3 | Dùng bộ nhãn ở mục 3, thiết kế sao cho mở rộng được về sau (mục 4) |
 | 4 | Ghi đề xuất này thành tài liệu trước khi làm |
 
-## 3. Bộ nhãn v14
+## 3. Bộ nhãn v15
 
 Mỗi ảnh có **một loại** và **sáu thuộc tính**. Bộ nhãn bám theo tiêu chí chọn
 ảnh bìa trong skill Threads, để nhãn dùng được ngay cho điểm "hợp làm bìa"
@@ -43,9 +43,9 @@ và được lấy nét, không xét theo việc ảnh *có* trời hay cây.
 | `garden` | Chỗ ngồi ngoài trời của chính quán là chủ thể: bàn, ghế, sofa, ghế dài, ghế nằm ở sân trong, vườn, sân thượng, ban công, sàn gỗ hay bên hồ bơi. Lối đi, bậc đá, cầu, sàn gỗ hay bãi cỏ không có ghế, hoặc vài ghế ở mép một khung mà cảnh chiếm phần lớn, là Phong cảnh. Công viên, bờ hồ, khuôn viên công cộng là Phong cảnh, kể cả có ghế đá. Cổng của quán chỉ là Sân vườn khi cây che gần hết cổng và thấy bàn ghế trong sân phía sau, như Bold Brew. Sân vườn là chỗ ngồi bên trong khuôn viên quán: sân trong, vườn, hiên hay sân quay vào chúng, sân thượng. Hiên, hè hay giàn có mái ở đó, mở ra ngoài ít nhất một phía, là Sân vườn. Bàn ghế ở vỉa hè hay dọc mặt nhà nhìn ra đường là Mặt tiền, có mái hay không; kín tường hay kính mọi phía thì là Nội thất | (từ v5, thu hẹp ở v6, thêm ở v9 và v10, chỉnh ở v11) |
 | `heritage` | Công trình văn hóa là chủ thể, nhìn từ ngoài: đền, chùa, miếu, nhà thờ, lăng mộ, thành quách, cung điện, cổng hay tháp cổ, tượng, đài tưởng niệm, bảo tàng, toà nhà cổ hay nhà Pháp được ghé thăm vì chính nó, cổng hay nhà ở làng nghề. Quán, cửa hàng hay khách sạn nằm trong toà nhà cổ vẫn là Mặt tiền. Vẫn là Văn hóa khi đứng giữa khuôn viên, miễn là ảnh chụp chính nó. Bên trong công trình là Nội thất. Công viên, vườn, bãi cỏ, hồ không có công trình làm chủ thể là Phong cảnh, kể cả trong khu di tích | (từ v7) |
 | `view` | Cảnh vật chiếm phần lớn khung: trời, nước, cây, bãi cỏ, công viên, khuôn viên, lối đi hay cây cầu xuyên qua chúng, toàn cảnh thành phố. Nhà hay công trình nhỏ giữa cảnh chiếm phần lớn khung vẫn là Phong cảnh. Nhà thờ hay công trình nhìn từ cửa sổ, cửa vòm hay ban công của quán là Phong cảnh khi chỉ là một phần của khung cảnh, giữa cây, phố và nhà khác, hay chỉ thấy thoáng qua ô cửa; khi mặt công trình chiếm rõ khung và là thứ ảnh chụp, là Văn hóa. Sân thượng mà bàn ghế là chủ thể là Sân vườn; cùng sân thượng đó mà toàn cảnh chiếm khung, ghế chỉ ở mép, là Phong cảnh. Bàn ghế của quán trước bãi biển, sông, toàn cảnh thành phố hay khu vườn cảnh chiếm phần lớn khung là Phong cảnh | S |
-| `text` | Menu, bảng chữ, poster, hoặc biển hay logo chiếm cả khung. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó. Biển neon hay biển vẽ treo giữa đồ trang trí của phòng là Nội thất: Chữ là để đọc, trang trí là để nhìn | U |
+| `text` | Menu, bảng chữ, poster, hoặc biển hay logo đứng riêng chiếm cả khung, không thấy gì của tòa nhà. Ảnh chụp cận biển hiệu của quán, còn thấy tường, cửa hay cửa sổ quanh nó, là Mặt tiền. Poster hay banner mà chữ là ý chính vẫn là Chữ, kể cả có ảnh trong đó. Biển neon hay biển vẽ treo giữa đồ trang trí của phòng là Nội thất: Chữ là để đọc, trang trí là để nhìn | U |
 | `collage` | Hai ảnh trở lên ghép thành một: lưới, chia đôi, xếp tầng, dù mỗi khung chụp gì. Một ảnh có chữ hay logo in đè không phải ảnh ghép. Là ảnh bìa hợp lệ | (từ v8) |
-| `other` | Không thuộc loại nào ở trên | U |
+| `other` | Lựa chọn cuối cùng: không khớp loại nào ở trên, kể cả một phần (ảnh chân dung cận, đồ vật không thấy địa điểm, ảnh trống hay lỗi). Ảnh khớp một phần loại nào thì chọn loại gần nhất và đánh dấu `unsure`; Khác không phải cách nói "chưa chắc" | U |
 
 **v2 (17/10/2026)** thêm bốn quyết định của chủ sản phẩm sau vòng 3 (mục 10):
 - ảnh ngoài trời có cả công trình và cây cỏ thì xét cái nào chiếm phần lớn
@@ -104,6 +104,11 @@ hàng, thư viện và trung tâm thương mại hiện đại (mục 13).
 trang trí trong phòng (tranh tường, biển neon, mái ngói dựng trong nhà) là Nội
 thất; nhà thờ nhìn qua cửa sổ của quán là Phong cảnh, trừ khi mặt công trình
 chiếm rõ khung (mục 13).
+
+**v15 (19/10/2026)** giữ nguyên văn v14 và thêm hai điều: quyết định của chủ
+sản phẩm về biển hiệu (ảnh chụp cận biển hiệu, còn thấy tường, cửa hay cửa
+sổ quanh nó, là Mặt tiền; biển hay logo đứng riêng là Chữ), và Khác là lựa
+chọn cuối cùng (mục 13).
 
 Người có mặt trong quán **không đổi loại ảnh**. Vòng 2 cho thấy chủ sản phẩm
 xếp ảnh barista hay khách đứng ở quầy vào Địa điểm. Việc có người được ghi
@@ -1454,3 +1459,41 @@ hóa; ca đó cần chủ sản phẩm duyệt, như các ảnh `unsure` khác.
 Ba lần đo tốn khoảng 0,75 USD. Không gán lại cả kho: v14 chỉ áp cho ảnh mới
 mà job hàng giờ gán nhãn, và ảnh có nhãn của chủ sản phẩm không bao giờ bị hỏi
 lại.
+
+### Rà soát luật và v15 (19/10/2026)
+
+Chủ sản phẩm yêu cầu rà soát lại toàn bộ luật. Lần rà soát đối chiếu v14 với
+134 chỗ sai của nó trên 458 ảnh có nhãn của chủ sản phẩm, và tìm ra ba điều:
+- **Một mâu thuẫn trực tiếp.** Mặt tiền ("biển hiệu chiếm phần lớn khung") và
+  Chữ ("biển hay logo chiếm cả khung") cùng nhận ảnh chụp cận biển hiệu. Chủ
+  sản phẩm chốt: biển gắn trên mặt quán, còn thấy tường, cửa hay cửa sổ, là Mặt
+  tiền; biển hay logo đứng riêng là Chữ.
+- **Sân vườn, Mặt tiền và Phong cảnh** chiếm 59 trên 134 chỗ sai. Luật Sân vườn
+  đã vá sáu lần.
+- **Khác là chỗ trú.** 26 trên 26 lần Claude đoán Khác ở đợt duyệt 189 ảnh đều
+  sai, và v14 vẫn gán Khác cho 20 ảnh.
+
+Ba bản v15 được đo trên cùng 458 ảnh, mỗi bản hai lần (Haiku, `write: false`):
+
+| Bản | Khớp | Mặt tiền (151) | Sân vườn (89) | Gán nhầm Khác |
+|---|---|---|---|---|
+| v14 (đối chứng) | 323 / 324 | 119 / 121 | 58 / 56 | 20 / 20 |
+| v15 viết lại thành thứ tự xét | 304 / 309 | 105 / – | 69 / – | 7 / – |
+| v15b = v14 + luật biển hiệu + Khác cuối cùng | 324 / 313 | 123 / 117 | 49 / 51 | 14 / 14 |
+| **v15c = v15b, luật biển hiệu chỉ cho ảnh chụp cận** | **327 / 316** | **129 / 120** | **51 / 48** | **14 / 13** |
+
+- **Bản viết lại thành thứ tự xét bị bỏ.** Khi chuyển các câu "cái này không
+  phải Sân vườn" sang luật Mặt tiền và Phong cảnh cho khỏi lặp, luật Sân vườn
+  nuốt 28 ảnh Mặt tiền và 26 ảnh Phong cảnh. Mô hình đọc định nghĩa của loại
+  nó đang định chọn, nên câu loại trừ phải nằm ngay ở đó, kể cả khi lặp.
+- **v15b** viết luật biển hiệu thành "biển là Mặt tiền khi thấy tường, cửa hay
+  cửa sổ". Câu đó kéo cả sân vườn có biển quán trên tường phía sau sang Mặt
+  tiền: Sân vườn → Mặt tiền tăng từ 35 lên 49 lần qua hai lần đo.
+- **v15c** giới hạn luật vào ảnh chụp cận biển hiệu, đúng như quyết định của chủ
+  sản phẩm. Đây là bản được giữ (function phiên bản 18).
+
+Tính trung bình, v15c ngang v14 (321,5 so với 323,5, trong mức dao động). Hai
+điểm hơn: gán nhầm Khác giảm khoảng một phần ba, Mặt tiền → Chữ giảm từ 3–4 xuống
+1–2. Đổi lại, Sân vườn thấp hơn khoảng 7 ảnh ở cả bốn lần đo v15, và đó không
+phải dao động. Đây là việc còn mở cho lần duyệt Sân vườn tiếp theo. Tám lần đo
+tốn khoảng 2 USD.

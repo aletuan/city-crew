@@ -130,16 +130,20 @@ describe('PhotoSheet', () => {
     expect(screen.getByTestId('score-standing').textContent).toContain("of the catalog's photos");
   });
 
-  // One height for the words beside the number, whatever they say, so the
-  // sheet does not rise and fall as the guide swipes (owner, 19 Oct 2026):
-  // the kind, two lines of standing and the hidden line, 23 + 4 + 40 + 4 + 20.
-  it('holds the head at one height, with the standing at two lines at most', () => {
-    const { unmount } = render(<PhotoSheet {...props({ photos: [photo({ kind: 'food', score })] })} />);
-    expect(getComputedStyle(screen.getByTestId('photo-sheet-name')).minHeight).toBe('91px');
+  // One height for the words beside the number, so the sheet does not
+  // rise and fall as the guide swipes: the kind and two lines of standing,
+  // 23 + 4 + 40, held only in a gallery with scores (owner, 19 Oct 2026).
+  it('holds the head at the kind and two lines in a scored gallery, and not at all without scores', () => {
+    const { unmount } = render(<PhotoSheet {...props({ photos: [photo({ kind: 'food', score }), photo({ id: 'p2', kind: null, score: null })] })} />);
+    expect(getComputedStyle(screen.getByTestId('photo-sheet-name')).minHeight).toBe('67px');
     expect(getComputedStyle(screen.getByTestId('score-standing')).webkitLineClamp).toBe('2');
     unmount();
-    render(<PhotoSheet {...props({ photos: [photo({ kind: null, score: null })] })} />);
-    expect(getComputedStyle(screen.getByTestId('photo-sheet-name')).minHeight).toBe('91px');
+    // A photograph with no score in a gallery that has them keeps the height.
+    const second = render(<PhotoSheet {...props({ photos: [photo({ kind: 'food', score }), photo({ id: 'p2', kind: null, score: null })], index: 1 })} />);
+    expect(getComputedStyle(screen.getByTestId('photo-sheet-name')).minHeight).toBe('67px');
+    second.unmount();
+    render(<PhotoSheet {...props({ photos: [photo({ kind: 'food', score: null })] })} />);
+    expect(getComputedStyle(screen.getByTestId('photo-sheet-name')).minHeight).not.toBe('67px');
   });
 
   it('says no kind when the labels have none to say', () => {
