@@ -148,7 +148,7 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
  * switch is the control; the row around it is not a button,
  * so there is one thing to find and one thing VoiceOver names.
  */
-function SwitchRow({ icon, label, value, onChange, last, testID }: {
+function SwitchRow({ icon, label, value, onChange, last, testID, rowRef }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** Null while it is being read: drawn off, and not to be pressed. */
@@ -156,9 +156,10 @@ function SwitchRow({ icon, label, value, onChange, last, testID }: {
   onChange: (on: boolean) => void;
   last?: boolean;
   testID?: string;
+  rowRef?: React.Ref<View>;
 }) {
   return (
-    <View style={[s.twoLineRow, !last && s.featureRowDivider]} testID={testID}>
+    <View ref={rowRef} style={[s.twoLineRow, !last && s.featureRowDivider]} testID={testID}>
       <RowGlyph name={icon} line={TITLE_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={[s.settingLabel, { lineHeight: TITLE_LINE }]}>{label}</Text>
@@ -276,6 +277,20 @@ function SettingsCard() {
   const { scheme, pref } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
   const tour = useSignupTour();
+  // The invitation the switch raises floats over the page, above the tab
+  // bar; with the card low on the screen it would cover the switch itself
+  // (owner, 19 Oct 2026). Once it knows where its top is, the page scrolls
+  // just enough to keep the switch above it, and not at all when it is.
+  const guideRow = useRef<View>(null);
+  const { notice, noticeTop } = tour;
+  const { scrollBy } = back;
+  useEffect(() => {
+    if (notice !== 'ready' || noticeTop === null) return;
+    guideRow.current?.measureInWindow((_x, y, _w, h) => {
+      const over = y + h + 12 - noticeTop;
+      if (over > 0) scrollBy(over);
+    });
+  }, [notice, noticeTop, scrollBy]);
 
   return (
     <>
@@ -314,6 +329,7 @@ function SettingsCard() {
           value={tour.enabled}
           onChange={tour.setEnabled}
           testID="profile-tips"
+          rowRef={guideRow}
           last={!tour.enabled}
         />
         {tour.enabled && <SettingRow
@@ -1060,6 +1076,8 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   );
 }
 
+// Neither is called outside a provider; one shared no-op stands in for both.
+const noop = () => {};
 /**
  * What the restart a theme costs has to put back on this screen, and what
  * it needs from it: the sheet that was open and how far down the page was
@@ -1073,7 +1091,8 @@ const ProfileReturn = createContext<{
    *  after it reads it again. */
   spendSheet: () => void;
   y: React.MutableRefObject<number>;
-}>({ sheet: null, spendSheet: () => {}, y: { current: 0 } });
+  scrollBy: (dy: number) => void;
+}>({ sheet: null, spendSheet: noop, y: { current: 0 }, scrollBy: noop });
 
 export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -1110,7 +1129,10 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   // handed out through context.
   const [sheet, setSheet] = useState<'theme' | null>(back?.sheet ?? null);
   const spendSheet = useCallback(() => setSheet(null), []);
-  const returning = useMemo(() => ({ sheet, spendSheet, y }), [sheet, spendSheet]);
+  // Down by `dy` from where the page is, for a card that needs something
+  // of its own kept in view (the guide switch, under its invitation).
+  const scrollBy = useCallback((dy: number) => scrollRef.current?.scrollTo({ y: y.current + dy, animated: true }), []);
+  const returning = useMemo(() => ({ sheet, spendSheet, y, scrollBy }), [sheet, spendSheet, scrollBy]);
 
   return (
     <Screen title={t('Profile', 'Cá nhân', 'プロフィール')}>

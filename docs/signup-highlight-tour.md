@@ -15,7 +15,7 @@ Mỗi bước hiển thị tiến độ x/4. Tiếp theo chuyển sang phần gi
 
 ## Hồ sơ và xem lại
 
-“Hiện hướng dẫn” thay thế setting gợi ý Collection; không còn các hộp TipBox trong Collection. Switch bật/tắt lưu độc lập với tiến độ: hoàn tất 4/4 vẫn bật, không tự phát lại. “Xem lại hướng dẫn” xuất hiện khi bật và đưa người dùng về Explorer, bắt đầu từ 1/4. Bật switch chỉ hiện lời mời có nút “Bắt đầu”, không tự chuyển màn hình. Lời mời có thể đóng và không tự hết hạn.
+“Hiện hướng dẫn” thay thế setting gợi ý Collection; không còn các hộp TipBox trong Collection. Switch bật/tắt lưu độc lập với tiến độ: hoàn tất 4/4 vẫn bật, không tự phát lại. “Xem lại hướng dẫn” xuất hiện khi bật và đưa người dùng về Explorer, bắt đầu từ 1/4. Bật switch chỉ hiện lời mời có nút “Bắt đầu”, không tự chuyển màn hình. Lời mời có thể đóng và không tự hết hạn. Lời mời là một thẻ nổi ngay trên thanh tab: biểu tượng bóng đèn, tiêu đề “Đã bật hướng dẫn”, một dòng mô tả, nút “Bắt đầu” và dấu × để đóng; màu lấy từ theme đang dùng. Khi thẻ hiện, Hồ sơ tự cuộn để dòng “Hiện hướng dẫn” nằm trên thẻ, không bị che.
 
 Bỏ qua hoặc chạm ra ngoài lớp hướng dẫn sẽ tắt switch và hiện thông báo cách bật lại trong Hồ sơ trong 10 giây, kèm nút đóng và thông báo cho trình đọc màn hình. Bấm control thật kết thúc lượt hướng dẫn, ghi tiến độ và thực hiện hành động; không tắt setting. Người dùng có thể chủ động xem lại sau đó. Đăng nhập/mở lại app không tự phát tiếp một lượt đang dở.
 

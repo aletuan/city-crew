@@ -28,7 +28,7 @@ function Controls() {
   const tour = useSignupTour();
   return <><button onClick={() => tour.start(state.uid)}>Start</button>
     <button onClick={() => tour.setEnabled(true)}>Enable</button><button onClick={() => tour.setEnabled(false)}>Disable</button>
-    <button onClick={tour.replay}>Replay</button><span data-testid="enabled">{String(tour.enabled)}</span>
+    <button onClick={tour.replay}>Replay</button><span data-testid="enabled">{String(tour.enabled)}</span><span data-testid="notice-top">{String(tour.noticeTop)}</span>
     {state.anchors && <><Anchor id="search" /><Anchor id="filter" /><Anchor id="save" /><Anchor id="collections" />{state.duplicate && <Anchor id="search" />}</>}</>;
 }
 const onReplay = vi.fn();
@@ -217,9 +217,47 @@ it('keeps controls usable if saving fails and dismisses the invitation without s
   fireEvent.click(screen.getByText('Enable'));
   await act(async () => {});
   expect(screen.getByTestId('enabled').textContent).toBe('true');
-  fireEvent.click(screen.getByText('Đóng'));
+  fireEvent.click(screen.getByLabelText('Đóng'));
   expect(screen.queryByTestId('guide-notice')).toBeNull();
   expect(onReplay).not.toHaveBeenCalled();
+});
+// The invitation as a toast over the page (owner, 19 Oct 2026): the
+// guide's mark, a title and a line, Start, and a ×, set on the floating
+// bar's height: a 16pt lift under a 34pt inset, the 64pt bar, 12pt of air.
+it('shows the invitation as a titled toast with Start and a close mark, on the tab bar', async () => {
+  state.bottom = 34;
+  render(tree());
+  fireEvent.click(screen.getByText('Enable'));
+  const toast = screen.getByTestId('guide-notice');
+  expect(toast.textContent).toContain('Đã bật hướng dẫn');
+  expect(toast.textContent).toContain('Chúng tôi sẽ hiển thị gợi ý ngắn');
+  expect(toast.style.bottom).toBe('92px');
+  expect(screen.getByTestId('guide-notice-start').textContent).toBe('Bắt đầu');
+  expect(screen.queryByText('Đóng')).toBeNull();
+  fireEvent.click(screen.getByLabelText('Đóng'));
+  expect(screen.queryByTestId('guide-notice')).toBeNull();
+});
+// Profile reads the toast's top to lift the switch above it, so the top is
+// the toast's own measured edge, and it goes when the toast does.
+it('reports where the invitation sits, and forgets it once closed', async () => {
+  render(tree());
+  fireEvent.click(screen.getByText('Enable'));
+  const toast = screen.getByTestId('guide-notice');
+  toast.getBoundingClientRect = () => ({ top: 668, left: 22, width: 346, height: 92, right: 368, bottom: 760, x: 22, y: 668, toJSON: () => ({}) });
+  type Fiber = { return: Fiber | null; memoizedProps: Record<string, unknown> };
+  const key = Object.keys(toast).find(k => k.startsWith('__reactFiber'))!;
+  let f = (toast as unknown as Record<string, Fiber>)[key];
+  while (f && !(f.memoizedProps.testID === 'guide-notice' && typeof f.memoizedProps.onLayout === 'function')) f = f.return!;
+  act(() => (f.memoizedProps.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { height: 92 } } }));
+  await waitFor(() => expect(screen.getByTestId('notice-top').textContent).toBe('668'));
+  fireEvent.click(screen.getByLabelText('Đóng'));
+  await waitFor(() => expect(screen.getByTestId('notice-top').textContent).toBe('null'));
+});
+it('says how to turn the guide back on, with no Start, once skipped', async () => {
+  render(tree()); await start();
+  fireEvent.click(screen.getByText('Bỏ qua hướng dẫn'));
+  expect(screen.getByTestId('guide-notice').textContent).toContain('Đã tắt hướng dẫn');
+  expect(screen.queryByTestId('guide-notice-start')).toBeNull();
 });
 it('expires the skip reminder without reopening the guide', async () => {
   vi.useFakeTimers();
