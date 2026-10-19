@@ -876,6 +876,40 @@ describe('settings card', () => {
     expect(screen.queryByText('close-theme')).toBeNull();
   });
 
+  // Back to where the page was, once the content is tall enough to hold
+  // it — and only once: a later growth is the reader's own page now.
+  // jsdom lays nothing out, so the size change is reached where the screen
+  // passes its handler.
+  it('scrolls back to where the restart left the page, once the page is tall enough', () => {
+    state.resume = { tab: 'Profile', sheet: 'theme', y: 300, at: Date.now() };
+    draw();
+    const el = screen.getByTestId('profile-scroll');
+    const sized = (h: number) => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && p.testID === 'profile-scroll' && typeof p.onContentSizeChange === 'function') {
+          act(() => { (p.onContentSizeChange as (w: number, h: number) => void)(390, h); });
+          return;
+        }
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error('no scroll view');
+    };
+    sized(200);
+    expect(el.scrollTop).toBe(0);
+    sized(500);
+    expect(el.scrollTop).toBe(300);
+    el.scrollTop = 40;
+    sized(900);
+    expect(el.scrollTop).toBe(40);
+  });
+
   // What the sheet is told when it asks: this tab, this sheet, and how far
   // down the page is at that moment — read off the scroll as it happens,
   // and still handed on to the tab bar's own listener.
