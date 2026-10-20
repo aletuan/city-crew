@@ -82,7 +82,7 @@ import { useSheetDrag } from './sheetDrag';
 import { PressableScale } from './ui';
 import type { GalleryPhoto } from '../lib/gallery';
 import { useI18n } from '../lib/i18n';
-import { KIND_ICON, kindName } from '../lib/photoKind';
+import { kindIcon, kindName } from '../lib/photoKind';
 import { colors, font, onPhoto, radius, space } from '../theme';
 
 /** The head's lines: the kind's, then the 14pt lines under it (the
@@ -258,7 +258,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
             <View style={[s.name, scored && s.nameHeld]} testID="photo-sheet-name">
               {p.kind ? (
                 <View style={s.kind} testID="photo-sheet-kind">
-                  <Ionicons name={KIND_ICON[p.kind]} size={20} color={colors.text} />
+                  <Ionicons name={kindIcon(p.kind)} size={20} color={colors.text} />
                   <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
                   {p.is_cover && (
                     <View accessibilityLabel={t('Cover', 'Ảnh bìa', 'カバー')} testID="photo-sheet-cover">

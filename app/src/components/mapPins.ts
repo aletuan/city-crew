@@ -9,7 +9,7 @@
 // Drawn by `scripts/map-pins.py` from the same table `pinCategory` reads;
 // `taxonomy.test.ts` holds the two together.
 
-import { pinCategory, type Categorisable } from '../lib/categories';
+import { pinCategory, type Categorisable, type Category } from '../lib/categories';
 
 import cafes from '../../assets/pins/cafes.png';
 import cafesChosen from '../../assets/pins/cafes-chosen.png';
@@ -32,14 +32,18 @@ import nightlifeChosen from '../../assets/pins/nightlife-chosen.png';
 import views from '../../assets/pins/views.png';
 import viewsChosen from '../../assets/pins/views-chosen.png';
 
-const PLAIN: Record<string, number> = {
+// Both tables must name every category and the neutral pin, or this
+// does not compile: a category added to the filter row without its two
+// pictures used to reach the map as an undefined image, which draws
+// nothing. Read by any string below, as `pinCategory` hands back one.
+const PLAIN: Readonly<Record<string, number>> = {
   cafes, eats, focus, fun, heritage, markets, nature, nightlife, views, neutral,
-};
-const CHOSEN: Record<string, number> = {
+} satisfies Record<Category | 'neutral', number>;
+const CHOSEN: Readonly<Record<string, number>> = {
   cafes: cafesChosen, eats: eatsChosen, focus: focusChosen, fun: funChosen,
   heritage: heritageChosen, markets: marketsChosen, nature: natureChosen,
   nightlife: nightlifeChosen, views: viewsChosen, neutral: neutralChosen,
-};
+} satisfies Record<Category | 'neutral', number>;
 
 /**
  * The picture this place's pin is drawn from.

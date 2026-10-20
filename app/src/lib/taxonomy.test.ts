@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CATEGORIES,
   CATEGORY_ORDER,
+  FOOD_CATEGORIES,
   MAP_PIN_CHOSEN_FILL,
   MAP_PIN_CHOSEN_INK,
   MAP_PIN_NEUTRAL_FILL,
@@ -73,6 +74,12 @@ describe('the category table', () => {
   // beats dropping the place out of the filter row entirely.
   it('renders an unknown key readably instead of dropping it', () => {
     expect(categoryLabel('street_food', t)).toBe('Street food');
+  });
+
+  // The donut's split. Read off the rows' `food` flag, so the planner and
+  // a saved trip cannot hold two copies that drift.
+  it('counts cafés and eats as food, and nothing else', () => {
+    expect([...FOOD_CATEGORIES]).toEqual(['cafes', 'eats']);
   });
 });
 

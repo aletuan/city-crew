@@ -58,6 +58,10 @@ export type CategoryStyle = {
    * degree, and hue is the clause that wins. `taxonomy.test.ts` holds it.
    */
   pin: string;
+  /** Spend here is food rather than activity, for the donut: the planner
+   *  splits a day's cost on it, and a saved trip splits on the same set so
+   *  a fresh plan and the trip it becomes account for a café alike. */
+  food?: true;
 };
 
 // Chip labels are two words at most. A filter row is scanned, not read:
@@ -71,16 +75,20 @@ export type CategoryStyle = {
 export const CATEGORY_ORDER = [
   'cafes', 'focus', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife', 'fun',
 ] as const;
+export type Category = typeof CATEGORY_ORDER[number];
 
-export const CATEGORIES: Record<string, CategoryStyle> = {
+/** Every key in `CATEGORY_ORDER` has a row, or this does not compile —
+ *  a category added to the order without its style used to surface as a
+ *  chip with no glyph. */
+const STYLES = {
   cafes: {
     en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', icon: 'cafe-outline', color: '#D2A679',
-    pin: '#B75F05',
+    pin: '#B75F05', food: true,
     terms: ['coffee', 'espresso', 'latte', 'quán cà phê', 'cà phê', 'コーヒー', '喫茶'],
   },
   eats: {
     en: 'Eats', vi: 'Ăn uống', ja: '食事', icon: 'restaurant-outline', color: '#E09A6B',
-    pin: '#A45E2F',
+    pin: '#A45E2F', food: true,
     terms: ['restaurant', 'food', 'dining', 'lunch', 'dinner', 'nhà hàng', 'quán ăn', 'ăn uống', 'レストラン', 'グルメ'],
   },
   views: {
@@ -132,7 +140,22 @@ export const CATEGORIES: Record<string, CategoryStyle> = {
     pin: '#B93FC9',
     terms: ['cinema', 'movie', 'film', 'karaoke', 'bowling', 'arcade', 'show', 'rạp phim', 'rạp', 'phim', 'xem phim', 'giải trí', '映画館', '映画'],
   },
-};
+} satisfies Record<Category, CategoryStyle>;
+
+/**
+ * The table as its readers hold it: by any string. The keys they look up
+ * come from rows (`places.categories`, a collection's kinds, a profile's
+ * taste), which can carry a key this build has not learned yet, so the
+ * narrow type would only move the cast into fifteen screens. Completeness
+ * is checked once, on `STYLES` above.
+ */
+export const CATEGORIES: Readonly<Record<string, CategoryStyle>> = STYLES;
+
+/** Categories whose spend is food rather than activity — the rows marked
+ *  `food`. */
+export const FOOD_CATEGORIES: ReadonlySet<string> = new Set(
+  CATEGORY_ORDER.filter((k) => CATEGORIES[k].food),
+);
 
 /** Same mapping the migration backfills with — see the note in categoriesOf. */
 const FROM_VIBE: Record<string, string> = {

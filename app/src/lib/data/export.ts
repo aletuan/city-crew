@@ -17,6 +17,7 @@
 // is `fetchMyLikes`'s belt-and-braces and its reasoning: a query that
 // states its own scope cannot be quietly widened by a policy change.
 
+import type { I18nDoc } from '../localized';
 import { supabase } from '../supabase';
 
 /** One place this account put into the catalog. Survives the account —
@@ -26,13 +27,15 @@ export type SubmittedPlaceRow = {
   slug: string;
   name_en: string;
   name_vi: string;
+  /** Every name after the two columns — Japanese and on (`localized`). */
+  i18n?: I18nDoc | null;
   created_at: string | null;
 };
 
 export async function fetchMySubmittedPlaces(ownerId: string): Promise<SubmittedPlaceRow[]> {
   const { data, error } = await supabase
     .from('places')
-    .select('slug, name_en, name_vi, created_at')
+    .select('slug, name_en, name_vi, i18n, created_at')
     .eq('submitted_by', ownerId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);

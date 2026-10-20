@@ -271,6 +271,23 @@ describe('history and contributions', () => {
     const none = [{ slug: 'q', name_en: '', name_vi: '', created_at: null }];
     expect(buildExport(bare({ submitted: none }), NOW, 'en').places_added[0].name).toBe('');
   });
+
+  // Japanese lives in the row's `i18n`, not in a column. The copy this
+  // module used to keep read the two columns only, and a Japanese export
+  // named every place in English.
+  it('names a place in Japanese for a Japanese export, from the row’s i18n', () => {
+    const submitted = [{ slug: 'q', name_en: 'Quan', name_vi: 'Quán', i18n: { ja: { name: 'クアン' } }, created_at: null }];
+    expect(buildExport(bare({ submitted }), NOW, 'ja').places_added[0].name).toBe('クアン');
+
+    const stops = [{ sort_order: 1, arrive_min: null, dwell_min: null, why: null, why_lang: null,
+      places: { ...place('a', 'Lake', 'Hồ'), i18n: { ja: { name: '湖' } } } }];
+    const trips = [{ id: 't1', owner_id: 'me', trip_stops: stops } as unknown as Trip];
+    expect(buildExport(bare({ trips }), NOW, 'ja').trips[0].stops[0].name).toBe('湖');
+
+    // Without one, Japanese falls to English, as the app's own `t` does.
+    const plain = [{ slug: 'q', name_en: 'Quan', name_vi: 'Quán', created_at: null }];
+    expect(buildExport(bare({ submitted: plain }), NOW, 'ja').places_added[0].name).toBe('Quan');
+  });
 });
 
 // The profile and the preferences travel whole: they are this account's

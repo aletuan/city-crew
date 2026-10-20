@@ -31,14 +31,17 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-/** The keys of `export const CATEGORIES: Record<string, CategoryStyle> = {…}`,
- *  taken at one level of indent so the fields inside each entry — `en`,
- *  `icon`, `color` — are not mistaken for categories. */
+/** The keys of `const STYLES = {…} satisfies Record<Category, CategoryStyle>`
+ *  — the table `CATEGORIES` is exported from — taken at one level of
+ *  indent so the fields inside each entry — `en`, `icon`, `color` — are
+ *  not mistaken for categories. The body ends at the first brace in
+ *  column 0, whatever follows it: `};` before the table had a `satisfies`,
+ *  `} satisfies …` since. */
 function appKeys() {
   const src = readFileSync(join(ROOT, 'app/src/lib/categories.ts'), 'utf8');
-  const start = src.indexOf('export const CATEGORIES');
-  assert.notEqual(start, -1, 'app/src/lib/categories.ts no longer declares CATEGORIES');
-  const body = src.slice(start, src.indexOf('\n};', start));
+  const start = src.indexOf('const STYLES = {');
+  assert.notEqual(start, -1, 'app/src/lib/categories.ts no longer declares the STYLES table');
+  const body = src.slice(start, src.indexOf('\n}', start));
   return [...body.matchAll(/^ {2}(\w+): \{/gm)].map((m) => m[1]);
 }
 
