@@ -702,7 +702,7 @@ describe('friends card', () => {
     const { raw } = draw();
     press('Activity');
     expect(raw.navigate).toHaveBeenCalledWith('Activity');
-    expect(screen.getByText('Friend requests, likes and copies.')).toBeTruthy();
+    expect(screen.getByText('Likes and copies of your collections.')).toBeTruthy();
   });
 
   it('files Activity in the same card as the friends row, under it', () => {
@@ -1176,16 +1176,29 @@ describe('the badges', () => {
     expect(box.height).toBe('22px');
   });
 
-  it('counts the feed and the requests waiting on Activity, and nothing when both are empty', () => {
+  it('counts the feed on Activity, and nothing when it is empty', () => {
     draw();
     const row = () => screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
     expect(row().querySelector('[data-testid="count-badge"]')).toBeNull();
     cleanup();
     state.feed = 3;
-    state.ships = [edge('z', 'me', 'pending'), edge('me', 'q', 'pending')];
     draw();
-    // Three in the feed and the one request waiting on this account —
-    // the one the reader sent does not count.
-    expect(row().querySelector('[data-testid="count-badge"]')!.textContent).toBe('4');
+    expect(row().querySelector('[data-testid="count-badge"]')!.textContent).toBe('3');
+  });
+
+  // Requests left Activity on 20 Oct 2026. A request waiting on this
+  // account is the dot on the friends row and nothing on Activity's —
+  // counted in both, one request read as two things to do.
+  it('does not count a request waiting on this account on Activity', () => {
+    state.ships = [edge('z', 'me', 'pending')];
+    draw();
+    const row = screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
+    expect(row.querySelector('[data-testid="count-badge"]')).toBeNull();
+    cleanup();
+    state.feed = 3;
+    state.ships = [edge('z', 'me', 'pending'), edge('y', 'me', 'pending')];
+    draw();
+    expect(screen.getByText('Activity').closest('[data-testid="feature-row"]')!
+      .querySelector('[data-testid="count-badge"]')!.textContent).toBe('3');
   });
 });

@@ -433,21 +433,17 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             the applause on your lists was left behind a route nothing
             navigated to, for six weeks.
 
-            Under the friends row rather than a bell in the header: what
-            the feed holds is who liked your lists and who wants to join
-            your crew, which is this section's subject, and a header bell
-            would be the one control on the screen outside a card. The
-            request dot stays on the friends row — Crew is the inbox since
-            #309; Activity answers requests too, but as news. */}
+            Under the friends row rather than a bell in the header: who
+            liked or copied your collections is this section's subject,
+            and a header bell would be the one control on the screen
+            outside a card. Requests are not counted here any more: they
+            left Activity on 20 Oct 2026 and are the dot on the friends row
+            above, so one request is one mark on this screen, not two. */}
         <FeatureRow
           icon="notifications-outline"
           title={t('Activity', 'Hoạt động', 'アクティビティ')}
-          count={feed + crew.incoming.length}
-          // In the order the screen reads: the requests at the top, the
-          // only things there that want an answer, then the likes and
-          // copies under "Earlier". One line, the owner's pick of two
-          // (20 Oct 2026); "list" was the one English word left in it.
-          sub={t('Friend requests, likes and copies.', 'Lời mời kết bạn, lượt thích và lượt sao chép.', '友達リクエスト、いいね、コピー。')}
+          count={feed}
+          sub={t('Likes and copies of your collections.', 'Lượt thích và sao chép bộ sưu tập.', 'コレクションへのいいねとコピー。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />
