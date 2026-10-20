@@ -250,7 +250,7 @@ describe('the gate', () => {
     expect(screen.getByText('About me')).toBeTruthy();
     expect(screen.getByText('Sign out')).toBeTruthy();
     expect(screen.queryByText('Keep the places you love')).toBeNull();
-    expect(screen.queryByText('Sign in / Sign up')).toBeNull();
+    expect(screen.queryByText('Create a new account')).toBeNull();
   });
 });
 
@@ -259,8 +259,20 @@ describe('guest hub', () => {
 
   it('sends the primary button to SignIn', () => {
     const { raw } = draw();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in / Sign up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(raw.navigate).toHaveBeenCalledWith('SignIn');
+    expect(raw.navigate).not.toHaveBeenCalledWith('SignUp');
+  });
+
+  // The way in for somebody new, one tap and no detour through Sign in.
+  // It took the place of "Keep exploring", which the tab bar already is.
+  it('opens Sign up straight from the line under the button, and offers no way back to Explore', () => {
+    const { raw, parent } = draw();
+    press('Create a new account');
+    expect(raw.navigate).toHaveBeenCalledWith('SignUp');
+    expect(raw.navigate).not.toHaveBeenCalledWith('SignIn');
+    expect(screen.queryByText('Keep exploring')).toBeNull();
+    expect(parent.navigate).not.toHaveBeenCalled();
   });
 
   it.each(['Saved places', 'Collections', 'Trips', 'Connect with friends'])(
@@ -278,22 +290,6 @@ describe('guest hub', () => {
     expect(screen.getByText('Create and organize your collections.')).toBeTruthy();
     expect(screen.getByText('Plan trips and invite your friends.')).toBeTruthy();
     expect(screen.getByText('Find friends and share unforgettable trips.')).toBeTruthy();
-  });
-
-  it('"Keep exploring" goes to the Explore tab through the parent navigator', () => {
-    const { raw, parent } = draw();
-    press('Keep exploring');
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
-    expect(raw.navigate).not.toHaveBeenCalled();
-    expect(goTo).not.toHaveBeenCalled();
-  });
-
-  it('"Keep exploring" still reaches Explore through the root when there is no parent', () => {
-    const r = nav();
-    r.raw.getParent.mockReturnValue(undefined as never);
-    render(<ProfileScreen navigation={r.n} />);
-    press('Keep exploring');
-    expect(goTo).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' });
   });
 
   // The same headings as the member view over the same cards, and one
