@@ -6,7 +6,7 @@ import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { categoriesOf, pinCategory } from '../lib/categories';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
-import { useCity } from '../lib/city';
+import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, sashLabel, shutLabel } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
@@ -58,7 +58,7 @@ export default function PlaceCard({
   const at = new Date();
   // On the place's own clock: a list can hold places from more than one
   // city (see `membersOf`), so the zone is the card's to look up.
-  const tz = cityTz(useCity().cities, place.city_id);
+  const tz = cityTz(useCityList().cities, place.city_id);
   const hours = openState(place.opening_hours, at, tz);
   const shut = shutLabel(hours, t);
   // What the sash shows and what it says are two lines about one fact:

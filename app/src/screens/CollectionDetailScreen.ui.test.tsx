@@ -105,7 +105,11 @@ vi.mock('../lib/save', () => {
   });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
 });
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city }) }));
+vi.mock('../lib/city', () => {
+  const m = { useCity: () => ({ city: state.city }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../nav', () => ({ goTo: spies.goTo }));
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 vi.mock('../lib/data', async (orig) => ({

@@ -77,9 +77,13 @@ const spies = vi.hoisted(() => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: state.city, cities: state.cities ?? (state.city ? [state.city] : []), setCity: spies.setCity }),
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({ city: state.city, cities: state.cities ?? (state.city ? [state.city] : []), setCity: spies.setCity }),
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.places, reload: spies.reload }),
   useCollections: () => state.cols,

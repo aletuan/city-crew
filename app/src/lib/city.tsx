@@ -182,11 +182,34 @@ const FALLBACK: City = {
   hero_photo_uri: null, hero_photo_credit: null, hero_photo_credit_uri: null,
 };
 
-const Ctx = createContext<CityContext>({
-  city: null, cities: [FALLBACK], mode: 'auto', setCity: () => {}, followMyLocation: async () => false,
+/**
+ * ── two halves, one provider (20 Oct 2026) ──
+ *
+ * `useCity` had twenty-five callers, and sixteen read only `city` — the
+ * data hooks, the save sheet, most screens. As one context, every one of
+ * them drew again whenever the *list* changed, which is twice on an
+ * ordinary launch (last launch's list, then this one's) and again on each
+ * foreground refresh, for a value they never read. The SOLID review (I)
+ * split it where the callers had: the city on screen, and the list with
+ * the ways to move between its rows. `useCity` stays as both, for the
+ * switchers and the screens that offer one.
+ */
+export type CurrentCity = Pick<CityContext, 'city'>;
+export type CityList = Omit<CityContext, keyof CurrentCity>;
+
+const CityCtx = createContext<CurrentCity>({ city: null });
+const CityListCtx = createContext<CityList>({
+  cities: [FALLBACK], mode: 'auto', setCity: () => {}, followMyLocation: async () => false,
 });
 
-export const useCity = () => useContext(Ctx);
+/** The city on screen, or null until the bootstrap commits to one. */
+export const useCurrentCity = () => useContext(CityCtx);
+/** Every city, whose word the current one is, and the two ways to change it. */
+export const useCityList = () => useContext(CityListCtx);
+/** All of it, as one object — the shape every caller had before the split. */
+export function useCity(): CityContext {
+  return { ...useCurrentCity(), ...useCityList() };
+}
 
 
 /**
@@ -619,13 +642,29 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [cities]);
 
-  const value = useMemo<CityContext>(() => ({
-    city: cityId ? cities.find((c) => c.id === cityId) ?? null : null,
-    cities,
-    mode,
-    setCity,
-    followMyLocation,
-  }), [cities, cityId, mode, setCity, followMyLocation]);
+  // The row on screen, kept by what it says rather than by which array it
+  // came from. A fresh list is fresh objects, so the same Da Nang read
+  // back from the network is a new `city` to React — and without this,
+  // every city-only caller still drew on each refresh, split or no split.
+  // A refresh that did change the row (a new cover, a corrected name)
+  // changes the text, and that does reach them. Cost, measured: the find
+  // and the stringify of a full 28-column row (795 bytes) take 1.0 µs in
+  // Node 24 on an M3 Pro, once per provider render — not per caller.
+  const found = cityId ? cities.find((c) => c.id === cityId) ?? null : null;
+  const foundText = JSON.stringify(found);
+  // `foundText` is `found`, said so that equal rows compare equal.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const city = useMemo(() => found, [foundText]);
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  const current = useMemo<CurrentCity>(() => ({ city }), [city]);
+  const list = useMemo<CityList>(
+    () => ({ cities, mode, setCity, followMyLocation }),
+    [cities, mode, setCity, followMyLocation],
+  );
+
+  return (
+    <CityCtx.Provider value={current}>
+      <CityListCtx.Provider value={list}>{children}</CityListCtx.Provider>
+    </CityCtx.Provider>
+  );
 }

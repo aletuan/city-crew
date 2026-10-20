@@ -19,14 +19,18 @@ const data = vi.hoisted(() => ({
 }));
 vi.mock('../lib/data', () => ({ removeCheckin: data.removeCheckin }));
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => { data.asked(); return data.visits; } }));
-vi.mock('../lib/city', () => ({
-  useCity: () => ({
-    cities: [
-      { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' },
-      { id: 'saigon', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: null },
-    ],
-  }),
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({
+      cities: [
+        { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' },
+        { id: 'saigon', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: null },
+      ],
+    }),
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 const i18n = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi' | 'ja' }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({

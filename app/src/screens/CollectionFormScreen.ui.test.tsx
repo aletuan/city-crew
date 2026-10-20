@@ -39,9 +39,13 @@ vi.mock('../lib/auth', () => {
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
-vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: who.city }),
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({ city: who.city }),
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 const lang = vi.hoisted(() => ({ now: 'en' as 'en' | 'vi' }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: lang.now, setLang: () => {}, t: (en: string, vi?: string) => (lang.now === 'vi' ? vi ?? en : en) }),

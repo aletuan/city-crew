@@ -10,7 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitySwitcherModal } from '../../components/CitySwitcher';
 import { PressableScale } from '../../components/ui';
-import { useCity } from '../../lib/city';
+import { useCurrentCity } from '../../lib/city';
 import { useSky } from '../../lib/sky';
 import { dayline } from '../../lib/format';
 import { coverOf, Place } from '../../lib/data';
@@ -54,7 +54,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
 }) {
   const searchAnchor = useTourAnchor('search', onSearch);
   const { t, lang } = useI18n();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const insets = useSafeAreaInsets();
   // The city's centre, never the device's position — someone with the
   // city set to follow their location still keeps it on their phone.

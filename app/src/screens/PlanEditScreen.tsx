@@ -101,7 +101,7 @@ import {
 import { DEFAULT_TZ } from '../lib/clock';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
 import { reviewAfterTripSaved } from '../lib/askReview';
@@ -150,7 +150,7 @@ export default function PlanEditScreen({ navigation, route }: {
   const clearance = useTabBarClearance();
   const p = route.params;
   const { data: places } = usePlaces();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const { session } = useSession();
   const mine = useMyLists();
   const { askToSignIn } = useSaveActions();

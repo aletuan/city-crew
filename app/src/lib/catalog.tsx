@@ -100,7 +100,28 @@ const EMPTY: Catalog = {
   toggleLike: async () => {},
 };
 
-const Ctx = createContext<Catalog>(EMPTY);
+/**
+ * ── two halves, one provider (20 Oct 2026) ──
+ *
+ * One context carried all eight members, and every one of its readers —
+ * twenty-eight calls for the places, the lists, the terms or a face, none
+ * of which a heart changes — drew again on each tap: the tap moves
+ * `pending`, which moves the counts and your set, which rebuilt the one
+ * value; and the two refetches
+ * the tap sends moved it twice more. The SOLID review (I) split it where
+ * the readers already had: what the catalog holds, and what has been
+ * liked. A tap now reaches only the hearts, and `useCatalog` stays as
+ * both, the way `useSave` did after #1078 and `useAuth` after #1079.
+ */
+export type CatalogData = Pick<Catalog, 'places' | 'collections' | 'curatorAvatars' | 'terms'>;
+export type CatalogLikes = Omit<Catalog, keyof CatalogData>;
+
+const DataCtx = createContext<CatalogData>({
+  places: EMPTY.places, collections: EMPTY.collections, terms: EMPTY.terms, curatorAvatars: EMPTY.curatorAvatars,
+});
+const LikesCtx = createContext<CatalogLikes>({
+  likes: EMPTY.likes, rankLikes: EMPTY.rankLikes, myLikes: EMPTY.myLikes, toggleLike: EMPTY.toggleLike,
+});
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // The places query needs to know who is reading, so it can include the
@@ -273,9 +294,8 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meId, liked, likeCounts.reload, myLikes.reload]);
 
-  const value = useMemo<Catalog>(() => ({
-    places, collections, terms, likes: counts, rankLikes: likeCounts.data.ranked, myLikes: liked, toggleLike,
-    curatorAvatars: curatorAvatars.data,
+  const data = useMemo<CatalogData>(() => ({
+    places, collections, terms, curatorAvatars: curatorAvatars.data,
   // Each field, not each wrapper: a Fetch object is new every render, so depending on it would
   // rebuild the context value — and re-render every consumer — on renders where nothing loaded.
   //
@@ -296,33 +316,45 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     places.data, places.loading, places.loaded, places.error, places.loadedAt, places.fromCache, places.reload,
     collections.data, collections.loading, collections.loaded, collections.error, collections.loadedAt,
     collections.fromCache, collections.reload,
-    curatorAvatars.data,
-    terms, counts, likeCounts.data.ranked, liked, toggleLike,
+    terms, curatorAvatars.data,
   ]);
+  const likes = useMemo<CatalogLikes>(
+    () => ({ likes: counts, rankLikes: likeCounts.data.ranked, myLikes: liked, toggleLike }),
+    [counts, likeCounts.data.ranked, liked, toggleLike],
+  );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <DataCtx.Provider value={data}>
+      <LikesCtx.Provider value={likes}>{children}</LikesCtx.Provider>
+    </DataCtx.Provider>
+  );
 }
 
-export const useCatalog = () => useContext(Ctx);
+/** All of it, as one object — the shape the provider had before the split.
+ *  A caller that reads only one half should ask for that half: this one
+ *  draws again on every heart tap. */
+export function useCatalog(): Catalog {
+  return { ...useContext(DataCtx), ...useContext(LikesCtx) };
+}
 
 /**
  * The city's published places. Same shape the screens always used, so a
  * call site does not care that the fetch moved — only the import did.
  */
-export const usePlaces = () => useCatalog().places;
+export const usePlaces = () => useContext(DataCtx).places;
 
 /** Search synonyms, merged and ready for `placeHaystack`. */
-export const useSearchTerms = () => useCatalog().terms;
+export const useSearchTerms = () => useContext(DataCtx).terms;
 
 /** The desk's public collections for the city. */
-export const useCollections = () => useCatalog().collections;
+export const useCollections = () => useContext(DataCtx).collections;
 
 /** One curator's face, if the shelf brought it back. Null covers both
  *  "no such profile" — every editorial handle — and "not fetched yet",
  *  and the screens draw the same placeholder for both, so the answer
  *  arriving late cannot move anything. */
 export const useCuratorAvatar = (handle: string | null | undefined) => {
-  const map = useCatalog().curatorAvatars;
+  const map = useContext(DataCtx).curatorAvatars;
   return handle ? map[normalizeHandle(handle)] ?? null : null;
 };
 
@@ -330,7 +362,4 @@ export const useCuratorAvatar = (handle: string | null | undefined) => {
  *  id, and the one way to change them. The shown counts and your likes
  *  already include the tap you just made; the ranking waits for the
  *  server. */
-export const useLikes = () => {
-  const { likes, rankLikes, myLikes, toggleLike } = useCatalog();
-  return { likes, rankLikes, myLikes, toggleLike };
-};
+export const useLikes = () => useContext(LikesCtx);

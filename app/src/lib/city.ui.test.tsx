@@ -52,7 +52,7 @@ vi.mock('./auth', async () => {
   };
 });
 
-import { CityProvider, useCity, useMyPosition } from './city';
+import { CityProvider, useCity, useCityList, useCurrentCity, useMyPosition } from './city';
 
 const KEY = 'citycrew.city';
 const CITIES = [
@@ -684,6 +684,71 @@ describe('the city list', () => {
       await back();
       // Only the healer's own ticks, if any — never one of this effect's.
       expect(asked()).toBe(before);
+    });
+
+    // ── the two halves (SOLID review, I, 20 Oct 2026) ──
+    //
+    // Sixteen callers read only the city on screen. A refreshed list must
+    // not redraw them — not even though the network hands the same row
+    // back as a new object — while a refresh that changed their row must.
+    describe('a city-only caller', () => {
+      const renders = { city: 0 };
+      let seen: ReturnType<typeof useCurrentCity>;
+      let list: ReturnType<typeof useCityList>;
+      let all: ReturnType<typeof useCity>;
+      function CityOnly() {
+        const c = useCurrentCity();
+        useEffect(() => { renders.city += 1; seen = c; });
+        return null;
+      }
+      function ListOnly() {
+        const l = useCityList();
+        useEffect(() => { list = l; });
+        return null;
+      }
+      function Both() {
+        const a = useCity();
+        useEffect(() => { all = a; });
+        return null;
+      }
+      /** Bootstrapped on Da Nang, with `next` queued for the refresh — as
+       *  JSON, the way the wire hands rows over: equal, never the same. */
+      const onDanang = async (next: unknown[]) => {
+        h.fake!.reset();
+        h.fake!.replies({ data: CITIES, error: null }, { data: JSON.parse(JSON.stringify(next)), error: null });
+        render(<CityProvider><Probe /><Count /><CityOnly /><ListOnly /><Both /></CityProvider>);
+        await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi'));
+        await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+        await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60 * 1000); });
+      };
+
+      it('gets the city alone, the list its own half, and useCity both', async () => {
+        await onDanang(CITIES);
+        expect(Object.keys(seen)).toEqual(['city']);
+        expect(Object.keys(list).sort()).toEqual(['cities', 'followMyLocation', 'mode', 'setCity']);
+        expect(all.city).toBe(seen.city);
+        expect(all.cities).toBe(list.cities);
+        expect(all.setCity).toBe(list.setCity);
+      });
+
+      it('is not redrawn when a refresh changes the list and not its row', async () => {
+        await onDanang([...CITIES, HOIAN]);
+        const before = renders.city;
+        const was = seen.city;
+        await back();
+        await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi,hoian'));
+        expect(list.cities).toHaveLength(3);
+        expect(seen.city).toBe(was);
+        expect(renders.city).toBe(before);
+      });
+
+      it('is redrawn when the refresh changed its own row', async () => {
+        await onDanang([{ ...CITIES[0], short_en: 'Đà Nẵng' }, CITIES[1]]);
+        const before = renders.city;
+        await back();
+        await waitFor(() => expect(seen.city?.short_en).toBe('Đà Nẵng'));
+        expect(renders.city).toBe(before + 1);
+      });
     });
 
     it('never stacks a second ask on one still out', async () => {

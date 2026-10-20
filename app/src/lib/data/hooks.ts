@@ -8,7 +8,7 @@
 // reach.
 
 import { useCallback } from 'react';
-import { useCity } from '../city';
+import { useCurrentCity } from '../city';
 import { normalizeHandle } from '../handle';
 import type { Collection, Place } from '../types';
 import { CACHE_CATALOG, cacheKey } from './cache';
@@ -36,7 +36,7 @@ const pending = new Promise<never>(() => {}); // keeps skeletons up during city 
 // reader is part of the question — see `cacheKey` — so asking before
 // knowing who asks is asking a question that is about to be replaced.
 export const usePlacesQuery = (meId: string | null | undefined) => {
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const known = meId !== undefined;
   const fetcher = useCallback(
     () => (city && known ? fetchPlaces(city.id, meId) : (pending as Promise<Place[]>)),
@@ -105,7 +105,7 @@ export const useMyLikesQuery = (meId?: string | null) => {
 // city serves the whole device, signed in or out, and signing in no
 // longer has to re-fetch a list that has not changed.
 export const useCollectionsQuery = () => {
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const fetcher = useCallback(
     () => (city ? fetchCollections(city.id) : (pending as Promise<Collection[]>)),
     // `city.id` is the stable key — see `usePlacesQuery` above.

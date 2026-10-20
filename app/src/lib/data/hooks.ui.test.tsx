@@ -27,7 +27,11 @@ const q = vi.hoisted(() => ({
   fetchMyLikes: vi.fn(),
   fetchPreferences: vi.fn(),
 }));
-vi.mock('../city', () => ({ useCity: () => ({ city: { id: 'hcmc' } }) }));
+vi.mock('../city', () => {
+  const m = { useCity: () => ({ city: { id: 'hcmc' } }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('./places', () => ({
   fetchPlaces: q.fetchPlaces, fetchCategoryTerms: vi.fn(), fetchPlaceBySlug: vi.fn(),
 }));

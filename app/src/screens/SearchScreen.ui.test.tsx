@@ -53,9 +53,13 @@ vi.mock('../lib/i18n', () => ({
 // Hanoi, with no zone on the row — which reads as Vietnam — unless a
 // test puts a city with one in its place.
 const cityState = vi.hoisted(() => ({ current: { id: 'hanoi' } as { id: string; tz?: string } }));
-vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: cityState.current, cities: [cityState.current] }),
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({ city: cityState.current, cities: [cityState.current] }),
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ data: cat.places }),
   useCollections: () => ({ data: cat.cols }),

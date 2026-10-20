@@ -77,7 +77,11 @@ vi.mock('../lib/i18n', async (importOriginal) => ({
 }));
 // The list carries the chosen city alone: the hours ribbon reads the
 // place's zone off it, and a place from another city reads as Vietnam.
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, cities: state.city ? [state.city] : [] }) }));
+vi.mock('../lib/city', () => {
+  const m = { useCity: () => ({ city: state.city, cities: state.city ? [state.city] : [] }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/catalog', () => ({ usePlaces: () => state.catalog }));
 // The barrel pulls in Supabase; the pure helpers it re-exports from
 // `lib/place` are kept real, and only the fetch hook is stood in for.

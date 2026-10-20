@@ -19,7 +19,7 @@ import {
   addPlaceToCollection, Collection, type Fetch, holds, logPlaceEvent, nextSortOrder, Place, removePlaceFromCollection,
   useMyCollections, useMyPreferences,
 } from './data';
-import { useCity } from './city';
+import { useCurrentCity } from './city';
 import { useI18n } from './i18n';
 import { DAILY_CAPS, isDailyLimit } from './quota';
 import { goTo, navRef } from '../nav';
@@ -113,7 +113,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   // session: opening a sheet is an act, not a read.
   const me = session?.user?.id ?? userId;
   const mine = useMyCollections(me);
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   // Only for the opt-in flag. The insert policy checks it too; this saves
   // a round trip to be told no.
   //

@@ -129,7 +129,11 @@ vi.mock('../lib/save', () => {
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
 });
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips, loaded: state.counts.tripsLoaded, error: state.counts.tripsError, reload: reloads.trips }) }));
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, mode: state.mode }) }));
+vi.mock('../lib/city', () => {
+  const m = { useCity: () => ({ city: state.city, mode: state.mode }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref: () => {}, ready: true, claimResume: () => state.resume }),
 }));

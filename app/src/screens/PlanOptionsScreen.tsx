@@ -43,7 +43,7 @@ import {
 } from '../lib/assist';
 import { DEFAULT_TZ } from '../lib/clock';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -101,7 +101,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const clearance = useTabBarClearance();
   const p = route.params;
   const { data: places } = usePlaces();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const mine = useMyLists();
   const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();

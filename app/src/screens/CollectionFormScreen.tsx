@@ -27,7 +27,7 @@ import { KindToggles } from '../components/KindPill';
 import { PressableScale, successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
@@ -76,7 +76,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   const { t, lang } = useI18n();
   const { width } = useWindowDimensions();
   const { session } = useSession();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const mine = useMyLists();
   const editing = route.params?.slug;
   const addPlaceSlug = route.params?.addPlaceSlug;

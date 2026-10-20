@@ -62,10 +62,14 @@ vi.mock('../lib/i18n', () => ({
       (state.lang === 'ja' ? ja || en : state.lang === 'vi' ? vi || en : en),
   }),
 }));
-vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: state.city, cities: state.cities, setCity }),
-  useMyPosition: () => state.me,
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({ city: state.city, cities: state.cities, setCity }),
+    useMyPosition: () => state.me,
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ data: state.places }),
   useCollections: () => ({ data: state.cols }),

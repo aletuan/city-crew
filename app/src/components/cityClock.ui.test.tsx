@@ -25,16 +25,20 @@ vi.mock('../lib/save', () => {
 });
 // Two cities in the list, each with its zone — the shape `cities.tz`
 // gives the app — and a third row hydrated before the column existed.
-vi.mock('../lib/city', () => ({
-  useCity: () => ({
-    city: null,
-    cities: [
-      { id: 'melbourne', tz: 'Australia/Melbourne' },
-      { id: 'hanoi', tz: 'Asia/Ho_Chi_Minh' },
-      { id: 'hcmc' },
-    ],
-  }),
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({
+      city: null,
+      cities: [
+        { id: 'melbourne', tz: 'Australia/Melbourne' },
+        { id: 'hanoi', tz: 'Asia/Ho_Chi_Minh' },
+        { id: 'hcmc' },
+      ],
+    }),
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 
 import PlaceCard from './PlaceCard';
 import MapPlaceCard from './MapPlaceCard';
