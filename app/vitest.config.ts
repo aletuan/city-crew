@@ -216,8 +216,13 @@ const IMPURE = [
 // whose every line runs, because it counts the no-op defaults each
 // `createContext` is given for a tree with no provider above it; a floor
 // there would ask for tests of code no reader can reach. Today's truth,
-// rounded down, each column one file's: `catalog.tsx` at 97.6% lines,
+// rounded down, each column one file's: every provider at 100% lines,
 // `invitations.tsx` at 89.18% branches.
+//
+// Lines were 97 while `catalog.tsx` stood at 97.54%, and the 2.5% it was
+// missing was `useCuratorAvatar` — the hook a context-value bug had made
+// read {} forever. Nothing ran it, so nothing could see that. The test
+// that covers it now is the one that caught the bug.
 //
 // That second figure was first written down as 86.11, and CI read 82.85
 // on the same code. `invitations.tsx` drops an answer that lands after a
@@ -226,7 +231,7 @@ const IMPURE = [
 // on its own is a coin toss, so the guard got two tests that hold each
 // ask open and let them go in order, and the figure stopped moving —
 // three full runs since, identical in every provider and function file.
-const PROVIDERS_FLOOR = { lines: 97, branches: 89 };
+const PROVIDERS_FLOOR = { lines: 100, branches: 89 };
 
 // ── the Edge Functions' floor ──
 //
