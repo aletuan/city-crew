@@ -509,3 +509,12 @@ for f in "$ROOT"/supabase/migrations/*_collection_kinds.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/collection_kinds_test.sql"
+
+# A new profile is dealt one of the bundled animals (20 Oct 2026). Last,
+# because from here every blank sign-up gets a face, and the profile
+# checks above expect the column as sign-up left it.
+echo "→ avatar at sign-up"
+for f in "$ROOT"/supabase/migrations/*_preset_avatar_at_signup.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/avatar_preset_test.sql"
