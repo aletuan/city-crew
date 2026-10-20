@@ -7,7 +7,7 @@ import { useSignupTour } from '../../components/SignupTour';
 import { CitySwitcherModal } from '../../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../../components/LanguageSwitcher';
 import { schemeIcon, schemeLabel, ThemeSwitcherModal } from '../../components/ThemeSwitcher';
-import { useCity } from '../../lib/city';
+import { useCurrentCity } from '../../lib/city';
 import { useI18n } from '../../lib/i18n';
 import { useScheme } from '../../lib/theme';
 import { SwitchRow, SettingRow } from './rows';
@@ -27,7 +27,7 @@ import { s } from './styles';
  *  convention is a weaker signal than a heading. See `AppCard`. */
 export function SettingsCard() {
   const { t, lang } = useI18n();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   // Open from the first frame when this launch is the restart a theme

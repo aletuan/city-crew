@@ -56,7 +56,11 @@ vi.mock('../lib/auth', () => {
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city }) }));
+vi.mock('../lib/city', () => {
+  const m = { useCity: () => ({ city: state.city }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/data', () => ({
   useMyPreferences: (uid: string | null) => {
     spies.prefsFor(uid);

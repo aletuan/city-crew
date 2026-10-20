@@ -18,7 +18,7 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill } from '../components/add';
 import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
-import { useCity } from '../lib/city';
+import { useCityList } from '../lib/city';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
 import { atHandle } from '../lib/handle';
@@ -456,7 +456,7 @@ export default function CollectionsScreen({ navigation, route }: {
 }) {
   const { t } = useI18n();
   const { session } = useSession();
-  const { cities } = useCity();
+  const { cities } = useCityList();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);
   // Shared with the save sheet — see SaveProvider. Reading it here through

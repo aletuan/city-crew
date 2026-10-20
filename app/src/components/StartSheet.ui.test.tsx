@@ -44,10 +44,14 @@ vi.mock('../lib/auth', () => {
 });
 const setCity = vi.hoisted(() => vi.fn());
 const followMyLocation = vi.hoisted(() => vi.fn(async () => true));
-vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: world.city, cities: world.cities, mode: world.mode, setCity, followMyLocation }),
-  useMyPosition: () => world.me,
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({ city: world.city, cities: world.cities, mode: world.mode, setCity, followMyLocation }),
+    useMyPosition: () => world.me,
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

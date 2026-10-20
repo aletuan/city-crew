@@ -59,7 +59,11 @@ vi.mock('../lib/auth', () => {
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, cities: [] }) }));
+vi.mock('../lib/city', () => {
+  const m = { useCity: () => ({ city: state.city, cities: [] }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ ...state.cols, reload: spies.colsReload }),
   useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),

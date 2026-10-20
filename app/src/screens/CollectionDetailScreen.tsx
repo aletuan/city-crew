@@ -26,7 +26,7 @@ import {
   setCollectionPublic, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
@@ -292,7 +292,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // Reporting, raised from the overflow menu — see components/reportFlow.
   const { report, canReport, node: reportSheet } = useReport();
   const { data: places, loading: placesLoading } = usePlaces();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   // Liking needs three things and refuses without any of them: an account
   // to attribute the like to, the row's id — the likes table keys on it,
   // not on the slug everything user-facing uses — and a list that is

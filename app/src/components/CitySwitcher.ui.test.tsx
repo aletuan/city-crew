@@ -21,18 +21,22 @@ const ctx = vi.hoisted(() => ({
 const setCity = vi.hoisted(() => vi.fn());
 const followMyLocation = vi.hoisted(() => vi.fn(async () => true));
 
-vi.mock('../lib/city', () => ({
-  useCity: () => ({
-    city: ctx.city,
-    cities: [
-      { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' },
-      { id: 'saigon', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン' },
-    ],
-    mode: ctx.mode,
-    setCity,
-    followMyLocation,
-  }),
-}));
+vi.mock('../lib/city', () => {
+  const m = {
+    useCity: () => ({
+      city: ctx.city,
+      cities: [
+        { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' },
+        { id: 'saigon', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン' },
+      ],
+      mode: ctx.mode,
+      setCity,
+      followMyLocation,
+    }),
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

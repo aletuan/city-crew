@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fireHaptic, PressableScale, Skeleton } from '../../components/ui';
 import { CATEGORIES, categoriesOf, type CategoryStyle } from '../../lib/categories';
-import { useCity } from '../../lib/city';
+import { useCurrentCity } from '../../lib/city';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../../lib/data';
 import { useCollections, useLikes, usePlaces } from '../../lib/catalog';
 import { useSession } from '../../lib/auth';
@@ -52,7 +52,7 @@ export function collectionBadge(members: Place[]): CategoryStyle | null {
 
 export function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const cols = useCollections();
   const { likes, rankLikes, myLikes, toggleLike } = useLikes();
   const uid = useSession().session?.user?.id;

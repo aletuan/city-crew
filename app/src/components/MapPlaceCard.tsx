@@ -10,7 +10,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, type Place } from '../lib/data';
-import { useCity } from '../lib/city';
+import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, shutLabel } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
@@ -39,7 +39,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // is silent otherwise. Shut: `shutLabel`. One of the two is null by
   // construction, so at most one fact about hours reaches the line —
   // the same split `PlaceCard` makes.
-  const state = openState(place.opening_hours, now, cityTz(useCity().cities, place.city_id));
+  const state = openState(place.opening_hours, now, cityTz(useCityList().cities, place.city_id));
   const hours = state?.open ? openFragment(state, t) : shutLabel(state, t);
   // The brand alone, as `PlaceCard` prints it. The suffix the catalog
   // hangs after the dash is the branch's ward, and this strip sits under

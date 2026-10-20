@@ -37,7 +37,7 @@ import {
 } from '../components/ui';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { DEFAULT_TZ, instantOn } from '../lib/clock';
 import { clockOf, dateline, fmtMinutes, openState } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
@@ -213,7 +213,7 @@ export default function SketchingScreen({ navigation, route }: {
   // sends them off to change answers that were fine. Named for what it
   // is, with the one remedy that can work: asking again.
   const failed = !loading && !!error && places.length === 0;
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const mine = useMyLists();
   const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();

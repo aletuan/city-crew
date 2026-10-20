@@ -22,7 +22,7 @@ import {
   Collection, coverOf, isLive, membersOf, Place, touchesCity,
 } from '../lib/data';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
 import { DEFAULT_TZ } from '../lib/clock';
@@ -69,7 +69,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const [query, setQuery] = useState('');
   const { data: places } = usePlaces();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const cols = useCollections();
   const tabClearance = useTabBarClearance();
   const google = useCandidates();

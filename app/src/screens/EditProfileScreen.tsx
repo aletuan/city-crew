@@ -46,7 +46,7 @@ import TastePicker from '../components/TastePicker';
 import { Card, PressableScale, successHaptic, Toggle } from '../components/ui';
 import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { CATEGORIES } from '../lib/categories';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { clearMyHistory, savePreferences, useMyPreferences } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { HANDLE_MAX, handleProblem, normalizeHandle } from '../lib/handle';
@@ -56,7 +56,7 @@ import type { Nav } from '../nav';
 
 export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const { session } = useSession();
   const { profile } = useProfile();
   const { updateProfile } = useAuthActions();

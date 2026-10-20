@@ -40,11 +40,22 @@ vi.mock('./auth', () => {
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
-vi.mock('./catalog', () => ({
-  usePlaces: () => ({ data: world.places }),
-  useCatalog: () => ({ collections: { data: world.collections }, myLikes: world.myLikes }),
-}));
-vi.mock('./city', () => ({ useCity: () => ({ city: world.city }) }));
+vi.mock('./catalog', () => {
+  const useCatalog = () => ({
+    places: { data: world.places }, collections: { data: world.collections }, myLikes: world.myLikes,
+  });
+  return {
+    useCatalog,
+    usePlaces: () => useCatalog().places,
+    useCollections: () => useCatalog().collections,
+    useLikes: () => useCatalog(),
+  };
+});
+vi.mock('./city', () => {
+  const m = { useCity: () => ({ city: world.city }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('./save', () => {
   const useSave = () => ({ mine: { data: world.mine } });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };

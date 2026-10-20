@@ -40,14 +40,14 @@ import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import { finished } from '../lib/batch';
 import CandidateRow from '../components/CandidateRow';
 import { useCandidates } from '../lib/candidates';
-import { useCity } from '../lib/city';
+import { useCurrentCity } from '../lib/city';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const tabClearance = useTabBarClearance();
   const { results, known, searching, adding, batch, run, addMany, awayFrom, clear } = useCandidates();
 

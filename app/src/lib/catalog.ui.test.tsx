@@ -18,7 +18,7 @@
 // curator avatars, after everything else has settled — reaches a reader,
 // rather than sitting behind a memo that was not told it changed.
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render } from '../uitest/render';
@@ -47,6 +47,9 @@ const world = vi.hoisted(() => ({
   likesFor: [] as (string | null | undefined)[],
   likeCounts: null as unknown as F,
   myLikes: null as unknown as F,
+  // One object per test, as `useFetch` holds its data in state: a fresh
+  // `{}` each render would rebuild the catalog's value on every render and
+  // hide the very redraws the two halves below are about.
   avatars: null as unknown as F,
   terms: null as unknown as F,
 }));
@@ -89,7 +92,9 @@ vi.mock('./data', async (orig) => ({
   unlikeCollection: writes.unlike,
 }));
 
-import { CatalogProvider, useCuratorAvatar, useLikes } from './catalog';
+import {
+  CatalogProvider, useCatalog, useCollections, useCuratorAvatar, useLikes, usePlaces, useSearchTerms,
+} from './catalog';
 
 const OLD = Date.now() - 10 * 60 * 1000;
 
@@ -334,5 +339,52 @@ describe('the curator avatars', () => {
     world.avatars = fetch({ data: { ann: 'https://x/ann.png' } as unknown as unknown[] });
     rerender(tree());
     expect(face).toBe('https://x/ann.png');
+  });
+});
+
+// The SOLID review's split (20 Oct 2026): what the catalog holds, and
+// what has been liked, from two contexts — so a heart tap reaches only
+// the callers that draw a heart.
+describe('the two halves', () => {
+  const list = { id: 'c1', slug: 'hue-noodles' };
+  const renders = { data: 0 };
+  let likes: ReturnType<typeof useLikes>;
+  let all: ReturnType<typeof useCatalog>;
+  let data: { places: unknown; collections: unknown; terms: unknown; face: unknown };
+  // Every selector of the data half at once: any one of them reading the
+  // likes too would redraw this on a tap.
+  function DataOnly() {
+    const d = {
+      places: usePlaces(), collections: useCollections(), terms: useSearchTerms(), face: useCuratorAvatar('ana'),
+    };
+    useEffect(() => { renders.data += 1; data = d; });
+    return null;
+  }
+  function LikesOnly() { likes = useLikes(); return null; }
+  function Both() { all = useCatalog(); return null; }
+  const mountHalves = () => render(<CatalogProvider><DataOnly /><LikesOnly /><Both /></CatalogProvider>);
+
+  it('hands each caller its own half, and useCatalog both', () => {
+    mountHalves();
+    expect(data.places).toBe(world.places);
+    expect(data.collections).toBe(world.collections);
+    expect(data.face).toBeNull();
+    expect(Object.keys(likes).sort()).toEqual(['likes', 'myLikes', 'rankLikes', 'toggleLike']);
+    expect(Object.keys(all).sort()).toEqual([
+      'collections', 'curatorAvatars', 'likes', 'myLikes', 'places', 'rankLikes', 'terms', 'toggleLike',
+    ]);
+    expect(all.places).toBe(world.places);
+    expect(all.toggleLike).toBe(likes.toggleLike);
+  });
+
+  // The point of the split: a tap moves the heart and the tally, and the
+  // places, the lists, the terms and the faces stay drawn as they were.
+  it('does not redraw a data-only caller when a heart is tapped', async () => {
+    mountHalves();
+    const before = renders.data;
+    await act(async () => { await likes.toggleLike(list); });
+    expect(likes.myLikes).toContain('c1');
+    expect(all.myLikes).toContain('c1');
+    expect(renders.data).toBe(before);
   });
 });

@@ -40,7 +40,7 @@ Google, khoá Claude, service role) — không phải để "có backend".
 |---|---|---|---|
 | Màn hình | `src/screens/` | một màn một file; ghép component, đọc provider và hook dữ liệu | components, lib, `nav.ts`, `theme.ts` |
 | Component | `src/components/` | UI dùng lại; `ui/` là design system | lib, `theme.ts`, `nav.ts` — **không** screens |
-| Provider | `src/lib/*.tsx` | trạng thái dùng chung: 9 React context (auth, thành phố, catalog, crew, trips…) và vài hook | lib, lib/data |
+| Provider | `src/lib/*.tsx` | trạng thái dùng chung: các provider (auth, thành phố, catalog, crew, trips…), mỗi cái một hoặc vài React context, và vài hook | lib, lib/data |
 | Dữ liệu | `src/lib/data/` | mọi câu hỏi tới Postgres/Storage, mỗi aggregate một file, `index.ts` là barrel | `lib/supabase.ts`, lib thuần |
 | Nghiệp vụ thuần | `src/lib/*.ts` | planner, xếp hạng, giờ mở cửa, định dạng… — không React, chạy được trong Node | lib thuần |
 
@@ -111,6 +111,17 @@ chỗ nào có lọc và vì sao.
 `App.tsx` lồng provider theo thứ tự phụ thuộc — cái bên trong đọc cái bên
 ngoài: `ThemeProvider` › `AppBoundary` › `Auth` › `I18n` › `City` ›
 `Catalog` › `Crew` › `Invitations` › `MyTrips` › `Save` › `TabBarDuck`.
+
+Provider nhiều người đọc mà mỗi người chỉ đọc một phần thì **chia context
+theo đường người đọc đã vạch**, vì một context đổi là mọi người đọc nó vẽ
+lại, kể cả người không đọc phần vừa đổi: `useSession` / `useProfile` /
+`useAuthActions` (auth), `useMyLists` / `useSaveActions` (save), `usePlaces`
+và các selector dữ liệu / `useLikes` (catalog — một cú tim không vẽ lại
+danh sách địa điểm), `useCurrentCity` / `useCityList` (thành phố — làm mới
+danh sách thành phố không vẽ lại mười sáu nơi chỉ đọc `city`). Hook gộp
+(`useAuth`, `useSave`, `useCatalog`, `useCity`) vẫn còn cho nơi đọc nhiều
+phần; nơi nào chỉ đọc một phần thì gọi hook hẹp. Auth, catalog và thành
+phố mỗi cái có một test đếm số lần vẽ để canh đúng điều đó.
 
 Năm tab (Ideas, Explore, Trips, Collections, Profile), mỗi tab một native
 stack. Màn chi tiết được khai báo lặp ở nhiều stack **có chủ ý** (để mở một

@@ -22,7 +22,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Alert, Keyboard } from 'react-native';
 import { useSession } from './auth';
 import { useSaveActions } from './save';
-import { useCity, useMyPosition } from './city';
+import { useCurrentCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
 import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
@@ -56,7 +56,7 @@ export type Candidates = {
 
 export function useCandidates(): Candidates {
   const { t } = useI18n();
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const me = useMyPosition();
   const { session } = useSession();
   const meId = session?.user?.id;

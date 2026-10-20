@@ -54,10 +54,14 @@ vi.mock('./save', () => {
   const useSave = () => ({ askToSignIn: h.askToSignIn });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
 });
-vi.mock('./city', () => ({
-  useCity: () => ({ city: h.city }),
-  useMyPosition: () => h.me,
-}));
+vi.mock('./city', () => {
+  const m = {
+    useCity: () => ({ city: h.city }),
+    useMyPosition: () => h.me,
+  };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('./catalog', () => ({ usePlaces: () => h.places }));
 vi.mock('./suggest', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),

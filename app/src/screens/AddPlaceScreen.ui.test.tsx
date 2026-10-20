@@ -42,7 +42,11 @@ vi.mock('../lib/i18n', () => ({
       (env.lang === 'vi' ? vi ?? en : env.lang === 'ja' ? ja ?? en : en),
   }),
 }));
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: env.city }) }));
+vi.mock('../lib/city', () => {
+  const m = { useCity: () => ({ city: env.city }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/candidates', () => ({ useCandidates: () => ({ ...g }) }));
 
 import AddPlaceScreen from './AddPlaceScreen';

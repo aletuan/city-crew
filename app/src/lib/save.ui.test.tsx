@@ -50,7 +50,11 @@ vi.mock('./auth', () => {
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
-vi.mock('./city', () => ({ useCity: () => ({ city: { id: 'hanoi' } }) }));
+vi.mock('./city', () => {
+  const m = { useCity: () => ({ city: { id: 'hanoi' } }) };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('./i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

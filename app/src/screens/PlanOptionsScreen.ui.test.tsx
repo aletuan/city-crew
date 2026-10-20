@@ -35,7 +35,11 @@ const prefetchNarration = vi.hoisted(() => vi.fn());
 const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string; tz?: string } | null } }));
 const mine = vi.hoisted(() => ({ current: [] as unknown[] }));
 
-vi.mock('../lib/city', () => ({ useCity: () => cityState.current }));
+vi.mock('../lib/city', () => {
+  const m = { useCity: () => cityState.current };
+  const all = () => (m as { useCity: () => object }).useCity();
+  return { ...m, useCurrentCity: all, useCityList: all };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));

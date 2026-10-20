@@ -16,8 +16,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from './auth';
-import { useCatalog, usePlaces } from './catalog';
-import { useCity } from './city';
+import { useCollections, useLikes, usePlaces } from './catalog';
+import { useCurrentCity } from './city';
 import { fetchPassedOver, logPlaceEvent, useMyPreferences, type EventKind } from './data';
 import { membersOf } from './place';
 import { CATEGORIES } from './categories';
@@ -86,7 +86,8 @@ export type PlanProfile = {
 function useOwnSignals(uid: string | null) {
   const { data: places } = usePlaces();
   const mine = useMyLists();
-  const { collections, myLikes } = useCatalog();
+  const collections = useCollections();
+  const { myLikes } = useLikes();
 
   // Flattened across collections, and `tally` counts each place once — a
   // café filed under both "Weekend" and "Near work" is one café that was
@@ -248,7 +249,7 @@ export function useBrowseTaste(): Taste | null {
 export function useNoteEvent(): (placeSlug: string, kind: EventKind) => void {
   const { session } = useSession();
   const uid = session?.user?.id ?? null;
-  const { city } = useCity();
+  const { city } = useCurrentCity();
   const prefs = useMyPreferences(uid);
   // `loaded`, not just the value. The empty preferences now say recording
   // is on (see `NO_PREFERENCES`), so without this the moment before the

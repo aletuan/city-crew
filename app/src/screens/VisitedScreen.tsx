@@ -51,7 +51,7 @@ import { CATEGORIES, categoryLabel } from '../lib/categories';
 import {
   type Checkin, filterVisits, monthTitle, textMatches, visitCategories, visitCities, visitSections, visitSummary,
 } from '../lib/checkin';
-import { useCity } from '../lib/city';
+import { useCityList } from '../lib/city';
 import { useMyCheckins } from '../lib/checkins';
 import { removeCheckin } from '../lib/data';
 import { clockOf, numericDate } from '../lib/format';
@@ -77,7 +77,7 @@ const THUMB = 56;
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const visits = useMyCheckins();
-  const { cities } = useCity();
+  const { cities } = useCityList();
   const [menuFor, setMenuFor] = useState<Checkin | null>(null);
   const clearance = useTabBarClearance();
 
