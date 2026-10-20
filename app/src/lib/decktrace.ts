@@ -57,7 +57,7 @@
 // from sharing a clock.
 
 import { IS_PRODUCTION_CHANNEL } from './channel';
-import { supabase } from './supabase';
+import { insertDeckTrace } from './data/traces';
 
 /**
  * The switch. On, every visit records its timeline, says it out loud, and
@@ -249,7 +249,7 @@ export function makeDeckReporter(enabled: boolean, send: (row: DeckRow) => Promi
 /** The insert itself. A refusal becomes a rejection, which the reporter
  *  above turns into silence — split out so a test can hold both halves. */
 export async function sendDeckRow(row: DeckRow): Promise<void> {
-  const { error } = await supabase.from('deck_traces').insert(row);
+  const { error } = await insertDeckTrace(row);
   if (error) throw new Error(error.message);
 }
 

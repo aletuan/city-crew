@@ -15,7 +15,7 @@
 import { useTourAnchor } from '../components/SignupTour';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet,
+  ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, StyleSheet,
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -401,7 +401,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const share = () => {
     void shareSafely({
       message: `${fullName}${place.address ? ` — ${place.address}` : ''}${mapsUrl ? `\n${mapsUrl}` : ''}`,
-    });
+    }, Share.share);
   };
   // A row that goes somewhere can fail to get there — a phone that cannot
   // dial, a URL no app claims — and `openURL` says so only by rejecting.

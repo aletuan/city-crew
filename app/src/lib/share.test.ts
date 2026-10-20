@@ -4,7 +4,6 @@
 // share is never an unhandled rejection. See the note at the top of
 // `share.ts` for the tap it exists to catch.
 
-import { Share } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isShielded, SHIELD_GRACE_MS, shareSafely, subscribeShield } from './share';
 
@@ -102,13 +101,6 @@ describe('the share', () => {
     const s = pending();
     void shareSafely({ message: 'City Crew 1.0.4' }, s.share);
     expect(s.share).toHaveBeenCalledWith({ message: 'City Crew 1.0.4' });
-  });
-
-  it('is React Native’s own sheet unless told otherwise', () => {
-    const spy = vi.spyOn(Share, 'share').mockResolvedValue({ action: 'dismissedAction' });
-    void shareSafely({ message: 'hi' });
-    expect(spy).toHaveBeenCalledWith({ message: 'hi' });
-    spy.mockRestore();
   });
 
   // Asked of the promise: a declined share resolves, so nothing escapes

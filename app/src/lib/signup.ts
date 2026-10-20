@@ -16,7 +16,7 @@
 // moment the sign-up screen opens is what lets the bar tell the truth
 // from its first frame.
 
-import { supabaseAnonKey, supabaseUrl } from './supabase';
+import { fetchAuthSettings } from './data/signup';
 
 /**
  * The settings body, read for one field and nothing else.
@@ -55,9 +55,7 @@ export function signUpTotal(needsConfirm: boolean | null): 2 | 3 {
  */
 export async function fetchSignUpNeedsConfirm(): Promise<boolean | null> {
   try {
-    const res = await fetch(`${supabaseUrl}/auth/v1/settings`, {
-      headers: { apikey: supabaseAnonKey },
-    });
+    const res = await fetchAuthSettings();
     if (!res.ok) return null;
     return parseNeedsConfirm(await res.json());
   } catch {

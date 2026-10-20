@@ -20,7 +20,7 @@
 //     row and read nobody's.
 
 import { IS_PRODUCTION_CHANNEL } from './channel';
-import { supabase } from './supabase';
+import { insertStartupTrace } from './data/traces';
 import type { TraceMark } from './trace';
 
 /**
@@ -89,7 +89,7 @@ export function makeReporter(enabled: boolean, send: (row: TraceRow) => Promise<
 /** The insert itself. A refusal becomes a rejection, which the reporter
  *  above turns into silence — split out so a test can hold both halves. */
 export async function sendRow(row: TraceRow): Promise<void> {
-  const { error } = await supabase.from('startup_traces').insert(row);
+  const { error } = await insertStartupTrace(row);
   if (error) throw new Error(error.message);
 }
 

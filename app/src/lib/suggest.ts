@@ -9,7 +9,8 @@
 // submitter and the daily cap are all set server-side; sending any of them
 // from here would be the `curator_handle` mistake again.
 
-import { supabase } from './supabase';
+import { invokeFetchPlace } from './data/functions';
+import { fetchPlacesByGoogleId } from './data/places';
 
 /** A Google result, before it is anything of ours. */
 export type Candidate = {
@@ -114,9 +115,7 @@ export class SignedOutError extends Error {
 }
 
 export async function searchPlaces(query: string, cityId: string): Promise<Candidate[]> {
-  const { data, error } = await supabase.functions.invoke('fetch-place', {
-    body: { action: 'search', query, city: cityId },
-  });
+  const { data, error } = await invokeFetchPlace({ action: 'search', query, city: cityId });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     const body = await bodyOf(error);
@@ -130,9 +129,7 @@ export async function suggestPlace(placeId: string, cityId: string): Promise<Sug
   // No `category`. The function defaults it, and asking a visitor to
   // classify a café into the desk's taxonomy is asking them to guess at
   // something an editor is going to set properly anyway.
-  const res = await supabase.functions.invoke('fetch-place', {
-    body: { action: 'suggest', place_id: placeId, city: cityId },
-  });
+  const res = await invokeFetchPlace({ action: 'suggest', place_id: placeId, city: cityId });
   return readOutcome(res as Fn);
 }
 
@@ -146,10 +143,7 @@ export async function suggestPlace(placeId: string, cityId: string): Promise<Sug
  */
 export async function knownByPlaceId(ids: string[]): Promise<Record<string, Known>> {
   if (!ids.length) return {};
-  const { data, error } = await supabase
-    .from('places')
-    .select('google_place_id, slug, is_published, review_status, submitted_by')
-    .in('google_place_id', ids);
+  const { data, error } = await fetchPlacesByGoogleId(ids);
   // A failed lookup must not take the search results down with it. Every
   // row simply looks new, and the function still refuses a duplicate.
   if (error) return {};

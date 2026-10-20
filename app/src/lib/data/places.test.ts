@@ -16,7 +16,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, PLACE_COLS,
+  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, fetchPlacesByGoogleId, PLACE_COLS,
 } from './places';
 
 const fake = () => h.fake!;
@@ -278,5 +278,27 @@ describe('fetchPlaceCountByCity', () => {
   it('answers missing data the same way', async () => {
     fake().replies({ data: null });
     expect(await fetchPlaceCountByCity()).toEqual({});
+  });
+});
+
+// The lookup behind the "already here" marks on Google's results. One
+// query over every id, and the reply handed back as it came: a refusal
+// there means "every row looks new", which is `suggest.ts`'s reading.
+describe('fetchPlacesByGoogleId', () => {
+  it('asks once, by Google id, for the columns the marks are made of', async () => {
+    fake().replies({ data: [{ google_place_id: 'p1', slug: 'a' }] });
+    expect(await fetchPlacesByGoogleId(['p1', 'p2'])).toEqual({ data: [{ google_place_id: 'p1', slug: 'a' }] });
+    expect(fake().log).toHaveLength(1);
+    const q = fake().log[0];
+    expect(q).toMatchObject({ table: 'places', op: 'select' });
+    expect(q.filters).toEqual([['google_place_id', ['p1', 'p2']]]);
+    for (const col of ['google_place_id', 'slug', 'is_published', 'review_status', 'submitted_by']) {
+      expect(String(q.payload)).toContain(col);
+    }
+  });
+
+  it('hands a refusal back rather than throwing it', async () => {
+    fake().replies({ error: { message: 'denied' } });
+    expect(await fetchPlacesByGoogleId(['p1'])).toEqual({ error: { message: 'denied' } });
   });
 });

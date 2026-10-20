@@ -15,7 +15,7 @@
 // `plan-assist` rather than straight to the API; see that function for why
 // the model is never allowed to choose a place.
 
-import { supabase } from './supabase';
+import { invokePlanAssist } from './data/functions';
 import { clampDay } from './day';
 import { clockOf, openState } from './format';
 import { COMPANY, type Company } from './trip';
@@ -166,25 +166,23 @@ export async function narrate(
 
   let reply: Reply;
   try {
-    reply = await supabase.functions.invoke('plan-assist', {
-      body: {
-        action: 'narrate',
-        lang,
-        draft: {
-          company: draft.company,
-          categories: draft.categories,
-          when: draft.when,
-          where: draft.where,
-        },
-        stops: stops.map((s) => ({
-          slug: s.slug,
-          name: s.name,
-          categories: s.categories ?? [],
-          neighborhood: s.neighborhood ?? null,
-          rating: s.rating ?? null,
-          arrive: clockOf(s.arriveMin),
-        })),
+    reply = await invokePlanAssist({
+      action: 'narrate',
+      lang,
+      draft: {
+        company: draft.company,
+        categories: draft.categories,
+        when: draft.when,
+        where: draft.where,
       },
+      stops: stops.map((s) => ({
+        slug: s.slug,
+        name: s.name,
+        categories: s.categories ?? [],
+        neighborhood: s.neighborhood ?? null,
+        rating: s.rating ?? null,
+        arrive: clockOf(s.arriveMin),
+      })),
     });
   } catch {
     // supabase-js reports a refused call in `error` and a broken one — no
@@ -453,14 +451,12 @@ export async function parseAsk(
 
   let reply: { data?: Record<string, unknown> | null; error?: { message?: string } | null };
   try {
-    reply = await supabase.functions.invoke('plan-assist', {
-      body: {
-        action: 'parse',
-        text: sentence,
-        today: opts.today,
-        categories: [...opts.categories],
-        districts: [...opts.districts],
-      },
+    reply = await invokePlanAssist({
+      action: 'parse',
+      text: sentence,
+      today: opts.today,
+      categories: [...opts.categories],
+      districts: [...opts.districts],
     });
   } catch {
     return null;
