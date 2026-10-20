@@ -21,7 +21,7 @@ import { s } from './styles';
  * and the heading said the app's behaviour lived there. A section says it
  * outright.
  *
- * "About City Crew" joined them here, under a heading that names what all
+ * "Version info" (once "About City Crew") joined them here, under a heading that names what all
  * three are about. It was briefly a card of its own under "Legal", where
  * it read as a stray; filed under "Legal" it would have been a document it
  * is not. "App" holds both without either being mislabelled.
@@ -63,7 +63,7 @@ export function AppCard() {
         />
         <SettingRow
           icon="information-circle-outline"
-          label={t('About City Crew', 'Giới thiệu City Crew', 'City Crewについて')}
+          label={t('Version info', 'Thông tin phiên bản', 'バージョン情報')}
           onPress={() => { fireHaptic('selection'); setAbout(true); }}
           last
         />

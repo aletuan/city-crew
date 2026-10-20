@@ -56,7 +56,10 @@ export function describeApp(native: NativeApplication | null, updates: UpdatesIn
   return {
     version: native?.nativeApplicationVersion || null,
     build: native?.nativeBuildVersion || null,
-    channel: updates.channel ?? null,
+    // `||`, not `??`: Expo Go answers with an empty string rather than
+    // nothing, and the sheet printed an empty Channel row on the owner's
+    // phone (21 Oct 2026) where it should have said "Development".
+    channel: updates.channel || null,
     runtime: updates.runtimeVersion ?? null,
     update: !updates.isEmbeddedLaunch && updates.updateId
       ? { id: updates.updateId, at: updates.createdAt ?? null }

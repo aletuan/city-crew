@@ -1,4 +1,10 @@
-// "About City Crew": which copy of the app this is.
+// "Version info": which copy of the app this is.
+//
+// Titled for what it holds (owner, 21 Oct 2026). It was "About City Crew"
+// ("Giới thiệu City Crew"), which promised a word about the app and
+// delivered four lines of build detail. iOS's own "About" can carry that
+// name because it also holds the device's name, its storage and the rest;
+// this sheet holds only the version, so it says so.
 //
 // For the one question support always starts with — which version are you
 // on — and the one a release keeps raising: did the update arrive? The
@@ -84,7 +90,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
       >
         <View style={s.handle} />
         <Text style={s.title} accessibilityRole="header">
-          {t('About City Crew', 'Giới thiệu City Crew', 'City Crewについて')}
+          {t('Version info', 'Thông tin phiên bản', 'バージョン情報')}
         </Text>
         <View style={s.card}>
           <Row

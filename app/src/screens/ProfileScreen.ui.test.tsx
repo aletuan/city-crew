@@ -983,7 +983,7 @@ describe('about row', () => {
   it.each([['signed in', true], ['a guest', false]])('sits under the two documents in the same card, %s', (_who, signedIn) => {
     if (!signedIn) state.session = null;
     draw();
-    const rows = ['Terms of Service', 'Privacy Policy', 'About City Crew'].map((name) => button(name));
+    const rows = ['Terms of Service', 'Privacy Policy', 'Version info'].map((name) => button(name));
     expect(new Set(rows.map((r) => r.parentElement)).size).toBe(1);
     for (let i = 1; i < rows.length; i++) {
       expect(rows[i - 1].compareDocumentPosition(rows[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -994,7 +994,7 @@ describe('about row', () => {
     if (!signedIn) state.session = null;
     draw();
     expect(screen.queryByText('close-about')).toBeNull();
-    press('About City Crew');
+    press('Version info');
     fireEvent.click(screen.getByText('close-about'));
     expect(screen.queryByText('close-about')).toBeNull();
   });

@@ -64,6 +64,11 @@ describe('describeApp', () => {
     });
     expect(describeApp(null, { updateId: 'abc' }).update).toEqual({ id: 'abc', at: null });
   });
+
+  // Expo Go says its channel is '', which is no channel at all.
+  it('reads an empty channel as none', () => {
+    expect(describeApp(null, { channel: '' }).channel).toBeNull();
+  });
 });
 
 describe('versionLabel', () => {

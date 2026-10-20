@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 //
-// "About City Crew": what it says about the copy of the app it is in, and
+// "Version info": what it says about the copy of the app it is in, and
 // what it says when it does not know. The unknown cases matter as much as
 // the known ones. An OTA reaches builds that answer with less, and a
 // development build answers with almost nothing.
@@ -44,7 +44,7 @@ afterEach(() => { vi.clearAllMocks(); });
 describe('a release build that has taken an update', () => {
   it('names the binary, the channel, the update and the runtime', () => {
     open();
-    expect(screen.getByText('Giới thiệu City Crew')).toBeTruthy();
+    expect(screen.getByText('Thông tin phiên bản')).toBeTruthy();
     expect(valueOf('Phiên bản')).toBe('1.0.4 (22)');
     expect(valueOf('Kênh')).toBe('production');
     expect(valueOf('Bản cập nhật')).toBe('29/09/2026 09:50 · 28f91171');
@@ -75,7 +75,7 @@ describe('what it does not know', () => {
   it('says the same in Japanese', () => {
     state.lang = 'ja';
     open(NOTHING);
-    expect(screen.getByText('City Crewについて')).toBeTruthy();
+    expect(screen.getByText('バージョン情報')).toBeTruthy();
     expect(valueOf('バージョン')).toBe('不明');
     expect(valueOf('チャンネル')).toBe('開発版');
     expect(valueOf('アップデート')).toBe('ビルドに同梱');
@@ -124,9 +124,9 @@ describe('ways out', () => {
   it('draws nothing while closed, and rises again when reopened', () => {
     const onClose = vi.fn();
     const view = render(<AboutSheet visible={false} onClose={onClose} info={RELEASE} />);
-    expect(screen.queryByText('Giới thiệu City Crew')).toBeNull();
+    expect(screen.queryByText('Thông tin phiên bản')).toBeNull();
     view.rerender(<AboutSheet visible onClose={onClose} info={RELEASE} />);
-    expect(screen.getByText('Giới thiệu City Crew')).toBeTruthy();
+    expect(screen.getByText('Thông tin phiên bản')).toBeTruthy();
   });
 
   it('describes the running app when no test says otherwise', () => {
