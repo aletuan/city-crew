@@ -6,7 +6,7 @@ import { Card, fireHaptic } from '../../components/ui';
 import { PrimaryButton } from '../../components/authUi';
 import { useI18n } from '../../lib/i18n';
 import { colors } from '../../theme';
-import { goTo, type Nav } from '../../nav';
+import type { Nav } from '../../nav';
 import { FeatureRow } from './rows';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
@@ -47,26 +47,28 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
           </Text>
         </View>
       </View>
-      <PrimaryButton label={t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録')} onPress={goSignIn} testID="profile-sign-in" />
+      {/* One button, one link, two doors (owner, 20 Oct 2026). The
+          button was "Sign in / Sign up" and led to Sign in, so somebody
+          new read a slash, tapped, and still had to find "Don't have an
+          account?" on the next screen. Now the button says the one thing
+          it does, and the line under it opens Sign up straight away.
+
+          That line used to be "Keep exploring", which led to Explore —
+          one tap from the tab bar under it on every screen, so the place
+          it held is worth more as the way in for somebody new. Rejected:
+          two buttons side by side. Filled and outlined in one capsule they
+          read as a switch between tabs, not as two actions. */}
+      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン')} onPress={goSignIn} testID="profile-sign-in" />
       <Pressable
         style={s.guestLink}
         accessibilityRole="button"
+        testID="profile-sign-up"
         onPress={() => {
           fireHaptic('selection');
-          // Through the tab navigator when there is one. `getParent()?.`
-          // alone was a tap that did nothing, silently, whenever this screen
-          // was mounted without one — so the root ref is the way out then,
-          // naming Explore's first screen rather than trusting a tab that
-          // may never have mounted to pick it.
-          const parent = navigation.getParent();
-          if (parent) parent.navigate('Explore');
-          else goTo('Explore', { screen: 'ExploreHome' });
+          navigation.navigate('SignUp');
         }}
       >
-        {/* Shorter, and the word "guest" appears nowhere on the screen
-            now — the hero stopped saying it, and this line saying it
-            twice-removed was the last echo. */}
-        <Text style={s.guestLinkText}>{t('Keep exploring', 'Tiếp tục khám phá', '探索を続ける')}</Text>
+        <Text style={s.guestLinkText}>{t('Create a new account', 'Tạo tài khoản mới', '新しいアカウントを作成')}</Text>
         <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
       </Pressable>
 
