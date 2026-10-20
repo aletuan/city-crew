@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropSlot, moveItem, sameOrder, stepAside } from './order';
+import { applyDraft, dropSlot, moveItem, sameOrder, stepAside } from './order';
 
 const LIST = ['a', 'b', 'c', 'd'];
 
@@ -57,6 +57,32 @@ describe('sameOrder', () => {
 
   it('is true for two empty lists', () => {
     expect(sameOrder([], [])).toBe(true);
+  });
+});
+
+describe('applyDraft', () => {
+  const m = (...slugs: string[]) => slugs.map((slug) => ({ slug }));
+  const slugs = (list: { slug: string }[]) => list.map((p) => p.slug);
+
+  it('is the members themselves when nothing is drafted', () => {
+    const members = m('a', 'b');
+    expect(applyDraft(members, null)).toBe(members);
+  });
+
+  it('puts the members in the drafted order', () => {
+    expect(slugs(applyDraft(m('a', 'b', 'c'), ['c', 'a', 'b']))).toEqual(['c', 'a', 'b']);
+  });
+
+  // A reload landed while the write was waiting.
+  it('appends a member that arrived after the draft, and drops one that left', () => {
+    expect(slugs(applyDraft(m('a', 'c', 'new'), ['c', 'gone', 'a']))).toEqual(['c', 'a', 'new']);
+  });
+
+  it('hands back the members’ own objects, not copies', () => {
+    const members = m('a', 'b');
+    const out = applyDraft(members, ['b', 'a']);
+    expect(out[0]).toBe(members[1]);
+    expect(out[1]).toBe(members[0]);
   });
 });
 

@@ -20,6 +20,20 @@ export function coverOf(p: Place): PlacePhoto | undefined {
   return photosOf(p)[0];
 }
 
+/**
+ * The photograph a collection's card wears: the one its owner chose, else
+ * its first place's own cover, else none.
+ *
+ * The first place and not the best-looking one, because the order of a
+ * list is its owner's and the top of it is what they put first. Takes the
+ * members already resolved rather than resolving them here — every caller
+ * has them in hand, and `membersOf` builds an index of the whole catalog
+ * each time it is called.
+ */
+export function coverUriOf(c: Pick<Collection, 'cover'>, members: readonly Place[]): string | undefined {
+  return c.cover?.photo_uri ?? (members[0] ? coverOf(members[0])?.photo_uri : undefined);
+}
+
 /** Explicitly free (0₫) — distinct from a missing price. */
 export function isFree(p: Place): boolean {
   if (p.price_vnd === 0) return true;

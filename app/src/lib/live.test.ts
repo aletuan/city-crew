@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canPublish, isFlagged, isLive, isMineAndUnlive, isPending,
+  blockerSentence, canPublish, isFlagged, isLive, isMineAndUnlive, isPending,
   ownPendingFirst, publishBlockers, type Reviewable,
 } from './live';
 
@@ -62,6 +62,29 @@ describe('isMineAndUnlive', () => {
   it('is nothing to a signed-out reader', () => {
     expect(isMineAndUnlive({ submitted_by: ME, review_status: 'pending' }, null)).toBe(false);
     expect(isMineAndUnlive({ submitted_by: null, review_status: 'pending' }, undefined)).toBe(false);
+  });
+});
+
+describe('blockerSentence', () => {
+  const en = (e: string) => e;
+  const vi = (_e: string, v: string) => v;
+  const ja = (_e: string, _v: string, j: string) => j;
+
+  // Both kinds named, because they end differently.
+  it('names both kinds, joined', () => {
+    expect(blockerSentence({ pending: 2, flagged: 1 }, en))
+      .toBe('Private until every place is live — 2 places are not public yet, and 1 was not accepted.');
+    expect(blockerSentence({ pending: 2, flagged: 1 }, vi))
+      .toBe('Riêng tư cho tới khi mọi địa điểm hiển thị — 2 địa điểm chưa công khai, và 1 địa điểm không được duyệt.');
+    expect(blockerSentence({ pending: 2, flagged: 1 }, ja))
+      .toBe('すべてのスポットが公開されるまで非公開です — 2件がまだ公開されていません、1件が不採用です。');
+  });
+
+  it('counts in the singular and the plural', () => {
+    expect(blockerSentence({ pending: 1, flagged: 0 }, en))
+      .toBe('Private until every place is live — 1 place is not public yet.');
+    expect(blockerSentence({ pending: 0, flagged: 2 }, en))
+      .toBe('Private until every place is live — 2 were not accepted.');
   });
 });
 

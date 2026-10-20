@@ -40,7 +40,7 @@ import PhotoCarousel from '../components/PhotoCarousel';
 import { PAGE_COUNT_H } from '../components/PageCount';
 import { pinImage } from '../components/mapPins';
 import {
-  atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
+  atHandle, hostOf, instagramUrl, threadsUrl, websiteHref, websiteRepeatsHandle,
 } from '../lib/links';
 import { cityTz } from '../lib/clock';
 import { clockOf, dateline, groupHours, openState } from '../lib/format';
@@ -420,12 +420,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     routeUrl!,
     t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
   );
-  // Websites are typed in by hand and often arrive bare (`congcaphe.com`),
-  // which `openURL` cannot route; with no scheme of its own, it is a web
-  // address.
-  const websiteUrl = site && !/^[a-z][a-z\d+.-]*:\/\//i.test(site)
-    ? `https://${site}`
-    : site;
 
   // What lies over the hero whether or not it has photographs: the two
   // scrims, the three floating buttons, the counter. Laid between the
@@ -1350,7 +1344,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   label={t('Website', 'Trang web', 'ウェブサイト')}
                   first={firstRow === 'website'}
                   onPress={() => open(
-                    websiteUrl!,
+                    websiteHref(site),
                     t('Could not open the website', 'Không mở được trang web', 'ウェブサイトを開けませんでした'),
                   )}
                 >

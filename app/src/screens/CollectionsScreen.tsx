@@ -19,8 +19,12 @@ import { AddPill } from '../components/add';
 import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
 import { useCityList } from '../lib/city';
+import { cityShortById } from '../lib/cityName';
+import {
+  placesOf as placesCount, reasonFor as shelfReason, scopeLine, shape, type ShelfRow,
+} from '../lib/collectionShelf';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
-import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
+import { Collection, coverUriOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
@@ -33,6 +37,8 @@ import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { accentFade, colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
+
+type ListRow = ShelfRow<Collection>;
 
 /** The two layouts the list remembers. */
 const TILE_OR_ROW = oneOf('tile', 'row');
@@ -510,10 +516,10 @@ export default function CollectionsScreen({ navigation, route }: {
 
   const me = session?.user?.id;
 
-  const cityName = useCallback((id: string | null | undefined) => {
-    const c = id ? cities.find((x) => x.id === id) : undefined;
-    return c ? t(c.short_en, c.short_vi, c.short_ja ?? c.short_en) : (id ?? '');
-  }, [cities, t]);
+  const cityName = useCallback(
+    (id: string | null | undefined) => cityShortById(cities, id, t) ?? (id ?? ''),
+    [cities, t],
+  );
 
   // A public collection with nothing at all is a dead end, so it stays
   // hidden. Your own are not: an empty one is new — `mine` is not
@@ -541,8 +547,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // same heart as everybody else's.
   const community = cols.data.filter((c) => membersOf(c, places).length > 0);
 
-  const coverFor = (c: Collection) =>
-    c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
+  const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places));
 
   // The faces behind the community tiles, fetched once per catalog load
   // through the same batched lookup the Crew screen uses. A miss leaves
@@ -736,49 +741,15 @@ export default function CollectionsScreen({ navigation, route }: {
   );
   const hitBy = useMemo(() => new Map(hits.map((h) => [h.c.slug, h])), [hits]);
 
-  /**
-   * Why a card is listed, when the shelf is narrowed — the line under its
-   * name. "matches MONO Coffee Lab" when the words landed on a place
-   * rather than on the list; "3 of 8 places · Cafés" when a chip reached
-   * part of it. Null when the ordinary count says it all: nothing asked
-   * (every place is a hit then, by construction), or a list found by its
-   * own words with every place still counted.
-   */
-  const placesOf = (n: number) => `${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`;
-  const reasonFor = (slug: string): string | null => {
-    const hit = hitBy.get(slug);
-    if (!hit) return null;
-    const parts: string[] = [];
-    if (hit.place) {
-      const name = t(hit.place.name_en ?? '', hit.place.name_vi ?? '', hit.place.name_ja ?? undefined);
-      parts.push(t(`matches ${name}`, `khớp ${name}`, `${name} に一致`));
-    }
-    if (hit.hits !== hit.total) {
-      parts.push(t(
-        `${hit.hits} of ${placesOf(hit.total)}`,
-        `${hit.hits} trong ${placesOf(hit.total)}`,
-        `${placesOf(hit.total)}のうち${hit.hits}`,
-      ));
-      if (kind) parts.push(categoryLabel(kind, t));
-      if (cityPick) parts.push(cityName(cityPick));
-    }
-    return parts.length ? parts.join(' · ') : null;
-  };
-
-  // The line under the title: how many lists, and across how many cities
-  // — the same on both shelves now that both show every city. Narrowed,
-  // it names the chips instead, as the visits screen does.
-  const listsWord = (n: number) => t(n === 1 ? '1 collection' : `${n} collections`, `${n} bộ sưu tập`, `${n}件のコレクション`);
+  // The chips' own labels, as the heading and the cards' reasons print
+  // them. The words themselves are `lib/collectionShelf`'s.
   const chosen = [
     kind ? categoryLabel(kind, t) : null,
     cityPick ? cityName(cityPick) : null,
   ].filter((x): x is string => !!x);
-  const scopeLine = (() => {
-    if (chosen.length) return [listsWord(hits.length), ...chosen].join(' · ');
-    const k = cityChoices.length;
-    if (k === 0) return listsWord(hits.length);
-    return `${listsWord(hits.length)} · ${k === 1 ? cityName(cityChoices[0]) : t(`${k} cities`, `${k} thành phố`, `${k}都市`)}`;
-  })();
+  const placesOf = (n: number) => placesCount(n, t);
+  const reasonFor = (slug: string) => shelfReason(hitBy.get(slug), chosen, t);
+  const scope = scopeLine({ count: hits.length, chosen, cities: cityChoices, cityName }, t);
 
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
@@ -810,32 +781,11 @@ export default function CollectionsScreen({ navigation, route }: {
   const coverW = Math.min(COVER, Math.round((winW - space.page * 2) * 0.36));
   const [view, pickView] = useStored<'tile' | 'row'>(VIEW_KEY, 'tile', TILE_OR_ROW);
 
-  // SectionList knows nothing of columns, so the grid packs itself: two
-  // cards per row-item, and the odd last card keeps a spacer where its
-  // neighbour would be. Every row-item carries whose it is — a tile
-  // shows a padlock for your own and a byline for everyone else's, and
-  // the two row shapes split the same way: yours swipe, the community's
-  // do not.
-  //
-  // `at` is a card's place in its whole list, not in its row-item: the
-  // smoke flows open "the first community collection" as
-  // `collection-card-0`, and it has to be the same card whichever shape
-  // the reader last picked.
-  type ListRow =
-    | { kind: 'own'; c: Collection }
-    | { kind: 'com'; c: Collection; at: number }
-    | { kind: 'pair'; pair: Collection[]; own: boolean; at: number };
-  const pairUp = (list: Collection[], own: boolean): ListRow[] => {
-    const out: ListRow[] = [];
-    for (let i = 0; i < list.length; i += 2) out.push({ kind: 'pair', pair: list.slice(i, i + 2), own, at: i });
-    return out;
-  };
-  const shape = (list: Collection[], own: boolean): ListRow[] => (view === 'tile'
-    ? pairUp(list, own)
-    : list.map((c, at): ListRow => (own ? { kind: 'own', c } : { kind: 'com', c, at })));
+  // Tiles pack two to a row-item; see `ShelfRow` for why every row-item
+  // carries whose it is and where it sits in the whole list.
   const sections = onYours
-    ? (mineReady ? [{ own: true, data: shape(sifted, true) }] : [])
-    : [{ own: false, data: shape(sifted, false) }];
+    ? (mineReady ? [{ own: true, data: shape(sifted, true, view) }] : [])
+    : [{ own: false, data: shape(sifted, false, view) }];
 
   return (
     // The door to a new list is the Trips screen's pill, in the header's
@@ -878,7 +828,7 @@ export default function CollectionsScreen({ navigation, route }: {
             column drops the pill a line below the title — the owner saw
             the two screens' pills at two heights (14 Oct 2026). */}
         {!holding && (onYours ? mineReady : true) ? (
-          <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scopeLine}</Text>
+          <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scope}</Text>
         ) : null}
         {/* The tab bar's own glyph for your shelf; the globe every public
             row already wears for everyone else's. Guests have no library,

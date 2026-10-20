@@ -39,6 +39,25 @@ export function sameOrder<T>(a: readonly T[], b: readonly T[]): boolean {
 }
 
 /**
+ * The members in the order a reader has drafted but not yet saved, or as
+ * they are when there is no draft.
+ *
+ * The draft is slugs, and the members can change under it — a reload
+ * lands while a write is waiting. A slug whose place has left is dropped:
+ * there is nothing to draw. Members that have arrived since the draft
+ * began are appended rather than dropped: saving would otherwise leave
+ * them wherever they were, which is not a decision the reader made.
+ */
+export function applyDraft<T extends { slug: string }>(members: T[], draft: readonly string[] | null): T[] {
+  if (!draft) return members;
+  const bySlug = new Map(members.map((p) => [p.slug, p]));
+  return [
+    ...draft.map((slug) => bySlug.get(slug)).filter((p): p is T => !!p),
+    ...members.filter((p) => !draft.includes(p.slug)),
+  ];
+}
+
+/**
  * Where a row being dragged would land, from how far it has moved.
  *
  * `pitches` is each row's height plus the gap under it, in list order —

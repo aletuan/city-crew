@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { fireHaptic, PressableScale, Skeleton } from '../../components/ui';
 import { CATEGORIES, categoriesOf, type CategoryStyle } from '../../lib/categories';
 import { useCurrentCity } from '../../lib/city';
-import { Collection, coverOf, membersOf, Place, touchesCity } from '../../lib/data';
+import { Collection, coverUriOf, membersOf, Place, touchesCity } from '../../lib/data';
 import { useCollections, useLikes, usePlaces } from '../../lib/catalog';
 import { useSession } from '../../lib/auth';
 import { useSaveActions } from '../../lib/save';
@@ -90,8 +90,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
     rankLikes,
   );
 
-  const coverFor = (c: Collection) =>
-    c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
+  const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places));
 
   // The card's width comes from the screen's, and the reason is what a
   // fixed 176 did between devices: a 430pt phone showed a 28pt sliver of

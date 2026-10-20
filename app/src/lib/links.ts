@@ -96,3 +96,15 @@ export function websiteRepeatsHandle(
   if (THREADS.includes(host) && handles.threads) return true;
   return false;
 }
+
+/**
+ * Where a tap on the website row goes.
+ *
+ * Websites are typed in by hand and often arrive bare (`congcaphe.com`),
+ * which `openURL` cannot route; with no scheme of its own, it is a web
+ * address. One that has a scheme keeps it — an `http://` site that never
+ * moved to TLS is still the venue's site.
+ */
+export function websiteHref(site: string): string {
+  return /^[a-z][a-z\d+.-]*:\/\//i.test(site) ? site : `https://${site}`;
+}

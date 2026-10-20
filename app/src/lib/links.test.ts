@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
+  atHandle, hostOf, instagramUrl, threadsUrl, websiteHref, websiteRepeatsHandle,
 } from './links';
 
 describe('hostOf', () => {
@@ -115,5 +115,19 @@ describe('websiteRepeatsHandle', () => {
   it('is false for no website at all', () => {
     expect(websiteRepeatsHandle(null, { instagram: 'x' })).toBe(false);
     expect(websiteRepeatsHandle('', { instagram: 'x' })).toBe(false);
+  });
+});
+
+describe('websiteHref', () => {
+  // As the desk types them: no scheme, which `openURL` cannot route.
+  it('makes a bare address a web one', () => {
+    expect(websiteHref('congcaphe.com')).toBe('https://congcaphe.com');
+    expect(websiteHref('www.example.vn/menu?x=1')).toBe('https://www.example.vn/menu?x=1');
+  });
+
+  it('leaves an address that has a scheme alone, whatever the case', () => {
+    expect(websiteHref('http://old.example.com')).toBe('http://old.example.com');
+    expect(websiteHref('HTTPS://Example.com')).toBe('HTTPS://Example.com');
+    expect(websiteHref('https://www.facebook.com/x')).toBe('https://www.facebook.com/x');
   });
 });

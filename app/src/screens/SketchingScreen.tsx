@@ -38,6 +38,7 @@ import {
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
+import { cityShort } from '../lib/cityName';
 import { DEFAULT_TZ, instantOn } from '../lib/clock';
 import { clockOf, dateline, fmtMinutes, openState } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
@@ -512,7 +513,7 @@ export default function SketchingScreen({ navigation, route }: {
   // anchored nowhere should be told it was not anchored, not left with
   // half a card and no explanation.
   const whereParts = (p.where?.trim() ?? '').split(' · ');
-  const cityName = city ? t(city.short_en, city.short_vi, city.short_ja ?? city.short_en) : null;
+  const cityName = city ? cityShort(city, t) : null;
   const wherePrimary = whereParts[0] || cityName;
   const whereSecondary = whereParts[0]
     ? whereParts.slice(1).join(' · ') || null
