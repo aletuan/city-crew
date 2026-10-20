@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from './categories';
 import {
   collectionCities, collectionHaystack, collectionKinds, collectionMatches, findCollections, findPlaces, fold, kindAnswersTo,
-  matches, mergeTerms, placeHaystack, queryTerms, type Searchable, type SearchableCollection,
+  matches, mergeTerms, placeHaystack, queryTerms, rankHits, relevance, type Searchable, type SearchableCollection,
   siftCollections, type SiftMember,
 } from './search';
 
@@ -441,8 +441,10 @@ describe('findPlaces', () => {
   // "f" begins a word in two of the three haystacks — "fun" on the
   // cinema's category, "fine" in the museum's name — so the assertion is
   // about which order they come back in, not about who is in it.
-  it('keeps the catalog\'s own order in both tiers', () => {
-    expect(findPlaces(all, 'f', TERMS).hits).toEqual([cgv, museum]);
+  it('puts a place named by the word over one whose category has it', () => {
+    // "Fine Arts Museum" begins with the query; CGV answers only through
+    // its category ("fun"). See `rankHits`.
+    expect(findPlaces(all, 'f', TERMS).hits).toEqual([museum, cgv]);
     expect(findPlaces(all, 'temple', TERMS).hits).toEqual([vanMieu]);
   });
 
@@ -671,5 +673,96 @@ describe('siftCollections', () => {
     const loose = [{ members: [{ name_en: 'x' } as SiftMember, { name_en: 'y', city_id: null, categories: null } as SiftMember] }];
     expect(collectionCities(loose)).toEqual([]);
     expect(collectionKinds(loose)).toEqual([]);
+  });
+});
+
+// ── the order of the hits ──
+//
+// Reported on 20 Oct 2026 with the two places as they stand in Đà Lạt:
+// "tan hien" put Hap Hap above Tán Hiên, because Hap Hap's description
+// has "tán cây" and "ngoài hiên" and the hits were in slug order.
+describe('rankHits', () => {
+  const tanHien = {
+    name_en: 'Tán Hiên Đà Lạt', name_vi: 'Tán Hiên Đà Lạt', neighborhood_vi: 'Đà Lạt',
+    vibe_tags: ['cafes'], rating: 5, rating_count: 126,
+  };
+  const hapHap = {
+    name_en: 'Hap Hap Riverside Kitchen', neighborhood_vi: 'Xuân Hương', vibe_tags: ['food_tour'],
+    desc_vi: 'căn nhà gỗ lợp tôn giữa tán cây, sàn ván, bàn dài và một lò nướng củi đặt ngoài hiên',
+    rating: 4.7, rating_count: 179,
+  };
+  const names = (ps: readonly { name_en?: string | null }[]) => ps.map((p) => p.name_en);
+
+  it('puts the place named "tan hien" above one whose description has both words', () => {
+    expect(names(findPlaces([hapHap, tanHien], 'tan hien', {}).hits))
+      .toEqual(['Tán Hiên Đà Lạt', 'Hap Hap Riverside Kitchen']);
+    expect(names(findPlaces([hapHap, tanHien], 'tán hiên', {}).hits))
+      .toEqual(['Tán Hiên Đà Lạt', 'Hap Hap Riverside Kitchen']);
+  });
+
+  // One place per tier, each a step under the last, in reverse catalog
+  // order so nothing passes by arriving first.
+  it('orders by where the words landed: name start, name phrase, name words, facts, the rest', () => {
+    const desc = { name_en: 'D', desc_en: 'a pho bo stall' };
+    const facts = { name_en: 'F', neighborhood_en: 'Bo Pho' };
+    const anyOrder = { name_en: 'Bo the Pho Place' };
+    const phrase = { name_en: 'The Pho Bo Corner' };
+    const start = { name_en: 'Pho Bo Gia Truyen' };
+    const ranked = rankHits([desc, facts, anyOrder, phrase, start], 'pho bo');
+    expect(names(ranked)).toEqual(['Pho Bo Gia Truyen', 'The Pho Bo Corner', 'Bo the Pho Place', 'F', 'D']);
+    expect([start, phrase, anyOrder, facts, desc].map((p) => relevance(p, 'pho bo')))
+      .toEqual([22, 18, 12, 8, 6]);
+  });
+
+  it('counts a category or a vibe as a fact about the place, not as prose', () => {
+    const viaKind = { name_en: 'K', categories: ['fun'] };
+    const viaVibe = { name_en: 'V', vibe_tags: ['rooftop'] };
+    const viaText = { name_en: 'T', desc_en: 'fun rooftop' };
+    expect(relevance(viaKind, 'fun')).toBe(relevance(viaVibe, 'rooftop'));
+    expect(relevance(viaKind, 'fun')).toBeGreaterThan(relevance(viaText, 'fun'));
+    // A category the app has no label for is still its key.
+    expect(relevance({ name_en: 'X', categories: ['zzz'] }, 'zzz')).toBe(relevance(viaKind, 'fun'));
+  });
+
+  it('puts the words together in the text above the same words apart', () => {
+    const apart = { name_en: 'A', desc_vi: 'giữa tán cây, ngoài hiên' };
+    const together = { name_en: 'B', desc_vi: 'ngồi dưới tán hiên gỗ' };
+    expect(names(rankHits([apart, together], 'tan hien'))).toEqual(['B', 'A']);
+  });
+
+  it('prefers the marks the reader typed, and only when they typed any', () => {
+    const tan = { name_en: 'Tân Định Market' };
+    const tán = { name_en: 'Tán Định Garden' };
+    expect(names(rankHits([tan, tán], 'tán'))).toEqual(['Tán Định Garden', 'Tân Định Market']);
+    expect(names(rankHits([tán, tan], 'tân'))).toEqual(['Tân Định Market', 'Tán Định Garden']);
+    // No marks typed: neither is preferred, so the catalog's order holds.
+    expect(names(rankHits([tan, tán], 'tan'))).toEqual(['Tân Định Market', 'Tán Định Garden']);
+    expect(relevance(tan, 'tan')).toBe(relevance(tán, 'tan'));
+    // Every marked word has to be there as typed, not just one.
+    expect(relevance({ name_en: 'Tán Hien' }, 'tán hiên')).toBe(relevance({ name_en: 'Tan Hien' }, 'tán hiên'));
+  });
+
+  it('never lets a bonus lift a place over a better tier', () => {
+    // The phrase as typed, marks and all — but in the description.
+    const told = { name_en: 'Somewhere', desc_vi: 'quán tán hiên' };
+    const named = { name_en: 'Tan Hien' };
+    expect(names(rankHits([told, named], 'tán hiên'))).toEqual(['Tan Hien', 'Somewhere']);
+  });
+
+  it('breaks a tie by rating, then by how many rated, then by arrival', () => {
+    const a = { name_en: 'Pho A', rating: 4.5, rating_count: 10 };
+    const b = { name_en: 'Pho B', rating: 4.8, rating_count: 3 };
+    const c = { name_en: 'Pho C', rating: 4.8, rating_count: 90 };
+    const d = { name_en: 'Pho D' };
+    const e = { name_en: 'Pho E', rating: null, rating_count: null };
+    expect(names(rankHits([d, a, e, b, c], 'pho'))).toEqual(['Pho C', 'Pho B', 'Pho A', 'Pho D', 'Pho E']);
+  });
+
+  it('reads a name in any language, and returns a new array', () => {
+    const ja = { name_en: 'Something', i18n: { ja: { name: 'フォー専門店' } } };
+    const other = { name_en: 'Elsewhere', desc_en: 'フォー' };
+    const input = [other, ja];
+    expect(names(rankHits(input, 'フォー'))).toEqual(['Something', 'Elsewhere']);
+    expect(input).toEqual([other, ja]);
   });
 });
