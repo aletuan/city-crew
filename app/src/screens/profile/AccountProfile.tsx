@@ -445,9 +445,11 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           count={feed + crew.incoming.length}
           // In the order the screen reads: the requests at the top, the
           // only things there that want an answer, then the likes and
-          // copies under "Earlier". One line, the owner's pick of two
-          // (20 Oct 2026); "list" was the one English word left in it.
-          sub={t('Friend requests, likes and copies.', 'Lời mời kết bạn, lượt thích và lượt sao chép.', '友達リクエスト、いいね、コピー。')}
+          // copies under "Earlier". "list" was the one English word left
+          // in it. The Vietnamese is the owner's shorter cut (20 Oct
+          // 2026): "Lời mời kết bạn, lượt thích và lượt sao chép" ran to
+          // a second line on a 430pt phone.
+          sub={t('Friend requests, likes and copies.', 'Kết bạn, lượt thích và sao chép.', '友達リクエスト、いいね、コピー。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />
