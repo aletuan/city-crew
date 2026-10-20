@@ -42,14 +42,15 @@ Google, khoá Claude, service role) — không phải để "có backend".
 | Component | `src/components/` | UI dùng lại; `ui/` là design system | lib, `theme.ts`, `nav.ts` — **không** screens |
 | Provider | `src/lib/*.tsx` | trạng thái dùng chung: các provider (auth, thành phố, catalog, crew, trips…), mỗi cái một hoặc vài React context, và vài hook | lib, lib/data |
 | Dữ liệu | `src/lib/data/` | mọi câu hỏi tới Postgres/Storage, mỗi aggregate một file, `index.ts` là barrel | `lib/supabase.ts`, lib thuần |
-| Nghiệp vụ thuần | `src/lib/*.ts` | planner, xếp hạng, giờ mở cửa, định dạng… — không React, chạy được trong Node | lib thuần |
+| Nghiệp vụ thuần | `src/lib/*.ts` | planner, xếp hạng, giờ mở cửa, định dạng… — không React, chạy được trong Node | lib thuần; lời gọi mạng qua từng file `lib/data/*.ts` (không qua barrel, vì barrel kéo theo hook) |
 
 Chiều mũi tên chỉ đi xuống. Hai điểm hay bị hiểu nhầm:
 
 - **`lib/` là hai tầng đội một tên.** `.ts` là phần thuần, `.tsx` là
   provider. Ranh giới được giữ bằng đuôi file, vì cổng coverage đọc đuôi
   file (xem dưới) — một `.ts` không thuần phải được ghi tên vào `IMPURE`
-  trong `app/vitest.config.ts` kèm lý do (hiện có 11).
+  trong `app/impure.js` kèm lý do (hiện có 11). Cổng coverage và lint đọc
+  cùng một danh sách đó.
 - **Không màn hình hay component nào nói chuyện với Supabase.** Muốn đọc
   hay ghi thì gọi một hàm trong `lib/data` hoặc một provider. Đây là lý do
   `planner.test.ts` chạy không cần mạng, và là lý do đổi một câu truy vấn
@@ -61,7 +62,8 @@ Chiều mũi tên chỉ đi xuống. Hai điểm hay bị hiểu nhầm:
 |---|---|---|
 | screens và components không import `lib/supabase` hay `@supabase/*` | `no-restricted-imports`, `app/eslint.config.js` | `npm run lint` |
 | components không import screens | như trên | `npm run lint` |
-| `lib/` không import components hay screens | như trên, trừ `lib/save.tsx` | `npm run lint` |
+| `lib/` không import components hay screens | như trên | `npm run lint` |
+| `lib/*.ts` không import `react`, `react-native`, `./supabase` hay `@supabase/*`, trừ file có tên trong `IMPURE` | như trên; `IMPURE` ở `app/impure.js` | `npm run lint` |
 | `lib/*.ts` và `lib/data/*.ts` thuần, test được trong Node | coverage 100% từng file, `app/vitest.config.ts` | `npm run coverage` |
 | màn nào cũng có cầu dao lỗi riêng | `ScreenBoundary.ui.test.tsx` đọc `App.tsx` | `npm test` |
 | taxonomy khớp ở app, dashboard và check constraint | `data/test/categories-sync.test.mjs` | job `data` |
@@ -72,10 +74,20 @@ không ai canh; luật thứ nhất thì **đã bị phá một chỗ**: `useAdd
 (component) gọi thẳng `supabase.storage`. Phần upload đã chuyển xuống
 `lib/data/guide.ts › uploadPlacePhoto` trong cùng thay đổi đặt luật.
 
-**Ngoại lệ duy nhất, có chủ ý:** `lib/save.tsx` import `AuthSheet` và
-`SaveSheet`. Nó là bộ điều phối UI — mở hai sheet đó từ ba màn — mà nằm
-trong `lib/` vì nó là provider. Chỗ đúng của nó là `components/`; chưa
-chuyển vì chưa tốn gì.
+Luật thứ tư được viết ra ngày 20/10/2026, và lúc viết nó **đã bị phá chín
+chỗ**: hai hook (`candidates`, `pending`) mang đuôi `.ts`, nay là `.tsx`
+cạnh các provider; sáu file gọi thẳng Supabase (`suggest`, `findplace`,
+`assist`, `decktrace`, `tracereport`, `signup`), nay gọi qua
+`lib/data/functions.ts`, `lib/data/traces.ts`, `lib/data/signup.ts` và
+`lib/data/places.ts › fetchPlacesByGoogleId` — chỉ lời gọi chuyển đi,
+cách đọc câu trả lời vẫn ở chỗ cũ; và `share.ts` lấy `Share.share` của
+React Native làm mặc định, nay nơi gọi tự đưa vào.
+
+**Không còn ngoại lệ nào.** `lib/save.tsx` từng import `AuthSheet` và
+`SaveSheet`; từ 20/10/2026 nó chỉ giữ trạng thái của hai sheet và đưa ra
+qua context thứ ba, `useSaveSheets`, còn `components/SaveSheets.tsx` vẽ
+chúng, gắn trong `App.tsx` ở đúng chỗ hai sheet từng nằm. Ngoại lệ trong
+`app/eslint.config.js` đã bỏ.
 
 ## Luồng dữ liệu
 
@@ -142,8 +154,8 @@ trong `_shared/` (test từ `app/src/lib/*.test.ts`, ngoài cổng coverage):
 
 | function | ai gọi | ai được gọi |
 |---|---|---|
-| `fetch-place` | app (`findplace.ts`, `suggest.ts`), dashboard | người đã đăng nhập; import vào catalog chỉ editor |
-| `plan-assist` | app (`assist.ts`) | người đã đăng nhập |
+| `fetch-place` | app (`findplace.ts`, `suggest.ts`, qua `lib/data/functions.ts`), dashboard | người đã đăng nhập; import vào catalog chỉ editor |
+| `plan-assist` | app (`assist.ts`, qua `lib/data/functions.ts`) | người đã đăng nhập |
 | `delete-account` | app (`auth.tsx`) | chính chủ tài khoản |
 | `scan-city`, `suspend-user` | dashboard | editor |
 | `refresh-places`, `shrink-photos` | `pg_cron` (`cron.sql` cạnh function) | token `ops_tokens` hoặc editor — `_shared/gate.ts` |
@@ -189,7 +201,10 @@ Ghi ra để không ai tưởng là có chủ ý:
   `screens/explore/`; `PlaceDetailScreen`, `CollectionsScreen` và
   `CollectionDetailScreen` vẫn gần 1.800 dòng. Sàn coverage giữ chúng
   đúng, nhưng không giữ chúng dễ đọc.
-- **`lib/save.tsx`** nằm sai tầng, như trên.
-- **Không có luật nào canh `lib/*.ts` không import React.** Cổng coverage
-  canh gián tiếp — một hook không đạt 100% trong Node — và `IMPURE` là nơi
-  ngoại lệ phải tự khai.
+- ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
+  chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
+  và ngoại lệ trong lint đã bỏ.
+- ~~**Không có luật nào canh `lib/*.ts` không import React.**~~ Có từ
+  20/10/2026: `no-restricted-imports` cấm `react`, `react-native` và
+  Supabase trong `lib/*.ts`, trừ các file trong `IMPURE` — danh sách nay ở
+  `app/impure.js`, một bản duy nhất cho cả lint lẫn coverage.

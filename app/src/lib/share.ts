@@ -15,8 +15,12 @@
 //
 // Every share goes through `shareSafely`. A screen that calls
 // `Share.share` itself gets the pass-through back.
-
-import { Share, type ShareContent } from 'react-native';
+//
+// The sheet is the caller's to hand in — `shareSafely(content, Share.share)`
+// — rather than a default read from React Native here. Until 20 Oct 2026
+// it was the default, and that one import was the only thing keeping this
+// file out of the pure half: what it holds is a count and a timer, and
+// lint now holds `lib/*.ts` to importing no React Native at all.
 
 /**
  * How long the shield stays after the share has settled. The sheet's own
@@ -51,9 +55,9 @@ export function isShielded(): boolean {
  * sheet has settled, however it went. Declined or failed, a share is the
  * reader's business and nothing is said about it.
  */
-export function shareSafely(
-  content: ShareContent,
-  share: (c: ShareContent) => Promise<unknown> = Share.share,
+export function shareSafely<C>(
+  content: C,
+  share: (c: C) => Promise<unknown>,
 ): Promise<void> {
   set(raised + 1);
   return share(content)

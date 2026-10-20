@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { IMPURE } from './impure';
 
 // The tests run on Hanoi time, and that is a correctness setting rather
 // than a cosmetic one.
@@ -190,19 +191,8 @@ const NATIVE_ONLY = [
   'src/components/MiniMap.tsx',
 ];
 
-const IMPURE = [
-  'src/lib/database.types.ts', // generated from the schema; one runtime const, no logic
-  'src/lib/channel.ts', // reads expo-updates; two consts, no logic to hold
-  'src/lib/reminders.ts', // talks to expo-notifications; the maths it uses is remind.ts, which the gate holds
-  'src/lib/askReview.ts', // reads AsyncStorage and the native review sheet; the rules it applies are review.ts, which the gate holds
-  'src/lib/photoScoreNative.ts', // looks up the Vision module, absent everywhere a test runs; what it reads is photoScore.ts, which the gate holds
-  'src/lib/data/fetch.ts', // the hook every query is driven by; needs a renderer
-  'src/lib/data/hooks.ts', // and the wrappers around it, for the same reason
-  'src/lib/data/index.ts', // the barrel: re-exports and nothing else
-  'src/lib/supabase.ts', // the client itself
-  'src/lib/testing.ts', // the stand-in for it — test scaffolding, not shipped
-  'src/lib/types.ts', // types only, no statements to cover
-];
+// `IMPURE` — the impure `lib/*.ts` files — is in `impure.js`, because
+// lint reads the same list; see the note there.
 
 // ── the providers' floor ──
 //

@@ -36,6 +36,7 @@
 
 const expo = require('eslint-config-expo/flat');
 const prettier = require('eslint-config-prettier');
+const { IMPURE } = require('./impure');
 
 module.exports = [
   {
@@ -124,6 +125,12 @@ module.exports = [
   // `lib/data/guide.ts`. That is the case for having them here: a rule
   // kept by everybody remembering it is kept until somebody doesn't.
   //
+  // The last, `lib/*.ts`, made the case again on 20 Oct 2026: nine files
+  // broke it the day it was written — two hooks filed as `.ts`, six calls
+  // to Supabase, and `share.ts` reaching for React Native's sheet — and
+  // `save.tsx`, the one named exception to the third, drew two sheets it
+  // now only holds the state of (`components/SaveSheets` draws them).
+  //
   // Flat config does not merge a rule across blocks — the last block that
   // sets it wins — so each directory states its whole list in one place.
   ...(() => {
@@ -139,15 +146,28 @@ module.exports = [
       regex: '(^|/)(components|screens)/',
       message: 'lib/ sits under the UI and must not import it. See docs/architecture.md.',
     };
+    const renderer = {
+      regex: '^react(-native)?$',
+      message: 'lib/*.ts is pure: a hook is a .tsx beside the providers. If it cannot be, name it in IMPURE (app/impure.js). See docs/architecture.md.',
+    };
+    const client = {
+      regex: '^\\./supabase$|^@supabase/',
+      message: 'lib/*.ts is pure: the call itself goes in lib/data. See docs/architecture.md.',
+    };
     const restrict = (...patterns) => ({ 'no-restricted-imports': ['error', { patterns }] });
     return [
       { files: ['src/screens/**'], rules: restrict(backend) },
       { files: ['src/components/**'], rules: restrict(backend, screens) },
-      // `save.tsx` is the one exception, and knowingly: it is a UI
-      // orchestrator that opens `AuthSheet` and `SaveSheet` from three
-      // screens, filed under `lib/` because it is a provider. Its header
-      // says why; `docs/architecture.md` says where it should live.
-      { files: ['src/lib/**'], ignores: ['src/lib/save.tsx'], rules: restrict(ui) },
+      { files: ['src/lib/**'], rules: restrict(ui) },
+      // The pure half. `lib/*.ts` runs in Node under the 100% gate, and
+      // what keeps it runnable there is that it reaches for neither a
+      // renderer nor the network: the hooks are `.tsx`, beside the other
+      // providers, and the queries are in `lib/data`. The files that cannot
+      // be pure say so in `IMPURE`, the list the coverage gate leaves out —
+      // one list, so the two gates cannot disagree about which files they
+      // are. Carries `ui` again because this block replaces the rule for
+      // the files it names rather than adding to it.
+      { files: ['src/lib/*.ts'], ignores: IMPURE, rules: restrict(ui, renderer, client) },
     ];
   })(),
 

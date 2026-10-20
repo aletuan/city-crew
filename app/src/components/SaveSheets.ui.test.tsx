@@ -9,15 +9,19 @@
 // shipped wrong — `data.length === 0` is true while the first fetch is
 // still out, which sent people who *had* collections to "New collection".
 //
-// It renders `AuthSheet` and `SaveSheet` itself, which is why this is a
-// rendered test rather than a test of a function.
+// A rendered test rather than a test of a function, because the answer
+// to a tap is a sheet. `lib/save` holds the state and `SaveSheets` draws
+// it, so this mounts the two together, as `App.tsx` does — and lives here
+// rather than beside the provider because lint keeps `lib/` from
+// importing a component, its tests included. It was `lib/save.ui.test.tsx`
+// until 20 Oct 2026, when the drawing moved out of the provider.
 
 import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
-import type { Collection, Place } from './data';
-import { DAILY_CAPS, DAILY_LIMIT } from './quota';
+import type { Collection, Place } from '../lib/data';
+import { DAILY_CAPS, DAILY_LIMIT } from '../lib/quota';
 
 const world = vi.hoisted(() => ({
   session: null as { user: { id: string } } | null,
@@ -45,20 +49,20 @@ const logPlaceEvent = vi.hoisted(() => vi.fn(async () => {}));
 const reload = vi.hoisted(() => vi.fn());
 
 vi.mock('../nav', () => ({ goTo, navRef }));
-vi.mock('./auth', () => {
+vi.mock('../lib/auth', () => {
   const m = { useAuth: () => ({ session: world.session, userId: world.userId }) };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
-vi.mock('./city', () => {
+vi.mock('../lib/city', () => {
   const m = { useCity: () => ({ city: { id: 'hanoi' } }) };
   const all = () => (m as { useCity: () => object }).useCity();
   return { ...m, useCurrentCity: all, useCityList: all };
 });
-vi.mock('./i18n', () => ({
+vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('./data', async (orig) => ({
+vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   useMyCollections: (ownerId?: string | null) => (world.listsFor.push(ownerId), ownerId
     ? { ...world.mine, reload }
@@ -76,8 +80,9 @@ vi.mock('./data', async (orig) => ({
   logPlaceEvent,
 }));
 
-import { SaveProvider, useMyLists, useSave, useSaveActions } from './save';
-import { dropResume, takeResume } from './resume';
+import { SaveProvider, useMyLists, useSave, useSaveActions } from '../lib/save';
+import SaveSheets from './SaveSheets';
+import { dropResume, takeResume } from '../lib/resume';
 
 const place = { slug: 'cong-caphe', name_en: 'Cong Caphe', name_vi: 'Cộng' } as unknown as Place;
 
@@ -100,7 +105,7 @@ function Tapper({ target = place }: { target?: Place }) {
 }
 
 const mount = (node: React.ReactNode = <Tapper />) =>
-  render(<SaveProvider>{node}</SaveProvider>);
+  render(<SaveProvider>{node}<SaveSheets /></SaveProvider>);
 
 const tap = () => fireEvent.click(screen.getByText('tap the bookmark'));
 
@@ -510,7 +515,7 @@ describe('finishing what a guest started', () => {
     tap();
     const r = takeResume(Date.now())!;
     world.session = { user: { id: 'u1' } };
-    rerender(<SaveProvider><Tapper /></SaveProvider>);
+    rerender(<SaveProvider><Tapper /><SaveSheets /></SaveProvider>);
     r.run!();
     expect(goTo).toHaveBeenCalledWith('Collections', {
       screen: 'CollectionForm', initial: false, params: { addPlaceSlug: 'cong-caphe' },

@@ -10,7 +10,7 @@ const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://amdvitzpogaejzzqroc
 const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'sb_publishable_VVol99Jqs0QYzeVrmOawlw_ZpXqcv7B';
 
 // Exported for the one caller that needs the address without the client:
-// `lib/signup` asks GoTrue's public settings endpoint a question the
+// `lib/data/signup` asks GoTrue's public settings endpoint a question the
 // client library has no method for. Same values, one source.
 export const supabaseUrl = url;
 export const supabaseAnonKey = key;

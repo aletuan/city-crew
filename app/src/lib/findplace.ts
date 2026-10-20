@@ -7,7 +7,7 @@
 // they were until the map became Google's, is answered at the top of
 // `MiniMap`.
 
-import { supabase } from './supabase';
+import { invokeFetchPlace } from './data/functions';
 import type { Lang } from './i18n';
 import { fromCandidates, type Spot } from './spots';
 import { bodyOf, SignedOutError, type Candidate } from './suggest';
@@ -48,9 +48,7 @@ export async function findSpots(
   if (!q) return [];
   let res: { data: unknown; error: unknown };
   try {
-    res = await supabase.functions.invoke('fetch-place', {
-      body: { action: 'search', query: q, at, city: city ?? undefined, lang },
-    });
+    res = await invokeFetchPlace({ action: 'search', query: q, at, city: city ?? undefined, lang });
   } catch {
     return [];
   }
@@ -82,9 +80,7 @@ export async function nameOf(
   lang: Lang,
 ): Promise<string> {
   try {
-    const { data, error } = await supabase.functions.invoke('fetch-place', {
-      body: { action: 'reverse', at, lang },
-    });
+    const { data, error } = await invokeFetchPlace({ action: 'reverse', at, lang });
     if (error) return '';
     const name = (data as { name?: unknown })?.name;
     return typeof name === 'string' ? name.trim() : '';

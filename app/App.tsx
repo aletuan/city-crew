@@ -29,6 +29,7 @@ import { GuideGrantSync } from './src/lib/useGuideGrant';
 import { SessionNavSync } from './src/lib/sessionNavSync';
 import { ThemeAccountSync } from './src/lib/themeAccountSync';
 import { SaveProvider } from './src/lib/save';
+import SaveSheets from './src/components/SaveSheets';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
 import FloatingTabBar from './src/components/FloatingTabBar';
@@ -374,6 +375,9 @@ function Root() {
                       <TabBarDuckProvider>
                         <SignupTourProvider onReplay={() => goTo('Explore', { screen: 'ExploreHome' })} getRoute={() => navRef.getCurrentRoute()?.name}><Tabs /></SignupTourProvider>
                       </TabBarDuckProvider>
+                      {/* The save and sign-in sheets, after the tabs so
+                          they paint over them — see `components/SaveSheets`. */}
+                      <SaveSheets />
                     </SaveProvider>
                     </CheckinsProvider>
                     </MyTripsProvider>

@@ -1,6 +1,6 @@
 // The notification half of trip reminders — the part that talks to the
 // operating system, kept apart from the arithmetic (lib/remind) the same
-// way candidates.ts keeps its React out of suggest.ts: the gate can hold
+// way candidates.tsx keeps its React out of suggest.ts: the gate can hold
 // the maths to 100%, and this file needs a phone to mean anything.
 //
 // Local notifications only. The date of a trip is known the moment it is

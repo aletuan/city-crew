@@ -192,3 +192,20 @@ export async function fetchCategoryTerms(): Promise<Record<string, string[]>> {
   }
   return out;
 }
+
+/**
+ * The rows behind these Google ids that the reader can see — the read
+ * `suggest.ts › knownByPlaceId` makes to mark each search result as live,
+ * yours, or new.
+ *
+ * Returned as supabase-js gave it, unlike the reads above, which throw: a
+ * failed lookup there means "every row looks new", not an error, and that
+ * reading is the caller's. It lived in `suggest.ts` until 20 Oct 2026,
+ * when lint began holding `lib/*.ts` to not importing the client.
+ */
+export async function fetchPlacesByGoogleId(ids: string[]) {
+  return supabase
+    .from('places')
+    .select('google_place_id, slug, is_published, review_status, submitted_by')
+    .in('google_place_id', ids);
+}

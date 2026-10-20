@@ -29,7 +29,7 @@
 // present one view controller while another is dismissing.
 
 import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_INFO, type AppInfo, shareText, shortUpdateId, updateDate, versionLabel } from '../lib/appinfo';
@@ -83,7 +83,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
     sharing.current = false;
     // Through `lib/share`, so the tap that closes the system sheet does
     // not land on Profile underneath it.
-    void shareSafely({ message: shareText(info) });
+    void shareSafely({ message: shareText(info) }, Share.share);
   };
   const share = () => {
     fireHaptic('selection');

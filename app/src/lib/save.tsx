@@ -9,11 +9,17 @@
 // Which means this owns the user's collections too — the sheet needs them
 // to draw its ticks, and reading them from two places would let one copy
 // go stale the moment the other wrote.
+//
+// It owns the two sheets' state and not their drawing. Until 20 Oct 2026
+// it rendered `AuthSheet` and `SaveSheet` itself, the one place `lib/`
+// imported the UI and the one exception lint was told to wave through.
+// The drawing is `components/SaveSheets` now, mounted beside the children
+// in `App.tsx` where these two used to sit, and it reads what to draw from
+// a third context, `useSaveSheets`. The callers of `useSave` and its two
+// halves see no difference.
 
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import AuthSheet from '../components/AuthSheet';
-import SaveSheet from '../components/SaveSheet';
 import { useSession } from './auth';
 import {
   addPlaceToCollection, Collection, type Fetch, holds, logPlaceEvent, nextSortOrder, Place, removePlaceFromCollection,
@@ -96,10 +102,39 @@ const ActionsCtx = createContext<SaveActions>({
 });
 const ListsCtx = createContext<MyLists>(NO_LISTS);
 
+/**
+ * What `components/SaveSheets` draws, and what its buttons do. Not for
+ * screens: a screen opens a sheet with `save` or `askToSignIn` and never
+ * needs to know one is up.
+ */
+export type SaveSheetsState = {
+  /** The place the save sheet is open for; null when it is shut. */
+  target: Place | null;
+  /** Whether the sign-in invitation is up. */
+  authSheet: boolean;
+  /** Its title and glyph — kept while it fades out, see `signInWhy` below. */
+  signInWhy: SignInWhy;
+  /** "Not now". */
+  closeAuth: () => void;
+  /** "Sign in / Sign up": the sheet goes and the form comes. */
+  signIn: () => void;
+  closeSave: () => void;
+  /** A list's row tapped: in if it was out, out if it was in. */
+  toggle: (c: Collection, place: Place) => Promise<void>;
+  /** "New collection", carrying the place along. */
+  newList: () => void;
+};
+const SheetsCtx = createContext<SaveSheetsState>({
+  target: null, authSheet: false, signInWhy: 'save',
+  closeAuth: () => {}, signIn: () => {}, closeSave: () => {}, toggle: async () => {}, newList: () => {},
+});
+
 /** The acts: `save`, `askToSignIn`, `isSaved`. */
 export const useSaveActions = () => useContext(ActionsCtx);
 /** The reader's own collections, as a `Fetch`. */
 export const useMyLists = () => useContext(ListsCtx);
+/** The sheets' state, for `components/SaveSheets` alone. */
+export const useSaveSheets = () => useContext(SheetsCtx);
 /** Both halves, as one object — the shape every caller had before the split. */
 export function useSave(): SaveActions & { mine: MyLists } {
   return { ...useSaveActions(), mine: useMyLists() };
@@ -231,31 +266,28 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     loadedAt: mine.loadedAt, fromCache: mine.fromCache, reload: mine.reload,
   }), [mine.data, mine.loading, mine.loaded, mine.error, mine.loadedAt, mine.fromCache, mine.reload]);
 
+  // "Not now" is an answer: what was asked for is forgotten with it.
+  const closeAuth = useCallback(() => { setAuthSheet(false); dropResume(); }, []);
+  const signIn = useCallback(() => { setAuthSheet(false); goTo('Profile', { screen: 'SignIn', initial: false }); }, []);
+  const closeSave = useCallback(() => setTarget(null), []);
+  const newList = useCallback(() => {
+    const place = target;
+    setTarget(null);
+    // `initial: false` for the same reason as in `save`: on a cold
+    // Collections stack the form must arrive *over* the list, not
+    // instead of it.
+    if (place) goTo('Collections', { screen: 'CollectionForm', initial: false, params: { addPlaceSlug: place.slug } });
+  }, [target]);
+  const sheets = useMemo<SaveSheetsState>(() => ({
+    target, authSheet, signInWhy, closeAuth, signIn, closeSave, toggle, newList,
+  }), [target, authSheet, signInWhy, closeAuth, signIn, closeSave, toggle, newList]);
+
   return (
     <ListsCtx.Provider value={lists}>
     <ActionsCtx.Provider value={actions}>
+    <SheetsCtx.Provider value={sheets}>
       {children}
-      <AuthSheet
-        visible={authSheet}
-        why={signInWhy}
-        // "Not now" is an answer: what was asked for is forgotten with it.
-        onClose={() => { setAuthSheet(false); dropResume(); }}
-        onSignIn={() => { setAuthSheet(false); goTo('Profile', { screen: 'SignIn', initial: false }); }}
-      />
-      <SaveSheet
-        place={target}
-        collections={mine.data}
-        onClose={() => setTarget(null)}
-        onToggle={toggle}
-        onNew={() => {
-          const place = target;
-          setTarget(null);
-          // `initial: false` for the same reason as in `save`: on a cold
-          // Collections stack the form must arrive *over* the list, not
-          // instead of it.
-          if (place) goTo('Collections', { screen: 'CollectionForm', initial: false, params: { addPlaceSlug: place.slug } });
-        }}
-      />
+    </SheetsCtx.Provider>
     </ActionsCtx.Provider>
     </ListsCtx.Provider>
   );
