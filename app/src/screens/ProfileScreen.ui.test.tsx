@@ -690,7 +690,7 @@ describe('friends card', () => {
     expect(raw.navigate).not.toHaveBeenCalled();
     press('Connect with friends');
     expect(raw.navigate).toHaveBeenCalledWith('Crew');
-    expect(screen.getByText('Find friends and share your plans.')).toBeTruthy();
+    expect(screen.getByText('Make friends and plan together.')).toBeTruthy();
   });
 
   // The feed had no door from 23 Aug 2026 (#309) until 6 Oct: its one
@@ -702,7 +702,7 @@ describe('friends card', () => {
     const { raw } = draw();
     press('Activity');
     expect(raw.navigate).toHaveBeenCalledWith('Activity');
-    expect(screen.getByText('Likes and copies of your lists, and friend requests.')).toBeTruthy();
+    expect(screen.getByText('Friend requests, likes and copies.')).toBeTruthy();
   });
 
   it('files Activity in the same card as the friends row, under it', () => {
@@ -1141,7 +1141,7 @@ describe('visited places', () => {
   it('shows no number before the first visit', () => {
     draw();
     const row = screen.getByText('Places you checked in at').closest('[data-testid="feature-row"]')!;
-    expect(row.textContent).toBe('Places you checked in at' + 'By month, newest first.');
+    expect(row.textContent).toBe('Places you checked in at' + "A record of the places you've been.");
   });
 
   it('sits under Interests and above Friends', () => {

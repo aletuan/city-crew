@@ -289,9 +289,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
       ) : earlier.length === 0 ? (
         <Empty text={t(
-          'Quiet so far. Likes and copies of your lists will show here.',
-          'Chưa có gì. Lượt thích và bản sao list của bạn sẽ hiện ở đây.',
-          'まだ静かです。リストへのいいねやコピーがここに表示されます。',
+          'Quiet so far. When someone likes or copies one of your collections, you will see it here.',
+          'Chưa có gì. Khi có người thích hay sao chép bộ sưu tập của bạn, bạn sẽ thấy ở đây.',
+          'まだ静かです。あなたのコレクションにいいねやコピーがあると、ここに表示されます。',
         )} />
       ) : (
             <Card testID="earlier-card">
