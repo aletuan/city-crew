@@ -15,7 +15,7 @@ vi.mock('expo-updates', () => ({
   isEmbeddedLaunch: false,
 }));
 
-import { APP_INFO, describeApp, shareText, shortUpdateId, updateDate, versionLabel } from './appinfo';
+import { APP_INFO, describeApp, shortUpdateId, updateDate, versionLabel } from './appinfo';
 
 const RELEASE = {
   channel: 'production', runtimeVersion: '57.0.0',
@@ -104,29 +104,5 @@ describe('updateDate', () => {
   it('names the month in English', () => {
     expect(updateDate(d, 'en')).toBe('9 Sep 2026, 07:05');
     expect(updateDate(new Date(2026, 11, 31, 23, 59), 'en')).toBe('31 Dec 2026, 23:59');
-  });
-});
-
-describe('shareText', () => {
-  it('spells out everything, with the full update id and its time', () => {
-    expect(shareText(APP_INFO)).toBe([
-      'City Crew 1.0.4 (22)',
-      'Channel: production',
-      'Runtime: 57.0.0',
-      'Update: 28f91171-a086-4959-78f6-6c4a944d5b67 (2026-09-29T02:50:00.000Z)',
-    ].join('\n'));
-  });
-
-  it('says what it does not know rather than leaving a line out', () => {
-    expect(shareText(describeApp(null, {}))).toBe([
-      'City Crew unknown version',
-      'Channel: none',
-      'Runtime: none',
-      'Update: shipped with the build',
-    ].join('\n'));
-  });
-
-  it('leaves the time off an update that has none', () => {
-    expect(shareText(describeApp(null, { updateId: 'abc' })).split('\n').at(-1)).toBe('Update: abc');
   });
 });

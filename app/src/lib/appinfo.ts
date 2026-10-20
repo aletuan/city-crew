@@ -100,20 +100,3 @@ export function updateDate(d: Date, lang: 'en' | 'vi' | 'ja'): string {
   const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
   return `${d.getDate()} ${month} ${d.getFullYear()}, ${time}`;
 }
-
-/**
- * The whole answer as plain text, for the share sheet — what somebody
- * pastes into a message when asked "which version are you on?". English
- * whatever the app's language: it is read by whoever maintains the app,
- * and the full update id is here because the one on screen is cut short.
- */
-export function shareText(info: AppInfo): string {
-  return [
-    `City Crew ${versionLabel(info) ?? 'unknown version'}`,
-    `Channel: ${info.channel ?? 'none'}`,
-    `Runtime: ${info.runtime ?? 'none'}`,
-    info.update
-      ? `Update: ${info.update.id}${info.update.at ? ` (${info.update.at.toISOString()})` : ''}`
-      : 'Update: shipped with the build',
-  ].join('\n');
-}
