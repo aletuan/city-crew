@@ -116,6 +116,9 @@ export type Searchable = {
   vibe_tags?: string[] | null;
   categories?: string[] | null;
   category?: string;
+  /** Google's figures, read only to break a tie in `rankHits`. */
+  rating?: number | null;
+  rating_count?: number | null;
 };
 
 /**
@@ -156,10 +159,7 @@ export function placeHaystack(p: Searchable): string {
     ...allLocalized(p, 'neighborhood'),
     ...allLocalized(p, 'desc'),
     (p.vibe_tags ?? []).join(' '),
-    categoriesOf(p).flatMap((c) => {
-      const cat = CATEGORIES[c];
-      return cat ? [c, cat.en, cat.vi, cat.ja] : [c];
-    }).join(' '),
+    categoryWords(p),
     p.address,
   ].join(' '));
   haystacks.set(p, built);
@@ -211,9 +211,107 @@ export function kindAnswersTo(p: Searchable, query: string, terms: TermMap): boo
 }
 
 /**
+ * How well a place answers what was typed, highest first. Only ever asked
+ * of a place `matches` already let through: this orders, it never filters.
+ *
+ * Until 20 Oct 2026 the hits came back in catalog order — slug, A to Z —
+ * so a word anywhere counted as much as the name. "tan hien" put Hap Hap
+ * Riverside Kitchen above Tán Hiên Đà Lạt: Hap Hap's description has a
+ * house "giữa tán cây" and an oven "ngoài hiên", two words forty letters
+ * apart, and "hap" sorts before "tan". The owner asked for the name first.
+ *
+ * Where the words landed, best first:
+ *
+ *   5  a name begins with the whole query       "tan hien" → Tán Hiên Đà Lạt
+ *   4  a name holds the whole query, in order   "da lat"   → Tán Hiên Đà Lạt
+ *   3  a name holds every word, any order       "hien tan"
+ *   2  every word is in a name, the area, a category or a vibe
+ *   1  only the description or the address had some of them
+ *
+ * Inside a tier, two smaller things: the whole query standing together
+ * somewhere rather than spread across a paragraph (what tells Hap Hap's
+ * "tán … hiên" apart from a description that says "tán hiên"), and, when
+ * the reader typed marks, finding them as typed. "tân" and "tán" fold to
+ * the same "tan" and both must still match — somebody without a
+ * Vietnamese keyboard types neither — but the one who typed "tán" meant
+ * that one.
+ *
+ * Neither crosses a tier: a description that happens to say the phrase
+ * stays under a place named by it. The bonuses are 2 and 1 inside a step
+ * of 4 for that reason.
+ */
+export function relevance(p: Searchable, query: string): number {
+  const words = queryTerms(query);
+  const phrase = words.join(' ');
+  const names = allLocalized(p, 'name').map(fold);
+  let tier = 1;
+  if (names.some((n) => n.startsWith(phrase))) tier = 5;
+  else if (names.some((n) => atWordStart(n, phrase))) tier = 4;
+  else if (names.some((n) => matches(n, words))) tier = 3;
+  else if (matches(factsHaystack(p), words)) tier = 2;
+  const together = matches(placeHaystack(p), [phrase]) ? 2 : 0;
+  return tier * 4 + together + (asTyped(p, query) ? 1 : 0);
+}
+
+/** Its names, its area, its kinds and its vibes — what the place *is*,
+ *  without what is said about it. */
+function factsHaystack(p: Searchable): string {
+  return fold([
+    ...allLocalized(p, 'name'),
+    ...allLocalized(p, 'neighborhood'),
+    (p.vibe_tags ?? []).join(' '),
+    categoryWords(p),
+  ].join(' '));
+}
+
+/** A place's categories as words: each key, and its label in every
+ *  language. */
+function categoryWords(p: Searchable): string {
+  return categoriesOf(p).flatMap((c) => {
+    const cat = CATEGORIES[c];
+    return cat ? [c, cat.en, cat.vi, cat.ja] : [c];
+  }).join(' ');
+}
+
+/** Lowercase and composed, marks kept: the reader's own spelling. */
+const marked = (s: string) => s.normalize('NFC').toLowerCase();
+
+/** Did the reader type marks, and does the place carry every marked word
+ *  exactly so? A query with no marks says nothing either way. */
+function asTyped(p: Searchable, query: string): boolean {
+  const typed = marked(query).split(/\s+/).filter(Boolean);
+  const markedWords = typed.filter((w) => fold(w) !== w);
+  if (!markedWords.length) return false;
+  const text = marked([
+    ...allLocalized(p, 'name'), ...allLocalized(p, 'neighborhood'), ...allLocalized(p, 'desc'), p.address,
+  ].join(' '));
+  return markedWords.every((w) => text.includes(w));
+}
+
+/**
+ * The hits in the order a reader should meet them: `relevance` first,
+ * then the better-rated, then the more-rated, then as they arrived — a
+ * stable sort, so the catalog's own order (the reader's suggestions
+ * first, then by slug) still settles a true tie.
+ *
+ * Rating only breaks ties, and never across a tier: a 5.0 from three
+ * reviews is not a reason to put a description match over a name.
+ */
+export function rankHits<T extends Searchable>(hits: readonly T[], query: string): T[] {
+  const scored = hits.map((p, i) => ({ p, i, r: relevance(p, query) }));
+  scored.sort((a, b) =>
+    b.r - a.r
+    || (b.p.rating ?? -1) - (a.p.rating ?? -1)
+    || (b.p.rating_count ?? -1) - (a.p.rating_count ?? -1)
+    || a.i - b.i);
+  return scored.map(({ p }) => p);
+}
+
+/**
  * The places a query finds, in two tiers.
  *
- * `hits` are places that say the words themselves. `related` are places
+ * `hits` are places that say the words themselves, best first — see
+ * `rankHits`. `related` are places
  * whose *kind* answers to them — and they are returned **only when there
  * are no hits at all**, because a synonym is a guess about what somebody
  * meant and a guess must never dilute an answer.
@@ -235,7 +333,7 @@ export function findPlaces<T extends Searchable>(
 ): { hits: T[]; related: T[] } {
   const words = queryTerms(query);
   if (!words.length) return { hits: [], related: [] };
-  const hits = places.filter((p) => matches(placeHaystack(p), words));
+  const hits = rankHits(places.filter((p) => matches(placeHaystack(p), words)), query);
   if (hits.length) return { hits, related: [] };
   const phrase = fold(query).trim();
   return { hits, related: places.filter((p) => kindAnswersTo(p, phrase, terms)) };

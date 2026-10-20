@@ -195,7 +195,9 @@ describe('the searches that already worked', () => {
 
   it('still finds a place by its area', () => {
     expect(named(search(CATALOG, 'hoan kiem').hits))
-      .toEqual(['Briques', 'The Running Bean Nhà Thờ - Coffee', 'Bún chả Hàng Quạt', 'Hoan Kiem Lake']);
+      // The lake is named by it, so it leads; the three that are only in
+      // the area keep the catalog's order (see `rankHits`).
+      .toEqual(['Hoan Kiem Lake', 'Briques', 'The Running Bean Nhà Thờ - Coffee', 'Bún chả Hàng Quạt']);
   });
 
   it('still narrows when a second word is added', () => {

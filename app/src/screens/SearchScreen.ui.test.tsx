@@ -438,8 +438,10 @@ describe('typing a query', () => {
   it('numbers every place hit for addressing', () => {
     mount();
     type('hoan kiem');
-    expect(screen.getByTestId('search-result-0').textContent).toContain('Cong Caphe');
-    expect(screen.getByTestId('search-result-1').textContent).toContain('Phở 10');
+    // Both are found by their area alone, a tie `rankHits` breaks on
+    // rating: Phở 10's 4.7 leads.
+    expect(screen.getByTestId('search-result-0').textContent).toContain('Phở 10');
+    expect(screen.getByTestId('search-result-1').textContent).toContain('Cong Caphe');
   });
 
   it('still finds the reader’s own pending place', () => {
@@ -536,7 +538,8 @@ describe('a search that finds nothing', () => {
     expect(screen.queryByText('All Cafés')).toBeNull();
     tapText('Browse Hoan Kiem');
     expect(input().value).toBe('Hoan Kiem');
-    expect(screen.getByTestId('search-result-0').textContent).toContain('Cong Caphe');
+    expect(screen.getByTestId('search-result-0').textContent).toContain('Phở 10');
+    expect(screen.getByTestId('search-result-1').textContent).toContain('Cong Caphe');
   });
 
   it('offers the kind of place inside the query', () => {
