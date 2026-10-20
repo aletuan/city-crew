@@ -31,11 +31,12 @@ import {
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import IdeasHeaderArt from '../components/IdeasHeaderArt';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
+import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
+import { cityShort } from '../lib/cityName';
 import { type City, useCity, useMyPosition } from '../lib/city';
 import { useSession } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
-import { type Collection, coverOf, membersOf, type Place } from '../lib/data';
+import { type Collection, coverUriOf, membersOf, type Place } from '../lib/data';
 import { rankByLikes } from '../lib/likes';
 import { clockOf, dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
@@ -246,11 +247,7 @@ export default function IdeasScreen({ navigation, route }: {
 
   // Only categories this city actually has, the same rule Explore's filter
   // row follows: a chip must never lead to an empty answer.
-  const cats = useMemo<string[]>(() => {
-    const present = new Set<string>();
-    for (const p of places) for (const c of categoriesOf(p)) present.add(c);
-    return CATEGORY_ORDER.filter((c) => present.has(c));
-  }, [places]);
+  const cats = useMemo(() => presentCategories(places), [places]);
 
   const set = <K extends keyof TripDraft>(k: K, v: TripDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -278,7 +275,7 @@ export default function IdeasScreen({ navigation, route }: {
   const [asking, setAsking] = useState<{ slug: string; choices: { id: string; n: number }[] } | null>(null);
   const [moved, setMoved] = useState<City | null>(null);
   const applied = useRef<number | null>(null);
-  const cityName = (c: City) => t(c.short_en, c.short_vi, c.short_ja ?? c.short_en);
+  const cityName = (c: City) => cityShort(c, t);
   const tick = (slug: string) => {
     setDraft((d) => (d.from.includes(slug) ? d : { ...d, from: [...d.from, slug] }));
     setMore(true);
@@ -402,7 +399,7 @@ export default function IdeasScreen({ navigation, route }: {
 
   /** One list as a row: cover, name, the places here, a tick. */
   const seedRow = ({ c, members }: { c: Collection; members: Place[] }, i: number) => {
-    const cover = c.cover?.photo_uri ?? (members[0] && coverOf(members[0])?.photo_uri);
+    const cover = coverUriOf(c, members);
     const on = draft.from.includes(c.slug);
     return (
       <View key={c.slug}>

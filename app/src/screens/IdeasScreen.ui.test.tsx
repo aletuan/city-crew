@@ -87,7 +87,11 @@ vi.mock('../lib/save', () => {
 });
 vi.mock('../lib/data', () => ({
   membersOf: (c: { slug: string }) => state.members[c.slug] ?? [],
-  coverOf: (p: { photo?: string }) => (p.photo ? { photo_uri: p.photo } : null),
+  // The chosen cover, else the first member's `photo`: the rule itself is
+  // `coverUriOf`'s and held in `place.test.ts`; what this screen owns is
+  // which members it hands over.
+  coverUriOf: (c: { cover?: { photo_uri: string } | null }, members: { photo?: string }[]) =>
+    c.cover?.photo_uri ?? members[0]?.photo,
 }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined }));
 // The platform picker has no web half. The stand-in keeps the props the

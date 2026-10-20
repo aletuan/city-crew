@@ -22,12 +22,12 @@ import { collectionKinds, narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  blockUser, deleteCollection, membersOf, publishBlockers, reorderCollection,
+  blockerSentence, blockUser, deleteCollection, membersOf, publishBlockers, reorderCollection,
   setCollectionPublic, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
-import { moveItem, sameOrder } from '../lib/order';
+import { applyDraft, moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
@@ -115,46 +115,6 @@ const BANNER_MS = 3000;
  *  The search field's slide is 200 for a smaller move; this one carries
  *  the whole list 60pt. */
 const BANNER_EASE = LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity);
-
-/**
- * Why a list cannot be published, said in words rather than counted at
- * the reader.
- *
- * It names both kinds because they end differently. A place still under
- * review will resolve on its own; one that was not accepted never will,
- * and the list stays private forever until its owner takes it out. A
- * sentence that said only "some places are pending" would leave them
- * waiting for something that is not coming.
- */
-function blockerSentence(
-  { pending, flagged }: { pending: number; flagged: number },
-  t: (en: string, vi: string, ja: string) => string,
-): string {
-  const parts: string[] = [];
-  if (pending) {
-    // Not public *yet* — the state the list is in, rather than the
-    // procedure it is waiting on. The owner does not need to picture a
-    // queue to understand why the switch will not move; they need to know
-    // which places are holding it, and that this one resolves on its own.
-    parts.push(t(
-      `${pending} ${pending === 1 ? 'place is' : 'places are'} not public yet`,
-      `${pending} địa điểm chưa công khai`,
-      `${pending}件がまだ公開されていません`,
-    ));
-  }
-  if (flagged) {
-    parts.push(t(
-      `${flagged} ${flagged === 1 ? 'was' : 'were'} not accepted`,
-      `${flagged} địa điểm không được duyệt`,
-      `${flagged}件が不採用です`,
-    ));
-  }
-  return t(
-    `Private until every place is live — ${parts.join(', and ')}.`,
-    `Riêng tư cho tới khi mọi địa điểm hiển thị — ${parts.join(', và ')}.`,
-    `すべてのスポットが公開されるまで非公開です — ${parts.join('、')}。`,
-  );
-}
 
 /**
  * How long after the last move the order is written.
@@ -599,16 +559,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const wanted = useRef<string[] | null>(null);
   const writing = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const bySlug = useMemo(() => new Map(members.map((p) => [p.slug, p])), [members]);
-  // Members that have arrived since the draft began are appended rather
-  // than dropped: saving would otherwise leave them wherever they were,
-  // which is not a decision the reader made.
-  const drafted: Place[] = draft
-    ? [
-      ...draft.map((slug) => bySlug.get(slug)).filter((p): p is Place => !!p),
-      ...members.filter((p) => !draft.includes(p.slug)),
-    ]
-    : members;
+  const drafted = useMemo(() => applyDraft(members, draft), [members, draft]);
   // The draft steps aside once the server agrees with it and nothing is
   // left to write. Adjusted during render, React's pattern for state that
   // follows props — see `usePersistedFetch`.
