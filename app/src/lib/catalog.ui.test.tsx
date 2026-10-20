@@ -52,7 +52,7 @@ const world = vi.hoisted(() => ({
 }));
 const writes = vi.hoisted(() => ({
   like: vi.fn(async (_id: string, _me: string) => true),
-  unlike: vi.fn(async (_id: string, _me: string) => true),
+  unlike: vi.fn(async (_id: string, _me: string): Promise<void> => {}),
 }));
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(async () => { world.sessionResolved += 1; return { data: { session: null } }; }),
@@ -116,7 +116,7 @@ beforeEach(() => {
   world.avatars = fetch({ data: {} as unknown as unknown[] });
   world.terms = fetch({ data: {} as unknown as unknown[] });
   writes.like.mockReset().mockResolvedValue(true);
-  writes.unlike.mockReset().mockResolvedValue(true);
+  writes.unlike.mockReset().mockResolvedValue(undefined);
   auth.getSession.mockClear();
   vi.spyOn(AppState, 'addEventListener').mockImplementation((_type, fn) => {
     world.appStateCb = fn as (s: string) => void;
@@ -265,6 +265,27 @@ describe('the heart', () => {
     expect(seen.myLikes).not.toContain('c1');
     expect(seen.likes['hue-noodles']).toBe(3);
     expect(world.myLikes.reload).toHaveBeenCalledOnce();
+  });
+
+  // A failed write — not a refusal — is breakage, and the heart springing
+  // back is how the screen says so. Nobody awaits a tap, so the promise
+  // must settle rather than reject: a rejection here is heard by nothing.
+  it('falls back to the server’s answer when the like fails, and does not reject', async () => {
+    writes.like.mockRejectedValue(new Error('Failed to fetch'));
+    mountReader();
+    await act(async () => { await expect(seen.toggleLike(list)).resolves.toBeUndefined(); });
+    expect(seen.myLikes).not.toContain('c1');
+    expect(seen.likes['hue-noodles']).toBe(3);
+    expect(world.myLikes.reload).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the heart filled when taking a like back fails', async () => {
+    world.myLikes = fetch({ data: ['c1'] });
+    writes.unlike.mockRejectedValue(new Error('Failed to fetch'));
+    mountReader();
+    await act(async () => { await expect(seen.toggleLike(list)).resolves.toBeUndefined(); });
+    expect(seen.myLikes).toContain('c1');
+    expect(seen.likes['hue-noodles']).toBe(3);
   });
 
   it('sends one write for a double tap', async () => {

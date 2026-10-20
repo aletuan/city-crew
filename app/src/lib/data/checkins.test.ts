@@ -76,6 +76,13 @@ describe('addCheckin', () => {
     await expect(addCheckin({ ownerId: 'u1', placeSlug: 'gone', cityId: null })).rejects.toThrow('place_not_found');
     expect(fake().log).toHaveLength(1);
   });
+  // Offline is not "the place is gone": the lookup's own failure is what
+  // the reader is told, and nothing is inserted.
+  it('says the lookup failed, not that the place is missing, when it did', async () => {
+    fake().replies({ error: { message: 'Failed to fetch' } });
+    await expect(addCheckin({ ownerId: 'u1', placeSlug: 'cong', cityId: null })).rejects.toThrow('Failed to fetch');
+    expect(fake().log).toHaveLength(1);
+  });
   it('turns a policy refusal into the daily-limit name, and keeps other failures as they are', async () => {
     fake().replies({ data: { id: 'p' } }, { data: null, error: { code: '42501', message: 'new row violates row-level security policy' } });
     await expect(addCheckin({ ownerId: 'u1', placeSlug: 'cong', cityId: null })).rejects.toThrow(DAILY_LIMIT);

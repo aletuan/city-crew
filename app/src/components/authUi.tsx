@@ -221,11 +221,16 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
             grouped ? s.fieldLabelSmall : s.fieldLabel,
             grouped && !!error && s.fieldLabelBad,
           ]}>{label}</Text>
+          {/* The caller's props first, and the two this row owns after
+              them. Spread last, a caller's `style` replaced the field's
+              type instead of adding to it, and a caller's
+              `secureTextEntry` overrode the eye — a password the toggle
+              could no longer show. */}
           <TextInput
-            style={s.fieldInput}
             placeholderTextColor={colors.textTertiary}
-            secureTextEntry={secure && hidden}
             {...input}
+            style={[s.fieldInput, input.style]}
+            secureTextEntry={secure && hidden}
           />
         </View>
         {secure ? (

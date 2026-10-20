@@ -304,6 +304,8 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   useEffect(() => {
     if (visible || !asked.current) {
       asked.current = true;
+      // A failure leaves no card wearing "Popular" — the sheet as it
+      // ships until a theme is worn by enough people to earn the word.
       fetchPopularThemes().then((n) => setNamed(n), () => {});
     }
     if (!visible) return;

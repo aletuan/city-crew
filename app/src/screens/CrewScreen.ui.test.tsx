@@ -46,7 +46,7 @@ vi.mock('../lib/data', () => data);
 
 const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], loading: false, loadedAt: 1 as number | null, reload: vi.fn() },
-  blocks: { data: [] as string[], reload: vi.fn() },
+  blocks: { data: [] as string[], error: null as string | null, reload: vi.fn() },
   people: {} as Record<string, FriendProfile>,
   mutual: {} as Record<string, number>,
   absorb: vi.fn(),
@@ -107,6 +107,7 @@ beforeEach(() => {
   crew.ships.loading = false;
   crew.ships.loadedAt = 1;
   crew.blocks.data = [];
+  crew.blocks.error = null;
   crew.people = {};
   crew.mutual = {};
 });
@@ -382,6 +383,26 @@ describe('the blocked list', () => {
     confirmLast();
     expect(data.unblockUser).toHaveBeenCalledWith(ME, 'x');
     await waitFor(() => expect(crew.blocks.reload).toHaveBeenCalled());
+  });
+
+  // Offline, the read used to answer "nobody" and the section did not
+  // draw — which is what having blocked nobody looks like.
+  it('says it could not load the list rather than drawing nothing, and asks again', () => {
+    crew.blocks.error = 'Failed to fetch';
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByText('Blocked')).toBeTruthy();
+    expect(screen.getByText("Couldn't load who you have blocked.")).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(crew.blocks.reload).toHaveBeenCalledOnce();
+  });
+
+  it('leaves a list already on screen standing when a refresh fails', () => {
+    crew.blocks.data = ['x'];
+    crew.blocks.error = 'Failed to fetch';
+    crew.people = { x: person('x', 'xuan', 'Xuan') };
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByText('Xuan')).toBeTruthy();
+    expect(screen.queryByText("Couldn't load who you have blocked.")).toBeNull();
   });
 });
 

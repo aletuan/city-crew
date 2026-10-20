@@ -64,9 +64,13 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
   // Counted before the picker rather than after the upload, which is the
   // only way the refusal can name a limit instead of saying "that did not
   // work". The policy still counts; this is the message in front of it.
+  //
+  // A failed count keeps the counts already held — zero, before the first
+  // — rather than blocking the upload: the policy is the limit, so the
+  // worst a stale count costs is the policy's plainer refusal.
   const recount = useCallback(async () => {
     if (!uid || !placeId) return;
-    setCounts(await fetchMyPhotoCounts(placeId, uid));
+    await fetchMyPhotoCounts(placeId, uid).then(setCounts, () => {});
   }, [uid, placeId]);
 
   useEffect(() => { if (mayOffer) void recount(); }, [mayOffer, recount]);

@@ -136,3 +136,35 @@ describe('the password eye', () => {
     expect(screen.getByRole('button', { name: 'Hiện mật khẩu' })).toBe(eye);
   });
 });
+
+// A caller's props go under the row's own two, not over them (SOLID
+// review, L). Spread last, `style` replaced the field's type rather than
+// adding to it, and `secureTextEntry` overrode the eye.
+describe('a caller\'s TextInput props', () => {
+  it('adds a style to the field\'s own rather than replacing it', () => {
+    lang = 'en';
+    render(
+      <FieldRow icon="mail-outline" label="Email" value="a@b.co" testID="f"
+        style={{ letterSpacing: 3 }} onChangeText={() => {}} />,
+    );
+    // react-native-web writes a sheet's rules as atomic classes, which
+    // jsdom does not compute, and an inline style as an inline style. So
+    // the field's own type is read off its class, the caller's off the
+    // element — both have to be there.
+    const field = screen.getByTestId('f');
+    expect(field.style.letterSpacing).toBe('3px');
+    expect(field.className).toMatch(/\br-fontSize-/);
+  });
+
+  it('cannot keep a password hidden that the eye has shown', () => {
+    lang = 'en';
+    render(
+      <FieldRow icon="lock-closed-outline" label="Password" secure secureTextEntry value="pw"
+        testID="p" onChangeText={() => {}} />,
+    );
+    const field = screen.getByTestId('p') as HTMLInputElement;
+    expect(field.type).toBe('password');
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(field.type).toBe('text');
+  });
+});

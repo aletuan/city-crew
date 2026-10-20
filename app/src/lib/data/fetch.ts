@@ -80,10 +80,9 @@ export function usePersistedFetch<T>(
   fetcher: () => Promise<T>,
   empty: T,
 ): Fetch<T> {
-  const [state, setState] = useState<{
-    loading: boolean; loaded: boolean; error: string | null; data: T;
-    loadedAt: number | null; fromCache: boolean;
-  }>({
+  // Named from `Fetch` rather than written out again: the copy is how a
+  // field added to the type could be left out of the state that fills it.
+  const [state, setState] = useState<Omit<Fetch<T>, 'reload'>>({
     loading: true, loaded: false, error: null, data: empty, loadedAt: null, fromCache: false,
   });
   // Which question is on screen. Bumped by every load and by every key

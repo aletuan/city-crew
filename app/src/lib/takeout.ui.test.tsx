@@ -192,6 +192,17 @@ describe('useTakeout', () => {
       expect(takeout.busy).toBe(false);
     });
 
+    // The blocks read used to answer a failure with "nobody", and the file
+    // went out saying so. It throws now, and an export missing a part is
+    // not written.
+    it('writes no file without the blocks', async () => {
+      reads.fetchMyBlocks.mockRejectedValueOnce(new Error('Network request failed'));
+      mount();
+      await run();
+      expect(takeout.error).toBe('Network request failed');
+      expect(world.written).toHaveLength(0);
+    });
+
     it('clears the last failure when it is asked again', async () => {
       reads.fetchMyHistory.mockRejectedValueOnce(new Error('Network request failed'));
       mount();

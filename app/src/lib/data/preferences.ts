@@ -132,13 +132,13 @@ export async function saveTheme(ownerId: string, theme: string): Promise<void> {
  * count). It answers a guest too, since the sheet shows a guest the same
  * cards.
  *
- * Failure is an empty list, never a throw: no card then carries the word,
- * which is the sheet as it ships until a theme is worn by that many.
+ * A failure throws; the Theme sheet catches it and no card carries the
+ * word, which is the sheet as it ships until a theme is worn by that many.
  */
 export async function fetchPopularThemes(): Promise<string[]> {
   const { data, error } = await supabase.rpc('popular_themes');
-  if (error || !data) return [];
-  return (data as { theme: string }[]).map((row) => row.theme);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { theme: string }[]).map((row) => row.theme);
 }
 
 export type EventKind = 'open' | 'save' | 'unsave' | 'plan_keep' | 'plan_drop';

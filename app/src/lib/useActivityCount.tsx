@@ -25,6 +25,8 @@ export function useActivityCount(me: string | null): number {
     if (!me) { setN(0); return undefined; }
     let live = true;
     const since = windowStart(new Date());
+    // Each half caught on its own, as the screen catches them: a badge
+    // counts what it could get rather than going dark over one failure.
     Promise.all([
       fetchApplause(since).catch(() => []),
       fetchCopies(since).catch(() => []),

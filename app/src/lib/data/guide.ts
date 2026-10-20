@@ -4,8 +4,10 @@
 // The rules are all in Postgres — `20260919080000_local_guide_photos.sql`
 // — so almost nothing here is a decision. What is worth pinning is the
 // shape of each question: which of these is scoped by RLS rather than by
-// a filter written here, which one fails loudly, and what the insert is
-// obliged to say about itself.
+// a filter written here, and what the insert is obliged to say about
+// itself. Every read here throws on a failure, as every read in this
+// directory does: what a failure should look like is the caller's to say,
+// and each one says it where it catches.
 
 import { supabase } from '../supabase';
 
@@ -23,13 +25,15 @@ import { supabase } from '../supabase';
  * the table to the caller's own rows, so a filter here would be a second,
  * weaker copy of a rule Postgres already enforces — and the one that
  * could drift. An empty answer means "nowhere", which is also what a
- * guest gets and what a database that predates the table gives: three
- * different facts, one safe answer, and the safe answer is the one that
- * draws no control.
+ * guest gets. A failed read — a dropped network, a database that
+ * predates the table — throws rather than answering "nowhere": the
+ * store's `load` catches it and draws no control, and keeps a grant it
+ * remembered from last launch. Answered as an empty list, that failure
+ * overwrote the remembered grant and was stashed as this launch's answer.
  */
 export async function fetchGuideCities(): Promise<(string | null)[]> {
   const { data, error } = await supabase.from('local_guides').select('city_id');
-  if (error) return [];
+  if (error) throw new Error(error.message);
   return (data ?? []).map((r) => r.city_id ?? null);
 }
 
@@ -37,13 +41,14 @@ export async function fetchGuideCities(): Promise<(string | null)[]> {
  * Whether this account is on the desk's `editors` list.
  *
  * Asked through `is_editor()`, the same function every policy asks, so the
- * app and the database cannot disagree about who the desk is. Like the
- * grant above, a failure reads as no: the answer that draws nothing is the
- * one that cannot draw a control the database would then refuse.
+ * app and the database cannot disagree about who the desk is. A failure
+ * throws, as the grant's does, and `guideGrant.load` reads it as no: the
+ * answer that draws nothing is the one that cannot draw a control the
+ * database would then refuse.
  */
 export async function fetchIsEditor(): Promise<boolean> {
   const { data, error } = await supabase.rpc('is_editor');
-  if (error) return false;
+  if (error) throw new Error(error.message);
   return data === true;
 }
 
@@ -68,6 +73,11 @@ export async function fetchIsEditor(): Promise<boolean> {
  * Ids rather than a `head: true` count: the numbers here are bounded by
  * the caps themselves — five and ten — so the rows are cheaper than the
  * capability would be worth.
+ *
+ * Either count failing throws. A failed count must not block the upload
+ * — the policy is the limit, and this is only the message in front of
+ * it — but that is `useAddPhoto`'s decision, made where it catches.
+ * Answered as zero here, it read as "nothing uploaded yet" to anybody.
  */
 export async function fetchMyPhotoCounts(placeId: string, uid: string): Promise<{
   mineHere: number;
@@ -80,8 +90,8 @@ export async function fetchMyPhotoCounts(placeId: string, uid: string): Promise<
     supabase.from('place_photos').select('id')
       .eq('uploaded_by', uid).gte('created_at', since),
   ]);
-  // A failed count answers zero rather than blocking the upload: the
-  // policy is the limit, and this is only the message in front of it.
+  if (here.error) throw new Error(here.error.message);
+  if (today.error) throw new Error(today.error.message);
   return {
     mineHere: (here.data as unknown[] | null)?.length ?? 0,
     mineToday: (today.data as unknown[] | null)?.length ?? 0,
@@ -130,7 +140,7 @@ export async function addPlacePhoto(row: {
     })
     .select('id')
     .single();
-  // Loud, unlike the reads above. A failed upload that said nothing would
+  // Loud, like the reads above. A failed upload that said nothing would
   // leave a file in the bucket and no row pointing at it, and the person
   // believing their photograph is on the place.
   if (error) throw new Error(error.message);
@@ -222,6 +232,10 @@ export async function removePhotoFile(path: string): Promise<void> {
  * the id is actually needed. RLS scopes the read the same way it scopes
  * everything else: a slug the caller cannot see answers null, and the
  * insert that would have followed was never going to be allowed.
+ *
+ * Null means that and only that. A failed read throws: answered as null,
+ * it reached `addCheckin` as "place_not_found" and the gallery as a place
+ * with no photographs, offline.
  */
 export async function fetchPlaceId(slug: string): Promise<string | null> {
   const { data, error } = await supabase
@@ -229,6 +243,6 @@ export async function fetchPlaceId(slug: string): Promise<string | null> {
     .select('id')
     .eq('slug', slug)
     .maybeSingle();
-  if (error) return null;
+  if (error) throw new Error(error.message);
   return (data as { id: string } | null)?.id ?? null;
 }

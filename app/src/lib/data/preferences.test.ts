@@ -310,12 +310,14 @@ describe('fetchPopularThemes', () => {
     expect(fake().log[0].payload).toBeUndefined();
   });
 
-  // An empty list, never a throw: no card then carries the word, which
-  // is the sheet as it ships until a theme is worn by enough.
-  it('answers an empty list when the function failed or said nothing', async () => {
+  // The sheet catches a failure and no card carries the word. The read
+  // throws, so that choice is the sheet's to make.
+  it('throws when the function failed', async () => {
     fake().replies({ error: { message: 'no such function' } });
-    expect(await fetchPopularThemes()).toEqual([]);
-    fake().reset();
+    await expect(fetchPopularThemes()).rejects.toThrow('no such function');
+  });
+
+  it('answers an empty list when the function said nothing', async () => {
     fake().replies({ data: null });
     expect(await fetchPopularThemes()).toEqual([]);
     fake().reset();

@@ -252,6 +252,16 @@ describe('the read', () => {
     expect(await screen.findByTestId('photo-sheet')).toBeTruthy();
   });
 
+  // Offline the id lookup used to answer null, and the screen drew "No
+  // photos yet" over a place that has them. A failure now says so.
+  it('says the read failed, rather than inviting a first photo, when the id lookup fails', async () => {
+    data.fetchPlaceId.mockRejectedValueOnce(new Error('Failed to fetch'));
+    show([photo('a')]);
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('That did not work', 'Failed to fetch'));
+    expect(screen.queryByText(/No photos yet/)).toBeNull();
+    expect(data.fetchGallery).not.toHaveBeenCalled();
+  });
+
   it('invites the first photo when there is none', async () => {
     show([]);
     expect(await screen.findByText(/No photos yet/)).toBeTruthy();
@@ -608,6 +618,18 @@ describe('adding one', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
     await waitFor(() => expect(data.picker).toHaveBeenCalledTimes(1));
     expect(data.picker.mock.calls[0][0]).toMatchObject({ allowsMultipleSelection: true, selectionLimit: 3, orderedSelection: true });
+  });
+
+  // A count that cannot be read must not stand between a guide and the
+  // roll: the policy is the limit. Counted as nothing yet, the roll
+  // offers the whole room.
+  it('still opens the roll when the counts cannot be read', async () => {
+    data.fetchMyPhotoCounts.mockRejectedValue(new Error('Failed to fetch'));
+    show([photo('a')]);
+    await grid();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    await waitFor(() => expect(data.picker).toHaveBeenCalledTimes(1));
+    expect(data.picker.mock.calls[0][0]).toMatchObject({ selectionLimit: 5 });
   });
 
   it('adds every photo picked, in the order picked, with the first picked ending as the cover', async () => {
