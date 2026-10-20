@@ -387,7 +387,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
         <FeatureRow
           icon="location-outline"
           title={t('Places you checked in at', 'Địa điểm check-in', 'チェックインした場所')}
-          sub={t('By month, newest first.', 'Theo tháng, mới nhất trước.', '月ごと、新しい順。')}
+          sub={t("A record of the places you've been.", 'Ghi lại những nơi bạn đã đi qua.', '訪れた場所の記録。')}
           count={visitSummary(visits.data).places}
           onPress={() => navigation.navigate('Visited')}
           last
@@ -420,7 +420,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
             <Text style={s.featureSub}>
-              {t('Find friends and share your plans.', 'Tìm kiếm bạn bè và chia sẻ kế hoạch.', '友達を探して、計画を共有。')}
+              {t('Make friends and plan together.', 'Kết bạn để cùng lên kế hoạch.', '友達になって、一緒に計画。')}
             </Text>
           </View>
           <CountBadge n={crew.friends.length} style={s.rowEnd} />
@@ -443,7 +443,11 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           icon="notifications-outline"
           title={t('Activity', 'Hoạt động', 'アクティビティ')}
           count={feed + crew.incoming.length}
-          sub={t('Likes and copies of your lists, and friend requests.', 'Lượt thích và bản sao list của bạn, và lời mời kết bạn.', 'リストへのいいねやコピーと、友達リクエスト。')}
+          // In the order the screen reads: the requests at the top, the
+          // only things there that want an answer, then the likes and
+          // copies under "Earlier". One line, the owner's pick of two
+          // (20 Oct 2026); "list" was the one English word left in it.
+          sub={t('Friend requests, likes and copies.', 'Lời mời kết bạn, lượt thích và lượt sao chép.', '友達リクエスト、いいね、コピー。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />

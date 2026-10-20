@@ -173,7 +173,7 @@ describe('the EARLIER states', () => {
     await renderScreen();
     expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.getByText(
-      'Quiet so far. Likes and copies of your lists will show here.',
+      'Quiet so far. When someone likes or copies one of your collections, you will see it here.',
     )).toBeTruthy();
   });
 
