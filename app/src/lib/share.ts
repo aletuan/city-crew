@@ -4,7 +4,8 @@
 // on the dimmed half above it closes it. That tap does not stop at the
 // sheet: it carries on into the app underneath. Reported from a phone on
 // Profile, where the dimmed half sits over Current city, Language and
-// Appearance: closing a share from About City Crew by tapping above it
+// Appearance: closing a share from the version sheet (which had a Share button until
+// 21 Oct 2026) by tapping above it
 // opened the language picker, and nobody had asked for it.
 //
 // So while the sheet is up, and for a moment after it has gone, a shield

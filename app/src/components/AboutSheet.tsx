@@ -1,4 +1,10 @@
-// "About City Crew": which copy of the app this is.
+// "Version info": which copy of the app this is.
+//
+// Titled for what it holds (owner, 21 Oct 2026). It was "About City Crew"
+// ("Giới thiệu City Crew"), which promised a word about the app and
+// delivered four lines of build detail. iOS's own "About" can carry that
+// name because it also holds the device's name, its storage and the rest;
+// this sheet holds only the version, so it says so.
 //
 // For the one question support always starts with — which version are you
 // on — and the one a release keeps raising: did the update arrive? The
@@ -12,31 +18,21 @@
 // row stays a destination like the two documents above it, and costs one
 // line.
 //
-// Share rather than copy. The clipboard is a native module this binary
-// does not carry, and this ships by OTA. React Native's own share sheet
-// offers Copy anyway, beside Messages and Mail, which is where the text
-// is going.
-//
-// The share sheet is not raised over this one. Presented from inside the
-// Modal, it opened, and a share cancelled from it left the app frozen on
-// a real phone: nothing on screen took a touch again until the app was
-// killed. On iOS a Modal is a view controller of its own, and the
-// activity sheet was presented from it; when that closed, the Modal's
-// window was left holding every touch. Tapping Share now closes this
-// sheet first and raises the system one once the Modal has gone, which
-// is the path PlaceDetail's share has always taken without trouble. It
-// is also what `AvatarPicker` learned for the camera: iOS will not
-// present one view controller while another is dismissing.
+// No Share button, since 21 Oct 2026 (owner). It handed the four lines to
+// the system share sheet as text; nobody used it, and each value on the
+// card can still be long-pressed and copied on its own. It had cost a
+// freeze to get right: raised from inside the Modal, a cancelled share
+// left the Modal's window holding every touch until the app was killed.
+// A share added here again has to close this sheet first.
 
 import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { APP_INFO, type AppInfo, shareText, shortUpdateId, updateDate, versionLabel } from '../lib/appinfo';
+import { APP_INFO, type AppInfo, shortUpdateId, updateDate, versionLabel } from '../lib/appinfo';
 import { useI18n } from '../lib/i18n';
-import { shareSafely } from '../lib/share';
 import { colors, font, radius, space, type } from '../theme';
-import { fireHaptic, PressableScale } from './ui';
+import { PressableScale } from './ui';
 import { useSheetDrag } from './sheetDrag';
 
 function Row({ label, value, first }: { label: string; value: string; first?: boolean }) {
@@ -44,7 +40,7 @@ function Row({ label, value, first }: { label: string; value: string; first?: bo
     <View style={[s.row, !first && s.rowDivider]}>
       <Text style={s.label}>{label}</Text>
       {/* Selectable, so a long press lifts one value on its own — the
-          update id, say — without going through the share sheet. */}
+          update id, say. */}
       <Text style={s.value} selectable numberOfLines={1}>{value}</Text>
     </View>
   );
@@ -75,32 +71,12 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
     // phone, or this is a build that never takes an update.
     : t('Shipped with the build', 'Có sẵn trong bản cài', 'ビルドに同梱');
 
-  // The share waiting for this sheet to finish going. See the note at
-  // the top: raised any earlier, it is raised over the Modal.
-  const sharing = useRef(false);
-  const shareNow = () => {
-    if (!sharing.current) return;
-    sharing.current = false;
-    // Through `lib/share`, so the tap that closes the system sheet does
-    // not land on Profile underneath it.
-    void shareSafely({ message: shareText(info) }, Share.share);
-  };
-  const share = () => {
-    fireHaptic('selection');
-    sharing.current = true;
-    onClose();
-    // `onDismiss` is iOS-only; elsewhere nothing would ever call it. The
-    // wait is the Modal's fade, as `AvatarPicker` waits for its own.
-    if (Platform.OS !== 'ios') setTimeout(shareNow, 250);
-  };
-
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
       onRequestClose={onClose}
-      onDismiss={shareNow}
       statusBarTranslucent
     >
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={close} />
@@ -114,7 +90,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
       >
         <View style={s.handle} />
         <Text style={s.title} accessibilityRole="header">
-          {t('About City Crew', 'Giới thiệu City Crew', 'City Crewについて')}
+          {t('Version info', 'Thông tin phiên bản', 'バージョン情報')}
         </Text>
         <View style={s.card}>
           <Row
@@ -133,15 +109,9 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
               did this phone not get it?" */}
           <Row label="Runtime" value={info.runtime ?? '—'} />
         </View>
-        <PressableScale onPress={share} accessibilityRole="button" contentStyle={s.share}>
-          <Ionicons name="share-outline" size={18} color={colors.accent} />
-          <Text style={s.shareText}>{t('Share these details', 'Chia sẻ thông tin này', 'この情報を共有')}</Text>
-        </PressableScale>
         {/* "Close", not "Done": nothing was being done here. It reads what
-            the documents beside it say (LegalSheet), and it is built like
-            the row above it: glyph and word, the same size and weight, in
-            the quieter colour, so the two read as a pair of rows rather
-            than a link and a stray word. */}
+            the documents beside it say (LegalSheet): glyph and word, in
+            the quieter colour. */}
         <PressableScale onPress={onClose} haptic="selection" accessibilityRole="button" contentStyle={s.done}>
           <Ionicons name="close" size={18} color={colors.textSecondary} />
           <Text style={s.doneText}>{close}</Text>
@@ -176,14 +146,9 @@ const s = StyleSheet.create({
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlass },
   label: { color: colors.textSecondary, fontSize: 15 },
   value: { flex: 1, textAlign: 'right', color: colors.text, fontSize: 15, fontWeight: font.medium },
-  share: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginTop: 14, paddingVertical: 13,
-  },
-  shareText: { color: colors.accent, ...type.body, fontWeight: font.medium },
   done: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 13,
+    marginTop: 14, paddingVertical: 13,
   },
   doneText: { color: colors.textSecondary, ...type.body, fontWeight: font.medium },
 });
