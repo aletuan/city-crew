@@ -76,6 +76,46 @@ export function publishBlockers(members: Reviewable[]): { pending: number; flagg
   return { pending, flagged };
 }
 
+/**
+ * Why a list cannot be published, said in words rather than counted at
+ * the reader.
+ *
+ * It names both kinds because they end differently. A place still under
+ * review will resolve on its own; one that was not accepted never will,
+ * and the list stays private forever until its owner takes it out. A
+ * sentence that said only "some places are pending" would leave them
+ * waiting for something that is not coming.
+ */
+export function blockerSentence(
+  { pending, flagged }: { pending: number; flagged: number },
+  t: (en: string, vi: string, ja: string) => string,
+): string {
+  const parts: string[] = [];
+  if (pending) {
+    // Not public *yet* — the state the list is in, rather than the
+    // procedure it is waiting on. The owner does not need to picture a
+    // queue to understand why the switch will not move; they need to know
+    // which places are holding it, and that this one resolves on its own.
+    parts.push(t(
+      `${pending} ${pending === 1 ? 'place is' : 'places are'} not public yet`,
+      `${pending} địa điểm chưa công khai`,
+      `${pending}件がまだ公開されていません`,
+    ));
+  }
+  if (flagged) {
+    parts.push(t(
+      `${flagged} ${flagged === 1 ? 'was' : 'were'} not accepted`,
+      `${flagged} địa điểm không được duyệt`,
+      `${flagged}件が不採用です`,
+    ));
+  }
+  return t(
+    `Private until every place is live — ${parts.join(', and ')}.`,
+    `Riêng tư cho tới khi mọi địa điểm hiển thị — ${parts.join(', và ')}.`,
+    `すべてのスポットが公開されるまで非公開です — ${parts.join('、')}。`,
+  );
+}
+
 /** Whether anything at all stands in the way. */
 export function canPublish(members: Reviewable[]): boolean {
   const { pending, flagged } = publishBlockers(members);

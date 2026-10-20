@@ -21,7 +21,7 @@ import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterShee
 import { AmbientWarmth, Chip, Empty, PressableScale, Skeleton, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { useDockOffer } from '../components/DockSlot';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, chosenKind, pinTint } from '../lib/categories';
+import { CATEGORIES, categoriesOf, categoryLabel, chosenKind, pinTint, presentCategories } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { fetchPlaceIndex, Place, PlaceIndexRow } from '../lib/data';
@@ -269,11 +269,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
-  const cats = useMemo<string[]>(() => {
-    const present = new Set<string>();
-    for (const p of places) for (const c of categoriesOf(p)) present.add(c);
-    return CATEGORY_ORDER.filter((c) => present.has(c));
-  }, [places]);
+  const cats = useMemo(() => presentCategories(places), [places]);
 
   // The two ends of what a reader calls "the app opened": the screen
   // existing at all, and the skeletons giving way to places. Everything

@@ -52,6 +52,7 @@ import {
   type Checkin, filterVisits, monthTitle, textMatches, visitCategories, visitCities, visitSections, visitSummary,
 } from '../lib/checkin';
 import { useCityList } from '../lib/city';
+import { cityShortById } from '../lib/cityName';
 import { useMyCheckins } from '../lib/checkins';
 import { removeCheckin } from '../lib/data';
 import { clockOf, numericDate } from '../lib/format';
@@ -140,10 +141,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
     .slice(0, RECENTS_SHOWN);
   const cityChoices = useMemo(() => visitCities(visits.data), [visits.data]);
   const kindChoices = useMemo(() => visitCategories(visits.data), [visits.data]);
-  const cityName = (id: string) => {
-    const c = cities.find((x) => x.id === id);
-    return c ? t(c.short_en, c.short_vi, c.short_ja ?? c.short_en) : id;
-  };
+  const cityName = (id: string) => cityShortById(cities, id, t) ?? id;
   // The words typed match the place's name or its city, through the same
   // fold the catalog search uses, and they narrow what the chips leave.
   const shown = useMemo(() => filterVisits(visits.data, city, kind)
@@ -162,9 +160,9 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
    *  weekday — see `numericDate`: thirty rows of "Thứ 5," said nothing. */
   const metaOf = (v: Checkin) => {
     const d = new Date(v.at);
-    const city = cities.find((c) => c.id === v.city_id);
+    const cityLabel = cityShortById(cities, v.city_id, t);
     const parts = [numericDate(lang, d), clockOf(d.getHours() * 60 + d.getMinutes())];
-    if (city) parts.push(t(city.short_en, city.short_vi, city.short_ja ?? city.short_en));
+    if (cityLabel != null) parts.push(cityLabel);
     return parts.join(' · ');
   };
 

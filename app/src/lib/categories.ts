@@ -314,3 +314,24 @@ export const MAP_PIN_CHOSEN_INK = '#17150F';
  *  `categoriesOf` on why nothing is the honest answer — dark enough to
  *  carry the same white glyph as the rest. */
 export const MAP_PIN_NEUTRAL_FILL = '#5F5A4E';
+
+/**
+ * The categories a catalog actually holds, in filter-row order.
+ *
+ * The rule three screens' chip rows follow: a chip must never lead to an
+ * empty answer, so a city with no market offers no Markets chip. The order
+ * is the taxonomy's (`CATEGORY_ORDER`), never the data's — a row that
+ * reshuffled with every catalog load would have to be read afresh each
+ * time. A key outside the order is not offered: there is no place in the
+ * row to put it.
+ *
+ * Which places count is the caller's question, not this one's. Search
+ * passes only the live catalog, because the reader's own pending
+ * submissions are not something a chip should advertise to them as the
+ * city's.
+ */
+export function presentCategories(places: readonly Categorisable[]): string[] {
+  const present = new Set<string>();
+  for (const p of places) for (const c of categoriesOf(p)) present.add(c);
+  return CATEGORY_ORDER.filter((c) => present.has(c));
+}

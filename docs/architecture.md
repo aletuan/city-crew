@@ -198,9 +198,12 @@ Ghi ra để không ai tưởng là có chủ ý:
 - **Màn hình to** — trung bình ~717 dòng một file so với ~163 ở `lib/`.
   Ngày 19/10/2026 `ProfileScreen` (1.338 → 87 dòng) và `ExploreScreen`
   (1.856 → ~1.040) được tách phần con ra `screens/profile/` và
-  `screens/explore/`; `PlaceDetailScreen`, `CollectionsScreen` và
-  `CollectionDetailScreen` vẫn gần 1.800 dòng. Sàn coverage giữ chúng
-  đúng, nhưng không giữ chúng dễ đọc.
+  `screens/explore/`; `PlaceDetailScreen` vẫn ~1.840 dòng. Ngày
+  20/10/2026 logic thuần và các đoạn lặp được đưa ra `lib/`
+  (`collectionShelf`, `searchRows`, `cityName`, …), nhưng JSX ở lại:
+  `CollectionsScreen` còn ~1.760 dòng, `CollectionDetailScreen` ~1.690,
+  `SearchScreen` ~810. Sàn coverage giữ chúng đúng, nhưng không giữ
+  chúng dễ đọc.
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.

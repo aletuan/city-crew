@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  coverOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity,
+  coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -52,6 +52,26 @@ describe('photosOf', () => {
 
   it('has no cover when every photo is hidden', () => {
     expect(coverOf(place({ place_photos: [photo({ is_cover: true, is_hidden: true })] }))).toBeUndefined();
+  });
+});
+
+describe('coverUriOf', () => {
+  const first = place({ slug: 'first', place_photos: [photo({ photo_uri: 'first.jpg' })] });
+  const second = place({ slug: 'second', place_photos: [photo({ photo_uri: 'second.jpg' })] });
+
+  it('wears the cover its owner chose over any place’s', () => {
+    expect(coverUriOf(collection({ cover: { photo_uri: 'chosen.jpg' } }), [first])).toBe('chosen.jpg');
+  });
+
+  it('falls back to the first place’s cover, not any other', () => {
+    expect(coverUriOf(collection(), [first, second])).toBe('first.jpg');
+  });
+
+  // The first place is what the owner put on top, so a first place with
+  // nothing to show leaves the card bare rather than reaching further down.
+  it('wears nothing when the first place has no photograph, or there is none', () => {
+    expect(coverUriOf(collection(), [place(), second])).toBeUndefined();
+    expect(coverUriOf(collection(), [])).toBeUndefined();
   });
 });
 
