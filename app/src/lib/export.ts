@@ -44,6 +44,7 @@
 //    the export into a way of learning who reported whom. Silently
 //    dropping it would be the same decision made dishonestly.
 
+import { localized, type LocalizedRow } from './localized';
 import type { Collection, Place } from './types';
 import type { Trip } from './data/trips';
 import type { Checkin } from './checkin';
@@ -180,11 +181,12 @@ const NOTES = {
 export type ExportLang = keyof typeof NOTES;
 
 /** The place's name in the reader's language, falling back the way the
- *  rest of the app does. `place.ts` owns this for the UI; repeating the
- *  two-line version here keeps this module import-free of anything that
- *  needs a renderer. */
-function placeName(p: { name_en: string; name_vi: string }, lang: ExportLang): string {
-  return (lang === 'vi' ? p.name_vi : p.name_en) || p.name_en || p.name_vi || '';
+ *  rest of the app does — through `localized`, the one reader of a row's
+ *  languages. That imports only `lang`, so this module still needs no
+ *  renderer. The two-line copy it replaces read the two columns and
+ *  nothing else, so a Japanese export named every place in English. */
+function placeName(p: LocalizedRow, lang: ExportLang): string {
+  return localized(p, 'name', lang);
 }
 
 function collectionTitle(c: Collection, lang: ExportLang): string {

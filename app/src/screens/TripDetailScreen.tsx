@@ -36,6 +36,7 @@ import {
 } from '../components/ui';
 import StopRow from '../components/StopRow';
 import { useProfile, useSession } from '../lib/auth';
+import { FOOD_CATEGORIES } from '../lib/categories';
 import { fromISO } from '../lib/day';
 import {
   answerInvite, deleteTrip, sendInvites, withdrawInvites,
@@ -62,11 +63,6 @@ import type { Nav, RootRoute } from '../nav';
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
   : `${Math.round(vnd / 1000)}k ₫`);
-
-/** Categories whose spend is food rather than something you did. Same set
- *  the planner splits its donut on, so a saved trip and a fresh plan
- *  account for the same café the same way. */
-const FOOD = new Set(['eats', 'cafes']);
 
 export default function TripDetailScreen({ navigation, route }: {
   navigation: Nav;
@@ -152,7 +148,7 @@ export default function TripDetailScreen({ navigation, route }: {
   let doing = 0;
   for (const st of stops) {
     const v = st.places?.price_vnd ?? 0;
-    if ((st.places?.categories ?? []).some((c) => FOOD.has(c))) food += v;
+    if ((st.places?.categories ?? []).some((c) => FOOD_CATEGORIES.has(c))) food += v;
     else doing += v;
   }
   const spend = spendVnd(stops.map((st: TripStopRow) => st.places));

@@ -62,56 +62,98 @@ export function kindOf(labels: unknown): PhotoKind | null {
   return KINDS.find((k) => k === l.kind) ?? null;
 }
 
-/** The mark beside each kind: Ionicons outlines, like the analysis rows.
- *  Other's is an empty frame, four corners with nothing in them, because
- *  the owner asked for a picture frame. Ionicons' own picture frame,
- *  `image-outline`, is already View's. `images-outline` is several
- *  photographs, which reads as Collage, and `easel-outline` is a painting,
- *  which reads as Culture. */
-export const KIND_ICON: Record<PhotoKind, keyof typeof Ionicons.glyphMap> = {
-  food: 'restaurant-outline',
-  interior: 'home-outline',
-  exterior: 'storefront-outline',
-  garden: 'leaf-outline',
-  heritage: 'library-outline',
-  view: 'image-outline',
-  text: 'document-text-outline',
-  collage: 'grid-outline',
-  other: 'scan-outline',
+type Tri = readonly [en: string, vi: string, ja: string];
+
+/** Everything the sheet says about a kind, in one row. */
+type KindDef = {
+  /** The mark beside it: Ionicons outlines, like the analysis rows. */
+  icon: keyof typeof Ionicons.glyphMap;
+  /** Its name, as the label under the reasons. The Vietnamese is the
+   *  label rounds' own words (`dashboard/src/labelRound.js`), which the
+   *  owner answered in. */
+  name: Tri;
+  /** The same, as it sits inside a sentence: "higher than 40% of the
+   *  catalog's food and drink photos". */
+  noun: Tri;
 };
 
-/** A kind's name, as the label under the reasons. The Vietnamese is the
- *  label rounds' own words (`dashboard/src/labelRound.js`), which the
- *  owner answered in. */
-export function kindName(kind: PhotoKind, t: T): string {
-  switch (kind) {
-    case 'food': return t('Food & drink', 'Đồ ăn & uống', '料理・ドリンク');
-    case 'interior': return t('Inside', 'Nội thất', '店内');
-    case 'exterior': return t('Front', 'Mặt tiền', '外観');
-    case 'garden': return t('Garden & terrace', 'Sân vườn', '庭・テラス');
-    case 'heritage': return t('Culture', 'Văn hóa', '文化');
-    case 'view': return t('View', 'Cảnh', '景色');
-    case 'text': return t('Menu & signs', 'Chữ, menu', 'メニュー・文字');
-    case 'collage': return t('Collage', 'Ảnh ghép', 'コラージュ');
-    case 'other': return t('Other', 'Khác', 'その他');
-  }
-}
+// A kind is its name in KINDS and a row here; without the row this does
+// not compile.
+//
+// Two other lists of kinds exist and cannot read this one. The labels'
+// own (`supabase/functions/_shared/photoLabels.ts`) is what the model is
+// asked to answer from, and ships in the Edge Function bundle, which
+// holds only `supabase/functions`. The desk's (`dashboard/src/
+// coverReview.js`) is plain JavaScript in its own package, worded for the
+// desk ("Food", where a reader sees "Food & drink"). Metro bundles only
+// `app/`. So a new kind is still three edits, as #1046 was; the test
+// beside this file holds the labels' list to KINDS, so the model cannot
+// learn a kind this build has no row for without CI saying so.
+const KIND_DEFS = {
+  food: {
+    icon: 'restaurant-outline',
+    name: ['Food & drink', 'Đồ ăn & uống', '料理・ドリンク'],
+    noun: ['food and drink', 'đồ ăn & uống', '料理・ドリンク'],
+  },
+  interior: {
+    icon: 'home-outline',
+    name: ['Inside', 'Nội thất', '店内'],
+    noun: ['interior', 'nội thất', '店内'],
+  },
+  exterior: {
+    icon: 'storefront-outline',
+    name: ['Front', 'Mặt tiền', '外観'],
+    noun: ['storefront', 'mặt tiền', '外観'],
+  },
+  garden: {
+    icon: 'leaf-outline',
+    name: ['Garden & terrace', 'Sân vườn', '庭・テラス'],
+    noun: ['garden and terrace', 'sân vườn', '庭・テラス'],
+  },
+  heritage: {
+    icon: 'library-outline',
+    name: ['Culture', 'Văn hóa', '文化'],
+    noun: ['culture', 'văn hóa', '文化'],
+  },
+  view: {
+    icon: 'image-outline',
+    name: ['View', 'Cảnh', '景色'],
+    noun: ['view', 'cảnh', '景色'],
+  },
+  text: {
+    icon: 'document-text-outline',
+    name: ['Menu & signs', 'Chữ, menu', 'メニュー・文字'],
+    noun: ['menu and sign', 'chữ, menu', 'メニュー・文字'],
+  },
+  collage: {
+    icon: 'grid-outline',
+    name: ['Collage', 'Ảnh ghép', 'コラージュ'],
+    noun: ['collage', 'ảnh ghép', 'コラージュ'],
+  },
+  // An empty frame, four corners with nothing in them, because the owner
+  // asked for a picture frame. Ionicons' own picture frame,
+  // `image-outline`, is already View's. `images-outline` is several
+  // photographs, which reads as Collage, and `easel-outline` is a
+  // painting, which reads as Culture.
+  other: {
+    icon: 'scan-outline',
+    name: ['Other', 'Khác', 'その他'],
+    noun: ['other', 'khác', 'その他'],
+  },
+} as const satisfies Record<PhotoKind, KindDef>;
 
-/** The same, as it sits inside a sentence: "higher than 40% of the
- *  catalog's food and drink photos". */
-export function kindNoun(kind: PhotoKind, t: T): string {
-  switch (kind) {
-    case 'food': return t('food and drink', 'đồ ăn & uống', '料理・ドリンク');
-    case 'interior': return t('interior', 'nội thất', '店内');
-    case 'exterior': return t('storefront', 'mặt tiền', '外観');
-    case 'garden': return t('garden and terrace', 'sân vườn', '庭・テラス');
-    case 'heritage': return t('culture', 'văn hóa', '文化');
-    case 'view': return t('view', 'cảnh', '景色');
-    case 'text': return t('menu and sign', 'chữ, menu', 'メニュー・文字');
-    case 'collage': return t('collage', 'ảnh ghép', 'コラージュ');
-    case 'other': return t('other', 'khác', 'その他');
-  }
-}
+/** A kind's row, as the shape every row has: nine literal tuples are a
+ *  union TypeScript will not spread into `t`. */
+const def = (kind: PhotoKind): KindDef => KIND_DEFS[kind];
+
+/** The mark beside a kind. */
+export const kindIcon = (kind: PhotoKind): KindDef['icon'] => def(kind).icon;
+
+/** A kind's name, as the label under the reasons. */
+export const kindName = (kind: PhotoKind, t: T): string => t(...def(kind).name);
+
+/** A kind as it sits inside a sentence. */
+export const kindNoun = (kind: PhotoKind, t: T): string => t(...def(kind).noun);
 
 /** Who said what, once a kind is shown: Apple Vision measured, Claude
  *  named the kind (owner's words, 18 Oct 2026). */

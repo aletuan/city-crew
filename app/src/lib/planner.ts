@@ -37,7 +37,7 @@
 // never appears.
 
 import { brandKey } from './brand';
-import { categoriesOf } from './categories';
+import { FOOD_CATEGORIES, categoriesOf } from './categories';
 import { minutesOf, toISO } from './day';
 import { openState } from './format';
 import { DEFAULT_TZ, instantOn } from './clock';
@@ -653,9 +653,6 @@ const HOP_DEFAULT_MIN = 20;
  *  has been chosen. Opening hours have to be checked against some hour,
  *  and the real arrival is not known until the stop before is picked. */
 const NOMINAL_STEP = DWELL_DEFAULT + HOP_DEFAULT_MIN;
-
-/** Categories whose spend is food rather than activity, for the donut. */
-const FOOD_CATEGORIES = new Set(['eats', 'cafes']);
 
 // ── the draw ─────────────────────────────────────────────────────────
 
