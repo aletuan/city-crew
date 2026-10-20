@@ -62,9 +62,12 @@ export async function profileByHandle(handle: string): Promise<FriendProfile | n
  * written into `curator_handle`, and `profiles.handle` never has one.
  * `lib/handle` states the rule — never trust the stored form.
  *
- * Failure is an empty map, never a throw. A missing face is the normal
- * case here (every editorial handle lives in `reserved_handles` with no
- * profile behind it), so it cannot be allowed to be an error.
+ * A missing face is the normal case here (every editorial handle lives
+ * in `reserved_handles` with no profile behind it), so a handle with no
+ * row is simply absent from the map, never an error. A failed read is
+ * one, and throws like every read in this directory: the hook's empty
+ * map is the fallback (`useCuratorAvatarsQuery`), and it keeps the faces
+ * a refresh could not replace rather than blanking them.
  */
 export async function fetchCuratorAvatars(handles: string[]): Promise<Record<string, string>> {
   const bare = [...new Set(handles.map(normalizeHandle).filter(Boolean))];
@@ -73,7 +76,7 @@ export async function fetchCuratorAvatars(handles: string[]): Promise<Record<str
     .from('profiles')
     .select('handle, avatar_url')
     .in('handle', bare);
-  if (error) return {};
+  if (error) throw new Error(error.message);
   const out: Record<string, string> = {};
   for (const r of (data ?? []) as { handle: string; avatar_url: string }[]) {
     if (r.avatar_url) out[normalizeHandle(r.handle)] = r.avatar_url;
@@ -114,7 +117,7 @@ export async function removeFriendship(a: string, b: string): Promise<void> {
  *  and anyone either side of a block; see `suggested_friends`. */
 export async function fetchSuggestedFriends(): Promise<import('../friends').Suggestion[]> {
   const { data, error } = await supabase.rpc('suggested_friends');
-  if (error) return [];
+  if (error) throw new Error(error.message);
   return (data ?? []) as import('../friends').Suggestion[];
 }
 
@@ -122,7 +125,7 @@ export async function fetchSuggestedFriends(): Promise<import('../friends').Sugg
 export async function fetchMutualSaves(others: string[]): Promise<Record<string, number>> {
   if (!others.length) return {};
   const { data, error } = await supabase.rpc('mutual_saves_counts', { others });
-  if (error) return {};
+  if (error) throw new Error(error.message);
   const out: Record<string, number> = {};
   for (const row of (data ?? []) as { other: string; mutual: number }[]) out[row.other] = row.mutual;
   return out;
@@ -160,9 +163,13 @@ export async function submitReport(input: {
 // applause feed. Their public collections stay public. Only the blocker
 // can see the list, and lifting a block is a plain delete of your own row.
 
+/** The ids this account has blocked. Throws on a failed read, and that
+ *  is the point of it: an empty list is a claim — "nobody" — and two
+ *  callers act on it. The export wrote a file with no blocks in it, and
+ *  the Crew screen showed no Blocked section, both offline. */
 export async function fetchMyBlocks(): Promise<string[]> {
   const { data, error } = await supabase.from('blocks').select('blocked');
-  if (error) return [];
+  if (error) throw new Error(error.message);
   return ((data ?? []) as { blocked: string }[]).map((r) => r.blocked);
 }
 
@@ -191,16 +198,17 @@ export async function searchHandles(prefix: string): Promise<FriendProfile[]> {
     .ilike('handle', `${prefix}%`)
     .order('handle')
     .limit(8);
-  if (error) return [];
+  if (error) throw new Error(error.message);
   return (data ?? []) as FriendProfile[];
 }
 
 /** Recent copies of your public lists, each with its copier's name — see
- *  `copies_of_mine`, `likes_on_mine`'s twin under the same rules. Quiet
- *  on failure, like its twin: the feed shows what it could get. */
+ *  `copies_of_mine`, `likes_on_mine`'s twin under the same rules. Throws
+ *  on failure, like its twin; the feed's callers catch, so it shows what
+ *  it could get. */
 export async function fetchCopies(sinceISO: string): Promise<import('../friends').Copy[]> {
   const { data, error } = await supabase.rpc('copies_of_mine', { since: sinceISO });
-  if (error) return [];
+  if (error) throw new Error(error.message);
   return (data ?? []) as import('../friends').Copy[];
 }
 
@@ -208,6 +216,6 @@ export async function fetchCopies(sinceISO: string): Promise<import('../friends'
  *  `likes_on_mine` (second cut: the owner always sees who). */
 export async function fetchApplause(sinceISO: string): Promise<import('../friends').Applause[]> {
   const { data, error } = await supabase.rpc('likes_on_mine', { since: sinceISO });
-  if (error) return [];
+  if (error) throw new Error(error.message);
   return (data ?? []) as import('../friends').Applause[];
 }

@@ -248,13 +248,18 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     inFlight.current.add(c.id);
     setPending((p) => ({ ...p, [c.id]: { slug: c.slug, liked: want, at: Date.now() } }));
     try {
-      const ok = want
-        ? await likeCollection(c.id, meId)
-        : await unlikeCollection(c.id, meId);
-      // A refused write is not breakage and not a state either: the
+      // A refused like is not breakage and not a state either: the
       // primary key refuses a second like, and that means the row is
-      // already there. Dropping the entry falls back to whatever the
-      // server says, which is the one answer that cannot be wrong.
+      // already there. A failed write — the network gone — is breakage,
+      // and the heart springing back to the server's answer is how this
+      // screen says so; nobody awaits the tap (`void toggleLike`), so a
+      // throw past here would be heard by nothing. Either way, dropping
+      // the entry falls back to whatever the server says, which is the
+      // one answer that cannot be wrong.
+      const ok = await (want
+        ? likeCollection(c.id, meId)
+        : unlikeCollection(c.id, meId).then(() => true)
+      ).catch(() => false);
       if (!ok) setPending(({ [c.id]: _dropped, ...rest }) => rest);
       // One call, both queries: a tap changes a public count and your own
       // set at the same moment, and refetching one without the other is

@@ -114,6 +114,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const [suggested, setSuggested] = useState<Suggestion[]>([]);
   useEffect(() => {
     if (!me) { setSuggested([]); return; }
+    // Introductions are an extra: a failure shows none, which is how
+    // the screen reads for anybody with no overlap yet.
     fetchSuggestedFriends().then(setSuggested).catch(() => {});
   }, [me]);
   useEffect(() => {
@@ -143,6 +145,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   useEffect(() => {
     const bare = normalizeHandle(handle);
     if (bare.length < MIN_SUGGEST_CHARS) { setFound([]); return; }
+    // A failed lookup keeps the suggestions already shown: the field
+    // still sends by exact handle, which says plainly when it fails.
     const timer = setTimeout(() => {
       searchHandles(bare).then((rows) => {
         setFound((prev) => (normalizeHandle(handle) === bare ? suggestable(rows, me ?? '', blocks.data) : prev));
@@ -748,6 +752,32 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                       </View>
                     );
                   })}
+                </Card>
+              </>
+            )}
+            {/* A list that could not be read is not an empty one. Without
+                this the section simply did not draw offline, which is
+                what "you have blocked nobody" looks like. Only while there
+                is nothing to show: a refresh that fails over a list
+                already here leaves the list, which is not wrong enough to
+                interrupt. */}
+            {blocks.error && blocks.data.length === 0 && (
+              <>
+                <Text style={s.head}>{t('Blocked', 'Đã chặn', 'ブロック中')}</Text>
+                <Card>
+                  <View style={s.row} testID="crew-blocks-failed">
+                    <Text style={[s.meta, { flex: 1 }]}>
+                      {t("Couldn't load who you have blocked.", 'Không tải được danh sách đã chặn.', 'ブロック中のユーザーを読み込めませんでした。')}
+                    </Text>
+                    <PressableScale
+                      contentStyle={s.quietBtn}
+                      onPress={() => blocks.reload()}
+                      accessibilityRole="button"
+                      testID="crew-blocks-retry"
+                    >
+                      <Text style={s.quietText}>{t('Try again', 'Thử lại', '再試行')}</Text>
+                    </PressableScale>
+                  </View>
                 </Card>
               </>
             )}

@@ -51,12 +51,13 @@ describe('fetchGuideCities', () => {
     expect(await fetchGuideCities()).toEqual([]);
   });
 
-  // A guest, a database that predates the table, and a network that went
-  // away are three different facts. All three answer "nowhere", because
-  // the safe answer is the one that draws no control.
-  it('is empty when the read fails rather than throwing', async () => {
+  // A guest gets "nowhere" from the read itself. A database that
+  // predates the table and a network that went away are failures, and
+  // throw: the store's `load` draws no control for them, and keeps a
+  // grant it remembered rather than overwriting it with "nowhere".
+  it('throws when the read fails', async () => {
     fake().replies({ error: { message: 'relation does not exist' } });
-    expect(await fetchGuideCities()).toEqual([]);
+    await expect(fetchGuideCities()).rejects.toThrow('relation does not exist');
   });
 
   // No error and no rows either — what PostgREST gives for a `head`
@@ -86,9 +87,10 @@ describe('fetchIsEditor', () => {
     expect(await fetchIsEditor()).toBe(false);
   });
 
-  it('reads a failure as no, which draws nothing', async () => {
+  // A failure is not a no; `guideGrant.load` reads it as one.
+  it('throws when the call fails', async () => {
     fake().replies({ error: { message: 'down' } });
-    expect(await fetchIsEditor()).toBe(false);
+    await expect(fetchIsEditor()).rejects.toThrow('down');
   });
 });
 
@@ -115,10 +117,17 @@ describe('fetchMyPhotoCounts', () => {
     expect(ago).toBeLessThan(25 * 60 * 60 * 1000);
   });
 
-  // The policy is the limit; this is only the message in front of it. A
-  // count that failed must not be the thing that stops an upload.
-  it('answers zero rather than blocking when the count fails', async () => {
-    fake().replies({ error: { message: 'down' } }, { error: { message: 'down' } });
+  // A count that failed must not stop an upload, but zero is not what it
+  // knows: it throws, and `useAddPhoto` decides what to do without it.
+  it('throws when either count fails', async () => {
+    fake().replies({ error: { message: 'here down' } }, { data: [] });
+    await expect(fetchMyPhotoCounts('p1', 'u1')).rejects.toThrow('here down');
+    fake().replies({ data: [] }, { error: { message: 'today down' } });
+    await expect(fetchMyPhotoCounts('p1', 'u1')).rejects.toThrow('today down');
+  });
+
+  it('counts no rows as zero', async () => {
+    fake().replies({ data: null }, { data: null });
     expect(await fetchMyPhotoCounts('p1', 'u1')).toEqual({ mineHere: 0, mineToday: 0 });
   });
 });
@@ -254,8 +263,10 @@ describe('fetchPlaceId', () => {
     expect(await fetchPlaceId('secret')).toBeNull();
   });
 
-  it('is null rather than throwing when the read fails', async () => {
+  // Null is "not found" and nothing else. Offline it used to be null too,
+  // and a check-in said the place did not exist.
+  it('throws when the read fails', async () => {
     fake().replies({ error: { message: 'down' } });
-    expect(await fetchPlaceId('cong-caphe')).toBeNull();
+    await expect(fetchPlaceId('cong-caphe')).rejects.toThrow('down');
   });
 });

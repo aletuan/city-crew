@@ -111,8 +111,8 @@ export async function fetchPlaceBySlug(slug: string): Promise<Place | null> {
  * data loss. One column over the live catalog, counted here — no view,
  * no RPC, nothing for a migration to carry.
  *
- * Failure is an empty map, never a throw: the rows simply keep their
- * quiet, which is the sheet the app always had.
+ * A failure throws; `CitySwitcher` catches it and its rows simply keep
+ * their quiet, which is the sheet the app always had.
  */
 export async function fetchPlaceCountByCity(): Promise<Record<string, number>> {
   const { data, error } = await supabase
@@ -120,9 +120,9 @@ export async function fetchPlaceCountByCity(): Promise<Record<string, number>> {
     .select('city_id')
     .eq('is_published', true)
     .eq('review_status', 'approved');
-  if (error || !data) return {};
+  if (error) throw new Error(error.message);
   const out: Record<string, number> = {};
-  for (const r of data as { city_id: string | null }[]) {
+  for (const r of (data ?? []) as { city_id: string | null }[]) {
     if (r.city_id) out[r.city_id] = (out[r.city_id] ?? 0) + 1;
   }
   return out;
@@ -143,7 +143,7 @@ export async function fetchPlaceCountByCity(): Promise<Record<string, number>> {
  * — see `matchesExplore`. Measured 2026-09-19: 635 rows, 219 kB before
  * transfer encoding, asked once when the map opens.
  *
- * Failure is an empty list, never a throw: the markers keep their names
+ * A failure throws; Explore catches it, and the markers keep their names
  * and lose their numbers, which is the map this replaced.
  */
 export type PlaceIndexRow = {
@@ -164,10 +164,10 @@ export async function fetchPlaceIndex(): Promise<PlaceIndexRow[]> {
     .select('slug, city_id, categories, vibe_tags, category, opening_hours')
     .eq('is_published', true)
     .eq('review_status', 'approved');
-  if (error || !data) return [];
+  if (error) throw new Error(error.message);
   // `category` is nullable in the column and optional in the type the
   // filters read; one is the other with the nulls dropped.
-  return (data as (Omit<PlaceIndexRow, 'category'> & { category: string | null })[])
+  return ((data ?? []) as (Omit<PlaceIndexRow, 'category'> & { category: string | null })[])
     .map(({ category, ...rest }) => (category ? { ...rest, category } : rest));
 }
 
@@ -177,16 +177,17 @@ export async function fetchPlaceIndex(): Promise<PlaceIndexRow[]> {
  * Not scoped to a city — what a reader types for "cinema" does not change
  * between Hanoi and Saigon — so it has no dependency and fetches once.
  *
- * Failure is an empty map, never a throw. The app ships its own defaults
- * and unions this onto them, so a table that is missing, empty, or
- * unreachable leaves search exactly as it shipped; see `mergeTerms`. That
- * is what lets this be nine rows of editable text rather than a risk.
+ * The app ships its own defaults and unions this onto them, so a table
+ * that is missing, empty, or unreachable leaves search exactly as it
+ * shipped; see `mergeTerms`. That is what lets this be nine rows of
+ * editable text rather than a risk. A failure throws all the same: the
+ * hook's empty map is the fallback (`useCategoryTermsQuery`).
  */
 export async function fetchCategoryTerms(): Promise<Record<string, string[]>> {
   const { data, error } = await supabase.from('category_terms').select('category, terms');
-  if (error || !data) return {};
+  if (error) throw new Error(error.message);
   const out: Record<string, string[]> = {};
-  for (const row of data as { category: string; terms: string[] | null }[]) {
+  for (const row of (data ?? []) as { category: string; terms: string[] | null }[]) {
     if (row.category) out[row.category] = row.terms ?? [];
   }
   return out;

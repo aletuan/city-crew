@@ -4,8 +4,8 @@
 // None of these had a test before `data.ts` became a directory — they were
 // the largest untested stretch of the file. What is worth pinning is the
 // shape of each question, because almost every rule here is enforced in
-// Postgres and invisible at the call site: which of these fail loudly and
-// which answer empty, which read is case-insensitive, and which call is a
+// Postgres and invisible at the call site: that every read fails loudly
+// (the callers choose their own fallbacks), which read is case-insensitive, and which call is a
 // Postgres function rather than a table at all.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -127,11 +127,12 @@ describe('fetchCuratorAvatars', () => {
   });
 
   // A missing face is the normal case — every editorial handle lives in
-  // `reserved_handles` with no profile behind it — so failure cannot be
-  // allowed to be an error.
-  it('answers an empty map when the read failed', async () => {
+  // `reserved_handles` with no profile behind it — and answers no key. A
+  // failed read is not that, and throws: the hook's empty map is the
+  // fallback, chosen there.
+  it('throws when the read failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await fetchCuratorAvatars(['anh'])).toEqual({});
+    await expect(fetchCuratorAvatars(['anh'])).rejects.toThrow('timeout');
   });
 
   it('answers an empty map when there is no data', async () => {
@@ -215,10 +216,12 @@ describe('fetchSuggestedFriends', () => {
     expect(q.payload).toBeUndefined();
   });
 
-  // An empty introductions shelf is a fine screen; an error one is not.
-  it('answers empty when the call failed', async () => {
+  // An empty introductions shelf is a fine screen — and the Crew screen
+  // catches to draw one — but "nobody overlaps" is not what a failed call
+  // knows.
+  it('throws when the call failed', async () => {
     fake().replies({ error: { message: 'function does not exist' } });
-    expect(await fetchSuggestedFriends()).toEqual([]);
+    await expect(fetchSuggestedFriends()).rejects.toThrow('function does not exist');
   });
 
   it('answers empty when it returned nothing', async () => {
@@ -240,9 +243,9 @@ describe('fetchMutualSaves', () => {
     expect(fake().log).toEqual([]);
   });
 
-  it('answers empty when the call failed', async () => {
+  it('throws when the call failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await fetchMutualSaves(['u2'])).toEqual({});
+    await expect(fetchMutualSaves(['u2'])).rejects.toThrow('timeout');
   });
 
   it('answers empty when it returned nothing', async () => {
@@ -289,12 +292,12 @@ describe('fetchMyBlocks', () => {
     expect(fake().log[0].table).toBe('blocks');
   });
 
-  // Failure is an empty list on purpose. This gates a screen, and a throw
-  // here would take the whole Crew tab down over a list that is almost
-  // always empty.
-  it('answers empty when the read failed', async () => {
+  // An empty list here is a claim — "nobody" — and the export wrote it
+  // into the file. The Crew screen catches through its Fetch and says it
+  // could not load the list; it does not go down.
+  it('throws when the read failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await fetchMyBlocks()).toEqual([]);
+    await expect(fetchMyBlocks()).rejects.toThrow('timeout');
   });
 
   it('answers empty when there is no data', async () => {
@@ -355,9 +358,9 @@ describe('searchHandles', () => {
     expect(fake().log[0].order).toEqual(['handle']);
   });
 
-  it('answers empty when the read failed', async () => {
+  it('throws when the read failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await searchHandles('an')).toEqual([]);
+    await expect(searchHandles('an')).rejects.toThrow('timeout');
   });
 
   it('answers empty when there is no data', async () => {
@@ -375,9 +378,12 @@ describe('fetchCopies', () => {
     expect(q.payload).toEqual({ since: '2026-08-01T00:00:00Z' });
   });
 
-  it('answers empty when the call failed or returned nothing', async () => {
+  it('throws when the call failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await fetchCopies('2026-08-01T00:00:00Z')).toEqual([]);
+    await expect(fetchCopies('2026-08-01T00:00:00Z')).rejects.toThrow('timeout');
+  });
+
+  it('answers empty when it returned nothing', async () => {
     fake().replies({ data: null });
     expect(await fetchCopies('2026-08-01T00:00:00Z')).toEqual([]);
   });
@@ -393,9 +399,9 @@ describe('fetchApplause', () => {
     expect(q.payload).toEqual({ since: '2026-08-01T00:00:00Z' });
   });
 
-  it('answers empty when the call failed', async () => {
+  it('throws when the call failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await fetchApplause('2026-08-01T00:00:00Z')).toEqual([]);
+    await expect(fetchApplause('2026-08-01T00:00:00Z')).rejects.toThrow('timeout');
   });
 
   it('answers empty when it returned nothing', async () => {

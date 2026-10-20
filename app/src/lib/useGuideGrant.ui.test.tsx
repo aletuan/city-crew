@@ -13,7 +13,7 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '../uitest/render';
+import { act, render, screen, waitFor } from '../uitest/render';
 import { cacheKey, packCache } from './data/cache';
 
 const world = vi.hoisted(() => ({ uid: 'u1' as string | null }));
@@ -144,6 +144,23 @@ describe('the remembered answer', () => {
     answer(false);
     await new Promise((r) => setTimeout(r, 20));
     expect(read('editor')).toBe('true');
+  });
+
+  // A dead network is not a "no". When the reads answered a failure with
+  // empty, the ask settled as no grant, drew over the remembered one and
+  // stashed the emptiness for the next launch too. They throw now.
+  it('keeps the remembered answer, and the stash, when the ask fails', async () => {
+    const remembered = packCache([{ cities: ['hue'], editor: true }], Date.now());
+    await AsyncStorage.setItem(key, remembered);
+    let fail!: (e: Error) => void;
+    fetchGuideCities.mockImplementation(() => new Promise((_, reject) => { fail = reject; }));
+    mount();
+    await waitFor(() => expect(read('editor')).toBe('true'));
+    await act(async () => { fail(new Error('Failed to fetch')); });
+    await waitFor(() => expect(read('settled')).toBe('true'));
+    expect(read('hue')).toBe('true');
+    expect(read('editor')).toBe('true');
+    expect(await AsyncStorage.getItem(key)).toBe(remembered);
   });
 
   it('writes the answer to the stash for the next launch', async () => {

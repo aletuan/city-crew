@@ -55,6 +55,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   useEffect(() => {
     if (!me) { setApplause([]); setCopies([]); return; }
     const since = new Date(Date.now() - APPLAUSE_DAYS * 86400000).toISOString();
+    // Quiet on failure, each half on its own: the feed shows what it
+    // could get, and a dropped likes call does not take the copies with it.
     fetchApplause(since).then(setApplause).catch(() => setApplause([]));
     // The same window: a copy is news for as long as a like is.
     fetchCopies(since).then(setCopies).catch(() => setCopies([]));

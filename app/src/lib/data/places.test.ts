@@ -194,12 +194,12 @@ describe('fetchCategoryTerms', () => {
     expect(await fetchCategoryTerms()).toEqual({});
   });
 
-  // Failure is an empty map, never a throw: the app ships its own defaults
-  // and unions this onto them, so an unreachable table leaves search exactly
-  // as it shipped. That is what lets the desk edit it without risk.
-  it('answers an empty map when the table is unreachable', async () => {
+  // The app ships its own defaults and unions this onto them, so an
+  // unreachable table leaves search exactly as it shipped — through the
+  // hook's empty map, not through an answer this read never had.
+  it('throws when the table is unreachable', async () => {
     fake().replies({ error: { message: 'relation does not exist' } });
-    expect(await fetchCategoryTerms()).toEqual({});
+    await expect(fetchCategoryTerms()).rejects.toThrow('relation does not exist');
   });
 
   it('answers an empty map when there is no data at all', async () => {
@@ -239,11 +239,11 @@ describe('fetchPlaceIndex', () => {
     expect(rows[1].category).toBe('food');
   });
 
-  // Failure is an empty list, never a throw: the markers keep their names
-  // and lose their numbers, which is the map this replaced.
-  it('answers an error, and missing data, with an empty list', async () => {
+  // Explore catches, and the markers keep their names and lose their
+  // numbers — the map this replaced. The read itself says what happened.
+  it('throws an error, and answers missing data with an empty list', async () => {
     fake().replies({ error: { message: 'offline' } });
-    expect(await fetchPlaceIndex()).toEqual([]);
+    await expect(fetchPlaceIndex()).rejects.toThrow('offline');
     fake().replies({ data: null });
     expect(await fetchPlaceIndex()).toEqual([]);
   });
@@ -268,11 +268,11 @@ describe('fetchPlaceCountByCity', () => {
     expect(await fetchPlaceCountByCity()).toEqual({ hanoi: 1 });
   });
 
-  // Failure is an empty map, never a throw: the sheet's rows simply keep
-  // their quiet, which is the sheet the app always had.
-  it('answers an error with an empty map', async () => {
+  // The switcher catches, and its rows keep their quiet — the sheet the
+  // app always had. The read itself throws.
+  it('throws when the read failed', async () => {
     fake().replies({ error: { message: 'offline' } });
-    expect(await fetchPlaceCountByCity()).toEqual({});
+    await expect(fetchPlaceCountByCity()).rejects.toThrow('offline');
   });
 
   it('answers missing data the same way', async () => {

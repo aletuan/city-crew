@@ -56,6 +56,12 @@ export const usePlacesQuery = (meId: string | null | undefined) => {
   );
 };
 
+// The desk's terms, the like tallies and the curators' faces are
+// decoration: the screen is whole without them. Their reads throw like
+// every read in this directory, and the fallback is the `empty` each
+// hook passes — what a failed first load shows, while a failed refresh
+// keeps the last answer (`usePersistedFetch`). No wrapper here catches,
+// so `error` still says what happened to anybody who asks.
 export const useCategoryTermsQuery = () => {
   const fetcher = useCallback(() => fetchCategoryTerms(), []);
   return useFetch(fetcher, {} as Record<string, string[]>);

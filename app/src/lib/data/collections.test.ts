@@ -474,17 +474,17 @@ describe('fetchLikeCounts', () => {
     expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
   });
 
-  // Failure is empty maps: every count then reads as zero, `rankByLikes`
-  // falls back to the order the shelf had before likes existed, and no
-  // heart shows a tally — the state the feature ships in anyway.
-  it('answers an empty map when the function failed', async () => {
+  // Either side failing throws. Empty maps are the hook's fallback
+  // before a first answer; answered here, a failed refresh wiped every
+  // tally a shelf already had.
+  it('throws when the function failed', async () => {
     fake().replies({ error: { message: 'no such function' } }, { data: [] });
-    expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
+    await expect(fetchLikeCounts()).rejects.toThrow('no such function');
   });
 
-  it('answers an empty map when the slug lookup failed', async () => {
+  it('throws when the slug lookup failed', async () => {
     fake().replies({ data: [] }, { error: { message: 'timeout' } });
-    expect(await fetchLikeCounts()).toEqual({ shown: {}, ranked: {} });
+    await expect(fetchLikeCounts()).rejects.toThrow('timeout');
   });
 
   it('answers an empty map when either side returned nothing', async () => {
@@ -506,9 +506,10 @@ describe('fetchMyLikes', () => {
     expect(q.filters).toEqual([['user_id', 'u1']]);
   });
 
-  it('answers empty when the read failed', async () => {
+  // Answered empty, a failure emptied every heart and was cached so.
+  it('throws when the read failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await fetchMyLikes('u1')).toEqual([]);
+    await expect(fetchMyLikes('u1')).rejects.toThrow('timeout');
   });
 
   it('answers empty when there is no data', async () => {
@@ -534,22 +535,33 @@ describe('likeCollection', () => {
   it('reports no change rather than throwing when the rules refused it', async () => {
     fake().replies({ error: { message: 'duplicate key value', code: '23505' } });
     expect(await likeCollection('c-1', 'u1')).toBe(false);
+    fake().replies({ error: { message: 'new row violates row-level security policy', code: '42501' } });
+    expect(await likeCollection('c-1', 'u1')).toBe(false);
+  });
+
+  // Anything else is not the rules working. It used to read as a refused
+  // duplicate, and the heart sprang back with nothing said anywhere.
+  it('throws any other failure', async () => {
+    fake().replies({ error: { message: 'Failed to fetch' } });
+    await expect(likeCollection('c-1', 'u1')).rejects.toThrow('Failed to fetch');
   });
 });
 
 describe('unlikeCollection', () => {
   it('deletes the reader’s own row, both ends named', async () => {
     fake().replies({ error: null });
-    expect(await unlikeCollection('c-1', 'u1')).toBe(true);
+    await expect(unlikeCollection('c-1', 'u1')).resolves.toBeUndefined();
 
     const [q] = fake().log;
     expect(q).toMatchObject({ table: 'collection_likes', op: 'delete' });
     expect(q.filters).toEqual([['collection_id', 'c-1'], ['user_id', 'u1']]);
   });
 
-  it('reports no change rather than throwing when it was refused', async () => {
-    fake().replies({ error: { message: 'not yours' } });
-    expect(await unlikeCollection('c-1', 'u1')).toBe(false);
+  // A delete has no refusal that is the rules working: RLS filters a row
+  // that is not yours to nothing. So any error is a failure.
+  it('throws when the delete failed', async () => {
+    fake().replies({ error: { message: 'Failed to fetch' } });
+    await expect(unlikeCollection('c-1', 'u1')).rejects.toThrow('Failed to fetch');
   });
 });
 

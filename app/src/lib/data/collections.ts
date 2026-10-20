@@ -182,22 +182,25 @@ export type LikeTally = { shown: Record<string, number>; ranked: Record<string, 
  * readers chose. A server still on the old function has no `others`, and
  * there the total stands in, which is what it meant before.
  *
- * Failure is empty maps, never a throw. Every count then reads as zero,
- * `rankByLikes` falls back to the order the shelf had before likes
- * existed, and no heart shows a tally — which is exactly the state the
- * feature ships in anyway.
+ * A failure on either side throws. The hook's empty tally is the
+ * fallback (`useLikeCountsQuery`): before a first answer every count
+ * reads as zero, `rankByLikes` falls back to the order the shelf had
+ * before likes existed, and no heart shows a tally — the state the
+ * feature ships in anyway. After one, a failed refresh keeps the tallies
+ * it had, where an empty answer used to wipe every heart's number.
  */
 export async function fetchLikeCounts(): Promise<LikeTally> {
   const [counts, ids] = await Promise.all([
     supabase.rpc('collection_like_counts'),
     supabase.from('collections').select('id, slug').eq('is_public', true),
   ]);
-  if (counts.error || ids.error || !counts.data || !ids.data) return { shown: {}, ranked: {} };
+  if (counts.error) throw new Error(counts.error.message);
+  if (ids.error) throw new Error(ids.error.message);
   const slugOf = new Map<string, string>();
-  for (const row of ids.data as { id: string; slug: string }[]) slugOf.set(row.id, row.slug);
+  for (const row of (ids.data ?? []) as { id: string; slug: string }[]) slugOf.set(row.id, row.slug);
   const shown: Record<string, number> = {};
   const ranked: Record<string, number> = {};
-  for (const row of counts.data as { collection_id: string; likes: number; others?: number }[]) {
+  for (const row of (counts.data ?? []) as { collection_id: string; likes: number; others?: number }[]) {
     const slug = slugOf.get(row.collection_id);
     if (!slug) continue;
     shown[slug] = row.likes;
@@ -213,40 +216,49 @@ export async function fetchLikeCounts(): Promise<LikeTally> {
  * answer different questions and only one of them is public. This one
  * reads the likes table directly and RLS keeps it to your own rows —
  * signed out it comes back empty, which is the right answer for a set
- * that is defined as yours.
+ * that is defined as yours. A failed read is not that answer, and
+ * throws: answered empty, it emptied every heart and wrote the emptiness
+ * into the launch cache (`useMyLikesQuery`).
  */
 export async function fetchMyLikes(meId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('collection_likes')
     .select('collection_id')
     .eq('user_id', meId);
-  if (error || !data) return [];
-  return (data as { collection_id: string }[]).map((r) => r.collection_id);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { collection_id: string }[]).map((r) => r.collection_id);
 }
 
 /**
  * Like, or take a like back.
  *
- * The insert can legitimately fail and the caller should not treat that
- * as breakage: the policy refuses a like on a private list, and the
- * primary key refuses a second one from the same person. Both are the
- * rules working. What the caller needs back is whether the state changed,
- * so it knows whether to refetch.
+ * The insert can be refused without anything being broken: the policy
+ * refuses a like on a private list, and the primary key refuses a second
+ * one from the same person. Both are the rules working, and both answer
+ * false — "no change" — so the caller falls back to what the server
+ * holds. Everything else is a failure and throws. Until 20 Oct 2026 this
+ * was `!error`, and a dropped network read as a refused duplicate.
  */
 export async function likeCollection(collectionId: string, meId: string): Promise<boolean> {
   const { error } = await supabase
     .from('collection_likes')
     .insert({ collection_id: collectionId, user_id: meId });
-  return !error;
+  if (!error) return true;
+  // 23505 = unique_violation: the like is already there.
+  if (error.code === '23505' || refusedByPolicy(error)) return false;
+  throw new Error(error.message);
 }
 
-export async function unlikeCollection(collectionId: string, meId: string): Promise<boolean> {
+/** A delete has no refusal that is the rules working — RLS filters a row
+ *  that is not yours to nothing rather than refusing it — so this answers
+ *  nothing and throws on any error. */
+export async function unlikeCollection(collectionId: string, meId: string): Promise<void> {
   const { error } = await supabase
     .from('collection_likes')
     .delete()
     .eq('collection_id', collectionId)
     .eq('user_id', meId);
-  return !error;
+  if (error) throw new Error(error.message);
 }
 
 const suffix = () => Math.random().toString(36).slice(2, 8);
