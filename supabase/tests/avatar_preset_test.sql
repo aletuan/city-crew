@@ -3,6 +3,24 @@
 -- Inside a transaction that is rolled back: the accounts made here are
 -- only for asking, and nothing after this file should count them.
 
+-- The backfill first: the migration ran just before this file, over every
+-- profile the blocks above left behind, and some of those were blank.
+do $$
+declare blank int; dealt int;
+begin
+  select count(*) into blank from public.profiles where avatar_url = '';
+  select count(*) into dealt from public.profiles where avatar_url like 'preset:%';
+  assert blank = 0, format('%s profiles are still blank after the backfill', blank);
+  assert dealt > 0, 'the backfill dealt nothing, so it was not tested';
+end $$;
+
+-- A face someone already had is not replaced by the backfill.
+do $$
+begin
+  assert (select avatar_url from public.profiles where id = '11111111-1111-1111-1111-111111111111') = 'http://x/a.jpg',
+    'the backfill replaced a face that was already there';
+end $$;
+
 begin;
 
 -- Sign-up with nothing to say about a face, through the real path: the
@@ -58,6 +76,8 @@ do $$
 begin
   assert not has_function_privilege('anon', 'public.default_avatar_preset()', 'execute'),
     'the trigger function is callable signed out';
+  assert not has_function_privilege('anon', 'public.random_avatar_preset()', 'execute'),
+    'the dealer is callable signed out';
 end $$;
 
 rollback;

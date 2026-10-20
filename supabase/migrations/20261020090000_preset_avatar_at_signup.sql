@@ -26,12 +26,15 @@
 -- not broken, but the very thing this exists to stop.
 --
 -- Clearing it is still the person's choice: Remove photo writes '' with an
--- UPDATE, which this does not touch. Existing blank profiles are left as
--- they are here; filling them is a separate decision.
+-- UPDATE, which the trigger does not touch.
 
-create or replace function public.default_avatar_preset()
-returns trigger
+-- ── the deal, once ──
+-- Shared by the trigger and the backfill below, so the two cannot deal
+-- from different lists.
+create or replace function public.random_avatar_preset()
+returns text
 language plpgsql
+volatile
 set search_path = ''
 as $$
 declare
@@ -39,17 +42,41 @@ declare
     'koala', 'kangaroo', 'wombat', 'quokka', 'platypus', 'echidna', 'kookaburra', 'emu'
   ];
 begin
+  return 'preset:' || animals[1 + floor(random() * array_length(animals, 1))::int];
+end;
+$$;
+
+-- ── every new profile ──
+create or replace function public.default_avatar_preset()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
   if coalesce(new.avatar_url, '') = '' then
-    new.avatar_url := 'preset:' || animals[1 + floor(random() * array_length(animals, 1))::int];
+    new.avatar_url := public.random_avatar_preset();
   end if;
   return new;
 end;
 $$;
 
--- A trigger function, never an RPC.
+-- Neither is an RPC.
+revoke execute on function public.random_avatar_preset() from public, anon, authenticated;
 revoke execute on function public.default_avatar_preset() from public, anon, authenticated;
 
 drop trigger if exists profiles_default_avatar on public.profiles;
 create trigger profiles_default_avatar
   before insert on public.profiles
   for each row execute function public.default_avatar_preset();
+
+-- ── the profiles already blank ──
+-- The owner's call, the same day: fill them too. 21 on production, every
+-- one with no object in the `avatars` bucket, so nothing uploaded is being
+-- hidden. One of them is `maestro`, the E2E account; no flow reads its
+-- face. Someone who had pressed Remove photo is filled as well — the
+-- column cannot tell that apart from never having chosen — and can press
+-- it again. `random()` is evaluated per row, so they do not all get one
+-- animal.
+update public.profiles
+   set avatar_url = public.random_avatar_preset()
+ where avatar_url = '';
