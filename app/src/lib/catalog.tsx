@@ -273,10 +273,25 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     curatorAvatars: curatorAvatars.data,
   // Each field, not each wrapper: a Fetch object is new every render, so depending on it would
   // rebuild the context value — and re-render every consumer — on renders where nothing loaded.
+  //
+  // So every field a reader can see has to be named here, because the lint rule that would say
+  // so is switched off for this line. `curatorAvatars.data` was not, and the cost was invisible
+  // by design: the avatars query is the last read to land — it waits for the shelf's handles —
+  // so when it did, nothing else here had changed, the memo kept the {} it was built with, and
+  // a collection's byline drew the placeholder until an unrelated read rebuilt the value. The
+  // provider test reads a face through `useCuratorAvatar` for exactly this reason.
+  //
+  // `loaded` and `fromCache` were missing too, and are listed on the same rule rather than for a
+  // bug seen: `useFetch` never changes either without `loading` or `loadedAt` moving in the same
+  // update, so nothing went stale. But the shelf holds its skeleton on `loaded`, and a list that
+  // is right only because of how another file happens to batch its writes is one refactor from
+  // wrong. All seven Fetch fields, as `mytrips` and `checkins` list them.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
-    places.data, places.loading, places.error, places.loadedAt, places.reload,
-    collections.data, collections.loading, collections.error, collections.loadedAt, collections.reload,
+    places.data, places.loading, places.loaded, places.error, places.loadedAt, places.fromCache, places.reload,
+    collections.data, collections.loading, collections.loaded, collections.error, collections.loadedAt,
+    collections.fromCache, collections.reload,
+    curatorAvatars.data,
     terms, counts, likeCounts.data.ranked, liked, toggleLike,
   ]);
 

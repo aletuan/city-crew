@@ -13,6 +13,10 @@
 // And the heart: that a tap moves it — and the tally beside it — before
 // the server has answered, that a refused write falls back to the
 // server's own answer, and that a double tap is one write, not two racing.
+//
+// And the context value itself: that a field arriving on its own — the
+// curator avatars, after everything else has settled — reaches a reader,
+// rather than sitting behind a memo that was not told it changed.
 
 import React from 'react';
 import { AppState } from 'react-native';
@@ -43,6 +47,8 @@ const world = vi.hoisted(() => ({
   likesFor: [] as (string | null | undefined)[],
   likeCounts: null as unknown as F,
   myLikes: null as unknown as F,
+  avatars: null as unknown as F,
+  terms: null as unknown as F,
 }));
 const writes = vi.hoisted(() => ({
   like: vi.fn(async (_id: string, _me: string) => true),
@@ -71,15 +77,19 @@ vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   usePlacesQuery: (me: string | null | undefined) => { world.askedAs.push(me); return world.places; },
   useCollectionsQuery: () => world.collections,
-  useCuratorAvatarsQuery: () => fetch({ data: {} as unknown as unknown[] }),
-  useCategoryTermsQuery: () => fetch({ data: {} as unknown as unknown[] }),
+  useCuratorAvatarsQuery: () => world.avatars,
+  // One object per test, not one per render: a fresh `data` every render
+  // rebuilt `terms`, and with it the whole context value, on every render
+  // — which is how the avatars bug below passed this file unseen. The
+  // real query hands back the same data until it loads again.
+  useCategoryTermsQuery: () => world.terms,
   useLikeCountsQuery: () => world.likeCounts,
   useMyLikesQuery: (me: string | null | undefined) => { world.likesFor.push(me); return world.myLikes; },
   likeCollection: writes.like,
   unlikeCollection: writes.unlike,
 }));
 
-import { CatalogProvider, useLikes } from './catalog';
+import { CatalogProvider, useCuratorAvatar, useLikes } from './catalog';
 
 const OLD = Date.now() - 10 * 60 * 1000;
 
@@ -103,6 +113,8 @@ beforeEach(() => {
     loadedAt: Date.now() - 1000,
   });
   world.myLikes = fetch({ data: [] });
+  world.avatars = fetch({ data: {} as unknown as unknown[] });
+  world.terms = fetch({ data: {} as unknown as unknown[] });
   writes.like.mockReset().mockResolvedValue(true);
   writes.unlike.mockReset().mockResolvedValue(true);
   auth.getSession.mockClear();
@@ -276,5 +288,30 @@ describe('the heart', () => {
     await act(async () => { await seen.toggleLike(list); });
     expect(writes.like).not.toHaveBeenCalled();
     expect(seen.myLikes).toEqual([]);
+  });
+});
+
+// ── a field that lands on its own ──
+//
+// The context value is memoised on a hand-written list of fields, under
+// an exhaustive-deps disable, so nothing but a test notices a field left
+// off it. `curatorAvatars` was: the avatars query is the last of the
+// catalog's reads to land — it waits for the shelf's handles — so when it
+// did, nothing else in the list had changed, the memo kept the `{}` it
+// was built with, and a collection's byline drew the placeholder until
+// some unrelated read happened to rebuild the value.
+describe('the curator avatars', () => {
+  it('reach a byline when they land after places and collections have settled', () => {
+    let face: string | null = 'unset';
+    const Byline = () => { face = useCuratorAvatar('@Ann'); return null; };
+    const tree = () => <CatalogProvider><Byline /></CatalogProvider>;
+    world.avatars = fetch({ loading: true, loaded: false, data: {} as unknown as unknown[] });
+    const { rerender } = render(tree());
+    expect(face).toBeNull();
+    // Only the avatars change: places and collections are the same
+    // objects they were, as they are once their reads have settled.
+    world.avatars = fetch({ data: { ann: 'https://x/ann.png' } as unknown as unknown[] });
+    rerender(tree());
+    expect(face).toBe('https://x/ann.png');
   });
 });
