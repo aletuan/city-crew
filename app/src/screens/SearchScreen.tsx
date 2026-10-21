@@ -18,7 +18,7 @@ import CandidateRow from '../components/CandidateRow';
 import {
   AmbientWarmth, Card, Chip, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
-import { coverOf, isLive, membersOf } from '../lib/data';
+import { coverOf, fmtCount, isLive, membersOf } from '../lib/data';
 import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
 import { useCurrentCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
@@ -462,12 +462,32 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                       does not need an arrow to say it opens; it needs the
                       score, right-aligned, the way the reference draws
                       it. Unrated places keep the chevron so the right
-                      edge is never simply empty. */}
+                      edge is never simply empty.
+
+                      With its count, as PlaceCard and the map's card
+                      print it (owner, 21 Oct 2026). Without one a 5.0
+                      says nothing about itself: of the 228 published
+                      places at 4.9 or more, 49 stand on fewer than 50
+                      reviews and 12 on fewer than 10, beside a 4.7 on
+                      three thousand. The ranking already weighs the
+                      count (`rank.ts` shrinks a thin score towards the
+                      mean), so a 5.0 listed under a 4.8 needs the count
+                      on screen to read as anything but a mistake. */}
                   {pl.rating != null
                     ? (
                       <View style={s.rowRating}>
                         <Text style={s.rowStar}>★</Text>
                         <Text style={s.rowRatingValue}>{pl.rating.toFixed(1)}</Text>
+                        {pl.rating_count
+                          ? (
+                            <Text
+                              style={s.rowRatingCount}
+                              accessibilityLabel={t(`${pl.rating_count} reviews`, `${pl.rating_count} đánh giá`, `${pl.rating_count}件の評価`, `${pl.rating_count} 条评价`, `${pl.rating_count} 條評價`)}
+                            >
+                              ({fmtCount(pl.rating_count)})
+                            </Text>
+                          )
+                          : null}
                       </View>
                     )
                     : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
@@ -788,13 +808,14 @@ const s = StyleSheet.create({
   cardMeta: { color: colors.textTertiary, ...type.meta },
   // The same 4pt the pin keeps from the district on PlaceCard.
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  // The reference's right edge: a gold mark and the number, nothing
-  // else — the count stays on the detail screen. Same gold the photo
+  // The right edge: a gold mark, the number, and its count a size down
+  // in the secondary colour, as PlaceCard sets them. Same gold the photo
   // overlay uses, so a star means one thing everywhere.
   rowRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ok },
   rowStar: { color: onPhoto.star, fontSize: 13 },
   rowRatingValue: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  rowRatingCount: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
 
   // The fork wears the app's glass pills — the same face the vibe chips
   // and the save button have — because it is an offer, not a result. The
