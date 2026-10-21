@@ -573,45 +573,59 @@ Data Desk), test. Từ bản này VI có localization riêng trên App Store Con
 
 ## Release notes v1.0.10 (What's New)
 
-Viết từ các PR merge sau build 1.0.9 (35) — #976 → #1074. Không có thay đổi
-native (package.json, app.json ngoài số version, modules/ đều giữ nguyên), nên
-mọi thứ dưới đây đã tới máy 1.0.9 qua EAS Update; bản này là binary mới để
-làm mốc. Không có mặt ở đây: photo labels / critic / cover review (Data Desk,
-server, chỉ editor và local guide), docs, test.
+Viết từ các PR merge sau build 1.0.9 (35) — #976 → #1117. Build 36 (từ
+9baacfc, chỉ tới #1074) đã gắn vào ASC rồi được thay bằng build dựng lại từ
+main 82b46ce, để bản này có cả tiếng Trung (#1104–#1116). Không có thay đổi
+native: `opencc-js` là devDependency (script `hant` sinh chuỗi phồn thể lúc
+viết code), app.json chỉ đổi số version. Không có mặt ở đây: photo labels /
+critic / cover review (Data Desk, server), SOLID review (#1076–#1096, chỉ
+cấu trúc code), docs, test.
 
 ### EN
 
 ```
+• City Crew now speaks Chinese, in Simplified (简体中文) and Traditional (繁體中文). Choose it in Profile.
+• On first launch the app opens in your phone's language, if it speaks it.
 • After you sign up, a short guide shows where to search, filter, save a place and find your collections. Replay it or turn it off in Profile.
+• Profile photo: pick one of eight Australian animals. New accounts start with one.
 • Collection pages: the curator, the number of places and who can see the list sit in the card at the top. Add places or plan a trip from the bar below.
 • You can like your own public collection.
+• City picker: cities you viewed lately sit on top, the rest A to Z.
+• Search: places whose name matches come first, and each row shows its number of reviews.
 • Profile: tap a count to open that list.
 • The trip date picker follows the app's language.
-• Friends' photos load faster and look sharper.
 • Fixed: after signing in, the app carries on with what you started.
 ```
 
 ### VI
 
 ```
+• City Crew có thêm tiếng Trung: giản thể (简体中文) và phồn thể (繁體中文). Chọn trong Hồ sơ.
+• Lần mở đầu tiên, app dùng ngôn ngữ của điện thoại nếu app hỗ trợ.
 • Sau khi đăng ký, một hướng dẫn ngắn chỉ chỗ tìm kiếm, lọc, lưu địa điểm và mở bộ sưu tập. Xem lại hoặc tắt trong Hồ sơ.
+• Ảnh đại diện: chọn một trong tám con vật Úc. Tài khoản mới có sẵn một con.
 • Trang bộ sưu tập: người tạo, số địa điểm và ai được xem nằm trong thẻ đầu trang. Thêm địa điểm hoặc lên kế hoạch từ thanh bên dưới.
 • Bạn có thể thích bộ sưu tập công khai của chính mình.
+• Chọn thành phố: các thành phố xem gần đây nằm trên cùng, còn lại xếp A–Z.
+• Tìm kiếm: địa điểm có tên khớp hiện trước, mỗi dòng có số lượt đánh giá.
 • Hồ sơ: chạm vào một con số để mở danh sách đó.
 • Lịch chọn ngày của kế hoạch theo ngôn ngữ của app.
-• Ảnh đại diện của bạn bè tải nhanh hơn và nét hơn.
 • Sửa lỗi: sau khi đăng nhập, app làm tiếp việc bạn đang làm dở.
 ```
 
 ### JA
 
 ```
+• 中国語に対応しました：簡体字（简体中文）と繁体字（繁體中文）。プロフィールで選べます。
+• 初回起動時、対応している言語ならスマホの言語で開きます。
 • 登録後、検索・絞り込み・スポットの保存・コレクションの場所を短いガイドで案内します。プロフィールから再表示やオフができます。
+• プロフィール写真：オーストラリアの動物8種から選べます。新しいアカウントには最初から1つ設定されます。
 • コレクションページ：作成者、スポット数、公開範囲を上部のカードにまとめました。下のバーからスポット追加やプラン作成ができます。
 • 自分の公開コレクションにも「いいね」できます。
+• 都市の選択：最近見た都市が上に、その他はA–Z順に並びます。
+• 検索：名前が一致するスポットが先に表示され、各行にレビュー数も表示されます。
 • プロフィール：数字をタップするとその一覧が開きます。
 • プランの日付ピッカーはアプリの言語で表示されます。
-• 友だちのプロフィール写真が速く、鮮明に表示されます。
 • 修正：サインイン後、途中だった操作をそのまま続けられます。
 ```
 
