@@ -16,9 +16,9 @@ const CITIES: C[] = [
   city('hoian', 'Hội An', 'Hoi An', 'ホイアン'),
   city('ninhbinh', 'Ninh Bình', 'Ninh Binh', 'ニンビン'),
 ];
-const vi = (o: { recent?: string[]; query?: string; lettered?: boolean } = {}) => cityBook(CITIES, {
+const vi = (o: { recent?: string[]; query?: string; folded?: boolean } = {}) => cityBook(CITIES, {
   recent: o.recent ?? [], query: o.query ?? '', label: (c) => c.vi,
-  names: (c) => [c.vi, c.en, c.ja], lettered: o.lettered ?? true,
+  names: (c) => [c.vi, c.en, c.ja], folded: o.folded ?? true,
 });
 const ids = (cs: readonly C[]) => cs.map((c) => c.id);
 
@@ -57,43 +57,31 @@ describe('rememberCity', () => {
 });
 
 describe('cityBook', () => {
-  it('files A to Z by the name on screen, folded, under letters', () => {
-    const { groups } = vi();
-    expect(groups.map((g) => g.letter)).toEqual(['D', 'H', 'M', 'N', 'S', 'V']);
-    // Đà Lạt and Đà Nẵng under D, and Hà Nội before Hải Phòng: "ha noi"
-    // sorts before "hai phong" on the space.
-    expect(groups.map((g) => ids(g.cities))).toEqual([
-      ['dalat', 'danang'],
-      ['hanoi', 'haiphong', 'hoian', 'hue'],
-      ['melbourne'], ['ninhbinh'], ['hcmc'], ['vungtau'],
+  // Đà Lạt and Đà Nẵng with the Ds, and Hà Nội before Hải Phòng: "ha noi"
+  // sorts before "hai phong" on the space.
+  it('lists every city A to Z by the name on screen, folded', () => {
+    expect(ids(vi().all)).toEqual([
+      'dalat', 'danang', 'hanoi', 'haiphong', 'hoian', 'hue', 'melbourne', 'ninhbinh', 'hcmc', 'vungtau',
     ]);
-  });
-
-  it('files a name that does not start with a letter under #', () => {
-    const odd = [city('x', '1990 Town'), city('y', 'Abc')];
-    const { groups } = cityBook(odd, { recent: [], query: '', label: (c) => c.vi, names: (c) => [c.vi], lettered: true });
-    expect(groups.map((g) => [g.letter, ids(g.cities)])).toEqual([['#', ['x']], ['A', ['y']]]);
   });
 
   // Two cities can share a short name (a Saint-something in two
   // countries); they keep the order the desk gave them.
   it('keeps two cities of one name in the order they came', () => {
     const twins = [city('b', 'San Jose'), city('a', 'San Jose')];
-    const { groups } = cityBook(twins, { recent: [], query: '', label: (c) => c.vi, names: (c) => [c.vi], lettered: true });
-    expect(ids(groups[0].cities)).toEqual(['b', 'a']);
+    expect(ids(cityBook(twins, { recent: [], query: '', label: (c) => c.vi, names: (c) => [c.vi], folded: true }).all))
+      .toEqual(['b', 'a']);
   });
 
-  // Katakana take no A–Z headings; they still sort in reading order.
-  it('is one unlettered list where the script has no letters', () => {
-    const { groups } = cityBook(CITIES, { recent: [], query: '', label: (c) => c.ja, names: (c) => [c.ja], lettered: false });
-    expect(groups).toHaveLength(1);
-    expect(groups[0].letter).toBeNull();
-    expect(groups[0].cities.map((c) => c.ja)).toEqual([...CITIES.map((c) => c.ja)].sort());
+  // Katakana unfolded: folded, ブンタウ would sort ahead of フエ.
+  it('sorts kana whole', () => {
+    const { all } = cityBook(CITIES, { recent: [], query: '', label: (c) => c.ja, names: (c) => [c.ja], folded: false });
+    expect(all.map((c) => c.ja)).toEqual([...CITIES.map((c) => c.ja)].sort());
+    expect(all.map((c) => c.ja).indexOf('フエ')).toBeLessThan(all.map((c) => c.ja).indexOf('ブンタウ'));
   });
 
   it('lists the recent cities newest first, dropping one that has gone', () => {
     expect(ids(vi({ recent: ['hue', 'retired', 'dalat'] }).recent)).toEqual(['hue', 'dalat']);
-    expect(ids(vi({ recent: ['hue', 'dalat'], lettered: false }).recent)).toEqual(['hue', 'dalat']);
   });
 
   // The city on screen alone is no list: the section waits for a second.
@@ -103,23 +91,15 @@ describe('cityBook', () => {
     expect(vi().recent).toEqual([]);
   });
 
-  it('answers a search with one flat list in the book’s order, by any name', () => {
+  it('answers a search with the matches alone, in the same order, by any name', () => {
     const found = vi({ query: 'ha', recent: ['hue', 'dalat'] });
     expect(found.recent).toEqual([]);
-    expect(found.groups).toHaveLength(1);
-    expect(found.groups[0].letter).toBeNull();
-    expect(ids(found.groups[0].cities)).toEqual(['hanoi', 'haiphong']);
+    expect(ids(found.all)).toEqual(['hanoi', 'haiphong']);
     // Without marks, and in a language the row is not showing.
-    expect(ids(vi({ query: 'da lat' }).groups[0].cities)).toEqual(['dalat']);
-    expect(ids(vi({ query: 'saigon' }).groups[0].cities)).toEqual(['hcmc']);
-    expect(ids(vi({ query: '  hue  ' }).groups[0].cities)).toEqual(['hue']);
-  });
-
-  it('has no groups for a search that finds nothing, or no cities', () => {
-    expect(vi({ query: 'zzz' }).groups).toEqual([]);
-    const none = { recent: [], query: '', label: (c: C) => c.vi, names: (c: C) => [c.vi] };
-    expect(cityBook([], { ...none, lettered: true }).groups).toEqual([]);
-    expect(cityBook([], { ...none, lettered: false }).groups).toEqual([]);
+    expect(ids(vi({ query: 'da lat' }).all)).toEqual(['dalat']);
+    expect(ids(vi({ query: 'saigon' }).all)).toEqual(['hcmc']);
+    expect(ids(vi({ query: '  hue  ' }).all)).toEqual(['hue']);
+    expect(vi({ query: 'zzz' }).all).toEqual([]);
   });
 
   it('leaves the cities it was given as they were', () => {
