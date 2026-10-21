@@ -17,6 +17,8 @@ const ctx = vi.hoisted(() => ({
   city: { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as
     { id: string; short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'auto' as 'auto' | 'manual',
+  recent: [] as string[],
+  lang: 'en' as 'en' | 'ja',
 }));
 const setCity = vi.hoisted(() => vi.fn());
 const followMyLocation = vi.hoisted(() => vi.fn(async () => true));
@@ -28,17 +30,22 @@ vi.mock('../lib/city', () => {
       cities: [
         { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' },
         { id: 'saigon', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン' },
+        { id: 'danang', short_en: 'Da Nang', short_vi: 'Đà Nẵng', short_ja: 'ダナン' },
       ],
       mode: ctx.mode,
       setCity,
       followMyLocation,
+      recentCityIds: ctx.recent,
     }),
   };
   const all = () => (m as { useCity: () => object }).useCity();
   return { ...m, useCurrentCity: all, useCityList: all };
 });
 vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+  useI18n: () => ({
+    lang: ctx.lang, setLang: () => {},
+    t: (en: string, _vi: string, ja: string) => (ctx.lang === 'ja' ? ja : en),
+  }),
 }));
 const fetchPlaceCountByCity = vi.hoisted(() => vi.fn(async () => ({} as Record<string, number>)));
 vi.mock('../lib/data', () => ({ fetchPlaceCountByCity }));
@@ -48,6 +55,8 @@ import { CitySwitcherModal } from './CitySwitcher';
 beforeEach(() => {
   ctx.city = { ...hanoi };
   ctx.mode = 'auto';
+  ctx.recent = [];
+  ctx.lang = 'en';
   setCity.mockClear();
   followMyLocation.mockClear();
   followMyLocation.mockImplementation(async () => true);
@@ -350,5 +359,64 @@ describe('the city sheet and the keyboard', () => {
     expect(list, 'the city rows should sit in a scroller').toBeTruthy();
     expect(getComputedStyle(list).maxHeight).toBe('380px');
     expect(getComputedStyle(list).flexShrink).toBe('1');
+  });
+});
+
+// ── recent, then the book (owner, 21 Oct 2026) ──
+//
+// What goes in each list is `lib/cityBook`'s and tested there; this is
+// what the sheet draws of it.
+describe('recent cities and the whole list', () => {
+  const rows = (prefix: string) =>
+    [...document.querySelectorAll(`[data-testid^="${prefix}"]`)].map((r) => r.textContent);
+
+  it('puts the cities shown lately on top, then every city A to Z under its letter', () => {
+    ctx.recent = ['hanoi', 'danang'];
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(screen.getByText('Recent')).toBeTruthy();
+    expect(screen.getByText('All cities')).toBeTruthy();
+    expect(rows('city-recent-')).toEqual(['Hanoi', 'Da Nang']);
+    expect(rows('city-row-')).toEqual(['Da Nang', 'Hanoi', 'Saigon']);
+    for (const letter of ['D', 'H', 'S']) expect(screen.getByText(letter)).toBeTruthy();
+    // The city on screen is marked in both lists.
+    expect([...document.querySelectorAll('[aria-selected="true"]')].map((r) => r.textContent)).toEqual(['Hanoi', 'Hanoi']);
+  });
+
+  it('switches from a recent row the same way', () => {
+    ctx.recent = ['hanoi', 'saigon'];
+    const onClose = vi.fn();
+    render(<CitySwitcherModal visible onClose={onClose} />);
+    fireEvent.click(screen.getByTestId('city-recent-1'));
+    expect(setCity).toHaveBeenCalledWith('saigon');
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  // One city is the one on screen, already marked below: no section.
+  it('draws no recent section until there is somewhere else to go back to', () => {
+    ctx.recent = ['hanoi'];
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(screen.queryByText('Recent')).toBeNull();
+    expect(screen.queryByText('All cities')).toBeNull();
+    expect(rows('city-recent-')).toEqual([]);
+    expect(screen.getByText('D')).toBeTruthy();
+  });
+
+  it('answers a search with the matching cities alone', () => {
+    ctx.recent = ['hanoi', 'danang'];
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    fireEvent.change(screen.getByTestId('city-search'), { target: { value: 'da' } });
+    expect(screen.queryByText('Recent')).toBeNull();
+    expect(screen.queryByText('D')).toBeNull();
+    expect(rows('city-row-')).toEqual(['Da Nang']);
+  });
+
+  it('letters nothing in Japanese, whose names are not written in them', () => {
+    ctx.lang = 'ja';
+    ctx.recent = ['hanoi', 'danang'];
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(screen.getByText('最近')).toBeTruthy();
+    expect(screen.getByText('すべての都市')).toBeTruthy();
+    expect(screen.queryByText('D')).toBeNull();
+    expect(rows('city-row-')).toEqual(['サイゴン', 'ダナン', 'ハノイ']);
   });
 });

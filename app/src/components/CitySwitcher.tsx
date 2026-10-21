@@ -24,10 +24,15 @@
 // is lost is the sighted non-colour cue, which the tint and the weight
 // have to do on their own.
 //
-// The search field earns its place at eight cities and not before. It
-// folds diacritics through `lib/search`'s own `fold`, so "hue" finds
-// Huế and "da lat" finds Đà Lạt — typing a Vietnamese name without the
-// marks is the ordinary case on a phone keyboard, not the exception.
+// The search field folds diacritics through `lib/search`'s own `fold`, so
+// "hue" finds Huế and "da lat" finds Đà Lạt — typing a Vietnamese name
+// without the marks is the ordinary case on a phone keyboard.
+//
+// Two lists since 21 Oct 2026 (owner): RECENT, the few cities this phone
+// has shown lately, and ALL CITIES, A to Z under letter headings. A reader
+// lives in one city and visits two or three, and the one list in the
+// desk's order made them hunt for those every time. What goes in each,
+// and why three, is `lib/cityBook`'s.
 //
 // When auto is on, the subtitle names the city it resolved — "On" alone
 // answered half the question. And a tap on the location row that comes
@@ -45,7 +50,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCity } from '../lib/city';
 import { fetchPlaceCountByCity } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { fold } from '../lib/search';
+import { cityBook } from '../lib/cityBook';
 import { colors, font, radius, space } from '../theme';
 import { fireHaptic, PressableScale } from './ui';
 import { useSheetDrag } from './sheetDrag';
@@ -57,9 +62,9 @@ import { useSheetDrag } from './sheetDrag';
 const YOUNG_CITY_MAX = 30;
 
 export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
-  const { city, cities, mode, setCity, followMyLocation } = useCity();
+  const { city, cities, mode, setCity, followMyLocation, recentCityIds } = useCity();
   const [locating, setLocating] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -82,11 +87,13 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   // reading the app in Vietnamese still types "saigon" as often as
   // "sài gòn", and a search that only looked at the shown language would
   // refuse them.
-  const q = fold(query.trim());
-  const shown = q
-    ? cities.filter((c) => [c.short_en, c.short_vi, c.short_ja, c.name_en, c.name_vi, c.name_ja]
-      .some((name) => fold(name).includes(q)))
-    : cities;
+  const book = cityBook(cities, {
+    recent: recentCityIds,
+    query,
+    label: (c) => t(c.short_en, c.short_vi, c.short_ja),
+    names: (c) => [c.short_en, c.short_vi, c.short_ja, c.name_en, c.name_vi, c.name_ja],
+    lettered: lang !== 'ja',
+  });
 
   // The house entrance (SaveSheet's, via PersonSheet): the modal only
   // fades — the scrim brightens in place, the way a room dims — while
@@ -138,6 +145,53 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
       'Không đọc được vị trí — kiểm tra quyền vị trí trong Cài đặt.',
       '位置情報を取得できません — 設定で位置情報のアクセスを確認してください。',
     ));
+  };
+
+  // One row, in either list: the same tap, the same count, the same mark
+  // for the city on screen.
+  const cityRow = (c: (typeof cities)[number], testID: string, divided: boolean) => {
+    const active = c.id === city?.id;
+    const n = counts[c.id];
+    return (
+      <View key={testID}>
+        {divided && <View style={s.sep} />}
+        <PressableScale
+          haptic="selection"
+          contentStyle={[s.row, active && s.rowOn]}
+          onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
+          accessibilityRole="button"
+          // `aria-*` rather than `accessibilityState`, which
+          // react-native-web drops — the same reason `Chip` does
+          // it this way, and now the only thing besides colour
+          // saying which row is chosen.
+          aria-selected={active}
+          testID={testID}
+        >
+          <View style={s.nameRow}>
+            <Text style={[s.rowTitle, active && { color: colors.accent }]}>
+              {t(c.short_en, c.short_vi, c.short_ja)}
+            </Text>
+            {/* Beside the name, because that is the noun it means.
+                Under it — as "15 places · new" — it sat next to
+                the count instead, and read as fifteen *newly
+                added* places rather than a young catalog. A chip
+                against the city's own name cannot say that. */}
+            {n != null && n < YOUNG_CITY_MAX && (
+              <View style={s.newChip}>
+                <Text style={s.newChipText}>{t('NEW', 'MỚI', '新着')}</Text>
+              </View>
+            )}
+          </View>
+          {/* Right edge, so the numbers line up in a column you
+              can read down. A city with nothing in it yet shows
+              no number rather than a zero: the row is an offer,
+              and "0" reads as a broken one. */}
+          {n != null && (
+            <Text style={[s.count, active && { color: colors.accent }]}>{n}</Text>
+          )}
+        </PressableScale>
+      </View>
+    );
   };
 
   return (
@@ -206,51 +260,27 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {shown.map((c, i) => {
-            const active = c.id === city?.id;
-            const n = counts[c.id];
-            return (
-              <View key={c.id}>
-                {i > 0 && <View style={s.sep} />}
-                <PressableScale
-                  haptic="selection"
-                  contentStyle={[s.row, active && s.rowOn]}
-                  onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
-                  accessibilityRole="button"
-                  // `aria-*` rather than `accessibilityState`, which
-                  // react-native-web drops — the same reason `Chip` does
-                  // it this way, and now the only thing besides colour
-                  // saying which row is chosen.
-                  aria-selected={active}
-                  testID={`city-row-${i}`}
-                >
-                  <View style={s.nameRow}>
-                    <Text style={[s.rowTitle, active && { color: colors.accent }]}>
-                      {t(c.short_en, c.short_vi, c.short_ja)}
-                    </Text>
-                    {/* Beside the name, because that is the noun it means.
-                        Under it — as "15 places · new" — it sat next to
-                        the count instead, and read as fifteen *newly
-                        added* places rather than a young catalog. A chip
-                        against the city's own name cannot say that. */}
-                    {n != null && n < YOUNG_CITY_MAX && (
-                      <View style={s.newChip}>
-                        <Text style={s.newChipText}>{t('NEW', 'MỚI', '新着')}</Text>
-                      </View>
-                    )}
-                  </View>
-                  {/* Right edge, so the numbers line up in a column you
-                      can read down. A city with nothing in it yet shows
-                      no number rather than a zero: the row is an offer,
-                      and "0" reads as a broken one. */}
-                  {n != null && (
-                    <Text style={[s.count, active && { color: colors.accent }]}>{n}</Text>
-                  )}
-                </PressableScale>
+          {book.recent.length > 0 && (
+            <>
+              <Text style={s.section} accessibilityRole="header">{t('Recent', 'Gần đây', '最近')}</Text>
+              {book.recent.map((c, i) => cityRow(c, `city-recent-${i}`, i > 0))}
+              <Text style={[s.section, s.sectionNext]} accessibilityRole="header">
+                {t('All cities', 'Tất cả thành phố', 'すべての都市')}
+              </Text>
+            </>
+          )}
+          {(() => {
+            // One running index across the groups, so `city-row-N` is the
+            // Nth city of the book whatever letter it sits under.
+            let n = 0;
+            return book.groups.map((g) => (
+              <View key={g.letter ?? 'all'}>
+                {g.letter && <Text style={s.letter} accessibilityRole="header">{g.letter}</Text>}
+                {g.cities.map((c, i) => cityRow(c, `city-row-${n++}`, i > 0))}
               </View>
-            );
-          })}
-          {shown.length === 0 && (
+            ));
+          })()}
+          {book.groups.length === 0 && (
             <Text style={s.empty}>
               {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません')}
             </Text>
@@ -335,6 +365,20 @@ const s = StyleSheet.create({
   },
   newChipText: {
     color: colors.accent, fontSize: 10, fontWeight: font.semibold, letterSpacing: 0.6,
+  },
+  // The two sections' headings: the eyebrow the Search screen's sections
+  // wear, so a heading reads as one thing across the app.
+  section: {
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    letterSpacing: 0.8, textTransform: 'uppercase',
+    paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4,
+  },
+  sectionNext: { paddingTop: 18 },
+  // A letter is a smaller step than a section: the rows under it are
+  // still the same list.
+  letter: {
+    color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold,
+    paddingHorizontal: 12, paddingTop: 10, paddingBottom: 2,
   },
   // The empty-handed answer, under the well it answers for.
   note: { color: colors.accent, fontSize: 13, lineHeight: 17, paddingHorizontal: 4, marginBottom: 6 },

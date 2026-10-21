@@ -205,7 +205,7 @@ reaches the native view.
 | `ExploreScreen` | `explore-search`, `explore-city`, `explore-list`, `place-card-<index>` |
 | `ExploreScreen` (filter) | `explore-filter` / `explore-filter-pinned` (its label carries the applied count as a digit — the badge inside it has no id of its own on iOS), `explore-view` (map toggle — dev build only) |
 | `ExploreFilterSheet` | `filter-sort-<recommended\|distance\|rating>`, `filter-status-<any\|open\|closed>`, `filter-saved`, `filter-reset` (only when dirty), `filter-apply`, `filter-close` |
-| `CitySwitcher` | `city-row-<index>` |
+| `CitySwitcher` | `city-search`, `city-row-<index>` (the A–Z list), `city-recent-<index>` (the recent section, when shown) |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-cancel`, `search-result-<index>` |
 | `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language` |
