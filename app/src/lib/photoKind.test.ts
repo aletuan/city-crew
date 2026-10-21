@@ -7,6 +7,7 @@ import { KINDS, bothSources, kindIcon, kindName, kindNoun, kindOf } from './phot
 const en = (e: string) => e;
 const vi = (_e: string, v: string) => v;
 const ja = (_e: string, _v: string, j: string) => j;
+const zh = (_e: string, _v: string, _j: string, z?: string) => z ?? '';
 
 describe('kindOf', () => {
   it('is the labels\' kind when they are sure of it', () => {
@@ -39,6 +40,7 @@ describe('the words', () => {
     expect(KINDS.map((k) => kindName(k, en))).toEqual(['Food & drink', 'Inside', 'Front', 'Garden & terrace', 'Culture', 'View', 'Menu & signs', 'Collage', 'Other']);
     expect(KINDS.map((k) => kindName(k, vi))).toEqual(['Đồ ăn & uống', 'Nội thất', 'Mặt tiền', 'Sân vườn', 'Văn hóa', 'Cảnh', 'Chữ, menu', 'Ảnh ghép', 'Khác']);
     expect(KINDS.map((k) => kindName(k, ja))).toEqual(['料理・ドリンク', '店内', '外観', '庭・テラス', '文化', '景色', 'メニュー・文字', 'コラージュ', 'その他']);
+    expect(KINDS.map((k) => kindName(k, zh))).toEqual(['餐饮', '室内', '门面', '庭院与露台', '文化', '景色', '菜单与招牌', '拼图', '其他']);
     expect(new Set(KINDS.map(kindIcon)).size).toBe(KINDS.length);
   });
   it('says each kind as it sits inside a sentence', () => {

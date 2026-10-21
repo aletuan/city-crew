@@ -470,7 +470,7 @@ export function BackButton({ onPress, testID }: { onPress: () => void; testID?: 
       icon="chevron-back"
       size={22}
       onPress={onPress}
-      label={t('Back', 'Quay lại', '戻る')}
+      label={t('Back', 'Quay lại', '戻る', '返回')}
       testID={testID}
     />
   );

@@ -84,16 +84,16 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
 
   const agoLabel = (iso: string): string => {
     const ago = agoOf(iso, Date.now());
-    if (ago.unit === 'now') return t('just now', 'vừa xong', 'たった今');
-    if (ago.unit === 'minutes') return t(`${ago.n}m ago`, `${ago.n} phút trước`, `${ago.n}分前`);
-    if (ago.unit === 'hours') return t(`${ago.n}h ago`, `${ago.n} giờ trước`, `${ago.n}時間前`);
-    if (ago.n === 1) return t('yesterday', 'hôm qua', '昨日');
+    if (ago.unit === 'now') return t('just now', 'vừa xong', 'たった今', '刚刚');
+    if (ago.unit === 'minutes') return t(`${ago.n}m ago`, `${ago.n} phút trước`, `${ago.n}分前`, `${ago.n} 分钟前`);
+    if (ago.unit === 'hours') return t(`${ago.n}h ago`, `${ago.n} giờ trước`, `${ago.n}時間前`, `${ago.n} 小时前`);
+    if (ago.n === 1) return t('yesterday', 'hôm qua', '昨日', '昨天');
     // A week of "n days ago", then the date: past a week nobody counts
     // back, they look at a calendar — Mail and Instagram turn the same
     // corner. The date is `numericDate`, the check-in rows' form, so a
     // day already past is written one way across the profile stack.
     if (ago.n > RELATIVE_DAYS) return numericDate(lang, new Date(iso));
-    return t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`);
+    return t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`, `${ago.n} 天前`);
   };
 
   // Only the two fetches the timeline is built from.
@@ -101,7 +101,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <AuthScreen>
-      <AuthHeader onBack={() => navigation.goBack()} title={t('Activity', 'Hoạt động', 'アクティビティ')} />
+      <AuthHeader onBack={() => navigation.goBack()} title={t('Activity', 'Hoạt động', 'アクティビティ', '动态')} />
 
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
@@ -110,6 +110,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           'Quiet so far. When someone likes or copies one of your collections, you will see it here.',
           'Chưa có gì. Khi có người thích hay sao chép bộ sưu tập của bạn, bạn sẽ thấy ở đây.',
           'まだ静かです。あなたのコレクションにいいねやコピーがあると、ここに表示されます。',
+          '暂时还很安静。有人点赞或复制你的合集时，会显示在这里。',
         )} />
       ) : (
             <Card testID="earlier-card">
@@ -128,11 +129,11 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                 // button's own words — "Save a copy" is what they pressed.
                 const line = item.kind === 'applause'
                   ? (by
-                    ? t(`${by} liked “${shown}”`, `${by} đã thích “${shown}”`, `${by} が「${shown}」にいいねしました`)
-                    : t(`Someone liked “${shown}”`, `Ai đó đã thích “${shown}”`, `誰かが「${shown}」にいいねしました`))
+                    ? t(`${by} liked “${shown}”`, `${by} đã thích “${shown}”`, `${by} が「${shown}」にいいねしました`, `${by} 点赞了“${shown}”`)
+                    : t(`Someone liked “${shown}”`, `Ai đó đã thích “${shown}”`, `誰かが「${shown}」にいいねしました`, `有人点赞了“${shown}”`))
                   : (by
-                    ? t(`${by} saved a copy of “${shown}”`, `${by} đã lưu bản sao “${shown}”`, `${by} が「${shown}」のコピーを保存しました`)
-                    : t(`Someone saved a copy of “${shown}”`, `Ai đó đã lưu bản sao “${shown}”`, `誰かが「${shown}」のコピーを保存しました`));
+                    ? t(`${by} saved a copy of “${shown}”`, `${by} đã lưu bản sao “${shown}”`, `${by} が「${shown}」のコピーを保存しました`, `${by} 保存了“${shown}”的副本`)
+                    : t(`Someone saved a copy of “${shown}”`, `Ai đó đã lưu bản sao “${shown}”`, `誰かが「${shown}」のコピーを保存しました`, `有人保存了“${shown}”的副本`));
                 return (
                   <PressableScale
                     key={`${item.kind}-${item.collection_id}-${item.at}`}

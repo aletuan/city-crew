@@ -23,13 +23,13 @@ export function ExploreSuggestRow({ onPress }: { onPress: () => void }) {
       // `mới` is carrying real weight: a collection has its own "Thêm
       // địa điểm", and that one adds a place the catalog already has.
       // This one is for a place nobody has put there yet.
-      title={t('Add a new place', 'Thêm địa điểm mới', '新しいスポットを追加')}
+      title={t('Add a new place', 'Thêm địa điểm mới', '新しいスポットを追加', '添加新地点')}
       // What you do, not what we do about it. "Chúng tôi lo phần còn lại"
       // was a promise about our end of the work, which is not the thing
       // standing between this row and the next screen. What you actually
       // need to know is what to type — and that an address works, which
       // is not obvious and is often all anyone has.
-      subtitle={t('Search by name or address', 'Gõ tên quán hoặc địa chỉ để tìm kiếm', '店名や住所で検索')}
+      subtitle={t('Search by name or address', 'Gõ tên quán hoặc địa chỉ để tìm kiếm', '店名や住所で検索', '按名称或地址搜索')}
     />
   );
 }
@@ -66,8 +66,8 @@ export function ScrollNudge({ visible, onSearch, onAdd }: {
     <DockSlot visible={visible} onPress={onSearch} accessibilityRole="button">
       <DockOffer
         icon="search"
-        title={t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
-        sub={t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
+        title={t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？', '没找到？')}
+        sub={t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加', '搜索，或自己添加')}
       />
       {/* `tall`: the 44 every other control has — see `AddPill`. The
           word is the noun, "+ Địa điểm", the collection dock's word too
@@ -76,8 +76,8 @@ export function ScrollNudge({ visible, onSearch, onAdd }: {
           the whole verb phrase. */}
       <AddPill
         tall
-        label={t('Place', 'Địa điểm', 'スポット')}
-        accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+        label={t('Place', 'Địa điểm', 'スポット', '地点')}
+        accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点')}
         onPress={onAdd}
       />
     </DockSlot>
