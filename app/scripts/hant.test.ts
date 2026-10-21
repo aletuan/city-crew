@@ -52,6 +52,7 @@ describe('toHantCatalog', () => {
     expect(toHantCatalog('海鲜扁面')).toBe('海鮮扁麵');
     expect(toHantCatalog('巴厘岛风格')).toBe('峇里島風格');
     expect(toHantCatalog('来自那不勒斯')).toBe('來自拿坡里');
+    expect(toHantCatalog('以越南食材调制')).toBe('以越南食材調製');
   });
 
   it('names food as Taiwan does, in either', () => {
