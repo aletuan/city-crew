@@ -29,7 +29,7 @@
 // without the marks is the ordinary case on a phone keyboard.
 //
 // Two lists since 21 Oct 2026 (owner): RECENT, the few cities this phone
-// has shown lately, and ALL CITIES, A to Z under letter headings. A reader
+// has shown lately, and ALL CITIES, A to Z. A reader
 // lives in one city and visits two or three, and the one list in the
 // desk's order made them hunt for those every time. What goes in each,
 // and why three, is `lib/cityBook`'s.
@@ -92,7 +92,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
     query,
     label: (c) => t(c.short_en, c.short_vi, c.short_ja),
     names: (c) => [c.short_en, c.short_vi, c.short_ja, c.name_en, c.name_vi, c.name_ja],
-    lettered: lang !== 'ja',
+    folded: lang !== 'ja',
   });
 
   // The house entrance (SaveSheet's, via PersonSheet): the modal only
@@ -269,18 +269,8 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
               </Text>
             </>
           )}
-          {(() => {
-            // One running index across the groups, so `city-row-N` is the
-            // Nth city of the book whatever letter it sits under.
-            let n = 0;
-            return book.groups.map((g) => (
-              <View key={g.letter ?? 'all'}>
-                {g.letter && <Text style={s.letter} accessibilityRole="header">{g.letter}</Text>}
-                {g.cities.map((c, i) => cityRow(c, `city-row-${n++}`, i > 0))}
-              </View>
-            ));
-          })()}
-          {book.groups.length === 0 && (
+          {book.all.map((c, i) => cityRow(c, `city-row-${i}`, i > 0))}
+          {book.all.length === 0 && (
             <Text style={s.empty}>
               {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません')}
             </Text>
@@ -374,12 +364,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4,
   },
   sectionNext: { paddingTop: 18 },
-  // A letter is a smaller step than a section: the rows under it are
-  // still the same list.
-  letter: {
-    color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold,
-    paddingHorizontal: 12, paddingTop: 10, paddingBottom: 2,
-  },
   // The empty-handed answer, under the well it answers for.
   note: { color: colors.accent, fontSize: 13, lineHeight: 17, paddingHorizontal: 4, marginBottom: 6 },
   // `marginVertical`, and it is the whole reason this line is visible.
