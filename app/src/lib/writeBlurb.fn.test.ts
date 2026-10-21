@@ -458,14 +458,15 @@ describe('the zh mode', () => {
     expect((await call({ slug: PARK.slug, mode: 'zh' })).status).toBe(200);
   });
 
-  it('translates the English for a Chinese reader, place names kept, desc_zh alone', async () => {
+  it('translates the English for a Chinese reader, names as the rule writes them, desc_zh alone', async () => {
     door(WRITTEN_PARK, ZH_WRITTEN);
     h.create.mockResolvedValue(says({ desc_zh: ' Sông Hương 边的长椅。 ' }));
     const res = await call({ slug: PARK.slug, mode: 'zh' });
     expect(await res.json()).toEqual({ desc_zh: 'Sông Hương 边的长椅。' });
     expect(sent().output_config.format.schema.required).toEqual(['desc_zh']);
     expect(sent().system).toContain('Simplified Chinese');
-    expect(sent().system).toContain('Never translate or transliterate one');
+    expect(sent().system).toContain('takes that name: 河内, 胡志明市, 还剑湖, 墨尔本');
+    expect(sent().system).toContain('Nguyễn Huệ, never 阮惠街');
     expect(sent().system).not.toContain('Japanese');
     const p = prompt();
     expect(p).toContain('en: Riverside benches by the Hương.');
@@ -513,7 +514,7 @@ describe('the zh-Hant mode', () => {
     expect(sent().output_config.format.schema.required).toEqual(['desc_zh-Hant']);
     expect(sent().system).toContain('Traditional Chinese as written in Taiwan');
     expect(sent().system).toContain('影片 not 視頻');
-    expect(sent().system).toContain('Never translate or transliterate one');
+    expect(sent().system).toContain('takes that name as Taiwan writes it: 河內, 胡志明市, 還劍湖, 墨爾本');
     expect(sent().system).not.toContain('Simplified');
     expect(prompt()).toContain('Write desc_zh-Hant: this blurb for a reader in Taiwan');
     expect(frames()).toEqual([]);
@@ -526,42 +527,74 @@ describe('the zh-Hant mode', () => {
   });
 });
 
-// The owner's rule for Chinese, checked: a draft that lost a Latin name
-// the blurb carries is asked for once more, told which; a second miss is
-// returned with the names listed (`_shared/latinNames.ts`).
-describe('the Latin names in a Chinese draft', () => {
+// The owner's rule for Chinese, checked: a city or landmark the table
+// lists takes its Chinese name, every other name keeps its Latin. The
+// request lists each name with its form; a draft that wrote one against
+// the rule is asked for once more, told which; a second miss is returned
+// with the names as they should read (`_shared/latinNames.ts`).
+describe('the names in a Chinese draft', () => {
   const NAMED = { ...PARK, desc_vi: 'Ghế đá bờ sông.', desc_en: 'Benches on Nguyễn Huệ, a walk from Hoàn Kiếm Lake.' };
   const last = () => h.create.mock.calls.at(-1)![0] as { messages: { role: string; content: unknown }[] };
 
-  it('takes a draft that kept every name, at the first ask', async () => {
+  it('lists the blurb\'s names with the form to write', async () => {
     door(NAMED);
-    h.create.mockResolvedValue(says({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' }));
-    expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json())
-      .toEqual({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' });
+    h.create.mockResolvedValue(says({ desc_zh: 'Nguyễn Huệ 上的长椅，离还剑湖不远。' }));
+    await call({ slug: PARK.slug, mode: 'zh' });
+    expect(prompt()).toContain('Its names, each as you write it:\n- Nguyễn Huệ → Nguyễn Huệ\n- Hoàn Kiếm Lake → 还剑湖\n');
+  });
+
+  it('lists them in Taiwan\'s forms for Traditional', async () => {
+    door(NAMED);
+    h.create.mockResolvedValue(says({ 'desc_zh-Hant': 'Nguyễn Huệ 上的長椅，離還劍湖不遠。' }));
+    await call({ slug: PARK.slug, mode: 'zh-Hant' });
+    expect(prompt()).toContain('- Hoàn Kiếm Lake → 還劍湖');
+  });
+
+  // The bakery's own name opens its blurb; "Paris" there is the bakery's.
+  it('keeps a word of the place\'s own name as the place spells it', async () => {
+    door({ ...PARK, name_en: 'Coco Paris', name_vi: 'Coco Paris', desc_en: 'Coco Paris is a small bakery.' });
+    h.create.mockResolvedValue(says({ desc_zh: 'Coco Paris是一家小烘焙店。' }));
+    expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json()).toEqual({ desc_zh: 'Coco Paris是一家小烘焙店。' });
+    expect(prompt()).toContain('- Paris → Paris');
     expect(h.create).toHaveBeenCalledTimes(1);
   });
 
-  it('asks again, naming what was lost, and takes the second when it keeps them', async () => {
+  it('lists nothing for a blurb with no names', async () => {
+    door({ ...PARK, desc_vi: 'Ghế đá.', desc_en: 'Benches by the water.' });
+    h.create.mockResolvedValue(says({ desc_zh: '水边的长椅。' }));
+    await call({ slug: PARK.slug, mode: 'zh' });
+    expect(prompt()).not.toContain('Its names');
+  });
+
+  it('takes a draft that wrote every name by the rule, at the first ask', async () => {
+    door(NAMED);
+    h.create.mockResolvedValue(says({ desc_zh: 'Nguyễn Huệ 上的长椅，离还剑湖不远。' }));
+    expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json())
+      .toEqual({ desc_zh: 'Nguyễn Huệ 上的长椅，离还剑湖不远。' });
+    expect(h.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks again, naming each as it should read, and takes the second when it does', async () => {
     door(NAMED);
     h.create
-      .mockResolvedValueOnce(says({ desc_zh: '阮惠街上的长椅，离还剑湖不远。' }))
-      .mockResolvedValueOnce(says({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' }));
+      .mockResolvedValueOnce(says({ desc_zh: '阮惠街上的长椅，离 Hoàn Kiếm Lake 不远。' }))
+      .mockResolvedValueOnce(says({ desc_zh: 'Nguyễn Huệ 上的长椅，离还剑湖不远。' }));
     expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json())
-      .toEqual({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' });
+      .toEqual({ desc_zh: 'Nguyễn Huệ 上的长椅，离还剑湖不远。' });
     expect(h.create).toHaveBeenCalledTimes(2);
     const turns = last().messages;
     expect(turns).toHaveLength(3);
-    expect(turns[1]).toEqual({ role: 'assistant', content: JSON.stringify({ desc_zh: '阮惠街上的长椅，离还剑湖不远。' }) });
-    expect(turns[2].content).toContain('Nguyễn Huệ, Hoàn Kiếm Lake');
+    expect(turns[1]).toEqual({ role: 'assistant', content: JSON.stringify({ desc_zh: '阮惠街上的长椅，离 Hoàn Kiếm Lake 不远。' }) });
+    expect(turns[2].content).toContain('as the list writes them: Nguyễn Huệ, 还剑湖.');
   });
 
-  it('returns a second miss with the names it still lost', async () => {
+  it('returns a second miss with the names it still wrote wrong', async () => {
     door(NAMED);
     h.create
       .mockResolvedValueOnce(says({ 'desc_zh-Hant': '阮惠街上的長椅。' }))
-      .mockResolvedValueOnce(says({ 'desc_zh-Hant': 'Nguyễn Huệ 上的長椅，離還劍湖不遠。' }));
+      .mockResolvedValueOnce(says({ 'desc_zh-Hant': 'Nguyễn Huệ 上的長椅，離 Hoàn Kiếm Lake 不遠。' }));
     expect(await (await call({ slug: PARK.slug, mode: 'zh-Hant' })).json()).toEqual({
-      'desc_zh-Hant': 'Nguyễn Huệ 上的長椅，離還劍湖不遠。', names_lost: ['Hoàn Kiếm Lake'],
+      'desc_zh-Hant': 'Nguyễn Huệ 上的長椅，離 Hoàn Kiếm Lake 不遠。', names_lost: ['還劍湖'],
     });
   });
 
@@ -572,7 +605,7 @@ describe('the Latin names in a Chinese draft', () => {
       .mockResolvedValueOnce(says({ desc_zh: '阮惠街上的长椅。' }))
       .mockResolvedValueOnce({ content: [{ type: 'text', text: '{"desc_zh": "cut' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 1 } });
     expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json())
-      .toEqual({ desc_zh: '阮惠街上的长椅。', names_lost: ['Nguyễn Huệ', 'Hoàn Kiếm Lake'] });
+      .toEqual({ desc_zh: '阮惠街上的长椅。', names_lost: ['Nguyễn Huệ', '还剑湖'] });
   });
 
   it('keeps the first draft when the second has no text', async () => {
@@ -598,11 +631,12 @@ describe('the Latin names in a Chinese draft', () => {
     expect(h.create).toHaveBeenCalledTimes(1);
   });
 
-  // Japanese has the same rule and is not checked yet; see the header.
+  // Japanese is not checked: which rule it keeps is the owner's to say.
   it('leaves the Japanese unchecked', async () => {
     door(NAMED);
     h.create.mockResolvedValue(says({ desc_ja: 'グエンフエ通りのベンチ。' }));
     expect(await (await call({ slug: PARK.slug, mode: 'ja' })).json()).toEqual({ desc_ja: 'グエンフエ通りのベンチ。' });
     expect(h.create).toHaveBeenCalledTimes(1);
+    expect(prompt()).not.toContain('Its names');
   });
 });

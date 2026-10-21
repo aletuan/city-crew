@@ -672,16 +672,17 @@ describe('the Japanese draft', () => {
     expect(api.savePlace.mock.calls[0][1].i18n).toEqual({ ja: { desc: '川沿いのベンチ。', machine: true } });
   });
 
-  // The function names the Latin names a Chinese draft lost twice; the
-  // editor is told which, and the draft is still the form's to fix.
-  it('names the Latin names a Chinese draft lost', async () => {
-    api.draftBlurb.mockResolvedValue({ desc_zh: '阮惠街上的长椅。', names_lost: ['Nguyễn Huệ', 'Hoàn Kiếm Lake'] });
+  // The function names, as they should read, the names a Chinese draft
+  // wrote against the rule twice; the editor is told, and the draft is
+  // still the form's to fix.
+  it('names what a Chinese draft should have written', async () => {
+    api.draftBlurb.mockResolvedValue({ desc_zh: '阮惠街上的长椅，离 Hoàn Kiếm Lake 不远。', names_lost: ['Nguyễn Huệ', '还剑湖'] });
     openEditor();
     await screen.findByDisplayValue('Café A');
     fireEvent.click(screen.getByRole('button', { name: 'Draft ZH' }));
     expect((await findToast()).textContent)
-      .toBe('Drafted, but it lost Nguyễn Huệ, Hoàn Kiếm Lake — put them back in Latin letters before you save.');
-    expect(field('desc_zh').value).toBe('阮惠街上的长椅。');
+      .toBe('Drafted, but it should write Nguyễn Huệ, 还剑湖 — put them in before you save.');
+    expect(field('desc_zh').value).toBe('阮惠街上的长椅，离 Hoàn Kiếm Lake 不远。');
   });
 
   it('says why when the draft fails', async () => {
