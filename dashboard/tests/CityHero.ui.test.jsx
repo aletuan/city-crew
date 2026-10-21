@@ -127,8 +127,24 @@ describe('CityHero', () => {
     expect(previewTitle()).toMatch(/的夜晚灵感$/);
     expect(previewSub()).toBe('河水一分为二');
     expect(previewCta()).toBe('探索 →');
-    fireEvent.change(screen.getByLabelText(/^Title\s*ZH/), { target: { value: '风吹竹枝' } });
+    fireEvent.change(screen.getByLabelText(/^Title\s*ZH$/), { target: { value: '风吹竹枝' } });
     expect(previewTitle()).toBe('风吹竹枝');
+  });
+
+  // Traditional in its own columns, `_zh_hant`, with its own defaults:
+  // the Simplified beside it is never what a Traditional reader is shown.
+  it('previews and edits the Traditional from its own columns', async () => {
+    api.city.mockImplementation(async (id) => cityRow(id, { hero_sub_zh: '河水一分为二', hero_sub_zh_hant: '河水一分為二' }));
+    api.places.mockResolvedValue(PLACES);
+    renderDesk('/city');
+    await screen.findByRole('heading', { name: /City hero/ });
+    fireEvent.click(screen.getByRole('button', { name: 'ZH-HANT' }));
+    expect(previewTitle()).toMatch(/的夜晚靈感$/);
+    expect(previewSub()).toBe('河水一分為二');
+    expect(previewCta()).toBe('探索 →');
+    expect(screen.getByLabelText(/^Line\s*ZH-HANT$/).placeholder).toBe('瀏覽公開的合集和地點 — 無需帳號。');
+    fireEvent.change(screen.getByLabelText(/^Title\s*ZH-HANT$/), { target: { value: '風吹竹枝' } });
+    expect(previewTitle()).toBe('風吹竹枝');
   });
 
   it('edits light up Save, Discard puts them back, and Save writes then re-reads', async () => {

@@ -1140,7 +1140,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .draftline { display: flex; align-items: center; gap: 10px; margin: -2px 0 14px; }
 .draftline .note { font-size: 12px; color: var(--text-secondary); margin: 0; }
 .triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-.quad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.langgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 12px; }
 
 /* ── city hero editor ──
    The preview approximates the app's Explore hero: photo, the same
@@ -1663,7 +1663,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .pcell .ops { opacity: 1; } /* no hover on touch — keep actions visible */
   .langs { grid-template-columns: 1fr; }
   .triple { grid-template-columns: 1fr; }
-  .quad { grid-template-columns: 1fr 1fr; }
+  .langgrid { grid-template-columns: 1fr 1fr; }
   .herolangs { flex-wrap: wrap; }
   .heropicked { margin-left: 0; flex-basis: 100%; }
   .panel { padding: 16px; }

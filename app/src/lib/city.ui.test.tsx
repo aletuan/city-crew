@@ -352,9 +352,26 @@ describe('a database older than the app', () => {
     await waitFor(() => expect(asked()).toHaveLength(2));
     const cols = asked();
     expect(cols[0]).toContain('hero_title_zh');
-    expect(cols[1]).not.toContain('_zh');
+    expect(cols[1]).not.toMatch(/_zh\b/);
+    expect(cols[1]).toContain('hero_title_zh_hant');
     expect(cols[1]).toContain('hero_sub_en');
     expect(cols[1]).toContain('hero_photo_uri');
+  });
+
+  // The database as it stood between the app's Traditional and the
+  // migration that gave the hero its columns: everything but those.
+  it('drops only the Traditional hero when that is all it lacks', async () => {
+    only(
+      { data: null, error: { message: 'column cities.hero_title_zh_hant does not exist' } },
+      { data: CITIES, error: null },
+    );
+    mount();
+    await waitFor(() => expect(asked()).toHaveLength(2));
+    const cols = asked();
+    expect(cols[0]).toContain('hero_cta_zh_hant');
+    expect(cols[1]).not.toContain('_zh_hant');
+    expect(cols[1]).toContain('hero_title_zh,');
+    expect(cols[1]).toContain('hero_sub_en');
   });
 
   // Every group named in turn, and each dropped once: the oldest database
@@ -362,14 +379,15 @@ describe('a database older than the app', () => {
   it('drops every group the database names, one at a time', async () => {
     only(
       { data: null, error: { message: 'column cities.hero_title_zh does not exist' } },
+      { data: null, error: { message: 'column cities.hero_title_zh_hant does not exist' } },
       { data: null, error: { message: 'column cities.tz does not exist' } },
       { data: null, error: { message: 'column cities.hero_photo_uri does not exist' } },
       { data: null, error: { message: 'column cities.hero_sub_en does not exist' } },
       { data: CITIES, error: null },
     );
     mount();
-    await waitFor(() => expect(asked()).toHaveLength(5));
-    const last = asked()[4];
+    await waitFor(() => expect(asked()).toHaveLength(6));
+    const last = asked()[5];
     for (const gone of ['_zh', ', tz', 'hero_photo', 'hero_sub']) expect(last).not.toContain(gone);
     await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
   });

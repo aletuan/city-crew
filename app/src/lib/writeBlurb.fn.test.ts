@@ -489,3 +489,39 @@ describe('the zh mode', () => {
     expect(prompt().startsWith('The place:')).toBe(true);
   });
 });
+
+describe('the zh-Hant mode', () => {
+  const WRITTEN_PARK = { ...PARK, desc_vi: 'Ghế đá bờ sông.', desc_en: 'Riverside benches by the Hương.' };
+
+  // Its own key, `zh-Hant`: the Simplified beside it is not a Traditional
+  // blurb, and does not refuse one.
+  it('refuses a place that already has Traditional, and only that', async () => {
+    h.fake.replies(session, editor, { data: { ...WRITTEN_PARK, i18n: { 'zh-Hant': { desc: '已有。' } } }, error: null });
+    const res = await call({ slug: PARK.slug, mode: 'zh-Hant' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'has_zh-Hant' });
+    door({ ...WRITTEN_PARK, i18n: { zh: { desc: '简体。' } } });
+    h.create.mockResolvedValue(says({ 'desc_zh-Hant': '河邊的長椅。' }));
+    expect((await call({ slug: PARK.slug, mode: 'zh-Hant' })).status).toBe(200);
+  });
+
+  it('translates the English for a reader in Taiwan, in Taiwan\'s words', async () => {
+    door(WRITTEN_PARK);
+    h.create.mockResolvedValue(says({ 'desc_zh-Hant': ' Sông Hương 邊的長椅。 ' }));
+    const res = await call({ slug: PARK.slug, mode: 'zh-Hant' });
+    expect(await res.json()).toEqual({ 'desc_zh-Hant': 'Sông Hương 邊的長椅。' });
+    expect(sent().output_config.format.schema.required).toEqual(['desc_zh-Hant']);
+    expect(sent().system).toContain('Traditional Chinese as written in Taiwan');
+    expect(sent().system).toContain('影片 not 視頻');
+    expect(sent().system).toContain('Never translate or transliterate one');
+    expect(sent().system).not.toContain('Simplified');
+    expect(prompt()).toContain('Write desc_zh-Hant: this blurb for a reader in Taiwan');
+    expect(frames()).toEqual([]);
+  });
+
+  it('refuses a script it does not know', async () => {
+    h.fake.replies(session, editor);
+    const res = await call({ slug: PARK.slug, mode: 'zh-hant' });
+    expect(res.status).toBe(400);
+  });
+});

@@ -398,7 +398,7 @@ test('progress() counts a place as unpublished only when approved and not yet li
   assert.equal(result.total, 3);
   assert.equal(result.by_status.approved, 2);
   // The machine queue rides on the same rows, so the select carries the object.
-  assert.deepEqual(result.by_machine, { ja: 1, zh: 0 });
+  assert.deepEqual(result.by_machine, { ja: 1, zh: 0, 'zh-Hant': 0 });
   assert.ok(client.calls[0].chain.some(([m, a]) => m === 'select' && a[0].includes('i18n')));
 });
 

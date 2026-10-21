@@ -65,8 +65,8 @@ export type City = {
   hero_title_zh?: string | null;
   hero_sub_zh?: string | null;
   hero_cta_zh?: string | null;
-  // Traditional Chinese, Taiwan's. Declared before the columns exist so
-  // the hero can ask for them; until they do, it reads as the English.
+  // Traditional Chinese, Taiwan's (20261021100000_zh_hant): the
+  // Simplified hero through the interface's own converter.
   hero_title_zh_hant?: string | null;
   hero_sub_zh_hant?: string | null;
   hero_cta_zh_hant?: string | null;
@@ -330,14 +330,18 @@ export function useMyPosition(nonce = 0): { lat: number; lng: number } | null {
 
 /** `withSub` and `withPhoto` each drop the newest group of columns, so a
  *  client shipped ahead of its migration still gets a city list. */
-type ColGroups = { zh: boolean; tz: boolean; photo: boolean; sub: boolean };
+type ColGroups = { hant: boolean; zh: boolean; tz: boolean; photo: boolean; sub: boolean };
 
-const CITY_COLS = ({ zh, tz, photo, sub }: ColGroups) =>
-  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km${tz ? ', tz' : ''}, hero_title_en, hero_title_vi, hero_title_ja${sub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug${photo ? ', hero_photo_uri, hero_photo_credit, hero_photo_credit_uri' : ''}${zh ? ', hero_title_zh, hero_sub_zh, hero_cta_zh' : ''}`;
+const CITY_COLS = ({ hant, zh, tz, photo, sub }: ColGroups) =>
+  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km${tz ? ', tz' : ''}, hero_title_en, hero_title_vi, hero_title_ja${sub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug${photo ? ', hero_photo_uri, hero_photo_credit, hero_photo_credit_uri' : ''}${zh ? ', hero_title_zh, hero_sub_zh, hero_cta_zh' : ''}${hant ? ', hero_title_zh_hant, hero_sub_zh_hant, hero_cta_zh_hant' : ''}`;
 
 /** Each droppable group, and how a refusal names it. Chinese first: its
- *  pattern would otherwise be taken for `hero_sub` by `hero_sub_zh`. */
+ *  pattern would otherwise be taken for `hero_sub` by `hero_sub_zh`. The
+ *  Simplified pattern cannot take `hero_sub_zh_hant`, since `_zh` there
+ *  is followed by a letter of the same word, but Traditional goes first
+ *  all the same, the longer name before the shorter. */
 const DROPPABLE: readonly [keyof ColGroups, RegExp][] = [
+  ['hant', /hero_\w+_zh_hant\b/],
   ['zh', /hero_\w+_zh\b/],
   ['tz', /\btz\b/],
   ['photo', /hero_photo/],
@@ -354,7 +358,7 @@ const DROPPABLE: readonly [keyof ColGroups, RegExp][] = [
  * switcher with nothing to switch to. The whole app would look like it
  * had one city.
  *
- * Four groups can be missing — the Chinese hero, `tz`, `hero_photo_*`
+ * Five groups can be missing — the two Chinese heroes, `tz`, `hero_photo_*`
  * (the city's own cover) and `hero_sub_*`. Postgres names only the first
  * column it does not recognise, so they cannot be dropped in one go: a
  * database missing two answers about one of them, and mentions the other
@@ -374,7 +378,7 @@ async function fetchCities(): Promise<City[]> {
   // every one after it in a guessed order; a fourth group (the Chinese
   // hero) made the guess one too many, and asking the error is what the
   // order was standing in for.
-  let groups: ColGroups = { zh: true, tz: true, photo: true, sub: true };
+  let groups: ColGroups = { hant: true, zh: true, tz: true, photo: true, sub: true };
   let { data, error } = await run(groups);
   for (;;) {
     const message = error?.message ?? '';
