@@ -24,8 +24,9 @@ import { describe, expect, it } from 'vitest';
 
 const src = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
-/** Step 2a: Explore, a place, Search, the city sheet, the filters, and
- *  what those draw. A group translated later is added here in its PR. */
+/** Each group is added here in the PR that translates it. Step 2a:
+ *  Explore, a place, Search, the city sheet, the filters, and what those
+ *  draw. */
 const TRANSLATED = [
   'screens/ExploreScreen.tsx',
   'screens/PlaceDetailScreen.tsx',
@@ -45,10 +46,26 @@ const TRANSLATED = [
   'lib/loadfail.ts',
   'lib/categories.ts',
   'lib/vibes.ts',
+  // Step 2b: Collections — the tab, a collection, making and editing
+  // one, the shelf on Explore, saving into a list, and reporting one.
+  'screens/CollectionsScreen.tsx',
+  'screens/CollectionDetailScreen.tsx',
+  'screens/CollectionFormScreen.tsx',
+  'screens/explore/CollectionShelf.tsx',
+  'components/SaveSheet.tsx',
+  'components/reportFlow.tsx',
+  'lib/collectionShelf.ts',
+  'lib/live.ts',
+  'lib/save.tsx',
 ];
 
 /** Rows with no Chinese column yet (step 3), by the English argument. */
-const ROWS = new Set(['c.short_en', 'city.short_en', 'item.collection.title_en', 'r.en']);
+const ROWS = new Set([
+  'c.short_en', 'city.short_en', 'r.en',
+  'item.collection.title_en', 'c.title_en', 'c.desc_en', 'col.title_en', 'col.desc_en', 'own.title_en', 'own.desc_en',
+  // A place's name read from its columns rather than `localized`.
+  "hit.place.name_en ?? ''",
+]);
 
 const KANA = /[぀-ヿ]/;
 

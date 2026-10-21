@@ -58,11 +58,11 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
             small should not say the same thing twice, once in prose and
             once as a control. */}
         <Text style={s.emptyBody}>
-          {t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')}
+          {t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。', '这里还没有内容。')}
         </Text>
         <GradientCta
           icon="compass-outline"
-          label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る')}
+          label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点')}
           onPress={onExplore}
         />
       </View>
@@ -207,8 +207,8 @@ function DraggableCard({
 }) {
   const { t } = useI18n();
   const actions = [
-    ...(index > 0 ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動') }] : []),
-    ...(index < count - 1 ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動') }] : []),
+    ...(index > 0 ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動', '上移') }] : []),
+    ...(index < count - 1 ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動', '下移') }] : []),
   ];
   return (
     <Animated.View
@@ -227,6 +227,7 @@ function DraggableCard({
           'Hold and drag to change the order.',
           'Giữ rồi kéo để đổi thứ tự.',
           '長押ししてドラッグすると並び順を変えられます。',
+          '长按并拖动即可调整顺序。',
         )}
         accessibilityActions={actions}
         onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown())}
@@ -397,6 +398,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               `${kept} of ${members.length} places`,
               `${kept} trên ${members.length} địa điểm`,
               `${members.length}件中${kept}件`,
+              `${members.length} 个地点中的 ${kept} 个`,
             )}
           </Text>
           <Text style={s.filterCountText}>·</Text>
@@ -406,7 +408,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             accessibilityRole="button"
             testID="collection-filter-clear"
           >
-            <Text style={s.filterClear}>{t('Clear', 'Bỏ lọc', '解除')}</Text>
+            <Text style={s.filterClear}>{t('Clear', 'Bỏ lọc', '解除', '清除')}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -480,8 +482,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       })
       .catch((e: Error) => Alert.alert(
         next
-          ? t('Could not publish', 'Không công khai được', '公開できませんでした')
-          : t('Could not make private', 'Không chuyển riêng tư được', '非公開にできませんでした'),
+          ? t('Could not publish', 'Không công khai được', '公開できませんでした', '无法公开')
+          : t('Could not make private', 'Không chuyển riêng tư được', '非公開にできませんでした', '无法设为私密'),
         e.message,
       ))
       .finally(() => setPublishing(false));
@@ -502,8 +504,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const still = useReducedMotion();
   const ease = () => { if (!still) LayoutAnimation.configureNext(BANNER_EASE); };
   const bannerText = (which: 'public' | 'private') => which === 'public'
-    ? t('This collection is now public', 'Bộ sưu tập này giờ đã công khai', 'このコレクションは公開されました')
-    : t('This collection is private again', 'Bộ sưu tập này đã riêng tư trở lại', 'このコレクションは非公開に戻りました');
+    ? t('This collection is now public', 'Bộ sưu tập này giờ đã công khai', 'このコレクションは公開されました', '这个合集已公开')
+    : t('This collection is private again', 'Bộ sưu tập này đã riêng tư trở lại', 'このコレクションは非公開に戻りました', '这个合集已改回私密');
   const showBanner = (which: 'public' | 'private') => {
     ease();
     setBanner(which);
@@ -580,7 +582,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       }
       setSaveState('saved');
       AccessibilityInfo.announceForAccessibility(
-        t('Order saved', 'Đã lưu thứ tự', '並び順を保存しました'),
+        t('Order saved', 'Đã lưu thứ tự', '並び順を保存しました', '顺序已保存'),
       );
       // Both catalogs: the row is in `mine` and, once published, in the
       // public list too, and the order is read from whichever copy the
@@ -592,7 +594,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       setDraft(null);
       setSaveState('idle');
       Alert.alert(
-        t('Could not save the order', 'Không lưu được thứ tự', '並び順を保存できませんでした'),
+        t('Could not save the order', 'Không lưu được thứ tự', '並び順を保存できませんでした', '无法保存顺序'),
         (e as Error).message,
       );
     } finally {
@@ -650,17 +652,19 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // says which wall you have hit rather than opening a share sheet onto a
   // link that would 404 for whoever received it.
   const share = () => Alert.alert(
-    t('Sharing is coming', 'Sắp có chia sẻ', '共有は近日公開'),
+    t('Sharing is coming', 'Sắp có chia sẻ', '共有は近日公開', '分享功能即将推出'),
     isPublic
       ? t(
         'This list is public, but there is no link to send yet. Sharing one is on the way.',
         'Bộ sưu tập này đã công khai, nhưng chưa có liên kết để gửi. Tính năng chia sẻ sẽ sớm có.',
         'このコレクションは公開中ですが、送れるリンクはまだありません。共有機能は近日公開予定です。',
+        '这个清单已公开，但还没有可发送的链接。分享功能即将推出。',
       )
       : t(
         'This list is private. Tap Private at the foot of its card to make it public — share links are on the way.',
         'Bộ sưu tập này đang riêng tư. Bấm Riêng tư ở cuối thẻ giới thiệu để công khai — liên kết chia sẻ sẽ sớm có.',
         'このコレクションは非公開です。紹介カードの下の「非公開」から公開できます。共有リンクは近日公開予定です。',
+        '这个清单是私密的。点按卡片底部的“私密”即可公开 — 分享链接即将推出。',
       ),
   );
 
@@ -735,12 +739,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   copyRef.current = copy;
 
   const remove = () => Alert.alert(
-    t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？'),
-    t(`"${title}" will be gone for good.`, `"${title}" sẽ mất hẳn.`, `「${title}」は完全に削除されます。`),
+    t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？', '删除这个合集？'),
+    t(`"${title}" will be gone for good.`, `"${title}" sẽ mất hẳn.`, `「${title}」は完全に削除されます。`, `“${title}”将被永久删除。`),
     [
-      { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
       {
-        text: t('Delete', 'Xoá', '削除'),
+        text: t('Delete', 'Xoá', '削除', '删除'),
         style: 'destructive',
         onPress: () => {
           if (!col) return;
@@ -762,7 +766,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               mine.reload();
               cols.reload();
             })
-            .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message));
+            .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除'), e.message));
         },
       },
     ],
@@ -803,6 +807,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         'Choose who can see this list',
         'Chọn ai có thể xem bộ sưu tập này',
         'このリストを見られる人を選びます',
+        '选择谁可以看到这个清单',
       )}
       testID="collection-visibility"
     >
@@ -812,7 +817,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         color={isPublic ? colors.ok : colors.textTertiary}
       />
       <Text style={isPublic ? s.metaPublic : s.meta}>
-        {isPublic ? t('Public', 'Công khai', '公開') : t('Private', 'Riêng tư', '非公開')}
+        {isPublic ? t('Public', 'Công khai', '公開', '公开') : t('Private', 'Riêng tư', '非公開', '私密')}
       </Text>
       <Ionicons name="chevron-down" size={13} color={colors.textTertiary} />
     </PressableScale>
@@ -841,10 +846,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     {
       key: 'public',
       icon: 'globe-outline',
-      title: t('Public', 'Công khai', '公開'),
+      title: t('Public', 'Công khai', '公開', '公开'),
       desc: blocked && !isPublic
         ? blockerSentence(blockers, t)
-        : t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます'),
+        : t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます', '会显示在探索和搜索中'),
       disabled: blocked && !isPublic,
       selected: isPublic,
       onPress: choose(true),
@@ -852,8 +857,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     {
       key: 'private',
       icon: 'lock-closed-outline',
-      title: t('Private', 'Riêng tư', '非公開'),
-      desc: t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます'),
+      title: t('Private', 'Riêng tư', '非公開', '私密'),
+      desc: t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます', '仅你可见'),
       selected: !isPublic,
       onPress: choose(false),
     },
@@ -885,8 +890,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       accessibilityRole="button"
       accessibilityState={{ selected: liked }}
       accessibilityLabel={liked
-        ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
-        : t('Like', 'Thích', 'いいね')}
+        ? t('Unlike', 'Bỏ thích', 'いいねを取り消す', '取消点赞')
+        : t('Like', 'Thích', 'いいね', '点赞')}
     >
       <Ionicons
         name={liked ? 'heart' : 'heart-outline'}
@@ -914,7 +919,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           ? <Text style={s.meta}>·</Text>
           : <Ionicons name="location-outline" size={15} color={colors.textTertiary} />}
         <Text style={s.meta}>
-          {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
+          {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点')}
         </Text>
       </View>
       {heart}
@@ -952,30 +957,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     const target = col?.owner_id;
     if (!target) return;
     Alert.alert(
-      t(`Block ${curatorTag}?`, `Chặn ${curatorTag}?`, `${curatorTag} をブロックしますか？`),
+      t(`Block ${curatorTag}?`, `Chặn ${curatorTag}?`, `${curatorTag} をブロックしますか？`, `屏蔽 ${curatorTag}？`),
       t(
         'They will not be told. You can undo this from Blocked.',
         'Họ sẽ không được báo. Bạn có thể bỏ chặn trong mục Đã chặn.',
         '相手に通知されません。ブロック中から解除できます。',
+        '对方不会收到通知。你可以在“已屏蔽”中撤销。',
       ),
       [
-        { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+        { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
         {
-          text: t('Block', 'Chặn', 'ブロック'),
+          text: t('Block', 'Chặn', 'ブロック', '屏蔽'),
           style: 'destructive',
           onPress: () => {
             blockUser(target)
               .then(() => Alert.alert(
-                t(`${curatorTag} is blocked`, `Đã chặn ${curatorTag}`, `${curatorTag} をブロックしました`),
+                t(`${curatorTag} is blocked`, `Đã chặn ${curatorTag}`, `${curatorTag} をブロックしました`, `已屏蔽 ${curatorTag}`),
                 t(
                   'Their public lists stay on the shelf; they can no longer reach you.',
                   'Bộ sưu tập công khai của họ vẫn hiện; họ không thể liên hệ bạn nữa.',
                   '公開リストは表示されたままですが、相手からは連絡できなくなります。',
+                  '对方的公开清单仍会显示，但对方无法再联系你。',
                 ),
               ))
               .catch(() => Alert.alert(
-                t('Could not block', 'Không chặn được', 'ブロックできませんでした'),
-                t('Please try again later.', 'Vui lòng thử lại sau.', '後でもう一度お試しください。'),
+                t('Could not block', 'Không chặn được', 'ブロックできませんでした', '无法屏蔽'),
+                t('Please try again later.', 'Vui lòng thử lại sau.', '後でもう一度お試しください。', '请稍后再试。'),
               ));
           },
         },
@@ -987,11 +994,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     curatorActions.push({
       key: 'report',
       icon: 'flag-outline',
-      title: t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告'),
+      title: t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告', '举报这个清单'),
       desc: t(
         'Tell the desk something here is wrong.',
         'Báo cho desk biết có điều gì không ổn ở đây.',
         'ここに問題があることをデスクに伝えます。',
+        '告诉编辑团队这里有问题。',
       ),
       onPress: () => report({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id, name: title }),
     });
@@ -1000,11 +1008,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     curatorActions.push({
       key: 'block',
       icon: 'ban-outline',
-      title: t(`Block ${curatorTag}`, `Chặn ${curatorTag}`, `${curatorTag} をブロック`),
+      title: t(`Block ${curatorTag}`, `Chặn ${curatorTag}`, `${curatorTag} をブロック`, `屏蔽 ${curatorTag}`),
       desc: t(
         'They will not be told, and can no longer reach you.',
         'Họ sẽ không được báo, và không thể liên hệ bạn nữa.',
         '相手に通知されず、あなたに連絡できなくなります。',
+        '对方不会收到通知，也无法再联系你。',
       ),
       destructive: true,
       onPress: blockCurator,
@@ -1068,7 +1077,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         <RoundIconButton
           icon="ellipsis-horizontal"
           onPress={openMenu}
-          label={t('More', 'Thêm', 'その他')}
+          label={t('More', 'Thêm', 'その他', '更多')}
           testID="collection-more"
         />
       </View>
@@ -1250,7 +1259,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 testID="collection-desc-add"
               >
                 <Ionicons name="add" size={17} color={colors.accent} />
-                <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加')}</Text>
+                <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加', '添加简介')}</Text>
               </PressableScale>
             ) : null}
             {kindRow}
@@ -1262,7 +1271,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               haptic="selection"
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               accessibilityRole="button"
-              accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集')}
+              accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集', '编辑简介')}
               testID="collection-desc-edit"
             >
               <Ionicons
@@ -1299,7 +1308,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           style={[s.banner, banner === 'private' && s.bannerQuiet]}
           onPress={hideBanner}
           accessibilityRole="button"
-          accessibilityHint={t('Dismisses this message', 'Ẩn thông báo này', 'このメッセージを閉じます')}
+          accessibilityHint={t('Dismisses this message', 'Ẩn thông báo này', 'このメッセージを閉じます', '关闭这条消息')}
           testID="collection-banner"
         >
           <Ionicons
@@ -1311,7 +1320,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         </Pressable>
       )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
-      {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
+      {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。', '找不到这个合集。')} />}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
         <View style={s.dragArea} {...panHandlers}>
           <FlatList
@@ -1363,6 +1372,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   'No places in this collection yet.',
                   'Bộ sưu tập này chưa có địa điểm nào.',
                   'このコレクションにはまだスポットがありません。',
+                  '这个合集里还没有地点。',
                 )} />)
               : null}
             ListHeaderComponent={introCard ? (
@@ -1400,41 +1410,41 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           // The way out under VoiceOver, which has no "anywhere off the
           // card" to tap: the backdrop has to be a control it can name.
           accessibilityRole="button"
-          accessibilityLabel={t('Close menu', 'Đóng menu', 'メニューを閉じる')}
+          accessibilityLabel={t('Close menu', 'Đóng menu', 'メニューを閉じる', '关闭菜单')}
         />
         <View style={[s.menu, { top: anchor.top, right: anchor.right }]}>
           {owned ? (
             <>
               <MenuRow
                 icon="add-circle-outline"
-                label={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+                label={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点')}
                 onPress={() => act(addPlace)}
                 first
               />
               {canPlan && (
                 <MenuRow
                   icon="paw-outline"
-                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')}
                   onPress={() => act(plan)}
                   testID="collection-menu-plan"
                 />
               )}
               <MenuRow
                 icon="create-outline"
-                label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
+                label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集', '编辑合集')}
                 onPress={() => act(edit)}
                 testID="collection-menu-edit"
               />
               <MenuRow
                 icon="share-outline"
-                label={t('Share', 'Chia sẻ', '共有')}
+                label={t('Share', 'Chia sẻ', '共有', '分享')}
                 onPress={() => act(share)}
               />
               {/* No publish row: who can see the list is changed where it
                   is said, at the foot of the card — see `visibility`. */}
               <MenuRow
                 icon="trash-outline"
-                label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除')}
+                label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除', '删除合集')}
                 onPress={() => act(remove)}
                 danger
                 testID="collection-menu-delete"
@@ -1459,7 +1469,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               {canPlan && (
                 <MenuRow
                   icon="paw-outline"
-                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')}
                   onPress={() => act(plan)}
                   first
                   testID="collection-menu-plan"
@@ -1471,14 +1481,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               {!!copyCityId && (
                 <MenuRow
                   icon="duplicate-outline"
-                  label={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
+                  label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本')}
                   onPress={() => act(copy)}
                   first={!canPlan}
                 />
               )}
               <MenuRow
                 icon="share-outline"
-                label={t('Share', 'Chia sẻ', '共有')}
+                label={t('Share', 'Chia sẻ', '共有', '分享')}
                 onPress={() => act(share)}
                 first={!copyCityId && !canPlan}
               />
@@ -1490,7 +1500,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               {col && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id }) && (
                 <MenuRow
                   icon="flag-outline"
-                  label={t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告')}
+                  label={t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告', '举报这个清单')}
                   danger
                   onPress={() => act(() => report({
                     kind: 'collection',
@@ -1507,19 +1517,19 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <DockSlot visible={dock} onPress={plan} accessibilityRole="button" testID="collection-dock">
         <DockOffer
           icon="paw"
-          title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+          title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')}
           // Short enough for one line beside the widest pill. "Dùng danh
           // sách này cho chuyến đi" was cut to "…cho ch…" beside "Lưu bản
           // sao" on the owner's phone (17 Oct 2026): about 23 characters
           // fit there, fewer on a 375pt screen. "Danh sách này" was the
           // part the screen already says.
-          sub={t('Use it for a trip', 'Dùng cho chuyến đi', '旅の計画に使う')}
+          sub={t('Use it for a trip', 'Dùng cho chuyến đi', '旅の計画に使う', '用于规划行程')}
         />
         {owned ? (
           <AddPill
             tall
-            label={t('Place', 'Địa điểm', 'スポット')}
-            accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+            label={t('Place', 'Địa điểm', 'スポット', '地点')}
+            accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点')}
             onPress={addPlace}
             testID="collection-dock-add"
           />
@@ -1527,7 +1537,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           <AddPill
             tall
             icon="duplicate-outline"
-            label={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
+            label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本')}
             onPress={copy}
             testID="collection-dock-copy"
           />
@@ -1548,7 +1558,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         actions={whoSeesRows}
         header={
           <Text style={s.sheetTitle} accessibilityRole="header">
-            {t('Who can see this list?', 'Ai có thể xem bộ sưu tập này?', 'このリストを見られるのは？')}
+            {t('Who can see this list?', 'Ai có thể xem bộ sưu tập này?', 'このリストを見られるのは？', '谁可以看到这个清单？')}
           </Text>
         }
       />

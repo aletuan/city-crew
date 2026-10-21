@@ -78,6 +78,9 @@ describe('blockerSentence', () => {
       .toBe('Riêng tư cho tới khi mọi địa điểm hiển thị — 2 địa điểm chưa công khai, và 1 địa điểm không được duyệt.');
     expect(blockerSentence({ pending: 2, flagged: 1 }, ja))
       .toBe('すべてのスポットが公開されるまで非公開です — 2件がまだ公開されていません、1件が不採用です。');
+    const zh = (_e: string, _v: string, _j: string, z?: string) => z ?? '';
+    expect(blockerSentence({ pending: 2, flagged: 1 }, zh))
+      .toBe('所有地点上线前保持私密 — 2 个地点尚未公开，1 个未通过。');
   });
 
   it('counts in the singular and the plural', () => {

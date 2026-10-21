@@ -17,12 +17,12 @@ type T = (en: string, vi: string, ja?: string, zh?: string) => string;
 /** "1 place", "3 places" — the count a card prints when nothing narrower
  *  needs saying. */
 export function placesOf(n: number, t: T): string {
-  return `${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`;
+  return `${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点')}`;
 }
 
 /** "1 collection", "4 collections" — the heading's count. */
 export function listsWord(n: number, t: T): string {
-  return t(n === 1 ? '1 collection' : `${n} collections`, `${n} bộ sưu tập`, `${n}件のコレクション`);
+  return t(n === 1 ? '1 collection' : `${n} collections`, `${n} bộ sưu tập`, `${n}件のコレクション`, `${n} 个合集`);
 }
 
 /**
@@ -50,6 +50,7 @@ export function reasonFor(hit: CollectionHit<unknown> | undefined, chosen: reado
       `${hit.hits} of ${placesOf(hit.total, t)}`,
       `${hit.hits} trong ${placesOf(hit.total, t)}`,
       `${placesOf(hit.total, t)}のうち${hit.hits}`,
+      `${placesOf(hit.total, t)}中的 ${hit.hits} 个`,
     ));
     parts.push(...chosen);
   }
@@ -76,7 +77,7 @@ export function scopeLine(
   if (chosen.length) return [listsWord(count, t), ...chosen].join(' · ');
   const k = cities.length;
   if (k === 0) return listsWord(count, t);
-  return `${listsWord(count, t)} · ${k === 1 ? cityName(cities[0]) : t(`${k} cities`, `${k} thành phố`, `${k}都市`)}`;
+  return `${listsWord(count, t)} · ${k === 1 ? cityName(cities[0]) : t(`${k} cities`, `${k} thành phố`, `${k}都市`, `${k} 个城市`)}`;
 }
 
 /**
