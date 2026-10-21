@@ -250,6 +250,9 @@ describe('the draft', () => {
     expect(p).not.toContain('列。');
     expect(p).not.toContain('ja: null');
     expect(sent().system).toContain('desc_ja is Japanese written for a Japanese reader');
+    // The owner's rule for Japanese: places in katakana, a venue as its sign.
+    expect(sent().system).toContain('in katakana: a city, a district, a street, a landmark — ハノイ, ホアンキエム湖, グエンフエ通り');
+    expect(sent().system).not.toContain('Latin alphabet as the screen prints them');
     expect(p).not.toContain('A café');
     expect(p).not.toContain('Half written');
     expect(p).not.toContain('No kinds');
@@ -405,6 +408,8 @@ describe('the ja mode', () => {
     // Its own instructions: nothing about photographs or facts to draw on.
     expect(sent().system).toContain('the only material');
     expect(sent().system).not.toContain('photographs');
+    expect(sent().system).toContain('in katakana');
+    expect(sent().system).toContain("A venue's own name, and any word on its sign, as the sign spells it.");
     expect(sent().system).not.toContain('facts');
     // The gallery is not even read: the two frames the full mode would
     // send are what the first ja drafts elaborated from.

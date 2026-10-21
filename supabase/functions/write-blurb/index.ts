@@ -150,9 +150,22 @@
 // that is a Chinese name too. So the request lists each name in the blurb
 // with the form to write, and the check reads the same list.
 //
-// Japanese is not checked. Its 434 blurbs write a street in katakana as
-// Japanese guides do (ゴークアンフイ通り), against its instructions, which
-// still say Latin; which of the two is right is the owner's to say.
+// ── the names in Japanese (21 Oct 2026) ──
+//
+// Japanese writes a place the way its guides and travel sites do, in
+// katakana: ハノイ, ホアンキエム湖, グエンフエ通り; a venue keeps the name
+// on its sign. The instructions said Latin until the owner ruled, and the
+// model had mostly ignored them: of the 435 Japanese blurbs that day, 28
+// wrote a street, a district or a city in Latin ("Pasteur通り", "Da Lat
+// 中心部") and the rest wrote theirs in katakana. The Latin is not lost
+// to anyone: the address prints beneath the blurb in Latin, which is what
+// a map and a driver need, and search reads every language's fields at
+// once, so "Pasteur" still finds the bar.
+//
+// Not checked like the Chinese. A katakana form cannot be read back to
+// the Latin it stands for without a table of every street, and the check
+// that would stand in — no Vietnamese letters left — would flag the
+// venues and the menus, which keep theirs.
 //
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
@@ -221,7 +234,7 @@ Rules, none of which bend:
 - Never say how food or drink tastes, and never mention the rating.
 - No hashtags, no emoji, no second person ("you") unless the examples use it for the kind of place.
 - desc_vi is Vietnamese; desc_en is English written for an English reader, saying the same things — not a word-for-word translation.
-- desc_ja is Japanese written for a Japanese reader from the same material, in the register of the examples' Japanese where they have it: plain, です・ます, place names kept in the Latin alphabet as the screen prints them.
+- desc_ja is Japanese written for a Japanese reader from the same material, in the register of the examples' Japanese where they have it: plain, です・ます. Places as a Japanese guide writes them, in katakana: a city, a district, a street, a landmark — ハノイ, ホアンキエム湖, グエンフエ通り. A venue's own name, and any word on its sign, as the sign spells it.
 - Do not repeat the place's name in the blurb; the screen prints it above.`;
 
 /** The ja mode's instructions: a translation, with nothing to draw on
@@ -233,7 +246,7 @@ const SYSTEM_JA = `You translate the two-line blurb City Crew shows under a plac
 Rules, none of which bend:
 - The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
 - Keep its length and its shape: one or two sentences, a dash where it has one.
-- Japanese for a Japanese reader, in the register of the examples: plain, です・ます, place names kept in the Latin alphabet as the screen prints them.
+- Japanese for a Japanese reader, in the register of the examples: plain, です・ます. Places as a Japanese guide writes them, in katakana: a city, a district, a street, a landmark — ハノイ, ホアンキエム湖, グエンフエ通り. A venue's own name, and any word on its sign, as the sign spells it.
 - No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
 
 /** The zh mode's instructions: the ja mode's, for a Chinese reader. */
@@ -415,7 +428,7 @@ Deno.serve(async (req) => {
       : (await wikiLead("vi", row.name_vi, cityNames)) ?? (await wikiLead("en", row.name_en, cityNames));
 
     // In the ja mode the row's facts stop at the name and the city — what
-    // the Latin-alphabet rule and the register need. The first batch had
+    // the names rule and the register need. The first batch had
     // the full block, and 10 of 66 drafts worked the opening hours into a
     // blurb that in English never mentions them: hours go stale and a
     // blurb is not re-synced, which is why the desk's own blurbs leave
