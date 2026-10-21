@@ -1,7 +1,13 @@
-// Trilingual UI: English, Vietnamese, Japanese. Every string is passed
-// inline as (en, vi, ja?) — Japanese falls back to English wherever a
-// translation hasn't been written, so partial coverage never renders a
-// blank. The choice persists across launches.
+// The UI in English, Vietnamese, Japanese and Simplified Chinese. Every
+// string is passed inline as (en, vi, ja?, zh?) — Japanese and Chinese
+// fall back to English wherever a translation hasn't been written, so
+// partial coverage never renders a blank. The choice persists across
+// launches.
+//
+// Chinese is the fourth argument, and optional, because it arrived after
+// eight hundred strings had been written with three (21 Oct 2026): it is
+// filled in screen by screen, and until a string has one it reads in
+// English. See `spokenIn` for the order.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +20,7 @@ export const LANGS: { id: Lang; label: string }[] = [
   { id: 'en', label: 'English' },
   { id: 'vi', label: 'Tiếng Việt' },
   { id: 'ja', label: '日本語' },
+  { id: 'zh', label: '简体中文' },
 ];
 
 type Str = string | null | undefined;
@@ -21,8 +28,8 @@ type Str = string | null | undefined;
 type I18n = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  /** Pick the right variant of a multilingual set; ja falls back to en. */
-  t: (en: Str, vi: Str, ja?: Str) => string;
+  /** Pick the right variant of a multilingual set; ja and zh fall back to en. */
+  t: (en: Str, vi: Str, ja?: Str, zh?: Str) => string;
 };
 
 const STORE_KEY = 'citycrew.lang';
@@ -36,7 +43,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORE_KEY).then((v) => {
-      if (v === 'en' || v === 'vi' || v === 'ja') setLangState(v);
+      if (v === 'en' || v === 'vi' || v === 'ja' || v === 'zh') setLangState(v);
     }).catch(() => {});
   }, []);
 
@@ -48,9 +55,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<I18n>(() => ({
     lang,
     setLang,
-    t: (en, vi, ja) => {
-      const spoken = spokenIn(lang, en, vi, ja);
-      return (spoken === 'vi' ? vi : spoken === 'ja' ? ja : spoken === 'en' ? en : null) ?? '';
+    t: (en, vi, ja, zh) => {
+      const spoken = spokenIn(lang, en, vi, ja, zh);
+      return (spoken === 'vi' ? vi : spoken === 'ja' ? ja : spoken === 'zh' ? zh : spoken === 'en' ? en : null) ?? '';
     },
   }), [lang, setLang]);
 

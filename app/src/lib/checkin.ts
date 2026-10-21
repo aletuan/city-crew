@@ -142,7 +142,8 @@ const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July
  *  as weekdays. */
 export function monthTitle(lang: string, year: number, month: number): string {
   if (lang === 'vi') return `Tháng ${month}, ${year}`;
-  if (lang === 'ja') return `${year}年${month}月`;
+  // Japanese and Chinese write a month the same way.
+  if (lang === 'ja' || lang === 'zh') return `${year}年${month}月`;
   return `${MONTHS_EN[month - 1]} ${year}`;
 }
 

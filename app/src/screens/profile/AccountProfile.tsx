@@ -37,7 +37,7 @@ export const MONTHS_EN = [
 
 export function memberSinceLabel(d: Date, lang: Lang): string {
   if (lang === 'vi') return `Tháng ${d.getMonth() + 1}, ${d.getFullYear()}`;
-  if (lang === 'ja') return `${d.getFullYear()}年${d.getMonth() + 1}月`;
+  if (lang === 'ja' || lang === 'zh') return `${d.getFullYear()}年${d.getMonth() + 1}月`;
   return `${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`;
 }
 

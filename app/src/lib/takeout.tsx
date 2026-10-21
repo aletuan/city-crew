@@ -26,7 +26,7 @@ import {
   fetchPreferences, fetchProfilesById,
 } from './data';
 import { fetchMyHistory, fetchMyLikedCollections, fetchMySubmittedPlaces } from './data/export';
-import { buildExport, exportFilename, type ExportLang } from './export';
+import { buildExport, exportFilename, exportLang } from './export';
 
 // ── why these two are required inside the function ──
 //
@@ -117,7 +117,7 @@ export function useTakeout() {
         },
         profile, preferences, collections, likes, trips,
         friendships, blocked, handles, submitted, history, checkins,
-      }, now, lang as ExportLang);
+      }, now, exportLang(lang));
 
       // The cache directory, not documents: this is a copy the reader is
       // taking somewhere else, and once it is in Files or in a mail draft

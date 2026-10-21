@@ -29,6 +29,13 @@ describe('the list of languages', () => {
     expect(screen.getByText('English')).toBeTruthy();
     expect(screen.getByText('Tiếng Việt')).toBeTruthy();
     expect(screen.getByText('日本語')).toBeTruthy();
+    expect(screen.getByText('简体中文')).toBeTruthy();
+  });
+
+  it('switches to Simplified Chinese', () => {
+    render(<LanguageSwitcherModal visible onClose={() => {}} />);
+    fireEvent.click(screen.getByText('简体中文'));
+    expect(setLang).toHaveBeenCalledWith('zh');
   });
 
   it('ticks the one in use', () => {

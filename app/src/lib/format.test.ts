@@ -762,3 +762,44 @@ describe('numericDate', () => {
     expect(numericDate('ja', jan)).toBe('1/4');
   });
 });
+
+// ── Simplified Chinese (21 Oct 2026) ──
+//
+// The forms a Chinese reader writes by hand: month and day with 月 and
+// 日, the weekday as 周 and its number, minutes as 分钟 and hours as 小时.
+describe('in Chinese', () => {
+  // A Wednesday, 7 October 2026, and a Sunday, 4 January 2026.
+  const wed = new Date(2026, 9, 7, 12);
+  const sun = new Date(2026, 0, 4, 12);
+
+  it('writes a day coming up as month, day and weekday', () => {
+    expect(dateline('zh', wed)).toBe('10月7日 周三');
+    expect(dateline('zh', sun)).toBe('1月4日 周日');
+  });
+
+  it('writes the hero line as the weekday and the day', () => {
+    expect(dayline('zh', wed)).toBe('周三 7日');
+  });
+
+  it('writes a day already past without its weekday', () => {
+    expect(numericDate('zh', wed)).toBe('10月7日');
+  });
+
+  it('spells minutes and hours', () => {
+    expect(fmtMinutes(75, 'zh')).toBe('75分钟');
+    expect(fmtDuration(30, 45, 'zh')).toBe('30–45分钟');
+    expect(fmtDuration(90, 150, 'zh')).toBe('1.5–2.5小时');
+  });
+
+  it('names the days of the opening hours, and a day closed or open throughout', () => {
+    expect(groupHours([
+      'Monday: 7:00 AM – 3:00 PM',
+      'Tuesday: Closed',
+      'Wednesday: Open 24 hours',
+    ], 'zh')).toEqual([
+      { label: '周一', hours: '07:00–15:00' },
+      { label: '周二', hours: '休息' },
+      { label: '周三', hours: '24小时营业' },
+    ]);
+  });
+});

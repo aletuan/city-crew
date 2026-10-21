@@ -8,7 +8,7 @@
 // worse thing, done on request, to somebody who never asked.
 
 import { describe, expect, it } from 'vitest';
-import { EXPORT_FORMAT_VERSION, buildExport, exportFilename, isoUtc, type ExportInput } from './export';
+import { EXPORT_FORMAT_VERSION, buildExport, exportFilename, exportLang, isoUtc, type ExportInput } from './export';
 import type { Collection, Place } from './types';
 import type { Trip } from './data/trips';
 
@@ -28,6 +28,16 @@ const bare = (over: Partial<ExportInput> = {}): ExportInput => ({
   collections: [], likes: [], trips: [], friendships: [], blocked: [],
   handles: {}, submitted: [], history: [], checkins: [],
   ...over,
+});
+
+// A language with no notes yet is written in English rather than handed
+// to `buildExport`, which would print `undefined` for each note.
+describe('exportLang', () => {
+  it('keeps a language the notes are written in, and gives English for one they are not', () => {
+    expect(exportLang('ja')).toBe('ja');
+    expect(exportLang('vi')).toBe('vi');
+    expect(exportLang('zh')).toBe('en');
+  });
 });
 
 describe('isoUtc', () => {

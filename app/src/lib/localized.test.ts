@@ -30,6 +30,15 @@ describe('slot', () => {
 });
 
 describe('localized', () => {
+  // A Chinese name is one more key in the object: no column, no
+  // migration. Without one the reader is handed English, then Vietnamese.
+  it('reads Chinese from the object, and falls back to English without it', () => {
+    const zh = { ...PLACE, i18n: { ...PLACE.i18n, zh: { name: '咖啡馆 A' } } };
+    expect(localized(zh, 'name', 'zh')).toBe('咖啡馆 A');
+    expect(localized(PLACE, 'name', 'zh')).toBe('Café A');
+    expect(localized({ name_vi: 'Quán A' }, 'name', 'zh')).toBe('Quán A');
+  });
+
   it('hands each reader their own language when the row has it', () => {
     expect(localized(PLACE, 'name', 'en')).toBe('Café A');
     expect(localized(PLACE, 'name', 'vi')).toBe('Quán A');

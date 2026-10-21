@@ -125,6 +125,7 @@ describe('visitSections', () => {
 describe('monthTitle', () => {
   it('names the month the way each language does', () => {
     expect(monthTitle('en', 2026, 10)).toBe('October 2026');
+    expect(monthTitle('zh', 2026, 10)).toBe('2026年10月');
     expect(monthTitle('vi', 2026, 10)).toBe('Tháng 10, 2026');
     expect(monthTitle('ja', 2026, 10)).toBe('2026年10月');
     expect(monthTitle('en', 2025, 1)).toBe('January 2025');
