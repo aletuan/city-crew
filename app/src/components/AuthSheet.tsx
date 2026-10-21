@@ -40,7 +40,7 @@ import { PressableScale, useNarrowWindow } from './ui';
 import artDark from '../../assets/signin-art-dark.webp';
 import artLight from '../../assets/signin-art-light.webp';
 
-type T = (en: string, vi: string, ja: string) => string;
+type T = (en: string, vi: string, ja: string, zh?: string) => string;
 
 /** What each reason says: the thing that was reached for, by name. */
 const TITLES: Record<SignInWhy, (t: T) => string> = {

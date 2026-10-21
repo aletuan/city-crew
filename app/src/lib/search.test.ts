@@ -250,6 +250,13 @@ describe('placeHaystack', () => {
     }
   });
 
+  // And Chinese, by the category's label: a reader in Chinese types 咖啡馆
+  // before any place has a Chinese name to find.
+  it('finds a place by its category in Chinese', () => {
+    expect(matches(placeHaystack({ name_en: 'A', categories: ['cafes'] }), queryTerms('咖啡馆'))).toBe(true);
+    expect(matches(placeHaystack({ name_en: 'A', categories: ['nightlife'] }), queryTerms('夜生活'))).toBe(true);
+  });
+
   it('reads the description, the area and the address too', () => {
     const hay = placeHaystack({
       name_en: 'A', desc_en: 'Third-wave espresso', neighborhood_en: 'Hoàn Kiếm',

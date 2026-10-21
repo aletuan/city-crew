@@ -359,7 +359,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
               <View key={k} style={s.tasteChip} testID={`interest-${k}`}>
                 <Ionicons name={CATEGORIES[k].icon} size={15} color={CATEGORIES[k].color} />
                 <Text style={s.tasteChipText}>
-                  {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja)}
+                  {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja, CATEGORIES[k].zh)}
                 </Text>
               </View>
             ))}

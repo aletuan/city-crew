@@ -226,7 +226,7 @@ export function planReminderSync(
   return { schedule, cancel };
 }
 
-export type Translate = (en: string, vi: string, ja: string) => string;
+export type Translate = (en: string, vi: string, ja: string, zh?: string) => string;
 
 /**
  * A note's words — one place, so a trip saved and a trip synced read the

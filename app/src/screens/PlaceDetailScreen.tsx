@@ -232,7 +232,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.accent} style={{ marginTop: 64 }} /></SafeAreaView>;
   }
   if (!place) {
-    return <SafeAreaView style={s.screen}><Empty text={t('Place not found.', 'Không tìm thấy địa điểm.', 'スポットが見つかりません。')} /></SafeAreaView>;
+    return <SafeAreaView style={s.screen}><Empty text={t('Place not found.', 'Không tìm thấy địa điểm.', 'スポットが見つかりません。', '找不到该地点。')} /></SafeAreaView>;
   }
 
   const photos = photosOf(place);
@@ -324,8 +324,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const descLang = localizedLang(place, 'desc', lang);
   const descFallback = desc && lang !== 'en' && descLang && descLang !== lang
     ? (descLang === 'en'
-      ? t('In English', 'Bản tiếng Anh', '英語の原文')
-      : t('In Vietnamese', 'Bản tiếng Việt', 'ベトナム語の原文'))
+      ? t('In English', 'Bản tiếng Anh', '英語の原文', '英文原文')
+      : t('In Vietnamese', 'Bản tiếng Việt', 'ベトナム語の原文', '越南文原文'))
     : null;
   // Who wrote the sentence above it. Null for most places — the desk wrote
   // its own copy, and there is nobody outside to name.
@@ -339,7 +339,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // was thrown into Threads. The paragraph is for reading, and the name
   // in the link colour is the one thing that says "this goes somewhere".
   const openBlurb = blurbHref
-    ? () => open(blurbHref, t('Could not open the source', 'Không mở được nguồn', 'ソースを開けませんでした'))
+    ? () => open(blurbHref, t('Could not open the source', 'Không mở được nguồn', 'ソースを開けませんでした', '无法打开来源'))
     : undefined;
   // The credit's words: the handle under a mark, the platform alone for
   // Google, and the long form for a source with no mark (see the block).
@@ -348,12 +348,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     : blurbFrom.kind === 'google'
       ? 'Google'
       : (blurbFrom.name
-        ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`)
+        ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`, `${blurbFrom.name}（${blurbFrom.source}）`)
         : blurbFrom.source);
   // What VoiceOver says for it: the mark it cannot read, put back in words
   // where the line names a person rather than the platform itself.
   const creditLabel = blurbFrom?.kind === 'threads' && blurbFrom.name
-    ? t(`${creditWords} on Threads`, `${creditWords} trên Threads`, `${creditWords}（Threads）`)
+    ? t(`${creditWords} on Threads`, `${creditWords} trên Threads`, `${creditWords}（Threads）`, `${creditWords}（Threads）`)
     : creditWords;
   const creditLine = blurbFrom ? (
     <Text style={[s.credit, blurbHref ? s.creditLink : null]}>
@@ -414,11 +414,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   /** Named once: the address row, its button and the map all do this. */
   const toMaps = () => open(
     mapsUrl!,
-    t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
+    t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした', '无法打开地图'),
   );
   const toRoute = () => open(
     routeUrl!,
-    t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
+    t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした', '无法打开地图'),
   );
 
   // What lies over the hero whether or not it has photographs: the two
@@ -454,7 +454,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               // In the reader's language, like every other control: these
               // two were English literals, and VoiceOver read "Back" and
               // "Share" in the middle of a Vietnamese screen (UX-07).
-              accessibilityLabel={t('Back', 'Quay lại', '戻る')}
+              accessibilityLabel={t('Back', 'Quay lại', '戻る', '返回')}
               accessibilityRole="button"
               testID="detail-back"
             >
@@ -462,7 +462,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </PressableScale>
             <PressableScale
               onPress={share} scaleTo={0.9}
-              style={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} contentStyle={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有')}
+              style={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} contentStyle={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享')}
               accessibilityRole="button"
             >
               <Ionicons name="share-outline" size={20} color={onPhoto.text} />
@@ -481,8 +481,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               // save having landed without reading a trilingual label.
               testID={saved ? 'detail-saved' : 'detail-save'}
               accessibilityLabel={saved
-                ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
-                : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
+                ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集')
+                : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集')}
             >
               <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
             </PressableScale>
@@ -517,12 +517,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
       // private signal and this is the reader's own record — see
       // `lib/checkin` for why the two are kept apart.
       Alert.alert(
-        t('Could not check in', 'Không check-in được', 'チェックインできませんでした'),
+        t('Could not check in', 'Không check-in được', 'チェックインできませんでした', '无法打卡'),
         isDailyLimit(e)
           ? t(
             `You have checked in here ${DAILY_CAPS.checkinsPerPlace} times today. Come back tomorrow.`,
             `Hôm nay bạn đã check-in ở đây ${DAILY_CAPS.checkinsPerPlace} lần rồi. Mai quay lại nhé.`,
             `今日はここに${DAILY_CAPS.checkinsPerPlace}回チェックイン済みです。また明日どうぞ。`,
+            `你今天已在这里打卡 ${DAILY_CAPS.checkinsPerPlace} 次，明天再来吧。`,
           )
           : (e as Error).message,
       );
@@ -545,7 +546,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
       await removeCheckin(id);
       visits.reload();
     } catch (e) {
-      Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした'), (e as Error).message);
+      Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした', '无法删除'), (e as Error).message);
     }
   };
   // "Again" is the sheet's one commit, so it is drawn as every sheet's
@@ -565,8 +566,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // without pretending.
   const checkinActions: SheetAction[] = [{
     key: 'review', icon: 'create-outline' as const, disabled: true,
-    title: t('Write a review', 'Viết đánh giá', 'レビューを書く'),
-    desc: t('Coming soon — share what it was like.', 'Sắp có — chia sẻ trải nghiệm của bạn.', '近日公開 — 感想を共有できます。'),
+    title: t('Write a review', 'Viết đánh giá', 'レビューを書く', '写评价'),
+    desc: t('Coming soon — share what it was like.', 'Sắp có — chia sẻ trải nghiệm của bạn.', '近日公開 — 感想を共有できます。', '即将推出 — 分享你的体验。'),
     onPress: () => {},
   }];
 
@@ -614,6 +615,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     `Photo ${i + 1} of ${photos.length} of ${fullName}`,
                     `Ảnh ${i + 1}/${photos.length} của ${fullName}`,
                     `${fullName}の写真 ${i + 1}/${photos.length}`,
+                    `${fullName}的照片，第 ${i + 1} 张，共 ${photos.length} 张`,
                   )}
                 />
               )}
@@ -661,7 +663,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {place.is_featured ? (
             <View style={s.pick} testID="detail-pick">
               <Ionicons name="ribbon-outline" size={13} color={colors.accent} />
-              <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ')}</Text>
+              <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ', 'City Crew 精选')}</Text>
             </View>
           ) : null}
           <Text style={s.name} testID="detail-name">{name.title}</Text>
@@ -691,7 +693,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 testID="detail-rating"
                 accessibilityRole="text"
                 accessibilityLabel={reviews
-                  ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー')}`
+                  ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー', '条评价')}`
                   : String(place.rating)}
               >
                 <Ionicons name="star" size={17} color={colors.accent} />
@@ -699,7 +701,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 {reviews ? (
                   <>
                     <Text style={s.ratingDot}>·</Text>
-                    <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text>
+                    <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー', '条评价')}</Text>
                   </>
                 ) : null}
               </View>
@@ -785,8 +787,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 accessibilityRole="button"
                 accessibilityState={{ selected: !!latestVisit, busy: checking }}
                 accessibilityLabel={latestVisit
-                  ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション')
-                  : t('Check in', 'Check-in', 'チェックイン')}
+                  ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション', '已打卡 — 选项')
+                  : t('Check in', 'Check-in', 'チェックイン', '打卡')}
                 style={s.checkinSlot}
                 // ── worn ──
                 // Filled once a visit is written, bare outline until then.
@@ -831,7 +833,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     Type step, because it is the other word itself. */}
                 <View style={s.checkinWords}>
                   <Text style={[s.goText, latestVisit && s.checkinOnText]}>
-                    {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
+                    {latestVisit ? t('Visited', 'Đã qua', '訪問済み', '已打卡') : t('Check in', 'Check-in', 'チェックイン', '打卡')}
                   </Text>
                   <Text
                     style={[s.goText, s.checkinGhost]}
@@ -839,7 +841,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     importantForAccessibility="no-hide-descendants"
                     testID="detail-checkin-ghost"
                   >
-                    {latestVisit ? t('Check in', 'Check-in', 'チェックイン') : t('Visited', 'Đã qua', '訪問済み')}
+                    {latestVisit ? t('Check in', 'Check-in', 'チェックイン', '打卡') : t('Visited', 'Đã qua', '訪問済み', '已打卡')}
                   </Text>
                 </View>
               </PressableScale>
@@ -962,7 +964,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   2026; it is over the name now (see "City Crew pick"). */}
               <View style={s.whyHead}>
                 <Text style={s.whyQuote}>{'\u201C'}</Text>
-                <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ')}</Text>
+                <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ', '亮点')}</Text>
               </View>
               <View style={s.whyBody}>
                 <Text style={s.desc} testID="detail-desc">{desc}</Text>
@@ -1063,7 +1065,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               {place.address && (
                 <InfoRow
                   icon="location-outline"
-                  label={t('Address', 'Địa chỉ', '住所')}
+                  label={t('Address', 'Địa chỉ', '住所', '地址')}
                   first={firstRow === 'address'}
                   onPress={mapsUrl ? toMaps : undefined}
                   hug={!!mapsUrl && !showsMap}
@@ -1098,7 +1100,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     <PressableScale
                       onPress={toRoute}
                       accessibilityRole="button"
-                      accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
+                      accessibilityLabel={t('Directions', 'Chỉ đường', '経路', '路线')}
                       hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       style={s.goSlot}
                       contentStyle={s.go}
@@ -1129,7 +1131,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     accessibilityRole={addrLong ? 'button' : undefined}
                     accessibilityState={addrLong ? { expanded: addrOpen } : undefined}
                     accessibilityHint={addrLong
-                      ? t('Shows the whole address', 'Xem đầy đủ địa chỉ', '住所の全文を表示')
+                      ? t('Shows the whole address', 'Xem đầy đủ địa chỉ', '住所の全文を表示', '显示完整地址')
                       : undefined}
                     testID="detail-address-toggle"
                   >
@@ -1203,7 +1205,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   <PressableScale
                     onPress={toRoute}
                     accessibilityRole="button"
-                    accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
+                    accessibilityLabel={t('Directions', 'Chỉ đường', '経路', '路线')}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     style={s.goOnMap}
                     contentStyle={s.goDisc}
@@ -1233,7 +1235,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       <Ionicons name="time-outline" size={19} color={colors.textTertiary} />
                     </View>
                     <View style={s.infoWords}>
-                      <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
+                      <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間', '营业时间')}</Text>
                       {openNow ? (
                         <Text style={[s.openNow, !openNow.open && s.openNowShut]}>
                           {/* Whole sentences per language, not a preposition
@@ -1246,15 +1248,17 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                                 `Open now · until ${clockOf(openNow.untilMin)}`,
                                 `Đang mở cửa · đến ${clockOf(openNow.untilMin)}`,
                                 `営業中 · ${clockOf(openNow.untilMin)}まで`,
+                                `营业中 · 营业至 ${clockOf(openNow.untilMin)}`,
                               )
-                              : t('Open now · 24 hours', 'Đang mở cửa · 24 giờ', '営業中 · 24時間')
+                              : t('Open now · 24 hours', 'Đang mở cửa · 24 giờ', '営業中 · 24時間', '营业中 · 24小时')
                             : openNow.opensAtMin != null
                               ? t(
                                 `Closed · opens ${clockOf(openNow.opensAtMin)}`,
                                 `Đã đóng cửa · mở lúc ${clockOf(openNow.opensAtMin)}`,
                                 `閉店中 · ${clockOf(openNow.opensAtMin)}開店`,
+                                `已打烊 · ${clockOf(openNow.opensAtMin)} 开门`,
                               )
-                              : t('Closed today', 'Hôm nay đóng cửa', '本日休業')}
+                              : t('Closed today', 'Hôm nay đóng cửa', '本日休業', '今日休息')}
                         </Text>
                       ) : null}
                       {/* Hours in a shape openState cannot read still get
@@ -1288,11 +1292,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               {place.phone && (
                 <InfoRow
                   icon="call-outline"
-                  label={t('Phone', 'Điện thoại', '電話番号')}
+                  label={t('Phone', 'Điện thoại', '電話番号', '电话')}
                   first={firstRow === 'phone'}
                   onPress={() => open(
                     `tel:${place.phone!.replace(/\s/g, '')}`,
-                    t('Could not place the call', 'Không gọi được', '電話をかけられませんでした'),
+                    t('Could not place the call', 'Không gọi được', '電話をかけられませんでした', '无法拨打电话'),
                   )}
                 >
                   <Text style={[s.infoValue, s.infoLink]}>{place.phone}</Text>
@@ -1313,7 +1317,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   first={firstRow === 'instagram'}
                   onPress={() => open(
                     instagramUrl(ig),
-                    t('Could not open Instagram', 'Không mở được Instagram', 'Instagramを開けませんでした'),
+                    t('Could not open Instagram', 'Không mở được Instagram', 'Instagramを開けませんでした', '无法打开 Instagram'),
                   )}
                 >
                   <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-instagram">
@@ -1329,7 +1333,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   first={firstRow === 'threads'}
                   onPress={() => open(
                     threadsUrl(th),
-                    t('Could not open Threads', 'Không mở được Threads', 'Threadsを開けませんでした'),
+                    t('Could not open Threads', 'Không mở được Threads', 'Threadsを開けませんでした', '无法打开 Threads'),
                   )}
                 >
                   <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-threads">
@@ -1341,11 +1345,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               {site && (
                 <InfoRow
                   icon="globe-outline"
-                  label={t('Website', 'Trang web', 'ウェブサイト')}
+                  label={t('Website', 'Trang web', 'ウェブサイト', '网站')}
                   first={firstRow === 'website'}
                   onPress={() => open(
                     websiteHref(site),
-                    t('Could not open the website', 'Không mở được trang web', 'ウェブサイトを開けませんでした'),
+                    t('Could not open the website', 'Không mở được trang web', 'ウェブサイトを開けませんでした', '无法打开网站'),
                   )}
                 >
                   {/* The domain, not the URL. What was here trimmed the
@@ -1382,7 +1386,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   the history card's padding so it stands on the trash
                   column's axis below. */}
               <View style={s.checkinHeadRow} testID="checkin-head">
-                <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み')}</Text>
+                <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み', '你在这里打过卡')}</Text>
                 <CountBadge n={visitsHere.length} style={s.checkinCount} />
               </View>
               <ScrollView style={s.history} bounces={false} showsVerticalScrollIndicator={visitsHere.length > HISTORY_ROWS}>
@@ -1402,7 +1406,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                         scaleTo={0.85}
                         hitSlop={{ top: 8, bottom: 8, left: 10, right: 10 }}
                         accessibilityRole="button"
-                        accessibilityLabel={t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除')}
+                        accessibilityLabel={t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除', '删除这次打卡')}
                       >
                         <Ionicons name="trash-outline" size={18} color={colors.bad} />
                       </PressableScale>
@@ -1414,7 +1418,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <GradientCta
                   wide
                   icon="location"
-                  label={t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン')}
+                  label={t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン', '再次打卡')}
                   onPress={() => { setCheckinMenu(false); void checkIn(); }}
                   testID="detail-checkin-again"
                 />

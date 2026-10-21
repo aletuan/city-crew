@@ -75,7 +75,7 @@ export type PhotoScore = {
   signals: Signals;
 };
 
-export type T = (en: string, vi: string, ja?: string) => string;
+export type T = (en: string, vi: string, ja?: string, zh?: string) => string;
 
 /** A scorer by name and by the version of its reading. */
 export type ScorerKey = { id: string; version: number };

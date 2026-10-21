@@ -139,7 +139,7 @@ export default function StopCard({
                 category wears everywhere else, so the glyph in the well
                 has its word beside it. */}
             <Text style={s.area} numberOfLines={1}>
-              {summaryLine([place.neighborhood_en, cat ? t(cat.en, cat.vi, cat.ja) : null, fmtMinutes(dwellMin, lang)])}
+              {summaryLine([place.neighborhood_en, cat ? t(cat.en, cat.vi, cat.ja, cat.zh) : null, fmtMinutes(dwellMin, lang)])}
             </Text>
           </View>
         </PressableScale>

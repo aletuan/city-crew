@@ -158,7 +158,7 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
 
 const isLook = (id: Pref): id is Pinned => Object.prototype.hasOwnProperty.call(PINNED, id);
 
-type T = (en: string, vi: string, ja?: string) => string;
+type T = (en: string, vi: string, ja?: string, zh?: string) => string;
 
 /**
  * How long the sheet is given to leave before the restart is asked for.

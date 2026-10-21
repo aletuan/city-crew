@@ -802,4 +802,17 @@ describe('in Chinese', () => {
       { label: '周三', hours: '24小时营业' },
     ]);
   });
+
+  // The hour first, then 开门 — "opens" glued before a translated hour
+  // would read backwards, the reason each of these is a whole phrase.
+  it('says when a place shuts and when it opens again', () => {
+    const zh = (_e: string, _v: string, _j?: string, z?: string) => z ?? '';
+    expect(openFragment({ open: true, untilMin: 1320, closesInMin: 45 }, zh)).toBe('营业至 22:00');
+    expect(openFragment({ open: false, opensAtMin: 480 }, zh)).toBe('08:00 开门');
+    expect(shutLabel({ open: false, opensAtMin: 480 }, zh)).toBe('已打烊 · 08:00 开门');
+    expect(shutLabel({ open: false }, zh)).toBe('已打烊');
+    expect(sashLabel({ open: false, opensAtMin: 480 }, zh)).toBe('08:00 开门');
+    expect(sashLabel({ open: false }, zh)).toBe('已打烊');
+    expect(openLabel('Ơ Kìa', zh)).toBe('打开Ơ Kìa');
+  });
 });

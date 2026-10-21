@@ -63,7 +63,7 @@ export type SearchRowsInput = {
 
 export function buildSearchRows(
   { terms, query, recents, cats, openNow, popular, latest, colMembers, places, cityId, fresh, synonyms }: SearchRowsInput,
-  t: (en: string, vi: string, ja: string) => string,
+  t: (en: string, vi: string, ja: string, zh?: string) => string,
 ): SearchRow[] {
   // Before a word is typed the list is the zero-state: the searches
   // this box remembers, the taxonomy to browse, and the places the
@@ -72,13 +72,13 @@ export function buildSearchRows(
   if (terms.length === 0) {
     const out: SearchRow[] = [];
     if (recents.length) {
-      out.push({ kind: 'eyebrow', key: 'z-recent', label: t('Recent', 'Gần đây', '最近'), clear: true });
+      out.push({ kind: 'eyebrow', key: 'z-recent', label: t('Recent', 'Gần đây', '最近', '最近'), clear: true });
       for (const term of recents.slice(0, RECENTS_SHOWN)) {
         out.push({ kind: 'recent', key: `rc-${term}`, term });
       }
     }
     if (cats.length) {
-      out.push({ kind: 'eyebrow', key: 'z-browse', label: t('Browse', 'Duyệt theo', 'カテゴリー') });
+      out.push({ kind: 'eyebrow', key: 'z-browse', label: t('Browse', 'Duyệt theo', 'カテゴリー', '分类') });
       out.push({ kind: 'chips', key: 'z-chips' });
     }
     // Above Most popular, because its answer expires first: a ranking
@@ -88,16 +88,16 @@ export function buildSearchRows(
     if (openNow.length) {
       out.push({
         kind: 'eyebrow', key: 'z-open', dot: true,
-        label: t('Open right now', 'Đang mở cửa', '営業中'),
+        label: t('Open right now', 'Đang mở cửa', '営業中', '正在营业'),
       });
       for (const pl of openNow) out.push({ kind: 'open', key: `on-${pl.slug}`, place: pl });
     }
     if (popular.length) {
-      out.push({ kind: 'eyebrow', key: 'z-popular', label: t('Most popular', 'Phổ biến nhất', '人気スポット') });
+      out.push({ kind: 'eyebrow', key: 'z-popular', label: t('Most popular', 'Phổ biến nhất', '人気スポット', '最受欢迎') });
       for (const pl of popular) out.push({ kind: 'popular', key: `mp-${pl.slug}`, place: pl });
     }
     if (latest.length) {
-      out.push({ kind: 'eyebrow', key: 'z-latest', label: t('Recently added', 'Mới thêm gần đây', '新着スポット') });
+      out.push({ kind: 'eyebrow', key: 'z-latest', label: t('Recently added', 'Mới thêm gần đây', '新着スポット', '最新添加') });
       for (const pl of latest) out.push({ kind: 'latest', key: `la-${pl.slug}`, place: pl });
     }
     return out;
@@ -114,7 +114,7 @@ export function buildSearchRows(
     // the second half of the answer this screen used to leave out.
     .filter(({ c, members }) => touchesCity(members, cityId) && collectionMatches(c, members, terms));
   if (foundCols.length) {
-    out.push({ kind: 'header', key: 'h-col', label: t('Collections', 'Bộ sưu tập', 'コレクション') });
+    out.push({ kind: 'header', key: 'h-col', label: t('Collections', 'Bộ sưu tập', 'コレクション', '合集') });
     for (const { c, members } of foundCols) {
       out.push({
         kind: 'collection',
@@ -131,7 +131,7 @@ export function buildSearchRows(
   // screen rather than diluting a real answer. See `findPlaces`.
   const { hits, related } = findPlaces(places, query, synonyms);
   if (hits.length) {
-    out.push({ kind: 'header', key: 'h-place', label: t('Places', 'Địa điểm', 'スポット') });
+    out.push({ kind: 'header', key: 'h-place', label: t('Places', 'Địa điểm', 'スポット', '地点') });
     for (const p of hits) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });
   }
   // Labelled as the guess it is. "bowling" reaching a cinema is only
@@ -145,6 +145,7 @@ export function buildSearchRows(
         'No exact match — related places',
         'Không khớp chính xác — chỗ tương tự',
         '完全一致なし — 近いスポット',
+        '没有完全匹配 — 相关地点',
       ),
     });
     for (const p of related) out.push({ kind: 'place', key: `r-${p.slug}`, place: p });
@@ -158,7 +159,7 @@ export function buildSearchRows(
     out.push({
       kind: 'header',
       key: 'h-google',
-      label: t('On Google Maps', 'Trên Google Maps', 'Google マップ上'),
+      label: t('On Google Maps', 'Trên Google Maps', 'Google マップ上', 'Google 地图上'),
     });
     for (const c of fresh) out.push({ kind: 'candidate', key: `g-${c.place_id}`, candidate: c });
   }

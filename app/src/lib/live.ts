@@ -88,7 +88,7 @@ export function publishBlockers(members: Reviewable[]): { pending: number; flagg
  */
 export function blockerSentence(
   { pending, flagged }: { pending: number; flagged: number },
-  t: (en: string, vi: string, ja: string) => string,
+  t: (en: string, vi: string, ja: string, zh?: string) => string,
 ): string {
   const parts: string[] = [];
   if (pending) {

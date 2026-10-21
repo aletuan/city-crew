@@ -38,7 +38,7 @@ export default function TastePicker({ chosen, onChange }: {
           return (
             <Tile
               key={key}
-              label={t(c.en, c.vi, c.ja)}
+              label={t(c.en, c.vi, c.ja, c.zh)}
               icon={c.icon}
               iconColor={c.color}
               active={on}
