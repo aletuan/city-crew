@@ -14,9 +14,13 @@
 
 import { fold } from './search';
 
-/** How many the zero-state shows. Five, per the reference: a memory is a
- *  shortcut, and a shortcut list longer than a glance stops being one. */
-export const RECENTS_SHOWN = 5;
+/** How many the zero-state shows. Three (owner, 21 Oct 2026), down from
+ *  the reference's five: a memory is a shortcut, and five rows pushed
+ *  "Browse" and "Open now" below the fold on a phone — the screen opened
+ *  on what the reader had already typed rather than on what to find.
+ *  Three is also what the city sheet's recent section holds, so every
+ *  "recent" in the app is the same length. */
+export const RECENTS_SHOWN = 3;
 
 /** How many survive in storage. A few more than are shown, so clearing a
  *  duplicate off the top does not leave the list visibly shorter. */

@@ -937,7 +937,7 @@ describe('CollectionsScreen — list view', () => {
 });
 
 describe('CollectionsScreen — search', () => {
-  const box = () => screen.getByPlaceholderText('Name, place, city, or @username') as HTMLInputElement;
+  const box = () => screen.getByPlaceholderText('Name, place, city, user') as HTMLInputElement;
   const type = (v: string) => fireEvent.change(box(), { target: { value: v } });
   const open = () => fireEvent.focus(box());
   const expectSub = (line: string) => expect(screen.getByTestId('collections-scope').textContent).toBe(line);
@@ -981,7 +981,8 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByText('List two')).toBeTruthy();
     expect(screen.queryByText('List one')).toBeNull();
     // The one thing the card could not tell the reader: why it is here.
-    expect(screen.getByText('matches Place b')).toBeTruthy();
+    expect(screen.getByText('Place b')).toBeTruthy();
+    expect(screen.queryByText(/matches/)).toBeNull();
   });
 
   it('matches by the city the places are in, typed as words', () => {

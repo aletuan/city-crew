@@ -363,12 +363,12 @@ describe('the zero-state', () => {
 });
 
 describe('recent searches', () => {
-  it('shows at most five remembered searches, newest first', async () => {
+  it('shows at most three remembered searches, newest first', async () => {
     await AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(['a1', 'a2', 'a3', 'a4', 'a5', 'a6']));
     mount();
     expect(await screen.findByText('Recent')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'a5' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'a6' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'a3' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'a4' })).toBeNull();
   });
 
   it('treats unreadable storage as an empty memory', async () => {

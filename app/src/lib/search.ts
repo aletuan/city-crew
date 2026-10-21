@@ -430,7 +430,7 @@ export type CollectionHit<C> = {
   hits: number;
   total: number;
   /** The first member the words landed on, when the list's own words did
-   *  not — "matches MONO Coffee Lab", the one thing a reader could not
+   *  not — "MONO Coffee Lab", the one thing a reader could not
    *  tell from the card. Null when the list was found by its own words
    *  or there were none. */
   place: SiftMember | null;

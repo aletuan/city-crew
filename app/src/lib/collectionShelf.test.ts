@@ -30,13 +30,15 @@ describe('reasonFor', () => {
     expect(reasonFor(hit({}), ['Cafés'], en)).toBeNull();
   });
 
+  // The name alone: the reader just typed it, and "matches" before it
+  // said nothing more (owner, 21 Oct 2026).
   it('names the place the words landed on, in the reader’s language', () => {
     const place = { name_en: 'MONO Coffee Lab', name_vi: 'MONO Cà phê', name_ja: null };
-    expect(reasonFor(hit({ place }), [], en)).toBe('matches MONO Coffee Lab');
-    expect(reasonFor(hit({ place }), [], vi)).toBe('khớp MONO Cà phê');
-    expect(reasonFor(hit({ place: { ...place, name_ja: 'モノ' } }), [], ja)).toBe('モノ に一致');
+    expect(reasonFor(hit({ place }), [], en)).toBe('MONO Coffee Lab');
+    expect(reasonFor(hit({ place }), [], vi)).toBe('MONO Cà phê');
+    expect(reasonFor(hit({ place: { ...place, name_ja: 'モノ' } }), [], ja)).toBe('モノ');
     // A place named only in Vietnamese still has a name to give.
-    expect(reasonFor(hit({ place: { name_vi: 'Quán Mơ' } }), [], vi)).toBe('khớp Quán Mơ');
+    expect(reasonFor(hit({ place: { name_vi: 'Quán Mơ' } }), [], vi)).toBe('Quán Mơ');
   });
 
   it('counts the part a chip reached, and names the chips', () => {
@@ -46,7 +48,7 @@ describe('reasonFor', () => {
 
   it('says both when both are true', () => {
     expect(reasonFor(hit({ hits: 1, total: 4, place: { name_en: 'Mono' } }), ['Cafés'], en))
-      .toBe('matches Mono · 1 of 4 places · Cafés');
+      .toBe('Mono · 1 of 4 places · Cafés');
   });
 });
 
