@@ -36,6 +36,10 @@ export const LANGS = [
   { code: 'en', label: 'EN', store: 'column' },
   { code: 'vi', label: 'VI', store: 'column' },
   { code: 'ja', label: 'JA', store: 'i18n' },
+  // Simplified Chinese, 21 Oct 2026. Its name and district stay empty on
+  // purpose — place names are kept as they are for a Chinese reader (the
+  // owner's rule), and an empty slot reads as the English one.
+  { code: 'zh', label: 'ZH', store: 'i18n' },
 ];
 
 /** The base names of the values that exist once per language. */

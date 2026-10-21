@@ -2,6 +2,7 @@
 //
 // POST { slug }             → { desc_vi, desc_en, desc_ja, sources: string[], photos: number }
 // POST { slug, mode: 'ja' } → { desc_ja }
+// POST { slug, mode: 'zh' } → { desc_zh }
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -103,6 +104,18 @@
 // drafts merged a Vietnamese sentence and an English one into a third
 // blurb longer than either. Vietnamese only when the English is blank.
 //
+// ── the zh mode (21 Oct 2026) ──
+//
+// The same translation into Simplified Chinese, for the fourth language
+// (#1104–#1110). One table below (`TRANSLATE`) holds what differs — the
+// instructions and the reader they name — so a fifth language is a row.
+// Its own rule, the owner's: every place name stays as the blurb spells
+// it, in Latin letters. Hoàn Kiếm and not 还剑湖, Melbourne and not 墨尔本
+// — it is the name on the sign the reader will be looking for, and the
+// app's own Chinese prints them the same way. No Chinese a person wrote
+// exists yet to show as an example, so the first drafts are made from
+// the rules alone; the examples join as the desk writes them.
+//
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
 
@@ -184,6 +197,25 @@ Rules, none of which bend:
 - Japanese for a Japanese reader, in the register of the examples: plain, です・ます, place names kept in the Latin alphabet as the screen prints them.
 - No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
 
+/** The zh mode's instructions: the ja mode's, for a Chinese reader. */
+const SYSTEM_ZH = `You translate the two-line blurb City Crew shows under a place — "Why go" — into Simplified Chinese, for its editors to read, edit and save.
+
+Rules, none of which bend:
+- The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
+- Keep its length and its shape: one or two sentences, a dash where it has one.
+- Simplified Chinese for a reader from mainland China: plain and concrete, Chinese punctuation, a space between Chinese and Latin letters.
+- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 还剑湖; Melbourne, not 墨尔本.
+- No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
+
+/** The languages a blurb is translated into: each one's instructions,
+ *  and the reader the request names. */
+const TRANSLATE = {
+  ja: { system: SYSTEM_JA, reader: "a Japanese reader" },
+  zh: { system: SYSTEM_ZH, reader: "a Chinese reader" },
+} as const;
+type Lang = keyof typeof TRANSLATE;
+const isLang = (m: unknown): m is Lang => typeof m === "string" && Object.hasOwn(TRANSLATE, m);
+
 type Row = {
   id: string;
   slug: string;
@@ -196,21 +228,21 @@ type Row = {
   website: string | null; primary_type: string | null;
   desc_vi: string | null; desc_en: string | null;
   desc_ja: string | null;
-  i18n: { ja?: { desc?: string | null } | null } | null;
+  i18n: Partial<Record<Lang, { desc?: string | null } | null>> | null;
 };
 
 type Example = {
   name_en: string; categories: string[] | null;
   desc_vi: string | null; desc_en: string | null;
-  i18n: { ja?: { desc?: string | null; machine?: boolean } | null } | null;
+  i18n: Partial<Record<Lang, { desc?: string | null; machine?: boolean } | null>> | null;
 };
 
-/** The example's Japanese, when a person wrote it: the object's entry,
- *  never the mirrored column (gone with the trigger one day), and not a
- *  `machine` draft nobody has read. */
-const exampleJa = (e: Example): string | null => {
-  const ja = e.i18n?.ja;
-  return ja && !ja.machine && ja.desc?.trim() ? ja.desc.trim() : null;
+/** The example's blurb in one language, when a person wrote it: the
+ *  object's entry, never the mirrored column (gone with the trigger one
+ *  day), and not a `machine` draft nobody has read. */
+const exampleIn = (e: Example, lang: Lang): string | null => {
+  const entry = e.i18n?.[lang];
+  return entry && !entry.machine && entry.desc?.trim() ? entry.desc.trim() : null;
 };
 
 const foldLite = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
@@ -249,8 +281,8 @@ async function wikiLead(lang: "vi" | "en", title: string, cityNames: string[]): 
 /** The desk's own blurbs of the same kinds, as the model's examples.
  *  The query already narrows to the kinds (`overlaps`); the check here
  *  is what a test can see, and costs nothing on forty rows. */
-function pickExamples(rows: Example[], kinds: string[], withJa = false): Example[] {
-  const same = rows.filter((r) => r.desc_vi && r.desc_en && (!withJa || exampleJa(r))
+function pickExamples(rows: Example[], kinds: string[], lang: Lang | null = null): Example[] {
+  const same = rows.filter((r) => r.desc_vi && r.desc_en && (!lang || exampleIn(r, lang))
     && (r.categories ?? []).some((c) => kinds.includes(c)));
   return same.slice(0, EXAMPLES);
 }
@@ -272,8 +304,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const slug = String(body.slug ?? "").trim();
     if (!slug) return json({ error: "slug required" }, 400);
-    if (body.mode != null && body.mode !== "ja") return json({ error: "unknown mode" }, 400);
-    const mode: "full" | "ja" = body.mode === "ja" ? "ja" : "full";
+    if (body.mode != null && !isLang(body.mode)) return json({ error: "unknown mode" }, 400);
+    // The language asked for, or null for a full draft from the material.
+    const lang: Lang | null = isLang(body.mode) ? body.mode : null;
+    const mode = lang ?? "full";
 
     const { data: place } = await admin
       .from("places")
@@ -282,10 +316,12 @@ Deno.serve(async (req) => {
     const row = place as Row | null;
     if (!row) return json({ error: `unknown place: ${slug}` }, 404);
     const hasBlurb = !!(row.desc_vi?.trim() || row.desc_en?.trim());
-    const hasJa = !!(row.i18n?.ja?.desc?.trim() || row.desc_ja?.trim());
-    if (mode === "full" && hasBlurb) return json({ error: "has_blurb" }, 409);
-    if (mode === "ja" && !hasBlurb) return json({ error: "no_blurb" }, 409);
-    if (mode === "ja" && hasJa) return json({ error: "has_ja" }, 409);
+    // Japanese through either door: the object, or the column the trigger
+    // still mirrors it into. Every later language has the object alone.
+    const hasLang = lang && !!(row.i18n?.[lang]?.desc?.trim() || (lang === "ja" && row.desc_ja?.trim()));
+    if (!lang && hasBlurb) return json({ error: "has_blurb" }, 409);
+    if (lang && !hasBlurb) return json({ error: "no_blurb" }, 409);
+    if (hasLang) return json({ error: `has_${lang}` }, 409);
 
     const { data: city } = await admin
       .from("cities").select("name_en, name_vi, short_en, short_vi").eq("id", row.city_id).maybeSingle();
@@ -305,11 +341,11 @@ Deno.serve(async (req) => {
       .overlaps("categories", kinds)
       .order("slug")
       .limit(40);
-    const examples = pickExamples((written ?? []) as Example[], kinds, mode === "ja");
+    const examples = pickExamples((written ?? []) as Example[], kinds, lang);
 
     // Cover first, then the gallery's own order, so the frame the app
     // leads with is the one the model reads first.
-    const { data: shots } = mode === "ja" ? { data: [] } : await admin
+    const { data: shots } = lang ? { data: [] } : await admin
       .from("place_photos")
       .select("photo_uri, storage_path")
       .eq("place_id", row.id).eq("is_hidden", false)
@@ -319,9 +355,9 @@ Deno.serve(async (req) => {
       .filter((ph) => ph.storage_path && ph.photo_uri)
       .map((ph) => ph.photo_uri);
 
-    // The blurb is the material in the ja mode; an article would be a
-    // second source the Japanese could drift towards and the blurb never had.
-    const lead = mode === "ja"
+    // The blurb is the material when translating; an article would be a
+    // second source the translation could drift towards and the blurb never had.
+    const lead = lang
       ? null
       : (await wikiLead("vi", row.name_vi, cityNames)) ?? (await wikiLead("en", row.name_en, cityNames));
 
@@ -334,7 +370,7 @@ Deno.serve(async (req) => {
     const facts = [
       `Name: ${row.name_vi} / ${row.name_en}`,
       `City: ${city?.name_vi ?? row.city_id ?? "?"} / ${city?.name_en ?? ""}`,
-      ...(mode === "ja" ? [] : [
+      ...(lang ? [] : [
       `District: ${row.neighborhood_vi ?? row.neighborhood_en ?? "?"}`,
       `Address: ${row.address ?? "?"}`,
       `Kinds: ${kinds.join(", ") || "?"}`,
@@ -349,16 +385,16 @@ Deno.serve(async (req) => {
     const message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
-      system: mode === "ja" ? SYSTEM_JA : SYSTEM,
+      system: lang ? TRANSLATE[lang].system : SYSTEM,
       output_config: {
         effort: "low",
         format: {
           type: "json_schema",
-          schema: mode === "ja"
+          schema: lang
             ? {
               type: "object",
-              properties: { desc_ja: { type: "string" } },
-              required: ["desc_ja"],
+              properties: { [`desc_${lang}`]: { type: "string" } },
+              required: [`desc_${lang}`],
               additionalProperties: false,
             }
             : {
@@ -379,20 +415,22 @@ Deno.serve(async (req) => {
           {
             type: "text" as const,
             text: [
-              "Examples of the voice, from the same kinds of place:",
-              ...examples.map((e) => mode === "ja"
-                ? `- ${e.name_en}\n  en: ${e.desc_en}\n  ja: ${exampleJa(e)}`
-                : `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}${exampleJa(e) ? `\n  ja: ${exampleJa(e)}` : ""}`),
-              "",
+              // No heading over nothing: Chinese has no example a person
+              // wrote yet, and an empty list would read as a cue.
+              ...(examples.length ? ["Examples of the voice, from the same kinds of place:"] : []),
+              ...examples.map((e) => lang
+                ? `- ${e.name_en}\n  en: ${e.desc_en}\n  ${lang}: ${exampleIn(e, lang)}`
+                : `- ${e.name_en}\n  vi: ${e.desc_vi}\n  en: ${e.desc_en}${exampleIn(e, "ja") ? `\n  ja: ${exampleIn(e, "ja")}` : ""}`),
+              ...(examples.length ? [""] : []),
               "The place:",
               facts,
               "",
-              ...(mode === "ja"
+              ...(lang
                 ? [
                   "The blurb, as the desk wrote it:",
                   row.desc_en?.trim() ? `en: ${row.desc_en.trim()}` : `vi: ${row.desc_vi!.trim()}`,
                   "",
-                  "Write desc_ja: this blurb for a Japanese reader — what it says and no more.",
+                  `Write desc_${lang}: this blurb for ${TRANSLATE[lang].reader} — what it says and no more.`,
                 ]
                 : [
                   lead ? `Wikipedia lead (${lead.url}):\n${lead.text}` : "No article extract.",
@@ -412,7 +450,7 @@ Deno.serve(async (req) => {
       console.log("write-blurb no text", { slug, mode, stop_reason: message.stop_reason, output_tokens: message.usage.output_tokens });
       return json({ error: `model gave no text (${message.stop_reason})` }, 502);
     }
-    let parsed: { desc_vi?: string; desc_en?: string; desc_ja: string };
+    let parsed: { desc_vi?: string; desc_en?: string; desc_ja?: string } & Partial<Record<`desc_${Lang}`, string>>;
     try {
       parsed = JSON.parse(text.text);
     } catch (e) {
@@ -423,11 +461,11 @@ Deno.serve(async (req) => {
       slug, mode, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,
     });
-    if (mode === "ja") return json({ desc_ja: parsed.desc_ja.trim() });
+    if (lang) return json({ [`desc_${lang}`]: (parsed[`desc_${lang}`] ?? "").trim() });
     return json({
       desc_vi: (parsed.desc_vi ?? "").trim(),
       desc_en: (parsed.desc_en ?? "").trim(),
-      desc_ja: parsed.desc_ja.trim(),
+      desc_ja: (parsed.desc_ja ?? "").trim(),
       sources: lead ? [lead.url] : [],
       photos: photos.length,
     });

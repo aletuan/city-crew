@@ -561,7 +561,7 @@ describe('the blurb draft', () => {
     openEditor();
     await screen.findByDisplayValue('Café A');
     expect(draftButton().disabled).toBe(true);
-    expect(screen.getByText('Drafts the JA blurb from the EN and VI ones. Clear both to draft from scratch.')).toBeTruthy();
+    expect(screen.getByText('Drafts the JA, ZH blurb from the EN and VI ones. Clear both to draft from scratch.')).toBeTruthy();
     fireEvent.change(field('desc_en'), { target: { value: '' } });
     expect(draftButton().disabled).toBe(false);
     fireEvent.change(field('desc_vi'), { target: { value: '  Đã có ' } });
@@ -635,10 +635,15 @@ describe('the blurb draft', () => {
 // the only write — and the same flag.
 describe('the Japanese draft', () => {
   it('offers Draft JA only while the blurb exists and the Japanese does not', async () => {
-    openEditor('/place/cafe-a', { ...PLACE, i18n: { ja: { desc: '古い。' } } });
+    openEditor('/place/cafe-a', { ...PLACE, i18n: { ja: { desc: '古い。' }, zh: { desc: '旧的。' } } });
     await screen.findByDisplayValue('Café A');
     expect(screen.queryByRole('button', { name: 'Draft JA' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Draft ZH' })).toBeNull();
     expect(screen.getByText('Clear the EN and VI Blurb fields to draft a new one.')).toBeTruthy();
+    // Each language its own button, offered only while its own blurb is empty.
+    fireEvent.change(field('desc_zh'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Draft ZH' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Draft JA' })).toBeNull();
     fireEvent.change(field('desc_ja'), { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Draft JA' })).toBeTruthy();
     fireEvent.change(field('desc_en'), { target: { value: '' } });
