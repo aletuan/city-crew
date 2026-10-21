@@ -54,10 +54,10 @@ export function stopFacts(
   let hours: string | null = null;
   if (state?.open && state.untilMin != null) {
     const until = clockOf(state.untilMin);
-    hours = t(`open until ${until}`, `mở tới ${until}`, `${until}まで営業`);
+    hours = t(`open until ${until}`, `mở tới ${until}`, `${until}まで営業`, `营业至 ${until}`);
   } else if (state && !state.open && state.opensAtMin != null) {
     const opens = clockOf(state.opensAtMin);
-    hours = t(`opens ${opens}`, `mở lúc ${opens}`, `${opens}開店`);
+    hours = t(`opens ${opens}`, `mở lúc ${opens}`, `${opens}開店`, `${opens} 开门`);
   }
   return summaryLine([
     opts.area === false ? null : place.neighborhood_en,

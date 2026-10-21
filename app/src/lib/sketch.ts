@@ -41,6 +41,7 @@ export type Step = {
   en: string;
   vi: string;
   ja: string;
+  zh: string;
 };
 
 /**
@@ -59,20 +60,20 @@ export type Step = {
 export const SKETCH_STEPS: readonly Step[] = [
   {
     key: 'picks',
-    en: 'Reading your picks', vi: 'Đọc lựa chọn của bạn', ja: 'あなたの好みを読み取り中',
+    en: 'Reading your picks', vi: 'Đọc lựa chọn của bạn', ja: 'あなたの好みを読み取り中', zh: '正在读取你的选择',
   },
   {
     key: 'find',
-    en: 'Finding places open then', vi: 'Tìm chỗ mở cửa lúc đó', ja: 'その時間に開いている店を検索',
+    en: 'Finding places open then', vi: 'Tìm chỗ mở cửa lúc đó', ja: 'その時間に開いている店を検索', zh: '正在查找那时营业的地点',
   },
   {
     key: 'balance',
-    en: 'Balancing the order of the day', vi: 'Cân đối thứ tự trong ngày', ja: '一日の流れを調整',
+    en: 'Balancing the order of the day', vi: 'Cân đối thứ tự trong ngày', ja: '一日の流れを調整', zh: '正在安排一天的顺序',
   },
   {
     key: 'walk',
     en: 'Timing the walks between stops', vi: 'Tính thời gian đi bộ giữa các điểm',
-    ja: '各スポット間の移動時間を計算',
+    ja: '各スポット間の移動時間を計算', zh: '正在计算地点之间的步行时间',
   },
   // The one step that reports something genuinely slow besides the
   // catalog: the model writing its line for each stop. The screen holds
@@ -102,7 +103,7 @@ export const SKETCH_STEPS: readonly Step[] = [
   {
     key: 'words',
     en: 'Finalizing your itinerary', vi: 'Đang hoàn thiện lịch trình của bạn',
-    ja: '旅程を仕上げています',
+    ja: '旅程を仕上げています', zh: '正在完成你的行程',
   },
 ];
 
@@ -182,7 +183,7 @@ export function summaryLine(parts: readonly (string | null | undefined)[]): stri
  * English grammar rule wearing their vocabulary.
  */
 export function stopCount(n: number, t: (en: string, vi: string, ja?: string, zh?: string) => string): string {
-  return `${n} ${n === 1 ? t('stop', 'điểm', 'スポット') : t('stops', 'điểm', 'スポット')}`;
+  return `${n} ${n === 1 ? t('stop', 'điểm', 'スポット', '个地点') : t('stops', 'điểm', 'スポット', '个地点')}`;
 }
 
 // ── what the box under the steps says ─────────────────────────────────
@@ -277,6 +278,7 @@ export function findingsOf(
         `${f.openNow} places open at ${fmt.clock(f.startMin)}`,
         `${f.openNow} chỗ mở lúc ${fmt.clock(f.startMin)}`,
         `${fmt.clock(f.startMin)}に開いているのは${f.openNow}件`,
+        `${fmt.clock(f.startMin)} 有 ${f.openNow} 个地点营业`,
       ),
     }
     : null;
@@ -284,7 +286,7 @@ export function findingsOf(
   const start = f.opening
     ? {
       icon: 'location-outline',
-      text: t(`Starting at ${f.opening}`, `Bắt đầu ở ${f.opening}`, `${f.opening}から`),
+      text: t(`Starting at ${f.opening}`, `Bắt đầu ở ${f.opening}`, `${f.opening}から`, `从${f.opening}出发`),
     }
     : null;
 
@@ -295,6 +297,7 @@ export function findingsOf(
         `${fmt.distance(f.hop.km)} to the next stop, about ${fmt.minutes(f.hop.minutes)}`,
         `${fmt.distance(f.hop.km)} tới điểm sau, khoảng ${fmt.minutes(f.hop.minutes)}`,
         `次のスポットまで${fmt.distance(f.hop.km)}、約${fmt.minutes(f.hop.minutes)}`,
+        `到下一个地点 ${fmt.distance(f.hop.km)}，约 ${fmt.minutes(f.hop.minutes)}`,
       ),
     }
     : null;
@@ -306,6 +309,7 @@ export function findingsOf(
         `Your day runs ${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}`,
         `Ngày của bạn từ ${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}`,
         `${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}の一日`,
+        `你的一天：${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}`,
       ),
     }
     : null;

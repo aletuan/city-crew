@@ -135,7 +135,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   const land = (at: { lat: number; lng: number }, atName: string | null): boolean => {
     const home = cityAround(cities, at.lat, at.lng);
     if (!home) {
-      setElsewhere({ name: atName ?? t('that pin', 'ghim này', 'そのピン'), me: false });
+      setElsewhere({ name: atName ?? t('that pin', 'ghim này', 'そのピン', '那个图钉'), me: false });
       setMoved(null);
       setDraft({ district: null, at: null, atName: null });
       return false;
@@ -361,7 +361,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   const caption = useMemo(() => {
     if (!where) return undefined;
     return onMe
-      ? t(`You're here · ${where}`, `Bạn đang ở đây · ${where}`, `現在地 · ${where}`)
+      ? t(`You're here · ${where}`, `Bạn đang ở đây · ${where}`, `現在地 · ${where}`, `你在这里 · ${where}`)
       : where;
   }, [where, onMe, t]);
 
@@ -379,7 +379,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
    * reads as the thing already taken.
    */
   const meSub = !me
-    ? t('Not located yet · tap to locate', 'Chưa xác định được · nhấn để định vị', '未取得 · タップで取得')
+    ? t('Not located yet · tap to locate', 'Chưa xác định được · nhấn để định vị', '未取得 · タップで取得', '尚未定位 · 点按定位')
     : onMe ? where : '';
 
   /**
@@ -490,7 +490,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   const settleCity = async () => {
     if (!me) return;
     const home = cityAround(cities, me.lat, me.lng);
-    if (!home) { setElsewhere({ name: t('you', 'bạn', '現在地'), me: true }); return; }
+    if (!home) { setElsewhere({ name: t('you', 'bạn', '現在地', '你'), me: true }); return; }
     if (city && home.id !== city.id && await followMyLocation()) setMoved(home);
   };
 
@@ -505,7 +505,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
       <Pressable style={s.scrim} onPress={onClose} />
       <View style={[s.sheet, { bottom: kb, maxHeight: (winH - kb) * 0.9 }]}>
         <View style={s.grabber} />
-        <Text style={s.title}>{t('Choose a starting point', 'Chọn địa điểm bắt đầu', '出発地点を選ぶ')}</Text>
+        <Text style={s.title}>{t('Choose a starting point', 'Chọn địa điểm bắt đầu', '出発地点を選ぶ', '选择出发地点')}</Text>
         <Text style={s.sub}>
           {t(
             // The owner's wording (4 Oct 2026): what to do on this sheet,
@@ -518,6 +518,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             'Pick a spot near you, or search for a starting point in the address box.',
             'Chọn một chỗ gần bạn, hoặc tìm kiếm địa điểm xuất phát trong phần tìm địa chỉ.',
             '近くの場所を選ぶか、住所検索で出発地点を探してください。',
+            '选择你附近的地点，或在地址栏中搜索出发地点。',
           )}
         </Text>
 
@@ -574,7 +575,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             haptic="selection"
             contentStyle={s.meRow}
             accessibilityRole="button"
-            accessibilityLabel={t('Current location', 'Vị trí hiện tại', '現在地')}
+            accessibilityLabel={t('Current location', 'Vị trí hiện tại', '現在地', '当前位置')}
             aria-selected={onMe}
           >
             <View style={s.meIcon}>
@@ -582,7 +583,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={s.hitName} numberOfLines={1}>
-                {t('Current location', 'Vị trí hiện tại', '現在地')}
+                {t('Current location', 'Vị trí hiện tại', '現在地', '当前位置')}
               </Text>
               {meSub ? <Text style={s.hitSub} numberOfLines={1}>{meSub}</Text> : null}
             </View>
@@ -611,6 +612,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                     "City Crew is not allowed to know where you are, so plans start from the city rather than from you. iOS only asks once — after that it is a switch in Settings.",
                     'City Crew chưa được phép biết bạn ở đâu, nên kế hoạch sẽ bắt đầu từ thành phố thay vì từ chỗ bạn đứng. iOS chỉ hỏi một lần — sau đó phải bật lại trong Cài đặt.',
                     'City Crew は現在地を取得できないため、プランはあなたの居場所ではなく街を起点にします。iOS が尋ねるのは一度きりで、あとは設定でのオンオフになります。',
+                    'City Crew 无法获取你的位置，因此计划会从城市而不是你的位置出发。iOS 只会询问一次 — 之后需要在设置中开启。',
                   )}
                 </Text>
                 <PressableScale
@@ -618,7 +620,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                   accessibilityRole="button"
                 >
                   <Text style={s.blockedCta}>
-                    {t('Open Settings', 'Mở Cài đặt', '設定を開く')}
+                    {t('Open Settings', 'Mở Cài đặt', '設定を開く', '打开设置')}
                   </Text>
                 </PressableScale>
               </View>
@@ -637,6 +639,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                 'Search an address or place',
                 'Tìm địa chỉ hoặc địa điểm',
                 '住所や場所を検索',
+                '搜索地址或地点',
               )}
               placeholderTextColor={colors.textTertiary}
               style={s.input}
@@ -664,6 +667,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                     `No places near ${elsewhere.name} yet.`,
                     `Chưa có địa điểm quanh ${elsewhere.name}.`,
                     `${elsewhere.name} の周辺にはまだスポットがありません。`,
+                    `${elsewhere.name}附近还没有地点。`,
                   )}
                 </Text>
                 {/* Every way out, since nothing is chosen now (rule 3) and
@@ -677,11 +681,13 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                       'Pick an area below, or search somewhere else.',
                       'Chọn một khu vực bên dưới, hoặc tìm chỗ khác.',
                       '下のエリアを選ぶか、別の場所を検索してください。',
+                      '选择下方的区域，或搜索其他地方。',
                     )
                     : t(
                       'Search somewhere else, pick an area below, or use your current location.',
                       'Tìm chỗ khác, chọn một khu vực bên dưới, hoặc dùng vị trí hiện tại.',
                       '別の場所を検索するか、下のエリアを選ぶか、現在地を使ってください。',
+                      '搜索其他地方、选择下方的区域，或使用你的当前位置。',
                     )}
                 </Text>
               </View>
@@ -700,6 +706,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                   `The plan will be made in ${cityName(moved)}.`,
                   `Kế hoạch sẽ lập ở ${cityName(moved)}.`,
                   `プランは${cityName(moved)}で作ります。`,
+                  `计划将在${cityName(moved)}制定。`,
                 )}
               </Text>
             </View>
@@ -710,6 +717,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                 'Nothing found for that. Try fewer words, or a street and district.',
                 'Không tìm thấy gì. Thử bớt chữ, hoặc tên đường kèm quận.',
                 '見つかりませんでした。語を減らすか、通りと区でお試しください。',
+                '没有找到结果。试试减少关键词，或输入街道和区名。',
               )}
             </Text>
           )}
@@ -752,13 +760,13 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             <>
               <Text style={s.label}>
                 {areasAreNear
-                  ? t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')
+                  ? t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ', '或选择附近的区域')
                   // Not "nearby", because it is not. Naming the city is
                   // the honest version of the same offer: these are the
                   // areas City Crew covers, and you are not in them.
                   : city
-                    ? t(`Or pick an area in ${city.name_en}`, `Hoặc chọn khu vực ở ${city.name_vi}`, `${city.name_en}のエリアから選ぶ`)
-                    : t('Or pick an area', 'Hoặc chọn một khu vực', 'エリアから選ぶ')}
+                    ? t(`Or pick an area in ${city.name_en}`, `Hoặc chọn khu vực ở ${city.name_vi}`, `${city.name_en}のエリアから選ぶ`, `或选择${city.name_en}的区域`)
+                    : t('Or pick an area', 'Hoặc chọn một khu vực', 'エリアから選ぶ', '或选择一个区域')}
               </Text>
               <View style={s.chips}>
                 {districts.map((d) => (
@@ -795,8 +803,8 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
           <GradientCta
             icon={cta === 'search' ? 'search' : 'checkmark'}
             label={cta === 'search'
-              ? t('Search', 'Tìm', '検索')
-              : t('Use this location', 'Dùng chỗ này', 'ここにする')}
+              ? t('Search', 'Tìm', '検索', '搜索')
+              : t('Use this location', 'Dùng chỗ này', 'ここにする', '使用这个位置')}
             onPress={cta === 'search' ? find : commit}
             disabled={refused}
             wide

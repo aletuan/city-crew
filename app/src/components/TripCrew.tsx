@@ -104,13 +104,14 @@ export default function TripCrew({
   const line = going === undefined
     ? null
     : going === null
-      ? t('You’re on this one.', 'Bạn có mặt trong chuyến này.', 'あなたはこの旅程に参加します。')
+      ? t('You’re on this one.', 'Bạn có mặt trong chuyến này.', 'あなたはこの旅程に参加します。', '你参加了这个行程。')
       : going === 1
-        ? t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')
+        ? t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ', '目前只有你')
         : t(
           `${going} going`,
           `${going} người đi`,
           `${going}人が参加`,
+          `${going} 人参加`,
         );
 
   return (
@@ -135,11 +136,13 @@ export default function TripCrew({
                   `${waiting} yet to answer`,
                   `${waiting} chưa trả lời`,
                   `${waiting}人が未回答`,
+                  `${waiting} 人未回复`,
                 ) : null,
                 said_no > 0 ? t(
                   `${said_no} can’t make it`,
                   `${said_no} không đi được`,
                   `${said_no}人が不参加`,
+                  `${said_no} 人无法参加`,
                 ) : null,
               ].filter(Boolean).join(' · ')}
             </Text>
@@ -149,7 +152,7 @@ export default function TripCrew({
         {canInvite ? (
           <PressableScale onPress={onInvite} accessibilityRole="button" contentStyle={s.ghost} testID="trip-invite">
             <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
-            <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
+            <Text style={s.ghostText}>{t('Invite', 'Mời', '招待', '邀请')}</Text>
           </PressableScale>
         ) : null}
       </View>
@@ -167,7 +170,7 @@ export default function TripCrew({
               <View key={i.invitee_id} style={s.person}>
                 <Avatar url={p?.avatar_url} size={26} />
                 <Text style={s.personName} numberOfLines={1}>
-                  {p?.full_name || (p?.handle ? `@${p.handle}` : t('Someone', 'Ai đó', '誰か'))}
+                  {p?.full_name || (p?.handle ? `@${p.handle}` : t('Someone', 'Ai đó', '誰か', '某人'))}
                 </Text>
                 <Text
                   testID={`crew-said-${n}`}
@@ -178,10 +181,10 @@ export default function TripCrew({
                   ]}
                 >
                   {said === 'accepted'
-                    ? t('Coming', 'Sẽ đi', '参加')
+                    ? t('Coming', 'Sẽ đi', '参加', '参加')
                     : said === 'declined'
-                      ? t('Can’t make it', 'Không đi được', '不参加')
-                      : t('Asked', 'Đã mời', '招待済み')}
+                      ? t('Can’t make it', 'Không đi được', '不参加', '无法参加')
+                      : t('Asked', 'Đã mời', '招待済み', '已邀请')}
                 </Text>
               </View>
             );

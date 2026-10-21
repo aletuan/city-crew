@@ -87,8 +87,8 @@ export default function StopCard({
   const cat = CATEGORIES[categoriesOf(place)[0]];
   const actions = onHold
     ? [
-      ...(canMoveUp ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動') }] : []),
-      ...(canMoveDown ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動') }] : []),
+      ...(canMoveUp ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動', '上移') }] : []),
+      ...(canMoveDown ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動', '下移') }] : []),
     ]
     : undefined;
 
@@ -107,7 +107,7 @@ export default function StopCard({
           delayLongPress={LIFT_AFTER_MS}
           onPressOut={onRelease}
           accessibilityHint={onHold
-            ? t('Hold and drag to change the order.', 'Giữ rồi kéo để đổi thứ tự.', '長押ししてドラッグすると並び順を変えられます。')
+            ? t('Hold and drag to change the order.', 'Giữ rồi kéo để đổi thứ tự.', '長押ししてドラッグすると並び順を変えられます。', '长按并拖动即可调整顺序。')
             : undefined}
           accessibilityActions={actions}
           onAccessibilityAction={(e) => onMove(e.nativeEvent.actionName === 'moveUp' ? 'up' : 'down')}
@@ -153,7 +153,7 @@ export default function StopCard({
             nothing saying so is a plan that gets somebody to a closed door. */}
         {wrong && (
           <Text style={s.warn}>
-            {t('Earlier than the stop above.', 'Sớm hơn điểm phía trên.', '前のスポットより早い時刻です。')}
+            {t('Earlier than the stop above.', 'Sớm hơn điểm phía trên.', '前のスポットより早い時刻です。', '早于上一个地点。')}
           </Text>
         )}
 
@@ -168,7 +168,7 @@ export default function StopCard({
             {/* Named, because the stepper used to be the only labelled
                 thing on the rail that was not labelled: a minus, a clock,
                 a plus, and nothing to say the clock was the arrival. */}
-            <Text style={s.timeLabel}>{t('Time', 'Giờ', '時刻')}</Text>
+            <Text style={s.timeLabel}>{t('Time', 'Giờ', '時刻', '时间')}</Text>
             <PressableScale
               haptic="selection"
               onPress={() => onNudge(-NUDGE_MIN)}
@@ -176,7 +176,7 @@ export default function StopCard({
               style={s.step}
               hitSlop={STEP_SLOP}
               accessibilityRole="button"
-              accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${place.name_en}`, `Đến ${place.name_en} sớm ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分早く着く`)}
+              accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${place.name_en}`, `Đến ${place.name_en} sớm ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分早く着く`, `提早 ${NUDGE_MIN} 分钟到达${place.name_en}`)}
             >
               <Ionicons name="remove" size={17} color={colors.text} />
             </PressableScale>
@@ -187,7 +187,7 @@ export default function StopCard({
               style={s.step}
               hitSlop={STEP_SLOP}
               accessibilityRole="button"
-              accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${place.name_en}`, `Đến ${place.name_en} muộn ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分遅く着く`)}
+              accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${place.name_en}`, `Đến ${place.name_en} muộn ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分遅く着く`, `推迟 ${NUDGE_MIN} 分钟到达${place.name_en}`)}
             >
               <Ionicons name="add" size={17} color={colors.text} />
             </PressableScale>
@@ -201,7 +201,7 @@ export default function StopCard({
               style={s.tool}
               hitSlop={TOOL_SLOP}
               accessibilityRole="button"
-              accessibilityLabel={t(`Remove ${place.name_en}`, `Bỏ ${place.name_en}`, `${place.name_en}を外す`)}
+              accessibilityLabel={t(`Remove ${place.name_en}`, `Bỏ ${place.name_en}`, `${place.name_en}を外す`, `移除${place.name_en}`)}
             >
               <Ionicons name="close" size={16} color={colors.textTertiary} />
             </PressableScale>

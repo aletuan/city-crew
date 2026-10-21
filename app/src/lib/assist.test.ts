@@ -50,6 +50,12 @@ describe('derivedTitle', () => {
     expect(derivedTitle([stop({ slug: 'a' })], 'evening', t)).toBe('An evening out');
     expect(derivedTitle([], 'evening', t)).toBe('An evening out');
   });
+
+  // The area first: Chinese names the place before the outing.
+  it('reads in Chinese with the area first', () => {
+    const zh = (_e: string, _v: string, _j?: string, z?: string) => z ?? '';
+    expect(derivedTitle([stop({ slug: 'a', neighborhood: 'Tây Hồ' })], 'day', zh)).toBe('Tây Hồ一日出游');
+  });
 });
 
 describe('factLine', () => {
