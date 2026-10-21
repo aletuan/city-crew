@@ -525,3 +525,84 @@ describe('the zh-Hant mode', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// The owner's rule for Chinese, checked: a draft that lost a Latin name
+// the blurb carries is asked for once more, told which; a second miss is
+// returned with the names listed (`_shared/latinNames.ts`).
+describe('the Latin names in a Chinese draft', () => {
+  const NAMED = { ...PARK, desc_vi: 'Ghế đá bờ sông.', desc_en: 'Benches on Nguyễn Huệ, a walk from Hoàn Kiếm Lake.' };
+  const last = () => h.create.mock.calls.at(-1)![0] as { messages: { role: string; content: unknown }[] };
+
+  it('takes a draft that kept every name, at the first ask', async () => {
+    door(NAMED);
+    h.create.mockResolvedValue(says({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' }));
+    expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json())
+      .toEqual({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' });
+    expect(h.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks again, naming what was lost, and takes the second when it keeps them', async () => {
+    door(NAMED);
+    h.create
+      .mockResolvedValueOnce(says({ desc_zh: '阮惠街上的长椅，离还剑湖不远。' }))
+      .mockResolvedValueOnce(says({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' }));
+    expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json())
+      .toEqual({ desc_zh: 'Nguyễn Huệ 上的长椅，离 Hoàn Kiếm Lake 不远。' });
+    expect(h.create).toHaveBeenCalledTimes(2);
+    const turns = last().messages;
+    expect(turns).toHaveLength(3);
+    expect(turns[1]).toEqual({ role: 'assistant', content: JSON.stringify({ desc_zh: '阮惠街上的长椅，离还剑湖不远。' }) });
+    expect(turns[2].content).toContain('Nguyễn Huệ, Hoàn Kiếm Lake');
+  });
+
+  it('returns a second miss with the names it still lost', async () => {
+    door(NAMED);
+    h.create
+      .mockResolvedValueOnce(says({ 'desc_zh-Hant': '阮惠街上的長椅。' }))
+      .mockResolvedValueOnce(says({ 'desc_zh-Hant': 'Nguyễn Huệ 上的長椅，離還劍湖不遠。' }));
+    expect(await (await call({ slug: PARK.slug, mode: 'zh-Hant' })).json()).toEqual({
+      'desc_zh-Hant': 'Nguyễn Huệ 上的長椅，離還劍湖不遠。', names_lost: ['Hoàn Kiếm Lake'],
+    });
+  });
+
+  // A second answer that cannot be read leaves the first standing, listed.
+  it('keeps the first draft when the second is cut off', async () => {
+    door(NAMED);
+    h.create
+      .mockResolvedValueOnce(says({ desc_zh: '阮惠街上的长椅。' }))
+      .mockResolvedValueOnce({ content: [{ type: 'text', text: '{"desc_zh": "cut' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 1 } });
+    expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json())
+      .toEqual({ desc_zh: '阮惠街上的长椅。', names_lost: ['Nguyễn Huệ', 'Hoàn Kiếm Lake'] });
+  });
+
+  it('keeps the first draft when the second has no text', async () => {
+    door(NAMED);
+    h.create
+      .mockResolvedValueOnce(says({ desc_zh: '阮惠街上的长椅。' }))
+      .mockResolvedValueOnce({ content: [], stop_reason: 'refusal', usage: { input_tokens: 1, output_tokens: 0 } });
+    expect((await (await call({ slug: PARK.slug, mode: 'zh' })).json()).desc_zh).toBe('阮惠街上的长椅。');
+  });
+
+  it('keeps the first draft when the second is empty', async () => {
+    door(NAMED);
+    h.create
+      .mockResolvedValueOnce(says({ desc_zh: '阮惠街上的长椅。' }))
+      .mockResolvedValueOnce(says({ desc_zh: '' }));
+    expect((await (await call({ slug: PARK.slug, mode: 'zh' })).json()).desc_zh).toBe('阮惠街上的长椅。');
+  });
+
+  it('reads the Vietnamese when the blurb has no English', async () => {
+    door({ ...PARK, desc_vi: 'Ghế đá trên Nguyễn Huệ.', desc_en: null });
+    h.create.mockResolvedValue(says({ desc_zh: 'Nguyễn Huệ 上的长椅。' }));
+    expect(await (await call({ slug: PARK.slug, mode: 'zh' })).json()).toEqual({ desc_zh: 'Nguyễn Huệ 上的长椅。' });
+    expect(h.create).toHaveBeenCalledTimes(1);
+  });
+
+  // Japanese has the same rule and is not checked yet; see the header.
+  it('leaves the Japanese unchecked', async () => {
+    door(NAMED);
+    h.create.mockResolvedValue(says({ desc_ja: 'グエンフエ通りのベンチ。' }));
+    expect(await (await call({ slug: PARK.slug, mode: 'ja' })).json()).toEqual({ desc_ja: 'グエンフエ通りのベンチ。' });
+    expect(h.create).toHaveBeenCalledTimes(1);
+  });
+});
