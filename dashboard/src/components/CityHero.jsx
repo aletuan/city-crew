@@ -15,9 +15,9 @@ import { api, resizeImage } from '../api.js';
 import { chipLabel, useCity, useToast } from '../App.jsx';
 
 const HERO_FIELDS = [
-  'hero_title_en', 'hero_title_vi', 'hero_title_ja',
-  'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja',
-  'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_place_slug',
+  'hero_title_en', 'hero_title_vi', 'hero_title_ja', 'hero_title_zh',
+  'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja', 'hero_sub_zh',
+  'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_cta_zh', 'hero_place_slug',
   // The credit travels with the rest of the form; the file and its URL do
   // not, because uploading is its own action with its own failure.
   'hero_photo_credit', 'hero_photo_credit_uri',
@@ -28,12 +28,14 @@ const pickForm = (row) => Object.fromEntries(HERO_FIELDS.map((k) => [k, row[k] ?
 const defaultTitle = (city, lang) => {
   if (lang === 'vi') return `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`;
   if (lang === 'ja') return `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`;
+  // A city's name stays as it is in Chinese — the owner's rule, 21 Oct 2026.
+  if (lang === 'zh') return `${city?.short_en ?? '这座城市'}的夜晚灵感`;
   return `Ideas for a night in ${city?.short_en ?? 'the city'}`;
 };
 /** The app's built-in button label, mirrored — the two codebases share no
  *  module, so the only thing keeping this honest is that both sides say
  *  where the other one is. See ExploreScreen's hero CTA. */
-const DEFAULT_CTA = { en: 'Explore', vi: 'Khám phá', ja: '探索する' };
+const DEFAULT_CTA = { en: 'Explore', vi: 'Khám phá', ja: '探索する', zh: '探索' };
 /** Cleared, the app falls back to this — the line it used to show in
  *  every city. Shown as the placeholder so an empty field reads as
  *  "this is what they will see", not as "this will be blank". */
@@ -41,12 +43,16 @@ const DEFAULT_SUB = {
   en: 'Browse public collections and places — no account needed.',
   vi: 'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
   ja: 'コレクションとスポットを自由に閲覧 — アカウント不要。',
+  zh: '浏览公开的合集和地点 — 无需账号。',
 };
+
+/** The app's four languages, in the order its language sheet lists them. */
+const LANGS = ['en', 'vi', 'ja', 'zh'];
 
 function LangRow({ label, base, form, set, placeholders }) {
   return (
-    <div className="triple">
-      {['en', 'vi', 'ja'].map((lang) => {
+    <div className="quad">
+      {LANGS.map((lang) => {
         const name = `${base}_${lang}`;
         return (
           <div className="field" key={name}>
@@ -254,7 +260,7 @@ export default function CityHero() {
         </div>
         <div className="herolangs">
           <span className="filterlabel">Preview</span>
-          {['en', 'vi', 'ja'].map((lang) => (
+          {LANGS.map((lang) => (
             <button
               key={lang}
               className={`chip ${previewLang === lang ? 'on' : ''}`}

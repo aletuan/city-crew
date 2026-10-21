@@ -339,6 +339,49 @@ describe('a database older than the app', () => {
     // list, not the single hardcoded Saigon row.
     await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
   });
+
+  // The Chinese hero is the newest group, and `hero_sub_zh` must not be
+  // read as the subtitle group: dropping that would lose the English and
+  // Vietnamese subtitles to a database missing only the Chinese.
+  it('drops only the Chinese hero when that is all it lacks', async () => {
+    only(
+      { data: null, error: { message: 'column cities.hero_sub_zh does not exist' } },
+      { data: CITIES, error: null },
+    );
+    mount();
+    await waitFor(() => expect(asked()).toHaveLength(2));
+    const cols = asked();
+    expect(cols[0]).toContain('hero_title_zh');
+    expect(cols[1]).not.toContain('_zh');
+    expect(cols[1]).toContain('hero_sub_en');
+    expect(cols[1]).toContain('hero_photo_uri');
+  });
+
+  // Every group named in turn, and each dropped once: the oldest database
+  // there is still gets its city list.
+  it('drops every group the database names, one at a time', async () => {
+    only(
+      { data: null, error: { message: 'column cities.hero_title_zh does not exist' } },
+      { data: null, error: { message: 'column cities.tz does not exist' } },
+      { data: null, error: { message: 'column cities.hero_photo_uri does not exist' } },
+      { data: null, error: { message: 'column cities.hero_sub_en does not exist' } },
+      { data: CITIES, error: null },
+    );
+    mount();
+    await waitFor(() => expect(asked()).toHaveLength(5));
+    const last = asked()[4];
+    for (const gone of ['_zh', ', tz', 'hero_photo', 'hero_sub']) expect(last).not.toContain(gone);
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+  });
+
+  // A refusal about something no group covers is not retried forever.
+  it('stops at an error it cannot drop its way out of', async () => {
+    only({ data: null, error: { message: 'permission denied for table cities' } });
+    mount();
+    await waitFor(() => expect(asked()).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(asked()).toHaveLength(1);
+  });
 });
 
 // ── a launch where the platform already knows ──
