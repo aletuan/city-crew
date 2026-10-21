@@ -437,3 +437,55 @@ describe('the ja mode', () => {
     expect(prompt()).not.toContain('en: Riverside benches.');
   });
 });
+
+describe('the zh mode', () => {
+  const WRITTEN_PARK = { ...PARK, desc_vi: 'Ghế đá bờ sông.', desc_en: 'Riverside benches by the Hương.' };
+  const ZH_WRITTEN = [
+    ...WRITTEN,
+    { name_en: 'Lakeside', categories: ['nature'], desc_vi: 'Bờ hồ.', desc_en: 'By the lake.', i18n: { zh: { desc: '湖边。' } } },
+    { name_en: 'Machine Lake', categories: ['nature'], desc_vi: 'Máy', desc_en: 'Machine', i18n: { zh: { desc: '机器。', machine: true } } },
+  ];
+
+  // Chinese lives in the object only: there is no column to check, and
+  // the Japanese column says nothing about it.
+  it('refuses a place that already has Chinese, and only through the object', async () => {
+    h.fake.replies(session, editor, { data: { ...WRITTEN_PARK, i18n: { zh: { desc: '已有。' } } }, error: null });
+    const res = await call({ slug: PARK.slug, mode: 'zh' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'has_zh' });
+    door({ ...WRITTEN_PARK, desc_ja: '日本語。' });
+    h.create.mockResolvedValue(says({ desc_zh: '河边的长椅。' }));
+    expect((await call({ slug: PARK.slug, mode: 'zh' })).status).toBe(200);
+  });
+
+  it('translates the English for a Chinese reader, place names kept, desc_zh alone', async () => {
+    door(WRITTEN_PARK, ZH_WRITTEN);
+    h.create.mockResolvedValue(says({ desc_zh: ' Sông Hương 边的长椅。 ' }));
+    const res = await call({ slug: PARK.slug, mode: 'zh' });
+    expect(await res.json()).toEqual({ desc_zh: 'Sông Hương 边的长椅。' });
+    expect(sent().output_config.format.schema.required).toEqual(['desc_zh']);
+    expect(sent().system).toContain('Simplified Chinese');
+    expect(sent().system).toContain('Never translate or transliterate one');
+    expect(sent().system).not.toContain('Japanese');
+    const p = prompt();
+    expect(p).toContain('en: Riverside benches by the Hương.');
+    expect(p).toContain('Write desc_zh: this blurb for a Chinese reader');
+    // A person's Chinese is an example; a draft nobody read is not, and
+    // Japanese is no example of Chinese.
+    expect(p).toContain('- Lakeside\n  en: By the lake.\n  zh: 湖边。');
+    expect(p).not.toContain('Machine Lake');
+    expect(p).not.toContain('Tao Dan Park');
+    expect(frames()).toEqual([]);
+    expect(p).not.toContain('Hours:');
+  });
+
+  // Before the desk has written any Chinese there is nothing to show, and
+  // a heading over an empty list would read as a cue.
+  it('says nothing about examples when there are none', async () => {
+    door(WRITTEN_PARK);
+    h.create.mockResolvedValue(says({ desc_zh: 'x' }));
+    await call({ slug: PARK.slug, mode: 'zh' });
+    expect(prompt()).not.toContain('Examples of the voice');
+    expect(prompt().startsWith('The place:')).toBe(true);
+  });
+});
