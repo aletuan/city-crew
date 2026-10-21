@@ -32,9 +32,11 @@ env:
     duration: 600
 - assertVisible:
     id: "explore-city"
-# Rows in the city switcher are indexed in catalog order; the second row
-# is "some other city" whichever one is current, and the first row puts
-# the suite back on the default so later flows see the same data.
+# Rows in the city switcher are indexed A to Z (`lib/cityBook`); the
+# second row is "some other city" whichever one is current. The way back
+# to the default is by name, through the sheet's search, since the
+# default (Saigon) is no longer the first row: later flows see the same
+# data whatever the sheet's order becomes.
 - tapOn:
     id: "explore-city"
 - extendedWaitUntil:
@@ -49,6 +51,13 @@ env:
     timeout: 30000
 - tapOn:
     id: "explore-city"
+- extendedWaitUntil:
+    visible:
+      id: "city-search"
+    timeout: 10000
+- tapOn:
+    id: "city-search"
+- inputText: "saigon"
 - extendedWaitUntil:
     visible:
       id: "city-row-0"

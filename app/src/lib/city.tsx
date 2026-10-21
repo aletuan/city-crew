@@ -21,6 +21,7 @@ import { supabase } from './supabase';
 import { nearestTo } from './geo';
 import { openOn, releaseChoice, settleOn, shouldCorrect, storedPick } from './citypick';
 import { parseCachedCities } from './citylist';
+import { parseCityRecents, rememberCity } from './cityBook';
 import { shouldRefresh } from './stale';
 import { startupTrace } from './trace';
 
@@ -102,10 +103,17 @@ type CityContext = {
    *  respectful. Only the button reports it; the quiet bootstrap read at
    *  launch stays quiet. */
   followMyLocation: () => Promise<boolean>;
+  /** The cities shown lately, newest first, the one on screen leading —
+   *  the city sheet's recent section. See `lib/cityBook`. */
+  recentCityIds: string[];
 };
 
 const KEY = 'citycrew.city';
 const LIST_KEY = 'citycrew.cities';
+/** Where the cities shown lately are kept, by id. */
+const RECENT_KEY = 'citycrew.cities.recent';
+/** Nothing read yet: one empty list, so the context does not change each render. */
+const NO_RECENT: string[] = [];
 const DEFAULT_CITY_ID = 'hcmc';
 /** Bootstrap never waits on location longer than this. */
 const GEO_BUDGET_MS = 1200;
@@ -199,7 +207,7 @@ export type CityList = Omit<CityContext, keyof CurrentCity>;
 
 const CityCtx = createContext<CurrentCity>({ city: null });
 const CityListCtx = createContext<CityList>({
-  cities: [FALLBACK], mode: 'auto', setCity: () => {}, followMyLocation: async () => false,
+  cities: [FALLBACK], mode: 'auto', setCity: () => {}, followMyLocation: async () => false, recentCityIds: [],
 });
 
 /** The city on screen, or null until the bootstrap commits to one. */
@@ -358,6 +366,10 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   // When a fetch last brought the list back; null until one has. Read by
   // the foreground refresh below, written by every fetch that succeeds.
   const listAt = useRef<number | null>(null);
+  // The cities shown lately; null until the device has answered, so the
+  // first city committed is added to what was remembered rather than
+  // written over it.
+  const [recent, setRecent] = useState<string[] | null>(null);
 
   // What a fix that lands late has to be checked against: the city and the
   // mode *now*, not when it was asked for. A reader who picks a city while
@@ -607,6 +619,10 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   // Heard through `useAuthEvent` rather than from Supabase directly: the
   // auth provider is the one place that subscribes (SOLID review, D).
   useAuthEvent('SIGNED_OUT', () => {
+      // Where one account went is not the next one's business: the recent
+      // cities go with them, and the city on screen starts the list again.
+      setRecent([]);
+      AsyncStorage.removeItem(RECENT_KEY).catch(() => {});
       (async () => {
         const raw = await AsyncStorage.getItem(KEY).catch(() => null);
         let stored: { id?: string; mode?: 'auto' | 'manual' } = {};
@@ -625,6 +641,26 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       })();
   });
 
+  /**
+   * Every city the app shows goes on the recent list — a tap, the
+   * location button, the bootstrap following the phone alike: the list is
+   * where the reader has been, not how they got there. Read once, then
+   * kept in step with `cityId` from here, the one place that knows.
+   */
+  useEffect(() => {
+    let live = true;
+    AsyncStorage.getItem(RECENT_KEY)
+      .then((raw) => { if (live) setRecent(parseCityRecents(raw)); })
+      .catch(() => { if (live) setRecent([]); });
+    return () => { live = false; };
+  }, []);
+  useEffect(() => {
+    if (!cityId || recent === null) return;
+    const next = rememberCity(recent, cityId);
+    if (next === recent) return;
+    setRecent(next);
+    AsyncStorage.setItem(RECENT_KEY, JSON.stringify(next)).catch(() => {});
+  }, [cityId, recent]);
   const setCity = useCallback((id: string, mode: 'auto' | 'manual' = 'manual') => {
     setCityId(id);
     setMode(mode);
@@ -657,9 +693,10 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   const city = useMemo(() => found, [foundText]);
 
   const current = useMemo<CurrentCity>(() => ({ city }), [city]);
+  const recentCityIds = recent ?? NO_RECENT;
   const list = useMemo<CityList>(
-    () => ({ cities, mode, setCity, followMyLocation }),
-    [cities, mode, setCity, followMyLocation],
+    () => ({ cities, mode, setCity, followMyLocation, recentCityIds }),
+    [cities, mode, setCity, followMyLocation, recentCityIds],
   );
 
   return (

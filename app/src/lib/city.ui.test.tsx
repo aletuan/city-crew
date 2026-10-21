@@ -725,7 +725,7 @@ describe('the city list', () => {
       it('gets the city alone, the list its own half, and useCity both', async () => {
         await onDanang(CITIES);
         expect(Object.keys(seen)).toEqual(['city']);
-        expect(Object.keys(list).sort()).toEqual(['cities', 'followMyLocation', 'mode', 'setCity']);
+        expect(Object.keys(list).sort()).toEqual(['cities', 'followMyLocation', 'mode', 'recentCityIds', 'setCity']);
         expect(all.city).toBe(seen.city);
         expect(all.cities).toBe(list.cities);
         expect(all.setCity).toBe(list.setCity);
@@ -758,5 +758,65 @@ describe('the city list', () => {
       await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi,hoian'));
       expect(asked()).toBe(2);
     });
+  });
+});
+
+// ── the cities shown lately ──
+//
+// The city sheet's recent section (`lib/cityBook`). Every city the app
+// shows goes on it, however it got there, newest first, and it is kept on
+// the device — so it is the provider's to write, from the one place that
+// knows which city is on screen.
+describe('the recent cities', () => {
+  const RECENT_KEY = 'citycrew.cities.recent';
+  function Recent() {
+    const { recentCityIds, setCity } = useCity();
+    return (
+      <>
+        <span data-testid="recent">{recentCityIds.join(',')}</span>
+        <button type="button" onClick={() => setCity('hanoi')}>pick hanoi</button>
+      </>
+    );
+  }
+  const show = () => render(<CityProvider><Probe /><Recent /></CityProvider>);
+  const recent = () => screen.getByTestId('recent').textContent;
+  const stored = async () => JSON.parse((await AsyncStorage.getItem(RECENT_KEY)) ?? 'null');
+  const writes = () => vi.mocked(AsyncStorage.setItem).mock.calls.filter(([k]) => k === RECENT_KEY);
+
+  // The describes above leave their own lists on the shared device.
+  beforeEach(async () => { await AsyncStorage.removeItem(RECENT_KEY); });
+
+  it('starts with the city the launch opened on, and keeps it on the device', async () => {
+    show();
+    await waitFor(() => expect(recent()).toBe('danang'));
+    await waitFor(async () => expect(await stored()).toEqual(['danang']));
+  });
+
+  it('adds the city on screen to what an earlier launch remembered', async () => {
+    await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(['hanoi']));
+    show();
+    await waitFor(() => expect(recent()).toBe('danang,hanoi'));
+  });
+
+  it('moves a picked city to the front, and writes nothing for the one already there', async () => {
+    show();
+    await waitFor(() => expect(recent()).toBe('danang'));
+    fireEvent.click(screen.getByText('pick hanoi'));
+    await waitFor(() => expect(recent()).toBe('hanoi,danang'));
+    await waitFor(async () => expect(await stored()).toEqual(['hanoi', 'danang']));
+    const before = writes().length;
+    fireEvent.click(screen.getByText('pick hanoi'));
+    expect(recent()).toBe('hanoi,danang');
+    expect(writes()).toHaveLength(before);
+  });
+
+  // Where one account went is not the next one's business.
+  it('forgets where the last account went when it signs out, keeping the city on screen', async () => {
+    await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(['hanoi']));
+    show();
+    await waitFor(() => expect(recent()).toBe('danang,hanoi'));
+    h.fake!.fireAuth('SIGNED_OUT');
+    await waitFor(() => expect(recent()).toBe('danang'));
+    await waitFor(async () => expect(await stored()).toEqual(['danang']));
   });
 });
