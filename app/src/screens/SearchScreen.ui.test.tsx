@@ -311,6 +311,10 @@ describe('the zero-state', () => {
     const popular = textAfter('Most popular');
     expect(popular).toContain('Hoan Kiem · opens 19:00');
     expect(popular).toContain('4.7');
+    // With its count beside it, a size down, said in words to a screen
+    // reader; a place with no count shows the score alone.
+    expect(popular).toContain('4.7(500)');
+    expect(screen.getAllByLabelText('500 reviews')[0].textContent).toBe('(500)');
     // An unrated place keeps the chevron; an area with no hours stands alone.
     expect(popular).toContain('Ba Dinh');
     expect(popular).not.toContain('Ba Dinh ·');
