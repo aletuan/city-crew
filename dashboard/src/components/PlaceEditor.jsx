@@ -277,12 +277,12 @@ export default function PlaceEditor() {
       const d = await api.draftBlurb(slug, code);
       setForm((f) => ({ ...f, [`desc_${code}`]: d[`desc_${code}`] }));
       setDrafted((prev) => ({ ...prev, [code]: d[`desc_${code}`] }));
-      // A Chinese draft that dropped a Latin name twice comes back with
-      // the names listed: the owner's rule keeps a city, a place and an
-      // address in Latin letters, and the editor is the one who can fix
-      // the sentence. See `_shared/latinNames.ts`.
+      // A Chinese draft that wrote a name against the owner's rule twice
+      // comes back with the names as they should read — 河内 for a city,
+      // Nguyễn Huệ as written for a street — and the editor is the one who
+      // can fix the sentence. See `_shared/latinNames.ts`.
       toast(d.names_lost?.length
-        ? `Drafted, but it lost ${d.names_lost.join(', ')} — put them back in Latin letters before you save.`
+        ? `Drafted, but it should write ${d.names_lost.join(', ')} — put them in before you save.`
         : 'Drafted from the blurb — read it before you save.');
     } catch (err) {
       toast(`Draft failed: ${err.message}`);

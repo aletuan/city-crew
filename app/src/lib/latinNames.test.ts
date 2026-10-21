@@ -1,11 +1,12 @@
-// What `write-blurb` holds a Chinese draft to: the Latin names the blurb
-// carries. Tested from here for the reason `ward.test.ts` gives — the
+// What `write-blurb` holds a Chinese draft to: the names the blurb
+// carries, each written as the owner's rule says. Tested from here for the reason `ward.test.ts` gives — the
 // module runs in an Edge Function and is plain TypeScript, and this is
 // where the test runner lives. Every case is a blurb from the catalog,
 // or the shape of one (21 Oct 2026).
 
 import { describe, expect, it } from 'vitest';
-import { latinNames, namesLost } from '../../../supabase/functions/_shared/latinNames';
+import { toHantCatalog } from '../../scripts/hant';
+import { EXONYMS, chineseNames, latinNames, namesLost } from '../../../supabase/functions/_shared/latinNames';
 
 describe('latinNames', () => {
   it('reads streets, districts, lakes and cities as the blurb spells them', () => {
@@ -33,7 +34,7 @@ describe('latinNames', () => {
     expect(latinNames('Imposing 1800s Gothic Revival cathedral, with French doors and DJs on the 81st floor.')).toEqual([]);
     expect(latinNames('Fillings, Hanoi-style, in a Huế-style bowl.')).toEqual(['Hanoi', 'Huế']);
     expect(latinNames('The stilt house of President Ho Chi Minh, by Ba Dinh Square.')).toEqual(['Ba Dinh Square']);
-    expect(latinNames('A Hong Kong-style tea house, and a Nagoya grill.')).toEqual([]);
+    expect(latinNames('A Hong Kong-style tea house, and a Nagoya grill.')).toEqual(['Hong Kong', 'Nagoya']);
     expect(latinNames('Lunch at a Hanoi Italian place, or at The.')).toEqual(['Hanoi']);
   });
 
@@ -48,15 +49,65 @@ describe('latinNames', () => {
   });
 });
 
+// The rule's two halves: a city or landmark the table lists takes its
+// Chinese name, and every other name keeps the blurb's Latin.
+describe('chineseNames', () => {
+  it('gives a city and a landmark their Chinese name, and a street its Latin', () => {
+    expect(chineseNames('Benches on Nguyễn Huệ by Hoàn Kiếm Lake, in Hanoi.', 'zh')).toEqual([
+      { name: 'Nguyễn Huệ', forms: ['Nguyễn Huệ'] },
+      { name: 'Hoàn Kiếm Lake', forms: ['还剑湖'] },
+      { name: 'Hanoi', forms: ['河内'] },
+    ]);
+  });
+
+  it('writes Taiwan\'s names in Traditional', () => {
+    expect(chineseNames('A Bali-style bar in Hanoi.', 'zh-Hant').map((n) => n.forms[0])).toEqual(['峇里島', '河內']);
+  });
+
+  // A bakery whose blurb opens with its own name, "Coco Paris".
+  it('asks for a word of the place\'s own name as the place spells it, and takes either form', () => {
+    expect(chineseNames('Coco Paris is a small bakery.', 'zh', ['Coco Paris'])).toEqual([{ name: 'Paris', forms: ['Paris', '巴黎'] }]);
+    expect(chineseNames('Coco Paris is a small bakery.', 'zh')).toEqual([{ name: 'Paris', forms: ['巴黎'] }]);
+    expect(namesLost('The museum tells Hanoi\'s story.', '博物馆讲述河内的历史。', 'zh', ['Hanoi Museum'])).toEqual([]);
+    expect(chineseNames('Benches on Nguyễn Huệ.', 'zh', ['Nguyễn Huệ Walking Street'])).toEqual([{ name: 'Nguyễn Huệ', forms: ['Nguyễn Huệ'] }]);
+  });
+
+  // A hotel named for its city is a name of its own.
+  it('matches a name only whole', () => {
+    expect(chineseNames('Rooftop of the Fairmont Hanoi.', 'zh')).toEqual([{ name: 'Fairmont Hanoi', forms: ['Fairmont Hanoi'] }]);
+  });
+});
+
+describe('EXONYMS', () => {
+  // A spelling the reader cannot see as one name is a row that never
+  // matches: a hyphen ends a word, a lowercase "of" ends a run.
+  it('lists only spellings the blurb\'s reading sees whole, each once', () => {
+    const all = EXONYMS.flatMap((e) => e.latin);
+    for (const v of all) expect(latinNames(`Near ${v}.`)).toEqual([v]);
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it('writes the Traditional the converter writes, Taiwan\'s names included', () => {
+    // Taiwan may have a second spelling the mainland has not (台北 beside the official 臺北).
+    for (const e of EXONYMS) expect(e.zh.map(toHantCatalog)).toEqual(e.hant.slice(0, e.zh.length));
+  });
+});
+
 describe('namesLost', () => {
-  it('lists the names a translation dropped, and nothing it kept', () => {
-    expect(namesLost('Benches on Nguyễn Huệ, by Hoàn Kiếm Lake.', '阮惠街上的长椅，靠近 Hoàn Kiếm Lake。'))
-      .toEqual(['Nguyễn Huệ']);
-    expect(namesLost('A cafe in Long Hai.', '位于Long Hai的海边咖啡馆。')).toEqual([]);
+  it('lists the names a translation wrote against the rule, as they should read', () => {
+    expect(namesLost('Benches on Nguyễn Huệ, by Hoàn Kiếm Lake.', '阮惠街上的长椅，靠近 Hoàn Kiếm Lake。', 'zh'))
+      .toEqual(['Nguyễn Huệ', '还剑湖']);
+    expect(namesLost('Benches on Nguyễn Huệ, by Hoàn Kiếm Lake.', 'Nguyễn Huệ 上的长椅，靠近还剑湖。', 'zh')).toEqual([]);
+    expect(namesLost('A cafe in Long Hai.', '位于Long Hai的海边咖啡馆。', 'zh')).toEqual([]);
+  });
+
+  it('takes any of a name\'s forms, and reads each script\'s own', () => {
+    expect(namesLost('A house in the Old Quarter.', '会安古城里的老宅。', 'zh')).toEqual([]);
+    expect(namesLost('A bar in Hanoi.', '河内的酒吧。', 'zh-Hant')).toEqual(['河內']);
   });
 
   it('reads a translation\'s possessive as the name', () => {
     expect(latinNames("Near St Joseph's Cathedral.")).toEqual(['Joseph', 'Cathedral']);
-    expect(namesLost("Near St Joseph's Cathedral.", '可遠眺St Joseph\'s Cathedral。')).toEqual([]);
+    expect(namesLost("Near St Joseph's Cathedral.", '可遠眺St Joseph\'s Cathedral。', 'zh-Hant')).toEqual([]);
   });
 });
