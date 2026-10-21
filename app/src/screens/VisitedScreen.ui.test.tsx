@@ -356,9 +356,9 @@ describe('VisitedScreen', () => {
       expect(screen.queryByText('Suggestions')).toBeNull();
       open();
       expect(await screen.findByText('Suggestions')).toBeTruthy();
-      // Five at most, newest first, as the catalog's box shows them.
-      expect(screen.getByRole('button', { name: 'x3' })).toBeTruthy();
-      expect(screen.queryByRole('button', { name: 'x4' })).toBeNull();
+      // Three at most, newest first, as the catalog's box shows them.
+      expect(screen.getByRole('button', { name: 'x1' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'x2' })).toBeNull();
       type('pi');
       expect(screen.getByRole('button', { name: 'pizza' })).toBeTruthy();
       expect(screen.queryByRole('button', { name: 'cong' })).toBeNull();
