@@ -121,12 +121,28 @@ export const PHRASES: [string, string][] = [
  * 選單 in a blurb was a restaurant's, 菜單 (12 of 257). 視窗 is a
  * program's window; a blurb's was in a wall. 通過 and 連線 are a test
  * passed and a network joined; a blurb means "by way of" and "linking".
+ *
+ * Then three OpenCC split wrongly in the blurbs re-translated on 21 Oct
+ * (one each in 65): 干 as 幹 where the leaves were pressed dry, 摆 as the
+ * 襬 of a hem where plants were set out, 面 as a face where it was
+ * linguine. And two places Taiwan names otherwise than the mainland, as
+ * `_shared/latinNames.ts` lists them: 峇里島 and 拿坡里.
+ *
+ * 調變 is a signal modulated, Taiwan's engineering word for 调制; in
+ * three cocktail bars' blurbs (21 Oct, of 257) it was drinks mixed, 調製.
  */
 export const CATALOG: [string, string][] = [
   ['選單', '菜單'],
   ['視窗', '窗口'],
   ['通過', '透過'],
   ['連線', '連接'],
+  ['壓幹', '壓乾'],
+  ['下襬放', '下擺放'],
+  ['扁面', '扁麵'],
+  ['巴厘島', '峇里島'],
+  ['巴釐', '峇里'],
+  ['那不勒斯', '拿坡里'],
+  ['調變', '調製'],
 ];
 
 const s2twp = OpenCC.Converter({ from: 'cn', to: 'twp' });

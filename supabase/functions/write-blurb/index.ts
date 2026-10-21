@@ -4,7 +4,7 @@
 // POST { slug, mode: 'ja' } → { desc_ja }
 // POST { slug, mode: 'zh' } → { desc_zh }
 // POST { slug, mode: 'zh-Hant' } → { 'desc_zh-Hant' }
-//   …and, when the Chinese lost a Latin name twice over, `names_lost`.
+//   …and, when the Chinese wrote a name against the rule twice over, `names_lost`.
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -111,10 +111,10 @@
 // The same translation into Simplified Chinese, for the fourth language
 // (#1104–#1110). One table below (`TRANSLATE`) holds what differs — the
 // instructions and the reader they name — so a fifth language is a row.
-// Its own rule, the owner's: every place name stays as the blurb spells
-// it, in Latin letters. Hoàn Kiếm and not 还剑湖, Melbourne and not 墨尔本
-// — it is the name on the sign the reader will be looking for, and the
-// app's own Chinese prints them the same way. No Chinese a person wrote
+// Its own rule for names, the owner's, and the checks below hold it: a
+// city or a landmark with a Chinese name of its own takes it (河内,
+// 还剑湖), and every other name keeps the blurb's Latin (Nguyễn Huệ, not
+// 阮惠街). `_shared/latinNames.ts` says why, and lists them. No Chinese a person wrote
 // exists yet to show as an example, so the first drafts are made from
 // the rules alone; the examples join as the desk writes them.
 //
@@ -132,17 +132,27 @@
 //
 // ── the names, checked (21 Oct 2026) ──
 //
-// The owner's rule for Chinese — a city, a place and an address stay in
-// Latin letters — is in both Chinese instructions, and the model kept
-// breaking it: 68 of the 257 Simplified blurbs written that morning had
-// lost a name the English carried (Nguyễn Huệ as 阮惠街, Hoàn Kiếm Lake
-// as 還劍湖), and the first Traditional drafts made Long Hai 長海. So a
-// Chinese draft is read back against the blurb (`_shared/latinNames.ts`
-// says what a name is), and one that lost a name is asked for once more,
-// told which. A second miss is returned all the same, with the names
-// listed as `names_lost`: the desk shows them, and a batch keeps what it
-// had. Japanese has the same rule and is not checked yet; its drafts were
-// written before this, and nobody has read them for it.
+// The rule was in both Chinese instructions, and the model kept breaking
+// it: 68 of the 257 Simplified blurbs written that morning had lost a
+// name the English carried (Nguyễn Huệ as 阮惠街), and the first
+// Traditional drafts made Long Hai 長海. Asked once more, told which, it
+// kept them. So a Chinese draft is read back against the blurb
+// (`_shared/latinNames.ts` says what a name is and how each is written),
+// and one that wrote a name against the rule is asked for once more.
+// A second miss is returned all the same, with the names as they should
+// read listed in `names_lost`: the desk shows them, and a batch keeps
+// what it had.
+//
+// The rule's first form was Latin for every name, a city included. Its
+// second, the same evening, gave cities and landmarks their Chinese
+// names, and the instructions could not have said which landmark has one
+// without a list — a model asked to judge would write 阮惠街 again, since
+// that is a Chinese name too. So the request lists each name in the blurb
+// with the form to write, and the check reads the same list.
+//
+// Japanese is not checked. Its 434 blurbs write a street in katakana as
+// Japanese guides do (ゴークアンフイ通り), against its instructions, which
+// still say Latin; which of the two is right is the owner's to say.
 //
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
@@ -150,7 +160,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.1";
 import { opsOrEditor } from "../_shared/gate.ts";
-import { namesLost } from "../_shared/latinNames.ts";
+import { type Chinese, chineseNames, namesLost } from "../_shared/latinNames.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -233,7 +243,7 @@ Rules, none of which bend:
 - The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
 - Keep its length and its shape: one or two sentences, a dash where it has one.
 - Simplified Chinese for a reader from mainland China: plain and concrete, Chinese punctuation, a space between Chinese and Latin letters.
-- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 还剑湖; Saigon, not 西贡; Nguyễn Huệ, not 阮惠街; Melbourne, not 墨尔本. An address keeps its street as written too; only its number may move.
+- Names follow one rule. A city, and a landmark with a Chinese name of its own, takes that name: 河内, 胡志明市, 还剑湖, 墨尔本. Every other name — a street, a district, a building, a venue — stays exactly as the blurb spells it, in the Latin alphabet: Nguyễn Huệ, never 阮惠街. An address keeps its street as written; only its number may move. The request lists the blurb's names and how each is written: write them so.
 - No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
 
 /** The zh-Hant mode's instructions: the zh mode's, for a reader in
@@ -244,7 +254,7 @@ Rules, none of which bend:
 - The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
 - Keep its length and its shape: one or two sentences, a dash where it has one.
 - Traditional Chinese for a reader from Taiwan, in Taiwan's vocabulary and not the mainland's in Traditional characters: 影片 not 視頻, 資訊 not 信息, 品質 not 質量, 計畫 not 計劃, 捷運 for a metro. Plain and concrete, full-width punctuation, 「」 for quotation marks, a space between Chinese and Latin letters.
-- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 還劍湖; Saigon, not 西貢; Nguyễn Huệ, not 阮惠街; Melbourne, not 墨爾本. An address keeps its street as written too; only its number may move.
+- Names follow one rule. A city, and a landmark with a Chinese name of its own, takes that name as Taiwan writes it: 河內, 胡志明市, 還劍湖, 墨爾本. Every other name — a street, a district, a building, a venue — stays exactly as the blurb spells it, in the Latin alphabet: Nguyễn Huệ, never 阮惠街. An address keeps its street as written; only its number may move. The request lists the blurb's names and how each is written: write them so.
 - No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
 
 /** The languages a blurb is translated into: each one's instructions,
@@ -255,8 +265,8 @@ const TRANSLATE = {
   "zh-Hant": { system: SYSTEM_HANT, reader: "a reader in Taiwan" },
 } as const;
 type Lang = keyof typeof TRANSLATE;
-/** The languages whose drafts are read back for the Latin names. */
-const CHECKED: ReadonlySet<Lang> = new Set(["zh", "zh-Hant"]);
+/** The languages whose drafts are read back for the names. */
+const checked = (l: Lang): l is Chinese => l === "zh" || l === "zh-Hant";
 const isLang = (m: unknown): m is Lang => typeof m === "string" && Object.hasOwn(TRANSLATE, m);
 
 type Row = {
@@ -424,6 +434,12 @@ Deno.serve(async (req) => {
       ]),
     ].join("\n");
 
+    // What a translation is of: the English, or the Vietnamese when there
+    // is none. In Chinese, its names too, each with the form to write.
+    const source = row.desc_en?.trim() || row.desc_vi?.trim() || "";
+    const own = [row.name_en, row.name_vi];
+    const names = lang && checked(lang) ? chineseNames(source, lang, own) : [];
+
     const anthropic = new Anthropic({ apiKey });
     const request = {
       model: MODEL,
@@ -471,8 +487,11 @@ Deno.serve(async (req) => {
               ...(lang
                 ? [
                   "The blurb, as the desk wrote it:",
-                  row.desc_en?.trim() ? `en: ${row.desc_en.trim()}` : `vi: ${row.desc_vi!.trim()}`,
+                  `${row.desc_en?.trim() ? "en" : "vi"}: ${source}`,
                   "",
+                  ...(names.length
+                    ? ["Its names, each as you write it:", ...names.map((n) => `- ${n.name} → ${n.forms[0]}`), ""]
+                    : []),
                   `Write desc_${lang}: this blurb for ${TRANSLATE[lang].reader} — what it says and no more.`,
                 ]
                 : [
@@ -506,10 +525,9 @@ Deno.serve(async (req) => {
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,
     });
     const field = `desc_${lang}` as const;
-    if (lang && CHECKED.has(lang)) {
-      const source = row.desc_en?.trim() || row.desc_vi!.trim();
+    if (lang && checked(lang)) {
       const first = (parsed[field] ?? "").trim();
-      const lost = namesLost(source, first);
+      const lost = namesLost(source, first, lang, own);
       if (!lost.length) return json({ [field]: first });
       const again = await anthropic.messages.create({
         ...request,
@@ -518,8 +536,8 @@ Deno.serve(async (req) => {
           { role: "assistant" as const, content: text.text },
           {
             role: "user" as const,
-            content: `These names are not in your ${field} as the blurb spells them: ${lost.join(", ")}. ` +
-              `Write ${field} again with every one of them exactly as written, in Latin letters.`,
+            content: `These names are not in your ${field} as the list writes them: ${lost.join(", ")}. ` +
+              `Write ${field} again with every one of them exactly so.`,
           },
         ],
       });
@@ -528,7 +546,7 @@ Deno.serve(async (req) => {
       try {
         if (retry?.type === "text") second = (JSON.parse(retry.text)[field] ?? "").trim() || first;
       } catch (_) { /* the first draft stands */ }
-      const still = namesLost(source, second);
+      const still = namesLost(source, second, lang, own);
       console.log("write-blurb names", { slug, mode, lost, still });
       return json(still.length ? { [field]: second, names_lost: still } : { [field]: second });
     }

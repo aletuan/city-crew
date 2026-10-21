@@ -36,7 +36,7 @@ describe('toHant', () => {
   });
 });
 
-// The catalog's words are the interface's plus four: 選單 there is a
+// The catalog's words are the interface's plus its own: 選單 there is a
 // screen's menu, here a restaurant's.
 describe('toHantCatalog', () => {
   it('writes a restaurant\'s menu as one, and leaves the interface\'s alone', () => {
@@ -44,6 +44,15 @@ describe('toHantCatalog', () => {
     expect(toHant('关闭菜单')).toBe('關閉選單');
     expect(toHantCatalog('请尽早通过其网站下单')).toBe('請儘早透過其網站下單');
     expect(toHant('未通过')).toBe('未通過');
+  });
+
+  it('mends what OpenCC split wrongly in a blurb, and names places as Taiwan does', () => {
+    expect(toHantCatalog('压干树叶的版画')).toBe('壓乾樹葉的版畫');
+    expect(toHantCatalog('屋檐下摆放着植物')).toBe('屋簷下擺放著植物');
+    expect(toHantCatalog('海鲜扁面')).toBe('海鮮扁麵');
+    expect(toHantCatalog('巴厘岛风格')).toBe('峇里島風格');
+    expect(toHantCatalog('来自那不勒斯')).toBe('來自拿坡里');
+    expect(toHantCatalog('以越南食材调制')).toBe('以越南食材調製');
   });
 
   it('names food as Taiwan does, in either', () => {
