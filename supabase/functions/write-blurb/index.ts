@@ -4,6 +4,7 @@
 // POST { slug, mode: 'ja' } → { desc_ja }
 // POST { slug, mode: 'zh' } → { desc_zh }
 // POST { slug, mode: 'zh-Hant' } → { 'desc_zh-Hant' }
+//   …and, when the Chinese lost a Latin name twice over, `names_lost`.
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -129,12 +130,27 @@
 // converter exists to avoid. The key is the app's, `zh-Hant`, hyphen and
 // all: it is the `i18n` key the desk folds it into.
 //
+// ── the names, checked (21 Oct 2026) ──
+//
+// The owner's rule for Chinese — a city, a place and an address stay in
+// Latin letters — is in both Chinese instructions, and the model kept
+// breaking it: 68 of the 257 Simplified blurbs written that morning had
+// lost a name the English carried (Nguyễn Huệ as 阮惠街, Hoàn Kiếm Lake
+// as 還劍湖), and the first Traditional drafts made Long Hai 長海. So a
+// Chinese draft is read back against the blurb (`_shared/latinNames.ts`
+// says what a name is), and one that lost a name is asked for once more,
+// told which. A second miss is returned all the same, with the names
+// listed as `names_lost`: the desk shows them, and a batch keeps what it
+// had. Japanese has the same rule and is not checked yet; its drafts were
+// written before this, and nobody has read them for it.
+//
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.1";
 import { opsOrEditor } from "../_shared/gate.ts";
+import { namesLost } from "../_shared/latinNames.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -217,7 +233,7 @@ Rules, none of which bend:
 - The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
 - Keep its length and its shape: one or two sentences, a dash where it has one.
 - Simplified Chinese for a reader from mainland China: plain and concrete, Chinese punctuation, a space between Chinese and Latin letters.
-- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 还剑湖; Melbourne, not 墨尔本.
+- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 还剑湖; Saigon, not 西贡; Nguyễn Huệ, not 阮惠街; Melbourne, not 墨尔本. An address keeps its street as written too; only its number may move.
 - No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
 
 /** The zh-Hant mode's instructions: the zh mode's, for a reader in
@@ -228,7 +244,7 @@ Rules, none of which bend:
 - The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
 - Keep its length and its shape: one or two sentences, a dash where it has one.
 - Traditional Chinese for a reader from Taiwan, in Taiwan's vocabulary and not the mainland's in Traditional characters: 影片 not 視頻, 資訊 not 信息, 品質 not 質量, 計畫 not 計劃, 捷運 for a metro. Plain and concrete, full-width punctuation, 「」 for quotation marks, a space between Chinese and Latin letters.
-- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 還劍湖; Melbourne, not 墨爾本.
+- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 還劍湖; Saigon, not 西貢; Nguyễn Huệ, not 阮惠街; Melbourne, not 墨爾本. An address keeps its street as written too; only its number may move.
 - No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
 
 /** The languages a blurb is translated into: each one's instructions,
@@ -239,6 +255,8 @@ const TRANSLATE = {
   "zh-Hant": { system: SYSTEM_HANT, reader: "a reader in Taiwan" },
 } as const;
 type Lang = keyof typeof TRANSLATE;
+/** The languages whose drafts are read back for the Latin names. */
+const CHECKED: ReadonlySet<Lang> = new Set(["zh", "zh-Hant"]);
 const isLang = (m: unknown): m is Lang => typeof m === "string" && Object.hasOwn(TRANSLATE, m);
 
 type Row = {
@@ -407,7 +425,7 @@ Deno.serve(async (req) => {
     ].join("\n");
 
     const anthropic = new Anthropic({ apiKey });
-    const message = await anthropic.messages.create({
+    const request = {
       model: MODEL,
       max_tokens: MAX_TOKENS,
       system: lang ? TRANSLATE[lang].system : SYSTEM,
@@ -465,7 +483,8 @@ Deno.serve(async (req) => {
           },
         ],
       }],
-    });
+    };
+    const message = await anthropic.messages.create(request);
 
     // The stop reason is the one word that says which way a reply went
     // wrong — `max_tokens` is the budget, `refusal` is the material — and
@@ -486,7 +505,34 @@ Deno.serve(async (req) => {
       slug, mode, examples: examples.length, photos: photos.length, wiki: lead?.url ?? null,
       input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens,
     });
-    if (lang) return json({ [`desc_${lang}`]: (parsed[`desc_${lang}`] ?? "").trim() });
+    const field = `desc_${lang}` as const;
+    if (lang && CHECKED.has(lang)) {
+      const source = row.desc_en?.trim() || row.desc_vi!.trim();
+      const first = (parsed[field] ?? "").trim();
+      const lost = namesLost(source, first);
+      if (!lost.length) return json({ [field]: first });
+      const again = await anthropic.messages.create({
+        ...request,
+        messages: [
+          ...request.messages,
+          { role: "assistant" as const, content: text.text },
+          {
+            role: "user" as const,
+            content: `These names are not in your ${field} as the blurb spells them: ${lost.join(", ")}. ` +
+              `Write ${field} again with every one of them exactly as written, in Latin letters.`,
+          },
+        ],
+      });
+      const retry = again.content.find((c) => c.type === "text");
+      let second = first;
+      try {
+        if (retry?.type === "text") second = (JSON.parse(retry.text)[field] ?? "").trim() || first;
+      } catch (_) { /* the first draft stands */ }
+      const still = namesLost(source, second);
+      console.log("write-blurb names", { slug, mode, lost, still });
+      return json(still.length ? { [field]: second, names_lost: still } : { [field]: second });
+    }
+    if (lang) return json({ [field]: (parsed[field] ?? "").trim() });
     return json({
       desc_vi: (parsed.desc_vi ?? "").trim(),
       desc_en: (parsed.desc_en ?? "").trim(),
