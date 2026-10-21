@@ -20,14 +20,14 @@
 // image.
 
 export const AVATAR_PRESETS = [
-  { key: 'koala', en: 'Koala', vi: 'Koala', ja: 'コアラ', zh: '考拉' },
-  { key: 'kangaroo', en: 'Kangaroo', vi: 'Chuột túi', ja: 'カンガルー', zh: '袋鼠' },
-  { key: 'wombat', en: 'Wombat', vi: 'Gấu túi wombat', ja: 'ウォンバット', zh: '袋熊' },
-  { key: 'quokka', en: 'Quokka', vi: 'Quokka', ja: 'クオッカ', zh: '短尾矮袋鼠' },
-  { key: 'platypus', en: 'Platypus', vi: 'Thú mỏ vịt', ja: 'カモノハシ', zh: '鸭嘴兽' },
-  { key: 'echidna', en: 'Echidna', vi: 'Thú lông nhím', ja: 'ハリモグラ', zh: '针鼹' },
-  { key: 'kookaburra', en: 'Kookaburra', vi: 'Chim kookaburra', ja: 'ワライカワセミ', zh: '笑翠鸟' },
-  { key: 'emu', en: 'Emu', vi: 'Đà điểu emu', ja: 'エミュー', zh: '鸸鹋' },
+  { key: 'koala', en: 'Koala', vi: 'Koala', ja: 'コアラ', zh: '考拉', hant: '無尾熊' },
+  { key: 'kangaroo', en: 'Kangaroo', vi: 'Chuột túi', ja: 'カンガルー', zh: '袋鼠', hant: '袋鼠' },
+  { key: 'wombat', en: 'Wombat', vi: 'Gấu túi wombat', ja: 'ウォンバット', zh: '袋熊', hant: '袋熊' },
+  { key: 'quokka', en: 'Quokka', vi: 'Quokka', ja: 'クオッカ', zh: '短尾矮袋鼠', hant: '短尾矮袋鼠' },
+  { key: 'platypus', en: 'Platypus', vi: 'Thú mỏ vịt', ja: 'カモノハシ', zh: '鸭嘴兽', hant: '鴨嘴獸' },
+  { key: 'echidna', en: 'Echidna', vi: 'Thú lông nhím', ja: 'ハリモグラ', zh: '针鼹', hant: '針鼴' },
+  { key: 'kookaburra', en: 'Kookaburra', vi: 'Chim kookaburra', ja: 'ワライカワセミ', zh: '笑翠鸟', hant: '笑翠鳥' },
+  { key: 'emu', en: 'Emu', vi: 'Đà điểu emu', ja: 'エミュー', zh: '鸸鹋', hant: '鴯鶓' },
 ] as const;
 
 export type AvatarPreset = (typeof AVATAR_PRESETS)[number]['key'];

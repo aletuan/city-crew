@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 
-const state = vi.hoisted(() => ({ lang: 'en' as Exclude<Lang, 'zh'> }));
+const state = vi.hoisted(() => ({ lang: 'en' as Exclude<Lang, 'zh' | 'zh-Hant'> }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: state.lang, setLang: () => {}, t: (en: string, vi: string, ja: string) => ({ en, vi, ja }[state.lang]) }),
 }));

@@ -117,7 +117,7 @@ function CompanyChip({ company }: { company: string | null }) {
       {c.icon ? (
         <Ionicons name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={c.color} />
       ) : null}
-      <Text style={s.badgeText}>{t(c.en, c.vi, c.ja, c.zh)}</Text>
+      <Text style={s.badgeText}>{t(c.en, c.vi, c.ja, c.zh, c.hant)}</Text>
     </View>
   );
 }
@@ -199,7 +199,7 @@ function TripCard({ trip, past, onPress, testID }: {
                 rest of it had made redundant. */}
             {summaryLine([
               day ? dateline(lang, day) : trip.day,
-              start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`, `${clockOf(start)} 起`) : null,
+              start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`, `${clockOf(start)} 起`, `${clockOf(start)} 起`) : null,
             ])}
           </Text>
           {/* At the row's far end, and onto a line of its own when large
@@ -230,14 +230,14 @@ function TripCard({ trip, past, onPress, testID }: {
                 )
                 : (
                   <Text style={s.stopGone} numberOfLines={1}>
-                    {t('No longer listed', 'Không còn trong danh mục', '掲載終了', '已下架')}
+                    {t('No longer listed', 'Không còn trong danh mục', '掲載終了', '已下架', '已下架')}
                   </Text>
                 )}
             </View>
           ))}
           {hidden > 0 && (
             <Text style={s.more}>
-              {t(`+${hidden} more`, `+${hidden} điểm nữa`, `他${hidden}件`, `还有 ${hidden} 个`)}
+              {t(`+${hidden} more`, `+${hidden} điểm nữa`, `他${hidden}件`, `还有 ${hidden} 个`, `還有 ${hidden} 個`)}
             </Text>
           )}
         </View>
@@ -248,11 +248,11 @@ function TripCard({ trip, past, onPress, testID }: {
           <Text style={s.footFacts} numberOfLines={1}>
             {summaryLine([
               stopCount(stops.length, t),
-              spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人', '人')}` : null,
+              spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人', '人', '人')}` : null,
             ])}
           </Text>
           <View style={s.open}>
-            <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る', '查看计划')}</Text>
+            <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る', '查看计划', '檢視計畫')}</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.accent} />
           </View>
         </View>
@@ -277,19 +277,19 @@ function FirstTrip({ onPress }: { onPress: () => void }) {
         <Ionicons name="map" size={27} color={colors.accent} />
       </View>
       <Text style={s.firstTitle}>
-        {t('No trips yet', 'Chưa có chuyến đi nào', '旅程はまだありません', '还没有行程')}
+        {t('No trips yet', 'Chưa có chuyến đi nào', '旅程はまだありません', '还没有行程', '還沒有行程')}
       </Text>
       <Text style={s.firstBody}>
         {t(
           'Answer four questions in Explore and keep the plan you like.',
           'Trả lời bốn câu trong Khám phá rồi giữ lại phương án bạn thích.',
           '探索で4つの質問に答え、気に入ったプランを保存しましょう。',
-          '在探索中回答四个问题，保存你喜欢的计划。',
+          '在探索中回答四个问题，保存你喜欢的计划。', '在探索中回答四個問題，儲存你喜歡的計畫。',
         )}
       </Text>
       <GradientCta
         icon="sparkles"
-        label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')}
+        label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
         onPress={onPress}
       />
     </View>
@@ -375,7 +375,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       trips.reload();
     } catch (e) {
       Alert.alert(
-        t('Could not answer', 'Không trả lời được', '回答できません', '无法回复'),
+        t('Could not answer', 'Không trả lời được', '回答できません', '无法回复', '無法回覆'),
         e instanceof Error ? e.message : String(e),
       );
     } finally {
@@ -393,27 +393,27 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
   // the whole screen rather than a banner above nothing.
   if (!session) {
     return (
-      <Screen title={t('Trips', 'Chuyến đi', '旅程', '行程')}>
+      <Screen title={t('Trips', 'Chuyến đi', '旅程', '行程', '行程')}>
         <AmbientWarmth />
         <View style={s.first}>
           <View style={s.firstIcon}>
             <Ionicons name="map" size={27} color={colors.accent} />
           </View>
           <Text style={s.firstTitle}>
-            {t('Where to next?', 'Đi đâu tiếp theo?', '次はどこへ？', '下一站去哪儿？')}
+            {t('Where to next?', 'Đi đâu tiếp theo?', '次はどこへ？', '下一站去哪儿？', '下一站去哪裡？')}
           </Text>
           <Text style={s.firstBody}>
             {t(
               'Plan a trip your way.',
               'Lên lịch trình theo cách bạn thích.',
               '自分らしい旅を計画しましょう。',
-              '按你的方式规划行程。',
+              '按你的方式规划行程。', '按你的方式規劃行程。',
             )}
           </Text>
           <GradientCta
             wide
             icon="sparkles-outline"
-            label={t('Try planning a trip', 'Thử lên kế hoạch', '旅の計画を試す', '试着规划一次行程')}
+            label={t('Try planning a trip', 'Thử lên kế hoạch', '旅の計画を試す', '试着规划一次行程', '試著規劃一次行程')}
             onPress={() => navigation.getParent()?.navigate('Ideas', { screen: 'IdeasHome' })}
           />
           <Text style={s.guestHint}>
@@ -421,13 +421,13 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               'No account needed',
               'Không cần tài khoản',
               'アカウント不要',
-              '无需账号',
+              '无需账号', '無需帳號',
             )}
           </Text>
         </View>
         <View style={s.guestReturning}>
           <Text style={s.guestHint}>
-            {t('Already have an account?', 'Đã có tài khoản?', 'アカウントをお持ちですか？', '已有账号？')}
+            {t('Already have an account?', 'Đã có tài khoản?', 'アカウントをお持ちですか？', '已有账号？', '已有帳號？')}
           </Text>
           <PressableScale
             accessibilityRole="button"
@@ -438,7 +438,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
             }}
           >
             <Text style={s.guestSignInText}>
-              {t('Sign in', 'Đăng nhập', 'サインイン', '登录')}
+              {t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}
             </Text>
           </PressableScale>
         </View>
@@ -448,7 +448,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
 
   return (
     <Screen
-      title={t('Trips', 'Chuyến đi', '旅程', '行程')}
+      title={t('Trips', 'Chuyến đi', '旅程', '行程', '行程')}
       // A header action acts on the screen it sits above, and the one thing
       // this screen cannot do for itself is make another trip. It jumps to
       // Ideas, which is where a trip comes from.
@@ -464,9 +464,9 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       right={trips.data.length > 0 ? (
         <AddPill
           tall
-          label={t('New', 'Tạo mới', '新規', '新建')}
+          label={t('New', 'Tạo mới', '新規', '新建', '新增')}
           onPress={() => navigation.getParent()?.navigate('Ideas')}
-          accessibilityLabel={t('New trip', 'Chuyến đi mới', '新しい旅程', '新建行程')}
+          accessibilityLabel={t('New trip', 'Chuyến đi mới', '新しい旅程', '新建行程', '新增行程')}
         />
       ) : undefined}
     >
@@ -511,7 +511,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               it says how much is owed before the scan starts. */}
           {!!rail.length && (
             <Text style={[s.section, s.sectionInvite]}>
-              {t('Invitations', 'Lời mời', '招待', '邀请')} · {rail.length}
+              {t('Invitations', 'Lời mời', '招待', '邀请', '邀請')} · {rail.length}
             </Text>
           )}
           {rail.map(({ invite, trip }, i) => (
@@ -539,13 +539,13 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
                   'Your next plans, in order.',
                   'Những kế hoạch sắp tới của bạn, theo thứ tự.',
                   'これからの予定を順番に。',
-                  '你接下来的计划，按顺序排列。',
+                  '你接下来的计划，按顺序排列。', '你接下來的計畫，按順序排列。',
                 )
                 : t(
                   'No plans coming up.',
                   'Bạn chưa có kế hoạch sắp tới.',
                   'これからの予定はまだありません。',
-                  '暂无即将到来的计划。',
+                  '暂无即将到来的计划。', '暫無即將到來的計畫。',
                 )}
             </Text>
           )}
@@ -555,7 +555,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               is the first thing that tells them how long the scan is. */}
           {!!upcoming.length && (
             <Text style={s.section}>
-              {t('Upcoming', 'Sắp tới', 'これから', '即将到来')} · {upcoming.length}
+              {t('Upcoming', 'Sắp tới', 'これから', '即将到来', '即將到來')} · {upcoming.length}
             </Text>
           )}
           {upcoming.map((trip, i) => (
@@ -575,7 +575,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
             // states the date, the one thing the split knows — the pair
             // to "Upcoming" (UX-10).
             <Text style={[s.section, !!upcoming.length && s.sectionAfter]}>
-              {t('Past', 'Đã qua', 'これまで', '已结束')} · {past.length}
+              {t('Past', 'Đã qua', 'これまで', '已结束', '已結束')} · {past.length}
             </Text>
           )}
           {past.map((trip) => (

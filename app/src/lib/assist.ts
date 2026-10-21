@@ -89,14 +89,14 @@ export function narratableOf(stops: readonly {
 export function derivedTitle(
   stops: readonly Narratable[],
   when: 'day' | 'evening',
-  t: (en: string, vi: string, ja: string, zh?: string) => string,
+  t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): string {
   const where = stops.find((s) => !!s.neighborhood)?.neighborhood;
   const part = when === 'day'
-    ? t('A day out', 'Một ngày đi chơi', '一日おでかけ', '一日出游')
-    : t('An evening out', 'Một buổi tối', '夜のおでかけ', '晚间出游');
+    ? t('A day out', 'Một ngày đi chơi', '一日おでかけ', '一日出游', '一日出遊')
+    : t('An evening out', 'Một buổi tối', '夜のおでかけ', '晚间出游', '晚間出遊');
   if (!where) return part;
-  return t(`${part} in ${where}`, `${part} ở ${where}`, `${where}の${part}`, `${where}${part}`);
+  return t(`${part} in ${where}`, `${part} ở ${where}`, `${where}の${part}`, `${where}${part}`, `${where}${part}`);
 }
 
 /**
@@ -114,7 +114,7 @@ export function factLine(
   stop: Narratable,
   now: Date,
   tz: string,
-  t: (en: string, vi: string, ja: string, zh?: string) => string,
+  t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): string {
   const bits: string[] = [];
   if (stop.rating) bits.push(`${stop.rating}★`);
@@ -128,10 +128,10 @@ export function factLine(
   // same as closed and must not be printed as either.
   if (state?.open && state.untilMin != null) {
     const at = clockOf(state.untilMin);
-    bits.push(t(`open until ${at}`, `mở tới ${at}`, `${at}まで営業`, `营业至 ${at}`));
+    bits.push(t(`open until ${at}`, `mở tới ${at}`, `${at}まで営業`, `营业至 ${at}`, `營業至 ${at}`));
   } else if (state && !state.open && state.opensAtMin != null) {
     const at = clockOf(state.opensAtMin);
-    bits.push(t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`, `${at} 开门`));
+    bits.push(t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`, `${at} 开门`, `${at} 開門`));
   }
   return bits.join('  ·  ');
 }

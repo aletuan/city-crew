@@ -40,7 +40,7 @@ import { type Collection, coverUriOf, membersOf, type Place } from '../lib/data'
 import { rankByLikes } from '../lib/likes';
 import { clockOf, dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
-import { useI18n } from '../lib/i18n';
+import { type Lang, useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
@@ -111,7 +111,7 @@ function Section({ title, cols, children }: {
 }
 
 /** The date picker's locale for each app language — see its note. */
-const PICKER_LOCALE: Record<'en' | 'vi' | 'ja' | 'zh', string> = { en: 'en-GB', vi: 'vi-VN', ja: 'ja-JP', zh: 'zh-Hans-CN' };
+const PICKER_LOCALE: Record<Lang, string> = { en: 'en-GB', vi: 'vi-VN', ja: 'ja-JP', zh: 'zh-Hans-CN', 'zh-Hant': 'zh-Hant-TW' };
 
 export default function IdeasScreen({ navigation, route }: {
   navigation: Nav;
@@ -321,7 +321,7 @@ export default function IdeasScreen({ navigation, route }: {
           `${n} ${n === 1 ? 'place' : 'places'} from this collection will be included`,
           `${n} địa điểm của bộ sưu tập sẽ được đưa vào`,
           `このコレクションから${n}件が含まれます`,
-          `将包含这个合集中的 ${n} 个地点`,
+          `将包含这个合集中的 ${n} 个地点`, `將包含這個合集中的 ${n} 個地點`,
         ),
         onPress: () => { setAsking(null); follow(asking.slug, to); },
       }] : [];
@@ -348,10 +348,10 @@ export default function IdeasScreen({ navigation, route }: {
   // know, and the owner asked for it to go. Japanese drops 周辺 with it.
   const whereLabel = draft.district
     ?? (draft.at
-      ? (draft.atName ?? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン', '你放置的图钉'))
+      ? (draft.atName ?? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン', '你放置的图钉', '你放置的圖釘'))
       : city
-        ? t(`${city.short_en} · Near you`, `${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en} · 現在地`, `${city.short_en} · 你附近`)
-        : t('Near you', 'Gần bạn', '現在地', '你附近'));
+        ? t(`${city.short_en} · Near you`, `${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en} · 現在地`, `${city.short_en} · 你附近`, `${city.short_en} · 你附近`)
+        : t('Near you', 'Gần bạn', '現在地', '你附近', '你附近'));
 
   /**
    * Where the reader is, for the default the label has always claimed.
@@ -431,7 +431,7 @@ export default function IdeasScreen({ navigation, route }: {
                 `${members.length} ${members.length === 1 ? 'place' : 'places'}`,
                 `${members.length} địa điểm`,
                 `${members.length}件`,
-                `${members.length} 个地点`,
+                `${members.length} 个地点`, `${members.length} 個地點`,
               )}
             </Text>
           </View>
@@ -443,7 +443,7 @@ export default function IdeasScreen({ navigation, route }: {
 
   return (
     <Screen
-      title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')}
+      title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
       /* The lede shares the fixed band with the title now, and the two
          cats share it with both — see `IdeasHeaderArt` for how the
          painting sits and when it steps aside.
@@ -463,7 +463,7 @@ export default function IdeasScreen({ navigation, route }: {
             'Good food.\nGood views.\nGood company.',
             'Món ngon.\nCảnh đẹp.\nBạn hiền.',
             '美味しいもの。\nいい景色。\nいい仲間。',
-            '好吃的。\n好看的。\n好朋友。',
+            '好吃的。\n好看的。\n好朋友。', '好吃的。\n好看的。\n好朋友。',
           )}
         </Text>
       )}
@@ -490,11 +490,11 @@ export default function IdeasScreen({ navigation, route }: {
             ("Who's coming?"), which read as a form to fill in; a copy
             edit here should keep them as openers the chip labels can
             complete, ellipsis and all. */}
-        <Section title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…', '和谁一起…')} cols={4}>
+        <Section title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…', '和谁一起…', '和誰一起…')} cols={4}>
           {COMPANY.map((c) => (
             <Tile
               key={c.key}
-              label={t(c.en, c.vi, c.ja, c.zh)}
+              label={t(c.en, c.vi, c.ja, c.zh, c.hant)}
               icon={c.icon as keyof typeof Ionicons.glyphMap}
               iconColor={c.color}
               active={draft.company === c.key}
@@ -509,7 +509,7 @@ export default function IdeasScreen({ navigation, route }: {
             would quietly shorten somebody's day. Nothing says so on
             screen, because nothing needs to — an unlimited choice is the
             one that needs no rule explained. */}
-        <Section title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…', '想去哪类地方…')} cols={3}>
+        <Section title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…', '想去哪类地方…', '想去哪類地方…')} cols={3}>
           {cats.map((c, i) => (
             <Tile
               key={c}
@@ -524,7 +524,7 @@ export default function IdeasScreen({ navigation, route }: {
         </Section>
 
         <View style={{ marginBottom: space.titleToContent }}>
-          <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…', '何时何地…')}</Text>
+          <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…', '何时何地…', '何時何地…')}</Text>
           <Card style={s.whenCard}>
             <PressableScale onPress={() => setSheet(true)} contentStyle={s.whereRow} accessibilityRole="button">
               <Ionicons name="location-outline" size={19} color={colors.accent} />
@@ -566,8 +566,8 @@ export default function IdeasScreen({ navigation, route }: {
                   part rather than as two buttons that happen to touch. */}
               <View style={s.segment} accessibilityRole="radiogroup">
                 {([
-                  ['day', t('Day', 'Ban ngày', '昼', '白天')],
-                  ['evening', t('Evening', 'Buổi tối', '夜', '晚上')],
+                  ['day', t('Day', 'Ban ngày', '昼', '白天', '白天')],
+                  ['evening', t('Evening', 'Buổi tối', '夜', '晚上', '晚上')],
                 ] as const).map(([key, label]) => {
                   const on = draft.when === key;
                   return (
@@ -621,7 +621,7 @@ export default function IdeasScreen({ navigation, route }: {
                 `It is already ${clockOf(startMin)} — this plan starts from there.`,
                 `Bây giờ đã ${clockOf(startMin)} — kế hoạch sẽ bắt đầu từ đó.`,
                 `もう${clockOf(startMin)}です — ここから始めるプランにします。`,
-                `现在已经 ${clockOf(startMin)} 了 — 计划将从这个时间开始。`,
+                `现在已经 ${clockOf(startMin)} 了 — 计划将从这个时间开始。`, `現在已經 ${clockOf(startMin)} 了 — 計畫將從這個時間開始。`,
               )}
             </Text>
           )}
@@ -630,7 +630,7 @@ export default function IdeasScreen({ navigation, route }: {
         {seeds && (
           <View style={{ marginBottom: space.titleToContent }}>
             <Text style={s.heading}>
-              {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める', '从你喜欢的开始')}
+              {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める', '从你喜欢的开始', '從你喜歡的開始')}
             </Text>
             {/* Which lists these are, said once: the rows count places
                 here, and this is the line that says what "here" is. The
@@ -642,7 +642,7 @@ export default function IdeasScreen({ navigation, route }: {
                   `Collections with a place in ${city.short_en}`,
                   `Bộ sưu tập có địa điểm ở ${city.short_vi}`,
                   `${city.short_ja ?? city.short_en}に場所があるコレクション`,
-                  `有${city.short_en}地点的合集`,
+                  `有${city.short_en}地点的合集`, `有${city.short_en}地點的合集`,
                 )}
               </Text>
             )}
@@ -657,7 +657,7 @@ export default function IdeasScreen({ navigation, route }: {
                     `The plan will be made in ${cityName(moved)}.`,
                     `Kế hoạch sẽ lập ở ${cityName(moved)}.`,
                     `プランは${cityName(moved)}で作ります。`,
-                    `计划将在${cityName(moved)}制定。`,
+                    `计划将在${cityName(moved)}制定。`, `計畫將在${cityName(moved)}制定。`,
                   )}
                 </Text>
               </View>
@@ -666,7 +666,7 @@ export default function IdeasScreen({ navigation, route }: {
               <>
                 {/* Labelled only once there are two cards to tell apart. */}
                 {more && community.length > 0 && (
-                  <Text style={s.groupLabel}>{t('Yours', 'Của bạn', '自分の', '我的')}</Text>
+                  <Text style={s.groupLabel}>{t('Yours', 'Của bạn', '自分の', '我的', '我的')}</Text>
                 )}
                 <Card style={{ paddingVertical: 4 }}>{own.map(seedRow)}</Card>
               </>
@@ -675,7 +675,7 @@ export default function IdeasScreen({ navigation, route }: {
               ? (more
                 ? (
                   <>
-                    <Text style={s.groupLabel}>{t('Community', 'Cộng đồng', 'みんなの', '社区')}</Text>
+                    <Text style={s.groupLabel}>{t('Community', 'Cộng đồng', 'みんなの', '社区', '社群')}</Text>
                     <Card style={{ paddingVertical: 4 }}>{community.map(seedRow)}</Card>
                   </>
                 )
@@ -686,7 +686,7 @@ export default function IdeasScreen({ navigation, route }: {
                       `More · ${community.length} community ${community.length === 1 ? 'collection' : 'collections'}`,
                       `Xem thêm · ${community.length} bộ sưu tập cộng đồng`,
                       `もっと見る · みんなのコレクション${community.length}件`,
-                      `更多 · ${community.length} 个社区合集`,
+                      `更多 · ${community.length} 个社区合集`, `更多 · ${community.length} 個社群合集`,
                     )}
                   />
                 ))
@@ -702,7 +702,7 @@ export default function IdeasScreen({ navigation, route }: {
                         `${community.length - COMMUNITY_FIRST} more`,
                         `Xem thêm ${community.length - COMMUNITY_FIRST}`,
                         `さらに${community.length - COMMUNITY_FIRST}件`,
-                        `还有 ${community.length - COMMUNITY_FIRST} 个`,
+                        `还有 ${community.length - COMMUNITY_FIRST} 个`, `還有 ${community.length - COMMUNITY_FIRST} 個`,
                       )}
                     />
                   )}
@@ -734,7 +734,7 @@ export default function IdeasScreen({ navigation, route }: {
               // it).
               icon="paw"
               // Generic, and it stays generic — see the lede's note.
-              label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')}
+              label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
               // `whereLabel` rather than the raw draft: only this screen
               // knows which of the three the reader ended up with — a
               // district, a pin, or the position behind "near me" — and
@@ -807,20 +807,20 @@ export default function IdeasScreen({ navigation, route }: {
                   "Pick who's going and one thing you fancy to make a plan.",
                   'Chọn người đi cùng và một thứ bạn thích để lên kế hoạch.',
                   '誰と行くかと、気になるものを1つ選ぶとプランを立てられます。',
-                  '选择同行的人和一样你感兴趣的，即可制定计划。',
+                  '选择同行的人和一样你感兴趣的，即可制定计划。', '選擇同行的人和一樣你感興趣的，即可制定計畫。',
                 )
                 : draft.company === null
                   ? t(
                     "Pick who's going to make a plan.",
                     'Chọn người đi cùng để lên kế hoạch.',
                     '誰と行くかを選ぶとプランを立てられます。',
-                    '选择同行的人，即可制定计划。',
+                    '选择同行的人，即可制定计划。', '選擇同行的人，即可制定計畫。',
                   )
                   : t(
                     'Pick one thing you fancy to make a plan.',
                     'Chọn một thứ bạn thích để lên kế hoạch.',
                     '気になるものを1つ選ぶとプランを立てられます。',
-                    '选择一样你感兴趣的，即可制定计划。',
+                    '选择一样你感兴趣的，即可制定计划。', '選擇一樣你感興趣的，即可制定計畫。',
                   )}
             </Text>
           )}
@@ -840,7 +840,7 @@ export default function IdeasScreen({ navigation, route }: {
             style={s.pickScrim}
             onPress={() => setPicking(false)}
             accessibilityRole="button"
-            accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')}
+            accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
           />
           <View style={s.pickCard}>
             <DateTimePicker
@@ -884,7 +884,7 @@ export default function IdeasScreen({ navigation, route }: {
             {Platform.OS === 'ios' && (
               <GradientCta
                 icon="checkmark"
-                label={t('Done', 'Xong', '完了', '完成')}
+                label={t('Done', 'Xong', '完了', '完成', '完成')}
                 onPress={() => setPicking(false)}
                 wide
               />
@@ -902,13 +902,13 @@ export default function IdeasScreen({ navigation, route }: {
         actions={askActions}
         header={(
           <View style={{ gap: 2 }}>
-            <Text style={s.askTitle}>{t('Which city?', 'Thành phố nào?', 'どの都市にしますか？', '哪个城市？')}</Text>
+            <Text style={s.askTitle}>{t('Which city?', 'Thành phố nào?', 'どの都市にしますか？', '哪个城市？', '哪個城市？')}</Text>
             <Text style={s.askMeta}>
               {t(
                 'This collection has places in more than one city. The plan is made in one.',
                 'Bộ sưu tập này có địa điểm ở nhiều thành phố. Kế hoạch chỉ lập ở một nơi.',
                 'このコレクションは複数の都市にスポットがあります。プランは一つの都市で作ります。',
-                '这个合集的地点分布在多个城市，计划只能在一个城市中制定。',
+                '这个合集的地点分布在多个城市，计划只能在一个城市中制定。', '這個合集的地點分佈在多個城市，計畫只能在一個城市中制定。',
               )}
             </Text>
           </View>

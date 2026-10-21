@@ -95,22 +95,22 @@ function ScreenFallback({ navigation, retry }: { navigation: Nav; retry: () => v
         </View>
       )}
       <Message
-        title={t('This screen ran into a problem', 'Màn hình này gặp lỗi', 'この画面で問題が起きました', '这个页面出了问题')}
+        title={t('This screen ran into a problem', 'Màn hình này gặp lỗi', 'この画面で問題が起きました', '这个页面出了问题', '這個頁面出了問題')}
         body={pushed
           ? t(
             'The rest of the app still works. Try again, or go back to the previous screen.',
             'Phần còn lại của app vẫn dùng được. Thử lại, hoặc quay về màn trước.',
             'アプリの他の部分は使えます。もう一度試すか、前の画面に戻ってください。',
-            '应用的其他部分仍可正常使用。请重试，或返回上一页。',
+            '应用的其他部分仍可正常使用。请重试，或返回上一页。', 'App 的其他部分仍可正常使用。請重試，或返回上一頁。',
           )
           : t(
             'The rest of the app still works. Try again, or switch to another tab.',
             'Phần còn lại của app vẫn dùng được. Thử lại, hoặc chuyển sang tab khác.',
             'アプリの他の部分は使えます。もう一度試すか、別のタブに切り替えてください。',
-            '应用的其他部分仍可正常使用。请重试，或切换到其他标签页。',
+            '应用的其他部分仍可正常使用。请重试，或切换到其他标签页。', 'App 的其他部分仍可正常使用。請重試，或切換到其他分頁。',
           )}
       >
-        <GradientCta icon="refresh" label={t('Try again', 'Thử lại', '再試行', '重试')} onPress={retry} />
+        <GradientCta icon="refresh" label={t('Try again', 'Thử lại', '再試行', '重试', '重試')} onPress={retry} />
         {pushed && (
           <Pressable
             onPress={() => navigation.goBack()}
@@ -118,7 +118,7 @@ function ScreenFallback({ navigation, retry }: { navigation: Nav; retry: () => v
             hitSlop={8}
             style={s.back}
           >
-            <Text style={s.backText}>{t('Back', 'Quay lại', '戻る', '返回')}</Text>
+            <Text style={s.backText}>{t('Back', 'Quay lại', '戻る', '返回', '返回')}</Text>
           </Pressable>
         )}
       </Message>
@@ -150,7 +150,7 @@ function AppFallback({ reset }: { reset: () => void }) {
   return (
     <View style={[s.page, { paddingTop: insets.top, paddingBottom: insets.bottom + 40 }]}>
       <Message
-        title={t('City Crew ran into a problem', 'City Crew gặp lỗi', 'City Crew で問題が起きました', 'City Crew 出了问题')}
+        title={t('City Crew ran into a problem', 'City Crew gặp lỗi', 'City Crew で問題が起きました', 'City Crew 出了问题', 'City Crew 出了問題')}
         // Saved things live on the server and survive any of this; a line
         // half-typed and not yet saved does not, so this promises only the
         // first.
@@ -158,10 +158,10 @@ function AppFallback({ reset }: { reset: () => void }) {
           'Everything you saved is still there. Reopen the app to carry on.',
           'Những gì bạn đã lưu vẫn còn nguyên. Mở lại app để tiếp tục.',
           '保存したものはそのまま残っています。アプリを開き直して続けてください。',
-          '你保存的内容都还在。重新打开应用即可继续。',
+          '你保存的内容都还在。重新打开应用即可继续。', '你儲存的內容都還在。重新開啟 App即可繼續。',
         )}
       >
-        <GradientCta icon="refresh" label={t('Reopen the app', 'Mở lại app', 'アプリを開き直す', '重新打开应用')} onPress={() => reopen(reset)} />
+        <GradientCta icon="refresh" label={t('Reopen the app', 'Mở lại app', 'アプリを開き直す', '重新打开应用', '重新開啟 App')} onPress={() => reopen(reset)} />
       </Message>
     </View>
   );

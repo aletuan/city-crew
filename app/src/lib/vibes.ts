@@ -35,17 +35,18 @@ export type VibeStyle = {
   vi: string;
   ja: string;
   zh: string;
+  hant: string;
 };
 
 export const VIBES: Record<string, VibeStyle> = {
-  cafes: { icon: 'cafe-outline', en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', zh: '咖啡馆' },
-  food_tour: { icon: 'restaurant-outline', en: 'Food', vi: 'Ăn uống', ja: 'グルメ', zh: '美食' },
-  nightlife: { icon: 'wine-outline', en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', zh: '夜生活' },
-  views: { icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', zh: '观景' },
-  culture: { icon: 'library-outline', en: 'Culture', vi: 'Văn hóa', ja: 'カルチャー', zh: '文化' },
-  outdoors: { icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然', zh: '自然' },
-  chill: { icon: 'happy-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり', zh: '放松' },
-  shopping: { icon: 'bag-outline', en: 'Shopping', vi: 'Mua sắm', ja: 'ショッピング', zh: '购物' },
+  cafes: { icon: 'cafe-outline', en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', zh: '咖啡馆', hant: '咖啡館' },
+  food_tour: { icon: 'restaurant-outline', en: 'Food', vi: 'Ăn uống', ja: 'グルメ', zh: '美食', hant: '美食' },
+  nightlife: { icon: 'wine-outline', en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', zh: '夜生活', hant: '夜生活' },
+  views: { icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', zh: '观景', hant: '觀景' },
+  culture: { icon: 'library-outline', en: 'Culture', vi: 'Văn hóa', ja: 'カルチャー', zh: '文化', hant: '文化' },
+  outdoors: { icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然', zh: '自然', hant: '自然' },
+  chill: { icon: 'happy-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり', zh: '放松', hant: '放鬆' },
+  shopping: { icon: 'bag-outline', en: 'Shopping', vi: 'Mua sắm', ja: 'ショッピング', zh: '购物', hant: '購物' },
 
   // ── suitability, which is what this axis was for ──
   //
@@ -64,17 +65,17 @@ export const VIBES: Record<string, VibeStyle> = {
   //
   // Three, not eight. Every value here is desk work on two hundred rows,
   // and a value nothing consumes is the redundancy this note opens with.
-  kid_friendly: { icon: 'balloon-outline', en: 'Kid-friendly', vi: 'Hợp trẻ em', ja: '子連れOK', zh: '适合带娃' },
-  romantic: { icon: 'heart-outline', en: 'Romantic', vi: 'Lãng mạn', ja: 'ロマンチック', zh: '浪漫' },
-  quiet: { icon: 'volume-low-outline', en: 'Quiet', vi: 'Yên tĩnh', ja: '静か', zh: '安静' },
+  kid_friendly: { icon: 'balloon-outline', en: 'Kid-friendly', vi: 'Hợp trẻ em', ja: '子連れOK', zh: '适合带娃', hant: '適合帶小孩' },
+  romantic: { icon: 'heart-outline', en: 'Romantic', vi: 'Lãng mạn', ja: 'ロマンチック', zh: '浪漫', hant: '浪漫' },
+  quiet: { icon: 'volume-low-outline', en: 'Quiet', vi: 'Yên tĩnh', ja: '静か', zh: '安静', hant: '安靜' },
 };
 
 /**
  * Label for a vibe key. An unknown key is shown as-is rather than dropped —
  * new data stays visible instead of silently disappearing from cards.
  */
-export function vibeLabel(key: string, t: (en: string, vi: string, ja?: string, zh?: string) => string): string {
+export function vibeLabel(key: string, t: (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string): string {
   const v = VIBES[key];
-  if (v) return t(v.en, v.vi, v.ja, v.zh);
+  if (v) return t(v.en, v.vi, v.ja, v.zh, v.hant);
   return key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }

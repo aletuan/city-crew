@@ -35,7 +35,7 @@ import { clockOf, fmtMinutes, openState } from './format';
 import { summaryLine } from './sketch';
 import type { Place } from './types';
 
-type T = (en: string, vi: string, ja: string, zh?: string) => string;
+type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
 
 export function stopFacts(
   place: Pick<Place, 'neighborhood_en' | 'duration_min' | 'duration_max' | 'opening_hours'>,
@@ -54,10 +54,10 @@ export function stopFacts(
   let hours: string | null = null;
   if (state?.open && state.untilMin != null) {
     const until = clockOf(state.untilMin);
-    hours = t(`open until ${until}`, `mở tới ${until}`, `${until}まで営業`, `营业至 ${until}`);
+    hours = t(`open until ${until}`, `mở tới ${until}`, `${until}まで営業`, `营业至 ${until}`, `營業至 ${until}`);
   } else if (state && !state.open && state.opensAtMin != null) {
     const opens = clockOf(state.opensAtMin);
-    hours = t(`opens ${opens}`, `mở lúc ${opens}`, `${opens}開店`, `${opens} 开门`);
+    hours = t(`opens ${opens}`, `mở lúc ${opens}`, `${opens}開店`, `${opens} 开门`, `${opens} 開門`);
   }
   return summaryLine([
     opts.area === false ? null : place.neighborhood_en,

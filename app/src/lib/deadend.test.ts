@@ -78,6 +78,9 @@ describe('escapeRoutes', () => {
   it('recognises a category by its own label, with no synonyms at all', () => {
     expect(escapeRoutes('cà phê ngon nhất', [thaoDien], {}))
       .toEqual([{ kind: 'category', key: 'cafes' }]);
+    // In Traditional too, where 咖啡館 is not the Simplified 咖啡馆.
+    expect(escapeRoutes('最好的咖啡館', [thaoDien], {}))
+      .toEqual([{ kind: 'category', key: 'cafes' }]);
   });
 
   // Every chip is a promise: a category this catalog holds no places for

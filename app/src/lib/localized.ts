@@ -45,7 +45,7 @@ export function slot(row: LocalizedRow, field: string, lang: Lang): string | nul
   const entry = row.i18n?.[lang];
   const fromObject = entry?.[field];
   if (typeof fromObject === 'string' && fromObject.trim()) return fromObject;
-  const fromColumn = row[`${field}_${lang}`];
+  const fromColumn = row[`${field}_${lang === 'zh-Hant' ? 'zh_hant' : lang}`];
   if (typeof fromColumn === 'string' && fromColumn.trim()) return fromColumn;
   return null;
 }
@@ -53,7 +53,8 @@ export function slot(row: LocalizedRow, field: string, lang: Lang): string | nul
 /** Which language the reader will be handed for this field, or null when
  *  every slot is empty — `spokenIn` over the row's slots. */
 export function localizedLang(row: LocalizedRow, field: string, lang: Lang): Lang | null {
-  return spokenIn(lang, slot(row, field, 'en'), slot(row, field, 'vi'), slot(row, field, 'ja'), slot(row, field, 'zh'));
+  return spokenIn(lang, slot(row, field, 'en'), slot(row, field, 'vi'), slot(row, field, 'ja'), slot(row, field, 'zh'),
+    slot(row, field, 'zh-Hant'));
 }
 
 /** The value to print: the reader's own language, else the provider's

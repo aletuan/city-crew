@@ -375,7 +375,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         'Allow location access to sort places by distance.',
         'Hãy cho phép truy cập vị trí để sắp xếp địa điểm theo khoảng cách.',
         '距離順に並べるには位置情報を許可してください。',
-        '允许访问位置信息后，才能按距离排序。',
+        '允许访问位置信息后，才能按距离排序。', '允許存取位置資訊後，才能按距離排序。',
       ) };
     }
     const position = await Location.getLastKnownPositionAsync()
@@ -385,7 +385,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         "Couldn't read your location. Try again in a moment.",
         'Không thể xác định vị trí của bạn. Hãy thử lại sau giây lát.',
         '位置情報を取得できませんでした。しばらくしてからもう一度お試しください。',
-        '无法获取你的位置，请稍后再试。',
+        '无法获取你的位置，请稍后再试。', '無法取得你的位置，請稍後再試。',
       ) };
     }
     const origin = { lat: position.coords.latitude, lng: position.coords.longitude };
@@ -429,10 +429,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     const next = cycleStatus(appliedFilters.status);
     setAppliedFilters({ ...appliedFilters, status: next });
     say(next === 'open'
-      ? t('Showing only places open now.', 'Chỉ hiện những điểm đang mở.', '営業中のスポットのみ表示します。', '仅显示正在营业的地点。')
+      ? t('Showing only places open now.', 'Chỉ hiện những điểm đang mở.', '営業中のスポットのみ表示します。', '仅显示正在营业的地点。', '僅顯示正在營業的地點。')
       : next === 'closed'
-        ? t('Showing only places closed now.', 'Chỉ hiện những điểm đã đóng cửa.', '営業時間外のスポットのみ表示します。', '仅显示当前已打烊的地点。')
-        : t('Opening-hours filter off.', 'Bỏ lọc theo giờ mở cửa.', '営業時間の絞り込みを解除しました。', '已取消营业时间筛选。'));
+        ? t('Showing only places closed now.', 'Chỉ hiện những điểm đã đóng cửa.', '営業時間外のスポットのみ表示します。', '仅显示当前已打烊的地点。', '僅顯示目前已打烊的地點。')
+        : t('Opening-hours filter off.', 'Bỏ lọc theo giờ mở cửa.', '営業時間の絞り込みを解除しました。', '已取消营业时间筛选。', '已取消營業時間篩選。'));
   };
   const pickSavedRef = useRef<() => void>(() => {});
   const pickSaved = () => {
@@ -443,8 +443,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     const on = !appliedFilters.savedOnly;
     setAppliedFilters({ ...appliedFilters, savedOnly: on });
     say(on
-      ? t('Showing only places you saved.', 'Chỉ hiện những điểm lưu lại.', '保存したスポットのみ表示します。', '仅显示你保存的地点。')
-      : t('Saved-places filter off.', 'Bỏ lọc theo điểm đã lưu.', '保存済みの絞り込みを解除しました。', '已取消已保存筛选。'));
+      ? t('Showing only places you saved.', 'Chỉ hiện những điểm lưu lại.', '保存したスポットのみ表示します。', '仅显示你保存的地点。', '僅顯示你儲存的地點。')
+      : t('Saved-places filter off.', 'Bỏ lọc theo điểm đã lưu.', '保存済みの絞り込みを解除しました。', '已取消已保存筛选。', '已取消已儲存篩選。'));
   };
   pickSavedRef.current = pickSaved;
   // The sheet's Visited row, as a cell: same door for a guest, same
@@ -455,8 +455,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     const on = !appliedFilters.visitedOnly;
     setAppliedFilters({ ...appliedFilters, visitedOnly: on });
     say(on
-      ? t('Showing only places you checked in at.', 'Chỉ hiện những điểm đã check-in.', 'チェックインしたスポットのみ表示します。', '仅显示你打过卡的地点。')
-      : t('Visited-places filter off.', 'Bỏ lọc theo điểm đã check-in.', '訪問済みの絞り込みを解除しました。', '已取消已打卡筛选。'));
+      ? t('Showing only places you checked in at.', 'Chỉ hiện những điểm đã check-in.', 'チェックインしたスポットのみ表示します。', '仅显示你打过卡的地点。', '僅顯示你打過卡的地點。')
+      : t('Visited-places filter off.', 'Bỏ lọc theo điểm đã check-in.', '訪問済みの絞り込みを解除しました。', '已取消已打卡筛选。', '已取消已打卡篩選。'));
   };
   pickVisitedRef.current = pickVisited;
 
@@ -656,7 +656,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     >
       <View style={s.filterHair} />
       <View style={s.placesHead}>
-        <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット', '地点')}</Text>
+        <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット', '地点', '地點')}</Text>
         <PressableScale
           onPress={() => setFilterOpen(true)}
           accessibilityRole="button"
@@ -665,9 +665,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               `Filter and sort places, ${filterCount} applied`,
               `Lọc và sắp xếp địa điểm, đang áp dụng ${filterCount}`,
               `スポットを絞り込み・並べ替え、${filterCount}件適用中`,
-              `筛选和排序地点，已应用 ${filterCount} 项`,
+              `筛选和排序地点，已应用 ${filterCount} 项`, `篩選和排序地點，已套用 ${filterCount} 項`,
             )
-            : t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え', '筛选和排序地点')}
+            : t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え', '筛选和排序地点', '篩選和排序地點')}
           accessibilityState={{ selected: filterCount > 0 }}
           hitSlop={4}
           contentStyle={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
@@ -718,8 +718,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             onPress={() => pickView(mapMode ? 'list' : 'map')}
             accessibilityRole="button"
             accessibilityLabel={mapMode
-              ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图')
-              : t('Open Map', 'Mở bản đồ', '地図を開く', '打开地图')}
+              ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图', '關閉地圖')
+              : t('Open Map', 'Mở bản đồ', '地図を開く', '打开地图', '開啟地圖')}
             testID={floating ? 'explore-view-pinned' : 'explore-view'}
           >
             <Ionicons
@@ -729,8 +729,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             />
             <Text style={s.viewBtnText}>
               {mapMode
-                ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图')
-                : t('Open Map', 'Mở bản đồ', '地図を開く', '打开地图')}
+                ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图', '關閉地圖')
+                : t('Open Map', 'Mở bản đồ', '地図を開く', '打开地图', '開啟地圖')}
             </Text>
           </PressableScale>
         ) : null}
@@ -835,7 +835,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             ListFooterComponent={(
               <>
                 {shown.length === 0
-                  ? <Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。', '这里还没有内容。')} />
+                  ? <Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。', '这里还没有内容。', '這裡還沒有內容。')} />
                   : null}
                 <ExploreSuggestRow onPress={() => navigation.navigate('AddPlace')} />
               </>
@@ -895,7 +895,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     onPress={pickStatus}
                     haptic="selection"
                     accessibilityRole="button"
-                    accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间')}: ${statusLabel(appliedFilters.status, t)}`}
+                    accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}: ${statusLabel(appliedFilters.status, t)}`}
                     accessibilityState={{ selected: appliedFilters.status !== 'any' }}
                     hitSlop={4}
                     contentStyle={[s.mapCell, appliedFilters.status !== 'any' && s.mapCellOn]}
@@ -911,7 +911,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     onPress={pickSaved}
                     haptic="selection"
                     accessibilityRole="button"
-                    accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存')}
+                    accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存', '僅看已儲存')}
                     accessibilityState={{ selected: appliedFilters.savedOnly }}
                     hitSlop={4}
                     contentStyle={[s.mapCell, appliedFilters.savedOnly && s.mapCellOn]}
@@ -933,7 +933,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                         haptic="selection"
                         testID="map-visited"
                         accessibilityRole="button"
-                        accessibilityLabel={t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡')}
+                        accessibilityLabel={t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡', '僅看已打卡')}
                         accessibilityState={{ selected: appliedFilters.visitedOnly }}
                         hitSlop={4}
                         contentStyle={[s.mapCell, appliedFilters.visitedOnly && s.mapCellOn]}

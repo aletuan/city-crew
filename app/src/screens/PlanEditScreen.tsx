@@ -268,17 +268,17 @@ export default function PlanEditScreen({ navigation, route }: {
       if (saved.current || emptied.current) return;
       e.preventDefault();
       Alert.alert(
-        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？', '放弃更改？'),
+        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？', '放弃更改？', '放棄更改？'),
         t(
           'The times and order you changed have not been saved.',
           'Giờ giấc và thứ tự bạn vừa đổi chưa được lưu.',
           '変更した時刻と順番はまだ保存されていません。',
-          '你修改的时间和顺序尚未保存。',
+          '你修改的时间和顺序尚未保存。', '你修改的時間和順序尚未儲存。',
         ),
         [
-          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける', '继续编辑'), style: 'cancel' },
+          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける', '继续编辑', '繼續編輯'), style: 'cancel' },
           {
-            text: t('Discard', 'Bỏ', '破棄', '放弃'),
+            text: t('Discard', 'Bỏ', '破棄', '放弃', '放棄'),
             style: 'destructive',
             onPress: () => navigation.dispatch(e.data.action),
           },
@@ -366,7 +366,7 @@ export default function PlanEditScreen({ navigation, route }: {
       'Sharing a trip needs a way to say who else is on it, and that does not exist yet. The button is here so the shape is right.',
       'Chia sẻ một chuyến đi cần có chỗ ghi ai cùng đi, và phần đó chưa có. Nút này ở đây để giữ đúng hình hài.',
       '旅程の共有には同行者を記録する仕組みが必要で、それはまだありません。ここにあるのは形だけです。',
-      '分享行程需要记录同行的人，这个功能还没有。按钮先放在这里，占好位置。',
+      '分享行程需要记录同行的人，这个功能还没有。按钮先放在这里，占好位置。', '分享行程需要記錄同行的人，這個功能還沒有。按鈕先放在這裡，佔好位置。',
     ),
   );
 
@@ -442,7 +442,7 @@ export default function PlanEditScreen({ navigation, route }: {
       navigation.getParent()?.navigate('Trips');
     } catch (e) {
       Alert.alert(
-        t('Could not save', 'Chưa lưu được', '保存できませんでした', '无法保存'),
+        t('Could not save', 'Chưa lưu được', '保存できませんでした', '无法保存', '無法儲存'),
         e instanceof Error ? e.message : String(e),
       );
     } finally {
@@ -452,9 +452,9 @@ export default function PlanEditScreen({ navigation, route }: {
 
   if (!picked) {
     return (
-      <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')} onBack={() => navigation.goBack()}>
+      <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')} onBack={() => navigation.goBack()}>
         <Card style={s.card}><Text style={s.body}>
-          {t('That plan is no longer available.', 'Phương án đó không còn nữa.', 'そのプランはもう利用できません。', '这个计划已不可用。')}
+          {t('That plan is no longer available.', 'Phương án đó không còn nữa.', 'そのプランはもう利用できません。', '这个计划已不可用。', '這個計畫已不可用。')}
         </Text></Card>
       </Screen>
     );
@@ -483,8 +483,8 @@ export default function PlanEditScreen({ navigation, route }: {
       right={(
         <RoundIconButton
           icon="share-outline"
-          onPress={() => mock(t('Share', 'Chia sẻ', '共有', '分享'))}
-          label={t('Share', 'Chia sẻ', '共有', '分享')}
+          onPress={() => mock(t('Share', 'Chia sẻ', '共有', '分享', '分享'))}
+          label={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
         />
       )}
     >
@@ -516,9 +516,9 @@ export default function PlanEditScreen({ navigation, route }: {
           {km > 0 && (
             <Fact icon={modeIcon(overallMode(legs))} text={fmtDistance(km)} />
           )}
-          {company && <Fact icon={company.icon} text={t(company.en, company.vi, company.ja, company.zh)} />}
+          {company && <Fact icon={company.icon} text={t(company.en, company.vi, company.ja, company.zh, company.hant)} />}
           {showPrice && spend > 0 && (
-            <Fact icon="wallet-outline" text={`~${money(spend)} / ${t('person', 'người', '人', '人')}`} />
+            <Fact icon="wallet-outline" text={`~${money(spend)} / ${t('person', 'người', '人', '人', '人')}`} />
           )}
         </View>
 
@@ -531,8 +531,8 @@ export default function PlanEditScreen({ navigation, route }: {
           <Ionicons name="move-outline" size={15} color={colors.textTertiary} />
           <Text style={s.hintText}>
             {canArrange
-              ? t('Hold a stop to move it. Nudge its time with − and +.', 'Giữ một điểm để kéo đổi chỗ. Chỉnh giờ bằng − và +.', 'スポットを長押しして動かす。時刻は − と + で調整。', '长按地点即可移动。用 − 和 + 微调时间。')
-              : t('Nudge the time with − and +.', 'Chỉnh giờ bằng − và +.', '時刻は − と + で調整。', '用 − 和 + 微调时间。')}
+              ? t('Hold a stop to move it. Nudge its time with − and +.', 'Giữ một điểm để kéo đổi chỗ. Chỉnh giờ bằng − và +.', 'スポットを長押しして動かす。時刻は − と + で調整。', '长按地点即可移动。用 − 和 + 微调时间。', '長按地點即可移動。用 − 和 + 微調時間。')
+              : t('Nudge the time with − and +.', 'Chỉnh giờ bằng − và +.', '時刻は − と + で調整。', '用 − 和 + 微调时间。', '用 − 和 + 微調時間。')}
           </Text>
         </View>
         )}
@@ -606,7 +606,7 @@ export default function PlanEditScreen({ navigation, route }: {
 
         {current.length === 0 && (
           <Card style={s.card}><Text style={s.body}>
-            {t('Nothing left in this plan.', 'Không còn điểm nào trong plan này.', 'このプランには何も残っていません。', '这个计划里已经没有地点了。')}
+            {t('Nothing left in this plan.', 'Không còn điểm nào trong plan này.', 'このプランには何も残っていません。', '这个计划里已经没有地点了。', '這個計畫裡已經沒有地點了。')}
           </Text></Card>
         )}
 
@@ -627,8 +627,8 @@ export default function PlanEditScreen({ navigation, route }: {
             icon="checkmark"
             wide
             label={saving
-              ? t('Saving…', 'Đang lưu…', '保存中…', '保存中…')
-              : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存', '保存到行程')}
+              ? t('Saving…', 'Đang lưu…', '保存中…', '保存中…', '儲存中…')
+              : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存', '保存到行程', '儲存到行程')}
             onPress={() => { if (!saving) void onSave(); }}
             testID="plan-save"
           />
@@ -636,7 +636,7 @@ export default function PlanEditScreen({ navigation, route }: {
           <GradientCta
             icon="arrow-back"
             wide
-            label={t('Choose another option', 'Chọn lại phương án', '別のプランを選ぶ', '选择其他方案')}
+            label={t('Choose another option', 'Chọn lại phương án', '別のプランを選ぶ', '选择其他方案', '選擇其他方案')}
             onPress={() => navigation.goBack()}
             testID="plan-choose-again"
           />
@@ -658,7 +658,7 @@ export default function PlanEditScreen({ navigation, route }: {
               'Sign in to save this trip.',
               'Đăng nhập để lưu chuyến đi này.',
               'この旅程を保存するにはサインインしてください。',
-              '登录后即可保存这个行程。',
+              '登录后即可保存这个行程。', '登入後即可儲存這個行程。',
             )}
           </Text>
         )}

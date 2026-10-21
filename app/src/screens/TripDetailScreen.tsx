@@ -121,12 +121,12 @@ export default function TripDetailScreen({ navigation, route }: {
   if (!trip) {
     return (
       <Screen
-        title={t('Trip', 'Chuyến đi', '旅程', '行程')}
+        title={t('Trip', 'Chuyến đi', '旅程', '行程', '行程')}
         onBack={() => navigation.goBack()}
       >
         <Empty text={trips.loaded
-          ? t('That trip is no longer here.', 'Chuyến đi đó không còn nữa.', 'その旅程はもうありません。', '这个行程已不存在。')
-          : t('Loading…', 'Đang tải…', '読み込み中…', '加载中…')}
+          ? t('That trip is no longer here.', 'Chuyến đi đó không còn nữa.', 'その旅程はもうありません。', '这个行程已不存在。', '這個行程已不存在。')
+          : t('Loading…', 'Đang tải…', '読み込み中…', '加载中…', '載入中…')}
         />
       </Screen>
     );
@@ -218,7 +218,7 @@ export default function TripDetailScreen({ navigation, route }: {
       invites.reload();
     } catch (e) {
       Alert.alert(
-        t('Could not send', 'Không gửi được', '送信できません', '无法发送'),
+        t('Could not send', 'Không gửi được', '送信できません', '无法发送', '無法傳送'),
         e instanceof Error ? e.message : String(e),
       );
     } finally {
@@ -227,17 +227,17 @@ export default function TripDetailScreen({ navigation, route }: {
   };
 
   const confirmDelete = () => Alert.alert(
-    t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？', '删除这个行程？'),
+    t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？', '删除这个行程？', '刪除這個行程？'),
     t(
       `"${trip.title}" will be gone for good.`,
       `"${trip.title}" sẽ mất hẳn.`,
       `「${trip.title}」は完全に削除されます。`,
-      `“${trip.title}”将被永久删除。`,
+      `“${trip.title}”将被永久删除。`, `「${trip.title}」將被永久刪除。`,
     ),
     [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
+      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
       {
-        text: t('Delete', 'Xoá', '削除', '删除'),
+        text: t('Delete', 'Xoá', '削除', '删除', '刪除'),
         style: 'destructive',
         // Back first, then reload: the list is the screen that has to
         // notice, and leaving this one standing over a row that no longer
@@ -248,7 +248,7 @@ export default function TripDetailScreen({ navigation, route }: {
           deleteTrip(trip.id)
             .then(() => { navigation.goBack(); trips.reload(); })
             .catch((e: Error) => Alert.alert(
-              t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除'), e.message,
+              t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除', '無法刪除'), e.message,
             ));
         },
       },
@@ -262,17 +262,17 @@ export default function TripDetailScreen({ navigation, route }: {
    *  ends their view of the plan for good and tells the planner the
    *  truth — the crew row marks them "can't make it". */
   const confirmLeave = () => Alert.alert(
-    t('Leave this trip?', 'Rời chuyến đi này?', 'この旅程から抜けますか？', '退出这个行程？'),
+    t('Leave this trip?', 'Rời chuyến đi này?', 'この旅程から抜けますか？', '退出这个行程？', '離開這個行程？'),
     t(
       `"${trip.title}" will leave your list, and the planner will see you can't make it.`,
       `"${trip.title}" sẽ rời khỏi danh sách của bạn; người mời sẽ thấy bạn không đi được.`,
       `「${trip.title}」はリストから消え、招待した人には不参加と表示されます。`,
-      `“${trip.title}”将从你的列表中移除，发起人会看到你无法参加。`,
+      `“${trip.title}”将从你的列表中移除，发起人会看到你无法参加。`, `「${trip.title}」將從你的列表中移除，發起人會看到你無法參加。`,
     ),
     [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
+      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
       {
-        text: t('Leave', 'Rời', '抜ける', '退出'),
+        text: t('Leave', 'Rời', '抜ける', '退出', '離開'),
         style: 'destructive',
         onPress: () => {
           answerInvite(trip.id, 'declined')
@@ -284,7 +284,7 @@ export default function TripDetailScreen({ navigation, route }: {
               navigation.goBack(); trips.reload(); invites.reload();
             })
             .catch((e: Error) => Alert.alert(
-              t('Could not leave', 'Không rời được', '退出できませんでした', '无法退出'), e.message,
+              t('Could not leave', 'Không rời được', '退出できませんでした', '无法退出', '無法離開'), e.message,
             ));
         },
       },
@@ -416,7 +416,7 @@ export default function TripDetailScreen({ navigation, route }: {
                   // Drawn as a gap rather than dropped. The reader kept five
                   // stops; a list of four with no explanation is the app
                   // losing one in front of them.
-                  gone={t('No longer listed', 'Không còn trong danh mục', '掲載終了', '已下架')}
+                  gone={t('No longer listed', 'Không còn trong danh mục', '掲載終了', '已下架', '已下架')}
                   meta={place
                     ? summaryLine([place.neighborhood_en, stop.dwell_min ? fmtMinutes(stop.dwell_min, lang) : null])
                     : null}
@@ -458,7 +458,7 @@ export default function TripDetailScreen({ navigation, route }: {
                 >
                   <Ionicons name="navigate-outline" size={16} color={colors.accent} />
                   <Text style={s.routeText}>
-                    {t('Open the route', 'Mở lộ trình', 'ルートを開く', '打开路线')}
+                    {t('Open the route', 'Mở lộ trình', 'ルートを開く', '打开路线', '開啟路線')}
                   </Text>
                   <Text style={s.routeSub} numberOfLines={1}>
                     {/* What it will actually do, not what it is called.
@@ -471,13 +471,13 @@ export default function TripDetailScreen({ navigation, route }: {
                         otherwise vanish from the route with the link still
                         looking complete. */}
                     {summaryLine([
-                      t('Google Maps', 'Google Maps', 'Google マップ', 'Google 地图'),
+                      t('Google Maps', 'Google Maps', 'Google マップ', 'Google 地图', 'Google 地圖'),
                       mapRoute.dropped > 0
                         ? t(
                           `first ${stops.length - mapRoute.dropped} only`,
                           `chỉ ${stops.length - mapRoute.dropped} điểm đầu`,
                           `最初の${stops.length - mapRoute.dropped}件のみ`,
-                          `仅前 ${stops.length - mapRoute.dropped} 个`,
+                          `仅前 ${stops.length - mapRoute.dropped} 个`, `僅前 ${stops.length - mapRoute.dropped} 個`,
                         )
                         : null,
                     ])}
@@ -491,19 +491,19 @@ export default function TripDetailScreen({ navigation, route }: {
 
         {showPrice && (
         <Card style={[s.card, s.spend]}>
-          <Text style={s.spendTitle}>{t('Roughly', 'Ước chừng', 'おおよそ', '大约')}</Text>
+          <Text style={s.spendTitle}>{t('Roughly', 'Ước chừng', 'おおよそ', '大约', '大約')}</Text>
           <View style={s.spendRow}>
-            <Text style={s.spendKey}>{t('Food and drink', 'Ăn uống', '飲食', '餐饮')}</Text>
+            <Text style={s.spendKey}>{t('Food and drink', 'Ăn uống', '飲食', '餐饮', '餐飲')}</Text>
             <Text style={s.spendVal}>{money(food)}</Text>
           </View>
           <View style={s.spendRow}>
-            <Text style={s.spendKey}>{t('Everything else', 'Phần còn lại', 'その他', '其他')}</Text>
+            <Text style={s.spendKey}>{t('Everything else', 'Phần còn lại', 'その他', '其他', '其他')}</Text>
             <Text style={s.spendVal}>{money(doing)}</Text>
           </View>
           <View style={s.divider} />
           <View style={s.spendRow}>
             <Text style={[s.spendKey, s.spendTotalKey]}>
-              {summaryLine([stopCount(stops.length, t), t('per person', 'mỗi người', '1人あたり', '每人')])}
+              {summaryLine([stopCount(stops.length, t), t('per person', 'mỗi người', '1人あたり', '每人', '每人')])}
             </Text>
             <Text style={[s.spendVal, s.spendTotalVal]}>{`~${money(spend)}`}</Text>
           </View>
@@ -515,7 +515,7 @@ export default function TripDetailScreen({ navigation, route }: {
               'Rides between stops are in the total.',
               'Tiền xe giữa các điểm đã tính trong tổng.',
               '移動費も合計に含まれています。',
-              '地点之间的交通费已计入总额。',
+              '地点之间的交通费已计入总额。', '地點之間的交通費已計入總額。',
             )}
           </Text>
         </Card>
@@ -530,8 +530,8 @@ export default function TripDetailScreen({ navigation, route }: {
           <Ionicons name={owned ? 'trash-outline' : 'exit-outline'} size={15} color={colors.bad} />
           <Text style={s.deleteText}>
             {owned
-              ? t('Delete this trip', 'Xoá chuyến đi này', 'この旅程を削除', '删除这个行程')
-              : t('Leave this trip', 'Rời chuyến đi này', 'この旅程から抜ける', '退出这个行程')}
+              ? t('Delete this trip', 'Xoá chuyến đi này', 'この旅程を削除', '删除这个行程', '刪除這個行程')
+              : t('Leave this trip', 'Rời chuyến đi này', 'この旅程から抜ける', '退出这个行程', '離開這個行程')}
           </Text>
         </PressableScale>
       </ScrollView>

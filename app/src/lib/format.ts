@@ -10,6 +10,8 @@ const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 // 周 rather than 星期: the short form a calendar and a ticket both print,
 // two characters where 星期三 is three.
 const DAYS_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+// The same in Traditional, as Taiwan prints it: 週, not 周.
+const DAYS_HANT = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 // Vietnamese numbers its weekdays, so the short form is the word and the
 // number: Monday is "Thứ 2" and Saturday "Thứ 7".
 //
@@ -65,6 +67,7 @@ export function dateline(lang: string, now: Date): string {
   // Chinese: "10月7日 周三", the month and day as a date is written in
   // a sentence, the weekday after. Nine characters at its widest.
   if (lang === 'zh') return `${now.getMonth() + 1}月${now.getDate()}日 ${DAYS_ZH[now.getDay()]}`;
+  if (lang === 'zh-Hant') return `${now.getMonth() + 1}月${now.getDate()}日 ${DAYS_HANT[now.getDay()]}`;
   return `${DAYS_EN[now.getDay()].slice(0, 3)}, ${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
@@ -85,6 +88,7 @@ export function dayline(lang: string, now: Date): string {
   if (lang === 'vi') return `${DAYS_VI[now.getDay()]} ${now.getDate()}`;
   if (lang === 'ja') return `${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
   if (lang === 'zh') return `${DAYS_ZH[now.getDay()]} ${now.getDate()}日`;
+  if (lang === 'zh-Hant') return `${DAYS_HANT[now.getDay()]} ${now.getDate()}日`;
   return `${DAYS_EN[now.getDay()]} ${now.getDate()}`;
 }
 
@@ -133,7 +137,7 @@ export function numericDate(lang: string, now: Date): string {
   const m = String(now.getMonth() + 1).padStart(2, '0');
   if (lang === 'vi') return `${d}/${m}`;
   if (lang === 'ja') return `${now.getMonth() + 1}/${now.getDate()}`;
-  if (lang === 'zh') return `${now.getMonth() + 1}月${now.getDate()}日`;
+  if (lang === 'zh' || lang === 'zh-Hant') return `${now.getMonth() + 1}月${now.getDate()}日`;
   return `${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
@@ -172,18 +176,18 @@ export function numericDate(lang: string, now: Date): string {
  * print back exactly.
  */
 export function fmtMinutes(n: number, lang: string): string {
-  return lang === 'vi' ? `${n} phút` : lang === 'ja' ? `${n}分` : lang === 'zh' ? `${n}分钟` : `${n} min`;
+  return lang === 'vi' ? `${n} phút` : lang === 'ja' ? `${n}分` : lang === 'zh' ? `${n}分钟` : lang === 'zh-Hant' ? `${n}分鐘` : `${n} min`;
 }
 
 export function fmtDuration(min: number | null, max: number | null, lang: string): string | null {
   if (!min) return null;
   if ((max ?? min) <= 60) {
     const range = !max || min === max ? `${min}` : `${min}–${max}`;
-    return lang === 'vi' ? `${range} phút` : lang === 'ja' ? `${range}分` : lang === 'zh' ? `${range}分钟` : `${range} min`;
+    return lang === 'vi' ? `${range} phút` : lang === 'ja' ? `${range}分` : lang === 'zh' ? `${range}分钟` : lang === 'zh-Hant' ? `${range}分鐘` : `${range} min`;
   }
   const h = (m: number) => Math.round(m / 30) / 2;
   const range = !max || h(min) === h(max) ? `${h(min)}` : `${h(min)}–${h(max)}`;
-  return lang === 'vi' ? `${range} giờ` : lang === 'ja' ? `${range}時間` : lang === 'zh' ? `${range}小时` : `${range}h`;
+  return lang === 'vi' ? `${range} giờ` : lang === 'ja' ? `${range}時間` : lang === 'zh' ? `${range}小时` : lang === 'zh-Hant' ? `${range}小時` : `${range}h`;
 }
 
 /**
@@ -241,23 +245,23 @@ export function splitHours(line: string): [string, string] {
  * because those are two different questions. The table used to answer only
  * the first, so a Vietnamese reader was told their café opens "Mon–Fri".
  */
-type Spelled = { en: string; vi: string; ja: string; zh: string };
+type Spelled = { en: string; vi: string; ja: string; zh: string; hant: string };
 
 const SHORT_DAY: Record<string, Spelled> = {
-  Monday: { en: 'Mon', vi: 'T2', ja: '月', zh: '周一' },
-  Tuesday: { en: 'Tue', vi: 'T3', ja: '火', zh: '周二' },
-  Wednesday: { en: 'Wed', vi: 'T4', ja: '水', zh: '周三' },
-  Thursday: { en: 'Thu', vi: 'T5', ja: '木', zh: '周四' },
-  Friday: { en: 'Fri', vi: 'T6', ja: '金', zh: '周五' },
-  Saturday: { en: 'Sat', vi: 'T7', ja: '土', zh: '周六' },
-  Sunday: { en: 'Sun', vi: 'CN', ja: '日', zh: '周日' },
+  Monday: { en: 'Mon', vi: 'T2', ja: '月', zh: '周一', hant: '週一' },
+  Tuesday: { en: 'Tue', vi: 'T3', ja: '火', zh: '周二', hant: '週二' },
+  Wednesday: { en: 'Wed', vi: 'T4', ja: '水', zh: '周三', hant: '週三' },
+  Thursday: { en: 'Thu', vi: 'T5', ja: '木', zh: '周四', hant: '週四' },
+  Friday: { en: 'Fri', vi: 'T6', ja: '金', zh: '周五', hant: '週五' },
+  Saturday: { en: 'Sat', vi: 'T7', ja: '土', zh: '周六', hant: '週六' },
+  Sunday: { en: 'Sun', vi: 'CN', ja: '日', zh: '周日', hant: '週日' },
 };
 
 const pick = (v: Spelled, lang: string) =>
-  (lang === 'vi' ? v.vi : lang === 'ja' ? v.ja : lang === 'zh' ? v.zh : v.en);
+  (lang === 'vi' ? v.vi : lang === 'ja' ? v.ja : lang === 'zh' ? v.zh : lang === 'zh-Hant' ? v.hant : v.en);
 
-const CLOSED: Spelled = { en: 'Closed', vi: 'Đóng cửa', ja: '休業', zh: '休息' };
-const ALL_DAY: Spelled = { en: 'Open 24 hours', vi: 'Mở cả ngày', ja: '24時間営業', zh: '24小时营业' };
+const CLOSED: Spelled = { en: 'Closed', vi: 'Đóng cửa', ja: '休業', zh: '休息', hant: '休息' };
+const ALL_DAY: Spelled = { en: 'Open 24 hours', vi: 'Mở cả ngày', ja: '24時間営業', zh: '24小时营业', hant: '24小時營業' };
 
 /**
  * One day's hours, printed on the app's own clock.
@@ -567,7 +571,7 @@ export const CLOSING_SOON_MIN = 45;
  */
 export function openFragment(
   state: OpenState | null,
-  t: (en: string, vi: string, ja?: string, zh?: string) => string,
+  t: (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string,
   soonMin: number = CLOSING_SOON_MIN,
 ): string | null {
   if (!state) return null;
@@ -575,11 +579,11 @@ export function openFragment(
     // No closing time, or one too far off to be news yet.
     if (state.closesInMin == null || state.closesInMin > soonMin) return null;
     const at = clockOf(state.untilMin as number);
-    return t(`until ${at}`, `đến ${at}`, `${at}まで`, `营业至 ${at}`);
+    return t(`until ${at}`, `đến ${at}`, `${at}まで`, `营业至 ${at}`, `營業至 ${at}`);
   }
   if (state.opensAtMin == null) return null;
   const at = clockOf(state.opensAtMin);
-  return t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`, `${at} 开门`);
+  return t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`, `${at} 开门`, `${at} 開門`);
 }
 
 /**
@@ -619,12 +623,12 @@ export const MINUTES_IN_DAY = DAY;
  */
 export function shutLabel(
   state: OpenState | null,
-  t: (en: string, vi: string, ja?: string, zh?: string) => string,
+  t: (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string,
 ): string | null {
   if (!state || state.open) return null;
-  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店', '已打烊');
+  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店', '已打烊', '已打烊');
   const at = clockOf(state.opensAtMin);
-  return t(`Closed · opens ${at}`, `Đóng cửa · mở ${at}`, `閉店・${at}開店`, `已打烊 · ${at} 开门`);
+  return t(`Closed · opens ${at}`, `Đóng cửa · mở ${at}`, `閉店・${at}開店`, `已打烊 · ${at} 开门`, `已打烊 · ${at} 開門`);
 }
 
 /**
@@ -644,12 +648,12 @@ export function shutLabel(
  */
 export function sashLabel(
   state: OpenState | null,
-  t: (en: string, vi: string, ja?: string, zh?: string) => string,
+  t: (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string,
 ): string | null {
   if (!state || state.open) return null;
-  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店', '已打烊');
+  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店', '已打烊', '已打烊');
   const at = clockOf(state.opensAtMin);
-  return t(`Opens ${at}`, `Mở ${at}`, `${at}開店`, `${at} 开门`);
+  return t(`Opens ${at}`, `Mở ${at}`, `${at}開店`, `${at} 开门`, `${at} 開門`);
 }
 
 /**
@@ -658,6 +662,6 @@ export function sashLabel(
  * 4 Oct 2026 — the editor's card, the saved trip's row — and one copy
  * here so the verb cannot drift between them.
  */
-export function openLabel(name: string, t: (en: string, vi: string, ja: string, zh?: string) => string): string {
-  return t(`Open ${name}`, `Mở ${name}`, `${name}を開く`, `打开${name}`);
+export function openLabel(name: string, t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string): string {
+  return t(`Open ${name}`, `Mở ${name}`, `${name}を開く`, `打开${name}`, `開啟${name}`);
 }

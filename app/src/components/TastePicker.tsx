@@ -38,7 +38,7 @@ export default function TastePicker({ chosen, onChange }: {
           return (
             <Tile
               key={key}
-              label={t(c.en, c.vi, c.ja, c.zh)}
+              label={t(c.en, c.vi, c.ja, c.zh, c.hant)}
               icon={c.icon}
               iconColor={c.color}
               active={on}
@@ -58,13 +58,13 @@ export default function TastePicker({ chosen, onChange }: {
                 `That is the five. Tap one again to swap it.`,
                 `Đã đủ năm. Chạm lại một mục để đổi.`,
                 `5つまでです。入れ替えるにはもう一度タップしてください。`,
-                `已经选满 5 个。再次点按可替换。`,
+                `已经选满 5 个。再次点按可替换。`, `已經選滿 5 個。再次點按可替換。`,
               )
             : t(
                 `${chosen.length} of ${TASTE_MAX}.`,
                 `${chosen.length}/${TASTE_MAX}.`,
                 `${chosen.length}/${TASTE_MAX}。`,
-                `${chosen.length}/${TASTE_MAX}。`,
+                `${chosen.length}/${TASTE_MAX}。`, `${chosen.length}/${TASTE_MAX}。`,
               )}
         </Text>
       ) : null}

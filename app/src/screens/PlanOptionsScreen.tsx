@@ -73,10 +73,10 @@ import { colors, font, gradAI, radius, space, type } from '../theme';
  * — a logo — not the adjective. Neither is a near miss a reader corrects
  * from context, because both are ordinary words meaning something else.
  */
-const BADGE: Record<LensKey, { en: string; vi: string; ja: string; zh: string; star?: boolean }> = {
-  match: { en: 'Best match', vi: 'Khớp nhất', ja: '最適', zh: '最佳匹配', star: true },
-  iconic: { en: 'Iconic views', vi: 'Nổi tiếng', ja: '定番', zh: '经典景点' },
-  lowkey: { en: 'Low-key', vi: 'Nhẹ nhàng', ja: '控えめ', zh: '低调小众' },
+const BADGE: Record<LensKey, { en: string; vi: string; ja: string; zh: string; hant: string; star?: boolean }> = {
+  match: { en: 'Best match', vi: 'Khớp nhất', ja: '最適', zh: '最佳匹配', hant: '最佳選擇', star: true },
+  iconic: { en: 'Iconic views', vi: 'Nổi tiếng', ja: '定番', zh: '经典景点', hant: '經典景點' },
+  lowkey: { en: 'Low-key', vi: 'Nhẹ nhàng', ja: '控えめ', zh: '低调小众', hant: '低調小眾' },
 };
 
 /** "~420k ₫". Per person — see the note under the cards. */
@@ -240,13 +240,13 @@ export default function PlanOptionsScreen({ navigation, route }: {
       'Some places from your collections are not open at this hour.',
       'Một số chỗ trong bộ sưu tập của bạn không mở vào giờ này.',
       'コレクションの一部はこの時間帯は開いていません。',
-      '你合集中的部分地点在这个时段不营业。',
+      '你合集中的部分地点在这个时段不营业。', '你合集中的部分地點在這個時段不營業。',
     )
     : t(
       'Some places from your collections did not fit this plan.',
       'Một số chỗ trong bộ sưu tập của bạn chưa hợp với plan này.',
       'コレクションの一部は今回のプランには入りませんでした。',
-      '你合集中的部分地点未能放进这个计划。',
+      '你合集中的部分地点未能放进这个计划。', '你合集中的部分地點未能放進這個計畫。',
     );
 
   return (
@@ -272,7 +272,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
         'Distances checked · each card a different angle',
         'Đã tính quãng đường · mỗi thẻ một hướng khác',
         '距離を確認済み · プランごとに違う切り口',
-        '已核对距离 · 每张卡片一种思路',
+        '已核对距离 · 每张卡片一种思路', '已核對距離 · 每張卡片一種思路',
       )}
       onBack={() => navigation.goBack()}
     >
@@ -327,7 +327,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
                 'Nothing here matches those answers now. Try Regenerate, or change what you asked for.',
                 'Hiện không có gì khớp với lựa chọn đó. Thử thực hiện lại, hoặc sửa câu trả lời.',
                 '今の条件に合うものがありません。作り直すか、条件を変えてみてください。',
-                '目前没有符合这些条件的地点。试试重新生成，或修改你的选择。',
+                '目前没有符合这些条件的地点。试试重新生成，或修改你的选择。', '目前沒有符合這些條件的地點。試試重新生成，或修改你的選擇。',
               )}
             </Text>
           </Card>
@@ -339,7 +339,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
           <GradientCta
             icon="refresh"
             wide
-            label={t('Regenerate', 'Thực hiện lại', '作り直す', '重新生成')}
+            label={t('Regenerate', 'Thực hiện lại', '作り直す', '重新生成', '重新生成')}
             onPress={regenerate}
           />
         </View>
@@ -367,16 +367,16 @@ export default function PlanOptionsScreen({ navigation, route }: {
  * and not one more stop. A plan whose places carry no district at all falls
  * back to naming the outing, which is the only honest thing left to say.
  */
-function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string, zh?: string) => string): string {
+function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string): string {
   const areas: string[] = [];
   for (const st of plan.stops) {
     const a = st.place.neighborhood_en?.trim();
     if (a && !areas.includes(a)) areas.push(a);
   }
-  if (!areas.length) return t('An outing', 'Một buổi đi chơi', 'おでかけ', '一次出游');
+  if (!areas.length) return t('An outing', 'Một buổi đi chơi', 'おでかけ', '一次出游', '一次出遊');
   const more = areas.length - 1;
   if (!more) return areas[0];
-  return t(`${areas[0]} +${more} area`, `${areas[0]} +${more} khu`, `${areas[0]} 他${more}地区`, `${areas[0]} 等 ${more + 1} 个区域`);
+  return t(`${areas[0]} +${more} area`, `${areas[0]} +${more} khu`, `${areas[0]} 他${more}地区`, `${areas[0]} 等 ${more + 1} 个区域`, `${areas[0]} 等 ${more + 1} 個區域`);
 }
 
 /**
@@ -386,18 +386,18 @@ function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string, zh?: s
  * count rather than claim "zero ways" above the empty card.
  */
 function heading(
-  isDay: boolean, count: number, t: (en: string, vi: string, ja: string, zh?: string) => string,
+  isDay: boolean, count: number, t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): string {
   if (isDay) {
-    if (count === 0) return t('Your day', 'Ngày của bạn', 'あなたの一日', '你的一天');
-    if (count === 1) return t('Your day, one way', 'Ngày của bạn, một cách', 'あなたの一日、一案', '你的一天，一种方案');
-    if (count === 2) return t('Your day, two ways', 'Ngày của bạn, hai cách', 'あなたの一日、二通り', '你的一天，两种方案');
-    return t('Your day, three ways', 'Ngày của bạn, ba cách', 'あなたの一日、三通り', '你的一天，三种方案');
+    if (count === 0) return t('Your day', 'Ngày của bạn', 'あなたの一日', '你的一天', '你的一天');
+    if (count === 1) return t('Your day, one way', 'Ngày của bạn, một cách', 'あなたの一日、一案', '你的一天，一种方案', '你的一天，一種方案');
+    if (count === 2) return t('Your day, two ways', 'Ngày của bạn, hai cách', 'あなたの一日、二通り', '你的一天，两种方案', '你的一天，兩種方案');
+    return t('Your day, three ways', 'Ngày của bạn, ba cách', 'あなたの一日、三通り', '你的一天，三种方案', '你的一天，三種方案');
   }
-  if (count === 0) return t('Your evening', 'Buổi tối của bạn', 'あなたの夜', '你的夜晚');
-  if (count === 1) return t('Your evening, one way', 'Buổi tối của bạn, một cách', 'あなたの夜、一案', '你的夜晚，一种方案');
-  if (count === 2) return t('Your evening, two ways', 'Buổi tối của bạn, hai cách', 'あなたの夜、二通り', '你的夜晚，两种方案');
-  return t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り', '你的夜晚，三种方案');
+  if (count === 0) return t('Your evening', 'Buổi tối của bạn', 'あなたの夜', '你的夜晚', '你的夜晚');
+  if (count === 1) return t('Your evening, one way', 'Buổi tối của bạn, một cách', 'あなたの夜、一案', '你的夜晚，一种方案', '你的夜晚，一種方案');
+  if (count === 2) return t('Your evening, two ways', 'Buổi tối của bạn, hai cách', 'あなたの夜、二通り', '你的夜晚，两种方案', '你的夜晚，兩種方案');
+  return t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り', '你的夜晚，三种方案', '你的夜晚，三種方案');
 }
 
 /**
@@ -497,7 +497,7 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
   const springTo = (v: number) =>
     Animated.spring(press, { toValue: v, useNativeDriver: true, speed: 40, bounciness: 5 }).start();
   const badge = BADGE[plan.lens];
-  const badgeText = t(badge.en, badge.vi, badge.ja, badge.zh);
+  const badgeText = t(badge.en, badge.vi, badge.ja, badge.zh, badge.hant);
   // The border and the star follow one rule — the lens — rather than the
   // border going to whichever card came first and the star to `match`
   // wherever it landed. A planner that reorders its lenses split them
@@ -662,7 +662,7 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
                   saying it about all three; this says it on each, in two
                   words and a chevron, where the eye lands last. */}
               <View style={s.open}>
-                <Text style={s.openText}>{t('View & edit', 'Xem & sửa', '見る・編集', '查看和编辑')}</Text>
+                <Text style={s.openText}>{t('View & edit', 'Xem & sửa', '見る・編集', '查看和编辑', '檢視和編輯')}</Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.accent} />
               </View>
             </View>

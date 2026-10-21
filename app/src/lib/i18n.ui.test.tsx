@@ -46,16 +46,18 @@ vi.mock('react-native', async (orig) => {
   };
 });
 
-// Each row is (en, vi, ja, zh) as a caller would pass it; `null` is a
-// translation nobody wrote.
-const CASES: [string, string | null, string | null, string | null, string | null][] = [
-  ['all three', 'Places', 'Địa điểm', '場所', null],
-  ['all four', 'Places', 'Địa điểm', '場所', '地点'],
-  ['no Japanese', 'Places', 'Địa điểm', null, null],
-  ['no Vietnamese', 'Places', null, '場所', null],
-  ['English only', 'Places', null, null, null],
-  ['no English', null, 'Địa điểm', null, null],
-  ['nothing', null, null, null, null],
+// Each row is (en, vi, ja, zh, hant) as a caller would pass it; `null`
+// is a translation nobody wrote.
+type Row = [string, string | null, string | null, string | null, string | null, string | null];
+const CASES: Row[] = [
+  ['all three', 'Places', 'Địa điểm', '場所', null, null],
+  ['all four', 'Places', 'Địa điểm', '場所', '地点', null],
+  ['all five', 'Places', 'Địa điểm', '場所', '地点', '地點'],
+  ['no Japanese', 'Places', 'Địa điểm', null, null, null],
+  ['no Vietnamese', 'Places', null, '場所', null, null],
+  ['English only', 'Places', null, null, null, null],
+  ['no English', null, 'Địa điểm', null, null, null],
+  ['nothing', null, null, null, null, null],
 ];
 
 function Probe() {
@@ -63,10 +65,10 @@ function Probe() {
   return (
     <>
       <span data-testid="lang">{lang}</span>
-      {CASES.map(([name, en, vi, ja, zh]) => (
-        <span key={name} data-testid={name}>{t(en, vi, ja, zh)}</span>
+      {CASES.map(([name, en, vi, ja, zh, hant]) => (
+        <span key={name} data-testid={name}>{t(en, vi, ja, zh, hant)}</span>
       ))}
-      {(['en', 'vi', 'ja', 'zh'] as Lang[]).map((l) => (
+      {(['en', 'vi', 'ja', 'zh', 'zh-Hant'] as Lang[]).map((l) => (
         <button key={l} type="button" onClick={() => setLang(l)}>{l}</button>
       ))}
     </>
@@ -126,6 +128,24 @@ describe('t', () => {
     expect(read('no English')).toBe('Địa điểm');
     expect(read('nothing')).toBe('');
   });
+
+  // Traditional: its own, then English, then Vietnamese — and never the
+  // Simplified beside it, which is the whole point of its being separate.
+  it('gives Traditional, then English, then Vietnamese, and never Simplified', async () => {
+    mount();
+    await pick('zh-Hant');
+    expect(read('all five')).toBe('地點');
+    expect(read('all four')).toBe('Places');
+    expect(read('no Vietnamese')).toBe('Places');
+    expect(read('no English')).toBe('Địa điểm');
+    expect(read('nothing')).toBe('');
+  });
+
+  it('gives Simplified its own, never the Traditional', async () => {
+    mount();
+    await pick('zh');
+    expect(read('all five')).toBe('地点');
+  });
 });
 
 describe('the stored choice', () => {
@@ -148,6 +168,13 @@ describe('the stored choice', () => {
     mount();
     await waitFor(() => expect(read('lang')).toBe('zh'));
     expect(read('all four')).toBe('地点');
+  });
+
+  it('reads Traditional back too', async () => {
+    await AsyncStorage.setItem(KEY, 'zh-Hant');
+    mount();
+    await waitFor(() => expect(read('lang')).toBe('zh-Hant'));
+    expect(read('all five')).toBe('地點');
   });
 
   it('is ignored when it is not a language the app speaks', async () => {
@@ -285,21 +312,21 @@ describe('langFromLocales', () => {
   });
 
   // The script a tag names outranks its region: a reader in Hong Kong
-  // who set Simplified asked for it.
+  // who set Simplified asked for it, and one in Beijing who set
+  // Traditional asked for that.
   it('reads the script before the region', () => {
     expect(langFromLocales(['zh-Hans-HK'])).toBe('zh');
     expect(langFromLocales(['zh_HK_#Hans'])).toBe('zh');
-    expect(langFromLocales(['zh-Hant-CN'])).toBe('en');
+    expect(langFromLocales(['zh-Hant-CN'])).toBe('zh-Hant');
   });
 
-  // Never Simplified to a Traditional reader: the next language they
-  // listed, or English. See the note in `lang.ts`.
-  it('does not hand Simplified to a Traditional reader', () => {
+  // Never Simplified to a Traditional reader. See the note in `lang.ts`.
+  it('opens in Traditional for a Traditional reader', () => {
     for (const tag of ['zh-TW', 'zh-HK', 'zh-MO', 'zh-Hant', 'zh-Hant-TW', 'zh-Hant-HK', 'zh_TW', 'zh_TW_#Hant']) {
-      expect([tag, langFromLocales([tag])]).toEqual([tag, 'en']);
+      expect([tag, langFromLocales([tag])]).toEqual([tag, 'zh-Hant']);
     }
-    expect(langFromLocales(['zh-Hant-TW', 'ja-JP'])).toBe('ja');
-    expect(langFromLocales(['zh-Hant-TW', 'zh-Hans-CN'])).toBe('zh');
+    expect(langFromLocales(['zh-Hant-TW', 'zh-Hans-CN'])).toBe('zh-Hant');
+    expect(langFromLocales(['zh-Hans-CN', 'zh-Hant-TW'])).toBe('zh');
   });
 });
 
@@ -333,6 +360,11 @@ describe('spokenIn', () => {
     expect(spokenIn('zh', 'a', 'b', 'c')).toBe('en');
     expect(spokenIn('zh', null, 'b', 'c')).toBe('vi');
     expect(spokenIn('zh', null, null, 'c')).toBeNull();
+    expect(spokenIn('zh', 'a', 'b', 'c', null, 'e')).toBe('en');
+    expect(spokenIn('zh-Hant', 'a', 'b', 'c', 'd', 'e')).toBe('zh-Hant');
+    expect(spokenIn('zh-Hant', 'a', 'b', 'c', 'd')).toBe('en');
+    expect(spokenIn('zh-Hant', null, 'b', 'c', 'd')).toBe('vi');
+    expect(spokenIn('zh-Hant', null, null, 'c', 'd')).toBeNull();
   });
 
   it('treats an empty string as written, exactly as t does', () => {

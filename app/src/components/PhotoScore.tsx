@@ -245,8 +245,8 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
           <ScoreGlyph size={22} color={colors.accent} active={!stopping} testID="scoring-glyph" />
           <Text style={s.dialogTitle}>
             {stopping
-              ? t('Stopping after this photo…', 'Đang dừng sau ảnh này…', 'この写真のあとで停止します…', '这张照片之后停止…')
-              : `${t('Reading the photos…', 'Đang phân tích ảnh…', '写真を分析中…', '正在分析照片…')} ${at}/${total}`}
+              ? t('Stopping after this photo…', 'Đang dừng sau ảnh này…', 'この写真のあとで停止します…', '这张照片之后停止…', '這張照片之後停止…')
+              : `${t('Reading the photos…', 'Đang phân tích ảnh…', '写真を分析中…', '正在分析照片…', '正在分析照片…')} ${at}/${total}`}
           </Text>
           <View style={s.track}>
             <View style={[s.fill, { width: `${total ? (done / total) * 100 : 0}%` }]} testID="scoring-fill" />
@@ -256,7 +256,7 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
                 what is not sent invites the question of what is (the
                 scores are, to the gallery), so the owner kept it to the
                 one fact (15 Oct 2026). */}
-            {t('Analysed on this phone.', 'Phân tích ngay trên máy.', '端末内で分析します。', '在本机分析。')}
+            {t('Analysed on this phone.', 'Phân tích ngay trên máy.', '端末内で分析します。', '在本机分析。', '在本機分析。')}
           </Text>
           <PressableScale
             onPress={onCancel}
@@ -264,10 +264,10 @@ export function ScoringDialog({ visible, done, total, stopping, onCancel }: {
             scaleTo={0.96}
             contentStyle={s.dialogCancel}
             accessibilityRole="button"
-            accessibilityLabel={t('Cancel', 'Huỷ', 'キャンセル', '取消')}
+            accessibilityLabel={t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消')}
             testID="scoring-cancel"
           >
-            <Text style={s.dialogCancelText}>{t('Cancel', 'Huỷ', 'キャンセル', '取消')}</Text>
+            <Text style={s.dialogCancelText}>{t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消')}</Text>
           </PressableScale>
         </View>
       </View>
@@ -294,16 +294,16 @@ export function ScoredCard({ scored, failed, best, onClose }: {
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.doneTitle}>
-          {t(`Scored ${scored} photo${scored === 1 ? '' : 's'}`, `Đã chấm xong ${scored} ảnh`, `${scored}枚を採点しました`, `已为 ${scored} 张照片评分`)}
+          {t(`Scored ${scored} photo${scored === 1 ? '' : 's'}`, `Đã chấm xong ${scored} ảnh`, `${scored}枚を採点しました`, `已为 ${scored} 张照片评分`, `已為 ${scored} 張照片評分`)}
         </Text>
         {best ? (
           <Text style={s.doneLine}>
-            {t(`Best: photo ${best.n} · ${tenText(best.ten)}`, `Cao nhất: ảnh ${best.n} · ${tenText(best.ten)}`, `最高：写真${best.n}・${tenText(best.ten)}`, `最佳：第 ${best.n} 张 · ${tenText(best.ten)}`)}
+            {t(`Best: photo ${best.n} · ${tenText(best.ten)}`, `Cao nhất: ảnh ${best.n} · ${tenText(best.ten)}`, `最高：写真${best.n}・${tenText(best.ten)}`, `最佳：第 ${best.n} 张 · ${tenText(best.ten)}`, `最佳：第 ${best.n} 張 · ${tenText(best.ten)}`)}
           </Text>
         ) : null}
         {failed > 0 ? (
           <Text style={s.doneLine} testID="scored-failed">
-            {t(`${failed} could not be read`, `${failed} ảnh không đọc được`, `${failed}枚は読み込めませんでした`, `${failed} 张无法读取`)}
+            {t(`${failed} could not be read`, `${failed} ảnh không đọc được`, `${failed}枚は読み込めませんでした`, `${failed} 张无法读取`, `${failed} 張無法讀取`)}
           </Text>
         ) : null}
       </View>
@@ -312,7 +312,7 @@ export function ScoredCard({ scored, failed, best, onClose }: {
         scaleTo={0.9}
         hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')}
+        accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
         testID="scored-close"
       >
         <Ionicons name="close" size={18} color={colors.textTertiary} />
@@ -394,7 +394,7 @@ export function ScoreStanding({ score, kind, lines }: { score: PhotoScore; kind?
           `Higher than ${percentText(among)}% of ${kindNoun(kind, t)} photos`,
           `Cao hơn ${percentText(among)}% ảnh ${kindNoun(kind, t)}`,
           `${kindNoun(kind, t)}写真の${percentText(among)}%より高い`,
-          `高于 ${percentText(among)}% 的${kindNoun(kind, t)}照片`,
+          `高于 ${percentText(among)}% 的${kindNoun(kind, t)}照片`, `高於 ${percentText(among)}% 的${kindNoun(kind, t)}照片`,
         )}
       </Text>
     );
@@ -406,7 +406,7 @@ export function ScoreStanding({ score, kind, lines }: { score: PhotoScore; kind?
         `Higher than ${percentText(standing)}% of the catalog's photos`,
         `Cao hơn ${percentText(standing)}% ảnh trong catalog`,
         `カタログの${percentText(standing)}%の写真より高い`,
-        `高于目录中 ${percentText(standing)}% 的照片`,
+        `高于目录中 ${percentText(standing)}% 的照片`, `高於目錄中 ${percentText(standing)}% 的照片`,
       )}
     </Text>
   );
@@ -443,7 +443,7 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
         accessibilityState={{ expanded: open }}
         testID="score-detail-toggle"
       >
-        <Text style={s.detailTitle}>{t('Detailed analysis', 'Phân tích chi tiết', '詳しい分析', '详细分析')}</Text>
+        <Text style={s.detailTitle}>{t('Detailed analysis', 'Phân tích chi tiết', '詳しい分析', '详细分析', '詳細分析')}</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
       </PressableScale>
       {open && (
@@ -455,7 +455,7 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
                 {/* Amber: every tip answers something that held the
                     photograph back, which is what the amber rows say. */}
                 <Ionicons name="bulb-outline" size={16} color={colors.warnInk} />
-                <Text style={s.tipsTitle}>{t('To improve', 'Gợi ý cải thiện', '改善のヒント', '改进建议')}</Text>
+                <Text style={s.tipsTitle}>{t('To improve', 'Gợi ý cải thiện', '改善のヒント', '改进建议', '改進建議')}</Text>
               </View>
               {/* Each under the mark of the quality it would help, so a
                   tip reads back to its row without saying which. */}
@@ -490,9 +490,9 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
  */
 function verdictOf(tone: Detail['tone'], t: T): string {
   switch (tone) {
-    case 'good': return t('Good', 'Tốt', '良い', '良好');
-    case 'warn': return t('Could improve', 'Cần cải thiện', '改善の余地あり', '可以改进');
-    case 'plain': return t('Fine', 'Ổn', '問題なし', '没问题');
+    case 'good': return t('Good', 'Tốt', '良い', '良好', '良好');
+    case 'warn': return t('Could improve', 'Cần cải thiện', '改善の余地あり', '可以改进', '可以改進');
+    case 'plain': return t('Fine', 'Ổn', '問題なし', '没问题', '沒問題');
   }
 }
 

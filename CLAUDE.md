@@ -48,6 +48,12 @@ npm run test:tz          # the same suite on a clock with daylight saving
 npm run coverage         # the same suite again, with floors
 ```
 
+A string written with `t()` takes its Traditional Chinese from its
+Simplified: after adding or editing one, run `npm run hant` in `app/`
+and commit what it writes. `scripts/chinese.test.ts` fails until you do,
+and a Traditional word to change is changed in `scripts/hant.ts`, never
+in the call.
+
 Run all five locally before pushing. One validated push beats three
 speculative ones, and a red PR costs a cycle of the reviewer's trust.
 

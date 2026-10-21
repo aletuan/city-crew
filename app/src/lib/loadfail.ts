@@ -66,26 +66,26 @@ export function classifyLoadFail(message: string | null | undefined): LoadFail |
   return 'other';
 }
 
-type T = (en: string, vi: string, ja?: string, zh?: string) => string;
+type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string;
 
 /** What to tell the reader, in one sentence, from the name. */
 export function loadFailText(kind: LoadFail, t: T): string {
   switch (kind) {
     case 'offline':
-      return t('You’re offline.', 'Bạn đang offline.', 'オフラインです。', '你已离线。');
+      return t('You’re offline.', 'Bạn đang offline.', 'オフラインです。', '你已离线。', '你已離線。');
     case 'expired':
       return t(
         'Your session lapsed — signing you back in.',
         'Phiên đăng nhập đã hết hạn — đang kết nối lại.',
         'セッションが切れました。再接続しています。',
-        '登录已过期 — 正在重新登录。',
+        '登录已过期 — 正在重新登录。', '登入已過期 — 正在重新登入。',
       );
     default:
-      return t('Couldn’t load right now.', 'Chưa tải được lúc này.', '読み込めませんでした。', '暂时无法加载。');
+      return t('Couldn’t load right now.', 'Chưa tải được lúc này.', '読み込めませんでした。', '暂时无法加载。', '暫時無法載入。');
   }
 }
 
 /** The second half, when the screen is still showing an older answer. */
 export function loadFailStale(t: T): string {
-  return t('Showing what was saved.', 'Đang hiện dữ liệu đã lưu.', '保存済みのデータを表示中。', '正在显示已保存的内容。');
+  return t('Showing what was saved.', 'Đang hiện dữ liệu đã lưu.', '保存済みのデータを表示中。', '正在显示已保存的内容。', '正在顯示已儲存的內容。');
 }

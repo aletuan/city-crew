@@ -30,6 +30,14 @@ describe('the list of languages', () => {
     expect(screen.getByText('Tiếng Việt')).toBeTruthy();
     expect(screen.getByText('日本語')).toBeTruthy();
     expect(screen.getByText('简体中文')).toBeTruthy();
+    expect(screen.getByText('繁體中文')).toBeTruthy();
+  });
+
+  // Labelled by its script, as Simplified is: never a country.
+  it('switches to Traditional Chinese', () => {
+    render(<LanguageSwitcherModal visible onClose={() => {}} />);
+    fireEvent.click(screen.getByText('繁體中文'));
+    expect(setLang).toHaveBeenCalledWith('zh-Hant');
   });
 
   it('switches to Simplified Chinese', () => {

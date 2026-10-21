@@ -65,6 +65,11 @@ export type City = {
   hero_title_zh?: string | null;
   hero_sub_zh?: string | null;
   hero_cta_zh?: string | null;
+  // Traditional Chinese, Taiwan's. Declared before the columns exist so
+  // the hero can ask for them; until they do, it reads as the English.
+  hero_title_zh_hant?: string | null;
+  hero_sub_zh_hant?: string | null;
+  hero_cta_zh_hant?: string | null;
   hero_place_slug: string | null;
   /** A photograph of the city itself. Beats `hero_place_slug` when set —
    *  see `heroPhoto` in ExploreScreen. */

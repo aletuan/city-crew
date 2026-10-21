@@ -98,7 +98,7 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         style={[s.sheet, {
           paddingBottom: insets.bottom + 16,

@@ -32,7 +32,7 @@ export default function PricePill({ place, compact }: {
   if (isFree(place)) {
     return (
       <View style={s.pill}>
-        <Text style={s.pillText}>{t('Free', 'Miễn phí', '無料', '免费')}</Text>
+        <Text style={s.pillText}>{t('Free', 'Miễn phí', '無料', '免费', '免費')}</Text>
       </View>
     );
   }
@@ -40,7 +40,7 @@ export default function PricePill({ place, compact }: {
   if (!label) return null;
   return (
     <Text style={s.price}>
-      {compact ? quiet(label) : t(`${quiet(label)} / person`, `${quiet(label)} / người`, `${quiet(label)} / 1人`, `${quiet(label)} / 人`)}
+      {compact ? quiet(label) : t(`${quiet(label)} / person`, `${quiet(label)} / người`, `${quiet(label)} / 1人`, `${quiet(label)} / 人`, `${quiet(label)} / 人`)}
     </Text>
   );
 }

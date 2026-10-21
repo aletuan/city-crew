@@ -226,7 +226,7 @@ export function planReminderSync(
   return { schedule, cancel };
 }
 
-export type Translate = (en: string, vi: string, ja: string, zh?: string) => string;
+export type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
 
 /**
  * A note's words — one place, so a trip saved and a trip synced read the
@@ -242,20 +242,20 @@ export function reminderText(
   const at = w.startMin == null ? null : clockOf(w.startMin);
   if (kind === 'eve') {
     return {
-      title: t(`Tomorrow: ${w.title}`, `Ngày mai: ${w.title}`, `明日：${w.title}`, `明天：${w.title}`),
+      title: t(`Tomorrow: ${w.title}`, `Ngày mai: ${w.title}`, `明日：${w.title}`, `明天：${w.title}`, `明天：${w.title}`),
       body: at
-        ? t(`First stop at ${at}. Sleep well.`, `Điểm dừng đầu lúc ${at}. Ngủ ngon nhé.`, `最初の立ち寄り先は${at}。おやすみなさい。`, `第一个地点 ${at} 开始。晚安。`)
-        : t('Your plan is tomorrow. Sleep well.', 'Mai là ngày đi rồi. Ngủ ngon nhé.', '予定は明日。おやすみなさい。', '你的计划在明天。晚安。'),
+        ? t(`First stop at ${at}. Sleep well.`, `Điểm dừng đầu lúc ${at}. Ngủ ngon nhé.`, `最初の立ち寄り先は${at}。おやすみなさい。`, `第一个地点 ${at} 开始。晚安。`, `第一個地點 ${at} 開始。晚安。`)
+        : t('Your plan is tomorrow. Sleep well.', 'Mai là ngày đi rồi. Ngủ ngon nhé.', '予定は明日。おやすみなさい。', '你的计划在明天。晚安。', '你的計畫在明天。晚安。'),
     };
   }
   // A day-of note exists only for a trip with a start, so `at` is set here.
   return {
-    title: t(`Today: ${w.title}`, `Hôm nay: ${w.title}`, `今日：${w.title}`, `今天：${w.title}`),
+    title: t(`Today: ${w.title}`, `Hôm nay: ${w.title}`, `今日：${w.title}`, `今天：${w.title}`, `今天：${w.title}`),
     body: t(
       `First stop at ${at}. Check the route and leave in time.`,
       `Điểm dừng đầu lúc ${at}. Xem lại lộ trình, đi cho kịp nhé.`,
       `最初の立ち寄り先は${at}。ルートを確認して、余裕を持って出発を。`,
-      `第一个地点 ${at} 开始。查看路线，准时出发。`,
+      `第一个地点 ${at} 开始。查看路线，准时出发。`, `第一個地點 ${at} 開始。檢視路線，準時出發。`,
     ),
   };
 }

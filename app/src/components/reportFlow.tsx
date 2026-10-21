@@ -50,44 +50,44 @@ export function useReport() {
   const label = (r: ReportReason): { title: string; desc: string } => {
     if (r === 'spam') {
       return {
-        title: t('Spam or advertising', 'Spam hoặc quảng cáo', 'スパム・宣伝', '垃圾信息或广告'),
+        title: t('Spam or advertising', 'Spam hoặc quảng cáo', 'スパム・宣伝', '垃圾信息或广告', '垃圾資訊或廣告'),
         desc: t(
           'Adverts, links, or the same thing over and over.',
           'Quảng cáo, đường dẫn, hoặc lặp đi lặp lại một nội dung.',
           '広告やリンク、同じ内容の繰り返し。',
-          '广告、链接，或反复发布相同内容。',
+          '广告、链接，或反复发布相同内容。', '廣告、連結，或反覆發布相同內容。',
         ),
       };
     }
     if (r === 'offensive') {
       return {
-        title: t('Offensive or hateful', 'Phản cảm hoặc thù ghét', '不快・差別的', '冒犯或仇恨内容'),
+        title: t('Offensive or hateful', 'Phản cảm hoặc thù ghét', '不快・差別的', '冒犯或仇恨内容', '冒犯或仇恨內容'),
         desc: t(
           'Hateful, violent, sexual, or otherwise not for this app.',
           'Thù ghét, bạo lực, tình dục, hoặc không phù hợp với ứng dụng này.',
           '差別的・暴力的・性的など、このアプリにふさわしくない内容。',
-          '仇恨、暴力、色情，或其他不适合本应用的内容。',
+          '仇恨、暴力、色情，或其他不适合本应用的内容。', '仇恨、暴力、色情，或其他不適合本 App的內容。',
         ),
       };
     }
     if (r === 'impersonation') {
       return {
-        title: t('Pretending to be someone', 'Mạo danh người khác', 'なりすまし', '冒充他人'),
+        title: t('Pretending to be someone', 'Mạo danh người khác', 'なりすまし', '冒充他人', '冒充他人'),
         desc: t(
           'Using a name, a face, or a business that is not theirs.',
           'Dùng tên, ảnh, hoặc thương hiệu không phải của họ.',
           '他人の名前・写真・店名を使っている。',
-          '使用不属于自己的名字、照片或商家名称。',
+          '使用不属于自己的名字、照片或商家名称。', '使用不屬於自己的名字、照片或商家名稱。',
         ),
       };
     }
     return {
-      title: t('Something else', 'Chuyện khác', 'その他', '其他'),
+      title: t('Something else', 'Chuyện khác', 'その他', '其他', '其他'),
       desc: t(
         'Anything the desk should look at that the others do not cover.',
         'Bất cứ điều gì cần desk xem mà các mục trên chưa nói tới.',
         '上記に当てはまらない、確認してほしいこと。',
-        '以上未涵盖、但需要编辑团队查看的问题。',
+        '以上未涵盖、但需要编辑团队查看的问题。', '以上未涵蓋、但需要編輯團隊檢視的問題。',
       ),
     };
   };
@@ -96,20 +96,20 @@ export function useReport() {
     if (!me) return;
     submitReport({ reporter: me, kind: tgt.kind, targetId: tgt.id, reason })
       .then(() => Alert.alert(
-        t('Thanks for telling us', 'Cảm ơn bạn đã báo', 'ご報告ありがとうございます', '感谢你的反馈'),
+        t('Thanks for telling us', 'Cảm ơn bạn đã báo', 'ご報告ありがとうございます', '感谢你的反馈', '感謝你的回饋'),
         t(
           'The desk will take a look. You will not hear back about it, and nobody is told who reported what.',
           'Desk sẽ xem lại. Bạn sẽ không nhận phản hồi riêng, và không ai biết ai đã báo cáo.',
           'デスクが確認します。個別のご返信はなく、誰が報告したかは誰にも伝わりません。',
-          '编辑团队会查看。我们不会单独回复，也不会透露是谁举报的。',
+          '编辑团队会查看。我们不会单独回复，也不会透露是谁举报的。', '編輯團隊會檢視。我們不會單獨回覆，也不會透露是誰舉報的。',
         ),
       ))
       // Neutral on purpose: the ways this fails are the day's cap and a
       // policy refusal, and neither is worth spelling out to somebody
       // who is in the middle of reporting something.
       .catch(() => Alert.alert(
-        t('Could not send this report', 'Không gửi được báo cáo', '報告を送信できませんでした', '无法发送举报'),
-        t('Please try again later.', 'Vui lòng thử lại sau.', '後でもう一度お試しください。', '请稍后再试。'),
+        t('Could not send this report', 'Không gửi được báo cáo', '報告を送信できませんでした', '无法发送举报', '無法傳送舉報'),
+        t('Please try again later.', 'Vui lòng thử lại sau.', '後でもう一度お試しください。', '请稍后再试。', '請稍後再試。'),
       ));
   };
 
@@ -117,7 +117,7 @@ export function useReport() {
     <PersonSheet
       visible={target !== null}
       name={target?.name ?? ''}
-      meta={t('What is wrong with this?', 'Vấn đề ở đây là gì?', '何が問題ですか？', '这里有什么问题？')}
+      meta={t('What is wrong with this?', 'Vấn đề ở đây là gì?', '何が問題ですか？', '这里有什么问题？', '這裡有什麼問題？')}
       avatarUrl={target?.avatarUrl}
       actions={target
         ? REPORT_REASONS.map((r): PersonAction => ({

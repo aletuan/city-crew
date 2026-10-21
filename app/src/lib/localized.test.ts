@@ -39,6 +39,18 @@ describe('localized', () => {
     expect(localized({ name_vi: 'Quán A' }, 'name', 'zh')).toBe('Quán A');
   });
 
+  // Traditional is its own key, 'zh-Hant', and its own column suffix,
+  // `_zh_hant` (a column name has no hyphen). Never the Simplified: a
+  // row with only `zh` reads as English to a Traditional reader.
+  it('reads Traditional from its own key and column, never from the Simplified', () => {
+    const both = { ...PLACE, i18n: { ...PLACE.i18n, zh: { name: '咖啡馆 A' }, 'zh-Hant': { name: '咖啡館 A' } } };
+    expect(localized(both, 'name', 'zh-Hant')).toBe('咖啡館 A');
+    expect(localized(both, 'name', 'zh')).toBe('咖啡馆 A');
+    const simplifiedOnly = { ...PLACE, i18n: { ...PLACE.i18n, zh: { name: '咖啡馆 A' } } };
+    expect(localized(simplifiedOnly, 'name', 'zh-Hant')).toBe('Café A');
+    expect(slot({ hero_title_zh_hant: '探索台北', hero_title_zh: '探索' }, 'hero_title', 'zh-Hant')).toBe('探索台北');
+  });
+
   it('hands each reader their own language when the row has it', () => {
     expect(localized(PLACE, 'name', 'en')).toBe('Café A');
     expect(localized(PLACE, 'name', 'vi')).toBe('Quán A');

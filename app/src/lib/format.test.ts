@@ -816,3 +816,46 @@ describe('in Chinese', () => {
     expect(openLabel('Ơ Kìa', zh)).toBe('打开Ơ Kìa');
   });
 });
+
+// ── Traditional Chinese (21 Oct 2026) ──
+//
+// The same forms in Taiwan's characters: the weekday as 週, not 周,
+// minutes as 分鐘 and hours as 小時. A date already past is the
+// Simplified one exactly, since it has no character the two write
+// differently.
+describe('in Traditional Chinese', () => {
+  const wed = new Date(2026, 9, 7, 12);
+  const sun = new Date(2026, 0, 4, 12);
+
+  it('writes a day coming up with 週', () => {
+    expect(dateline('zh-Hant', wed)).toBe('10月7日 週三');
+    expect(dateline('zh-Hant', sun)).toBe('1月4日 週日');
+    expect(dayline('zh-Hant', wed)).toBe('週三 7日');
+    expect(numericDate('zh-Hant', wed)).toBe('10月7日');
+  });
+
+  it('spells minutes and hours in Traditional', () => {
+    expect(fmtMinutes(75, 'zh-Hant')).toBe('75分鐘');
+    expect(fmtDuration(30, 45, 'zh-Hant')).toBe('30–45分鐘');
+    expect(fmtDuration(90, 150, 'zh-Hant')).toBe('1.5–2.5小時');
+  });
+
+  it('names the days of the opening hours in Traditional', () => {
+    expect(groupHours([
+      'Monday: 7:00 AM – 3:00 PM',
+      'Tuesday: Closed',
+      'Wednesday: Open 24 hours',
+    ], 'zh-Hant')).toEqual([
+      { label: '週一', hours: '07:00–15:00' },
+      { label: '週二', hours: '休息' },
+      { label: '週三', hours: '24小時營業' },
+    ]);
+  });
+
+  it('says when a place shuts and opens again, in Traditional', () => {
+    const hant = (_e: string, _v: string, _j?: string, _z?: string, h?: string) => h ?? '';
+    expect(openFragment({ open: true, untilMin: 1320, closesInMin: 45 }, hant)).toBe('營業至 22:00');
+    expect(shutLabel({ open: false, opensAtMin: 480 }, hant)).toBe('已打烊 · 08:00 開門');
+    expect(openLabel('Ơ Kìa', hant)).toBe('開啟Ơ Kìa');
+  });
+});

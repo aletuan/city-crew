@@ -76,19 +76,19 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
   useEffect(() => { if (mayOffer) void recount(); }, [mayOffer, recount]);
 
   const refusalText = (why: PhotoRefusal): string => ({
-    not_a_guide: t('This is not yours to add to.', 'Bạn không thêm được vào đây.', 'ここには追加できません。', '你无权在这里添加。'),
-    not_your_place: t('This is not yours to add to.', 'Bạn không thêm được vào đây.', 'ここには追加できません。', '你无权在这里添加。'),
+    not_a_guide: t('This is not yours to add to.', 'Bạn không thêm được vào đây.', 'ここには追加できません。', '你无权在这里添加。', '你無權在這裡新增。'),
+    not_your_place: t('This is not yours to add to.', 'Bạn không thêm được vào đây.', 'ここには追加できません。', '你无权在这里添加。', '你無權在這裡新增。'),
     place_full: t(
       'Five photos is the most for one place.',
       'Mỗi địa điểm tối đa 5 ảnh.',
       '1つの場所につき写真は5枚までです。',
-      '每个地点最多 5 张照片。',
+      '每个地点最多 5 张照片。', '每個地點最多 5 張照片。',
     ),
     day_full: t(
       'Ten photos a day is the limit.',
       'Mỗi ngày tối đa 10 ảnh.',
       '1日10枚までです。',
-      '每天最多 10 张照片。',
+      '每天最多 10 张照片。', '每天最多 10 張照片。',
     ),
   }[why]);
 
@@ -179,9 +179,9 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
             `Could not add ${failed.length} of ${batch.length} photos`,
             `Không thêm được ${failed.length}/${batch.length} ảnh`,
             `${batch.length}枚のうち${failed.length}枚を追加できませんでした`,
-            `${batch.length} 张照片中有 ${failed.length} 张无法添加`,
+            `${batch.length} 张照片中有 ${failed.length} 张无法添加`, `${batch.length} 張照片中有 ${failed.length} 張無法新增`,
           )
-          : t('Could not add your photo', 'Không thêm được ảnh', '写真を追加できませんでした', '无法添加你的照片'),
+          : t('Could not add your photo', 'Không thêm được ảnh', '写真を追加できませんでした', '无法添加你的照片', '無法新增你的照片'),
         e instanceof Error ? e.message : String(e),
       );
     } finally {
