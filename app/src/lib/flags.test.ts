@@ -17,6 +17,11 @@ describe('flagsStore', () => {
     expect(flagsStore().get('place_checkin')).toBe(false);
   });
 
+  it('ships with the city sheet\u2019s place counts hidden', () => {
+    expect(FLAG_DEFAULTS.city_place_counts).toBe(false);
+    expect(flagsStore().get('city_place_counts')).toBe(false);
+  });
+
   it('takes a row from the table over the default', async () => {
     const fake = fakeSupabase();
     fake.replies({ data: [{ key: 'photo_attribution', enabled: false }] });
