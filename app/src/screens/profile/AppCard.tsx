@@ -53,17 +53,17 @@ export function AppCard() {
             value column. See `AboutSheet`. */}
         <SettingRow
           icon="document-text-outline"
-          label={t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
+          label={t('Terms of Service', 'Điều khoản sử dụng', '利用規約', '服务条款')}
           onPress={() => { fireHaptic('selection'); setLegal('terms'); }}
         />
         <SettingRow
           icon="shield-checkmark-outline"
-          label={t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー')}
+          label={t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー', '隐私政策')}
           onPress={() => { fireHaptic('selection'); setLegal('privacy'); }}
         />
         <SettingRow
           icon="information-circle-outline"
-          label={t('Version info', 'Thông tin phiên bản', 'バージョン情報')}
+          label={t('Version info', 'Thông tin phiên bản', 'バージョン情報', '版本信息')}
           onPress={() => { fireHaptic('selection'); setAbout(true); }}
           last
         />
@@ -98,6 +98,7 @@ export function Tagline() {
           '“We do not remember days,\nwe remember moments.”',
           '“Ta không nhớ những ngày,\nta nhớ những khoảnh khắc.”',
           '「私たちが覚えているのは日々ではなく、\n瞬間なのだ。」',
+          '“我们记住的不是日子，\n而是瞬间。”',
         )}
       </Text>
       {/* A borrowed sentence wears its author's name — and a name is

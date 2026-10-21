@@ -10,6 +10,7 @@ describe('the preset faces', () => {
     ]);
     for (const p of AVATAR_PRESETS) {
       expect(p.en && p.vi && p.ja, p.key).toBeTruthy();
+      expect(p.zh, p.key).toMatch(/^[\u4e00-\u9fff]+$/);
     }
   });
 

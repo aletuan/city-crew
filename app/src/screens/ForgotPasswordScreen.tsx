@@ -89,7 +89,7 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
       // In field order: the code sits above the new password.
       if (!cleanOtp(code)) throw new Error('need_code');
       if (password.length < PASSWORD_MIN) {
-        throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
+        throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。', '密码至少需要 8 个字符。'));
       }
       await resetPassword(email, cleanOtp(code), password);
       leaveAuth(navigation);
@@ -100,17 +100,18 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
       <AuthScreen>
         <AuthHeader
           onBack={() => setStep('email')}
-          title={t('Set a new password', 'Đặt mật khẩu mới', '新しいパスワードを設定')}
+          title={t('Set a new password', 'Đặt mật khẩu mới', '新しいパスワードを設定', '设置新密码')}
         />
         <Lede>{t(
             `We sent a recovery code to ${email}. Enter it with your new password.`,
             `Mã khôi phục đã được gửi tới ${email}. Nhập mã cùng mật khẩu mới.`,
             `${email} にリカバリーコードを送信しました。新しいパスワードと一緒に入力してください。`,
+            `我们已向 ${email} 发送了找回验证码。请输入验证码和新密码。`,
           )}</Lede>
         <FieldRow
           icon="key-outline"
-          label={t('Recovery code', 'Mã khôi phục', 'リカバリーコード')}
-          placeholder={t('Paste the code from the email', 'Dán mã trong email', 'メールのコードを貼り付け')}
+          label={t('Recovery code', 'Mã khôi phục', 'リカバリーコード', '找回验证码')}
+          placeholder={t('Paste the code from the email', 'Dán mã trong email', 'メールのコードを貼り付け', '粘贴邮件中的验证码')}
           value={code}
           onChangeText={(v) => setCode(cleanOtp(v))}
           keyboardType="number-pad"
@@ -119,8 +120,8 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
         />
         <FieldRow
           icon="lock-closed-outline"
-          label={t('New password', 'Mật khẩu mới', '新しいパスワード')}
-          placeholder={t('Use at least 8 characters', 'Ít nhất 8 ký tự', '8文字以上')}
+          label={t('New password', 'Mật khẩu mới', '新しいパスワード', '新密码')}
+          placeholder={t('Use at least 8 characters', 'Ít nhất 8 ký tự', '8文字以上', '至少 8 个字符')}
           value={password}
           onChangeText={setPassword}
           secure
@@ -144,8 +145,8 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
         >
           <Text style={[s.resendText, cooldown > 0 && s.resendWaiting]}>
             {cooldown > 0
-              ? t(`Resend code in ${cooldown}s`, `Gửi lại mã sau ${cooldown}s`, `${cooldown}秒後に再送信`)
-              : t("Didn't get it? Resend code", 'Chưa nhận được? Gửi lại mã', '届きませんか？コードを再送信')}
+              ? t(`Resend code in ${cooldown}s`, `Gửi lại mã sau ${cooldown}s`, `${cooldown}秒後に再送信`, `${cooldown} 秒后可重新发送`)
+              : t("Didn't get it? Resend code", 'Chưa nhận được? Gửi lại mã', '届きませんか？コードを再送信', '没收到？重新发送验证码')}
           </Text>
         </Pressable>
         {resent && cooldown > 0 ? (
@@ -154,11 +155,12 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
               'A new code is on its way. The previous one no longer works.',
               'Mã mới đang được gửi. Mã cũ không còn dùng được.',
               '新しいコードを送信しました。前のコードは使えません。',
+              '新的验证码已发送，之前的验证码已失效。',
             )}
           </Text>
         ) : null}
         {error ? <FormError>{failText(error)}</FormError> : null}
-        <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu', 'パスワードをリセット')} onPress={reset} busy={busy} testID="forgot-reset" />
+        <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu', 'パスワードをリセット', '重置密码')} onPress={reset} busy={busy} testID="forgot-reset" />
       </AuthScreen>
     );
   }
@@ -167,17 +169,18 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
     <AuthScreen>
       <AuthHeader
         onBack={() => navigation.goBack()}
-        title={t('Forgot password', 'Quên mật khẩu', 'パスワードをお忘れの方')}
+        title={t('Forgot password', 'Quên mật khẩu', 'パスワードをお忘れの方', '忘记密码')}
       />
       <Lede>{t(
           "Enter your email and we'll send you a recovery code.",
           'Nhập email của bạn, chúng tôi sẽ gửi mã khôi phục.',
           'メールアドレスを入力すると、リカバリーコードをお送りします。',
+          '输入你的邮箱，我们会发送找回验证码。',
         )}</Lede>
       <FieldRow
         icon="mail-outline"
-        label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
-        placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力')}
+        label={t('Email address', 'Địa chỉ email', 'メールアドレス', '电子邮箱')}
+        placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力', '输入你的邮箱')}
         value={email}
         // Stripped as it is typed rather than trimmed at submit — the
         // keyboard's space lands inside the address. See `lib/email`.
@@ -197,7 +200,7 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
         testID="forgot-email"
       />
       {error ? <FormError>{failText(error)}</FormError> : null}
-      <PrimaryButton label={t('Send recovery code', 'Gửi mã khôi phục', 'コードを送信')} onPress={send} busy={busy} testID="forgot-submit" />
+      <PrimaryButton label={t('Send recovery code', 'Gửi mã khôi phục', 'コードを送信', '发送找回验证码')} onPress={send} busy={busy} testID="forgot-submit" />
     </AuthScreen>
   );
 }

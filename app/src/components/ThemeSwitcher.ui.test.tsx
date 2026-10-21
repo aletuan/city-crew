@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert, StyleSheet } from 'react-native';
 import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Look, Pref } from '../lib/look';
+import { LOOK_DEFS } from '../lib/look';
 import { PALETTES } from '../theme';
 
 const setPref = vi.hoisted(() => vi.fn());
@@ -650,6 +651,16 @@ describe('the looks', () => {
     expect(schemeLabel('wine', vi_)).toBe('Rượu vang');
     expect(schemeLabel('navy', (en) => en)).toBe('Navy');
     expect(schemeLabel('dark', vi_)).toBe('Tối');
+    // And in Chinese, every look its own name — kana would mean the
+    // Japanese line pasted in.
+    const zh_ = (_en: string, _vi: string, _ja?: string, zh?: string) => zh ?? '';
+    expect(schemeLabel('coffee', zh_)).toBe('咖啡');
+    expect(schemeLabel('navy', zh_)).toBe('海军蓝');
+    expect(schemeLabel('system', zh_)).toBe('自动');
+    expect(schemeLabel('dark', zh_)).toBe('深色');
+    for (const id of Object.keys(LOOK_DEFS) as (keyof typeof LOOK_DEFS)[]) {
+      expect(schemeLabel(id, zh_), id).toMatch(/^[\u4e00-\u9fff]+$/);
+    }
   });
 
   it('gives Profile a look’s own mark, and a ground’s for the rest', () => {

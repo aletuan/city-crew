@@ -145,16 +145,17 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   };
 
   const handleMessage = (bad: NonNullable<ReturnType<typeof handleProblem>>) => ({
-    empty: t('Choose a username.', 'Hãy chọn một tên người dùng.', 'ユーザー名を選んでください。'),
-    short: t('At least 3 characters.', 'Ít nhất 3 ký tự.', '3文字以上にしてください。'),
-    long: t('20 characters at most.', 'Tối đa 20 ký tự.', '20文字以内にしてください。'),
-    chars: t('Letters, numbers and _ only.', 'Chỉ gồm chữ, số và dấu _.', '英数字と _ のみ使えます。'),
+    empty: t('Choose a username.', 'Hãy chọn một tên người dùng.', 'ユーザー名を選んでください。', '请选择用户名。'),
+    short: t('At least 3 characters.', 'Ít nhất 3 ký tự.', '3文字以上にしてください。', '至少 3 个字符。'),
+    long: t('20 characters at most.', 'Tối đa 20 ký tự.', '20文字以内にしてください。', '最多 20 个字符。'),
+    chars: t('Letters, numbers and _ only.', 'Chỉ gồm chữ, số và dấu _.', '英数字と _ のみ使えます。', '只能使用字母、数字和 _。'),
   }[bad]);
 
   const takenMessage = (h: string) => t(
     `@${h} is taken. Try another.`,
     `@${h} đã có người dùng. Chọn tên khác.`,
     `@${h} は使用されています。別の名前をお試しください。`,
+    `@${h} 已被使用，请换一个。`,
   );
 
   /**
@@ -225,10 +226,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       // apart between the two moments it can be said.
       if (!emailShapeOk(email.trim())) throw new Error('bad_email');
       if (password.length < PASSWORD_MIN) {
-        throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
+        throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。', '密码至少需要 8 个字符。'));
       }
       if (password !== confirm) {
-        throw new Error(t("Passwords don't match.", 'Mật khẩu nhập lại không khớp.', 'パスワードが一致しません。'));
+        throw new Error(t("Passwords don't match.", 'Mật khẩu nhập lại không khớp.', 'パスワードが一致しません。', '两次输入的密码不一致。'));
       }
       // Last of the six, and out of screen order on purpose: it is the
       // only one that costs a round trip, and making every submit wait on
@@ -317,12 +318,13 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             it instead of finding out after the code fails to arrive. */}
         <AuthHeader
           onBack={() => setStep('form')}
-          title={t('What are you into?', 'Bạn thích gì?', '好みを教えてください')}
+          title={t('What are you into?', 'Bạn thích gì?', '好みを教えてください', '你喜欢什么？')}
         />
         <Lede>{t(
             'Choose up to 5 interests for suggestions that suit you. You can change them later in your profile.',
             'Chọn tối đa 5 sở thích để nhận gợi ý phù hợp. Bạn có thể thay đổi sau trong hồ sơ.',
             'あなたに合った提案を受け取るために、興味のあるものを5つまで選んでください。あとからプロフィールで変更できます。',
+            '最多选择 5 个兴趣，获取适合你的推荐。之后可以在个人主页中修改。',
           )}</Lede>
         <TastePicker chosen={taste} onChange={setTaste} />
         {/* Said here, before anything is recorded, and that is the whole
@@ -341,6 +343,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             'City Crew uses your interests, trips and activity history to suggest more relevant content. You can turn off activity recording in Profile → Edit profile.',
             'City Crew sử dụng sở thích, hành trình và lịch sử hoạt động để gợi ý nội dung phù hợp hơn. Bạn có thể tắt việc ghi nhớ hoạt động trong Hồ sơ → Sửa hồ sơ.',
             'City Crew は好みや旅程、アクティビティ履歴をもとに、あなたに合ったコンテンツを提案します。アクティビティの記録は「プロフィール」→「プロフィール編集」でオフにできます。',
+            'City Crew 会根据你的兴趣、行程和活动记录推荐更相关的内容。你可以在“个人主页 → 编辑个人资料”中关闭活动记录。',
           )}
         </Text>
         {/* The account is made here now, so this is where its failures
@@ -356,7 +359,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             the account; it is now a real answer that does not have to
             hide the other one to be offered. */}
         <PrimaryButton
-          label={t('Continue', 'Tiếp tục', '続ける')}
+          label={t('Continue', 'Tiếp tục', '続ける', '继续')}
           onPress={() => finish(taste)}
           busy={busy}
         />
@@ -370,7 +373,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           hitSlop={10}
           testID="signup-taste-skip"
         >
-          <Text style={s.skip}>{t('Skip for now', 'Bỏ qua', 'あとで')}</Text>
+          <Text style={s.skip}>{t('Skip for now', 'Bỏ qua', 'あとで', '暂时跳过')}</Text>
         </Pressable>
       </AuthScreen>
     );
@@ -386,17 +389,18 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         <StepDots step={3} total={3} />
         <AuthHeader
           onBack={() => setStep('form')}
-          title={t('Check your email', 'Kiểm tra email', 'メールをご確認ください')}
+          title={t('Check your email', 'Kiểm tra email', 'メールをご確認ください', '请查收邮件')}
         />
         <Lede>{t(
             `We sent a confirmation code to ${email.trim()}. Enter it below to activate your account.`,
             `Mã xác nhận đã được gửi tới ${email.trim()}. Nhập mã bên dưới để kích hoạt tài khoản.`,
             `${email.trim()} に確認コードを送信しました。以下に入力してアカウントを有効化してください。`,
+            `我们已向 ${email.trim()} 发送了验证码。请在下方输入以激活账号。`,
           )}</Lede>
         <FieldRow
           icon="key-outline"
-          label={t('Confirmation code', 'Mã xác nhận', '確認コード')}
-          placeholder={t('Paste the code from the email', 'Dán mã trong email', 'メールのコードを貼り付け')}
+          label={t('Confirmation code', 'Mã xác nhận', '確認コード', '验证码')}
+          placeholder={t('Paste the code from the email', 'Dán mã trong email', 'メールのコードを貼り付け', '粘贴邮件中的验证码')}
           value={code}
           onChangeText={(v) => setCode(cleanOtp(v))}
           keyboardType="number-pad"
@@ -405,7 +409,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           returnKeyType="done"
         />
         {error ? <FormError>{failText(error)}</FormError> : null}
-        <PrimaryButton label={t('Verify & continue', 'Xác nhận & tiếp tục', '確認して続行')} onPress={verify} busy={busy} />
+        <PrimaryButton label={t('Verify & continue', 'Xác nhận & tiếp tục', '確認して続行', '验证并继续')} onPress={verify} busy={busy} />
       </AuthScreen>
     );
   }
@@ -413,12 +417,12 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   if (step === 'welcome') {
     const pending = peekResume(Date.now());
     const continueLabel = pending?.kind === 'save'
-      ? t('Continue saving place', 'Tiếp tục lưu địa điểm', '場所の保存を続ける')
+      ? t('Continue saving place', 'Tiếp tục lưu địa điểm', '場所の保存を続ける', '继续保存地点')
       : pending?.kind === 'collection'
-        ? t('Continue creating collection', 'Tiếp tục tạo bộ sưu tập', 'コレクションの作成を続ける')
+        ? t('Continue creating collection', 'Tiếp tục tạo bộ sưu tập', 'コレクションの作成を続ける', '继续创建合集')
         : pending
-          ? t('Return to what you were doing', 'Quay lại việc đang làm', '続きに戻る')
-          : t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる');
+          ? t('Return to what you were doing', 'Quay lại việc đang làm', '続きに戻る', '返回刚才的操作')
+          : t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる', '开始探索');
     return (
       <AuthScreen>
         {/* No marks here. The bar answers "how much longer", and the
@@ -464,6 +468,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
               `Welcome, ${name.trim()}`,
               `Chào mừng, ${name.trim()}`,
               `${name.trim()} さん、ようこそ`,
+              `欢迎你，${name.trim()}`,
             )}
           </Text>
           <HeartDoodle style={s.welcomeHeart} />
@@ -478,6 +483,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             'You’re all set. Save places you love, build collections, and find your next place to explore.',
             'Xong hết rồi. Lưu những nơi bạn thích, gom thành bộ sưu tập, và tìm nơi tiếp theo để khám phá.',
             '準備完了です。気に入った場所を保存し、コレクションにまとめて、次の探索先を見つけましょう。',
+            '一切就绪。保存喜欢的地点，创建合集，发现下一个想去的地方。',
           )}</Text>
         <PrimaryButton
           arrow
@@ -498,12 +504,13 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       <StepDots step={1} total={dotTotal} />
       <AuthHeader
         onBack={() => navigation.goBack()}
-        title={t('Sign up', 'Đăng ký', '新規登録')}
+        title={t('Sign up', 'Đăng ký', '新規登録', '注册')}
       />
       <Lede>{t(
           'Join City Crew to save places, build collections and plan unforgettable trips with your crew.',
           'Tham gia City Crew để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi đáng nhớ.',
           'City Crewに参加して、場所を保存し、コレクションを作り、忘れられない旅を計画しましょう。',
+          '加入 City Crew，保存地点、创建合集，和朋友一起规划难忘的旅行。',
         )}</Lede>
       {/* Vietnamese apps ask in the imperative — "Nhập …" — and almost
           never in the friendly question this used to carry, which is a
@@ -515,8 +522,8 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           row and verifies nothing. It now says so. */}
       <FieldRow
         icon="person-outline"
-        label={t('Display name', 'Tên hiển thị', '表示名')}
-        placeholder={t('What should we call you?', 'Bạn muốn được gọi là gì?', '何とお呼びすればよいですか？')}
+        label={t('Display name', 'Tên hiển thị', '表示名', '显示名称')}
+        placeholder={t('What should we call you?', 'Bạn muốn được gọi là gì?', '何とお呼びすればよいですか？', '我们该怎么称呼你？')}
         value={name}
         error={error === 'need_name' ? failText(error) : null}
         onChangeText={(v) => {
@@ -533,7 +540,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           never asked for it. */}
       <FieldRow
         icon="at-outline"
-        label={t('Username', 'Tên người dùng', 'ユーザー名')}
+        label={t('Username', 'Tên người dùng', 'ユーザー名', '用户名')}
         placeholder="yourname"
         value={handle}
         error={nameError}
@@ -549,8 +556,8 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           mistake cannot be made rather than being caught. */}
       <FieldRow
         icon="mail-outline"
-        label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
-        placeholder={t('Enter your email address', 'Nhập địa chỉ email', 'メールアドレスを入力')}
+        label={t('Email address', 'Địa chỉ email', 'メールアドレス', '电子邮箱')}
+        placeholder={t('Enter your email address', 'Nhập địa chỉ email', 'メールアドレスを入力', '输入你的电子邮箱')}
         value={email}
         invalid={error === 'need_email' || error === 'bad_email' || error === 'email_taken'}
         // The error this edit fixes goes with it, and the red with it —
@@ -569,8 +576,8 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       />
       <FieldRow
         icon="lock-closed-outline"
-        label={t('Password', 'Mật khẩu', 'パスワード')}
-        placeholder={t('Use at least 8 characters', 'Ít nhất 8 ký tự', '8文字以上')}
+        label={t('Password', 'Mật khẩu', 'パスワード', '密码')}
+        placeholder={t('Use at least 8 characters', 'Ít nhất 8 ký tự', '8文字以上', '至少 8 个字符')}
         value={password}
         onChangeText={setPassword}
         secure
@@ -581,8 +588,8 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       />
       <FieldRow
         icon="lock-closed-outline"
-        label={t('Confirm password', 'Nhập lại mật khẩu', 'パスワード（確認）')}
-        placeholder={t('Type your password again', 'Gõ lại mật khẩu của bạn', 'もう一度入力してください')}
+        label={t('Confirm password', 'Nhập lại mật khẩu', 'パスワード（確認）', '确认密码')}
+        placeholder={t('Type your password again', 'Gõ lại mật khẩu của bạn', 'もう一度入力してください', '再次输入密码')}
         value={confirm}
         onChangeText={setConfirm}
         secure
@@ -593,7 +600,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         testID="signup-confirm"
       />
       {error && error !== 'need_name' ? <FormError>{failText(error)}</FormError> : null}
-      <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} testID="signup-submit" />
+      <PrimaryButton label={t('Sign up', 'Đăng ký', '登録', '注册')} onPress={submit} busy={busy} testID="signup-submit" />
       {/* This line used to be a joke — "you agree to keep your crew's
           plans awesome" — sitting in exactly the place where the two
           real documents belong, and nowhere in the app linked to either.
@@ -622,19 +629,20 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           'By signing up, you agree to City Crew’s ',
           'Khi đăng ký, bạn đồng ý với ',
           '登録すると、City Crew の',
+          '注册即表示你同意 City Crew 的',
         )}
         <Text style={s.termsLink} onPress={() => setLegal('terms')} accessibilityRole="link">
-          {t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
+          {t('Terms of Service', 'Điều khoản sử dụng', '利用規約', '服务条款')}
         </Text>
-        {t(' and ', ' và ', 'と')}
+        {t(' and ', ' và ', 'と', '和')}
         <Text style={s.termsLink} onPress={() => setLegal('privacy')} accessibilityRole="link">
-          {t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー')}
+          {t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー', '隐私政策')}
         </Text>
-        {t('.', ' của City Crew.', 'に同意したことになります。')}
+        {t('.', ' của City Crew.', 'に同意したことになります。', '。')}
       </Text>
       <SwitchRow
-        prompt={t('Already have an account?', 'Đã có tài khoản?', 'すでにアカウントをお持ちの方は')}
-        action={t('Sign in', 'Đăng nhập', 'サインイン')}
+        prompt={t('Already have an account?', 'Đã có tài khoản?', 'すでにアカウントをお持ちの方は', '已有账号？')}
+        action={t('Sign in', 'Đăng nhập', 'サインイン', '登录')}
         onPress={() => navigation.replace('SignIn')}
       />
       <LegalSheet id={legal} onClose={() => setLegal(null)} />

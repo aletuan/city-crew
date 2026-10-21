@@ -61,7 +61,7 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const returning = useMemo(() => ({ sheet, spendSheet, y, scrollBy }), [sheet, spendSheet, scrollBy]);
 
   return (
-    <Screen title={t('Profile', 'Cá nhân', 'プロフィール')}>
+    <Screen title={t('Profile', 'Cá nhân', 'プロフィール', '个人主页')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         <ScrollView
