@@ -121,7 +121,7 @@ export default function LegalSheet({ id, onClose }: {
   // Japanese falls back to English, exactly as the published pages do for
   // a reader who follows the same link in a browser.
   const half = lang === 'vi' ? 'vi' : 'en';
-  const close = t('Close', 'Đóng', '閉じる');
+  const close = t('Close', 'Đóng', '閉じる', '关闭');
 
   const swap = (next: LegalId) => {
     setShown(next);

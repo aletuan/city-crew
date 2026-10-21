@@ -60,7 +60,7 @@ export function StatTile({ n, label, onPress }: { n: number | null; label: strin
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={n === null
-        ? `${label}, ${t('loading', 'đang tải', '読み込み中')}`
+        ? `${label}, ${t('loading', 'đang tải', '読み込み中', '加载中')}`
         : `${n} ${label}`}
     >
       <Text style={[s.statN, n === null && s.statPending]}>{n ?? '—'}</Text>
@@ -118,21 +118,23 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   const role = editor
     ? {
       icon: 'medal' as const, color: colors.accent, dress: s.roleEditor,
-      name: t('Super User', 'Super User', 'スーパーユーザー'),
+      name: t('Super User', 'Super User', 'スーパーユーザー', '超级用户'),
       says: t(
         'You can edit, and add photos to, every place in the app — new or already listed.',
         'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
         'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
+        '你可以编辑应用中的所有地点并为其添加照片，无论是新地点还是已收录的。',
       ),
     }
     : guide
       ? {
         icon: 'star' as const, color: colors.ok, dress: s.roleGuide,
-        name: t('Local Guide', 'Local Guide', 'ローカルガイド'),
+        name: t('Local Guide', 'Local Guide', 'ローカルガイド', '本地向导'),
         says: t(
           'You can edit, and add photos to, places in your collections and places you imported.',
           'Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.',
           '自分のコレクションの場所や、自分が追加した場所を編集し、写真を追加できます。',
+          '你可以编辑你合集中的地点和你导入的地点，并为其添加照片。',
         ),
       }
       : null;
@@ -217,7 +219,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
                 contentStyle={[s.roleDisc, role.dress]}
                 accessibilityRole="button"
                 accessibilityLabel={role.name}
-                accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します')}
+                accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します', '说明这个身份可以做什么')}
                 onPress={() => Alert.alert(role.name, role.says)}
                 testID="role-badge"
               >
@@ -276,7 +278,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
               onPress={() => navigation.navigate('EditProfile')}
               accessibilityRole="button"
             >
-              <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}</Text>
+              <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料')}</Text>
             </PressableScale>
           </View>
         </View>
@@ -288,11 +290,11 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           the reference's four: there is no review feature, and a count
           with no data behind it is the one number that must not appear. */}
       <View style={s.stats}>
-        <StatTile n={mine.loaded ? mine.data.length : null} label={t('Collections', 'Bộ sưu tập', 'コレクション')} onPress={() => hop('Collections', 'CollectionsHome')} />
+        <StatTile n={mine.loaded ? mine.data.length : null} label={t('Collections', 'Bộ sưu tập', 'コレクション', '合集')} onPress={() => hop('Collections', 'CollectionsHome')} />
         <View style={s.statDivider} />
-        <StatTile n={mine.loaded ? saved : null} label={t('Saved places', 'Địa điểm đã lưu', '保存した場所')} onPress={() => hop('Collections', 'CollectionsHome')} />
+        <StatTile n={mine.loaded ? saved : null} label={t('Saved places', 'Địa điểm đã lưu', '保存した場所', '已保存的地点')} onPress={() => hop('Collections', 'CollectionsHome')} />
         <View style={s.statDivider} />
-        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', 'トリップ')} onPress={() => hop('Trips', 'TripsHome')} />
+        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', 'トリップ', '行程')} onPress={() => hop('Trips', 'TripsHome')} />
       </View>
       {/* A dash that stays a dash is a question the screen cannot answer,
           and it says so — only for a count still unknown: a fetch that
@@ -301,7 +303,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
       {((!mine.loaded && mine.error) || (!trips.loaded && trips.error)) ? (
         <View style={s.statsFailed} testID="stats-failed">
           <Text style={s.statsFailedText}>
-            {t("Couldn't load your counts.", 'Không tải được số liệu.', '件数を読み込めませんでした。')}
+            {t("Couldn't load your counts.", 'Không tải được số liệu.', '件数を読み込めませんでした。', '无法加载统计数据。')}
           </Text>
           <PressableScale
             onPress={() => {
@@ -311,22 +313,22 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             accessibilityRole="button"
             hitSlop={10}
           >
-            <Text style={s.statsRetry}>{t('Try again', 'Thử lại', '再試行')}</Text>
+            <Text style={s.statsRetry}>{t('Try again', 'Thử lại', '再試行', '重试')}</Text>
           </PressableScale>
         </View>
       ) : null}
 
-      <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介')}</Text>
+      <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介', '关于我')}</Text>
       <Card style={s.featureCard}>
         <AboutRow
           icon="mail-outline"
-          label={t('Email', 'Email', 'メール')}
+          label={t('Email', 'Email', 'メール', '邮箱')}
           value={email ?? ''}
         />
         {profile.location ? (
           <AboutRow
             icon="location-outline"
-            label={t('Hometown', 'Quê quán', '出身地')}
+            label={t('Hometown', 'Quê quán', '出身地', '家乡')}
             value={profile.location}
             last={!memberSince}
           />
@@ -334,7 +336,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
         {memberSince ? (
           <AboutRow
             icon="calendar-outline"
-            label={t('Member since', 'Thành viên từ', '登録日')}
+            label={t('Member since', 'Thành viên từ', '登録日', '加入时间')}
             value={memberSinceLabel(memberSince, lang)}
             last
           />
@@ -351,7 +353,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           the heading: it was there for one build and opened the same
           screen as the Edit profile button four lines up, and two ways
           to the same place on one screen is one too many. */}
-      <Text style={s.section}>{t('Interests', 'Sở thích', '興味')}</Text>
+      <Text style={s.section}>{t('Interests', 'Sở thích', '興味', '兴趣')}</Text>
       <Card style={s.featureCard}>
         {taste.length ? (
           <View style={s.tasteChips}>
@@ -370,6 +372,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
               'Edit profile to add your interests.',
               'Sửa hồ sơ để cập nhật sở thích của bạn.',
               '「プロフィール編集」で興味を追加できます。',
+              '在“编辑个人资料”中添加你的兴趣。',
             )}
           </Text>
         )}
@@ -382,12 +385,12 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           own rather than a row in Interests, because the chips there are
           a picker at rest and a navigation row under a picker is two
           kinds of thing in one card. */}
-      <Text style={s.section}>{t('Check-ins', 'Check-in', 'チェックイン')}</Text>
+      <Text style={s.section}>{t('Check-ins', 'Check-in', 'チェックイン', '打卡')}</Text>
       <Card style={s.featureCard}>
         <FeatureRow
           icon="location-outline"
-          title={t('Places you checked in at', 'Địa điểm check-in', 'チェックインした場所')}
-          sub={t("A record of the places you've been.", 'Ghi lại những nơi bạn đã đi qua.', '訪れた場所の記録。')}
+          title={t('Places you checked in at', 'Địa điểm check-in', 'チェックインした場所', '你打过卡的地点')}
+          sub={t("A record of the places you've been.", 'Ghi lại những nơi bạn đã đi qua.', '訪れた場所の記録。', '你去过的地方的记录。')}
           count={visitSummary(visits.data).places}
           onPress={() => navigation.navigate('Visited')}
           last
@@ -401,7 +404,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           appearance are set once and left, so they keep the quiet end.
           The order reads as a story: who you are, who you go with, how
           the app behaves, and then the ways out. */}
-      <Text style={s.section}>{t('Friends', 'Bạn bè', '友達')}</Text>
+      <Text style={s.section}>{t('Friends', 'Bạn bè', '友達', '好友')}</Text>
       {/* The pill said "Coming soon" from the day this screen shipped;
           the row opens the crew now. The number is friends, the dot is
           requests — two different facts, and neither borrows the other's
@@ -418,9 +421,9 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             {crew.incoming.length > 0 ? <View style={[s.reqDot, { borderColor: bgElevatedHex[scheme] }]} /> : null}
           </View>
           <View style={{ flex: 1, gap: 3 }}>
-            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
+            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる', '与好友联系')}</Text>
             <Text style={s.featureSub}>
-              {t('Make friends and plan together.', 'Kết bạn để cùng lên kế hoạch.', '友達になって、一緒に計画。')}
+              {t('Make friends and plan together.', 'Kết bạn để cùng lên kế hoạch.', '友達になって、一緒に計画。', '结交好友，一起规划。')}
             </Text>
           </View>
           <CountBadge n={crew.friends.length} style={s.rowEnd} />
@@ -441,9 +444,9 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             above, so one request is one mark on this screen, not two. */}
         <FeatureRow
           icon="notifications-outline"
-          title={t('Activity', 'Hoạt động', 'アクティビティ')}
+          title={t('Activity', 'Hoạt động', 'アクティビティ', '动态')}
           count={feed}
-          sub={t('Likes and copies of your collections.', 'Lượt thích và sao chép bộ sưu tập.', 'コレクションへのいいねとコピー。')}
+          sub={t('Likes and copies of your collections.', 'Lượt thích và sao chép bộ sưu tập.', 'コレクションへのいいねとコピー。', '你的合集获得的点赞和复制。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />
@@ -452,7 +455,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
       {/* Named the way About me and Friends are, so this screen reads
           as sections rather than a stray card between them. The guest
           view uses the same heading over the same card. */}
-      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
+      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定', '偏好设置')}</Text>
       <SettingsCard />
 
       {/* Last section, and last on purpose. The order this screen reads
@@ -462,7 +465,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           settings by position while being drawn as not-settings; a
           heading of their own costs one line and stops the screen arguing
           with itself. */}
-      <Text style={s.section}>{t('App', 'Ứng dụng', 'アプリ')}</Text>
+      <Text style={s.section}>{t('App', 'Ứng dụng', 'アプリ', '应用')}</Text>
       <AppCard />
 
       <PressableScale
@@ -470,7 +473,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
         accessibilityRole="button"
         // The label stays while the spinner stands in for the word, so the
         // control keeps its name for a screen reader mid-request.
-        accessibilityLabel={t('Sign out', 'Đăng xuất', 'サインアウト')}
+        accessibilityLabel={t('Sign out', 'Đăng xuất', 'サインアウト', '退出登录')}
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         testID="profile-sign-out"
@@ -487,7 +490,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             // and the button simply came back — which reads as "signed
             // out" until the next screen says otherwise.
             Alert.alert(
-              t('Could not sign out', 'Không đăng xuất được', 'サインアウトできませんでした'),
+              t('Could not sign out', 'Không đăng xuất được', 'サインアウトできませんでした', '无法退出登录'),
               (e as Error).message,
             );
           } finally {
@@ -497,7 +500,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
       >
         {busy
           ? <ActivityIndicator color={colors.textSecondary} />
-          : <Text style={s.signOutText}>{t('Sign out', 'Đăng xuất', 'サインアウト')}</Text>}
+          : <Text style={s.signOutText}>{t('Sign out', 'Đăng xuất', 'サインアウト', '退出登录')}</Text>}
       </PressableScale>
 
       <Tagline />
@@ -532,7 +535,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
         testID="profile-delete-account"
       >
         <Ionicons name="trash-outline" size={15} color={colors.bad} />
-        <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>
+        <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号')}</Text>
       </PressableScale>
     </>
   );

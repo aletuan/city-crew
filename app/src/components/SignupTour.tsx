@@ -108,8 +108,8 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   useEffect(() => {
     if (!notice) { setNoticeTop(null); return; }
     AccessibilityInfo.announceForAccessibility(notice === 'off'
-      ? t('Guide turned off. Enable it in Profile → Show guide.', 'Đã tắt hướng dẫn. Bạn có thể bật lại trong Hồ sơ → Hiện hướng dẫn.', 'ガイドをオフにしました。プロフィール → ガイドを表示で再開できます。')
-      : t('Guide enabled. Start whenever you are ready.', 'Đã bật hướng dẫn. Bắt đầu khi bạn sẵn sàng.', 'ガイドをオンにしました。準備ができたら開始できます。'));
+      ? t('Guide turned off. Enable it in Profile → Show guide.', 'Đã tắt hướng dẫn. Bạn có thể bật lại trong Hồ sơ → Hiện hướng dẫn.', 'ガイドをオフにしました。プロフィール → ガイドを表示で再開できます。', '新手引导已关闭。可在“个人主页 → 显示新手引导”中重新开启。')
+      : t('Guide enabled. Start whenever you are ready.', 'Đã bật hướng dẫn. Bắt đầu khi bạn sẵn sàng.', 'ガイドをオンにしました。準備ができたら開始できます。', '新手引导已开启，准备好后随时开始。'));
     // The actionable invitation stays until dismissed, including for VoiceOver.
     if (notice === 'ready') return;
     const timer = setTimeout(() => setNotice(null), 10000);
@@ -177,14 +177,14 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   }, [step, width, height, insets.top, insets.bottom, getRoute]);
   const value = useMemo(() => ({ step, start, finish, next, register, enabled, setEnabled, replay, notice, noticeTop }),
     [step, start, finish, next, register, enabled, setEnabled, replay, notice, noticeTop]);
-  const titles = [t('Find a place', 'Tìm nơi bạn muốn đến', '行きたい場所を探す'),
-    t('Filter and sort', 'Lọc và sắp xếp', '絞り込み・並べ替え'),
-    t('Save places you love', 'Lưu nơi bạn thích', '好きな場所を保存'),
-    t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション')];
-  const descriptions = [t('Find or add a place you like', 'Tìm hoặc bổ sung địa điểm bạn thích', '好きな場所を探したり追加したりできます'),
-    t('Adjust filters to find places that suit you.', 'Điều chỉnh bộ lọc để tìm địa điểm phù hợp hơn.', 'フィルターで自分に合った場所を探しましょう。'),
-    t('Add a place to a collection to find it again easily.', 'Thêm địa điểm vào bộ sưu tập để dễ tìm lại.', '場所をコレクションに保存して、あとで簡単に見つけましょう。'),
-    t('Find your saved places here.', 'Những địa điểm bạn đã lưu nằm ở đây.', '保存した場所はこちらにあります。')];
+  const titles = [t('Find a place', 'Tìm nơi bạn muốn đến', '行きたい場所を探す', '寻找地点'),
+    t('Filter and sort', 'Lọc và sắp xếp', '絞り込み・並べ替え', '筛选和排序'),
+    t('Save places you love', 'Lưu nơi bạn thích', '好きな場所を保存', '保存喜欢的地点'),
+    t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション', '你的合集')];
+  const descriptions = [t('Find or add a place you like', 'Tìm hoặc bổ sung địa điểm bạn thích', '好きな場所を探したり追加したりできます', '寻找或添加你喜欢的地点'),
+    t('Adjust filters to find places that suit you.', 'Điều chỉnh bộ lọc để tìm địa điểm phù hợp hơn.', 'フィルターで自分に合った場所を探しましょう。', '调整筛选条件，找到适合你的地点。'),
+    t('Add a place to a collection to find it again easily.', 'Thêm địa điểm vào bộ sưu tập để dễ tìm lại.', '場所をコレクションに保存して、あとで簡単に見つけましょう。', '把地点加入合集，之后就能轻松找到。'),
+    t('Find your saved places here.', 'Những địa điểm bạn đã lưu nằm ở đây.', '保存した場所はこちらにあります。', '你保存的地点都在这里。')];
   const cardWidth = Math.min(width - 32, 340);
   const left = rect ? Math.max(16, Math.min(rect.x + rect.width / 2 - cardWidth / 2, width - cardWidth - 16)) : 16;
   const below = rect ? rect.y + rect.height + 16 : 0;
@@ -210,16 +210,16 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
       <View style={s.noticeMark}><Ionicons name="bulb-outline" size={20} color={colors.accent} /></View>
       <View style={s.noticeText}>
         <Text style={s.noticeTitle}>{notice === 'off'
-          ? t('Guide turned off', 'Đã tắt hướng dẫn', 'ガイドをオフにしました')
-          : t('Guide turned on', 'Đã bật hướng dẫn', 'ガイドをオンにしました')}</Text>
+          ? t('Guide turned off', 'Đã tắt hướng dẫn', 'ガイドをオフにしました', '新手引导已关闭')
+          : t('Guide turned on', 'Đã bật hướng dẫn', 'ガイドをオンにしました', '新手引导已开启')}</Text>
         <Text style={s.noticeBody}>{notice === 'off'
-          ? t('Turn it back on in Profile → Show guide.', 'Bật lại trong Hồ sơ → Hiện hướng dẫn.', 'プロフィール → ガイドを表示で再開できます。')
-          : t('Short tips will show you around the app.', 'Chúng tôi sẽ hiển thị gợi ý ngắn để bạn làm quen nhanh với các tính năng.', '短いヒントで主な機能をご案内します。')}</Text>
+          ? t('Turn it back on in Profile → Show guide.', 'Bật lại trong Hồ sơ → Hiện hướng dẫn.', 'プロフィール → ガイドを表示で再開できます。', '可在“个人主页 → 显示新手引导”中重新开启。')
+          : t('Short tips will show you around the app.', 'Chúng tôi sẽ hiển thị gợi ý ngắn để bạn làm quen nhanh với các tính năng.', '短いヒントで主な機能をご案内します。', '简短的提示会带你熟悉应用。')}</Text>
         {notice === 'ready' && <Pressable onPress={replay} accessibilityRole="button" testID="guide-notice-start" style={s.noticeStart}>
-          <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{t('Start', 'Bắt đầu', '開始')}</Text></LinearGradient>
+          <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{t('Start', 'Bắt đầu', '開始', '开始')}</Text></LinearGradient>
         </Pressable>}
       </View>
-      <Pressable onPress={() => setNotice(null)} accessibilityRole="button" accessibilityLabel={t('Close', 'Đóng', '閉じる')}
+      <Pressable onPress={() => setNotice(null)} accessibilityRole="button" accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')}
         hitSlop={4} style={s.noticeClose}>
         <Ionicons name="close" size={20} color={colors.textSecondary} />
       </Pressable>
@@ -227,7 +227,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     <Modal visible={step >= 0 && !!rect && owner === uid} transparent animationType="none" statusBarTranslucent onRequestClose={dismiss}
       onShow={() => AccessibilityInfo.announceForAccessibility(`${step + 1}/4. ${titles[step]}. ${descriptions[step]}`)}>
       <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
-        <Pressable style={[StyleSheet.absoluteFill, s.scrim]} onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('Close guide', 'Đóng hướng dẫn', 'ガイドを閉じる')} />
+        <Pressable style={[StyleSheet.absoluteFill, s.scrim]} onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('Close guide', 'Đóng hướng dẫn', 'ガイドを閉じる', '关闭新手引导')} />
         {rect && <Pressable testID="signup-tour-target" accessibilityRole="button" accessibilityLabel={titles[step]}
           onPress={() => { const action = current.current?.press; persist(true, step + 1); finish(); if (action) requestAnimationFrame(action); }}
           style={[s.ring, { left: rect.x - 4, top: rect.y - 4, width: rect.width + 8, height: rect.height + 8 }]} />}
@@ -243,9 +243,9 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
             </View>
             <Text style={s.body}>{descriptions[step]}</Text>
             <View style={s.actions}>
-              {step < 3 && <Pressable onPress={dismiss} accessibilityRole="button" style={s.skip}><Text style={s.skipText}>{t('Skip guide', 'Bỏ qua hướng dẫn', 'ガイドをスキップ')}</Text></Pressable>}
+              {step < 3 && <Pressable onPress={dismiss} accessibilityRole="button" style={s.skip}><Text style={s.skipText}>{t('Skip guide', 'Bỏ qua hướng dẫn', 'ガイドをスキップ', '跳过新手引导')}</Text></Pressable>}
               <Pressable onPress={next} accessibilityRole="button" testID="signup-tour-next" style={s.next}>
-                <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{step === 3 ? t('Done', 'Hoàn tất', '完了') : t('Next', 'Tiếp theo', '次へ')}</Text></LinearGradient>
+                <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{step === 3 ? t('Done', 'Hoàn tất', '完了', '完成') : t('Next', 'Tiếp theo', '次へ', '下一步')}</Text></LinearGradient>
               </Pressable>
             </View>
           </ScrollView>

@@ -37,12 +37,13 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
               its paw were both reaching for warmth the sentence did not
               need, and the qualifier was doing nothing besides — every
               trip you plan comes next. */}
-          <Text style={s.heroTitle}>{t('Keep the places you love', 'Lưu lại những nơi bạn yêu thích', 'お気に入りの場所を残しておく')}</Text>
+          <Text style={s.heroTitle}>{t('Keep the places you love', 'Lưu lại những nơi bạn yêu thích', 'お気に入りの場所を残しておく', '留住你喜欢的地点')}</Text>
           <Text style={s.heroBody}>
             {t(
               'Sign in to save places, build collections, and plan your trips',
               'Đăng nhập để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi',
               'サインインして、場所を保存し、コレクションを作り、旅を計画しましょう',
+              '登录后即可保存地点、创建合集、规划行程',
             )}
           </Text>
         </View>
@@ -58,7 +59,7 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
           it held is worth more as the way in for somebody new. Rejected:
           two buttons side by side. Filled and outlined in one capsule they
           read as a switch between tabs, not as two actions. */}
-      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン')} onPress={goSignIn} testID="profile-sign-in" />
+      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン', '登录')} onPress={goSignIn} testID="profile-sign-in" />
       <Pressable
         style={s.guestLink}
         accessibilityRole="button"
@@ -68,7 +69,7 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
           navigation.navigate('SignUp');
         }}
       >
-        <Text style={s.guestLinkText}>{t('Create a new account', 'Tạo tài khoản mới', '新しいアカウントを作成')}</Text>
+        <Text style={s.guestLinkText}>{t('Create a new account', 'Tạo tài khoản mới', '新しいアカウントを作成', '创建新账号')}</Text>
         <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
       </Pressable>
 
@@ -79,24 +80,24 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
           alone. Read beside the member view, which is how anyone who signs
           in meets it, the same Preferences card with a heading on one side
           and none on the other was the odd one out. */}
-      <Text style={s.section}>{t('With an account', 'Khi có tài khoản', 'アカウントでできること')}</Text>
+      <Text style={s.section}>{t('With an account', 'Khi có tài khoản', 'アカウントでできること', '有了账号，你可以')}</Text>
       <Card style={s.featureCard}>
         <FeatureRow
           icon="bookmark-outline"
-          title={t('Saved places', 'Địa điểm đã lưu', '保存した場所')}
-          sub={t('Sign in to save your favorite places.', 'Đăng nhập để lưu địa điểm yêu thích.', 'サインインしてお気に入りを保存。')}
+          title={t('Saved places', 'Địa điểm đã lưu', '保存した場所', '已保存的地点')}
+          sub={t('Sign in to save your favorite places.', 'Đăng nhập để lưu địa điểm yêu thích.', 'サインインしてお気に入りを保存。', '登录后保存你喜欢的地点。')}
           onPress={goSignIn}
         />
         <FeatureRow
           icon="folder-open-outline"
-          title={t('Collections', 'Bộ sưu tập', 'コレクション')}
-          sub={t('Create and organize your collections.', 'Tạo và sắp xếp bộ sưu tập của riêng bạn.', '自分のコレクションを作成・整理。')}
+          title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集')}
+          sub={t('Create and organize your collections.', 'Tạo và sắp xếp bộ sưu tập của riêng bạn.', '自分のコレクションを作成・整理。', '创建和整理你的合集。')}
           onPress={goSignIn}
         />
         <FeatureRow
           icon="calendar-outline"
-          title={t('Trips', 'Chuyến đi', '旅程')}
-          sub={t('Plan trips and invite your friends.', 'Lên kế hoạch và mời bạn bè cùng đi.', '旅を計画して友達を招待。')}
+          title={t('Trips', 'Chuyến đi', '旅程', '行程')}
+          sub={t('Plan trips and invite your friends.', 'Lên kế hoạch và mời bạn bè cùng đi.', '旅を計画して友達を招待。', '规划行程并邀请好友。')}
           onPress={goSignIn}
         />
         {/* A fourth row here rather than a card of its own at the foot of
@@ -105,18 +106,18 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
             it. The tap leads to signing in, which is where friends begin. */}
         <FeatureRow
           icon="people-outline"
-          title={t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}
-          sub={t('Find friends and share unforgettable trips.', 'Tìm kiếm bạn bè và chia sẻ những chuyến đi đáng nhớ.', '友達を探して、忘れられない旅を共有。')}
+          title={t('Connect with friends', 'Kết nối bạn bè', '友達とつながる', '与好友联系')}
+          sub={t('Find friends and share unforgettable trips.', 'Tìm kiếm bạn bè và chia sẻ những chuyến đi đáng nhớ.', '友達を探して、忘れられない旅を共有。', '寻找好友，分享难忘的旅行。')}
           onPress={goSignIn}
           last
         />
       </Card>
 
-      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
+      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定', '偏好设置')}</Text>
       <SettingsCard />
       {/* The documents matter most to exactly this reader, the one who
           has not signed up yet. */}
-      <Text style={s.section}>{t('App', 'Ứng dụng', 'アプリ')}</Text>
+      <Text style={s.section}>{t('App', 'Ứng dụng', 'アプリ', '应用')}</Text>
       <AppCard />
 
       <Tagline />

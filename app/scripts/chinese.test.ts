@@ -57,6 +57,30 @@ const TRANSLATED = [
   'lib/collectionShelf.ts',
   'lib/live.ts',
   'lib/save.tsx',
+  // Step 2c: the profile and the account — signing in and up, a new
+  // password, editing a profile, settings, the theme and language
+  // sheets, the guide, and deleting an account. The terms and the
+  // privacy policy stay as they are: a policy is binding in the words it
+  // was written in, and `LegalSheet` shows Chinese readers the English.
+  'screens/ProfileScreen.tsx',
+  'screens/EditProfileScreen.tsx',
+  'screens/SignInScreen.tsx',
+  'screens/SignUpScreen.tsx',
+  'screens/ForgotPasswordScreen.tsx',
+  'screens/DeleteAccountScreen.tsx',
+  'screens/profile/AccountProfile.tsx',
+  'screens/profile/AppCard.tsx',
+  'screens/profile/GuestHub.tsx',
+  'screens/profile/SettingsCard.tsx',
+  'components/AboutSheet.tsx',
+  'components/AuthSheet.tsx',
+  'components/AvatarPicker.tsx',
+  'components/LanguageSwitcher.tsx',
+  'components/LegalSheet.tsx',
+  'components/SignupTour.tsx',
+  'components/TastePicker.tsx',
+  'components/ThemeSwitcher.tsx',
+  'components/authUi.tsx',
 ];
 
 /** Rows with no Chinese column yet (step 3), by the English argument. */

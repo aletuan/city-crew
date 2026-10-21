@@ -63,13 +63,13 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
     Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
   }, [visible, rise]);
 
-  const close = t('Close', 'Đóng', '閉じる');
+  const close = t('Close', 'Đóng', '閉じる', '关闭');
   const update = info.update
     ? [info.update.at && updateDate(info.update.at, lang), shortUpdateId(info.update.id)]
       .filter(Boolean).join(' · ')
     // The build's own code: nothing published since has reached this
     // phone, or this is a build that never takes an update.
-    : t('Shipped with the build', 'Có sẵn trong bản cài', 'ビルドに同梱');
+    : t('Shipped with the build', 'Có sẵn trong bản cài', 'ビルドに同梱', '随安装包附带');
 
   return (
     <Modal
@@ -90,20 +90,20 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
       >
         <View style={s.handle} />
         <Text style={s.title} accessibilityRole="header">
-          {t('Version info', 'Thông tin phiên bản', 'バージョン情報')}
+          {t('Version info', 'Thông tin phiên bản', 'バージョン情報', '版本信息')}
         </Text>
         <View style={s.card}>
           <Row
             first
-            label={t('Version', 'Phiên bản', 'バージョン')}
-            value={versionLabel(info) ?? t('Unknown', 'Không rõ', '不明')}
+            label={t('Version', 'Phiên bản', 'バージョン', '版本')}
+            value={versionLabel(info) ?? t('Unknown', 'Không rõ', '不明', '未知')}
           />
           {/* No channel is Expo Go or a development build — always us. */}
           <Row
-            label={t('Channel', 'Kênh', 'チャンネル')}
-            value={info.channel ?? t('Development', 'Bản phát triển', '開発版')}
+            label={t('Channel', 'Kênh', 'チャンネル', '渠道')}
+            value={info.channel ?? t('Development', 'Bản phát triển', '開発版', '开发版')}
           />
-          <Row label={t('Update', 'Bản cập nhật', 'アップデート')} value={update} />
+          <Row label={t('Update', 'Bản cập nhật', 'アップデート', '更新')} value={update} />
           {/* Which updates this build can take: only ones published for the
               same runtime. Worth a line because it is the answer to "why
               did this phone not get it?" */}

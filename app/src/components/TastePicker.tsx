@@ -58,10 +58,12 @@ export default function TastePicker({ chosen, onChange }: {
                 `That is the five. Tap one again to swap it.`,
                 `Đã đủ năm. Chạm lại một mục để đổi.`,
                 `5つまでです。入れ替えるにはもう一度タップしてください。`,
+                `已经选满 5 个。再次点按可替换。`,
               )
             : t(
                 `${chosen.length} of ${TASTE_MAX}.`,
                 `${chosen.length}/${TASTE_MAX}.`,
+                `${chosen.length}/${TASTE_MAX}。`,
                 `${chosen.length}/${TASTE_MAX}。`,
               )}
         </Text>

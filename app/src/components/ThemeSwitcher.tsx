@@ -204,14 +204,14 @@ export function schemeIcon(pref: Pref, scheme: Scheme): keyof typeof Ionicons.gl
 
 /** The label for a setting, in the app's three languages. */
 export function schemeLabel(id: Pref, t: T): string {
-  if (id === 'system') return t('Automatic', 'Tự động', '自動');
+  if (id === 'system') return t('Automatic', 'Tự động', '自動', '自动');
   if (isLook(id)) {
-    const { en, vi, ja } = LOOK_DEFS[id].name;
-    return t(en, vi, ja);
+    const { en, vi, ja, zh } = LOOK_DEFS[id].name;
+    return t(en, vi, ja, zh);
   }
   return id === 'dark'
-    ? t('Dark', 'Tối', 'ダーク')
-    : t('Light', 'Sáng', 'ライト');
+    ? t('Dark', 'Tối', 'ダーク', '深色')
+    : t('Light', 'Sáng', 'ライト', '浅色');
 }
 
 /**
@@ -230,10 +230,10 @@ export function schemeLabel(id: Pref, t: T): string {
  * would land.
  */
 function systemNow(following: boolean, scheme: Scheme, t: T): string {
-  if (!following) return t('Following the phone', 'Theo hệ thống', '端末に合わせる');
+  if (!following) return t('Following the phone', 'Theo hệ thống', '端末に合わせる', '跟随系统');
   return scheme === 'dark'
-    ? t('Following the phone · Dark', 'Theo hệ thống · Tối', '端末に合わせる · ダーク')
-    : t('Following the phone · Light', 'Theo hệ thống · Sáng', '端末に合わせる · ライト');
+    ? t('Following the phone · Dark', 'Theo hệ thống · Tối', '端末に合わせる · ダーク', '跟随系统 · 深色')
+    : t('Following the phone · Light', 'Theo hệ thống · Sáng', '端末に合わせる · ライト', '跟随系统 · 浅色');
 }
 
 /**
@@ -352,11 +352,12 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
     pending.current = null;
     setPref(id, returnTo?.(), remember(id));
     timers.current.push(setTimeout(() => Alert.alert(
-      t('Close and reopen City Crew', 'Mở lại City Crew', 'City Crew を開き直してください'),
+      t('Close and reopen City Crew', 'Mở lại City Crew', 'City Crew を開き直してください', '请关闭并重新打开 City Crew'),
       t(
         'The new theme is saved, and appears the next time the app opens.',
         'Theme mới đã lưu. Mở lại app để thấy màu mới.',
         '新しいテーマは保存されました。次にアプリを開いたときに反映されます。',
+        '新主题已保存，下次打开应用时生效。',
       ),
     ), STUCK_MS));
   };
@@ -385,7 +386,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   }, [visible, rise]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={relaunch} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} testID="theme-close" />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} testID="theme-close" />
       <Animated.View
         style={[s.sheet, {
           paddingBottom: 14 + insets.bottom,
@@ -396,7 +397,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
             list that scrolls, and keeps its own gesture. */}
         <View {...handlers} testID="sheet-grab">
           <View style={s.handle} />
-          <Text style={s.title}>{t('Theme', 'Giao diện', 'テーマ')}</Text>
+          <Text style={s.title}>{t('Theme', 'Giao diện', 'テーマ', '主题')}</Text>
         </View>
         <ScrollView style={{ maxHeight: room }} bounces={false} showsVerticalScrollIndicator={false}>
         {grounds.map((o, i) => {
@@ -432,7 +433,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
         {palettes.length > 0 && (
           <>
             <View style={s.sectionRow}>
-              <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー')}</Text>
+              <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー', '颜色')}</Text>
               {/* The count, and only with somewhere to swipe to — the
                   rule `PageCount` keeps. Tabular digits so a swipe moves
                   the page and not the dot. */}
@@ -442,6 +443,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                     `${palettes.length} colours · ${page + 1}/${pages.length}`,
                     `${palettes.length} bảng màu · ${page + 1}/${pages.length}`,
                     `${palettes.length}色 · ${page + 1}/${pages.length}`,
+                    `${palettes.length} 种颜色 · ${page + 1}/${pages.length}`,
                   )}
                 </Text>
               )}
@@ -492,7 +494,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                               ? <Ionicons name="people" size={10} color={pillInk[scheme]} />
                               : <View style={[s.wordDot, { backgroundColor: pillInk[scheme] }]} testID={`theme-${o.id}-new-dot`} />}
                             <Text style={[s.wordText, { color: pillInk[scheme] }]}>
-                              {word === 'popular' ? t('Popular', 'Phổ biến', '人気') : t('New', 'Mới', '新着')}
+                              {word === 'popular' ? t('Popular', 'Phổ biến', '人気', '热门') : t('New', 'Mới', '新着', '新建')}
                             </Text>
                           </View>
                         )}
