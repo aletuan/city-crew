@@ -88,7 +88,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   // line of text. Truncated because the prefix can push a long source
   // title past what one row holds.
   const [title, setTitle] = useState(() => (copyFrom
-    ? t(`Copy of ${copyFrom.title}`, `Bản sao của ${copyFrom.title}`, `「${copyFrom.title}」のコピー`).slice(0, MAX_TITLE)
+    ? t(`Copy of ${copyFrom.title}`, `Bản sao của ${copyFrom.title}`, `「${copyFrom.title}」のコピー`, `${copyFrom.title}（副本）`).slice(0, MAX_TITLE)
     : route.params?.title ?? ''));
   const [desc, setDesc] = useState(copyFrom?.desc ?? route.params?.desc ?? '');
   // What the form opened on, which `changed` measures against.
@@ -214,16 +214,17 @@ export default function CollectionFormScreen({ navigation, route }: {
       if (saved.current) return;
       e.preventDefault();
       Alert.alert(
-        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？'),
+        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？', '放弃更改？'),
         t(
           'What you changed on this list has not been saved.',
           'Những gì bạn vừa đổi trên bộ sưu tập này chưa được lưu.',
           'このリストの変更はまだ保存されていません。',
+          '你对这个清单的更改尚未保存。',
         ),
         [
-          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける'), style: 'cancel' },
+          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける', '继续编辑'), style: 'cancel' },
           {
-            text: t('Discard', 'Bỏ', '破棄'),
+            text: t('Discard', 'Bỏ', '破棄', '放弃'),
             style: 'destructive',
             onPress: () => navigation.dispatch(e.data.action),
           },
@@ -240,7 +241,7 @@ export default function CollectionFormScreen({ navigation, route }: {
     // before any tab renders. Checked anyway so a failure is a sentence
     // rather than a crash.
     if (!uid || !city) {
-      setError(t('Sign in first.', 'Hãy đăng nhập trước.', '先にサインインしてください。'));
+      setError(t('Sign in first.', 'Hãy đăng nhập trước.', '先にサインインしてください。', '请先登录。'));
       return;
     }
     setBusy(true);
@@ -316,19 +317,20 @@ export default function CollectionFormScreen({ navigation, route }: {
           `You can make ${DAILY_CAPS.collections} lists and save ${DAILY_CAPS.placesIntoLists} places a day. Come back tomorrow.`,
           `Mỗi ngày bạn có thể tạo ${DAILY_CAPS.collections} bộ sưu tập và lưu ${DAILY_CAPS.placesIntoLists} địa điểm. Mai quay lại nhé.`,
           `1日に${DAILY_CAPS.collections}件のリストと${DAILY_CAPS.placesIntoLists}件の保存ができます。また明日どうぞ。`,
+          `你每天可以创建 ${DAILY_CAPS.collections} 个清单、保存 ${DAILY_CAPS.placesIntoLists} 个地点。明天再来吧。`,
         );
         setError(words);
-        Alert.alert(t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで'), words);
+        Alert.alert(t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで', '今天就到这里吧'), words);
         return;
       }
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
       Alert.alert(
         copyFrom
-          ? t('Could not save a copy', 'Không lưu được bản sao', 'コピーを保存できませんでした')
+          ? t('Could not save a copy', 'Không lưu được bản sao', 'コピーを保存できませんでした', '无法保存副本')
           : editing
-            ? t('Could not save the changes', 'Không lưu được thay đổi', '変更を保存できませんでした')
-            : t('Could not create the collection', 'Không tạo được bộ sưu tập', 'コレクションを作成できませんでした'),
+            ? t('Could not save the changes', 'Không lưu được thay đổi', '変更を保存できませんでした', '无法保存更改')
+            : t('Could not create the collection', 'Không tạo được bộ sưu tập', 'コレクションを作成できませんでした', '无法创建合集'),
         message,
       );
     } finally {
@@ -345,7 +347,7 @@ export default function CollectionFormScreen({ navigation, route }: {
       <AuthHeader
         onBack={() => navigation.goBack()}
         title={copyFrom
-          ? t('Save a copy', 'Lưu bản sao', 'コピーを保存')
+          ? t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本')
           : editing
             // Named for the thing the reader tapped "New" beside, in the
             // word the tab and every row of it use. "Name your list"
@@ -353,14 +355,14 @@ export default function CollectionFormScreen({ navigation, route }: {
             // new reader to work out whether a list was a collection
             // (UX-13, 17 Oct 2026). "Edit", not "Rename": the same form
             // changes the description, the chips and the cover too.
-            ? t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')
-            : t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+            ? t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集', '编辑合集')
+            : t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集')}
         action={{
           label: copyFrom
-            ? t('Save the copy', 'Lưu bản sao', 'コピーを保存')
+            ? t('Save the copy', 'Lưu bản sao', 'コピーを保存', '保存副本')
             : editing
-              ? t('Save changes', 'Lưu thay đổi', '変更を保存')
-              : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成'),
+              ? t('Save changes', 'Lưu thay đổi', '変更を保存', '保存更改')
+              : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成', '创建合集'),
           onPress: submit,
           busy,
           disabled: !title.trim() || (!!editing && !changed),
@@ -374,12 +376,14 @@ export default function CollectionFormScreen({ navigation, route }: {
             'Make it yours before it saves — nothing is copied until you do.',
             'Sửa thoải mái trước khi lưu — chưa lưu thì chưa có bản sao nào cả.',
             '保存する前に自由に編集できます — 保存するまでコピーは作られません。',
+            '保存前可以随意修改 — 保存后才会创建副本。',
           )
           : addPlaceSlug
             ? t(
               'Name it, and the place you just saved goes in first.',
               'Đặt tên, và địa điểm bạn vừa lưu sẽ vào đầu tiên.',
               '名前をつければ、いま保存したスポットが最初に入ります。',
+              '起个名字，你刚保存的地点会排在第一个。',
             )
             // Said of the list as it is. This line used to promise "only
             // you can see this one" on every rename, public lists included,
@@ -391,16 +395,18 @@ export default function CollectionFormScreen({ navigation, route }: {
                 'This list is public — its new name and description will show to everyone.',
                 'Bộ sưu tập này đang công khai — tên và mô tả mới sẽ hiện với mọi người.',
                 'このリストは公開中です — 新しい名前と説明はすべての人に表示されます。',
+                '这个清单已公开 — 新的名称和简介会对所有人显示。',
               )
               : t(
                 'Only you can see this list until you make it public from its menu.',
                 'Chỉ mình bạn thấy bộ sưu tập này cho đến khi bạn công khai nó trong menu của bộ sưu tập.',
                 'リストのメニューから公開するまで、このリストはあなただけに表示されます。',
+                '在清单菜单中设为公开之前，这个清单仅你可见。',
               )}</Lede>
       <FieldRow
         icon="bookmark-outline"
-        label={t('Name', 'Tên', '名前')}
-        placeholder={t('Weekend coffee', 'Cà phê cuối tuần', '週末のコーヒー')}
+        label={t('Name', 'Tên', '名前', '名称')}
+        placeholder={t('Weekend coffee', 'Cà phê cuối tuần', '週末のコーヒー', '周末咖啡')}
         value={title}
         onChangeText={setTitle}
         maxLength={MAX_TITLE}
@@ -414,8 +420,8 @@ export default function CollectionFormScreen({ navigation, route }: {
           that can go unanswered. */}
       <FieldRow
         icon="text-outline"
-        label={t('Description', 'Mô tả', '説明')}
-        placeholder={t('What ties these together?', 'Điều gì gắn kết những nơi này?', '共通点は何ですか？')}
+        label={t('Description', 'Mô tả', '説明', '简介')}
+        placeholder={t('What ties these together?', 'Điều gì gắn kết những nơi này?', '共通点は何ですか？', '这些地点有什么共同点？')}
         value={desc}
         onChangeText={setDesc}
         multiline
@@ -434,12 +440,13 @@ export default function CollectionFormScreen({ navigation, route }: {
           places nobody has classified: there is nothing to hide. */}
       {offered.length > 0 ? (
         <View style={s.coverBlock} testID="collection-kinds-field">
-          <Text style={s.coverLabel}>{t('CATEGORIES', 'THỂ LOẠI', 'カテゴリー')}</Text>
+          <Text style={s.coverLabel}>{t('CATEGORIES', 'THỂ LOẠI', 'カテゴリー', '类别')}</Text>
           <Text style={s.kindsHint}>
             {t(
               'From the places in it. Tap one to hide it from the list, or show it again.',
               'Lấy từ các địa điểm trong bộ sưu tập. Chạm để ẩn hoặc hiện lại.',
               'リストのスポットから。タップで非表示・再表示を切り替えます。',
+              '来自清单里的地点。点按可在清单中隐藏或重新显示。',
             )}
           </Text>
           {/* Drawn as the list page draws them (`KindToggles`), so the
@@ -456,12 +463,12 @@ export default function CollectionFormScreen({ navigation, route }: {
           from — a rename or a copy; a brand-new list offers no picker. */}
       {choices.length > 0 ? (
         <View style={s.coverBlock}>
-          <Text style={s.coverLabel}>{t('COVER', 'ẢNH BÌA', 'カバー写真')}</Text>
+          <Text style={s.coverLabel}>{t('COVER', 'ẢNH BÌA', 'カバー写真', '封面')}</Text>
           <View style={s.coverGrid}>
             <PressableScale
               onPress={() => setPick({ chosen: true, id: null })}
               accessibilityRole="button"
-              accessibilityLabel={t('Auto', 'Tự động', '自動')}
+              accessibilityLabel={t('Auto', 'Tự động', '自動', '自动')}
               accessibilityState={{ selected: coverId == null }}
               // `aria-selected` beside it, because react-native-web drops
               // `accessibilityState` — the same pairing `Chip` and `Tile`
@@ -477,13 +484,13 @@ export default function CollectionFormScreen({ navigation, route }: {
                 <>
                   <Image source={{ uri: autoUri }} style={s.thumbImg} contentFit="cover" transition={120} />
                   <View style={s.autoScrim}>
-                    <Text style={s.autoOnPhoto}>{t('Auto', 'Tự động', '自動')}</Text>
+                    <Text style={s.autoOnPhoto}>{t('Auto', 'Tự động', '自動', '自动')}</Text>
                   </View>
                 </>
               ) : (
                 <>
                   <Ionicons name="sparkles-outline" size={22} color={colors.textSecondary} />
-                  <Text style={s.autoText}>{t('Auto', 'Tự động', '自動')}</Text>
+                  <Text style={s.autoText}>{t('Auto', 'Tự động', '自動', '自动')}</Text>
                 </>
               )}
             </PressableScale>
@@ -500,6 +507,7 @@ export default function CollectionFormScreen({ navigation, route }: {
                     `${localized(place, 'name', lang)}, photo ${n} of ${of}`,
                     `${localized(place, 'name', lang)}, ảnh ${n} trên ${of}`,
                     `${localized(place, 'name', lang)}、写真${n}/${of}`,
+                    `${localized(place, 'name', lang)}，第 ${n} 张照片，共 ${of} 张`,
                   )
                   : localized(place, 'name', lang)}
                 accessibilityState={{ selected: coverId === ph.id }}

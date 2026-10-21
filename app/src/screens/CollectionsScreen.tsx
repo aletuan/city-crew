@@ -126,17 +126,19 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
         'Sign in to build your own collections',
         'Đăng nhập để tạo bộ sưu tập của riêng bạn',
         'サインインして自分のコレクションを作る',
+        '登录后即可创建自己的合集',
       )}
     >
       <View style={s.noticeCopy}>
         <Text style={s.noticeTitle}>
-          {t('Start a collection', 'Tạo bộ sưu tập riêng', 'コレクションを作る')}
+          {t('Start a collection', 'Tạo bộ sưu tập riêng', 'コレクションを作る', '创建合集')}
         </Text>
         <Text style={s.noticeBody}>
           {t(
             'Sign in to create and sort.',
             'Đăng nhập để tạo và sắp xếp.',
             'サインインして作成・整理。',
+            '登录后可创建和整理。',
           )}
         </Text>
       </View>
@@ -146,7 +148,7 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
           be the loudest object on the screen. At the row's end now, centred
           on the two lines beside it. */}
       <LinearGradient {...gradAI} style={s.noticeChip}>
-        <Text style={s.noticeChipText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
+        <Text style={s.noticeChipText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录')}</Text>
         <Ionicons name="arrow-forward" size={15} color={colors.accentInk} />
       </LinearGradient>
     </PressableScale>
@@ -192,13 +194,14 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
           <Ionicons name="bookmark" size={27} color={colors.accent} />
         </View>
         <Text style={s.firstTitle}>
-          {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません')}
+          {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集')}
         </Text>
         <Text style={s.firstBody}>
           {t(
             'Group places into lists — date nights, crew weekends, coffee crawls.',
             'Nhóm địa điểm thành bộ sưu tập — buổi hẹn tối, cuối tuần với hội bạn, tour cà phê.',
             'スポットをリストにまとめましょう — デートの夜、仲間との週末、カフェ巡り。',
+            '把地点整理成清单 — 约会之夜、朋友周末、咖啡巡游。',
           )}
         </Text>
         {/* A pill here, where the sheet's primary is a rounded rectangle:
@@ -207,11 +210,11 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
             is exactly where a pill belongs. */}
         <GradientCta
           icon="add"
-          label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る')}
+          label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集')}
           onPress={onPress}
         />
         <Text style={s.firstFoot}>
-          {t('Only you can see your lists.', 'Chỉ mình bạn thấy bộ sưu tập của bạn.', 'リストはあなただけに表示されます。')}
+          {t('Only you can see your lists.', 'Chỉ mình bạn thấy bộ sưu tập của bạn.', 'リストはあなただけに表示されます。', '你的清单仅你可见。')}
         </Text>
       </View>
     </View>
@@ -245,7 +248,7 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
           <Ionicons name="globe" size={27} color={colors.accent} />
         </View>
         <Text style={s.firstTitle}>
-          {t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません')}
+          {t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません', '还没有公开的清单')}
         </Text>
         {/* True now that a curator's own public list is on this shelf; it
             promised the same thing while the shelf filtered them out. */}
@@ -254,6 +257,7 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
             'Yours can be the first — make a list, set it to Public, and it shows up here for everyone.',
             'Bộ sưu tập của bạn có thể là đầu tiên — tạo một bộ sưu tập và đặt Công khai, nó sẽ hiện ở đây cho mọi người.',
             '最初の一つはあなたかも — リストを作って「公開」にすると、ここにみんなの目に並びます。',
+            '你的可以成为第一个 — 创建清单并设为公开，所有人都能在这里看到。',
           )}
         </Text>
         {/* Signed out, "make a list" is not yet an offer this reader can
@@ -262,14 +266,14 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
           ? (
             <GradientCta
               icon="add"
-              label={t('Create a collection', 'Tạo bộ sưu tập', 'コレクションを作る')}
+              label={t('Create a collection', 'Tạo bộ sưu tập', 'コレクションを作る', '创建合集')}
               onPress={onCreate}
             />
           )
           : (
             <GradientCta
               icon="compass"
-              label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る')}
+              label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点')}
               onPress={onExplore}
             />
           )}
@@ -576,12 +580,12 @@ export default function CollectionsScreen({ navigation, route }: {
   const remove = (c: Collection) => {
     const name = t(c.title_en, c.title_vi, c.title_ja);
     Alert.alert(
-      t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？'),
-      t(`"${name}" will be gone for good.`, `"${name}" sẽ mất hẳn.`, `「${name}」は完全に削除されます。`),
+      t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？', '删除这个合集？'),
+      t(`"${name}" will be gone for good.`, `"${name}" sẽ mất hẳn.`, `「${name}」は完全に削除されます。`, `“${name}”将被永久删除。`),
       [
-        { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+        { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
         {
-          text: t('Delete', 'Xoá', '削除'),
+          text: t('Delete', 'Xoá', '削除', '删除'),
           style: 'destructive',
           onPress: () => {
             // Both catalogs, as the detail screen's publish does: a public
@@ -589,7 +593,7 @@ export default function CollectionsScreen({ navigation, route }: {
             // reloading only your library left it standing there.
             deleteCollection(c.slug)
               .then(() => { mine.reload(); cols.reload(); })
-              .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message));
+              .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除'), e.message));
           },
         },
       ],
@@ -807,13 +811,13 @@ export default function CollectionsScreen({ navigation, route }: {
     // `startNew` takes the reader to Yours once it exists. Guests have no
     // library, so no pill.
     <Screen
-      title={t('Collections', 'Bộ sưu tập', 'コレクション')}
+      title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集')}
       right={(onYours ? mineReady && mine.data.length > 0 : !!session) ? (
         <AddPill
           tall
-          label={t('New', 'Tạo mới', '新規')}
+          label={t('New', 'Tạo mới', '新規', '新建')}
           onPress={startNew}
-          accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+          accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集')}
           testID="collection-new"
         />
       ) : undefined}
@@ -836,8 +840,8 @@ export default function CollectionsScreen({ navigation, route }: {
         {session ? (
           <UnderlineTabs
             tabs={[
-              { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の'), testID: 'collections-yours' },
-              { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの') },
+              { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の', '我的'), testID: 'collections-yours' },
+              { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの', '社区') },
             ]}
             active={tab}
             onChange={pickTab}
@@ -861,8 +865,8 @@ export default function CollectionsScreen({ navigation, route }: {
                     accessibilityRole="button"
                     accessibilityState={{ selected: view === v }}
                     accessibilityLabel={v === 'tile'
-                      ? t('Tile view', 'Dạng lưới', 'タイル表示')
-                      : t('List view', 'Dạng danh sách', 'リスト表示')}
+                      ? t('Tile view', 'Dạng lưới', 'タイル表示', '卡片视图')
+                      : t('List view', 'Dạng danh sách', 'リスト表示', '列表视图')}
                   >
                     <Ionicons
                       name={v === 'tile' ? 'grid-outline' : 'list-outline'}
@@ -894,9 +898,9 @@ export default function CollectionsScreen({ navigation, route }: {
               // search finds a curator by the handle typed with or without
               // the @ anyway. No "or": a list of four needs no conjunction
               // to be read as one.
-              placeholder={t('Name, place, city, user', 'Tên, địa điểm, thành phố, người dùng', '名前・スポット・都市・ユーザー')}
+              placeholder={t('Name, place, city, user', 'Tên, địa điểm, thành phố, người dùng', '名前・スポット・都市・ユーザー', '名称、地点、城市、用户')}
               // Inside the box, while the panel is up — see `SearchField`.
-              cancel={{ shown: panel, label: t('Cancel', 'Hủy', 'キャンセル'), onPress: cancel }}
+              cancel={{ shown: panel, label: t('Cancel', 'Hủy', 'キャンセル', '取消'), onPress: cancel }}
             />
           </View>
         )}
@@ -905,15 +909,15 @@ export default function CollectionsScreen({ navigation, route }: {
             {suggestions.length > 0 && (
               <View style={s.group}>
                 <View style={s.legendRow}>
-                  <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補')}</Text>
+                  <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補', '推荐')}</Text>
                   <PressableScale
                     onPress={() => keepRecents([])}
                     scaleTo={0.92}
                     hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
                     accessibilityRole="button"
-                    accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去')}
+                    accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去', '清除推荐')}
                   >
-                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去')}</Text>
+                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除')}</Text>
                   </PressableScale>
                 </View>
                 {suggestions.map((term) => (
@@ -933,7 +937,7 @@ export default function CollectionsScreen({ navigation, route }: {
             )}
             {offerCities && (
               <View style={s.group}>
-                <Text style={s.legend}>{t('City', 'Thành phố', '都市')}</Text>
+                <Text style={s.legend}>{t('City', 'Thành phố', '都市', '城市')}</Text>
                 <View style={s.chipWrap}>
                   {cityChoices.map((id) => (
                     <Chip
@@ -948,7 +952,7 @@ export default function CollectionsScreen({ navigation, route }: {
             )}
             {kindChoices.length > 1 && (
               <View style={s.group}>
-                <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類')}</Text>
+                <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類', '地点类型')}</Text>
                 <View style={s.chipWrap}>
                   {kindChoices.map((k) => (
                     <Chip
@@ -964,7 +968,7 @@ export default function CollectionsScreen({ navigation, route }: {
               </View>
             )}
             {suggestions.length === 0 && !offerCities && kindChoices.length <= 1 && (
-              <Text style={s.legend}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。')}</Text>
+              <Text style={s.legend}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。', '输入名称、地点或城市。')}</Text>
             )}
           </Card>
         )}
@@ -1102,8 +1106,8 @@ export default function CollectionsScreen({ navigation, route }: {
                               ) : item.own && (
                                 <Text style={s.gcardMeta} numberOfLines={1}>
                                   {members === 0
-                                    ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
-                                    : `${members} ${t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
+                                    ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点')
+                                    : `${members} ${t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点')}`}
                                 </Text>
                               )}
                               {/* Only where a like is possible: a private
@@ -1126,8 +1130,8 @@ export default function CollectionsScreen({ navigation, route }: {
                                   accessibilityRole="button"
                                   accessibilityState={{ selected: my }}
                                   accessibilityLabel={my
-                                    ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                                    : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                                    ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集')
+                                    : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集')}
                                 >
                                   <Ionicons
                                     name={my ? 'heart' : 'heart-outline'}
@@ -1163,7 +1167,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 const my = !!c.id && myLikes.includes(c.id);
                 const blurb = t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() || '';
                 const byline = c.curator_handle
-                  ? `${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}, ${reason ?? placesOf(n)}`
+                  ? `${t('by', 'bởi', 'by', '来自')} ${atHandle(c.curator_handle)}, ${reason ?? placesOf(n)}`
                   : undefined;
                 return (
                   <View style={s.row}>
@@ -1325,8 +1329,8 @@ export default function CollectionsScreen({ navigation, route }: {
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: my }}
                                 accessibilityLabel={my
-                                  ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                                  : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                                  ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集')
+                                  : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集')}
                               >
                                 <Ionicons
                                   name={my ? 'heart' : 'heart-outline'}
@@ -1335,7 +1339,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                 />
                                 {likesWorthShowing(likes[c.slug]) && (
                                   <Text style={s.meta}>
-                                    {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
+                                    {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね', '个赞')}
                                   </Text>
                                 )}
                               </PressableScale>
@@ -1401,11 +1405,11 @@ export default function CollectionsScreen({ navigation, route }: {
                             {/* "0 places" reads like a broken count; an empty
                                 list you just made deserves a sentence. */}
                             {reasonFor(own.slug) ?? (count === 0
-                              ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
+                              ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点')
                               : placesOf(count))}
                             {`  ·  ${own.is_public
-                              ? t('Public', 'Công khai', '公開')
-                              : t('Private', 'Riêng tư', '非公開')}`}
+                              ? t('Public', 'Công khai', '公開', '公开')
+                              : t('Private', 'Riêng tư', '非公開', '私密')}`}
                           </Text>
                         </View>
                         {/* The same sentence, for the same reason, because
@@ -1468,8 +1472,8 @@ export default function CollectionsScreen({ navigation, route }: {
                             accessibilityRole="button"
                             accessibilityState={{ selected: myLikes.includes(own.id) }}
                             accessibilityLabel={myLikes.includes(own.id)
-                              ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                              : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                              ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集')
+                              : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集')}
                           >
                             <Ionicons
                               name={myLikes.includes(own.id) ? 'heart' : 'heart-outline'}
@@ -1478,7 +1482,7 @@ export default function CollectionsScreen({ navigation, route }: {
                             />
                             {likesWorthShowing(likes[own.slug]) && (
                               <Text style={s.meta}>
-                                {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
+                                {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね', '个赞')}
                               </Text>
                             )}
                           </PressableScale>
@@ -1500,8 +1504,8 @@ export default function CollectionsScreen({ navigation, route }: {
                       desc: t(own.desc_en, own.desc_vi, own.desc_ja),
                     })}
                     onDelete={() => remove(own)}
-                    editLabel={t('Edit', 'Sửa', '編集')}
-                    deleteLabel={t('Delete', 'Xoá', '削除')}
+                    editLabel={t('Edit', 'Sửa', '編集', '编辑')}
+                    deleteLabel={t('Delete', 'Xoá', '削除', '删除')}
                   >
                     {card}
                   </SwipeRow>
@@ -1516,8 +1520,8 @@ export default function CollectionsScreen({ navigation, route }: {
               if (asked) {
                 if (section.data.length > 0) return null;
                 return q
-                  ? <Empty text={t(`Nothing here matches "${q}".`, `Không có gì khớp với "${q}".`, `「${q}」に一致するものはありません。`)} />
-                  : <Empty text={t('No collections match that choice.', 'Không có bộ sưu tập nào khớp lựa chọn đó.', 'その条件に合うコレクションはありません。')} />;
+                  ? <Empty text={t(`Nothing here matches "${q}".`, `Không có gì khớp với "${q}".`, `「${q}」に一致するものはありません。`, `没有与“${q}”匹配的内容。`)} />
+                  : <Empty text={t('No collections match that choice.', 'Không có bộ sưu tập nào khớp lựa chọn đó.', 'その条件に合うコレクションはありません。', '没有符合条件的合集。')} />;
               }
               if (section.own) {
                 return section.data.length === 0

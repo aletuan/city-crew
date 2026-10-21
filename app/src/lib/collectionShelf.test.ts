@@ -4,6 +4,7 @@ import { listsWord, pairUp, placesOf, reasonFor, scopeLine, shape } from './coll
 const en = (e: string) => e;
 const vi = (_e: string, v: string) => v;
 const ja = (_e: string, _v: string, j?: string) => j ?? '';
+const zh = (_e: string, _v: string, _j?: string, z?: string) => z ?? '';
 
 const hit = (over: { hits?: number; total?: number; place?: { name_en?: string; name_vi?: string; name_ja?: string | null } | null }) => ({
   c: null, hits: 3, total: 3, place: null, ...over,
@@ -17,6 +18,8 @@ describe('placesOf and listsWord', () => {
     expect(listsWord(1, en)).toBe('1 collection');
     expect(listsWord(4, en)).toBe('4 collections');
     expect(listsWord(4, ja)).toBe('4件のコレクション');
+    expect(placesOf(3, zh)).toBe('3 个地点');
+    expect(listsWord(4, zh)).toBe('4 个合集');
   });
 });
 
@@ -43,6 +46,7 @@ describe('reasonFor', () => {
 
   it('counts the part a chip reached, and names the chips', () => {
     expect(reasonFor(hit({ hits: 3, total: 8 }), ['Cafés', 'Hanoi'], en)).toBe('3 of 8 places · Cafés · Hanoi');
+    expect(reasonFor(hit({ hits: 3, total: 8 }), ['咖啡馆'], zh)).toBe('8 个地点中的 3 个 · 咖啡馆');
     expect(reasonFor(hit({ hits: 1, total: 2 }), [], ja)).toBe('2 スポットのうち1');
   });
 
@@ -64,6 +68,7 @@ describe('scopeLine', () => {
     expect(scopeLine({ count: 1, chosen: [], cities: ['hn'], cityName }, en)).toBe('1 collection · Hanoi');
     expect(scopeLine({ count: 5, chosen: [], cities: ['hn', 'sg', 'dn'], cityName }, en)).toBe('5 collections · 3 cities');
     expect(scopeLine({ count: 5, chosen: [], cities: ['hn', 'sg'], cityName }, vi)).toBe('5 bộ sưu tập · 2 thành phố');
+    expect(scopeLine({ count: 5, chosen: [], cities: ['hn', 'sg'], cityName }, zh)).toBe('5 个合集 · 2 个城市');
     expect(scopeLine({ count: 0, chosen: [], cities: [], cityName }, en)).toBe('0 collections');
   });
 });

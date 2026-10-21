@@ -114,7 +114,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
             destination the day the tab got its real name. Your own
             public lists belong on it too: a public list is part of the
             community, yours included. */}
-        <Text style={s.section}>{t('From the community', 'Từ cộng đồng', 'みんなのコレクション')}</Text>
+        <Text style={s.section}>{t('From the community', 'Từ cộng đồng', 'みんなのコレクション', '来自社区')}</Text>
         <Pressable
           // "See all" of a *public* shelf lands on the Community tab, not
           // on your library. `CollectionsHome` is the stack's first
@@ -129,7 +129,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
           }}
           hitSlop={10}
         >
-          <Text style={s.seeAll}>{t('See all', 'Xem tất cả', 'すべて見る')} →</Text>
+          <Text style={s.seeAll}>{t('See all', 'Xem tất cả', 'すべて見る', '查看全部')} →</Text>
         </Pressable>
       </View>
       {holding ? (
@@ -184,7 +184,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                   <Text style={s.shelfCardTitle} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <View style={s.shelfCardFoot}>
                     {/* English is the only of the three that inflects. */}
-                    <Text style={s.shelfCardMeta}>{count} {t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}</Text>
+                    <Text style={s.shelfCardMeta}>{count} {t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点')}</Text>
                     {/* One heart, and it is both the gesture and the
                         tally.
 
@@ -233,8 +233,8 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                         accessibilityRole="button"
                         accessibilityState={{ selected: myLikes.includes(c.id) }}
                         accessibilityLabel={myLikes.includes(c.id)
-                          ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                          : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                          ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集')
+                          : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集')}
                       >
                         <Ionicons
                           name={myLikes.includes(c.id) ? 'heart' : 'heart-outline'}
