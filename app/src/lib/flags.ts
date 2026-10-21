@@ -70,6 +70,22 @@ export const FLAG_DEFAULTS = {
    * `20261008090000_place_checkin_app_flags.sql` for the row.
    */
   place_checkin: false,
+  /**
+   * Draw each city's place count at the right edge of its row in the city
+   * sheet. **Off** (owner, 21 Oct 2026): 370 beside Sài Gòn and 8 beside
+   * Vũng Tàu read as a league table of cities, and the number is the
+   * catalog's business, not the reader's reason to pick one. The NEW chip
+   * beside a young city stays — it says the same thing kindly, and still
+   * reads the count to decide.
+   *
+   * There is no row for it, so the default is the answer. To bring the
+   * numbers back on every phone at the next launch:
+   *
+   *     insert into app_flags (key, enabled, note) values
+   *       ('city_place_counts', true, 'Place counts in the city sheet.')
+   *     on conflict (key) do update set enabled = true;
+   */
+  city_place_counts: false,
 } as const;
 
 export type FlagKey = keyof typeof FLAG_DEFAULTS;

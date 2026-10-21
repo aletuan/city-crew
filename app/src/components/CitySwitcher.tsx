@@ -50,6 +50,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCity } from '../lib/city';
 import { fetchPlaceCountByCity } from '../lib/data';
 import { useI18n } from '../lib/i18n';
+import { useFlag } from '../lib/useFlag';
 import { cityBook } from '../lib/cityBook';
 import { colors, font, radius, space } from '../theme';
 import { fireHaptic, PressableScale } from './ui';
@@ -65,6 +66,10 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
   const { city, cities, mode, setCity, followMyLocation, recentCityIds } = useCity();
+  // The number on each row, behind a switch that ships off — see
+  // `city_place_counts` in `lib/flags`. The counts are still asked for:
+  // the NEW chip reads them.
+  const showCounts = useFlag('city_place_counts');
   const [locating, setLocating] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -186,7 +191,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
               can read down. A city with nothing in it yet shows
               no number rather than a zero: the row is an offer,
               and "0" reads as a broken one. */}
-          {n != null && (
+          {showCounts && n != null && (
             <Text style={[s.count, active && { color: colors.accent }]}>{n}</Text>
           )}
         </PressableScale>

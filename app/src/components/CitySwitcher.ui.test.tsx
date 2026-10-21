@@ -51,12 +51,14 @@ const fetchPlaceCountByCity = vi.hoisted(() => vi.fn(async () => ({} as Record<s
 vi.mock('../lib/data', () => ({ fetchPlaceCountByCity }));
 
 import { CitySwitcherModal } from './CitySwitcher';
+import { appFlags } from '../lib/flags';
 
 beforeEach(() => {
   ctx.city = { ...hanoi };
   ctx.mode = 'auto';
   ctx.recent = [];
   ctx.lang = 'en';
+  appFlags.reset();
   setCity.mockClear();
   followMyLocation.mockClear();
   followMyLocation.mockImplementation(async () => true);
@@ -154,7 +156,18 @@ describe('the list of cities', () => {
   // The promise each row makes: fifteen places is a different offer from
   // a hundred and seventy-nine, and the young one says so before anyone
   // walks in expecting Hanoi.
-  it('wears each city’s place count, and introduces the young one as new', async () => {
+  // Behind `city_place_counts`, which ships off (owner, 21 Oct 2026):
+  // the numbers read as a league table of cities.
+  it('draws no place counts as shipped, and still introduces the young city as new', async () => {
+    fetchPlaceCountByCity.mockImplementation(async () => ({ hanoi: 179, saigon: 15 }));
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(await screen.findByText('NEW')).toBeTruthy();
+    expect(screen.queryByText('179')).toBeNull();
+    expect(screen.queryByText('15')).toBeNull();
+  });
+
+  it('wears each city’s place count when the switch is on, and introduces the young one as new', async () => {
+    appFlags.set('city_place_counts', true);
     fetchPlaceCountByCity.mockImplementation(async () => ({ hanoi: 179, saigon: 15 }));
     render(<CitySwitcherModal visible onClose={() => {}} />);
     // The number alone now, at the row's right edge — the word "places"
@@ -179,6 +192,8 @@ describe('the list of cities', () => {
   });
 
   it('keeps its quiet when the count never came', async () => {
+    // With the numbers switched on, so their absence means something.
+    appFlags.set('city_place_counts', true);
     fetchPlaceCountByCity.mockImplementationOnce(async () => { throw new Error('offline'); });
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(await screen.findByText('Hanoi')).toBeTruthy();
