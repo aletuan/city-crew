@@ -14,14 +14,37 @@
 // The stored choice is the other half: a word in storage the app did not
 // write (an old build's value, a hand-edited device) must leave the
 // reader in English rather than in an unknown language.
+//
+// The phone's language is the third: what the first launch speaks before
+// anything is stored, and what a stored choice overrides.
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '../uitest/render';
 import { I18nProvider, spokenIn, useI18n, type Lang } from './i18n';
+import { langFromLocales } from './lang';
 
 const KEY = 'citycrew.lang';
+
+// The phone, as React Native reports it. The web build the tests render
+// through has neither `Settings` nor a locale in `I18nManager`, so both
+// are stood in for; `os` is 'web' unless a test says otherwise, and every
+// other test runs on a phone that reports nothing.
+const phone = vi.hoisted(() => ({
+  os: 'web',
+  apple: undefined as unknown,
+  android: undefined as string | undefined,
+}));
+vi.mock('react-native', async (orig) => {
+  const real = await orig<Record<string, object>>();
+  return {
+    ...real,
+    Platform: { ...real.Platform, get OS() { return phone.os; } },
+    Settings: { get: (k: string) => (k === 'AppleLanguages' ? phone.apple : undefined) },
+    I18nManager: { ...real.I18nManager, getConstants: () => ({ isRTL: false, localeIdentifier: phone.android }) },
+  };
+});
 
 // Each row is (en, vi, ja, zh) as a caller would pass it; `null` is a
 // translation nobody wrote.
@@ -55,6 +78,7 @@ const read = (name: string) => screen.getByTestId(name).textContent;
 const pick = (l: Lang) => act(() => { screen.getByText(l, { selector: 'button' }).click(); });
 
 beforeEach(async () => {
+  Object.assign(phone, { os: 'web', apple: undefined, android: undefined });
   await AsyncStorage.removeItem(KEY);
   vi.mocked(AsyncStorage.getItem).mockClear();
 });
@@ -185,6 +209,97 @@ describe('the stored choice', () => {
     } finally {
       Object.assign(store, real);
     }
+  });
+});
+
+describe('the phone\'s language', () => {
+  // From the first frame: the read is synchronous, so a Vietnamese reader
+  // is not shown English while storage answers.
+  it('is the first launch\'s language on iOS, from the reader\'s list', () => {
+    Object.assign(phone, { os: 'ios', apple: ['vi-VN', 'en-VN'] });
+    mount();
+    expect(read('lang')).toBe('vi');
+    expect(read('all three')).toBe('Địa điểm');
+  });
+
+  it('skips what is not a language tag in that list', () => {
+    Object.assign(phone, { os: 'ios', apple: [42, 'ja-JP'] });
+    mount();
+    expect(read('lang')).toBe('ja');
+  });
+
+  it('is Android\'s locale, in Java\'s spelling', () => {
+    Object.assign(phone, { os: 'android', apple: ['vi-VN'], android: 'zh_CN_#Hans' });
+    mount();
+    expect(read('lang')).toBe('zh');
+  });
+
+  it('falls to the locale when iOS keeps no list', () => {
+    Object.assign(phone, { os: 'ios', apple: 'vi-VN', android: 'ja_JP' });
+    mount();
+    expect(read('lang')).toBe('ja');
+  });
+
+  it('is English on a runtime that reports neither', async () => {
+    mount();
+    await act(async () => {});
+    expect(read('lang')).toBe('en');
+  });
+
+  it('gives way to a stored choice', async () => {
+    Object.assign(phone, { os: 'ios', apple: ['vi-VN'] });
+    await AsyncStorage.setItem(KEY, 'ja');
+    mount();
+    await waitFor(() => expect(read('lang')).toBe('ja'));
+  });
+
+  // Not stored, so a reader who changes the phone's language is followed
+  // until they choose one in the app.
+  it('is never stored', async () => {
+    Object.assign(phone, { os: 'ios', apple: ['vi-VN'] });
+    mount();
+    await act(async () => {});
+    expect(read('lang')).toBe('vi');
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  });
+});
+
+describe('langFromLocales', () => {
+  it('opens in the first language the app speaks', () => {
+    expect(langFromLocales(['vi-VN'])).toBe('vi');
+    expect(langFromLocales(['ja-JP'])).toBe('ja');
+    expect(langFromLocales(['en-AU'])).toBe('en');
+    expect(langFromLocales(['fr-FR', 'vi-VN'])).toBe('vi');
+    expect(langFromLocales(['VI_vn'])).toBe('vi');
+  });
+
+  it('opens in English when the app speaks none of them', () => {
+    expect(langFromLocales(['fr-FR', 'ko-KR'])).toBe('en');
+    expect(langFromLocales([])).toBe('en');
+  });
+
+  it('opens in Simplified Chinese for a Simplified reader', () => {
+    for (const tag of ['zh', 'zh-CN', 'zh-SG', 'zh-Hans', 'zh-Hans-CN', 'zh_CN', 'zh_CN_#Hans']) {
+      expect([tag, langFromLocales([tag])]).toEqual([tag, 'zh']);
+    }
+  });
+
+  // The script a tag names outranks its region: a reader in Hong Kong
+  // who set Simplified asked for it.
+  it('reads the script before the region', () => {
+    expect(langFromLocales(['zh-Hans-HK'])).toBe('zh');
+    expect(langFromLocales(['zh_HK_#Hans'])).toBe('zh');
+    expect(langFromLocales(['zh-Hant-CN'])).toBe('en');
+  });
+
+  // Never Simplified to a Traditional reader: the next language they
+  // listed, or English. See the note in `lang.ts`.
+  it('does not hand Simplified to a Traditional reader', () => {
+    for (const tag of ['zh-TW', 'zh-HK', 'zh-MO', 'zh-Hant', 'zh-Hant-TW', 'zh-Hant-HK', 'zh_TW', 'zh_TW_#Hant']) {
+      expect([tag, langFromLocales([tag])]).toEqual([tag, 'en']);
+    }
+    expect(langFromLocales(['zh-Hant-TW', 'ja-JP'])).toBe('ja');
+    expect(langFromLocales(['zh-Hant-TW', 'zh-Hans-CN'])).toBe('zh');
   });
 });
 

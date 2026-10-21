@@ -36,3 +36,43 @@ export function spokenIn(lang: Lang, en: Str, vi: Str, ja?: Str, zh?: Str): Lang
   const hit = order.find(([, s]) => s != null);
   return hit ? hit[0] : null;
 }
+
+// ── the first language, before anybody chooses one ──
+//
+// Until 21 Oct 2026 every first launch was in English, whatever the phone
+// was set to, and a Vietnamese or Japanese reader had to find the switch
+// in Profile before the app spoke to them. Now the first launch speaks
+// the phone's language when the app has it; a choice made in Profile
+// still wins over it, and is the only thing ever stored.
+//
+// Chinese is the case that needed thought. `zh` is Simplified, and
+// Simplified is not what a reader in Taiwan, Hong Kong or Macau writes:
+// handing it to them unasked reads as a statement about where they live,
+// not as a convenience. So a Traditional tag is a language the app does
+// not speak yet, and the walk moves on to the next one the reader listed
+// — English, for most — rather than to the nearest script. A reader who
+// wants Simplified can still pick it; the app does not pick it for them.
+// When Traditional exists it is one more branch here.
+
+/** Regions whose Chinese is written in Traditional characters when a tag
+ *  names no script: `zh-TW` is Traditional though it never says so. */
+const TRADITIONAL = new Set(['tw', 'hk', 'mo']);
+
+/**
+ * The language to open in for a reader whose device lists `tags`, most
+ * preferred first — the first one the app speaks, else English.
+ *
+ * Tags arrive in two spellings: iOS writes BCP 47 (`zh-Hant-TW`), Android
+ * writes Java's `Locale.toString()` (`zh_TW_#Hant`). Both are read.
+ */
+export function langFromLocales(tags: readonly string[]): Lang {
+  for (const tag of tags) {
+    const [base, ...rest] = tag.toLowerCase().replace(/[_#]+/g, '-').split('-');
+    if (base === 'en' || base === 'vi' || base === 'ja') return base;
+    if (base !== 'zh') continue;
+    const script = rest.find((p) => p === 'hans' || p === 'hant');
+    const traditional = script ? script === 'hant' : rest.some((p) => TRADITIONAL.has(p));
+    if (!traditional) return 'zh';
+  }
+  return 'en';
+}
