@@ -68,6 +68,7 @@ export default function InviteCard({
       `from ${clockOf(first.arrive_min)}`,
       `từ ${clockOf(first.arrive_min)}`,
       `${clockOf(first.arrive_min)}から`,
+      `${clockOf(first.arrive_min)} 起`,
     ) : null,
   ]);
 
@@ -95,9 +96,9 @@ export default function InviteCard({
             <View style={s.asker}>
               <Avatar url={from?.avatar_url} size={26} />
               <Text style={s.askerText} numberOfLines={1}>
-                {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か'))}
+                {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か', '某人'))}
                 {' '}
-                <Text style={s.askerVerb}>{t('invited you', 'đã mời bạn', 'があなたを招待しました')}</Text>
+                <Text style={s.askerVerb}>{t('invited you', 'đã mời bạn', 'があなたを招待しました', '邀请了你')}</Text>
               </Text>
             </View>
           </View>
@@ -108,9 +109,9 @@ export default function InviteCard({
           <View style={s.askerBare}>
             <Avatar url={from?.avatar_url} size={26} />
             <Text style={s.askerBareText} numberOfLines={1}>
-              {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か'))}
+              {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か', '某人'))}
               {' '}
-              <Text style={s.askerBareVerb}>{t('invited you', 'đã mời bạn', 'があなたを招待しました')}</Text>
+              <Text style={s.askerBareVerb}>{t('invited you', 'đã mời bạn', 'があなたを招待しました', '邀请了你')}</Text>
             </Text>
           </View>
         )}
@@ -149,7 +150,7 @@ export default function InviteCard({
           contentStyle={[s.yes, busy && s.busy]}
         >
           <Ionicons name="checkmark" size={16} color={colors.accentInk} />
-          <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する')}</Text>
+          <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する', '我参加')}</Text>
         </PressableScale>
         <PressableScale
           onPress={() => { if (!busy) onAnswer('declined'); }}
@@ -157,13 +158,13 @@ export default function InviteCard({
           style={{ flex: 1 }}
           contentStyle={[s.no, busy && s.busy]}
         >
-          <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません')}</Text>
+          <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません', '无法参加')}</Text>
         </PressableScale>
       </View>
 
       <PressableScale onPress={onOpen} accessibilityRole="button" contentStyle={s.more}>
         <Text style={s.moreText}>
-          {t('See the whole plan', 'Xem toàn bộ kế hoạch', '予定をすべて見る')}
+          {t('See the whole plan', 'Xem toàn bộ kế hoạch', '予定をすべて見る', '查看完整计划')}
         </Text>
         <Ionicons name="chevron-forward" size={13} color={colors.accent} />
       </PressableScale>

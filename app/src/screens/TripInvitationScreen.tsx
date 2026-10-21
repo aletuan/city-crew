@@ -102,7 +102,7 @@ export default function TripInvitationScreen({ navigation, route }: {
       navigation.goBack();
     } catch (e) {
       Alert.alert(
-        t('Could not answer', 'Không trả lời được', '回答できません'),
+        t('Could not answer', 'Không trả lời được', '回答できません', '无法回复'),
         e instanceof Error ? e.message : String(e),
       );
     } finally {
@@ -113,17 +113,18 @@ export default function TripInvitationScreen({ navigation, route }: {
 
   if (!trip) {
     return (
-      <Screen title={t('Invitation', 'Lời mời', '招待')} onBack={() => navigation.goBack()}>
+      <Screen title={t('Invitation', 'Lời mời', '招待', '邀请')} onBack={() => navigation.goBack()}>
         {/* `loaded` stays true after a failed fetch, so a failure has to
             be asked about first — or a dropped connection tells the
             invitee they were uninvited. */}
         <Empty text={trips.error
           ? t('Could not load this invitation. Go back and try again.',
             'Không tải được lời mời. Quay lại và thử lại.',
-            '招待を読み込めませんでした。戻ってもう一度お試しください。')
+            '招待を読み込めませんでした。戻ってもう一度お試しください。',
+            '无法加载这个邀请。请返回后重试。')
           : trips.loaded
-            ? t('That invitation is no longer here.', 'Lời mời đó không còn nữa.', 'その招待はもうありません。')
-            : t('Loading…', 'Đang tải…', '読み込み中…')}
+            ? t('That invitation is no longer here.', 'Lời mời đó không còn nữa.', 'その招待はもうありません。', '这个邀请已不存在。')
+            : t('Loading…', 'Đang tải…', '読み込み中…', '加载中…')}
         />
       </Screen>
     );
@@ -149,7 +150,7 @@ export default function TripInvitationScreen({ navigation, route }: {
   return (
     <Screen
       title={trip.title}
-      eyebrow={t('INVITATION', 'LỜI MỜI', '招待')}
+      eyebrow={t('INVITATION', 'LỜI MỜI', '招待', '邀请')}
       onBack={() => navigation.goBack()}
     >
       <AmbientWarmth />
@@ -161,9 +162,9 @@ export default function TripInvitationScreen({ navigation, route }: {
           <Avatar url={from?.avatar_url} size={44} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.askerName} numberOfLines={1}>
-              {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か'))}
+              {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か', '某人'))}
               {' '}
-              <Text style={s.askerVerb}>{t('wants you along', 'muốn rủ bạn đi', 'があなたを誘っています')}</Text>
+              <Text style={s.askerVerb}>{t('wants you along', 'muốn rủ bạn đi', 'があなたを誘っています', '邀请你同行')}</Text>
             </Text>
             <Text style={s.askerMeta} numberOfLines={2}>
               {[from?.handle ? `@${from.handle}` : null, day ? dateline(lang, day) : trip.day, window]
@@ -172,7 +173,7 @@ export default function TripInvitationScreen({ navigation, route }: {
           </View>
         </Card>
 
-        <Text style={s.section}>{t('THEIR PLAN', 'KẾ HOẠCH CỦA HỌ', 'その予定')}</Text>
+        <Text style={s.section}>{t('THEIR PLAN', 'KẾ HOẠCH CỦA HỌ', 'その予定', '对方的计划')}</Text>
         <Card style={s.plan}>
           {stops.map((st, i) => {
             const p = st.places;
@@ -185,7 +186,7 @@ export default function TripInvitationScreen({ navigation, route }: {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={s.name} numberOfLines={1}>
                       {p ? localized(p, 'name', lang)
-                        : t('A place that has since gone', 'Một nơi giờ không còn', 'いまはない場所')}
+                        : t('A place that has since gone', 'Một nơi giờ không còn', 'いまはない場所', '一个已不存在的地点')}
                     </Text>
                     <Text style={s.where} numberOfLines={1}>
                       {[p ? localized(p, 'neighborhood', lang) : null,
@@ -212,9 +213,9 @@ export default function TripInvitationScreen({ navigation, route }: {
             <Text style={s.sumText}>
               {[
                 t(`${stops.length} stop${stops.length === 1 ? '' : 's'}`,
-                  `${stops.length} điểm dừng`, `${stops.length}か所`),
+                  `${stops.length} điểm dừng`, `${stops.length}か所`, `${stops.length} 个地点`),
                 window,
-                spend > 0 ? t(`~${money(spend)} / person`, `~${money(spend)} / người`, `~${money(spend)} / 人`) : null,
+                spend > 0 ? t(`~${money(spend)} / person`, `~${money(spend)} / người`, `~${money(spend)} / 人`, `~${money(spend)} / 人`) : null,
               ].filter(Boolean).join(' · ')}
             </Text>
           </View>
@@ -229,11 +230,13 @@ export default function TripInvitationScreen({ navigation, route }: {
                   `${from?.full_name || 'They'} — you’d be 2 in all.`,
                   `${from?.full_name || 'Họ'} — tính cả bạn là 2 người.`,
                   `${from?.full_name || 'この人'} — あなたを入れて2人。`,
+                  `${from?.full_name || '对方'} — 加上你一共 2 人。`,
                 )
                 : t(
                   `${from?.full_name || 'They'} and ${going - 1} other${going - 1 === 1 ? '' : 's'} — you’d be ${going + 1} in all.`,
                   `${from?.full_name || 'Họ'} và ${going - 1} người nữa — tính cả bạn là ${going + 1}.`,
                   `${from?.full_name || 'この人'} と他${going - 1}人 — あなたを入れて${going + 1}人。`,
+                  `${from?.full_name || '对方'}和另外 ${going - 1} 人 — 加上你一共 ${going + 1} 人。`,
                 )}
             </Text>
           </Card>
@@ -246,6 +249,7 @@ export default function TripInvitationScreen({ navigation, route }: {
               `${from?.full_name ? `${from.full_name} keeps` : 'They keep'} the plan. Accepting puts it in your Trips and you get a reminder the evening before and on the day.`,
               `${from?.full_name || 'Họ'} giữ kế hoạch. Đồng ý thì chuyến vào mục Chuyến đi của bạn, và bạn được nhắc vào tối hôm trước và trong ngày đi.`,
               `予定は${from?.full_name || 'この人'}のものです。承諾すると旅程に入り、前の晩と当日にリマインダーが届きます。`,
+              `计划由${from?.full_name || '对方'}管理。接受后，它会出现在你的行程中，你会在前一晚和当天收到提醒。`,
             )}
           </Text>
         </Card>
@@ -253,8 +257,8 @@ export default function TripInvitationScreen({ navigation, route }: {
         {answered ? (
           <Text style={s.already}>
             {invite?.status === 'accepted'
-              ? t('You said you’re in.', 'Bạn đã nhận lời.', '参加すると回答済みです。')
-              : t('You said you can’t make it.', 'Bạn đã từ chối.', '不参加と回答済みです。')}
+              ? t('You said you’re in.', 'Bạn đã nhận lời.', '参加すると回答済みです。', '你已回复参加。')
+              : t('You said you can’t make it.', 'Bạn đã từ chối.', '不参加と回答済みです。', '你已回复无法参加。')}
           </Text>
         ) : (
           <>
@@ -266,7 +270,7 @@ export default function TripInvitationScreen({ navigation, route }: {
                 contentStyle={[s.yes, busy && s.busy]}
               >
                 <Ionicons name="checkmark" size={17} color={colors.accentInk} />
-                <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する')}</Text>
+                <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する', '我参加')}</Text>
               </PressableScale>
               <PressableScale
                 onPress={() => answer('declined')}
@@ -274,7 +278,7 @@ export default function TripInvitationScreen({ navigation, route }: {
                 style={{ flex: 1 }}
                 contentStyle={[s.no, busy && s.busy]}
               >
-                <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません')}</Text>
+                <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません', '无法参加')}</Text>
               </PressableScale>
             </View>
             <Text style={s.foot}>
@@ -282,6 +286,7 @@ export default function TripInvitationScreen({ navigation, route }: {
                 'Either answer tells them. Declining does not delete their plan.',
                 'Dù trả lời thế nào họ cũng biết. Từ chối không xoá kế hoạch của họ.',
                 'どちらの回答も相手に伝わります。断っても相手の予定は消えません。',
+                '无论哪种回复，对方都会知道。拒绝不会删除对方的计划。',
               )}
             </Text>
           </>

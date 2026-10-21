@@ -158,7 +158,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const send = async () => {
     const bare = normalizeHandle(handle);
     if (handleProblem(bare)) {
-      setNote(t('That does not look like a handle.', 'Trông không giống một username.', 'ユーザー名の形式ではありません。'));
+      setNote(t('That does not look like a handle.', 'Trông không giống một username.', 'ユーザー名の形式ではありません。', '这看起来不像用户名。'));
       return;
     }
     setBusy(true);
@@ -167,18 +167,18 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       const who = await profileByHandle(bare);
       if (!who) {
         // The one thing the lookup may say about an absent account.
-        setNote(t(`Nobody here is ${atHandle(bare)}.`, `Chưa có ai là ${atHandle(bare)}.`, `${atHandle(bare)} は見つかりませんでした。`));
+        setNote(t(`Nobody here is ${atHandle(bare)}.`, `Chưa có ai là ${atHandle(bare)}.`, `${atHandle(bare)} は見つかりませんでした。`, `没有找到 ${atHandle(bare)}。`));
         return;
       }
       const standing = standingWith(ships.data, me ?? '', who.id);
       if (standing === 'yourself') {
-        setNote(t('That is you.', 'Đó chính là bạn.', 'それはあなたです。'));
+        setNote(t('That is you.', 'Đó chính là bạn.', 'それはあなたです。', '这是你自己。'));
       } else if (standing === 'friends') {
-        setNote(t(`You and ${atHandle(who.handle)} are already friends.`, `Bạn và ${atHandle(who.handle)} đã là bạn bè.`, `${atHandle(who.handle)} とはすでに友達です。`));
+        setNote(t(`You and ${atHandle(who.handle)} are already friends.`, `Bạn và ${atHandle(who.handle)} đã là bạn bè.`, `${atHandle(who.handle)} とはすでに友達です。`, `你和 ${atHandle(who.handle)} 已经是好友了。`));
       } else if (standing === 'asked') {
-        setNote(t('Already asked — waiting on their answer.', 'Đã gửi lời mời — đang chờ trả lời.', 'リクエスト送信済み — 返事待ちです。'));
+        setNote(t('Already asked — waiting on their answer.', 'Đã gửi lời mời — đang chờ trả lời.', 'リクエスト送信済み — 返事待ちです。', '已发送请求 — 等待对方回复。'));
       } else if (standing === 'asks_you') {
-        setNote(t('They already asked you — their request is above.', 'Họ đã mời bạn — lời mời ở ngay trên.', '相手からのリクエストが上にあります。'));
+        setNote(t('They already asked you — their request is above.', 'Họ đã mời bạn — lời mời ở ngay trên.', '相手からのリクエストが上にあります。', '对方已经向你发送了请求 — 就在上方。'));
       } else {
         await sendFriendRequest(me!, who.id);
         setHandle('');
@@ -194,7 +194,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       // sentence because the server names it in the count check's wake.
       const msg = (e as Error).message;
       setNote(/row-level security/i.test(msg)
-        ? t('Could not send this request.', 'Không gửi được lời mời này.', 'リクエストを送信できませんでした。')
+        ? t('Could not send this request.', 'Không gửi được lời mời này.', 'リクエストを送信できませんでした。', '无法发送这个请求。')
         : msg);
     } finally {
       setBusy(false);
@@ -217,7 +217,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     id,
     () => sendFriendRequest(me!, id),
     () => { successHaptic(); ships.reload(); },
-    failed(t('Could not send the request', 'Không gửi được lời mời', 'リクエストを送れませんでした')),
+    failed(t('Could not send the request', 'Không gửi được lời mời', 'リクエストを送れませんでした', '无法发送请求')),
   );
 
   const answer = (requester: string, yes: boolean) => run(
@@ -225,8 +225,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     () => (yes ? acceptFriendRequest(requester, me!) : removeFriendship(requester, me!)),
     () => { if (yes) successHaptic(); ships.reload(); },
     failed(yes
-      ? t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした')
-      : t('Could not decline the request', 'Không từ chối được lời mời', 'リクエストを拒否できませんでした')),
+      ? t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした', '无法接受请求')
+      : t('Could not decline the request', 'Không từ chối được lời mời', 'リクエストを拒否できませんでした', '无法拒绝请求')),
   );
 
   // ── the ⋯ sheet ──
@@ -248,7 +248,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const known = (id: string): FriendProfile =>
     people[id] ?? { id, handle: '', full_name: '', avatar_url: '' };
   /** How a sentence names them: the handle when there is one. */
-  const tag = (p: FriendProfile) => (p.handle ? atHandle(p.handle) : t('this person', 'người này', 'この人'));
+  const tag = (p: FriendProfile) => (p.handle ? atHandle(p.handle) : t('this person', 'người này', 'この人', '此人'));
 
   /** The row every person-shaped sheet ends with. Last, and not red:
    *  reporting is not a thing done to somebody you know, it is a thing
@@ -258,11 +258,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     key: 'report',
     icon: 'flag-outline',
     // The verb alone: the sheet's header names them — see `ActionSheet`.
-    title: t('Report', 'Báo cáo', '報告する'),
+    title: t('Report', 'Báo cáo', '報告する', '举报'),
     desc: t(
       'Tell the desk about their name, photo or bio. They are not told who reported them.',
       'Báo cho desk về tên, ảnh hoặc tiểu sử của họ. Họ không biết ai đã báo cáo.',
       '名前・写真・自己紹介についてデスクに報告します。誰が報告したかは相手に伝わりません。',
+      '向编辑团队举报对方的名字、头像或简介。对方不会知道是谁举报的。',
     ),
     onPress: () => report({
       kind: 'profile',
@@ -278,7 +279,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     title,
     body,
     [
-      { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
       { text: verb, style: 'destructive', onPress: run },
     ],
   );
@@ -293,7 +294,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     id,
     () => blockUser(id),
     () => { ships.reload(); blocks.reload(); },
-    failed(t('Could not block', 'Không chặn được', 'ブロックできませんでした')),
+    failed(t('Could not block', 'Không chặn được', 'ブロックできませんでした', '无法屏蔽')),
   );
 
   const blockAction = (p: FriendProfile, title: string, desc: string): PersonAction => ({
@@ -303,9 +304,9 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     desc,
     destructive: true,
     onPress: () => askThen(
-      t(`Block ${tag(p)}?`, `Chặn ${tag(p)}?`, `${tag(p)} をブロックしますか？`),
-      t('They will not be told. You can undo this from Blocked.', 'Họ sẽ không được báo. Bạn có thể bỏ chặn trong mục Đã chặn.', '相手に通知されません。ブロック中から解除できます。'),
-      t('Block', 'Chặn', 'ブロック'),
+      t(`Block ${tag(p)}?`, `Chặn ${tag(p)}?`, `${tag(p)} をブロックしますか？`, `屏蔽 ${tag(p)}？`),
+      t('They will not be told. You can undo this from Blocked.', 'Họ sẽ không được báo. Bạn có thể bỏ chặn trong mục Đã chặn.', '相手に通知されません。ブロック中から解除できます。', '对方不会收到通知。你可以在“已屏蔽”中撤销。'),
+      t('Block', 'Chặn', 'ブロック', '屏蔽'),
       () => bar(p.id),
     ),
   });
@@ -318,27 +319,29 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       {
         key: 'unfriend',
         icon: 'person-remove-outline',
-        title: t('Unfriend', 'Hủy kết bạn', '友達をやめる'),
+        title: t('Unfriend', 'Hủy kết bạn', '友達をやめる', '删除好友'),
         desc: t(
           'Take them out of your crew. They will not be told, and either of you can ask again later.',
           'Bỏ họ khỏi crew. Họ sẽ không được báo, và sau này ai cũng có thể mời lại.',
           'クルーから外します。相手に通知されず、あとでどちらからでも申請できます。',
+          '把对方移出你的好友。对方不会收到通知，之后双方都可以重新发送请求。',
         ),
         destructive: true,
         onPress: () => askThen(
-          t(`Unfriend ${tag(p)}?`, `Hủy kết bạn với ${tag(p)}?`, `${tag(p)} と友達をやめますか？`),
-          t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。'),
-          t('Unfriend', 'Hủy kết bạn', '友達をやめる'),
-          () => cutEdge(p.id, t('Could not unfriend', 'Không huỷ kết bạn được', '友達を解除できませんでした')),
+          t(`Unfriend ${tag(p)}?`, `Hủy kết bạn với ${tag(p)}?`, `${tag(p)} と友達をやめますか？`, `删除好友 ${tag(p)}？`),
+          t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。', '对方不会收到通知。'),
+          t('Unfriend', 'Hủy kết bạn', '友達をやめる', '删除好友'),
+          () => cutEdge(p.id, t('Could not unfriend', 'Không huỷ kết bạn được', '友達を解除できませんでした', '无法删除好友')),
         ),
       },
       blockAction(
         p,
-        t('Block', 'Chặn', 'ブロック'),
+        t('Block', 'Chặn', 'ブロック', '屏蔽'),
         t(
           'Ends the friendship and keeps it ended: no requests either way, and their likes leave your Activity.',
           'Hủy kết bạn và giữ nguyên như vậy: không ai mời được ai, và lượt thích của họ rời khỏi Hoạt động.',
           '友達関係を解消し、以後どちらからも申請できません。相手のいいねもアクティビティから消えます。',
+          '结束好友关系且不再恢复：双方都无法再发送请求，对方的点赞也会从你的动态中移除。',
         ),
       ),
       ...(p.handle ? [reportAction(p)] : []),
@@ -346,29 +349,31 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   });
 
   const openRequestSheet = (requester: string, p?: FriendProfile) => setSheet({
-    name: p ? (p.full_name || tag(p)) : t('This request', 'Lời mời này', 'このリクエスト'),
+    name: p ? (p.full_name || tag(p)) : t('This request', 'Lời mời này', 'このリクエスト', '这个请求'),
     meta: p ? atHandle(p.handle) : undefined,
     avatar: p?.avatar_url || undefined,
     actions: [
       {
         key: 'decline',
         icon: 'close-circle-outline',
-        title: t('Decline', 'Từ chối', '拒否'),
+        title: t('Decline', 'Từ chối', '拒否', '拒绝'),
         desc: t(
           'The request goes, silently. They can ask again another day.',
           'Lời mời biến mất, im lặng. Hôm khác họ vẫn có thể mời lại.',
           'リクエストは静かに消えます。相手はまた後日申請できます。',
+          '请求会被悄悄移除。对方改天可以再次发送。',
         ),
         onPress: () => answer(requester, false),
       },
       ...(p ? [
         blockAction(
           p,
-          t('Decline and block', 'Từ chối và chặn', '拒否してブロック'),
+          t('Decline and block', 'Từ chối và chặn', '拒否してブロック', '拒绝并屏蔽'),
           t(
             'Refuse it and stop them asking again.',
             'Từ chối và chặn họ mời lại.',
             '拒否して、今後の申請も止めます。',
+            '拒绝请求，并阻止对方再次发送。',
           ),
         ),
         reportAction(p),
@@ -378,27 +383,29 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   const openSentSheet = (p: FriendProfile) => setSheet({
     name: p.full_name || tag(p),
-    meta: [p.handle && atHandle(p.handle), t('waiting on their answer', 'đang chờ trả lời', '返事待ち')].filter(Boolean).join(' · '),
+    meta: [p.handle && atHandle(p.handle), t('waiting on their answer', 'đang chờ trả lời', '返事待ち', '等待对方回复')].filter(Boolean).join(' · '),
     avatar: p.avatar_url || undefined,
     actions: [
       {
         key: 'withdraw',
         icon: 'arrow-undo-outline',
-        title: t('Cancel the request', 'Huỷ lời mời', 'リクエストを取り消す'),
+        title: t('Cancel the request', 'Huỷ lời mời', 'リクエストを取り消す', '撤回请求'),
         desc: t(
           'Take it back before they answer. They will not be told, and you can ask again.',
           'Rút lại trước khi họ trả lời. Họ sẽ không được báo, và bạn vẫn có thể mời lại.',
           '返事の前に取り消します。相手に通知されず、また申請できます。',
+          '在对方回复前撤回。对方不会收到通知，你之后可以再次发送。',
         ),
-        onPress: () => cutEdge(p.id, t('Could not cancel the request', 'Không huỷ được lời mời', 'リクエストを取り消せませんでした')),
+        onPress: () => cutEdge(p.id, t('Could not cancel the request', 'Không huỷ được lời mời', 'リクエストを取り消せませんでした', '无法撤回请求')),
       },
       blockAction(
         p,
-        t('Cancel and block', 'Huỷ và chặn', '取り消してブロック'),
+        t('Cancel and block', 'Huỷ và chặn', '取り消してブロック', '撤回并屏蔽'),
         t(
           'Take the request back and bar the door in both directions.',
           'Rút lời mời và chặn cả hai chiều.',
           'リクエストを取り消し、双方向に連絡を止めます。',
+          '撤回请求，并双向阻止联系。',
         ),
       ),
       ...(p.handle ? [reportAction(p)] : []),
@@ -406,14 +413,14 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   });
 
   const confirmUnblock = (p: FriendProfile) => askThen(
-    t(`Unblock ${tag(p)}?`, `Bỏ chặn ${tag(p)}?`, `${tag(p)} のブロックを解除しますか？`),
-    t('They will be able to send you requests again.', 'Họ sẽ có thể gửi lời mời cho bạn lại.', '相手は再びリクエストを送れるようになります。'),
-    t('Unblock', 'Bỏ chặn', '解除'),
+    t(`Unblock ${tag(p)}?`, `Bỏ chặn ${tag(p)}?`, `${tag(p)} のブロックを解除しますか？`, `取消屏蔽 ${tag(p)}？`),
+    t('They will be able to send you requests again.', 'Họ sẽ có thể gửi lời mời cho bạn lại.', '相手は再びリクエストを送れるようになります。', '对方将可以再次向你发送请求。'),
+    t('Unblock', 'Bỏ chặn', '解除', '取消屏蔽'),
     () => run(
       p.id,
       () => unblockUser(me!, p.id),
       () => blocks.reload(),
-      failed(t('Could not unblock', 'Không bỏ chặn được', 'ブロックを解除できませんでした')),
+      failed(t('Could not unblock', 'Không bỏ chặn được', 'ブロックを解除できませんでした', '无法取消屏蔽')),
     ),
   );
 
@@ -427,8 +434,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   const savesLine = (n?: number) => (n != null && n > 0
     ? (n === 1
-      ? t('1 mutual save', '1 chỗ cùng lưu', '共通の保存1件')
-      : t(`${n} mutual saves`, `${n} chỗ cùng lưu`, `共通の保存${n}件`))
+      ? t('1 mutual save', '1 chỗ cùng lưu', '共通の保存1件', '1 个共同收藏')
+      : t(`${n} mutual saves`, `${n} chỗ cùng lưu`, `共通の保存${n}件`, `${n} 个共同收藏`))
     : '');
 
   const nameOf = (p?: FriendProfile) => p?.full_name || (p ? atHandle(p.handle) : '…');
@@ -442,7 +449,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       // Vietnamese the word is foreign and belongs to the app's name only,
       // so this screen, the invitation line and the block alert say
       // "bạn bè" instead. The English keeps the brand's word.
-      title={t('Your crew', 'Thông tin bạn bè', 'あなたのクルー')}
+      title={t('Your crew', 'Thông tin bạn bè', 'あなたのクルー', '你的好友')}
       /* No subtitle. It held a count once, then the motto alone once
          the count moved to the Friends tab — and a motto under a title
          is marketing copy where navigation belongs (HIG). A line under
@@ -453,7 +460,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       right={(
         <RoundIconButton
           icon="person-add-outline"
-          label={t('Add a friend', 'Thêm bạn', '友達を追加')}
+          label={t('Add a friend', 'Thêm bạn', '友達を追加', '添加好友')}
           testID="crew-add"
           // The field belongs with the asking, so the control that opens
           // it takes you there — pressing ⊕ from the friends list and
@@ -474,11 +481,11 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           the trip wizard already puts on its Friends chip. */}
       <UnderlineTabs
         tabs={[
-          { key: 'requests', icon: 'mail-outline', label: t('Requests', 'Lời mời', 'リクエスト'), count: crew.incoming.length, testID: 'crew-tab-requests' },
+          { key: 'requests', icon: 'mail-outline', label: t('Requests', 'Lời mời', 'リクエスト', '好友请求'), count: crew.incoming.length, testID: 'crew-tab-requests' },
           // A tally, not a count: how many friends is a fact, not news,
           // so it sits in the name in both states and never rings the
           // unchosen-tab bubble the way waiting requests do.
-          { key: 'friends', icon: 'people-outline', label: t('Your friends', 'Bạn bè', '友達'), tally: crew.friends.length, testID: 'crew-tab-friends' },
+          { key: 'friends', icon: 'people-outline', label: t('Your friends', 'Bạn bè', '友達', '你的好友'), tally: crew.friends.length, testID: 'crew-tab-friends' },
         ]}
         active={tab}
         onChange={setTab}
@@ -497,7 +504,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
               <Card style={s.addCard}>
                 <FieldRow
                   icon="at-outline"
-                  label={t('Their username', 'Username của bạn ấy', '相手のユーザー名')}
+                  label={t('Their username', 'Username của bạn ấy', '相手のユーザー名', '对方的用户名')}
                   testID="crew-handle"
                   value={handle}
                   onChangeText={setHandle}
@@ -526,7 +533,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     ))}
                   </View>
                 )}
-                <PrimaryButton label={t('Send request', 'Gửi lời mời', 'リクエスト送信')} onPress={send} busy={busy} testID="crew-send" />
+                <PrimaryButton label={t('Send request', 'Gửi lời mời', 'リクエスト送信', '发送请求')} onPress={send} busy={busy} testID="crew-send" />
               </Card>
             )}
 
@@ -536,7 +543,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 the same two verbs. */}
             {crew.incoming.length > 0 && (
               <>
-                <Text style={s.head}>{t('Pending', 'Đang chờ', '保留中')}</Text>
+                <Text style={s.head}>{t('Pending', 'Đang chờ', '保留中', '待处理')}</Text>
                 {crew.incoming.map((r, i) => {
                   const p = people[r.requester];
                   return (
@@ -547,7 +554,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.reqTitle}>
                             <Text style={{ fontWeight: font.bold }}>{nameOf(p)}</Text>
                             {' '}
-                            {t('wants to join your crew', 'muốn kết bạn với bạn', 'がクルーに参加したがっています')}
+                            {t('wants to join your crew', 'muốn kết bạn với bạn', 'がクルーに参加したがっています', '想加你为好友')}
                           </Text>
                           {p ? <Text style={s.meta}>{atHandle(p.handle)}</Text> : null}
                         </View>
@@ -556,7 +563,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           scaleTo={0.85}
                           hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
                           accessibilityRole="button"
-                          accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
+                          accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项')}
                         >
                           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
                         </PressableScale>
@@ -572,7 +579,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         >
                           <LinearGradient {...gradAI} style={s.accept}>
                             <Ionicons name="checkmark" size={17} color={colors.accentInk} />
-                            <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認')}</Text>
+                            <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受')}</Text>
                           </LinearGradient>
                         </PressableScale>
                         <PressableScale
@@ -584,7 +591,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           onLongPress={() => openRequestSheet(r.requester, p)}
                           accessibilityRole="button"
                         >
-                          <Text style={s.declineText}>{t('Decline', 'Từ chối', '拒否')}</Text>
+                          <Text style={s.declineText}>{t('Decline', 'Từ chối', '拒否', '拒绝')}</Text>
                         </PressableScale>
                       </View>
                     </Card>
@@ -598,7 +605,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 the other person's screen. */}
             {crew.outgoing.length > 0 && (
               <>
-                <Text style={s.head}>{t('Sent', 'Đã gửi', '送信済み')}</Text>
+                <Text style={s.head}>{t('Sent', 'Đã gửi', '送信済み', '已发送')}</Text>
                 <Card>
                   {crew.outgoing.map((r, i) => {
                     const p = people[r.addressee];
@@ -609,11 +616,11 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
                           <Text style={s.meta} numberOfLines={1}>
                             {p ? `${atHandle(p.handle)} · ` : ''}
-                            {t('waiting on their answer', 'đang chờ trả lời', '返事待ち')}
+                            {t('waiting on their answer', 'đang chờ trả lời', '返事待ち', '等待对方回复')}
                           </Text>
                         </View>
                         <PressableScale contentStyle={s.quietBtn} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
-                          <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す')}</Text>
+                          <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す', '取消')}</Text>
                         </PressableScale>
                       </View>
                     );
@@ -629,7 +636,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
             {intros.length > 0 && (
               <>
                 <Text style={s.head}>
-                  {t('Suggested · you save the same places', 'Gợi ý · cùng lưu những chỗ giống nhau', 'おすすめ · 同じスポットを保存')}
+                  {t('Suggested · you save the same places', 'Gợi ý · cùng lưu những chỗ giống nhau', 'おすすめ · 同じスポットを保存', '推荐 · 你们保存了相同的地点')}
                 </Text>
                 <Card>
                   {intros.map((sg, i) => {
@@ -653,7 +660,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         >
                           <LinearGradient {...gradAI} style={s.addBtn}>
                             <Ionicons name="person-add-outline" size={15} color={colors.accentInk} />
-                            <Text style={s.addText}>{t('Add', 'Thêm', '追加')}</Text>
+                            <Text style={s.addText}>{t('Add', 'Thêm', '追加', '添加')}</Text>
                           </LinearGradient>
                         </PressableScale>
                       </View>
@@ -670,6 +677,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 'Nothing waiting. Add someone by username — and anyone who saves the places you save will turn up here.',
                 'Chưa có gì. Thêm bạn bằng username — và những người cùng lưu các chỗ giống bạn sẽ hiện ở đây.',
                 '今は何もありません。ユーザー名で追加してみましょう — 同じスポットを保存している人もここに出てきます。',
+                '暂无待处理的请求。可以通过用户名添加好友 — 保存了相同地点的人也会出现在这里。',
               )} />
             ))}
           </>
@@ -704,7 +712,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         scaleTo={0.85}
                         hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
                         accessibilityRole="button"
-                        accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
+                        accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项')}
                       >
                         <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
                       </PressableScale>
@@ -719,6 +727,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 'No friends yet. Ask for a username and add them here.',
                 'Chưa có bạn nào. Hỏi username của bạn bè rồi thêm ở đây.',
                 'まだ友達がいません。ユーザー名を聞いて追加しましょう。',
+                '还没有好友。问到对方的用户名后，在这里添加。',
               )} />
             )}
 
@@ -728,7 +737,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 that asks for the undo. */}
             {blocks.data.length > 0 && (
               <>
-                <Text style={s.head}>{t('Blocked', 'Đã chặn', 'ブロック中')}</Text>
+                <Text style={s.head}>{t('Blocked', 'Đã chặn', 'ブロック中', '已屏蔽')}</Text>
                 <Card>
                   {blocks.data.map((id, i) => {
                     const p = people[id];
@@ -747,7 +756,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           aria-disabled={pending.has(id)}
                           accessibilityRole="button"
                         >
-                          <Text style={s.quietText}>{t('Unblock', 'Bỏ chặn', '解除')}</Text>
+                          <Text style={s.quietText}>{t('Unblock', 'Bỏ chặn', '解除', '取消屏蔽')}</Text>
                         </PressableScale>
                       </View>
                     );
@@ -763,11 +772,11 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 interrupt. */}
             {blocks.error && blocks.data.length === 0 && (
               <>
-                <Text style={s.head}>{t('Blocked', 'Đã chặn', 'ブロック中')}</Text>
+                <Text style={s.head}>{t('Blocked', 'Đã chặn', 'ブロック中', '已屏蔽')}</Text>
                 <Card>
                   <View style={s.row} testID="crew-blocks-failed">
                     <Text style={[s.meta, { flex: 1 }]}>
-                      {t("Couldn't load who you have blocked.", 'Không tải được danh sách đã chặn.', 'ブロック中のユーザーを読み込めませんでした。')}
+                      {t("Couldn't load who you have blocked.", 'Không tải được danh sách đã chặn.', 'ブロック中のユーザーを読み込めませんでした。', '无法加载已屏蔽的用户。')}
                     </Text>
                     <PressableScale
                       contentStyle={s.quietBtn}
@@ -775,7 +784,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                       accessibilityRole="button"
                       testID="crew-blocks-retry"
                     >
-                      <Text style={s.quietText}>{t('Try again', 'Thử lại', '再試行')}</Text>
+                      <Text style={s.quietText}>{t('Try again', 'Thử lại', '再試行', '重试')}</Text>
                     </PressableScale>
                   </View>
                 </Card>

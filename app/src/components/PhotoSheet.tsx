@@ -166,8 +166,8 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   // kind it stays a word, since a lone star in the head would mark
   // nothing.
   const status = [
-    p.is_cover && !p.kind ? t('Cover', 'Ảnh bìa', 'カバー') : null,
-    p.is_hidden ? t('Hidden', 'Đã ẩn', '非表示') : null,
+    p.is_cover && !p.kind ? t('Cover', 'Ảnh bìa', 'カバー', '封面') : null,
+    p.is_hidden ? t('Hidden', 'Đã ẩn', '非表示', '已隐藏') : null,
   ].filter(Boolean).join(' · ');
   const count = `${at + 1}/${all.length}`;
   const closeFull = () => {
@@ -178,7 +178,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={full ? closeFull : onClose} statusBarTranslucent>
       <BlurView intensity={BLUR} tint="dark" style={StyleSheet.absoluteFill} testID="photo-sheet-blur" />
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
       <Animated.View
         style={[s.sheet, {
           maxHeight: height - insets.top - 8,
@@ -218,8 +218,8 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
                   style={{ width: frameW, height: frameH }}
                   onPress={() => setFull(true)}
                   accessibilityRole="imagebutton"
-                  accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}/${all.length}`}
-                  accessibilityHint={t('Opens it full screen.', 'Mở toàn màn hình.', '全画面で開きます。')}
+                  accessibilityLabel={`${t('Photo', 'Ảnh', '写真', '照片')} ${i + 1}/${all.length}`}
+                  accessibilityHint={t('Opens it full screen.', 'Mở toàn màn hình.', '全画面で開きます。', '全屏打开。')}
                   testID={`photo-sheet-page-${ph.id}`}
                 >
                   <Image
@@ -235,7 +235,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               contentStyle={[s.round, s.close]}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={t('Close', 'Đóng', '閉じる')}
+              accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')}
               testID="photo-sheet-close"
             >
               <Ionicons name="close" size={18} color={onPhoto.text} />
@@ -247,7 +247,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               contentStyle={[s.round, s.expand]}
               onPress={() => setFull(true)}
               accessibilityRole="button"
-              accessibilityLabel={t('Full screen', 'Toàn màn hình', '全画面')}
+              accessibilityLabel={t('Full screen', 'Toàn màn hình', '全画面', '全屏')}
               testID="photo-sheet-full"
             >
               <Ionicons name="expand" size={17} color={onPhoto.text} />
@@ -261,7 +261,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
                   <Ionicons name={kindIcon(p.kind)} size={20} color={colors.text} />
                   <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
                   {p.is_cover && (
-                    <View accessibilityLabel={t('Cover', 'Ảnh bìa', 'カバー')} testID="photo-sheet-cover">
+                    <View accessibilityLabel={t('Cover', 'Ảnh bìa', 'カバー', '封面')} testID="photo-sheet-cover">
                       <Ionicons name="star" size={16} color={colors.okInk} />
                     </View>
                   )}

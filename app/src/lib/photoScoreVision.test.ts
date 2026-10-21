@@ -52,6 +52,13 @@ describe('explainScore', () => {
       .toBe('Well lit, sharp. Held back by: horizon tilted 4°.');
   });
 
+  // Chinese punctuation, and no space between the sentences.
+  it('writes the same sentence in Chinese', () => {
+    const zh = (_e: string, _v: string, _j?: string, z?: string) => z ?? '';
+    expect(explainScore({ is_utility: false, signals: { brightness: 0.5, sharpness: 2500, tilt: 4.4, labels: ROOM } }, zh))
+      .toBe('光线充足，清晰。扣分项：地平线倾斜 4°。');
+  });
+
   describe('a record, not a picture', () => {
     const LEAD = 'Lots of writing in frame — it reads like a menu or a sign rather than a picture.';
 

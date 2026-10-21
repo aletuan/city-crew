@@ -175,10 +175,10 @@ export function band(ten: number): Band {
 
 export function bandLabel(b: Band, t: T): string {
   return {
-    excellent: t('Very good', 'Rất tốt', 'とても良い'),
-    good: t('Good', 'Tốt', '良い'),
-    fair: t('Fair', 'Khá', 'まずまず'),
-    weak: t('Weak', 'Chưa tốt', 'いまひとつ'),
+    excellent: t('Very good', 'Rất tốt', 'とても良い', '非常好'),
+    good: t('Good', 'Tốt', '良い', '良好'),
+    fair: t('Fair', 'Khá', 'まずまず', '一般'),
+    weak: t('Weak', 'Chưa tốt', 'いまひとつ', '弱'),
   }[b];
 }
 

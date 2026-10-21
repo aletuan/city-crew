@@ -155,7 +155,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 
   const nameOf = (v: Checkin) => (v.place
     ? localized(v.place, 'name', lang)
-    : t('A place that was removed', 'Một địa điểm đã bị gỡ', '削除された場所'));
+    : t('A place that was removed', 'Một địa điểm đã bị gỡ', '削除された場所', '一个已被移除的地点'));
   /** The date, the clock, and the city when the app still knows it. No
    *  weekday — see `numericDate`: thirty rows of "Thứ 5," said nothing. */
   const metaOf = (v: Checkin) => {
@@ -171,13 +171,13 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
       await removeCheckin(v.id);
       visits.reload();
     } catch (e) {
-      Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした'), (e as Error).message);
+      Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした', '无法删除'), (e as Error).message);
     }
   };
   const actions: SheetAction[] = [{
     key: 'remove', icon: 'trash-outline', destructive: true,
-    title: t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除'),
-    desc: t('Only this one; your other visits stay.', 'Chỉ lần này; các lần khác vẫn giữ.', 'この1件だけ。他の訪問は残ります。'),
+    title: t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除', '删除这次打卡'),
+    desc: t('Only this one; your other visits stay.', 'Chỉ lần này; các lần khác vẫn giữ.', 'この1件だけ。他の訪問は残ります。', '仅删除这一次，其他打卡记录保留。'),
     onPress: () => { const v = menuFor; setMenuFor(null); if (v) void remove(v); },
   }];
 
@@ -188,7 +188,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   // and cities. Narrowed, it names what the reader chose — "12 places ·
   // Hà Nội · Cà phê" — because that is the answer to the question the
   // tap asked. A search for a city's name counts as choosing it.
-  const placesWord = t(`${summary.places} ${summary.places === 1 ? 'place' : 'places'}`, `${summary.places} địa điểm`, `${summary.places}か所`);
+  const placesWord = t(`${summary.places} ${summary.places === 1 ? 'place' : 'places'}`, `${summary.places} địa điểm`, `${summary.places}か所`, `${summary.places} 个地点`);
   const chosen = [
     city ? cityName(city) : (summary.cities === 1 && (filtered || query) ? cityName(shown[0]?.city_id ?? '') : null),
     kind ? categoryLabel(kind, t) : null,
@@ -199,11 +199,12 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
       `${placesWord} · ${summary.cities} ${summary.cities === 1 ? 'city' : 'cities'}`,
       `${placesWord} · ${summary.cities} thành phố`,
       `${placesWord} · ${summary.cities}都市`,
+      `${placesWord} · ${summary.cities} 个城市`,
     );
 
   return (
     <Screen
-      title={t('Check-ins', 'Địa điểm check-in', 'チェックインした場所')}
+      title={t('Check-ins', 'Địa điểm check-in', 'チェックインした場所', '打卡')}
       subtitle={visits.loaded && visits.data.length > 0 ? summaryLine : undefined}
       onBack={() => navigation.goBack()}
     >
@@ -227,9 +228,9 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             onFocus={() => setOpen(true)}
             onSubmitEditing={noteSearch}
             testID={{ input: 'visits-input', cancel: 'visits-cancel' }}
-            placeholder={t('Place or city', 'Tên địa điểm hoặc thành phố', '場所または都市')}
+            placeholder={t('Place or city', 'Tên địa điểm hoặc thành phố', '場所または都市', '地点或城市')}
             // Inside the box, while the panel is up — see `SearchField`.
-            cancel={{ shown: open, label: t('Cancel', 'Hủy', 'キャンセル'), onPress: cancel }}
+            cancel={{ shown: open, label: t('Cancel', 'Hủy', 'キャンセル', '取消'), onPress: cancel }}
           />
         </View>
         {open && (
@@ -237,15 +238,15 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             {suggestions.length > 0 && (
               <View style={s.group}>
                 <View style={s.legendRow}>
-                  <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補')}</Text>
+                  <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補', '推荐')}</Text>
                   <PressableScale
                     onPress={() => keepRecents([])}
                     scaleTo={0.92}
                     hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
                     accessibilityRole="button"
-                    accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去')}
+                    accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去', '清除推荐')}
                   >
-                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去')}</Text>
+                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除')}</Text>
                   </PressableScale>
                 </View>
                 {suggestions.map((term) => (
@@ -265,7 +266,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             )}
             {cityChoices.length > 1 && (
               <View style={s.group}>
-                <Text style={s.legend}>{t('City', 'Thành phố', '都市')}</Text>
+                <Text style={s.legend}>{t('City', 'Thành phố', '都市', '城市')}</Text>
                 <View style={s.chipWrap}>
                   {cityChoices.map((id) => (
                     <Chip key={id} label={cityName(id)} active={city === id} onPress={() => { setCity(city === id ? null : id); answered(); }} />
@@ -275,7 +276,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             )}
             {kindChoices.length > 1 && (
               <View style={s.group}>
-                <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類')}</Text>
+                <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類', '地点类型')}</Text>
                 <View style={s.chipWrap}>
                   {kindChoices.map((k) => (
                     <Chip
@@ -291,7 +292,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
               </View>
             )}
             {suggestions.length === 0 && cityChoices.length <= 1 && kindChoices.length <= 1 && (
-              <Text style={s.legend}>{t('Type a place or a city.', 'Gõ tên địa điểm hoặc thành phố.', '場所か都市を入力。')}</Text>
+              <Text style={s.legend}>{t('Type a place or a city.', 'Gõ tên địa điểm hoặc thành phố.', '場所か都市を入力。', '输入地点或城市。')}</Text>
             )}
           </Card>
         )}
@@ -302,6 +303,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             'No visits yet. Check in at a place to start the list.',
             'Chưa có lần ghé nào. Check-in ở một địa điểm để bắt đầu.',
             'まだ訪問がありません。場所でチェックインすると、ここに並びます。',
+            '还没有打卡记录。在地点打卡后，这里就会出现记录。',
           )} />
         ) : (
           <>
@@ -310,6 +312,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                 'No visits match both choices.',
                 'Không có lần ghé nào khớp cả hai lựa chọn.',
                 '両方の条件に合う訪問はありません。',
+                '没有同时符合两个条件的打卡记录。',
               )} />
             )}
             {sections.map((sec) => (
@@ -349,7 +352,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                             hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
                             style={s.rowEnd}
                             accessibilityRole="button"
-                            accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
+                            accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项')}
                           >
                             <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
                           </PressableScale>

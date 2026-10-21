@@ -99,7 +99,7 @@ export default function PhotoViewer({ photos, index, onIndex, onClose }: {
               style={{ width, height }}
               onPress={() => setChrome((on) => !on)}
               accessibilityRole="image"
-              accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}/${photos.length}`}
+              accessibilityLabel={`${t('Photo', 'Ảnh', '写真', '照片')} ${i + 1}/${photos.length}`}
               testID={`photo-viewer-page-${ph.id}`}
             >
               <Image source={{ uri: ph.photo_uri }} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
@@ -115,7 +115,7 @@ export default function PhotoViewer({ photos, index, onIndex, onClose }: {
               contentStyle={s.round}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={t('Close', 'Đóng', '閉じる')}
+              accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')}
               testID="photo-viewer-close"
             >
               <Ionicons name="close" size={20} color={onPhoto.text} />
