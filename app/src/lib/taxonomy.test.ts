@@ -24,6 +24,7 @@ import { VIBES, vibeLabel } from './vibes';
 
 /** The app's `t`, in English. */
 const t = (en: string) => en;
+const zh = (_en: string, _vi: string, _ja?: string, z?: string) => z ?? '';
 
 describe('categoriesOf', () => {
   it('uses the stored categories when there are any', () => {
@@ -70,6 +71,12 @@ describe('the category table', () => {
     expect(categoryLabel('cafes', t)).toBe(CATEGORIES.cafes.en);
   });
 
+  // Kana would mean a Japanese label pasted into the Chinese slot.
+  it('names every category in Chinese', () => {
+    expect(categoryLabel('cafes', zh)).toBe('咖啡馆');
+    for (const key of CATEGORY_ORDER) expect(CATEGORIES[key].zh, key).toMatch(/^[\u4e00-\u9fff]+$/);
+  });
+
   // Data can grow a key before this table knows about it. Showing it
   // beats dropping the place out of the filter row entirely.
   it('renders an unknown key readably instead of dropping it', () => {
@@ -86,6 +93,11 @@ describe('the category table', () => {
 describe('vibes', () => {
   it('labels a known vibe from the table', () => {
     expect(vibeLabel('cafes', t)).toBe(VIBES.cafes.en);
+  });
+
+  it('names every vibe in Chinese', () => {
+    expect(vibeLabel('kid_friendly', zh)).toBe('适合带娃');
+    for (const [key, v] of Object.entries(VIBES)) expect(v.zh, key).toMatch(/^[\u4e00-\u9fff]+$/);
   });
 
   it('renders an unknown vibe readably', () => {

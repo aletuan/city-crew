@@ -51,7 +51,7 @@ import type Ionicons from '@expo/vector-icons/Ionicons';
 export const KINDS = ['food', 'interior', 'exterior', 'garden', 'heritage', 'view', 'text', 'collage', 'other'] as const;
 export type PhotoKind = typeof KINDS[number];
 
-type T = (en: string, vi: string, ja: string) => string;
+type T = (en: string, vi: string, ja: string, zh?: string) => string;
 
 /** The kind a sheet may say, or null: not labelled, labelled unsure, or
  *  a kind this build does not know. */

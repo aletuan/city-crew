@@ -89,7 +89,7 @@ export function narratableOf(stops: readonly {
 export function derivedTitle(
   stops: readonly Narratable[],
   when: 'day' | 'evening',
-  t: (en: string, vi: string, ja: string) => string,
+  t: (en: string, vi: string, ja: string, zh?: string) => string,
 ): string {
   const where = stops.find((s) => !!s.neighborhood)?.neighborhood;
   const part = when === 'day'
@@ -114,7 +114,7 @@ export function factLine(
   stop: Narratable,
   now: Date,
   tz: string,
-  t: (en: string, vi: string, ja: string) => string,
+  t: (en: string, vi: string, ja: string, zh?: string) => string,
 ): string {
   const bits: string[] = [];
   if (stop.rating) bits.push(`${stop.rating}★`);

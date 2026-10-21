@@ -56,13 +56,13 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
   // What the row says about itself while a batch is running, in place of
   // the address — the reader is watching progress, not reading streets.
   const status = item === 'running'
-    ? t('Fetching name, photos and hours…', 'Đang lấy tên, ảnh và giờ mở cửa…', '名前・写真・営業時間を取得中…')
+    ? t('Fetching name, photos and hours…', 'Đang lấy tên, ảnh và giờ mở cửa…', '名前・写真・営業時間を取得中…', '正在获取名称、照片和营业时间…')
     : item === 'done'
-      ? t('Added — only you can see it', 'Đã thêm — chỉ mình bạn thấy', '追加済み — あなただけに表示')
+      ? t('Added — only you can see it', 'Đã thêm — chỉ mình bạn thấy', '追加済み — あなただけに表示', '已添加 — 仅你可见')
       : item === 'skipped'
-        ? t('Already here — skipped', 'Đã có sẵn — bỏ qua', 'すでにあります — スキップ')
+        ? t('Already here — skipped', 'Đã có sẵn — bỏ qua', 'すでにあります — スキップ', '已存在 — 已跳过')
         : item === 'failed'
-          ? t('Could not add this one', 'Không thêm được chỗ này', '追加できませんでした')
+          ? t('Could not add this one', 'Không thêm được chỗ này', '追加できませんでした', '无法添加这个地点')
           // Neither a failure nor the silence this used to be. The
           // account's goes for the day ran out before this one's turn
           // came; nothing is wrong with the place, and tomorrow the same
@@ -72,6 +72,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
               'Not added — no goes left today',
               'Chưa thêm — hết lượt hôm nay',
               '未追加 — 本日の上限に達しました',
+              '未添加 — 今日次数已用完',
             )
             : '';
 
@@ -95,9 +96,9 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
         <Text style={s.name} numberOfLines={1}>{c.name}</Text>
         <Text style={[s.sub, live && s.subLive, !!status && s.subStatus, item === 'failed' && s.subBad]} numberOfLines={1}>
           {status || (live
-            ? t('Already on City Crew', 'Đã có trên City Crew', 'すでに City Crew にあります')
+            ? t('Already on City Crew', 'Đã có trên City Crew', 'すでに City Crew にあります', '已在 City Crew 上')
             : mine
-              ? t('You added this — only you can see it', 'Bạn đã thêm — hiện chỉ mình bạn thấy', '追加済み — まだあなただけに表示')
+              ? t('You added this — only you can see it', 'Bạn đã thêm — hiện chỉ mình bạn thấy', '追加済み — まだあなただけに表示', '你添加的 — 仅你可见')
               // Distance first, then the address as far as it fits.
               //
               // Three shops called "So Coffee" arrive with three addresses
@@ -113,7 +114,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
 
       {openable ? (
         <PressableScale onPress={() => onOpen(openable)} scaleTo={0.94} contentStyle={s.viewBtn}>
-          <Text style={s.viewText}>{t('View', 'Xem', '見る')}</Text>
+          <Text style={s.viewText}>{t('View', 'Xem', '見る', '查看')}</Text>
         </PressableScale>
       ) : mine || locksRow(item) ? null : busy ? (
         <ActivityIndicator color={colors.accent} />

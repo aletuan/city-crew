@@ -567,7 +567,7 @@ export const CLOSING_SOON_MIN = 45;
  */
 export function openFragment(
   state: OpenState | null,
-  t: (en: string, vi: string, ja?: string) => string,
+  t: (en: string, vi: string, ja?: string, zh?: string) => string,
   soonMin: number = CLOSING_SOON_MIN,
 ): string | null {
   if (!state) return null;
@@ -575,11 +575,11 @@ export function openFragment(
     // No closing time, or one too far off to be news yet.
     if (state.closesInMin == null || state.closesInMin > soonMin) return null;
     const at = clockOf(state.untilMin as number);
-    return t(`until ${at}`, `đến ${at}`, `${at}まで`);
+    return t(`until ${at}`, `đến ${at}`, `${at}まで`, `营业至 ${at}`);
   }
   if (state.opensAtMin == null) return null;
   const at = clockOf(state.opensAtMin);
-  return t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`);
+  return t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`, `${at} 开门`);
 }
 
 /**
@@ -619,12 +619,12 @@ export const MINUTES_IN_DAY = DAY;
  */
 export function shutLabel(
   state: OpenState | null,
-  t: (en: string, vi: string, ja?: string) => string,
+  t: (en: string, vi: string, ja?: string, zh?: string) => string,
 ): string | null {
   if (!state || state.open) return null;
-  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店');
+  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店', '已打烊');
   const at = clockOf(state.opensAtMin);
-  return t(`Closed · opens ${at}`, `Đóng cửa · mở ${at}`, `閉店・${at}開店`);
+  return t(`Closed · opens ${at}`, `Đóng cửa · mở ${at}`, `閉店・${at}開店`, `已打烊 · ${at} 开门`);
 }
 
 /**
@@ -644,12 +644,12 @@ export function shutLabel(
  */
 export function sashLabel(
   state: OpenState | null,
-  t: (en: string, vi: string, ja?: string) => string,
+  t: (en: string, vi: string, ja?: string, zh?: string) => string,
 ): string | null {
   if (!state || state.open) return null;
-  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店');
+  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店', '已打烊');
   const at = clockOf(state.opensAtMin);
-  return t(`Opens ${at}`, `Mở ${at}`, `${at}開店`);
+  return t(`Opens ${at}`, `Mở ${at}`, `${at}開店`, `${at} 开门`);
 }
 
 /**
@@ -658,6 +658,6 @@ export function sashLabel(
  * 4 Oct 2026 — the editor's card, the saved trip's row — and one copy
  * here so the verb cannot drift between them.
  */
-export function openLabel(name: string, t: (en: string, vi: string, ja: string) => string): string {
-  return t(`Open ${name}`, `Mở ${name}`, `${name}を開く`);
+export function openLabel(name: string, t: (en: string, vi: string, ja: string, zh?: string) => string): string {
+  return t(`Open ${name}`, `Mở ${name}`, `${name}を開く`, `打开${name}`);
 }

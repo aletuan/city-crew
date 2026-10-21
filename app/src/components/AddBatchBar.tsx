@@ -67,6 +67,7 @@ export default function AddBatchBar({ chosen, batch, onAdd, done }: {
               `Adding ${batch.done + 1} of ${batch.total}…`,
               `Đang thêm ${batch.done + 1}/${batch.total}…`,
               `${batch.total}件中 ${batch.done + 1}件目…`,
+              `正在添加第 ${batch.done + 1} 个，共 ${batch.total} 个…`,
             )}
           </Text>
         </LinearGradient>
@@ -82,11 +83,13 @@ export default function AddBatchBar({ chosen, batch, onAdd, done }: {
               '1 place still to add — no goes left today',
               'Còn 1 chỗ chưa thêm — hết lượt hôm nay',
               'あと1件 — 本日の上限に達しました',
+              '还有 1 个地点待添加 — 今日次数已用完',
             )
             : t(
               `${held} places still to add — no goes left today`,
               `Còn ${held} chỗ chưa thêm — hết lượt hôm nay`,
               `あと${held}件 — 本日の上限に達しました`,
+              `还有 ${held} 个地点待添加 — 今日次数已用完`,
             )}
         </Text>
       ) : chosen > 0 ? (
@@ -98,11 +101,12 @@ export default function AddBatchBar({ chosen, batch, onAdd, done }: {
           wide
           icon="add"
           label={chosen === 1
-            ? t('Add this place', 'Thêm địa điểm này', 'このスポットを追加')
+            ? t('Add this place', 'Thêm địa điểm này', 'このスポットを追加', '添加这个地点')
             : t(
               `Add ${chosen} places`,
               `Thêm ${chosen} địa điểm`,
               `${chosen}件を追加`,
+              `添加 ${chosen} 个地点`,
             )}
           onPress={onAdd}
         />
@@ -135,6 +139,7 @@ export default function AddBatchBar({ chosen, batch, onAdd, done }: {
             'They keep their place — come back and add them then.',
             'Chúng vẫn ở đây — quay lại thêm sau nhé.',
             'そのまま残ります — またあとで追加できます。',
+            '它们会留在列表里 — 之后再回来添加。',
           )}
         </Text>
       ) : null}

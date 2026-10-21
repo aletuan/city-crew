@@ -59,8 +59,8 @@ function Bubble({ count }: { count: number }) {
 }
 
 /** The same figure, in words, for a listener. */
-function spokenCount(n: number, t: (en: string, vi: string, ja?: string) => string): string {
-  return t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`);
+function spokenCount(n: number, t: (en: string, vi: string, ja?: string, zh?: string) => string): string {
+  return t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`, `${n} 个地点`);
 }
 
 type Pinned = Place & { lat: number; lng: number };
@@ -230,6 +230,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
                   `${c.slugs.length} places, zoom in`,
                   `${c.slugs.length} địa điểm, phóng to`,
                   `${c.slugs.length}件、拡大`,
+                  `${c.slugs.length} 个地点，放大查看`,
                 )}
                 testID={`cluster-${c.key}`}
               >
@@ -307,7 +308,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
             accessibilityLabel={[
               c.name,
               spokenCount(c.count!, t),
-              t('switch to this city', 'chuyển sang thành phố này', 'この都市に切り替える'),
+              t('switch to this city', 'chuyển sang thành phố này', 'この都市に切り替える', '切换到这个城市'),
             ].filter(Boolean).join(', ')}
             testID={`city-${c.id}`}
           >

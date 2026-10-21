@@ -35,7 +35,7 @@ import { clockOf, fmtMinutes, openState } from './format';
 import { summaryLine } from './sketch';
 import type { Place } from './types';
 
-type T = (en: string, vi: string, ja: string) => string;
+type T = (en: string, vi: string, ja: string, zh?: string) => string;
 
 export function stopFacts(
   place: Pick<Place, 'neighborhood_en' | 'duration_min' | 'duration_max' | 'opening_hours'>,

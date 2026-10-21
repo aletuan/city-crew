@@ -140,8 +140,8 @@ export default function PlaceCard({
             accessibilityRole="button"
             accessibilityState={{ selected: saved }}
             accessibilityLabel={saved
-              ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
-              : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
+              ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集')
+              : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集')}
             hitSlop={8}
             style={s.saveSlot}
             contentStyle={s.saveFab}
@@ -459,8 +459,8 @@ export default function PlaceCard({
               />
               <Text style={[s.statusText, isFlagged(place) && s.statusTextBad]} numberOfLines={1}>
                 {isFlagged(place)
-                  ? t('Not accepted', 'Không được duyệt', '不採用')
-                  : t('Only you can see this', 'Chỉ mình bạn thấy', 'あなただけに表示中')}
+                  ? t('Not accepted', 'Không được duyệt', '不採用', '未通过')
+                  : t('Only you can see this', 'Chỉ mình bạn thấy', 'あなただけに表示中', '仅你可见')}
               </Text>
             </View>
           )}

@@ -363,7 +363,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
  * and not one more stop. A plan whose places carry no district at all falls
  * back to naming the outing, which is the only honest thing left to say.
  */
-function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string) => string): string {
+function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string, zh?: string) => string): string {
   const areas: string[] = [];
   for (const st of plan.stops) {
     const a = st.place.neighborhood_en?.trim();
@@ -382,7 +382,7 @@ function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string) => str
  * count rather than claim "zero ways" above the empty card.
  */
 function heading(
-  isDay: boolean, count: number, t: (en: string, vi: string, ja: string) => string,
+  isDay: boolean, count: number, t: (en: string, vi: string, ja: string, zh?: string) => string,
 ): string {
   if (isDay) {
     if (count === 0) return t('Your day', 'Ngày của bạn', 'あなたの一日');

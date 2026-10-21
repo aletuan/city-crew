@@ -21,6 +21,7 @@ export type CategoryStyle = {
   en: string;
   vi: string;
   ja: string;
+  zh: string;
   icon: keyof typeof Ionicons.glyphMap;
   /**
    * Words a reader might type for this concept that the label does not
@@ -82,39 +83,39 @@ export type Category = typeof CATEGORY_ORDER[number];
  *  chip with no glyph. */
 const STYLES = {
   cafes: {
-    en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', icon: 'cafe-outline', color: '#D2A679',
+    en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', zh: '咖啡馆', icon: 'cafe-outline', color: '#D2A679',
     pin: '#B75F05', food: true,
-    terms: ['coffee', 'espresso', 'latte', 'quán cà phê', 'cà phê', 'コーヒー', '喫茶'],
+    terms: ['coffee', 'espresso', 'latte', 'quán cà phê', 'cà phê', 'コーヒー', '喫茶', '咖啡'],
   },
   eats: {
-    en: 'Eats', vi: 'Ăn uống', ja: '食事', icon: 'restaurant-outline', color: '#E09A6B',
+    en: 'Eats', vi: 'Ăn uống', ja: '食事', zh: '美食', icon: 'restaurant-outline', color: '#E09A6B',
     pin: '#A45E2F', food: true,
-    terms: ['restaurant', 'food', 'dining', 'lunch', 'dinner', 'nhà hàng', 'quán ăn', 'ăn uống', 'レストラン', 'グルメ'],
+    terms: ['restaurant', 'food', 'dining', 'lunch', 'dinner', 'nhà hàng', 'quán ăn', 'ăn uống', 'レストラン', 'グルメ', '餐厅', '美食'],
   },
   views: {
-    en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', icon: 'business-outline', color: '#6FB3C0',
+    en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', zh: '观景', icon: 'business-outline', color: '#6FB3C0',
     pin: '#216572',
-    terms: ['rooftop', 'skyline', 'scenic', 'view', 'ngắm cảnh', 'tầng thượng', '展望'],
+    terms: ['rooftop', 'skyline', 'scenic', 'view', 'ngắm cảnh', 'tầng thượng', '展望', '天台', '观景'],
   },
   heritage: {
-    en: 'Culture', vi: 'Văn hóa', ja: '文化', icon: 'library-outline', color: '#D98A80',
+    en: 'Culture', vi: 'Văn hóa', ja: '文化', zh: '文化', icon: 'library-outline', color: '#D98A80',
     pin: '#DA3C28',
-    terms: ['museum', 'temple', 'pagoda', 'history', 'historic', 'bảo tàng', 'đền', 'chùa', 'di tích', 'lịch sử', '博物館', '寺'],
+    terms: ['museum', 'temple', 'pagoda', 'history', 'historic', 'bảo tàng', 'đền', 'chùa', 'di tích', 'lịch sử', '博物館', '寺', '博物馆', '寺庙'],
   },
   nature: {
-    en: 'Nature', vi: 'Thiên nhiên', ja: '自然', icon: 'leaf-outline', color: '#8FBF8A',
+    en: 'Nature', vi: 'Thiên nhiên', ja: '自然', zh: '自然', icon: 'leaf-outline', color: '#8FBF8A',
     pin: '#28881E',
-    terms: ['park', 'garden', 'lake', 'outdoor', 'green', 'công viên', 'vườn', 'hồ nước', 'ngoài trời', '公園'],
+    terms: ['park', 'garden', 'lake', 'outdoor', 'green', 'công viên', 'vườn', 'hồ nước', 'ngoài trời', '公園', '公园', '花园'],
   },
   markets: {
-    en: 'Shopping', vi: 'Mua sắm', ja: '買い物', icon: 'bag-outline', color: '#C98BB0',
+    en: 'Shopping', vi: 'Mua sắm', ja: '買い物', zh: '购物', icon: 'bag-outline', color: '#C98BB0',
     pin: '#DB2190',
-    terms: ['market', 'shop', 'store', 'mall', 'souvenir', 'chợ', 'cửa hàng', 'mua sắm', '市場'],
+    terms: ['market', 'shop', 'store', 'mall', 'souvenir', 'chợ', 'cửa hàng', 'mua sắm', '市場', '市场', '购物'],
   },
   nightlife: {
-    en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', icon: 'wine-outline', color: '#A98CD9',
+    en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', zh: '夜生活', icon: 'wine-outline', color: '#A98CD9',
     pin: '#8E54EE',
-    terms: ['bar', 'pub', 'club', 'beer', 'cocktail', 'drinks', 'quán bar', 'bia', 'nhậu', 'về đêm', 'バー'],
+    terms: ['bar', 'pub', 'club', 'beer', 'cocktail', 'drinks', 'quán bar', 'bia', 'nhậu', 'về đêm', 'バー', '酒吧'],
   },
   // The two 2026-08 additions, and why their hues are what they are.
   //
@@ -131,14 +132,14 @@ const STYLES = {
   // reel, for `fun`: a cinema is what the catalog holds today, but the key
   // has to be as true for bowling or a show as for a screen.
   focus: {
-    en: 'Focus', vi: 'Học tập', ja: '作業', icon: 'book-outline', color: '#989AD7',
+    en: 'Focus', vi: 'Học tập', ja: '作業', zh: '学习办公', icon: 'book-outline', color: '#989AD7',
     pin: '#6468E2',
-    terms: ['work', 'study', 'laptop', 'wifi', 'coworking', 'quiet', 'làm việc', 'học bài', 'học tập', 'ngồi lâu', '作業', '勉強'],
+    terms: ['work', 'study', 'laptop', 'wifi', 'coworking', 'quiet', 'làm việc', 'học bài', 'học tập', 'ngồi lâu', '作業', '勉強', '自习', '办公'],
   },
   fun: {
-    en: 'Fun', vi: 'Giải trí', ja: 'エンタメ', icon: 'ticket-outline', color: '#C88BD0',
+    en: 'Fun', vi: 'Giải trí', ja: 'エンタメ', zh: '娱乐', icon: 'ticket-outline', color: '#C88BD0',
     pin: '#B93FC9',
-    terms: ['cinema', 'movie', 'film', 'karaoke', 'bowling', 'arcade', 'show', 'rạp phim', 'rạp', 'phim', 'xem phim', 'giải trí', '映画館', '映画'],
+    terms: ['cinema', 'movie', 'film', 'karaoke', 'bowling', 'arcade', 'show', 'rạp phim', 'rạp', 'phim', 'xem phim', 'giải trí', '映画館', '映画', '电影院', '电影'],
   },
 } satisfies Record<Category, CategoryStyle>;
 
@@ -285,9 +286,9 @@ export function pinTint(p: Categorisable, chip?: string | null): string | null {
  * vibe table has always done this; a test comparing the two is what
  * turned up that categories did not.
  */
-export function categoryLabel(key: string, t: (en: string, vi: string, ja?: string) => string): string {
+export function categoryLabel(key: string, t: (en: string, vi: string, ja?: string, zh?: string) => string): string {
   const c = CATEGORIES[key];
-  if (c) return t(c.en, c.vi, c.ja);
+  if (c) return t(c.en, c.vi, c.ja, c.zh);
   return key.replace(/_/g, ' ').replace(/^\w/, (ch) => ch.toUpperCase());
 }
 

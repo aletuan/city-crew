@@ -12,7 +12,7 @@
 
 import type { CollectionHit } from './search';
 
-type T = (en: string, vi: string, ja?: string) => string;
+type T = (en: string, vi: string, ja?: string, zh?: string) => string;
 
 /** "1 place", "3 places" — the count a card prints when nothing narrower
  *  needs saying. */

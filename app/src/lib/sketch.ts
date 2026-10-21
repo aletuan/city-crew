@@ -181,7 +181,7 @@ export function summaryLine(parts: readonly (string | null | undefined)[]): stri
  * no plural, and forcing them through a singular/plural pair would be an
  * English grammar rule wearing their vocabulary.
  */
-export function stopCount(n: number, t: (en: string, vi: string, ja?: string) => string): string {
+export function stopCount(n: number, t: (en: string, vi: string, ja?: string, zh?: string) => string): string {
   return `${n} ${n === 1 ? t('stop', 'điểm', 'スポット') : t('stops', 'điểm', 'スポット')}`;
 }
 
@@ -263,7 +263,7 @@ export type Findings = {
  */
 export function findingsOf(
   f: Findings,
-  t: (en: string, vi: string, ja?: string) => string,
+  t: (en: string, vi: string, ja?: string, zh?: string) => string,
   fmt: {
     clock: (min: number) => string;
     distance: (km: number) => string;
