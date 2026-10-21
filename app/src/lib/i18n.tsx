@@ -1,7 +1,7 @@
-// The UI in English, Vietnamese, Japanese and Simplified Chinese. Every
-// string is passed inline as (en, vi, ja?, zh?) — Japanese and Chinese
-// fall back to English wherever a translation hasn't been written, so
-// partial coverage never renders a blank. The choice persists across
+// The UI in English, Vietnamese, Japanese, and Chinese in both scripts.
+// Every string is passed inline as (en, vi, ja?, zh?, hant?) — Japanese
+// and Chinese fall back to English wherever a translation hasn't been
+// written, so partial coverage never renders a blank. The choice persists across
 // launches; until one is made, the app speaks the phone's language when
 // it has it (see `langFromLocales`).
 //
@@ -9,6 +9,11 @@
 // eight hundred strings had been written with three (21 Oct 2026): it is
 // filled in screen by screen, and until a string has one it reads in
 // English. See `spokenIn` for the order.
+//
+// Traditional is the fifth, `hant`, and is not written by hand: it is the
+// Simplified line put through OpenCC with Taiwan's phrases and the
+// corrections in `scripts/hant.ts`, and `scripts/chinese.test.ts` fails
+// on a call whose fifth argument is not exactly that.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { I18nManager, Platform, Settings } from 'react-native';
@@ -23,6 +28,7 @@ export const LANGS: { id: Lang; label: string }[] = [
   { id: 'vi', label: 'Tiếng Việt' },
   { id: 'ja', label: '日本語' },
   { id: 'zh', label: '简体中文' },
+  { id: 'zh-Hant', label: '繁體中文' },
 ];
 
 type Str = string | null | undefined;
@@ -30,8 +36,9 @@ type Str = string | null | undefined;
 type I18n = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  /** Pick the right variant of a multilingual set; ja and zh fall back to en. */
-  t: (en: Str, vi: Str, ja?: Str, zh?: Str) => string;
+  /** Pick the right variant of a multilingual set; ja and both Chineses
+   *  fall back to en. */
+  t: (en: Str, vi: Str, ja?: Str, zh?: Str, hant?: Str) => string;
 };
 
 const STORE_KEY = 'citycrew.lang';
@@ -72,7 +79,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORE_KEY).then((v) => {
-      if (v === 'en' || v === 'vi' || v === 'ja' || v === 'zh') setLangState(v);
+      if (LANGS.some((l) => l.id === v)) setLangState(v as Lang);
     }).catch(() => {});
   }, []);
 
@@ -84,9 +91,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<I18n>(() => ({
     lang,
     setLang,
-    t: (en, vi, ja, zh) => {
-      const spoken = spokenIn(lang, en, vi, ja, zh);
-      return (spoken === 'vi' ? vi : spoken === 'ja' ? ja : spoken === 'zh' ? zh : spoken === 'en' ? en : null) ?? '';
+    t: (en, vi, ja, zh, hant) => {
+      const spoken = spokenIn(lang, en, vi, ja, zh, hant);
+      return (spoken === 'vi' ? vi : spoken === 'ja' ? ja : spoken === 'zh' ? zh : spoken === 'zh-Hant' ? hant : spoken === 'en' ? en : null) ?? '';
     },
   }), [lang, setLang]);
 

@@ -121,23 +121,23 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   // Interests row. A reader who has met these four screens has met these
   // four glyphs.
   const gone: [keyof typeof Ionicons.glyphMap, string][] = [
-    ['person-outline', t('Profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名', '个人资料、头像和用户名')],
-    ['bookmark-outline', t('Collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程', '合集、点赞和行程')],
-    ['people-outline', t('Crew and blocked accounts', 'Bạn bè và tài khoản đã chặn', 'クルーとブロック中のアカウント', '好友和已屏蔽的账号')],
-    ['heart-outline', t('Taste preferences and history', 'Sở thích và lịch sử', '興味と履歴', '兴趣偏好和浏览记录')],
+    ['person-outline', t('Profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名', '个人资料、头像和用户名', '個人資料、大頭貼和使用者名稱')],
+    ['bookmark-outline', t('Collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程', '合集、点赞和行程', '合集、按讚和行程')],
+    ['people-outline', t('Crew and blocked accounts', 'Bạn bè và tài khoản đã chặn', 'クルーとブロック中のアカウント', '好友和已屏蔽的账号', '好友和已遮蔽的帳號')],
+    ['heart-outline', t('Taste preferences and history', 'Sở thích và lịch sử', '興味と履歴', '兴趣偏好和浏览记录', '興趣偏好和瀏覽記錄')],
   ];
 
   return (
     <AuthScreen>
       <AuthHeader
         onBack={() => navigation.goBack()}
-        title={t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号')}
+        title={t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号', '刪除帳號')}
       />
       <Lede>{t(
         "Permanently delete your account and personal data. This action can't be undone.",
         'Xoá vĩnh viễn tài khoản và dữ liệu cá nhân của bạn. Hành động này không thể hoàn tác.',
         'アカウントと個人データを完全に削除します。この操作は元に戻せません。',
-        '永久删除你的账号和个人数据。此操作无法撤销。',
+        '永久删除你的账号和个人数据。此操作无法撤销。', '永久刪除你的帳號和個人資料。此操作無法復原。',
       )}</Lede>
 
       {/* One card, three parts: whose account, what it is made of, and
@@ -193,7 +193,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         <View style={[s.block, s.divider]}>
           <View style={s.blockHead}>
             <Ionicons name="close-circle-outline" size={17} color={colors.textTertiary} />
-            <Text style={s.label}>{t('Will be deleted', 'Sẽ bị xoá', '削除されるもの', '将被删除')}</Text>
+            <Text style={s.label}>{t('Will be deleted', 'Sẽ bị xoá', '削除されるもの', '将被删除', '將被刪除')}</Text>
           </View>
           {gone.map(([icon, line]) => (
             <View key={line} style={s.item}>
@@ -221,13 +221,13 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
                 opposition the English pair does, in the grammar rather
                 than only in the verbs. "Sẽ ở lại" was neither: an
                 active verb, and slightly colloquial for data. */}
-            <Text style={s.label}>{t('Will remain', 'Sẽ được giữ lại', '残るもの', '将会保留')}</Text>
+            <Text style={s.label}>{t('Will remain', 'Sẽ được giữ lại', '残るもの', '将会保留', '將會保留')}</Text>
           </View>
           <Text style={s.value}>{t(
             'Places you added will remain in the catalog, but will no longer be linked to your account.',
             'Địa điểm bạn đã thêm vẫn còn trên City Crew, nhưng không còn gắn với tài khoản của bạn.',
             '追加したスポットは City Crew に残りますが、アカウントとの紐づけは解除されます。',
-            '你添加的地点会保留在 City Crew 中，但不再与你的账号关联。',
+            '你添加的地点会保留在 City Crew 中，但不再与你的账号关联。', '你新增的地點會保留在 City Crew 中，但不再與你的帳號關聯。',
           )}</Text>
         </View>
       </Card>
@@ -263,12 +263,12 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
             <Ionicons name="download-outline" size={19} color={colors.textTertiary} />
           </View>
           <View style={s.words}>
-            <Text style={s.actionTitle}>{t('Download your data', 'Tải dữ liệu của bạn', 'データをダウンロード', '下载你的数据')}</Text>
+            <Text style={s.actionTitle}>{t('Download your data', 'Tải dữ liệu của bạn', 'データをダウンロード', '下载你的数据', '下載你的資料')}</Text>
             <Text style={s.actionSub}>{t(
               'A copy of everything above, as one file.',
               'Một bản sao của mọi thứ ở trên, trong một tệp.',
               '上記すべての写しを 1 つのファイルで。',
-              '以上所有内容的副本，合为一个文件。',
+              '以上所有内容的副本，合为一个文件。', '以上所有內容的副本，合為一個檔案。',
             )}</Text>
           </View>
           {takeout.busy
@@ -281,7 +281,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       {error ? <FormError>{failText(error)}</FormError> : null}
 
       <DangerButton
-        label={t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号')}
+        label={t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号', '刪除帳號')}
         onPress={remove}
         busy={busy}
         testID="delete-account-confirm"
@@ -296,7 +296,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         accessibilityRole="button"
         hitSlop={10}
       >
-        <Text style={s.keep}>{t('Keep my account', 'Giữ tài khoản', 'アカウントを残す', '保留我的账号')}</Text>
+        <Text style={s.keep}>{t('Keep my account', 'Giữ tài khoản', 'アカウントを残す', '保留我的账号', '保留我的帳號')}</Text>
       </Pressable>
     </AuthScreen>
   );

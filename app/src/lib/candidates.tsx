@@ -116,12 +116,12 @@ export function useCandidates(): Candidates {
         // "Edge Function returned a non-2xx status code", which names the
         // plumbing and says nothing about what to do.
         Alert.alert(
-          t('Search failed', 'Tìm kiếm thất bại', '検索に失敗しました', '搜索失败'),
+          t('Search failed', 'Tìm kiếm thất bại', '検索に失敗しました', '搜索失败', '搜尋失敗'),
           t(
             'Could not reach Google Maps just now. Try again in a moment.',
             'Chưa kết nối được Google Maps. Thử lại sau giây lát nhé.',
             'Google マップに接続できませんでした。少し待ってからもう一度お試しください。',
-            '暂时无法连接 Google 地图，请稍后再试。',
+            '暂时无法连接 Google 地图，请稍后再试。', '暫時無法連線 Google 地圖，請稍後再試。',
           ),
         );
       })
@@ -206,12 +206,12 @@ export function useCandidates(): Candidates {
     }
     if (out.reason === 'daily_limit') {
       Alert.alert(
-        t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで', '今天就到这里吧'),
+        t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで', '今天就到这里吧', '今天就到這裡吧'),
         t(
           `You can suggest ${out.limit} places a day. Come back tomorrow.`,
           `Mỗi ngày bạn có thể đề xuất ${out.limit} địa điểm. Mai quay lại nhé.`,
           `1日に${out.limit}件まで提案できます。また明日どうぞ。`,
-          `你每天可以推荐 ${out.limit} 个地点。明天再来吧。`,
+          `你每天可以推荐 ${out.limit} 个地点。明天再来吧。`, `你每天可以推薦 ${out.limit} 個地點。明天再來吧。`,
         ),
       );
       // The cap is per account per day, so every remaining item in this
@@ -224,7 +224,7 @@ export function useCandidates(): Candidates {
       capped.current = true;
       return 'held';
     }
-    Alert.alert(t('Could not add it', 'Không thêm được', '追加できませんでした', '无法添加'), out.message);
+    Alert.alert(t('Could not add it', 'Không thêm được', '追加できませんでした', '无法添加', '無法新增'), out.message);
     return 'failed';
   }, [t]);
 

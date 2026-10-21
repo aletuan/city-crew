@@ -194,7 +194,7 @@ export default function WelcomeSheet() {
         <Pressable
           style={[StyleSheet.absoluteFill, s.backdrop]}
           onPress={dismiss}
-          accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')}
+          accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
         />
       </Animated.View>
       <Animated.View
@@ -213,7 +213,7 @@ export default function WelcomeSheet() {
             the first thing dark mode shows you. */}
         <Image source={welcomeLogo} style={s.logo} contentFit="contain" />
         <Text style={s.title}>
-          {t('Welcome to City Crew', 'Chào bạn đến với City Crew', 'City Crew へようこそ', '欢迎来到 City Crew')}
+          {t('Welcome to City Crew', 'Chào bạn đến với City Crew', 'City Crew へようこそ', '欢迎来到 City Crew', '歡迎來到 City Crew')}
         </Text>
 
         {/* Three lines standing on the sheet itself. They wore a bordered
@@ -229,32 +229,32 @@ export default function WelcomeSheet() {
         <View style={s.rows}>
           <Row
             icon="compass-outline"
-            title={t('Discover & save', 'Khám phá & lưu lại', '見つけて、保存する', '发现与保存')}
+            title={t('Discover & save', 'Khám phá & lưu lại', '見つけて、保存する', '发现与保存', '發現與儲存')}
             body={t(
               'Find places worth visiting, and save the ones you love.',
               'Tìm những nơi đáng ghé và lưu lại địa điểm bạn yêu thích.',
               '訪れる価値のある場所を見つけて、お気に入りを保存できます。',
-              '发现值得一去的地方，保存你喜欢的。',
+              '发现值得一去的地方，保存你喜欢的。', '發現值得一去的地方，儲存你喜歡的。',
             )}
           />
           <Row
             icon="bulb-outline"
-            title={t('Plan with ease', 'Lên kế hoạch dễ dàng', 'かんたんに計画する', '轻松规划')}
+            title={t('Plan with ease', 'Lên kế hoạch dễ dàng', 'かんたんに計画する', '轻松规划', '輕鬆規劃')}
             body={t(
               'Say what kind of day you want, and City Crew suggests an itinerary to match.',
               'Chỉ cần nói bạn muốn một ngày thế nào, City Crew sẽ gợi ý lịch trình phù hợp.',
               'どんな一日にしたいか伝えるだけで、City Crew がぴったりの旅程を提案します。',
-              '说出你想要怎样的一天，City Crew 会推荐相应的行程。',
+              '说出你想要怎样的一天，City Crew 会推荐相应的行程。', '說出你想要怎樣的一天，City Crew 會推薦相應的行程。',
             )}
           />
           <Row
             icon="people-outline"
-            title={t('Share with friends', 'Chia sẻ cùng bạn bè', '友達と共有する', '与好友分享')}
+            title={t('Share with friends', 'Chia sẻ cùng bạn bè', '友達と共有する', '与好友分享', '與好友分享')}
             body={t(
               'Share your plan, invite friends, and decide together.',
               'Chia sẻ kế hoạch, mời bạn bè và cùng nhau lựa chọn.',
               'プランを共有して友達を招待し、みんなで決められます。',
-              '分享你的计划，邀请好友，一起决定。',
+              '分享你的计划，邀请好友，一起决定。', '分享你的計畫，邀請好友，一起決定。',
             )}
           />
         </View>
@@ -270,7 +270,7 @@ export default function WelcomeSheet() {
         >
           <LinearGradient {...gradAI} style={s.primary}>
             <Text style={s.primaryText}>
-              {t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる', '开始探索')}
+              {t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる', '开始探索', '開始探索')}
             </Text>
           </LinearGradient>
         </PressableScale>
@@ -282,8 +282,8 @@ export default function WelcomeSheet() {
             save sheet already takes from outside the navigators. */}
         <View style={s.switch}>
           <SwitchRow
-            prompt={t('Already have an account?', 'Đã có tài khoản?', 'すでにアカウントをお持ちですか？', '已有账号？')}
-            action={t('Sign in', 'Đăng nhập', 'サインイン', '登录')}
+            prompt={t('Already have an account?', 'Đã có tài khoản?', 'すでにアカウントをお持ちですか？', '已有账号？', '已有帳號？')}
+            action={t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}
             onPress={() => { dismiss(); goTo('Profile', { screen: 'SignIn', initial: false }); }}
           />
         </View>

@@ -198,30 +198,30 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
     'Choose a photo taken in more light.',
     'Chọn ảnh chụp lúc nhiều ánh sáng hơn.',
     'もっと明るい時に撮った写真を選びましょう。',
-    '选择一张光线更充足时拍的照片。',
+    '选择一张光线更充足时拍的照片。', '選擇一張光線更充足時拍的照片。',
   );
 
   const b = s.brightness;
   if (b !== undefined) {
-    if (b < DARK) out.push({ dim: 'light', plus: false, say: t('a little dark', 'hơi thiếu sáng', 'やや暗い', '略暗'), fix: fixLight });
+    if (b < DARK) out.push({ dim: 'light', plus: false, say: t('a little dark', 'hơi thiếu sáng', 'やや暗い', '略暗', '略暗'), fix: fixLight });
     else if (b > BRIGHT) {
       out.push({
-        dim: 'light', plus: false, say: t('a little overexposed', 'hơi dư sáng', 'やや明るすぎ', '略微过曝'),
-        fix: t('Avoid shooting into the light.', 'Tránh chụp ngược sáng.', '逆光を避けましょう。', '避免逆光拍摄。'),
+        dim: 'light', plus: false, say: t('a little overexposed', 'hơi dư sáng', 'やや明るすぎ', '略微过曝', '略微過曝'),
+        fix: t('Avoid shooting into the light.', 'Tránh chụp ngược sáng.', '逆光を避けましょう。', '避免逆光拍摄。', '避免逆光拍攝。'),
       });
-    } else if (b >= LIT[0] && b <= LIT[1]) out.push({ dim: 'light', plus: true, say: t('well lit', 'đủ sáng', '明るさが適切', '光线充足') });
+    } else if (b >= LIT[0] && b <= LIT[1]) out.push({ dim: 'light', plus: true, say: t('well lit', 'đủ sáng', '明るさが適切', '光线充足', '光線充足') });
   }
   if ((s.shadows ?? 0) > SHADOWS) {
-    out.push({ dim: 'light', plus: false, say: t('shadows lose detail', 'vùng tối mất chi tiết', '暗部がつぶれている', '暗部丢失细节'), fix: fixLight });
+    out.push({ dim: 'light', plus: false, say: t('shadows lose detail', 'vùng tối mất chi tiết', '暗部がつぶれている', '暗部丢失细节', '暗部丟失細節'), fix: fixLight });
   }
   if ((s.highlights ?? 0) > HIGHLIGHTS) {
     out.push({
-      dim: 'light', plus: false, say: t('highlights blown out', 'vùng sáng bị cháy', '白飛びがある', '高光过曝'),
+      dim: 'light', plus: false, say: t('highlights blown out', 'vùng sáng bị cháy', '白飛びがある', '高光过曝', '高光過曝'),
       fix: t(
         'Keep bright windows and lamps from filling the frame.',
         'Tránh để cửa sổ hay đèn sáng chiếm nhiều khung.',
         '明るい窓や照明が大きく入らないようにしましょう。',
-        '避免明亮的窗户和灯占满画面。',
+        '避免明亮的窗户和灯占满画面。', '避免明亮的窗戶和燈佔滿畫面。',
       ),
     });
   }
@@ -229,15 +229,15 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
   if (s.sharpness !== undefined) {
     if (s.sharpness < SOFT) {
       out.push({
-        dim: 'focus', plus: false, say: t('a little soft', 'hơi mờ', 'ややぼやけている', '略微模糊'),
+        dim: 'focus', plus: false, say: t('a little soft', 'hơi mờ', 'ややぼやけている', '略微模糊', '略微模糊'),
         fix: t(
           'Hold the phone steady and tap the subject to focus.',
           'Giữ máy chắc tay và chạm vào chủ thể để lấy nét.',
           '端末をしっかり持ち、被写体をタップしてピントを合わせましょう。',
-          '拿稳手机，点按主体对焦。',
+          '拿稳手机，点按主体对焦。', '拿穩手機，點按主體對焦。',
         ),
       });
-    } else if (s.sharpness > SHARP) out.push({ dim: 'focus', plus: true, say: t('sharp', 'rõ nét', 'シャープ', '清晰') });
+    } else if (s.sharpness > SHARP) out.push({ dim: 'focus', plus: true, say: t('sharp', 'rõ nét', 'シャープ', '清晰', '清晰') });
   }
 
   const tilt = Math.abs(s.tilt ?? 0);
@@ -245,12 +245,12 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
     const n = Math.round(tilt);
     out.push({
       dim: 'composition', plus: false,
-      say: t(`horizon tilted ${n}°`, `đường chân trời nghiêng ${n}°`, `水平が${n}°傾いている`, `地平线倾斜 ${n}°`),
+      say: t(`horizon tilted ${n}°`, `đường chân trời nghiêng ${n}°`, `水平が${n}°傾いている`, `地平线倾斜 ${n}°`, `地平線傾斜 ${n}°`),
       fix: t(
         'Straighten it: Edit → Crop in Photos levels the horizon.',
         'Chỉnh thẳng khung: Sửa → Cắt trong app Ảnh sẽ cân lại đường chân trời.',
         '写真アプリの「編集 → 切り取り」で水平を直せます。',
-        '在“照片”中用“编辑 → 裁剪”可以拉直地平线。',
+        '在“照片”中用“编辑 → 裁剪”可以拉直地平线。', '在「照片」中用「編輯 → 裁切」可以拉直地平線。',
       ),
     });
   }
@@ -258,12 +258,12 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
   if ((s.peopleArea ?? 0) > PEOPLE) {
     out.push({
       dim: 'composition', plus: false,
-      say: t('people fill much of the frame', 'người chiếm nhiều khung hình', '人物が大きく写っている', '人物占据画面较多'),
+      say: t('people fill much of the frame', 'người chiếm nhiều khung hình', '人物が大きく写っている', '人物占据画面较多', '人物佔據畫面較多'),
       fix: t(
         'Choose a moment with fewer people, or keep them small in the frame.',
         'Chụp lúc vắng người, hoặc để người nhỏ trong khung.',
         '人が少ない時に撮るか、人物を小さく写しましょう。',
-        '选择人少的时候拍，或让人物在画面中小一些。',
+        '选择人少的时候拍，或让人物在画面中小一些。', '選擇人少的時候拍，或讓人物在畫面中小一些。',
       ),
     });
   }
@@ -271,12 +271,12 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
   if (writing(s)) {
     out.push({
       dim: 'composition', plus: false, quiet: record,
-      say: t('a lot of writing in frame', 'nhiều chữ trong khung', '文字が多い', '画面中文字较多'),
+      say: t('a lot of writing in frame', 'nhiều chữ trong khung', '文字が多い', '画面中文字较多', '畫面中文字較多'),
       fix: t(
         'Step back or crop so signs and menus do not fill the frame.',
         'Lùi ra hoặc cắt bớt để biển, menu không chiếm khung.',
         '看板やメニューが画面を占めないよう、下がるか切り取りましょう。',
-        '退后一点或裁剪，不要让招牌和菜单占满画面。',
+        '退后一点或裁剪，不要让招牌和菜单占满画面。', '退後一點或裁切，不要讓招牌和菜單佔滿畫面。',
       ),
     });
   }
@@ -284,15 +284,15 @@ function facts(s: Signals, t: T, record: boolean): Fact[] {
   if (s.subject && atEdge(s.subject)) {
     out.push({
       dim: 'composition', plus: false,
-      say: t('subject pushed to the edge', 'chủ thể lệch sát mép', '被写体が端に寄っている', '主体太靠边'),
-      fix: t('Bring the subject in from the edge.', 'Đưa chủ thể vào gần giữa khung hơn.', '被写体を中央寄りにしましょう。', '把主体从边缘移向中间。'),
+      say: t('subject pushed to the edge', 'chủ thể lệch sát mép', '被写体が端に寄っている', '主体太靠边', '主體太靠邊'),
+      fix: t('Bring the subject in from the edge.', 'Đưa chủ thể vào gần giữa khung hơn.', '被写体を中央寄りにしましょう。', '把主体从边缘移向中间。', '把主體從邊緣移向中間。'),
     });
   }
 
   if (s.width !== undefined && s.height !== undefined && Math.max(s.width, s.height) < LOW_RES) {
     out.push({
-      dim: 'focus', plus: false, say: t('low resolution', 'độ phân giải thấp', '解像度が低い', '分辨率低'),
-      fix: t('Use the original photo, not a resized copy.', 'Dùng ảnh gốc, không dùng bản đã thu nhỏ.', '縮小版ではなく元の写真を使いましょう。', '请使用原图，而不是缩小后的副本。'),
+      dim: 'focus', plus: false, say: t('low resolution', 'độ phân giải thấp', '解像度が低い', '分辨率低', '解析度低'),
+      fix: t('Use the original photo, not a resized copy.', 'Dùng ảnh gốc, không dùng bản đã thu nhỏ.', '縮小版ではなく元の写真を使いましょう。', '请使用原图，而不是缩小后的副本。', '請使用原圖，而不是縮小後的副本。'),
     });
   }
 
@@ -316,9 +316,9 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * out, it says so rather than inventing praise.
  */
 export function explainScore(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): string {
-  const sep = t(', ', ', ', '、', '，');
-  const stop = t('.', '.', '。', '。');
-  const gap = t(' ', ' ', '', '');
+  const sep = t(', ', ', ', '、', '，', '，');
+  const stop = t('.', '.', '。', '。', '。');
+  const gap = t(' ', ' ', '', '', '');
   const record = isRecord(score);
   const said = facts(score.signals ?? {}, t, record).filter((f) => !f.quiet);
   const plus = said.filter((f) => f.plus).map((f) => f.say);
@@ -329,12 +329,12 @@ export function explainScore(score: Pick<PhotoScore, 'is_utility' | 'signals'>, 
       'Lots of writing in frame — it reads like a menu or a sign rather than a picture.',
       'Trong khung có nhiều chữ, trông như ảnh menu hoặc biển hiệu hơn là ảnh để ngắm.',
       '文字が多く、鑑賞用の写真というよりメニューや看板のように見えます。',
-      '画面中文字较多 — 看起来更像菜单或招牌，而不是照片。',
+      '画面中文字较多 — 看起来更像菜单或招牌，而不是照片。', '畫面中文字較多 — 看起來更像菜單或招牌，而不是照片。',
     ));
   }
   if (plus.length) out.push(capital(plus.join(sep)) + stop);
-  if (minus.length) out.push(t('Held back by: ', 'Trừ điểm: ', '減点：', '扣分项：') + minus.join(sep) + stop);
-  if (!out.length) out.push(t('Nothing measured stands out either way.', 'Không có điểm đo nào nổi bật.', '測定上、目立つ点はありません。', '测量结果没有特别突出的地方。'));
+  if (minus.length) out.push(t('Held back by: ', 'Trừ điểm: ', '減点：', '扣分项：', '扣分項：') + minus.join(sep) + stop);
+  if (!out.length) out.push(t('Nothing measured stands out either way.', 'Không có điểm đo nào nổi bật.', '測定上、目立つ点はありません。', '测量结果没有特别突出的地方。', '測量結果沒有特別突出的地方。'));
   return out.join(gap);
 }
 // ── the detailed analysis ──
@@ -419,7 +419,7 @@ function framing(s: Signals): { passed: number; of: number } {
 export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: T): Detail[] {
   const sig = score.signals ?? {};
   const all = facts(sig, t, isRecord(score));
-  const sep = t(', ', ', ', '、', '，');
+  const sep = t(', ', ', ', '、', '，', '，');
   const rows: Detail[] = [];
   /** A row read off the facts about `key`: what held it back if anything
    *  did, else what helped, else `empty` — measured, and unremarkable. */
@@ -436,20 +436,20 @@ export function detailsOf(score: Pick<PhotoScore, 'is_utility' | 'signals'>, t: 
   };
 
   if (sig.brightness !== undefined) {
-    row('light', t('Light', 'Ánh sáng', '明るさ', '光线'), exposure(sig.brightness, sig.shadows, sig.highlights),
-      { value: t('Neither dark nor bright', 'Không tối, không quá sáng', '暗くも明るすぎもしない', '不暗也不过亮'), tone: 'plain' });
+    row('light', t('Light', 'Ánh sáng', '明るさ', '光线', '光線'), exposure(sig.brightness, sig.shadows, sig.highlights),
+      { value: t('Neither dark nor bright', 'Không tối, không quá sáng', '暗くも明るすぎもしない', '不暗也不过亮', '不暗也不過亮'), tone: 'plain' });
   }
   if (sig.sharpness !== undefined) {
-    row('focus', t('Focus', 'Độ nét', 'ピント', '对焦'), standingIn(sig.sharpness, SHARPNESS_SPREAD),
-      { value: t('Average', 'Trung bình', '標準的', '一般'), tone: 'plain' });
+    row('focus', t('Focus', 'Độ nét', 'ピント', '对焦', '對焦'), standingIn(sig.sharpness, SHARPNESS_SPREAD),
+      { value: t('Average', 'Trung bình', '標準的', '一般', '一般'), tone: 'plain' });
   }
   const frame = framing(sig);
   if (frame.of > 0) {
     // "Nothing wrong found", not "Good": the checks look for faults, and
     // passing them all says the framing has none of those — not that it
     // is good, which nothing here can see.
-    row('composition', t('Composition', 'Bố cục', '構図', '构图'), frame.passed / frame.of,
-      { value: t('No problems found', 'Không thấy lỗi', '問題なし', '未发现问题'), tone: 'plain' });
+    row('composition', t('Composition', 'Bố cục', '構図', '构图', '構圖'), frame.passed / frame.of,
+      { value: t('No problems found', 'Không thấy lỗi', '問題なし', '未发现问题', '未發現問題'), tone: 'plain' });
   }
   return rows;
 }
@@ -493,7 +493,7 @@ export const appleVision: Interpreter = {
   // "Analysed", the scoring dialog's own word ("Phân tích ngay trên
   // máy"), so the promise made while the phone reads and the line under
   // what it read are one sentence said twice (owner, 17 Oct 2026).
-  source: (t) => t('Analysed on this phone by Apple Vision.', 'Phân tích trên máy bằng Apple Vision.', 'この端末でApple Visionが分析。', '由 Apple Vision 在本机分析。'),
+  source: (t) => t('Analysed on this phone by Apple Vision.', 'Phân tích trên máy bằng Apple Vision.', 'この端末でApple Visionが分析。', '由 Apple Vision 在本机分析。', '由 Apple Vision 在本機分析。'),
   explain: explainScore,
   details: detailsOf,
   suggestions: suggestionsOf,

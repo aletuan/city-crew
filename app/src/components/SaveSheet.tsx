@@ -35,7 +35,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         style={[
           s.sheet,
@@ -46,7 +46,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
         ]}
       >
         <View style={s.grabber} />
-        <Text style={s.title}>{t('Save to', 'Lưu vào', '保存先', '保存到')}</Text>
+        <Text style={s.title}>{t('Save to', 'Lưu vào', '保存先', '保存到', '儲存到')}</Text>
         {place ? (
           <Text style={s.subtitle} numberOfLines={1}>
             {localized(place, 'name', lang)}
@@ -75,8 +75,8 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
                   <Text style={s.rowText} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <Text style={s.rowMeta} numberOfLines={1}>
                     {c.collection_places.length === 0
-                      ? t('Empty', 'Trống', '空', '空')
-                      : `${c.collection_places.length} ${t(c.collection_places.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点')}`}
+                      ? t('Empty', 'Trống', '空', '空', '空')
+                      : `${c.collection_places.length} ${t(c.collection_places.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}`}
                   </Text>
                 </View>
               </PressableScale>
@@ -93,11 +93,11 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
           <View style={s.newIcon}>
             <Ionicons name="add" size={19} color={colors.accent} />
           </View>
-          <Text style={s.newText}>{t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集')}</Text>
+          <Text style={s.newText}>{t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}</Text>
         </PressableScale>
 
         <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.done} testID="save-done">
-          <Text style={s.doneText}>{t('Done', 'Xong', '完了', '完成')}</Text>
+          <Text style={s.doneText}>{t('Done', 'Xong', '完了', '完成', '完成')}</Text>
         </PressableScale>
       </Animated.View>
     </Modal>

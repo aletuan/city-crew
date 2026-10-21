@@ -48,12 +48,12 @@ export type Company = 'solo' | 'couple' | 'friends' | 'family';
  * than everything beside it.
  */
 export const COMPANY: {
-  key: Company; icon: string; color: string; en: string; vi: string; ja: string; zh: string;
+  key: Company; icon: string; color: string; en: string; vi: string; ja: string; zh: string; hant: string;
 }[] = [
-  { key: 'solo', icon: 'person-outline', color: '#8CA9D0', en: 'Just me', vi: 'Một mình', ja: 'ひとり', zh: '独自一人' },
-  { key: 'couple', icon: 'heart-outline', color: '#D496A5', en: 'Couple', vi: 'Hai người', ja: 'ふたり', zh: '情侣' },
-  { key: 'friends', icon: 'people-outline', color: '#B9A654', en: 'Friends', vi: 'Bạn bè', ja: '友だち', zh: '朋友' },
-  { key: 'family', icon: 'home-outline', color: '#65B690', en: 'Family', vi: 'Gia đình', ja: '家族', zh: '家人' },
+  { key: 'solo', icon: 'person-outline', color: '#8CA9D0', en: 'Just me', vi: 'Một mình', ja: 'ひとり', zh: '独自一人', hant: '獨自一人' },
+  { key: 'couple', icon: 'heart-outline', color: '#D496A5', en: 'Couple', vi: 'Hai người', ja: 'ふたり', zh: '情侣', hant: '情侶' },
+  { key: 'friends', icon: 'people-outline', color: '#B9A654', en: 'Friends', vi: 'Bạn bè', ja: '友だち', zh: '朋友', hant: '朋友' },
+  { key: 'family', icon: 'home-outline', color: '#65B690', en: 'Family', vi: 'Gia đình', ja: '家族', zh: '家人', hant: '家人' },
 ];
 
 /** Day or evening. Not a clock time: the wizard's own promise is that

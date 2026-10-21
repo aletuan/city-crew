@@ -264,12 +264,12 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       : (
         <AddSlot
           onPress={() => google.run(typed)}
-          title={t(`Add “${shown}”`, `Thêm “${shown}”`, `「${shown}」を追加`, `添加“${shown}”`)}
+          title={t(`Add “${shown}”`, `Thêm “${shown}”`, `「${shown}」を追加`, `添加“${shown}”`, `新增「${shown}」`)}
           subtitle={t(
             'We look it up on Google Maps',
             'Chúng tôi tìm trên Google Maps',
             'Google マップで探します',
-            '我们会在 Google 地图上查找',
+            '我们会在 Google 地图上查找', '我們會在 Google 地圖上查詢',
           )}
         />
       );
@@ -283,7 +283,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         'Nothing on Google Maps that is not already here.',
         'Google Maps không có chỗ nào mà đây chưa có.',
         'Google マップにも、ここにないものはありませんでした。',
-        'Google 地图上没有这里尚未收录的地点。',
+        'Google 地图上没有这里尚未收录的地点。', 'Google 地圖上沒有這裡尚未收錄的地點。',
       )}
     </Text>
   );
@@ -305,8 +305,8 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           inputRef={inputRef}
           value={query}
           onChangeText={setQuery}
-          placeholder={t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索', '搜索地点和合集')}
-          cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル', '取消'), onPress: () => navigation.goBack() }}
+          placeholder={t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索', '搜索地点和合集', '搜尋地點和合集')}
+          cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: () => navigation.goBack() }}
         />
       </View>
 
@@ -335,9 +335,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     scaleTo={0.92}
                     hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
                     accessibilityRole="button"
-                    accessibilityLabel={t('Clear recent searches', 'Xóa tìm kiếm gần đây', '最近の検索を消去', '清除最近搜索')}
+                    accessibilityLabel={t('Clear recent searches', 'Xóa tìm kiếm gần đây', '最近の検索を消去', '清除最近搜索', '清除最近搜尋')}
                   >
-                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除')}</Text>
+                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除', '清除')}</Text>
                   </PressableScale>
                 ) : null}
               </View>
@@ -371,7 +371,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                   scaleTo={0.85}
                   hitSlop={{ top: 12, bottom: 12, left: 14, right: 14 }}
                   accessibilityRole="button"
-                  accessibilityLabel={t('Edit this search', 'Sửa tìm kiếm này', 'この検索を編集', '编辑此搜索')}
+                  accessibilityLabel={t('Edit this search', 'Sửa tìm kiếm này', 'この検索を編集', '编辑此搜索', '編輯此搜尋')}
                 >
                   <Ionicons
                     name="arrow-up"
@@ -525,7 +525,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     {t(item.collection.title_en, item.collection.title_vi, item.collection.title_ja)}
                   </Text>
                   <Text style={s.cardMeta}>
-                    {item.count} {t(item.count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点')}
+                    {item.count} {t(item.count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
@@ -572,7 +572,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                 'Try a name, a neighbourhood, or a vibe — cafés, museums, rooftops.',
                 'Thử tên quán, tên khu, hay một kiểu vibe — cà phê, bảo tàng, rooftop.',
                 '名前・エリア・雰囲気で検索 — カフェ、博物館、ルーフトップ。',
-                '试试名称、街区或氛围 — 咖啡馆、博物馆、天台。',
+                '试试名称、街区或氛围 — 咖啡馆、博物馆、天台。', '試試名稱、街區或氛圍 — 咖啡館、博物館、頂樓。',
               )} />
         }
         // Only while searching: before a word is typed the list holds the
@@ -624,10 +624,10 @@ function NoMatches({ term }: { term: string }) {
         </View>
       </View>
       <Text style={s.noneTitle}>
-        {t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`, `没有与“${term}”匹配的结果`)}
+        {t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`, `没有与“${term}”匹配的结果`, `沒有與「${term}」相符的結果`)}
       </Text>
       <Text style={s.noneHint}>
-        {t('Not in City Crew yet.', 'Chưa có trong City Crew.', 'City Crew にはまだありません。', 'City Crew 里还没有。')}
+        {t('Not in City Crew yet.', 'Chưa có trong City Crew.', 'City Crew にはまだありません。', 'City Crew 里还没有。', 'City Crew 裡還沒有。')}
       </Text>
     </View>
   );
@@ -656,7 +656,7 @@ function Fork({ routes, onSearch, onExplore }: {
   const { t } = useI18n();
   return (
     <View style={s.forkBox}>
-      <Text style={s.forkLabel}>{t('OR TRY', 'HOẶC THỬ', 'または', '或者试试')}</Text>
+      <Text style={s.forkLabel}>{t('OR TRY', 'HOẶC THỬ', 'または', '或者试试', '或者試試')}</Text>
       <View style={s.forkRow}>
         {routes.map((r) => {
           if (r.kind === 'area') {
@@ -665,7 +665,7 @@ function Fork({ routes, onSearch, onExplore }: {
               <ForkChip
                 key={`a-${r.en}`}
                 icon="location-outline"
-                label={t(`Browse ${r.en}`, `Xem quanh ${r.vi}`, `${r.ja}を見る`, `浏览${r.en}`)}
+                label={t(`Browse ${r.en}`, `Xem quanh ${r.vi}`, `${r.ja}を見る`, `浏览${r.en}`, `瀏覽${r.en}`)}
                 onPress={() => onSearch(name)}
               />
             );
@@ -675,14 +675,14 @@ function Fork({ routes, onSearch, onExplore }: {
             <ForkChip
               key={`c-${r.key}`}
               icon={cat.icon}
-              label={t(`All ${cat.en}`, `Tất cả ${cat.vi}`, `${cat.ja}すべて`, `全部${cat.zh}`)}
-              onPress={() => onSearch(t(cat.en, cat.vi, cat.ja, cat.zh))}
+              label={t(`All ${cat.en}`, `Tất cả ${cat.vi}`, `${cat.ja}すべて`, `全部${cat.zh}`, `全部${cat.zh}`)}
+              onPress={() => onSearch(t(cat.en, cat.vi, cat.ja, cat.zh, cat.hant))}
             />
           );
         })}
         <ForkChip
           icon="compass-outline"
-          label={t('Back to Places', 'Về Địa điểm', 'スポットに戻る', '返回地点')}
+          label={t('Back to Places', 'Về Địa điểm', 'スポットに戻る', '返回地点', '返回地點')}
           onPress={onExplore}
         />
       </View>

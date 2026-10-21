@@ -40,18 +40,18 @@ import { PressableScale, useNarrowWindow } from './ui';
 import artDark from '../../assets/signin-art-dark.webp';
 import artLight from '../../assets/signin-art-light.webp';
 
-type T = (en: string, vi: string, ja: string, zh?: string) => string;
+type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
 
 /** What each reason says: the thing that was reached for, by name. */
 const TITLES: Record<SignInWhy, (t: T) => string> = {
-  save: (t) => t('Save this place', 'Lưu địa điểm này', 'このスポットを保存', '保存这个地点'),
-  like: (t) => t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集'),
-  copy: (t) => t('Save a copy to your account', 'Lưu bản sao về tài khoản', 'コピーを自分のアカウントに保存', '保存副本到你的账号'),
-  saved: (t) => t('See the places you saved', 'Xem địa điểm đã lưu', '保存したスポットを見る', '查看你保存的地点'),
-  search: (t) => t('Find new places on Google Maps', 'Tìm địa điểm mới trên Google Maps', 'Google マップで新しいスポットを探す', '在 Google 地图上发现新地点'),
-  trip: (t) => t('Save this trip', 'Lưu chuyến đi này', 'この旅程を保存', '保存这个行程'),
-  start: (t) => t('Find a starting point', 'Tìm điểm xuất phát', '出発地を探す', '寻找出发地点'),
-  checkin: (t) => t('Check in here', 'Check-in ở đây', 'ここにチェックイン', '在这里打卡'),
+  save: (t) => t('Save this place', 'Lưu địa điểm này', 'このスポットを保存', '保存这个地点', '儲存這個地點'),
+  like: (t) => t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集'),
+  copy: (t) => t('Save a copy to your account', 'Lưu bản sao về tài khoản', 'コピーを自分のアカウントに保存', '保存副本到你的账号', '儲存副本到你的帳號'),
+  saved: (t) => t('See the places you saved', 'Xem địa điểm đã lưu', '保存したスポットを見る', '查看你保存的地点', '檢視你儲存的地點'),
+  search: (t) => t('Find new places on Google Maps', 'Tìm địa điểm mới trên Google Maps', 'Google マップで新しいスポットを探す', '在 Google 地图上发现新地点', '在 Google 地圖上發現新地點'),
+  trip: (t) => t('Save this trip', 'Lưu chuyến đi này', 'この旅程を保存', '保存这个行程', '儲存這個行程'),
+  start: (t) => t('Find a starting point', 'Tìm điểm xuất phát', '出発地を探す', '寻找出发地点', '尋找出發地點'),
+  checkin: (t) => t('Check in here', 'Check-in ở đây', 'ここにチェックイン', '在这里打卡', '在這裡打卡'),
 };
 
 /** Width over height of both files (900×471). */
@@ -90,7 +90,7 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       {/* Tapping the dimmed area dismisses — the same escape as "Not now". */}
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         style={[
           s.sheet,
@@ -121,11 +121,11 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
           <LinearGradient {...gradAI} style={s.primary}>
             {/* Both words: a reader without an account reads "Sign in" as
                 a door for somebody else. */}
-            <Text style={s.primaryText}>{t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録', '登录 / 注册')}</Text>
+            <Text style={s.primaryText}>{t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録', '登录 / 注册', '登入 / 註冊')}</Text>
           </LinearGradient>
         </PressableScale>
         <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.secondary}>
-          <Text style={s.secondaryText}>{t('Not now', 'Để sau', '今はしない', '暂不')}</Text>
+          <Text style={s.secondaryText}>{t('Not now', 'Để sau', '今はしない', '暂不', '暫不')}</Text>
         </PressableScale>
       </Animated.View>
     </Modal>

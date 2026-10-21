@@ -15,7 +15,7 @@ import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 import type { Place } from '../lib/data';
 
-const state = vi.hoisted(() => ({ lang: 'en' as Exclude<Lang, 'zh'>, saved: new Set<string>() }));
+const state = vi.hoisted(() => ({ lang: 'en' as Exclude<Lang, 'zh' | 'zh-Hant'>, saved: new Set<string>() }));
 const save = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/i18n', () => ({

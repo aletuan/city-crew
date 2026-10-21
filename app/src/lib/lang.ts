@@ -6,33 +6,41 @@
 // Simplified Chinese joined on 21 Oct 2026, as the plumbing first: the
 // language can be chosen, dates and durations are written its way, and
 // every string not yet translated falls back to English, so a screen is
-// never blank while the translation catches up. `zh` is Simplified; a
-// Traditional script would be its own code.
-export type Lang = 'en' | 'vi' | 'ja' | 'zh';
+// never blank while the translation catches up. `zh` is Simplified.
+//
+// Traditional Chinese joined the same day as its own code, `zh-Hant`, with
+// Taiwan's vocabulary (軟體, 資訊, 登入). Not a variant of `zh`: a reader
+// in Taipei who is handed Simplified has been told something about where
+// they live, so the two never stand in for each other — each falls to
+// English. The label is the script, 繁體中文, never a country.
+export type Lang = 'en' | 'vi' | 'ja' | 'zh' | 'zh-Hant';
 
 type Str = string | null | undefined;
 
 /**
  * Which variant a reader of `lang` is handed, or null when every slot is
  * empty. The fallback order, written once: Vietnamese falls to English;
- * Japanese and Chinese fall to English, then Vietnamese; English falls to
- * Vietnamese. `t` is this plus a lookup, so the two cannot drift.
+ * Japanese and both Chineses fall to English, then Vietnamese; English
+ * falls to Vietnamese. `t` is this plus a lookup, so the two cannot drift.
  *
  * Chinese falls to English and not to Japanese, though the scripts share
  * characters: a Japanese sentence is not readable Chinese, and English is
- * the language a Chinese visitor to Việt Nam is likeliest to read.
+ * the language a Chinese visitor to Việt Nam is likeliest to read. The
+ * two scripts do not fall to each other either; see `Lang`.
  *
  * Null, not undefined, is "nothing" here — an empty string is a written
  * (if empty) value, exactly as `t`'s `??` has always treated it.
  */
-export function spokenIn(lang: Lang, en: Str, vi: Str, ja?: Str, zh?: Str): Lang | null {
+export function spokenIn(lang: Lang, en: Str, vi: Str, ja?: Str, zh?: Str, hant?: Str): Lang | null {
   const order: [Lang, Str][] = lang === 'vi'
     ? [['vi', vi], ['en', en]]
     : lang === 'ja'
       ? [['ja', ja], ['en', en], ['vi', vi]]
       : lang === 'zh'
         ? [['zh', zh], ['en', en], ['vi', vi]]
-        : [['en', en], ['vi', vi]];
+        : lang === 'zh-Hant'
+          ? [['zh-Hant', hant], ['en', en], ['vi', vi]]
+          : [['en', en], ['vi', vi]];
   const hit = order.find(([, s]) => s != null);
   return hit ? hit[0] : null;
 }
@@ -45,14 +53,14 @@ export function spokenIn(lang: Lang, en: Str, vi: Str, ja?: Str, zh?: Str): Lang
 // the phone's language when the app has it; a choice made in Profile
 // still wins over it, and is the only thing ever stored.
 //
-// Chinese is the case that needed thought. `zh` is Simplified, and
-// Simplified is not what a reader in Taiwan, Hong Kong or Macau writes:
-// handing it to them unasked reads as a statement about where they live,
-// not as a convenience. So a Traditional tag is a language the app does
-// not speak yet, and the walk moves on to the next one the reader listed
-// — English, for most — rather than to the nearest script. A reader who
-// wants Simplified can still pick it; the app does not pick it for them.
-// When Traditional exists it is one more branch here.
+// Chinese is the case that needed thought. Simplified is not what a
+// reader in Taiwan, Hong Kong or Macau writes, and handing it to them
+// unasked reads as a statement about where they live, not as a
+// convenience. So the script decides: a tag that names one (`zh-Hant`,
+// `zh-Hans`) is taken at its word, and a tag that names only a region
+// (`zh-TW`) is read the way that region writes. Until Traditional
+// existed a Traditional tag was skipped, to English; it opens in 繁體中文
+// now.
 
 /** Regions whose Chinese is written in Traditional characters when a tag
  *  names no script: `zh-TW` is Traditional though it never says so. */
@@ -72,7 +80,7 @@ export function langFromLocales(tags: readonly string[]): Lang {
     if (base !== 'zh') continue;
     const script = rest.find((p) => p === 'hans' || p === 'hant');
     const traditional = script ? script === 'hant' : rest.some((p) => TRADITIONAL.has(p));
-    if (!traditional) return 'zh';
+    return traditional ? 'zh-Hant' : 'zh';
   }
   return 'en';
 }

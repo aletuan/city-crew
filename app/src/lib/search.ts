@@ -269,7 +269,7 @@ function factsHaystack(p: Searchable): string {
 function categoryWords(p: Searchable): string {
   return categoriesOf(p).flatMap((c) => {
     const cat = CATEGORIES[c];
-    return cat ? [c, cat.en, cat.vi, cat.ja, cat.zh] : [c];
+    return cat ? [c, cat.en, cat.vi, cat.ja, cat.zh, cat.hant] : [c];
   }).join(' ');
 }
 

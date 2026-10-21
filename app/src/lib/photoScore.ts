@@ -75,7 +75,7 @@ export type PhotoScore = {
   signals: Signals;
 };
 
-export type T = (en: string, vi: string, ja?: string, zh?: string) => string;
+export type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string;
 
 /** A scorer by name and by the version of its reading. */
 export type ScorerKey = { id: string; version: number };
@@ -175,10 +175,10 @@ export function band(ten: number): Band {
 
 export function bandLabel(b: Band, t: T): string {
   return {
-    excellent: t('Very good', 'Rất tốt', 'とても良い', '非常好'),
-    good: t('Good', 'Tốt', '良い', '良好'),
-    fair: t('Fair', 'Khá', 'まずまず', '一般'),
-    weak: t('Weak', 'Chưa tốt', 'いまひとつ', '弱'),
+    excellent: t('Very good', 'Rất tốt', 'とても良い', '非常好', '非常好'),
+    good: t('Good', 'Tốt', '良い', '良好', '良好'),
+    fair: t('Fair', 'Khá', 'まずまず', '一般', '一般'),
+    weak: t('Weak', 'Chưa tốt', 'いまひとつ', '弱', '弱'),
   }[b];
 }
 

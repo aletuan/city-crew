@@ -234,18 +234,18 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       // sheet says so rather than showing the policy's own sentence.
       if (isDailyLimit(e)) {
         Alert.alert(
-          t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで', '今天就到这里吧'),
+          t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで', '今天就到这里吧', '今天就到這裡吧'),
           t(
             `You can save ${DAILY_CAPS.placesIntoLists} places a day. Come back tomorrow.`,
             `Mỗi ngày bạn có thể lưu ${DAILY_CAPS.placesIntoLists} địa điểm. Mai quay lại nhé.`,
             `1日に${DAILY_CAPS.placesIntoLists}件まで保存できます。また明日どうぞ。`,
-            `你每天可以保存 ${DAILY_CAPS.placesIntoLists} 个地点。明天再来吧。`,
+            `你每天可以保存 ${DAILY_CAPS.placesIntoLists} 个地点。明天再来吧。`, `你每天可以儲存 ${DAILY_CAPS.placesIntoLists} 個地點。明天再來吧。`,
           ),
         );
         return;
       }
       Alert.alert(
-        t('Could not save', 'Không lưu được', '保存できませんでした', '无法保存'),
+        t('Could not save', 'Không lưu được', '保存できませんでした', '无法保存', '無法儲存'),
         e instanceof Error ? e.message : String(e),
       );
     }

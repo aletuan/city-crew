@@ -101,6 +101,7 @@ describe('updateDate', () => {
   it('writes day first in Vietnamese', () => {
     expect(updateDate(d, 'vi')).toBe('09/09/2026 07:05');
     expect(updateDate(d, 'zh')).toBe('2026/09/09 07:05');
+    expect(updateDate(d, 'zh-Hant')).toBe('2026/09/09 07:05');
   });
 
   it('writes year first in Japanese', () => {

@@ -257,6 +257,13 @@ describe('placeHaystack', () => {
     expect(matches(placeHaystack({ name_en: 'A', categories: ['nightlife'] }), queryTerms('夜生活'))).toBe(true);
   });
 
+  // And in Traditional: a reader in Taipei types 咖啡館, and 購物 rather
+  // than 购物 — the label is in the haystack, and so is the term.
+  it('finds a place by its category in Traditional Chinese', () => {
+    expect(matches(placeHaystack({ name_en: 'A', categories: ['cafes'] }), queryTerms('咖啡館'))).toBe(true);
+    expect(matches(placeHaystack({ name_en: 'A', categories: ['fun'] }), queryTerms('娛樂'))).toBe(true);
+  });
+
   it('reads the description, the area and the address too', () => {
     const hay = placeHaystack({
       name_en: 'A', desc_en: 'Third-wave espresso', neighborhood_en: 'Hoàn Kiếm',

@@ -4,9 +4,9 @@ import {
 } from './sketch';
 
 const steps: Step[] = [
-  { key: 'a', en: 'a', vi: 'a', ja: 'a', zh: 'a' },
-  { key: 'b', en: 'b', vi: 'b', ja: 'b', zh: 'b' },
-  { key: 'c', en: 'c', vi: 'c', ja: 'c', zh: 'c' },
+  { key: 'a', en: 'a', vi: 'a', ja: 'a', zh: 'a', hant: 'a' },
+  { key: 'b', en: 'b', vi: 'b', ja: 'b', zh: 'b', hant: 'b' },
+  { key: 'c', en: 'c', vi: 'c', ja: 'c', zh: 'c', hant: 'c' },
 ];
 
 describe('SKETCH_STEPS', () => {

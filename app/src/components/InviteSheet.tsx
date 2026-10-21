@@ -95,26 +95,26 @@ export default function InviteSheet({
   };
 
   const label = sending
-    ? t('Sending…', 'Đang gửi…', '送信中…', '发送中…')
+    ? t('Sending…', 'Đang gửi…', '送信中…', '发送中…', '傳送中…')
     : invite.length
       ? t(
         `Send ${invite.length} invite${invite.length === 1 ? '' : 's'}`,
         `Gửi ${invite.length} lời mời`,
         `${invite.length}件の招待を送る`,
-        `发送 ${invite.length} 个邀请`,
+        `发送 ${invite.length} 个邀请`, `傳送 ${invite.length} 個邀請`,
       )
       : withdraw.length
         ? t(
           `Take back ${withdraw.length}`,
           `Rút lại ${withdraw.length}`,
           `${withdraw.length}件を取り消す`,
-          `撤回 ${withdraw.length} 个`,
+          `撤回 ${withdraw.length} 个`, `撤回 ${withdraw.length} 個`,
         )
-        : t('Send invites', 'Gửi lời mời', '招待を送る', '发送邀请');
+        : t('Send invites', 'Gửi lời mời', '招待を送る', '发送邀请', '傳送邀請');
 
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         style={[
           s.sheet,
@@ -125,13 +125,13 @@ export default function InviteSheet({
         ]}
       >
         <View style={s.grabber} />
-        <Text style={s.title}>{t('Who’s coming?', 'Ai sẽ đi cùng?', '誰と行く？', '谁一起来？')}</Text>
+        <Text style={s.title}>{t('Who’s coming?', 'Ai sẽ đi cùng?', '誰と行く？', '谁一起来？', '誰一起來？')}</Text>
         <Text style={s.subtitle}>
           {company === 'couple'
-            ? t('A couple’s evening — pick who joins.', 'Buổi tối hai người — chọn người đi cùng.', 'ふたりの夜 — 誰を誘う？', '两人的夜晚 — 选择同行的人。')
+            ? t('A couple’s evening — pick who joins.', 'Buổi tối hai người — chọn người đi cùng.', 'ふたりの夜 — 誰を誘う？', '两人的夜晚 — 选择同行的人。', '兩人的夜晚 — 選擇同行的人。')
             : company === 'family'
-              ? t('A family day — pick who joins.', 'Ngày của gia đình — chọn người đi cùng.', '家族の日 — 誰を誘う？', '家庭日 — 选择同行的人。')
-              : t('A friends day — pick who joins.', 'Ngày với bạn bè — chọn người đi cùng.', '友だちとの日 — 誰を誘う？', '朋友聚会日 — 选择同行的人。')}
+              ? t('A family day — pick who joins.', 'Ngày của gia đình — chọn người đi cùng.', '家族の日 — 誰を誘う？', '家庭日 — 选择同行的人。', '家庭日 — 選擇同行的人。')
+              : t('A friends day — pick who joins.', 'Ngày với bạn bè — chọn người đi cùng.', '友だちとの日 — 誰を誘う？', '朋友聚会日 — 选择同行的人。', '朋友聚會日 — 選擇同行的人。')}
         </Text>
 
         {friendIds.length === 0 ? (
@@ -143,7 +143,7 @@ export default function InviteSheet({
               'Nobody in your crew yet. Add a friend first, then you can invite them.',
               'Chưa có ai trong nhóm. Thêm bạn trước rồi mới mời được.',
               'まだ仲間がいません。先に友だちを追加してください。',
-              '你还没有好友。先添加好友，然后就可以邀请了。',
+              '你还没有好友。先添加好友，然后就可以邀请了。', '你還沒有好友。先新增好友，然後就可以邀請了。',
             )}
           </Text>
         ) : (
@@ -170,7 +170,7 @@ export default function InviteSheet({
                   <Avatar url={p?.avatar_url} size={44} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={s.name} numberOfLines={1}>
-                      {p?.full_name || p?.handle || t('Someone', 'Ai đó', '誰か', '某人')}
+                      {p?.full_name || p?.handle || t('Someone', 'Ai đó', '誰か', '某人', '某人')}
                     </Text>
                     <Text style={s.meta} numberOfLines={1}>
                       {p?.handle ? `@${p.handle}` : ''}
@@ -178,7 +178,7 @@ export default function InviteSheet({
                         `${n} mutual save${n === 1 ? '' : 's'}`,
                         `${n} nơi cùng lưu`,
                         `共通の保存 ${n}`,
-                        `${n} 个共同收藏`,
+                        `${n} 个共同收藏`, `${n} 個共同收藏`,
                       )}` : ''}
                     </Text>
                   </View>
@@ -187,7 +187,7 @@ export default function InviteSheet({
                       one that can. */}
                   {r.locked ? (
                     <Text style={s.locked}>
-                      {t('Answered', 'Đã trả lời', '回答済み', '已回复')}
+                      {t('Answered', 'Đã trả lời', '回答済み', '已回复', '已回覆')}
                     </Text>
                   ) : (
                     <View style={[s.tick, on && s.tickOn]}>
@@ -208,27 +208,27 @@ export default function InviteSheet({
                 'This trip is full — twenty is the most one evening can hold.',
                 'Chuyến này đã đầy — một buổi tối tối đa hai mươi người.',
                 'この旅程は満員です — 一晩は最大20人までです。',
-                '这个行程已满 — 一个晚上最多 20 人。',
+                '这个行程已满 — 一个晚上最多 20 人。', '這個行程已滿 — 一個晚上最多 20 人。',
               )
               : seatsHeld
                 ? t(
                   'A couple’s evening is complete — your guest has answered.',
                   'Buổi tối hai người đã đủ — người đi cùng đã trả lời.',
                   'ふたりの夜はそろいました — 相手はもう回答しています。',
-                  '两人的夜晚已凑齐 — 对方已经回复。',
+                  '两人的夜晚已凑齐 — 对方已经回复。', '兩人的夜晚已湊齊 — 對方已經回覆。',
                 )
                 : full
                   ? t(
                     'A couple’s evening seats one guest — untick to choose someone else.',
                     'Buổi tối hai người chỉ mời một người — bỏ chọn để đổi người khác.',
                     'ふたりの夜は1人だけ — 変えるにはチェックを外してください。',
-                    '两人的夜晚只能邀请一位 — 取消勾选可换人。',
+                    '两人的夜晚只能邀请一位 — 取消勾选可换人。', '兩人的夜晚只能邀請一位 — 取消勾選可換人。',
                   )
                   : t(
                     'They see the plan once they accept. Times and stops stay yours to edit.',
                     'Họ thấy kế hoạch sau khi đồng ý. Giờ giấc và các điểm dừng vẫn do bạn sửa.',
                     '承諾すると予定が見えます。時刻とスポットはあなたが編集します。',
-                    '对方接受后即可看到计划。时间和地点仍由你编辑。',
+                    '对方接受后即可看到计划。时间和地点仍由你编辑。', '對方接受後即可看到計畫。時間和地點仍由你編輯。',
                   )}
           </Text>
         </View>
@@ -243,7 +243,7 @@ export default function InviteSheet({
         />
 
         <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.later}>
-          <Text style={s.laterText}>{t('Not now', 'Để sau', 'あとで', '暂不')}</Text>
+          <Text style={s.laterText}>{t('Not now', 'Để sau', 'あとで', '暂不', '暫不')}</Text>
         </PressableScale>
       </Animated.View>
     </Modal>

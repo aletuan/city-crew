@@ -88,7 +88,7 @@ export function publishBlockers(members: Reviewable[]): { pending: number; flagg
  */
 export function blockerSentence(
   { pending, flagged }: { pending: number; flagged: number },
-  t: (en: string, vi: string, ja: string, zh?: string) => string,
+  t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): string {
   const parts: string[] = [];
   if (pending) {
@@ -100,7 +100,7 @@ export function blockerSentence(
       `${pending} ${pending === 1 ? 'place is' : 'places are'} not public yet`,
       `${pending} địa điểm chưa công khai`,
       `${pending}件がまだ公開されていません`,
-      `${pending} 个地点尚未公开`,
+      `${pending} 个地点尚未公开`, `${pending} 個地點尚未公開`,
     ));
   }
   if (flagged) {
@@ -108,14 +108,14 @@ export function blockerSentence(
       `${flagged} ${flagged === 1 ? 'was' : 'were'} not accepted`,
       `${flagged} địa điểm không được duyệt`,
       `${flagged}件が不採用です`,
-      `${flagged} 个未通过`,
+      `${flagged} 个未通过`, `${flagged} 個未通過`,
     ));
   }
   return t(
     `Private until every place is live — ${parts.join(', and ')}.`,
     `Riêng tư cho tới khi mọi địa điểm hiển thị — ${parts.join(', và ')}.`,
     `すべてのスポットが公開されるまで非公開です — ${parts.join('、')}。`,
-    `所有地点上线前保持私密 — ${parts.join('，')}。`,
+    `所有地点上线前保持私密 — ${parts.join('，')}。`, `所有地點上線前保持私密 — ${parts.join('，')}。`,
   );
 }
 

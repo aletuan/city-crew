@@ -76,7 +76,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
     'Would you like to add photos to your place?',
     'Bạn có muốn thêm ảnh cho địa điểm của mình?',
     'この場所に写真を追加しますか？',
-    '想为你的地点添加照片吗？',
+    '想为你的地点添加照片吗？', '想為你的地點新增照片嗎？',
   );
 
   return (
@@ -90,7 +90,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
       <PressableScale
         onPress={onOpen}
         accessibilityRole="button"
-        accessibilityLabel={t('Gallery', 'Gallery', 'ギャラリー', '相册')}
+        accessibilityLabel={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')}
         accessibilityHint={ask}
         // A card's press, not a button's: 0.97 on something this wide
         // moves its edges 5pt and reads as a lurch (InviteCard uses this).
@@ -150,8 +150,8 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
               take one, and neither does any other string in this app. */}
           <Text style={s.title} numberOfLines={1}>
             {who
-              ? t(`Hi ${who},`, `Chào ${who},`, `${who}さん、`, `${who}，你好：`)
-              : t('Hi there,', 'Chào bạn,', 'こんにちは、', '你好：')}
+              ? t(`Hi ${who},`, `Chào ${who},`, `${who}さん、`, `${who}，你好：`, `${who}，你好：`)
+              : t('Hi there,', 'Chào bạn,', 'こんにちは、', '你好：', '你好：')}
           </Text>
           <Text style={s.sub}>
             {ask}

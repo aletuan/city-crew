@@ -64,7 +64,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // rating, distance, and hours without that confusing symbol.
   const spoken = [
     name,
-    ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評価 ${ratingFact}`, `评分 ${ratingFact}`) : null,
+    ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評価 ${ratingFact}`, `评分 ${ratingFact}`, `評分 ${ratingFact}`) : null,
     distanceFact,
     hours,
   ].filter((f): f is string => !!f).join(', ');

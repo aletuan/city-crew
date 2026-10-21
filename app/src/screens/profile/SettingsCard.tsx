@@ -46,7 +46,7 @@ export function SettingsCard() {
   const [themeOpen, setThemeOpen] = useState(back.sheet === 'theme');
   useEffect(() => { if (back.sheet) back.spendSheet(); }, [back]);
   const { scheme, pref } = useScheme();
-  const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語', zh: '简体中文' }[lang];
+  const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語', zh: '简体中文', 'zh-Hant': '繁體中文' }[lang];
   const tour = useSignupTour();
   // The invitation the switch raises floats over the page, above the tab
   // bar; with the card low on the screen it would cover the switch itself
@@ -71,13 +71,13 @@ export function SettingsCard() {
           // "City" alone read as a fact about the reader, sitting one card
           // below "Hometown", which is one. This is the catalog the app is
           // showing — it changes when you travel, and the label now says so.
-          label={t('Current city', 'Thành phố hiện tại', '現在の都市', '当前城市')}
+          label={t('Current city', 'Thành phố hiện tại', '現在の都市', '当前城市', '目前城市')}
           value={city ? t(city.short_en, city.short_vi, city.short_ja) : '…'}
           onPress={() => setOpen(true)}
         />
         <SettingRow
           icon="language-outline"
-          label={t('Language', 'Ngôn ngữ', '言語', '语言')}
+          label={t('Language', 'Ngôn ngữ', '言語', '语言', '語言')}
           value={langLabel ?? 'English'}
           onPress={() => setLangOpen(true)}
           testID="profile-language"
@@ -89,14 +89,14 @@ export function SettingsCard() {
             wear their own mark (`schemeIcon`). */}
         <SettingRow
           icon={schemeIcon(pref, scheme)}
-          label={t('Theme', 'Giao diện', 'テーマ', '主题')}
+          label={t('Theme', 'Giao diện', 'テーマ', '主题', '主題')}
           value={schemeLabel(pref, t)}
           onPress={() => setThemeOpen(true)}
           testID="profile-theme"
         />
         <SwitchRow
           icon="bulb-outline"
-          label={t('Show guide', 'Hiện hướng dẫn', 'ガイドを表示', '显示新手引导')}
+          label={t('Show guide', 'Hiện hướng dẫn', 'ガイドを表示', '显示新手引导', '顯示新手引導')}
           value={tour.enabled}
           onChange={tour.setEnabled}
           testID="profile-tips"
@@ -105,7 +105,7 @@ export function SettingsCard() {
         />
         {tour.enabled && <SettingRow
           icon="refresh-outline"
-          label={t('Replay guide', 'Xem lại hướng dẫn', 'ガイドをもう一度見る', '重新播放新手引导')}
+          label={t('Replay guide', 'Xem lại hướng dẫn', 'ガイドをもう一度見る', '重新播放新手引导', '重新播放新手引導')}
           onPress={tour.replay}
           testID="profile-replay-guide"
           last

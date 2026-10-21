@@ -124,7 +124,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   const fail = useCallback((e: unknown) => {
     Alert.alert(
-      t('That did not work', 'Chưa làm được', 'うまくいきませんでした', '操作未成功'),
+      t('That did not work', 'Chưa làm được', 'うまくいきませんでした', '操作未成功', '操作未成功'),
       e instanceof Error ? e.message : String(e),
     );
   }, [t]);
@@ -186,18 +186,18 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   const confirmDelete = (ids: string[]) => Alert.alert(
     ids.length === 1
-      ? t('Delete this photo?', 'Xoá ảnh này?', 'この写真を削除しますか？', '删除这张照片？')
-      : t(`Delete ${ids.length} photos?`, `Xoá ${ids.length} ảnh?`, `${ids.length}枚の写真を削除しますか？`, `删除 ${ids.length} 张照片？`),
+      ? t('Delete this photo?', 'Xoá ảnh này?', 'この写真を削除しますか？', '删除这张照片？', '刪除這張照片？')
+      : t(`Delete ${ids.length} photos?`, `Xoá ${ids.length} ảnh?`, `${ids.length}枚の写真を削除しますか？`, `删除 ${ids.length} 张照片？`, `刪除 ${ids.length} 張照片？`),
     t(
       'It comes off the place for everyone. This cannot be undone.',
       'Ảnh sẽ biến mất khỏi địa điểm với mọi người. Không hoàn tác được.',
       'この場所から全員に対して消えます。元に戻せません。',
-      '所有人都将看不到这张照片。此操作无法撤销。',
+      '所有人都将看不到这张照片。此操作无法撤销。', '所有人都將看不到這張照片。此操作無法復原。',
     ),
     [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
+      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
       {
-        text: t('Delete', 'Xoá', '削除', '删除'),
+        text: t('Delete', 'Xoá', '削除', '删除', '刪除'),
         style: 'destructive',
         onPress: () => {
           void run(async () => {
@@ -220,35 +220,35 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       key: a,
       ...(photo.is_cover ? {
         icon: 'star' as const, selected: true,
-        title: t('It is the cover', 'Đang là ảnh bìa', 'カバーです', '这是封面'),
-        desc: t('The picture that stands for the place.', 'Ảnh đại diện cho địa điểm.', 'この場所を代表する写真です。', '代表这个地点的照片。'),
+        title: t('It is the cover', 'Đang là ảnh bìa', 'カバーです', '这是封面', '這是封面'),
+        desc: t('The picture that stands for the place.', 'Ảnh đại diện cho địa điểm.', 'この場所を代表する写真です。', '代表这个地点的照片。', '代表這個地點的照片。'),
       } : {
         icon: 'star-outline' as const,
-        title: t('Make it the cover', 'Đặt làm ảnh bìa', 'カバーにする', '设为封面'),
-        desc: t('The picture that stands for the place, first wherever it appears.', 'Ảnh đại diện cho địa điểm, đứng đầu ở mọi nơi.', 'この場所を代表する写真になり、どこでも先頭に出ます。', '代表这个地点的照片，在任何地方都排在第一张。'),
+        title: t('Make it the cover', 'Đặt làm ảnh bìa', 'カバーにする', '设为封面', '設為封面'),
+        desc: t('The picture that stands for the place, first wherever it appears.', 'Ảnh đại diện cho địa điểm, đứng đầu ở mọi nơi.', 'この場所を代表する写真になり、どこでも先頭に出ます。', '代表这个地点的照片，在任何地方都排在第一张。', '代表這個地點的照片，在任何地方都排在第一張。'),
       }),
-      short: t('Cover', 'Ảnh bìa', 'カバー', '封面'),
+      short: t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面'),
       onPress: () => { void run(() => setCover(photo.id)); },
     },
     hide: {
       key: a, icon: 'eye-off-outline' as const,
-      title: t('Hide it', 'Ẩn ảnh', '非表示にする', '隐藏'),
-      short: t('Hide', 'Ẩn', '非表示', '隐藏'),
-      desc: t('Readers stop seeing it. You can show it again.', 'Người xem không thấy nữa. Bạn hiện lại được.', '読者には見えなくなります。再表示できます。', '其他人将看不到它。你可以重新显示。'),
+      title: t('Hide it', 'Ẩn ảnh', '非表示にする', '隐藏', '隱藏'),
+      short: t('Hide', 'Ẩn', '非表示', '隐藏', '隱藏'),
+      desc: t('Readers stop seeing it. You can show it again.', 'Người xem không thấy nữa. Bạn hiện lại được.', '読者には見えなくなります。再表示できます。', '其他人将看不到它。你可以重新显示。', '其他人將看不到它。你可以重新顯示。'),
       onPress: () => { void run(() => setHidden(photo.id, true)); },
     },
     unhide: {
       key: a, icon: 'eye-outline' as const,
-      title: t('Show it again', 'Hiện lại', '再表示する', '重新显示'),
-      short: t('Show', 'Hiện lại', '再表示', '显示'),
-      desc: t('Back on the place for everyone.', 'Trở lại địa điểm với mọi người.', 'この場所に再び表示されます。', '重新对所有人显示。'),
+      title: t('Show it again', 'Hiện lại', '再表示する', '重新显示', '重新顯示'),
+      short: t('Show', 'Hiện lại', '再表示', '显示', '顯示'),
+      desc: t('Back on the place for everyone.', 'Trở lại địa điểm với mọi người.', 'この場所に再び表示されます。', '重新对所有人显示。', '重新對所有人顯示。'),
       onPress: () => { void run(() => setHidden(photo.id, false)); },
     },
     delete: {
       key: a, icon: 'trash-outline' as const, destructive: true,
-      title: t('Delete it', 'Xoá ảnh', '削除する', '删除'),
-      short: t('Delete', 'Xoá', '削除', '删除'),
-      desc: t('Gone from the place, for good.', 'Xoá hẳn khỏi địa điểm.', 'この場所から完全に消えます。', '从这个地点永久移除。'),
+      title: t('Delete it', 'Xoá ảnh', '削除する', '删除', '刪除'),
+      short: t('Delete', 'Xoá', '削除', '删除', '刪除'),
+      desc: t('Gone from the place, for good.', 'Xoá hẳn khỏi địa điểm.', 'この場所から完全に消えます。', '从这个地点永久移除。', '從這個地點永久移除。'),
       onPress: () => confirmDelete([photo.id]),
     },
   }[a]);
@@ -295,7 +295,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   if ((catalogLoading || elsewhere.loading) && !place) {
     return (
-      <Screen title={t('Gallery', 'Gallery', 'ギャラリー', '相册')} onBack={() => navigation.goBack()}>
+      <Screen title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')} onBack={() => navigation.goBack()}>
         <ActivityIndicator color={colors.accent} style={{ marginTop: 64 }} />
       </Screen>
     );
@@ -304,15 +304,15 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // alone — but a route can be typed, and this is what it says.
   if (!place || !mayKeep) {
     return (
-      <Screen title={t('Gallery', 'Gallery', 'ギャラリー', '相册')} onBack={() => navigation.goBack()}>
-        <Empty text={t('This is not yours to keep.', 'Đây không phải gallery của bạn.', 'これはあなたのギャラリーではありません。', '你无权管理这个相册。')} />
+      <Screen title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')} onBack={() => navigation.goBack()}>
+        <Empty text={t('This is not yours to keep.', 'Đây không phải gallery của bạn.', 'これはあなたのギャラリーではありません。', '你无权管理这个相册。', '你無權管理這個相簿。')} />
       </Screen>
     );
   }
 
   return (
     <Screen
-      title={t('Gallery', 'Gallery', 'ギャラリー', '相册')}
+      title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')}
       subtitle={name}
       onBack={() => navigation.goBack()}
       // The one invitation on the screen. Not repeated as a tile in the
@@ -321,9 +321,9 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       right={mode === 'view' ? (
         <AddPill
           tall
-          label={t('Add', 'Thêm', '追加', '添加')}
+          label={t('Add', 'Thêm', '追加', '添加', '新增')}
           busy={adder.busy}
-          accessibilityLabel={t('Add a photo', 'Thêm ảnh', '写真を追加', '添加照片')}
+          accessibilityLabel={t('Add a photo', 'Thêm ảnh', '写真を追加', '添加照片', '新增照片')}
           onPress={() => { void adder.add(); }}
         />
       ) : undefined}
@@ -338,7 +338,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         {shown.length > 0 && (
           <View style={s.tools} testID="gallery-tools">
             {mode === 'view' && (
-              <Tool icon="checkmark-circle-outline" label={t('Select', 'Chọn', '選択', '选择')} onPress={startPick} testID="gallery-select" />
+              <Tool icon="checkmark-circle-outline" label={t('Select', 'Chọn', '選択', '选择', '選擇')} onPress={startPick} testID="gallery-select" />
             )}
             {/* Drawn only where the phone can read, and only while there
                 is something left to read — a button that would score
@@ -347,20 +347,20 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
               <Tool
                 glyph={<ScoreGlyph size={15} color={colors.text} />}
                 label={anyScored
-                  ? t(`Score ${unscored.length} new`, `Chấm ${unscored.length} ảnh mới`, `新しい${unscored.length}枚を採点`, `为 ${unscored.length} 张新照片评分`)
-                  : t('Score photos', 'Chấm ảnh', '写真を採点', '为照片评分')}
+                  ? t(`Score ${unscored.length} new`, `Chấm ${unscored.length} ảnh mới`, `新しい${unscored.length}枚を採点`, `为 ${unscored.length} 张新照片评分`, `為 ${unscored.length} 張新照片評分`)
+                  : t('Score photos', 'Chấm ảnh', '写真を採点', '为照片评分', '為照片評分')}
                 onPress={() => { void startScoring(photoScorer!, uid); }}
                 testID="gallery-score"
               />
             )}
             {mode === 'pick' && (
               <>
-                <Tool icon="close" label={t('Cancel', 'Huỷ', 'キャンセル', '取消')} onPress={cancel} testID="gallery-cancel" />
+                <Tool icon="close" label={t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消')} onPress={cancel} testID="gallery-cancel" />
                 <Tool
                   icon="trash-outline"
                   label={picked.length
-                    ? t(`Delete ${picked.length}`, `Xoá ${picked.length}`, `${picked.length}枚を削除`, `删除 ${picked.length} 张`)
-                    : t('Delete', 'Xoá', '削除', '删除')}
+                    ? t(`Delete ${picked.length}`, `Xoá ${picked.length}`, `${picked.length}枚を削除`, `删除 ${picked.length} 张`, `刪除 ${picked.length} 張`)
+                    : t('Delete', 'Xoá', '削除', '删除', '刪除')}
                   onPress={() => { if (picked.length) confirmDelete(picked); }}
                   destructive
                   testID="gallery-delete-picked"
@@ -382,7 +382,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         {photos === null ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
         ) : shown.length === 0 && !adder.busy ? (
-          <Empty text={t('No photos yet. Add the first one.', 'Chưa có ảnh nào. Thêm ảnh đầu tiên nhé.', 'まだ写真がありません。最初の1枚を追加しましょう。', '还没有照片。添加第一张吧。')} />
+          <Empty text={t('No photos yet. Add the first one.', 'Chưa có ảnh nào. Thêm ảnh đầu tiên nhé.', 'まだ写真がありません。最初の1枚を追加しましょう。', '还没有照片。添加第一张吧。', '還沒有照片。新增第一張吧。')} />
         ) : (
           <View style={s.grid} testID="gallery-grid">
             {shown.map((p, i) => {
@@ -394,7 +394,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   disabled={busy}
                   onPress={picks ? () => togglePick(p.id) : () => open(p)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${t('Photo', 'Ảnh', '写真', '照片')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー', '封面')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示', '已隐藏')}` : ''}${p.score?.aesthetic != null ? ` · ${tenText(toTen(p.score.aesthetic))}/10` : ''}`}
+                  accessibilityLabel={`${t('Photo', 'Ảnh', '写真', '照片', '照片')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー', '封面', '封面')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示', '已隐藏', '已隱藏')}` : ''}${p.score?.aesthetic != null ? ` · ${tenText(toTen(p.score.aesthetic))}/10` : ''}`}
                   accessibilityState={picks ? { selected: picked.includes(p.id) } : undefined}
                   style={{ width: cell, height: cell }}
                   contentStyle={[s.tile, !picks && lastOpened === p.id && s.tileLast]}
@@ -414,7 +414,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   {p.is_cover && (
                     <View style={s.badge} testID="gallery-cover">
                       <Ionicons name="star" size={10} color={onPhoto.accent} />
-                      <Text style={s.badgeText}>{t('Cover', 'Bìa', 'カバー', '封面')}</Text>
+                      <Text style={s.badgeText}>{t('Cover', 'Bìa', 'カバー', '封面', '封面')}</Text>
                     </View>
                   )}
 
@@ -443,8 +443,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                 <ActivityIndicator color={colors.accent} />
                 <Text style={s.waitingText}>
                   {adder.stage === 'shrinking'
-                    ? t('Compressing…', 'Đang nén…', '圧縮中…', '压缩中…')
-                    : t('Uploading…', 'Đang tải lên…', 'アップロード中…', '上传中…')}
+                    ? t('Compressing…', 'Đang nén…', '圧縮中…', '压缩中…', '壓縮中…')
+                    : t('Uploading…', 'Đang tải lên…', 'アップロード中…', '上传中…', '上傳中…')}
                   {/* "2/4" only when there is a batch to count. */}
                   {adder.progress.total > 1 ? ` ${adder.progress.done + 1}/${adder.progress.total}` : ''}
                 </Text>
@@ -470,24 +470,24 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
               is the surprise the old wording only hinted at — the upload
               trigger (`20260921093000_guide_upload_becomes_cover.sql`)
               makes the newest photo the cover. */}
-          <Text style={s.tipsTitle}>{t('Note', 'Chú ý', 'ご注意', '注意')}</Text>
+          <Text style={s.tipsTitle}>{t('Note', 'Chú ý', 'ご注意', '注意', '注意')}</Text>
           <Tip text={t(
             'A photo you add becomes the cover.',
             'Ảnh mới thêm sẽ thành ảnh bìa.',
             '追加した写真がカバーになります。',
-            '你添加的照片会成为封面。',
+            '你添加的照片会成为封面。', '你新增的照片會成為封面。',
           )} />
           <Tip text={t(
             'The City Crew team can edit these photos too.',
             'Đội ngũ City Crew cũng có thể chỉnh các ảnh này.',
             'City Crewのチームもこれらの写真を編集できます。',
-            'City Crew 团队也可以编辑这些照片。',
+            'City Crew 团队也可以编辑这些照片。', 'City Crew 團隊也可以編輯這些照片。',
           )} />
           <Tip text={t(
             `Up to ${MAX_PER_PLACE} photos per place.`,
             `Tối đa ${MAX_PER_PLACE} ảnh cho mỗi địa điểm.`,
             `1つの場所に${MAX_PER_PLACE}枚まで。`,
-            `每个地点最多 ${MAX_PER_PLACE} 张照片。`,
+            `每个地点最多 ${MAX_PER_PLACE} 张照片。`, `每個地點最多 ${MAX_PER_PLACE} 張照片。`,
           )} />
         </Card>
       </ScrollView>

@@ -149,7 +149,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
       'Couldn’t read your location — check location access in Settings.',
       'Không đọc được vị trí — kiểm tra quyền vị trí trong Cài đặt.',
       '位置情報を取得できません — 設定で位置情報のアクセスを確認してください。',
-      '无法获取你的位置 — 请在设置中检查位置权限。',
+      '无法获取你的位置 — 请在设置中检查位置权限。', '無法取得你的位置 — 請在設定中檢查位置許可權。',
     ));
   };
 
@@ -184,7 +184,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                 against the city's own name cannot say that. */}
             {n != null && n < YOUNG_CITY_MAX && (
               <View style={s.newChip}>
-                <Text style={s.newChipText}>{t('NEW', 'MỚI', '新着', '新')}</Text>
+                <Text style={s.newChipText}>{t('NEW', 'MỚI', '新着', '新', '新')}</Text>
               </View>
             )}
           </View>
@@ -202,7 +202,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         testID="city-sheet"
         style={[s.sheet, {
@@ -221,7 +221,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
             list that scrolls, and keeps its own gesture. */}
         <View {...handlers} testID="sheet-grab">
           <View style={s.handle} />
-          <Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択', '选择城市')}</Text>
+          <Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択', '选择城市', '選擇城市')}</Text>
         </View>
 
         <View style={s.search}>
@@ -230,12 +230,12 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
             style={s.searchInput}
             value={query}
             onChangeText={setQuery}
-            placeholder={t('Search cities…', 'Tìm thành phố…', '都市を検索…', '搜索城市…')}
+            placeholder={t('Search cities…', 'Tìm thành phố…', '都市を検索…', '搜索城市…', '搜尋城市…')}
             placeholderTextColor={colors.textTertiary}
             autoCorrect={false}
             autoCapitalize="none"
             returnKeyType="search"
-            accessibilityLabel={t('Search cities', 'Tìm thành phố', '都市を検索', '搜索城市')}
+            accessibilityLabel={t('Search cities', 'Tìm thành phố', '都市を検索', '搜索城市', '搜尋城市')}
             testID="city-search"
           />
         </View>
@@ -244,14 +244,14 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
           <Ionicons name="navigate-outline" size={19} color={colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={s.rowTitle}>
-              {locating ? t('Locating…', 'Đang định vị…', '位置情報を取得中…', '定位中…') : t('Use my location', 'Dùng vị trí của tôi', '現在地を使う', '使用我的位置')}
+              {locating ? t('Locating…', 'Đang định vị…', '位置情報を取得中…', '定位中…', '定位中…') : t('Use my location', 'Dùng vị trí của tôi', '現在地を使う', '使用我的位置', '使用我的位置')}
             </Text>
             <Text style={s.rowSub}>
               {mode === 'auto'
                 ? (here
-                  ? t(`On · you're in ${here}`, `Đang bật · đang ở ${here}`, `オン · ${here}にいます`, `已开启 · 你在${here}`)
-                  : t('On · nearest city is selected for you', 'Đang bật · chọn thành phố gần bạn nhất', 'オン · 最寄りの都市を自動選択', '已开启 · 自动选择最近的城市'))
-                : t('Currently picking manually', 'Bạn đang tự chọn', '現在は手動で選択中', '当前为手动选择')}
+                  ? t(`On · you're in ${here}`, `Đang bật · đang ở ${here}`, `オン · ${here}にいます`, `已开启 · 你在${here}`, `已開啟 · 你在${here}`)
+                  : t('On · nearest city is selected for you', 'Đang bật · chọn thành phố gần bạn nhất', 'オン · 最寄りの都市を自動選択', '已开启 · 自动选择最近的城市', '已開啟 · 自動選擇最近的城市'))
+                : t('Currently picking manually', 'Bạn đang tự chọn', '現在は手動で選択中', '当前为手动选择', '目前為手動選擇')}
             </Text>
           </View>
         </PressableScale>
@@ -268,7 +268,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
         >
           {book.recent.length > 0 && (
             <>
-              <Text style={s.section} accessibilityRole="header">{t('Recent', 'Gần đây', '最近', '最近')}</Text>
+              <Text style={s.section} accessibilityRole="header">{t('Recent', 'Gần đây', '最近', '最近', '最近')}</Text>
               {book.recent.map((c, i) => cityRow(c, `city-recent-${i}`, i > 0))}
             </>
           )}
@@ -277,14 +277,14 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
               already recent, it would name nothing. */}
           {book.recent.length > 0 && book.others.length > 0 && (
             <Text style={[s.section, s.sectionNext]} accessibilityRole="header">
-              {t('Other cities', 'Thành phố khác', 'その他の都市', '其他城市')}
+              {t('Other cities', 'Thành phố khác', 'その他の都市', '其他城市', '其他城市')}
             </Text>
           )}
           {book.others.map((c, i) => cityRow(c, `city-row-${i}`, i > 0))}
           {/* Only a search can come back empty-handed. */}
           {query.trim() !== '' && book.others.length === 0 && (
             <Text style={s.empty}>
-              {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません', '没有这个城市')}
+              {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません', '没有这个城市', '沒有這個城市')}
             </Text>
           )}
         </ScrollView>

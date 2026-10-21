@@ -109,7 +109,7 @@ export function escapeRoutes(
   const present = new Set(places.flatMap((p) => categoriesOf(p)));
   for (const [key, cat] of Object.entries(CATEGORIES)) {
     if (!present.has(key)) continue;
-    const words = [key, cat.en, cat.vi, cat.ja, cat.zh, ...(terms[key] ?? [])];
+    const words = [key, cat.en, cat.vi, cat.ja, cat.zh, cat.hant, ...(terms[key] ?? [])];
     if (words.some((w) => phraseIn(q, fold(w)))) {
       out.push({ kind: 'category', key });
       break;

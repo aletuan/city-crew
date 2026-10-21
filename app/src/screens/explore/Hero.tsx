@@ -76,12 +76,12 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   // The city switcher, openable from here — see the chip in heroContent.
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const title = city?.hero_title_en
-    ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja, city.hero_title_zh)
+    ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja, city.hero_title_zh, city.hero_title_zh_hant)
     : t(
         `Ideas for a night in ${city?.short_en ?? 'the city'}`,
         `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
         `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`,
-        `${city?.short_en ?? '这座城市'}的夜晚灵感`,
+        `${city?.short_en ?? '这座城市'}的夜晚灵感`, `${city?.short_en ?? '這座城市'}的夜晚靈感`,
       );
   /**
    * The headline, broken so its second line is not one word — see
@@ -154,7 +154,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           scaleTo={0.9}
           contentStyle={s.heroSearch}
           accessibilityRole="button"
-          accessibilityLabel={t('Search', 'Tìm kiếm', '検索', '搜索')}
+          accessibilityLabel={t('Search', 'Tìm kiếm', '検索', '搜索', '搜尋')}
           anchorRef={searchAnchor}
           testID="explore-search"
         >
@@ -174,7 +174,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
             haptic="selection"
             onPress={() => setSwitcherOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel={t('Choose a city', 'Chọn thành phố', '都市を選択', '选择城市')}
+            accessibilityLabel={t('Choose a city', 'Chọn thành phố', '都市を選択', '选择城市', '選擇城市')}
             testID="explore-city"
             style={{ alignSelf: 'flex-start' }}
             contentStyle={s.heroCity}
@@ -198,12 +198,12 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
             not signed in. */}
         <Text style={s.heroSub}>
           {city?.hero_sub_en
-            ? t(city.hero_sub_en, city.hero_sub_vi, city.hero_sub_ja, city.hero_sub_zh)
+            ? t(city.hero_sub_en, city.hero_sub_vi, city.hero_sub_ja, city.hero_sub_zh, city.hero_sub_zh_hant)
             : t(
                 'Browse public collections and places — no account needed.',
                 'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
                 'コレクションとスポットを自由に閲覧 — アカウント不要。',
-                '浏览公开的合集和地点 — 无需账号。',
+                '浏览公开的合集和地点 — 无需账号。', '瀏覽公開的合集和地點 — 無需帳號。',
               )}
         </Text>
         <PressableScale onPress={onStart} accessibilityRole="button" contentStyle={{ alignSelf: 'flex-start', marginTop: 4 }}>
@@ -221,8 +221,8 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
                   module, so the only thing holding them together is
                   that each says so. */}
               {city?.hero_cta_en
-                ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja, city.hero_cta_zh)
-                : t('Explore', 'Khám phá', '探索する', '探索')}
+                ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja, city.hero_cta_zh, city.hero_cta_zh_hant)
+                : t('Explore', 'Khám phá', '探索する', '探索', '探索')}
             </Text>
             <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
           </LinearGradient>

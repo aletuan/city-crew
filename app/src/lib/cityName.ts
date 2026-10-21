@@ -13,7 +13,7 @@
 /** The three names this file reads. A full `City` satisfies it. */
 export type ShortNamed = { short_en: string; short_vi: string; short_ja?: string | null };
 
-type T = (en: string, vi: string, ja: string, zh?: string) => string;
+type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
 
 export function cityShort(c: ShortNamed, t: T): string {
   return t(c.short_en, c.short_vi, c.short_ja ?? c.short_en);

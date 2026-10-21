@@ -158,7 +158,7 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
 
 const isLook = (id: Pref): id is Pinned => Object.prototype.hasOwnProperty.call(PINNED, id);
 
-type T = (en: string, vi: string, ja?: string, zh?: string) => string;
+type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string;
 
 /**
  * How long the sheet is given to leave before the restart is asked for.
@@ -204,14 +204,14 @@ export function schemeIcon(pref: Pref, scheme: Scheme): keyof typeof Ionicons.gl
 
 /** The label for a setting, in the app's three languages. */
 export function schemeLabel(id: Pref, t: T): string {
-  if (id === 'system') return t('Automatic', 'Tự động', '自動', '自动');
+  if (id === 'system') return t('Automatic', 'Tự động', '自動', '自动', '自動');
   if (isLook(id)) {
-    const { en, vi, ja, zh } = LOOK_DEFS[id].name;
-    return t(en, vi, ja, zh);
+    const { en, vi, ja, zh, hant } = LOOK_DEFS[id].name;
+    return t(en, vi, ja, zh, hant);
   }
   return id === 'dark'
-    ? t('Dark', 'Tối', 'ダーク', '深色')
-    : t('Light', 'Sáng', 'ライト', '浅色');
+    ? t('Dark', 'Tối', 'ダーク', '深色', '深色')
+    : t('Light', 'Sáng', 'ライト', '浅色', '淺色');
 }
 
 /**
@@ -230,10 +230,10 @@ export function schemeLabel(id: Pref, t: T): string {
  * would land.
  */
 function systemNow(following: boolean, scheme: Scheme, t: T): string {
-  if (!following) return t('Following the phone', 'Theo hệ thống', '端末に合わせる', '跟随系统');
+  if (!following) return t('Following the phone', 'Theo hệ thống', '端末に合わせる', '跟随系统', '跟隨系統');
   return scheme === 'dark'
-    ? t('Following the phone · Dark', 'Theo hệ thống · Tối', '端末に合わせる · ダーク', '跟随系统 · 深色')
-    : t('Following the phone · Light', 'Theo hệ thống · Sáng', '端末に合わせる · ライト', '跟随系统 · 浅色');
+    ? t('Following the phone · Dark', 'Theo hệ thống · Tối', '端末に合わせる · ダーク', '跟随系统 · 深色', '跟隨系統 · 深色')
+    : t('Following the phone · Light', 'Theo hệ thống · Sáng', '端末に合わせる · ライト', '跟随系统 · 浅色', '跟隨系統 · 淺色');
 }
 
 /**
@@ -352,12 +352,12 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
     pending.current = null;
     setPref(id, returnTo?.(), remember(id));
     timers.current.push(setTimeout(() => Alert.alert(
-      t('Close and reopen City Crew', 'Mở lại City Crew', 'City Crew を開き直してください', '请关闭并重新打开 City Crew'),
+      t('Close and reopen City Crew', 'Mở lại City Crew', 'City Crew を開き直してください', '请关闭并重新打开 City Crew', '請關閉並重新開啟 City Crew'),
       t(
         'The new theme is saved, and appears the next time the app opens.',
         'Theme mới đã lưu. Mở lại app để thấy màu mới.',
         '新しいテーマは保存されました。次にアプリを開いたときに反映されます。',
-        '新主题已保存，下次打开应用时生效。',
+        '新主题已保存，下次打开应用时生效。', '新主題已儲存，下次開啟 App 時生效。',
       ),
     ), STUCK_MS));
   };
@@ -386,7 +386,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   }, [visible, rise]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={relaunch} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} testID="theme-close" />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} testID="theme-close" />
       <Animated.View
         style={[s.sheet, {
           paddingBottom: 14 + insets.bottom,
@@ -397,7 +397,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
             list that scrolls, and keeps its own gesture. */}
         <View {...handlers} testID="sheet-grab">
           <View style={s.handle} />
-          <Text style={s.title}>{t('Theme', 'Giao diện', 'テーマ', '主题')}</Text>
+          <Text style={s.title}>{t('Theme', 'Giao diện', 'テーマ', '主题', '主題')}</Text>
         </View>
         <ScrollView style={{ maxHeight: room }} bounces={false} showsVerticalScrollIndicator={false}>
         {grounds.map((o, i) => {
@@ -433,7 +433,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
         {palettes.length > 0 && (
           <>
             <View style={s.sectionRow}>
-              <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー', '颜色')}</Text>
+              <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー', '颜色', '顏色')}</Text>
               {/* The count, and only with somewhere to swipe to — the
                   rule `PageCount` keeps. Tabular digits so a swipe moves
                   the page and not the dot. */}
@@ -443,7 +443,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                     `${palettes.length} colours · ${page + 1}/${pages.length}`,
                     `${palettes.length} bảng màu · ${page + 1}/${pages.length}`,
                     `${palettes.length}色 · ${page + 1}/${pages.length}`,
-                    `${palettes.length} 种颜色 · ${page + 1}/${pages.length}`,
+                    `${palettes.length} 种颜色 · ${page + 1}/${pages.length}`, `${palettes.length} 種顏色 · ${page + 1}/${pages.length}`,
                   )}
                 </Text>
               )}
@@ -494,7 +494,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                               ? <Ionicons name="people" size={10} color={pillInk[scheme]} />
                               : <View style={[s.wordDot, { backgroundColor: pillInk[scheme] }]} testID={`theme-${o.id}-new-dot`} />}
                             <Text style={[s.wordText, { color: pillInk[scheme] }]}>
-                              {word === 'popular' ? t('Popular', 'Phổ biến', '人気', '热门') : t('New', 'Mới', '新着', '新建')}
+                              {word === 'popular' ? t('Popular', 'Phổ biến', '人気', '热门', '熱門') : t('New', 'Mới', '新着', '新', '新')}
                             </Text>
                           </View>
                         )}

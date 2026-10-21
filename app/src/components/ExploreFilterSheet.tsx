@@ -44,9 +44,9 @@ const STATUSES: ExploreStatus[] = ['any', 'open', 'closed'];
  * wraps to two lines in a segment while its neighbours take one.
  */
 function sortLabel(value: ExploreSort, t: ReturnType<typeof useI18n>['t']) {
-  if (value === 'distance') return t('Nearest', 'Gần nhất', '近い順', '距离最近');
-  if (value === 'rating') return t('Top rated', 'Đánh giá', '評価順', '评分最高');
-  return t('Recommended', 'Đề xuất', 'おすすめ', '推荐');
+  if (value === 'distance') return t('Nearest', 'Gần nhất', '近い順', '距离最近', '距離最近');
+  if (value === 'rating') return t('Top rated', 'Đánh giá', '評価順', '评分最高', '評分最高');
+  return t('Recommended', 'Đề xuất', 'おすすめ', '推荐', '推薦');
 }
 
 /**
@@ -75,11 +75,11 @@ function sortIcon(value: ExploreSort): keyof typeof Ionicons.glyphMap {
  * about now, and neither needs a 今 in front of it to say so.
  */
 export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t']) {
-  if (value === 'open') return t('Open now', 'Đang mở cửa', '営業中', '营业中');
-  if (value === 'closed') return t('Closed now', 'Đang đóng cửa', '営業時間外', '已打烊');
+  if (value === 'open') return t('Open now', 'Đang mở cửa', '営業中', '营业中', '營業中');
+  if (value === 'closed') return t('Closed now', 'Đang đóng cửa', '営業時間外', '已打烊', '已打烊');
   // "Any time", not "Any": it sits under a heading that asks about
   // opening hours, and the other two answers are about now.
-  return t('Any time', 'Mọi giờ', '指定なし', '不限');
+  return t('Any time', 'Mọi giờ', '指定なし', '不限', '不限');
 }
 
 /**
@@ -170,7 +170,7 @@ export default function ExploreFilterSheet({
   const dirty = isDirty(draft);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         {...handlers}
         style={[s.sheet, {
@@ -180,12 +180,12 @@ export default function ExploreFilterSheet({
       >
         <View style={s.handle} />
         <View style={s.head}>
-          <Text style={s.title}>{t('Sort & filter', 'Sắp xếp & lọc', '並べ替え・絞り込み', '排序和筛选')}</Text>
+          <Text style={s.title}>{t('Sort & filter', 'Sắp xếp & lọc', '並べ替え・絞り込み', '排序和筛选', '排序和篩選')}</Text>
           <PressableScale
             onPress={onClose}
             testID="filter-close"
             accessibilityRole="button"
-            accessibilityLabel={t('Close filters', 'Đóng bộ lọc', 'フィルターを閉じる', '关闭筛选')}
+            accessibilityLabel={t('Close filters', 'Đóng bộ lọc', 'フィルターを閉じる', '关闭筛选', '關閉篩選')}
             contentStyle={s.close}
           >
             <Ionicons name="close" size={19} color={colors.text} />
@@ -206,7 +206,7 @@ export default function ExploreFilterSheet({
             has lost. A segment gives up the radio and the long name and
             keeps the mark, the tint and the hairline; the track is what
             says these three are one answer, as it does for the hours. */}
-        <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え', '排序方式')}</Text>
+        <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え', '排序方式', '排序方式')}</Text>
         <View style={s.track} accessibilityRole="radiogroup">
           {SORTS.map((value) => {
             const active = draft.sort === value;
@@ -245,7 +245,7 @@ export default function ExploreFilterSheet({
             accent the rest of the app wears when something is chosen —
             not the white raised tile of a native iOS segmented control,
             which has no counterpart on the dark theme. */}
-        <Text style={s.legend}>{t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间')}</Text>
+        <Text style={s.legend}>{t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}</Text>
         <View style={s.track} accessibilityRole="radiogroup">
           {STATUSES.map((value) => {
             const active = draft.status === value;
@@ -279,7 +279,7 @@ export default function ExploreFilterSheet({
             "Bookmarked only" rather than naming the section twice: the
             heading says what the block is about, so the row is free to
             say what the switch does. */}
-        <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存済み', '已保存的地点')}</Text>
+        <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存済み', '已保存的地点', '已儲存的地點')}</Text>
         <Card>
         <PressableScale
           onPress={() => {
@@ -293,9 +293,9 @@ export default function ExploreFilterSheet({
           {...switchOrDoor(
             signedIn,
             draft.savedOnly,
-            t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存'),
-            t('Bookmarked only, sign in', 'Chỉ nơi đã lưu, đăng nhập', 'ブックマークのみ、サインイン', '仅看已保存，需登录'),
-            t('Sign in to filter by saved places', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして保存済みで絞り込む', '登录后可按已保存的地点筛选'),
+            t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存', '僅看已儲存'),
+            t('Bookmarked only, sign in', 'Chỉ nơi đã lưu, đăng nhập', 'ブックマークのみ、サインイン', '仅看已保存，需登录', '僅看已儲存，需登入'),
+            t('Sign in to filter by saved places', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして保存済みで絞り込む', '登录后可按已保存的地点筛选', '登入後可按已儲存的地點篩選'),
           )}
           contentStyle={[s.row, draft.savedOnly && s.rowOn]}
         >
@@ -305,7 +305,7 @@ export default function ExploreFilterSheet({
             color={draft.savedOnly ? colors.accent : colors.textSecondary}
           />
           <Text style={[s.rowText, draft.savedOnly && s.rowTextOn]}>
-            {t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存')}
+            {t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存', '僅看已儲存')}
           </Text>
           {/* Signed out this said "Sign in required" in grey, which is a
               refusal written as a label. It is a door, so it looks like
@@ -317,7 +317,7 @@ export default function ExploreFilterSheet({
             </View>
           ) : (
             <View style={s.signIn}>
-              <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录')}</Text>
+              <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.accent} />
             </View>
           )}
@@ -333,7 +333,7 @@ export default function ExploreFilterSheet({
             build can do is a question with one answer. */}
         {visitedAvailable ? (
           <>
-            <Text style={s.legend}>{t('Visited places', 'Địa điểm đã check-in', '訪問済み', '已打卡的地点')}</Text>
+            <Text style={s.legend}>{t('Visited places', 'Địa điểm đã check-in', '訪問済み', '已打卡的地点', '已打卡的地點')}</Text>
             <Card>
             <PressableScale
               onPress={() => {
@@ -344,9 +344,9 @@ export default function ExploreFilterSheet({
               {...switchOrDoor(
                 signedIn,
                 draft.visitedOnly,
-                t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡'),
-                t('Visited only, sign in', 'Chỉ nơi đã check-in, đăng nhập', '訪問済みのみ、サインイン', '仅看已打卡，需登录'),
-                t('Sign in to filter by places you checked in at', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして訪問済みで絞り込む', '登录后可按打过卡的地点筛选'),
+                t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡', '僅看已打卡'),
+                t('Visited only, sign in', 'Chỉ nơi đã check-in, đăng nhập', '訪問済みのみ、サインイン', '仅看已打卡，需登录', '僅看已打卡，需登入'),
+                t('Sign in to filter by places you checked in at', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして訪問済みで絞り込む', '登录后可按打过卡的地点筛选', '登入後可按打過卡的地點篩選'),
               )}
               contentStyle={[s.row, draft.visitedOnly && s.rowOn]}
             >
@@ -356,7 +356,7 @@ export default function ExploreFilterSheet({
                 color={draft.visitedOnly ? colors.accent : colors.textSecondary}
               />
               <Text style={[s.rowText, draft.visitedOnly && s.rowTextOn]}>
-                {t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡')}
+                {t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡', '僅看已打卡')}
               </Text>
               {signedIn ? (
                 <View style={[s.check, draft.visitedOnly && s.checkOn]}>
@@ -364,7 +364,7 @@ export default function ExploreFilterSheet({
                 </View>
               ) : (
                 <View style={s.signIn}>
-                  <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录')}</Text>
+                  <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
                   <Ionicons name="chevron-forward" size={14} color={colors.accent} />
                 </View>
               )}
@@ -408,7 +408,7 @@ export default function ExploreFilterSheet({
               contentStyle={s.reset}
             >
               <Ionicons name="refresh" size={17} color={colors.textSecondary} />
-              <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット', '重置')}</Text>
+              <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット', '重置', '重設')}</Text>
             </PressableScale>
           ) : null}
           {/* The app's own primary button, not a coral pill drawn again
@@ -430,7 +430,7 @@ export default function ExploreFilterSheet({
               busy={busy}
               onPress={() => { void apply(); }}
               testID="filter-apply"
-              label={`${t('Show', 'Hiện', '表示', '显示')} ${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', '件', '个地点')}`}
+              label={`${t('Show', 'Hiện', '表示', '显示', '顯示')} ${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', '件', '个地点', '個地點')}`}
             />
           </View>
         </View>

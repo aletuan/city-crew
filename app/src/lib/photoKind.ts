@@ -51,7 +51,7 @@ import type Ionicons from '@expo/vector-icons/Ionicons';
 export const KINDS = ['food', 'interior', 'exterior', 'garden', 'heritage', 'view', 'text', 'collage', 'other'] as const;
 export type PhotoKind = typeof KINDS[number];
 
-type T = (en: string, vi: string, ja: string, zh?: string) => string;
+type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
 
 /** The kind a sheet may say, or null: not labelled, labelled unsure, or
  *  a kind this build does not know. */
@@ -62,7 +62,7 @@ export function kindOf(labels: unknown): PhotoKind | null {
   return KINDS.find((k) => k === l.kind) ?? null;
 }
 
-type Tri = readonly [en: string, vi: string, ja: string, zh: string];
+type Tri = readonly [en: string, vi: string, ja: string, zh: string, hant: string];
 
 /** Everything the sheet says about a kind, in one row. */
 type KindDef = {
@@ -92,43 +92,43 @@ type KindDef = {
 const KIND_DEFS = {
   food: {
     icon: 'restaurant-outline',
-    name: ['Food & drink', 'Đồ ăn & uống', '料理・ドリンク', '餐饮'],
-    noun: ['food and drink', 'đồ ăn & uống', '料理・ドリンク', '餐饮'],
+    name: ['Food & drink', 'Đồ ăn & uống', '料理・ドリンク', '餐饮', '餐飲'],
+    noun: ['food and drink', 'đồ ăn & uống', '料理・ドリンク', '餐饮', '餐飲'],
   },
   interior: {
     icon: 'home-outline',
-    name: ['Inside', 'Nội thất', '店内', '室内'],
-    noun: ['interior', 'nội thất', '店内', '室内'],
+    name: ['Inside', 'Nội thất', '店内', '室内', '室內'],
+    noun: ['interior', 'nội thất', '店内', '室内', '室內'],
   },
   exterior: {
     icon: 'storefront-outline',
-    name: ['Front', 'Mặt tiền', '外観', '门面'],
-    noun: ['storefront', 'mặt tiền', '外観', '门面'],
+    name: ['Front', 'Mặt tiền', '外観', '门面', '門面'],
+    noun: ['storefront', 'mặt tiền', '外観', '门面', '門面'],
   },
   garden: {
     icon: 'leaf-outline',
-    name: ['Garden & terrace', 'Sân vườn', '庭・テラス', '庭院与露台'],
-    noun: ['garden and terrace', 'sân vườn', '庭・テラス', '庭院与露台'],
+    name: ['Garden & terrace', 'Sân vườn', '庭・テラス', '庭院与露台', '庭院與露台'],
+    noun: ['garden and terrace', 'sân vườn', '庭・テラス', '庭院与露台', '庭院與露台'],
   },
   heritage: {
     icon: 'library-outline',
-    name: ['Culture', 'Văn hóa', '文化', '文化'],
-    noun: ['culture', 'văn hóa', '文化', '文化'],
+    name: ['Culture', 'Văn hóa', '文化', '文化', '文化'],
+    noun: ['culture', 'văn hóa', '文化', '文化', '文化'],
   },
   view: {
     icon: 'image-outline',
-    name: ['View', 'Cảnh', '景色', '景色'],
-    noun: ['view', 'cảnh', '景色', '景色'],
+    name: ['View', 'Cảnh', '景色', '景色', '景色'],
+    noun: ['view', 'cảnh', '景色', '景色', '景色'],
   },
   text: {
     icon: 'document-text-outline',
-    name: ['Menu & signs', 'Chữ, menu', 'メニュー・文字', '菜单与招牌'],
-    noun: ['menu and sign', 'chữ, menu', 'メニュー・文字', '菜单与招牌'],
+    name: ['Menu & signs', 'Chữ, menu', 'メニュー・文字', '菜单与招牌', '菜單與招牌'],
+    noun: ['menu and sign', 'chữ, menu', 'メニュー・文字', '菜单与招牌', '菜單與招牌'],
   },
   collage: {
     icon: 'grid-outline',
-    name: ['Collage', 'Ảnh ghép', 'コラージュ', '拼图'],
-    noun: ['collage', 'ảnh ghép', 'コラージュ', '拼图'],
+    name: ['Collage', 'Ảnh ghép', 'コラージュ', '拼图', '拼圖'],
+    noun: ['collage', 'ảnh ghép', 'コラージュ', '拼图', '拼圖'],
   },
   // An empty frame, four corners with nothing in them, because the owner
   // asked for a picture frame. Ionicons' own picture frame,
@@ -137,8 +137,8 @@ const KIND_DEFS = {
   // painting, which reads as Culture.
   other: {
     icon: 'scan-outline',
-    name: ['Other', 'Khác', 'その他', '其他'],
-    noun: ['other', 'khác', 'その他', '其他'],
+    name: ['Other', 'Khác', 'その他', '其他', '其他'],
+    noun: ['other', 'khác', 'その他', '其他', '其他'],
   },
 } as const satisfies Record<PhotoKind, KindDef>;
 
@@ -158,4 +158,4 @@ export const kindNoun = (kind: PhotoKind, t: T): string => t(...def(kind).noun);
 /** Who said what, once a kind is shown: Apple Vision measured, Claude
  *  named the kind (owner's words, 18 Oct 2026). */
 export const bothSources = (t: T) =>
-  t('Photo analysed by Apple Vision and Claude.', 'Phân tích ảnh bằng Apple Vision và Claude.', 'Apple VisionとClaudeで写真を分析。', '照片由 Apple Vision 和 Claude 分析。');
+  t('Photo analysed by Apple Vision and Claude.', 'Phân tích ảnh bằng Apple Vision và Claude.', 'Apple VisionとClaudeで写真を分析。', '照片由 Apple Vision 和 Claude 分析。', '照片由 Apple Vision 和 Claude 分析。');

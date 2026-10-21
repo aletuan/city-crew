@@ -33,7 +33,7 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
   }, [visible, rise]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         {...handlers}
         style={[s.sheet, {
@@ -42,7 +42,7 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
         }]}
       >
         <View style={s.handle} />
-        <Text style={s.title}>{t('Choose a language', 'Chọn ngôn ngữ', '言語を選択', '选择语言')}</Text>
+        <Text style={s.title}>{t('Choose a language', 'Chọn ngôn ngữ', '言語を選択', '选择语言', '選擇語言')}</Text>
         {LANGS.map((l, i) => {
           const active = l.id === lang;
           return (

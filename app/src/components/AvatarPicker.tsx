@@ -90,7 +90,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
       // The names `setAvatar` throws — `too_soon`, `bad_image`, the three
       // stalls — become sentences here; anything else arrives as it was.
       Alert.alert(
-        t('Could not update your photo', 'Không cập nhật được ảnh', '写真を更新できませんでした', '无法更新头像'),
+        t('Could not update your photo', 'Không cập nhật được ảnh', '写真を更新できませんでした', '无法更新头像', '無法更新大頭貼'),
         failText(e instanceof Error ? e.message : String(e)),
       );
     } finally {
@@ -110,7 +110,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
 
   const fromCamera = () => start(async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) throw new Error(t('Camera access is off in Settings.', 'Quyền dùng máy ảnh đang tắt trong Cài đặt.', '設定でカメラへのアクセスが無効です。', '相机权限已在设置中关闭。'));
+    if (!perm.granted) throw new Error(t('Camera access is off in Settings.', 'Quyền dùng máy ảnh đang tắt trong Cài đặt.', '設定でカメラへのアクセスが無効です。', '相机权限已在设置中关闭。', '相機許可權已在設定中關閉。'));
     const res = await ImagePicker.launchCameraAsync(EDIT);
     if (!res.canceled && res.assets[0]) await setAvatar(res.assets[0].uri);
   });
@@ -125,7 +125,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
         onPress={open}
         scaleTo={0.94}
         accessibilityRole="button"
-        accessibilityLabel={t('Change profile photo', 'Đổi ảnh đại diện', 'プロフィール写真を変更', '更换头像')}
+        accessibilityLabel={t('Change profile photo', 'Đổi ảnh đại diện', 'プロフィール写真を変更', '更换头像', '更換大頭貼')}
       >
         {/* Two views, because one cannot do both jobs: the ring clips its
             contents to a circle, and the badge has to hang outside that
@@ -167,11 +167,11 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
         <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]} testID="avatar-sheet">
           <View style={s.grabber} />
           <View style={s.head}>
-            <Text style={s.sheetTitle}>{t('Profile photo', 'Ảnh đại diện', 'プロフィール写真', '头像')}</Text>
+            <Text style={s.sheetTitle}>{t('Profile photo', 'Ảnh đại diện', 'プロフィール写真', '头像', '大頭貼')}</Text>
             <PressableScale
               onPress={() => setSheet(false)}
               accessibilityRole="button"
-              accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭')}
+              accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
               hitSlop={8}
               style={s.close}
               contentStyle={s.closeFace}
@@ -187,7 +187,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
                   key={p.key}
                   onPress={() => setChosen(p.key)}
                   accessibilityRole="button"
-                  accessibilityLabel={t(p.en, p.vi, p.ja, p.zh)}
+                  accessibilityLabel={t(p.en, p.vi, p.ja, p.zh, p.hant)}
                   aria-selected={on}
                   testID={`avatar-preset-${p.key}`}
                   style={[s.cell, { width: cell, height: cell, borderRadius: cell / 2 }, on && s.cellOn]}
@@ -206,15 +206,15 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
           </View>
           <View style={s.rule} />
           <View style={s.pair}>
-            <Source icon="images-outline" label={t('Library', 'Thư viện', 'ライブラリ', '相册')}
-              a11y={t('Choose from library', 'Chọn từ thư viện', 'ライブラリから選ぶ', '从相册选择')} onPress={fromLibrary} />
-            <Source icon="camera-outline" label={t('Camera', 'Chụp ảnh', 'カメラ', '相机')}
-              a11y={t('Take a photo', 'Chụp ảnh', '写真を撮る', '拍照')} onPress={fromCamera} />
+            <Source icon="images-outline" label={t('Library', 'Thư viện', 'ライブラリ', '相册', '相簿')}
+              a11y={t('Choose from library', 'Chọn từ thư viện', 'ライブラリから選ぶ', '从相册选择', '從相簿選擇')} onPress={fromLibrary} />
+            <Source icon="camera-outline" label={t('Camera', 'Chụp ảnh', 'カメラ', '相机', '相機')}
+              a11y={t('Take a photo', 'Chụp ảnh', '写真を撮る', '拍照', '拍照')} onPress={fromCamera} />
           </View>
           <View style={s.commit}>
             <GradientCta
               wide
-              label={t('Use this avatar', 'Dùng avatar này', 'このアバターにする', '使用这个头像')}
+              label={t('Use this avatar', 'Dùng avatar này', 'このアバターにする', '使用这个头像', '使用這個大頭貼')}
               onPress={wear}
               disabled={!chosen || chosen === worn}
               testID="avatar-use"
@@ -223,7 +223,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
           {/* Nothing to remove until there is something there. */}
           {profile.avatar_url ? (
             <PressableScale onPress={remove} accessibilityRole="button" contentStyle={s.remove}>
-              <Text style={s.removeText}>{t('Remove photo', 'Xóa ảnh', '写真を削除', '移除头像')}</Text>
+              <Text style={s.removeText}>{t('Remove photo', 'Xóa ảnh', '写真を削除', '移除头像', '移除大頭貼')}</Text>
             </PressableScale>
           ) : null}
         </View>

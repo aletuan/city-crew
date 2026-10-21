@@ -116,17 +116,17 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       if (saved.current) return;
       e.preventDefault();
       Alert.alert(
-        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？', '放弃更改？'),
+        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？', '放弃更改？', '放棄更改？'),
         t(
           'What you changed on your profile has not been saved.',
           'Những gì bạn vừa đổi trên hồ sơ chưa được lưu.',
           'プロフィールの変更はまだ保存されていません。',
-          '你对个人资料的更改尚未保存。',
+          '你对个人资料的更改尚未保存。', '你對個人資料的更改尚未儲存。',
         ),
         [
-          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける', '继续编辑'), style: 'cancel' },
+          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける', '继续编辑', '繼續編輯'), style: 'cancel' },
           {
-            text: t('Discard', 'Bỏ', '破棄', '放弃'),
+            text: t('Discard', 'Bỏ', '破棄', '放弃', '放棄'),
             style: 'destructive',
             onPress: () => navigation.dispatch(e.data.action),
           },
@@ -136,17 +136,17 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   }, [edited, navigation, t]);
 
   const confirmClear = () => Alert.alert(
-    t('Delete your history?', 'Xoá lịch sử của bạn?', '履歴を削除しますか？', '删除你的浏览记录？'),
+    t('Delete your history?', 'Xoá lịch sử của bạn?', '履歴を削除しますか？', '删除你的浏览记录？', '刪除你的瀏覽記錄？'),
     t(
       'Every place you opened is forgotten. Your saved collections and trips stay.',
       'Mọi địa điểm bạn từng mở sẽ bị quên. Bộ sưu tập và chuyến đi đã lưu vẫn còn.',
       '開いた場所の記録はすべて消えます。保存したコレクションと旅程は残ります。',
-      '你打开过的所有地点都会被清除。已保存的合集和行程会保留。',
+      '你打开过的所有地点都会被清除。已保存的合集和行程会保留。', '你開啟過的所有地點都會被清除。已儲存的合集和行程會保留。',
     ),
     [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消'), style: 'cancel' },
+      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
       {
-        text: t('Delete', 'Xoá', '削除', '删除'),
+        text: t('Delete', 'Xoá', '削除', '删除', '刪除'),
         style: 'destructive',
         // Deleted straight away rather than staged until Save. A person
         // who asks for their history to be gone has not asked for it to be
@@ -156,7 +156,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           clearMyHistory(uid)
             .then(() => { successHaptic(); setCleared(true); })
             .catch((e: Error) => Alert.alert(
-              t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除'), e.message,
+              t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除', '無法刪除'), e.message,
             ));
         },
       },
@@ -215,10 +215,10 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           `@${normalizeHandle(handle)} is taken. Try another.`,
           `@${normalizeHandle(handle)} đã có người dùng. Chọn tên khác.`,
           `@${normalizeHandle(handle)} は使用されています。別の名前をお試しください。`,
-          `@${normalizeHandle(handle)} 已被使用，请换一个。`,
+          `@${normalizeHandle(handle)} 已被使用，请换一个。`, `@${normalizeHandle(handle)} 已被使用，請換一個。`,
         ));
       } else if (m === 'handle_reserved') {
-        setNameError(t('That username is reserved.', 'Tên người dùng này đã được giữ chỗ.', 'このユーザー名は予約されています。', '这个用户名已被保留。'));
+        setNameError(t('That username is reserved.', 'Tên người dùng này đã được giữ chỗ.', 'このユーザー名は予約されています。', '这个用户名已被保留。', '這個使用者名稱已被保留。'));
       } else {
         setError(m);
       }
@@ -228,10 +228,10 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   };
 
   const handleMessage = (bad: NonNullable<ReturnType<typeof handleProblem>>) => ({
-    empty: t('Choose a username.', 'Hãy chọn một tên người dùng.', 'ユーザー名を選んでください。', '请选择用户名。'),
-    short: t('At least 3 characters.', 'Ít nhất 3 ký tự.', '3文字以上にしてください。', '至少 3 个字符。'),
-    long: t('20 characters at most.', 'Tối đa 20 ký tự.', '20文字以内にしてください。', '最多 20 个字符。'),
-    chars: t('Letters, numbers and _ only.', 'Chỉ gồm chữ, số và dấu _.', '英数字と _ のみ使えます。', '只能使用字母、数字和 _。'),
+    empty: t('Choose a username.', 'Hãy chọn một tên người dùng.', 'ユーザー名を選んでください。', '请选择用户名。', '請選擇使用者名稱。'),
+    short: t('At least 3 characters.', 'Ít nhất 3 ký tự.', '3文字以上にしてください。', '至少 3 个字符。', '至少 3 個字元。'),
+    long: t('20 characters at most.', 'Tối đa 20 ký tự.', '20文字以内にしてください。', '最多 20 个字符。', '最多 20 個字元。'),
+    chars: t('Letters, numbers and _ only.', 'Chỉ gồm chữ, số và dấu _.', '英数字と _ のみ使えます。', '只能使用字母、数字和 _。', '只能使用字母、數字和 _。'),
   }[bad]);
 
   return (
@@ -255,9 +255,9 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           uses, and a form that cannot pass it keeps its button. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
-        title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料')}
+        title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}
         action={{
-          label: t('Save changes', 'Lưu thay đổi', '変更を保存', '保存更改'),
+          label: t('Save changes', 'Lưu thay đổi', '変更を保存', '保存更改', '儲存更改'),
           onPress: save,
           busy,
           disabled: !edited && handleProblem(normalizeHandle(handle)) === null,
@@ -275,7 +275,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       <View style={{ alignItems: 'center', gap: 10, marginBottom: 22 }}>
         <AvatarPicker size={96} />
         <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
-          {t('Change profile photo', 'Thay đổi ảnh đại diện', 'プロフィール写真を変更', '更换头像')}
+          {t('Change profile photo', 'Thay đổi ảnh đại diện', 'プロフィール写真を変更', '更换头像', '更換大頭貼')}
         </Text>
       </View>
       {/* No lede. "Tell your crew a little about yourself" introduced four
@@ -292,8 +292,8 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         grouped
         icon="person-outline"
-        label={t('Display name', 'Tên hiển thị', '表示名', '显示名称')}
-        placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力', '输入你的姓名')}
+        label={t('Display name', 'Tên hiển thị', '表示名', '显示名称', '顯示名稱')}
+        placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力', '输入你的姓名', '輸入你的姓名')}
         value={name}
         onChangeText={setName}
         autoComplete="name"
@@ -303,7 +303,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         grouped
         icon="at-outline"
-        label={t('Username', 'Tên người dùng', 'ユーザー名', '用户名')}
+        label={t('Username', 'Tên người dùng', 'ユーザー名', '用户名', '使用者名稱')}
         placeholder="yourname"
         value={handle}
         error={nameError}
@@ -319,8 +319,8 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         // Same word the profile shows it under. The field and the row that
         // displays it drifting apart is how a reader ends up unsure whether
         // they are two different things.
-        label={t('Hometown', 'Quê quán', '出身地', '家乡')}
-        placeholder={t(`${city?.short_en ?? 'Saigon'}, Vietnam`, `${city?.short_vi ?? 'Sài Gòn'}, Việt Nam`, `${city?.short_ja ?? 'サイゴン'}、ベトナム`, `${city?.short_en ?? 'Saigon'}，越南`)}
+        label={t('Hometown', 'Quê quán', '出身地', '家乡', '家鄉')}
+        placeholder={t(`${city?.short_en ?? 'Saigon'}, Vietnam`, `${city?.short_vi ?? 'Sài Gòn'}, Việt Nam`, `${city?.short_ja ?? 'サイゴン'}、ベトナム`, `${city?.short_en ?? 'Saigon'}，越南`, `${city?.short_en ?? 'Saigon'}，越南`)}
         value={location}
         onChangeText={setLocation}
       />
@@ -328,8 +328,8 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         grouped
         icon="chatbubble-ellipses-outline"
-        label={t('Bio', 'Giới thiệu', '自己紹介', '个人简介')}
-        placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家', '咖啡爱好者 · 周末探索家')}
+        label={t('Bio', 'Giới thiệu', '自己紹介', '个人简介', '個人簡介')}
+        placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家', '咖啡爱好者 · 周末探索家', '咖啡愛好者 · 週末探索家')}
         value={bio}
         onChangeText={setBio}
         multiline
@@ -355,13 +355,13 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       {uid ? (
         <Card>
           <View style={s.taste}>
-            <Text style={s.tasteTitle}>{t('Interests', 'Sở thích', '興味', '兴趣')}</Text>
+            <Text style={s.tasteTitle}>{t('Interests', 'Sở thích', '興味', '兴趣', '興趣')}</Text>
             <Text style={s.tasteSub}>
               {t(
                 'Personalise what you see by the interests you choose.',
                 'Cá nhân hoá nội dung theo sở thích lựa chọn.',
                 '選んだ興味に合わせて表示内容をパーソナライズします。',
-                '根据你选择的兴趣，个性化你看到的内容。',
+                '根据你选择的兴趣，个性化你看到的内容。', '根據你選擇的興趣，個人化你看到的內容。',
               )}
             </Text>
             <TastePicker chosen={taste} onChange={setTaste} />
@@ -383,21 +383,21 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
             <View style={s.toggleRow}>
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={s.toggleTitle}>
-                  {t('Personalise my experience', 'Nâng cao trải nghiệm cá nhân', '体験をパーソナライズ', '个性化我的体验')}
+                  {t('Personalise my experience', 'Nâng cao trải nghiệm cá nhân', '体験をパーソナライズ', '个性化我的体验', '個人化我的體驗')}
                 </Text>
                 <Text style={s.note}>
                   {t(
                     'Uses the places you have viewed to personalise what you see.',
                     'Sử dụng những địa điểm bạn đã xem để cá nhân hoá nội dung trải nghiệm.',
                     '閲覧した場所をもとに、表示内容をパーソナライズします。',
-                    '根据你浏览过的地点，个性化你看到的内容。',
+                    '根据你浏览过的地点，个性化你看到的内容。', '根據你瀏覽過的地點，個人化你看到的內容。',
                   )}
                 </Text>
               </View>
               <Toggle
                 value={history}
                 onValueChange={setHistory}
-                accessibilityLabel={t('Personalise my experience', 'Nâng cao trải nghiệm cá nhân', '体験をパーソナライズ', '个性化我的体验')}
+                accessibilityLabel={t('Personalise my experience', 'Nâng cao trải nghiệm cá nhân', '体験をパーソナライズ', '个性化我的体验', '個人化我的體驗')}
               />
             </View>
           </Card>
@@ -415,8 +415,8 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
             <Ionicons name="trash-outline" size={18} color={colors.bad} />
             <Text style={s.clearText}>
               {cleared
-                ? t('History deleted', 'Đã xoá lịch sử', '履歴を削除しました', '浏览记录已删除')
-                : t('Delete my history', 'Xoá lịch sử của tôi', '履歴を削除', '删除我的浏览记录')}
+                ? t('History deleted', 'Đã xoá lịch sử', '履歴を削除しました', '浏览记录已删除', '瀏覽記錄已刪除')
+                : t('Delete my history', 'Xoá lịch sử của tôi', '履歴を削除', '删除我的浏览记录', '刪除我的瀏覽記錄')}
             </Text>
           </PressableScale>
         </View>

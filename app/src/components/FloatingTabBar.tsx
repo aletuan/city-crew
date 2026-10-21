@@ -202,7 +202,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         `${label}, ${requestsWaiting} friend request${requestsWaiting === 1 ? '' : 's'} waiting`,
         `${label}, ${requestsWaiting} lời mời kết bạn đang chờ`,
         `${label}、友達リクエスト${requestsWaiting}件待ち`,
-        `${label}，${requestsWaiting} 个好友请求待处理`,
+        `${label}，${requestsWaiting} 个好友请求待处理`, `${label}，${requestsWaiting} 個好友請求待處理`,
       );
     }
     if (name === 'Trips' && invitesWaiting > 0) {
@@ -210,7 +210,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         `${label}, ${invitesWaiting} trip invitation${invitesWaiting === 1 ? '' : 's'} waiting`,
         `${label}, ${invitesWaiting} lời mời chuyến đi đang chờ`,
         `${label}、旅程の招待${invitesWaiting}件待ち`,
-        `${label}，${invitesWaiting} 个行程邀请待处理`,
+        `${label}，${invitesWaiting} 个行程邀请待处理`, `${label}，${invitesWaiting} 個行程邀請待處理`,
       );
     }
     // After the invitation, when both apply: the one somebody else is
@@ -218,7 +218,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     // names it.
     if (name === 'Trips' && today.length > 0) {
       const title = today[0].title;
-      return t(`${label}, “${title}” is today`, `${label}, “${title}” là hôm nay`, `${label}、「${title}」は今日です`, `${label}，“${title}”就在今天`);
+      return t(`${label}, “${title}” is today`, `${label}, “${title}” là hôm nay`, `${label}、「${title}」は今日です`, `${label}，“${title}”就在今天`, `${label}，「${title}」就在今天`);
     }
     return label;
   };

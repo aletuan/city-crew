@@ -82,7 +82,7 @@ export function StepDots({ step, total }: { step: number; total: number }) {
         `Step ${step} of ${total}`,
         `Bước ${step} trên ${total}`,
         `${total} ステップ中 ${step}`,
-        `第 ${step} 步，共 ${total} 步`,
+        `第 ${step} 步，共 ${total} 步`, `第 ${step} 步，共 ${total} 步`,
       )}
     >
       {Array.from({ length: total }, (_, i) => (
@@ -244,8 +244,8 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
             // build (UX-07) — and a toggle named for both directions says
             // neither: the reader still has to find out which way it is.
             accessibilityLabel={hidden
-              ? t('Show password', 'Hiện mật khẩu', 'パスワードを表示', '显示密码')
-              : t('Hide password', 'Ẩn mật khẩu', 'パスワードを隠す', '隐藏密码')}
+              ? t('Show password', 'Hiện mật khẩu', 'パスワードを表示', '显示密码', '顯示密碼')
+              : t('Hide password', 'Ẩn mật khẩu', 'パスワードを隠す', '隐藏密码', '隱藏密碼')}
           >
             <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={21} color={colors.textTertiary} />
           </Pressable>
@@ -291,18 +291,18 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
   const level = passwordStrength(password);
   if (level === 0) return null;
   const label = password.length < PASSWORD_MIN
-    ? t('Too short', 'Quá ngắn', '短すぎます', '太短')
+    ? t('Too short', 'Quá ngắn', '短すぎます', '太短', '太短')
     : [
-        t('Weak', 'Yếu', '弱い', '弱'),
-        t('Fair', 'Trung bình', '普通', '一般'),
-        t('Good', 'Khá', '良い', '良好'),
-        t('Strong', 'Mạnh', '強い', '强'),
+        t('Weak', 'Yếu', '弱い', '弱', '弱'),
+        t('Fair', 'Trung bình', '普通', '一般', '一般'),
+        t('Good', 'Khá', '良い', '良好', '良好'),
+        t('Strong', 'Mạnh', '強い', '强', '強'),
       ][level - 1];
   const fill = [colors.bad, colors.sun, METER_GOOD, colors.ok][level - 1];
   return (
     <View
       style={s.meter}
-      accessibilityLabel={`${t('Password strength', 'Độ mạnh mật khẩu', 'パスワードの強度', '密码强度')}: ${label}`}
+      accessibilityLabel={`${t('Password strength', 'Độ mạnh mật khẩu', 'パスワードの強度', '密码强度', '密碼強度')}: ${label}`}
     >
       <View style={s.meterTrack} accessible={false}>
         {[1, 2, 3, 4].map((n) => (
@@ -535,7 +535,7 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'Email or password is incorrect.',
       'Email hoặc mật khẩu không đúng.',
       'メールアドレスまたはパスワードが正しくありません。',
-      '邮箱或密码不正确。',
+      '邮箱或密码不正确。', '電子郵件或密碼不正確。',
     ),
     // The one that most needs its own sentence: this person typed the
     // right password, and the fix is in their inbox rather than in the
@@ -544,13 +544,13 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       "This email hasn't been confirmed yet. Check your inbox for the code.",
       'Email này chưa được xác nhận. Kiểm tra hộp thư để lấy mã.',
       'このメールアドレスはまだ確認されていません。受信トレイのコードをご確認ください。',
-      '这个邮箱尚未验证。请在收件箱中查找验证码。',
+      '这个邮箱尚未验证。请在收件箱中查找验证码。', '這個電子郵件尚未驗證。請在收件匣中查看驗證碼。',
     ),
     email_taken: t(
       'An account already uses this email. Sign in instead.',
       'Email này đã có tài khoản. Hãy đăng nhập.',
       'このメールアドレスは登録済みです。サインインしてください。',
-      '这个邮箱已注册，请直接登录。',
+      '这个邮箱已注册，请直接登录。', '這個電子郵件已註冊，請直接登入。',
     ),
     // `PASSWORD_MIN` rather than the number, so this cannot drift from
     // the check that fires first on the way in.
@@ -558,7 +558,7 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       `Pick a longer password — at least ${PASSWORD_MIN} characters.`,
       `Chọn mật khẩu dài hơn — ít nhất ${PASSWORD_MIN} ký tự.`,
       `もっと長いパスワードを選んでください。${PASSWORD_MIN}文字以上必要です。`,
-      `请设置更长的密码 — 至少 ${PASSWORD_MIN} 个字符。`,
+      `请设置更长的密码 — 至少 ${PASSWORD_MIN} 个字符。`, `請設定更長的密碼 — 至少 ${PASSWORD_MIN} 個字元。`,
     ),
     // Wrong and expired are one sentence because the answer is the same
     // either way, and because the server does not tell them apart.
@@ -566,25 +566,25 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'That code is wrong or has expired. Ask for a new one.',
       'Mã không đúng hoặc đã hết hạn. Hãy yêu cầu mã mới.',
       'コードが正しくないか、有効期限が切れています。新しいコードを取得してください。',
-      '验证码错误或已过期，请重新获取。',
+      '验证码错误或已过期，请重新获取。', '驗證碼錯誤或已過期，請重新取得。',
     ),
     rate_limit: t(
       'Too many attempts. Wait a moment and try again.',
       'Thử quá nhiều lần. Đợi một lát rồi thử lại.',
       '試行回数が多すぎます。少し待ってからもう一度お試しください。',
-      '尝试次数过多，请稍后再试。',
+      '尝试次数过多，请稍后再试。', '嘗試次數過多，請稍後再試。',
     ),
     bad_email: t(
       "That email address doesn't look right.",
       'Địa chỉ email không hợp lệ.',
       'メールアドレスの形式が正しくありません。',
-      '邮箱地址格式不正确。',
+      '邮箱地址格式不正确。', '電子郵件地址格式不正確。',
     ),
     same_password: t(
       'The new password is the same as the current one.',
       'Mật khẩu mới trùng với mật khẩu cũ.',
       '新しいパスワードが現在のものと同じです。',
-      '新密码与当前密码相同。',
+      '新密码与当前密码相同。', '新密碼與目前密碼相同。',
     ),
     // Named separately from every refusal above because the action is
     // different: nothing about what was typed is wrong.
@@ -592,7 +592,7 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'No connection. Check your network and try again.',
       'Không có kết nối. Kiểm tra mạng rồi thử lại.',
       '接続できません。ネットワークを確認してもう一度お試しください。',
-      '无网络连接，请检查网络后重试。',
+      '无网络连接，请检查网络后重试。', '無網路連線，請檢查網路後重試。',
     ),
     // Names no field, on purpose. `validation_failed` covers a bad
     // address and a missing password alike, and the empty cases it used
@@ -601,7 +601,7 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'Check the details you entered.',
       'Kiểm tra lại thông tin bạn đã nhập.',
       '入力内容をご確認ください。',
-      '请检查你输入的信息。',
+      '请检查你输入的信息。', '請檢查你輸入的資訊。',
     ),
 
     // ── found here, before anything is sent ──
@@ -609,25 +609,25 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'Enter your email address.',
       'Nhập địa chỉ email của bạn.',
       'メールアドレスを入力してください。',
-      '请输入电子邮箱。',
+      '请输入电子邮箱。', '請輸入電子郵件。',
     ),
     need_password: t(
       'Enter your password.',
       'Nhập mật khẩu của bạn.',
       'パスワードを入力してください。',
-      '请输入密码。',
+      '请输入密码。', '請輸入密碼。',
     ),
     need_code: t(
       'Enter the code from the email.',
       'Nhập mã trong email.',
       'メールに記載のコードを入力してください。',
-      '请输入邮件中的验证码。',
+      '请输入邮件中的验证码。', '請輸入郵件中的驗證碼。',
     ),
     need_name: t(
       'Tell us what to call you.',
       'Cho chúng tôi biết tên của bạn.',
       'お名前を教えてください。',
-      '请告诉我们怎么称呼你。',
+      '请告诉我们怎么称呼你。', '請告訴我們怎麼稱呼你。',
     ),
 
     // ── raised by `lib/auth`, which cannot call `t` ──
@@ -635,19 +635,19 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'Sign in to do that.',
       'Hãy đăng nhập để làm điều đó.',
       'この操作にはサインインが必要です。',
-      '请先登录。',
+      '请先登录。', '請先登入。',
     ),
     sharing_unavailable: t(
       'This device cannot share files, so the export could not be handed over.',
       'Máy này không chia sẻ được tệp, nên không giao được bản xuất.',
       'この端末はファイルを共有できないため、エクスポートを渡せませんでした。',
-      '这台设备无法共享文件，因此无法导出。',
+      '这台设备无法共享文件，因此无法导出。', '這臺裝置無法共享檔案，因此無法匯出。',
     ),
     bad_image: t(
       "That picture could not be read. Try another.",
       'Không đọc được ảnh này. Hãy chọn ảnh khác.',
       'この画像を読み込めませんでした。別の画像をお試しください。',
-      '无法读取这张图片，请换一张。',
+      '无法读取这张图片，请换一张。', '無法讀取這張圖片，請換一張。',
     ),
     // Three names for one shape, because which step stalled is the whole
     // information a stall carries — see `withTimeout`.
@@ -655,25 +655,25 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'Preparing the photo is taking too long. Check your connection and try again.',
       'Chuẩn bị ảnh mất quá lâu. Kiểm tra kết nối rồi thử lại.',
       '画像の準備に時間がかかっています。接続を確認してもう一度お試しください。',
-      '处理照片耗时过长，请检查网络后重试。',
+      '处理照片耗时过长，请检查网络后重试。', '處理照片耗時過長，請檢查網路後重試。',
     ),
     slow_upload: t(
       'Uploading the photo is taking too long. Check your connection and try again.',
       'Tải ảnh lên mất quá lâu. Kiểm tra kết nối rồi thử lại.',
       '画像のアップロードに時間がかかっています。接続を確認してもう一度お試しください。',
-      '上传照片耗时过长，请检查网络后重试。',
+      '上传照片耗时过长，请检查网络后重试。', '上傳照片耗時過長，請檢查網路後重試。',
     ),
     slow_save: t(
       'Saving the photo is taking too long. Check your connection and try again.',
       'Lưu ảnh mất quá lâu. Kiểm tra kết nối rồi thử lại.',
       '画像の保存に時間がかかっています。接続を確認してもう一度お試しください。',
-      '保存照片耗时过长，请检查网络后重试。',
+      '保存照片耗时过长，请检查网络后重试。', '儲存照片耗時過長，請檢查網路後重試。',
     ),
     too_soon: t(
       'Give it a minute before changing your photo again.',
       'Đợi một phút rồi hãy đổi ảnh lần nữa.',
       '写真をもう一度変更するには1分お待ちください。',
-      '请稍等一分钟再更换头像。',
+      '请稍等一分钟再更换头像。', '請稍等一分鐘再更換大頭貼。',
     ),
   };
 }

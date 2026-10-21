@@ -55,7 +55,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
     <AuthScreen>
       <AuthHeader
         onBack={() => navigation.goBack()}
-        title={t('Sign in', 'Đăng nhập', 'サインイン', '登录')}
+        title={t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}
       />
       {/* Neutral on purpose. "Glad to see you again" greeted a returning
           reader — and this screen is also the first thing a brand-new one
@@ -67,12 +67,12 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
           'Keep your places, build your own collections, and share your journeys with friends.',
           'Lưu giữ địa điểm, tạo bộ sưu tập cá nhân và cùng chia sẻ hành trình kết nối.',
           '場所を保存して、自分だけのコレクションを作り、旅を仲間と共有しよう。',
-          '保存你的地点，创建自己的合集，与朋友分享你的旅程。',
+          '保存你的地点，创建自己的合集，与朋友分享你的旅程。', '儲存你的地點，建立自己的合集，與朋友分享你的旅程。',
         )}</Lede>
       <FieldRow
         icon="mail-outline"
-        label={t('Email address', 'Địa chỉ email', 'メールアドレス', '电子邮箱')}
-        placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力', '输入你的邮箱')}
+        label={t('Email address', 'Địa chỉ email', 'メールアドレス', '电子邮箱', '電子郵件')}
+        placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力', '输入你的邮箱', '輸入你的電子郵件')}
         value={email}
         // Whitespace stripped as it is typed, not trimmed at submit: the
         // space the iOS keyboard adds after an autocomplete lands after
@@ -93,8 +93,8 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
       />
       <FieldRow
         icon="lock-closed-outline"
-        label={t('Password', 'Mật khẩu', 'パスワード', '密码')}
-        placeholder={t('Enter your password', 'Nhập mật khẩu', 'パスワードを入力', '输入你的密码')}
+        label={t('Password', 'Mật khẩu', 'パスワード', '密码', '密碼')}
+        placeholder={t('Enter your password', 'Nhập mật khẩu', 'パスワードを入力', '输入你的密码', '輸入你的密碼')}
         value={password}
         onChangeText={setPassword}
         secure
@@ -106,14 +106,14 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
       />
       <View style={s.metaRow}>
         <Pressable onPress={() => navigation.navigate('ForgotPassword', { email })} hitSlop={8} testID="signin-forgot">
-          <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?', 'パスワードをお忘れですか？', '忘记密码？')}</Text>
+          <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?', 'パスワードをお忘れですか？', '忘记密码？', '忘記密碼？')}</Text>
         </Pressable>
       </View>
       {error ? <FormError>{failText(error)}</FormError> : null}
-      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン', '登录')} onPress={submit} busy={busy} testID="signin-submit" />
+      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')} onPress={submit} busy={busy} testID="signin-submit" />
       <SwitchRow
-        prompt={t("Don't have an account?", 'Chưa có tài khoản?', 'アカウントをお持ちでない方は', '还没有账号？')}
-        action={t('Sign up', 'Đăng ký', '登録', '注册')}
+        prompt={t("Don't have an account?", 'Chưa có tài khoản?', 'アカウントをお持ちでない方は', '还没有账号？', '還沒有帳號？')}
+        action={t('Sign up', 'Đăng ký', '登録', '注册', '註冊')}
         onPress={() => navigation.replace('SignUp')}
         testID="signin-switch-signup"
       />

@@ -59,8 +59,8 @@ function Bubble({ count }: { count: number }) {
 }
 
 /** The same figure, in words, for a listener. */
-function spokenCount(n: number, t: (en: string, vi: string, ja?: string, zh?: string) => string): string {
-  return t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`, `${n} 个地点`);
+function spokenCount(n: number, t: (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string): string {
+  return t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`, `${n} 个地点`, `${n} 個地點`);
 }
 
 type Pinned = Place & { lat: number; lng: number };
@@ -230,7 +230,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
                   `${c.slugs.length} places, zoom in`,
                   `${c.slugs.length} địa điểm, phóng to`,
                   `${c.slugs.length}件、拡大`,
-                  `${c.slugs.length} 个地点，放大查看`,
+                  `${c.slugs.length} 个地点，放大查看`, `${c.slugs.length} 個地點，放大檢視`,
                 )}
                 testID={`cluster-${c.key}`}
               >
@@ -308,7 +308,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
             accessibilityLabel={[
               c.name,
               spokenCount(c.count!, t),
-              t('switch to this city', 'chuyển sang thành phố này', 'この都市に切り替える', '切换到这个城市'),
+              t('switch to this city', 'chuyển sang thành phố này', 'この都市に切り替える', '切换到这个城市', '切換到這個城市'),
             ].filter(Boolean).join(', ')}
             testID={`city-${c.id}`}
           >

@@ -67,7 +67,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   );
   const chosen = addable.filter((c) => picked.includes(c.place_id));
   const done = {
-    label: t('Back to Places', 'Về Địa điểm', 'スポットに戻る', '返回地点'),
+    label: t('Back to Places', 'Về Địa điểm', 'スポットに戻る', '返回地点', '返回地點'),
     onPress: () => navigation.goBack(),
   };
   // The bar clears the tab bar itself, so the list must not clear it too —
@@ -99,7 +99,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <Screen
-      title={t('Add a place', 'Thêm địa điểm', 'スポットを追加', '添加地点')}
+      title={t('Add a place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
       onBack={() => navigation.goBack()}
     >
       <AmbientWarmth />
@@ -119,7 +119,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
             `Name of a place in ${cityName}`,
             `Tên một địa điểm ở ${cityName}`,
             `${cityName}のスポット名`,
-            `${cityName}的地点名称`,
+            `${cityName}的地点名称`, `${cityName}的地點名稱`,
           )}
           placeholderTextColor={colors.textTertiary}
           style={s.input}
@@ -130,7 +130,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
             scaleTo={0.9}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={t('Clear search', 'Xoá tìm kiếm', '検索をクリア', '清除搜索')}
+            accessibilityLabel={t('Clear search', 'Xoá tìm kiếm', '検索をクリア', '清除搜索', '清除搜尋')}
           >
             <Ionicons name="close-circle" size={19} color={colors.textTertiary} />
           </PressableScale>
@@ -153,20 +153,20 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
               `ADDING ${batch.total} · ${batch.done} DONE`,
               `ĐANG THÊM ${batch.total} · XONG ${batch.done}`,
               `${batch.total}件を追加中 · ${batch.done}件完了`,
-              `正在添加 ${batch.total} 个 · 已完成 ${batch.done} 个`,
+              `正在添加 ${batch.total} 个 · 已完成 ${batch.done} 个`, `正在新增 ${batch.total} 個 · 已完成 ${batch.done} 個`,
             )
             : finished(batch)
               ? t(
                 `ADDED ${added} OF ${batch.total}`,
                 `ĐÃ THÊM ${added}/${batch.total}`,
                 `${batch.total}件中 ${added}件を追加`,
-                `已添加 ${added} 个，共 ${batch.total} 个`,
+                `已添加 ${added} 个，共 ${batch.total} 个`, `已新增 ${added} 個，共 ${batch.total} 個`,
               )
               : t(
                 `${results.length} RESULTS · ${cityName.toUpperCase()}`,
                 `${results.length} KẾT QUẢ · ${cityName.toUpperCase()}`,
                 `${results.length}件 · ${cityName}`,
-                `${results.length} 个结果 · ${cityName}`,
+                `${results.length} 个结果 · ${cityName}`, `${results.length} 個結果 · ${cityName}`,
               )}
         </Text>
       )}
@@ -195,7 +195,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
                 'Nothing found. Try the name as it appears on the door.',
                 'Không tìm thấy. Thử tên đúng như trên biển hiệu xem sao.',
                 '見つかりません。看板どおりの名前で試してください。',
-                '没有找到。试试门口招牌上的名字。',
+                '没有找到。试试门口招牌上的名字。', '沒有找到。試試門口招牌上的名字。',
               )}
             </Text>
           )
@@ -210,7 +210,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
                 `Results from Google Maps · ${cityName}`,
                 `Kết quả từ Google Maps · ${cityName}`,
                 `Google マップの結果 · ${cityName}`,
-                `Google 地图搜索结果 · ${cityName}`,
+                `Google 地图搜索结果 · ${cityName}`, `Google 地圖搜尋結果 · ${cityName}`,
               )}
             </Text>
           )

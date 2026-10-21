@@ -74,32 +74,32 @@ export type Scheme = 'dark' | 'light';
  * a test holds each to a glyph that exists.
  */
 export const LOOK_DEFS = {
-  coffee: { ground: 'dark', icon: 'cafe-outline', name: { en: 'Coffee', vi: 'Nâu cafe', ja: 'コーヒー', zh: '咖啡' } },
-  rose: { ground: 'light', icon: 'flower-outline', name: { en: 'Rose', vi: 'Hồng', ja: 'ローズ', zh: '玫瑰' } },
-  blush: { ground: 'light', icon: 'heart-outline', name: { en: 'Blush', vi: 'Hồng phấn', ja: 'ブラッシュ', zh: '腮红粉' } },
-  slate: { ground: 'light', icon: 'cloud-outline', name: { en: 'Slate', vi: 'Xanh xám', ja: 'スレート', zh: '石板灰' } },
-  midnight: { ground: 'dark', icon: 'star-outline', name: { en: 'Midnight', vi: 'Xanh than', ja: 'ミッドナイト', zh: '午夜蓝' } },
-  navy: { ground: 'dark', icon: 'boat-outline', name: { en: 'Navy', vi: 'Xanh navy', ja: 'ネイビー', zh: '海军蓝' } },
-  chocolate: { ground: 'dark', icon: 'ice-cream-outline', name: { en: 'Chocolate', vi: 'Sô-cô-la', ja: 'チョコレート', zh: '巧克力' } },
-  cosmic: { ground: 'dark', icon: 'planet-outline', name: { en: 'Cosmic', vi: 'Vũ trụ', ja: 'コズミック', zh: '星空紫' } },
-  duck: { ground: 'light', icon: 'leaf-outline', name: { en: 'Teal', vi: 'Xanh cổ vịt', ja: 'ティール', zh: '青绿' } },
-  honey: { ground: 'dark', icon: 'flash-outline', name: { en: 'Honey', vi: 'Mật ong', ja: 'ハニー', zh: '蜂蜜' } },
-  royal: { ground: 'dark', icon: 'diamond-outline', name: { en: 'Royal', vi: 'Hoàng gia', ja: 'ロイヤル', zh: '皇家蓝' } },
-  plum: { ground: 'dark', icon: 'nutrition-outline', name: { en: 'Plum', vi: 'Mận', ja: 'プラム', zh: '梅子' } },
-  violet: { ground: 'dark', icon: 'sparkles-outline', name: { en: 'Violet', vi: 'Tím', ja: 'バイオレット', zh: '紫罗兰' } },
-  wine: { ground: 'dark', icon: 'wine-outline', name: { en: 'Wine', vi: 'Rượu vang', ja: 'ワイン', zh: '酒红' } },
-  maroon: { ground: 'dark', icon: 'rose-outline', name: { en: 'Maroon', vi: 'Đỏ mận', ja: 'マルーン', zh: '栗红' } },
-  amber: { ground: 'light', icon: 'partly-sunny-outline', name: { en: 'Amber', vi: 'Vàng đậm', ja: 'アンバー', zh: '琥珀' } },
-  neon: { ground: 'dark', icon: 'bulb-outline', name: { en: 'Neon', vi: 'Hồng neon', ja: 'ネオン', zh: '霓虹粉' } },
-  ember: { ground: 'dark', icon: 'flame-outline', name: { en: 'Ember', vi: 'Cam cháy', ja: 'エンバー', zh: '余烬橙' } },
-  sand: { ground: 'light', icon: 'footsteps-outline', name: { en: 'Sand', vi: 'Be cát', ja: 'サンド', zh: '沙色' } },
+  coffee: { ground: 'dark', icon: 'cafe-outline', name: { en: 'Coffee', vi: 'Nâu cafe', ja: 'コーヒー', zh: '咖啡', hant: '咖啡' } },
+  rose: { ground: 'light', icon: 'flower-outline', name: { en: 'Rose', vi: 'Hồng', ja: 'ローズ', zh: '玫瑰', hant: '玫瑰' } },
+  blush: { ground: 'light', icon: 'heart-outline', name: { en: 'Blush', vi: 'Hồng phấn', ja: 'ブラッシュ', zh: '腮红粉', hant: '腮紅粉' } },
+  slate: { ground: 'light', icon: 'cloud-outline', name: { en: 'Slate', vi: 'Xanh xám', ja: 'スレート', zh: '石板灰', hant: '石板灰' } },
+  midnight: { ground: 'dark', icon: 'star-outline', name: { en: 'Midnight', vi: 'Xanh than', ja: 'ミッドナイト', zh: '午夜蓝', hant: '午夜藍' } },
+  navy: { ground: 'dark', icon: 'boat-outline', name: { en: 'Navy', vi: 'Xanh navy', ja: 'ネイビー', zh: '海军蓝', hant: '海軍藍' } },
+  chocolate: { ground: 'dark', icon: 'ice-cream-outline', name: { en: 'Chocolate', vi: 'Sô-cô-la', ja: 'チョコレート', zh: '巧克力', hant: '巧克力' } },
+  cosmic: { ground: 'dark', icon: 'planet-outline', name: { en: 'Cosmic', vi: 'Vũ trụ', ja: 'コズミック', zh: '星空紫', hant: '星空紫' } },
+  duck: { ground: 'light', icon: 'leaf-outline', name: { en: 'Teal', vi: 'Xanh cổ vịt', ja: 'ティール', zh: '青绿', hant: '青綠' } },
+  honey: { ground: 'dark', icon: 'flash-outline', name: { en: 'Honey', vi: 'Mật ong', ja: 'ハニー', zh: '蜂蜜', hant: '蜂蜜' } },
+  royal: { ground: 'dark', icon: 'diamond-outline', name: { en: 'Royal', vi: 'Hoàng gia', ja: 'ロイヤル', zh: '皇家蓝', hant: '皇家藍' } },
+  plum: { ground: 'dark', icon: 'nutrition-outline', name: { en: 'Plum', vi: 'Mận', ja: 'プラム', zh: '梅子', hant: '梅子' } },
+  violet: { ground: 'dark', icon: 'sparkles-outline', name: { en: 'Violet', vi: 'Tím', ja: 'バイオレット', zh: '紫罗兰', hant: '紫羅蘭' } },
+  wine: { ground: 'dark', icon: 'wine-outline', name: { en: 'Wine', vi: 'Rượu vang', ja: 'ワイン', zh: '酒红', hant: '酒紅' } },
+  maroon: { ground: 'dark', icon: 'rose-outline', name: { en: 'Maroon', vi: 'Đỏ mận', ja: 'マルーン', zh: '栗红', hant: '栗紅' } },
+  amber: { ground: 'light', icon: 'partly-sunny-outline', name: { en: 'Amber', vi: 'Vàng đậm', ja: 'アンバー', zh: '琥珀', hant: '琥珀' } },
+  neon: { ground: 'dark', icon: 'bulb-outline', name: { en: 'Neon', vi: 'Hồng neon', ja: 'ネオン', zh: '霓虹粉', hant: '霓虹粉' } },
+  ember: { ground: 'dark', icon: 'flame-outline', name: { en: 'Ember', vi: 'Cam cháy', ja: 'エンバー', zh: '余烬橙', hant: '餘燼橙' } },
+  sand: { ground: 'light', icon: 'footsteps-outline', name: { en: 'Sand', vi: 'Be cát', ja: 'サンド', zh: '沙色', hant: '沙色' } },
 } as const satisfies Record<string, LookDef>;
 
 /** One look, as `LOOK_DEFS` holds it. */
 export type LookDef = {
   ground: Scheme;
   icon: string;
-  name: { en: string; vi: string; ja: string; zh: string };
+  name: { en: string; vi: string; ja: string; zh: string; hant: string };
 };
 
 /** Each look and the ground it pins, read off `LOOK_DEFS`. */
