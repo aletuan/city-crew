@@ -2,7 +2,7 @@
 // holds the app to it; this holds it to what it means.
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { chineseTable, hantOf, toHant } from './hant';
+import { chineseTable, hantOf, toHant, toHantCatalog } from './hant';
 
 /** The first node of a kind in a snippet, parsed as the app's files are. */
 function first<T extends ts.Node>(code: string, is: (n: ts.Node) => n is T): T {
@@ -33,6 +33,22 @@ describe('toHant', () => {
 
   it('quotes the way Taiwan does', () => {
     expect(toHant('“周末咖啡”')).toBe('「週末咖啡」');
+  });
+});
+
+// The catalog's words are the interface's plus four: 選單 there is a
+// screen's menu, here a restaurant's.
+describe('toHantCatalog', () => {
+  it('writes a restaurant\'s menu as one, and leaves the interface\'s alone', () => {
+    expect(toHantCatalog('菜单以早午餐为主')).toBe('菜單以早午餐為主');
+    expect(toHant('关闭菜单')).toBe('關閉選單');
+    expect(toHantCatalog('请尽早通过其网站下单')).toBe('請儘早透過其網站下單');
+    expect(toHant('未通过')).toBe('未通過');
+  });
+
+  it('names food as Taiwan does, in either', () => {
+    expect(toHant('牛油果吐司配三文鱼')).toBe('酪梨吐司配鮭魚');
+    expect(toHantCatalog('自制意面和芝士')).toBe('自製義大利麵和起司');
   });
 });
 

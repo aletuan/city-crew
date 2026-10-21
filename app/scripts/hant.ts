@@ -98,17 +98,61 @@ export const PHRASES: [string, string][] = [
   ['考拉', '無尾熊'],
   ['本地嚮導', '在地嚮導'],
   ['哪兒', '哪裡'],
+  // Food, from the places' blurbs (read 21 Oct 2026, all 257 of them):
+  // the mainland's names for what Taiwan calls otherwise, and 自制
+  // ("self-restraint") where the blurb meant 自製, made in house.
+  ['牛油果', '酪梨'],
+  ['三文魚', '鮭魚'],
+  ['芝士', '起司'],
+  ['酸奶', '優格'],
+  ['意麵', '義大利麵'],
+  ['自制', '自製'],
+  ['酒店', '飯店'],
+  ['幹玉米', '乾玉米'],
   // Quotation marks: Taiwan writes 「」, not “”.
   ['“', '「'],
   ['”', '」'],
 ];
 
+/**
+ * The catalog's own words, after the above: a place's blurb, a city's
+ * hero. Not the interface, where the same characters mean something
+ * else. 選單 is a menu on a screen and the interface has three; every
+ * 選單 in a blurb was a restaurant's, 菜單 (12 of 257). 視窗 is a
+ * program's window; a blurb's was in a wall. 通過 and 連線 are a test
+ * passed and a network joined; a blurb means "by way of" and "linking".
+ */
+export const CATALOG: [string, string][] = [
+  ['選單', '菜單'],
+  ['視窗', '窗口'],
+  ['通過', '透過'],
+  ['連線', '連接'],
+];
+
 const s2twp = OpenCC.Converter({ from: 'cn', to: 'twp' });
 const correct = OpenCC.CustomConverter(PHRASES);
+const catalog = OpenCC.CustomConverter(CATALOG);
 
 /** The Traditional of a Simplified string, as this app writes it. */
 export function toHant(simplified: string): string {
   return correct(s2twp(simplified));
+}
+
+/**
+ * The same, for the catalog's text: what `toHant` makes of it, with the
+ * catalog's words on top.
+ *
+ * The places' Traditional blurbs (21 Oct 2026) are their Simplified ones
+ * put through this, not translated a second time. `write-blurb` was
+ * asked first, from the English, and the first three drafts it wrote
+ * turned Long Hai into 長海: a place name translated, which is the one
+ * thing the owner's rule for Chinese forbids. The Simplified it already
+ * wrote said Long Hai, and a converter cannot invent a name. The desk's
+ * Draft ZH-HANT button still asks the model, for a place with no
+ * Simplified to convert; an editor reads that draft before it is saved.
+ */
+export function toHantCatalog(simplified: string): string {
+  return catalog(toHant(simplified));
 }
 
 const HAN = /[\u4e00-\u9fff]/;
