@@ -29,7 +29,7 @@
 // without the marks is the ordinary case on a phone keyboard.
 //
 // Two lists since 21 Oct 2026 (owner): RECENT, the few cities this phone
-// has shown lately, and ALL CITIES, A to Z. A reader
+// has shown lately, and OTHER CITIES, A to Z, without them. A reader
 // lives in one city and visits two or three, and the one list in the
 // desk's order made them hunt for those every time. What goes in each,
 // and why three, is `lib/cityBook`'s.
@@ -264,13 +264,19 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
             <>
               <Text style={s.section} accessibilityRole="header">{t('Recent', 'Gần đây', '最近')}</Text>
               {book.recent.map((c, i) => cityRow(c, `city-recent-${i}`, i > 0))}
-              <Text style={[s.section, s.sectionNext]} accessibilityRole="header">
-                {t('All cities', 'Tất cả thành phố', 'すべての都市')}
-              </Text>
             </>
           )}
-          {book.all.map((c, i) => cityRow(c, `city-row-${i}`, i > 0))}
-          {book.all.length === 0 && (
+          {/* Headed only beside a recent section, and only over something:
+              alone, it is the list and needs no name; with every city
+              already recent, it would name nothing. */}
+          {book.recent.length > 0 && book.others.length > 0 && (
+            <Text style={[s.section, s.sectionNext]} accessibilityRole="header">
+              {t('Other cities', 'Thành phố khác', 'その他の都市')}
+            </Text>
+          )}
+          {book.others.map((c, i) => cityRow(c, `city-row-${i}`, i > 0))}
+          {/* Only a search can come back empty-handed. */}
+          {query.trim() !== '' && book.others.length === 0 && (
             <Text style={s.empty}>
               {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません')}
             </Text>

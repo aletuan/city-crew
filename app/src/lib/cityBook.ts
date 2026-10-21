@@ -1,5 +1,5 @@
 // The city sheet's two lists: the few the reader actually moves between,
-// and the whole book, in the order a long list is read.
+// and the rest, in the order a long list is read.
 //
 // ── why (21 Oct 2026) ──
 //
@@ -19,7 +19,16 @@
 //
 // The section is drawn only when it holds somewhere *else*. On a first
 // launch it would hold the city on screen and nothing more, and a heading
-// over one row that is already ticked below says nothing.
+// over one row is not a list.
+//
+// ── the others ──
+//
+// Every city the recent section does not already show. Until 21 Oct 2026
+// the second list was ALL CITIES and repeated the recent ones, so the city
+// on screen was drawn twice, tinted twice, and the eye had two rows to
+// choose between for one answer; the owner asked for OTHER CITIES instead.
+// With no recent section there is nothing to subtract, and the one list
+// is every city, unheaded.
 //
 // ── the book ──
 //
@@ -71,8 +80,9 @@ export function rememberCity(list: readonly string[], id: string): string[] {
 export type CityBook<C> = {
   /** The recent section; empty when it would say nothing. */
   recent: C[];
-  /** Every city, A to Z — or, under a search, the ones that match. */
-  all: C[];
+  /** Every city not in `recent`, A to Z — or, under a search, every
+   *  city that matches. */
+  others: C[];
 };
 
 type Options<C> = {
@@ -97,10 +107,12 @@ export function cityBook<C extends { id: string }>(cities: readonly C[], o: Opti
   });
 
   const q = fold(o.query.trim());
-  if (q) return { recent: [], all: sorted.filter((c) => o.names(c).some((n) => fold(n).includes(q))) };
+  if (q) return { recent: [], others: sorted.filter((c) => o.names(c).some((n) => fold(n).includes(q))) };
 
   // A retired city drops out rather than drawing a row that goes nowhere.
   const byId = new Map(cities.map((c) => [c.id, c]));
   const known = o.recent.map((id) => byId.get(id)).filter((c): c is C => !!c);
-  return { recent: known.length > 1 ? known : [], all: sorted };
+  const recent = known.length > 1 ? known : [];
+  const shown = new Set(recent.map((c) => c.id));
+  return { recent, others: sorted.filter((c) => !shown.has(c.id)) };
 }

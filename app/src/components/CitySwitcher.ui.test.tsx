@@ -370,18 +370,31 @@ describe('recent cities and the whole list', () => {
   const rows = (prefix: string) =>
     [...document.querySelectorAll(`[data-testid^="${prefix}"]`)].map((r) => r.textContent);
 
-  it('puts the cities shown lately on top, then every city A to Z', () => {
+  it('puts the cities shown lately on top, then the other cities A to Z', () => {
     ctx.recent = ['hanoi', 'danang'];
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(screen.getByText('Recent')).toBeTruthy();
-    expect(screen.getByText('All cities')).toBeTruthy();
+    expect(screen.getByText('Other cities')).toBeTruthy();
     expect(rows('city-recent-')).toEqual(['Hanoi', 'Da Nang']);
-    expect(rows('city-row-')).toEqual(['Da Nang', 'Hanoi', 'Saigon']);
+    // Each city once: the recent ones are not repeated under them
+    // (owner, 21 Oct 2026).
+    expect(rows('city-row-')).toEqual(['Saigon']);
     // No letter headings: with ten cities they were more heading than
     // list (owner, 21 Oct 2026).
     for (const letter of ['D', 'H', 'S']) expect(screen.queryByText(letter)).toBeNull();
-    // The city on screen is marked in both lists.
-    expect([...document.querySelectorAll('[aria-selected="true"]')].map((r) => r.textContent)).toEqual(['Hanoi', 'Hanoi']);
+    // The city on screen is marked once, where it is: in the recent list.
+    expect([...document.querySelectorAll('[aria-selected="true"]')].map((r) => r.textContent)).toEqual(['Hanoi']);
+  });
+
+  // Nothing left to list: no heading over an empty list, and no "no city
+  // by that name" for a search nobody made.
+  it('says nothing under the recent cities when they are all there is', () => {
+    ctx.recent = ['hanoi', 'saigon', 'danang'];
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(rows('city-recent-')).toEqual(['Hanoi', 'Saigon', 'Da Nang']);
+    expect(rows('city-row-')).toEqual([]);
+    expect(screen.queryByText('Other cities')).toBeNull();
+    expect(screen.queryByText('No city by that name')).toBeNull();
   });
 
   it('switches from a recent row the same way', () => {
@@ -398,7 +411,7 @@ describe('recent cities and the whole list', () => {
     ctx.recent = ['hanoi'];
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(screen.queryByText('Recent')).toBeNull();
-    expect(screen.queryByText('All cities')).toBeNull();
+    expect(screen.queryByText('Other cities')).toBeNull();
     expect(rows('city-recent-')).toEqual([]);
     expect(rows('city-row-')).toEqual(['Da Nang', 'Hanoi', 'Saigon']);
   });
@@ -408,16 +421,20 @@ describe('recent cities and the whole list', () => {
     render(<CitySwitcherModal visible onClose={() => {}} />);
     fireEvent.change(screen.getByTestId('city-search'), { target: { value: 'da' } });
     expect(screen.queryByText('Recent')).toBeNull();
-    expect(screen.queryByText('All cities')).toBeNull();
+    expect(screen.queryByText('Other cities')).toBeNull();
+    // A search reaches the recent cities too: they are cities.
     expect(rows('city-row-')).toEqual(['Da Nang']);
   });
 
-  it('orders the kana in Japanese', () => {
+  it('orders the kana in Japanese, and names the sections there too', () => {
     ctx.lang = 'ja';
+    const view = render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(rows('city-row-')).toEqual(['サイゴン', 'ダナン', 'ハノイ']);
+    view.unmount();
     ctx.recent = ['hanoi', 'danang'];
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(screen.getByText('最近')).toBeTruthy();
-    expect(screen.getByText('すべての都市')).toBeTruthy();
-    expect(rows('city-row-')).toEqual(['サイゴン', 'ダナン', 'ハノイ']);
+    expect(screen.getByText('その他の都市')).toBeTruthy();
+    expect(rows('city-row-')).toEqual(['サイゴン']);
   });
 });

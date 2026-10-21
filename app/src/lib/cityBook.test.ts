@@ -59,8 +59,8 @@ describe('rememberCity', () => {
 describe('cityBook', () => {
   // Đà Lạt and Đà Nẵng with the Ds, and Hà Nội before Hải Phòng: "ha noi"
   // sorts before "hai phong" on the space.
-  it('lists every city A to Z by the name on screen, folded', () => {
-    expect(ids(vi().all)).toEqual([
+  it('lists every city A to Z by the name on screen, folded, when none is recent', () => {
+    expect(ids(vi().others)).toEqual([
       'dalat', 'danang', 'hanoi', 'haiphong', 'hoian', 'hue', 'melbourne', 'ninhbinh', 'hcmc', 'vungtau',
     ]);
   });
@@ -69,19 +69,31 @@ describe('cityBook', () => {
   // countries); they keep the order the desk gave them.
   it('keeps two cities of one name in the order they came', () => {
     const twins = [city('b', 'San Jose'), city('a', 'San Jose')];
-    expect(ids(cityBook(twins, { recent: [], query: '', label: (c) => c.vi, names: (c) => [c.vi], folded: true }).all))
+    expect(ids(cityBook(twins, { recent: [], query: '', label: (c) => c.vi, names: (c) => [c.vi], folded: true }).others))
       .toEqual(['b', 'a']);
   });
 
   // Katakana unfolded: folded, ブンタウ would sort ahead of フエ.
   it('sorts kana whole', () => {
-    const { all } = cityBook(CITIES, { recent: [], query: '', label: (c) => c.ja, names: (c) => [c.ja], folded: false });
-    expect(all.map((c) => c.ja)).toEqual([...CITIES.map((c) => c.ja)].sort());
-    expect(all.map((c) => c.ja).indexOf('フエ')).toBeLessThan(all.map((c) => c.ja).indexOf('ブンタウ'));
+    const { others } = cityBook(CITIES, { recent: [], query: '', label: (c) => c.ja, names: (c) => [c.ja], folded: false });
+    expect(others.map((c) => c.ja)).toEqual([...CITIES.map((c) => c.ja)].sort());
+    expect(others.map((c) => c.ja).indexOf('フエ')).toBeLessThan(others.map((c) => c.ja).indexOf('ブンタウ'));
   });
 
   it('lists the recent cities newest first, dropping one that has gone', () => {
     expect(ids(vi({ recent: ['hue', 'retired', 'dalat'] }).recent)).toEqual(['hue', 'dalat']);
+  });
+
+  // Drawn once: a recent city is not repeated in the list under it.
+  it('leaves the recent cities out of the others', () => {
+    const { recent, others } = vi({ recent: ['hanoi', 'haiphong', 'dalat'] });
+    expect(ids(recent)).toEqual(['hanoi', 'haiphong', 'dalat']);
+    expect(ids(others)).toEqual(['danang', 'hoian', 'hue', 'melbourne', 'ninhbinh', 'hcmc', 'vungtau']);
+  });
+
+  // One recent city is no section, so nothing is taken out of the list.
+  it('keeps every city in the list when the recent section is not drawn', () => {
+    expect(vi({ recent: ['hue'] }).others).toHaveLength(CITIES.length);
   });
 
   // The city on screen alone is no list: the section waits for a second.
@@ -94,12 +106,12 @@ describe('cityBook', () => {
   it('answers a search with the matches alone, in the same order, by any name', () => {
     const found = vi({ query: 'ha', recent: ['hue', 'dalat'] });
     expect(found.recent).toEqual([]);
-    expect(ids(found.all)).toEqual(['hanoi', 'haiphong']);
+    expect(ids(found.others)).toEqual(['hanoi', 'haiphong']);
     // Without marks, and in a language the row is not showing.
-    expect(ids(vi({ query: 'da lat' }).all)).toEqual(['dalat']);
-    expect(ids(vi({ query: 'saigon' }).all)).toEqual(['hcmc']);
-    expect(ids(vi({ query: '  hue  ' }).all)).toEqual(['hue']);
-    expect(vi({ query: 'zzz' }).all).toEqual([]);
+    expect(ids(vi({ query: 'da lat' }).others)).toEqual(['dalat']);
+    expect(ids(vi({ query: 'saigon' }).others)).toEqual(['hcmc']);
+    expect(ids(vi({ query: '  hue  ' }).others)).toEqual(['hue']);
+    expect(vi({ query: 'zzz' }).others).toEqual([]);
   });
 
   it('leaves the cities it was given as they were', () => {
