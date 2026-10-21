@@ -489,7 +489,7 @@ export default function SketchingScreen({ navigation, route }: {
   // One `dateline` for every day the app names (9 Oct 2026); it is the
   // short form this cell asked for, so the cell still fits it.
   const dateText = dateline(lang, fromISO(day) ?? new Date());
-  const halfText = p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜');
+  const halfText = p.when === 'day' ? t('Day', 'Ban ngày', '昼', '白天') : t('Evening', 'Buổi tối', '夜', '晚上');
 
   // `p.where` arrives already joined, and sometimes with a separator in
   // it: a district is "Hoàn Kiếm", a dropped pin is its own name, and the
@@ -517,7 +517,7 @@ export default function SketchingScreen({ navigation, route }: {
   const wherePrimary = whereParts[0] || cityName;
   const whereSecondary = whereParts[0]
     ? whereParts.slice(1).join(' · ') || null
-    : t('Anywhere in the city', 'Khắp thành phố', '市内どこでも');
+    : t('Anywhere in the city', 'Khắp thành phố', '市内どこでも', '城市任意地点');
   // What was asked for, as the chips it was asked with.
   //
   // It was a third grey line reading "Cà phê · Ăn uống", which is the one
@@ -563,7 +563,7 @@ export default function SketchingScreen({ navigation, route }: {
   const moreWants = wants.length - shownWants.length;
 
   return (
-    <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}>
+    <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程')}>
       <ScrollView
         contentContainerStyle={[s.body, { paddingBottom: clearance }]}
         showsVerticalScrollIndicator={false}
@@ -614,8 +614,8 @@ export default function SketchingScreen({ navigation, route }: {
         {(failed || empty) && (
           <Text style={s.title}>
             {failed
-              ? t("Couldn't load places", 'Không tải được địa điểm', '場所を読み込めませんでした')
-              : t('Nothing to build a day from', 'Chưa đủ chỗ để dựng một ngày', '一日を組む材料が足りません')}
+              ? t("Couldn't load places", 'Không tải được địa điểm', '場所を読み込めませんでした', '无法加载地点')
+              : t('Nothing to build a day from', 'Chưa đủ chỗ để dựng một ngày', '一日を組む材料が足りません', '没有足够的地点来安排一天')}
           </Text>
         )}
 
@@ -663,7 +663,7 @@ export default function SketchingScreen({ navigation, route }: {
           {SKETCH_STEPS.map((step, i) => (
             <StepRow
               key={step.key}
-              label={t(step.en, step.vi, step.ja)}
+              label={t(step.en, step.vi, step.ja, step.zh)}
               state={states[i]}
               still={calm}
               last={i + 1 === SKETCH_STEPS.length}
@@ -696,11 +696,12 @@ export default function SketchingScreen({ navigation, route }: {
                 'Check your connection and try again. Your answers are kept.',
                 'Kiểm tra kết nối mạng rồi thử lại. Lựa chọn của bạn vẫn được giữ.',
                 '接続を確認してもう一度お試しください。回答はそのまま残ります。',
+                '请检查网络后重试。你的选择已保留。',
               )}
             </Text>
             <GradientCta
               icon="refresh"
-              label={t('Try again', 'Thử lại', '再試行')}
+              label={t('Try again', 'Thử lại', '再試行', '重试')}
               onPress={reload}
               wide
             />
@@ -718,16 +719,18 @@ export default function SketchingScreen({ navigation, route }: {
                   `Nothing in this city matches those choices for that hour. ${categoryLabel(gap.suggestion, t)} has places open — try adding it.`,
                   `Không có chỗ nào ở thành phố này khớp với lựa chọn đó vào giờ ấy. ${categoryLabel(gap.suggestion, t)} thì còn chỗ mở cửa — thử thêm vào xem.`,
                   `その時間帯に条件に合う店がこの街にありません。${categoryLabel(gap.suggestion, t)}なら開いている店があります。`,
+                  `这个城市在那个时段没有符合条件的地点。${categoryLabel(gap.suggestion, t)}有营业的地点 — 试试加上它。`,
                 )
                 : t(
                   'Nothing in this city matches those choices for that hour. Try another day or another part of it.',
                   'Không có chỗ nào ở thành phố này khớp với lựa chọn đó vào giờ ấy. Thử ngày khác hoặc buổi khác xem.',
                   'その時間帯に条件に合う店がこの街にありません。別の日か別の時間帯をお試しください。',
+                  '这个城市在那个时段没有符合条件的地点。试试换一天或换个时段。',
                 )}
             </Text>
             <GradientCta
               icon="arrow-back"
-              label={t('Change the answers', 'Sửa lại lựa chọn', '回答を変える')}
+              label={t('Change the answers', 'Sửa lại lựa chọn', '回答を変える', '修改选择')}
               onPress={() => navigation.goBack()}
               wide
             />

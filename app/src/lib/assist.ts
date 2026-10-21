@@ -93,10 +93,10 @@ export function derivedTitle(
 ): string {
   const where = stops.find((s) => !!s.neighborhood)?.neighborhood;
   const part = when === 'day'
-    ? t('A day out', 'Một ngày đi chơi', '一日おでかけ')
-    : t('An evening out', 'Một buổi tối', '夜のおでかけ');
+    ? t('A day out', 'Một ngày đi chơi', '一日おでかけ', '一日出游')
+    : t('An evening out', 'Một buổi tối', '夜のおでかけ', '晚间出游');
   if (!where) return part;
-  return t(`${part} in ${where}`, `${part} ở ${where}`, `${where}の${part}`);
+  return t(`${part} in ${where}`, `${part} ở ${where}`, `${where}の${part}`, `${where}${part}`);
 }
 
 /**
@@ -128,10 +128,10 @@ export function factLine(
   // same as closed and must not be printed as either.
   if (state?.open && state.untilMin != null) {
     const at = clockOf(state.untilMin);
-    bits.push(t(`open until ${at}`, `mở tới ${at}`, `${at}まで営業`));
+    bits.push(t(`open until ${at}`, `mở tới ${at}`, `${at}まで営業`, `营业至 ${at}`));
   } else if (state && !state.open && state.opensAtMin != null) {
     const at = clockOf(state.opensAtMin);
-    bits.push(t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`));
+    bits.push(t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`, `${at} 开门`));
   }
   return bits.join('  ·  ');
 }

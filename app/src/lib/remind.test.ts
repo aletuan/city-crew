@@ -227,5 +227,8 @@ describe('reminderText', () => {
     });
     expect(reminderText('today', w, vi).title).toBe('Hôm nay: Pho night');
     expect(reminderText('today', w, ja).title).toBe('今日：Pho night');
+    const zh = (_a: string, _b: string, _c: string, z?: string) => z ?? '';
+    expect(reminderText('today', w, zh)).toEqual({ title: '今天：Pho night', body: '第一个地点 18:00 开始。查看路线，准时出发。' });
+    expect(reminderText('eve', w, zh).title).toBe('明天：Pho night');
   });
 });

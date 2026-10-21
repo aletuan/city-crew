@@ -81,6 +81,23 @@ const TRANSLATED = [
   'components/TastePicker.tsx',
   'components/ThemeSwitcher.tsx',
   'components/authUi.tsx',
+  // Step 2d-1: trips — planning one (the four questions, where it
+  // starts, the sketch, the options, editing a plan), the Trips tab, a
+  // trip and who is on it, and the reminders the night before and the
+  // morning of.
+  'screens/IdeasScreen.tsx',
+  'screens/TripDetailScreen.tsx',
+  'screens/TripsScreen.tsx',
+  'components/StartSheet.tsx',
+  'screens/PlanEditScreen.tsx',
+  'screens/PlanOptionsScreen.tsx',
+  'screens/SketchingScreen.tsx',
+  'components/StopCard.tsx',
+  'components/TripCrew.tsx',
+  'lib/sketch.ts',
+  'lib/remind.ts',
+  'lib/assist.ts',
+  'lib/stopFacts.ts',
 ];
 
 /** Rows with no Chinese column yet (step 3), by the English argument. */

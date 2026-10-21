@@ -4,9 +4,9 @@ import {
 } from './sketch';
 
 const steps: Step[] = [
-  { key: 'a', en: 'a', vi: 'a', ja: 'a' },
-  { key: 'b', en: 'b', vi: 'b', ja: 'b' },
-  { key: 'c', en: 'c', vi: 'c', ja: 'c' },
+  { key: 'a', en: 'a', vi: 'a', ja: 'a', zh: 'a' },
+  { key: 'b', en: 'b', vi: 'b', ja: 'b', zh: 'b' },
+  { key: 'c', en: 'c', vi: 'c', ja: 'c', zh: 'c' },
 ];
 
 describe('SKETCH_STEPS', () => {
@@ -26,11 +26,13 @@ describe('SKETCH_STEPS', () => {
     expect(STEP_FLOOR_MS).toBeGreaterThan(700);
   });
 
-  it('says the same thing in all three languages', () => {
+  it('says the same thing in all four languages', () => {
     for (const s of SKETCH_STEPS) {
       expect(s.en.length, s.key).toBeGreaterThan(0);
       expect(s.vi.length, s.key).toBeGreaterThan(0);
       expect(s.ja.length, s.key).toBeGreaterThan(0);
+      // Kana would mean the Japanese line pasted into the Chinese slot.
+      expect(s.zh, s.key).toMatch(/^[\u4e00-\u9fff]+$/);
     }
   });
 });
@@ -140,6 +142,9 @@ describe('stopCount', () => {
   // pass a singular and a plural for every language, which would put an
   // English grammar rule inside their vocabulary.
   it('leaves the languages that do not inflect alone', () => {
+    const zh = (_a: string, _b: string, _c?: string, z?: string) => z ?? '';
+    expect(stopCount(1, zh)).toBe('1 个地点');
+    expect(stopCount(3, zh)).toBe('3 个地点');
     expect(stopCount(1, vi)).toBe('1 điểm');
     expect(stopCount(5, vi)).toBe('5 điểm');
     expect(stopCount(1, ja)).toBe('1 スポット');
