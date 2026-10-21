@@ -7,6 +7,9 @@ import { wallClock } from './clock';
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+// 周 rather than 星期: the short form a calendar and a ticket both print,
+// two characters where 星期三 is three.
+const DAYS_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 // Vietnamese numbers its weekdays, so the short form is the word and the
 // number: Monday is "Thứ 2" and Saturday "Thứ 7".
 //
@@ -59,6 +62,9 @@ export function dateline(lang: string, now: Date): string {
   const m = String(now.getMonth() + 1).padStart(2, '0');
   if (lang === 'vi') return `${NUM_DAYS_VI[now.getDay()]}, ${d}/${m}`;
   if (lang === 'ja') return `${now.getMonth() + 1}/${now.getDate()}（${DAYS_JA[now.getDay()]}）`;
+  // Chinese: "10月7日 周三", the month and day as a date is written in
+  // a sentence, the weekday after. Nine characters at its widest.
+  if (lang === 'zh') return `${now.getMonth() + 1}月${now.getDate()}日 ${DAYS_ZH[now.getDay()]}`;
   return `${DAYS_EN[now.getDay()].slice(0, 3)}, ${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
@@ -78,6 +84,7 @@ export function dateline(lang: string, now: Date): string {
 export function dayline(lang: string, now: Date): string {
   if (lang === 'vi') return `${DAYS_VI[now.getDay()]} ${now.getDate()}`;
   if (lang === 'ja') return `${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
+  if (lang === 'zh') return `${DAYS_ZH[now.getDay()]} ${now.getDate()}日`;
   return `${DAYS_EN[now.getDay()]} ${now.getDate()}`;
 }
 
@@ -126,6 +133,7 @@ export function numericDate(lang: string, now: Date): string {
   const m = String(now.getMonth() + 1).padStart(2, '0');
   if (lang === 'vi') return `${d}/${m}`;
   if (lang === 'ja') return `${now.getMonth() + 1}/${now.getDate()}`;
+  if (lang === 'zh') return `${now.getMonth() + 1}月${now.getDate()}日`;
   return `${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
@@ -164,18 +172,18 @@ export function numericDate(lang: string, now: Date): string {
  * print back exactly.
  */
 export function fmtMinutes(n: number, lang: string): string {
-  return lang === 'vi' ? `${n} phút` : lang === 'ja' ? `${n}分` : `${n} min`;
+  return lang === 'vi' ? `${n} phút` : lang === 'ja' ? `${n}分` : lang === 'zh' ? `${n}分钟` : `${n} min`;
 }
 
 export function fmtDuration(min: number | null, max: number | null, lang: string): string | null {
   if (!min) return null;
   if ((max ?? min) <= 60) {
     const range = !max || min === max ? `${min}` : `${min}–${max}`;
-    return lang === 'vi' ? `${range} phút` : lang === 'ja' ? `${range}分` : `${range} min`;
+    return lang === 'vi' ? `${range} phút` : lang === 'ja' ? `${range}分` : lang === 'zh' ? `${range}分钟` : `${range} min`;
   }
   const h = (m: number) => Math.round(m / 30) / 2;
   const range = !max || h(min) === h(max) ? `${h(min)}` : `${h(min)}–${h(max)}`;
-  return lang === 'vi' ? `${range} giờ` : lang === 'ja' ? `${range}時間` : `${range}h`;
+  return lang === 'vi' ? `${range} giờ` : lang === 'ja' ? `${range}時間` : lang === 'zh' ? `${range}小时` : `${range}h`;
 }
 
 /**
@@ -233,21 +241,23 @@ export function splitHours(line: string): [string, string] {
  * because those are two different questions. The table used to answer only
  * the first, so a Vietnamese reader was told their café opens "Mon–Fri".
  */
-const SHORT_DAY: Record<string, { en: string; vi: string; ja: string }> = {
-  Monday: { en: 'Mon', vi: 'T2', ja: '月' },
-  Tuesday: { en: 'Tue', vi: 'T3', ja: '火' },
-  Wednesday: { en: 'Wed', vi: 'T4', ja: '水' },
-  Thursday: { en: 'Thu', vi: 'T5', ja: '木' },
-  Friday: { en: 'Fri', vi: 'T6', ja: '金' },
-  Saturday: { en: 'Sat', vi: 'T7', ja: '土' },
-  Sunday: { en: 'Sun', vi: 'CN', ja: '日' },
+type Spelled = { en: string; vi: string; ja: string; zh: string };
+
+const SHORT_DAY: Record<string, Spelled> = {
+  Monday: { en: 'Mon', vi: 'T2', ja: '月', zh: '周一' },
+  Tuesday: { en: 'Tue', vi: 'T3', ja: '火', zh: '周二' },
+  Wednesday: { en: 'Wed', vi: 'T4', ja: '水', zh: '周三' },
+  Thursday: { en: 'Thu', vi: 'T5', ja: '木', zh: '周四' },
+  Friday: { en: 'Fri', vi: 'T6', ja: '金', zh: '周五' },
+  Saturday: { en: 'Sat', vi: 'T7', ja: '土', zh: '周六' },
+  Sunday: { en: 'Sun', vi: 'CN', ja: '日', zh: '周日' },
 };
 
-const pick = (v: { en: string; vi: string; ja: string }, lang: string) =>
-  (lang === 'vi' ? v.vi : lang === 'ja' ? v.ja : v.en);
+const pick = (v: Spelled, lang: string) =>
+  (lang === 'vi' ? v.vi : lang === 'ja' ? v.ja : lang === 'zh' ? v.zh : v.en);
 
-const CLOSED = { en: 'Closed', vi: 'Đóng cửa', ja: '休業' };
-const ALL_DAY = { en: 'Open 24 hours', vi: 'Mở cả ngày', ja: '24時間営業' };
+const CLOSED: Spelled = { en: 'Closed', vi: 'Đóng cửa', ja: '休業', zh: '休息' };
+const ALL_DAY: Spelled = { en: 'Open 24 hours', vi: 'Mở cả ngày', ja: '24時間営業', zh: '24小时营业' };
 
 /**
  * One day's hours, printed on the app's own clock.

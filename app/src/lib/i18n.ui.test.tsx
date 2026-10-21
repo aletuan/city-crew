@@ -23,15 +23,16 @@ import { I18nProvider, spokenIn, useI18n, type Lang } from './i18n';
 
 const KEY = 'citycrew.lang';
 
-// Each row is (en, vi, ja) as a caller would pass it; `null` is a
+// Each row is (en, vi, ja, zh) as a caller would pass it; `null` is a
 // translation nobody wrote.
-const CASES: [string, string | null, string | null, string | null][] = [
-  ['all three', 'Places', 'Địa điểm', '場所'],
-  ['no Japanese', 'Places', 'Địa điểm', null],
-  ['no Vietnamese', 'Places', null, '場所'],
-  ['English only', 'Places', null, null],
-  ['no English', null, 'Địa điểm', null],
-  ['nothing', null, null, null],
+const CASES: [string, string | null, string | null, string | null, string | null][] = [
+  ['all three', 'Places', 'Địa điểm', '場所', null],
+  ['all four', 'Places', 'Địa điểm', '場所', '地点'],
+  ['no Japanese', 'Places', 'Địa điểm', null, null],
+  ['no Vietnamese', 'Places', null, '場所', null],
+  ['English only', 'Places', null, null, null],
+  ['no English', null, 'Địa điểm', null, null],
+  ['nothing', null, null, null, null],
 ];
 
 function Probe() {
@@ -39,10 +40,10 @@ function Probe() {
   return (
     <>
       <span data-testid="lang">{lang}</span>
-      {CASES.map(([name, en, vi, ja]) => (
-        <span key={name} data-testid={name}>{t(en, vi, ja)}</span>
+      {CASES.map(([name, en, vi, ja, zh]) => (
+        <span key={name} data-testid={name}>{t(en, vi, ja, zh)}</span>
       ))}
-      {(['en', 'vi', 'ja'] as Lang[]).map((l) => (
+      {(['en', 'vi', 'ja', 'zh'] as Lang[]).map((l) => (
         <button key={l} type="button" onClick={() => setLang(l)}>{l}</button>
       ))}
     </>
@@ -88,6 +89,19 @@ describe('t', () => {
     expect(read('no English')).toBe('Địa điểm');
     expect(read('nothing')).toBe('');
   });
+
+  // Chinese: its own, then English — the string most screens have until
+  // their translation lands — then Vietnamese. Never the Japanese, which
+  // shares characters with it and is not readable Chinese.
+  it('gives Chinese, then English, then Vietnamese, and never Japanese', async () => {
+    mount();
+    await pick('zh');
+    expect(read('all four')).toBe('地点');
+    expect(read('all three')).toBe('Places');
+    expect(read('no Vietnamese')).toBe('Places');
+    expect(read('no English')).toBe('Địa điểm');
+    expect(read('nothing')).toBe('');
+  });
 });
 
 describe('the stored choice', () => {
@@ -103,6 +117,13 @@ describe('the stored choice', () => {
     mount();
     await waitFor(() => expect(read('lang')).toBe('vi'));
     expect(read('all three')).toBe('Địa điểm');
+  });
+
+  it('reads Chinese back too', async () => {
+    await AsyncStorage.setItem(KEY, 'zh');
+    mount();
+    await waitFor(() => expect(read('lang')).toBe('zh'));
+    expect(read('all four')).toBe('地点');
   });
 
   it('is ignored when it is not a language the app speaks', async () => {
@@ -193,6 +214,10 @@ describe('spokenIn', () => {
     expect(spokenIn('ja', 'a', 'b')).toBe('en');
     expect(spokenIn('ja', null, 'b')).toBe('vi');
     expect(spokenIn('ja', null, null, null)).toBeNull();
+    expect(spokenIn('zh', 'a', 'b', 'c', 'd')).toBe('zh');
+    expect(spokenIn('zh', 'a', 'b', 'c')).toBe('en');
+    expect(spokenIn('zh', null, 'b', 'c')).toBe('vi');
+    expect(spokenIn('zh', null, null, 'c')).toBeNull();
   });
 
   it('treats an empty string as written, exactly as t does', () => {

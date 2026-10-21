@@ -46,7 +46,7 @@ export function SettingsCard() {
   const [themeOpen, setThemeOpen] = useState(back.sheet === 'theme');
   useEffect(() => { if (back.sheet) back.spendSheet(); }, [back]);
   const { scheme, pref } = useScheme();
-  const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
+  const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語', zh: '简体中文' }[lang];
   const tour = useSignupTour();
   // The invitation the switch raises floats over the page, above the tab
   // bar; with the card low on the screen it would cover the switch itself

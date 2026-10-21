@@ -180,6 +180,14 @@ const NOTES = {
 
 export type ExportLang = keyof typeof NOTES;
 
+/** The export's language for the app's: its own where the notes exist,
+ *  English where they do not yet — Chinese, until it has its three. A
+ *  language without notes cannot be handed to `buildExport`, which would
+ *  read `undefined` for every note and write a file that says nothing. */
+export function exportLang(lang: string): ExportLang {
+  return lang in NOTES ? (lang as ExportLang) : 'en';
+}
+
 /** The place's name in the reader's language, falling back the way the
  *  rest of the app does — through `localized`, the one reader of a row's
  *  languages. That imports only `lang`, so this module still needs no

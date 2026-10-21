@@ -209,7 +209,7 @@ reaches the native view.
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-cancel`, `search-result-<index>` |
 | `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language` |
-| `LanguageSwitcher` | `lang-<en\|vi\|ja>` |
+| `LanguageSwitcher` | `lang-<en\|vi\|ja\|zh>` |
 | `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`), `signin-forgot`; `auth-error` (`FormError`) |
 | `ForgotPasswordScreen` | `forgot-email`, `forgot-submit`; on the code step `forgot-code`, `forgot-resend`, `forgot-reset` (`forgot-password` is set but no flow types into it — see `14`'s header) |
 | `SignUpScreen` | `signup-name`, `signup-email`, `signup-password`, `signup-confirm`, `signup-submit`, `signup-taste-skip`, `signup-welcome-continue` |

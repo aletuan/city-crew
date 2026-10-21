@@ -53,7 +53,7 @@ export function slot(row: LocalizedRow, field: string, lang: Lang): string | nul
 /** Which language the reader will be handed for this field, or null when
  *  every slot is empty — `spokenIn` over the row's slots. */
 export function localizedLang(row: LocalizedRow, field: string, lang: Lang): Lang | null {
-  return spokenIn(lang, slot(row, field, 'en'), slot(row, field, 'vi'), slot(row, field, 'ja'));
+  return spokenIn(lang, slot(row, field, 'en'), slot(row, field, 'vi'), slot(row, field, 'ja'), slot(row, field, 'zh'));
 }
 
 /** The value to print: the reader's own language, else the provider's

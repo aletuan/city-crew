@@ -111,7 +111,7 @@ function Section({ title, cols, children }: {
 }
 
 /** The date picker's locale for each app language — see its note. */
-const PICKER_LOCALE: Record<'en' | 'vi' | 'ja', string> = { en: 'en-GB', vi: 'vi-VN', ja: 'ja-JP' };
+const PICKER_LOCALE: Record<'en' | 'vi' | 'ja' | 'zh', string> = { en: 'en-GB', vi: 'vi-VN', ja: 'ja-JP', zh: 'zh-Hans-CN' };
 
 export default function IdeasScreen({ navigation, route }: {
   navigation: Nav;

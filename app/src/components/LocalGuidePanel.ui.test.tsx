@@ -19,7 +19,7 @@ import type { Place } from '../lib/types';
 import { colors } from '../theme';
 
 const state = vi.hoisted(() => ({
-  lang: 'en' as Lang,
+  lang: 'en' as Exclude<Lang, 'zh'>,
   uid: 'u1' as string | null,
   granted: true,
   editor: false,

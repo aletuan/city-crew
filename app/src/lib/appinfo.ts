@@ -96,9 +96,10 @@ const pad = (n: number) => String(n).padStart(2, '0');
  * varies with the device's region settings would print a date the reader
  * then has to read twice.
  */
-export function updateDate(d: Date, lang: 'en' | 'vi' | 'ja'): string {
+export function updateDate(d: Date, lang: 'en' | 'vi' | 'ja' | 'zh'): string {
   const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (lang === 'ja') return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${time}`;
+  // Chinese writes year/month/day, as Japanese does.
+  if (lang === 'ja' || lang === 'zh') return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${time}`;
   if (lang === 'vi') return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${time}`;
   const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
   return `${d.getDate()} ${month} ${d.getFullYear()}, ${time}`;

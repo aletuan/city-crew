@@ -48,7 +48,7 @@ vi.mock('../nav', async (orig) => ({
 const state = vi.hoisted(() => ({
   guide: false,
   editor: false,
-  lang: 'en' as 'en' | 'vi' | 'ja',
+  lang: 'en' as 'en' | 'vi' | 'ja' | 'zh',
   scheme: 'dark' as 'dark' | 'light',
   pref: 'dark' as Pref,
   ready: true,
@@ -433,6 +433,9 @@ describe('account identity', () => {
   it.each([
     ['vi' as const, 'Thành viên từ', 'Tháng 3, 2025'],
     ['ja' as const, '登録日', '2025年3月'],
+    // The label has no Chinese yet and reads in English; the date is
+    // written the Chinese way already.
+    ['zh' as const, 'Member since', '2025年3月'],
   ])('writes Member since the %s way', (lang, label, value) => {
     state.lang = lang;
     state.memberSince = new Date(2025, 2, 14);
