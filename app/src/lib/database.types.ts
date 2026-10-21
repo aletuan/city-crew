@@ -121,6 +121,7 @@ export type Database = {
           hero_cta_en: string | null
           hero_cta_ja: string | null
           hero_cta_vi: string | null
+          hero_cta_zh: string | null
           hero_photo_credit: string | null
           hero_photo_credit_uri: string | null
           hero_photo_path: string | null
@@ -129,9 +130,11 @@ export type Database = {
           hero_sub_en: string | null
           hero_sub_ja: string | null
           hero_sub_vi: string | null
+          hero_sub_zh: string | null
           hero_title_en: string | null
           hero_title_ja: string | null
           hero_title_vi: string | null
+          hero_title_zh: string | null
           id: string
           is_active: boolean
           name_en: string
@@ -150,6 +153,7 @@ export type Database = {
           hero_cta_en?: string | null
           hero_cta_ja?: string | null
           hero_cta_vi?: string | null
+          hero_cta_zh?: string | null
           hero_photo_credit?: string | null
           hero_photo_credit_uri?: string | null
           hero_photo_path?: string | null
@@ -158,9 +162,11 @@ export type Database = {
           hero_sub_en?: string | null
           hero_sub_ja?: string | null
           hero_sub_vi?: string | null
+          hero_sub_zh?: string | null
           hero_title_en?: string | null
           hero_title_ja?: string | null
           hero_title_vi?: string | null
+          hero_title_zh?: string | null
           id: string
           is_active?: boolean
           name_en: string
@@ -179,6 +185,7 @@ export type Database = {
           hero_cta_en?: string | null
           hero_cta_ja?: string | null
           hero_cta_vi?: string | null
+          hero_cta_zh?: string | null
           hero_photo_credit?: string | null
           hero_photo_credit_uri?: string | null
           hero_photo_path?: string | null
@@ -187,9 +194,11 @@ export type Database = {
           hero_sub_en?: string | null
           hero_sub_ja?: string | null
           hero_sub_vi?: string | null
+          hero_sub_zh?: string | null
           hero_title_en?: string | null
           hero_title_ja?: string | null
           hero_title_vi?: string | null
+          hero_title_zh?: string | null
           id?: string
           is_active?: boolean
           name_en?: string

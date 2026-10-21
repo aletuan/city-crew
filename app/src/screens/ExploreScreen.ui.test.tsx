@@ -30,6 +30,7 @@ beforeEach(() => { tourState.step = -1; tourState.next.mockClear(); });
 type City = Record<string, unknown> & { id: string; short_en: string };
 
 const state = vi.hoisted(() => ({
+  zh: false,
   city: null as City | null,
   cities: null as City[] | null,
   index: [] as unknown[],
@@ -75,7 +76,10 @@ const spies = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+  useI18n: () => ({
+    lang: state.zh ? 'zh' : 'en', setLang: () => {},
+    t: (en: string, _vi?: string, _ja?: string, zh?: string | null) => (state.zh ? zh ?? en : en),
+  }),
 }));
 vi.mock('../lib/city', () => {
   const m = {
@@ -329,6 +333,7 @@ beforeEach(async () => {
   // The switches back to their shipped positions, so one test turning
   // the credit off cannot leave it off for the rest of the file.
   appFlags.reset();
+  state.zh = false;
   state.city = { ...hanoi };
   state.cities = null;
   state.index = [];
@@ -368,6 +373,18 @@ describe('the hero', () => {
     expect(screen.getByText('Lanterns and lakes')).toBeTruthy();
     expect(screen.getByText('Plan it')).toBeTruthy();
     expect(screen.queryByText('Ideas for a night in Hanoi')).toBeNull();
+  });
+
+  // The desk's Chinese, and where a city has none yet, the English — never
+  // a blank hero. The city's name stays as it is in both.
+  it('wears the desk’s Chinese, and falls back to English line by line', () => {
+    state.zh = true;
+    state.city = { ...hanoi, hero_title_en: 'The wind sways the bamboo low', hero_title_zh: '风吹竹枝，低低摇曳', hero_sub_en: 'A folk verse', hero_sub_zh: null };
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByText('风吹竹枝，低低摇曳')).toBeTruthy();
+    expect(screen.getByText('A folk verse')).toBeTruthy();
+    expect(screen.getByText('探索')).toBeTruthy();
   });
 
   // `onTextLayout` never fires in jsdom, which lays nothing out, so the

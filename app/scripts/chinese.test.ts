@@ -17,10 +17,13 @@
 // from the day it is written, not from the day somebody remembers to add
 // it here.
 //
-// The exception is a row from the database — a city's short name, a
-// collection's title, a city's hero copy — which has no Chinese column
-// yet. Those are step 3, and named here so that the list says what is
-// left.
+// The exception is a row from the database that has no Chinese of its
+// own, and two kinds of those are meant to stay that way. Place names —
+// a city's, a neighbourhood's — are kept as they are, in Latin letters:
+// the owner's rule (21 Oct 2026), because they are the names on the
+// signs and the map a visitor reads. A collection's title and
+// description are kept in the words its author wrote them in. Both are
+// named below, so the list says what is English on purpose.
 //
 // It also fails on kana in a Chinese string. The two languages share
 // characters, and a Japanese line pasted into the Chinese slot looks right
@@ -44,13 +47,12 @@ const walk = (dir: string): string[] =>
     return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [path] : [];
   });
 
-/** Rows with no Chinese column yet (step 3), by the English argument. */
+/** Rows with no Chinese column, on purpose, by the English argument. */
 const ROWS = new Set([
-  'c.short_en', 'city.short_en', 'r.en',
+  // Place names: a city's, a neighbourhood's, a place's own.
+  'c.short_en', 'city.short_en', 'r.en', "hit.place.name_en ?? ''",
+  // What a collection's author wrote.
   'item.collection.title_en', 'c.title_en', 'c.desc_en', 'col.title_en', 'col.desc_en', 'own.title_en', 'own.desc_en',
-  'city.hero_title_en', 'city.hero_sub_en', 'city.hero_cta_en',
-  // A place's name read from its columns rather than `localized`.
-  "hit.place.name_en ?? ''",
 ]);
 
 const KANA = /[぀-ヿ]/;

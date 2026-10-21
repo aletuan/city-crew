@@ -116,6 +116,21 @@ describe('CityHero', () => {
     expect(previewSub()).toBe('コレクションとスポットを自由に閲覧 — アカウント不要。');
   });
 
+  // Chinese: the desk's own line where there is one, the app's defaults
+  // where there is not, and the city's name kept as it is.
+  it('previews and edits the Chinese like the other three', async () => {
+    api.city.mockImplementation(async (id) => cityRow(id, { hero_sub_zh: '河水一分为二' }));
+    api.places.mockResolvedValue(PLACES);
+    renderDesk('/city');
+    await screen.findByRole('heading', { name: /City hero/ });
+    fireEvent.click(screen.getByRole('button', { name: 'ZH' }));
+    expect(previewTitle()).toMatch(/的夜晚灵感$/);
+    expect(previewSub()).toBe('河水一分为二');
+    expect(previewCta()).toBe('探索 →');
+    fireEvent.change(screen.getByLabelText(/^Title\s*ZH/), { target: { value: '风吹竹枝' } });
+    expect(previewTitle()).toBe('风吹竹枝');
+  });
+
   it('edits light up Save, Discard puts them back, and Save writes then re-reads', async () => {
     api.city.mockImplementation(async (id) => cityRow(id));
     renderDesk('/city');

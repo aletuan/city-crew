@@ -76,7 +76,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   // The city switcher, openable from here — see the chip in heroContent.
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const title = city?.hero_title_en
-    ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
+    ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja, city.hero_title_zh)
     : t(
         `Ideas for a night in ${city?.short_en ?? 'the city'}`,
         `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
@@ -198,7 +198,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
             not signed in. */}
         <Text style={s.heroSub}>
           {city?.hero_sub_en
-            ? t(city.hero_sub_en, city.hero_sub_vi, city.hero_sub_ja)
+            ? t(city.hero_sub_en, city.hero_sub_vi, city.hero_sub_ja, city.hero_sub_zh)
             : t(
                 'Browse public collections and places — no account needed.',
                 'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
@@ -221,7 +221,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
                   module, so the only thing holding them together is
                   that each says so. */}
               {city?.hero_cta_en
-                ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja)
+                ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja, city.hero_cta_zh)
                 : t('Explore', 'Khám phá', '探索する', '探索')}
             </Text>
             <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />

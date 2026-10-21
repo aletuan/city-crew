@@ -59,6 +59,12 @@ export type City = {
   hero_cta_en: string | null;
   hero_cta_vi: string | null;
   hero_cta_ja: string | null;
+  /** Chinese, added 21 Oct 2026. Optional for the reason `tz` is: a row
+   *  from a launch cache written before the columns has none, and the
+   *  hero reads that as English. */
+  hero_title_zh?: string | null;
+  hero_sub_zh?: string | null;
+  hero_cta_zh?: string | null;
   hero_place_slug: string | null;
   /** A photograph of the city itself. Beats `hero_place_slug` when set —
    *  see `heroPhoto` in ExploreScreen. */
@@ -187,6 +193,7 @@ const FALLBACK: City = {
   hero_title_en: null, hero_title_vi: null, hero_title_ja: null,
   hero_sub_en: null, hero_sub_vi: null, hero_sub_ja: null,
   hero_cta_en: null, hero_cta_vi: null, hero_cta_ja: null, hero_place_slug: null,
+  hero_title_zh: null, hero_sub_zh: null, hero_cta_zh: null,
   hero_photo_uri: null, hero_photo_credit: null, hero_photo_credit_uri: null,
 };
 
@@ -318,8 +325,19 @@ export function useMyPosition(nonce = 0): { lat: number; lng: number } | null {
 
 /** `withSub` and `withPhoto` each drop the newest group of columns, so a
  *  client shipped ahead of its migration still gets a city list. */
-const CITY_COLS = (withSub: boolean, withPhoto: boolean, withTz: boolean) =>
-  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km${withTz ? ', tz' : ''}, hero_title_en, hero_title_vi, hero_title_ja${withSub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug${withPhoto ? ', hero_photo_uri, hero_photo_credit, hero_photo_credit_uri' : ''}`;
+type ColGroups = { zh: boolean; tz: boolean; photo: boolean; sub: boolean };
+
+const CITY_COLS = ({ zh, tz, photo, sub }: ColGroups) =>
+  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km${tz ? ', tz' : ''}, hero_title_en, hero_title_vi, hero_title_ja${sub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug${photo ? ', hero_photo_uri, hero_photo_credit, hero_photo_credit_uri' : ''}${zh ? ', hero_title_zh, hero_sub_zh, hero_cta_zh' : ''}`;
+
+/** Each droppable group, and how a refusal names it. Chinese first: its
+ *  pattern would otherwise be taken for `hero_sub` by `hero_sub_zh`. */
+const DROPPABLE: readonly [keyof ColGroups, RegExp][] = [
+  ['zh', /hero_\w+_zh\b/],
+  ['tz', /\btz\b/],
+  ['photo', /hero_photo/],
+  ['sub', /hero_sub/],
+];
 
 /**
  * The city list, and a way back when the database is older than the app.
@@ -331,27 +349,35 @@ const CITY_COLS = (withSub: boolean, withPhoto: boolean, withTz: boolean) =>
  * switcher with nothing to switch to. The whole app would look like it
  * had one city.
  *
- * Two groups can be missing, and they are dropped newest first:
- * `hero_photo_*` (the city's own cover) then `hero_sub_*`. Postgres names
- * only the first column it does not recognise, so the retries have to be
- * ordered rather than combined — a database missing both answers about
- * `hero_photo_uri`, and only once that group is gone does it mention
- * `hero_sub`.
+ * Four groups can be missing — the Chinese hero, `tz`, `hero_photo_*`
+ * (the city's own cover) and `hero_sub_*`. Postgres names only the first
+ * column it does not recognise, so they cannot be dropped in one go: a
+ * database missing two answers about one of them, and mentions the other
+ * only once the first is gone.
  */
 async function fetchCities(): Promise<City[]> {
-  const run = (withSub: boolean, withPhoto: boolean, withTz = true) =>
+  const run = (groups: ColGroups) =>
     supabase
       .from('cities')
-      .select(CITY_COLS(withSub, withPhoto, withTz))
+      .select(CITY_COLS(groups))
       .eq('is_active', true)
       .order('sort_order');
 
-  let { data, error } = await run(true, true);
-  // Newest column first, the way the others are ordered: a database
-  // without `tz` answers about it before it answers about the hero.
-  if (error && /\btz\b/.test(error.message)) ({ data, error } = await run(true, true, false));
-  if (error && error.message.includes('hero_photo')) ({ data, error } = await run(true, false, false));
-  if (error && error.message.includes('hero_sub')) ({ data, error } = await run(false, false, false));
+  // Drop exactly the group the refusal names, and ask again, until the
+  // database answers or names nothing this knows how to drop. Until 21 Oct
+  // 2026 this was three fixed retries, each dropping its own group and
+  // every one after it in a guessed order; a fourth group (the Chinese
+  // hero) made the guess one too many, and asking the error is what the
+  // order was standing in for.
+  let groups: ColGroups = { zh: true, tz: true, photo: true, sub: true };
+  let { data, error } = await run(groups);
+  for (;;) {
+    const message = error?.message ?? '';
+    const named = DROPPABLE.find(([key, said]) => groups[key] && said.test(message));
+    if (!named) break;
+    groups = { ...groups, [named[0]]: false };
+    ({ data, error } = await run(groups));
+  }
   return (data as City[] | null) ?? [];
 }
 
