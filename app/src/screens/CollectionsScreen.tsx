@@ -888,10 +888,13 @@ export default function CollectionsScreen({ navigation, route }: {
               onFocus={() => setPanel(true)}
               onSubmitEditing={noteSearch}
               testID={{ input: 'collections-input', cancel: 'collections-cancel' }}
-              // The four things it answers by, named in the box itself —
-              // and in the app's own word for the last: "username" is
-              // what the Crew screen's add flow already calls it.
-              placeholder={t('Name, place, city, or @username', 'Tên, địa điểm, thành phố, hoặc @username', '名前・スポット・都市・@ユーザー名')}
+              // The four things it answers by, named in the box itself.
+              // A person, not "@username" (owner, 21 Oct 2026): on a phone
+              // the box cut it to "@use…", which read as nothing, and the
+              // search finds a curator by the handle typed with or without
+              // the @ anyway. No "or": a list of four needs no conjunction
+              // to be read as one.
+              placeholder={t('Name, place, city, user', 'Tên, địa điểm, thành phố, người dùng', '名前・スポット・都市・ユーザー')}
               // Inside the box, while the panel is up — see `SearchField`.
               cancel={{ shown: panel, label: t('Cancel', 'Hủy', 'キャンセル'), onPress: cancel }}
             />

@@ -27,8 +27,10 @@ export function listsWord(n: number, t: T): string {
 
 /**
  * Why a card is listed, when the shelf is narrowed — the line under its
- * name. "matches MONO Coffee Lab" when the words landed on a place
- * rather than on the list; "3 of 8 places · Cafés" when a chip reached
+ * name. "MONO Coffee Lab" when the words landed on a place rather than
+ * on the list: the place's name alone, since 21 Oct 2026 (owner) — the
+ * reader just typed it, so "matches" before it said nothing they did not
+ * know, and cost a third of a narrow card's line; "3 of 8 places · Cafés" when a chip reached
  * part of it. Null when the ordinary count says it all: nothing asked
  * (every place is a hit then, by construction), or a list found by its
  * own words with every place still counted.
@@ -41,7 +43,7 @@ export function reasonFor(hit: CollectionHit<unknown> | undefined, chosen: reado
   const parts: string[] = [];
   if (hit.place) {
     const name = t(hit.place.name_en ?? '', hit.place.name_vi ?? '', hit.place.name_ja ?? undefined);
-    parts.push(t(`matches ${name}`, `khớp ${name}`, `${name} に一致`));
+    parts.push(name);
   }
   if (hit.hits !== hit.total) {
     parts.push(t(
