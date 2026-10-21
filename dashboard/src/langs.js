@@ -40,6 +40,10 @@ export const LANGS = [
   // purpose — place names are kept as they are for a Chinese reader (the
   // owner's rule), and an empty slot reads as the English one.
   { code: 'zh', label: 'ZH', store: 'i18n' },
+  // Traditional Chinese, as Taiwan writes it, 21 Oct 2026: its own key,
+  // `zh-Hant`, never folded into the Simplified one or read from it. Name
+  // and district empty on purpose, as for Simplified.
+  { code: 'zh-Hant', label: 'ZH-HANT', store: 'i18n' },
 ];
 
 /** The base names of the values that exist once per language. */

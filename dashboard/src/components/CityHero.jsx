@@ -15,27 +15,32 @@ import { api, resizeImage } from '../api.js';
 import { chipLabel, useCity, useToast } from '../App.jsx';
 
 const HERO_FIELDS = [
-  'hero_title_en', 'hero_title_vi', 'hero_title_ja', 'hero_title_zh',
-  'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja', 'hero_sub_zh',
-  'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_cta_zh', 'hero_place_slug',
+  'hero_title_en', 'hero_title_vi', 'hero_title_ja', 'hero_title_zh', 'hero_title_zh_hant',
+  'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja', 'hero_sub_zh', 'hero_sub_zh_hant',
+  'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_cta_zh', 'hero_cta_zh_hant', 'hero_place_slug',
   // The credit travels with the rest of the form; the file and its URL do
   // not, because uploading is its own action with its own failure.
   'hero_photo_credit', 'hero_photo_credit_uri',
 ];
 const pickForm = (row) => Object.fromEntries(HERO_FIELDS.map((k) => [k, row[k] ?? '']));
 
+/** The Chinese title, either script: [the words for "this city", the rest]. */
+const ZH_TITLE = { zh: ['这座城市', '的夜晚灵感'], zh_hant: ['這座城市', '的夜晚靈感'] };
+
 /** Same defaults the app renders when a hero field is null. */
 const defaultTitle = (city, lang) => {
   if (lang === 'vi') return `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`;
   if (lang === 'ja') return `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`;
-  // A city's name stays as it is in Chinese — the owner's rule, 21 Oct 2026.
-  if (lang === 'zh') return `${city?.short_en ?? '这座城市'}的夜晚灵感`;
+  // A city's name stays as it is in Chinese — the owner's rule, 21 Oct
+  // 2026 — in either script, so the two share a line.
+  const zh = ZH_TITLE[lang];
+  if (zh) return `${city?.short_en ?? zh[0]}${zh[1]}`;
   return `Ideas for a night in ${city?.short_en ?? 'the city'}`;
 };
 /** The app's built-in button label, mirrored — the two codebases share no
  *  module, so the only thing keeping this honest is that both sides say
  *  where the other one is. See ExploreScreen's hero CTA. */
-const DEFAULT_CTA = { en: 'Explore', vi: 'Khám phá', ja: '探索する', zh: '探索' };
+const DEFAULT_CTA = { en: 'Explore', vi: 'Khám phá', ja: '探索する', zh: '探索', zh_hant: '探索' };
 /** Cleared, the app falls back to this — the line it used to show in
  *  every city. Shown as the placeholder so an empty field reads as
  *  "this is what they will see", not as "this will be blank". */
@@ -44,19 +49,23 @@ const DEFAULT_SUB = {
   vi: 'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
   ja: 'コレクションとスポットを自由に閲覧 — アカウント不要。',
   zh: '浏览公开的合集和地点 — 无需账号。',
+  zh_hant: '瀏覽公開的合集和地點 — 無需帳號。',
 };
 
-/** The app's four languages, in the order its language sheet lists them. */
-const LANGS = ['en', 'vi', 'ja', 'zh'];
+/** The app's five languages, in the order its language sheet lists them,
+ *  by the suffix their columns carry: Traditional Chinese is `zh-Hant` in
+ *  the app and `_zh_hant` in a column name, which has no hyphen. */
+const LANGS = ['en', 'vi', 'ja', 'zh', 'zh_hant'];
+const LANG_LABEL = { en: 'EN', vi: 'VI', ja: 'JA', zh: 'ZH', zh_hant: 'ZH-HANT' };
 
 function LangRow({ label, base, form, set, placeholders }) {
   return (
-    <div className="quad">
+    <div className="langgrid">
       {LANGS.map((lang) => {
         const name = `${base}_${lang}`;
         return (
           <div className="field" key={name}>
-            <label htmlFor={name}>{label}<span className="lang">{lang.toUpperCase()}</span></label>
+            <label htmlFor={name}>{label}<span className="lang">{LANG_LABEL[lang]}</span></label>
             <input
               id={name}
               value={form[name]}
@@ -266,7 +275,7 @@ export default function CityHero() {
               className={`chip ${previewLang === lang ? 'on' : ''}`}
               onClick={() => setPreviewLang(lang)}
             >
-              {lang.toUpperCase()}
+              {LANG_LABEL[lang]}
             </button>
           ))}
           {row?.hero_photo_uri ? (

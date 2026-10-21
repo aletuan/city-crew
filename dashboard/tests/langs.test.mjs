@@ -14,18 +14,23 @@ import {
 
 test('EN and VI are columns, every later language is in the object', () => {
   assert.deepEqual(columnLangs().map((l) => l.code), ['en', 'vi']);
-  assert.deepEqual(objectLangs().map((l) => l.code), ['ja', 'zh']);
-  assert.equal(LANGS.length, 4);
+  assert.deepEqual(objectLangs().map((l) => l.code), ['ja', 'zh', 'zh-Hant']);
+  assert.equal(LANGS.length, 5);
   assert.deepEqual(localizedColumns(), [
     'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
   ]);
-  assert.deepEqual(localizedKeys(['desc']), ['desc_en', 'desc_vi', 'desc_ja', 'desc_zh']);
+  assert.deepEqual(localizedKeys(['desc']), ['desc_en', 'desc_vi', 'desc_ja', 'desc_zh', 'desc_zh-Hant']);
 });
 
 test('unfold gives the form one key per field, null where the object has nothing', () => {
-  const none = { name_ja: null, desc_ja: null, neighborhood_ja: null, name_zh: null, desc_zh: null, neighborhood_zh: null };
-  assert.deepEqual(unfoldI18n({ ja: { name: 'カフェ', desc: '  川沿い。 ', machine: true }, zh: { desc: ' 河边。 ' } }), {
-    ...none, name_ja: 'カフェ', desc_ja: '川沿い。', desc_zh: '河边。',
+  const none = {
+    name_ja: null, desc_ja: null, neighborhood_ja: null, name_zh: null, desc_zh: null, neighborhood_zh: null,
+    'name_zh-Hant': null, 'desc_zh-Hant': null, 'neighborhood_zh-Hant': null,
+  };
+  assert.deepEqual(unfoldI18n({
+    ja: { name: 'カフェ', desc: '  川沿い。 ', machine: true }, zh: { desc: ' 河边。 ' }, 'zh-Hant': { desc: '河邊。' },
+  }), {
+    ...none, name_ja: 'カフェ', desc_ja: '川沿い。', desc_zh: '河边。', 'desc_zh-Hant': '河邊。',
   });
   assert.deepEqual(unfoldI18n({}), none);
   assert.deepEqual(unfoldI18n(undefined), none);
@@ -78,8 +83,8 @@ test('other metadata beside the text survives a fold', () => {
 });
 
 test('the machine queue is counted per object language, on the boolean the fold writes', () => {
-  assert.deepEqual(machineFilters(), [['ja', 'Machine JA'], ['zh', 'Machine ZH']]);
-  assert.deepEqual(countMachine(null), { ja: 0, zh: 0 });
+  assert.deepEqual(machineFilters(), [['ja', 'Machine JA'], ['zh', 'Machine ZH'], ['zh-Hant', 'Machine ZH-HANT']]);
+  assert.deepEqual(countMachine(null), { ja: 0, zh: 0, 'zh-Hant': 0 });
   assert.deepEqual(countMachine([
     { i18n: { ja: { desc: 'a', machine: true } } },
     { i18n: { ja: { desc: 'b', machine: true } } },
@@ -87,7 +92,8 @@ test('the machine queue is counted per object language, on the boolean the fold 
     { i18n: { ja: { desc: 'd', machine: 'true' } } }, // not the fold's boolean
     { i18n: { ko: { desc: 'e', machine: true } } },   // a language LANGS does not list
     { i18n: { zh: { desc: 'f', machine: true } } },
+    { i18n: { 'zh-Hant': { desc: 'g', machine: true } } },
     { i18n: {} },
     {},
-  ]), { ja: 2, zh: 1 });
+  ]), { ja: 2, zh: 1, 'zh-Hant': 1 });
 });

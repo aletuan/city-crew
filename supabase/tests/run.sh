@@ -518,3 +518,11 @@ for f in "$ROOT"/supabase/migrations/*_preset_avatar_at_signup.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/avatar_preset_test.sql"
+
+# Traditional Chinese (21 Oct 2026): `places.i18n` takes a language and
+# its script, `zh-Hant`, and cities gain the hero's three columns.
+echo "→ traditional chinese"
+for f in "$ROOT"/supabase/migrations/*_zh_hant.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/zh_hant_test.sql"

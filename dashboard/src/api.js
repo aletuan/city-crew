@@ -189,9 +189,9 @@ export const api = {
 
   saveCityHero: async (id, fields) => {
     const editable = new Set([
-      'hero_title_en', 'hero_title_vi', 'hero_title_ja', 'hero_title_zh',
-      'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja', 'hero_sub_zh',
-      'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_cta_zh', 'hero_place_slug',
+      'hero_title_en', 'hero_title_vi', 'hero_title_ja', 'hero_title_zh', 'hero_title_zh_hant',
+      'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja', 'hero_sub_zh', 'hero_sub_zh_hant',
+      'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_cta_zh', 'hero_cta_zh_hant', 'hero_place_slug',
       // The photo's URL and path are not here on purpose: they are written
       // by setCityHeroPhoto, which owns the file beside them. Only the
       // credit is typed by hand.

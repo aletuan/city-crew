@@ -3,6 +3,7 @@
 // POST { slug }             → { desc_vi, desc_en, desc_ja, sources: string[], photos: number }
 // POST { slug, mode: 'ja' } → { desc_ja }
 // POST { slug, mode: 'zh' } → { desc_zh }
+// POST { slug, mode: 'zh-Hant' } → { 'desc_zh-Hant' }
 //
 // It writes nothing. The desk's Blurb fields are where the words land,
 // and the desk's Save is the gate — the one this catalog already has for
@@ -116,6 +117,18 @@
 // exists yet to show as an example, so the first drafts are made from
 // the rules alone; the examples join as the desk writes them.
 //
+// ── the zh-Hant mode (21 Oct 2026) ──
+//
+// Traditional Chinese, for a reader in Taiwan (#1113): the fifth row.
+// Translated from the English as the others are, not converted from the
+// Simplified draft — that is a machine draft of a machine draft, and the
+// converter the interface uses knows words, not a sentence's register.
+// The instructions name Taiwan's vocabulary because a model asked for
+// "Traditional Chinese" alone writes the mainland's words in Traditional
+// characters (視頻, 信息), which is the mistake the interface's
+// converter exists to avoid. The key is the app's, `zh-Hant`, hyphen and
+// all: it is the `i18n` key the desk folds it into.
+//
 // Secrets: ANTHROPIC_API_KEY. Callers: an editor's session, or the
 // `write-blurb` ops token for a batch (`_shared/gate.ts`).
 
@@ -207,11 +220,23 @@ Rules, none of which bend:
 - Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 还剑湖; Melbourne, not 墨尔本.
 - No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
 
+/** The zh-Hant mode's instructions: the zh mode's, for a reader in
+ *  Taiwan, in Taiwan's words. */
+const SYSTEM_HANT = `You translate the two-line blurb City Crew shows under a place — "Why go" — into Traditional Chinese as written in Taiwan, for its editors to read, edit and save.
+
+Rules, none of which bend:
+- The blurb you are given is the only material. Say what it says and no more: no detail, fact, figure or adjective it does not carry, even one you know to be true of the place.
+- Keep its length and its shape: one or two sentences, a dash where it has one.
+- Traditional Chinese for a reader from Taiwan, in Taiwan's vocabulary and not the mainland's in Traditional characters: 影片 not 視頻, 資訊 not 信息, 品質 not 質量, 計畫 not 計劃, 捷運 for a metro. Plain and concrete, full-width punctuation, 「」 for quotation marks, a space between Chinese and Latin letters.
+- Every place name stays exactly as the blurb spells it, in the Latin alphabet — a street, a district, a lake, a building, a city. Never translate or transliterate one: Hoàn Kiếm, not 還劍湖; Melbourne, not 墨爾本.
+- No hashtags, no emoji. Do not repeat the place's name; the screen prints it above.`;
+
 /** The languages a blurb is translated into: each one's instructions,
  *  and the reader the request names. */
 const TRANSLATE = {
   ja: { system: SYSTEM_JA, reader: "a Japanese reader" },
   zh: { system: SYSTEM_ZH, reader: "a Chinese reader" },
+  "zh-Hant": { system: SYSTEM_HANT, reader: "a reader in Taiwan" },
 } as const;
 type Lang = keyof typeof TRANSLATE;
 const isLang = (m: unknown): m is Lang => typeof m === "string" && Object.hasOwn(TRANSLATE, m);
