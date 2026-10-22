@@ -219,11 +219,14 @@ afterEach(() => {
 });
 
 describe('the zero-state', () => {
-  it('offers browse, open now, most popular and recently added before anything is typed', () => {
+  // No "Open right now": Explore's filter asks that, with the same
+  // ranking, and the owner took the copy out of Search (22 Oct 2026).
+  it('offers browse, most popular and recently added before anything is typed, and not open now', () => {
     mount();
-    for (const label of ['Browse', 'Open right now', 'Most popular', 'Recently added']) {
+    for (const label of ['Browse', 'Most popular', 'Recently added']) {
       expect(screen.getByText(label)).toBeTruthy();
     }
+    expect(screen.queryByText('Open right now')).toBeNull();
     // Nothing remembered yet, so no Recent section.
     expect(screen.queryByText('Recent')).toBeNull();
     expect(screen.queryByText('Places')).toBeNull();
@@ -265,45 +268,36 @@ describe('the zero-state', () => {
     expect(popular).not.toContain('Nguyễn Thái Học');
   });
 
-  it('lists only the places open at this minute', () => {
-    mount();
-    const open = textAfter('Open right now');
-    const section = open.slice(0, open.indexOf('Most popular'));
-    expect(section).toContain('Cong Caphe');
-    expect(section).not.toContain('Phở 10');
-  });
-
   // Ten in the morning, and the café has twelve hours left. It used to
   // print "until 22:00" here, on every row, all day — see
   // CLOSING_SOON_MIN for why an hour that is always on says nothing.
   it('leaves the hour off a place that is nowhere near closing', () => {
     mount();
-    const open = textAfter('Open right now');
-    const section = open.slice(0, open.indexOf('Most popular'));
-    expect(section).toContain('Hoan Kiem');
-    expect(section).not.toContain('until 22:00');
+    const popular = textAfter('Most popular');
+    expect(popular).toContain('Cong Caphe');
+    expect(popular).not.toContain('until 22:00');
   });
 
   // Half an hour out is exactly when the hour is worth the space it takes.
   it('names the closing hour once the place is about to close', () => {
     vi.setSystemTime(new Date('2026-09-10T14:30:00Z')); // 21:30 in Hanoi
     mount();
-    const open = textAfter('Open right now');
-    const section = open.slice(0, open.indexOf('Most popular'));
-    expect(section).toContain('Hoan Kiem · until 22:00');
+    expect(textAfter('Most popular')).toContain('Hoan Kiem · until 22:00');
   });
 
-  // "Open right now" is read on the city's clock. The instant that found
+  // A row's hours are read on the city's clock. The instant that found
   // the bug: 06:56Z is 16:56 in Melbourne and 13:56 in Hanoi. A place
   // open 3 PM to 10 PM is open on the first clock and shut on the second,
-  // and the app used to read every city on the second.
-  it('reads "open right now" on the city’s clock', () => {
+  // and the app used to read every city on the second, saying "opens
+  // 15:00" of a place whose doors were open.
+  it('reads a row’s hours on the city’s clock', () => {
     cityState.current = { id: 'melbourne', tz: 'Australia/Melbourne' };
     vi.setSystemTime(new Date('2026-09-22T06:56:00Z'));
     cat.places = [{ ...cong, opening_hours: week('3:00 – 10:00 PM') }, pho, museum];
     mount();
-    const open = textAfter('Open right now');
-    expect(open.slice(0, open.indexOf('Most popular'))).toContain('Hoan Kiem');
+    const popular = textAfter('Most popular');
+    expect(popular).toContain('Cong Caphe');
+    expect(popular).not.toContain('opens 15:00');
   });
 
   it('says when a closed place opens, and shows the rating on the right', () => {
@@ -340,13 +334,6 @@ describe('the zero-state', () => {
     fireEvent.click(screen.getAllByText('Fine Arts Gallery')[0]);
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'fine-arts' });
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
-  });
-
-  it('skips the open-now section entirely when nothing is open', () => {
-    cat.places = [pho, museum];
-    mount();
-    expect(screen.queryByText('Open right now')).toBeNull();
-    expect(screen.getByText('Most popular')).toBeTruthy();
   });
 
   it('shows the hint while the catalog is still empty', () => {

@@ -26,7 +26,7 @@ export type SearchRow =
   // The zero-state — what the screen offers before anyone has typed.
   // Small-caps section marks (`eyebrow`), the remembered searches, one
   // row of category chips, and the ranked "most popular" places.
-  | { kind: 'eyebrow'; key: string; label: string; clear?: boolean; dot?: boolean }
+  | { kind: 'eyebrow'; key: string; label: string; clear?: boolean }
   | { kind: 'recent'; key: string; term: string }
   | { kind: 'chips'; key: string }
   | { kind: 'popular'; key: string; place: Place }
@@ -35,11 +35,7 @@ export type SearchRow =
   // than a reused one so a place in both sections keys twice without a
   // collision, and so the two lists can ever diverge in rendering
   // without an archaeology dig.
-  | { kind: 'latest'; key: string; place: Place }
-  // The reference's time-aware section: doors that are open at this
-  // minute. Selection lives in lib/opennow; the row renders exactly as
-  // its two neighbours do.
-  | { kind: 'open'; key: string; place: Place };
+  | { kind: 'latest'; key: string; place: Place };
 
 export type SearchRowsInput = {
   /** `queryTerms(query)` — empty means the zero-state. */
@@ -49,7 +45,6 @@ export type SearchRowsInput = {
   /** The categories the Browse chips offer; the section is skipped when
    *  there are none. */
   cats: readonly string[];
-  openNow: readonly Place[];
   popular: readonly Place[];
   latest: readonly Place[];
   /** Every list with its members resolved, once per catalog. */
@@ -62,7 +57,7 @@ export type SearchRowsInput = {
 };
 
 export function buildSearchRows(
-  { terms, query, recents, cats, openNow, popular, latest, colMembers, places, cityId, fresh, synonyms }: SearchRowsInput,
+  { terms, query, recents, cats, popular, latest, colMembers, places, cityId, fresh, synonyms }: SearchRowsInput,
   t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): SearchRow[] {
   // Before a word is typed the list is the zero-state: the searches
@@ -81,17 +76,13 @@ export function buildSearchRows(
       out.push({ kind: 'eyebrow', key: 'z-browse', label: t('Browse', 'Duyệt theo', 'カテゴリー', '分类', '分類') });
       out.push({ kind: 'chips', key: 'z-chips' });
     }
-    // Above Most popular, because its answer expires first: a ranking
-    // holds for weeks, an open door for hours. Skipped entirely when
-    // nothing is open — a section titled "open right now" with no rows
-    // would read as the city being shut, which 3 a.m. aside it is not.
-    if (openNow.length) {
-      out.push({
-        kind: 'eyebrow', key: 'z-open', dot: true,
-        label: t('Open right now', 'Đang mở cửa', '営業中', '正在营业', '正在營業'),
-      });
-      for (const pl of openNow) out.push({ kind: 'open', key: `on-${pl.slug}`, place: pl });
-    }
+    // There was an "Open right now" section here, between these two,
+    // the reference's question of where one can walk into this minute.
+    // The owner took it out (22 Oct 2026): Explore asks the same question
+    // in its filter, "Đang mở cửa", and answered it with the same ranking
+    // (`bestFirst`), so the two lists were one list in two places. Search
+    // is for finding a place one can name; walking the city as it is
+    // right now is Explore's, where the map is.
     if (popular.length) {
       out.push({ kind: 'eyebrow', key: 'z-popular', label: t('Most popular', 'Phổ biến nhất', '人気スポット', '最受欢迎', '最受歡迎') });
       for (const pl of popular) out.push({ kind: 'popular', key: `mp-${pl.slug}`, place: pl });

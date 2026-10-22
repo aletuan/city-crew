@@ -320,9 +320,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * promises to repeat. The desk's sequence this was thought to be does
    * not exist, which is why replacing it costs nothing.
    *
-   * `bestFirst` is what Search's open-now list has always used: rating
-   * down the column, taste worth one standard deviation of it, and
-   * `slug` as the final tie so two renders of the same screen agree.
+   * `bestFirst` is what Search's open-now list used, until that list went
+   * as a copy of this one (22 Oct 2026): rating down the column, taste
+   * worth one standard deviation of it, and `slug` as the final tie so
+   * two renders of the same screen agree.
    * Signed out, `taste` is null and this is the plain rating order — a
    * deterministic list where there was an arbitrary one.
    *

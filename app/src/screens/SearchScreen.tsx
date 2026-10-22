@@ -30,8 +30,6 @@ import { RECENTS_KEY, rememberSearch } from '../lib/recents';
 import { buildSearchRows } from '../lib/searchRows';
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
 import { newestPlaces } from '../lib/newest';
-import { openNowPlaces } from '../lib/opennow';
-import { useBrowseTaste } from '../lib/tasteProfile';
 import { rankPopular } from '../lib/popular';
 import { queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
@@ -164,32 +162,6 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // ordering caveats live with the ranking, in lib/newest.
   const latest = useMemo(() => newestPlaces(places.filter(isLive)), [places]);
 
-  // What this reader leans towards, or null. The chips they picked plus
-  // the categories their own collections are made of — see
-  // `useBrowseTaste`, and note that it is deliberately not the hook the
-  // planner uses.
-  //
-  // It moves this list by at most `TASTE_LIFT`, one standard deviation of
-  // the catalog's ratings, which is what makes it a reordering of the
-  // pack rather than a different list: the three 4.9s in the reference
-  // capture were decided by a fourth decimal place, and this is what
-  // decides them instead.
-  const taste = useBrowseTaste();
-
-  // The doors open at this minute — see lib/opennow. `now` is taken per
-  // render and deliberately left out of the deps: recomputing on every
-  // keystroke would walk every place's hours to reach the same answer
-  // within the same minute, and a screen left open across a closing time
-  // corrects itself on its next real render.
-  const openNow = useMemo(
-    // `taste` is in the deps and `now` still is not: taste changes when
-    // the reader edits their chips, which must reorder this the next
-    // time they look, and `useBrowseTaste` memoises so it is stable
-    // between those edits.
-    () => openNowPlaces(places.filter(isLive), now, city?.tz ?? DEFAULT_TZ, undefined, taste),
-    [places, taste], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
   // Only categories this city actually has — the same rule the Explore
   // filter row states: a chip never leads to an empty list. Counted over
   // the live catalog for the same reason `popular` is.
@@ -204,9 +176,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // `lib/searchRows`.
   const rows = useMemo(
     () => buildSearchRows({
-      terms, query, recents, cats, openNow, popular, latest, colMembers, places, cityId: city?.id, fresh, synonyms,
+      terms, query, recents, cats, popular, latest, colMembers, places, cityId: city?.id, fresh, synonyms,
     }, t),
-    [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, latest, openNow, cats],
+    [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, latest, cats],
   );
 
   // Row key → position among the place hits, so a UI test can address
@@ -320,11 +292,6 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             return (
               <View style={s.eyebrowRow}>
                 <Text style={s.eyebrow}>{item.label}</Text>
-                {/* The reference's live mark: a small green dot beside
-                    "Open right now", the same green the detail screen
-                    says "Open now" in — a colour that already means
-                    "the doors are open" in this app. */}
-                {item.dot ? <View style={s.liveDot} /> : null}
                 {/* Clear wipes the whole memory — the reference design has
                     no per-row delete, and a memory you can prune one line
                     at a time invites tidying a list that exists to be
@@ -403,7 +370,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
               </View>
             );
           }
-          if (item.kind === 'popular' || item.kind === 'latest' || item.kind === 'open') {
+          if (item.kind === 'popular' || item.kind === 'latest') {
             const pl = item.place;
             const cover = coverOf(pl)?.photo_uri;
             // The reference layout, followed exactly: the meta line is
@@ -812,7 +779,6 @@ const s = StyleSheet.create({
   // in the secondary colour, as PlaceCard sets them. Same gold the photo
   // overlay uses, so a star means one thing everywhere.
   rowRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ok },
   rowStar: { color: onPhoto.star, fontSize: 13 },
   rowRatingValue: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   rowRatingCount: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },

@@ -1,15 +1,15 @@
 // Best first, with a thumb on the scale for what this reader likes.
 //
 // Lifted out of `opennow.ts` when Explore wanted the same ordering. It
-// was never really about opening hours: that module filters to the doors
-// that are open and then ranks what is left, and only the filter is about
-// the hour. Two surfaces asking for "the good ones, leaning your way"
-// should not be two comparators — that is how two lists meant to agree
-// stop agreeing.
+// was never really about opening hours: that module filtered to the doors
+// that were open and then ranked what was left, and only the filter was
+// about the hour. Two surfaces asking for "the good ones, leaning your
+// way" should not be two comparators — that is how two lists meant to
+// agree stop agreeing.
 //
-// What stayed behind in `opennow.ts` is the part that is genuinely its
-// own: `openState`, the cap of five, and the argument for why a place
-// whose hours cannot be read is simply absent.
+// `opennow.ts` is gone (22 Oct 2026), with the "Open right now" section of
+// Search it fed: the owner found it was Explore's open-now filter a second
+// time, and once both ranked by this, it was.
 
 /** Enough of a place to put in order. Structural, so Node can run it and
  *  so a test does not have to build a catalog row to say "4.5, and lots
