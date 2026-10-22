@@ -124,7 +124,12 @@ const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionico
 };
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const collectionAnchor = useTourAnchor('collections', () => navigation.navigate('Collections'));
+  // The guide's ring on this tab is the pill's own shape (owner, 22 Oct
+  // 2026): the cell's width, and the inset in from the island's rim above
+  // and below. Ringed as other controls are, a little clear of the cell's
+  // box, it was 82×70 against the 75×56 pill a reader knows as "the
+  // selected tab", and stood 4pt out past the island's rim top and foot.
+  const collectionAnchor = useTourAnchor('collections', () => navigation.navigate('Collections'), undefined, { x: 0, y: -PILL_INSET });
   const light = useScheme().scheme === 'light';
   const duck = useTabBarDuck();
 

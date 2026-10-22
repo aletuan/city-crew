@@ -22,7 +22,10 @@ vi.mock('react-native', async orig => ({ ...(await orig<Record<string, unknown>>
 const pressed = vi.fn();
 const getRoute = () => state.route;
 function Anchor({ id }: { id: 'search' | 'filter' | 'save' | 'collections' }) {
-  const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined);
+  // The collections tab rings as the tab bar asks: in from its box above
+  // and below, out by nothing at the sides.
+  const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined,
+    id === 'collections' ? { x: 0, y: -4 } : undefined);
   useEffect(() => {
     ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.readings.shift() ?? state.y, state.w, state.h) } as unknown as View;
   }, [ref]);
@@ -289,4 +292,24 @@ it('expires the skip reminder without reopening the guide', async () => {
     expect(screen.queryByTestId('guide-notice')).toBeNull();
     expect(screen.queryByTestId('signup-tour')).toBeNull();
   } finally { vi.useRealTimers(); }
+});
+
+// A control whose box is not its shape says where its ring goes: the tab
+// bar's cell asks for the pill inside it. Every other control is ringed a
+// little clear of its box, and the card keeps the same distance from
+// either ring.
+it('draws the ring where the control asks, and keeps the card as clear of it', async () => {
+  render(tree()); await start();
+  const target = () => screen.getByTestId('signup-tour-target');
+  const card = () => screen.getByTestId('signup-tour');
+  // Search: 4 clear of its 40×40 box at (40, 60), the card 12 below that.
+  expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['36px', '56px', '48px', '48px']);
+  expect(card().style.top).toBe('116px');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/4');
+  state.route = 'PlaceDetail';
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/4');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/4');
+  // Collections: the box's width, 4 in from its top and foot.
+  expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
+  expect(card().style.top).toBe('108px');
 });
