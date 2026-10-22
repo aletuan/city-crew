@@ -19,6 +19,7 @@
 
 import type { I18nDoc } from '../localized';
 import { supabase } from '../supabase';
+import { everyPage } from './pages';
 
 /** One place this account put into the catalog. Survives the account —
  *  see the delete screen — so it is exported as a contribution rather
@@ -75,13 +76,17 @@ export async function fetchMyLikedCollections(ownerId: string): Promise<LikedCol
 }
 
 export async function fetchMyHistory(ownerId: string): Promise<HistoryEventRow[]> {
-  const { data, error } = await supabase
+  // Every page (`lib/data/pages`): one reader had 1,991 events by 22 Oct
+  // 2026, and a single read handed the export the first thousand. `id`
+  // breaks the tie between two events in the same instant, so no page
+  // boundary can drop one or repeat it.
+  // Through `unknown`, like every other embed in this directory:
+  // PostgREST types a to-one embed as an array and the runtime does not.
+  return everyPage<HistoryEventRow>((from, to) => supabase
     .from('place_events')
     .select('kind, city_id, created_at, places(slug)')
     .eq('user_id', ownerId)
-    .order('created_at', { ascending: true });
-  if (error) throw new Error(error.message);
-  // Through `unknown`, like every other embed in this directory:
-  // PostgREST types a to-one embed as an array and the runtime does not.
-  return (data ?? []) as unknown as HistoryEventRow[];
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+    .range(from, to));
 }

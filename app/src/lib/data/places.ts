@@ -8,6 +8,7 @@
 import { supabase } from '../supabase';
 import type { Place } from '../types';
 import { ownPendingFirst } from '../live';
+import { everyPage } from './pages';
 
 // `city_id` is selected, not just filtered on. A place that travels
 // outside the city query — inside a collection that reaches more than one
@@ -115,14 +116,18 @@ export async function fetchPlaceBySlug(slug: string): Promise<Place | null> {
  * their quiet, which is the sheet the app always had.
  */
 export async function fetchPlaceCountByCity(): Promise<Record<string, number>> {
-  const { data, error } = await supabase
+  // Every page (`lib/data/pages`): read in one, the switcher counted the first
+  // thousand places and missed the rest, by city in whatever order the
+  // server happened to read them.
+  const rows = await everyPage<{ city_id: string | null }>((from, to) => supabase
     .from('places')
     .select('city_id')
     .eq('is_published', true)
-    .eq('review_status', 'approved');
-  if (error) throw new Error(error.message);
+    .eq('review_status', 'approved')
+    .order('slug', { ascending: true })
+    .range(from, to));
   const out: Record<string, number> = {};
-  for (const r of (data ?? []) as { city_id: string | null }[]) {
+  for (const r of rows) {
     if (r.city_id) out[r.city_id] = (out[r.city_id] ?? 0) + 1;
   }
   return out;
@@ -141,7 +146,8 @@ export async function fetchPlaceCountByCity(): Promise<Record<string, number>> {
  * So: the columns the three Explore filters read, for every published
  * place in every city, and the counting runs the same rule the list runs
  * — see `matchesExplore`. Measured 2026-09-19: 635 rows, 219 kB before
- * transfer encoding, asked once when the map opens.
+ * transfer encoding, asked once when the map opens. 1,109 rows by 22 Oct,
+ * which is two pages (`lib/data/pages`).
  *
  * A failure throws; Explore catches it, and the markers keep their names
  * and lose their numbers, which is the map this replaced.
@@ -159,16 +165,57 @@ export type PlaceIndexRow = {
 };
 
 export async function fetchPlaceIndex(): Promise<PlaceIndexRow[]> {
-  const { data, error } = await supabase
+  const rows = await everyPage<Omit<PlaceIndexRow, 'category'> & { category: string | null }>((from, to) => supabase
     .from('places')
     .select('slug, city_id, categories, vibe_tags, category, opening_hours')
     .eq('is_published', true)
-    .eq('review_status', 'approved');
-  if (error) throw new Error(error.message);
+    .eq('review_status', 'approved')
+    .order('slug', { ascending: true })
+    .range(from, to));
   // `category` is nullable in the column and optional in the type the
   // filters read; one is the other with the nulls dropped.
-  return ((data ?? []) as (Omit<PlaceIndexRow, 'category'> & { category: string | null })[])
-    .map(({ category, ...rest }) => (category ? { ...rest, category } : rest));
+  return rows.map(({ category, ...rest }) => (category ? { ...rest, category } : rest));
+}
+
+/**
+ * Every city's places, as much of each as Search needs: to match what is
+ * typed, and to draw the result's card (owner, 22 Oct 2026: Search
+ * answers from every city, the reader's own first).
+ *
+ * The match runs on the same words the city's own catalog is matched on
+ * — names, areas and descriptions in every language, the address, the
+ * kinds (`placeHaystack`) — so a city's count on its chip is the count
+ * its own catalog would give. A server-side search was the smaller
+ * download and was ruled out for that: a second matcher, in SQL, is a
+ * second opinion waiting to disagree with the first about what "ca phe"
+ * finds. And the card's fields: the cover alone of the photographs, the
+ * hours, the rating.
+ *
+ * Measured 22 Oct 2026, 1,109 live places: 380 kB on the wire per 1,000
+ * rows, gzipped, against 890 kB for the catalog's full columns
+ * (`PLACE_COLS`), which carry every photograph and the place page's
+ * fields. About 420 kB in all, in two pages. A place opened from a
+ * result is read whole by its own page (`fetchPlaceBySlug`).
+ *
+ * Live places, and the reader's own suggestions, as the catalog is
+ * (`fetchPlaces`), and theirs first.
+ */
+export const SEARCH_INDEX_COLS = 'slug, city_id, name_en, name_vi, i18n, category, categories, vibe_tags, neighborhood_en, neighborhood_vi, address, rating, rating_count, desc_en, desc_vi, emoji, opening_hours, is_published, review_status, submitted_by, place_photos(id, photo_uri, is_cover, attribution_name)';
+
+export async function fetchSearchIndex(meId?: string | null): Promise<Place[]> {
+  const rows = await everyPage<Place>((from, to) => {
+    const q = supabase
+      .from('places')
+      .select(SEARCH_INDEX_COLS)
+      // Every live place has exactly one cover (22 Oct 2026), and a card
+      // shows nothing else.
+      .eq('place_photos.is_cover', true);
+    const scoped = meId
+      ? q.or(`and(is_published.eq.true,review_status.eq.approved),submitted_by.eq.${meId}`)
+      : q.eq('is_published', true).eq('review_status', 'approved');
+    return scoped.order('slug', { ascending: true }).range(from, to);
+  });
+  return ownPendingFirst(rows, meId);
 }
 
 /**

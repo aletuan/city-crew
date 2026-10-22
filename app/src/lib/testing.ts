@@ -64,6 +64,8 @@ export type Asked = {
   /** Every `order` call, in the order they were chained, for the queries
    *  where the tie-break is part of the answer. */
   orders?: unknown[][];
+  /** `range(from, to)`: the rows a paged read asked for, both ends in. */
+  range?: [number, number];
   single?: boolean;
   /** `maybeSingle`, which differs from `single` in what it does about no
    *  rows — an error there, a null here. Recorded separately so a test can
@@ -131,6 +133,7 @@ export function fakeSupabase() {
       // because a test asserting it wants to see the kinds, not an `eq`.
       overlaps: (k: string, v: unknown) => { asked.filters.push([`${k}&&`, v]); return b; },
       limit: (n: number) => { asked.limit = n; return b; },
+      range: (from: number, to: number) => { asked.range = [from, to]; return b; },
       or: (s: string) => { asked.or = s; return b; },
       order: (...a: unknown[]) => {
         (asked.orders ??= []).push(a);
