@@ -16,8 +16,10 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, fetchPlacesByGoogleId, PLACE_COLS,
+  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, fetchPlacesByGoogleId, fetchSearchIndex,
+  PLACE_COLS,
 } from './places';
+import { PAGE_ROWS } from './pages';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -239,6 +241,45 @@ describe('fetchPlaceIndex', () => {
     expect(rows[1].category).toBe('food');
   });
 
+  // The catalog passed PostgREST's thousand-row cap unnoticed (22 Oct
+  // 2026), and the map counted the first thousand places only. Every page,
+  // in slug order, until one comes back short.
+  it('reads every page, in slug order, until one comes back short', async () => {
+    const page = (n: number, at: number) => Array.from({ length: n }, (_, i) => ({
+      slug: `p${at + i}`, city_id: 'melbourne', categories: [], vibe_tags: [], category: null, opening_hours: null,
+    }));
+    fake().replies({ data: page(PAGE_ROWS, 0) }, { data: page(109, PAGE_ROWS) });
+    const rows = await fetchPlaceIndex();
+    expect(rows).toHaveLength(PAGE_ROWS + 109);
+    expect(fake().log.map((q) => q.range)).toEqual([[0, PAGE_ROWS - 1], [PAGE_ROWS, 2 * PAGE_ROWS - 1]]);
+    for (const q of fake().log) expect(q.order).toEqual(['slug', { ascending: true }]);
+  });
+
+  // The page is the server's cap, not a choice. A larger one is answered
+  // with a thousand rows all the same, reads as a short last page, and
+  // stops: the very truncation this paging exists to end.
+  it('pages at the server’s own cap of a thousand rows', () => {
+    expect(PAGE_ROWS).toBe(1000);
+  });
+
+  // A full last page leaves one more to ask, which answers nothing.
+  it('asks once more after a full page, and stops at the empty one', async () => {
+    const full = Array.from({ length: PAGE_ROWS }, (_, i) => ({
+      slug: `p${i}`, city_id: 'hanoi', categories: [], vibe_tags: [], category: null, opening_hours: null,
+    }));
+    fake().replies({ data: full }, { data: [] });
+    expect(await fetchPlaceIndex()).toHaveLength(PAGE_ROWS);
+    expect(fake().log).toHaveLength(2);
+  });
+
+  it('throws when a later page fails, rather than answering part of the country', async () => {
+    const full = Array.from({ length: PAGE_ROWS }, (_, i) => ({
+      slug: `p${i}`, city_id: 'hanoi', categories: [], vibe_tags: [], category: null, opening_hours: null,
+    }));
+    fake().replies({ data: full }, { error: { message: 'offline' } });
+    await expect(fetchPlaceIndex()).rejects.toThrow('offline');
+  });
+
   // Explore catches, and the markers keep their names and lose their
   // numbers — the map this replaced. The read itself says what happened.
   it('throws an error, and answers missing data with an empty list', async () => {
@@ -261,6 +302,15 @@ describe('fetchPlaceCountByCity', () => {
     const [q] = fake().log;
     expect(q.table).toBe('places');
     expect(q.filters).toEqual([['is_published', true], ['review_status', 'approved']]);
+  });
+
+  // Past the server's cap of a thousand rows (22 Oct 2026), every page.
+  it('counts every page, not the first thousand', async () => {
+    const full = Array.from({ length: PAGE_ROWS }, () => ({ city_id: 'hanoi' }));
+    fake().replies({ data: full }, { data: [{ city_id: 'melbourne' }] });
+    expect(await fetchPlaceCountByCity()).toEqual({ hanoi: PAGE_ROWS, melbourne: 1 });
+    expect(fake().log.map((q) => q.range)).toEqual([[0, PAGE_ROWS - 1], [PAGE_ROWS, 2 * PAGE_ROWS - 1]]);
+    expect(fake().log[0].order).toEqual(['slug', { ascending: true }]);
   });
 
   it('skips a row that cannot say where it is', async () => {
@@ -300,5 +350,55 @@ describe('fetchPlacesByGoogleId', () => {
   it('hands a refusal back rather than throwing it', async () => {
     fake().replies({ error: { message: 'denied' } });
     expect(await fetchPlacesByGoogleId(['p1'])).toEqual({ error: { message: 'denied' } });
+  });
+});
+
+// Search's index of every city (22 Oct 2026): what a match reads and what
+// a result's card draws, and nothing a place's own page needs.
+describe('fetchSearchIndex', () => {
+  it('asks for the words a match reads and the card the result is drawn as, and the cover only', async () => {
+    fake().replies({ data: [row('a')] });
+    await fetchSearchIndex();
+    const [q] = fake().log;
+    expect(q.table).toBe('places');
+    for (const col of ['name_en', 'name_vi', 'i18n', 'neighborhood_en', 'desc_en', 'desc_vi', 'address', 'vibe_tags', 'categories', 'opening_hours', 'rating', 'city_id']) {
+      expect(q.payload).toContain(col);
+    }
+    // The page's own fields stay with the page.
+    for (const col of ['lat', 'website', 'phone', 'reviewer_url', 'sort_order']) {
+      expect(String(q.payload).split(/[ ,()]+/)).not.toContain(col);
+    }
+    expect(q.filters).toContainEqual(['place_photos.is_cover', true]);
+    expect(q.order).toEqual(['slug', { ascending: true }]);
+    expect(q.range).toEqual([0, PAGE_ROWS - 1]);
+  });
+
+  it('is the live catalog for a reader signed out', async () => {
+    fake().replies({ data: [] });
+    await fetchSearchIndex(null);
+    const [q] = fake().log;
+    expect(q.filters).toEqual(expect.arrayContaining([['is_published', true], ['review_status', 'approved']]));
+    expect(q.or).toBeUndefined();
+  });
+
+  // As the catalog is: a suggestion is its maker's from the moment it is
+  // made, and first in their list.
+  it('adds the reader’s own suggestions, first', async () => {
+    fake().replies({ data: [row('a'), row('mine', { is_published: false, review_status: 'pending', submitted_by: 'me' })] });
+    const rows = await fetchSearchIndex('me');
+    expect(fake().log[0].or).toBe('and(is_published.eq.true,review_status.eq.approved),submitted_by.eq.me');
+    expect(rows.map((r) => r.slug)).toEqual(['mine', 'a']);
+  });
+
+  it('reads every page', async () => {
+    const full = Array.from({ length: PAGE_ROWS }, (_, i) => row(`p${i}`));
+    fake().replies({ data: full }, { data: [row('last')] });
+    expect(await fetchSearchIndex()).toHaveLength(PAGE_ROWS + 1);
+    expect(fake().log[1].range).toEqual([PAGE_ROWS, 2 * PAGE_ROWS - 1]);
+  });
+
+  it('throws what the database said', async () => {
+    fake().replies({ error: { message: 'offline' } });
+    await expect(fetchSearchIndex()).rejects.toThrow('offline');
   });
 });

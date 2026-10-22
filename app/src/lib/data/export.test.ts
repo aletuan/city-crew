@@ -17,6 +17,7 @@ vi.mock('../supabase', async () => {
 const fake = () => h.fake!;
 
 import { fetchMyHistory, fetchMyLikedCollections, fetchMySubmittedPlaces } from './export';
+import { PAGE_ROWS } from './pages';
 
 beforeEach(() => fake().reset());
 
@@ -89,6 +90,18 @@ describe('fetchMyHistory', () => {
     });
     expect(fake().log[0].filters.map(([k]) => k)).not.toContain('created_at>=');
     expect(rows[0].kind).toBe('open');
+  });
+
+  // A reader with 1,991 events (22 Oct 2026) was exported a thousand of
+  // them: the server's cap on one answer. Every page, in a total order.
+  it('reads every page, oldest first, ties broken by id', async () => {
+    const full = Array.from({ length: PAGE_ROWS }, (_, i) => ({ kind: 'open', city_id: 'hanoi', created_at: `t${i}`, places: { slug: `p${i}` } }));
+    fake().replies({ data: full }, { data: [{ kind: 'save', city_id: 'hanoi', created_at: 'later', places: { slug: 'last' } }] });
+    const rows = await fetchMyHistory('u-1');
+    expect(rows).toHaveLength(PAGE_ROWS + 1);
+    expect(rows.at(-1)!.kind).toBe('save');
+    expect(fake().log.map((q) => q.range)).toEqual([[0, PAGE_ROWS - 1], [PAGE_ROWS, 2 * PAGE_ROWS - 1]]);
+    expect(fake().log[0].orders).toEqual([['created_at', { ascending: true }], ['id', { ascending: true }]]);
   });
 
   it('answers with an empty list rather than null', async () => {
