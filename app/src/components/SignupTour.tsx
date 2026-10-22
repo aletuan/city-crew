@@ -10,11 +10,17 @@ import { colors, font, gradAI, radius, space } from '../theme';
 import { TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 
 type Target = 'search' | 'filter' | 'save' | 'collections';
-type Anchor = { ref: React.RefObject<View | null>; press: () => void; focused: () => boolean };
+/** How far the ring stands out from the control it marks, each side;
+ *  negative draws it inside. */
+type Outset = { x: number; y: number };
+type Anchor = { ref: React.RefObject<View | null>; press: () => void; focused: () => boolean; outset: Outset };
 type Rect = { x: number; y: number; width: number; height: number };
 const targets: Target[] = ['search', 'filter', 'save', 'collections'];
 const noop = () => {};
 const always = () => true;
+/** A little clear of the control on every side, so the ring outlines it
+ *  rather than sitting on its edge. */
+const AROUND: Outset = { x: 4, y: 4 };
 const same = (a: Rect, b: Rect) => a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 /** Two readings this far apart must agree before a step is drawn. Long
  *  enough to see a native stack push still moving (it lasts about 350ms,
@@ -26,15 +32,18 @@ const Context = createContext({ enabled: null as boolean | null, setEnabled: (_o
   register: (_id: Target, _anchor: Anchor): (() => void) => noop, notice: null as Notice | null, noticeTop: null as number | null });
 export const useSignupTour = () => useContext(Context);
 
-/** Attach to the real control, without inserting a view into its layout. */
-export function useTourAnchor(id: Target, press: () => void, focused: () => boolean = always) {
+/** Attach to the real control, without inserting a view into its layout.
+ *  `outset` is for a control whose box is not its shape: the tab bar's
+ *  cell, whose mark is the pill inside it. */
+export function useTourAnchor(id: Target, press: () => void, focused: () => boolean = always, outset: Outset = AROUND) {
   const { register } = useSignupTour();
   const ref = useRef<View>(null);
   const action = useRef(press);
   action.current = press;
   const active = useRef(focused);
   active.current = focused;
-  useEffect(() => register(id, { ref, press: () => action.current(), focused: () => active.current() }), [id, register]);
+  const { x: ox, y: oy } = outset;
+  useEffect(() => register(id, { ref, press: () => action.current(), focused: () => active.current(), outset: { x: ox, y: oy } }), [id, register, ox, oy]);
   return ref;
 }
 
@@ -155,7 +164,11 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
         // past the 898 the inset left. A bar that has ducked away slides
         // below the edge and still fails this.
         if (w > 0 && h > 0 && x >= 0 && y >= insets.top && x + w <= width && y + h <= height) {
-          candidate = { anchor, rect: { x, y, width: w, height: h } };
+          // Where the ring goes: the control's box, stood out by the
+          // anchor's outset. The box is what must be on screen; the ring
+          // is what the card keeps clear of.
+          const { x: ox, y: oy } = anchor.outset;
+          candidate = { anchor, rect: { x: x - ox, y: y - oy, width: w + ox * 2, height: h + oy * 2 } };
         }
         remaining -= 1;
         if (remaining) return;
@@ -187,12 +200,13 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     t('Find your saved places here.', 'Những địa điểm bạn đã lưu nằm ở đây.', '保存した場所はこちらにあります。', '你保存的地点都在这里。', '你儲存的地點都在這裡。')];
   const cardWidth = Math.min(width - 32, 340);
   const left = rect ? Math.max(16, Math.min(rect.x + rect.width / 2 - cardWidth / 2, width - cardWidth - 16)) : 16;
-  const below = rect ? rect.y + rect.height + 16 : 0;
+  // The card stands 12 clear of the ring, above or below it.
+  const below = rect ? rect.y + rect.height + 12 : 0;
   const roomBelow = Math.max(0, height - insets.bottom - 12 - below);
-  const roomAbove = rect ? Math.max(0, rect.y - 16 - insets.top - 8) : 0;
+  const roomAbove = rect ? Math.max(0, rect.y - 12 - insets.top - 8) : 0;
   const showBelow = roomBelow >= tipHeight || roomBelow >= roomAbove;
   const cardMaxHeight = showBelow ? roomBelow : roomAbove;
-  const top = rect ? (showBelow ? below : rect.y - 16 - Math.min(tipHeight, cardMaxHeight)) : 0;
+  const top = rect ? (showBelow ? below : rect.y - 12 - Math.min(tipHeight, cardMaxHeight)) : 0;
   return <Context.Provider value={value}>
     {children}
     {/* A toast over the page, not a card in it (owner, 19 Oct 2026, from
@@ -230,7 +244,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
         <Pressable style={[StyleSheet.absoluteFill, s.scrim]} onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('Close guide', 'Đóng hướng dẫn', 'ガイドを閉じる', '关闭新手引导', '關閉新手引導')} />
         {rect && <Pressable testID="signup-tour-target" accessibilityRole="button" accessibilityLabel={titles[step]}
           onPress={() => { const action = current.current?.press; persist(true, step + 1); finish(); if (action) requestAnimationFrame(action); }}
-          style={[s.ring, { left: rect.x - 4, top: rect.y - 4, width: rect.width + 8, height: rect.height + 8 }]} />}
+          style={[s.ring, { left: rect.x, top: rect.y, width: rect.width, height: rect.height }]} />}
         <View testID="signup-tour" style={[s.card, { left, top, width: cardWidth, maxHeight: cardMaxHeight }]}
           onLayout={e => setTipHeight(e.nativeEvent.layout.height)}>
           <ScrollView bounces={false}>

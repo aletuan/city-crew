@@ -41,6 +41,14 @@ vi.mock('react-native', async (orig) => ({
   useWindowDimensions: () => ({ width: win.width, height: 852, scale: 3, fontScale: 1 }),
 }));
 
+// The guide's anchor on the collections tab, as the bar asks for it: the
+// real hook, with what it was asked kept.
+const anchorCalls = vi.hoisted(() => [] as unknown[][]);
+vi.mock('./SignupTour', async (orig) => {
+  const real = await orig<typeof import('./SignupTour')>();
+  return { ...real, useTourAnchor: (...args: Parameters<typeof real.useTourAnchor>) => { anchorCalls.push(args); return real.useTourAnchor(...args); } };
+});
+
 import { PALETTES } from '../theme';
 import FloatingTabBar from './FloatingTabBar';
 import PlacesGlyph from './PlacesGlyph';
@@ -537,5 +545,30 @@ describe('the duck', () => {
     view.rerender(<TabBarDuckProvider><Scroller /><FloatingTabBar {...pushed} /></TabBarDuckProvider>);
     expect(bar().style.opacity).toBe('1');
     expect(bar().style.transform).toBe('translateY(0px)');
+  });
+});
+
+// The guide's ring on the collections tab is the pill's own shape (owner,
+// 22 Oct 2026): the cell's width, and in from the island's rim by the
+// pill's inset, so it is the selected tab's mark and never stands out past
+// the bar. Ringed as other controls are, it was 82×70 against a 75×56 pill.
+describe('the guide’s ring on the collections tab', () => {
+  it('is the pill’s size: the cell’s width, the pill’s height', () => {
+    anchorCalls.length = 0;
+    mount(propsFor(0).props);
+    const [id, , , outset] = anchorCalls.at(-1)! as [string, unknown, unknown, { x: number; y: number }];
+    expect(id).toBe('collections');
+    expect(outset.x).toBe(0);
+    expect(TAB_BAR_HEIGHT + outset.y * 2).toBe(parseFloat(getComputedStyle(pill()).height));
+  });
+
+  // Tapping the ring is tapping the tab: the guide hands the press back.
+  it('opens Collections when the guide hands the press back', () => {
+    anchorCalls.length = 0;
+    const { navigation, props } = propsFor(0);
+    mount(props);
+    const [, press] = anchorCalls.at(-1)! as [string, () => void];
+    press();
+    expect(navigation.navigate).toHaveBeenCalledWith('Collections');
   });
 });
