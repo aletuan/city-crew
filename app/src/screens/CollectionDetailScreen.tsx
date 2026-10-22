@@ -1266,8 +1266,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         />
         {/* The guide's own "look here" (`Attention`), while the grid notice
             points at this button: 4pt clear of the 44pt circle, as the
-            guide rings its round search button. */}
-        {noticing && <AttentionRing frame={MORE_RING} runKey={visits} testID="collection-more-ring" />}
+            guide rings its round search button. Transient: three pulses,
+            then gone, and again on each return (owner, 22 Oct 2026) — the
+            notice says where the way back is, and a still ring after the
+            pulses only weighed on the corner. */}
+        {noticing && <AttentionRing frame={MORE_RING} runKey={visits} transient testID="collection-more-ring" />}
       </View>
     </View>
   ) : null;
@@ -1417,12 +1420,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <View style={s.noticeMark}><Ionicons name="grid-outline" size={20} color={colors.accent} /></View>
       <View style={s.noticeText}>
         <Text style={s.noticeTitle}>
-          {t('Collections now open as a grid', 'Bộ sưu tập giờ hiển thị dạng lưới',
-            'コレクションはグリッドで表示されるようになりました', '合集现在以网格显示', '合集現在以網格顯示')}
+          {t('Now in grid view', 'Bộ sưu tập hiển thị dạng lưới',
+            'グリッド表示になりました', '现在以网格显示', '現在以網格顯示')}
         </Text>
         <Text style={s.noticeBody}>
-          {t('Switch back to the list in the ⋯ menu.', 'Bạn có thể chuyển về dạng danh sách trong menu ⋯.',
-            '⋯ メニューからリスト表示に戻せます。', '可在 ⋯ 菜单中切换回列表。', '可在 ⋯ 選單中切換回列表。')}
+          {t('Switch to List view in the ⋯ menu.', 'Bạn có thể chuyển về dạng danh sách trong menu ⋯ ở góc màn hình.',
+            '⋯ メニューからリスト表示に切り替えられます。', '可在 ⋯ 菜单中切换为列表。', '可在 ⋯ 選單中切換為列表。')}
         </Text>
       </View>
       <Pressable onPress={closeNotice} accessibilityRole="button" hitSlop={4} style={s.noticeClose}

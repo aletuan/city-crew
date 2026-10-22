@@ -30,6 +30,10 @@ const PULSES = 3;
 const PULSE_MS = 1200;
 const PULSE_REST_MS = 400;
 const PULSE_GROWTH = 1.25;
+/** How long the three pulses take, and how long a transient ring then
+ *  takes to go. */
+const PULSES_MS = PULSES * (PULSE_MS + PULSE_REST_MS);
+const FADE_MS = 300;
 
 /** Where a ring goes, in its parent's points. */
 export type Frame = { left: number; top: number; width: number; height: number };
@@ -80,14 +84,34 @@ export function AttentionPulse({ frame, runKey, testID }: { frame: Frame; runKey
   );
 }
 
-/** A ring and its pulse round a control, at `frame`. Touches pass through
- *  to the control underneath. The pulse runs again whenever `runKey`
- *  changes: the screen coming back into view, for the ⋯ button. */
-export function AttentionRing({ frame, runKey, testID }: { frame: Frame; runKey?: unknown; testID?: string }) {
+/**
+ * A ring and its pulse round a control, at `frame`. Touches pass through
+ * to the control underneath. The pulse runs again whenever `runKey`
+ * changes: the screen coming back into view, for the ⋯ button.
+ *
+ * `transient`: the ring fades once its pulses are done, and comes back
+ * with them when `runKey` changes (owner, 22 Oct 2026). For a ring beside
+ * something that already says what it points to — the ⋯ button's, under
+ * the grid notice — where a still ring after the pulse only weighs on the
+ * corner. Not for the guide's: there the ring is the control to press and
+ * the whole of the step. The fade is not motion, so it runs under Reduce
+ * Motion too, after the same few seconds of still ring.
+ */
+export function AttentionRing({ frame, runKey, transient = false, testID }: {
+  frame: Frame; runKey?: unknown; transient?: boolean; testID?: string;
+}) {
+  const shown = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    shown.setValue(1);
+    if (!transient) return;
+    const fade = Animated.timing(shown, { toValue: 0, delay: PULSES_MS, duration: FADE_MS, useNativeDriver: true });
+    fade.start();
+    return () => fade.stop();
+  }, [runKey, transient, shown]);
   return (
     <>
       <AttentionPulse frame={frame} runKey={runKey} testID={testID && `${testID}-pulse`} />
-      <Animated.View testID={testID} pointerEvents="none" style={[attentionRing, frame]} />
+      <Animated.View testID={testID} pointerEvents="none" style={[attentionRing, frame, { opacity: shown }]} />
     </>
   );
 }

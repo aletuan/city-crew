@@ -2337,8 +2337,8 @@ describe('the grid', () => {
       show();
       expect(banner()).toBeNull();
       await reads();
-      expect(banner()!.textContent).toContain('Collections now open as a grid');
-      expect(banner()!.textContent).toContain('Switch back to the list in the ⋯ menu.');
+      expect(banner()!.textContent).toContain('Now in grid view');
+      expect(banner()!.textContent).toContain('Switch to List view in the ⋯ menu.');
       // Between the card and the tiles.
       const intro = screen.getByTestId('collection-intro');
       expect(intro.compareDocumentPosition(banner()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -2347,6 +2347,9 @@ describe('the grid', () => {
       const r = ring()!;
       expect([r.style.left, r.style.top, r.style.width, r.style.height]).toEqual(['-4px', '-4px', '52px', '52px']);
       expect(screen.getByTestId('collection-more-ring-pulse')).toBeTruthy();
+      // Transient: gone once its pulses are done (owner, 22 Oct 2026).
+      // Animations land at once here, so "done" is now.
+      expect(getComputedStyle(r).opacity).toBe('0');
     });
 
     // A reader who has had it, whose answer is still being read when the
@@ -2440,6 +2443,15 @@ describe('the grid', () => {
       await reads();
       expect(banner()).toBeTruthy();
       expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(NOTICE, 'seen');
+    });
+
+    // The owner's words, 22 Oct 2026: "dạng danh sách" in lower case.
+    it('says it in the reader’s language', async () => {
+      state.lang = 'vi';
+      show();
+      await reads();
+      expect(banner()!.textContent).toContain('Bộ sưu tập hiển thị dạng lưới');
+      expect(banner()!.textContent).toContain('Bạn có thể chuyển về dạng danh sách trong menu ⋯ ở góc màn hình.');
     });
 
     it('says nothing over a list with no places', async () => {

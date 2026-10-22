@@ -65,3 +65,37 @@ describe('AttentionPulse', () => {
     expect(stop).toHaveBeenCalled();
   });
 });
+
+// Transient (owner, 22 Oct 2026): the ring goes once its pulses are done,
+// and comes back with them for a new key. A ring that is not transient
+// stays. Animated values do not tick here — an animation lands at once —
+// so the timing is read off the call that starts it, against the pulse's
+// own: the fade waits exactly as long as the three pulses take.
+describe('a transient ring', () => {
+  const opacity = () => getComputedStyle(screen.getByTestId('ring')).opacity;
+  type Timing = { toValue: number; duration: number; delay?: number };
+  let timing: MockInstance<typeof Animated.timing>;
+  let delay: MockInstance<typeof Animated.delay>;
+  beforeEach(() => { timing = vi.spyOn(Animated, 'timing'); delay = vi.spyOn(Animated, 'delay'); });
+  const fades = () => timing.mock.calls.map(([, c]) => c as Timing).filter((c) => c.toValue === 0 && c.delay !== undefined);
+
+  it('fades once the three pulses are done, and is back for a new key', async () => {
+    const view = render(<AttentionRing frame={FRAME} runKey={1} transient testID="ring" />);
+    await waitFor(() => expect(runs()).toBe(1));
+    const pulse = timing.mock.calls.map(([, c]) => c as Timing).find((c) => c.toValue === 1)!;
+    const rest = delay.mock.calls[0][0];
+    expect(fades()).toHaveLength(1);
+    expect(fades()[0].delay).toBe(3 * (pulse.duration + rest));
+    expect(fades()[0].duration).toBeLessThanOrEqual(400);
+    expect(opacity()).toBe('0');
+    view.rerender(<AttentionRing frame={FRAME} runKey={2} transient testID="ring" />);
+    await waitFor(() => expect(fades()).toHaveLength(2));
+  });
+
+  it('stays when it is not transient', async () => {
+    render(<AttentionRing frame={FRAME} testID="ring" />);
+    await waitFor(() => expect(runs()).toBe(1));
+    expect(fades()).toHaveLength(0);
+    expect(opacity()).toBe('1');
+  });
+});
