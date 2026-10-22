@@ -122,6 +122,36 @@ export async function saveTheme(ownerId: string, theme: string): Promise<void> {
 }
 
 /**
+ * Whether this account has closed the collection grid notice, on any
+ * phone (owner, 22 Oct 2026: one × is enough everywhere).
+ *
+ * Its own column and its own two calls, as the theme's are, and for the
+ * same reason: `Preferences` is written whole by the screens that edit
+ * taste, and a field carried along in it would be lost to a stale read.
+ */
+export async function fetchGridNoticeClosed(ownerId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('preferences')
+    .select('grid_notice_closed_at')
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return !!(data as { grid_notice_closed_at?: unknown } | null)?.grid_notice_closed_at;
+}
+
+/** Keep the × on the account. An upsert of the one column, as `saveTheme`
+ *  is, so the rest of the row stands. */
+export async function closeGridNotice(ownerId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase.from('preferences').upsert({
+    owner_id: ownerId,
+    grid_notice_closed_at: now,
+    updated_at: now,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
  * The themes that are popular, most worn first, by the theme's `Pref`
  * string — for the "Popular" word on the Theme sheet (`lib/lookLabels`).
  *

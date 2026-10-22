@@ -58,6 +58,9 @@ const spies = vi.hoisted(() => ({
   canReport: vi.fn((_t: { kind: string; id: string; ownerId?: string | null }) => true),
   profileLookup: vi.fn((_h: string | null) => ({ data: null as null | { id?: string; full_name?: string; avatar_url: string }, loading: false })),
   blockUser: vi.fn(async (_id: string) => {}),
+  // The grid notice on the account: open there, unless a test says not.
+  noticeClosed: vi.fn(async (_id: string) => false),
+  closeNotice: vi.fn(async (_id: string) => {}),
 }));
 
 const state = vi.hoisted(() => ({
@@ -126,6 +129,8 @@ vi.mock('../lib/data', async (orig) => ({
   setCollectionPublic: spies.setCollectionPublic,
   useProfileByHandle: spies.profileLookup,
   blockUser: spies.blockUser,
+  fetchGridNoticeClosed: spies.noticeClosed,
+  closeGridNotice: spies.closeNotice,
 }));
 vi.mock('../components/reportFlow', () => ({
   useReport: () => ({ report: spies.report, canReport: spies.canReport, node: null }),
@@ -314,6 +319,8 @@ beforeEach(() => {
   spies.setCollectionPublic.mockImplementation(async () => {});
   spies.canReport.mockImplementation(() => true);
   spies.blockUser.mockImplementation(async () => {});
+  spies.noticeClosed.mockImplementation(async () => false);
+  spies.closeNotice.mockImplementation(async () => {});
   spies.profileLookup.mockImplementation(() => ({ data: null, loading: false }));
   state.uid = 'me';
   state.ducked = false;
@@ -2388,6 +2395,24 @@ describe('the grid', () => {
         expect(banner()).toBeTruthy();
         fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
         expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collection.gridNotice.v2:u2', 'seen');
+      });
+
+      // One × on any phone is enough on every phone (owner, 22 Oct 2026).
+      it('says nothing on a phone that has not closed it, once the account says it was', async () => {
+        spies.noticeClosed.mockImplementation(async () => true);
+        show();
+        await reads();
+        expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+        expect(banner()).toBeNull();
+        expect(spies.noticeClosed).toHaveBeenCalledWith('me');
+      });
+
+      it('keeps the × on the account as well as the phone', async () => {
+        show();
+        await reads();
+        fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
+        expect(spies.closeNotice).toHaveBeenCalledWith('me');
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(NOTICE, 'seen');
       });
 
       it('keeps the phone’s own choice for nobody signed in', async () => {

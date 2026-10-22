@@ -34,7 +34,8 @@ import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { useMyLists, useSaveActions } from '../lib/save';
-import { readerKey, COLLECTION_VIEW_KEY, GRID_NOTICE_KEY } from '../lib/readerPrefs';
+import { useGridNotice } from '../lib/gridNotice';
+import { readerKey, COLLECTION_VIEW_KEY } from '../lib/readerPrefs';
 import { oneOf, useStored } from '../lib/stored';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
@@ -163,25 +164,6 @@ const PITCH_GUESS = 320;
  */
 const LIST_OR_GRID = oneOf('list', 'grid');
 
-/**
- * Whether the reader has closed the grid notice: the banner saying lists
- * now open as a grid, and where the way back is.
- *
- * Shown to every reader looking at a list as a grid, until they close it
- * with its own × (owner, 22 Oct 2026). Nothing else closes it: not
- * leaving the screen, which a reader who went straight back did without
- * reading it; not opening the ⋯ menu, which is not saying "I have read
- * this". A reader on the cards does not see it — it is about the grid —
- * and sees it again if they come to the grid before closing it.
- *
- * It was shown only to a reader the grid was a default for, and closed by
- * opening the menu too. The owner's own phone, which had chosen the grid
- * that morning, never saw it, and the rule was changed the same day: told
- * to everybody, closed only by them. Hence `.v2`: a phone the first rule
- * marked as told — by a menu opened, not by an × — is told again.
- * Kept per reader, as the view is: an × on one account told nobody else.
- */
-const NOTICE = oneOf('unseen', 'seen');
 /** The ring round the 44pt ⋯ button, 4 clear of it all round. */
 const MORE_RING = { left: -4, top: -4, width: 52, height: 52 };
 
@@ -566,16 +548,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     readerKey(COLLECTION_VIEW_KEY, userId), 'grid', LIST_OR_GRID,
   );
   const grid = view === 'grid';
-  const [notice, keepNotice, noticeFrom] = useStored<'unseen' | 'seen'>(
-    readerKey(GRID_NOTICE_KEY, userId), 'unseen', NOTICE,
-  );
+  // Open until the reader closes it with its ×, on this phone or any
+  // other the account is signed into — see `lib/gridNotice` for the rule
+  // and the two memories it is kept in.
+  const { state: noticeState, close: closeNotice } = useGridNotice(userId);
   // Only once both reads are in, and so only once it is known who is
   // reading: until then a reader who chose the cards is shown the grid
   // by default, for a moment, and a reader who closed the notice has not
   // yet been read as having closed it.
-  const noticing = viewFrom !== 'reading' && noticeFrom !== 'reading' && notice === 'unseen'
+  const noticing = viewFrom !== 'reading' && noticeState === 'open'
     && grid && members.length > 0;
-  const closeNotice = () => keepNotice('seen');
   // Each time the screen comes back into view with the notice still open,
   // the ⋯ button's ring pulses its three again (owner, 22 Oct 2026). The
   // first three ran while the screen was still sliding in, under eyes on
@@ -1455,7 +1437,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   /* ── the grid notice (owner, 22 Oct 2026) ──
      Lists open as a grid now, so a reader looking at one is told, between
      the card and the tiles, where the way back is: the ⋯ button, ringed
-     while this shows, until they close it (`GRID_NOTICE_KEY`). A banner in the page rather than a
+     while this shows, until they close it (`lib/gridNotice`). A banner in the page rather than a
      sheet over it: it says something, it asks nothing, and the grid it is
      about is right under it. The guide's toast in look — the sheets'
      ground, the accent's tint behind the mark — so the app's two notices
