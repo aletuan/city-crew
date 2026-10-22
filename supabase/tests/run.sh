@@ -258,6 +258,14 @@ for f in "$ROOT"/supabase/migrations/*_preferences_theme.sql; do
 done
 run "$DB" -f "$HERE/preferences_theme_test.sql"
 
+# The grid notice's column (22 Oct 2026), beside the theme and after it
+# for the same reason. Listed, not globbed, for the same trap.
+echo "→ grid notice on the account"
+for f in "$ROOT"/supabase/migrations/*_preferences_grid_notice.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/preferences_grid_notice_test.sql"
+
 # Which themes are popular (12 Oct 2026): the count function, then the
 # share function that replaced it the same day. After the column they
 # read; the test seeds and removes its own ten accounts.

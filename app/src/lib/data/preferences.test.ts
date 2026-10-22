@@ -18,7 +18,7 @@ vi.mock('../supabase', async () => {
 
 import {
   clearMyHistory, fetchPassedOver, fetchPreferences, fetchPopularThemes, fetchTheme, logPlaceEvent, NO_PREFERENCES,
-  savePreferences, saveTheme,
+  savePreferences, saveTheme, fetchGridNoticeClosed, closeGridNotice,
 } from './preferences';
 
 const fake = () => h.fake!;
@@ -323,5 +323,42 @@ describe('fetchPopularThemes', () => {
     fake().reset();
     fake().replies({ data: [] });
     expect(await fetchPopularThemes()).toEqual([]);
+  });
+});
+
+// The grid notice on the account (22 Oct 2026): one × on any phone is
+// enough on every phone. The theme's shape, a column and two calls.
+describe('the grid notice', () => {
+  it('reads closed when the account has a time for it, and open otherwise', async () => {
+    fake().replies({ data: { grid_notice_closed_at: '2026-10-22T06:00:00Z' } });
+    expect(await fetchGridNoticeClosed('u-1')).toBe(true);
+    expect(fake().log[0]).toMatchObject({ table: 'preferences', op: 'select' });
+    fake().reset();
+    fake().replies({ data: { grid_notice_closed_at: null } });
+    expect(await fetchGridNoticeClosed('u-1')).toBe(false);
+    fake().reset();
+    fake().replies({ data: null });
+    expect(await fetchGridNoticeClosed('u-1')).toBe(false);
+  });
+
+  it('throws what the database said on a read', async () => {
+    fake().replies({ error: { message: 'not yours' } });
+    await expect(fetchGridNoticeClosed('u-1')).rejects.toThrow('not yours');
+  });
+
+  it('keeps the × in the one column, with the time, and touches nothing beside it', async () => {
+    await closeGridNotice('u-1');
+    expect(fake().log[0]).toMatchObject({ table: 'preferences', op: 'insert', upsert: true });
+    const payload = fake().log[0].payload as Record<string, unknown>;
+    expect(payload.owner_id).toBe('u-1');
+    expect(Number.isNaN(Date.parse(payload.grid_notice_closed_at as string))).toBe(false);
+    expect(payload).not.toHaveProperty('theme');
+    expect(payload).not.toHaveProperty('categories');
+    expect(payload).not.toHaveProperty('history_on');
+  });
+
+  it('throws what the database said on a write', async () => {
+    fake().replies({ error: { message: 'not yours' } });
+    await expect(closeGridNotice('u-1')).rejects.toThrow('not yours');
   });
 });

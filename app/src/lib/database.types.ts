@@ -917,6 +917,7 @@ export type Database = {
         Row: {
           budget_vnd: number | null
           categories: string[]
+          grid_notice_closed_at: string | null
           history_on: boolean
           theme: string | null
           owner_id: string
@@ -925,6 +926,7 @@ export type Database = {
         Insert: {
           budget_vnd?: number | null
           categories?: string[]
+          grid_notice_closed_at?: string | null
           history_on?: boolean
           theme?: string | null
           owner_id: string
@@ -933,6 +935,7 @@ export type Database = {
         Update: {
           budget_vnd?: number | null
           categories?: string[]
+          grid_notice_closed_at?: string | null
           history_on?: boolean
           theme?: string | null
           owner_id?: string
