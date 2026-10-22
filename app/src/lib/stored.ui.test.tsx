@@ -6,16 +6,16 @@ import React, { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, render, waitFor } from '../uitest/render';
-import { NO_RECENTS, oneOf, RECENTS, useStored, type Codec } from './stored';
+import { NO_RECENTS, oneOf, RECENTS, useStored, type Codec, type Origin } from './stored';
 
 const KEY = 'test.stored';
 const VIEW = oneOf('tile', 'row');
 
 /** The hook's latest answer, written after render. */
-const seen = {} as { value: unknown; remember: (v: never) => void };
+const seen = {} as { value: unknown; remember: (v: never) => void; origin: Origin };
 function Probe<T>({ fallback, codec, storeKey = KEY }: { fallback: T; codec: Codec<T>; storeKey?: string }) {
-  const [value, remember] = useStored(storeKey, fallback, codec);
-  useEffect(() => { seen.value = value; seen.remember = remember as (v: never) => void; });
+  const [value, remember, origin] = useStored(storeKey, fallback, codec);
+  useEffect(() => { seen.value = value; seen.remember = remember as (v: never) => void; seen.origin = origin; });
   return null;
 }
 
@@ -104,5 +104,50 @@ describe('the codecs', () => {
     expect(VIEW.parse('row')).toBe('row');
     expect(VIEW.parse('grid')).toBeUndefined();
     expect(VIEW.format('tile')).toBe('tile');
+  });
+});
+
+// Whether the value in hand is a choice or the default standing in for
+// one — what the collection's grid notice turns on (owner, 22 Oct 2026).
+describe('where the value came from', () => {
+  it('is reading until the read lands, then stored when something usable was', async () => {
+    await AsyncStorage.setItem(KEY, 'row');
+    render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} />);
+    expect(seen.origin).toBe('reading');
+    await waitFor(() => expect(seen.origin).toBe('stored'));
+  });
+
+  it('is the fallback when nothing is stored, nothing usable is, or the read fails', async () => {
+    const one = render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} />);
+    await waitFor(() => expect(seen.origin).toBe('fallback'));
+    one.unmount();
+    await AsyncStorage.setItem(KEY, 'grid');
+    const two = render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} />);
+    await waitFor(() => expect(seen.origin).toBe('fallback'));
+    two.unmount();
+    vi.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('disk'));
+    render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} />);
+    await waitFor(() => expect(seen.origin).toBe('fallback'));
+  });
+
+  it('is stored the moment the reader sets it, and a read landing late does not undo that', async () => {
+    let land!: (raw: string | null) => void;
+    vi.spyOn(AsyncStorage, 'getItem').mockImplementationOnce(() => new Promise((r) => { land = r; }));
+    render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} />);
+    act(() => { seen.remember('row' as never); });
+    expect(seen.origin).toBe('stored');
+    await act(async () => { land(null); });
+    expect(seen.origin).toBe('stored');
+  });
+
+  it('says nothing after the screen has gone', async () => {
+    let fail!: (e: Error) => void;
+    vi.spyOn(AsyncStorage, 'getItem').mockImplementationOnce(() => new Promise((_r, j) => { fail = j; }));
+    const view = render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} />);
+    view.unmount();
+    const error = vi.spyOn(console, 'error');
+    await act(async () => { fail(new Error('disk')); });
+    expect(seen.origin).toBe('reading');
+    expect(error).not.toHaveBeenCalled();
   });
 });

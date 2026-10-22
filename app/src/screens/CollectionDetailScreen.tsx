@@ -14,6 +14,7 @@ import {
   fireHaptic, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
+import { AttentionRing } from '../components/Attention';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { AddPill } from '../components/add';
@@ -81,12 +82,14 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
  * rows meant Delete was not marked at all. Neutral against `bad` is
  * 4.11:1, so the red says something again.
  */
-function MenuRow({ icon, label, onPress, danger, first, testID }: {
+function MenuRow({ icon, label, onPress, danger, first, checked, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
   danger?: boolean;
   first?: boolean;
+  /** For a row that is one of a choice: ticked when it is the one in force. */
+  checked?: boolean;
   testID?: string;
 }) {
   return (
@@ -94,10 +97,12 @@ function MenuRow({ icon, label, onPress, danger, first, testID }: {
       onPress={onPress}
       testID={testID}
       accessibilityRole="button"
+      aria-selected={checked}
       style={({ pressed }) => [s.menuRow, !first && s.menuDivider, pressed && s.menuRowOn]}
     >
       <Ionicons name={icon} size={21} color={danger ? colors.bad : colors.text} />
       <Text style={[s.menuText, danger && { color: colors.bad }]} numberOfLines={1}>{label}</Text>
+      {checked && <Ionicons name="checkmark" size={20} color={colors.accent} style={s.menuCheck} />}
     </Pressable>
   );
 }
@@ -144,11 +149,32 @@ const PITCH_GUESS = 320;
  * One choice for every list, kept on the phone as Collections keeps its
  * tile/row choice (`citycrew.collections.view`): how a reader likes to
  * look at a list is theirs, not the list's, and a choice made per list
- * would be forty-five choices to make. The cards are the default, which
- * is what the screen showed before there was a choice.
+ * would be forty-five choices to make.
+ *
+ * The grid is the default (owner, the same day, once a tile could be
+ * dragged and the list scrolled under it): a list is mostly photographs,
+ * and the grid shows a list of twenty at a glance. A reader who chose the
+ * cards before that keeps them — the default stands in only where nobody
+ * has chosen.
  */
 const VIEW_KEY = 'citycrew.collection.view';
 const LIST_OR_GRID = oneOf('list', 'grid');
+
+/**
+ * Whether the reader has had the grid notice: the banner saying lists now
+ * open as a grid, and where the way back is.
+ *
+ * Shown only to a reader the grid is a default for — one who chose the
+ * cards keeps them, and one who chose the grid knows it — and only until
+ * they answer it: the ×, opening the ⋯ menu it points to, or choosing a
+ * view there (owner, 22 Oct 2026). Not on leaving the screen: a reader
+ * who opened a list and went straight back has not read the banner, and
+ * would never see it again. Kept on the phone, as the view is.
+ */
+const NOTICE_KEY = 'citycrew.collection.gridNotice';
+const NOTICE = oneOf('unseen', 'seen');
+/** The ring round the 44pt ⋯ button, 4 clear of it all round. */
+const MORE_RING = { left: -4, top: -4, width: 52, height: 52 };
 
 /** Tiles to a row. Three, the reference's and every photo app's: at 393pt
  *  a tile is 111pt, which still carries a name in 12pt across most of it. */
@@ -509,6 +535,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const btn = useRef<View>(null);
   const [anchor, setAnchor] = useState({ top: insets.top + 58, right: space.page });
   const openMenu = () => {
+    // The menu the grid notice points to: opening it is reading it.
+    noticed();
     // Opened first and positioned second: if the measure never calls back
     // the menu still appears, at the estimate above rather than not at all.
     setMenu(true);
@@ -521,24 +549,43 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // still standing behind either is the sort of thing you come back to and
   // have to dismiss twice.
   const act = (run: () => void) => { setMenu(false); run(); };
-  const [view, pickView] = useStored<'list' | 'grid'>(VIEW_KEY, 'list', LIST_OR_GRID);
+  const [view, pickView, viewFrom] = useStored<'list' | 'grid'>(VIEW_KEY, 'grid', LIST_OR_GRID);
   const grid = view === 'grid';
+  const [notice, keepNotice, noticeFrom] = useStored<'unseen' | 'seen'>(NOTICE_KEY, 'unseen', NOTICE);
+  // Only once both reads are in: until then a reader who chose the cards
+  // looks, for a moment, like one the grid is a default for.
+  const noticing = viewFrom === 'fallback' && noticeFrom !== 'reading' && notice === 'unseen'
+    && grid && members.length > 0;
+  const noticed = () => { if (noticing) keepNotice('seen'); };
   /*
-   * The way to the other view, in either menu: how a list is looked at is
-   * the reader's, whoever made the list. One row that names where it goes
-   * rather than a switch that names where you are — the glyph is the
-   * view the tap brings, as Collections' own toggle draws it.
+   * The two views, in either menu: how a list is looked at is the
+   * reader's, whoever made the list. A choice of two under its own name,
+   * the one in force ticked, as iOS's own Files does it (owner, 22 Oct
+   * 2026, from the reference). It was one row naming where it went —
+   * "List view" while in the grid — which said nothing about where you
+   * were, and the grid notice needs a row it can point to by name.
    */
-  const viewRow = (first = false) => (
-    <MenuRow
-      icon={grid ? 'list-outline' : 'grid-outline'}
-      label={grid
-        ? t('List view', 'Xem dạng danh sách', 'リスト表示', '列表视图', '列表檢視')
-        : t('Grid view', 'Xem dạng lưới', 'グリッド表示', '网格视图', '網格檢視')}
-      onPress={() => act(() => pickView(grid ? 'list' : 'grid'))}
-      first={first}
-      testID="collection-menu-view"
-    />
+  const viewRows = (first = false) => (
+    <>
+      <Text style={[s.menuSection, !first && s.menuDivider]} accessibilityRole="header">
+        {t('View', 'Chế độ xem', '表示', '视图', '檢視')}
+      </Text>
+      <MenuRow
+        icon="grid-outline"
+        label={t('Grid', 'Dạng lưới', 'グリッド', '网格', '網格')}
+        onPress={() => act(() => pickView('grid'))}
+        checked={grid}
+        first
+        testID="collection-menu-grid"
+      />
+      <MenuRow
+        icon="list-outline"
+        label={t('List', 'Dạng danh sách', 'リスト', '列表', '列表')}
+        onPress={() => act(() => pickView('list'))}
+        checked={!grid}
+        testID="collection-menu-list"
+      />
+    </>
   );
 
   // Explore is where places are, and saving one from there already offers
@@ -1203,6 +1250,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           label={t('More', 'Thêm', 'その他', '更多', '更多')}
           testID="collection-more"
         />
+        {/* The guide's own "look here" (`Attention`), while the grid notice
+            points at this button: 4pt clear of the 44pt circle, as the
+            guide rings its round search button. */}
+        {noticing && <AttentionRing frame={MORE_RING} testID="collection-more-ring" />}
       </View>
     </View>
   ) : null;
@@ -1339,6 +1390,34 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      stays in the header, so the reader never loses which list this is.
      The chips go with it: you filter first and then read, and a filter
      row pinned over the places would be the same tax again. */
+  /* ── the grid notice (owner, 22 Oct 2026) ──
+     Lists open as a grid now, so a reader the grid is a default for is
+     told once, between the card and the tiles, where the way back is: the
+     ⋯ button, ringed while this shows. A banner in the page rather than a
+     sheet over it: it says something, it asks nothing, and the grid it is
+     about is right under it. The guide's toast in look — the sheets'
+     ground, the accent's tint behind the mark — so the app's two notices
+     read as one kind of thing. */
+  const gridNotice = (
+    <View style={s.notice} testID="collection-grid-notice" accessibilityLiveRegion="polite">
+      <View style={s.noticeMark}><Ionicons name="grid-outline" size={20} color={colors.accent} /></View>
+      <View style={s.noticeText}>
+        <Text style={s.noticeTitle}>
+          {t('Collections now open as a grid', 'Bộ sưu tập giờ hiển thị dạng lưới',
+            'コレクションはグリッドで表示されるようになりました', '合集现在以网格显示', '合集現在以網格顯示')}
+        </Text>
+        <Text style={s.noticeBody}>
+          {t('Switch back to the list in the ⋯ menu.', 'Bạn có thể chuyển về dạng danh sách trong menu ⋯.',
+            '⋯ メニューからリスト表示に戻せます。', '可在 ⋯ 菜单中切换回列表。', '可在 ⋯ 選單中切換回列表。')}
+        </Text>
+      </View>
+      <Pressable onPress={noticed} accessibilityRole="button" hitSlop={4} style={s.noticeClose}
+        accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} testID="collection-grid-notice-close">
+        <Ionicons name="close" size={20} color={colors.textSecondary} />
+      </Pressable>
+    </View>
+  );
+
   const introCard = col ? (
     <View style={s.descWrap}>
       <Card
@@ -1528,16 +1607,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   '这个合集里还没有地点。', '這個合集裡還沒有地點。',
                 )} />)
               : null}
-            ListHeaderComponent={introCard ? (
-              <View
-                testID="collection-intro"
-                onLayout={(e) => {
-                  const { y, height } = e.nativeEvent.layout;
-                  cardEnd.current = y + height;
-                }}
-              >
-                {introCard}
-              </View>
+            ListHeaderComponent={introCard || noticing ? (
+              <>
+                {introCard && (
+                  <View
+                    testID="collection-intro"
+                    onLayout={(e) => {
+                      const { y, height } = e.nativeEvent.layout;
+                      cardEnd.current = y + height;
+                    }}
+                  >
+                    {introCard}
+                  </View>
+                )}
+                {noticing && gridNotice}
+              </>
             ) : null}
             contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
@@ -1582,7 +1666,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   testID="collection-menu-plan"
                 />
               )}
-              {viewRow()}
+              {viewRows()}
               <MenuRow
                 icon="create-outline"
                 label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集', '编辑合集', '編輯合集')}
@@ -1640,7 +1724,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   first={!canPlan}
                 />
               )}
-              {viewRow(!copyCityId && !canPlan)}
+              {viewRows(!copyCityId && !canPlan)}
               <MenuRow
                 icon="share-outline"
                 label={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
@@ -1830,6 +1914,26 @@ const s = StyleSheet.create({
   menuRowOn: { backgroundColor: colors.surfaceGlass },
   menuDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   menuText: { color: colors.text, fontSize: 17, lineHeight: 22, fontWeight: font.medium },
+  // The tick sits at the row's far end, past the label.
+  menuCheck: { marginLeft: 'auto' },
+  // A choice's name over its rows: smaller and quieter than a row, so it
+  // reads as a heading and not as one more thing to press.
+  menuSection: {
+    color: colors.textSecondary, fontSize: 13, fontWeight: font.medium,
+    paddingHorizontal: 18, paddingTop: 12, paddingBottom: 2,
+  },
+  // The guide's toast, in the page: see `gridNotice`.
+  notice: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    marginHorizontal: space.page, marginBottom: 12, paddingVertical: 14, paddingLeft: 14, paddingRight: 4,
+    backgroundColor: colors.bgElevated, borderColor: colors.borderGlassSoft, borderWidth: 1, borderRadius: radius.card,
+  },
+  noticeMark: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
+  noticeText: { flex: 1, gap: 2, paddingTop: 1 },
+  noticeTitle: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.semibold },
+  noticeBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  // 40pt, and 4 of slop each side, for the 44pt a finger needs.
+  noticeClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginTop: -8 },
 
   emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
   empty: {

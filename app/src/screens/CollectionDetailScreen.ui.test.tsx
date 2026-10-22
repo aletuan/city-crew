@@ -160,6 +160,23 @@ vi.mock('../components/PlaceCard', async () => {
   };
 });
 
+// Which view a list opens in when the reader has chosen none. The app's
+// own is the grid (owner, 22 Oct 2026); most of this file is about the
+// cards — their drag, their dock, their chips — so it opens on them unless
+// a test is about the default, which clears this and gets the screen's
+// own. Only the fallback is changed: what is stored, and whether anything
+// is, stays the real hook's.
+const views = vi.hoisted(() => ({ fallback: 'list' as 'list' | null }));
+vi.mock('../lib/stored', async (orig) => {
+  const real = await orig<typeof import('../lib/stored')>();
+  return {
+    ...real,
+    useStored: ((key: string, fallback: unknown, codec: never) => real.useStored(
+      key, key === 'citycrew.collection.view' && views.fallback ? views.fallback : fallback, codec,
+    )) as typeof real.useStored,
+  };
+});
+
 // The same for the grid's tile, filed by slug as it is last drawn, with
 // the testID the screen gives it so a test can find and tap it.
 type TileProps = CardProps & { testID?: string; size: number };
@@ -311,6 +328,7 @@ beforeEach(() => {
   state.cachedAvatar = null;
   state.city = { id: 'hanoi' };
   state.lang = 'en';
+  views.fallback = 'list';
 });
 
 describe('before the list is there', () => {
@@ -2056,22 +2074,29 @@ describe('the actions and the dock', () => {
 });
 
 // Two ways to look at a list (owner, 22 Oct 2026): the cards, or a grid of
-// three to a row. One choice for every list, kept on the phone; the way
-// between them is a row in either menu, named for where it goes. On the
-// owner's own list a tile is held and dragged as a card is.
+// three to a row. One choice for every list, kept on the phone; the two are
+// a choice of two in either menu, the one in force ticked. On the owner's
+// own list a tile is held and dragged as a card is.
 describe('the grid', () => {
   const VIEW = 'citycrew.collection.view';
-  beforeEach(async () => { await AsyncStorage.removeItem(VIEW); });
-  afterEach(async () => { await AsyncStorage.removeItem(VIEW); });
-  const toGrid = () => { openMenu(); fireEvent.click(menuRow('Grid view')); endModalFade(); };
+  const NOTICE = 'citycrew.collection.gridNotice';
+  beforeEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
+  afterEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
+  const toGrid = () => { openMenu(); fireEvent.click(menuRow('Grid')); endModalFade(); };
   const tiles = () => [0, 1, 2].map((i) => screen.getByTestId(`collection-tile-${i}`).textContent);
+  /** Both reads in: the view and whether the notice has been had. */
+  const reads = () => act(async () => {});
 
-  it('opens on the cards, and the menu offers the grid', () => {
+  it('names the two views under one heading in the menu, ticking the one in force', async () => {
     show();
-    expect(screen.getByText('card:Pho 10')).toBeTruthy();
-    expect(screen.queryByTestId('collection-tile-0')).toBeNull();
     openMenu();
-    expect(menuRow('Grid view')).toBeTruthy();
+    expect(menuRow('View')).toBeTruthy();
+    const grid = screen.getByTestId('collection-menu-grid');
+    const list = screen.getByTestId('collection-menu-list');
+    expect(list.getAttribute('aria-selected')).toBe('true');
+    expect(grid.getAttribute('aria-selected')).toBe('false');
+    expect(list.querySelector('[data-icon="checkmark"]')).toBeTruthy();
+    expect(grid.querySelector('[data-icon="checkmark"]')).toBeNull();
   });
 
   it('draws the places as tiles in the list’s order, and remembers the choice', () => {
@@ -2084,12 +2109,15 @@ describe('the grid', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(VIEW, 'grid');
   });
 
-  it('names the way back, and takes it', () => {
+  it('ticks the grid once in it, and goes back to the cards from the same place', () => {
     show();
     toGrid();
     openMenu();
-    expect(screen.queryByText('Grid view')).toBeNull();
-    fireEvent.click(menuRow('List view'));
+    const tick = (id: string) => screen.getByTestId(id).querySelector('[data-icon="checkmark"]');
+    expect(tick('collection-menu-grid')).toBeTruthy();
+    expect(tick('collection-menu-list')).toBeNull();
+    expect(screen.getByTestId('collection-menu-grid').getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(menuRow('List'));
     expect(screen.getByText('card:Pho 10')).toBeTruthy();
     expect(screen.queryByTestId('collection-tile-0')).toBeNull();
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(VIEW, 'list');
@@ -2232,11 +2260,128 @@ describe('the grid', () => {
     state.cols = [theirs({ city_id: null } as Partial<Collection>, [])];
     show();
     openMenu();
-    const rows = [...document.querySelectorAll('[aria-modal] [role="button"]')].filter((b) => b.textContent);
-    expect(rows[0].textContent).toBe('Grid view');
-    // The first row carries no rule above it; every row after it does.
     const rule = (el: Element) => parseFloat(getComputedStyle(el).borderTopWidth) || 0;
+    // The heading leads, with no rule above it; its first row hangs from
+    // it with none either; every row after that has one.
+    expect(rule(menuRow('View'))).toBe(0);
+    const rows = [...document.querySelectorAll('[aria-modal] [role="button"]')].filter((b) => b.textContent);
+    expect(rows.map((r) => r.textContent).slice(0, 3)).toEqual(['Grid', 'List', 'Share']);
     expect(rule(rows[0])).toBe(0);
     expect(rule(rows[1])).toBeGreaterThan(0);
+    expect(rule(rows[2])).toBeGreaterThan(0);
+  });
+
+  // Below the owner's other rows, the heading takes a rule like any row.
+  it('rules the heading off from the rows above it in the owner’s menu', () => {
+    show();
+    openMenu();
+    expect(parseFloat(getComputedStyle(menuRow('View')).borderTopWidth)).toBeGreaterThan(0);
+  });
+
+  // The grid as the default (owner, 22 Oct 2026), for a reader who has
+  // chosen no view; and the notice that says so, once.
+  describe('as the default', () => {
+    beforeEach(() => { views.fallback = null; });
+    const banner = () => screen.queryByTestId('collection-grid-notice');
+    const ring = () => screen.queryByTestId('collection-more-ring');
+
+    it('opens a list nobody has chosen a view for as a grid', async () => {
+      show();
+      await reads();
+      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+      expect(screen.queryByText('card:Pho 10')).toBeNull();
+    });
+
+    it('keeps the cards for a reader who chose them, and tells them nothing', async () => {
+      await AsyncStorage.setItem(VIEW, 'list');
+      show();
+      await reads();
+      expect(screen.getByText('card:Pho 10')).toBeTruthy();
+      expect(banner()).toBeNull();
+      expect(ring()).toBeNull();
+    });
+
+    it('tells nobody who chose the grid themselves', async () => {
+      await AsyncStorage.setItem(VIEW, 'grid');
+      show();
+      await reads();
+      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+      expect(banner()).toBeNull();
+    });
+
+    // Not before both reads are in: until then a reader who chose the
+    // cards looks like one the grid is a default for.
+    it('says so once the reads are in, under the card, and rings the ⋯ button as the guide does', async () => {
+      show();
+      expect(banner()).toBeNull();
+      await reads();
+      expect(banner()!.textContent).toContain('Collections now open as a grid');
+      expect(banner()!.textContent).toContain('Switch back to the list in the ⋯ menu.');
+      // Between the card and the tiles.
+      const intro = screen.getByTestId('collection-intro');
+      expect(intro.compareDocumentPosition(banner()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(banner()!.compareDocumentPosition(screen.getByTestId('collection-tile-0')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      // The guide's ring and pulse, 4 clear of the 44pt button.
+      const r = ring()!;
+      expect([r.style.left, r.style.top, r.style.width, r.style.height]).toEqual(['-4px', '-4px', '52px', '52px']);
+      expect(screen.getByTestId('collection-more-ring-pulse')).toBeTruthy();
+    });
+
+    // A reader who has had it, whose answer is still being read when the
+    // view's read lands, does not see it flash up meanwhile.
+    it('waits for the answer to whether the reader has had it', async () => {
+      await AsyncStorage.setItem(NOTICE, 'seen');
+      const getItem = AsyncStorage.getItem.bind(AsyncStorage);
+      vi.spyOn(AsyncStorage, 'getItem').mockImplementation((key: string) => (
+        key === NOTICE ? new Promise(() => {}) : getItem(key)
+      ) as never);
+      show();
+      await reads();
+      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+      expect(banner()).toBeNull();
+      vi.mocked(AsyncStorage.getItem).mockRestore();
+    });
+
+    it('goes for good with its ×', async () => {
+      const view = show();
+      await reads();
+      fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
+      expect(banner()).toBeNull();
+      expect(ring()).toBeNull();
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(NOTICE, 'seen');
+      cleanup();
+      void view;
+      show();
+      await reads();
+      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+      expect(banner()).toBeNull();
+    });
+
+    // The menu it points to: opening it is reading it.
+    it('goes for good when the ⋯ menu is opened', async () => {
+      show();
+      await reads();
+      openMenu();
+      expect(banner()).toBeNull();
+      expect(ring()).toBeNull();
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(NOTICE, 'seen');
+    });
+
+    it('stays while the reader only looks, until they answer it', async () => {
+      show();
+      await reads();
+      cleanup();
+      show();
+      await reads();
+      expect(banner()).toBeTruthy();
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(NOTICE, 'seen');
+    });
+
+    it('says nothing over a list with no places', async () => {
+      state.mine = [collection({}, [])];
+      show();
+      await reads();
+      expect(banner()).toBeNull();
+    });
   });
 });
