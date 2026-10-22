@@ -16,8 +16,8 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, fetchPlacesByGoogleId, fetchSearchIndex,
-  PLACE_COLS,
+  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, fetchPlacesByGoogleId, fetchSearchIndex, fetchSearchPlaces,
+  PLACE_COLS, SEARCH_INDEX_COLS,
 } from './places';
 import { PAGE_ROWS } from './pages';
 
@@ -355,6 +355,32 @@ describe('fetchPlacesByGoogleId', () => {
 
 // Search's index of every city (22 Oct 2026): what a match reads and what
 // a result's card draws, and nothing a place's own page needs.
+describe('fetchSearchPlaces', () => {
+  // The few just suggested, by slug, as the index has its rows: not the
+  // whole index again.
+  it('reads the places named, with the index’s columns and the cover only', async () => {
+    fake().replies({ data: [row('a'), row('b')] });
+    const rows = await fetchSearchPlaces(['a', 'b']);
+    const [q] = fake().log;
+    expect(q.table).toBe('places');
+    expect(q.payload).toBe(SEARCH_INDEX_COLS);
+    expect(q.filters).toEqual(expect.arrayContaining([['slug', ['a', 'b']], ['place_photos.is_cover', true]]));
+    expect(rows.map((r) => r.slug)).toEqual(['a', 'b']);
+  });
+
+  it('asks nothing for no places', async () => {
+    expect(await fetchSearchPlaces([])).toEqual([]);
+    expect(fake().log).toHaveLength(0);
+  });
+
+  it('reads an empty answer as none, and throws what the database said', async () => {
+    fake().replies({ data: null });
+    expect(await fetchSearchPlaces(['a'])).toEqual([]);
+    fake().replies({ error: { message: 'boom' } });
+    await expect(fetchSearchPlaces(['a'])).rejects.toThrow('boom');
+  });
+});
+
 describe('fetchSearchIndex', () => {
   it('asks for the words a match reads and the card the result is drawn as, and the cover only', async () => {
     fake().replies({ data: [row('a')] });

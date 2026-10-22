@@ -5,7 +5,7 @@
 import React, { useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render } from '../uitest/render';
-import { forgetSearchIndex, useSearchIndex } from './searchIndex';
+import { addToSearchIndex, forgetSearchIndex, useSearchIndex } from './searchIndex';
 import type { Place } from './data';
 
 const data = vi.hoisted(() => ({ fetch: vi.fn(async (_me: string | null): Promise<Place[]> => []) }));
@@ -87,5 +87,52 @@ describe('useSearchIndex', () => {
     render(<Probe reader={null} />).unmount();
     await act(async () => { answer([place('late')]); });
     expect(seen.places).toBeNull();
+  });
+});
+
+// A place suggested during the run was not in an index read before it
+// existed, and its city's chip did not count it (owner, 22 Oct 2026).
+describe('addToSearchIndex', () => {
+  const at = (slug: string, city_id: string) => ({ slug, city_id }) as Place;
+
+  it('lays the new places in first, in place of any with the same slug, and the screen reads it again', async () => {
+    data.fetch.mockImplementation(async () => [at('a', 'hcmc'), at('b', 'hcmc')]);
+    render(<Probe reader="u1" />);
+    await settle();
+    await act(async () => { addToSearchIndex('u1', [at('new', 'hanoi'), at('b', 'hanoi')]); });
+    expect(seen.places).toEqual([at('new', 'hanoi'), at('b', 'hanoi'), at('a', 'hcmc')]);
+    expect(data.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  // Kept for the run: the next screen opened starts from it, new places and all.
+  it('keeps them for the next screen', async () => {
+    render(<Probe reader="u1" />).unmount();
+    await settle();
+    addToSearchIndex('u1', [at('new', 'hanoi')]);
+    render(<Probe reader="u1" />);
+    await settle();
+    expect(seen.places).toEqual([at('new', 'hanoi'), place('a')]);
+  });
+
+  it('touches nobody else’s index, and nothing that was never asked for', async () => {
+    render(<Probe reader="u1" />);
+    await settle();
+    await act(async () => { addToSearchIndex('u2', [at('new', 'hanoi')]); });
+    expect(seen.places).toEqual([place('a')]);
+    // Asked for later, it is read whole, new places and all, from the server.
+    render(<Probe reader="u2" />);
+    await settle();
+    expect(data.fetch).toHaveBeenLastCalledWith('u2');
+  });
+
+  it('reads nothing again for nothing to add', async () => {
+    let reads = 0;
+    data.fetch.mockImplementation(async () => { reads += 1; return [place('a')]; });
+    render(<Probe reader={null} />);
+    await settle();
+    const before = seen.places;
+    await act(async () => { addToSearchIndex(null, []); });
+    expect(seen.places).toBe(before);
+    expect(reads).toBe(1);
   });
 });
