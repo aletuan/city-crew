@@ -434,7 +434,7 @@ describe('CollectionsScreen — signed in', () => {
     state.mine.data = [col('fresh', [], { owner_id: 'u1' })];
     show();
     expect(screen.getByText('No places yet')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'List fresh' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List fresh, Public' })).toBeTruthy();
     // Tiles keep no swipe, so they carry no actions either.
     expect(actionRows()).toEqual([]);
   });
@@ -683,14 +683,36 @@ describe('CollectionsScreen — signed in', () => {
 describe('CollectionsScreen — list view', () => {
   beforeEach(() => { state.uid = 'u1'; });
 
+  // Who can see a list of yours is a glyph on screen, which VoiceOver
+  // does not read, so the card's spoken name carries it — in either view,
+  // and only on your own: somebody else's list is public by being there.
+  it('says in the card’s spoken name who can see a list of yours, in either view', async () => {
+    state.mine.data = [
+      col('mine1', ['a'], { is_public: false, owner_id: 'u1' }),
+      col('mine2', ['a'], { is_public: true, owner_id: 'u1' }),
+    ];
+    show();
+    expect(screen.getByRole('button', { name: 'List mine1, Private' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List mine2, Public' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    await screen.findByRole('button', { name: 'List mine1, Private' });
+    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'List mine2, Public' })).toBeTruthy();
+  });
+
   it('the switch turns tiles into rows and remembers the choice', async () => {
     state.mine.data = [col('mine1', ['a', 'b'], { is_public: false, owner_id: 'u1' })];
     show();
     // Tiles by default: the count stands alone, no status word beside it.
     expect(screen.getByText('2 places')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'List view' }));
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.view', 'row');
-    expect(screen.getByText(/2 places\s+·\s+Private/)).toBeTruthy();
+    // Rows, which a row's Delete says. Their count stands alone too now
+    // (owner, 22 Oct 2026): the lock says it, and the word is not drawn.
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    expect(screen.getByText('2 places')).toBeTruthy();
+    expect(screen.queryByText(/Private/)).toBeNull();
     // And back again.
     fireEvent.click(screen.getByRole('button', { name: 'Tile view' }));
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('citycrew.collections.view', 'tile');
@@ -701,7 +723,7 @@ describe('CollectionsScreen — list view', () => {
     await AsyncStorage.setItem('citycrew.collections.view', 'row');
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
-    expect(await screen.findByText(/1 place\s+·\s+Public/)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Delete' })).toBeTruthy();
   });
 
   it('ignores a stored value that is neither view', async () => {
@@ -709,7 +731,7 @@ describe('CollectionsScreen — list view', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
     await act(async () => {});
-    expect(screen.queryByText(/·\s+Public/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
     expect(screen.getByText('1 place')).toBeTruthy();
   });
 
@@ -727,7 +749,7 @@ describe('CollectionsScreen — list view', () => {
     show();
     expect(await screen.findByText('Rooftops for Friday')).toBeTruthy();
     expect(screen.getByText('1 like')).toBeTruthy();
-    expect(screen.getByText(/No places yet\s+·\s+Private/)).toBeTruthy();
+    expect(screen.getByText('No places yet')).toBeTruthy();
     // The empty one draws the waiting well, not a photograph.
     expect(icons('bookmark-outline')).toBeGreaterThanOrEqual(2); // tab glyph + empty cover
   });
@@ -800,7 +822,7 @@ describe('CollectionsScreen — list view', () => {
     const { navigation } = show();
     // Wait for the stored preference to land, or the tap hits a tile the
     // row is about to replace.
-    await screen.findByText(/1 place\s+·\s+Public/);
+    await screen.findByRole('button', { name: 'Delete' });
     fireEvent.click(screen.getByText('List mine1'));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'mine1' });
   });
@@ -836,9 +858,9 @@ describe('CollectionsScreen — list view', () => {
     await rows();
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', desc_en: 'Rooftops' })];
     const { navigation } = show();
-    await screen.findByText(/1 place\s+·\s+Public/);
+    await screen.findByRole('button', { name: 'Delete' });
     const [row] = actionRows();
-    expect(row.accessibilityLabel).toBe('List mine1');
+    expect(row.accessibilityLabel).toBe('List mine1, Public');
     expect(row.accessibilityActions).toEqual([{ name: 'edit', label: 'Edit' }, { name: 'delete', label: 'Delete' }]);
     act(() => row.onAccessibilityAction({ nativeEvent: { actionName: 'edit' } }));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm', {
@@ -863,7 +885,7 @@ describe('CollectionsScreen — list view', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     state.cols.data = [col('theirs', ['a', 'b'], { curator_handle: 'trang' }), col('solo', ['a'])];
     show();
-    expect(await screen.findByRole('button', { name: 'List mine1' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'List mine1, Public' })).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
     expect(screen.getByRole('button', { name: 'List theirs, by @trang, 2 places' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'List solo' })).toBeTruthy();
