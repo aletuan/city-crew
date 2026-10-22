@@ -282,6 +282,38 @@ describe('useListDrag on a grid', () => {
     expect(onMove).toHaveBeenCalledWith(4, 0);
     for (const k of ['a', 'b', 'c', 'd', 'e']) expect(styleOf(k).transform).toBe('');
   });
+
+  // One cell held by something that does not move, as the collection's
+  // "Add place" is:  + a b / c d e. The rows are counted from 0 still;
+  // the cells they stand in are one on.
+  describe('a cell in', () => {
+    beforeEach(() => {
+      cleanup();
+      render(<Rows keys={['a', 'b', 'c', 'd', 'e']} grid={{ cols: 3, pitch: 100, lead: 1 }} />);
+    });
+
+    it('lands by the cells the tiles stand in, and steps them round their own rows’ ends', () => {
+      lift2(0);
+      claim();
+      move2(0, 100);
+      // a's cell is the first row's middle, so down a row is d's.
+      expect(state()).toBe('0>3');
+      expect(styleOf('b').transform).toBe('translateX(-100px) translateY(0px)');
+      expect(styleOf('c').transform).toBe('translateX(200px) translateY(-100px)');
+      expect(styleOf('d').transform).toBe('translateX(-100px) translateY(0px)');
+      drop();
+      expect(onMove).toHaveBeenCalledWith(0, 3);
+    });
+
+    it('lands a tile let go over the held cell first', () => {
+      lift2(2);
+      claim();
+      move2(0, -100);
+      expect(state()).toBe('2>0');
+      drop();
+      expect(onMove).toHaveBeenCalledWith(2, 0);
+    });
+  });
 });
 
 // Past the edge of the screen (owner, 22 Oct 2026): the list is held still

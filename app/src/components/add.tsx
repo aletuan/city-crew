@@ -24,7 +24,13 @@
 //     bar. Filled, because it is a thing you do rather than a space you
 //     fill.
 //
-// There was a third, AddIconButton — the same action as a bare circle,
+//   AddCell — the space for one more in a list of your own, the shape of
+//     the thing it adds: a tile among tiles, a row the cards' width above
+//     the cards. Dashed like the slot, for the same reason, but a word and
+//     a plus and nothing else, since the list around it already says what
+//     goes there.
+//
+// There was a fourth, AddIconButton — the same action as a bare circle,
 // one per row in a list. Search was its only caller, and Search now
 // selects several rows and commits them from one bar (AddBatchBar), so
 // the shape has no job left. Its story is worth keeping even though the
@@ -75,6 +81,48 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
         <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
       </PressableScale>
     </View>
+  );
+}
+
+/**
+ * The space for one more place in your own collection (owner, 22 Oct
+ * 2026), from two mockups the owner drew: a dashed tile in the grid's
+ * first cell, and a dashed row over the first card in the list. The
+ * glyph is the bare plus of the second mockup, in both; the first had a
+ * picture with a plus on it, which says "add a photo", and this adds a
+ * place.
+ *
+ * Not `AddSlot`. That one ends a list, where the reader arrives with
+ * nothing on screen to say what the row is for, so it takes a second line
+ * and a circle to say it. This one leads a list of the very things it
+ * adds, under a card that says whose list it is: the word is enough, and
+ * a subtitle there would be the row explaining itself.
+ *
+ * The row is the cards' width and 48pt tall: the mockup's row measures
+ * about 46, and 12 above and below a 24pt plus is the nearest figure that
+ * stays over the 44 a control needs. The tile is the grid's tile, so the
+ * cell it takes is a cell like the rest.
+ */
+export function AddCell({ label, onPress, size, testID }: {
+  label: string;
+  onPress: () => void;
+  /** The grid's tile side; without it, a row across the list. */
+  size?: number;
+  testID?: string;
+}) {
+  const tile = size !== undefined;
+  return (
+    <PressableScale
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={tile ? undefined : s.cellRowWrap}
+      contentStyle={tile ? [s.cellTile, { width: size, height: size }] : s.cellRow}
+      testID={testID}
+    >
+      <Ionicons name="add" size={24} color={colors.text} />
+      <Text style={tile ? s.cellTileText : s.cellRowText} numberOfLines={2}>{label}</Text>
+    </PressableScale>
   );
 }
 
@@ -195,6 +243,21 @@ const s = StyleSheet.create({
   // of four places, which is exactly the failure this file exists to end.
   slotTitle: { color: colors.text, ...type.cardTitle, lineHeight: 24 },
   slotSub: { color: colors.textTertiary, fontSize: 14, lineHeight: 19 },
+
+  // The cards' own margins, so the row's dashed edge is the cards' edge.
+  cellRowWrap: { marginHorizontal: space.page, marginBottom: space.cardGap },
+  cellRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: space.cardPadding, paddingVertical: 12, borderRadius: radius.card,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
+  },
+  cellRowText: { color: colors.textSecondary, fontSize: 16, lineHeight: 22 },
+  // The tile's own radius (`PlaceTile`), so the cell reads as one of them.
+  cellTile: {
+    alignItems: 'center', justifyContent: 'center', gap: 6, padding: 8,
+    borderRadius: radius.input, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
+  },
+  cellTileText: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, textAlign: 'center' },
 
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

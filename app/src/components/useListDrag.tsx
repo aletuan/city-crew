@@ -52,7 +52,10 @@
 // both ways, a tile lands on the cell under it (`gridSlot`), and the tiles
 // it has passed shuffle one cell along, round a row's end where they have
 // to (`gridStepAside`). Every cell is the one size, so the grid hands its
-// pitch over rather than having the tiles measure themselves.
+// pitch over rather than having the tiles measure themselves. A grid can
+// begin a cell in (`lead`): the collection keeps its first cell for the
+// owner's "Add place" tile, which neither moves nor takes a tile dropped
+// on it.
 //
 // ── past the edge of the screen ──
 //
@@ -118,7 +121,14 @@ export type DragScroll = {
 
 /** The rows laid out as a grid: so many to a row, each cell `pitch` from the
  *  next both ways (a tile and the gap after it). */
-export type DragGrid = { cols: number; pitch: number };
+export type DragGrid = {
+  cols: number;
+  pitch: number;
+  /** Cells before the first row, held by something that does not move —
+   *  the owner's "Add place" tile in the collection's first cell. The rows
+   *  are still counted from 0; only where each one stands moves on. */
+  lead?: number;
+};
 
 export type ListDrag = {
   /** For drawing: the row that is up and the slot it is over. Null between drags. */
@@ -214,8 +224,11 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null, scroll = nu
     // the finger across.
     const dx = grid ? pageX - held.x0 : 0;
     dragX.setValue(dx);
+    // On a grid the arithmetic is the cells', the lead's among them, and a
+    // tile over the lead lands first.
+    const lead = grid?.lead ?? 0;
     const to = grid
-      ? gridSlot(keys.length, grid.cols, grid.pitch, held.from, dx, dy)
+      ? Math.max(0, gridSlot(keys.length + lead, grid.cols, grid.pitch, held.from + lead, dx, dy) - lead)
       : dropSlot(pitches(), held.from, dy);
     if (to !== held.to) {
       raise({ ...held, to });
@@ -277,7 +290,8 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null, scroll = nu
       return [s.lifted, { transform: [{ translateX: dragX }, { translateY: dragY }, { scale: 1.02 }] }];
     }
     if (grid) {
-      const { dx, dy } = gridStepAside(i, lift.from, lift.to, grid.cols, grid.pitch);
+      const lead = grid.lead ?? 0;
+      const { dx, dy } = gridStepAside(i + lead, lift.from + lead, lift.to + lead, grid.cols, grid.pitch);
       return dx !== 0 || dy !== 0 ? { transform: [{ translateX: dx }, { translateY: dy }] } : undefined;
     }
     const shift = stepAside(i, lift.from, lift.to, lift.pitch);

@@ -10,8 +10,8 @@ import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
-import { AddPill, AddSlot } from './add';
-import { colors } from '../theme';
+import { AddCell, AddPill, AddSlot } from './add';
+import { colors, space } from '../theme';
 
 describe('AddSlot', () => {
   it('ends with the row-end chevron at the app\'s one size, and opens on a tap', () => {
@@ -22,6 +22,24 @@ describe('AddSlot', () => {
     expect(chevron.getAttribute('data-color')).toBe(colors.textTertiary);
     fireEvent.click(screen.getByRole('button', { name: /New collection/ }));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A plus and a word, the plus the owner's mockup chose (22 Oct 2026):
+// the bare one, not a picture with a plus, since what it adds is a place.
+describe('AddCell', () => {
+  it('is a tile the side it is given, and a row the list’s width without one', () => {
+    const onPress = vi.fn();
+    const { rerender } = render(<AddCell label="Add place" size={110} onPress={onPress} testID="cell" />);
+    const box = () => screen.getByTestId('cell').firstElementChild as HTMLElement;
+    expect([box().style.width, box().style.height]).toEqual(['110px', '110px']);
+    expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('24');
+    fireEvent.click(screen.getByRole('button', { name: 'Add place' }));
+    expect(onPress).toHaveBeenCalledTimes(1);
+    rerender(<AddCell label="Add place" onPress={onPress} testID="cell" />);
+    expect(box().style.width).toBe('');
+    expect(getComputedStyle(screen.getByTestId('cell')).marginLeft).toBe(`${space.page}px`);
+    expect(document.querySelector('[data-icon="add"]')).toBeTruthy();
   });
 });
 
