@@ -2461,7 +2461,9 @@ describe('the grid', () => {
       expect(banner()!.textContent).toContain('Bộ sưu tập hiển thị dạng lưới');
       const line = screen.getByTestId('collection-grid-notice-more').parentElement!;
       expect(line.textContent).toBe('Bạn có thể chuyển về dạng danh sách trong menu .');
-      expect(line.getAttribute('aria-label')).toBe('Bạn có thể chuyển về dạng danh sách trong menu Thêm.');
+      expect(line.getAttribute('aria-label')).toBe('Bạn có thể chuyển về dạng danh sách trong menu Tùy chọn khác.');
+      // And the button is called the same, not "Thêm", which heard alone is "add".
+      expect(screen.getByRole('button', { name: 'Tùy chọn khác' })).toBeTruthy();
     });
 
     it('says nothing over a list with no places', async () => {

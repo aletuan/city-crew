@@ -1261,7 +1261,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         <RoundIconButton
           icon="ellipsis-horizontal"
           onPress={openMenu}
-          label={t('More', 'Thêm', 'その他', '更多', '更多')}
+          // "Tùy chọn khác" and not "Thêm" (owner, 22 Oct 2026): heard
+          // alone, "Thêm" is "add", and this screen has an Add place too.
+          label={t('More', 'Tùy chọn khác', 'その他', '更多', '更多')}
           testID="collection-more"
         />
         {/* The guide's own "look here" (`Attention`), while the grid notice
@@ -1427,13 +1429,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             round ground, not the "⋯" character (owner, 22 Oct 2026): a
             character comes out thin and low in the body font and does not
             look like the round button it names, and a screen reader says
-            "ellipsis". It is said as the button is labelled instead, "More",
+            "ellipsis". It is said as the button is labelled instead, "More" ("Tùy chọn khác"),
             so the sentence and the button agree out loud. With the glyph in
             the line, "in the corner of the screen" went: the chip and the
             ring already show where. */}
         <Text
           style={s.noticeBody}
-          accessibilityLabel={t('Switch to List view in the More menu.', 'Bạn có thể chuyển về dạng danh sách trong menu Thêm.',
+          accessibilityLabel={t('Switch to List view in the More menu.', 'Bạn có thể chuyển về dạng danh sách trong menu Tùy chọn khác.',
             'その他メニューからリスト表示に切り替えられます。', '可在“更多”菜单中切换为列表。', '可在「更多」選單中切換為列表。')}
         >
           {(() => {
