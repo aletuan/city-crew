@@ -17,7 +17,7 @@ import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { AttentionRing } from '../components/Attention';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
-import { AddPill } from '../components/add';
+import { AddCell, AddPill } from '../components/add';
 import { useProfile, useSession } from '../lib/auth';
 import { categoriesOf } from '../lib/categories';
 import { collectionKinds, narrowTo } from '../lib/collectionKinds';
@@ -189,6 +189,9 @@ const GRID_COLUMNS = 3;
 /** Between tiles, both ways. The reference's, measured off it: about a
  *  fourteenth of a tile. */
 const GRID_GAP = 8;
+/** The grid's first cell on your own list, which holds "Add place" rather
+ *  than a place. Not a slug: slugs never carry a "+". */
+const ADD_CELL = '+add' as const;
 
 /** Which card is in the finger, for the cell that holds it; -1 for none. */
 const LiftedCard = createContext(-1);
@@ -813,13 +816,18 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // card (owner, 22 Oct 2026), so a card can reach a place off screen in
   // one drag. The foot's edge starts at the floating bar's top, which lies
   // over the list's last few points.
-  const listRef = useRef<FlatList<Place>>(null);
+  //
+  // On your own list the grid's first cell is "Add place" (below), so the
+  // tiles stand one cell on from their place in the order: `lead`.
+  const adding = owned && members.length > 0;
+  const lead = grid && adding ? 1 : 0;
+  const listRef = useRef<FlatList<Place | typeof ADD_CELL>>(null);
   const barCovers = useTabBarClearance(0);
   const { lift, panHandlers, onLift, onRelease, onPitch, styleOf, areaRef, onScrolled, onContentSizeChange } = useListDrag({
     keys: drafted.map((p) => p.slug),
     onMove: shuffle,
     pitchGuess: PITCH_GUESS,
-    grid: grid ? { cols: GRID_COLUMNS, pitch: tile + GRID_GAP } : null,
+    grid: grid ? { cols: GRID_COLUMNS, pitch: tile + GRID_GAP, lead } : null,
     scroll: {
       to: (offset) => listRef.current?.scrollToOffset({ offset, animated: false }),
       coveredBelow: barCovers,
@@ -1409,6 +1417,31 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      stays in the header, so the reader never loses which list this is.
      The chips go with it: you filter first and then read, and a filter
      row pinned over the places would be the same tax again. */
+  /* ── "Add place" in the list (owner, 22 Oct 2026) ──
+     From the owner's two mockups: in the grid the first cell, dashed, a
+     tile among tiles; in the list a dashed row over the first card. Adding
+     a place is the owner's everyday edit, and until now it lived in the ⋯
+     menu and in the dock — which only rises once the card has scrolled
+     away. Here it is where the places are, on arrival.
+
+     First, not last. A list of twenty would put the last cell seven rows
+     down, and the reader who wants to add has just opened the list. It
+     leaves with the card as the list scrolls, which is about when the
+     dock's "+ Địa điểm" comes up: the one offer hands over to the other.
+
+     Only on your own list, and not on an empty one: there the card
+     under the header already hands you the way (`OwnEmpty`), and two
+     offers of one act read as two acts. While a filter narrows the list
+     it stays: the place you add is added whatever is shown. It goes
+     where the ⋯ menu's row and the dock's pill go, `addPlace`. */
+  const addCell = (size?: number) => (
+    <AddCell
+      label={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
+      onPress={addPlace}
+      size={size}
+      testID="collection-add-cell"
+    />
+  );
   /* ── the grid notice (owner, 22 Oct 2026) ──
      Lists open as a grid now, so a reader looking at one is told, between
      the card and the tiles, where the way back is: the ⋯ button, ringed
@@ -1568,12 +1601,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。', '找不到这个合集。', '找不到這個合集。')} />}
       {/* On the grid a cell of the list is a row of tiles, so it is the
           lifted tile's row that is raised. */}
-      <LiftedCard.Provider value={lift ? (grid ? Math.floor(lift.from / GRID_COLUMNS) : lift.from) : -1}>
+      <LiftedCard.Provider value={lift ? (grid ? Math.floor((lift.from + lead) / GRID_COLUMNS) : lift.from) : -1}>
         <View ref={areaRef} style={s.dragArea} testID="collection-drag-area" {...panHandlers}>
           <FlatList
             ref={listRef}
-            data={shown}
-            keyExtractor={(p) => p.slug}
+            data={lead ? [ADD_CELL, ...shown] : shown}
+            keyExtractor={(p) => (p === ADD_CELL ? ADD_CELL : p.slug)}
             // A list cannot change its columns once drawn, so each view is
             // a list of its own.
             key={view}
@@ -1586,7 +1619,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             onScroll={onListScroll}
             onContentSizeChange={onContentSizeChange}
             scrollEventThrottle={16}
-            renderItem={({ item, index }) => {
+            renderItem={({ item, index: at }) => {
+              if (item === ADD_CELL) return addCell(tile);
+              const index = at - lead;
               const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
               const up = () => shuffle(index, index - 1);
               const down = () => shuffle(index, index + 1);
@@ -1649,7 +1684,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   '这个合集里还没有地点。', '這個合集裡還沒有地點。',
                 )} />)
               : null}
-            ListHeaderComponent={introCard || noticing ? (
+            ListHeaderComponent={introCard || noticing || (adding && !grid) ? (
               <>
                 {introCard && (
                   <View
@@ -1663,6 +1698,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   </View>
                 )}
                 {noticing && gridNotice}
+                {adding && !grid && addCell()}
               </>
             ) : null}
             contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
@@ -1934,9 +1970,6 @@ const s = StyleSheet.create({
   // the page. `zIndex` for iOS and the web, `elevation` for Android.
   arrangeCellLifted: { zIndex: 10, elevation: 6 },
   gridRow: { paddingHorizontal: space.page, gap: GRID_GAP, marginBottom: GRID_GAP },
-
-  // The dashed slot at the end of the list, matching the collections
-  // screen's own last row down to the well and the gap.
 
   // Lighter than the sheet's scrim was. A popover keeps its context —
   // you can still read the row you are acting on — where a sheet takes

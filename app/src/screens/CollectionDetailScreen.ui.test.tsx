@@ -442,11 +442,26 @@ describe('your own list', () => {
     expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
-  // The old dashed slot at the end of the list stays gone; adding is the
-  // card's quiet button and the menu's row (owner, 16 Oct 2026).
-  it('ends a non-empty list with no Add place slot', () => {
-    show();
+  // The old dashed slot at the end of the list stays gone (owner, 16 Oct
+  // 2026). Adding came back on 22 Oct as the list's first row instead:
+  // under the card, over the first place, and a word with a plus.
+  it('leads a list of yours with Add place over the first card, and it goes to Explore', () => {
+    const { parent } = show();
     expect(screen.queryByText('From search or your bookmarks')).toBeNull();
+    const add = screen.getByTestId('collection-add-cell');
+    expect(add.getAttribute('aria-label')).toBe('Add place');
+    expect(add.querySelector('[data-icon="add"]')).toBeTruthy();
+    const follows = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(screen.getByTestId('collection-intro'), add)).toBe(true);
+    expect(follows(add, screen.getByText('card:Pho 10'))).toBe(true);
+    fireEvent.click(add);
+    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+  });
+
+  it('says Add place in the reader’s language', () => {
+    state.lang = 'vi';
+    show();
+    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Thêm địa điểm');
   });
 
   it('greets an empty list with one invitation to Explore, and no footer', () => {
@@ -458,6 +473,8 @@ describe('your own list', () => {
     expect(screen.getByText(/0 places/)).toBeTruthy();
     fireEvent.click(screen.getByText('Explore places'));
     expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    // The card is the one offer; an Add place row over it would be two.
+    expect(screen.queryByTestId('collection-add-cell')).toBeNull();
   });
 
   it('offers the owner the full menu and nothing meant for visitors', () => {
@@ -1254,6 +1271,12 @@ describe("somebody else's list", () => {
     expect(screen.queryByText('Public')).toBeNull();
     expect(screen.queryByText(/Private/)).toBeNull();
     expect(screen.queryByText('From search or your bookmarks')).toBeNull();
+  });
+
+  it('offers a visitor no Add place over the places', () => {
+    show();
+    expect(screen.getByText('card:Pho 10')).toBeTruthy();
+    expect(screen.queryByTestId('collection-add-cell')).toBeNull();
   });
 
   it('offers Save a copy, Share and Report — never Edit, Reorder, Publish or Delete', () => {
@@ -2087,6 +2110,40 @@ describe('the grid', () => {
   /** Both reads in: the view and whether the notice has been had. */
   const reads = () => act(async () => {});
 
+  // The owner's grid gives its first cell to Add place (owner's mockup,
+  // 22 Oct 2026): a tile the tiles' size, then the places in their order.
+  it('gives the first cell of your own grid to Add place, a tile like the rest', () => {
+    // A window with a width, so the tile has a side: jsdom's has none.
+    const dims = vi.spyOn(Dimensions, 'get').mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 });
+    const { parent } = show();
+    toGrid();
+    const add = screen.getByTestId('collection-add-cell');
+    const follows = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(add, screen.getByTestId('collection-tile-0'))).toBe(true);
+    expect(tiles()).toEqual(['tile:Pho 10', 'tile:Cafe Giang', 'tile:Fine Arts Museum']);
+    const side = Math.floor((390 - space.page * 2 - 16) / 3);
+    const box = add.firstElementChild as HTMLElement;
+    expect([box.style.width, box.style.height]).toEqual([`${side}px`, `${side}px`]);
+    fireEvent.click(add);
+    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    dims.mockRestore();
+  });
+
+  it('gives a visitor’s grid no Add place, and an empty list of yours none either', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    toGrid();
+    expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+    expect(screen.queryByTestId('collection-add-cell')).toBeNull();
+    cleanup();
+    state.mine = [collection({}, [])];
+    state.cols = [];
+    show();
+    toGrid();
+    expect(screen.queryByTestId('collection-add-cell')).toBeNull();
+  });
+
   it('names the two views under one heading in the menu, ticking the one in force', async () => {
     show();
     openMenu();
@@ -2149,8 +2206,9 @@ describe('the grid', () => {
   });
 
   // Dragging in the grid (owner, 22 Oct 2026): the card's hold, the
-  // card's save, the grid's arithmetic. Four places, so there is a second
-  // row to drag into: pho cafe museum / bar.
+  // card's save, the grid's arithmetic. Four places, and the owner's "Add
+  // place" in the first cell, so there is a second row to drag into:
+  // + pho cafe / museum bar.
   describe('dragging', () => {
     const BAR = place('bar', 'Bar Bar');
     // A cell is a tile and the gap after it, the way the screen works the
@@ -2200,7 +2258,9 @@ describe('the grid', () => {
 
     // Down a row is three places on: the tile under the finger is bar's,
     // and the three before it each shuffle one cell back, museum round the
-    // row's end to the start of the next.
+    // row's end to the end of the row above. Counted in cells, the Add
+    // cell's among them: without it museum would step back along its own
+    // row.
     it('drags down a row, stepping the passed tiles aside a cell each', () => {
       show();
       toGrid();
@@ -2209,24 +2269,40 @@ describe('the grid', () => {
       move(0, PITCH);
       expect(el('pho').style.transform).toContain(`translateX(0px) translateY(${PITCH}px)`);
       expect(el('cafe').style.transform).toBe(`translateX(${-PITCH}px) translateY(0px)`);
-      expect(el('museum').style.transform).toBe(`translateX(${-PITCH}px) translateY(0px)`);
-      expect(el('bar').style.transform).toBe(`translateX(${2 * PITCH}px) translateY(${-PITCH}px)`);
+      expect(el('museum').style.transform).toBe(`translateX(${2 * PITCH}px) translateY(${-PITCH}px)`);
+      expect(el('bar').style.transform).toBe(`translateX(${-PITCH}px) translateY(0px)`);
       drop();
       expect(order()).toEqual(['Cafe Giang', 'Fine Arts Museum', 'Bar Bar', 'Pho 10']);
       for (const slug of ['pho', 'cafe', 'museum', 'bar']) expect(el(slug).style.transform).toBe('');
     });
 
+    // Up a row from museum is the Add cell, which takes no tile: one
+    // dropped there lands first. Without the cell counted, museum would be
+    // the first row's last tile and have no row above it to go to.
+    it('lands a tile let go over the Add cell first', async () => {
+      show();
+      toGrid();
+      lift('museum');
+      claim('museum');
+      move(0, -PITCH);
+      drop();
+      expect(order()).toEqual(['Fine Arts Museum', 'Pho 10', 'Cafe Giang', 'Bar Bar']);
+      await pastTheBeat();
+      expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['museum', 'pho', 'cafe', 'bar']);
+    });
+
     // A list's cell is a row of tiles here, so it is the held tile's row
-    // that goes over the others, not the cell at the tile's own index.
+    // that goes over the others, not the cell at the tile's own index —
+    // museum's is the second, behind the Add cell and two places.
     it('raises the held tile’s row over the rest', () => {
       show();
       toGrid();
       const cell = (slug: string) => el(slug).parentElement!.parentElement!;
-      lift('bar');
-      expect(getComputedStyle(cell('bar')).zIndex).toBe('10');
+      lift('museum');
+      expect(getComputedStyle(cell('museum')).zIndex).toBe('10');
       expect(getComputedStyle(cell('pho')).zIndex).not.toBe('10');
       drop();
-      expect(getComputedStyle(cell('bar')).zIndex).not.toBe('10');
+      expect(getComputedStyle(cell('museum')).zIndex).not.toBe('10');
     });
 
     it('offers VoiceOver a step earlier and later, in the reader’s language', async () => {
