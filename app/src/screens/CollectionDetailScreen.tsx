@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, LayoutAnimation, Modal,
+  type AccessibilityActionEvent, AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, LayoutAnimation, Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle,
 } from 'react-native';
@@ -228,10 +228,6 @@ function DraggableCard({
   onPitch: (slug: string, pitch: number) => void;
 }) {
   const { t } = useI18n();
-  const actions = [
-    ...(index > 0 ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動', '上移', '上移') }] : []),
-    ...(index < count - 1 ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動', '下移', '下移') }] : []),
-  ];
   return (
     <Animated.View
       onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height)}
@@ -245,14 +241,82 @@ function DraggableCard({
         onLongPress={(e) => onLift(index, e.nativeEvent.pageY)}
         delayLongPress={LIFT_AFTER_MS}
         onPressOut={onRelease}
-        accessibilityHint={t(
-          'Hold and drag to change the order.',
-          'Giữ rồi kéo để đổi thứ tự.',
-          '長押ししてドラッグすると並び順を変えられます。',
-          '长按并拖动即可调整顺序。', '長按並拖曳即可調整順序。',
-        )}
-        accessibilityActions={actions}
-        onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown())}
+        {...stepsFor(t, index, count, 'list', onUp, onDown)}
+      />
+    </Animated.View>
+  );
+}
+
+/**
+ * What VoiceOver is offered in place of the drag, and told in the hint: a
+ * step either way, only where there is somewhere to go. On the cards a
+ * step is up or down. On the grid it is earlier or later, because the next
+ * place in the order is beside a tile or, at a row's end, at the start of
+ * the row below — "up" there would promise a move of three.
+ */
+function stepsFor(
+  t: ReturnType<typeof useI18n>['t'], index: number, count: number, view: 'list' | 'grid',
+  onUp: () => void, onDown: () => void,
+) {
+  const grid = view === 'grid';
+  return {
+    accessibilityHint: t(
+      'Hold and drag to change the order.',
+      'Giữ rồi kéo để đổi thứ tự.',
+      '長押ししてドラッグすると並び順を変えられます。',
+      '长按并拖动即可调整顺序。', '長按並拖曳即可調整順序。',
+    ),
+    accessibilityActions: [
+      ...(index > 0 ? [{
+        name: 'moveUp',
+        label: grid
+          ? t('Move earlier', 'Đưa lên trước', '前へ移動', '前移', '前移')
+          : t('Move up', 'Chuyển lên', '上へ移動', '上移', '上移'),
+      }] : []),
+      ...(index < count - 1 ? [{
+        name: 'moveDown',
+        label: grid
+          ? t('Move later', 'Đưa ra sau', '後ろへ移動', '后移', '後移')
+          : t('Move down', 'Chuyển xuống', '下へ移動', '下移', '下移'),
+      }] : []),
+    ],
+    onAccessibilityAction: (e: AccessibilityActionEvent) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown()),
+  };
+}
+
+/**
+ * A place in your own list as a tile of the grid, which can be held and
+ * dragged as the card can. The same hold, the same responder on the list
+ * around it, the same save: only the arithmetic of where it lands is the
+ * grid's (see `useListDrag`). Every tile is one size, so unlike the card
+ * it reports no pitch.
+ */
+function DraggableTile({
+  place, index, count, size, style, onOpen, onUp, onDown, onLift, onRelease,
+}: {
+  place: Place;
+  index: number;
+  count: number;
+  size: number;
+  style: ReturnType<ReturnType<typeof useListDrag>['styleOf']>;
+  onOpen: () => void;
+  onUp: () => void;
+  onDown: () => void;
+  onLift: (index: number, pageY: number, pageX: number) => void;
+  onRelease: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <Animated.View style={style} testID={`drag-${place.slug}`}>
+      <PlaceTile
+        place={place}
+        size={size}
+        onPress={onOpen}
+        testID={`collection-tile-${index}`}
+        onLongPress={(e) => onLift(index, e.nativeEvent.pageY, e.nativeEvent.pageX)}
+        delayLongPress={LIFT_AFTER_MS}
+        onPressOut={onRelease}
+        {...stepsFor(t, index, count, 'grid', onUp, onDown)}
       />
     </Animated.View>
   );
@@ -679,10 +743,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // actions make, and saves the same way. The pitch guess is a 16:10
   // photograph the width of a phone, the two lines under it, and the gap
   // below — only ever used for the first frame.
+  //
+  // On the grid the same hook drags tiles: a cell is a tile and the gap
+  // after it, across and down alike, since the rows are spaced by the gap
+  // the tiles are.
   const { lift, panHandlers, onLift, onRelease, onPitch, styleOf } = useListDrag({
     keys: drafted.map((p) => p.slug),
     onMove: shuffle,
     pitchGuess: PITCH_GUESS,
+    grid: grid ? { cols: GRID_COLUMNS, pitch: tile + GRID_GAP } : null,
   });
 
   // Deliberately inert, and now inert for two different reasons — which
@@ -1364,7 +1433,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。', '找不到这个合集。', '找不到這個合集。')} />}
-      <LiftedCard.Provider value={lift ? lift.from : -1}>
+      {/* On the grid a cell of the list is a row of tiles, so it is the
+          lifted tile's row that is raised. */}
+      <LiftedCard.Provider value={lift ? (grid ? Math.floor(lift.from / GRID_COLUMNS) : lift.from) : -1}>
         <View style={s.dragArea} {...panHandlers}>
           <FlatList
             data={shown}
@@ -1382,10 +1453,26 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             scrollEventThrottle={16}
             renderItem={({ item, index }) => {
               const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
-              // A tile lifts nothing, for now: the order a grid shows is the
-              // list's, set on the cards. Dragging across three columns is a
-              // gesture of its own, and comes next.
-              if (grid) return <PlaceTile place={item} size={tile} onPress={open} testID={`collection-tile-${index}`} />;
+              const up = () => shuffle(index, index - 1);
+              const down = () => shuffle(index, index + 1);
+              if (grid) {
+                return canArrange
+                  ? (
+                    <DraggableTile
+                      place={item}
+                      index={index}
+                      count={drafted.length}
+                      size={tile}
+                      style={styleOf(index)}
+                      onOpen={open}
+                      onUp={up}
+                      onDown={down}
+                      onLift={onLift}
+                      onRelease={onRelease}
+                    />
+                  )
+                  : <PlaceTile place={item} size={tile} onPress={open} testID={`collection-tile-${index}`} />;
+              }
               return canArrange
                 ? (
                   <DraggableCard
@@ -1394,8 +1481,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                     count={drafted.length}
                     style={styleOf(index)}
                     onOpen={open}
-                    onUp={() => shuffle(index, index - 1)}
-                    onDown={() => shuffle(index, index + 1)}
+                    onUp={up}
+                    onDown={down}
                     onLift={onLift}
                     onRelease={onRelease}
                     onPitch={onPitch}

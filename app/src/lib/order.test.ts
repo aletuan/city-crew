@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyDraft, dropSlot, moveItem, sameOrder, stepAside } from './order';
+import { applyDraft, dropSlot, gridSlot, gridStepAside, moveItem, sameOrder, stepAside } from './order';
 
 const LIST = ['a', 'b', 'c', 'd'];
 
@@ -126,5 +126,64 @@ describe('stepAside', () => {
 
   it('moves nothing while the row is over its own place', () => {
     expect([0, 1, 2].map((i) => stepAside(i, 1, 1, 60))).toEqual([0, 0, 0]);
+  });
+});
+
+// A grid of 3 columns, cells 100 apart, 8 tiles:
+//   0 1 2
+//   3 4 5
+//   6 7
+describe('gridSlot', () => {
+  const at = (from: number, dx: number, dy: number) => gridSlot(8, 3, 100, from, dx, dy);
+
+  it('stays put until the tile is half a cell over, either way', () => {
+    expect(at(4, 49, 0)).toBe(4);
+    expect(at(4, 50, 0)).toBe(5);
+    expect(at(4, -50, 0)).toBe(3);
+    expect(at(4, 0, 49)).toBe(4);
+    expect(at(4, 0, 50)).toBe(7);
+    expect(at(4, 0, -50)).toBe(1);
+  });
+
+  it('reads the cell a diagonal reaches', () => {
+    expect(at(0, 200, 100)).toBe(5);
+    expect(at(7, -100, -200)).toBe(0);
+  });
+
+  it('keeps to the grid however far the finger goes', () => {
+    expect(at(1, 10_000, 0)).toBe(2);
+    expect(at(1, -10_000, 0)).toBe(0);
+    expect(at(4, 0, -10_000)).toBe(1);
+  });
+
+  // The last row is short: below or beside its end is the last tile.
+  it('lands on the last tile past the end of the list', () => {
+    expect(at(0, 200, 200)).toBe(7);
+    expect(at(4, 0, 10_000)).toBe(7);
+  });
+});
+
+describe('gridStepAside', () => {
+  const shift = (from: number, to: number) => [0, 1, 2, 3, 4, 5, 6, 7].map((i) => gridStepAside(i, from, to, 3, 100));
+  const still = { dx: 0, dy: 0 };
+
+  it('moves the tiles passed forward one cell back, wrapping to the row above', () => {
+    expect(shift(1, 4)).toEqual([
+      still, still,
+      { dx: -100, dy: 0 }, { dx: 200, dy: -100 }, { dx: -100, dy: 0 },
+      still, still, still,
+    ]);
+  });
+
+  it('moves the tiles passed backward one cell on, wrapping to the row below', () => {
+    expect(shift(5, 1)).toEqual([
+      still,
+      { dx: 100, dy: 0 }, { dx: -200, dy: 100 }, { dx: 100, dy: 0 }, { dx: 100, dy: 0 },
+      still, still, still,
+    ]);
+  });
+
+  it('moves nothing while the tile is over its own cell', () => {
+    expect(shift(4, 4)).toEqual(Array(8).fill(still));
   });
 });

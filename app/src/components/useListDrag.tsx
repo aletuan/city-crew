@@ -43,12 +43,22 @@
 //
 // The maths — where a drag lands, who steps aside — is `lib/order`, where
 // it can be tested as arithmetic.
+//
+// ── on a grid ──
+//
+// The same hook drags the collection's tiles, three to a row (owner, 22
+// Oct 2026), given `grid`. The order is still the list's, read row by row,
+// so all that changes is the arithmetic: the finger's travel is counted
+// both ways, a tile lands on the cell under it (`gridSlot`), and the tiles
+// it has passed shuffle one cell along, round a row's end where they have
+// to (`gridStepAside`). Every cell is the one size, so the grid hands its
+// pitch over rather than having the tiles measure themselves.
 
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated, PanResponder, StyleSheet, type GestureResponderHandlers, type StyleProp, type ViewStyle,
 } from 'react-native';
-import { dropSlot, stepAside } from '../lib/order';
+import { dropSlot, gridSlot, gridStepAside, stepAside } from '../lib/order';
 import { fireHaptic } from './ui';
 
 /**
@@ -67,17 +77,24 @@ export const LIFT_AFTER_MS = 400;
 
 /** The row in the finger: where it came from, the slot it hovers over, its
  *  own pitch, and where the finger was when it lifted. */
-export type Held = { from: number; to: number; pitch: number; y0: number };
+export type Held = { from: number; to: number; pitch: number; x0: number; y0: number };
+
+/** The rows laid out as a grid: so many to a row, each cell `pitch` from the
+ *  next both ways (a tile and the gap after it). */
+export type DragGrid = { cols: number; pitch: number };
 
 export type ListDrag = {
   /** For drawing: the row that is up and the slot it is over. Null between drags. */
   lift: Held | null;
   /** The finger's travel since the lift, positive downward. */
   dragY: Animated.Value;
+  /** The same, across, positive rightward. Only a grid moves along it. */
+  dragX: Animated.Value;
   /** For the view around the rows: the responder that carries the drag. */
   panHandlers: GestureResponderHandlers;
-  /** The hold completed on row `index`, with the finger at `pageY`. */
-  onLift: (index: number, pageY: number) => void;
+  /** The hold completed on row `index`, with the finger at `pageY` (and
+   *  `pageX`, which only a grid reads). */
+  onLift: (index: number, pageY: number, pageX?: number) => void;
   /** The row's button let go of the touch: by the finger coming up, or by
    *  the list taking the drag over. Only the first is a drop. */
   onRelease: () => void;
@@ -88,7 +105,7 @@ export type ListDrag = {
   styleOf: (i: number) => Animated.WithAnimatedValue<StyleProp<ViewStyle>>;
 };
 
-export function useListDrag({ keys, onMove, pitchGuess }: {
+export function useListDrag({ keys, onMove, pitchGuess, grid = null }: {
   /** The rows, in their current order, by a key each row reports its pitch under. */
   keys: readonly string[];
   /** The drop: row `from` landed on slot `to`. Never called with `from === to`. */
@@ -96,6 +113,8 @@ export function useListDrag({ keys, onMove, pitchGuess }: {
   /** A row's pitch before it has reported one: the first frame only, or a
    *  platform that does not report layout. */
   pitchGuess: number;
+  /** Set when the rows are tiles in a grid rather than one under another. */
+  grid?: DragGrid | null;
 }): ListDrag {
   // `lift` is for drawing. `liftRef` is the same thing for the touch
   // handlers, which fire faster than renders and must not read a render
@@ -105,6 +124,7 @@ export function useListDrag({ keys, onMove, pitchGuess }: {
   const liftRef = useRef<Held | null>(null);
   const claimed = useRef(false);
   const dragY = useRef(new Animated.Value(0)).current;
+  const dragX = useRef(new Animated.Value(0)).current;
   const pitchByKey = useRef(new Map<string, number>());
   const raise = (next: Held | null) => {
     liftRef.current = next;
@@ -112,18 +132,25 @@ export function useListDrag({ keys, onMove, pitchGuess }: {
   };
   const pitches = () => keys.map((k) => pitchByKey.current.get(k) ?? pitchGuess);
 
-  const onLift = (index: number, pageY: number) => {
+  const onLift = (index: number, pageY: number, pageX = 0) => {
     dragY.setValue(0);
+    dragX.setValue(0);
     claimed.current = false;
-    raise({ from: index, to: index, pitch: pitches()[index], y0: pageY });
+    raise({ from: index, to: index, pitch: pitches()[index], x0: pageX, y0: pageY });
     fireHaptic('light');
   };
-  const onDrag = (pageY: number) => {
+  const onDrag = (pageX: number, pageY: number) => {
     const held = liftRef.current;
     if (!held) return;
     const dy = pageY - held.y0;
     dragY.setValue(dy);
-    const to = dropSlot(pitches(), held.from, dy);
+    // A list's row goes nowhere sideways, so only a grid's tile follows
+    // the finger across.
+    const dx = grid ? pageX - held.x0 : 0;
+    dragX.setValue(dx);
+    const to = grid
+      ? gridSlot(keys.length, grid.cols, grid.pitch, held.from, dx, dy)
+      : dropSlot(pitches(), held.from, dy);
     if (to !== held.to) {
       raise({ ...held, to });
       fireHaptic('selection');
@@ -144,7 +171,7 @@ export function useListDrag({ keys, onMove, pitchGuess }: {
   const [drag] = useState(() => PanResponder.create({
     onMoveShouldSetPanResponderCapture: () => liftRef.current !== null,
     onPanResponderGrant: () => { claimed.current = true; },
-    onPanResponderMove: (_e, g) => dragTo.current.onDrag(g.moveY),
+    onPanResponderMove: (_e, g) => dragTo.current.onDrag(g.moveX, g.moveY),
     onPanResponderRelease: () => dragTo.current.onDrop(),
     onPanResponderTerminate: () => dragTo.current.onDrop(),
     onPanResponderTerminationRequest: () => false,
@@ -153,12 +180,18 @@ export function useListDrag({ keys, onMove, pitchGuess }: {
 
   const styleOf = (i: number): Animated.WithAnimatedValue<StyleProp<ViewStyle>> => {
     if (!lift) return undefined;
-    if (lift.from === i) return [s.lifted, { transform: [{ translateY: dragY }, { scale: 1.02 }] }];
+    if (lift.from === i) {
+      return [s.lifted, { transform: [{ translateX: dragX }, { translateY: dragY }, { scale: 1.02 }] }];
+    }
+    if (grid) {
+      const { dx, dy } = gridStepAside(i, lift.from, lift.to, grid.cols, grid.pitch);
+      return dx !== 0 || dy !== 0 ? { transform: [{ translateX: dx }, { translateY: dy }] } : undefined;
+    }
     const shift = stepAside(i, lift.from, lift.to, lift.pitch);
     return shift !== 0 ? { transform: [{ translateY: shift }] } : undefined;
   };
 
-  return { lift, dragY, panHandlers: drag.panHandlers, onLift, onRelease, onPitch, styleOf };
+  return { lift, dragY, dragX, panHandlers: drag.panHandlers, onLift, onRelease, onPitch, styleOf };
 }
 
 const s = StyleSheet.create({
