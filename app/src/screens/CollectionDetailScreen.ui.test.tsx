@@ -2338,7 +2338,15 @@ describe('the grid', () => {
       expect(banner()).toBeNull();
       await reads();
       expect(banner()!.textContent).toContain('Now in grid view');
-      expect(banner()!.textContent).toContain('Switch to List view in the ⋯ menu.');
+      // The ⋯ is the button's glyph on its round ground, in the line, and
+      // the line is said with the button's own name.
+      const chip = screen.getByTestId('collection-grid-notice-more');
+      expect(chip.querySelector('[data-icon="ellipsis-horizontal"]')).toBeTruthy();
+      const line = chip.parentElement!;
+      expect(line.textContent).toBe('Switch to List view in the  menu.');
+      expect(line.textContent).not.toContain('⋯');
+      expect(line.getAttribute('aria-label')).toBe('Switch to List view in the More menu.');
+      expect(chip.compareDocumentPosition(line.lastChild!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       // Between the card and the tiles.
       const intro = screen.getByTestId('collection-intro');
       expect(intro.compareDocumentPosition(banner()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -2451,7 +2459,9 @@ describe('the grid', () => {
       show();
       await reads();
       expect(banner()!.textContent).toContain('Bộ sưu tập hiển thị dạng lưới');
-      expect(banner()!.textContent).toContain('Bạn có thể chuyển về dạng danh sách trong menu ⋯ ở góc màn hình.');
+      const line = screen.getByTestId('collection-grid-notice-more').parentElement!;
+      expect(line.textContent).toBe('Bạn có thể chuyển về dạng danh sách trong menu .');
+      expect(line.getAttribute('aria-label')).toBe('Bạn có thể chuyển về dạng danh sách trong menu Thêm.');
     });
 
     it('says nothing over a list with no places', async () => {

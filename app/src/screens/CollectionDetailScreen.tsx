@@ -1423,9 +1423,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           {t('Now in grid view', 'Bộ sưu tập hiển thị dạng lưới',
             'グリッド表示になりました', '现在以网格显示', '現在以網格顯示')}
         </Text>
-        <Text style={s.noticeBody}>
-          {t('Switch to List view in the ⋯ menu.', 'Bạn có thể chuyển về dạng danh sách trong menu ⋯ ở góc màn hình.',
-            '⋯ メニューからリスト表示に切り替えられます。', '可在 ⋯ 菜单中切换为列表。', '可在 ⋯ 選單中切換為列表。')}
+        {/* The ⋯ in the line is the button's own glyph on the button's own
+            round ground, not the "⋯" character (owner, 22 Oct 2026): a
+            character comes out thin and low in the body font and does not
+            look like the round button it names, and a screen reader says
+            "ellipsis". It is said as the button is labelled instead, "More",
+            so the sentence and the button agree out loud. With the glyph in
+            the line, "in the corner of the screen" went: the chip and the
+            ring already show where. */}
+        <Text
+          style={s.noticeBody}
+          accessibilityLabel={t('Switch to List view in the More menu.', 'Bạn có thể chuyển về dạng danh sách trong menu Thêm.',
+            'その他メニューからリスト表示に切り替えられます。', '可在“更多”菜单中切换为列表。', '可在「更多」選單中切換為列表。')}
+        >
+          {(() => {
+            const [before, after] = t('Switch to List view in the {⋯} menu.', 'Bạn có thể chuyển về dạng danh sách trong menu {⋯}.',
+              '{⋯} メニューからリスト表示に切り替えられます。', '可在 {⋯} 菜单中切换为列表。', '可在 {⋯} 選單中切換為列表。').split('{⋯}');
+            return (
+              <>
+                {before}
+                <View style={s.moreChip} testID="collection-grid-notice-more">
+                  <Ionicons name="ellipsis-horizontal" size={12} color={colors.text} />
+                </View>
+                {after}
+              </>
+            );
+          })()}
         </Text>
       </View>
       <Pressable onPress={closeNotice} accessibilityRole="button" hitSlop={4} style={s.noticeClose}
@@ -1949,6 +1972,15 @@ const s = StyleSheet.create({
   noticeText: { flex: 1, gap: 2, paddingTop: 1 },
   noticeTitle: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.semibold },
   noticeBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  // The ⋯ button in small, inside the line: the button's ground and glyph
+  // at 18pt to its 44. A view in a line of text sits with its foot on the
+  // baseline, so 18pt of chip stands about 3pt above the middle of 14pt
+  // lower-case; it is brought down by that. A starting figure, to be
+  // judged on a phone.
+  moreChip: {
+    width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass, transform: [{ translateY: 3 }],
+  },
   // 40pt, and 4 of slop each side, for the 44pt a finger needs.
   noticeClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginTop: -8 },
 
