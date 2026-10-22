@@ -243,7 +243,13 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // thrown away, and this walks the whole catalog.
   const dead = searching && rows.length === 0;
   // Found, but not in the cities chosen: the chips above say where, and the
-  // screen does not choose for the reader (owner, 22 Oct 2026).
+  // screen does not choose for the reader (owner, 22 Oct 2026). Google's
+  // row stays under it. It was left out, on the reading that the answer
+  // existed elsewhere; but somebody in Hanoi typing "vườn thảo điền" may
+  // mean one the catalog has not got, and had to tap Saigon to be offered
+  // Google at all (owner, the same night: long-winded and hard to follow).
+  // The fork stays out: it guesses at what else was meant, and here the
+  // chips already answer that.
   const elsewhere = dead && totalFound(counts) > 0;
   const routes = useMemo(
     () => (dead ? escapeRoutes(query, places, synonyms) : []),
@@ -617,7 +623,13 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         // "then let us go and find it".
         ListEmptyComponent={
           searching && elsewhere
-            ? <NoMatches term={shown} where={pick === 'all' ? null : pick.map(cityName).filter(Boolean).join(', ')} />
+            ? (
+              <>
+                <NoMatches term={shown} where={pick === 'all' ? null : pick.map(cityName).filter(Boolean).join(', ')} />
+                {addRow}
+                {googleEmpty}
+              </>
+            )
           : searching
             ? (
               <>

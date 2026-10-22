@@ -820,7 +820,10 @@ describe('every city', () => {
   });
 
   // Nothing switches by itself: the screen says where, the chips go there.
-  it('says nothing was found at home, and that other cities have it', () => {
+  // Google stays on offer: the reader may mean one the catalog has not
+  // got, and should not have to tap another city to be asked (owner,
+  // 22 Oct 2026).
+  it('says nothing was found at home, that other cities have it, and still offers Google', () => {
     cat.places = [cong, pho, museum];
     idx.places = [sg1, dl];
     mount();
@@ -829,7 +832,9 @@ describe('every city', () => {
     expect(chip('hanoi').textContent).toBe('Hanoi (0)');
     expect(screen.getByText('No matches for “bold” in Hanoi')).toBeTruthy();
     expect(screen.getByText('Other cities have it: choose one above.')).toBeTruthy();
-    expect(screen.queryByText(/We look it up on Google Maps/)).toBeNull();
+    expect(screen.getByText('We look it up on Google Maps')).toBeTruthy();
+    // The guesses at what else was meant stay out: the chips answer that.
+    expect(screen.queryByText('OR TRY')).toBeNull();
     fireEvent.click(chip('hcmc'));
     fireEvent.click(chip('hanoi'));
     expect(results()).toHaveLength(1);
