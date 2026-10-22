@@ -42,6 +42,8 @@ const h = vi.hoisted(() => ({
   // a fresh one per render would rebuild `addMany` on every state change
   // and test a churn the app does not have.
   places: { data: [], reload: vi.fn() },
+  fetchSearchPlaces: vi.fn(),
+  addToSearchIndex: vi.fn(),
 }));
 
 vi.mock('./i18n', () => ({ useI18n: () => ({ t: (en: string) => en }) }));
@@ -63,6 +65,8 @@ vi.mock('./city', () => {
   return { ...m, useCurrentCity: all, useCityList: all };
 });
 vi.mock('./catalog', () => ({ usePlaces: () => h.places }));
+vi.mock('./data', () => ({ fetchSearchPlaces: h.fetchSearchPlaces }));
+vi.mock('./searchIndex', () => ({ addToSearchIndex: h.addToSearchIndex }));
 vi.mock('./suggest', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   searchPlaces: h.searchPlaces,
@@ -95,6 +99,8 @@ beforeEach(() => {
   h.knownByPlaceId.mockReset().mockResolvedValue({});
   h.suggestPlace.mockReset();
   h.places.reload.mockReset();
+  h.fetchSearchPlaces.mockReset().mockResolvedValue([]);
+  h.addToSearchIndex.mockReset();
   alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
   dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
 });
@@ -323,6 +329,41 @@ describe('adding several', () => {
     const { result } = renderHook(() => useCandidates());
     await act(async () => { await result.current.addMany([cand('a')]); });
     expect(h.places.reload).not.toHaveBeenCalled();
+    expect(h.fetchSearchPlaces).not.toHaveBeenCalled();
+  });
+
+  // Suggested from Search in Saigon, Coffee By Chance went to Hanoi, and
+  // no chip said so (owner, 22 Oct 2026): the catalog is the city on
+  // screen, and only Search's index of every city can count it.
+  it('reads back the places this run made, and lays them into the reader’s index of every city', async () => {
+    h.suggestPlace
+      .mockResolvedValueOnce({ ok: true, slug: 'by-chance', photos: 3 })
+      .mockResolvedValueOnce({ ok: false, reason: 'already_live', slug: 'old' })
+      .mockResolvedValueOnce({ ok: true, slug: 'choice', photos: 1 });
+    const rows = [{ slug: 'by-chance', city_id: 'hanoi' }, { slug: 'choice', city_id: 'hcmc' }];
+    h.fetchSearchPlaces.mockResolvedValue(rows);
+    const { result } = renderHook(() => useCandidates());
+    await act(async () => { await result.current.addMany([cand('a'), cand('b'), cand('c')]); });
+    await settle();
+    expect(h.fetchSearchPlaces).toHaveBeenCalledWith(['by-chance', 'choice']);
+    expect(h.addToSearchIndex).toHaveBeenCalledWith('u1', rows);
+
+    // The next run's places, and only those.
+    h.suggestPlace.mockResolvedValueOnce({ ok: true, slug: 'next', photos: 0 });
+    await act(async () => { await result.current.addMany([cand('d')]); });
+    expect(h.fetchSearchPlaces).toHaveBeenLastCalledWith(['next']);
+  });
+
+  it('lets a failed read back cost the chip and nothing else', async () => {
+    h.suggestPlace.mockResolvedValue({ ok: true, slug: 'a-slug', photos: 1 });
+    h.fetchSearchPlaces.mockRejectedValue(new Error('offline'));
+    const { result } = renderHook(() => useCandidates());
+    let out: unknown;
+    await act(async () => { out = await result.current.addMany([cand('a')]); });
+    await settle();
+    expect(out).toEqual({ done: 1, skipped: 0, failed: 0, held: 0 });
+    expect(h.addToSearchIndex).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
   });
 
   it('holds, rather than fails or tries, everything from the daily cap on', async () => {

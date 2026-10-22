@@ -219,6 +219,23 @@ export async function fetchSearchIndex(meId?: string | null): Promise<Place[]> {
 }
 
 /**
+ * The places just suggested, as the index has its rows: a few, by slug,
+ * rather than the 420 kB again, so a city's chip counts the place the
+ * moment it exists (`addToSearchIndex`). The reader's own suggestions are
+ * theirs to read from the moment they are made, as in `fetchSearchIndex`.
+ */
+export async function fetchSearchPlaces(slugs: readonly string[]): Promise<Place[]> {
+  if (!slugs.length) return [];
+  const { data, error } = await supabase
+    .from('places')
+    .select(SEARCH_INDEX_COLS)
+    .eq('place_photos.is_cover', true)
+    .in('slug', [...slugs]);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as Place[];
+}
+
+/**
  * The desk's search synonyms, as `category → terms`.
  *
  * Not scoped to a city — what a reader types for "cinema" does not change

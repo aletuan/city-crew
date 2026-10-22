@@ -26,6 +26,8 @@ import { useCurrentCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
 import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
+import { fetchSearchPlaces } from './data';
+import { addToSearchIndex } from './searchIndex';
 import { Candidate, knownByPlaceId, Known, searchPlaces, SignedOutError, suggestPlace } from './suggest';
 import { Batch, IDLE_BATCH, ItemState } from './batch';
 
@@ -78,6 +80,8 @@ export function useCandidates(): Candidates {
    * it. What is left has one cause, so it is a flag again.
    */
   const capped = useRef(false);
+  /** The slugs this run made, for Search's index once it ends. */
+  const made = useRef<string[]>([]);
 
   const clear = useCallback(() => { setResults(null); setKnown({}); setBatch(IDLE_BATCH); capped.current = false; }, []);
 
@@ -191,6 +195,7 @@ export function useCandidates(): Candidates {
       // loose enough for Google, too loose for a substring — never
       // reaches. See CandidateRow: a 'mine' row with a slug can View.
       setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine', slug: out.slug } }));
+      made.current.push(out.slug);
       return 'done';
     }
     if (out.reason === 'already_live') {
@@ -241,6 +246,7 @@ export function useCandidates(): Candidates {
   const addMany = useCallback(async (list: Candidate[]) => {
     if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, held: 0 };
     capped.current = false;
+    made.current = [];
     setBatch({
       running: true,
       total: list.length,
@@ -273,11 +279,20 @@ export function useCandidates(): Candidates {
     // Once, at the end, rather than after each: the catalog is one fetch
     // and five of them would be four wasted round trips and four list
     // re-renders under the reader's finger.
-    if (tally.done > 0) places.reload();
+    if (tally.done > 0) {
+      places.reload();
+      // The catalog is the city on screen. A place Google put in another
+      // city goes there (`import-place`), where only Search's index of
+      // every city can count it: read back the rows just made and lay
+      // them in, so its city's chip says so now rather than next run.
+      // A failed read costs the chip until then, and nothing else.
+      fetchSearchPlaces(made.current)
+        .then((rows) => addToSearchIndex(meId ?? null, rows), () => {});
+    }
     return tally;
   // `city.id` is the stable key — see the note above `search`.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city?.id, places, suggestOne]);
+  }, [city?.id, meId, places, suggestOne]);
 
   const adding = Object.keys(batch.state).find((id) => batch.state[id] === 'running') ?? null;
 
