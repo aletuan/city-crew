@@ -20,7 +20,7 @@ const collection = (slug: string, c: Partial<Collection> = {}): Collection => ({
 });
 
 const input = (over: Partial<SearchRowsInput> = {}): SearchRowsInput => ({
-  terms: [], query: '', recents: [], cats: [], openNow: [], popular: [], latest: [],
+  terms: [], query: '', recents: [], cats: [], popular: [], latest: [],
   colMembers: [], places: [], cityId: 'hn', fresh: null, synonyms: {}, ...over,
 });
 
@@ -31,13 +31,14 @@ describe('buildSearchRows — before a word is typed', () => {
     expect(keys({})).toEqual([]);
   });
 
-  // The order is the point: an open door expires before a ranking does.
+  // No "Open right now" between the chips and Most popular: it was
+  // Explore's open-now filter a second time (owner, 22 Oct 2026).
   it('lists the sections in their order, each under its own mark', () => {
     const a = place('a');
     const b = place('b');
     expect(keys({
-      recents: ['pho'], cats: ['cafes'], openNow: [a], popular: [b], latest: [a],
-    })).toEqual(['z-recent', 'rc-pho', 'z-browse', 'z-chips', 'z-open', 'on-a', 'z-popular', 'mp-b', 'z-latest', 'la-a']);
+      recents: ['pho'], cats: ['cafes'], popular: [b], latest: [a],
+    })).toEqual(['z-recent', 'rc-pho', 'z-browse', 'z-chips', 'z-popular', 'mp-b', 'z-latest', 'la-a']);
   });
 
   it('shows only as many remembered searches as the box holds', () => {
@@ -45,10 +46,10 @@ describe('buildSearchRows — before a word is typed', () => {
     expect(keys({ recents }).filter((k) => k.startsWith('rc-'))).toHaveLength(RECENTS_SHOWN);
   });
 
-  it('marks the recents as clearable and the open section with its dot', () => {
-    const rows = buildSearchRows(input({ recents: ['x'], openNow: [place('a')] }), en);
+  it('marks the recents as clearable, and nothing else', () => {
+    const rows = buildSearchRows(input({ recents: ['x'], popular: [place('a')] }), en);
     expect(rows[0]).toEqual({ kind: 'eyebrow', key: 'z-recent', label: 'Recent', clear: true });
-    expect(rows[2]).toEqual({ kind: 'eyebrow', key: 'z-open', label: 'Open right now', dot: true });
+    expect(rows[2]).toEqual({ kind: 'eyebrow', key: 'z-popular', label: 'Most popular' });
   });
 
   // The terms decide, not the raw text: spaces typed are not a search.
