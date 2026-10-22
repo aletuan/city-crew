@@ -34,7 +34,7 @@
 
 import React from 'react';
 import {
-  AccessibilityInfo, Alert, Dimensions, FlatList, LayoutAnimation, PanResponder, type PanResponderCallbacks,
+  AccessibilityInfo, Alert, Animated, Dimensions, FlatList, LayoutAnimation, PanResponder, type PanResponderCallbacks,
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -2392,6 +2392,24 @@ describe('the grid', () => {
       await reads();
       expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
       expect(banner()).toBeNull();
+    });
+
+    // Back on the screen with the notice still open, the ring pulses its
+    // three again; once closed, there is nothing to pulse.
+    it('pulses the ⋯ ring again each time the screen comes back into view', async () => {
+      const loop = vi.spyOn(Animated, 'loop');
+      const pulses = () => loop.mock.calls.filter(([, cfg]) => cfg?.iterations === 3).length;
+      show();
+      await reads();
+      await waitFor(() => expect(pulses()).toBeGreaterThan(0));
+      const before = pulses();
+      act(() => focusListeners.forEach((cb) => cb()));
+      await waitFor(() => expect(pulses()).toBe(before + 1));
+      fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
+      act(() => focusListeners.forEach((cb) => cb()));
+      await reads();
+      expect(pulses()).toBe(before + 1);
+      loop.mockRestore();
     });
 
     // Opening the menu it points to is not closing it: only its ×.
