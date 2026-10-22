@@ -35,10 +35,14 @@
 // - Nothing switches by itself. When the reader's city finds nothing and
 //   others do, the screen says so and the chips are there to tap; it does
 //   not choose for them.
-// - No row at all when every place found is in the reader's own city. A
-//   row of "Hanoi 6 · All 6" says nothing — unless the reader has chosen
-//   elsewhere: a chosen city keeps its chip, found nothing or not, or new
-//   words could strand them in a city with no chip left to leave it by.
+// - The row stands from the first letter to the last, whatever was found
+//   (owner, the same evening). It was left out when every place found was
+//   at home, on the reading that "All (6) · Hanoi (6)" says nothing; on
+//   the phone it came and went between keystrokes and the list jumped a
+//   row each time, which says less. It also says, while it stands, which
+//   city the list is from.
+// - A chosen city keeps its chip, found nothing or not, or new words could
+//   strand the reader in a city with no chip left to leave it by.
 
 /** The cities chosen: some, by id, or every one. Never an empty list. */
 export type CityPick = 'all' | readonly string[];
@@ -48,14 +52,6 @@ export function countByCity(found: readonly { city_id?: string | null }[]): Map<
   const out = new Map<string, number>();
   for (const p of found) if (p.city_id) out.set(p.city_id, (out.get(p.city_id) ?? 0) + 1);
   return out;
-}
-
-/** Whether the row of chips is worth a line: something found beyond
- *  `home`, or a choice beyond home to be undone. */
-export function chipsWorthShowing(counts: ReadonlyMap<string, number>, home: string, pick: CityPick): boolean {
-  if (pick === 'all' || pick.some((id) => id !== home)) return true;
-  for (const id of counts.keys()) if (id !== home) return true;
-  return false;
 }
 
 /**
