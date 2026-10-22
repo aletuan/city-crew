@@ -17,10 +17,17 @@ import { Animated, PanResponder, View, type PanResponderCallbacks } from 'react-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '../uitest/render';
 
+// A phone's window: jsdom's own is 0 tall to React Native's eyes.
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
+}));
 const fireHaptic = vi.hoisted(() => vi.fn());
 vi.mock('./ui', async (orig) => ({ ...(await orig<Record<string, unknown>>()), fireHaptic }));
 
-import { LIFT_AFTER_MS, useListDrag, type DragGrid, type ListDrag } from './useListDrag';
+import {
+  LIFT_AFTER_MS, SCROLL_EDGE, SCROLL_MAX, useListDrag, type DragGrid, type DragScroll, type ListDrag,
+} from './useListDrag';
 
 // The responder as the hook made it, with its callbacks kept.
 const responder = vi.hoisted(() => ({ config: null as null | PanResponderCallbacks }));
@@ -34,11 +41,11 @@ const api = { current: null as ListDrag | null };
 const onMove = vi.fn();
 
 /** Three rows under the hook, their styles on view, the hook's handle kept. */
-function Rows({ keys, grid }: { keys: readonly string[]; grid?: DragGrid }) {
-  const d = useListDrag({ keys, onMove, pitchGuess: 100, grid });
+function Rows({ keys, grid, scroll }: { keys: readonly string[]; grid?: DragGrid; scroll?: DragScroll }) {
+  const d = useListDrag({ keys, onMove, pitchGuess: 100, grid, scroll });
   useEffect(() => { api.current = d; });
   return (
-    <View {...d.panHandlers}>
+    <View ref={d.areaRef} {...d.panHandlers}>
       {keys.map((k, i) => <Animated.View key={k} testID={`row-${k}`} style={d.styleOf(i)} />)}
       <Animated.Text testID="state">{d.lift ? `${d.lift.from}>${d.lift.to}` : 'idle'}</Animated.Text>
     </View>
@@ -274,5 +281,111 @@ describe('useListDrag on a grid', () => {
     drop();
     expect(onMove).toHaveBeenCalledWith(4, 0);
     for (const k of ['a', 'b', 'c', 'd', 'e']) expect(styleOf(k).transform).toBe('');
+  });
+});
+
+// Past the edge of the screen (owner, 22 Oct 2026): the list is held still
+// under a drag, so near either end of the part that shows it scrolls
+// itself, a frame at a time, and the distance it scrolls is the row's.
+describe('useListDrag near the ends of a list that scrolls', () => {
+  // The list shows from 100 to 700 on screen, 600 tall, over 1600 of
+  // content: it can scroll 1000. It says how tall its content is when it
+  // lays out, before anybody has scrolled it.
+  const TOP = 100;
+  const BOTTOM = 700;
+  const to = vi.fn();
+  const scrollTo = (y: number) => act(() => { d().onScrolled({ contentOffset: { x: 0, y } } as never); });
+  const show = (scroll: DragScroll) => {
+    cleanup();
+    render(<Rows keys={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']} scroll={scroll} />);
+    (d().areaRef.current as unknown as { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => void })
+      .measureInWindow = (cb) => cb(0, TOP, 390, BOTTOM - TOP);
+    act(() => { d().onContentSizeChange(390, 1600); });
+  };
+  const fingerAt = (pageY: number) => act(() => { cfg().onPanResponderMove!(evt, { moveX: 0, moveY: pageY } as never); });
+  const frames = (n: number) => act(() => { for (let i = 0; i < n; i++) vi.advanceTimersToNextFrame(); });
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
+    to.mockReset();
+    show({ to });
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('keeps still while the finger is clear of both ends', () => {
+    act(() => { d().onLift(2, 400); });
+    claim();
+    fingerAt(BOTTOM - SCROLL_EDGE - 1);
+    frames(5);
+    expect(to).not.toHaveBeenCalled();
+  });
+
+  it('scrolls on near the foot, a frame at a time, and the row travels with it', () => {
+    act(() => { d().onLift(0, 400); });
+    claim();
+    // Half way into the foot's edge: half the most, each frame.
+    fingerAt(BOTTOM - SCROLL_EDGE / 2);
+    frames(3);
+    const step = SCROLL_MAX / 2;
+    expect(to.mock.calls.map(([y]) => y)).toEqual([step, step * 2, step * 3]);
+    scrollTo(step * 3);
+    // The finger moved 264, the list 21 under it: the row is 285 down,
+    // past b, c and the middle of d, so over d.
+    expect(styleOf('a').transform).toBe(`translateX(0px) translateY(${BOTTOM - SCROLL_EDGE / 2 - 400 + step * 3}px) scale(1.02)`);
+    expect(state()).toBe('0>3');
+  });
+
+  it('scrolls back near the top, and stops at the start', () => {
+    scrollTo(20);
+    act(() => { d().onLift(5, 400); });
+    claim();
+    fingerAt(TOP);
+    frames(3);
+    // The most each frame, until there is no further to go.
+    expect(to.mock.calls.map(([y]) => y)).toEqual([20 - SCROLL_MAX, 0]);
+  });
+
+  it('stops at the end of the list', () => {
+    scrollTo(995);
+    act(() => { d().onLift(0, 400); });
+    claim();
+    fingerAt(BOTTOM);
+    frames(4);
+    expect(to.mock.calls.map(([y]) => y)).toEqual([1000]);
+  });
+
+  it('stops when the row is let go', () => {
+    act(() => { d().onLift(0, 400); });
+    claim();
+    fingerAt(BOTTOM);
+    frames(1);
+    drop();
+    frames(5);
+    expect(to).toHaveBeenCalledTimes(1);
+  });
+
+  // The floating bar lies over the list's foot, so the edge starts at the
+  // bar's top: on an 844 window, a bar covering 244 leaves the list
+  // showing to 600, not 700.
+  it('measures the foot’s edge from the top of what lies over it', () => {
+    show({ to, coveredBelow: 244 });
+    act(() => { d().onLift(0, 300); });
+    claim();
+    fingerAt(600 - SCROLL_EDGE - 1);
+    frames(2);
+    expect(to).not.toHaveBeenCalled();
+    fingerAt(600 - SCROLL_EDGE / 2);
+    frames(1);
+    expect(to).toHaveBeenCalledWith(SCROLL_MAX / 2);
+  });
+});
+
+describe('useListDrag without a scroll', () => {
+  it('never asks for a frame', () => {
+    const raf = vi.spyOn(globalThis, 'requestAnimationFrame');
+    lift(0);
+    claim();
+    move(10_000);
+    expect(raf).not.toHaveBeenCalled();
+    raf.mockRestore();
   });
 });

@@ -747,11 +747,22 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // On the grid the same hook drags tiles: a cell is a tile and the gap
   // after it, across and down alike, since the rows are spaced by the gap
   // the tiles are.
-  const { lift, panHandlers, onLift, onRelease, onPitch, styleOf } = useListDrag({
+  //
+  // Near either end of the list the list scrolls itself under the held
+  // card (owner, 22 Oct 2026), so a card can reach a place off screen in
+  // one drag. The foot's edge starts at the floating bar's top, which lies
+  // over the list's last few points.
+  const listRef = useRef<FlatList<Place>>(null);
+  const barCovers = useTabBarClearance(0);
+  const { lift, panHandlers, onLift, onRelease, onPitch, styleOf, areaRef, onScrolled, onContentSizeChange } = useListDrag({
     keys: drafted.map((p) => p.slug),
     onMove: shuffle,
     pitchGuess: PITCH_GUESS,
     grid: grid ? { cols: GRID_COLUMNS, pitch: tile + GRID_GAP } : null,
+    scroll: {
+      to: (offset) => listRef.current?.scrollToOffset({ offset, animated: false }),
+      coveredBelow: barCovers,
+    },
   });
 
   // Deliberately inert, and now inert for two different reasons — which
@@ -1259,6 +1270,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const pastRef = useRef(false);
   const onListScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     duckScroll?.(e);
+    onScrolled(e.nativeEvent);
     const past = e.nativeEvent.contentOffset.y > cardEnd.current;
     if (past !== pastRef.current) {
       pastRef.current = past;
@@ -1436,8 +1448,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {/* On the grid a cell of the list is a row of tiles, so it is the
           lifted tile's row that is raised. */}
       <LiftedCard.Provider value={lift ? (grid ? Math.floor(lift.from / GRID_COLUMNS) : lift.from) : -1}>
-        <View style={s.dragArea} {...panHandlers}>
+        <View ref={areaRef} style={s.dragArea} testID="collection-drag-area" {...panHandlers}>
           <FlatList
+            ref={listRef}
             data={shown}
             keyExtractor={(p) => p.slug}
             // A list cannot change its columns once drawn, so each view is
@@ -1450,6 +1463,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             scrollEnabled={!lift}
             CellRendererComponent={LiftCell}
             onScroll={onListScroll}
+            onContentSizeChange={onContentSizeChange}
             scrollEventThrottle={16}
             renderItem={({ item, index }) => {
               const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });

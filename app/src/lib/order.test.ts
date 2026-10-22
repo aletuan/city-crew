@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyDraft, dropSlot, gridSlot, gridStepAside, moveItem, sameOrder, stepAside } from './order';
+import { applyDraft, dropSlot, edgeSpeed, gridSlot, gridStepAside, moveItem, sameOrder, stepAside } from './order';
 
 const LIST = ['a', 'b', 'c', 'd'];
 
@@ -185,5 +185,26 @@ describe('gridStepAside', () => {
 
   it('moves nothing while the tile is over its own cell', () => {
     expect(shift(4, 4)).toEqual(Array(8).fill(still));
+  });
+});
+
+// A list showing 100 to 700, the edges 80 deep, at most 20 a frame.
+describe('edgeSpeed', () => {
+  const at = (y: number) => edgeSpeed(y, 100, 700, 80, 20);
+
+  it('scrolls nothing while the finger is clear of both edges', () => {
+    expect([at(180), at(400), at(620)]).toEqual([0, 0, 0]);
+  });
+
+  it('scrolls back near the top and on near the foot, faster the deeper in', () => {
+    expect(at(160)).toBe(-5);
+    expect(at(120)).toBe(-15);
+    expect(at(640)).toBe(5);
+    expect(at(680)).toBe(15);
+  });
+
+  it('goes no faster than the most once past an edge', () => {
+    expect([at(100), at(40)]).toEqual([-20, -20]);
+    expect([at(700), at(800)]).toEqual([20, 20]);
   });
 });
