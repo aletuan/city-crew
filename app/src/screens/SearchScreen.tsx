@@ -337,6 +337,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           horizontal
           showsHorizontalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          style={s.citiesRow}
           contentContainerStyle={s.cities}
           testID="search-cities"
         >
@@ -786,6 +787,13 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
   // The chips' row: the page's margins, and the gap the Browse chips keep.
+  // A horizontal ScrollView grows by default (React Native's
+  // `baseHorizontal` is flexGrow 1), and this one is the list's sibling
+  // in the screen's column: with a short list the two split the empty
+  // height, and "boat" set its one card a third of the screen below the
+  // chips. With a long one the list's own size squeezed the row back to
+  // its chips, which is why "phở" looked right and hid it.
+  citiesRow: { flexGrow: 0 },
   cities: { paddingHorizontal: space.page, paddingBottom: 12, gap: 8 },
 
   section: {
