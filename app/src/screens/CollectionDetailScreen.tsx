@@ -161,17 +161,24 @@ const VIEW_KEY = 'citycrew.collection.view';
 const LIST_OR_GRID = oneOf('list', 'grid');
 
 /**
- * Whether the reader has had the grid notice: the banner saying lists now
- * open as a grid, and where the way back is.
+ * Whether the reader has closed the grid notice: the banner saying lists
+ * now open as a grid, and where the way back is.
  *
- * Shown only to a reader the grid is a default for — one who chose the
- * cards keeps them, and one who chose the grid knows it — and only until
- * they answer it: the ×, opening the ⋯ menu it points to, or choosing a
- * view there (owner, 22 Oct 2026). Not on leaving the screen: a reader
- * who opened a list and went straight back has not read the banner, and
- * would never see it again. Kept on the phone, as the view is.
+ * Shown to every reader looking at a list as a grid, until they close it
+ * with its own × (owner, 22 Oct 2026). Nothing else closes it: not
+ * leaving the screen, which a reader who went straight back did without
+ * reading it; not opening the ⋯ menu, which is not saying "I have read
+ * this". A reader on the cards does not see it — it is about the grid —
+ * and sees it again if they come to the grid before closing it.
+ *
+ * It was shown only to a reader the grid was a default for, and closed by
+ * opening the menu too. The owner's own phone, which had chosen the grid
+ * that morning, never saw it, and the rule was changed the same day: told
+ * to everybody, closed only by them. Hence `.v2`: a phone the first rule
+ * marked as told — by a menu opened, not by an × — is told again.
+ * Kept on the phone, as the view is.
  */
-const NOTICE_KEY = 'citycrew.collection.gridNotice';
+const NOTICE_KEY = 'citycrew.collection.gridNotice.v2';
 const NOTICE = oneOf('unseen', 'seen');
 /** The ring round the 44pt ⋯ button, 4 clear of it all round. */
 const MORE_RING = { left: -4, top: -4, width: 52, height: 52 };
@@ -535,8 +542,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const btn = useRef<View>(null);
   const [anchor, setAnchor] = useState({ top: insets.top + 58, right: space.page });
   const openMenu = () => {
-    // The menu the grid notice points to: opening it is reading it.
-    noticed();
     // Opened first and positioned second: if the measure never calls back
     // the menu still appears, at the estimate above rather than not at all.
     setMenu(true);
@@ -553,10 +558,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const grid = view === 'grid';
   const [notice, keepNotice, noticeFrom] = useStored<'unseen' | 'seen'>(NOTICE_KEY, 'unseen', NOTICE);
   // Only once both reads are in: until then a reader who chose the cards
-  // looks, for a moment, like one the grid is a default for.
-  const noticing = viewFrom === 'fallback' && noticeFrom !== 'reading' && notice === 'unseen'
+  // is shown the grid by default, for a moment, and a reader who closed
+  // the notice has not yet been read as having closed it.
+  const noticing = viewFrom !== 'reading' && noticeFrom !== 'reading' && notice === 'unseen'
     && grid && members.length > 0;
-  const noticed = () => { if (noticing) keepNotice('seen'); };
+  const closeNotice = () => keepNotice('seen');
   /*
    * The two views, in either menu: how a list is looked at is the
    * reader's, whoever made the list. A choice of two under its own name,
@@ -1391,9 +1397,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      The chips go with it: you filter first and then read, and a filter
      row pinned over the places would be the same tax again. */
   /* ── the grid notice (owner, 22 Oct 2026) ──
-     Lists open as a grid now, so a reader the grid is a default for is
-     told once, between the card and the tiles, where the way back is: the
-     ⋯ button, ringed while this shows. A banner in the page rather than a
+     Lists open as a grid now, so a reader looking at one is told, between
+     the card and the tiles, where the way back is: the ⋯ button, ringed
+     while this shows, until they close it (`NOTICE_KEY`). A banner in the page rather than a
      sheet over it: it says something, it asks nothing, and the grid it is
      about is right under it. The guide's toast in look — the sheets'
      ground, the accent's tint behind the mark — so the app's two notices
@@ -1411,7 +1417,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             '⋯ メニューからリスト表示に戻せます。', '可在 ⋯ 菜单中切换回列表。', '可在 ⋯ 選單中切換回列表。')}
         </Text>
       </View>
-      <Pressable onPress={noticed} accessibilityRole="button" hitSlop={4} style={s.noticeClose}
+      <Pressable onPress={closeNotice} accessibilityRole="button" hitSlop={4} style={s.noticeClose}
         accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} testID="collection-grid-notice-close">
         <Ionicons name="close" size={20} color={colors.textSecondary} />
       </Pressable>
