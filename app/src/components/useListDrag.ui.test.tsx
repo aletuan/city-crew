@@ -8,17 +8,19 @@
 // measured pitches picks the slot, with a tick on each change; letting go
 // (or being terminated) lands the row and reports the move once; and the
 // rows' styles — the held one raised and travelling, the passed ones
-// stepped aside by the held one's pitch, the rest untouched.
+// stepped aside by the held one's pitch, the rest untouched. Given a grid,
+// the same with the finger counted both ways and the tiles stepping a cell
+// along, round a row's end.
 
 import React, { useEffect } from 'react';
 import { Animated, PanResponder, View, type PanResponderCallbacks } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '../uitest/render';
+import { act, cleanup, render, screen } from '../uitest/render';
 
 const fireHaptic = vi.hoisted(() => vi.fn());
 vi.mock('./ui', async (orig) => ({ ...(await orig<Record<string, unknown>>()), fireHaptic }));
 
-import { LIFT_AFTER_MS, useListDrag, type ListDrag } from './useListDrag';
+import { LIFT_AFTER_MS, useListDrag, type DragGrid, type ListDrag } from './useListDrag';
 
 // The responder as the hook made it, with its callbacks kept.
 const responder = vi.hoisted(() => ({ config: null as null | PanResponderCallbacks }));
@@ -32,8 +34,8 @@ const api = { current: null as ListDrag | null };
 const onMove = vi.fn();
 
 /** Three rows under the hook, their styles on view, the hook's handle kept. */
-function Rows({ keys }: { keys: readonly string[] }) {
-  const d = useListDrag({ keys, onMove, pitchGuess: 100 });
+function Rows({ keys, grid }: { keys: readonly string[]; grid?: DragGrid }) {
+  const d = useListDrag({ keys, onMove, pitchGuess: 100, grid });
   useEffect(() => { api.current = d; });
   return (
     <View {...d.panHandlers}>
@@ -204,6 +206,16 @@ describe('useListDrag', () => {
     for (const k of ['a', 'b', 'c']) expect(styleOf(k).transform).toBe('');
   });
 
+  // A list's row has nowhere to go sideways, so a finger that drifts
+  // across as it drags does not take the row with it.
+  it('keeps a list’s row in its column whatever the finger does across', () => {
+    lift(0);
+    claim();
+    act(() => { cfg().onPanResponderMove!(evt, { moveX: 300, moveY: Y0 + 60 } as never); });
+    expect(state()).toBe('0>1');
+    expect(styleOf('a').transform).toBe('translateX(0px) translateY(60px) scale(1.02)');
+  });
+
   it('steps rows aside downward when the held row comes up from below', () => {
     measure('c', 80);
     lift(2);
@@ -212,5 +224,55 @@ describe('useListDrag', () => {
     expect(styleOf('a').transform).toBe('translateY(80px)');
     expect(styleOf('b').transform).toBe('translateY(80px)');
     expect(styleOf('c').transform).toMatch(/scale\(1\.02/);
+  });
+});
+
+describe('useListDrag on a grid', () => {
+  // Five tiles, three to a row, a cell 100 each way:  a b c / d e
+  const X0 = 150;
+  const at2 = (dx: number, dy: number) => ({ moveX: X0 + dx, moveY: Y0 + dy }) as never;
+  const move2 = (dx: number, dy: number) => act(() => { cfg().onPanResponderMove!(evt, at2(dx, dy)); });
+  const lift2 = (i: number) => act(() => { d().onLift(i, Y0, X0); });
+  beforeEach(() => {
+    cleanup();
+    render(<Rows keys={['a', 'b', 'c', 'd', 'e']} grid={{ cols: 3, pitch: 100 }} />);
+  });
+
+  it('counts the finger both ways from where the tile lifted, with a tick on each new cell', () => {
+    lift2(0);
+    claim();
+    fireHaptic.mockReset();
+    move2(40, 0);
+    expect(state()).toBe('0>0');
+    move2(60, 0);
+    expect(state()).toBe('0>1');
+    move2(60, 100);
+    expect(state()).toBe('0>4');
+    expect(fireHaptic).toHaveBeenCalledTimes(2);
+    expect(styleOf('a').transform).toBe('translateX(60px) translateY(100px) scale(1.02)');
+  });
+
+  // The cells measure nothing: a row's height, which a list would read,
+  // is not what a grid steps by.
+  it('steps by the grid’s pitch, not the rows’ measured heights', () => {
+    measure('b', 300);
+    lift2(0);
+    claim();
+    move2(100, 0);
+    expect(state()).toBe('0>1');
+    expect(styleOf('b').transform).toBe('translateX(-100px) translateY(0px)');
+  });
+
+  it('steps the passed tiles a cell along, round the row’s end, and lands the tile', () => {
+    lift2(4);
+    claim();
+    move2(-100, -100);
+    expect(state()).toBe('4>0');
+    expect(styleOf('a').transform).toBe('translateX(100px) translateY(0px)');
+    expect(styleOf('c').transform).toBe('translateX(-200px) translateY(100px)');
+    expect(styleOf('d').transform).toBe('translateX(100px) translateY(0px)');
+    drop();
+    expect(onMove).toHaveBeenCalledWith(4, 0);
+    for (const k of ['a', 'b', 'c', 'd', 'e']) expect(styleOf(k).transform).toBe('');
   });
 });

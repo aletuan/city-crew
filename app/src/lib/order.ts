@@ -98,3 +98,42 @@ export function stepAside(i: number, from: number, to: number, lifted: number): 
   if (to < from && i >= to && i < from) return lifted;
   return 0;
 }
+
+/**
+ * The same two questions on a grid: where a tile being dragged would land,
+ * and how far the others step aside while it hovers.
+ *
+ * A grid's cells are all one size — a tile is a square of the window's
+ * width over the columns — so one `pitch` (a tile and the gap after it)
+ * serves both ways, where the list needs a height per row. The order is
+ * still the list's, read left to right and row by row, so a tile dropped
+ * on a cell takes that cell's place in the list and everything between
+ * shuffles one cell along, wrapping at a row's end the way text does.
+ *
+ * A cell is reached once the tile's centre is past the middle of the gap
+ * to it — half a pitch, either way, as `dropSlot` rounds a row. Off the
+ * grid's edges is the nearest cell on it; below the last tile is the last
+ * tile, since a list has no empty places to drop into.
+ */
+export function gridSlot(count: number, cols: number, pitch: number, from: number, dx: number, dy: number): number {
+  // Half a cell rounds away from where the tile started, both ways: Math.round
+  // takes -0.5 to 0 and 0.5 to 1, which made a drag left need further than a
+  // drag right.
+  const cells = (d: number) => Math.sign(d) * Math.round(Math.abs(d) / pitch);
+  const col = Math.min(cols - 1, Math.max(0, (from % cols) + cells(dx)));
+  const row = Math.max(0, Math.floor(from / cols) + cells(dy));
+  return Math.min(count - 1, row * cols + col);
+}
+
+/**
+ * How far tile `i` moves while the tile at `from` hovers over `to`: the
+ * tiles it has passed each take the cell before or after their own, which
+ * across a row's end is the far side of the next row.
+ */
+export function gridStepAside(i: number, from: number, to: number, cols: number, pitch: number): { dx: number; dy: number } {
+  const goes = from < to && i > from && i <= to ? i - 1 : to < from && i >= to && i < from ? i + 1 : i;
+  return {
+    dx: ((goes % cols) - (i % cols)) * pitch,
+    dy: (Math.floor(goes / cols) - Math.floor(i / cols)) * pitch,
+  };
+}

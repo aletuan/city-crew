@@ -22,23 +22,27 @@
 //   after the last move, the whole sequence in one write;
 // - deleting is behind a confirmation and tells the taste profile;
 // - either menu turns the cards into a grid of tiles and back, and the
-//   choice is the reader's, kept for every list.
+//   choice is the reader's, kept for every list; on the owner's own list
+//   a tile is held and dragged as a card is, across and down.
 //
 // Mocks sit at the screen's own seams: the `lib/*` hooks it reads and the
 // `lib/data` writes it calls. `membersOf` and `publishBlockers` stay real,
 // because which places count as "blocking" is exactly the rule the banner
 // has to agree with. `PlaceCard` is a stand-in that names its place — it
 // has its own rendering concerns and what this screen owes it is the tap.
+// `PlaceTile` is one too, for the same reason.
 
 import React from 'react';
-import { AccessibilityInfo, Alert, LayoutAnimation, PanResponder, type PanResponderCallbacks } from 'react-native';
+import {
+  AccessibilityInfo, Alert, Dimensions, LayoutAnimation, PanResponder, type PanResponderCallbacks,
+} from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
-import { colors } from '../theme';
+import { colors, space } from '../theme';
 
 const spies = vi.hoisted(() => ({
   goTo: vi.fn(),
@@ -134,7 +138,7 @@ type CardProps = {
   place: { slug: string; name_en: string };
   onPress: () => void;
   chip?: string | null;
-  onLongPress?: (e: { nativeEvent: { pageY: number } }) => void;
+  onLongPress?: (e: { nativeEvent: { pageX?: number; pageY: number } }) => void;
   delayLongPress?: number;
   onPressOut?: () => void;
   accessibilityHint?: string;
@@ -150,6 +154,24 @@ vi.mock('../components/PlaceCard', async () => {
       return (
         <Pressable accessibilityRole="button" onPress={p.onPress}>
           <Text>{`card:${p.place.name_en}`}</Text>
+        </Pressable>
+      );
+    },
+  };
+});
+
+// The same for the grid's tile, filed by slug as it is last drawn, with
+// the testID the screen gives it so a test can find and tap it.
+type TileProps = CardProps & { testID?: string; size: number };
+const tileProps = vi.hoisted(() => new Map<string, TileProps>());
+vi.mock('../components/PlaceTile', async () => {
+  const { Pressable, Text } = await import('react-native');
+  return {
+    default: (p: TileProps) => {
+      tileProps.set(p.place.slug, p);
+      return (
+        <Pressable accessibilityRole="button" onPress={p.onPress} testID={p.testID}>
+          <Text>{`tile:${p.place.name_en}`}</Text>
         </Pressable>
       );
     },
@@ -1976,9 +1998,8 @@ describe('the actions and the dock', () => {
 
 // Two ways to look at a list (owner, 22 Oct 2026): the cards, or a grid of
 // three to a row. One choice for every list, kept on the phone; the way
-// between them is a row in either menu, named for where it goes. The grid
-// shows the list's order and does not change it — that is the cards' job
-// until the grid learns to drag.
+// between them is a row in either menu, named for where it goes. On the
+// owner's own list a tile is held and dragged as a card is.
 describe('the grid', () => {
   const VIEW = 'citycrew.collection.view';
   beforeEach(async () => { await AsyncStorage.removeItem(VIEW); });
@@ -2030,11 +2051,119 @@ describe('the grid', () => {
     expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
-  it('lifts nothing in the grid, even on the owner’s own list', () => {
+  it('lifts nothing on somebody else’s list', async () => {
+    await AsyncStorage.setItem(VIEW, 'grid');
+    state.mine = [];
+    state.cols = [theirs()];
     show();
-    expect(screen.getByTestId('drag-pho')).toBeTruthy();
-    toGrid();
+    await waitFor(() => expect(screen.getByTestId('collection-tile-0')).toBeTruthy());
     expect(document.querySelector('[data-testid^="drag-"]')).toBeNull();
+    expect(tileProps.get('pho')!.onLongPress).toBeUndefined();
+  });
+
+  // Dragging in the grid (owner, 22 Oct 2026): the card's hold, the
+  // card's save, the grid's arithmetic. Four places, so there is a second
+  // row to drag into: pho cafe museum / bar.
+  describe('dragging', () => {
+    const BAR = place('bar', 'Bar Bar');
+    // A cell is a tile and the gap after it, the way the screen works the
+    // tile out of the window: three to a row, 8 between.
+    const PITCH = Math.floor((Dimensions.get('window').width - space.page * 2 - 16) / 3) + 8;
+    const X0 = 200;
+    const Y0 = 480;
+    const tile = (slug: string) => tileProps.get(slug)!;
+    const cfg = () => responder.config!;
+    const evt = {} as never;
+    const at = (dx: number, dy: number) => ({ moveX: X0 + dx, moveY: Y0 + dy }) as never;
+    const lift = (slug: string) => act(() => { tile(slug).onLongPress!({ nativeEvent: { pageX: X0, pageY: Y0 } }); });
+    const claim = (slug: string) => act(() => {
+      cfg().onMoveShouldSetPanResponderCapture!(evt, at(0, 0));
+      cfg().onPanResponderGrant!(evt, at(0, 0));
+      tile(slug).onPressOut!();
+    });
+    const move = (dx: number, dy: number) => act(() => { cfg().onPanResponderMove!(evt, at(dx, dy)); });
+    const drop = () => act(() => { cfg().onPanResponderRelease!(evt, at(0, 0)); });
+    const el = (slug: string) => screen.getByTestId(`drag-${slug}`);
+    const order = () => screen.getAllByText(/^tile:/).map((e) => e.textContent!.slice(5));
+    const pastTheBeat = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      tileProps.clear();
+      responder.config = null;
+      state.places = [PHO, CAFE, MUSEUM, BAR];
+      state.mine = [collection({}, [PHO, CAFE, MUSEUM, BAR])];
+      vi.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('lands a tile on the cell it is let go over, across a row, and saves it', async () => {
+      show();
+      toGrid();
+      expect(tile('pho').delayLongPress).toBeGreaterThanOrEqual(300);
+      lift('pho');
+      claim('pho');
+      // Measured from where the finger was when the tile lifted, across as
+      // well as down: one cell right is cafe's.
+      move(PITCH, 0);
+      drop();
+      expect(order()).toEqual(['Cafe Giang', 'Pho 10', 'Fine Arts Museum', 'Bar Bar']);
+      await pastTheBeat();
+      expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum', 'bar']);
+    });
+
+    // Down a row is three places on: the tile under the finger is bar's,
+    // and the three before it each shuffle one cell back, museum round the
+    // row's end to the start of the next.
+    it('drags down a row, stepping the passed tiles aside a cell each', () => {
+      show();
+      toGrid();
+      lift('pho');
+      claim('pho');
+      move(0, PITCH);
+      expect(el('pho').style.transform).toContain(`translateX(0px) translateY(${PITCH}px)`);
+      expect(el('cafe').style.transform).toBe(`translateX(${-PITCH}px) translateY(0px)`);
+      expect(el('museum').style.transform).toBe(`translateX(${-PITCH}px) translateY(0px)`);
+      expect(el('bar').style.transform).toBe(`translateX(${2 * PITCH}px) translateY(${-PITCH}px)`);
+      drop();
+      expect(order()).toEqual(['Cafe Giang', 'Fine Arts Museum', 'Bar Bar', 'Pho 10']);
+      for (const slug of ['pho', 'cafe', 'museum', 'bar']) expect(el(slug).style.transform).toBe('');
+    });
+
+    // A list's cell is a row of tiles here, so it is the held tile's row
+    // that goes over the others, not the cell at the tile's own index.
+    it('raises the held tile’s row over the rest', () => {
+      show();
+      toGrid();
+      const cell = (slug: string) => el(slug).parentElement!.parentElement!;
+      lift('bar');
+      expect(getComputedStyle(cell('bar')).zIndex).toBe('10');
+      expect(getComputedStyle(cell('pho')).zIndex).not.toBe('10');
+      drop();
+      expect(getComputedStyle(cell('bar')).zIndex).not.toBe('10');
+    });
+
+    it('offers VoiceOver a step earlier and later, in the reader’s language', async () => {
+      show();
+      toGrid();
+      const labels = (slug: string) => tile(slug).accessibilityActions!.map((a) => a.label);
+      expect(labels('pho')).toEqual(['Move later']);
+      expect(labels('cafe')).toEqual(['Move earlier', 'Move later']);
+      expect(labels('bar')).toEqual(['Move earlier']);
+      expect(tile('cafe').accessibilityHint).toBe('Hold and drag to change the order.');
+      act(() => { tile('bar').onAccessibilityAction!({ nativeEvent: { actionName: 'moveUp' } }); });
+      act(() => { tile('pho').onAccessibilityAction!({ nativeEvent: { actionName: 'moveDown' } }); });
+      expect(order()).toEqual(['Cafe Giang', 'Pho 10', 'Bar Bar', 'Fine Arts Museum']);
+      await pastTheBeat();
+      expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
+    });
+
+    it('names those steps in the reader’s language', async () => {
+      await AsyncStorage.setItem(VIEW, 'grid');
+      state.lang = 'vi';
+      show();
+      await act(async () => {});
+      expect(tile('cafe').accessibilityActions!.map((a) => a.label)).toEqual(['Đưa lên trước', 'Đưa ra sau']);
+    });
   });
 
   // How a list is looked at is the reader's, whoever made the list.

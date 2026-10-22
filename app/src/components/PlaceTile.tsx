@@ -25,9 +25,16 @@
 //
 // The credit is the card's, smaller and in the top corner, since the name
 // holds the foot: one photograph shown, one credit owed (`PhotoCredit`).
+//
+// On the owner's own list a tile can also be held and dragged, as a card
+// can: the hold and the VoiceOver moves come in from the screen, as they
+// do to `PlaceCard`, and the tile only passes them to its press.
 
 import React from 'react';
-import { type GestureResponderEvent, type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import {
+  type AccessibilityActionEvent, type AccessibilityActionInfo, type GestureResponderEvent, type StyleProp, StyleSheet,
+  Text, View, type ViewStyle,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { coverOf, type Place } from '../lib/data';
@@ -38,13 +45,23 @@ import { colors, font, labelScaleCap, onPhoto, radius } from '../theme';
 import PhotoCredit from './PhotoCredit';
 import { PressableScale } from './ui';
 
-export default function PlaceTile({ place, size, onPress, testID, style }: {
+export default function PlaceTile({
+  place, size, onPress, testID, style, onLongPress, delayLongPress, onPressOut,
+  accessibilityHint, accessibilityActions, onAccessibilityAction,
+}: {
   place: Place;
   /** The tile's side, which the grid works out from the window. */
   size: number;
   onPress: (e: GestureResponderEvent) => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  /** For a tile that can be held and dragged: the owner's own list. */
+  onLongPress?: (e: GestureResponderEvent) => void;
+  delayLongPress?: number;
+  onPressOut?: (e: GestureResponderEvent) => void;
+  accessibilityHint?: string;
+  accessibilityActions?: AccessibilityActionInfo[];
+  onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
 }) {
   const { lang } = useI18n();
   const cover = coverOf(place);
@@ -54,8 +71,14 @@ export default function PlaceTile({ place, size, onPress, testID, style }: {
     <PressableScale
       onPress={onPress}
       testID={testID}
+      onLongPress={onLongPress}
+      delayLongPress={delayLongPress}
+      onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityLabel={name}
+      accessibilityHint={accessibilityHint}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
       style={[{ width: size, height: size }, style]}
       contentStyle={[s.tile, { width: size, height: size }]}
     >
