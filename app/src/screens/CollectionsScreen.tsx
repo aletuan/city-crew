@@ -752,6 +752,11 @@ export default function CollectionsScreen({ navigation, route }: {
     cityPick ? cityName(cityPick) : null,
   ].filter((x): x is string => !!x);
   const placesOf = (n: number) => placesCount(n, t);
+  // Who can see a list of yours, in words, for VoiceOver: on screen the
+  // globe or the lock says it, and a glyph is not read out.
+  const visibilityOf = (c: { is_public?: boolean | null }) => (c.is_public
+    ? t('Public', 'Công khai', '公開', '公开', '公開')
+    : t('Private', 'Riêng tư', '非公開', '私密', '私密'));
   const reasonFor = (slug: string) => shelfReason(hitBy.get(slug), chosen, t);
   const scope = scopeLine({ count: hits.length, chosen, cities: cityChoices, cityName }, t);
 
@@ -1026,7 +1031,9 @@ export default function CollectionsScreen({ navigation, route }: {
                           onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
                           testID={item.own ? undefined : `collection-card-${item.at + j}`}
                           accessibilityRole="button"
-                          accessibilityLabel={t(c.title_en, c.title_vi, c.title_ja)}
+                          accessibilityLabel={item.own
+                            ? `${t(c.title_en, c.title_vi, c.title_ja)}, ${visibilityOf(c)}`
+                            : t(c.title_en, c.title_vi, c.title_ja)}
                         >
                           {uri
                             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
@@ -1372,7 +1379,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 <PressableScale
                   onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: own.slug }); }}
                   accessibilityRole="button"
-                  accessibilityLabel={t(own.title_en, own.title_vi, own.title_ja)}
+                  accessibilityLabel={`${t(own.title_en, own.title_vi, own.title_ja)}, ${visibilityOf(own)}`}
                   {...a11y}
                 >
                   <Card style={s.card}>
@@ -1395,7 +1402,17 @@ export default function CollectionsScreen({ navigation, route }: {
                               because every owned list was private; now the
                               glyph carries which of the two it is, and the
                               detail screen uses the same pair for the same
-                              fact. */}
+                              fact.
+
+                              The glyph alone, as on the tiles (owner, 22 Oct
+                              2026). The row said it twice, the glyph and then
+                              "· Public" after the count, and the word was the
+                              one the eye did not need: the lock is the lock
+                              everywhere, and the globe is the Community tab's
+                              own glyph a few points above. The word is still
+                              on the list's own screen, where it is the switch
+                              that changes it, and it is in the card's spoken
+                              name, which had never carried it at all. */}
                           <Ionicons
                             name={own.is_public ? 'globe-outline' : 'lock-closed-outline'}
                             size={13}
@@ -1407,9 +1424,6 @@ export default function CollectionsScreen({ navigation, route }: {
                             {reasonFor(own.slug) ?? (count === 0
                               ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点', '還沒有地點')
                               : placesOf(count))}
-                            {`  ·  ${own.is_public
-                              ? t('Public', 'Công khai', '公開', '公开', '公開')
-                              : t('Private', 'Riêng tư', '非公開', '私密', '私密')}`}
                           </Text>
                         </View>
                         {/* The same sentence, for the same reason, because
