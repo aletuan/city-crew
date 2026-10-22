@@ -2491,9 +2491,10 @@ describe('the grid', () => {
       const chip = screen.getByTestId('collection-grid-notice-more');
       expect(chip.querySelector('[data-icon="ellipsis-horizontal"]')).toBeTruthy();
       const line = chip.parentElement!;
-      expect(line.textContent).toBe('Switch to List view in the  menu.');
+      // One line, no full stop (owner, 22 Oct 2026).
+      expect(line.textContent).toBe('Switch to list in the  menu');
       expect(line.textContent).not.toContain('⋯');
-      expect(line.getAttribute('aria-label')).toBe('Switch to List view in the More menu.');
+      expect(line.getAttribute('aria-label')).toBe('Switch to list in the More menu');
       expect(chip.compareDocumentPosition(line.lastChild!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       // Between the card and the tiles.
       const intro = screen.getByTestId('collection-intro');
@@ -2601,15 +2602,16 @@ describe('the grid', () => {
       expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(NOTICE, 'seen');
     });
 
-    // The owner's words, 22 Oct 2026: "dạng danh sách" in lower case.
+    // The owner's words, 22 Oct 2026, then shortened to one line the same
+    // day: "Đổi về danh sách", no full stop.
     it('says it in the reader’s language', async () => {
       state.lang = 'vi';
       show();
       await reads();
       expect(banner()!.textContent).toContain('Bộ sưu tập hiển thị dạng lưới');
       const line = screen.getByTestId('collection-grid-notice-more').parentElement!;
-      expect(line.textContent).toBe('Bạn có thể chuyển về dạng danh sách trong menu .');
-      expect(line.getAttribute('aria-label')).toBe('Bạn có thể chuyển về dạng danh sách trong menu Tùy chọn khác.');
+      expect(line.textContent).toBe('Đổi về danh sách trong menu ');
+      expect(line.getAttribute('aria-label')).toBe('Đổi về danh sách trong menu Tùy chọn khác');
       // And the button is called the same, not "Thêm", which heard alone is "add".
       expect(screen.getByRole('button', { name: 'Tùy chọn khác' })).toBeTruthy();
     });

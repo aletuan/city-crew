@@ -1444,7 +1444,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      read as one kind of thing. */
   const gridNotice = (
     <View style={s.notice} testID="collection-grid-notice" accessibilityLiveRegion="polite">
-      <View style={s.noticeMark}><Ionicons name="grid-outline" size={20} color={colors.accent} /></View>
+      <View style={s.noticeMark}><Ionicons name="grid-outline" size={16} color={colors.accent} /></View>
       <View style={s.noticeText}>
         <Text style={s.noticeTitle}>
           {t('Now in grid view', 'Bộ sưu tập hiển thị dạng lưới',
@@ -1457,15 +1457,22 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             "ellipsis". It is said as the button is labelled instead, "More" ("Tùy chọn khác"),
             so the sentence and the button agree out loud. With the glyph in
             the line, "in the corner of the screen" went: the chip and the
-            ring already show where. */}
+            ring already show where.
+
+            One line, and no full stop (owner, 22 Oct 2026): the notice
+            took about 92pt, most of it a second line of this sentence.
+            "Đổi về danh sách" says it in half the words "Bạn có thể chuyển
+            về dạng danh sách" did, and fits a 390pt phone in one line
+            beside the 32pt mark; a sentence that is a single line of a
+            tip wants no stop, as iOS's own tips have none. */}
         <Text
           style={s.noticeBody}
-          accessibilityLabel={t('Switch to List view in the More menu.', 'Bạn có thể chuyển về dạng danh sách trong menu Tùy chọn khác.',
-            'その他メニューからリスト表示に切り替えられます。', '可在“更多”菜单中切换为列表。', '可在「更多」選單中切換為列表。')}
+          accessibilityLabel={t('Switch to list in the More menu', 'Đổi về danh sách trong menu Tùy chọn khác',
+            'その他メニューからリストに切り替え', '可在“更多”菜单中切换为列表', '可在「更多」選單中切換為列表')}
         >
           {(() => {
-            const [before, after] = t('Switch to List view in the {⋯} menu.', 'Bạn có thể chuyển về dạng danh sách trong menu {⋯}.',
-              '{⋯} メニューからリスト表示に切り替えられます。', '可在 {⋯} 菜单中切换为列表。', '可在 {⋯} 選單中切換為列表。').split('{⋯}');
+            const [before, after] = t('Switch to list in the {⋯} menu', 'Đổi về danh sách trong menu {⋯}',
+              '{⋯} メニューからリストに切り替え', '可在 {⋯} 菜单中切换为列表', '可在 {⋯} 選單中切換為列表').split('{⋯}');
             return (
               <>
                 {before}
@@ -1990,12 +1997,16 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingTop: 12, paddingBottom: 2,
   },
   // The guide's toast, in the page: see `gridNotice`.
+  // 12 above and below, not 14, and a 32pt mark, not 40 (owner, 22 Oct
+  // 2026, asking for it smaller): with the line now one line, the title
+  // and it come to 44pt, and the mark was the tallest thing in the row.
+  // About 68pt in all, where it was about 92.
   notice: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    marginHorizontal: space.page, marginBottom: 12, paddingVertical: 14, paddingLeft: 14, paddingRight: 4,
+    marginHorizontal: space.page, marginBottom: 12, paddingVertical: 12, paddingLeft: 14, paddingRight: 4,
     backgroundColor: colors.bgElevated, borderColor: colors.borderGlassSoft, borderWidth: 1, borderRadius: radius.card,
   },
-  noticeMark: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
+  noticeMark: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
   noticeText: { flex: 1, gap: 2, paddingTop: 1 },
   noticeTitle: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.semibold },
   noticeBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
