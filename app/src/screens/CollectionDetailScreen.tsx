@@ -2,11 +2,12 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import {
   AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, LayoutAnimation, Modal,
   type NativeScrollEvent,
-  type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle,
+  type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
+import PlaceTile from '../components/PlaceTile';
 import { KindPills } from '../components/KindPill';
 import {
   AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
@@ -32,6 +33,7 @@ import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { useMyLists, useSaveActions } from '../lib/save';
+import { oneOf, useStored } from '../lib/stored';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space, type } from '../theme';
@@ -134,6 +136,26 @@ const SAVE_AFTER_MS = 600;
  * `marginBottom` sits inside the view that is measured).
  */
 const PITCH_GUESS = 320;
+
+/**
+ * The two ways a list is looked at: the cards, or a grid of three to a row
+ * (owner, 22 Oct 2026; `PlaceTile` says what a tile keeps and drops).
+ *
+ * One choice for every list, kept on the phone as Collections keeps its
+ * tile/row choice (`citycrew.collections.view`): how a reader likes to
+ * look at a list is theirs, not the list's, and a choice made per list
+ * would be forty-five choices to make. The cards are the default, which
+ * is what the screen showed before there was a choice.
+ */
+const VIEW_KEY = 'citycrew.collection.view';
+const LIST_OR_GRID = oneOf('list', 'grid');
+
+/** Tiles to a row. Three, the reference's and every photo app's: at 393pt
+ *  a tile is 111pt, which still carries a name in 12pt across most of it. */
+const GRID_COLUMNS = 3;
+/** Between tiles, both ways. The reference's, measured off it: about a
+ *  fourteenth of a tile. */
+const GRID_GAP = 8;
 
 /** Which card is in the finger, for the cell that holds it; -1 for none. */
 const LiftedCard = createContext(-1);
@@ -435,6 +457,25 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // still standing behind either is the sort of thing you come back to and
   // have to dismiss twice.
   const act = (run: () => void) => { setMenu(false); run(); };
+  const [view, pickView] = useStored<'list' | 'grid'>(VIEW_KEY, 'list', LIST_OR_GRID);
+  const grid = view === 'grid';
+  /*
+   * The way to the other view, in either menu: how a list is looked at is
+   * the reader's, whoever made the list. One row that names where it goes
+   * rather than a switch that names where you are — the glyph is the
+   * view the tap brings, as Collections' own toggle draws it.
+   */
+  const viewRow = (first = false) => (
+    <MenuRow
+      icon={grid ? 'list-outline' : 'grid-outline'}
+      label={grid
+        ? t('List view', 'Xem dạng danh sách', 'リスト表示', '列表视图', '列表檢視')
+        : t('Grid view', 'Xem dạng lưới', 'グリッド表示', '网格视图', '網格檢視')}
+      onPress={() => act(() => pickView(grid ? 'list' : 'grid'))}
+      first={first}
+      testID="collection-menu-view"
+    />
+  );
 
   // Explore is where places are, and saving one from there already offers
   // this list by name. A picker that wrote straight back into this
@@ -628,6 +669,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // screen would be a move among places the reader cannot see, and the
   // list's real order is the one that saves.
   const canArrange = owned && drafted.length > 1 && !narrowed;
+  const { width: winW } = useWindowDimensions();
+  const tile = Math.floor((winW - space.page * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
 
   // ── the card in the finger ──
   //
@@ -1326,6 +1369,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           <FlatList
             data={shown}
             keyExtractor={(p) => p.slug}
+            // A list cannot change its columns once drawn, so each view is
+            // a list of its own.
+            key={view}
+            numColumns={grid ? GRID_COLUMNS : 1}
+            columnWrapperStyle={grid ? s.gridRow : undefined}
             // Held still while a card is in the finger: the drag and the scroll
             // would otherwise both answer the same drag.
             scrollEnabled={!lift}
@@ -1334,6 +1382,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             scrollEventThrottle={16}
             renderItem={({ item, index }) => {
               const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
+              // A tile lifts nothing, for now: the order a grid shows is the
+              // list's, set on the cards. Dragging across three columns is a
+              // gesture of its own, and comes next.
+              if (grid) return <PlaceTile place={item} size={tile} onPress={open} testID={`collection-tile-${index}`} />;
               return canArrange
                 ? (
                   <DraggableCard
@@ -1429,6 +1481,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   testID="collection-menu-plan"
                 />
               )}
+              {viewRow()}
               <MenuRow
                 icon="create-outline"
                 label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集', '编辑合集', '編輯合集')}
@@ -1486,11 +1539,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   first={!canPlan}
                 />
               )}
+              {viewRow(!copyCityId && !canPlan)}
               <MenuRow
                 icon="share-outline"
                 label={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
                 onPress={() => act(share)}
-                first={!copyCityId && !canPlan}
               />
               {/* The third thing you can do about somebody else's list,
                   and the one the store asks for: say something is wrong
@@ -1653,6 +1706,7 @@ const s = StyleSheet.create({
   // Lifted: above its neighbours, with the shadow of something held off
   // the page. `zIndex` for iOS and the web, `elevation` for Android.
   arrangeCellLifted: { zIndex: 10, elevation: 6 },
+  gridRow: { paddingHorizontal: space.page, gap: GRID_GAP, marginBottom: GRID_GAP },
 
   // The dashed slot at the end of the list, matching the collections
   // screen's own last row down to the well and the gap.
