@@ -85,10 +85,10 @@ vi.mock('../lib/candidates', () => ({
 }));
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => null }));
 // Every city's places: none until a test hands some over, and a record of
-// whether the screen asked.
-const idx = vi.hoisted(() => ({ places: null as Place[] | null, asks: [] as boolean[] }));
+// each time the screen asked, by reader.
+const idx = vi.hoisted(() => ({ places: null as Place[] | null, asks: [] as (string | null | undefined)[] }));
 vi.mock('../lib/searchIndex', () => ({
-  useSearchIndex: (wanted: boolean) => { idx.asks.push(wanted); return wanted ? idx.places : null; },
+  useSearchIndex: (reader: string | null | undefined) => { idx.asks.push(reader); return idx.places; },
 }));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: vi.fn(), isSaved: () => false });
@@ -696,11 +696,11 @@ describe('every city', () => {
     idx.places = [hn, sg1, sg2, dl];
   });
 
-  it('asks for every city only once a word is typed', () => {
+  // Not at the first letter: the chips it counts then came in a beat
+  // after the results and pushed them down a row (owner, 22 Oct 2026).
+  it('asks for every city as the screen opens, before a word is typed', () => {
     mount();
-    expect(idx.asks.every((w) => !w)).toBe(true);
-    type('bold');
-    expect(idx.asks.at(-1)).toBe(true);
+    expect(idx.asks.length).toBeGreaterThan(0);
   });
 
   it('starts at home, All before it, the cities that found something after', () => {
@@ -778,19 +778,29 @@ describe('every city', () => {
     expect(getComputedStyle(screen.getByTestId('search-cities')).flexGrow).toBe('0');
   });
 
-  it('draws no row when every place found is at home', () => {
+  // A row that came and went between keystrokes moved the list a row each
+  // time (owner, 22 Oct 2026): it stands from the first letter, and says
+  // which city the list is from.
+  it('keeps the row when every place found is at home', () => {
     mount();
     type('cong');
-    expect(screen.queryByTestId('search-cities')).toBeNull();
+    expect(chipIds()).toEqual(['all', 'hanoi']);
+    expect(chip('all').textContent).toBe('All (1)');
+    expect(chip('hanoi').textContent).toBe('Hanoi (1)');
     expect(results()).toHaveLength(1);
   });
 
-  it('draws no row before a word, nor before the other cities are in', () => {
+  // Before the other cities are in, the row already stands, so their
+  // chips join it rather than push the list down; All has no figure yet
+  // rather than home's figure passed off as everybody's.
+  it('draws no row before a word, and All and home while the other cities are on their way', () => {
     idx.places = null;
     mount();
     expect(screen.queryByTestId('search-cities')).toBeNull();
     type('bold');
-    expect(screen.queryByTestId('search-cities')).toBeNull();
+    expect(chipIds()).toEqual(['all', 'hanoi']);
+    expect(chip('all').textContent).toBe('All');
+    expect(chip('hanoi').textContent).toBe('Hanoi (1)');
     expect(results()).toHaveLength(1);
   });
 

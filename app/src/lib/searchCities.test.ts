@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  byCity, chipsWorthShowing, cityChips, countByCity, namesCities, picked, tapCity, totalFound, type CityPick,
+  byCity, cityChips, countByCity, namesCities, picked, tapCity, totalFound, type CityPick,
 } from './searchCities';
 
 const at = (...ids: (string | null)[]) => ids.map((city_id) => ({ city_id }));
@@ -8,24 +8,6 @@ const at = (...ids: (string | null)[]) => ids.map((city_id) => ({ city_id }));
 describe('countByCity', () => {
   it('counts the places found in each city, and skips a place that cannot say where it is', () => {
     expect([...countByCity(at('hanoi', 'hcmc', 'hanoi', null))]).toEqual([['hanoi', 2], ['hcmc', 1]]);
-  });
-});
-
-describe('chipsWorthShowing', () => {
-  it('is a line only when something was found beyond the reader’s city', () => {
-    expect(chipsWorthShowing(countByCity(at('hanoi', 'hanoi')), 'hanoi', ['hanoi'])).toBe(false);
-    expect(chipsWorthShowing(countByCity(at('hanoi', 'hcmc')), 'hanoi', ['hanoi'])).toBe(true);
-    // The reader's city found nothing, and another did: the row is how
-    // they get there.
-    expect(chipsWorthShowing(countByCity(at('dalat')), 'hanoi', ['hanoi'])).toBe(true);
-    expect(chipsWorthShowing(new Map(), 'hanoi', ['hanoi'])).toBe(false);
-  });
-
-  // New words found nothing beyond home, but the reader had chosen Saigon:
-  // the row stays, or there is no chip left to leave Saigon by.
-  it('is a line while the reader has chosen beyond home, whatever was found', () => {
-    expect(chipsWorthShowing(countByCity(at('hanoi')), 'hanoi', ['hcmc'])).toBe(true);
-    expect(chipsWorthShowing(countByCity(at('hanoi')), 'hanoi', 'all')).toBe(true);
   });
 });
 

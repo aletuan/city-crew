@@ -1,10 +1,12 @@
-// Search's index of every city's places, once it is wanted.
+// Search's index of every city's places.
 //
-// The index is about 420 kB on the wire (`fetchSearchIndex`), so it is
-// not asked for by a screen that has not been typed into: the zero-state
-// answers from the reader's own city, which is already loaded. The first
-// letter asks; the answer is kept for the rest of the run, and every later
-// search, on this screen or the next one opened, starts from it.
+// About 420 kB on the wire (`fetchSearchIndex`), asked for the moment
+// Search opens and kept for the rest of the run: every later search, on
+// this screen or the next one opened, starts from it. It waited for the
+// first letter until 22 Oct 2026, and the city chips it counts then came
+// in a beat after the results and pushed them down a row (owner, on the
+// phone). Somebody who opens Search is about to type, and the keyboard
+// comes up as the screen lands.
 //
 // Kept in memory, not on the phone. The catalog's own cache is on the
 // phone, but this is about 1.5 MB of text, and Android reads a stored
@@ -28,14 +30,13 @@ export function forgetSearchIndex(): void {
 
 /**
  * Every city's places for `reader` (`useSession().userId`: undefined while
- * unknown, null for nobody), once `wanted`; null until then, and until the
- * answer is in.
+ * unknown, null for nobody); null until the answer is in.
  */
-export function useSearchIndex(wanted: boolean, reader: string | null | undefined): Place[] | null {
+export function useSearchIndex(reader: string | null | undefined): Place[] | null {
   const key = reader === undefined ? null : reader ?? '';
   const [got, setGot] = useState<{ for: string; places: Place[] } | null>(null);
   useEffect(() => {
-    if (!wanted || key === null) return undefined;
+    if (key === null) return undefined;
     let answer = asked.get(key);
     if (!answer) {
       answer = fetchSearchIndex(key || null);
@@ -45,6 +46,6 @@ export function useSearchIndex(wanted: boolean, reader: string | null | undefine
     let live = true;
     answer.then((places) => { if (live) setGot({ for: key, places }); }, () => {});
     return () => { live = false; };
-  }, [wanted, key]);
+  }, [key]);
   return got && got.for === key ? got.places : null;
 }

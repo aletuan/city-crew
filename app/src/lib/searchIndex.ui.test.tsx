@@ -13,8 +13,8 @@ vi.mock('./data', () => ({ fetchSearchIndex: data.fetch }));
 
 const place = (slug: string) => ({ slug, city_id: 'hcmc' }) as Place;
 const seen = { places: undefined as Place[] | null | undefined };
-function Probe({ wanted, reader }: { wanted: boolean; reader: string | null | undefined }) {
-  const places = useSearchIndex(wanted, reader);
+function Probe({ reader }: { reader: string | null | undefined }) {
+  const places = useSearchIndex(reader);
   useEffect(() => { seen.places = places; });
   return null;
 }
@@ -28,21 +28,15 @@ beforeEach(() => {
 });
 
 describe('useSearchIndex', () => {
-  // The zero-state answers from the reader's own city; 420 kB waits for a
-  // letter.
-  it('asks nothing until it is wanted', async () => {
-    const view = render(<Probe wanted={false} reader={null} />);
-    await settle();
-    expect(data.fetch).not.toHaveBeenCalled();
-    expect(seen.places).toBeNull();
-    view.rerender(<Probe wanted reader={null} />);
+  it('asks for nobody’s index when nobody is signed in', async () => {
+    render(<Probe reader={null} />);
     await settle();
     expect(seen.places).toEqual([place('a')]);
     expect(data.fetch).toHaveBeenCalledWith(null);
   });
 
   it('asks nothing while it is not known who is reading', async () => {
-    render(<Probe wanted reader={undefined} />);
+    render(<Probe reader={undefined} />);
     await settle();
     expect(data.fetch).not.toHaveBeenCalled();
     expect(seen.places).toBeNull();
@@ -50,26 +44,26 @@ describe('useSearchIndex', () => {
 
   // Their own suggestions are in it.
   it('asks for the reader’s own index', async () => {
-    render(<Probe wanted reader="u1" />);
+    render(<Probe reader="u1" />);
     await settle();
     expect(data.fetch).toHaveBeenCalledWith('u1');
   });
 
   it('asks once a run, however many screens want it', async () => {
-    render(<Probe wanted reader="u1" />).unmount();
+    render(<Probe reader="u1" />).unmount();
     await settle();
-    render(<Probe wanted reader="u1" />);
+    render(<Probe reader="u1" />);
     await settle();
     expect(data.fetch).toHaveBeenCalledTimes(1);
     expect(seen.places).toEqual([place('a')]);
   });
 
   it('asks again for somebody else, and shows nothing of the first meanwhile', async () => {
-    const view = render(<Probe wanted reader="u1" />);
+    const view = render(<Probe reader="u1" />);
     await settle();
     let answer: (p: Place[]) => void = () => {};
     data.fetch.mockImplementation(() => new Promise((r) => { answer = r; }));
-    view.rerender(<Probe wanted reader="u2" />);
+    view.rerender(<Probe reader="u2" />);
     await settle();
     expect(seen.places).toBeNull();
     await act(async () => { answer([place('b')]); });
@@ -79,9 +73,9 @@ describe('useSearchIndex', () => {
   // The next search asks again rather than living with it.
   it('forgets a failed read', async () => {
     data.fetch.mockImplementationOnce(async () => { throw new Error('offline'); });
-    render(<Probe wanted reader={null} />).unmount();
+    render(<Probe reader={null} />).unmount();
     await settle();
-    render(<Probe wanted reader={null} />);
+    render(<Probe reader={null} />);
     await settle();
     expect(data.fetch).toHaveBeenCalledTimes(2);
     expect(seen.places).toEqual([place('a')]);
@@ -90,7 +84,7 @@ describe('useSearchIndex', () => {
   it('says nothing after the screen has gone', async () => {
     let answer: (p: Place[]) => void = () => {};
     data.fetch.mockImplementation(() => new Promise((r) => { answer = r; }));
-    render(<Probe wanted reader={null} />).unmount();
+    render(<Probe reader={null} />).unmount();
     await act(async () => { answer([place('late')]); });
     expect(seen.places).toBeNull();
   });

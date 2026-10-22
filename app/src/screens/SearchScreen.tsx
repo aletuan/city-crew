@@ -34,7 +34,7 @@ import { newestPlaces } from '../lib/newest';
 import { rankPopular } from '../lib/popular';
 import { findPlaces, queryTerms } from '../lib/search';
 import {
-  chipsWorthShowing, cityChips, countByCity, namesCities, picked as inCities, tapCity, totalFound, type CityPick,
+  cityChips, countByCity, namesCities, picked as inCities, tapCity, totalFound, type CityPick,
 } from '../lib/searchCities';
 import { useSearchIndex } from '../lib/searchIndex';
 import { useI18n } from '../lib/i18n';
@@ -187,13 +187,15 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // row of chips saying what each city found — the rules are
   // `lib/searchCities`'. The reader's city answers from its catalog, which
   // is on screen already and whole; the others from the index, asked for
-  // at the first letter (`useSearchIndex`). Until it lands the reader's
-  // own city answers alone, as it always did.
+  // as the screen opens (`useSearchIndex`). Until it lands the reader's
+  // own city answers alone, as it always did, under a row that already
+  // stands — All without a figure, since it does not know one yet, and
+  // home — so the other cities' chips join it rather than push the list.
   //
   // `pick` is null until the reader taps a chip: their own city, then.
   // State, not storage, so every visit to Search starts at home.
   const searching = terms.length > 0;
-  const index = useSearchIndex(searching, userId);
+  const index = useSearchIndex(userId);
   const home = city?.id ?? null;
   const everywhere = useMemo(
     () => (index && home ? [...places, ...index.filter((p) => p.city_id !== home)] : places),
@@ -207,7 +209,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     () => countByCity(searching ? findPlaces(everywhere, query, synonyms).hits : []),
     [searching, everywhere, query, synonyms],
   );
-  const chips = searching && home && chipsWorthShowing(counts, home, pick) ? cityChips(counts, home, pick) : null;
+  const chips = searching && home ? cityChips(counts, home, pick) : null;
   const inPick = useMemo(() => everywhere.filter((p) => inCities(pick, p.city_id)), [everywhere, pick]);
   const cityName = (id: string | null | undefined) => {
     const c = cityList.find((x) => x.id === id);
@@ -343,7 +345,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         >
           <Chip
             label={t('All', 'Tất cả', 'すべて', '全部', '全部')}
-            count={totalFound(counts)}
+            count={index ? totalFound(counts) : undefined}
             active={pick === 'all'}
             onPress={() => { Keyboard.dismiss(); setCityChoice('all'); }}
             testID="search-city-all"
