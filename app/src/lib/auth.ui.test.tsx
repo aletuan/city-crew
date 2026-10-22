@@ -341,9 +341,18 @@ describe('the steps that must not run out of order', () => {
   it('reports a finished deletion as finished even when the local sign-out after it fails', async () => {
     await mount({ signedIn: session('u1'), fetched: row() });
     await AsyncStorage.setItem('highlight.v1:u1', JSON.stringify({ enabled: false }));
+    // The collection's view and grid notice are the reader's too.
+    await AsyncStorage.setItem('citycrew.collection.view:u1', 'list');
+    await AsyncStorage.setItem('citycrew.collection.gridNotice.v2:u1', 'seen');
+    await AsyncStorage.setItem('citycrew.collection.view', 'grid');
     h.fake.replies({ data: { ok: true } }, { throws: new Error('storage locked') });
     await expect(seen.api.deleteAccount()).resolves.toBeUndefined();
     expect(await AsyncStorage.getItem('highlight.v1:u1')).toBeNull();
+    expect(await AsyncStorage.getItem('citycrew.collection.view:u1')).toBeNull();
+    expect(await AsyncStorage.getItem('citycrew.collection.gridNotice.v2:u1')).toBeNull();
+    // The phone's own, for whoever is not signed in, is not the account's.
+    expect(await AsyncStorage.getItem('citycrew.collection.view')).toBe('grid');
+    await AsyncStorage.removeItem('citycrew.collection.view');
     const fns = h.fake.log.map((a) => a.fn).filter(Boolean);
     expect(fns.slice(-2)).toEqual(['delete-account', 'signOut']);
   });

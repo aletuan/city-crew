@@ -67,15 +67,34 @@ export type Origin = 'reading' | 'stored' | 'fallback';
  * `fallback` until then and whenever nothing usable is stored. `remember`
  * sets it now and writes it for the next launch; a write that fails is a
  * memory lost, not an error the screen can act on.
+ *
+ * `key` can be null, for a value kept per reader while it is not yet
+ * known who is reading (`readerKey`): nothing is read, the answer stays
+ * `reading`, and a value set meanwhile is shown but not written, since
+ * there is no key yet to say whose it is. When the key changes — the
+ * reader signs in, or out, or is somebody else — the hook starts over
+ * for the new key: back to `fallback` and `reading`, and a write made
+ * under the old key no longer holds the new key's read back.
  */
-export function useStored<T>(key: string, fallback: T, codec: Codec<T>): [T, (value: T) => void, Origin] {
+export function useStored<T>(key: string | null, fallback: T, codec: Codec<T>): [T, (value: T) => void, Origin] {
   const [value, setValue] = useState<T>(fallback);
   const [origin, setOrigin] = useState<Origin>('reading');
+  // Adjusted during render, React's pattern for state that follows props:
+  // an effect would paint one frame of the old reader's value under the
+  // new reader.
+  const [readFor, setReadFor] = useState(key);
+  if (readFor !== key) {
+    setReadFor(key);
+    setValue(fallback);
+    setOrigin('reading');
+  }
   const written = useRef(false);
   const latest = useRef(codec);
   latest.current = codec;
 
   useEffect(() => {
+    written.current = false;
+    if (key === null) return undefined;
     let live = true;
     AsyncStorage.getItem(key)
       .then((raw) => {
@@ -92,7 +111,7 @@ export function useStored<T>(key: string, fallback: T, codec: Codec<T>): [T, (va
     written.current = true;
     setValue(next);
     setOrigin('stored');
-    AsyncStorage.setItem(key, latest.current.format(next)).catch(() => {});
+    if (key !== null) AsyncStorage.setItem(key, latest.current.format(next)).catch(() => {});
   }, [key]);
 
   return [value, remember, origin];

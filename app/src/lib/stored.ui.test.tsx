@@ -13,7 +13,7 @@ const VIEW = oneOf('tile', 'row');
 
 /** The hook's latest answer, written after render. */
 const seen = {} as { value: unknown; remember: (v: never) => void; origin: Origin };
-function Probe<T>({ fallback, codec, storeKey = KEY }: { fallback: T; codec: Codec<T>; storeKey?: string }) {
+function Probe<T>({ fallback, codec, storeKey = KEY }: { fallback: T; codec: Codec<T>; storeKey?: string | null }) {
   const [value, remember, origin] = useStored(storeKey, fallback, codec);
   useEffect(() => { seen.value = value; seen.remember = remember as (v: never) => void; seen.origin = origin; });
   return null;
@@ -83,6 +83,45 @@ describe('remembering', () => {
     view.rerender(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} storeKey="b" />);
     await act(async () => { land('row'); });
     expect(seen.value).toBe('tile');
+  });
+
+  // A value kept per reader, before it is known who is reading
+  // (`readerKey`): nothing to read, and nothing to write under.
+  it('reads nothing and writes nothing while there is no key, and shows what is set', async () => {
+    const read = vi.spyOn(AsyncStorage, 'getItem');
+    const write = vi.spyOn(AsyncStorage, 'setItem');
+    render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} storeKey={null} />);
+    await act(async () => {});
+    expect(read).not.toHaveBeenCalled();
+    expect([seen.value, seen.origin]).toEqual(['tile', 'reading']);
+    act(() => seen.remember('row' as never));
+    expect(seen.value).toBe('row');
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  // Somebody else signs in: the first reader's value must not stand,
+  // even for a frame, under the second.
+  it('starts over for a new key: the default, reading, then the new key’s own value', async () => {
+    await AsyncStorage.setItem('a', 'row');
+    const view = render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} storeKey="a" />);
+    await waitFor(() => expect(seen.value).toBe('row'));
+    view.rerender(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} storeKey="b" />);
+    expect([seen.value, seen.origin]).toEqual(['tile', 'reading']);
+    await act(async () => {});
+    expect([seen.value, seen.origin]).toEqual(['tile', 'fallback']);
+    await AsyncStorage.removeItem('a');
+  });
+
+  // A write under the old key held back only the old key's read.
+  it('reads the new key even after a write under the old one', async () => {
+    await AsyncStorage.setItem('b', 'row');
+    const view = render(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} storeKey="a" />);
+    await act(async () => {});
+    act(() => seen.remember('tile' as never));
+    view.rerender(<Probe<"tile" | "row"> fallback="tile" codec={VIEW} storeKey="b" />);
+    await waitFor(() => expect([seen.value, seen.origin]).toEqual(['row', 'stored']));
+    await AsyncStorage.removeItem('a');
+    await AsyncStorage.removeItem('b');
   });
 
   it('keeps the value shown when the write fails', async () => {

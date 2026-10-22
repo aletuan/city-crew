@@ -34,6 +34,7 @@ import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { useMyLists, useSaveActions } from '../lib/save';
+import { readerKey, COLLECTION_VIEW_KEY, GRID_NOTICE_KEY } from '../lib/readerPrefs';
 import { oneOf, useStored } from '../lib/stored';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
@@ -156,8 +157,10 @@ const PITCH_GUESS = 320;
  * and the grid shows a list of twenty at a glance. A reader who chose the
  * cards before that keeps them — the default stands in only where nobody
  * has chosen.
+ *
+ * Kept per reader, not per phone (`readerKey`, owner, 22 Oct 2026): a
+ * second account on the same phone opened on the first one's cards.
  */
-const VIEW_KEY = 'citycrew.collection.view';
 const LIST_OR_GRID = oneOf('list', 'grid');
 
 /**
@@ -176,9 +179,8 @@ const LIST_OR_GRID = oneOf('list', 'grid');
  * that morning, never saw it, and the rule was changed the same day: told
  * to everybody, closed only by them. Hence `.v2`: a phone the first rule
  * marked as told — by a menu opened, not by an × — is told again.
- * Kept on the phone, as the view is.
+ * Kept per reader, as the view is: an × on one account told nobody else.
  */
-const NOTICE_KEY = 'citycrew.collection.gridNotice.v2';
 const NOTICE = oneOf('unseen', 'seen');
 /** The ring round the 44pt ⋯ button, 4 clear of it all round. */
 const MORE_RING = { left: -4, top: -4, width: 52, height: 52 };
@@ -360,7 +362,10 @@ function DraggableTile({
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
-  const { session } = useSession();
+  // `userId` keys what the phone keeps per reader (`readerKey`), and is
+  // known a storage read into the launch where the session can be a
+  // round trip away.
+  const { session, userId } = useSession();
   const { profile } = useProfile();
   const uid = session?.user?.id;
   const cols = useCollections();
@@ -557,12 +562,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // still standing behind either is the sort of thing you come back to and
   // have to dismiss twice.
   const act = (run: () => void) => { setMenu(false); run(); };
-  const [view, pickView, viewFrom] = useStored<'list' | 'grid'>(VIEW_KEY, 'grid', LIST_OR_GRID);
+  const [view, pickView, viewFrom] = useStored<'list' | 'grid'>(
+    readerKey(COLLECTION_VIEW_KEY, userId), 'grid', LIST_OR_GRID,
+  );
   const grid = view === 'grid';
-  const [notice, keepNotice, noticeFrom] = useStored<'unseen' | 'seen'>(NOTICE_KEY, 'unseen', NOTICE);
-  // Only once both reads are in: until then a reader who chose the cards
-  // is shown the grid by default, for a moment, and a reader who closed
-  // the notice has not yet been read as having closed it.
+  const [notice, keepNotice, noticeFrom] = useStored<'unseen' | 'seen'>(
+    readerKey(GRID_NOTICE_KEY, userId), 'unseen', NOTICE,
+  );
+  // Only once both reads are in, and so only once it is known who is
+  // reading: until then a reader who chose the cards is shown the grid
+  // by default, for a moment, and a reader who closed the notice has not
+  // yet been read as having closed it.
   const noticing = viewFrom !== 'reading' && noticeFrom !== 'reading' && notice === 'unseen'
     && grid && members.length > 0;
   const closeNotice = () => keepNotice('seen');
@@ -1445,7 +1455,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   /* ── the grid notice (owner, 22 Oct 2026) ──
      Lists open as a grid now, so a reader looking at one is told, between
      the card and the tiles, where the way back is: the ⋯ button, ringed
-     while this shows, until they close it (`NOTICE_KEY`). A banner in the page rather than a
+     while this shows, until they close it (`GRID_NOTICE_KEY`). A banner in the page rather than a
      sheet over it: it says something, it asks nothing, and the grid it is
      about is right under it. The guide's toast in look — the sheets'
      ground, the accent's tint behind the mark — so the app's two notices

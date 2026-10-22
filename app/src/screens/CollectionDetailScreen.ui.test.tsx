@@ -79,7 +79,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('../lib/auth', () => {
   const m = {
-    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null, profile: state.profile }),
+    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null, userId: state.uid, profile: state.profile }),
   };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
@@ -171,8 +171,9 @@ vi.mock('../lib/stored', async (orig) => {
   const real = await orig<typeof import('../lib/stored')>();
   return {
     ...real,
-    useStored: ((key: string, fallback: unknown, codec: never) => real.useStored(
-      key, key === 'citycrew.collection.view' && views.fallback ? views.fallback : fallback, codec,
+    // The view's key, whoever is reading: the phone's, or a reader's own.
+    useStored: ((key: string | null, fallback: unknown, codec: never) => real.useStored(
+      key, key?.startsWith('citycrew.collection.view') && views.fallback ? views.fallback : fallback, codec,
     )) as typeof real.useStored,
   };
 });
@@ -2101,8 +2102,9 @@ describe('the actions and the dock', () => {
 // a choice of two in either menu, the one in force ticked. On the owner's
 // own list a tile is held and dragged as a card is.
 describe('the grid', () => {
-  const VIEW = 'citycrew.collection.view';
-  const NOTICE = 'citycrew.collection.gridNotice.v2';
+  // Kept per reader: the default reader is 'me'.
+  const VIEW = 'citycrew.collection.view:me';
+  const NOTICE = 'citycrew.collection.gridNotice.v2:me';
   beforeEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
   afterEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
   const toGrid = () => { openMenu(); fireEvent.click(menuRow('Grid')); endModalFade(); };
@@ -2361,6 +2363,51 @@ describe('the grid', () => {
     beforeEach(() => { views.fallback = null; });
     const banner = () => screen.queryByTestId('collection-grid-notice');
     const ring = () => screen.queryByTestId('collection-more-ring');
+
+    // Kept per reader, not per phone (owner, 22 Oct 2026): a second account
+    // on the owner's phone opened on the first one's cards and was told
+    // nothing.
+    describe('per reader', () => {
+      const PHONE_VIEW = 'citycrew.collection.view';
+      const PHONE_NOTICE = 'citycrew.collection.gridNotice.v2';
+      afterEach(async () => {
+        for (const k of [PHONE_VIEW, PHONE_NOTICE, 'citycrew.collection.view:u2', 'citycrew.collection.gridNotice.v2:u2']) {
+          await AsyncStorage.removeItem(k);
+        }
+      });
+
+      it('tells a second reader on the same phone, whatever the first chose and closed', async () => {
+        await AsyncStorage.setItem(VIEW, 'list');
+        await AsyncStorage.setItem(NOTICE, 'seen');
+        await AsyncStorage.setItem(PHONE_VIEW, 'list');
+        await AsyncStorage.setItem(PHONE_NOTICE, 'seen');
+        state.uid = 'u2';
+        show();
+        await reads();
+        expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+        expect(banner()).toBeTruthy();
+        fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collection.gridNotice.v2:u2', 'seen');
+      });
+
+      it('keeps the phone’s own choice for nobody signed in', async () => {
+        await AsyncStorage.setItem(PHONE_VIEW, 'list');
+        state.uid = null;
+        show();
+        await reads();
+        expect(screen.queryByTestId('collection-tile-0')).toBeNull();
+        expect(banner()).toBeNull();
+      });
+
+      // Before the launch knows who is reading, a read would be the wrong
+      // person's: the notice waits rather than flash up and go.
+      it('says nothing while it is not yet known who is reading', async () => {
+        state.uid = undefined as unknown as null;
+        show();
+        await reads();
+        expect(banner()).toBeNull();
+      });
+    });
 
     it('opens a list nobody has chosen a view for as a grid', async () => {
       show();

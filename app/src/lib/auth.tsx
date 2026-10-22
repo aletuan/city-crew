@@ -18,6 +18,7 @@ import { cacheKey, packCache, unpackCache } from './data/cache';
 import { supabase } from './supabase';
 import { normalizeHandle } from './handle';
 import { presetUrl, type AvatarPreset } from './avatars';
+import { READER_PREFS, readerKey } from './readerPrefs';
 
 /**
  * Postgres constraint violations, as something a screen can branch on.
@@ -487,7 +488,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // completed deletion look like it did not happen.
     // Guidance belongs to an account ID, never an email or this device.
     // Remove its local record too; registering again gets a fresh ID and tour.
-    if (userId) await AsyncStorage.removeItem(`highlight.v1:${userId}`).catch(() => {});
+    // The collection's view and its grid notice are kept per reader too
+    // (`readerPrefs`), and go with the account for the same reason.
+    if (userId) {
+      await AsyncStorage.removeItem(`highlight.v1:${userId}`).catch(() => {});
+      for (const base of READER_PREFS) await AsyncStorage.removeItem(readerKey(base, userId) as string).catch(() => {});
+    }
     await supabase.auth.signOut().catch(() => {});
   }, [userId]);
 
