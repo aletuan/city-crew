@@ -34,7 +34,7 @@
 
 import React from 'react';
 import {
-  AccessibilityInfo, Alert, Dimensions, LayoutAnimation, PanResponder, type PanResponderCallbacks,
+  AccessibilityInfo, Alert, Dimensions, FlatList, LayoutAnimation, PanResponder, type PanResponderCallbacks,
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -811,6 +811,24 @@ describe('reordering', () => {
     drop();
   };
   const el = (slug: string) => screen.getByTestId(`drag-${slug}`);
+  /** The list's own props, as the screen gave them. */
+  const listProps = () => {
+    const root = screen.getByTestId('collection-drag-area');
+    const key = Object.keys(root).find((k) => k.startsWith('__reactFiber'))!;
+    const stack = [(root as unknown as Record<string, { child: unknown }>)[key]] as {
+      memoizedProps?: Record<string, unknown>; child?: unknown; sibling?: unknown;
+    }[];
+    while (stack.length) {
+      const fb = stack.pop()!;
+      const p = fb.memoizedProps;
+      if (p && typeof p.onContentSizeChange === 'function' && 'ListHeaderComponent' in p) {
+        return p as { onContentSizeChange?: (w: number, h: number) => void; onScroll?: (e: unknown) => void };
+      }
+      if (fb.sibling) stack.push(fb.sibling as never);
+      if (fb.child) stack.push(fb.child as never);
+    }
+    throw new Error('no list');
+  };
   /** The card as React Native Web measures it, by hand: jsdom has no
    *  ResizeObserver, and the handler is left on the node for one. */
   const measure = (slug: string, height: number) => act(() => {
@@ -897,6 +915,44 @@ describe('reordering', () => {
     expect(spies.colsReload).toHaveBeenCalled();
     // The menu is still there beside the report.
     expect(button('More')).toBeTruthy();
+  });
+
+  // Past the edge of the screen (owner, 22 Oct 2026). On an 844 window the
+  // floating bar covers the foot's 74 (64 tall, 10 up), so the list shows
+  // to 770 and its foot edge begins 72 above that, at 698. A finger at 760
+  // is in it; with the bar not counted the edge would begin at 772 and the
+  // same finger would scroll nothing.
+  it('scrolls the list under a card held near its foot, above the floating bar', () => {
+    // The frames too, which the block's own fake clock leaves real.
+    vi.useRealTimers();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame'] });
+    const win = { width: 390, height: 844, scale: 1, fontScale: 1 };
+    const dims = vi.spyOn(Dimensions, 'get').mockReturnValue(win);
+    const scrollTo = vi.spyOn(FlatList.prototype, 'scrollToOffset');
+    show();
+    const area = screen.getByTestId('collection-drag-area') as unknown as {
+      measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => void;
+    };
+    // The list shows from 100 to the window's foot, over 2000 of content.
+    area.measureInWindow = (cb) => cb(0, 100, 390, 744);
+    act(() => { listProps().onContentSizeChange!(390, 2000); });
+    // Scrolled down 500 already: the list carries on from there.
+    act(() => { listProps().onScroll!({ nativeEvent: { contentOffset: { x: 0, y: 500 } } }); });
+    lift('pho');
+    claim('pho');
+    act(() => { cfg().onPanResponderMove!(evt, { moveY: 760 } as never); });
+    act(() => { vi.advanceTimersToNextFrame(); });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo.mock.calls[0][0]).toMatchObject({ animated: false });
+    expect(scrollTo.mock.calls[0][0].offset).toBeGreaterThan(500);
+    expect(scrollTo.mock.calls[0][0].offset).toBeLessThan(500 + 14);
+    // No further than the content goes: 2000 less the 744 it shows in.
+    act(() => { cfg().onPanResponderMove!(evt, { moveY: 844 } as never); });
+    act(() => { for (let i = 0; i < 200; i++) vi.advanceTimersToNextFrame(); });
+    expect(scrollTo.mock.calls.at(-1)![0].offset).toBe(1256);
+    drop();
+    dims.mockRestore();
+    scrollTo.mockRestore();
   });
 
   it('crosses as many cards as the finger does, upward too', async () => {
@@ -1835,10 +1891,13 @@ describe('the actions and the dock', () => {
     }
     throw new Error('nothing matched');
   };
-  // The list's own `onScroll`, as the FlatList would call it.
+  // The list's own `onScroll`, as the FlatList would call it: where it is,
+  // and the content and window it is scrolled within.
   const listScroll = (y: number) => act(() => {
     const p = propsWhere((q) => typeof q.onScroll === 'function' && 'ListHeaderComponent' in q);
-    (p.onScroll as (e: unknown) => void)({ nativeEvent: { contentOffset: { x: 0, y } } });
+    (p.onScroll as (e: unknown) => void)({ nativeEvent: {
+      contentOffset: { x: 0, y }, contentSize: { width: 390, height: 2000 }, layoutMeasurement: { width: 390, height: 844 },
+    } });
   });
   /** Lay the card out 300 tall at the top, then scroll the list to `y`. */
   const pastTheCard = (y = 400) => {

@@ -137,3 +137,18 @@ export function gridStepAside(i: number, from: number, to: number, cols: number,
     dy: (Math.floor(goes / cols) - Math.floor(i / cols)) * pitch,
   };
 }
+
+/**
+ * How far the list scrolls this frame while the finger holding a row is
+ * at `y`, in a list whose visible part runs from `top` to `bottom`.
+ *
+ * Nothing while the finger is clear of both ends. Within `edge` of one,
+ * that way, faster the deeper in: a quarter of the way in is a quarter of
+ * `max`. Past the end itself is all of it, so a finger on the very rim, or
+ * on the bar laid over the list's foot, scrolls as fast as it can.
+ */
+export function edgeSpeed(y: number, top: number, bottom: number, edge: number, max: number): number {
+  const depth = (into: number) => Math.min(1, Math.max(0, into / edge)) * max;
+  const up = depth(top + edge - y);
+  return up > 0 ? -up : depth(y - (bottom - edge));
+}

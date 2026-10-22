@@ -53,12 +53,27 @@
 // it has passed shuffle one cell along, round a row's end where they have
 // to (`gridStepAside`). Every cell is the one size, so the grid hands its
 // pitch over rather than having the tiles measure themselves.
+//
+// ── past the edge of the screen ──
+//
+// The list is held still while a row is up (the screen's `scrollEnabled`),
+// so the drag and the scroll never answer the same finger. That left a
+// row no way to reach a place off screen: a list of twenty, three tiles
+// to a row, is seven rows, and the first was a drag or three from the
+// last (owner, 22 Oct 2026). Given `scroll`, the hook scrolls the list
+// itself while the finger is near either end of the part that shows —
+// a frame at a time, faster the deeper in (`edgeSpeed`) — and counts the
+// distance scrolled as the row's travel, so the row stays under the
+// finger and lands where the finger is over. The foot of the list that
+// the floating tab bar lies over is not "showing": the edge is measured
+// from the bar's top.
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, PanResponder, StyleSheet, type GestureResponderHandlers, type StyleProp, type ViewStyle,
+  Animated, PanResponder, StyleSheet, useWindowDimensions, View, type GestureResponderHandlers, type NativeScrollEvent,
+  type StyleProp, type ViewStyle,
 } from 'react-native';
-import { dropSlot, gridSlot, gridStepAside, stepAside } from '../lib/order';
+import { dropSlot, edgeSpeed, gridSlot, gridStepAside, stepAside } from '../lib/order';
 import { fireHaptic } from './ui';
 
 /**
@@ -75,9 +90,31 @@ import { fireHaptic } from './ui';
  */
 export const LIFT_AFTER_MS = 400;
 
+/**
+ * How near either end of the list the finger has to be before the list
+ * scrolls under it, and how fast it scrolls at the most, in points a
+ * frame. 72 is a little over a finger's width, so a thumb resting on the
+ * last card showing does not set the list moving. 14 is about 840pt a
+ * second at 60 frames, a phone's height in a second, so a long list
+ * crosses quickly while the start of the edge is slow enough to stop on
+ * a card. Both are starting figures, to be judged on a phone.
+ */
+export const SCROLL_EDGE = 72;
+export const SCROLL_MAX = 14;
+
 /** The row in the finger: where it came from, the slot it hovers over, its
- *  own pitch, and where the finger was when it lifted. */
-export type Held = { from: number; to: number; pitch: number; x0: number; y0: number };
+ *  own pitch, where the finger was when it lifted, and how far the list
+ *  was scrolled then. */
+export type Held = { from: number; to: number; pitch: number; x0: number; y0: number; s0: number };
+
+/** For a list that can scroll itself while a row is dragged near its ends. */
+export type DragScroll = {
+  /** Scroll the list to this offset, at once. */
+  to: (offset: number) => void;
+  /** Points at the window's foot that something lies over — the floating
+   *  tab bar — so the list's foot edge starts above it. */
+  coveredBelow?: number;
+};
 
 /** The rows laid out as a grid: so many to a row, each cell `pitch` from the
  *  next both ways (a tile and the gap after it). */
@@ -100,12 +137,21 @@ export type ListDrag = {
   onRelease: () => void;
   /** Row `key` measured `pitch` points tall, gap included. */
   onPitch: (key: string, pitch: number) => void;
+  /** For the view around the rows, with `panHandlers`: where the list
+   *  shows on screen, measured when a row lifts. */
+  areaRef: React.RefObject<View | null>;
+  /** For the list's `onScroll`: where it is scrolled to. */
+  onScrolled: (e: NativeScrollEvent) => void;
+  /** For the list's `onContentSizeChange`: how tall its content is, which
+   *  with the height it shows in says how far it can scroll. A list the
+   *  reader has not scrolled yet has sent no scroll event to say it. */
+  onContentSizeChange: (width: number, height: number) => void;
   /** What row `i` wears right now: raised and travelling, stepped aside, or
    *  nothing. For an `Animated.View`. */
   styleOf: (i: number) => Animated.WithAnimatedValue<StyleProp<ViewStyle>>;
 };
 
-export function useListDrag({ keys, onMove, pitchGuess, grid = null }: {
+export function useListDrag({ keys, onMove, pitchGuess, grid = null, scroll = null }: {
   /** The rows, in their current order, by a key each row reports its pitch under. */
   keys: readonly string[];
   /** The drop: row `from` landed on slot `to`. Never called with `from === to`. */
@@ -115,6 +161,8 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null }: {
   pitchGuess: number;
   /** Set when the rows are tiles in a grid rather than one under another. */
   grid?: DragGrid | null;
+  /** Set when the list should scroll itself near its ends during a drag. */
+  scroll?: DragScroll | null;
 }): ListDrag {
   // `lift` is for drawing. `liftRef` is the same thing for the touch
   // handlers, which fire faster than renders and must not read a render
@@ -126,6 +174,15 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null }: {
   const dragY = useRef(new Animated.Value(0)).current;
   const dragX = useRef(new Animated.Value(0)).current;
   const pitchByKey = useRef(new Map<string, number>());
+  const { height: winH } = useWindowDimensions();
+  const areaRef = useRef<View>(null);
+  // Where the list is scrolled and how far it can go, from its own scroll
+  // events; where it shows on screen, from the lift; where the finger is;
+  // and the frame waiting to scroll it, if one is.
+  const scrolled = useRef({ y: 0, content: 0 });
+  const shows = useRef({ top: 0, bottom: 0, height: 0 });
+  const finger = useRef({ x: 0, y: 0 });
+  const frame = useRef<number | null>(null);
   const raise = (next: Held | null) => {
     liftRef.current = next;
     setLift(next);
@@ -136,13 +193,22 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null }: {
     dragY.setValue(0);
     dragX.setValue(0);
     claimed.current = false;
-    raise({ from: index, to: index, pitch: pitches()[index], x0: pageX, y0: pageY });
+    finger.current = { x: pageX, y: pageY };
+    if (scroll) {
+      areaRef.current?.measureInWindow((_x, y, _w, h) => {
+        shows.current = { top: y, bottom: Math.min(y + h, winH - (scroll.coveredBelow ?? 0)), height: h };
+      });
+    }
+    raise({ from: index, to: index, pitch: pitches()[index], x0: pageX, y0: pageY, s0: scrolled.current.y });
     fireHaptic('light');
   };
-  const onDrag = (pageX: number, pageY: number) => {
+  // Where the held row is over: the finger's travel since the lift, and
+  // down, the distance the list has scrolled under it since too.
+  const place = () => {
     const held = liftRef.current;
     if (!held) return;
-    const dy = pageY - held.y0;
+    const { x: pageX, y: pageY } = finger.current;
+    const dy = pageY - held.y0 + (scrolled.current.y - held.s0);
     dragY.setValue(dy);
     // A list's row goes nowhere sideways, so only a grid's tile follows
     // the finger across.
@@ -156,6 +222,33 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null }: {
       fireHaptic('selection');
     }
   };
+  // One frame of scrolling, while the finger stays near an end and the
+  // list has further to go that way; then the next.
+  const tick = () => {
+    frame.current = null;
+    if (!scroll || !liftRef.current) return;
+    const speed = edgeSpeed(finger.current.y, shows.current.top, shows.current.bottom, SCROLL_EDGE, SCROLL_MAX);
+    const { y, content } = scrolled.current;
+    const next = Math.min(Math.max(0, content - shows.current.height), Math.max(0, y + speed));
+    if (next === y) return;
+    scrolled.current = { y: next, content };
+    scroll.to(next);
+    place();
+    frame.current = requestAnimationFrame(() => tickRef.current());
+  };
+  const tickRef = useRef(tick);
+  useEffect(() => { tickRef.current = tick; });
+  const onDrag = (pageX: number, pageY: number) => {
+    finger.current = { x: pageX, y: pageY };
+    place();
+    if (scroll && frame.current === null) frame.current = requestAnimationFrame(() => tickRef.current());
+  };
+  // Leaving the screen mid-scroll leaves no frame behind.
+  useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
+  const onScrolled = (e: NativeScrollEvent) => { scrolled.current = { ...scrolled.current, y: e.contentOffset.y }; };
+  const onContentSizeChange = (_w: number, h: number) => { scrolled.current = { ...scrolled.current, content: h }; };
+  // A frame already asked for when the row lands finds nothing held and
+  // does nothing, so letting go needs no cancelling of its own.
   const onDrop = () => {
     const held = liftRef.current;
     if (!held) return;
@@ -191,7 +284,7 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null }: {
     return shift !== 0 ? { transform: [{ translateY: shift }] } : undefined;
   };
 
-  return { lift, dragY, dragX, panHandlers: drag.panHandlers, onLift, onRelease, onPitch, styleOf };
+  return { lift, dragY, dragX, panHandlers: drag.panHandlers, onLift, onRelease, onPitch, styleOf, areaRef, onScrolled, onContentSizeChange };
 }
 
 const s = StyleSheet.create({
