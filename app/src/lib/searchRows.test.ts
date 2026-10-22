@@ -21,7 +21,7 @@ const collection = (slug: string, c: Partial<Collection> = {}): Collection => ({
 
 const input = (over: Partial<SearchRowsInput> = {}): SearchRowsInput => ({
   terms: [], query: '', recents: [], cats: [], popular: [], latest: [],
-  colMembers: [], places: [], cityId: 'hn', fresh: null, synonyms: {}, ...over,
+  colMembers: [], places: [], cities: ['hn'], fresh: null, synonyms: {}, ...over,
 });
 
 const keys = (over: Partial<SearchRowsInput>) => buildSearchRows(input(over), en).map((r) => r.key);
@@ -79,6 +79,20 @@ describe('buildSearchRows — results', () => {
     expect(rows.map((r) => r.key)).toEqual(['h-col', 'c-here', 'h-place', 'p-mono']);
     expect(rows[0]).toEqual({ kind: 'header', key: 'h-col', label: 'Collections' });
     expect(rows[1]).toMatchObject({ kind: 'collection', collection: here, count: 1 });
+  });
+
+  // More than one city chosen (owner, 22 Oct 2026): a list answers when it
+  // has a place in any of them, and under All any list with a place does.
+  it('lists the collections that touch any chosen city, and every one under All', () => {
+    const here = collection('here', { title_en: 'Mono run' });
+    const away = collection('away', { title_en: 'Mono abroad' });
+    const keysFor = (cities: readonly string[] | null) => buildSearchRows(input({
+      terms: ['mono'], query: 'mono', cities,
+      colMembers: [{ c: here, members: [mono] }, { c: away, members: [elsewhere] }, { c: collection('empty', { title_en: 'Mono none' }), members: [] }],
+    }), en).filter((r) => r.kind === 'collection').map((r) => r.key);
+    expect(keysFor(['sg'])).toEqual(['c-away']);
+    expect(keysFor(['hn', 'sg'])).toEqual(['c-here', 'c-away']);
+    expect(keysFor(null)).toEqual(['c-here', 'c-away']);
   });
 
   it('wears the collection’s cover, else its first place’s', () => {

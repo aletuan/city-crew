@@ -6,7 +6,7 @@
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -20,7 +20,8 @@ import {
 } from '../components/ui';
 import { coverOf, fmtCount, isLive, membersOf } from '../lib/data';
 import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
-import { useCurrentCity } from '../lib/city';
+import { useCityList, useCurrentCity } from '../lib/city';
+import { useSession } from '../lib/auth';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
 import { DEFAULT_TZ } from '../lib/clock';
@@ -31,7 +32,11 @@ import { buildSearchRows } from '../lib/searchRows';
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
 import { newestPlaces } from '../lib/newest';
 import { rankPopular } from '../lib/popular';
-import { queryTerms } from '../lib/search';
+import { findPlaces, queryTerms } from '../lib/search';
+import {
+  chipsWorthShowing, cityChips, countByCity, namesCities, picked as inCities, tapCity, totalFound, type CityPick,
+} from '../lib/searchCities';
+import { useSearchIndex } from '../lib/searchIndex';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
@@ -43,6 +48,8 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const [query, setQuery] = useState('');
   const { data: places } = usePlaces();
   const { city } = useCurrentCity();
+  const { cities: cityList } = useCityList();
+  const { userId } = useSession();
   const cols = useCollections();
   const tabClearance = useTabBarClearance();
   const google = useCandidates();
@@ -174,11 +181,47 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
 
   // Which sections appear, in what order, and which never mix — see
   // `lib/searchRows`.
+  // ── every city (owner, 22 Oct 2026) ──
+  //
+  // A search answers from every city now, the reader's own first, under a
+  // row of chips saying what each city found — the rules are
+  // `lib/searchCities`'. The reader's city answers from its catalog, which
+  // is on screen already and whole; the others from the index, asked for
+  // at the first letter (`useSearchIndex`). Until it lands the reader's
+  // own city answers alone, as it always did.
+  //
+  // `pick` is null until the reader taps a chip: their own city, then.
+  // State, not storage, so every visit to Search starts at home.
+  const searching = terms.length > 0;
+  const index = useSearchIndex(searching, userId);
+  const home = city?.id ?? null;
+  const everywhere = useMemo(
+    () => (index && home ? [...places, ...index.filter((p) => p.city_id !== home)] : places),
+    [index, places, home],
+  );
+  const [cityChoice, setCityChoice] = useState<CityPick | null>(null);
+  const pick: CityPick = useMemo(() => cityChoice ?? (home ? [home] : 'all'), [cityChoice, home]);
+  // What every city found, for the chips' counts. The same match the list
+  // runs (`findPlaces`), so a chip's figure is the list it opens.
+  const counts = useMemo(
+    () => countByCity(searching ? findPlaces(everywhere, query, synonyms).hits : []),
+    [searching, everywhere, query, synonyms],
+  );
+  const chips = searching && home && chipsWorthShowing(counts, home, pick) ? cityChips(counts, home, pick) : null;
+  const inPick = useMemo(() => everywhere.filter((p) => inCities(pick, p.city_id)), [everywhere, pick]);
+  const cityName = (id: string | null | undefined) => {
+    const c = cityList.find((x) => x.id === id);
+    return c ? t(c.short_en, c.short_vi, c.short_ja) : null;
+  };
+
   const rows = useMemo(
     () => buildSearchRows({
-      terms, query, recents, cats, popular, latest, colMembers, places, cityId: city?.id, fresh, synonyms,
+      terms, query, recents, cats, popular, latest, colMembers,
+      places: searching ? inPick : places,
+      cities: pick === 'all' ? null : pick,
+      fresh, synonyms,
     }, t),
-    [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, latest, cats],
+    [terms, query, places, inPick, searching, pick, colMembers, fresh, synonyms, t, recents, popular, latest, cats],
   );
 
   // Row key → position among the place hits, so a UI test can address
@@ -189,7 +232,6 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     return m;
   }, [rows]);
 
-  const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);
 
   // The fork out of a dead end: the part of town and the kind of place
@@ -197,6 +239,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // the screen is actually empty — on any other frame the answer is
   // thrown away, and this walks the whole catalog.
   const dead = searching && rows.length === 0;
+  // Found, but not in the cities chosen: the chips above say where, and the
+  // screen does not choose for the reader (owner, 22 Oct 2026).
+  const elsewhere = dead && totalFound(counts) > 0;
   const routes = useMemo(
     () => (dead ? escapeRoutes(query, places, synonyms) : []),
     [dead, query, places, synonyms],
@@ -281,6 +326,39 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: () => navigation.goBack() }}
         />
       </View>
+      {/* The cities, under the box rather than in the list, so they stay
+          while the results scroll: the reader's own first, then All, then
+          the rest most first (`lib/searchCities`). A tap puts the keyboard
+          away and keeps the words, as the reference does: the reader has
+          stopped typing to look. */}
+      {chips ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={s.cities}
+          testID="search-cities"
+        >
+          {chips.map(({ id, count }, i) => (
+            <React.Fragment key={id}>
+              <Chip
+                label={`${cityName(id) ?? id} ${count}`}
+                active={pick !== 'all' && pick.includes(id)}
+                onPress={() => { Keyboard.dismiss(); setCityChoice(tapCity(pick, id)); }}
+                testID={`search-city-${id}`}
+              />
+              {i === 0 ? (
+                <Chip
+                  label={`${t('All', 'Tất cả', 'すべて', '全部', '全部')} ${totalFound(counts)}`}
+                  active={pick === 'all'}
+                  onPress={() => { Keyboard.dismiss(); setCityChoice('all'); }}
+                  testID="search-city-all"
+                />
+              ) : null}
+            </React.Fragment>
+          ))}
+        </ScrollView>
+      ) : null}
 
       <FlatList
         data={rows}
@@ -485,6 +563,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             return (
               <PlaceCard
                 place={item.place}
+                city={namesCities(pick) ? cityName(item.place.city_id) : null}
                 testID={`search-result-${placeIndex.get(item.key) ?? 0}`}
                 onPress={() => {
                   // This tap is what makes the query worth remembering:
@@ -534,7 +613,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         // everything there is, and it is the only honest moment to say
         // "then let us go and find it".
         ListEmptyComponent={
-          searching
+          searching && elsewhere
+            ? <NoMatches term={shown} where={pick === 'all' ? null : pick.map(cityName).filter(Boolean).join(', ')} />
+          : searching
             ? (
               <>
                 <NoMatches term={shown} />
@@ -597,7 +678,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
  * state: the catalog has not got this, yet. "Yet" is load-bearing; the
  * row directly underneath offers to go and fetch it.
  */
-function NoMatches({ term }: { term: string }) {
+function NoMatches({ term, where }: { term: string; where?: string | null }) {
   const { t } = useI18n();
   return (
     <View style={s.noneBox}>
@@ -610,11 +691,17 @@ function NoMatches({ term }: { term: string }) {
           <Text style={s.noneBadgeText}>?</Text>
         </View>
       </View>
+      {/* Found in another city: said as "not here", with the chips above
+          for "there", rather than as "not anywhere". */}
       <Text style={s.noneTitle}>
-        {t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`, `没有与“${term}”匹配的结果`, `沒有與「${term}」相符的結果`)}
+        {where
+          ? t(`No matches for “${term}” in ${where}`, `Không có kết quả cho “${term}” ở ${where}`, `${where}に「${term}」の一致なし`, `${where}没有与“${term}”匹配的结果`, `${where}沒有與「${term}」相符的結果`)
+          : t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`, `没有与“${term}”匹配的结果`, `沒有與「${term}」相符的結果`)}
       </Text>
       <Text style={s.noneHint}>
-        {t('Not in City Crew yet.', 'Chưa có trong City Crew.', 'City Crew にはまだありません。', 'City Crew 里还没有。', 'City Crew 裡還沒有。')}
+        {where
+          ? t('Other cities have it: choose one above.', 'Có ở thành phố khác: chọn ở trên.', '他の都市にあります。上で選んでください。', '其他城市有：请在上方选择。', '其他城市有：請在上方選擇。')
+          : t('Not in City Crew yet.', 'Chưa có trong City Crew.', 'City Crew にはまだありません。', 'City Crew 里还没有。', 'City Crew 裡還沒有。')}
       </Text>
     </View>
   );
@@ -698,6 +785,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
+  // The chips' row: the page's margins, and the gap the Browse chips keep.
+  cities: { paddingHorizontal: space.page, paddingBottom: 12, gap: 8 },
 
   section: {
     color: colors.text, ...type.section,

@@ -49,15 +49,18 @@ export type SearchRowsInput = {
   latest: readonly Place[];
   /** Every list with its members resolved, once per catalog. */
   colMembers: readonly { c: Collection; members: Place[] }[];
+  /** The places a match is looked for in: the chosen cities' only. */
   places: Place[];
-  cityId: string | null | undefined;
+  /** The cities chosen (`lib/searchCities`), or null for every city and
+   *  for none known yet. */
+  cities: readonly string[] | null;
   /** Google's candidates not already in the catalog, or null before any. */
   fresh: readonly Candidate[] | null;
   synonyms: TermMap;
 };
 
 export function buildSearchRows(
-  { terms, query, recents, cats, popular, latest, colMembers, places, cityId, fresh, synonyms }: SearchRowsInput,
+  { terms, query, recents, cats, popular, latest, colMembers, places, cities, fresh, synonyms }: SearchRowsInput,
   t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): SearchRow[] {
   // Before a word is typed the list is the zero-state: the searches
@@ -95,15 +98,17 @@ export function buildSearchRows(
   }
   const out: SearchRow[] = [];
 
-  // Same city test as the shelf and the tab. The public query is no
-  // longer scoped to a city — a list appears wherever it has a place —
-  // so without this, searching in Hanoi would turn up lists that are
-  // entirely in Saigon, which nothing else on this screen does.
+  // Same city test as the shelf and the tab, for each city chosen. The
+  // public query is no longer scoped to a city — a list appears wherever
+  // it has a place — so without this, searching in Hanoi would turn up
+  // lists that are entirely in Saigon. A list with a place in any chosen
+  // city answers, since the places it would show are the chosen cities'.
+  const touches = (members: Place[]) => (cities ? cities.some((id) => touchesCity(members, id)) : touchesCity(members, null));
   const foundCols = colMembers
     // `collectionMatches`, so a list answers by the places inside it
     // too: "mono coffee" finds the café *and* the lists that hold it —
     // the second half of the answer this screen used to leave out.
-    .filter(({ c, members }) => touchesCity(members, cityId) && collectionMatches(c, members, terms));
+    .filter(({ c, members }) => touches(members) && collectionMatches(c, members, terms));
   if (foundCols.length) {
     out.push({ kind: 'header', key: 'h-col', label: t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集') });
     for (const { c, members } of foundCols) {

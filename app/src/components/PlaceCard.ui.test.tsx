@@ -204,6 +204,23 @@ describe('the line under the name', () => {
     expect(screen.getByText(/Ngoc Ha/)).toBeTruthy();
   });
 
+  // Search's list can hold more than one city's places (owner, 22 Oct
+  // 2026): the city goes before the district, on the district's own line.
+  it('says the city before the district when handed one, and the city alone without a district', () => {
+    const view = render(<PlaceCard testID="card" onPress={() => {}} city="Hà Nội" place={place({
+      neighborhood_en: 'Giang Vo', neighborhood_vi: 'Giảng Võ',
+    })} />);
+    expect(screen.getByTestId('card-district').textContent).toBe('Hà Nội · Giang Vo');
+    view.unmount();
+    render(<PlaceCard testID="card" onPress={() => {}} city="Hà Nội" place={place()} />);
+    expect(screen.getByTestId('card-district').textContent).toBe('Hà Nội');
+  });
+
+  it('says no city when handed none', () => {
+    render(<PlaceCard testID="card" onPress={() => {}} place={place({ neighborhood_en: 'Giang Vo' })} />);
+    expect(screen.getByTestId('card-district').textContent).toBe('Giang Vo');
+  });
+
   // Dropped rather than left blank when the catalog has no district: an
   // empty line under a name reads as a loading state.
   it('is absent when there is neither a district nor an hour', () => {

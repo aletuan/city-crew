@@ -20,10 +20,15 @@ import PhotoCredit from './PhotoCredit';
 import { KindPill } from './KindPill';
 
 export default function PlaceCard({
-  place, onPress, testID, distanceKm, chip, onLongPress, delayLongPress, onPressOut,
+  place, onPress, testID, distanceKm, chip, city, onLongPress, delayLongPress, onPressOut,
   accessibilityHint, accessibilityActions, onAccessibilityAction,
 }: {
   place: Place;
+  /** The place's city, said before its district — "Hà Nội · Giảng Võ" —
+   *  where cards from more than one city share a list (Search, owner,
+   *  22 Oct 2026). Left off everywhere a list is one city's: there it
+   *  would say the same word on every card. */
+  city?: string | null;
   /** The category the list is filtered to, if any (Explore's chip row).
    *  The pill then names it, as the map's pin does — see `pinCategory`. */
   chip?: string | null;
@@ -52,9 +57,10 @@ export default function PlaceCard({
   // The clock is read per render, not memoised, for the reason the Search
   // zero-state gives: a list left open across a closing time should not
   // keep insisting the door is open.
-  const where = place.neighborhood_en
+  const district = place.neighborhood_en
     ? localized(place, 'neighborhood', lang)
     : null;
+  const where = city ? (district ? `${city} · ${district}` : city) : district;
   const at = new Date();
   // On the place's own clock: a list can hold places from more than one
   // city (see `membersOf`), so the zone is the card's to look up.

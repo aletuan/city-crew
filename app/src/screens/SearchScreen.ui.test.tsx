@@ -53,9 +53,19 @@ vi.mock('../lib/i18n', () => ({
 // Hanoi, with no zone on the row — which reads as Vietnam — unless a
 // test puts a city with one in its place.
 const cityState = vi.hoisted(() => ({ current: { id: 'hanoi' } as { id: string; tz?: string } }));
+// Every city's names, for the chips and the cards that say which city.
+const CITIES = vi.hoisted(() => [
+  { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' },
+  { id: 'hcmc', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン' },
+  { id: 'dalat', short_en: 'Dalat', short_vi: 'Đà Lạt', short_ja: 'ダラット' },
+]);
 vi.mock('../lib/city', () => {
   const m = {
-    useCity: () => ({ city: cityState.current, cities: [cityState.current] }),
+    useCity: () => ({
+      city: cityState.current,
+      cities: [cityState.current, ...CITIES].map((c) => ({ ...CITIES.find((x) => x.id === c.id), ...c }))
+        .filter((c, i, all) => all.findIndex((x) => x.id === c.id) === i),
+    }),
   };
   const all = () => (m as { useCity: () => object }).useCity();
   return { ...m, useCurrentCity: all, useCityList: all };
@@ -74,11 +84,18 @@ vi.mock('../lib/candidates', () => ({
   useCandidates: () => ({ ...g, awayFrom: () => '' }),
 }));
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => null }));
+// Every city's places: none until a test hands some over, and a record of
+// whether the screen asked.
+const idx = vi.hoisted(() => ({ places: null as Place[] | null, asks: [] as boolean[] }));
+vi.mock('../lib/searchIndex', () => ({
+  useSearchIndex: (wanted: boolean) => { idx.asks.push(wanted); return wanted ? idx.places : null; },
+}));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: vi.fn(), isSaved: () => false });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
 });
 
+import { Keyboard } from 'react-native';
 import SearchScreen from './SearchScreen';
 
 const week = (hours: string) =>
@@ -208,6 +225,8 @@ beforeEach(async () => {
     batch: { running: false, state: {}, done: 0, total: 0 },
   });
   g.run.mockClear();
+  idx.places = null;
+  idx.asks = [];
   g.addMany.mockClear();
   g.clear.mockClear();
   await AsyncStorage.removeItem(RECENTS_KEY);
@@ -655,5 +674,130 @@ describe('the keyboard', () => {
     expect(document.activeElement).not.toBe(input());
     await new Promise((r) => setTimeout(r, 700));
     expect(document.activeElement).not.toBe(input());
+  });
+});
+
+// Every city answers (owner, 22 Oct 2026): the reader's own first, under
+// chips that say what each city found. The rules are `lib/searchCities`'.
+describe('every city', () => {
+  const brew = (slug: string, city_id: string, neighborhood_en: string) =>
+    place({ slug, city_id, name_en: `Bold Brew ${slug}`, neighborhood_en, created_at: '2026-01-01T00:00:00Z' } as Partial<Place>);
+  const hn = brew('hn', 'hanoi', 'Giang Vo');
+  const sg1 = brew('sg1', 'hcmc', 'District 1');
+  const sg2 = brew('sg2', 'hcmc', 'District 3');
+  const dl = brew('dl', 'dalat', 'Ward 2');
+  const chip = (id: string) => screen.getByTestId(`search-city-${id}`);
+  const chipIds = () => [...screen.getByTestId('search-cities').querySelectorAll('[data-testid^="search-city-"]')]
+    .map((e) => e.getAttribute('data-testid')!.slice('search-city-'.length));
+  const results = () => screen.queryAllByTestId(/^search-result-\d+$/).map((e) => e.textContent ?? '');
+
+  beforeEach(() => {
+    cat.places = [hn, cong, pho, museum];
+    idx.places = [hn, sg1, sg2, dl];
+  });
+
+  it('asks for every city only once a word is typed', () => {
+    mount();
+    expect(idx.asks.every((w) => !w)).toBe(true);
+    type('bold');
+    expect(idx.asks.at(-1)).toBe(true);
+  });
+
+  it('starts at home, with the cities that found something beside it, All second', () => {
+    mount();
+    type('bold');
+    expect(chipIds()).toEqual(['hanoi', 'all', 'hcmc', 'dalat']);
+    expect(chip('hanoi').textContent).toBe('Hanoi 1');
+    expect(chip('all').textContent).toBe('All 4');
+    expect(chip('hcmc').textContent).toBe('Saigon 2');
+    expect(chip('hanoi').getAttribute('aria-selected')).toBe('true');
+    expect(chip('hcmc').getAttribute('aria-selected')).toBe('false');
+    // Home only, and one city on screen says no city on its cards.
+    expect(results()).toHaveLength(1);
+    expect(screen.getByTestId('search-result-0-district').textContent).toBe('Giang Vo');
+  });
+
+  it('adds a city, and every card says its city', () => {
+    const dismiss = vi.spyOn(Keyboard, 'dismiss');
+    mount();
+    type('bold');
+    fireEvent.click(chip('hcmc'));
+    expect(dismiss).toHaveBeenCalled();
+    expect(input().value).toBe('bold');
+    expect(results()).toHaveLength(3);
+    const lines = screen.getAllByTestId(/^search-result-\d+-district$/).map((e) => e.textContent);
+    expect(lines).toEqual(expect.arrayContaining(['Hanoi · Giang Vo', 'Saigon · District 1', 'Saigon · District 3']));
+  });
+
+  it('puts a city down while another stays, and never the last', () => {
+    mount();
+    type('bold');
+    fireEvent.click(chip('hcmc'));
+    fireEvent.click(chip('hanoi'));
+    expect(results()).toHaveLength(2);
+    expect(chip('hanoi').getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(chip('hcmc'));
+    expect(results()).toHaveLength(2);
+    expect(chip('hcmc').getAttribute('aria-selected')).toBe('true');
+  });
+
+  // From every city to one, never "every city but this one".
+  it('shows every city under All, and a city tapped under All alone', () => {
+    mount();
+    type('bold');
+    fireEvent.click(chip('all'));
+    expect(results()).toHaveLength(4);
+    expect(chip('all').getAttribute('aria-selected')).toBe('true');
+    expect(chip('hanoi').getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(chip('dalat'));
+    expect(results()).toHaveLength(1);
+    expect(screen.getByTestId('search-result-0-district').textContent).toBe('Ward 2');
+  });
+
+  it('draws no row when every place found is at home', () => {
+    mount();
+    type('cong');
+    expect(screen.queryByTestId('search-cities')).toBeNull();
+    expect(results()).toHaveLength(1);
+  });
+
+  it('draws no row before a word, nor before the other cities are in', () => {
+    idx.places = null;
+    mount();
+    expect(screen.queryByTestId('search-cities')).toBeNull();
+    type('bold');
+    expect(screen.queryByTestId('search-cities')).toBeNull();
+    expect(results()).toHaveLength(1);
+  });
+
+  // New words that only home answers must not strand the reader in a city
+  // with no chip left to leave it by.
+  it('keeps the chosen city’s chip when new words find nothing there', () => {
+    mount();
+    type('bold');
+    fireEvent.click(chip('hcmc'));
+    fireEvent.click(chip('hanoi'));
+    type('cong');
+    expect(chipIds()).toEqual(['hanoi', 'all', 'hcmc']);
+    expect(chip('hcmc').textContent).toBe('Saigon 0');
+    expect(screen.getByText('No matches for “cong” in Saigon')).toBeTruthy();
+    fireEvent.click(chip('hanoi'));
+    expect(results()).toHaveLength(1);
+  });
+
+  // Nothing switches by itself: the screen says where, the chips go there.
+  it('says nothing was found at home, and that other cities have it', () => {
+    cat.places = [cong, pho, museum];
+    idx.places = [sg1, dl];
+    mount();
+    type('bold');
+    expect(chipIds()).toEqual(['hanoi', 'all', 'dalat', 'hcmc']);
+    expect(chip('hanoi').textContent).toBe('Hanoi 0');
+    expect(screen.getByText('No matches for “bold” in Hanoi')).toBeTruthy();
+    expect(screen.getByText('Other cities have it: choose one above.')).toBeTruthy();
+    expect(screen.queryByText(/We look it up on Google Maps/)).toBeNull();
+    fireEvent.click(chip('hcmc'));
+    fireEvent.click(chip('hanoi'));
+    expect(results()).toHaveLength(1);
   });
 });
