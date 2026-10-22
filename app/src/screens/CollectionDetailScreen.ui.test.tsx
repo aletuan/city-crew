@@ -2079,7 +2079,7 @@ describe('the actions and the dock', () => {
 // own list a tile is held and dragged as a card is.
 describe('the grid', () => {
   const VIEW = 'citycrew.collection.view';
-  const NOTICE = 'citycrew.collection.gridNotice';
+  const NOTICE = 'citycrew.collection.gridNotice.v2';
   beforeEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
   afterEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
   const toGrid = () => { openMenu(); fireEvent.click(menuRow('Grid')); endModalFade(); };
@@ -2279,7 +2279,8 @@ describe('the grid', () => {
   });
 
   // The grid as the default (owner, 22 Oct 2026), for a reader who has
-  // chosen no view; and the notice that says so, once.
+  // chosen no view; and the notice that says so to everybody on the grid,
+  // until they close it themselves.
   describe('as the default', () => {
     beforeEach(() => { views.fallback = null; });
     const banner = () => screen.queryByTestId('collection-grid-notice');
@@ -2301,12 +2302,33 @@ describe('the grid', () => {
       expect(ring()).toBeNull();
     });
 
-    it('tells nobody who chose the grid themselves', async () => {
+    // Everybody on the grid, the owner's own phone included, which chose
+    // the grid the morning it shipped and was told nothing under the first
+    // rule.
+    it('tells a reader who chose the grid themselves too', async () => {
       await AsyncStorage.setItem(VIEW, 'grid');
       show();
       await reads();
       expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+      expect(banner()).toBeTruthy();
+      expect(ring()).toBeTruthy();
+    });
+
+    // About the grid, so not on the cards; and back on the grid until it
+    // is closed.
+    it('leaves the cards alone, and is back on the grid until closed', async () => {
+      show();
+      await reads();
+      openMenu();
+      fireEvent.click(menuRow('List'));
+      endModalFade();
+      expect(screen.getByText('card:Pho 10')).toBeTruthy();
       expect(banner()).toBeNull();
+      expect(ring()).toBeNull();
+      openMenu();
+      fireEvent.click(menuRow('Grid'));
+      endModalFade();
+      expect(banner()).toBeTruthy();
     });
 
     // Not before both reads are in: until then a reader who chose the
@@ -2342,6 +2364,21 @@ describe('the grid', () => {
       vi.mocked(AsyncStorage.getItem).mockRestore();
     });
 
+    // Nor, while the view's own read is out, a reader who chose the cards
+    // and is being shown the grid by default for a moment.
+    it('waits for the answer to which view the reader chose', async () => {
+      await AsyncStorage.setItem(VIEW, 'list');
+      const getItem = AsyncStorage.getItem.bind(AsyncStorage);
+      vi.spyOn(AsyncStorage, 'getItem').mockImplementation((key: string) => (
+        key === VIEW ? new Promise(() => {}) : getItem(key)
+      ) as never);
+      show();
+      await reads();
+      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
+      expect(banner()).toBeNull();
+      vi.mocked(AsyncStorage.getItem).mockRestore();
+    });
+
     it('goes for good with its ×', async () => {
       const view = show();
       await reads();
@@ -2357,14 +2394,24 @@ describe('the grid', () => {
       expect(banner()).toBeNull();
     });
 
-    // The menu it points to: opening it is reading it.
-    it('goes for good when the ⋯ menu is opened', async () => {
+    // Opening the menu it points to is not closing it: only its ×.
+    it('stays when the ⋯ menu is opened', async () => {
       show();
       await reads();
       openMenu();
-      expect(banner()).toBeNull();
-      expect(ring()).toBeNull();
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(NOTICE, 'seen');
+      endModalFade();
+      expect(banner()).toBeTruthy();
+      expect(ring()).toBeTruthy();
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(NOTICE, 'seen');
+    });
+
+    // A phone the first rule marked as told, by a menu opened, is told again.
+    it('takes no notice of the first rule’s mark', async () => {
+      await AsyncStorage.setItem('citycrew.collection.gridNotice', 'seen');
+      show();
+      await reads();
+      expect(banner()).toBeTruthy();
+      await AsyncStorage.removeItem('citycrew.collection.gridNotice');
     });
 
     it('stays while the reader only looks, until they answer it', async () => {
