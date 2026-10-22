@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
-import type { View } from 'react-native';
+import { AccessibilityInfo, Animated, type View } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { SignupTourProvider, useSignupTour, useTourAnchor } from './SignupTour';
 const state = vi.hoisted(() => ({ uid: 'new', route: 'ExploreHome', offscreen: false, y: 60, anchors: true, x: 40, w: 40, h: 40, duplicate: false, focused: true, bottom: 0, readings: [] as number[] }));
@@ -84,7 +84,62 @@ it('keeps the count beside the title, with no close button of its own, over a li
   expect(screen.getByText('1/4').parentElement).toBe(screen.getByText('Tìm nơi bạn muốn đến').parentElement);
   expect(screen.queryByText('×')).toBeNull();
   expect(screen.getAllByLabelText('Đóng hướng dẫn')).toHaveLength(1);
-  expect(getComputedStyle(screen.getByLabelText('Đóng hướng dẫn')).backgroundColor).toBe('rgba(6, 5, 8, 0.25)');
+  expect(screen.getByTestId('signup-tour-scrim').getAttribute('fill')).toBe('rgba(6,5,8,0.25)');
+});
+// The spotlight (owner, 22 Oct 2026): the scrim is the screen with the
+// ring's shape cut out of it, so the control the step is about is the one
+// thing left bright. The hole has the ring's round ends: a circle round
+// the 48pt search ring, a capsule round the tab's 40×32.
+it('cuts the ring’s shape out of the scrim, and follows it from step to step', async () => {
+  render(tree()); await start();
+  const scrim = () => screen.getByTestId('signup-tour-scrim');
+  expect(scrim().getAttribute('fill-rule')).toBe('evenodd');
+  expect(scrim().getAttribute('d')).toBe(
+    'M0 0H390V844H0Z'
+    + 'M60 56H60A24 24 0 0 1 84 80V80A24 24 0 0 1 60 104H60A24 24 0 0 1 36 80V80A24 24 0 0 1 60 56Z',
+  );
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/4');
+  state.route = 'PlaceDetail';
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/4');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/4');
+  expect(scrim().getAttribute('d')).toBe(
+    'M0 0H390V844H0Z'
+    + 'M56 64H64A16 16 0 0 1 80 80V80A16 16 0 0 1 64 96H56A16 16 0 0 1 40 80V80A16 16 0 0 1 56 64Z',
+  );
+  // A tap in the hole is the ring's, not the scrim's.
+  fireEvent.click(screen.getByTestId('signup-tour-target'));
+  await waitFor(() => expect(pressed).toHaveBeenCalledOnce());
+});
+// The pulse (owner, 22 Oct 2026): a second ring grows out of the first
+// and fades, three times, and stops inside the five seconds after which
+// WCAG 2.2.2 asks that motion can be paused.
+it('pulses the ring three times and stops inside five seconds', async () => {
+  const loop = vi.spyOn(Animated, 'loop');
+  const timing = vi.spyOn(Animated, 'timing');
+  const delay = vi.spyOn(Animated, 'delay');
+  render(tree()); await start();
+  const pulse = screen.getByTestId('signup-tour-pulse');
+  const ring = screen.getByTestId('signup-tour-target');
+  // The ring's own place and size, under it.
+  for (const k of ['left', 'top', 'width', 'height'] as const) expect(pulse.style[k]).toBe(ring.style[k]);
+  expect(pulse.compareDocumentPosition(ring) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  await waitFor(() => expect(loop).toHaveBeenCalled());
+  const iterations = loop.mock.calls.at(-1)![1]!.iterations!;
+  const out = (timing.mock.calls.at(-1)![1] as { duration: number }).duration;
+  const rest = delay.mock.calls.at(-1)![0];
+  expect(iterations).toBe(3);
+  expect(iterations * (out + rest)).toBeLessThanOrEqual(5000);
+  loop.mockRestore(); timing.mockRestore(); delay.mockRestore();
+});
+// Reduce Motion: no pulse. The cut-out and the ring already say where.
+it('draws no pulse for a reader who asked for less motion', async () => {
+  const reduce = vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+  const loop = vi.spyOn(Animated, 'loop');
+  render(tree()); await start();
+  await waitFor(() => expect(screen.queryByTestId('signup-tour-pulse')).toBeNull());
+  expect(screen.getByTestId('signup-tour-scrim')).toBeTruthy();
+  expect(loop.mock.calls.filter(([, cfg]) => cfg?.iterations === 3)).toHaveLength(0);
+  reduce.mockRestore(); loop.mockRestore();
 });
 it('skips the entire guide and does not reopen for the same account', async () => {
   render(tree()); await start();
