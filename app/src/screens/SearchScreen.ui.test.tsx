@@ -767,6 +767,17 @@ describe('every city', () => {
     expect(results().map((r) => r.match(/Bold Brew ([a-z]+\d*)/)![1])).toEqual(['hn', 'dl']);
   });
 
+  // A horizontal ScrollView grows by default (flexGrow 1), and the row
+  // sits in the screen's column beside the list, which grows too: with a
+  // short list the two split the empty height, and "boat" stood its one
+  // card a third of the screen below the chips (owner, 22 Oct 2026). jsdom
+  // lays nothing out, so the rule is read where it is written.
+  it('keeps the row to its chips’ height, however short the list under it', () => {
+    mount();
+    type('bold');
+    expect(getComputedStyle(screen.getByTestId('search-cities')).flexGrow).toBe('0');
+  });
+
   it('draws no row when every place found is at home', () => {
     mount();
     type('cong');
