@@ -81,11 +81,12 @@ export function AttentionPulse({ frame, runKey, testID }: { frame: Frame; runKey
 }
 
 /** A ring and its pulse round a control, at `frame`. Touches pass through
- *  to the control underneath. */
-export function AttentionRing({ frame, testID }: { frame: Frame; testID?: string }) {
+ *  to the control underneath. The pulse runs again whenever `runKey`
+ *  changes: the screen coming back into view, for the ⋯ button. */
+export function AttentionRing({ frame, runKey, testID }: { frame: Frame; runKey?: unknown; testID?: string }) {
   return (
     <>
-      <AttentionPulse frame={frame} testID={testID && `${testID}-pulse`} />
+      <AttentionPulse frame={frame} runKey={runKey} testID={testID && `${testID}-pulse`} />
       <Animated.View testID={testID} pointerEvents="none" style={[attentionRing, frame]} />
     </>
   );

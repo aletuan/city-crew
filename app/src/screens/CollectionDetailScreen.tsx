@@ -563,6 +563,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const noticing = viewFrom !== 'reading' && noticeFrom !== 'reading' && notice === 'unseen'
     && grid && members.length > 0;
   const closeNotice = () => keepNotice('seen');
+  // Each time the screen comes back into view with the notice still open,
+  // the ⋯ button's ring pulses its three again (owner, 22 Oct 2026). The
+  // first three ran while the screen was still sliding in, under eyes on
+  // the photographs, and a reader back from a place found only the still
+  // ring. Not pulsing on and on: the × is there to stop it, but a ring
+  // breathing in the corner for as long as one browses is a nag.
+  const [visits, setVisits] = useState(0);
+  useEffect(() => navigation.addListener('focus', () => setVisits((n) => n + 1)), [navigation]);
   /*
    * The two views, in either menu: how a list is looked at is the
    * reader's, whoever made the list. A choice of two under its own name,
@@ -1259,7 +1267,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         {/* The guide's own "look here" (`Attention`), while the grid notice
             points at this button: 4pt clear of the 44pt circle, as the
             guide rings its round search button. */}
-        {noticing && <AttentionRing frame={MORE_RING} testID="collection-more-ring" />}
+        {noticing && <AttentionRing frame={MORE_RING} runKey={visits} testID="collection-more-ring" />}
       </View>
     </View>
   ) : null;
