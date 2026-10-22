@@ -20,7 +20,9 @@
 //   drags it to where it lands (or uses VoiceOver's Move up / Move down),
 //   a tip under the title says so, and the order saves itself a beat
 //   after the last move, the whole sequence in one write;
-// - deleting is behind a confirmation and tells the taste profile.
+// - deleting is behind a confirmation and tells the taste profile;
+// - either menu turns the cards into a grid of tiles and back, and the
+//   choice is the reader's, kept for every list.
 //
 // Mocks sit at the screen's own seams: the `lib/*` hooks it reads and the
 // `lib/data` writes it calls. `membersOf` and `publishBlockers` stay real,
@@ -31,6 +33,7 @@
 import React from 'react';
 import { AccessibilityInfo, Alert, LayoutAnimation, PanResponder, type PanResponderCallbacks } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
@@ -172,7 +175,7 @@ const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 
 const live = { is_published: true, review_status: 'approved' };
 const place = (slug: string, name: string, over: Partial<Place> = {}): Place => ({
-  slug, name_en: name, name_vi: name, name_ja: null, neighborhood_en: `${name} area`,
+  slug, name_en: name, name_vi: name, name_ja: null, neighborhood_en: `${name} area`, place_photos: [],
   ...live, ...over,
 } as unknown as Place);
 
@@ -1968,5 +1971,84 @@ describe('the actions and the dock', () => {
     act(() => focusListeners.forEach((cb) => cb()));
     settle();
     expect(screen.queryByTestId('collection-dock')).toBeNull();
+  });
+});
+
+// Two ways to look at a list (owner, 22 Oct 2026): the cards, or a grid of
+// three to a row. One choice for every list, kept on the phone; the way
+// between them is a row in either menu, named for where it goes. The grid
+// shows the list's order and does not change it — that is the cards' job
+// until the grid learns to drag.
+describe('the grid', () => {
+  const VIEW = 'citycrew.collection.view';
+  beforeEach(async () => { await AsyncStorage.removeItem(VIEW); });
+  afterEach(async () => { await AsyncStorage.removeItem(VIEW); });
+  const toGrid = () => { openMenu(); fireEvent.click(menuRow('Grid view')); endModalFade(); };
+  const tiles = () => [0, 1, 2].map((i) => screen.getByTestId(`collection-tile-${i}`).textContent);
+
+  it('opens on the cards, and the menu offers the grid', () => {
+    show();
+    expect(screen.getByText('card:Pho 10')).toBeTruthy();
+    expect(screen.queryByTestId('collection-tile-0')).toBeNull();
+    openMenu();
+    expect(menuRow('Grid view')).toBeTruthy();
+  });
+
+  it('draws the places as tiles in the list’s order, and remembers the choice', () => {
+    show();
+    toGrid();
+    expect(tiles()).toEqual([
+      expect.stringContaining('Pho 10'), expect.stringContaining('Cafe Giang'), expect.stringContaining('Fine Arts Museum'),
+    ]);
+    expect(screen.queryByText('card:Pho 10')).toBeNull();
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(VIEW, 'grid');
+  });
+
+  it('names the way back, and takes it', () => {
+    show();
+    toGrid();
+    openMenu();
+    expect(screen.queryByText('Grid view')).toBeNull();
+    fireEvent.click(menuRow('List view'));
+    expect(screen.getByText('card:Pho 10')).toBeTruthy();
+    expect(screen.queryByTestId('collection-tile-0')).toBeNull();
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(VIEW, 'list');
+  });
+
+  it('opens on the grid when that was the last choice, on any list', async () => {
+    await AsyncStorage.setItem(VIEW, 'grid');
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    await waitFor(() => expect(screen.getByTestId('collection-tile-0')).toBeTruthy());
+  });
+
+  it('opens a place from its tile', () => {
+    const { raw } = show();
+    toGrid();
+    fireEvent.click(screen.getByTestId('collection-tile-1'));
+    expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
+  });
+
+  it('lifts nothing in the grid, even on the owner’s own list', () => {
+    show();
+    expect(screen.getByTestId('drag-pho')).toBeTruthy();
+    toGrid();
+    expect(document.querySelector('[data-testid^="drag-"]')).toBeNull();
+  });
+
+  // How a list is looked at is the reader's, whoever made the list.
+  it('is in a visitor’s menu too, and leads it when nothing else does', () => {
+    state.mine = [];
+    state.city = null;
+    state.cols = [theirs({ city_id: null } as Partial<Collection>, [])];
+    show();
+    openMenu();
+    const rows = [...document.querySelectorAll('[aria-modal] [role="button"]')].filter((b) => b.textContent);
+    expect(rows[0].textContent).toBe('Grid view');
+    // The first row carries no rule above it; every row after it does.
+    const rule = (el: Element) => parseFloat(getComputedStyle(el).borderTopWidth) || 0;
+    expect(rule(rows[0])).toBe(0);
+    expect(rule(rows[1])).toBeGreaterThan(0);
   });
 });
