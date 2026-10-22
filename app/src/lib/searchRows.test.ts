@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildSearchRows, type SearchRowsInput } from './searchRows';
 import { RECENTS_SHOWN } from './recents';
+import { fold } from './search';
 import type { Collection, Place } from './types';
 import type { Candidate } from './suggest';
 
@@ -93,6 +94,17 @@ describe('buildSearchRows — results', () => {
     expect(keysFor(['sg'])).toEqual(['c-away']);
     expect(keysFor(['hn', 'sg'])).toEqual(['c-here', 'c-away']);
     expect(keysFor(null)).toEqual(['c-here', 'c-away']);
+  });
+
+  // `collectionMatches` holds a word typed with marks to them: "phở" is
+  // not answered by a list whose blurb walks down a "phố".
+  it('holds a list to the marks the reader typed', () => {
+    const walk = collection('walk', { title_en: 'Lanes', desc_vi: 'những con phố nhỏ' });
+    const keysFor = (query: string) => buildSearchRows(input({
+      terms: [fold(query)], query, colMembers: [{ c: walk, members: [mono] }],
+    }), en).filter((r) => r.kind === 'collection').map((r) => r.key);
+    expect(keysFor('phở')).toEqual([]);
+    expect(keysFor('phố')).toEqual(['c-walk']);
   });
 
   it('wears the collection’s cover, else its first place’s', () => {

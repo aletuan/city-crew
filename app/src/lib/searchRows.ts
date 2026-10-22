@@ -113,7 +113,7 @@ export function buildSearchRows(
     // `collectionMatches`, so a list answers by the places inside it
     // too: "mono coffee" finds the café *and* the lists that hold it —
     // the second half of the answer this screen used to leave out.
-    .filter(({ c, members }) => touches(members) && collectionMatches(c, members, terms));
+    .filter(({ c, members }) => touches(members) && collectionMatches(c, members, terms, query));
   if (foundCols.length) {
     out.push({ kind: 'header', key: 'h-col', label: t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集') });
     for (const { c, members } of foundCols) {

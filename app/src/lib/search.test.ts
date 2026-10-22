@@ -479,6 +479,60 @@ describe('findPlaces', () => {
       expect(overlap, q).toEqual([]);
     }
   });
+
+  // ── a word typed with marks means those marks (owner, 22 Oct 2026) ──
+  //
+  // "phở" folded to "pho" and found every "phố" and "phòng": 13 places in
+  // Melbourne, which has no phở.
+  describe('a word typed with marks', () => {
+    const thin = { name_vi: 'Phở Thìn', desc_vi: 'phở bò tái lăn' };
+    const street = { name_en: 'Hosier Lane', desc_vi: 'con phố graffiti nổi tiếng' };
+    const room = { name_en: 'State Library', desc_vi: 'phòng đọc mái vòm, phong cách cổ điển' };
+    const bare = { name_en: 'Pho Ngoc', name_vi: 'Pho Ngoc' };
+    const photo = { name_en: 'Photo Booth Bar' };
+    const hits = (q: string, places: Searchable[]) => findPlaces(places, q, {}).hits;
+
+    it('finds those marks, and not a word that only folds the same', () => {
+      expect(hits('phở', [street, room, thin, photo])).toEqual([thin]);
+    });
+
+    // The desk wrote two phở shops with no marks at all; "phở" still has
+    // to reach them, and the one written with marks comes first.
+    it('finds a word written bare when the whole word folds to it', () => {
+      expect(hits('phở', [bare, thin, photo])).toEqual([thin, bare]);
+    });
+
+    it('finds a word written bare in an English sentence too, but not one it merely begins', () => {
+      expect(hits('phở', [{ name_en: 'Somewhere', desc_en: 'the best pho, served at dawn' }])).toHaveLength(1);
+      expect(hits('phở', [{ name_en: 'Somewhere', desc_en: 'phone ahead for a table' }])).toEqual([]);
+    });
+
+    // Telex reaches "phở" through "phơ": a word half typed still begins
+    // the one it is on its way to.
+    it('finds the word it is on its way to while it is being typed', () => {
+      expect(hits('phơ', [thin, street])).toEqual([thin]);
+      expect(hits('phô', [thin, street])).toEqual([street]);
+    });
+
+    it('holds every marked word to its marks, and leaves a bare one folding', () => {
+      expect(hits('phở tái', [thin, street])).toEqual([thin]);
+      expect(hits('phở tại', [thin])).toEqual([]);
+      expect(hits('phở tai', [thin])).toEqual([thin]);
+    });
+
+    // "đinh" carries no tone: đ is its only mark, and it is one.
+    it('treats đ as a mark', () => {
+      const street = { name_en: 'Somewhere', address: '12 Đinh Tiên Hoàng' };
+      const sticky = { name_en: 'Xoi Bar', desc_vi: 'xôi dính tay' };
+      expect(hits('đinh', [street, sticky])).toEqual([street]);
+      expect(hits('dinh', [street, sticky])).toHaveLength(2);
+    });
+
+    // Whoever typed "pho" may mean either: bare words fold as before.
+    it('changes nothing for a query typed bare', () => {
+      expect(hits('pho', [street, room, thin, photo])).toHaveLength(4);
+    });
+  });
 });
 
 describe('collectionHaystack', () => {
@@ -573,6 +627,17 @@ describe('findCollections', () => {
   it('exposes the same verdict per collection through collectionMatches', () => {
     expect(collectionMatches(cafes.c, cafes.members, queryTerms('huynh hoa'))).toBe(true);
     expect(collectionMatches(cafes.c, cafes.members, queryTerms('sky'))).toBe(false);
+  });
+
+  // The places' rule for marks: "phở" is not answered by a list whose
+  // blurb walks down a "phố", nor by one that holds a "Phòng" by name.
+  it('holds a word typed with marks to its marks', () => {
+    const walk = { c: { title_en: 'Melbourne lanes', desc_vi: 'đi bộ dọc những con phố' }, members: [] };
+    const bowl = { c: { title_en: 'Hanoi in a bowl' }, members: [{ name_vi: 'Phở Thìn' }] };
+    const room = { c: { title_en: 'Work spots' }, members: [{ name_vi: 'Phòng Trà' }] };
+    expect(findCollections([walk, bowl, room], 'phở')).toEqual([bowl.c]);
+    expect(findCollections([walk, bowl, room], 'pho')).toEqual([walk.c, bowl.c, room.c]);
+    expect(collectionMatches(walk.c, [], ['pho'])).toBe(true);
   });
 });
 

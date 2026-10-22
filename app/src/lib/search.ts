@@ -154,15 +154,30 @@ const haystacks = new WeakMap<object, string>();
 export function placeHaystack(p: Searchable): string {
   const cached = haystacks.get(p);
   if (cached !== undefined) return cached;
-  const built = fold([
+  const built = fold(placeText(p));
+  haystacks.set(p, built);
+  return built;
+}
+
+/** What `placeHaystack` folds, as written. */
+function placeText(p: Searchable): string {
+  return [
     ...allLocalized(p, 'name'),
     ...allLocalized(p, 'neighborhood'),
     ...allLocalized(p, 'desc'),
     (p.vibe_tags ?? []).join(' '),
     categoryWords(p),
     p.address,
-  ].join(' '));
-  haystacks.set(p, built);
+  ].join(' ');
+}
+
+/** `placeText`'s words as written, remembered as the haystack is. */
+const writtenWords = new WeakMap<object, readonly string[]>();
+function placeWords(p: Searchable): readonly string[] {
+  const cached = writtenWords.get(p);
+  if (cached !== undefined) return cached;
+  const built = wordsAsWritten(placeText(p));
+  writtenWords.set(p, built);
   return built;
 }
 
@@ -231,10 +246,11 @@ export function kindAnswersTo(p: Searchable, query: string, terms: TermMap): boo
  * Inside a tier, two smaller things: the whole query standing together
  * somewhere rather than spread across a paragraph (what tells Hap Hap's
  * "tán … hiên" apart from a description that says "tán hiên"), and, when
- * the reader typed marks, finding them as typed. "tân" and "tán" fold to
- * the same "tan" and both must still match — somebody without a
- * Vietnamese keyboard types neither — but the one who typed "tán" meant
- * that one.
+ * the reader typed marks, finding them as typed. Since 22 Oct 2026 a word
+ * typed with marks only matches those marks or a word written bare
+ * (`marksAgree`), so this bonus no longer tells "tán" from "tân" — "tân"
+ * is not let through — but it still puts "Phở Thìn" above a "Pho Ngoc"
+ * written without them.
  *
  * Neither crosses a tier: a description that happens to say the phrase
  * stays under a place named by it. The bonuses are 2 and 1 inside a step
@@ -275,6 +291,54 @@ function categoryWords(p: Searchable): string {
 
 /** Lowercase and composed, marks kept: the reader's own spelling. */
 const marked = (s: string) => s.normalize('NFC').toLowerCase();
+
+/**
+ * ── a word typed with marks means those marks (owner, 22 Oct 2026) ──
+ *
+ * Folding lets a reader with no Vietnamese keyboard type "pho" and reach
+ * "Phở". It also made "phở" reach every "phố" (street), "phòng" (room)
+ * and "phong" (style) in the catalog, since all of them fold to "pho":
+ * 222 published places answered "phở" and 16 had it, 13 of the 222 in
+ * Melbourne, which has no phở at all. Measured on the live catalog the
+ * day the owner typed it.
+ *
+ * So a word typed with marks must find a word written with the same
+ * marks, from its start — or a word written with none at all that folds
+ * to it whole. The second half is for a place written without marks, as
+ * Google often hands a name over: two of the 16 were "Pho 10 Ly Quoc Su"
+ * and "Pho Ngoc" until the desk wrote them properly the same day, and the
+ * next one must not drop out of "phở" while it waits for the same. Whole,
+ * so "phong" and "photo", which carry no marks either, do not come back
+ * in by that door.
+ *
+ * Compared decomposed, so a word half typed still begins the word it is
+ * on its way to: Telex reaches "phở" through "phơ", and "phơ" does not
+ * begin "phở" until both are taken apart into letter and marks.
+ *
+ * A word typed bare folds as it always has: whoever typed "pho" may mean
+ * either, and the name tier ranks the "Phở" ones first.
+ */
+function hasMarks(w: string): boolean {
+  return /[\u0300-\u036f]/.test(w.normalize('NFKD')) || /đ/i.test(w);
+}
+
+/** A text's words, lowercase and decomposed, marks kept. */
+function wordsAsWritten(text: string): string[] {
+  return text.normalize('NFD').toLowerCase().split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
+}
+
+/** The words of the query typed with marks, as `wordsAsWritten` has them. */
+function markedTerms(query: string): string[] {
+  return wordsAsWritten(query).filter(hasMarks);
+}
+
+/** Does every word typed with marks find itself among `words`? */
+function marksAgree(words: readonly string[], typed: readonly string[]): boolean {
+  return typed.every((w) => {
+    const bare = fold(w);
+    return words.some((t) => t.startsWith(w) || (fold(t) === bare && !hasMarks(t)));
+  });
+}
 
 /** Did the reader type marks, and does the place carry every marked word
  *  exactly so? A query with no marks says nothing either way. */
@@ -333,7 +397,9 @@ export function findPlaces<T extends Searchable>(
 ): { hits: T[]; related: T[] } {
   const words = queryTerms(query);
   if (!words.length) return { hits: [], related: [] };
-  const hits = rankHits(places.filter((p) => matches(placeHaystack(p), words)), query);
+  const typed = markedTerms(query);
+  const hits = rankHits(places.filter((p) =>
+    matches(placeHaystack(p), words) && (!typed.length || marksAgree(placeWords(p), typed))), query);
   if (hits.length) return { hits, related: [] };
   const phrase = fold(query).trim();
   return { hits, related: places.filter((p) => kindAnswersTo(p, phrase, terms)) };
@@ -379,10 +445,19 @@ function memberNames(members: readonly Searchable[]): string {
  * rebuilt per render anyway, so a WeakMap would miss every time.
  */
 export function collectionMatches(
-  c: SearchableCollection, members: readonly Searchable[], terms: readonly string[],
+  c: SearchableCollection, members: readonly Searchable[], terms: readonly string[], query = '',
 ): boolean {
   const bare = terms.map((t) => t.replace(/^@/, ''));
-  return matches(`${collectionHaystack(c)} ${memberNames(members)}`, bare);
+  if (!matches(`${collectionHaystack(c)} ${memberNames(members)}`, bare)) return false;
+  // The places' rule for marks (`marksAgree`): "phở" is not answered by a
+  // list whose blurb walks down a "phố".
+  const typed = markedTerms(query);
+  if (!typed.length) return true;
+  const text = [
+    c.title_en, c.title_vi, c.title_ja, c.desc_en, c.desc_vi, c.desc_ja, c.curator_handle,
+    ...members.flatMap((m) => allLocalized(m, 'name')),
+  ].join(' ');
+  return marksAgree(wordsAsWritten(text), typed);
 }
 
 /**
@@ -397,7 +472,7 @@ export function findCollections<C extends SearchableCollection>(
 ): C[] {
   const terms = queryTerms(query);
   if (!terms.length) return pairs.map(({ c }) => c);
-  return pairs.filter(({ c, members }) => collectionMatches(c, members, terms)).map(({ c }) => c);
+  return pairs.filter(({ c, members }) => collectionMatches(c, members, terms, query)).map(({ c }) => c);
 }
 
 /**
