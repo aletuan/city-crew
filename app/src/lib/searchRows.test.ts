@@ -120,6 +120,22 @@ describe('buildSearchRows — results', () => {
     expect(keys({ terms: ['cgv'], query: 'cgv', places: [cgv], synonyms })).toEqual(['h-place', 'p-cgv']);
   });
 
+  // The places city by city in the chips' order, the reader's own first;
+  // with no order the match's own ranking stands.
+  it('lists the places, and the related ones, city by city in the chips’ order', () => {
+    const sgMono = place('sgmono', { name_en: 'Mono', city_id: 'sg' });
+    const hnMono = place('hnmono', { name_en: 'Mono Hanoi' });
+    expect(keys({ terms: ['mono'], query: 'mono', places: [sgMono, hnMono], cities: null }))
+      .toEqual(['h-place', 'p-sgmono', 'p-hnmono']);
+    expect(keys({ terms: ['mono'], query: 'mono', places: [sgMono, hnMono], cities: null, cityOrder: ['hn', 'sg'] }))
+      .toEqual(['h-place', 'p-hnmono', 'p-sgmono']);
+    const synonyms = { fun: ['cinema'] };
+    const sgCgv = place('sgcgv', { name_en: 'CGV', categories: ['fun'], city_id: 'sg' });
+    const hnCgv = place('hncgv', { name_en: 'CGV', categories: ['fun'] });
+    expect(keys({ terms: ['cinema'], query: 'cinema', places: [sgCgv, hnCgv], cities: null, cityOrder: ['hn', 'sg'], synonyms }))
+      .toEqual(['h-related', 'r-hncgv', 'r-sgcgv']);
+  });
+
   it('puts Google’s candidates last, under their own heading', () => {
     const candidate = { place_id: 'g1' } as Candidate;
     expect(keys({ terms: ['mono'], query: 'mono', places: [mono], fresh: [candidate] }))

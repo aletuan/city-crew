@@ -19,8 +19,15 @@
 //   own city first whatever it found: it is the one chosen, and the empty
 //   screen under it says "nothing in Hanoi", which needs its chip there to
 //   be read against.
-// - "All" second, not first and not last: beside the reader's city, so the
-//   default and the way out of it are both on screen without a swipe.
+// - "All" first, the reader's city after it (owner, the same evening, on
+//   the phone): All is the whole of what the cities hold, and the cities
+//   are its parts. It was second, beside the reader's city, on the reading
+//   that the default should lead; the owner read the row as a total and
+//   its parts, which wants the total first.
+// - The places in the order of the chips: the reader's city's first, then
+//   each other city's, most found first. A mixed list ranked by match
+//   alone put a Saigon café above the Hanoi one the reader was standing
+//   near.
 // - The last chosen city cannot be put down. A choice of nothing would be
 //   a search of nowhere; the tap does nothing and the chip stays lit.
 // - A city tapped while "All" is chosen becomes the only one: from every
@@ -54,8 +61,8 @@ export function chipsWorthShowing(counts: ReadonlyMap<string, number>, home: str
 /**
  * The cities' chips in their order: `home` first, whatever it found, then
  * every other city that found something or is chosen, most first, ties by
- * id so the row holds still between keystrokes. "All" is drawn between the
- * first and the rest by the screen.
+ * id so the row holds still between keystrokes. "All" is drawn before
+ * them all by the screen.
  */
 export function cityChips(counts: ReadonlyMap<string, number>, home: string, pick: CityPick): { id: string; count: number }[] {
   const chosen = pick === 'all' ? [] : pick;
@@ -65,6 +72,19 @@ export function cityChips(counts: ReadonlyMap<string, number>, home: string, pic
     .sort(([a, x], [b, y]) => y - x || a.localeCompare(b))
     .map(([id, count]) => ({ id, count }));
   return [{ id: home, count: counts.get(home) ?? 0 }, ...rest];
+}
+
+/**
+ * `places` in the chips' order of their cities, each city's in the order
+ * they came: a stable sort, so the match's own ranking holds within a
+ * city. A city not in `order` goes last.
+ */
+export function byCity<T extends { city_id?: string | null }>(places: readonly T[], order: readonly string[]): T[] {
+  const rank = (p: T) => {
+    const i = p.city_id ? order.indexOf(p.city_id) : -1;
+    return i < 0 ? order.length : i;
+  };
+  return [...places].sort((a, b) => rank(a) - rank(b));
 }
 
 /** Every place the cities found, all chips together: "All"'s figure. */

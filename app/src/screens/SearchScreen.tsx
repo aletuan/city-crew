@@ -219,9 +219,10 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       terms, query, recents, cats, popular, latest, colMembers,
       places: searching ? inPick : places,
       cities: pick === 'all' ? null : pick,
+      cityOrder: chips ? chips.map((c) => c.id) : null,
       fresh, synonyms,
     }, t),
-    [terms, query, places, inPick, searching, pick, colMembers, fresh, synonyms, t, recents, popular, latest, cats],
+    [terms, query, places, inPick, searching, pick, chips, colMembers, fresh, synonyms, t, recents, popular, latest, cats],
   );
 
   // Row key → position among the place hits, so a UI test can address
@@ -327,7 +328,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         />
       </View>
       {/* The cities, under the box rather than in the list, so they stay
-          while the results scroll: the reader's own first, then All, then
+          while the results scroll: All, then the reader's own city, then
           the rest most first (`lib/searchCities`). A tap puts the keyboard
           away and keeps the words, as the reference does: the reader has
           stopped typing to look. */}
@@ -339,23 +340,22 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           contentContainerStyle={s.cities}
           testID="search-cities"
         >
-          {chips.map(({ id, count }, i) => (
-            <React.Fragment key={id}>
-              <Chip
-                label={`${cityName(id) ?? id} ${count}`}
-                active={pick !== 'all' && pick.includes(id)}
-                onPress={() => { Keyboard.dismiss(); setCityChoice(tapCity(pick, id)); }}
-                testID={`search-city-${id}`}
-              />
-              {i === 0 ? (
-                <Chip
-                  label={`${t('All', 'Tất cả', 'すべて', '全部', '全部')} ${totalFound(counts)}`}
-                  active={pick === 'all'}
-                  onPress={() => { Keyboard.dismiss(); setCityChoice('all'); }}
-                  testID="search-city-all"
-                />
-              ) : null}
-            </React.Fragment>
+          <Chip
+            label={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+            count={totalFound(counts)}
+            active={pick === 'all'}
+            onPress={() => { Keyboard.dismiss(); setCityChoice('all'); }}
+            testID="search-city-all"
+          />
+          {chips.map(({ id, count }) => (
+            <Chip
+              key={id}
+              label={cityName(id) ?? id}
+              count={count}
+              active={pick !== 'all' && pick.includes(id)}
+              onPress={() => { Keyboard.dismiss(); setCityChoice(tapCity(pick, id)); }}
+              testID={`search-city-${id}`}
+            />
           ))}
         </ScrollView>
       ) : null}

@@ -703,13 +703,13 @@ describe('every city', () => {
     expect(idx.asks.at(-1)).toBe(true);
   });
 
-  it('starts at home, with the cities that found something beside it, All second', () => {
+  it('starts at home, All before it, the cities that found something after', () => {
     mount();
     type('bold');
-    expect(chipIds()).toEqual(['hanoi', 'all', 'hcmc', 'dalat']);
-    expect(chip('hanoi').textContent).toBe('Hanoi 1');
-    expect(chip('all').textContent).toBe('All 4');
-    expect(chip('hcmc').textContent).toBe('Saigon 2');
+    expect(chipIds()).toEqual(['all', 'hanoi', 'hcmc', 'dalat']);
+    expect(chip('hanoi').textContent).toBe('Hanoi (1)');
+    expect(chip('all').textContent).toBe('All (4)');
+    expect(chip('hcmc').textContent).toBe('Saigon (2)');
     expect(chip('hanoi').getAttribute('aria-selected')).toBe('true');
     expect(chip('hcmc').getAttribute('aria-selected')).toBe('false');
     // Home only, and one city on screen says no city on its cards.
@@ -754,6 +754,19 @@ describe('every city', () => {
     expect(screen.getByTestId('search-result-0-district').textContent).toBe('Ward 2');
   });
 
+  // The places in the chips' order, home's first: ranked by match alone,
+  // the index's order put Da Lat's ahead of the one the reader is near.
+  it('lists home’s places first, then each city’s in the chips’ order', () => {
+    idx.places = [dl, sg1, hn, sg2];
+    mount();
+    type('bold');
+    fireEvent.click(chip('all'));
+    expect(results().map((r) => r.match(/Bold Brew ([a-z]+\d*)/)![1])).toEqual(['hn', 'sg1', 'sg2', 'dl']);
+    fireEvent.click(chip('dalat'));
+    fireEvent.click(chip('hanoi'));
+    expect(results().map((r) => r.match(/Bold Brew ([a-z]+\d*)/)![1])).toEqual(['hn', 'dl']);
+  });
+
   it('draws no row when every place found is at home', () => {
     mount();
     type('cong');
@@ -778,8 +791,8 @@ describe('every city', () => {
     fireEvent.click(chip('hcmc'));
     fireEvent.click(chip('hanoi'));
     type('cong');
-    expect(chipIds()).toEqual(['hanoi', 'all', 'hcmc']);
-    expect(chip('hcmc').textContent).toBe('Saigon 0');
+    expect(chipIds()).toEqual(['all', 'hanoi', 'hcmc']);
+    expect(chip('hcmc').textContent).toBe('Saigon (0)');
     expect(screen.getByText('No matches for “cong” in Saigon')).toBeTruthy();
     fireEvent.click(chip('hanoi'));
     expect(results()).toHaveLength(1);
@@ -791,8 +804,8 @@ describe('every city', () => {
     idx.places = [sg1, dl];
     mount();
     type('bold');
-    expect(chipIds()).toEqual(['hanoi', 'all', 'dalat', 'hcmc']);
-    expect(chip('hanoi').textContent).toBe('Hanoi 0');
+    expect(chipIds()).toEqual(['all', 'hanoi', 'dalat', 'hcmc']);
+    expect(chip('hanoi').textContent).toBe('Hanoi (0)');
     expect(screen.getByText('No matches for “bold” in Hanoi')).toBeTruthy();
     expect(screen.getByText('Other cities have it: choose one above.')).toBeTruthy();
     expect(screen.queryByText(/We look it up on Google Maps/)).toBeNull();
