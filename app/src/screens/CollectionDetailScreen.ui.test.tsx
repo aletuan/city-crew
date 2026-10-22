@@ -2337,8 +2337,16 @@ describe('the grid', () => {
       show();
       expect(banner()).toBeNull();
       await reads();
-      expect(banner()!.textContent).toContain('Collections now open as a grid');
-      expect(banner()!.textContent).toContain('Switch back to the list in the ⋯ menu.');
+      expect(banner()!.textContent).toContain('Now in grid view');
+      // The ⋯ is the button's glyph on its round ground, in the line, and
+      // the line is said with the button's own name.
+      const chip = screen.getByTestId('collection-grid-notice-more');
+      expect(chip.querySelector('[data-icon="ellipsis-horizontal"]')).toBeTruthy();
+      const line = chip.parentElement!;
+      expect(line.textContent).toBe('Switch to List view in the  menu.');
+      expect(line.textContent).not.toContain('⋯');
+      expect(line.getAttribute('aria-label')).toBe('Switch to List view in the More menu.');
+      expect(chip.compareDocumentPosition(line.lastChild!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       // Between the card and the tiles.
       const intro = screen.getByTestId('collection-intro');
       expect(intro.compareDocumentPosition(banner()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -2347,6 +2355,9 @@ describe('the grid', () => {
       const r = ring()!;
       expect([r.style.left, r.style.top, r.style.width, r.style.height]).toEqual(['-4px', '-4px', '52px', '52px']);
       expect(screen.getByTestId('collection-more-ring-pulse')).toBeTruthy();
+      // Transient: gone once its pulses are done (owner, 22 Oct 2026).
+      // Animations land at once here, so "done" is now.
+      expect(getComputedStyle(r).opacity).toBe('0');
     });
 
     // A reader who has had it, whose answer is still being read when the
@@ -2440,6 +2451,19 @@ describe('the grid', () => {
       await reads();
       expect(banner()).toBeTruthy();
       expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(NOTICE, 'seen');
+    });
+
+    // The owner's words, 22 Oct 2026: "dạng danh sách" in lower case.
+    it('says it in the reader’s language', async () => {
+      state.lang = 'vi';
+      show();
+      await reads();
+      expect(banner()!.textContent).toContain('Bộ sưu tập hiển thị dạng lưới');
+      const line = screen.getByTestId('collection-grid-notice-more').parentElement!;
+      expect(line.textContent).toBe('Bạn có thể chuyển về dạng danh sách trong menu .');
+      expect(line.getAttribute('aria-label')).toBe('Bạn có thể chuyển về dạng danh sách trong menu Tùy chọn khác.');
+      // And the button is called the same, not "Thêm", which heard alone is "add".
+      expect(screen.getByRole('button', { name: 'Tùy chọn khác' })).toBeTruthy();
     });
 
     it('says nothing over a list with no places', async () => {

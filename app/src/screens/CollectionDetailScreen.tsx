@@ -1261,13 +1261,18 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         <RoundIconButton
           icon="ellipsis-horizontal"
           onPress={openMenu}
-          label={t('More', 'Thêm', 'その他', '更多', '更多')}
+          // "Tùy chọn khác" and not "Thêm" (owner, 22 Oct 2026): heard
+          // alone, "Thêm" is "add", and this screen has an Add place too.
+          label={t('More', 'Tùy chọn khác', 'その他', '更多', '更多')}
           testID="collection-more"
         />
         {/* The guide's own "look here" (`Attention`), while the grid notice
             points at this button: 4pt clear of the 44pt circle, as the
-            guide rings its round search button. */}
-        {noticing && <AttentionRing frame={MORE_RING} runKey={visits} testID="collection-more-ring" />}
+            guide rings its round search button. Transient: three pulses,
+            then gone, and again on each return (owner, 22 Oct 2026) — the
+            notice says where the way back is, and a still ring after the
+            pulses only weighed on the corner. */}
+        {noticing && <AttentionRing frame={MORE_RING} runKey={visits} transient testID="collection-more-ring" />}
       </View>
     </View>
   ) : null;
@@ -1417,12 +1422,35 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <View style={s.noticeMark}><Ionicons name="grid-outline" size={20} color={colors.accent} /></View>
       <View style={s.noticeText}>
         <Text style={s.noticeTitle}>
-          {t('Collections now open as a grid', 'Bộ sưu tập giờ hiển thị dạng lưới',
-            'コレクションはグリッドで表示されるようになりました', '合集现在以网格显示', '合集現在以網格顯示')}
+          {t('Now in grid view', 'Bộ sưu tập hiển thị dạng lưới',
+            'グリッド表示になりました', '现在以网格显示', '現在以網格顯示')}
         </Text>
-        <Text style={s.noticeBody}>
-          {t('Switch back to the list in the ⋯ menu.', 'Bạn có thể chuyển về dạng danh sách trong menu ⋯.',
-            '⋯ メニューからリスト表示に戻せます。', '可在 ⋯ 菜单中切换回列表。', '可在 ⋯ 選單中切換回列表。')}
+        {/* The ⋯ in the line is the button's own glyph on the button's own
+            round ground, not the "⋯" character (owner, 22 Oct 2026): a
+            character comes out thin and low in the body font and does not
+            look like the round button it names, and a screen reader says
+            "ellipsis". It is said as the button is labelled instead, "More" ("Tùy chọn khác"),
+            so the sentence and the button agree out loud. With the glyph in
+            the line, "in the corner of the screen" went: the chip and the
+            ring already show where. */}
+        <Text
+          style={s.noticeBody}
+          accessibilityLabel={t('Switch to List view in the More menu.', 'Bạn có thể chuyển về dạng danh sách trong menu Tùy chọn khác.',
+            'その他メニューからリスト表示に切り替えられます。', '可在“更多”菜单中切换为列表。', '可在「更多」選單中切換為列表。')}
+        >
+          {(() => {
+            const [before, after] = t('Switch to List view in the {⋯} menu.', 'Bạn có thể chuyển về dạng danh sách trong menu {⋯}.',
+              '{⋯} メニューからリスト表示に切り替えられます。', '可在 {⋯} 菜单中切换为列表。', '可在 {⋯} 選單中切換為列表。').split('{⋯}');
+            return (
+              <>
+                {before}
+                <View style={s.moreChip} testID="collection-grid-notice-more">
+                  <Ionicons name="ellipsis-horizontal" size={12} color={colors.text} />
+                </View>
+                {after}
+              </>
+            );
+          })()}
         </Text>
       </View>
       <Pressable onPress={closeNotice} accessibilityRole="button" hitSlop={4} style={s.noticeClose}
@@ -1946,6 +1974,15 @@ const s = StyleSheet.create({
   noticeText: { flex: 1, gap: 2, paddingTop: 1 },
   noticeTitle: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.semibold },
   noticeBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  // The ⋯ button in small, inside the line: the button's ground and glyph
+  // at 18pt to its 44. A view in a line of text sits with its foot on the
+  // baseline, so 18pt of chip stands about 3pt above the middle of 14pt
+  // lower-case; it is brought down by that. A starting figure, to be
+  // judged on a phone.
+  moreChip: {
+    width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass, transform: [{ translateY: 3 }],
+  },
   // 40pt, and 4 of slop each side, for the 44pt a finger needs.
   noticeClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginTop: -8 },
 
