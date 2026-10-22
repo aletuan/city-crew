@@ -15,6 +15,7 @@
 import { coverUriOf, touchesCity } from './place';
 import { RECENTS_SHOWN } from './recents';
 import { collectionMatches, findPlaces, type TermMap } from './search';
+import { byCity } from './searchCities';
 import type { Candidate } from './suggest';
 import type { Collection, Place } from './types';
 
@@ -54,13 +55,17 @@ export type SearchRowsInput = {
   /** The cities chosen (`lib/searchCities`), or null for every city and
    *  for none known yet. */
   cities: readonly string[] | null;
+  /** The cities in the chips' order, the reader's own first: the places
+   *  found are listed city by city in it (`byCity`). Null leaves the
+   *  match's own ranking alone. */
+  cityOrder?: readonly string[] | null;
   /** Google's candidates not already in the catalog, or null before any. */
   fresh: readonly Candidate[] | null;
   synonyms: TermMap;
 };
 
 export function buildSearchRows(
-  { terms, query, recents, cats, popular, latest, colMembers, places, cities, fresh, synonyms }: SearchRowsInput,
+  { terms, query, recents, cats, popular, latest, colMembers, places, cities, cityOrder = null, fresh, synonyms }: SearchRowsInput,
   t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): SearchRow[] {
   // Before a word is typed the list is the zero-state: the searches
@@ -125,7 +130,9 @@ export function buildSearchRows(
   // Two tiers, and the second only ever appears when the first is empty:
   // a synonym is a guess about what somebody meant, so it fills a blank
   // screen rather than diluting a real answer. See `findPlaces`.
-  const { hits, related } = findPlaces(places, query, synonyms);
+  const found = findPlaces(places, query, synonyms);
+  const hits = cityOrder ? byCity(found.hits, cityOrder) : found.hits;
+  const related = cityOrder ? byCity(found.related, cityOrder) : found.related;
   if (hits.length) {
     out.push({ kind: 'header', key: 'h-place', label: t('Places', 'Địa điểm', 'スポット', '地点', '地點') });
     for (const p of hits) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });

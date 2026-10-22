@@ -65,8 +65,13 @@ export function PressableScale({ children, style, contentStyle, anchorRef, hapti
   );
 }
 
-export function Chip({ label, active, onPress, icon, iconColor, testID }: {
+export function Chip({ label, count, active, onPress, icon, iconColor, testID }: {
   label: string;
+  /** How many the chip stands for, after its word in brackets and the
+   *  tertiary ink, as a rating's review count is: "Hà Nội (6)". Search's
+   *  city chips (owner, 22 Oct 2026): a figure set flush against a name,
+   *  "Hà Nội 6", read as part of the name. */
+  count?: number;
   /** For the iOS smoke flows; see `.maestro/README.md`. */
   testID?: string;
   active?: boolean;
@@ -95,7 +100,10 @@ export function Chip({ label, active, onPress, icon, iconColor, testID }: {
       testID={testID}
     >
       {icon ? <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} /> : null}
-      <Text style={[s.chipText, active && s.chipTextOn]}>{label}</Text>
+      <Text style={[s.chipText, active && s.chipTextOn]}>
+        {label}
+        {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
+      </Text>
     </PressableScale>
   );
 }
@@ -504,6 +512,8 @@ const s = StyleSheet.create({
   tileTextOn: { color: colors.accent, fontWeight: font.semibold },
   tileRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   chipTextOn: { color: colors.accent, fontWeight: font.semibold },
+  // The same in either state: the figure is not what is chosen.
+  chipCount: { color: colors.textTertiary, fontWeight: font.regular },
   tabsRow: {
     flexDirection: 'row', alignItems: 'center', gap: 26,
     marginHorizontal: space.page, marginBottom: 14,

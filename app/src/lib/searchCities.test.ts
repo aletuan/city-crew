@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  chipsWorthShowing, cityChips, countByCity, namesCities, picked, tapCity, totalFound, type CityPick,
+  byCity, chipsWorthShowing, cityChips, countByCity, namesCities, picked, tapCity, totalFound, type CityPick,
 } from './searchCities';
 
 const at = (...ids: (string | null)[]) => ids.map((city_id) => ({ city_id }));
@@ -50,6 +50,28 @@ describe('cityChips', () => {
   it('holds still between ties', () => {
     expect(cityChips(countByCity(at('vungtau', 'hue', 'dalat')), 'hanoi', ['hanoi']).map((c) => c.id))
       .toEqual(['hanoi', 'dalat', 'hue', 'vungtau']);
+  });
+});
+
+describe('byCity', () => {
+  // Stable: within a city, the match's own ranking holds.
+  it('puts the places in the order of their cities, each city’s as they came', () => {
+    const found = [
+      { slug: 'sg1', city_id: 'hcmc' }, { slug: 'dl', city_id: 'dalat' }, { slug: 'hn1', city_id: 'hanoi' },
+      { slug: 'sg2', city_id: 'hcmc' }, { slug: 'hn2', city_id: 'hanoi' },
+    ];
+    expect(byCity(found, ['hanoi', 'hcmc', 'dalat']).map((p) => p.slug)).toEqual(['hn1', 'hn2', 'sg1', 'sg2', 'dl']);
+  });
+
+  it('puts a place whose city is not in the order, or not known, last', () => {
+    const found = [{ slug: 'x', city_id: null }, { slug: 'hue', city_id: 'hue' }, { slug: 'hn', city_id: 'hanoi' }];
+    expect(byCity(found, ['hanoi']).map((p) => p.slug)).toEqual(['hn', 'x', 'hue']);
+  });
+
+  it('leaves the list it was given alone', () => {
+    const found = [{ city_id: 'hcmc' }, { city_id: 'hanoi' }];
+    byCity(found, ['hanoi']);
+    expect(found).toEqual([{ city_id: 'hcmc' }, { city_id: 'hanoi' }]);
   });
 });
 
