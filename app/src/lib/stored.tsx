@@ -51,13 +51,26 @@ export function oneOf<T extends string>(...words: readonly T[]): Codec<T> {
 }
 
 /**
- * `[value, remember]`: the stored value once it has been read, `fallback`
- * until then and whenever nothing usable is stored. `remember` sets it
- * now and writes it for the next launch; a write that fails is a memory
- * lost, not an error the screen can act on.
+ * Where the value in hand came from: `reading` while the read is out,
+ * `stored` once the device gave one or the reader set one, `fallback`
+ * once it is known that nothing usable is stored.
+ *
+ * For a screen that has to tell a reader's choice from the default
+ * standing in for one: the collection's grid, which is the default now,
+ * says so once to a reader who never chose it (owner, 22 Oct 2026), and
+ * not to one who did — nor, while the read is out, to anybody.
  */
-export function useStored<T>(key: string, fallback: T, codec: Codec<T>): [T, (value: T) => void] {
+export type Origin = 'reading' | 'stored' | 'fallback';
+
+/**
+ * `[value, remember, origin]`: the stored value once it has been read,
+ * `fallback` until then and whenever nothing usable is stored. `remember`
+ * sets it now and writes it for the next launch; a write that fails is a
+ * memory lost, not an error the screen can act on.
+ */
+export function useStored<T>(key: string, fallback: T, codec: Codec<T>): [T, (value: T) => void, Origin] {
   const [value, setValue] = useState<T>(fallback);
+  const [origin, setOrigin] = useState<Origin>('reading');
   const written = useRef(false);
   const latest = useRef(codec);
   latest.current = codec;
@@ -66,19 +79,21 @@ export function useStored<T>(key: string, fallback: T, codec: Codec<T>): [T, (va
     let live = true;
     AsyncStorage.getItem(key)
       .then((raw) => {
-        if (!live || written.current || raw == null) return;
-        const read = latest.current.parse(raw);
+        if (!live || written.current) return;
+        const read = raw == null ? undefined : latest.current.parse(raw);
         if (read !== undefined) setValue(read);
+        setOrigin(read === undefined ? 'fallback' : 'stored');
       })
-      .catch(() => {});
+      .catch(() => { if (live && !written.current) setOrigin('fallback'); });
     return () => { live = false; };
   }, [key]);
 
   const remember = useCallback((next: T) => {
     written.current = true;
     setValue(next);
+    setOrigin('stored');
     AsyncStorage.setItem(key, latest.current.format(next)).catch(() => {});
   }, [key]);
 
-  return [value, remember];
+  return [value, remember, origin];
 }

@@ -1,8 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AccessibilityInfo, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
-} from 'react-native';
+import { AccessibilityInfo, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +8,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space } from '../theme';
-import { TAB_BAR_HEIGHT, useReducedMotion, useTabBarLift } from './ui';
+import { TAB_BAR_HEIGHT, useTabBarLift } from './ui';
+import { AttentionPulse, attentionRing } from './Attention';
 
 type Target = 'search' | 'filter' | 'save' | 'collections';
 /** How far the ring stands out from the control it marks, each side;
@@ -59,23 +58,8 @@ function spotlight(width: number, height: number, r: Rect) {
     + `V${y + k}A${k} ${k} 0 0 1 ${x + k} ${y}Z`;
 }
 
-/**
- * The pulse: a second ring that grows out of the first and fades, three
- * times when a step appears, then stops (owner, 22 Oct 2026).
- *
- * Three, and stopping, because motion that carries on is motion a reader
- * has to look away from: WCAG 2.2.2 asks that anything moving for more
- * than five seconds can be paused, and three of these come to 4.8. A
- * pulse is 1.2 seconds out and 0.4 at rest, slow enough to read as a
- * breath rather than an alarm. It grows by a quarter, which on the tab's
- * 75×56 pill is about 9pt either side and 7 above and below. These are
- * the starting figures, to be judged on a phone. With Reduce Motion on
- * there is no pulse at all: the cut-out and the ring already say where.
- */
-const PULSES = 3;
-const PULSE_MS = 1200;
-const PULSE_REST_MS = 400;
-const PULSE_GROWTH = 1.25;
+// The ring and its pulse are the app's one "look here" (`Attention`),
+// shared with the collection's ⋯ button.
 const Context = createContext({ enabled: null as boolean | null, setEnabled: (_on: boolean) => {}, replay: noop, step: -1, start: (_uid: string) => {}, finish: noop, next: noop,
   register: (_id: Target, _anchor: Anchor): (() => void) => noop, notice: null as Notice | null, noticeTop: null as number | null });
 export const useSignupTour = () => useContext(Context);
@@ -119,21 +103,6 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   const [noticeTop, setNoticeTop] = useState<number | null>(null);
   const noticeRef = useRef<View>(null);
   const lift = useTabBarLift();
-  const still = useReducedMotion();
-  const pulse = useRef(new Animated.Value(0)).current;
-  // Restarted each time a step's ring appears: a new step, or the same
-  // step coming back after its target was away.
-  const showing = rect ? step : -1;
-  useEffect(() => {
-    pulse.setValue(0);
-    if (still || showing < 0) return;
-    const run = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1, duration: PULSE_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.delay(PULSE_REST_MS),
-    ]), { iterations: PULSES });
-    run.start();
-    return () => run.stop();
-  }, [showing, still, pulse]);
   const revision = useRef(0);
   const writes = useRef(Promise.resolve());
   const started = useRef(new Set<string>());
@@ -308,13 +277,13 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
         {rect && <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
           <Path d={spotlight(width, height, rect)} fill={SCRIM} fillRule="evenodd" testID="signup-tour-scrim" />
         </Svg>}
-        {rect && !still && <Animated.View testID="signup-tour-pulse" pointerEvents="none"
-          style={[s.ring, { left: rect.x, top: rect.y, width: rect.width, height: rect.height },
-            { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] }),
-              transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, PULSE_GROWTH] }) }] }]} />}
+        {/* Pulsing afresh each time a step's ring appears: a new step, or
+            the same step back after its target was away. */}
+        {rect && <AttentionPulse testID="signup-tour-pulse" runKey={step}
+          frame={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }} />}
         {rect && <Pressable testID="signup-tour-target" accessibilityRole="button" accessibilityLabel={titles[step]}
           onPress={() => { const action = current.current?.press; persist(true, step + 1); finish(); if (action) requestAnimationFrame(action); }}
-          style={[s.ring, { left: rect.x, top: rect.y, width: rect.width, height: rect.height }]} />}
+          style={[attentionRing, { left: rect.x, top: rect.y, width: rect.width, height: rect.height }]} />}
         <View testID="signup-tour" style={[s.card, { left, top, width: cardWidth, maxHeight: cardMaxHeight }]}
           onLayout={e => setTipHeight(e.nativeEvent.layout.height)}>
           <ScrollView bounces={false}>
@@ -353,7 +322,6 @@ const s = StyleSheet.create({
   noticeStart: { alignSelf: 'flex-start', marginTop: 10, borderRadius: radius.pill, overflow: 'hidden' },
   // 40pt, and 4 of slop each side, for the 44pt a finger needs.
   noticeClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginTop: -8 },
-  ring: { position: 'absolute', borderWidth: 2, borderColor: colors.accent, borderRadius: radius.pill },
   card: { position: 'absolute', backgroundColor: colors.surfaceCard, borderColor: colors.borderGlassSoft, borderWidth: 1, borderRadius: radius.card, padding: 16 },
   heading: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 },
   count: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
