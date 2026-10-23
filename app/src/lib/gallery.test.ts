@@ -1,7 +1,7 @@
 // The gallery's rule, decided on the phone.
 
 import { describe, expect, it } from 'vitest';
-import { canKeepGallery, galleryActions, galleryOrder, type GalleryPhoto } from './gallery';
+import { applyEdit, canKeepGallery, galleryActions, galleryOrder, type GalleryPhoto } from './gallery';
 import { canAddPhoto } from './guide';
 
 const photo = (over: Partial<GalleryPhoto> = {}): GalleryPhoto => ({
@@ -56,5 +56,51 @@ describe('the order', () => {
     const before = three.map((p) => p.id);
     galleryOrder(three);
     expect(three.map((p) => p.id)).toEqual(before);
+  });
+});
+
+// What the grid draws the moment a tap lands, before the server answers
+// (owner, 23 Oct 2026) — the server's rules restated, so the guess is
+// the answer.
+describe('an edit, drawn at once', () => {
+  const four = () => [
+    photo({ id: 'c', sort_order: 2, is_cover: true }),
+    photo({ id: 'a', sort_order: 0 }),
+    photo({ id: 'b', sort_order: 1 }),
+    photo({ id: 'h', sort_order: 3, is_hidden: true }),
+  ];
+  const ids = (ps: GalleryPhoto[]) => ps.map((p) => `${p.id}${p.is_cover ? '*' : ''}${p.is_hidden ? '-' : ''}`);
+
+  it('moves the cover, one of it, to the front', () => {
+    expect(ids(applyEdit(four(), { kind: 'cover', id: 'b' }))).toEqual(['b*', 'a', 'c', 'h-']);
+  });
+
+  // `guide_set_cover` refuses one; the menu never offers it.
+  it('draws no cover on a hidden photograph', () => {
+    const before = four();
+    const out = applyEdit(before, { kind: 'cover', id: 'h' });
+    expect(ids(out)).toEqual(ids(before));
+    expect(out).not.toBe(before);
+  });
+
+  // `guide_set_hidden` takes the cover off what it hides.
+  it('hides a photograph, and the cover with it when it was the cover', () => {
+    expect(ids(applyEdit(four(), { kind: 'hide', id: 'a', hidden: true }))).toEqual(['c*', 'a-', 'b', 'h-']);
+    expect(ids(applyEdit(four(), { kind: 'hide', id: 'c', hidden: true }))).toEqual(['c-', 'a', 'b', 'h-']);
+  });
+
+  it('shows one again without making it the cover', () => {
+    expect(ids(applyEdit(four(), { kind: 'hide', id: 'h', hidden: false }))).toEqual(['c*', 'a', 'b', 'h']);
+  });
+
+  it('takes out every photograph deleted, and nothing else', () => {
+    expect(ids(applyEdit(four(), { kind: 'delete', ids: ['a', 'c'] }))).toEqual(['b', 'h-']);
+  });
+
+  it('leaves the photographs it was given alone', () => {
+    const before = four();
+    applyEdit(before, { kind: 'cover', id: 'b' });
+    applyEdit(before, { kind: 'hide', id: 'c', hidden: true });
+    expect(ids(before)).toEqual(['c*', 'a', 'b', 'h-']);
   });
 });

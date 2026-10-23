@@ -167,7 +167,7 @@ export async function uploadPlacePhoto(path: string, bytes: ArrayBuffer): Promis
 }
 
 /**
- * Take one back: the row, and then the file behind it.
+ * Take photographs back: the rows, and then the files behind them.
  *
  * `uploaders remove their own photos` is what makes the row half safe to
  * call with nothing but an id: a row that is not this account's is not
@@ -188,16 +188,28 @@ export async function uploadPlacePhoto(path: string, bytes: ArrayBuffer): Promis
  * Google-sourced rows before `rehost-photos` — and then there is nothing
  * to take out.
  */
-export async function removePlacePhoto(id: string, storagePath: string | null): Promise<void> {
-  const { error } = await supabase.from('place_photos').delete().eq('id', id);
+//
+// ── one request, and the files not waited for (owner, 23 Oct 2026) ──
+//
+// Deleting several from the gallery used to be a row delete and then a
+// file remove for each, every one awaited: two round trips a photograph,
+// one after another, before the grid could be read back. The rows go in
+// one delete now, and the files in one remove that nobody waits for —
+// it was best effort already, and the answer it gave was never read.
+export async function removePlacePhotos(
+  photos: readonly { id: string; storage_path: string | null }[],
+): Promise<void> {
+  if (!photos.length) return;
+  const { error } = await supabase.from('place_photos').delete().in('id', photos.map((p) => p.id));
   if (error) throw new Error(error.message);
-  if (storagePath) await removePhotoFile(storagePath);
+  const paths = photos.map((p) => p.storage_path).filter((p): p is string => !!p);
+  if (paths.length) void removePhotoFile(paths);
 }
 
 /**
  * One file out of the bucket, quietly.
  *
- * Called where the row is already gone (`removePlacePhoto`) or never
+ * Called where the row is already gone (`removePlacePhotos`) or never
  * landed (`useAddPhoto`, when the insert after the upload is refused),
  * which is why it does not throw: nothing the caller could do with the
  * failure would help the reader, and a thrown remove would report a
@@ -211,9 +223,9 @@ export async function removePlacePhoto(id: string, storagePath: string | null): 
  * the caller can select, the lesson the 10 Sep migration learned for
  * editors.
  */
-export async function removePhotoFile(path: string): Promise<void> {
+export async function removePhotoFile(path: string | readonly string[]): Promise<void> {
   try {
-    await supabase.storage.from('place-photos').remove([path]);
+    await supabase.storage.from('place-photos').remove(typeof path === 'string' ? [path] : [...path]);
   } catch {
     // Housekeeping; see above.
   }

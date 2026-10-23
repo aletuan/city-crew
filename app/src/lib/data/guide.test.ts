@@ -15,7 +15,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  addPlacePhoto, fetchGuideCities, fetchMyPhotoCounts, fetchPlaceId, removePhotoFile, removePlacePhoto,
+  addPlacePhoto, fetchGuideCities, fetchMyPhotoCounts, fetchPlaceId, removePhotoFile, removePlacePhotos,
   uploadPlacePhoto, fetchIsEditor,
 } from './guide';
 
@@ -186,42 +186,68 @@ describe('uploadPlacePhoto', () => {
   });
 });
 
-describe('removePlacePhoto', () => {
-  // Nothing but an id for the row: `uploaders remove their own photos`
+describe('removePlacePhotos', () => {
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  // Nothing but ids for the rows: `uploaders remove their own photos`
   // makes that safe. A row that is not this account's is simply not
-  // deleted.
-  it('deletes by id and leaves the rest to the policy', async () => {
+  // deleted. One delete for all of them, however many there are.
+  it('deletes every row in one request, by id, and leaves the rest to the policy', async () => {
     fake().replies({ data: null });
-    await removePlacePhoto('ph1', null);
+    await removePlacePhotos([{ id: 'ph1', storage_path: null }, { id: 'ph2', storage_path: null }]);
     expect(fake().log[0]).toMatchObject({
-      table: 'place_photos', op: 'delete', filters: [['id', 'ph1']],
+      table: 'place_photos', op: 'delete', filters: [['id', ['ph1', 'ph2']]],
     });
     expect(fake().log).toHaveLength(1);
   });
 
-  // The file after the row, never before: a row pointing at a missing
+  it('asks for nothing when there is nothing to delete', async () => {
+    await removePlacePhotos([]);
+    expect(fake().log).toHaveLength(0);
+  });
+
+  // The files after the rows, never before: a row pointing at a missing
   // file is a broken picture on every screen, a file with no row is a
   // few hundred kilobytes nobody sees. Fifty-six of the latter were
   // swept out on 6 Oct 2026, most of them left by this very delete.
-  it('takes the file out of the bucket once the row is gone', async () => {
-    fake().replies({ data: null }, { data: [{ name: 'u1/cong-1.jpg' }] });
-    await removePlacePhoto('ph1', 'u1/cong-1.jpg');
+  // One remove for every file, the rows with none left out.
+  it('takes the files out of the bucket once the rows are gone, in one remove', async () => {
+    fake().replies({ data: null }, { data: [] });
+    await removePlacePhotos([
+      { id: 'ph1', storage_path: 'u1/cong-1.jpg' },
+      { id: 'ph2', storage_path: null },
+      { id: 'ph3', storage_path: 'u1/cong-3.jpg' },
+    ]);
+    await settle();
     expect(fake().log.map((a) => a.op)).toEqual(['delete', 'storage']);
-    expect(fake().log[1]).toMatchObject({ table: 'place-photos', fn: 'remove', payload: ['u1/cong-1.jpg'] });
+    expect(fake().log[1]).toMatchObject({ table: 'place-photos', fn: 'remove', payload: ['u1/cong-1.jpg', 'u1/cong-3.jpg'] });
+  });
+
+  // Not waited for: the delete is done when the rows are, and the bucket
+  // answers whenever it answers.
+  it('is done once the rows are gone, before the bucket has answered', async () => {
+    const remove = vi.fn(() => new Promise<never>(() => {}));
+    const bucket = vi.spyOn(fake().client.storage, 'from').mockReturnValue({ remove } as never);
+    fake().replies({ data: null });
+    await removePlacePhotos([{ id: 'ph1', storage_path: 'u1/cong-1.jpg' }]);
+    expect(remove).toHaveBeenCalledWith(['u1/cong-1.jpg']);
+    bucket.mockRestore();
   });
 
   it('does not touch the bucket when the row delete fails', async () => {
     fake().replies({ error: { message: 'gone' } });
-    await expect(removePlacePhoto('ph1', 'u1/cong-1.jpg')).rejects.toThrow('gone');
+    await expect(removePlacePhotos([{ id: 'ph1', storage_path: 'u1/cong-1.jpg' }])).rejects.toThrow('gone');
+    await settle();
     expect(fake().log.filter((a) => a.op === 'storage')).toEqual([]);
   });
 
-  // The row is what the person asked about; the file is housekeeping,
+  // The rows are what the person asked about; the files are housekeeping,
   // and `prune-photos` sweeps what this misses. A thrown remove would
   // tell them the delete failed when it did not.
-  it('is quiet when the file will not go', async () => {
+  it('is quiet when the files will not go', async () => {
     fake().replies({ data: null }, { throws: new Error('storage down') });
-    await expect(removePlacePhoto('ph1', 'u1/cong-1.jpg')).resolves.toBeUndefined();
+    await expect(removePlacePhotos([{ id: 'ph1', storage_path: 'u1/cong-1.jpg' }])).resolves.toBeUndefined();
+    await settle();
   });
 });
 
@@ -230,6 +256,12 @@ describe('removePhotoFile', () => {
     fake().replies({ data: [{ name: 'u1/x.jpg' }] });
     await removePhotoFile('u1/x.jpg');
     expect(fake().log[0]).toMatchObject({ table: 'place-photos', op: 'storage', fn: 'remove', payload: ['u1/x.jpg'] });
+  });
+
+  it('removes several paths in one request', async () => {
+    fake().replies({ data: [] });
+    await removePhotoFile(['u1/x.jpg', 'u1/y.jpg']);
+    expect(fake().log[0]).toMatchObject({ fn: 'remove', payload: ['u1/x.jpg', 'u1/y.jpg'] });
   });
 
   // Best effort, by design: it is called from the places where the row is
