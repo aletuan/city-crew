@@ -42,6 +42,7 @@ const state = vi.hoisted(() => ({
 const spies = vi.hoisted(() => ({
   colsReload: vi.fn(),
   mineReload: vi.fn(),
+  placesReload: vi.fn(),
   askToSignIn: vi.fn(),
   toggleLike: vi.fn(async () => {}),
   deleteCollection: vi.fn(async (_slug: string) => {}),
@@ -67,7 +68,7 @@ vi.mock('../lib/city', () => {
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ ...state.cols, reload: spies.colsReload }),
   useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
-  usePlaces: () => ({ data: state.places, loading: state.placesLoading, loaded: state.placesLoaded }),
+  usePlaces: () => ({ data: state.places, loading: state.placesLoading, loaded: state.placesLoaded, reload: spies.placesReload }),
 }));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ mine: { ...state.mine, reload: spies.mineReload }, askToSignIn: spies.askToSignIn });
@@ -668,13 +669,16 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
   });
 
-  it('pulling reloads both shelves and holds the spinner only for the pull', () => {
+  it('pulling reloads both shelves and the places in them, and holds the spinner only for the pull', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
     spies.mineReload.mockClear();
+    spies.colsReload.mockClear();
+    spies.placesReload.mockClear();
     act(() => { listProps().onRefresh(); });
     expect(spies.colsReload).toHaveBeenCalledTimes(1);
     expect(spies.mineReload).toHaveBeenCalledTimes(1);
+    expect(spies.placesReload).toHaveBeenCalledTimes(1);
     // Nothing is loading, so the spinner disarms as soon as it is armed.
     expect(listProps().refreshing).toBe(false);
   });
