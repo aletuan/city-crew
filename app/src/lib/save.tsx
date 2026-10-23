@@ -18,7 +18,7 @@
 // a third context, `useSaveSheets`. The callers of `useSave` and its two
 // halves see no difference.
 
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useSession } from './auth';
 import {
@@ -27,6 +27,7 @@ import {
 } from './data';
 import { useCurrentCity } from './city';
 import { useI18n } from './i18n';
+import { pendingKey, type PendingSaves, withPending } from './pendingSaves';
 import { DAILY_CAPS, isDailyLimit } from './quota';
 import { goTo, navRef } from '../nav';
 import { dropResume, focusedTab, holdResume } from './resume';
@@ -176,13 +177,46 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   // the sheet again.
   const saveRef = useRef<(place: Place) => void>(() => {});
 
+  // ── a tick moves when it is tapped (owner, 23 Oct 2026) ──
+  //
+  // What the reader asked for, laid over what the database last returned
+  // (`lib/pendingSaves` has the measurement that made it necessary). Every
+  // reader of the lists gets the overlaid copy, so the tick, the count
+  // under it and the bookmark all move together and at once.
+  const [pending, setPending] = useState<PendingSaves>({});
+  const shown = useMemo(() => withPending(mine.data, pending), [mine.data, pending]);
+  // The writes behind the ticks, one chain per place in a list. `at` is
+  // what the database holds as far as this session knows, `want` the last
+  // thing tapped; the chain writes until the two agree, so a quick
+  // in-out-in sends at most what is needed, in the order it was asked.
+  // `from` is where the chain started, which is what a failed first write
+  // falls back to.
+  const chains = useRef(new Map<string, { at: boolean; want: boolean; from: boolean; running: boolean }>());
+  const writing = useRef(0);
+  // Whether anything was written since the lists were last asked for:
+  // a run that only failed changed nothing and asks for nothing.
+  const wrote = useRef(false);
+  // When the one reload after the last write was asked for. The overlay
+  // stays until a load at least that recent lands — a reload already out
+  // when the writes began is dropped unheard by `useFetch`'s generation
+  // check once this one is asked, so the first answer after it is the one
+  // that carries every write.
+  const settledAt = useRef<number | null>(null);
+  useEffect(() => {
+    const at = settledAt.current;
+    if (at === null || writing.current > 0 || mine.loadedAt === null || mine.loadedAt < at) return;
+    settledAt.current = null;
+    chains.current.clear();
+    setPending({});
+  }, [mine.loadedAt]);
+
   const savedSlugs = useMemo(() => {
     const set = new Set<string>();
-    for (const c of mine.data) {
+    for (const c of shown) {
       for (const cp of c.collection_places) if (cp.places) set.add(cp.places.slug);
     }
     return set;
-  }, [mine.data]);
+  }, [shown]);
 
   const save = useCallback((place: Place) => {
     if (!session) { ask('save', () => saveRef.current(place)); return; }
@@ -216,20 +250,49 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   saveRef.current = save;
 
   const toggle = useCallback(async (c: Collection, place: Place) => {
+    const key = pendingKey(c.slug, place.slug);
+    let chain = chains.current.get(key);
+    if (!chain) {
+      // No chain means no entry for this pair either — the two are made
+      // and cleared together — so the row as drawn is the database's word.
+      const at = holds(c, place.slug);
+      chain = { at, want: at, from: at, running: false };
+      chains.current.set(key, chain);
+    }
+    const link = chain;
+    link.want = !link.want;
+    setPending((p) => ({ ...p, [key]: { collection: c.slug, place, want: link.want } }));
+    if (link.running) return;
+
+    link.running = true;
+    writing.current += 1;
     try {
-      const had = holds(c, place.slug);
-      if (had) await removePlaceFromCollection(c.slug, place.slug);
-      else await addPlaceToCollection(c.slug, place.slug, nextSortOrder(c));
-      // Noted here rather than in the sheet because this is the one place
-      // both verbs pass through, and only after the write succeeded — an
-      // event for a save that did not happen is worse than no event.
-      //
-      // Not `useNoteEvent`: that hook reads this provider, and a provider
-      // that imports the module importing it is a cycle Metro resolves by
-      // handing one of them an empty object at start-up.
-      void logPlaceEvent(session?.user?.id, place.slug, had ? 'unsave' : 'save', city?.id ?? null, historyOn);
-      mine.reload();
+      while (link.at !== link.want) {
+        const to = link.want;
+        if (to) await addPlaceToCollection(c.slug, place.slug, nextSortOrder(c), c.id);
+        else await removePlaceFromCollection(c.slug, place.slug, c.id);
+        link.at = to;
+        wrote.current = true;
+        // Noted here rather than in the sheet because this is the one place
+        // both verbs pass through, and only after the write succeeded — an
+        // event for a save that did not happen is worse than no event.
+        //
+        // Not `useNoteEvent`: that hook reads this provider, and a provider
+        // that imports the module importing it is a cycle Metro resolves by
+        // handing one of them an empty object at start-up.
+        void logPlaceEvent(session?.user?.id, place.slug, to ? 'save' : 'unsave', city?.id ?? null, historyOn);
+      }
     } catch (e) {
+      // The tick goes back to what the database holds. Where nothing was
+      // written on this chain that is where it started, and the entry
+      // goes; otherwise it says what the last write left.
+      link.want = link.at;
+      if (link.at === link.from) {
+        chains.current.delete(key);
+        setPending(({ [key]: _gone, ...rest }) => rest);
+      } else {
+        setPending((p) => ({ ...p, [key]: { collection: c.slug, place, want: link.at } }));
+      }
       // Three hundred saves in a day is the cap the policy holds; the
       // sheet says so rather than showing the policy's own sentence.
       if (isDailyLimit(e)) {
@@ -242,12 +305,23 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
             `你每天可以保存 ${DAILY_CAPS.placesIntoLists} 个地点。明天再来吧。`, `你每天可以儲存 ${DAILY_CAPS.placesIntoLists} 個地點。明天再來吧。`,
           ),
         );
-        return;
+      } else {
+        Alert.alert(
+          t('Could not save', 'Không lưu được', '保存できませんでした', '无法保存', '無法儲存'),
+          e instanceof Error ? e.message : String(e),
+        );
       }
-      Alert.alert(
-        t('Could not save', 'Không lưu được', '保存できませんでした', '无法保存', '無法儲存'),
-        e instanceof Error ? e.message : String(e),
-      );
+    } finally {
+      link.running = false;
+      writing.current -= 1;
+      // One reload once every chain is quiet, not one per write: three
+      // lists ticked in a row used to fetch the whole of your lists three
+      // times over.
+      if (writing.current === 0 && wrote.current) {
+        wrote.current = false;
+        settledAt.current = Date.now();
+        mine.reload();
+      }
     }
   // `mine.reload` and `city.id` are the stable halves of two objects rebuilt each render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,9 +337,9 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     isSaved: (slug) => savedSlugs.has(slug),
   }), [save, askToSignIn, savedSlugs]);
   const lists = useMemo<MyLists>(() => ({
-    data: mine.data, loading: mine.loading, loaded: mine.loaded, error: mine.error,
+    data: shown, loading: mine.loading, loaded: mine.loaded, error: mine.error,
     loadedAt: mine.loadedAt, fromCache: mine.fromCache, reload: mine.reload,
-  }), [mine.data, mine.loading, mine.loaded, mine.error, mine.loadedAt, mine.fromCache, mine.reload]);
+  }), [shown, mine.loading, mine.loaded, mine.error, mine.loadedAt, mine.fromCache, mine.reload]);
 
   // "Not now" is an answer: what was asked for is forgotten with it.
   const closeAuth = useCallback(() => { setAuthSheet(false); dropResume(); }, []);

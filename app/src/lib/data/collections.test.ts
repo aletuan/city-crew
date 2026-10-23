@@ -189,6 +189,15 @@ describe('addPlaceToCollection', () => {
     expect(fake().log[2].payload).toEqual({ collection_id: 'c-id', place_id: 'p-id', sort_order: 3 });
   });
 
+  // A list of your own carries its id, and the sheet passes it: only the
+  // place is looked up.
+  it('asks only for the place when the list’s id is already known', async () => {
+    fake().replies({ data: { id: 'p-id' } });
+    await addPlaceToCollection('quan-ca-phe-cu', 'cong-caphe', 3, 'c-known');
+    expect(fake().log.map((c) => c.table)).toEqual(['places', 'collection_places']);
+    expect(fake().log[1].payload).toEqual({ collection_id: 'c-known', place_id: 'p-id', sort_order: 3 });
+  });
+
   it('puts it first when the caller does not say where', async () => {
     ids();
     await addPlaceToCollection('quan-ca-phe-cu', 'cong-caphe');
@@ -243,6 +252,13 @@ describe('removePlaceFromCollection', () => {
       op: 'delete',
       filters: [['collection_id', 'c-id'], ['place_id', 'p-id']],
     });
+  });
+
+  it('asks only for the place when the list’s id is already known', async () => {
+    fake().replies({ data: { id: 'p-id' } });
+    await removePlaceFromCollection('quan-ca-phe-cu', 'cong-caphe', 'c-known');
+    expect(fake().log.map((c) => c.table)).toEqual(['places', 'collection_places']);
+    expect(fake().log[1]).toMatchObject({ op: 'delete', filters: [['collection_id', 'c-known'], ['place_id', 'p-id']] });
   });
 
   // Unlike adding, there is no code to forgive here: a removal that failed

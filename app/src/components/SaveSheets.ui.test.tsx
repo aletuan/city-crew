@@ -19,7 +19,7 @@
 import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Collection, Place } from '../lib/data';
 import { DAILY_CAPS, DAILY_LIMIT } from '../lib/quota';
 
@@ -326,7 +326,18 @@ describe('signed in with somewhere to put it', () => {
     mount();
     tap();
     fireEvent.click(await screen.findByText('coffee'));
-    await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledWith('coffee', 'cong-caphe', 0));
+    await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledWith('coffee', 'cong-caphe', 0, undefined));
+  });
+
+  // A list of your own carries its id; passing it spares the lookup.
+  it('passes the list’s own id along with it', async () => {
+    world.mine = { ...world.mine, data: [{ ...list('coffee'), id: 'c-1' } as Collection, { ...list('weekend', ['cong-caphe']), id: 'w-1' } as Collection] };
+    mount();
+    tap();
+    fireEvent.click(await screen.findByText('coffee'));
+    fireEvent.click(screen.getByText('weekend'));
+    await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledWith('coffee', 'cong-caphe', 0, 'c-1'));
+    await waitFor(() => expect(removePlaceFromCollection).toHaveBeenCalledWith('weekend', 'cong-caphe', 'w-1'));
   });
 
   // After the last member, not at the count: with 0 and 2 left after a
@@ -343,14 +354,14 @@ describe('signed in with somewhere to put it', () => {
     mount();
     tap();
     fireEvent.click(await screen.findByText('gappy'));
-    await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledWith('gappy', 'cong-caphe', 3));
+    await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledWith('gappy', 'cong-caphe', 3, undefined));
   });
 
   it('takes it back out of a list that already holds it', async () => {
     mount();
     tap();
     fireEvent.click(await screen.findByText('weekend'));
-    await waitFor(() => expect(removePlaceFromCollection).toHaveBeenCalledWith('weekend', 'cong-caphe'));
+    await waitFor(() => expect(removePlaceFromCollection).toHaveBeenCalledWith('weekend', 'cong-caphe', undefined));
     expect(addPlaceToCollection).not.toHaveBeenCalled();
   });
 
@@ -359,6 +370,160 @@ describe('signed in with somewhere to put it', () => {
     tap();
     fireEvent.click(await screen.findByText('coffee'));
     await waitFor(() => expect(reload).toHaveBeenCalled());
+  });
+});
+
+// A tick moves when it is tapped (owner, 23 Oct 2026). It used to wait for
+// the ids, the write and a reload of every list before the box filled —
+// "a while later the status changes". The write is the database's
+// business; the box is the reader's.
+describe('a tick moves when it is tapped', () => {
+  let alert: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    world.mine = { ...world.mine, data: [list('coffee'), list('weekend', ['cong-caphe'])] };
+    alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+  afterEach(() => { alert.mockRestore(); });
+
+  /** A write that lands when the test says so. */
+  const held = () => {
+    let land!: () => void;
+    let refuse!: (e: unknown) => void;
+    const p = new Promise<void>((res, rej) => { land = res; refuse = rej; });
+    return { p, land: () => act(async () => { land(); }), refuse: (e: unknown) => act(async () => { refuse(e); }) };
+  };
+  /** The row's tick as a screen reader hears it: 'true' or 'false'. */
+  const box = (name: string) => {
+    const row = screen.getAllByRole('checkbox').find((el) => el.textContent?.startsWith(name));
+    return String(screen.queryAllByRole('checkbox', { checked: true }).includes(row!));
+  };
+  const open = async () => { tap(); await screen.findByText('coffee'); };
+  const click = (name: string) => fireEvent.click(screen.getByText(name));
+  const app = () => <SaveProvider><Tapper /><SaveSheets /></SaveProvider>;
+
+  it('ticks the box, its count and the bookmark before the write lands', async () => {
+    world.mine = { ...world.mine, data: [list('coffee')] };
+    const w = held();
+    addPlaceToCollection.mockImplementationOnce(() => w.p);
+    mount();
+    await open();
+    click('coffee');
+    expect(box('coffee')).toBe('true');
+    expect(screen.getByText('1 place')).toBeTruthy();
+    expect(screen.getByTestId('saved').textContent).toBe('true');
+    expect(reload).not.toHaveBeenCalled();
+    await w.land();
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+  });
+
+  // In, then straight back out: two writes, in the order they were asked,
+  // and the box says out the whole time after the second tap.
+  it('takes it back out on a second tap, after the first write', async () => {
+    const w = held();
+    addPlaceToCollection.mockImplementationOnce(() => w.p);
+    mount();
+    await open();
+    click('coffee');
+    click('coffee');
+    expect(box('coffee')).toBe('false');
+    expect(removePlaceFromCollection).not.toHaveBeenCalled();
+    await w.land();
+    await waitFor(() => expect(removePlaceFromCollection).toHaveBeenCalledWith('coffee', 'cong-caphe', undefined));
+    expect(addPlaceToCollection.mock.invocationCallOrder[0]).toBeLessThan(removePlaceFromCollection.mock.invocationCallOrder[0]);
+    expect(box('coffee')).toBe('false');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  // In, out, in again while the first write is still out: one chain per
+  // row, so the third tap is not a second insert racing the first — and
+  // the out it cancelled is never sent.
+  it('sends one write for in-out-in while the first is still out', async () => {
+    const w = held();
+    addPlaceToCollection.mockImplementationOnce(() => w.p);
+    mount();
+    await open();
+    click('coffee');
+    click('coffee');
+    click('coffee');
+    expect(box('coffee')).toBe('true');
+    expect(addPlaceToCollection).toHaveBeenCalledTimes(1);
+    await w.land();
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(addPlaceToCollection).toHaveBeenCalledTimes(1);
+    expect(removePlaceFromCollection).not.toHaveBeenCalled();
+  });
+
+  it('asks for the lists once after two lists were ticked, not once each', async () => {
+    const w = held();
+    addPlaceToCollection.mockImplementationOnce(() => w.p);
+    mount();
+    await open();
+    click('coffee');
+    click('weekend');
+    await waitFor(() => expect(removePlaceFromCollection).toHaveBeenCalled());
+    expect(reload).not.toHaveBeenCalled();
+    await w.land();
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect([box('coffee'), box('weekend')]).toEqual(['true', 'false']);
+  });
+
+  // Tapped again before the reload brought the first write back: the
+  // second tap is a removal, because the first one is known to have landed.
+  it('remembers what it wrote when tapped again before the lists come back', async () => {
+    mount();
+    await open();
+    click('coffee');
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    click('coffee');
+    await waitFor(() => expect(removePlaceFromCollection).toHaveBeenCalledWith('coffee', 'cong-caphe', undefined));
+    expect(box('coffee')).toBe('false');
+  });
+
+  it('puts the box back when the write is refused', async () => {
+    addPlaceToCollection.mockImplementationOnce(async () => { throw new Error('Network request failed'); });
+    mount();
+    await open();
+    click('coffee');
+    await waitFor(() => expect(alert).toHaveBeenCalledOnce());
+    expect(box('coffee')).toBe('false');
+    expect(screen.getByTestId('saved').textContent).toBe('true');
+  });
+
+  // In landed, out was refused: the box says what the database holds,
+  // which is in — not where the chain started.
+  it('leaves the box where the last write left it when a later one is refused', async () => {
+    const w = held();
+    addPlaceToCollection.mockImplementationOnce(() => w.p);
+    removePlaceFromCollection.mockImplementationOnce(async () => { throw new Error('offline'); });
+    mount();
+    await open();
+    click('coffee');
+    click('coffee');
+    await w.land();
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not save', 'offline'));
+    expect(box('coffee')).toBe('true');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  // The overlay stays until a load newer than the writes lands, and then
+  // the database's word is the one shown — here it disagrees, which is
+  // how the test can see the overlay go.
+  it('gives way to the lists once a load newer than the writes lands', async () => {
+    const r = render(app());
+    await open();
+    click('coffee');
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    world.mine = { ...world.mine, loadedAt: 1 };
+    r.rerender(app());
+    expect(box('coffee')).toBe('true');
+    world.mine = { ...world.mine, loadedAt: Date.now() + 60_000 };
+    r.rerender(app());
+    expect(box('coffee')).toBe('false');
+    // And the next tap starts from that word, not from the write before it.
+    click('coffee');
+    expect(box('coffee')).toBe('true');
+    await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledTimes(2));
+    expect(removePlaceFromCollection).not.toHaveBeenCalled();
   });
 });
 

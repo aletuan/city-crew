@@ -64,6 +64,9 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
                 onPress={() => place && onToggle(c, place)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: on }}
+                // What react-native-web keeps of the state, which drops
+                // `accessibilityState` — the form `switchOrDoor` uses too.
+                aria-checked={on}
                 testID={`save-row-${i}`}
                 style={{ alignSelf: 'stretch' }}
                 contentStyle={s.row}
