@@ -29,6 +29,21 @@
 // On the owner's own list a tile can also be held and dragged, as a card
 // can: the hold and the VoiceOver moves come in from the screen, as they
 // do to `PlaceCard`, and the tile only passes them to its press.
+//
+// ── a place nobody else sees (owner, 23 Oct 2026) ──
+//
+// A list stays public when it holds a place that is not live, and that
+// place is hidden from everyone but its owner. The card says so in its
+// status line; the grid said nothing, and the grid is the default — so a
+// list of nine read as nine to its owner while every friend it was shown
+// to saw eight. The tile now carries the card's own mark, in the free top
+// corner: the clock for a place waiting on the desk, the cross for one the
+// desk turned down, each in the colour the card gives it.
+//
+// The picture is not dimmed. The place is still the owner's to go to, and
+// a faded tile reads as one that is gone. Shown on whatever tile reaches a
+// reader not live, as the card's line is: other readers are never handed
+// such a place (the member policy), so in practice that is the owner.
 
 import React from 'react';
 import {
@@ -37,7 +52,8 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { coverOf, type Place } from '../lib/data';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { coverOf, isFlagged, isLive, type Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
@@ -63,9 +79,17 @@ export default function PlaceTile({
   accessibilityActions?: AccessibilityActionInfo[];
   onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
 }) {
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const cover = coverOf(place);
   const name = splitName(localized(place, 'name', lang)).title;
+  const flagged = isFlagged(place);
+  // The card's own words, so VoiceOver hears on a tile what a sighted
+  // reader is told on the card.
+  const status = isLive(place)
+    ? null
+    : flagged
+      ? t('Not accepted', 'Không được duyệt', '不採用', '未通过', '未通過')
+      : t('Only you can see this', 'Chỉ mình bạn thấy', 'あなただけに表示中', '仅你可见', '僅你可見');
   return (
     // The card's press, so a tile gives under the thumb the way a card does.
     <PressableScale
@@ -75,7 +99,7 @@ export default function PlaceTile({
       delayLongPress={delayLongPress}
       onPressOut={onPressOut}
       accessibilityRole="button"
-      accessibilityLabel={name}
+      accessibilityLabel={status ? `${name}, ${status}` : name}
       accessibilityHint={accessibilityHint}
       accessibilityActions={accessibilityActions}
       onAccessibilityAction={onAccessibilityAction}
@@ -108,6 +132,15 @@ export default function PlaceTile({
         pointerEvents="none"
       />
       <Text style={s.name} numberOfLines={1} maxFontSizeMultiplier={labelScaleCap}>{name}</Text>
+      {status && (
+        <View style={s.status} testID="tile-status">
+          <Ionicons
+            name={flagged ? 'close-circle-outline' : 'time-outline'}
+            size={13}
+            color={flagged ? colors.bad : onPhoto.text}
+          />
+        </View>
+      )}
     </PressableScale>
   );
 }
@@ -121,6 +154,18 @@ const s = StyleSheet.create({
     position: 'absolute', left: 8, right: 8, bottom: 6,
     color: onPhoto.text, fontWeight: font.semibold, fontSize: 12,
     textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 2,
+  },
+  // The card's rating pill and save disc, in the same material: marks on
+  // a photograph are made of one thing. 13pt is the card's status glyph;
+  // 22pt is the smallest disc that keeps a ring of ground round it, and
+  // at a 111pt tile it is a fifth of the width — present, not a sticker.
+  // Top-left because the credit holds the top-right and the name the foot.
+  status: {
+    position: 'absolute', left: 5, top: 5,
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,11,10,0.58)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   attr: {
     position: 'absolute', right: 6, top: 5, maxWidth: '70%',

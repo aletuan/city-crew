@@ -3,8 +3,8 @@
 // A place as one square of the collection's grid. What is pinned: the
 // cover and nothing else stands for the place, the name is on it in the
 // reader's language and is what VoiceOver reads, a tap is the tile's, a
-// place with no photograph keeps its square, and the credit follows the
-// same switch as the card's.
+// place with no photograph keeps its square, the credit follows the
+// same switch as the card's, and a place nobody else sees says so.
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +18,7 @@ vi.mock('../lib/i18n', () => ({
 
 import PlaceTile from './PlaceTile';
 import { appFlags } from '../lib/flags';
+import { colors, onPhoto } from '../theme';
 
 const place = (over: Partial<Place> = {}): Place => ({
   slug: 'pho-10',
@@ -85,5 +86,39 @@ describe('PlaceTile', () => {
     appFlags.set('photo_attribution', false);
     render(<PlaceTile place={place({ place_photos: [COVER] } as Partial<Place>)} size={111} onPress={() => {}} />);
     expect(screen.queryByText('Bởi Minh')).toBeNull();
+  });
+
+  // A list stays public around a place that is not live, and only its
+  // owner sees that place (23 Oct 2026). The grid is the default view, so
+  // the tile has to say what the card's status line says.
+  describe('a place nobody else sees', () => {
+    const icon = () => screen.queryByTestId('tile-status')?.querySelector('[data-icon]');
+
+    it('marks nothing on a live place', () => {
+      render(<PlaceTile place={place()} size={111} onPress={() => {}} />);
+      expect(screen.queryByTestId('tile-status')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Pho 10' })).toBeTruthy();
+    });
+
+    it('wears the clock while it waits, and VoiceOver says only you can see it', () => {
+      render(<PlaceTile place={place({ is_published: false, review_status: 'pending' })} size={111} onPress={() => {}} />);
+      expect(icon()?.getAttribute('data-icon')).toBe('time-outline');
+      expect(icon()?.getAttribute('data-color')).toBe(onPhoto.text);
+      expect(screen.getByRole('button', { name: 'Pho 10, Only you can see this' })).toBeTruthy();
+    });
+
+    // Approved and still unpublished is not live either: the rule is the
+    // pair, as the member policy's is.
+    it('wears the clock when approved but not yet published', () => {
+      render(<PlaceTile place={place({ is_published: false, review_status: 'approved' })} size={111} onPress={() => {}} />);
+      expect(icon()?.getAttribute('data-icon')).toBe('time-outline');
+    });
+
+    it('wears the red cross once the desk has turned it down', () => {
+      render(<PlaceTile place={place({ is_published: true, review_status: 'flagged' })} size={111} onPress={() => {}} />);
+      expect(icon()?.getAttribute('data-icon')).toBe('close-circle-outline');
+      expect(icon()?.getAttribute('data-color')).toBe(colors.bad);
+      expect(screen.getByRole('button', { name: 'Pho 10, Not accepted' })).toBeTruthy();
+    });
   });
 });
