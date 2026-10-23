@@ -157,10 +157,17 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // Reset during render rather than in an effect, so the stale page is
   // never painted; the carousel below is keyed on the same value so the
   // native scroll offset starts over too.
+  //
+  // And when the number of photographs changes (23 Oct 2026): the owner
+  // swiped to a late page, deleted photographs in the gallery, and came
+  // back to a page that no longer existed — the carousel now keeps its
+  // own reading in range, but the strip should start over all the same,
+  // as it does for a new cover.
   const coverUri = place ? coverOf(place)?.photo_uri ?? null : null;
-  const [pagedFor, setPagedFor] = useState(coverUri);
-  if (pagedFor !== coverUri) {
-    setPagedFor(coverUri);
+  const pageKey = `${coverUri ?? 'no-cover'}|${place ? photosOf(place).length : 0}`;
+  const [pagedFor, setPagedFor] = useState(pageKey);
+  if (pagedFor !== pageKey) {
+    setPagedFor(pageKey);
     setPhotoIndex(0);
   }
   const [hoursOpen, setHoursOpen] = useState(false);
@@ -598,7 +605,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               onPage={setPhotoIndex}
               width={heroW}
               height={heroH}
-              scrollKey={coverUri ?? 'no-cover'}
+              scrollKey={pageKey}
               countRight={space.page}
               countBottom={15}
               attrStyle={s.attr}

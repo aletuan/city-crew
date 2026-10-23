@@ -928,6 +928,23 @@ describe('PlaceDetailScreen — hero', () => {
     expect(document.querySelector('img[src="c.jpg"]')).not.toBe(pageBefore);
   });
 
+  // The owner's crash (23 Oct 2026): on page 3, into the gallery, two
+  // photographs deleted, back — a page that was no longer there. The
+  // strip starts over, as for a new cover, and the screen stands.
+  it('goes back to the first page when photographs are deleted under it', () => {
+    const p = (n: number) => place({
+      place_photos: ['a.jpg', 'b.jpg', 'c.jpg'].slice(0, n).map((u, i) => photo(u, { sort_order: i, is_cover: i === 0 })),
+    });
+    state.catalog = { loading: false, data: [p(3)] };
+    const n = nav();
+    const r = render(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    swipeTo(2);
+    state.catalog = { loading: false, data: [p(2)] };
+    r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    expect(heroPage().page).toBe(0);
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+  });
+
   // Only a new cover moves the reader. A reload that changes nothing
   // else about the photographs must not throw away where they had got to.
   it('keeps the page across a reload that leaves the cover where it was', () => {

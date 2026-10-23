@@ -81,6 +81,13 @@ export default function PhotoCarousel<T>({
 }) {
   const [measured, setMeasured] = useState(0);
   if (!pages.length) return null;
+  // The page the caller holds, kept to the pages there are. The pages can
+  // shrink under a page held still: on 23 Oct 2026 the owner swiped the
+  // hero along, deleted photographs in the gallery and came back, and the
+  // credit read `pages[page]` past the end — `undefined.attribution_name`,
+  // and the whole place screen was its error face. The caller resets the
+  // page where it can see why; this is so no caller can crash it.
+  const at = Math.min(page, pages.length - 1);
   const w = width ?? measured;
   const size: PageSize = height != null ? { width: w, height } : { width: w, aspectRatio: aspectRatio ?? 1 };
 
@@ -106,8 +113,8 @@ export default function PhotoCarousel<T>({
         {pages.map((item, i) => renderPage(item, i, size))}
       </ScrollView>
       {children}
-      <PhotoCredit name={attributionOf(pages[page])} style={attrStyle ?? s.attr} />
-      <PageCount count={pages.length} page={page} right={countRight} bottom={countBottom} testID={testID ? `${testID}-count` : undefined} />
+      <PhotoCredit name={attributionOf(pages[at])} style={attrStyle ?? s.attr} />
+      <PageCount count={pages.length} page={at} right={countRight} bottom={countBottom} testID={testID ? `${testID}-count` : undefined} />
     </View>
   );
 }
