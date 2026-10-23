@@ -48,6 +48,16 @@ test('savePlace stamps reviewed_at only when review_status is part of the patch'
   assert.ok('updated_at' in updateArgs[0]);
 });
 
+// Approved means live (owner, 23 Oct 2026): approving publishes. A flag
+// leaves the switch where it was — the flag alone hides the place.
+test('savePlace publishes a place it approves, and leaves the switch alone for a flag', async () => {
+  const { api, client } = await loadApi([{ data: [{ slug: 'a' }], error: null }, { data: [{ slug: 'a' }], error: null }]);
+  await api.savePlace('a', { review_status: 'approved' });
+  assert.equal(client.calls[0].chain.find(([m]) => m === 'update')[1][0].is_published, true);
+  await api.savePlace('a', { review_status: 'flagged' });
+  assert.equal('is_published' in client.calls[1].chain.find(([m]) => m === 'update')[1][0], false);
+});
+
 test('savePlace leaves reviewed_at alone for an ordinary field edit', async () => {
   const { api, client } = await loadApi([{ data: [{ slug: 'a-slug' }], error: null }]);
   await api.savePlace('a-slug', { name_en: 'New name' });
@@ -357,13 +367,19 @@ test('places() looks up each contributor once, even when several rows share one'
   assert.deepEqual(client.calls[1].chain.find(([m]) => m === 'in'), ['in', ['id', ['u1']]]);
 });
 
-// ---- approvePlaces / publishApproved: the two switches stay independent.
+// ---- approvePlaces / publishApproved. Approving publishes (owner, 23 Oct
+// 2026); publishApproved stays for an approved place taken down by hand.
 
-test('approvePlaces excludes already-approved rows so the count reflects real changes', async () => {
+test('approvePlaces publishes what it approves, and skips rows already approved and live', async () => {
   const { api, client } = await loadApi([{ data: [{ slug: 'a' }], error: null }]);
   const result = await api.approvePlaces(['a', 'b']);
   assert.equal(result.approved, 1);
-  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'neq' && a[0] === 'review_status'));
+  const chain = client.calls[0].chain;
+  const [, [patch]] = chain.find(([m]) => m === 'update');
+  assert.equal(patch.review_status, 'approved');
+  assert.equal(patch.is_published, true);
+  // An approved place that was taken down is put back up by approving it.
+  assert.ok(chain.some(([m, a]) => m === 'or' && a[0] === 'review_status.neq.approved,is_published.eq.false'));
 });
 
 test('approvePlaces on an empty selection makes no request', async () => {
@@ -400,6 +416,22 @@ test('progress() counts a place as unpublished only when approved and not yet li
   // The machine queue rides on the same rows, so the select carries the object.
   assert.deepEqual(result.by_machine, { ja: 1, zh: 0, 'zh-Hant': 0 });
   assert.ok(client.calls[0].chain.some(([m, a]) => m === 'select' && a[0].includes('i18n')));
+});
+
+// A flag hides the place until it is approved again, so the overview says
+// how long the oldest has waited.
+test('progress() reports when the longest-flagged place was flagged, and null when none is', async () => {
+  const rows = [
+    { slug: 'a', review_status: 'flagged', reviewed_at: '2026-10-23T06:00:00Z' },
+    { slug: 'b', review_status: 'flagged', reviewed_at: '2026-10-23T04:30:00Z' },
+    { slug: 'c', review_status: 'flagged', reviewed_at: null },
+    { slug: 'd', review_status: 'approved', reviewed_at: '2026-10-01T00:00:00Z' },
+  ];
+  const { api, client } = await loadApi([{ data: rows, error: null }]);
+  assert.equal((await api.progress()).oldest_flagged, '2026-10-23T04:30:00Z');
+  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'select' && a[0].includes('reviewed_at')));
+  const { api: api2 } = await loadApi([{ data: [{ slug: 'd', review_status: 'approved', reviewed_at: '2026-10-01T00:00:00Z' }], error: null }]);
+  assert.equal((await api2.progress()).oldest_flagged, null);
 });
 
 test('progress() names the unclassified rows and which half is missing, rather than only counting them', async () => {

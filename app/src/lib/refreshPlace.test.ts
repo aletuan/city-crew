@@ -35,6 +35,8 @@ const asImported: Current = {
   google_phone: '+84 28 0000 0000',
   desc_en: 'Old summary.',
   reviewer_source: 'google',
+  business_status: 'OPERATIONAL',
+  review_note: null,
 };
 
 describe("Google's own fields", () => {
@@ -166,6 +168,40 @@ const table = (updateError?: string) => {
 };
 
 const row = { ...asImported, id: 'p1', google_place_id: 'ChIJabc' };
+
+// A place Google calls closed for good comes off the app, once, when the
+// closure is new (owner, 23 Oct 2026).
+describe('a place closed for good', () => {
+  const closed = { ...google, businessStatus: 'CLOSED_PERMANENTLY' };
+
+  it('is flagged, stamped, and given the reason on the desk\'s note', () => {
+    const patch = refreshPatch(closed, asImported, NOW);
+    expect(patch).toMatchObject({
+      business_status: 'CLOSED_PERMANENTLY',
+      review_status: 'flagged',
+      reviewed_at: '2026-09-27T03:00:00.000Z',
+      review_note: 'Google: closed permanently (2026-09-27)',
+    });
+  });
+
+  it('keeps the note the desk had already written, under the reason', () => {
+    const patch = refreshPatch(closed, { ...asImported, review_note: 'Found via Threads' }, NOW);
+    expect(patch.review_note).toBe('Google: closed permanently (2026-09-27)\nFound via Threads');
+  });
+
+  // The desk looked, found Google wrong, and approved it again: the next
+  // run must not flag it back.
+  it('is left alone when Google already said so last time', () => {
+    const patch = refreshPatch(closed, { ...asImported, business_status: 'CLOSED_PERMANENTLY' }, NOW);
+    expect(patch).not.toHaveProperty('review_status');
+    expect(patch).not.toHaveProperty('review_note');
+  });
+
+  it('is not what a temporary closure means', () => {
+    const patch = refreshPatch({ ...google, businessStatus: 'CLOSED_TEMPORARILY' }, asImported, NOW);
+    expect(patch).not.toHaveProperty('review_status');
+  });
+});
 
 describe('refreshPlace', () => {
   it('asks Google for this place with the refresh mask, and writes the patch', async () => {

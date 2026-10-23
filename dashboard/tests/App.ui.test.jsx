@@ -54,6 +54,27 @@ describe('App', () => {
     expect(tile('flagged').textContent).toBe('3flagged');
   });
 
+  // A flag hides the place from the app until it is approved again: the
+  // overview says so, and how long the oldest has waited.
+  it('says flagged places are hidden, and how long the oldest has waited', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-23T08:30:00Z'));
+    api.progress.mockResolvedValue(progress({ ...COUNTS, oldest_flagged: '2026-10-23T06:30:00Z' }));
+    const { unmount } = renderDesk('/');
+    const note = await screen.findByRole('note');
+    expect(note.textContent).toBe('3 flagged places are hidden from the app until approved · the oldest has waited 2h');
+    unmount();
+    api.progress.mockResolvedValue(progress({ total: 5, by_status: { approved: 4, flagged: 1 }, oldest_flagged: '2026-10-23T08:00:00Z' }));
+    const second = renderDesk('/');
+    expect((await screen.findByRole('note')).textContent).toBe('A flagged place is hidden from the app until approved · the oldest has waited 30m');
+    second.unmount();
+    api.progress.mockResolvedValue(progress({ total: 5, by_status: { approved: 5 }, oldest_flagged: null }));
+    renderDesk('/');
+    await screen.findByRole('group', { name: 'Filter by review status' });
+    expect(screen.queryByRole('note')).toBeNull();
+    vi.useRealTimers();
+  });
+
   it('a queue with nothing in it stays quiet, and no total means no tiles', async () => {
     api.progress.mockResolvedValue(progress({ total: 5, by_status: { approved: 5 } }));
     const { unmount } = renderDesk('/');

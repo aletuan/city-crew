@@ -72,6 +72,9 @@ export type Details = {
   editorialSummary?: { text?: string };
 };
 
+/** What Google says of a place that has shut for good. */
+export const CLOSED_FOR_GOOD = "CLOSED_PERMANENTLY";
+
 /** The part of the row a refresh has to see before it writes. */
 export type Current = {
   website: string | null;
@@ -80,6 +83,10 @@ export type Current = {
   google_phone: string | null;
   desc_en: string | null;
   reviewer_source: string | null;
+  /** What Google said last time — so a closure is acted on once, when it
+   *  is new, and not again on every run after. */
+  business_status: string | null;
+  review_note: string | null;
 };
 
 const empty = (s: string | null | undefined) => s == null || s.trim() === "";
@@ -111,6 +118,22 @@ export function refreshPatch(d: Details, cur: Current, now: Date): Record<string
   if (w.change) patch.website = w.value;
   const p = follow(cur.phone, cur.google_phone, phone);
   if (p.change) patch.phone = p.value;
+
+  // ── closed for good (owner, 23 Oct 2026) ──
+  //
+  // A place Google calls closed for good comes off the app: flagged, which
+  // hides it from everyone but its submitter and the desk, with the reason
+  // on the note the desk reads. Not deleted — a delete would take readers'
+  // check-ins, trip stops and list entries with it, and Google is sometimes
+  // wrong. Only when the closure is new: a place the desk looked at and
+  // approved again stays approved on the next run, rather than being
+  // flagged back every night.
+  if (d.businessStatus === CLOSED_FOR_GOOD && cur.business_status !== CLOSED_FOR_GOOD) {
+    const note = `Google: closed permanently (${now.toISOString().slice(0, 10)})`;
+    patch.review_status = "flagged";
+    patch.reviewed_at = now.toISOString();
+    patch.review_note = cur.review_note ? `${note}\n${cur.review_note}` : note;
+  }
 
   if (cur.reviewer_source === "google") {
     patch.desc_en = summary;

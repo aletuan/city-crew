@@ -36,7 +36,7 @@ const DEFAULT_LIMIT = 10;
  *  twenty keeps a request well inside the function's time limit. */
 const MAX_LIMIT = 20;
 
-const COLS = "id, google_place_id, website, phone, google_website, google_phone, desc_en, reviewer_source";
+const COLS = "id, google_place_id, website, phone, google_website, google_phone, desc_en, reviewer_source, business_status, review_note";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });

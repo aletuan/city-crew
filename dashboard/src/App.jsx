@@ -4,7 +4,7 @@ import { api } from './api.js';
 import { DAYS } from './contributors.js';
 import { signOut } from './auth.jsx';
 import { CategoryIcon } from './icons.jsx';
-import { newCount } from './reports.js';
+import { ageLabel, newCount } from './reports.js';
 
 const ToastCtx = createContext(() => {});
 const ProgressCtx = createContext({ progress: null, refresh: () => {} });
@@ -430,6 +430,7 @@ export default function App() {
 
   const approved = progress?.by_status?.approved ?? 0;
   const flagged = progress?.by_status?.flagged ?? 0;
+  const oldestFlagged = progress?.oldest_flagged ?? null;
   const total = progress?.total ?? 0;
   // Approved and still invisible. Both the line and the button vanish at
   // zero, which makes their absence the signal that nothing is waiting —
@@ -621,6 +622,18 @@ export default function App() {
                   <UnfiledBell places={progress?.unclassified} />
                 </div>
               </div>
+              {/* A flag takes a place off the app until it is approved
+                  again, and the Threads skill flags every place it
+                  enriches — so the flagged tile is a list of places
+                  missing from every collection that holds them. Said in
+                  words, with how long the oldest has waited (owner, 23 Oct
+                  2026), so a re-review is not left for tomorrow. */}
+              {oldestFlagged && (
+                <p className="flagnote" role="note">
+                  {flagged === 1 ? 'A flagged place is' : `${flagged} flagged places are`} hidden from the app until approved
+                  {' · '}the oldest has waited <b>{ageLabel(oldestFlagged)}</b>
+                </p>
+              )}
             </div>
                 <Outlet />
                 {toast && <div className="toast" role="status">{toast}</div>}
