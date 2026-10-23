@@ -378,10 +378,17 @@ export async function deleteCollection(slug: string): Promise<void> {
 }
 
 /** The row ids behind two slugs. Both tables key on slug for the app and on
- *  id for the join table, so one hop is unavoidable. */
-async function idsFor(collectionSlug: string, placeSlug: string) {
+ *  id for the join table, so one hop is unavoidable.
+ *
+ *  A list of your own arrives with its id (`MY_COLLECTION_COLS`), and the
+ *  save sheet passes it: asking for an id already in hand was a query on
+ *  every tick, for nothing (23 Oct 2026). The place's is not carried —
+ *  `PLACE_COLS` keys on slug — so that one is still asked. */
+async function idsFor(collectionSlug: string, placeSlug: string, collectionId?: string) {
   const [col, place] = await Promise.all([
-    supabase.from('collections').select('id').eq('slug', collectionSlug).single(),
+    collectionId
+      ? { data: { id: collectionId }, error: null }
+      : supabase.from('collections').select('id').eq('slug', collectionSlug).single(),
     supabase.from('places').select('id').eq('slug', placeSlug).single(),
   ]);
   if (col.error) throw new Error(col.error.message);
@@ -396,8 +403,10 @@ async function idsFor(collectionSlug: string, placeSlug: string) {
  * `sortOrder` is where it lands in the list — the caller knows how many
  * members there already are, so new saves go on the end.
  */
-export async function addPlaceToCollection(collectionSlug: string, placeSlug: string, sortOrder = 0): Promise<void> {
-  const { collectionId, placeId } = await idsFor(collectionSlug, placeSlug);
+export async function addPlaceToCollection(
+  collectionSlug: string, placeSlug: string, sortOrder = 0, knownId?: string,
+): Promise<void> {
+  const { collectionId, placeId } = await idsFor(collectionSlug, placeSlug, knownId);
   const { error } = await supabase
     .from('collection_places')
     .insert({ collection_id: collectionId, place_id: placeId, sort_order: sortOrder });
@@ -409,8 +418,8 @@ export async function addPlaceToCollection(collectionSlug: string, placeSlug: st
   if (error && error.code !== '23505') throw new Error(error.message);
 }
 
-export async function removePlaceFromCollection(collectionSlug: string, placeSlug: string): Promise<void> {
-  const { collectionId, placeId } = await idsFor(collectionSlug, placeSlug);
+export async function removePlaceFromCollection(collectionSlug: string, placeSlug: string, knownId?: string): Promise<void> {
+  const { collectionId, placeId } = await idsFor(collectionSlug, placeSlug, knownId);
   const { error } = await supabase
     .from('collection_places')
     .delete()
