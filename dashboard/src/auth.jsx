@@ -19,7 +19,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase.js';
 import { buildRedirectTo, resolveAuthView } from './lib/authGate.js';
 
-export const signOut = () => supabase.auth.signOut();
+// This browser only. supabase-js signs out of every session the account
+// has unless told otherwise, and on 23 Oct 2026 signing out here ended the
+// app's session on the owner's phone with it — which the phone did not
+// notice, and showed a profile on a session auth no longer honoured.
+export const signOut = () => supabase.auth.signOut({ scope: 'local' });
 
 const redirectTo = () => buildRedirectTo(window.location.origin, window.location.pathname);
 

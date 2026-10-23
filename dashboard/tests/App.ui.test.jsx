@@ -154,6 +154,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
     fireEvent.click(within(screen.getByRole('menu', { name: 'More' })).getByRole('menuitem', { name: 'Sign out' }));
     expect(supabase.auth.signOut).toHaveBeenCalledTimes(2);
+    // Out of this browser, and not out of the app on the phone too.
+    expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
   it('the nav wears the count of waiting reports, and the sheet says it too', async () => {

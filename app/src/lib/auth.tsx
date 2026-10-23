@@ -19,6 +19,8 @@ import { supabase } from './supabase';
 import { normalizeHandle } from './handle';
 import { presetUrl, type AvatarPreset } from './avatars';
 import { READER_PREFS, readerKey } from './readerPrefs';
+import { sessionGone } from './sessionGone';
+import { shouldRefresh } from './stale';
 
 /**
  * Postgres constraint violations, as something a screen can branch on.
@@ -155,6 +157,14 @@ type Auth = {
   setAvatarPreset: (key: AvatarPreset) => Promise<void>;
   clearAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
+  /**
+   * Is the session still good, now that something the server guards has
+   * refused it? A refresh, once: true when a fresh token came back. When
+   * auth says the session is gone, this device signs out of it too and
+   * the answer is false; when auth said nothing (no network), false and
+   * nothing else — see `lib/sessionGone`.
+   */
+  confirmSession: () => Promise<boolean>;
   /** Delete the account and everything personal under it. The server
    *  deletes exactly the account the token proves — see the
    *  delete-account function — and the local session is cleared after,
@@ -195,6 +205,7 @@ const ActionsCtx = createContext<AuthActions>({
   confirmSignUp: async () => {}, requestReset: async () => {}, resetPassword: async () => {},
   updateProfile: async () => {}, setAvatar: async () => {}, setAvatarPreset: async () => {}, clearAvatar: async () => {},
   signOut: async () => {},
+  confirmSession: async () => false,
   deleteAccount: async () => {},
 });
 const EventsCtx = createContext<Subscribe>(() => () => {});
@@ -315,6 +326,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .setItem(cacheKey('profile', 'all', uid), packCache([profile], Date.now()))
       .catch(() => {});
   }, [profile, session?.user?.id]);
+
+  // ── a session ended somewhere else (owner, 23 Oct 2026) ──
+  //
+  // A sign-out elsewhere can end this device's session without this
+  // device hearing of it: the Data Desk's did, and the phone went on
+  // showing the owner's profile for most of an hour on a token auth no
+  // longer honoured (see `lib/sessionGone`). So the session is put to
+  // auth — `getUser` asks it, where reading the token does not — once it
+  // is known at launch, and again on coming back to the app, no more
+  // often than the catalog asks again (`shouldRefresh`). Gone, and this
+  // device signs out of it: `SIGNED_OUT` clears the profile, the lists
+  // and everything else that was the account's, and nothing is said.
+  const endIfGone = useCallback(async (e: { code?: string } | null) => {
+    if (sessionGone(e)) await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  }, []);
+  const checkedAt = useRef<number | null>(null);
+  const signedIn = useRef(false);
+  signedIn.current = !!uid;
+  const verify = useCallback(async () => {
+    checkedAt.current = Date.now();
+    const { error } = await supabase.auth.getUser().catch(() => ({ error: null }));
+    await endIfGone(error);
+  }, [endIfGone]);
+  useEffect(() => {
+    if (ready && uid) void verify();
+  }, [ready, uid, verify]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && signedIn.current && shouldRefresh(checkedAt.current, Date.now())) void verify();
+    });
+    return () => sub.remove();
+  }, [verify]);
+
+  const confirmSession = useCallback(async () => {
+    const { data, error } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null }, error: null }));
+    if (data.session) return true;
+    await endIfGone(error);
+    return false;
+  }, [endIfGone]);
 
   // Token refresh runs on a timer; only keep it running while the app is
   // in the foreground (the supabase-js guidance for React Native).
@@ -469,8 +519,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile((p) => ({ ...p, avatar_url: '' }));
   }, [session]);
 
+  // This device only. supabase-js signs out everywhere unless told
+  // otherwise, and the Data Desk's sign-out doing that is how the phone
+  // came to hold a session auth had ended (23 Oct 2026, above).
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw new Error(error.message);
   }, []);
 
@@ -508,9 +561,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const actions = useMemo<AuthActions>(() => ({
     signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
-    setAvatar, setAvatarPreset, clearAvatar, signOut, deleteAccount,
+    setAvatar, setAvatarPreset, clearAvatar, signOut, confirmSession, deleteAccount,
   }), [signIn, signUp, confirmSignUp, requestReset, resetPassword,
-      updateProfile, setAvatar, setAvatarPreset, clearAvatar, signOut, deleteAccount]);
+      updateProfile, setAvatar, setAvatarPreset, clearAvatar, signOut, confirmSession, deleteAccount]);
 
   return (
     <EventsCtx.Provider value={subscribe}>

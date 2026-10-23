@@ -84,8 +84,18 @@ async function mount({ signedIn = null as ReturnType<typeof session> | null, fet
   return view;
 }
 
+// Whether auth still has the session, as `getUser` says — off the queue,
+// so a provider that asks on launch does not eat a reply meant for the
+// profile read. The tests of that check set it themselves.
+const getUser = vi.hoisted(() => ({ answer: { data: { user: {} }, error: null } as unknown }));
+
 beforeEach(async () => {
   h.fake.reset();
+  getUser.answer = { data: { user: {} }, error: null };
+  vi.spyOn(h.fake.client.auth, 'getUser').mockImplementation(async () => {
+    h.fake.log.push({ op: 'auth', fn: 'getUser', filters: [] });
+    return getUser.answer as never;
+  });
   manipulateAsync.mockReset();
   vi.mocked(AsyncStorage.setItem).mockClear();
   for (const uid of ['u1', 'u2']) await AsyncStorage.removeItem(profileKey(uid));
@@ -651,5 +661,114 @@ describe('useAuthEvent', () => {
     render(<Listener />);
     h.fake.fireAuth('SIGNED_OUT', null);
     expect(fn).not.toHaveBeenCalled();
+  });
+});
+
+// The Data Desk's sign-out ended the phone's session on 23 Oct 2026, and
+// the phone went on showing the owner's profile on a token auth no longer
+// honoured (`lib/sessionGone`). The session is put to auth now, and a
+// device signs out of no session but its own.
+describe('a session ended somewhere else', () => {
+  const signOuts = () => asked('signOut').map((a) => a.payload);
+  const getUsers = () => h.fake.log.filter((a) => a.fn === 'getUser').length;
+
+  it('signs out of this device alone', async () => {
+    await mount({ signedIn: session('u1'), fetched: row() });
+    h.fake.replies({ error: null });
+    await seen.api.signOut();
+    expect(signOuts()).toEqual([{ scope: 'local' }]);
+  });
+
+  it('asks auth once the stored session is known, and signs this device out when auth has no such session', async () => {
+    getUser.answer = { data: { user: null }, error: { code: 'session_not_found', status: 403 } };
+    await mount({ signedIn: session('u1'), fetched: row() });
+    await waitFor(() => expect(signOuts()).toEqual([{ scope: 'local' }]));
+    expect(getUsers()).toBe(1);
+  });
+
+  // No network is not proof of anything: nobody is signed out for it.
+  it('keeps the session when auth could not be reached, or said something else', async () => {
+    for (const answer of [
+      { data: { user: null }, error: { name: 'AuthRetryableFetchError', status: 0 } },
+      { data: { user: { id: 'u1' } }, error: null },
+    ]) {
+      getUser.answer = answer;
+      const view = await mount({ signedIn: session('u1'), fetched: row() });
+      await act(async () => {});
+      expect(getUsers()).toBe(1);
+      expect(signOuts()).toEqual([]);
+      view.unmount();
+      h.fake.reset();
+    }
+    vi.mocked(h.fake.client.auth.getUser).mockRejectedValueOnce(new Error('offline'));
+    await mount({ signedIn: session('u1'), fetched: row() });
+    await act(async () => {});
+    expect(signOuts()).toEqual([]);
+  });
+
+  it('asks nothing of a reader who is not signed in', async () => {
+    await mount();
+    await act(async () => {});
+    expect(getUsers()).toBe(0);
+  });
+
+  // Coming back to the app asks again, as often as the catalog does.
+  it('asks again on coming back to the app, once the last answer is old', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-23T12:00:00Z'));
+    const handlers: ((s: string) => void)[] = [];
+    const spy = vi.spyOn(AppState, 'addEventListener').mockImplementation((_type, fn) => {
+      handlers.push(fn as (s: string) => void);
+      return { remove: () => {} } as unknown as ReturnType<typeof AppState.addEventListener>;
+    });
+    await mount({ signedIn: session('u1'), fetched: row() });
+    const back = async () => { await act(async () => { for (const f of handlers) f('active'); }); };
+    expect(getUsers()).toBe(1);
+    vi.setSystemTime(new Date('2026-10-23T12:01:00Z'));
+    await back();
+    expect(getUsers()).toBe(1);
+    getUser.answer = { data: { user: null }, error: { code: 'session_not_found' } };
+    vi.setSystemTime(new Date('2026-10-23T12:03:00Z'));
+    await back();
+    expect(getUsers()).toBe(2);
+    await waitFor(() => expect(signOuts()).toEqual([{ scope: 'local' }]));
+    spy.mockRestore();
+  });
+
+  it('does not ask on coming back when nobody is signed in', async () => {
+    const handlers: ((s: string) => void)[] = [];
+    const spy = vi.spyOn(AppState, 'addEventListener').mockImplementation((_type, fn) => {
+      handlers.push(fn as (s: string) => void);
+      return { remove: () => {} } as unknown as ReturnType<typeof AppState.addEventListener>;
+    });
+    await mount();
+    await act(async () => { for (const f of handlers) f('active'); });
+    expect(getUsers()).toBe(0);
+    spy.mockRestore();
+  });
+
+  describe('confirmSession', () => {
+    it('is true when a fresh token comes back', async () => {
+      await mount({ signedIn: session('u1'), fetched: row() });
+      h.fake.replies({ data: { session: session('u1') }, error: null });
+      await expect(seen.api.confirmSession()).resolves.toBe(true);
+      expect(signOuts()).toEqual([]);
+    });
+
+    it('signs this device out, and is false, when auth has ended the session', async () => {
+      await mount({ signedIn: session('u1'), fetched: row() });
+      h.fake.replies({ data: { session: null }, error: { code: 'refresh_token_not_found', message: 'Refresh Token Not Found' } }, { error: null });
+      await expect(seen.api.confirmSession()).resolves.toBe(false);
+      expect(signOuts()).toEqual([{ scope: 'local' }]);
+    });
+
+    it('is false and signs nobody out when auth could not be reached', async () => {
+      await mount({ signedIn: session('u1'), fetched: row() });
+      h.fake.replies({ data: { session: null }, error: { message: 'Failed to fetch' } });
+      await expect(seen.api.confirmSession()).resolves.toBe(false);
+      h.fake.replies({ throws: new Error('offline') });
+      await expect(seen.api.confirmSession()).resolves.toBe(false);
+      expect(signOuts()).toEqual([]);
+    });
   });
 });

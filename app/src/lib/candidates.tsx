@@ -20,7 +20,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Keyboard } from 'react-native';
-import { useSession } from './auth';
+import { useAuthActions, useSession } from './auth';
 import { useSaveActions } from './save';
 import { type City, useCurrentCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
@@ -89,6 +89,7 @@ export function useCandidates(at?: City | null): Candidates {
   const meId = session?.user?.id;
   const places = usePlaces();
   const { askToSignIn } = useSaveActions();
+  const { confirmSession } = useAuthActions();
 
   const [results, setResults] = useState<Candidate[] | null>(null);
   const [known, setKnown] = useState<Record<string, Known>>({});
@@ -123,7 +124,19 @@ export function useCandidates(at?: City | null): Candidates {
     Keyboard.dismiss();
     setSearching(true);
     setResults(null);
-    searchPlaces(q, city.id)
+    // Refused by a session this device still holds (owner, 23 Oct 2026):
+    // renewed, the search goes again, once; ended somewhere else, this
+    // device signs out of it too (`confirmSession`), and the sheet below
+    // is then the truth rather than a contradiction of Profile.
+    const ask = async () => {
+      try {
+        return await searchPlaces(q, city.id);
+      } catch (e) {
+        if (e instanceof SignedOutError && await confirmSession()) return searchPlaces(q, city.id);
+        throw e;
+      }
+    };
+    ask()
       .then(async (found) => {
         // Awaited, unlike the version this replaces, because one of the
         // two callers *hides* the rows it already has rather than
@@ -158,7 +171,7 @@ export function useCandidates(at?: City | null): Candidates {
   // `city.id` is the stable key; depending on `city` re-runs the search on renders where the city
   // did not change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city?.id, searching, meId, t, askToSignIn]);
+  }, [city?.id, searching, meId, t, askToSignIn, confirmSession]);
 
   /**
    * How far a result is from the reader, or nothing at all.
