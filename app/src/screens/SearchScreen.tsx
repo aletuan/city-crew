@@ -83,7 +83,6 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // city of its own, and answers in the app's.
   const home = list ? cityOfList(list, city?.id ?? null) : city?.id ?? null;
   const homeCity = cityList.find((c) => c.id === home) ?? city;
-  const elsewhereHome = !!list && !!home && home !== city?.id;
   const scope = useCatalogIn(home);
   const places = scope.places.data;
   const cols = scope.collections;
@@ -382,16 +381,30 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
         />
       </View>
       {/* Where a ⊕ puts a place, said once under the box rather than on
-          every row: the rows only say whether each one is in. */}
+          every row: the rows only say whether each one is in.
+
+          A chip, and not a line (owner, 23 Oct 2026). The line was the
+          accent's green at 13pt behind a ⊕, which read as one more
+          button and left the list's name no louder than the words before
+          it. The chip is the "Browse" chips' glass, so it reads as a
+          fact the screen is set to, with the name as its loudest part;
+          a bookmark rather than a ⊕, because nothing here is pressed.
+          The city is not named: the list's own title almost always
+          says it, and the chips below show it. */}
       {list ? (
-        <View style={s.addingTo} testID="search-adding-to">
-          <Ionicons name="add-circle" size={16} color={colors.accent} />
-          <Text style={s.addingToText} numberOfLines={1}>
-            {t(`Adding to ${listTitle}`, `Thêm vào ${listTitle}`, `「${listTitle}」に追加`, `添加到“${listTitle}”`, `新增到「${listTitle}」`)}
-            {/* The city it answers in, when it is not the app's: the
-                shelves below are that city's, and nothing else says so. */}
-            {elsewhereHome ? <Text style={s.addingToCity}>{` · ${cityName(home)}`}</Text> : null}
-          </Text>
+        <View style={s.addingToRow}>
+          <View
+            style={s.addingTo}
+            testID="search-adding-to"
+            accessible
+            accessibilityLabel={t(`Adding to ${listTitle}`, `Đang thêm vào ${listTitle}`, `「${listTitle}」に追加中`, `正在添加到“${listTitle}”`, `正在新增到「${listTitle}」`)}
+          >
+            <Ionicons name="bookmark-outline" size={15} color={colors.textTertiary} />
+            <Text style={s.addingToText} numberOfLines={1}>
+              {t('Collection: ', 'Bộ sưu tập: ', 'コレクション：', '合集：', '合集：')}
+              <Text style={s.addingToTitle}>{listTitle}</Text>
+            </Text>
+          </View>
         </View>
       ) : null}
       {/* The cities, under the box rather than in the list, so they stay
@@ -883,14 +896,18 @@ const s = StyleSheet.create({
   // chips. With a long one the list's own size squeezed the row back to
   // its chips, which is why "phở" looked right and hid it.
   citiesRow: { flexGrow: 0 },
-  // Under the box, on the page's margin, before the chips: one line in
-  // the accent, the colour the ⊕ on every row wears.
+  // Under the box, on the page's margin, before the chips. The pill is the
+  // Browse chip's glass and padding (`Chip`'s chipOn), sized to its words
+  // and stopped at the margin, where a long name ends in "…".
+  addingToRow: { paddingHorizontal: space.page, paddingBottom: 12, flexDirection: 'row' },
   addingTo: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: space.page, marginTop: -4, paddingBottom: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
+    paddingHorizontal: 14, paddingVertical: 8,
   },
-  addingToText: { flex: 1, color: colors.accent, ...type.meta, fontWeight: font.semibold },
-  addingToCity: { color: colors.textSecondary, fontWeight: font.regular },
+  addingToText: { flexShrink: 1, color: colors.textSecondary, fontSize: 15 },
+  addingToTitle: { color: colors.text, fontWeight: font.semibold },
   cities: { paddingHorizontal: space.page, paddingBottom: 12, gap: 8 },
 
   section: {
