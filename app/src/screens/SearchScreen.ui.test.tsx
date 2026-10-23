@@ -940,12 +940,26 @@ describe('adding to a list', () => {
     // A chip, not a button (owner, 23 Oct 2026): a bookmark rather than a
     // ⊕, the name its loudest part, the whole said as one for VoiceOver.
     const chip = screen.getByTestId('search-adding-to');
-    expect(chip.textContent).toBe('Collection: Thao Dien must visit');
-    expect(chip.getAttribute('aria-label')).toBe('Adding to Thao Dien must visit');
+    expect(chip.textContent).toBe('Add to collection: Thao Dien must visit(1)');
+    expect(chip.getAttribute('aria-label')).toBe('Adding to Thao Dien must visit, 1 place');
     expect(chip.getAttribute('role')).not.toBe('button');
     expect(chip.querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('bookmark-outline');
     expect(getComputedStyle(screen.getByText('Thao Dien must visit')).fontWeight).toBe(String(font.semibold));
     expect(input().placeholder).toBe('Search places');
+  });
+
+  // The figure moves with each ⊕ (owner, 23 Oct 2026): the lists Search
+  // reads carry the taps already, so a list one longer is a count one up.
+  it('counts what the list holds, and counts again as it grows', () => {
+    const { n } = nav();
+    const r = render(<SearchScreen navigation={n} route={{ params: { addTo: 'thao-dien' } } as RootRoute<'Search'>} />);
+    expect(screen.getByTestId('search-adding-to-count').textContent).toBe('(1)');
+    sv.lists = [collection({
+      slug: 'thao-dien', title_en: 'Thao Dien must visit', collection_places: members('pho-10', 'cong'),
+    })];
+    r.rerender(<SearchScreen navigation={n} route={{ params: { addTo: 'thao-dien' } } as RootRoute<'Search'>} />);
+    expect(screen.getByTestId('search-adding-to-count').textContent).toBe('(2)');
+    expect(screen.getByTestId('search-adding-to').getAttribute('aria-label')).toBe('Adding to Thao Dien must visit, 2 places');
   });
 
   it('puts a place in with one tap on its ⊕, and neither opens nor saves it', () => {
@@ -1076,7 +1090,7 @@ describe('in the list’s city', () => {
     expect(cat.asked.at(-1)).toBe('hue');
     expect(g.at).toBe('hue');
     // Not named: the list's title says it, and the chips below show it.
-    expect(screen.getByTestId('search-adding-to').textContent).toBe('Collection: Slow coffee in Hue');
+    expect(screen.getByTestId('search-adding-to').textContent).toBe('Add to collection: Slow coffee in Hue(3)');
     // Hue's own shelves and chips, not Hanoi's.
     expect(textAfter('Most popular')).toContain('Imperial Citadel');
     expect(screen.queryByText('Cong Caphe')).toBeNull();
@@ -1098,7 +1112,7 @@ describe('in the list’s city', () => {
       mountIn();
       expect(cat.asked.at(-1)).toBe('hanoi');
       expect(g.at).toBe('hanoi');
-      expect(screen.getByTestId('search-adding-to').textContent).toBe('Collection: Slow coffee in Hue');
+      expect(screen.getByTestId('search-adding-to').textContent).toBe(`Add to collection: Slow coffee in Hue(${members.length})`);
       cleanup();
     }
   });
