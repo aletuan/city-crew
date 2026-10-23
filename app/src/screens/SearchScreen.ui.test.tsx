@@ -19,7 +19,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
-import type { Nav } from '../nav';
+import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/data';
 import type { Candidate, Known } from '../lib/suggest';
 import { RECENTS_KEY } from '../lib/recents';
@@ -43,7 +43,7 @@ const g = vi.hoisted(() => ({
   adding: null as string | null,
   batch: { running: false, state: {}, done: 0, total: 0 } as unknown,
   run: vi.fn(),
-  addMany: vi.fn(async () => ({ done: 0, skipped: 0, failed: 0, held: 0 })),
+  addMany: vi.fn(async () => ({ done: 0, skipped: 0, failed: 0, held: 0, made: [] as Place[] })),
   clear: vi.fn(),
 }));
 
@@ -112,9 +112,12 @@ vi.mock('../lib/auth', () => {
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
+// The reader's own lists, as `useMyLists` hands them over, and the one
+// act Search takes on them.
+const sv = vi.hoisted(() => ({ lists: [] as unknown[], toggle: vi.fn(async (_c: unknown, _p: unknown) => {}) }));
 vi.mock('../lib/save', () => {
-  const useSave = () => ({ save: vi.fn(), isSaved: () => false });
-  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+  const useSave = () => ({ save: vi.fn(), isSaved: () => false, toggle: sv.toggle });
+  return { useSave, useMyLists: () => ({ data: sv.lists }), useSaveActions: () => useSave() };
 });
 
 import { Keyboard } from 'react-native';
@@ -255,6 +258,8 @@ beforeEach(async () => {
   forgetSearchIndex();
   g.addMany.mockClear();
   g.clear.mockClear();
+  sv.lists = [];
+  sv.toggle.mockClear();
   await AsyncStorage.removeItem(RECENTS_KEY);
   vi.mocked(AsyncStorage.setItem).mockClear();
 });
@@ -902,5 +907,122 @@ describe('a place just suggested in another city', () => {
     expect(screen.getByTestId('search-city-hcmc').textContent).toBe('Saigon (1)');
     type('sài gòn concept');
     expect(screen.getByTestId('search-city-hcmc').textContent).toBe('Saigon (1)');
+  });
+});
+
+// Opened from a list of the reader's own (owner, 23 Oct 2026): every
+// place wears that list's ⊕ / ✓, a tap puts it in or takes it out, and
+// what Google makes goes in once the run is over.
+describe('adding to a list', () => {
+  const thaoDien = () => collection({
+    slug: 'thao-dien', title_en: 'Thao Dien must visit', collection_places: members('pho-10'),
+  });
+  const mountIn = (addTo: string) => {
+    const { n } = nav();
+    render(<SearchScreen navigation={n} route={{ params: { addTo } } as RootRoute<'Search'>} />);
+    return n;
+  };
+  beforeEach(() => { sv.lists = [thaoDien()]; });
+
+  it('says which list, under a box that asks for places alone', () => {
+    mountIn('thao-dien');
+    expect(screen.getByTestId('search-adding-to').textContent).toBe('Adding to Thao Dien must visit');
+    expect(input().placeholder).toBe('Search places');
+  });
+
+  it('puts a place in with one tap on its ⊕, and neither opens nor saves it', () => {
+    const n = mountIn('thao-dien');
+    type('cong');
+    const box = screen.getByTestId('search-result-0-in-list');
+    expect(box.getAttribute('aria-label')).toBe('Add to Thao Dien must visit');
+    expect(box.getAttribute('aria-checked')).toBe('false');
+    expect(screen.queryByLabelText('Save to a collection')).toBeNull();
+    fireEvent.click(box);
+    expect(sv.toggle).toHaveBeenCalledWith(sv.lists[0], expect.objectContaining({ slug: 'cong' }));
+    expect(n.navigate).not.toHaveBeenCalled();
+  });
+
+  it('ticks what the list holds, and a tap on the tick is the same act', () => {
+    mountIn('thao-dien');
+    type('pho');
+    const box = screen.getByTestId('search-result-0-in-list');
+    expect(box.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(box);
+    expect(sv.toggle).toHaveBeenCalledWith(sv.lists[0], expect.objectContaining({ slug: 'pho-10' }));
+  });
+
+  // Found as surely as opening it would have found it.
+  it('remembers a search whose place went into the list', async () => {
+    mountIn('thao-dien');
+    type('cong');
+    fireEvent.click(screen.getByTestId('search-result-0-in-list'));
+    await act(async () => {});
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(RECENTS_KEY, expect.stringContaining('cong'));
+  });
+
+  it('puts the ⊕ on the places before anything is typed, too', () => {
+    const n = mountIn('thao-dien');
+    const popular = screen.getAllByTestId('search-popular-cong-in-list')[0];
+    expect(popular.getAttribute('aria-checked')).toBe('false');
+    expect(screen.getAllByTestId('search-popular-pho-10-in-list')[0].getAttribute('aria-checked')).toBe('true');
+    expect(screen.getAllByTestId('search-latest-cong-in-list').length).toBeGreaterThan(0);
+    fireEvent.click(popular);
+    expect(sv.toggle).toHaveBeenCalledWith(sv.lists[0], expect.objectContaining({ slug: 'cong' }));
+    expect(n.navigate).not.toHaveBeenCalled();
+  });
+
+  // A list is not something to put in a list.
+  it('leaves collections out of the results', () => {
+    mountIn('thao-dien');
+    type('coffee crawl');
+    expect(screen.queryByText('Coffee crawl')).toBeNull();
+  });
+
+  it('puts what Google made into the list, each after the one before', async () => {
+    g.results = [cand('g1', 'New Roastery'), cand('g2', 'Other Roastery')];
+    const a = place({ slug: 'new-roastery', name_en: 'New Roastery', is_published: false, review_status: 'pending' });
+    const b = place({ slug: 'other-roastery', name_en: 'Other Roastery', is_published: false, review_status: 'pending' });
+    g.addMany.mockResolvedValueOnce({ done: 2, skipped: 0, failed: 0, held: 0, made: [a, b] } as never);
+    mountIn('thao-dien');
+    type('roastery');
+    for (const box of screen.getAllByRole('checkbox').filter((el) => !el.getAttribute('aria-label')?.startsWith('Add to'))) {
+      fireEvent.click(box);
+    }
+    fireEvent.click(screen.getByText('Add 2 places'));
+    await act(async () => {});
+    expect(sv.toggle.mock.calls.map(([c, p]) => [
+      (p as Place).slug, (c as Collection).collection_places.map((cp) => cp.places?.slug),
+    ])).toEqual([
+      ['new-roastery', ['pho-10']],
+      ['other-roastery', ['pho-10', 'new-roastery']],
+    ]);
+  });
+
+  it('says the way back is to the list', () => {
+    const n = mountIn('thao-dien');
+    type('zzzz');
+    fireEvent.click(screen.getByText('Back to the list'));
+    expect(n.goBack).toHaveBeenCalled();
+  });
+
+  // Somebody else's list, or one not loaded: plain Search, bookmark and all.
+  it('is plain Search for a list that is not one of yours', () => {
+    mountIn('someone-elses');
+    expect(screen.queryByTestId('search-adding-to')).toBeNull();
+    type('cong');
+    expect(screen.queryByTestId('search-result-0-in-list')).toBeNull();
+    expect(screen.getAllByLabelText('Save to a collection').length).toBeGreaterThan(0);
+  });
+
+  it('adds nothing to a list when Google was asked from plain Search', async () => {
+    g.results = [cand('g1', 'New Roastery')];
+    g.addMany.mockResolvedValueOnce({ done: 1, skipped: 0, failed: 0, held: 0, made: [place({ slug: 'new-roastery' })] } as never);
+    mount();
+    type('roastery');
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.click(screen.getByText('Add this place'));
+    await act(async () => {});
+    expect(g.addMany).toHaveBeenCalled();
+    expect(sv.toggle).not.toHaveBeenCalled();
   });
 });

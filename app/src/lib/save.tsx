@@ -77,6 +77,14 @@ type SaveActions = {
   askToSignIn: (why?: SignInWhy, resume?: () => void) => void;
   /** Is the place in any of their lists? Drives the bookmark's fill. */
   isSaved: (placeSlug: string) => boolean;
+  /**
+   * One place into one of their lists, or out of it, drawn at once and
+   * written behind — the same act as a row of the save sheet, which is
+   * where it lived alone until Search could be opened from a list to add
+   * to it (owner, 23 Oct 2026). `c` is the list as the screen has it from
+   * `useMyLists`.
+   */
+  toggle: (c: Collection, place: Place) => Promise<void>;
 };
 
 /**
@@ -100,6 +108,7 @@ const ActionsCtx = createContext<SaveActions>({
   save: () => {},
   askToSignIn: () => {},
   isSaved: () => false,
+  toggle: async () => {},
 });
 const ListsCtx = createContext<MyLists>(NO_LISTS);
 
@@ -130,7 +139,7 @@ const SheetsCtx = createContext<SaveSheetsState>({
   closeAuth: () => {}, signIn: () => {}, closeSave: () => {}, toggle: async () => {}, newList: () => {},
 });
 
-/** The acts: `save`, `askToSignIn`, `isSaved`. */
+/** The acts: `save`, `askToSignIn`, `isSaved`, `toggle`. */
 export const useSaveActions = () => useContext(ActionsCtx);
 /** The reader's own collections, as a `Fetch`. */
 export const useMyLists = () => useContext(ListsCtx);
@@ -335,7 +344,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     save,
     askToSignIn,
     isSaved: (slug) => savedSlugs.has(slug),
-  }), [save, askToSignIn, savedSlugs]);
+    toggle,
+  }), [save, askToSignIn, savedSlugs, toggle]);
   const lists = useMemo<MyLists>(() => ({
     data: shown, loading: mine.loading, loaded: mine.loaded, error: mine.error,
     loadedAt: mine.loadedAt, fromCache: mine.fromCache, reload: mine.reload,

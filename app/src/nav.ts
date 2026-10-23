@@ -63,7 +63,11 @@ export type PlanAsk = {
 // so the bottom tab bar stays visible everywhere.
 export type RootStackParamList = {
   ExploreHome: undefined;
-  Search: undefined;
+  /** `addTo` is a list of the reader's own, when Search was opened from it
+   *  to add places: each place then wears that list's ⊕ / ✓, and what
+   *  Google finds goes into it. Registered in the Collections stack too,
+   *  so the way back is to the list. */
+  Search: { addTo?: string } | undefined;
   /** `tab` lands the screen on a specific half — Explore's "See all"
    *  points at the community shelf, Profile's counts at your library.
    *  `at` is the moment of the tap, so a repeat tap is a new param: it
