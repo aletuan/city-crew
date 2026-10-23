@@ -49,7 +49,7 @@
 // also keeps dynamic colours out of expo-linear-gradient, which processes
 // its stops itself.
 
-import { DynamicColorIOS, Platform, Settings, type ColorValue } from 'react-native';
+import { DynamicColorIOS, Platform, Settings, type OpaqueColorValue } from 'react-native';
 import { LOOK_DEFS, readLook, storeOf, type Look, type Pinned } from './lib/look';
 import { PALETTES, type Palette } from './palettes';
 
@@ -64,8 +64,21 @@ export { PALETTES, type Palette };
  * build used for quick checks) it settles on the dark value, which is the
  * app's original and only shipping ground.
  */
-const dyn = (light: string, dark: string): ColorValue =>
-  (Platform.OS === 'ios' ? DynamicColorIOS({ light, dark }) : dark);
+const dyn = (light: string, dark: string): Color =>
+  (Platform.OS === 'ios' ? DynamicColorIOS({ light, dark }) as OpaqueColorValue : dark);
+
+/**
+ * What a token is: a hex string, or the platform's own dynamic colour.
+ *
+ * Not React Native's `ColorValue`, which since 0.88 (SDK 58) is typed to
+ * take `null` and a number as well — true of what a style accepts, and
+ * not of what this theme hands out. Icons take only a string or a
+ * native colour, so tokens typed as the wider `ColorValue` were refused
+ * at every icon in the app (198 places, 24 Oct 2026). `DynamicColorIOS`
+ * is typed as returning that wider type too, and returns the native
+ * colour object; the cast above says so once, here.
+ */
+export type Color = string | OpaqueColorValue;
 
 type Sides = { light: Palette; dark: Palette };
 
@@ -96,7 +109,7 @@ export const loadedLook: Look = readLook(storeOf(() => Settings));
 const SIDES = LOOKS[loadedLook];
 /** One token, as a plain value where the look's two sides agree and as a
  *  `dyn` pair where they do not. */
-const pick = (k: Exclude<keyof Palette, 'gradAI'>): ColorValue =>
+const pick = (k: Exclude<keyof Palette, 'gradAI'>): Color =>
   (SIDES.light[k] === SIDES.dark[k] ? SIDES.light[k] : dyn(SIDES.light[k], SIDES.dark[k]));
 
 /**

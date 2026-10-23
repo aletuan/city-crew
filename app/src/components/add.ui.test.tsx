@@ -76,8 +76,8 @@ describe('AddPill', () => {
     }
     throw new Error('no matching element in the committed tree');
   };
-  const pill = () => StyleSheet.flatten(propsWhere((p) => 'colors' in p).style as StyleProp<ViewStyle>);
-  const word = () => StyleSheet.flatten(propsWhere((p) => p.children === 'Add' && 'style' in p).style as StyleProp<TextStyle>);
+  const pill = () => StyleSheet.flatten(propsWhere((p) => 'colors' in p).style as StyleProp<ViewStyle>) ?? {};
+  const word = () => StyleSheet.flatten(propsWhere((p) => p.children === 'Add' && 'style' in p).style as StyleProp<TextStyle>) ?? {};
 
   it('stands at 44 when tall and sizes to its content otherwise', () => {
     const { rerender } = render(<AddPill label="Add" onPress={() => {}} tall />);

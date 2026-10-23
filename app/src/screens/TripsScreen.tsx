@@ -303,7 +303,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
   // of the walk back that ExploreScreen's `tabPress` note describes.
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
   // And from Profile's Trips count, which lands here with a fresh `at`:
   // the list from its top, not where the reader last left it (UX-09).

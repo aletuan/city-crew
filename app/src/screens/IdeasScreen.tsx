@@ -131,7 +131,7 @@ export default function IdeasScreen({ navigation, route }: {
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
   // of the walk back that ExploreScreen's `tabPress` note describes.
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
 
   const [draft, setDraft] = useState<TripDraft>(EMPTY_DRAFT);

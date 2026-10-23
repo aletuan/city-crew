@@ -2,11 +2,11 @@
 // round and gradient buttons, the switch.
 
 import React, { useRef } from 'react';
-import { Animated, ColorValue, Pressable, PressableProps, StyleProp, StyleSheet, Switch, Text, View, ViewStyle } from 'react-native';
+import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, Switch, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../../lib/i18n';
-import { colors, font, gradAI, labelScaleCap, radius, space } from '../../theme';
+import { type Color, colors, font, gradAI, labelScaleCap, radius, space } from '../../theme';
 import { CONTROL_H, useNarrowWindow } from './layout';
 import { type HapticKind, fireHaptic } from './haptics';
 import { useReducedMotion, useLoop } from './motion';
@@ -28,7 +28,7 @@ import { useReducedMotion, useLoop } from './motion';
  * `containerStyle` → `style`, with no change on screen.
  */
 export function PressableScale({ children, style, contentStyle, anchorRef, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: Omit<PressableProps, 'style'> & {
-  anchorRef?: React.Ref<View>;
+  anchorRef?: React.Ref<React.ComponentRef<typeof View>>;
   haptic?: HapticKind;
   scaleTo?: number;
   /**
@@ -327,10 +327,10 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color, testID
    * Optional, and the default is the one to reach for. A coloured round
    * button is for a control whose colour *is* the information.
    *
-   * `ColorValue` rather than `string`, because every token in the theme
-   * is a `dyn()` — a value that resolves per theme, not a hex.
+   * The theme's `Color` rather than `string`, because every token in the
+   * theme is a `dyn()` — a value that resolves per theme, not a hex.
    */
-  color?: ColorValue;
+  color?: Color;
   testID?: string;
 }) {
   return (

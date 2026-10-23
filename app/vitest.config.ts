@@ -189,6 +189,10 @@ const COMPONENTS_FLOOR = { lines: 95, statements: 95, branches: 93, functions: 9
 // for the same reason.
 const NATIVE_ONLY = [
   'src/components/MiniMap.tsx',
+  // Gesture handler 2.32's own Swipeable, carried over because v3 (SDK 58)
+  // dropped it — see the file. A native gesture recogniser: jsdom has no
+  // thumb, and the screen's test stands it in, as it did the package's.
+  'src/components/Swipeable.tsx',
 ];
 
 // `IMPURE` — the impure `lib/*.ts` files — is in `impure.js`, because

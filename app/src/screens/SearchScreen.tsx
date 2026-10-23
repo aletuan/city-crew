@@ -101,7 +101,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // field for editing — a different promise from the row itself, which
   // runs the search as typed — and putting it there without focusing the
   // field would strand the reader one tap short of the edit they asked for.
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   // The keyboard waits for the push to land. `autoFocus` raised it during
   // the slide itself — two animations fighting for the same frames, which
   // is the stutter this screen was reported for. `transitionEnd` is the
@@ -752,7 +752,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
         // answering a question nobody asked.
         ListFooterComponent={searching && rows.length > 0
           ? <>{addRow}{googleEmpty}</>
-          : null}
+          : undefined}
         contentContainerStyle={{ paddingTop: 6, paddingBottom: showBar ? 10 : tabClearance }}
         showsVerticalScrollIndicator={false}
       />

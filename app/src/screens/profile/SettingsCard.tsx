@@ -1,6 +1,6 @@
 // Profile's Preferences card: city, language, theme and tips.
 
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { View } from 'react-native';
 import { Card } from '../../components/ui';
 import { useSignupTour } from '../../components/SignupTour';
@@ -52,7 +52,7 @@ export function SettingsCard() {
   // bar; with the card low on the screen it would cover the switch itself
   // (owner, 19 Oct 2026). Once it knows where its top is, the page scrolls
   // just enough to keep the switch above it, and not at all when it is.
-  const guideRow = useRef<View>(null);
+  const guideRow = useRef<ComponentRef<typeof View>>(null);
   const { notice, noticeTop } = tour;
   const { scrollBy } = back;
   useEffect(() => {

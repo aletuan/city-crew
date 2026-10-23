@@ -104,7 +104,7 @@ export default function LegalSheet({ id, onClose }: {
   const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<React.ComponentRef<typeof ScrollView>>(null);
   // The document actually on screen. It starts as the one the caller
   // named and moves when a cross-reference is tapped, so the caller does
   // not have to own a decision the sheet is better placed to make.

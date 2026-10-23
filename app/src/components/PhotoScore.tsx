@@ -9,13 +9,13 @@
 // these at once.
 
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, type ColorValue, Modal, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { band, bandLabel, interpreterOf, toTen, type Detail, type PhotoScore, type T } from '../lib/photoScore';
 import { bothSources, kindNoun, type PhotoKind } from '../lib/photoKind';
 import { percentText } from '../lib/standing';
 import { useI18n } from '../lib/i18n';
-import { colors, display, font, onPhoto, radius, space } from '../theme';
+import { type Color, colors, display, font, onPhoto, radius, space } from '../theme';
 import { Card, PressableScale, useReducedMotion } from './ui';
 
 /**
@@ -92,7 +92,7 @@ function useWave(ms: number, still: boolean) {
  * costs the JS thread nothing while Vision is busy — see `useWave`.
  */
 export function ScoreGlyph({ size, color, active = false, testID = 'score-glyph' }: {
-  size: number; color: ColorValue; active?: boolean; testID?: string;
+  size: number; color: Color; active?: boolean; testID?: string;
 }) {
   const still = useReducedMotion() || !active;
   const waves = [useWave(BARS[0].ms, still), useWave(BARS[1].ms, still), useWave(BARS[2].ms, still)];

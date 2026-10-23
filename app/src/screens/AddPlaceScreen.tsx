@@ -53,7 +53,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
 
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
-  const input = useRef<TextInput>(null);
+  const input = useRef<React.ComponentRef<typeof TextInput>>(null);
   // Held from the tap rather than read from `batch.running`, which only
   // turns true a render later — two taps inside that frame both saw the
   // button and submitted the same selection twice.
@@ -199,7 +199,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
               )}
             </Text>
           )
-          : null}
+          : undefined}
         ListFooterComponent={results?.length
           ? (
             // Google requires the attribution wherever its results are
@@ -214,7 +214,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
               )}
             </Text>
           )
-          : null}
+          : undefined}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingTop: 8, paddingBottom: showFoot ? 10 : tabClearance }}
         showsVerticalScrollIndicator={false}

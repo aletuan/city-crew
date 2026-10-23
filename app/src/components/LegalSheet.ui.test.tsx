@@ -46,7 +46,7 @@ describe('a cross-reference', () => {
   // link has to mean "show the other one", and must never hand a reader
   // mid-signup to Safari.
   it('swaps the document instead of leaving the app', async () => {
-    const spy = vi.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const spy = vi.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     open('terms');
     fireEvent.click((await screen.findAllByText('Chính sách quyền riêng tư'))[0]);
 
@@ -56,7 +56,7 @@ describe('a cross-reference', () => {
   });
 
   it('still leaves for a link that is genuinely elsewhere', async () => {
-    const spy = vi.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const spy = vi.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     open('privacy');
     fireEvent.click((await screen.findAllByText('Supabase'))[0]);
 

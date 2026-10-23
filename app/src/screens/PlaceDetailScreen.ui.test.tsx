@@ -166,8 +166,8 @@ vi.mock('../components/MiniMap', async () => {
 
 import PlaceDetailScreen from './PlaceDetailScreen';
 
-const openURL = vi.spyOn(Linking, 'openURL').mockImplementation(async () => true);
-const shareSpy = vi.spyOn(Share, 'share').mockImplementation(async () => ({ action: 'sharedAction' }));
+const openURL = vi.spyOn(Linking, 'openURL').mockImplementation(async () => {});
+const shareSpy = vi.spyOn(Share, 'share').mockImplementation(async () => ({ action: 'sharedAction', activityType: undefined }));
 // react-native-web's `Alert` is a silent no-op; what the reader is told is
 // read off the spy (see `uitest/setup`).
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -297,7 +297,7 @@ beforeEach(() => {
   spies.bySlug.mockClear();
   spies.setStatusBarStyle.mockClear();
   openURL.mockReset();
-  openURL.mockImplementation(async () => true);
+  openURL.mockImplementation(async () => {});
   shareSpy.mockClear();
   alert.mockClear();
 });
@@ -1033,7 +1033,7 @@ describe('PlaceDetailScreen — floating controls', () => {
   // system sheet above its top edge, where this screen's buttons are.
   it('shares behind the shield', () => {
     let close!: () => void;
-    shareSpy.mockImplementationOnce(() => new Promise((res) => { close = () => res({ action: 'dismissedAction' }); }));
+    shareSpy.mockImplementationOnce(() => new Promise((res) => { close = () => res({ action: 'dismissedAction', activityType: undefined }); }));
     show();
     fireEvent.click(screen.getByLabelText('Share'));
     expect(isShielded()).toBe(true);

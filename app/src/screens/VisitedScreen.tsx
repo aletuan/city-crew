@@ -112,7 +112,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const [open, setOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
   const [kind, setKind] = useState<string | null>(null);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const cancel = () => {
     setOpen(false); setQuery(''); setCity(null); setKind(null);
     inputRef.current?.blur();
