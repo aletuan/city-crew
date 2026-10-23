@@ -544,7 +544,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // computed from paddings, because the header's height moves with the
   // title and the meta line and a menu that floats away from its control
   // stops looking like that control's menu.
-  const btn = useRef<View>(null);
+  const btn = useRef<React.ComponentRef<typeof View>>(null);
   const [anchor, setAnchor] = useState({ top: insets.top + 58, right: space.page });
   const openMenu = () => {
     // Opened first and positioned second: if the measure never calls back
@@ -1700,7 +1700,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   'このコレクションにはまだスポットがありません。',
                   '这个合集里还没有地点。', '這個合集裡還沒有地點。',
                 )} />)
-              : null}
+              : undefined}
             ListHeaderComponent={introCard || noticing || (adding && !grid) ? (
               <>
                 {introCard && (
@@ -1717,7 +1717,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 {noticing && gridNotice}
                 {adding && !grid && addCell()}
               </>
-            ) : null}
+            ) : undefined}
             contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
           />

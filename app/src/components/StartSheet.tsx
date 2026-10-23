@@ -243,7 +243,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   // keyboard closes and this scrolls back to the top — otherwise the map
   // moves to the address you asked for while scrolled out of sight, and
   // the only thing you see happen is the keyboard going away.
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const [fieldY, setFieldY] = useState(0);
   const showField = () => scroller.current?.scrollTo({ y: Math.max(0, fieldY - 8), animated: true });
   const showMap = () => scroller.current?.scrollTo({ y: 0, animated: true });

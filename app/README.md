@@ -42,12 +42,19 @@ Cài **Expo Go** (App Store / Play Store) rồi quét QR.
 > Apple Maps nên ô bản đồ **trống**, phần còn lại của màn vẫn chạy. Muốn
 > thấy bản đồ trên iPhone thì dùng development build (Cách 3).
 
-> **Vì sao SDK 57?** Expo Go trên App Store chỉ chạy đúng một SDK — bản
+> **Vì sao SDK 58?** Expo Go trên App Store chỉ chạy đúng một SDK — bản
 > mới nhất — và không cài được bản cũ. App theo SDK mà Expo Go đang có
-> (57 từ tháng 9/2026; trước đó kẹt ở 54 vì Apple duyệt chậm). Khi Expo Go
-> lên SDK mới, màn "Project is incompatible with this version of Expo Go"
-> là dấu hiệu phải nâng: `npx expo install expo@^<sdk>` rồi
-> `npx expo install --fix`.
+> (58 từ 24/10/2026; 57 từ tháng 9; trước đó kẹt ở 54 vì Apple duyệt chậm).
+> Khi Expo Go lên SDK mới, màn "Project is incompatible with this version
+> of Expo Go" là dấu hiệu phải nâng: `npx expo install expo@^<sdk>` rồi
+> `npx expo install --fix`. Trong sandbox không tới được `api.expo.dev`
+> thì thêm `EXPO_OFFLINE=1`: lệnh đọc bảng phiên bản đi kèm gói `expo`.
+>
+> **Nâng SDK là phải có binary mới.** `runtimeVersion` theo `sdkVersion`,
+> nên sau khi nâng, EAS Update chỉ tới được binary build trên SDK mới —
+> bản TestFlight/App Store cũ đứng yên ở update cuối của SDK cũ cho tới
+> khi binary mới được duyệt. Chạy *Release app to TestFlight* ngay sau khi
+> merge.
 
 **Cách 2 — không cần máy tính (qua GitHub Actions):**
 

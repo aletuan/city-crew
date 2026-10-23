@@ -15,7 +15,7 @@ type Target = 'search' | 'filter' | 'save' | 'collections';
 /** How far the ring stands out from the control it marks, each side;
  *  negative draws it inside. */
 type Outset = { x: number; y: number };
-type Anchor = { ref: React.RefObject<View | null>; press: () => void; focused: () => boolean; outset: Outset };
+type Anchor = { ref: React.RefObject<React.ComponentRef<typeof View> | null>; press: () => void; focused: () => boolean; outset: Outset };
 type Rect = { x: number; y: number; width: number; height: number };
 const targets: Target[] = ['search', 'filter', 'save', 'collections'];
 const noop = () => {};
@@ -69,7 +69,7 @@ export const useSignupTour = () => useContext(Context);
  *  cell, whose mark is the pill inside it. */
 export function useTourAnchor(id: Target, press: () => void, focused: () => boolean = always, outset: Outset = AROUND) {
   const { register } = useSignupTour();
-  const ref = useRef<View>(null);
+  const ref = useRef<React.ComponentRef<typeof View>>(null);
   const action = useRef(press);
   action.current = press;
   const active = useRef(focused);
@@ -101,7 +101,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   // Where the notice's top edge sits on screen, for Profile to keep the
   // switch that raised it in view above it (`SettingsCard`).
   const [noticeTop, setNoticeTop] = useState<number | null>(null);
-  const noticeRef = useRef<View>(null);
+  const noticeRef = useRef<React.ComponentRef<typeof View>>(null);
   const lift = useTabBarLift();
   const revision = useRef(0);
   const writes = useRef(Promise.resolve());

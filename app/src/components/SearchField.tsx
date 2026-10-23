@@ -62,7 +62,7 @@ export default function SearchField({
   value: string;
   onChangeText: (next: string) => void;
   placeholder: string;
-  inputRef?: React.Ref<TextInput>;
+  inputRef?: React.Ref<React.ComponentRef<typeof TextInput>>;
   /** The two ids a smoke flow or a test reaches for. The Search screen
    *  keeps the default, which is what its flows already name. */
   testID?: { input: string; cancel: string };

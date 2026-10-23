@@ -86,7 +86,7 @@ vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined })
 // stand-in draws the row and its revealed actions side by side (so Edit and
 // Delete are reachable by name), hands the render prop a real drag value,
 // and offers two buttons that play the open/close callbacks a swipe fires.
-vi.mock('react-native-gesture-handler/Swipeable', async () => {
+vi.mock('../components/Swipeable', async () => {
   const R = await import('react');
   const { Animated } = await import('react-native');
   type P = {

@@ -62,7 +62,7 @@ function disc(): ViewStyle {
   while (stack.length) {
     const f = stack.pop()!;
     const p = f.memoizedProps;
-    if (p && typeof p === 'object' && 'contentStyle' in p) return StyleSheet.flatten(p.contentStyle as StyleProp<ViewStyle>);
+    if (p && typeof p === 'object' && 'contentStyle' in p) return StyleSheet.flatten(p.contentStyle as StyleProp<ViewStyle>) ?? {};
     if (f.sibling) stack.push(f.sibling);
     if (f.child) stack.push(f.child);
   }

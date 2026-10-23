@@ -89,7 +89,7 @@ export function SwitchRow({ icon, label, value, onChange, last, testID, rowRef }
   onChange: (on: boolean) => void;
   last?: boolean;
   testID?: string;
-  rowRef?: React.Ref<View>;
+  rowRef?: React.Ref<React.ComponentRef<typeof View>>;
 }) {
   return (
     <View ref={rowRef} style={[s.twoLineRow, !last && s.featureRowDivider]} testID={testID}>

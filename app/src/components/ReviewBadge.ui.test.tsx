@@ -119,8 +119,8 @@ function propsWhere(pick: (p: Record<string, unknown>) => boolean): Record<strin
   }
   throw new Error('nothing matched');
 }
-const word = () => StyleSheet.flatten(propsWhere((p) => p.children === 'Pending' && 'style' in p).style as StyleProp<TextStyle>);
-const ground = () => StyleSheet.flatten(propsWhere((p) => p.testID === 'pill' && 'style' in p).style as StyleProp<ViewStyle>);
+const word = () => StyleSheet.flatten(propsWhere((p) => p.children === 'Pending' && 'style' in p).style as StyleProp<TextStyle>) ?? {};
+const ground = () => StyleSheet.flatten(propsWhere((p) => p.testID === 'pill' && 'style' in p).style as StyleProp<ViewStyle>) ?? {};
 
 /** A colour as the browser resolves it, to compare against a style read
  *  back — a token may be hex, rgba or a named dynamic pair. */

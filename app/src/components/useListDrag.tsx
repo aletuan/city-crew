@@ -71,7 +71,7 @@
 // the floating tab bar lies over is not "showing": the edge is measured
 // from the bar's top.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Animated, PanResponder, StyleSheet, useWindowDimensions, View, type GestureResponderHandlers, type NativeScrollEvent,
   type StyleProp, type ViewStyle,
@@ -149,7 +149,7 @@ export type ListDrag = {
   onPitch: (key: string, pitch: number) => void;
   /** For the view around the rows, with `panHandlers`: where the list
    *  shows on screen, measured when a row lifts. */
-  areaRef: React.RefObject<View | null>;
+  areaRef: React.RefObject<ComponentRef<typeof View> | null>;
   /** For the list's `onScroll`: where it is scrolled to. */
   onScrolled: (e: NativeScrollEvent) => void;
   /** For the list's `onContentSizeChange`: how tall its content is, which
@@ -185,7 +185,7 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null, scroll = nu
   const dragX = useRef(new Animated.Value(0)).current;
   const pitchByKey = useRef(new Map<string, number>());
   const { height: winH } = useWindowDimensions();
-  const areaRef = useRef<View>(null);
+  const areaRef = useRef<ComponentRef<typeof View>>(null);
   // Where the list is scrolled and how far it can go, from its own scroll
   // events; where it shows on screen, from the lift; where the finger is;
   // and the frame waiting to scroll it, if one is.

@@ -265,7 +265,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     pickView('list');
   }), [navigation, pickView]);
   const listRef = useRef<SectionList<Place>>(null);
-  useScrollToTop(listRef);
+  // React Navigation types the list it scrolls as a ScrollView or a thing
+  // with `scrollTo`; React Native 0.88 (SDK 58) types a SectionList as
+  // neither, though it answers `getScrollResponder` as it always did.
+  useScrollToTop(listRef as unknown as Parameters<typeof useScrollToTop>[0]);
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
@@ -479,7 +482,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     firstRef.current = n;
     setFirstVisible(n);
   }).current;
-  const onViewable = useRef(({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
+  const onViewable = useRef(({ viewableItems }: { viewableItems: { index: number | null | undefined }[] }) => {
     const idx = viewableItems.map((v) => v.index).filter((i): i is number => i != null);
     // An empty batch happens between frames and means nothing; taking it
     // as zero would blink the offer off and on again.

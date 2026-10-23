@@ -6,9 +6,9 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type AccessibilityProps, Alert, Animated, Keyboard, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View } from 'react-native';
+import { Alert, Animated, Keyboard, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View, type ViewProps } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -47,7 +47,12 @@ const TILE_OR_ROW = oneOf('tile', 'row');
 type Drag = ReturnType<Animated.Value['interpolate']>;
 
 /** The swipe's two actions, in the form a screen reader offers them. */
-type RowA11y = Pick<AccessibilityProps, 'accessibilityActions' | 'onAccessibilityAction'>;
+type RowA11y = Pick<ViewProps, 'accessibilityActions' | 'onAccessibilityAction'>;
+
+/** A section of the list: yours or the community's, with its rows. The
+ *  rows are named here, not only by the list: React Native 0.88 types a
+ *  section handed back to a render prop as possibly the extra fields alone. */
+type Section = { own: boolean; data: ListRow[] };
 
 /** What the two actions take up behind an open row: two 62pt buttons, the
  *  8pt between them, and the 8pt separating them from the card. The row
@@ -484,8 +489,11 @@ export default function CollectionsScreen({ navigation, route }: {
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
   // of the walk back that ExploreScreen's `tabPress` note describes.
-  const scrollRef = useRef<SectionList<ListRow, { own: boolean }>>(null);
-  useScrollToTop(scrollRef);
+  const scrollRef = useRef<SectionList<ListRow, Section>>(null);
+  // Typed through, as on Explore: React Navigation's idea of a scrollable
+  // and React Native 0.88's SectionList do not meet, though the list
+  // answers `getScrollResponder` as it always did.
+  useScrollToTop(scrollRef as unknown as Parameters<typeof useScrollToTop>[0]);
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
   //
@@ -688,7 +696,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // Community was scoped to the app's city and letting go of that chip
   // had to mean something other than unset.
   const [cityPick, setCityPick] = useState<string | null>(null);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const cancel = () => {
     setPanel(false); setQuery(''); setKind(null); setCityPick(null);
     inputRef.current?.blur();
@@ -792,7 +800,7 @@ export default function CollectionsScreen({ navigation, route }: {
 
   // Tiles pack two to a row-item; see `ShelfRow` for why every row-item
   // carries whose it is and where it sits in the whole list.
-  const sections = onYours
+  const sections: Section[] = onYours
     ? (mineReady ? [{ own: true, data: shape(sifted, true, view) }] : [])
     : [{ own: false, data: shape(sifted, false, view) }];
 

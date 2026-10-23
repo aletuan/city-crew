@@ -54,7 +54,7 @@ vi.mock('react-native', async (orig) => {
   const rn = await orig<typeof import('react-native')>();
   const R = await import('react');
   type P = React.ComponentProps<typeof rn.ScrollView>;
-  const ScrollView = R.forwardRef<InstanceType<typeof rn.ScrollView>, P>((p, ref) => (
+  const ScrollView = R.forwardRef<React.ComponentRef<typeof rn.ScrollView>, P>((p, ref) => (
     p.horizontal && p.onMomentumScrollEnd
       ? R.createElement(rn.View, null,
         R.createElement(rn.Pressable, {
@@ -397,7 +397,7 @@ describe('the money', () => {
 
 describe('the way out to Google Maps', () => {
   it('opens the whole day as a route', () => {
-    const open = vi.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const open = vi.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     show();
     expect(screen.getByText('Open the route')).toBeTruthy();
     expect(screen.getByText('Google Maps')).toBeTruthy();
@@ -423,7 +423,7 @@ describe('the way out to Google Maps', () => {
   // A one-stop day is a route from where the reader is to that stop; it
   // used to be relabelled "Open in Google Maps" and open a search.
   it('routes to the one place when only one stop can be placed', () => {
-    const open = vi.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const open = vi.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     state.trips = [trip({
       trip_stops: [stop(place()), stop(null)],
     })];

@@ -27,7 +27,7 @@ function Anchor({ id }: { id: 'search' | 'filter' | 'save' | 'collections' }) {
   const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined,
     id === 'collections' ? { x: 0, y: -4 } : undefined);
   useEffect(() => {
-    ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.readings.shift() ?? state.y, state.w, state.h) } as unknown as View;
+    ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.readings.shift() ?? state.y, state.w, state.h) } as unknown as React.ComponentRef<typeof View>;
   }, [ref]);
   return null;
 }

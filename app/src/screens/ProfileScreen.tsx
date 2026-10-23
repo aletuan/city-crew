@@ -6,7 +6,7 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { AmbientWarmth, Screen, useTabBarClearance } from '../components/ui';
 import { useScrollToTop } from '@react-navigation/native';
@@ -27,7 +27,7 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
   // of the walk back that ExploreScreen's `tabPress` note describes.
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
   // Where the restart left the reader, taken once on this screen's first
   // render of the run (see `claimResume`): the sheet reopens from its first
