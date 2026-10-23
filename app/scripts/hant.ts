@@ -56,6 +56,10 @@ export const PHRASES: [string, string][] = [
   ['熟悉應用', '熟悉 App'],
   ['編輯應用中', '編輯 App 中'],
   ['應用', 'App'],
+  // Review. OpenCC's Taiwan table turns 審核 into 稽核, which is an
+  // audit — of accounts, of a company. A place waiting on the desk is
+  // 待審核 in Taiwan, as an app waits on App Store 審核 (23 Oct 2026).
+  ['稽核', '審核'],
   // The screen and its controls.
   ['全屏', '全螢幕'],
   ['標籤頁', '分頁'],

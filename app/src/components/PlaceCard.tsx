@@ -5,7 +5,7 @@ import {
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { categoriesOf, pinCategory } from '../lib/categories';
-import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
+import { coverOf, fmtCount, isLive, Place } from '../lib/data';
 import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, sashLabel, shutLabel } from '../lib/format';
@@ -17,6 +17,7 @@ import { useSaveActions } from '../lib/save';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
+import ReviewBadge from './ReviewBadge';
 import { KindPill } from './KindPill';
 
 export default function PlaceCard({
@@ -440,34 +441,24 @@ export default function PlaceCard({
               {kind ? <KindPill kind={kind} more={more} testID={testID ? `${testID}-kind` : undefined} /> : null}
             </View>
           )}
-          {/* Only its submitter can see this card at all, so the marker is
-              not a warning — it is the answer to "why can nobody else see
-              the place I added". Without it the card looks live, they show
-              a friend, the friend sees nothing, and the app reads as broken.
+          {/* Only its owner sees this card's place, so the marker is not a
+              warning — it is the answer to "why can nobody else see the
+              place I added". Without it the card looks live, they show a
+              friend, the friend sees nothing, and the app reads as broken.
 
-              It says what is true of the card rather than what is being
-              done about it. "Awaiting review" was a worse label twice
-              over: it made a contribution sound like a submission at a
-              counter, and it was not even accurate — a place can be
-              approved and still not published, and that card said the desk
-              had not looked at it when the desk had.
+              The grid's pill and this are one thing (`ReviewBadge`, owner,
+              23 Oct 2026), in the look's own colours. It read "Only you can
+              see this" until then, chosen over "Awaiting review" because a
+              place can be approved and not yet published; the owner's
+              reference put the state itself on the pill, and what it means
+              for who sees the place moved into the tap.
 
-              Turned down keeps its own words. One is *wait*, the other is
+              Turned down keeps its own word. One is *wait*, the other is
               *no*, and a person owed the second should not be left
-              expecting the first — which is exactly what would happen if
-              this softening reached across to cover it. */}
+              expecting the first. */}
           {!isLive(place) && (
-            <View style={[s.statusRow, isFlagged(place) && s.statusRowBad]}>
-              <Ionicons
-                name={isFlagged(place) ? 'close-circle-outline' : 'time-outline'}
-                size={13}
-                color={isFlagged(place) ? colors.bad : colors.textSecondary}
-              />
-              <Text style={[s.statusText, isFlagged(place) && s.statusTextBad]} numberOfLines={1}>
-                {isFlagged(place)
-                  ? t('Not accepted', 'Không được duyệt', '不採用', '未通过', '未通過')
-                  : t('Only you can see this', 'Chỉ mình bạn thấy', 'あなただけに表示中', '仅你可见', '僅你可見')}
-              </Text>
+            <View style={s.status}>
+              <ReviewBadge place={place} testID={testID ? `${testID}-status` : undefined} />
             </View>
           )}
         </View>
@@ -661,15 +652,7 @@ const s = StyleSheet.create({
   star: { color: onPhoto.star, fontSize: 13 },
   ratingValue: { color: onPhoto.text, fontSize: 15, fontWeight: font.semibold },
   ratingCount: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.regular },
-  statusRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    alignSelf: 'flex-start', marginTop: 8,
-    paddingHorizontal: 9, paddingVertical: 4,
-    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
-  },
-  statusRowBad: { backgroundColor: colors.badSoft },
-  statusText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
-  statusTextBad: { color: colors.bad },
+  status: { marginTop: 8 },
 
   // The pill itself is `KindPill`, shared with the place page and a
   // list's card, so the three say a category one way.
