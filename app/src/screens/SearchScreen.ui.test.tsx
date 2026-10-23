@@ -23,6 +23,7 @@ import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/data';
 import type { Candidate, Known } from '../lib/suggest';
 import { RECENTS_KEY } from '../lib/recents';
+import { font } from '../theme';
 
 const cat = vi.hoisted(() => ({
   places: [] as unknown[],
@@ -936,7 +937,14 @@ describe('adding to a list', () => {
 
   it('says which list, under a box that asks for places alone', () => {
     mountIn('thao-dien');
-    expect(screen.getByTestId('search-adding-to').textContent).toBe('Adding to Thao Dien must visit');
+    // A chip, not a button (owner, 23 Oct 2026): a bookmark rather than a
+    // ⊕, the name its loudest part, the whole said as one for VoiceOver.
+    const chip = screen.getByTestId('search-adding-to');
+    expect(chip.textContent).toBe('Collection: Thao Dien must visit');
+    expect(chip.getAttribute('aria-label')).toBe('Adding to Thao Dien must visit');
+    expect(chip.getAttribute('role')).not.toBe('button');
+    expect(chip.querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('bookmark-outline');
+    expect(getComputedStyle(screen.getByText('Thao Dien must visit')).fontWeight).toBe(String(font.semibold));
     expect(input().placeholder).toBe('Search places');
   });
 
@@ -1062,12 +1070,13 @@ describe('in the list’s city', () => {
   });
   afterEach(() => { CITIES.splice(CITIES.findIndex((c) => c.id === 'hue'), 1); });
 
-  it('answers in the city of the list’s places, and says so, while the app stays in its own', () => {
+  it('answers in the city of the list’s places, while the app stays in its own', () => {
     sv.lists = [list([slow, citadel, place({ slug: 'cong' })])];
     mountIn();
     expect(cat.asked.at(-1)).toBe('hue');
     expect(g.at).toBe('hue');
-    expect(screen.getByTestId('search-adding-to').textContent).toBe('Adding to Slow coffee in Hue · Hue');
+    // Not named: the list's title says it, and the chips below show it.
+    expect(screen.getByTestId('search-adding-to').textContent).toBe('Collection: Slow coffee in Hue');
     // Hue's own shelves and chips, not Hanoi's.
     expect(textAfter('Most popular')).toContain('Imperial Citadel');
     expect(screen.queryByText('Cong Caphe')).toBeNull();
@@ -1082,15 +1091,14 @@ describe('in the list’s city', () => {
     expect(screen.getByText('Slow Cafe')).toBeTruthy();
   });
 
-  // In the app's city already, or empty: the app's city, and no word
-  // about it — nothing on screen is somewhere else.
+  // In the app's city already, or empty: the app's city.
   it('stays in the app’s city for a list that is in it, or has nothing in it', () => {
     for (const members of [[pho, slow], []]) {
       sv.lists = [list(members)];
       mountIn();
       expect(cat.asked.at(-1)).toBe('hanoi');
       expect(g.at).toBe('hanoi');
-      expect(screen.getByTestId('search-adding-to').textContent).toBe('Adding to Slow coffee in Hue');
+      expect(screen.getByTestId('search-adding-to').textContent).toBe('Collection: Slow coffee in Hue');
       cleanup();
     }
   });
