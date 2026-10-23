@@ -52,6 +52,11 @@ const world = vi.hoisted(() => ({
   // hide the very redraws the two halves below are about.
   avatars: null as unknown as F,
   terms: null as unknown as F,
+  // Another city's catalog, for `useCatalogIn`, and every city a query
+  // was asked for by id (undefined: the city on screen, unasked).
+  elsewhere: null as unknown as F,
+  elsewhereLists: null as unknown as F,
+  cityAsked: [] as (string | null | undefined)[],
 }));
 const writes = vi.hoisted(() => ({
   like: vi.fn(async (_id: string, _me: string) => true),
@@ -76,10 +81,15 @@ vi.mock('./auth', () => {
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent };
 });
 vi.mock('./supabase', () => ({ supabase: { auth } }));
+vi.mock('./city', () => ({ useCurrentCity: () => ({ city: { id: 'hanoi' } }) }));
 vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  usePlacesQuery: (me: string | null | undefined) => { world.askedAs.push(me); return world.places; },
-  useCollectionsQuery: () => world.collections,
+  usePlacesQuery: (me: string | null | undefined, cityId?: string | null) => {
+    world.askedAs.push(me);
+    world.cityAsked.push(cityId);
+    return cityId ? world.elsewhere : world.places;
+  },
+  useCollectionsQuery: (cityId?: string | null) => (cityId ? world.elsewhereLists : world.collections),
   useCuratorAvatarsQuery: () => world.avatars,
   // One object per test, not one per render: a fresh `data` every render
   // rebuilt `terms`, and with it the whole context value, on every render
@@ -93,7 +103,7 @@ vi.mock('./data', async (orig) => ({
 }));
 
 import {
-  CatalogProvider, useCatalog, useCollections, useCuratorAvatar, useLikes, usePlaces, useSearchTerms,
+  CatalogProvider, useCatalog, useCatalogIn, useCollections, useCuratorAvatar, useLikes, usePlaces, useSearchTerms,
 } from './catalog';
 
 const OLD = Date.now() - 10 * 60 * 1000;
@@ -109,6 +119,9 @@ beforeEach(() => {
   world.userId = undefined;
   world.askedAs = [];
   world.likesFor = [];
+  world.elsewhere = fetch();
+  world.elsewhereLists = fetch();
+  world.cityAsked = [];
   // Counted a second ago, so a tap made now is newer than the tally and
   // shows in it — the rule `countsNow` keeps.
   // Three shown, two ranked: the owner's own like is in the first and not
@@ -386,5 +399,39 @@ describe('the two halves', () => {
     expect(likes.myLikes).toContain('c1');
     expect(all.myLikes).toContain('c1');
     expect(renders.data).toBe(before);
+  });
+});
+
+// Search opened from a list in another city answers in that city (owner,
+// 23 Oct 2026): a copy of its own for any other city, and the shared copy
+// — with nothing else asked for — for the city on screen or none.
+describe('useCatalogIn', () => {
+  let seen: ReturnType<typeof useCatalogIn> | null = null;
+  function Probe({ id }: { id: string | null }) {
+    const got = useCatalogIn(id);
+    useEffect(() => { seen = got; });
+    return null;
+  }
+  // The provider's own query asks for no city by id; the probe's are the rest.
+  const probeAsked = () => world.cityAsked.filter((c) => c !== undefined);
+
+  it('hands back the shared copy for the city on screen, and for none, and fetches nothing else', () => {
+    for (const id of ['hanoi', null]) {
+      world.cityAsked = [];
+      render(<CatalogProvider><Probe id={id} /></CatalogProvider>);
+      expect(seen!.places).toBe(world.places);
+      expect(seen!.collections).toBe(world.collections);
+      expect(probeAsked().every((c) => c === null)).toBe(true);
+      cleanup();
+    }
+  });
+
+  it('fetches another city its own copy, for the reader the catalog is read as', () => {
+    world.me = 'u7';
+    render(<CatalogProvider><Probe id="hue" /></CatalogProvider>);
+    expect(seen!.places).toBe(world.elsewhere);
+    expect(seen!.collections).toBe(world.elsewhereLists);
+    expect(probeAsked()).toContain('hue');
+    expect(world.askedAs.at(-1)).toBe('u7');
   });
 });

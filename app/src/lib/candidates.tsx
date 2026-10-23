@@ -22,7 +22,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Alert, Keyboard } from 'react-native';
 import { useSession } from './auth';
 import { useSaveActions } from './save';
-import { useCurrentCity, useMyPosition } from './city';
+import { type City, useCurrentCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
 import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
@@ -75,9 +75,15 @@ const stub = (slug: string, c: Candidate, cityId: string) => ({
   is_published: false, review_status: 'pending', place_photos: [],
 }) as unknown as Place;
 
-export function useCandidates(): Candidates {
+/**
+ * `at` is the city to ask Google about and to suggest into, when it is not
+ * the one chosen: Search's, opened from a list in another city. Left out,
+ * the chosen city, as it always was.
+ */
+export function useCandidates(at?: City | null): Candidates {
   const { t } = useI18n();
-  const { city } = useCurrentCity();
+  const current = useCurrentCity().city;
+  const city = at ?? current;
   const me = useMyPosition();
   const { session } = useSession();
   const meId = session?.user?.id;

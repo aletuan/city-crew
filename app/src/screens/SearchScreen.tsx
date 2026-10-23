@@ -1,7 +1,7 @@
 // Search — type-to-filter across the current city's catalog.
 //
 // The catalog is small enough to live in memory, so filtering runs
-// client-side over what usePlaces()/useCollections() already loaded:
+// client-side over what the catalog already loaded (`useCatalogIn`):
 // instant, no extra queries, and it matches without diacritics so
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
@@ -19,7 +19,7 @@ import ListToggle from '../components/ListToggle';
 import {
   AmbientWarmth, Card, Chip, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
-import { coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
+import { cityOfList, coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
 import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
 import { useCityList, useCurrentCity } from '../lib/city';
 import { useSession } from '../lib/auth';
@@ -29,7 +29,7 @@ import { freshOnly, useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
 import { DEFAULT_TZ } from '../lib/clock';
 import { openFragment, openState } from '../lib/format';
-import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
+import { useCatalogIn, useLikes, useSearchTerms } from '../lib/catalog';
 import { RECENTS_KEY, rememberSearch } from '../lib/recents';
 import { buildSearchRows } from '../lib/searchRows';
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
@@ -49,13 +49,10 @@ import type { Nav, RootRoute } from '../nav';
 export default function SearchScreen({ navigation, route }: { navigation: Nav; route?: RootRoute<'Search'> }) {
   const { t, lang } = useI18n();
   const [query, setQuery] = useState('');
-  const { data: places } = usePlaces();
   const { city } = useCurrentCity();
   const { cities: cityList } = useCityList();
   const { userId } = useSession();
-  const cols = useCollections();
   const tabClearance = useTabBarClearance();
-  const google = useCandidates();
 
   // ── adding to a list (owner, 23 Oct 2026) ──
   //
@@ -74,6 +71,23 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // reader may tick more in the meantime.
   const listRef = useRef(list);
   listRef.current = list;
+
+  // ── in the list's city (owner, 23 Oct 2026) ──
+  //
+  // A list of Huế cafés, opened while the app was in Ninh Bình, was offered
+  // Ninh Bình: its three category chips, its pagoda as most popular, Google
+  // asked about Ninh Bình. So opened from a list, Search answers in the
+  // city most of the list's places are in (`cityOfList`) — the catalog,
+  // the shelves before anything is typed, the chips' home and Google —
+  // and the city the app is in stays where it was. An empty list has no
+  // city of its own, and answers in the app's.
+  const home = list ? cityOfList(list, city?.id ?? null) : city?.id ?? null;
+  const homeCity = cityList.find((c) => c.id === home) ?? city;
+  const elsewhereHome = !!list && !!home && home !== city?.id;
+  const scope = useCatalogIn(home);
+  const places = scope.places.data;
+  const cols = scope.collections;
+  const google = useCandidates(homeCity);
 
   const [picked, setPicked] = useState<string[]>([]);
 
@@ -227,7 +241,6 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // State, not storage, so every visit to Search starts at home.
   const searching = terms.length > 0;
   const index = useSearchIndex(userId);
-  const home = city?.id ?? null;
   const everywhere = useMemo(
     () => (index && home ? [...places, ...index.filter((p) => p.city_id !== home)] : places),
     [index, places, home],
@@ -375,6 +388,9 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
           <Ionicons name="add-circle" size={16} color={colors.accent} />
           <Text style={s.addingToText} numberOfLines={1}>
             {t(`Adding to ${listTitle}`, `Thêm vào ${listTitle}`, `「${listTitle}」に追加`, `添加到“${listTitle}”`, `新增到「${listTitle}」`)}
+            {/* The city it answers in, when it is not the app's: the
+                shelves below are that city's, and nothing else says so. */}
+            {elsewhereHome ? <Text style={s.addingToCity}>{` · ${cityName(home)}`}</Text> : null}
           </Text>
         </View>
       ) : null}
@@ -516,7 +532,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
             // the hours cannot be read. The grammar lives in
             // `openFragment`, shared with the Explore cards, so the two
             // lists can never learn to disagree about what an hour says.
-            const when = openFragment(openState(pl.opening_hours, now, city?.tz ?? DEFAULT_TZ), t);
+            const when = openFragment(openState(pl.opening_hours, now, homeCity?.tz ?? DEFAULT_TZ), t);
             const area = localized(pl, 'neighborhood', lang);
             const meta = [area, when].filter(Boolean).join(' · ');
             return (
@@ -874,6 +890,7 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, marginTop: -4, paddingBottom: 12,
   },
   addingToText: { flex: 1, color: colors.accent, ...type.meta, fontWeight: font.semibold },
+  addingToCity: { color: colors.textSecondary, fontWeight: font.regular },
   cities: { paddingHorizontal: space.page, paddingBottom: 12, gap: 8 },
 
   section: {

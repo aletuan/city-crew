@@ -122,6 +122,20 @@ describe('asking Google', () => {
     expect(result.current.searching).toBe(false);
   });
 
+  // Search opened from a list in another city asks about that city, and
+  // suggests into it (owner, 23 Oct 2026).
+  it('asks about, and suggests into, the city it is handed rather than the one chosen', async () => {
+    h.searchPlaces.mockResolvedValue([cand('g1')]);
+    h.suggestPlace.mockResolvedValue({ ok: true, slug: 's', photos: 0 });
+    const hue: City = { ...HANOI, id: 'hue' };
+    const { result } = renderHook(() => useCandidates(hue as unknown as Parameters<typeof useCandidates>[0]));
+    act(() => result.current.run('slow'));
+    await settle();
+    expect(h.searchPlaces).toHaveBeenCalledWith('slow', 'hue');
+    await act(async () => { await result.current.addMany([cand('g1')]); });
+    expect(h.suggestPlace).toHaveBeenCalledWith('g1', 'hue');
+  });
+
   it('searches for a signed-in reader, trimmed, and puts the keyboard away', async () => {
     h.searchPlaces.mockResolvedValue([cand('g1')]);
     const { result } = renderHook(() => useCandidates());
