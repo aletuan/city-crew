@@ -358,8 +358,6 @@ export const colors = {
   //  #422520 on the brown, #2A1A18 on charcoal — charcoal's well on
   //  #271910 would be the page itself: `bad` on it 5.2:1.
   badSoft: pick('badSoft'),
-  /** Words on `badSoft` — see the palette note. */
-  badInk: pick('badInk'),
   /** `badSoft`'s counterpart, for the one thing that goes right loudly
    *  enough to need a ground: the banner that says a collection is now
    *  public. Built to the same recipe and the same weight — 1.11:1

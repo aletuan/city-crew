@@ -135,8 +135,6 @@ describe('okInk, warnInk and bad', () => {
     expect(contrast(hex(p.okInk), hex(p.okSoft))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(hex(p.warnInk), hex(p.warnSoft))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(hex(p.bad), hex(p.badSoft))).toBeGreaterThanOrEqual(3);
-    // A word on the red well, as the status pill sets one.
-    expect(contrast(hex(p.badInk), hex(p.badSoft))).toBeGreaterThanOrEqual(4.5);
   });
 });
 

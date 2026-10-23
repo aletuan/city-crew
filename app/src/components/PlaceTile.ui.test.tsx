@@ -114,11 +114,11 @@ describe('PlaceTile', () => {
       expect(pill()?.textContent).toBe('Pending');
     });
 
-    it('says Declined in the look’s red once the desk has turned it down', () => {
+    it('says In review, under its own glyph, while the desk looks again', () => {
       render(<PlaceTile place={place({ is_published: true, review_status: 'flagged' })} size={111} onPress={() => {}} />);
-      expect(pill()?.textContent).toBe('Declined');
-      expect(pill()?.querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('alert-circle');
-      expect(screen.getByRole('button', { name: 'Pho 10, Declined' })).toBeTruthy();
+      expect(pill()?.textContent).toBe('In review');
+      expect(pill()?.querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('refresh');
+      expect(screen.getByRole('button', { name: 'Pho 10, In review' })).toBeTruthy();
     });
 
     // The pill takes the top edge, so the credit steps down over the name

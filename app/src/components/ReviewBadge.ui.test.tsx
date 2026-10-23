@@ -46,14 +46,15 @@ describe('ReviewBadge', () => {
     expect(getComputedStyle(screen.getByText('Pending')).color).toBe(resolved(colors.warnInk));
   });
 
-  // Not the close-and-delete cross the grid wore first: a declined place
-  // is not something with a button for throwing it away.
-  it('declines in the look’s red pair, under a mark that is not a delete button', () => {
+  // Flagged is the desk looking again at a place it had approved, not a
+  // no (owner, 23 Oct 2026): the same amber wait, under its own glyph —
+  // and not the close-and-delete cross the grid wore first.
+  it('says In review in the same amber pair, under a turn of arrows', () => {
     render(<ReviewBadge place={place({ is_published: true, review_status: 'flagged' })} testID="pill" />);
-    expect(pill().textContent).toBe('Declined');
-    expect(pill().querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('alert-circle');
-    expect(style().backgroundColor).toBe(resolved(colors.badSoft));
-    expect(getComputedStyle(screen.getByText('Declined')).color).toBe(resolved(colors.badInk));
+    expect(pill().textContent).toBe('In review');
+    expect(pill().querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('refresh');
+    expect(style().backgroundColor).toBe(resolved(colors.warnSoft));
+    expect(getComputedStyle(screen.getByText('In review')).color).toBe(resolved(colors.warnInk));
   });
 
   it('says, when tapped, that only its owner can see a place still waiting', () => {
@@ -66,12 +67,12 @@ describe('ReviewBadge', () => {
     );
   });
 
-  it('says, when tapped, that nobody else will see a declined place', () => {
+  it('says, when tapped, that a place in review comes back once it is done', () => {
     render(<ReviewBadge place={place({ review_status: 'flagged' })} testID="pill" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Declined' }));
+    fireEvent.click(screen.getByRole('button', { name: 'In review' }));
     expect(alert).toHaveBeenCalledWith(
-      'Declined',
-      'This place was not accepted, so only you can see it. Nobody else will see it, here or anywhere on City Crew.',
+      'In review',
+      'This place is being looked at again. Until that is done only you can see it; then everyone will see it again.',
       [{ text: 'Got it' }],
     );
   });

@@ -453,9 +453,9 @@ export default function PlaceCard({
               reference put the state itself on the pill, and what it means
               for who sees the place moved into the tap.
 
-              Turned down keeps its own word. One is *wait*, the other is
-              *no*, and a person owed the second should not be left
-              expecting the first. */}
+              A flagged place says "In review", not "Not accepted": flagged
+              is the desk looking again at a place it had approved, not a
+              no — `ReviewBadge` has the count. */}
           {!isLive(place) && (
             <View style={s.status}>
               <ReviewBadge place={place} testID={testID ? `${testID}-status` : undefined} />

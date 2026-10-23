@@ -1,28 +1,33 @@
-// What a place nobody else can see says about itself: "Pending" while the
-// desk has it, "Declined" once the desk turned it down.
+// What a place nobody else can see says about itself: "Pending" while a
+// suggestion waits on the desk, "In review" while the desk looks again at
+// one it had already approved.
 //
 // ── why a word, and why these colours (owner, 23 Oct 2026) ──
 //
 // The grid's tile carried a 22pt dark disc with a clock or a cross in it
 // (#1147), and the owner found it hard to see: on a night photograph the
 // disc sank into the picture, a glyph alone left the reader to guess what
-// it meant, and the cross was iOS's own close-and-delete mark — a place
-// the desk declined looked like it had a button for throwing it away.
-// The owner's reference put the state in words on a pill, and asked that
-// the pill and the card's status line be one thing, in the colours of the
-// look picked on Profile.
+// it meant, and the cross was iOS's own close-and-delete mark. The owner's
+// reference put the state in words on a pill, and asked that the pill and
+// the card's status line be one thing, in the colours of the look picked
+// on Profile: the look's warning pair, `warnSoft` under `warnInk`, held to
+// 4.5:1 on every look by `theme.test` — what an 11–12pt word needs.
 //
-// So both are this. The waiting pill is the look's warning pair
-// (`warnSoft` under `warnInk`), the declined one its red pair (`badSoft`
-// under `badInk`) — each held to 4.5:1 on every look by `theme.test`,
-// which is what a 11–12pt word needs. `badInk` exists for this: `bad`
-// was held to 3:1 on its well, and read 3.5:1 on paper and slate.
+// ── "In review", not "Declined" ──
 //
-// "Declined" ("Bị từ chối") is the owner's pick over "Not accepted",
-// which at a tile's 111pt did not fit. "Pending" covers a place approved
-// and not yet published too — there were none of those on 23 Oct 2026,
-// and a third pill for a state with no rows would be one more thing to
-// read on a 111pt tile.
+// `flagged` reads like a rejection and is not used as one. On 23 Oct 2026
+// all three flagged places were the desk's own re-review: an approved
+// place given a new blurb or photographs from Threads, flagged so the
+// change gets a second look. There is no rejected state at all —
+// `review_status` is pending, approved or flagged. "Bị từ chối" was on
+// this pill for an hour and the owner called it too heavy for that, so
+// both states are a wait, in the same amber, told apart by their glyph:
+// a clock for the first look, a turn of arrows for the second. Red is
+// left for a state that means no, if one is ever added.
+//
+// "Pending" covers a place approved and not yet published too — there
+// were none of those on 23 Oct 2026, and a third pill for a state with no
+// rows would be one more thing to read on a 111pt tile.
 //
 // A tap explains, in the platform's own alert: what the pill means for
 // who can see the place. The rest of the tile or card still opens the
@@ -41,7 +46,7 @@ export function useReviewLabel(place: Place): string | null {
   const { t } = useI18n();
   if (isLive(place)) return null;
   return isFlagged(place)
-    ? t('Declined', 'Bị từ chối', '不採用', '已拒绝', '已拒絕')
+    ? t('In review', 'Đang xem lại', '再確認中', '复核中', '複核中')
     : t('Pending', 'Chờ duyệt', '審査待ち', '待审核', '待審核');
 }
 
@@ -56,17 +61,16 @@ export default function ReviewBadge({ place, compact, overPhoto, testID }: {
   const { t } = useI18n();
   const label = useReviewLabel(place);
   if (!label) return null;
-  const declined = isFlagged(place);
-  const ink = declined ? colors.badInk : colors.warnInk;
+  const again = isFlagged(place);
   const explain = () => Alert.alert(
     label,
-    declined
+    again
       ? t(
-        'This place was not accepted, so only you can see it. Nobody else will see it, here or anywhere on City Crew.',
-        'Địa điểm này không được duyệt nên chỉ bạn thấy. Người khác sẽ không thấy nó, ở đây hay bất cứ đâu trên City Crew.',
-        'このスポットは採用されなかったため、あなたにだけ表示されています。ここでも City Crew のどこでも、ほかの人には表示されません。',
-        '这个地点未通过审核，所以只有你能看到。其他人在这里或 City Crew 的任何地方都看不到它。',
-        '這個地點未通過審核，所以只有你能看到。其他人在這裡或 City Crew 的任何地方都看不到它。',
+        'This place is being looked at again. Until that is done only you can see it; then everyone will see it again.',
+        'Địa điểm này đang được xem lại. Trong lúc đó chỉ bạn thấy nó; xem lại xong, mọi người sẽ thấy lại.',
+        'このスポットは再確認中です。終わるまではあなたにだけ表示され、終わればまたみんなに表示されます。',
+        '这个地点正在复核。在此期间只有你能看到；复核完成后，所有人都能再次看到它。',
+        '這個地點正在複核。在此期間只有你能看到；複核完成後，所有人都能再次看到它。',
       )
       : t(
         'Only you can see this place for now. Once it is approved, everyone will see it here and across City Crew.',
@@ -89,13 +93,13 @@ export default function ReviewBadge({ place, compact, overPhoto, testID }: {
       style={[
         s.pill,
         compact && s.compact,
-        { backgroundColor: declined ? colors.badSoft : colors.warnSoft },
+        { backgroundColor: colors.warnSoft },
         overPhoto && s.overPhoto,
       ]}
     >
-      <Ionicons name={declined ? 'alert-circle' : 'time-outline'} size={compact ? 12 : 13} color={ink} />
+      <Ionicons name={again ? 'refresh' : 'time-outline'} size={compact ? 12 : 13} color={colors.warnInk} />
       <Text
-        style={[s.text, compact && s.textCompact, { color: ink }]}
+        style={[s.text, compact && s.textCompact, { color: colors.warnInk }]}
         numberOfLines={1}
         maxFontSizeMultiplier={labelScaleCap}
       >
@@ -113,8 +117,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.pill,
   },
   // The tile's: 11pt type, 7pt in. The reference's 13pt and 12pt in were
-  // drawn on a wider tile; at 13pt "Bị từ chối", the widest word, comes
-  // to about 100pt by estimate — not measured on a device — against the
+  // drawn on a wider tile; at 13pt "Đang xem lại", the widest word, comes
+  // to over 100pt by estimate — not measured on a device — against the
   // 99pt a 111pt tile leaves inside its 6pt insets.
   compact: { gap: 3, paddingHorizontal: 7, paddingVertical: 4 },
   // `onPhoto.line`, not a themed colour: a border takes the phone's

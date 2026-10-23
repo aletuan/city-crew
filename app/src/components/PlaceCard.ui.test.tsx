@@ -538,20 +538,20 @@ describe('a place the desk has not published', () => {
     expect(screen.getByRole('button', { name: 'Pending' })).toBeTruthy();
   });
 
-  // One is *wait*, the other is *no*. A person owed the second should not
-  // be left expecting the first.
-  it('does not soften a rejection into a wait', () => {
+  // Flagged is the desk looking again, not a no: it waits too, under its
+  // own word.
+  it('says In review on a flagged card, not Pending', () => {
     render(<PlaceCard onPress={() => {}} place={place({
       is_published: false, review_status: 'flagged',
     })} />);
-    expect(screen.getByRole('button', { name: 'Declined' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'In review' })).toBeTruthy();
     expect(screen.queryByText('Pending')).toBeNull();
   });
 
   it('says nothing at all on a live card', () => {
     render(<PlaceCard place={place()} onPress={() => {}} />);
     expect(screen.queryByText('Pending')).toBeNull();
-    expect(screen.queryByText('Declined')).toBeNull();
+    expect(screen.queryByText('In review')).toBeNull();
   });
 });
 

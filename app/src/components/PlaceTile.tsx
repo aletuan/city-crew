@@ -35,7 +35,7 @@
 // A list stays public when it holds a place that is not live, and that
 // place is hidden from everyone but its owner. The tile says so with the
 // card's own pill (`ReviewBadge`), in the free top corner: "Pending" or
-// "Declined", in the look's colours. A 22pt disc with a glyph was tried
+// "In review", in the look's colours. A 22pt disc with a glyph was tried
 // first (#1147) and was hard to see; `ReviewBadge` has why.
 //
 // The picture is not dimmed. The place is still the owner's to go to, and
@@ -151,7 +151,7 @@ const s = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   // With the pill in its corner the credit steps down to sit over the
-  // name, right-aligned: "Bị từ chối" leaves too little of a 111pt top
+  // name, right-aligned: "Đang xem lại" leaves too little of a 111pt top
   // edge for a name to be read in, and a credit cut to three letters is
   // not a credit. Only ever on the owner's own places that are not live.
   attrBeside: { top: undefined, bottom: 24 },
