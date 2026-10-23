@@ -67,6 +67,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   const addTo = route?.params?.addTo;
   const list = (addTo && mine.data.find((c) => c.slug === addTo)) || null;
   const listTitle = list ? t(list.title_en, list.title_vi, list.title_ja) : '';
+  const listCount = list ? list.collection_places.length : 0;
   // The newest copy, for what Google makes: a run takes a while, and the
   // reader may tick more in the meantime.
   const listRef = useRef(list);
@@ -397,13 +398,24 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
             style={s.addingTo}
             testID="search-adding-to"
             accessible
-            accessibilityLabel={t(`Adding to ${listTitle}`, `Đang thêm vào ${listTitle}`, `「${listTitle}」に追加中`, `正在添加到“${listTitle}”`, `正在新增到「${listTitle}」`)}
+            accessibilityLabel={t(
+              `Adding to ${listTitle}, ${listCount} ${listCount === 1 ? 'place' : 'places'}`,
+              `Đang thêm vào ${listTitle}, ${listCount} địa điểm`,
+              `「${listTitle}」に追加中、${listCount}件`,
+              `正在添加到“${listTitle}”，${listCount} 个地点`, `正在新增到「${listTitle}」，${listCount} 個地點`,
+            )}
           >
             <Ionicons name="bookmark-outline" size={15} color={colors.textTertiary} />
             <Text style={s.addingToText} numberOfLines={1}>
-              {t('Collection: ', 'Bộ sưu tập: ', 'コレクション：', '合集：', '合集：')}
+              {t('Add to collection: ', 'Thêm vào bộ sưu tập: ', 'コレクションに追加：', '添加到合集：', '新增到合集：')}
               <Text style={s.addingToTitle}>{listTitle}</Text>
             </Text>
+            {/* How many it holds, moving as each ⊕ is tapped (owner, 23 Oct
+                2026): the list read from `useMyLists` has the taps laid
+                over it, so the figure is the one the list will show. Its
+                own text, outside the one that shrinks, so a long name
+                ends in "…" and the count stays. */}
+            <Text style={s.addingToCount} testID="search-adding-to-count">{`(${listCount})`}</Text>
           </View>
         </View>
       ) : null}
@@ -908,6 +920,7 @@ const s = StyleSheet.create({
   },
   addingToText: { flexShrink: 1, color: colors.textSecondary, fontSize: 15 },
   addingToTitle: { color: colors.text, fontWeight: font.semibold },
+  addingToCount: { flexShrink: 0, color: colors.textSecondary, fontSize: 15, marginLeft: -3 },
   cities: { paddingHorizontal: space.page, paddingBottom: 12, gap: 8 },
 
   section: {
