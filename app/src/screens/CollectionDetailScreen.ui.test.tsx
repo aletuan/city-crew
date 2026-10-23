@@ -53,6 +53,7 @@ const spies = vi.hoisted(() => ({
   askToSignIn: vi.fn(),
   mineReload: vi.fn(),
   colsReload: vi.fn(),
+  placesReload: vi.fn(),
   note: vi.fn(),
   report: vi.fn(),
   canReport: vi.fn((_t: { kind: string; id: string; ownerId?: string | null }) => true),
@@ -102,7 +103,7 @@ vi.mock('../lib/i18n', () => ({
 }));
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.cols, loading: state.colsLoading, reload: spies.colsReload }),
-  usePlaces: () => ({ data: state.places, loading: state.placesLoading }),
+  usePlaces: () => ({ data: state.places, loading: state.placesLoading, reload: spies.placesReload }),
   useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
   useCuratorAvatar: () => state.cachedAvatar,
 }));
@@ -266,6 +267,24 @@ const show = (slug = 'old-quarter') => {
 
 const button = (name: string | RegExp) => screen.getByRole('button', { name });
 const openMenu = () => fireEvent.click(button('More'));
+
+/** The props of the first committed element `pick` accepts — reached
+ *  through the fiber tree, since a list's own gestures (a scroll, a pull)
+ *  have no jsdom counterpart. */
+const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const fb = stack.pop()!;
+    const p = fb.memoizedProps;
+    if (p && typeof p === 'object' && pick(p)) return p;
+    if (fb.sibling) stack.push(fb.sibling);
+    if (fb.child) stack.push(fb.child);
+  }
+  throw new Error('nothing matched');
+};
 /**
  * A row in the overflow menu, by its label. The modal portals to the end of
  * the document, so when a label also appears on the page (the owner's
@@ -1911,21 +1930,6 @@ describe('the introduction card', () => {
 // the top, and in the tab bar's dock once the card has scrolled away and
 // the bar has ducked — never both at once.
 describe('the actions and the dock', () => {
-  /** The props of the first committed element `pick` accepts. */
-  const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
-    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
-    const stack: Fiber[] = [host[key].stateNode.current];
-    while (stack.length) {
-      const fb = stack.pop()!;
-      const p = fb.memoizedProps;
-      if (p && typeof p === 'object' && pick(p)) return p;
-      if (fb.sibling) stack.push(fb.sibling);
-      if (fb.child) stack.push(fb.child);
-    }
-    throw new Error('nothing matched');
-  };
   // The list's own `onScroll`, as the FlatList would call it: where it is,
   // and the content and window it is scrolled within.
   const listScroll = (y: number) => act(() => {
@@ -2608,5 +2612,40 @@ describe('the grid', () => {
       await reads();
       expect(banner()).toBeNull();
     });
+  });
+});
+
+// Pull to reload (owner, 23 Oct 2026): the screen used to reload only
+// after a write of its own, so a place approved by the desk waited for a
+// trip back to the Collections tab.
+describe('pulling the list down', () => {
+  const list = () => propsWhere((q) => 'onRefresh' in q && 'renderItem' in q) as { onRefresh: () => void; refreshing: boolean };
+
+  beforeEach(() => {
+    state.mine = [];
+    state.cols = [theirs()];
+  });
+
+  it('reloads the list and the places drawn in it', () => {
+    show();
+    spies.colsReload.mockClear();
+    spies.mineReload.mockClear();
+    spies.placesReload.mockClear();
+    act(() => { list().onRefresh(); });
+    expect(spies.colsReload).toHaveBeenCalledTimes(1);
+    expect(spies.mineReload).toHaveBeenCalledTimes(1);
+    expect(spies.placesReload).toHaveBeenCalledTimes(1);
+    // Nothing is loading, so the spinner disarms as soon as it is armed.
+    expect(list().refreshing).toBe(false);
+  });
+
+  // The spinner is the pull's: a background revalidate does not light it,
+  // and one the pull started keeps it lit until it settles.
+  it('spins for the pull, not for a load nobody asked to watch', () => {
+    state.placesLoading = true;
+    show();
+    expect(list().refreshing).toBe(false);
+    act(() => { list().onRefresh(); });
+    expect(list().refreshing).toBe(true);
   });
 });

@@ -479,7 +479,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // the control the Explore shelf taps, backed by the same provider, one
   // copy of the truth.
   const { likes, myLikes, toggleLike } = useLikes();
-  const { data: places, loading: placesLoading, loaded: placesLoaded } = usePlaces();
+  const { data: places, loading: placesLoading, loaded: placesLoaded, reload: placesReload } = usePlaces();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
@@ -1554,7 +1554,11 @@ export default function CollectionsScreen({ navigation, route }: {
             }}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
-            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); }}
+            // The catalog too (owner, 23 Oct 2026): a community list draws
+            // its places from it, so a place the desk approved since the
+            // last load stayed missing from every list holding it until
+            // the catalog happened to revalidate on its own.
+            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); placesReload(); }}
             refreshing={pulling}
           />
         )}

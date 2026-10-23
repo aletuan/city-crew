@@ -361,7 +361,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const { askToSignIn } = useSaveActions();
   // Reporting, raised from the overflow menu — see components/reportFlow.
   const { report, canReport, node: reportSheet } = useReport();
-  const { data: places, loading: placesLoading } = usePlaces();
+  const { data: places, loading: placesLoading, reload: placesReload } = usePlaces();
   const { city } = useCurrentCity();
   // Liking needs three things and refuses without any of them: an account
   // to attribute the like to, the row's id — the likes table keys on it,
@@ -375,6 +375,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const members = useMemo(() => (col ? membersOf(col, places) : []), [col, places]);
   const note = useNoteEvent();
   const loading = cols.loading || mine.loading || placesLoading;
+  // Pull to reload (owner, 23 Oct 2026). Until then this screen reloaded
+  // only after a write of its own, so a place the desk approved, or a
+  // change made to the list on another phone, waited for a trip back to
+  // the Collections tab and a pull there. All three catalogs, because the
+  // screen is drawn from all three: the list from `mine` or `cols`, a
+  // community list's places from `places`.
+  //
+  // The spinner belongs to the pull, as on Collections and Explore: armed
+  // by the gesture, disarmed when the fetches settle, and never lit by a
+  // background revalidate nobody asked to watch.
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !loading) setPulling(false);
+  }, [pulling, loading]);
+  const pull = () => { setPulling(true); cols.reload(); mine.reload(); placesReload(); };
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
   /**
@@ -1613,6 +1628,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             // Held still while a card is in the finger: the drag and the scroll
             // would otherwise both answer the same drag.
             scrollEnabled={!lift}
+            onRefresh={pull}
+            refreshing={pulling}
             CellRendererComponent={LiftCell}
             onScroll={onListScroll}
             onContentSizeChange={onContentSizeChange}
