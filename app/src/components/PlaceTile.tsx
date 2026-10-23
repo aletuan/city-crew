@@ -33,16 +33,14 @@
 // ── a place nobody else sees (owner, 23 Oct 2026) ──
 //
 // A list stays public when it holds a place that is not live, and that
-// place is hidden from everyone but its owner. The card says so in its
-// status line; the grid said nothing, and the grid is the default — so a
-// list of nine read as nine to its owner while every friend it was shown
-// to saw eight. The tile now carries the card's own mark, in the free top
-// corner: the clock for a place waiting on the desk, the cross for one the
-// desk turned down, each in the colour the card gives it.
+// place is hidden from everyone but its owner. The tile says so with the
+// card's own pill (`ReviewBadge`), in the free top corner: "Pending" or
+// "In review", in the look's colours. A 22pt disc with a glyph was tried
+// first (#1147) and was hard to see; `ReviewBadge` has why.
 //
 // The picture is not dimmed. The place is still the owner's to go to, and
 // a faded tile reads as one that is gone. Shown on whatever tile reaches a
-// reader not live, as the card's line is: other readers are never handed
+// reader not live, as the card's pill is: other readers are never handed
 // such a place (the member policy), so in practice that is the owner.
 
 import React from 'react';
@@ -52,13 +50,13 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { coverOf, isFlagged, isLive, type Place } from '../lib/data';
+import { coverOf, type Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { colors, font, labelScaleCap, onPhoto, radius } from '../theme';
 import PhotoCredit from './PhotoCredit';
+import ReviewBadge, { useReviewLabel } from './ReviewBadge';
 import { PressableScale } from './ui';
 
 export default function PlaceTile({
@@ -79,17 +77,11 @@ export default function PlaceTile({
   accessibilityActions?: AccessibilityActionInfo[];
   onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
 }) {
-  const { lang, t } = useI18n();
+  const { lang } = useI18n();
   const cover = coverOf(place);
   const name = splitName(localized(place, 'name', lang)).title;
-  const flagged = isFlagged(place);
-  // The card's own words, so VoiceOver hears on a tile what a sighted
-  // reader is told on the card.
-  const status = isLive(place)
-    ? null
-    : flagged
-      ? t('Not accepted', 'Không được duyệt', '不採用', '未通过', '未通過')
-      : t('Only you can see this', 'Chỉ mình bạn thấy', 'あなただけに表示中', '仅你可见', '僅你可見');
+  // The pill's word, so VoiceOver hears what a sighted reader sees.
+  const status = useReviewLabel(place);
   return (
     // The card's press, so a tile gives under the thumb the way a card does.
     <PressableScale
@@ -115,7 +107,7 @@ export default function PlaceTile({
             transition={200}
             recyclingKey={place.slug}
           />
-          <PhotoCredit name={cover.attribution_name} style={s.attr} />
+          <PhotoCredit name={cover.attribution_name} style={[s.attr, status && s.attrBeside]} />
         </>
       ) : (
         <View style={[StyleSheet.absoluteFill, s.fallback]}>
@@ -133,12 +125,8 @@ export default function PlaceTile({
       />
       <Text style={s.name} numberOfLines={1} maxFontSizeMultiplier={labelScaleCap}>{name}</Text>
       {status && (
-        <View style={s.status} testID="tile-status">
-          <Ionicons
-            name={flagged ? 'close-circle-outline' : 'time-outline'}
-            size={13}
-            color={flagged ? colors.bad : onPhoto.text}
-          />
+        <View style={s.status}>
+          <ReviewBadge place={place} compact overPhoto testID="tile-status" />
         </View>
       )}
     </PressableScale>
@@ -155,21 +143,16 @@ const s = StyleSheet.create({
     color: onPhoto.text, fontWeight: font.semibold, fontSize: 12,
     textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 2,
   },
-  // The card's rating pill and save disc, in the same material: marks on
-  // a photograph are made of one thing. 13pt is the card's status glyph;
-  // 22pt is the smallest disc that keeps a ring of ground round it, and
-  // at a 111pt tile it is a fifth of the width — present, not a sticker.
-  // Top-left because the credit holds the top-right and the name the foot.
-  status: {
-    position: 'absolute', left: 5, top: 5,
-    width: 22, height: 22, borderRadius: 11,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(10,11,10,0.58)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
+  // Top-left, 6pt in: the credit holds the top-right and the name the foot.
+  status: { position: 'absolute', left: 6, top: 6, maxWidth: '88%' },
   attr: {
     position: 'absolute', right: 6, top: 5, maxWidth: '70%',
     fontSize: 8, color: onPhoto.text, opacity: 0.5,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
+  // With the pill in its corner the credit steps down to sit over the
+  // name, right-aligned: "Đang xem lại" leaves too little of a 111pt top
+  // edge for a name to be read in, and a credit cut to three letters is
+  // not a credit. Only ever on the owner's own places that are not live.
+  attrBeside: { top: undefined, bottom: 24 },
 });

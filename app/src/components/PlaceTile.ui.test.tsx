@@ -18,7 +18,7 @@ vi.mock('../lib/i18n', () => ({
 
 import PlaceTile from './PlaceTile';
 import { appFlags } from '../lib/flags';
-import { colors, onPhoto } from '../theme';
+import { colors } from '../theme';
 
 const place = (over: Partial<Place> = {}): Place => ({
   slug: 'pho-10',
@@ -90,35 +90,45 @@ describe('PlaceTile', () => {
 
   // A list stays public around a place that is not live, and only its
   // owner sees that place (23 Oct 2026). The grid is the default view, so
-  // the tile has to say what the card's status line says.
+  // the tile carries the card's pill: the word, in the look's colours.
   describe('a place nobody else sees', () => {
-    const icon = () => screen.queryByTestId('tile-status')?.querySelector('[data-icon]');
+    const pill = () => screen.queryByTestId('tile-status');
 
     it('marks nothing on a live place', () => {
       render(<PlaceTile place={place()} size={111} onPress={() => {}} />);
-      expect(screen.queryByTestId('tile-status')).toBeNull();
+      expect(pill()).toBeNull();
       expect(screen.getByRole('button', { name: 'Pho 10' })).toBeTruthy();
     });
 
-    it('wears the clock while it waits, and VoiceOver says only you can see it', () => {
+    it('says Pending in the look’s amber while it waits, and VoiceOver hears it', () => {
       render(<PlaceTile place={place({ is_published: false, review_status: 'pending' })} size={111} onPress={() => {}} />);
-      expect(icon()?.getAttribute('data-icon')).toBe('time-outline');
-      expect(icon()?.getAttribute('data-color')).toBe(onPhoto.text);
-      expect(screen.getByRole('button', { name: 'Pho 10, Only you can see this' })).toBeTruthy();
+      expect(pill()?.textContent).toBe('Pending');
+      expect(pill()?.querySelector('[data-icon]')?.getAttribute('data-color')).toBe(colors.warnInk);
+      expect(screen.getByRole('button', { name: 'Pho 10, Pending' })).toBeTruthy();
     });
 
     // Approved and still unpublished is not live either: the rule is the
     // pair, as the member policy's is.
-    it('wears the clock when approved but not yet published', () => {
+    it('says Pending when approved but not yet published', () => {
       render(<PlaceTile place={place({ is_published: false, review_status: 'approved' })} size={111} onPress={() => {}} />);
-      expect(icon()?.getAttribute('data-icon')).toBe('time-outline');
+      expect(pill()?.textContent).toBe('Pending');
     });
 
-    it('wears the red cross once the desk has turned it down', () => {
+    it('says In review, under its own glyph, while the desk looks again', () => {
       render(<PlaceTile place={place({ is_published: true, review_status: 'flagged' })} size={111} onPress={() => {}} />);
-      expect(icon()?.getAttribute('data-icon')).toBe('close-circle-outline');
-      expect(icon()?.getAttribute('data-color')).toBe(colors.bad);
-      expect(screen.getByRole('button', { name: 'Pho 10, Not accepted' })).toBeTruthy();
+      expect(pill()?.textContent).toBe('In review');
+      expect(pill()?.querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('refresh');
+      expect(screen.getByRole('button', { name: 'Pho 10, In review' })).toBeTruthy();
+    });
+
+    // The pill takes the top edge, so the credit steps down over the name
+    // rather than being cut to nothing beside it.
+    it('moves the credit down beside the pill', () => {
+      render(<PlaceTile place={place({ review_status: 'flagged', place_photos: [COVER] } as Partial<Place>)} size={111} onPress={() => {}} />);
+      const credit = getComputedStyle(screen.getByText('Bởi Minh'));
+      expect(credit.bottom).toBe('24px');
+      render(<PlaceTile place={place({ slug: 'live', place_photos: [COVER] } as Partial<Place>)} size={111} onPress={() => {}} />);
+      expect(getComputedStyle(screen.getAllByText('Bởi Minh')[1]).top).toBe('5px');
     });
   });
 });
