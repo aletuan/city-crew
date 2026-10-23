@@ -10,7 +10,8 @@
 // only in theory — the desk approves and publishes as separate actions,
 // and there are rows in production that are approved and unpublished.
 // Any check written against one flag is wrong half the time it matters,
-// and the same rule is enforced in SQL by the publish gate.
+// and the same rule is enforced in SQL, on who may read a public list's
+// members (`*_lists_stay_public_around_unlive_places.sql`).
 
 /** The part of a place this file needs. Structural, so a full `Place`
  *  satisfies it and a test fixture does not have to invent thirty
@@ -53,19 +54,20 @@ export function isMineAndUnlive(p: Reviewable, meId: string | null | undefined):
 }
 
 /**
- * Why a collection cannot be published, counted.
+ * The members of a list that only its owner can see, counted.
  *
- * Both numbers, not a boolean, because the sentence the owner reads has
- * to name what is holding it: *"2 places are not public yet, and 1 was
- * not accepted"*. A generic "some places are pending" leaves them
- * pressing Publish and watching nothing happen, which is the failure
- * this is here to prevent.
+ * A public list stays public around them since 23 Oct 2026 (owner: a
+ * list of thirty disappeared for everyone over one new place). They are
+ * what goes unseen instead — the database keeps them out of everybody
+ * else's read — and the owner is told how many, on the Public row, so a
+ * friend shown the list with a place missing is not a surprise.
  *
- * `flagged` is the half that matters most. It never resolves on its own,
- * so a collection holding one is blocked forever until its owner takes
- * it out — and they can only do that if they are told which one it is.
+ * Both numbers, because they end differently: a place not public yet
+ * will be, and one not accepted never will, so it stays unseen until its
+ * owner takes it out — which they can only do if they are told it is
+ * there.
  */
-export function publishBlockers(members: Reviewable[]): { pending: number; flagged: number } {
+export function unseenMembers(members: Reviewable[]): { pending: number; flagged: number } {
   let pending = 0;
   let flagged = 0;
   for (const m of members) {
@@ -77,52 +79,40 @@ export function publishBlockers(members: Reviewable[]): { pending: number; flagg
 }
 
 /**
- * Why a list cannot be published, said in words rather than counted at
- * the reader.
+ * What a public list shows everyone else, said on the Public row: the
+ * row's own sentence, less the members `unseenMembers` counted.
  *
- * It names both kinds because they end differently. A place still under
- * review will resolve on its own; one that was not accepted never will,
- * and the list stays private forever until its owner takes it out. A
- * sentence that said only "some places are pending" would leave them
- * waiting for something that is not coming.
+ * "Not public yet" rather than "awaiting review", for the reason
+ * `PlaceCard`'s marker gives: it says what is true of the place, not the
+ * procedure it is in.
  */
-export function blockerSentence(
+export function unseenSentence(
   { pending, flagged }: { pending: number; flagged: number },
   t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
 ): string {
   const parts: string[] = [];
   if (pending) {
-    // Not public *yet* — the state the list is in, rather than the
-    // procedure it is waiting on. The owner does not need to picture a
-    // queue to understand why the switch will not move; they need to know
-    // which places are holding it, and that this one resolves on its own.
     parts.push(t(
-      `${pending} ${pending === 1 ? 'place is' : 'places are'} not public yet`,
+      `${pending} ${pending === 1 ? 'place' : 'places'} not public yet`,
       `${pending} địa điểm chưa công khai`,
-      `${pending}件がまだ公開されていません`,
-      `${pending} 个地点尚未公开`, `${pending} 個地點尚未公開`,
+      `まだ公開されていない${pending}件`,
+      `尚未公开的 ${pending} 个地点`, `尚未公開的 ${pending} 個地點`,
     ));
   }
   if (flagged) {
     parts.push(t(
-      `${flagged} ${flagged === 1 ? 'was' : 'were'} not accepted`,
+      `${flagged} not accepted`,
       `${flagged} địa điểm không được duyệt`,
-      `${flagged}件が不採用です`,
-      `${flagged} 个未通过`, `${flagged} 個未通過`,
+      `不採用の${flagged}件`,
+      `未通过的 ${flagged} 个`, `未通過的 ${flagged} 個`,
     ));
   }
   return t(
-    `Private until every place is live — ${parts.join(', and ')}.`,
-    `Riêng tư cho tới khi mọi địa điểm hiển thị — ${parts.join(', và ')}.`,
-    `すべてのスポットが公開されるまで非公開です — ${parts.join('、')}。`,
-    `所有地点上线前保持私密 — ${parts.join('，')}。`, `所有地點上線前保持私密 — ${parts.join('，')}。`,
+    `Shown in Explore and in search, except ${parts.join(' and ')}`,
+    `Hiện trên Khám phá và trong tìm kiếm, trừ ${parts.join(' và ')}`,
+    `「探索する」と検索に表示されます（${parts.join('と')}を除く）`,
+    `会显示在探索和搜索中，${parts.join('和')}除外`, `會顯示在探索和搜尋中，${parts.join('和')}除外`,
   );
-}
-
-/** Whether anything at all stands in the way. */
-export function canPublish(members: Reviewable[]): boolean {
-  const { pending, flagged } = publishBlockers(members);
-  return pending === 0 && flagged === 0;
 }
 
 /**

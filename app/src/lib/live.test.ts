@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  blockerSentence, canPublish, isFlagged, isLive, isMineAndUnlive, isPending,
-  ownPendingFirst, publishBlockers, type Reviewable,
+  isFlagged, isLive, isMineAndUnlive, isPending,
+  ownPendingFirst, type Reviewable, unseenMembers, unseenSentence,
 } from './live';
 
 const ME = 'me-uuid';
@@ -65,40 +65,39 @@ describe('isMineAndUnlive', () => {
   });
 });
 
-describe('blockerSentence', () => {
+describe('unseenSentence', () => {
   const en = (e: string) => e;
   const vi = (_e: string, v: string) => v;
   const ja = (_e: string, _v: string, j: string) => j;
+  const zh = (_e: string, _v: string, _j: string, z?: string) => z ?? '';
 
   // Both kinds named, because they end differently.
-  it('names both kinds, joined', () => {
-    expect(blockerSentence({ pending: 2, flagged: 1 }, en))
-      .toBe('Private until every place is live — 2 places are not public yet, and 1 was not accepted.');
-    expect(blockerSentence({ pending: 2, flagged: 1 }, vi))
-      .toBe('Riêng tư cho tới khi mọi địa điểm hiển thị — 2 địa điểm chưa công khai, và 1 địa điểm không được duyệt.');
-    expect(blockerSentence({ pending: 2, flagged: 1 }, ja))
-      .toBe('すべてのスポットが公開されるまで非公開です — 2件がまだ公開されていません、1件が不採用です。');
-    const zh = (_e: string, _v: string, _j: string, z?: string) => z ?? '';
-    expect(blockerSentence({ pending: 2, flagged: 1 }, zh))
-      .toBe('所有地点上线前保持私密 — 2 个地点尚未公开，1 个未通过。');
+  it('names both kinds, joined, after what the list is shown as', () => {
+    expect(unseenSentence({ pending: 2, flagged: 1 }, en))
+      .toBe('Shown in Explore and in search, except 2 places not public yet and 1 not accepted');
+    expect(unseenSentence({ pending: 2, flagged: 1 }, vi))
+      .toBe('Hiện trên Khám phá và trong tìm kiếm, trừ 2 địa điểm chưa công khai và 1 địa điểm không được duyệt');
+    expect(unseenSentence({ pending: 2, flagged: 1 }, ja))
+      .toBe('「探索する」と検索に表示されます（まだ公開されていない2件と不採用の1件を除く）');
+    expect(unseenSentence({ pending: 2, flagged: 1 }, zh))
+      .toBe('会显示在探索和搜索中，尚未公开的 2 个地点和未通过的 1 个除外');
   });
 
-  it('counts in the singular and the plural', () => {
-    expect(blockerSentence({ pending: 1, flagged: 0 }, en))
-      .toBe('Private until every place is live — 1 place is not public yet.');
-    expect(blockerSentence({ pending: 0, flagged: 2 }, en))
-      .toBe('Private until every place is live — 2 were not accepted.');
+  it('counts in the singular and the plural, and names one kind alone', () => {
+    expect(unseenSentence({ pending: 1, flagged: 0 }, en))
+      .toBe('Shown in Explore and in search, except 1 place not public yet');
+    expect(unseenSentence({ pending: 0, flagged: 2 }, en))
+      .toBe('Shown in Explore and in search, except 2 not accepted');
   });
 });
 
-describe('publishBlockers', () => {
-  it('counts nothing when everything is live', () => {
-    expect(publishBlockers([live(), live()])).toEqual({ pending: 0, flagged: 0 });
-    expect(canPublish([live(), live()])).toBe(true);
+describe('unseenMembers', () => {
+  it('counts nothing when everything is live, or there is nothing', () => {
+    expect(unseenMembers([live(), live()])).toEqual({ pending: 0, flagged: 0 });
+    expect(unseenMembers([])).toEqual({ pending: 0, flagged: 0 });
   });
 
-  // Both numbers, because the sentence the owner reads has to name what
-  // is holding it.
+  // Both numbers, because the sentence the owner reads names both.
   it('counts the two kinds apart', () => {
     const members = [
       live(),
@@ -106,24 +105,13 @@ describe('publishBlockers', () => {
       { is_published: false, review_status: 'pending' },
       { is_published: false, review_status: 'flagged' },
     ];
-    expect(publishBlockers(members)).toEqual({ pending: 2, flagged: 1 });
-    expect(canPublish(members)).toBe(false);
+    expect(unseenMembers(members)).toEqual({ pending: 2, flagged: 1 });
   });
 
-  // The one that never resolves on its own. A collection holding it is
-  // blocked until its owner removes it, which they can only do if they
-  // are told which one it is.
-  it('blocks on a flagged place alone', () => {
-    expect(canPublish([live(), { review_status: 'flagged', is_published: false }])).toBe(false);
-  });
-
-  it('counts an approved-but-unpublished member as waiting', () => {
-    expect(publishBlockers([{ is_published: false, review_status: 'approved' }]))
+  // Approved and unpublished is unseen too: two flags, one meaning.
+  it('counts an approved-but-unpublished member as not public yet', () => {
+    expect(unseenMembers([{ is_published: false, review_status: 'approved' }]))
       .toEqual({ pending: 1, flagged: 0 });
-  });
-
-  it('lets an empty list through', () => {
-    expect(canPublish([])).toBe(true);
   });
 });
 
