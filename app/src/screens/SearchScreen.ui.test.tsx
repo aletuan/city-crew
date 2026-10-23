@@ -86,10 +86,32 @@ vi.mock('../lib/candidates', () => ({
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => null }));
 // Every city's places: none until a test hands some over, and a record of
 // each time the screen asked, by reader.
-const idx = vi.hoisted(() => ({ places: null as Place[] | null, asks: [] as (string | null | undefined)[] }));
-vi.mock('../lib/searchIndex', () => ({
-  useSearchIndex: (reader: string | null | undefined) => { idx.asks.push(reader); return idx.places; },
+// `real` runs the module itself instead, over `server` as what the
+// database holds, for a reader who is signed in.
+const idx = vi.hoisted(() => ({
+  places: null as Place[] | null, asks: [] as (string | null | undefined)[],
+  real: false, server: [] as Place[],
 }));
+vi.mock('../lib/searchIndex', async (orig) => {
+  const real = await orig<typeof import('../lib/searchIndex')>();
+  return {
+    ...real,
+    useSearchIndex: (reader: string | null | undefined) => {
+      if (idx.real) return real.useSearchIndex(reader);
+      idx.asks.push(reader);
+      return idx.places;
+    },
+  };
+});
+vi.mock('../lib/data', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchSearchIndex: async () => idx.server,
+}));
+vi.mock('../lib/auth', () => {
+  const m = { useAuth: () => ({ session: null, ready: true, email: null, userId: idx.real ? 'u1' : undefined }) };
+  const all = () => (m as { useAuth: () => object }).useAuth();
+  return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
+});
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: vi.fn(), isSaved: () => false });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
@@ -97,6 +119,7 @@ vi.mock('../lib/save', () => {
 
 import { Keyboard } from 'react-native';
 import SearchScreen from './SearchScreen';
+import { addToSearchIndex, forgetSearchIndex } from '../lib/searchIndex';
 
 const week = (hours: string) =>
   ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -227,6 +250,9 @@ beforeEach(async () => {
   g.run.mockClear();
   idx.places = null;
   idx.asks = [];
+  idx.real = false;
+  idx.server = [];
+  forgetSearchIndex();
   g.addMany.mockClear();
   g.clear.mockClear();
   await AsyncStorage.removeItem(RECENTS_KEY);
@@ -838,5 +864,43 @@ describe('every city', () => {
     fireEvent.click(chip('hcmc'));
     fireEvent.click(chip('hanoi'));
     expect(results()).toHaveLength(1);
+  });
+});
+
+// A place suggested here, in another city, as `useCandidates` lays it into
+// the index (owner, 22 Oct 2026: Saigon Concept, suggested from Hanoi).
+// The real index module, so what is pinned is the screen counting what
+// the module hands back.
+describe('a place just suggested in another city', () => {
+  const concept = place({
+    slug: 'saigon-concept', city_id: 'hcmc', name_en: 'Saigon Concept', name_vi: 'Saigon Concept',
+    neighborhood_en: 'An Khánh', is_published: false, review_status: 'pending',
+    address: '14 Trần Ngọc Diện, P. Phú Thuận, An Khánh, Hồ Chí Minh 700000, Vietnam',
+  });
+  const chipIds = () => [...screen.getByTestId('search-cities').querySelectorAll('[data-testid^="search-city-"]')]
+    .map((e) => e.getAttribute('data-testid')!.slice('search-city-'.length));
+
+  it('is counted on its city’s chip the moment it is laid in', async () => {
+    idx.real = true;
+    mount();
+    await act(async () => {});
+    type('saigon concept');
+    expect(chipIds()).toEqual(['all', 'hanoi']);
+    await act(async () => { addToSearchIndex('u1', [concept]); });
+    expect(chipIds()).toEqual(['all', 'hanoi', 'hcmc']);
+    expect(screen.getByTestId('search-city-hcmc').textContent).toBe('Saigon (1)');
+  });
+
+  // As the owner typed it: the name is written as one word, the search as
+  // two, and the chip came up only for "saigon concept" (`runsInto`).
+  it('is counted for its name typed as two words, or with marks', async () => {
+    idx.real = true;
+    mount();
+    await act(async () => {});
+    type('sai gon concept');
+    await act(async () => { addToSearchIndex('u1', [concept]); });
+    expect(screen.getByTestId('search-city-hcmc').textContent).toBe('Saigon (1)');
+    type('sài gòn concept');
+    expect(screen.getByTestId('search-city-hcmc').textContent).toBe('Saigon (1)');
   });
 });

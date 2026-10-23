@@ -327,17 +327,36 @@ function wordsAsWritten(text: string): string[] {
   return text.normalize('NFD').toLowerCase().split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
 }
 
-/** The words of the query typed with marks, as `wordsAsWritten` has them. */
+/** The words of the query as `wordsAsWritten` has them, when any of them
+ *  was typed with marks; none when none was, and there is nothing to hold
+ *  the place to. */
 function markedTerms(query: string): string[] {
-  return wordsAsWritten(query).filter(hasMarks);
+  const words = wordsAsWritten(query);
+  return words.some(hasMarks) ? words : [];
 }
 
-/** Does every word typed with marks find itself among `words`? */
+/**
+ * Does every word typed with marks find itself among `words`?
+ *
+ * Or a run of two or three typed words, marks and all, that a bare
+ * written word is whole: "sài gòn" finds "Saigon Concept" as "sai gon"
+ * does (`runsInto`, 22 Oct 2026). Whole, for the reason the single bare
+ * word is whole.
+ */
 function marksAgree(words: readonly string[], typed: readonly string[]): boolean {
-  return typed.every((w) => {
+  const ok = typed.map((w) => {
+    if (!hasMarks(w)) return true;
     const bare = fold(w);
     return words.some((t) => t.startsWith(w) || (fold(t) === bare && !hasMarks(t)));
   });
+  if (ok.every(Boolean)) return true;
+  const bareWords = new Set(words.filter((t) => !hasMarks(t)).map(fold));
+  for (let i = 0; i < typed.length; i++) {
+    for (let n = 2; n <= MAX_RUN && i + n <= typed.length; n++) {
+      if (bareWords.has(typed.slice(i, i + n).map(fold).join(''))) ok.fill(true, i, i + n);
+    }
+  }
+  return ok.every(Boolean);
 }
 
 /** Did the reader type marks, and does the place carry every marked word
@@ -629,12 +648,113 @@ function atWordStart(haystack: string, term: string): boolean {
   return false;
 }
 
+/**
+ * ── one word or two: "sai gon" and "saigon" (owner, 22 Oct 2026) ──
+ *
+ * Saigon Concept, suggested from Hanoi, was not counted on Saigon's chip
+ * for "sai gon concept": "gon" begins no word of "Saigon". The catalog
+ * writes the same names both ways — 34 published names say "Saigon" and
+ * 3 "Sài Gòn", 26 "Hanoi" and 2 "Hà Nội", 5 "Dalat" and 10 "Đà Lạt" —
+ * and readers type both ways, so which one a search found depended on
+ * which way the reader's thumb went.
+ *
+ * Algolia, Meilisearch and Typesense all answer this the same way, and so
+ * does this: typed words run together ("sai gon" → "saigon"), and a typed
+ * word may run over the place's own words ("saigon" over "sai gon").
+ * Measured on the 1,115 published places, against the rule before it:
+ *
+ *   sai gon / saigon        110 / 51  →  130 / 130
+ *   dalat                     5       →   66   (da lat: 86)
+ *   danang                    2       →   98   (da nang: 104)
+ *   caphe, thaodien, hoankiem 0       →  583, 43, 102, as their spaced forms
+ *   roof top / land mark      2 / 1   →   24 / 9
+ *   pho, bar, cafe, han, an, oc, kem, banh, the …   unchanged
+ *
+ * Nothing that matched stopped matching. The limits in `runsInto` are
+ * what kept "han", "oc" and "pho" unchanged: a first cut without them
+ * added 287, 23 and 9 places to them.
+ *
+ * The cost, on the same 1,115 places, warm, on a development machine
+ * rather than a phone: a search the words as typed already answer pays
+ * nothing more ("c" 4.9 ms, "cafe" 3.6 → 3.8); one that tries runs pays
+ * about a millisecond and a half more ("saigon" 0.4 → 1.4, "the workshop
+ * coffee" 0.2 → 2.2).
+ */
+const MAX_RUN = 3;
+
+/**
+ * Does `term` run over two or three of the haystack's words, from the
+ * start of one: "saigon" over "sai gon", "hochiminh" over "ho chi minh"?
+ *
+ * Only across a single space, so "tayho" does not run over "Thạnh Mỹ Tây,
+ * Hồ Chí Minh". Only over words of two letters or more, and two letters
+ * at least into the last: "han" is half a syllable, not "ha noi" (287
+ * places), "oc" is not "ở cửa", and "pho" is not "P. Hồ".
+ */
+function runsInto(haystack: string, term: string): boolean {
+  // Two letters of one word and two into the next: anything shorter
+  // cannot run, and is turned away before the scan.
+  if (term.length < 4 || CJK.test(term)) return false;
+  const head = term.slice(0, 2);
+  for (let i = haystack.indexOf(head); i !== -1; i = haystack.indexOf(head, i + 1)) {
+    if (i > 0 && WORD_CHAR.test(haystack[i - 1])) continue;
+    let k = 0;
+    let j = i;
+    let len = 0;
+    let joins = 0;
+    while (k < term.length && j < haystack.length) {
+      if (haystack[j] === term[k]) {
+        k += 1; j += 1; len += 1;
+      } else if (haystack[j] === ' ' && len >= 2 && joins < MAX_RUN - 1) {
+        joins += 1; j += 1; len = 0;
+      } else break;
+    }
+    if (k === term.length && joins > 0 && len >= 2) return true;
+  }
+  return false;
+}
+
+/** Every way to run neighbouring words together, `MAX_RUN` at most:
+ *  "sai gon concept" → itself, "saigon concept", "sai gonconcept",
+ *  "saigonconcept". */
+function runsOf(terms: readonly string[]): string[][] {
+  if (!terms.length) return [[]];
+  const out: string[][] = [];
+  for (let n = 1; n <= Math.min(MAX_RUN, terms.length); n++) {
+    const head = terms.slice(0, n).join('');
+    for (const rest of runsOf(terms.slice(n))) out.push([head, ...rest]);
+  }
+  return out;
+}
+
+/** Past this many words the ways to run them together (81 at eight)
+ *  outgrow what a keystroke can spend across the catalog, and the words
+ *  as typed are all that is tried. */
+const MAX_RUN_TERMS = 8;
+
 /** Every word must appear somewhere — "cafe saigon" narrows, not widens.
  *
  *  Each word must begin a word of the haystack, except a CJK term, which
  *  stays a plain substring: 映画館 has no word edges for 映画 to start at,
  *  and the scripts that write without spaces are the same ones `usable`
- *  already exempts from the length rule. */
+ *  already exempts from the length rule.
+ *
+ *  Or the words run together, or over the haystack's (`runsInto`): tried
+ *  only once the words as typed have failed, so a search that already
+ *  matched costs what it did. */
 export function matches(haystack: string, terms: readonly string[]): boolean {
-  return terms.every((term) => (CJK.test(term) ? haystack.includes(term) : atWordStart(haystack, term)));
+  const begins = (term: string) => (CJK.test(term) ? haystack.includes(term) : atWordStart(haystack, term));
+  if (terms.every(begins)) return true;
+  if (terms.length > MAX_RUN_TERMS) return false;
+  return runsFor(terms).some((run) => run.every((term) => begins(term) || runsInto(haystack, term)));
+}
+
+/** `runsOf`, for the last words asked about. `matches` is asked the same
+ *  words once per place, a thousand times a keystroke; built once instead,
+ *  "sai gon concept" across the catalog went from 2.5 ms to 1.7. */
+let lastRuns: { key: string; runs: string[][] } = { key: '', runs: [[]] };
+function runsFor(terms: readonly string[]): string[][] {
+  const key = terms.join('\u0000');
+  if (lastRuns.key !== key) lastRuns = { key, runs: runsOf(terms) };
+  return lastRuns.runs;
 }

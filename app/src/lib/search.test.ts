@@ -150,6 +150,74 @@ describe('matches', () => {
   it('is order-blind — the words may arrive any way round', () => {
     expect(matches('bun cha hanoi', ['hanoi', 'bun'])).toBe(true);
   });
+
+  // ── one word or two (owner, 22 Oct 2026) ──
+  //
+  // "sai gon concept" did not find Saigon Concept: "gon" begins no word
+  // of "Saigon". The catalog writes the same names both ways, and so do
+  // readers.
+  describe('one word or two', () => {
+    it('runs typed words together: "sai gon" finds "Saigon"', () => {
+      expect(matches('saigon concept', ['sai', 'gon', 'concept'])).toBe(true);
+      expect(matches('roof top bar', ['roof', 'top'])).toBe(true);
+      expect(matches('the rooftop bar', ['roof', 'top'])).toBe(true);
+      expect(matches('hochiminh city', ['ho', 'chi', 'minh'])).toBe(true);
+    });
+
+    it('runs a typed word over the place’s words: "saigon" finds "Sài Gòn"', () => {
+      expect(matches('banh mi sai gon', ['saigon'])).toBe(true);
+      expect(matches('nha tho ho chi minh', ['hochiminh'])).toBe(true);
+      // Half way into the second word, as a thumb gets there.
+      expect(matches('ha noi', ['hano'])).toBe(true);
+    });
+
+    it('does both at once', () => {
+      expect(matches('cong ca phe', ['cong', 'caphe'])).toBe(true);
+      expect(matches('cong caphe', ['cong', 'ca', 'phe'])).toBe(true);
+    });
+
+    // Three words at most, either way: "hochiminhcity" is four.
+    it('runs three words together and no more', () => {
+      expect(matches('ho chi minh city', ['hochiminhcity'])).toBe(false);
+      expect(matches('hochiminhcity', ['ho', 'chi', 'minh', 'city'])).toBe(false);
+    });
+
+    // What kept "han", "oc" and "pho" where they were: a first cut without
+    // these limits added 287, 23 and 9 places to them.
+    it('needs two letters into the last word, so half a syllable is not a city', () => {
+      expect(matches('ha noi', ['han'])).toBe(false);
+      expect(matches('hal nguyen', ['haln'])).toBe(false);
+      expect(matches('hal nguyen', ['halng'])).toBe(true);
+    });
+
+    it('runs over words of two letters or more only', () => {
+      expect(matches('o cua so', ['ocua'])).toBe(false);
+      expect(matches('p. ho tay', ['pho'])).toBe(false);
+    });
+
+    it('runs over a single space only, not a comma or two spaces', () => {
+      expect(matches('thanh my tay, ho chi minh', ['tayho'])).toBe(false);
+      expect(matches('tay  ho', ['tayho'])).toBe(false);
+      expect(matches('tay ho', ['tayho'])).toBe(true);
+    });
+
+    it('starts a run at the start of a word, as every match does', () => {
+      expect(matches('bosai gon', ['saigon'])).toBe(false);
+    });
+
+    // Past eight words the ways to run them together outgrow a keystroke,
+    // and the words as typed are all that is tried.
+    it('runs the words of a query of eight together, and of nine not', () => {
+      const words = ['a1', 'b2', 'c3', 'd4', 'e5', 'f6', 'g7'];
+      expect(matches('a1 b2 c3 d4 e5 f6 saigon', [...words.slice(0, 6), 'sai', 'gon'])).toBe(true);
+      expect(matches('a1 b2 c3 d4 e5 f6 g7 saigon', [...words, 'sai', 'gon'])).toBe(false);
+      expect(matches('a1 b2 c3 d4 e5 f6 g7 sai gon', [...words, 'sai', 'gon'])).toBe(true);
+    });
+
+    it('leaves Japanese to its substring rule', () => {
+      expect(matches('東京 映画館', ['東京映画'])).toBe(false);
+    });
+  });
 });
 
 describe('mergeTerms', () => {
@@ -528,6 +596,22 @@ describe('findPlaces', () => {
       expect(hits('dinh', [street, sticky])).toHaveLength(2);
     });
 
+    // A run of marked words that a bare written word is whole: "sài gòn"
+    // finds "Saigon Concept" as "sai gon" does.
+    it('lets a run of marked words find a bare word they make whole', () => {
+      const concept = { name_en: 'Saigon Concept' };
+      expect(hits('sài gòn concept', [concept])).toEqual([concept]);
+      expect(hits('sài gòn', [concept])).toEqual([concept]);
+      // Whole, as a single bare word must be: half of it is not enough.
+      expect(hits('sài gò', [concept])).toEqual([]);
+      // And the run still holds every word to its marks.
+      expect(hits('sài gọn', [{ name_vi: 'Sài Gòn Xưa' }])).toEqual([]);
+      // A run may mix bare words and marked ones, as typing does.
+      expect(hits('sai gòn', [concept])).toEqual([concept]);
+      // Only a bare written word: one written with other marks is not it.
+      expect(hits('sai gọn', [{ name_vi: 'Saigòn' }])).toEqual([]);
+    });
+
     // Whoever typed "pho" may mean either: bare words fold as before.
     it('changes nothing for a query typed bare', () => {
       expect(hits('pho', [street, room, thin, photo])).toHaveLength(4);
@@ -631,6 +715,13 @@ describe('findCollections', () => {
 
   // The places' rule for marks: "phở" is not answered by a list whose
   // blurb walks down a "phố", nor by one that holds a "Phòng" by name.
+  it('finds a list by a name written as one word or two', () => {
+    const lanes = { c: { title_en: 'Saigon lanes' }, members: [] };
+    const bowls = { c: { title_en: 'Hanoi in a bowl' }, members: [{ name_vi: 'Phở Hà Nội' }] };
+    expect(findCollections([lanes, bowls], 'sai gon')).toEqual([lanes.c]);
+    expect(findCollections([lanes, bowls], 'hanoi')).toEqual([bowls.c]);
+  });
+
   it('holds a word typed with marks to its marks', () => {
     const walk = { c: { title_en: 'Melbourne lanes', desc_vi: 'đi bộ dọc những con phố' }, members: [] };
     const bowl = { c: { title_en: 'Hanoi in a bowl' }, members: [{ name_vi: 'Phở Thìn' }] };
