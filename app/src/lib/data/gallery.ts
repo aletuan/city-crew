@@ -21,7 +21,7 @@ const LABELS = 'claude-labels';
 
 /** The catalog's photo columns plus `source`, which the sheet prints. */
 // `storage_path` rides along for one reason: a delete hands it to the
-// bucket once the row is gone (`removePlacePhoto`).
+// bucket once the row is gone (`removePlacePhotos`).
 // The score rides along embedded: the gallery is the one screen that
 // shows it, so it costs no other read. Only the shown scorer's row — see
 // the filter in `fetchGallery`. The photo labels ride along the same way,

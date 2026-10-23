@@ -47,8 +47,10 @@ import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance 
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { fetchGallery, fetchPlaceId, removePlacePhoto, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
-import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryPhoto } from '../lib/gallery';
+import { fetchGallery, fetchPlaceId, removePlacePhotos, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
+import {
+  applyEdit, canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryEdit, type GalleryPhoto,
+} from '../lib/gallery';
 import { MAX_PER_PLACE } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
@@ -83,7 +85,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const { reload: reloadLists } = useCollections();
   const mine = useMyLists();
   // Everything on screen that draws this place's photographs, read again
-  // after a write. Not only the catalog: a collection carries its places
+  // once the guide leaves (see `dirty` below). Not only the catalog: a collection carries its places
   // embedded whole (`withMembers`), photographs and all, so a list holding
   // this place kept its old cover until something reloaded the lists —
   // Royal Botanic Gardens' new cover showed on its own page and not in
@@ -115,7 +117,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // swiped to, when the guide swiped.
   const [lastOpened, setLastOpened] = useState<string | null>(null);
   const open = (p: GalleryPhoto) => { setOpenId(p.id); setLastOpened(p.id); };
-  const [busy, setBusy] = useState(false);
   // A run of the scorer: how far it has got while it runs, and what it
   // came to once it has finished, until the card is closed.
   const [scoring, setScoring] = useState<{ done: number; total: number; stopping?: boolean } | null>(null);
@@ -129,15 +130,47 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     );
   }, [t]);
 
+  // Taps drawn on the grid since it was last read, counted so a read that
+  // left before the latest tap does not draw over it (`load`), and the
+  // writes still out, so the gallery is read back once, after the last.
+  const drawn = useRef(0);
+  const writing = useRef(0);
+
   // Its own read, hidden rows included — see `fetchGallery` for why the
   // catalog's embed will not do. The id is looked up once and kept: every
-  // write after this one names the place by it.
+  // write after this one names the place by it. An answer to a question
+  // asked before the guide's latest tap is not the gallery any more, and
+  // is dropped: the read after that tap's write is on its way.
   const load = useCallback(async () => {
+    const asked = drawn.current;
     const id = placeId ?? await fetchPlaceId(slug);
     if (!id) { setPhotos([]); return; }
     setPlaceId(id);
-    setPhotos(galleryOrder(await fetchGallery(id)));
+    const rows = galleryOrder(await fetchGallery(id));
+    if (asked === drawn.current) setPhotos(rows);
   }, [placeId, slug]);
+
+  // ── the catalog, once, on the way out (owner, 23 Oct 2026) ──
+  //
+  // Every write used to reload the city's whole catalog, its public lists
+  // and the reader's own, to change one place's photographs: 1.3 MB of
+  // JSON for Hanoi's 384 places and 440 kB for the owner's lists,
+  // measured that day, parsed, written to the cache and drawn again on
+  // every screen holding the catalog — the stall a moment after each
+  // change. Nothing on this screen reads the catalog, so it waits until
+  // the guide leaves, and five changes cost one reload. Leaving is a pop
+  // back to the place, which unmounts this, or a tab, which blurs it.
+  const dirty = useRef(false);
+  const flush = useRef(() => {});
+  flush.current = () => {
+    if (!dirty.current) return;
+    dirty.current = false;
+    reloadCatalog();
+  };
+  useEffect(() => {
+    const off = navigation.addListener('blur', () => flush.current());
+    return () => { off(); flush.current(); };
+  }, [navigation]);
 
   useEffect(() => {
     if (!mayKeep) return;
@@ -147,31 +180,37 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mayKeep]);
 
-  // Every write, the same way: do it, read the gallery back, and tell the
-  // catalog and the lists (`reloadCatalog`) so the detail screen behind
-  // this one, and any collection holding the place, draw the new cover on
-  // the way back. Reading back rather than patching state is what keeps
-  // this screen honest about the desk: whatever the desk did in between
-  // arrives with the answer.
-  const run = async (job: () => Promise<void>) => {
-    setBusy(true);
+  // Every write, the same way: draw it on the grid at once (`applyEdit`),
+  // do it, and read the gallery back once the last write is in. Reading
+  // back is what keeps this screen honest about the desk: whatever the
+  // desk did in between arrives with the answer, and so does the server's
+  // word on a write that failed. The grid is never locked while a write is
+  // out — a second tap draws over the first and is written after it.
+  const run = async (edit: GalleryEdit, job: () => Promise<void>) => {
+    const before = photos;
+    drawn.current += 1;
+    writing.current += 1;
+    setPhotos((was) => (was ? applyEdit(was, edit) : was));
     try {
       await job();
-      await load();
-      reloadCatalog();
+      dirty.current = true;
       successHaptic();
     } catch (e) {
+      // Alone, it goes back to what was there; under other taps, the
+      // read-back after them says what the server holds.
+      if (writing.current === 1) setPhotos(before);
       fail(e);
     } finally {
-      setBusy(false);
+      writing.current -= 1;
     }
+    if (writing.current === 0) await load().catch(fail);
   };
 
   const adder = useAddPhoto({
     place: place ?? { slug },
     placeId,
     count: photos?.length ?? 0,
-    onAdded: () => { load().catch(fail); reloadCatalog(); },
+    onAdded: () => { load().catch(fail); dirty.current = true; },
   });
 
   const name = place ? splitName(localized(place, 'name', lang)).title : '';
@@ -200,11 +239,10 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         text: t('Delete', 'Xoá', '削除', '删除', '刪除'),
         style: 'destructive',
         onPress: () => {
-          void run(async () => {
-            // The path from the rows on screen, so the file goes with the
-            // row — see `removePlacePhoto` for why the row goes first.
-            for (const id of ids) await removePlacePhoto(id, photos?.find((p) => p.id === id)?.storage_path ?? null);
-          });
+          // The paths from the rows on screen, so the files go with the
+          // rows — see `removePlacePhotos` for why the rows go first.
+          const gone = ids.map((id) => ({ id, storage_path: photos?.find((p) => p.id === id)?.storage_path ?? null }));
+          void run({ kind: 'delete', ids }, () => removePlacePhotos(gone));
           setMode('view');
           setPicked([]);
         },
@@ -228,21 +266,21 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         desc: t('The picture that stands for the place, first wherever it appears.', 'Ảnh đại diện cho địa điểm, đứng đầu ở mọi nơi.', 'この場所を代表する写真になり、どこでも先頭に出ます。', '代表这个地点的照片，在任何地方都排在第一张。', '代表這個地點的照片，在任何地方都排在第一張。'),
       }),
       short: t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面'),
-      onPress: () => { void run(() => setCover(photo.id)); },
+      onPress: () => { void run({ kind: 'cover', id: photo.id }, () => setCover(photo.id)); },
     },
     hide: {
       key: a, icon: 'eye-off-outline' as const,
       title: t('Hide it', 'Ẩn ảnh', '非表示にする', '隐藏', '隱藏'),
       short: t('Hide', 'Ẩn', '非表示', '隐藏', '隱藏'),
       desc: t('Readers stop seeing it. You can show it again.', 'Người xem không thấy nữa. Bạn hiện lại được.', '読者には見えなくなります。再表示できます。', '其他人将看不到它。你可以重新显示。', '其他人將看不到它。你可以重新顯示。'),
-      onPress: () => { void run(() => setHidden(photo.id, true)); },
+      onPress: () => { void run({ kind: 'hide', id: photo.id, hidden: true }, () => setHidden(photo.id, true)); },
     },
     unhide: {
       key: a, icon: 'eye-outline' as const,
       title: t('Show it again', 'Hiện lại', '再表示する', '重新显示', '重新顯示'),
       short: t('Show', 'Hiện lại', '再表示', '显示', '顯示'),
       desc: t('Back on the place for everyone.', 'Trở lại địa điểm với mọi người.', 'この場所に再び表示されます。', '重新对所有人显示。', '重新對所有人顯示。'),
-      onPress: () => { void run(() => setHidden(photo.id, false)); },
+      onPress: () => { void run({ kind: 'hide', id: photo.id, hidden: false }, () => setHidden(photo.id, false)); },
     },
     delete: {
       key: a, icon: 'trash-outline' as const, destructive: true,
@@ -391,7 +429,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                 <PressableScale
                   key={p.id}
                   scaleTo={0.96}
-                  disabled={busy}
                   onPress={picks ? () => togglePick(p.id) : () => open(p)}
                   accessibilityRole="button"
                   accessibilityLabel={`${t('Photo', 'Ảnh', '写真', '照片', '照片')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー', '封面', '封面')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示', '已隐藏', '已隱藏')}` : ''}${p.score?.aesthetic != null ? ` · ${tenText(toTen(p.score.aesthetic))}/10` : ''}`}

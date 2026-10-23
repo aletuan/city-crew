@@ -87,3 +87,39 @@ export function galleryActions(photo: GalleryPhoto): GalleryAction[] {
 export function galleryOrder(photos: readonly GalleryPhoto[]): GalleryPhoto[] {
   return [...photos].sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order);
 }
+
+/** One change the guide asked for, as the grid should draw it at once. */
+export type GalleryEdit =
+  | { kind: 'cover'; id: string }
+  | { kind: 'hide'; id: string; hidden: boolean }
+  | { kind: 'delete'; ids: readonly string[] };
+
+/**
+ * The gallery as it will be once the server has done what was asked.
+ *
+ * ── why (owner, 23 Oct 2026) ──
+ *
+ * A tap used to change nothing on the grid until two round trips had
+ * come back one after the other — the write, then the gallery read again
+ * — with every tile disabled in between and no sign of why. "It hangs a
+ * little when a photo changes." The grid draws this instead the moment
+ * the tap lands, and the read-back replaces it when it arrives.
+ *
+ * The server's own rules, restated so the guess matches the answer
+ * (`guide_set_cover`, `guide_set_hidden`): one cover, which moves to the
+ * front (`galleryOrder`); a hidden photograph is never the cover, so
+ * hiding the cover leaves the place without one, as the server does; a
+ * hidden photograph cannot be made the cover — the menu never offers it
+ * — so that guess is not drawn. Deleting the cover leaves none either:
+ * the server picks no successor.
+ */
+export function applyEdit(photos: readonly GalleryPhoto[], e: GalleryEdit): GalleryPhoto[] {
+  if (e.kind === 'delete') return photos.filter((p) => !e.ids.includes(p.id));
+  if (e.kind === 'hide') {
+    return photos.map((p) => (p.id === e.id
+      ? { ...p, is_hidden: e.hidden, is_cover: e.hidden ? false : p.is_cover }
+      : p));
+  }
+  if (photos.find((p) => p.id === e.id)?.is_hidden) return [...photos];
+  return galleryOrder(photos.map((p) => ({ ...p, is_cover: p.id === e.id })));
+}

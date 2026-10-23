@@ -50,7 +50,7 @@ const data = vi.hoisted(() => ({
   setCover: vi.fn(async () => {}),
   setHidden: vi.fn(async () => {}),
   reorderGallery: vi.fn(async () => {}),
-  removePlacePhoto: vi.fn(async (_id: string, _path: string | null) => {}),
+  removePlacePhotos: vi.fn(async (_photos: { id: string; storage_path: string | null }[]) => {}),
   savePhotoScore: vi.fn(async (_id: string, _scorer: ScorerKey, _reading: Reading, _uid: string) => {}),
   scoreAsync: vi.fn(async (_uri: string): Promise<Reading> => ({ aesthetic: 0.5, isUtility: false, signals: {} })),
   removePhotoFile: vi.fn(async (_path: string) => {}),
@@ -105,7 +105,7 @@ vi.mock('../lib/data', () => ({
   setCover: data.setCover,
   setHidden: data.setHidden,
   reorderGallery: data.reorderGallery,
-  removePlacePhoto: data.removePlacePhoto,
+  removePlacePhotos: data.removePlacePhotos,
   savePhotoScore: data.savePhotoScore,
   removePhotoFile: data.removePhotoFile,
   fetchMyPhotoCounts: data.fetchMyPhotoCounts,
@@ -151,7 +151,21 @@ const photo = (id: string, over: Partial<GalleryPhoto> = {}): GalleryPhoto => ({
 const mine = (id: string, over: Partial<GalleryPhoto> = {}) =>
   photo(id, { source: 'upload', storage_path: `u1/cong-caphe-${id}.jpg`, ...over });
 
-const nav = () => ({ navigate: vi.fn(), goBack: vi.fn() }) as unknown as Nav;
+// The screen's blur, fired by `leave` — a tab away from the gallery.
+const blurs: (() => void)[] = [];
+const nav = () => ({
+  navigate: vi.fn(), goBack: vi.fn(),
+  addListener: vi.fn((ev: string, cb: () => void) => { if (ev === 'blur') blurs.push(cb); return () => {}; }),
+}) as unknown as Nav;
+/** The guide leaves the gallery, for another tab. */
+const leave = () => act(() => { for (const b of blurs.splice(0)) b(); });
+/** A promise held open until the test lets it go. */
+function later<T = void>() {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((r, j) => { resolve = r; reject = j; });
+  return { promise, resolve, reject };
+}
 const route = (slug = 'cong-caphe') => ({ params: { slug } }) as RootRoute<'Gallery'>;
 
 const show = (rows: GalleryPhoto[], p: Place | null = place()) => {
@@ -203,6 +217,7 @@ const confirmLast = () => {
 };
 
 beforeEach(() => {
+  blurs.length = 0;
   gates.shrink = { hold: false, release: () => {} };
   gates.upload = { hold: false, release: () => {} };
   state.uid = 'u1';
@@ -329,18 +344,22 @@ describe('who may keep it', () => {
 });
 
 describe('the menu on one photograph', () => {
-  // Every write, the same way: do it, read the gallery back, tell the
-  // catalog — so the detail screen behind this one draws the new cover —
-  // and both shelves of lists, which carry the place's photographs in
-  // their own copy of it (owner, 15 Oct 2026: a collection kept the old
-  // cover until navigated away and back).
-  it('sets the cover, then reads back and tells the catalog and the lists', async () => {
+  // Every write, the same way: do it, read the gallery back, and once the
+  // guide leaves, tell the catalog — so the detail screen behind this one
+  // draws the new cover — and both shelves of lists, which carry the
+  // place's photographs in their own copy of it (owner, 15 Oct 2026: a
+  // collection kept the old cover until navigated away and back). Not
+  // after each write: 1.3 MB of Hanoi's catalog was read again for every
+  // tap (owner, 23 Oct 2026).
+  it('sets the cover, reads back, and tells the catalog and the lists once the guide leaves', async () => {
     show([photo('a'), mine('m', { sort_order: 1 })]);
     await grid();
     await pick('a', 'Make it the cover');
     await waitFor(() => expect(data.setCover).toHaveBeenCalledWith('a'));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
-    expect(data.reload).toHaveBeenCalled();
+    expect(data.reload).not.toHaveBeenCalled();
+    await leave();
+    expect(data.reload).toHaveBeenCalledTimes(1);
     expect(data.reloadLists).toHaveBeenCalledTimes(1);
     expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
@@ -368,8 +387,10 @@ describe('the menu on one photograph', () => {
     await grid();
     await pick('a', 'Hide it');
     await waitFor(() => expect(data.setHidden).toHaveBeenCalledWith('a', true));
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
     // A hidden cover leaves a list's tile too.
-    await waitFor(() => expect(data.reloadLists).toHaveBeenCalledTimes(1));
+    await leave();
+    expect(data.reloadLists).toHaveBeenCalledTimes(1);
     expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 
@@ -451,12 +472,13 @@ describe('the menu on one photograph', () => {
     await pick('m', 'Delete it');
     await waitFor(() => expect(alert).toHaveBeenCalled());
     expect(alert.mock.calls.at(-1)![0]).toBe('Delete this photo?');
-    expect(data.removePlacePhoto).not.toHaveBeenCalled();
+    expect(data.removePlacePhotos).not.toHaveBeenCalled();
     confirmLast();
     // The row's id and its file's path, so the bucket is cleared with it.
-    await waitFor(() => expect(data.removePlacePhoto).toHaveBeenCalledWith('m', 'u1/cong-caphe-m.jpg'));
+    await waitFor(() => expect(data.removePlacePhotos).toHaveBeenCalledWith([{ id: 'm', storage_path: 'u1/cong-caphe-m.jpg' }]));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(data.reloadLists).toHaveBeenCalledTimes(1));
+    await leave();
+    expect(data.reloadLists).toHaveBeenCalledTimes(1);
     expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 
@@ -467,6 +489,122 @@ describe('the menu on one photograph', () => {
     await pick('a', 'Make it the cover');
     await waitFor(() => expect(alert).toHaveBeenCalled());
     expect(alert.mock.calls.at(-1)![1]).toBe('not yours to set');
+  });
+});
+
+// A tap is drawn before the server answers (owner, 23 Oct 2026: "it
+// hangs a little when a photo changes" — two round trips, one after the
+// other, with every tile locked and nothing to say why).
+describe('drawn at once', () => {
+  const badgeOn = (id: string) => !!within(screen.getByTestId(`gallery-tile-${id}`)).queryByTestId('gallery-cover');
+
+  it('moves the cover before the server has answered, and leaves the tiles free', async () => {
+    const w = later();
+    data.setCover.mockReturnValueOnce(w.promise);
+    show([photo('a', { is_cover: true }), photo('b', { sort_order: 1 })]);
+    await grid();
+    await pick('b', 'Make it the cover');
+    // The sheet closes, and the act runs as it goes (`SheetStrip`).
+    await waitFor(() => expect(data.setCover).toHaveBeenCalledWith('b'));
+    expect(tileIds()).toEqual(['b', 'a']);
+    expect(badgeOn('b')).toBe(true);
+    expect(badgeOn('a')).toBe(false);
+    expect(screen.getByTestId('gallery-tile-a').getAttribute('aria-disabled')).not.toBe('true');
+    expect(data.fetchGallery).toHaveBeenCalledTimes(1);
+    await act(async () => { w.resolve(); });
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+  });
+
+  it('takes a deleted photograph off the grid before the server has answered', async () => {
+    const w = later();
+    data.removePlacePhotos.mockReturnValueOnce(w.promise);
+    show([mine('m'), photo('g', { sort_order: 1 })]);
+    await grid();
+    await pick('m', 'Delete it');
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    act(() => confirmLast());
+    expect(tileIds()).toEqual(['g']);
+    await act(async () => { w.resolve(); });
+  });
+
+  // Alone, a refused write goes back to what was there at once, before
+  // the read-back has come; the read-back then has the server's word.
+  it('puts the grid back when the write is refused', async () => {
+    data.setCover.mockRejectedValueOnce(new Error('not yours to set'));
+    const read = later<GalleryPhoto[]>();
+    show([photo('a', { is_cover: true }), photo('b', { sort_order: 1 })]);
+    await grid();
+    data.fetchGallery.mockReturnValueOnce(read.promise);
+    await pick('b', 'Make it the cover');
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(tileIds()).toEqual(['a', 'b']);
+    expect(badgeOn('a')).toBe(true);
+    await act(async () => { read.resolve(state.rows); });
+  });
+
+  // Two taps in a row: both drawn, both written, the gallery read back
+  // once, after the second.
+  it('reads the gallery back once, after the last of several writes', async () => {
+    const first = later();
+    data.setCover.mockReturnValueOnce(first.promise);
+    show([photo('a', { is_cover: true }), photo('b', { sort_order: 1 }), photo('c', { sort_order: 2 })]);
+    await grid();
+    await pick('b', 'Make it the cover');
+    fireEvent.click(screen.getByTestId('photo-sheet-close'));
+    await pick('c', 'Hide it');
+    await waitFor(() => expect(data.setHidden).toHaveBeenCalledWith('c', true));
+    await act(async () => {});
+    expect(data.fetchGallery).toHaveBeenCalledTimes(1);
+    expect(tileIds()).toEqual(['b', 'a', 'c']);
+    await act(async () => { first.resolve(); });
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+  });
+
+  // A read asked before the latest tap is not the gallery any more: its
+  // answer is dropped, and the read after that tap's write draws instead.
+  it('does not let a read from before a tap draw over it', async () => {
+    const stale = later<GalleryPhoto[]>();
+    const second = later();
+    const hidden = (id: string) => !!screen.getByTestId(`gallery-tile-${id}`).querySelector('[data-testid="gallery-hidden"]');
+    show([photo('a', { is_cover: true }), photo('b', { sort_order: 1 })]);
+    await grid();
+    data.fetchGallery.mockReturnValueOnce(stale.promise);
+    await pick('b', 'Hide it');
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+    data.setHidden.mockReturnValueOnce(second.promise);
+    await pick('a', 'Hide it');
+    await waitFor(() => expect(data.setHidden).toHaveBeenCalledWith('a', true));
+    await act(async () => { stale.resolve([photo('a', { is_cover: true }), photo('b', { sort_order: 1, is_hidden: true })]); });
+    expect(hidden('a')).toBe(true);
+    state.rows = [photo('a', { is_hidden: true }), photo('b', { sort_order: 1, is_hidden: true })];
+    await act(async () => { second.resolve(); });
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(3));
+    expect(hidden('a')).toBe(true);
+  });
+
+  it('tells the catalog nothing when nothing was written', async () => {
+    show([photo('a', { is_cover: true }), photo('b', { sort_order: 1 })]);
+    await grid();
+    await leave();
+    cleanup();
+    expect(data.reload).not.toHaveBeenCalled();
+    expect(data.reloadMine).not.toHaveBeenCalled();
+  });
+
+  // Popped back to the place, the screen goes, and the catalog is told
+  // once for everything done here.
+  it('tells the catalog once for many writes, as the screen goes', async () => {
+    show([photo('a', { is_cover: true }), photo('b', { sort_order: 1 })]);
+    await grid();
+    await pick('b', 'Make it the cover');
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+    await pick('a', 'Hide it');
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(3));
+    expect(data.reload).not.toHaveBeenCalled();
+    cleanup();
+    expect(data.reload).toHaveBeenCalledTimes(1);
+    expect(data.reloadLists).toHaveBeenCalledTimes(1);
+    expect(data.reloadMine).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -486,8 +624,11 @@ describe('choosing several', () => {
     fireEvent.click(screen.getByTestId('gallery-delete-picked'));
     expect(alert.mock.calls.at(-1)![0]).toBe('Delete 2 photos?');
     confirmLast();
-    await waitFor(() => expect(data.removePlacePhoto).toHaveBeenCalledTimes(2));
-    expect(data.removePlacePhoto.mock.calls).toEqual([['g', 'cong-caphe/g.jpg'], ['m2', 'u1/cong-caphe-m2.jpg']]);
+    // One delete for both, not one each.
+    await waitFor(() => expect(data.removePlacePhotos).toHaveBeenCalledTimes(1));
+    expect(data.removePlacePhotos).toHaveBeenCalledWith([
+      { id: 'g', storage_path: 'cong-caphe/g.jpg' }, { id: 'm2', storage_path: 'u1/cong-caphe-m2.jpg' },
+    ]);
     await waitFor(() => expect(screen.queryByTestId('gallery-delete-picked')).toBeNull());
   });
 
@@ -506,7 +647,7 @@ describe('choosing several', () => {
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
     fireEvent.click(screen.getByTestId('gallery-cancel'));
     expect(screen.queryByTestId('gallery-tick-a')).toBeNull();
-    expect(data.removePlacePhoto).not.toHaveBeenCalled();
+    expect(data.removePlacePhotos).not.toHaveBeenCalled();
     // Looking again: a tap opens the photograph.
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
     expect(await screen.findByTestId('photo-sheet')).toBeTruthy();
@@ -527,6 +668,8 @@ describe('adding one', () => {
       publicUrl: expect.stringContaining('u1/cong-caphe-'),
     });
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+    expect(data.reload).not.toHaveBeenCalled();
+    await leave();
     expect(data.reload).toHaveBeenCalled();
     // A new photograph becomes the cover, so the lists are told too.
     expect(data.reloadLists).toHaveBeenCalledTimes(1);
@@ -646,6 +789,7 @@ describe('adding one', () => {
     expect(data.addPlacePhoto.mock.calls.map((c) => (c[0] as { sortOrder: number }).sortOrder)).toEqual([4, 3, 2]);
     // One read-back for the batch, not one per photo.
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+    await leave();
     expect(data.reload).toHaveBeenCalledTimes(1);
     expect(alert).not.toHaveBeenCalled();
   });
