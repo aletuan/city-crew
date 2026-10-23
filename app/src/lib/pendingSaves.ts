@@ -68,3 +68,24 @@ export function withPending(lists: Collection[], pending: PendingSaves): Collect
     return out;
   });
 }
+
+/**
+ * Several places into one list, each after the one before it.
+ *
+ * What Google made for a list Search was opened from (owner, 23 Oct
+ * 2026), handed to `toggle` one at a time. Each write takes its place
+ * from the list it is handed, so the list is handed on with the last one
+ * laid in — otherwise every one of them would be written at the same
+ * place in the order, and the list keeps no tie-break between them. A
+ * place already in the list is left alone: `toggle` would take it out.
+ */
+export function addAll(
+  c: Collection, places: readonly Place[], toggle: (c: Collection, place: Place) => unknown,
+): void {
+  let into = c;
+  for (const place of places) {
+    if (holds(into, place.slug)) continue;
+    void toggle(into, place);
+    [into] = withPending([into], { [pendingKey(into.slug, place.slug)]: { collection: into.slug, place, want: true } });
+  }
+}

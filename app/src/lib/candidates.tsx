@@ -26,7 +26,7 @@ import { useCurrentCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
 import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
-import { fetchSearchPlaces } from './data';
+import { fetchSearchPlaces, type Place } from './data';
 import { addToSearchIndex } from './searchIndex';
 import { Candidate, knownByPlaceId, Known, searchPlaces, SignedOutError, suggestPlace } from './suggest';
 import { Batch, IDLE_BATCH, ItemState } from './batch';
@@ -47,14 +47,33 @@ export type Candidates = {
   batch: Batch;
   run: (query: string) => void;
   /** Submit several, one at a time. Resolves once every one has settled,
-   *  or once the daily cap has ended the run. */
-  addMany: (list: Candidate[]) => Promise<{
-    done: number; skipped: number; failed: number; held: number;
-  }>;
+   *  or once the daily cap has ended the run — with the places it made,
+   *  for a screen that has somewhere to put them (Search, adding to a
+   *  collection). */
+  addMany: (list: Candidate[]) => Promise<Tally>;
   /** Formatted distance from the reader, or '' — see `awayFrom` below. */
   awayFrom: (c: Candidate) => string;
   clear: () => void;
 };
+
+export type Tally = {
+  done: number; skipped: number; failed: number; held: number;
+  /** The places this run made, as read back once it ended. */
+  made: Place[];
+};
+
+/**
+ * A place just made, drawn from what Google said about it, for when the
+ * read back fails. Enough for the write that puts it in a list, which
+ * needs only the slug, and for the tile that stands in until the list is
+ * fetched again: a name, no photograph, and the pending pill a place
+ * nobody has approved wears.
+ */
+const stub = (slug: string, c: Candidate, cityId: string) => ({
+  slug, city_id: cityId, name_en: c.name, name_vi: c.name,
+  address: c.address, rating: c.rating, rating_count: c.rating_count,
+  is_published: false, review_status: 'pending', place_photos: [],
+}) as unknown as Place;
 
 export function useCandidates(): Candidates {
   const { t } = useI18n();
@@ -80,8 +99,8 @@ export function useCandidates(): Candidates {
    * it. What is left has one cause, so it is a flag again.
    */
   const capped = useRef(false);
-  /** The slugs this run made, for Search's index once it ends. */
-  const made = useRef<string[]>([]);
+  /** What this run made, for Search's index and the caller once it ends. */
+  const made = useRef<{ slug: string; c: Candidate }[]>([]);
 
   const clear = useCallback(() => { setResults(null); setKnown({}); setBatch(IDLE_BATCH); capped.current = false; }, []);
 
@@ -195,7 +214,7 @@ export function useCandidates(): Candidates {
       // loose enough for Google, too loose for a substring — never
       // reaches. See CandidateRow: a 'mine' row with a slug can View.
       setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine', slug: out.slug } }));
-      made.current.push(out.slug);
+      made.current.push({ slug: out.slug, c });
       return 'done';
     }
     if (out.reason === 'already_live') {
@@ -244,7 +263,7 @@ export function useCandidates(): Candidates {
    * server is working on, not one of five that might be.
    */
   const addMany = useCallback(async (list: Candidate[]) => {
-    if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, held: 0 };
+    if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, held: 0, made: [] };
     capped.current = false;
     made.current = [];
     setBatch({
@@ -279,17 +298,26 @@ export function useCandidates(): Candidates {
     // Once, at the end, rather than after each: the catalog is one fetch
     // and five of them would be four wasted round trips and four list
     // re-renders under the reader's finger.
-    if (tally.done > 0) {
-      places.reload();
-      // The catalog is the city on screen. A place Google put in another
-      // city goes there (`import-place`), where only Search's index of
-      // every city can count it: read back the rows just made and lay
-      // them in, so its city's chip says so now rather than next run.
-      // A failed read costs the chip until then, and nothing else.
-      fetchSearchPlaces(made.current)
-        .then((rows) => addToSearchIndex(meId ?? null, rows), () => {});
-    }
-    return tally;
+    if (tally.done === 0) return { ...tally, made: [] };
+    places.reload();
+    // The catalog is the city on screen. A place Google put in another
+    // city goes there (`import-place`), where only Search's index of
+    // every city can count it: read back the rows just made and lay them
+    // in, so its city's chip says so now rather than next run. A failed
+    // read costs the chip until then, and nothing else — the caller is
+    // handed what Google said about each place instead.
+    //
+    // Awaited now, which it was not until a caller wanted the rows (owner,
+    // 23 Oct 2026: a place found on Google from a collection goes into
+    // it). The bar has already said the run is over by this point, so
+    // the read delays only what the caller does next.
+    const ran = made.current;
+    const rows = await fetchSearchPlaces(ran.map((m) => m.slug)).catch(() => null);
+    if (rows) addToSearchIndex(meId ?? null, rows);
+    return {
+      ...tally,
+      made: ran.map((m) => rows?.find((r) => r.slug === m.slug) ?? stub(m.slug, m.c, city.id)),
+    };
   // `city.id` is the stable key — see the note above `search`.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city?.id, meId, places, suggestOne]);

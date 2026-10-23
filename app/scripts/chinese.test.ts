@@ -61,6 +61,7 @@ const ROWS = new Set([
   'c.short_en', 'city.short_en', 'r.en', "hit.place.name_en ?? ''",
   // What a collection's author wrote.
   'item.collection.title_en', 'c.title_en', 'c.desc_en', 'col.title_en', 'col.desc_en', 'own.title_en', 'own.desc_en',
+  'list.title_en',
 ]);
 
 const KANA = /[぀-ヿ]/;

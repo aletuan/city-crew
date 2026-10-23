@@ -15,13 +15,16 @@ import SearchField from '../components/SearchField';
 import { AddSlot } from '../components/add';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
+import ListToggle from '../components/ListToggle';
 import {
   AmbientWarmth, Card, Chip, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
-import { coverOf, fmtCount, isLive, membersOf } from '../lib/data';
+import { coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
 import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
 import { useCityList, useCurrentCity } from '../lib/city';
 import { useSession } from '../lib/auth';
+import { useMyLists, useSaveActions } from '../lib/save';
+import { addAll } from '../lib/pendingSaves';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
 import { DEFAULT_TZ } from '../lib/clock';
@@ -41,9 +44,9 @@ import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
-import type { Nav } from '../nav';
+import type { Nav, RootRoute } from '../nav';
 
-export default function SearchScreen({ navigation }: { navigation: Nav }) {
+export default function SearchScreen({ navigation, route }: { navigation: Nav; route?: RootRoute<'Search'> }) {
   const { t, lang } = useI18n();
   const [query, setQuery] = useState('');
   const { data: places } = usePlaces();
@@ -53,6 +56,24 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const cols = useCollections();
   const tabClearance = useTabBarClearance();
   const google = useCandidates();
+
+  // ── adding to a list (owner, 23 Oct 2026) ──
+  //
+  // Opened from one of the reader's own lists, Search puts that list's
+  // ⊕ on every place it shows, a tap puts the place in or takes it out,
+  // and what Google finds goes in once it is made. The list is read from
+  // `useMyLists`, the copy with the taps already laid over it, so a ✓
+  // moves when it is tapped. Not one of theirs, or not loaded: plain
+  // Search, which is what every other way in has always opened.
+  const mine = useMyLists();
+  const { toggle } = useSaveActions();
+  const addTo = route?.params?.addTo;
+  const list = (addTo && mine.data.find((c) => c.slug === addTo)) || null;
+  const listTitle = list ? t(list.title_en, list.title_vi, list.title_ja) : '';
+  // The newest copy, for what Google makes: a run takes a while, and the
+  // reader may tick more in the meantime.
+  const listRef = useRef(list);
+  listRef.current = list;
 
   const [picked, setPicked] = useState<string[]>([]);
 
@@ -98,6 +119,11 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     const next = rememberSearch(recents, query);
     if (next !== recents) keepRecents(next);
   };
+  // A ⊕ found the thing as surely as opening it did, so it is remembered
+  // the same way.
+  const inList = (pl: Place) => (list
+    ? { on: holds(list, pl.slug), title: listTitle, onPress: () => { noteSearch(); void toggle(list, pl); } }
+    : undefined);
 
   // Cleared whenever the words change: a Google section answering the
   // previous query, sitting under results for this one, would be the
@@ -145,9 +171,14 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // an index of every place each time it is called, and this ran it for
   // all twenty-two lists on every letter — before the filter, so it paid
   // for the twenty that were never going to match either.
+  //
+  // None while adding to a list: a collection is not something to put in
+  // one, and its row would be one more thing between the reader and the
+  // places.
+  const adding = !!list;
   const colMembers = useMemo(
-    () => cols.data.map((c) => ({ c, members: membersOf(c, places) })),
-    [cols.data, places],
+    () => (adding ? [] : cols.data.map((c) => ({ c, members: membersOf(c, places) }))),
+    [adding, cols.data, places],
   );
 
   // The zero-state's third section. Ranked over the live catalog only —
@@ -331,10 +362,22 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           inputRef={inputRef}
           value={query}
           onChangeText={setQuery}
-          placeholder={t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索', '搜索地点和合集', '搜尋地點和合集')}
+          placeholder={adding
+            ? t('Search places', 'Tìm địa điểm', 'スポットを検索', '搜索地点', '搜尋地點')
+            : t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索', '搜索地点和合集', '搜尋地點和合集')}
           cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: () => navigation.goBack() }}
         />
       </View>
+      {/* Where a ⊕ puts a place, said once under the box rather than on
+          every row: the rows only say whether each one is in. */}
+      {list ? (
+        <View style={s.addingTo} testID="search-adding-to">
+          <Ionicons name="add-circle" size={16} color={colors.accent} />
+          <Text style={s.addingToText} numberOfLines={1}>
+            {t(`Adding to ${listTitle}`, `Thêm vào ${listTitle}`, `「${listTitle}」に追加`, `添加到“${listTitle}”`, `新增到「${listTitle}」`)}
+          </Text>
+        </View>
+      ) : null}
       {/* The cities, under the box rather than in the list, so they stay
           while the results scroll: All, then the reader's own city, then
           the rest most first (`lib/searchCities`). A tap puts the keyboard
@@ -545,6 +588,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                       </View>
                     )
                     : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
+                  {list
+                    ? <ListToggle {...inList(pl)!} testID={`search-${item.kind}-${pl.slug}-in-list`} />
+                    : null}
                 </Card>
               </PressableScale>
             );
@@ -574,6 +620,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                 place={item.place}
                 city={namesCities(pick) ? cityName(item.place.city_id) : null}
                 testID={`search-result-${placeIndex.get(item.key) ?? 0}`}
+                inList={inList(item.place)}
                 onPress={() => {
                   // This tap is what makes the query worth remembering:
                   // it found the thing. See lib/recents.
@@ -644,7 +691,8 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                 <Fork
                   routes={routes}
                   onSearch={setQuery}
-                  onExplore={() => navigation.goBack()}
+                  onBack={() => navigation.goBack()}
+                  toList={adding}
                 />
               </>
             )
@@ -677,7 +725,14 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       <AddBatchBar
         chosen={chosen.length}
         batch={google.batch}
-        onAdd={() => { if (chosen.length) google.addMany(chosen); }}
+        onAdd={() => {
+          if (!chosen.length) return;
+          // Into the list once they are made — each one, the moment the
+          // run is over, after the last member (`addAll`).
+          void google.addMany(chosen).then(({ made }) => {
+            if (listRef.current) addAll(listRef.current, made, toggle);
+          });
+        }}
       />
     </SafeAreaView>
   );
@@ -737,10 +792,12 @@ function NoMatches({ term, where }: { term: string; where?: string | null }) {
  * and someone whose query held nothing recognisable still deserves a
  * door that is not the keyboard.
  */
-function Fork({ routes, onSearch, onExplore }: {
+function Fork({ routes, onSearch, onBack, toList }: {
   routes: ReturnType<typeof escapeRoutes>;
   onSearch: (q: string) => void;
-  onExplore: () => void;
+  onBack: () => void;
+  /** Opened from a list, back is to the list, and says so. */
+  toList: boolean;
 }) {
   const { t } = useI18n();
   return (
@@ -770,9 +827,11 @@ function Fork({ routes, onSearch, onExplore }: {
           );
         })}
         <ForkChip
-          icon="compass-outline"
-          label={t('Back to Places', 'Về Địa điểm', 'スポットに戻る', '返回地点', '返回地點')}
-          onPress={onExplore}
+          icon={toList ? 'albums-outline' : 'compass-outline'}
+          label={toList
+            ? t('Back to the list', 'Về bộ sưu tập', 'コレクションに戻る', '返回合集', '返回合集')
+            : t('Back to Places', 'Về Địa điểm', 'スポットに戻る', '返回地点', '返回地點')}
+          onPress={onBack}
         />
       </View>
     </View>
@@ -808,6 +867,13 @@ const s = StyleSheet.create({
   // chips. With a long one the list's own size squeezed the row back to
   // its chips, which is why "phở" looked right and hid it.
   citiesRow: { flexGrow: 0 },
+  // Under the box, on the page's margin, before the chips: one line in
+  // the accent, the colour the ⊕ on every row wears.
+  addingTo: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: space.page, marginTop: -4, paddingBottom: 12,
+  },
+  addingToText: { flex: 1, color: colors.accent, ...type.meta, fontWeight: font.semibold },
   cities: { paddingHorizontal: space.page, paddingBottom: 12, gap: 8 },
 
   section: {

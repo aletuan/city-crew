@@ -472,8 +472,10 @@ describe('your own list', () => {
   // The old dashed slot at the end of the list stays gone (owner, 16 Oct
   // 2026). Adding came back on 22 Oct as the list's first row instead:
   // under the card, over the first place, and a word with a plus.
-  it('leads a list of yours with Add place over the first card, and it goes to Explore', () => {
-    const { parent } = show();
+  // Search, opened for this list, in this tab's stack (owner, 23 Oct
+  // 2026) — not the Explore tab, which is where it went until then.
+  it('leads a list of yours with Add place over the first card, and it opens Search for this list', () => {
+    const { parent, raw } = show();
     expect(screen.queryByText('From search or your bookmarks')).toBeNull();
     const add = screen.getByTestId('collection-add-cell');
     expect(add.getAttribute('aria-label')).toBe('Add place');
@@ -482,7 +484,8 @@ describe('your own list', () => {
     expect(follows(screen.getByTestId('collection-intro'), add)).toBe(true);
     expect(follows(add, screen.getByText('card:Pho 10'))).toBe(true);
     fireEvent.click(add);
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
+    expect(parent.navigate).not.toHaveBeenCalled();
   });
 
   it('says Add place in the reader’s language', () => {
@@ -491,15 +494,16 @@ describe('your own list', () => {
     expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Thêm địa điểm');
   });
 
-  it('greets an empty list with one invitation to Explore, and no footer', () => {
+  it('greets an empty list with one invitation to find places for it, and no footer', () => {
     state.mine = [collection({}, [])];
-    const { parent } = show();
+    const { raw } = show();
     expect(screen.getByText('Nothing here yet.')).toBeTruthy();
     expect(screen.queryByText('No places in this collection yet.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
     expect(screen.getByText(/0 places/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Explore places'));
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    expect(screen.getByRole('button', { name: 'Find places' }).querySelector('[data-icon="search"]')).toBeTruthy();
+    fireEvent.click(screen.getByText('Find places'));
+    expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
     // The card is the one offer; an Add place row over it would be two.
     expect(screen.queryByTestId('collection-add-cell')).toBeNull();
   });
@@ -528,11 +532,11 @@ describe('your own list', () => {
     }
   });
 
-  it('Add place in the menu closes the menu and goes to Explore', async () => {
-    const { parent } = show();
+  it('Add place in the menu closes the menu and opens Search for this list', async () => {
+    const { raw } = show();
     openMenu();
     fireEvent.click(menuRow('Add place'));
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
     // The menu closed behind the action. jsdom runs no CSS animations, so
     // the fade-out's end is signalled by hand; a menu still `visible` would
     // ignore it and stay mounted.
@@ -1964,7 +1968,7 @@ describe('the actions and the dock', () => {
 
   it('rises into the dock once the card has gone and the bar has ducked', () => {
     state.ducked = true;
-    const { parent } = show();
+    const { raw } = show();
     settle();
     expect(screen.queryByTestId('collection-dock')).toBeNull();
     pastTheCard();
@@ -1982,7 +1986,7 @@ describe('the actions and the dock', () => {
     // The noun on screen, the whole act for VoiceOver.
     expect(add.getAttribute('aria-label')).toBe('Add place');
     fireEvent.click(add);
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
     // The pill is its own press, not the island's.
     expect(spies.goTo).not.toHaveBeenCalled();
   });
@@ -2114,7 +2118,7 @@ describe('the grid', () => {
   it('gives the first cell of your own grid to Add place, a tile like the rest', () => {
     // A window with a width, so the tile has a side: jsdom's has none.
     const dims = vi.spyOn(Dimensions, 'get').mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 });
-    const { parent } = show();
+    const { raw } = show();
     toGrid();
     const add = screen.getByTestId('collection-add-cell');
     const follows = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -2124,7 +2128,7 @@ describe('the grid', () => {
     const box = add.firstElementChild as HTMLElement;
     expect([box.style.width, box.style.height]).toEqual([`${side}px`, `${side}px`]);
     fireEvent.click(add);
-    expect(parent.navigate).toHaveBeenCalledWith('Explore');
+    expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
     dims.mockRestore();
   });
 

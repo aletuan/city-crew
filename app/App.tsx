@@ -160,6 +160,8 @@ function CollectionsStack() {
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
+      {/* Opened from a list to add places to it, and back is the list. */}
+      <Stack.Screen name="Search" component={SearchScreen} />
     </Stack.Navigator>
   );
 }
@@ -191,6 +193,7 @@ function ProfileStack() {
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
+      <Stack.Screen name="Search" component={SearchScreen} />
     </Stack.Navigator>
   );
 }

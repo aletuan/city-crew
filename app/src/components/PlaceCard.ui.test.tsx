@@ -196,6 +196,29 @@ describe('the bookmark', () => {
   });
 });
 
+// Search opened from a list (owner, 23 Oct 2026): the corner is that
+// list's ⊕ / ✓, and the bookmark — which asks which list — steps aside.
+describe('in a list being added to', () => {
+  it('holds the list’s ⊕ in the bookmark’s corner, and the tap neither saves nor opens', () => {
+    const onPress = vi.fn();
+    const add = vi.fn();
+    render(<PlaceCard place={place()} onPress={onPress} testID="card" inList={{ on: false, title: 'Thảo Điền', onPress: add }} />);
+    expect(screen.queryByLabelText('Save to a collection')).toBeNull();
+    const box = screen.getByTestId('card-in-list');
+    expect(box.getAttribute('aria-label')).toBe('Add to Thảo Điền');
+    expect(box.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(box);
+    expect(add).toHaveBeenCalledOnce();
+    expect(save).not.toHaveBeenCalled();
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('ticks a place the list holds', () => {
+    render(<PlaceCard place={place()} onPress={() => {}} inList={{ on: true, title: 'Thảo Điền', onPress: () => {} }} />);
+    expect(screen.getByRole('checkbox', { name: 'Add to Thảo Điền' }).getAttribute('aria-checked')).toBe('true');
+  });
+});
+
 describe('the line under the name', () => {
   it('names the part of town', () => {
     render(<PlaceCard onPress={() => {}} place={place({

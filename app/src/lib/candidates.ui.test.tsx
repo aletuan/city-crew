@@ -74,7 +74,7 @@ vi.mock('./suggest', async (orig) => ({
   suggestPlace: h.suggestPlace,
 }));
 
-import { freshOnly, IDLE_BATCH, useCandidates } from './candidates';
+import { freshOnly, IDLE_BATCH, useCandidates, type Tally } from './candidates';
 import { SignedOutError } from './suggest';
 
 const cand = (place_id: string, at: { lat: number | null; lng: number | null } = { lat: null, lng: null }): Candidate => ({
@@ -275,12 +275,12 @@ describe('adding several', () => {
     const { result, rerender } = renderHook(() => useCandidates());
     let out: unknown;
     await act(async () => { out = await result.current.addMany([]); });
-    expect(out).toEqual({ done: 0, skipped: 0, failed: 0, held: 0 });
+    expect(out).toEqual({ done: 0, skipped: 0, failed: 0, held: 0, made: [] });
 
     h.city = null;
     rerender();
     await act(async () => { out = await result.current.addMany([cand('g1')]); });
-    expect(out).toEqual({ done: 0, skipped: 0, failed: 0, held: 0 });
+    expect(out).toEqual({ done: 0, skipped: 0, failed: 0, held: 0, made: [] });
     expect(h.suggestPlace).not.toHaveBeenCalled();
     expect(result.current.batch).toEqual(IDLE_BATCH);
   });
@@ -303,7 +303,8 @@ describe('adding several', () => {
     await act(async () => { out = await result.current.addMany(list); });
 
     expect(h.suggestPlace).toHaveBeenCalledWith('a', 'hanoi');
-    expect(out).toEqual({ done: 2, skipped: 2, failed: 2, held: 0 });
+    expect(out).toMatchObject({ done: 2, skipped: 2, failed: 2, held: 0 });
+    expect((out as Tally).made.map((p) => p.slug)).toEqual(['a-slug', 'f-slug']);
     expect(result.current.batch).toEqual({
       running: false,
       total: 6,
@@ -354,16 +355,55 @@ describe('adding several', () => {
     expect(h.fetchSearchPlaces).toHaveBeenLastCalledWith(['next']);
   });
 
-  it('lets a failed read back cost the chip and nothing else', async () => {
+  // Search, adding to a collection, puts each of them in it (owner,
+  // 23 Oct 2026): the rows as read back, in the order they were made —
+  // only what this run made, never a place that was already live.
+  it('hands back the places it made, as read back, in the order it made them', async () => {
+    h.suggestPlace
+      .mockResolvedValueOnce({ ok: true, slug: 'by-chance', photos: 3 })
+      .mockResolvedValueOnce({ ok: false, reason: 'already_live', slug: 'old' })
+      .mockResolvedValueOnce({ ok: true, slug: 'choice', photos: 1 });
+    const rows = [{ slug: 'choice', city_id: 'hcmc' }, { slug: 'by-chance', city_id: 'hanoi' }];
+    h.fetchSearchPlaces.mockResolvedValue(rows);
+    const { result } = renderHook(() => useCandidates());
+    let out: unknown;
+    await act(async () => { out = await result.current.addMany([cand('a'), cand('b'), cand('c')]); });
+    expect((out as Tally).made).toEqual([rows[1], rows[0]]);
+  });
+
+  it('lets a failed read back cost the chip, and hands back what Google said instead', async () => {
     h.suggestPlace.mockResolvedValue({ ok: true, slug: 'a-slug', photos: 1 });
     h.fetchSearchPlaces.mockRejectedValue(new Error('offline'));
     const { result } = renderHook(() => useCandidates());
     let out: unknown;
     await act(async () => { out = await result.current.addMany([cand('a')]); });
     await settle();
-    expect(out).toEqual({ done: 1, skipped: 0, failed: 0, held: 0 });
+    expect(out).toEqual({
+      done: 1, skipped: 0, failed: 0, held: 0,
+      made: [{
+        slug: 'a-slug', city_id: 'hanoi', name_en: cand('a').name, name_vi: cand('a').name,
+        address: cand('a').address, rating: cand('a').rating, rating_count: cand('a').rating_count,
+        is_published: false, review_status: 'pending', place_photos: [],
+      }],
+    });
     expect(h.addToSearchIndex).not.toHaveBeenCalled();
     expect(alert).not.toHaveBeenCalled();
+  });
+
+  // A read that answers without one of them: that one is drawn from
+  // Google's word, the rest as read.
+  it('stands in for a place the read back did not return', async () => {
+    h.suggestPlace
+      .mockResolvedValueOnce({ ok: true, slug: 'x', photos: 1 })
+      .mockResolvedValueOnce({ ok: true, slug: 'y', photos: 1 });
+    const rows = [{ slug: 'y', city_id: 'hanoi' }];
+    h.fetchSearchPlaces.mockResolvedValue(rows);
+    const { result } = renderHook(() => useCandidates());
+    let out: unknown;
+    await act(async () => { out = await result.current.addMany([cand('a'), cand('b')]); });
+    const made = (out as Tally).made;
+    expect(made[0]).toMatchObject({ slug: 'x', name_en: cand('a').name, review_status: 'pending' });
+    expect(made[1]).toBe(rows[0]);
   });
 
   it('holds, rather than fails or tries, everything from the daily cap on', async () => {
@@ -377,7 +417,7 @@ describe('adding several', () => {
     });
 
     expect(h.suggestPlace).toHaveBeenCalledTimes(2);
-    expect(out).toEqual({ done: 1, skipped: 0, failed: 0, held: 3 });
+    expect(out).toMatchObject({ done: 1, skipped: 0, failed: 0, held: 3 });
     expect(result.current.batch.state).toEqual({ a: 'done', b: 'held', c: 'held', d: 'held' });
     // Only what was attempted is progress: the refused one was refused
     // before the server looked at it.
@@ -398,7 +438,7 @@ describe('adding several', () => {
     h.suggestPlace.mockResolvedValue({ ok: true, slug: 's', photos: 0 });
     let out: unknown;
     await act(async () => { out = await result.current.addMany([cand('b')]); });
-    expect(out).toEqual({ done: 1, skipped: 0, failed: 0, held: 0 });
+    expect(out).toMatchObject({ done: 1, skipped: 0, failed: 0, held: 0 });
     expect(result.current.batch.state).toEqual({ b: 'done' });
   });
 

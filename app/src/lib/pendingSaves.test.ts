@@ -2,10 +2,11 @@
 // answer. What is pinned: an entry moves a place in or out of the one
 // list it names and no other, lands after the last member, follows the
 // members a row carries and leaves a row without them alone, and an
-// entry the lists already agree with changes nothing.
+// entry the lists already agree with changes nothing. And `addAll`: each
+// place handed on after the one before it, none that is already in.
 
-import { describe, expect, it } from 'vitest';
-import { pendingKey, withPending } from './pendingSaves';
+import { describe, expect, it, vi } from 'vitest';
+import { addAll, pendingKey, withPending } from './pendingSaves';
 import type { Collection, Place } from './types';
 
 const place = (slug: string) => ({ slug }) as Place;
@@ -63,5 +64,28 @@ describe('withPending', () => {
     });
     expect(slugs(a)).toEqual(['y']);
     expect(a.members).toBeUndefined();
+  });
+});
+
+describe('addAll', () => {
+  // Each write takes its place from the list it is handed: handed the
+  // same list five times, five places would share one place in the order.
+  it('hands each place the list with the ones before it already in', () => {
+    const toggle = vi.fn();
+    addAll(list('a', ['x', 'y']), [place('p'), place('q'), place('r')], toggle);
+    expect(toggle.mock.calls.map(([c, p]) => [p.slug, slugs(c)])).toEqual([
+      ['p', ['x', 'y']],
+      ['q', ['x', 'y', 'p']],
+      ['r', ['x', 'y', 'p', 'q']],
+    ]);
+    expect(toggle.mock.calls.map(([c]) => c.collection_places.at(-1).sort_order)).toEqual([2, 3, 4]);
+  });
+
+  // `toggle` takes a place out of a list it is in: one already there, or
+  // handed twice, is left where it is.
+  it('leaves alone a place the list already holds', () => {
+    const toggle = vi.fn();
+    addAll(list('a', ['x']), [place('x'), place('p'), place('p')], toggle);
+    expect(toggle.mock.calls.map(([, p]) => p.slug)).toEqual(['p']);
   });
 });

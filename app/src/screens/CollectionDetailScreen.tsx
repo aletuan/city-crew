@@ -50,7 +50,7 @@ import { goTo, type Nav, type RootRoute } from '../nav';
  * is just new, and the screen should hand you the way forward instead of
  * reporting the absence twice.
  */
-function OwnEmpty({ onExplore }: { onExplore: () => void }) {
+function OwnEmpty({ onAdd }: { onAdd: () => void }) {
   const { t } = useI18n();
   return (
     <View style={s.emptyWrap}>
@@ -66,9 +66,9 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
           {t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。', '这里还没有内容。', '這裡還沒有內容。')}
         </Text>
         <GradientCta
-          icon="compass-outline"
-          label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点', '探索地點')}
-          onPress={onExplore}
+          icon="search"
+          label={t('Find places', 'Tìm địa điểm', 'スポットを探す', '查找地点', '查詢地點')}
+          onPress={onAdd}
         />
       </View>
     </View>
@@ -612,11 +612,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </>
   );
 
-  // Explore is where places are, and saving one from there already offers
-  // this list by name. A picker that wrote straight back into this
-  // collection would be better, and is a screen rather than a button.
+  // Search, opened for this list (owner, 23 Oct 2026). It used to be the
+  // Explore tab, where saving a place offered this list by name: a trip
+  // out of the list, a sheet per place, and a way back that was not the
+  // one the reader came by. Search in this tab's own stack puts a ⊕ for
+  // this list on every place it finds, and back is back to the list.
   const addPlace = () => {
-    navigation.getParent()?.navigate('Explore');
+    if (col) navigation.navigate('Search', { addTo: col.slug });
   };
 
   const edit = () => {
@@ -1691,7 +1693,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               ? (owned
                 // One message, not two. The reference stacks "No places in this
                 // collection yet." above a card that says the same thing again.
-                ? <OwnEmpty onExplore={() => navigation.getParent()?.navigate('Explore')} />
+                ? <OwnEmpty onAdd={addPlace} />
                 : <Empty text={t(
                   'No places in this collection yet.',
                   'Bộ sưu tập này chưa có địa điểm nào.',

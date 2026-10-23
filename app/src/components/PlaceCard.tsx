@@ -18,13 +18,17 @@ import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } 
 import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 import ReviewBadge from './ReviewBadge';
+import ListToggle from './ListToggle';
 import { KindPill } from './KindPill';
 
 export default function PlaceCard({
   place, onPress, testID, distanceKm, chip, city, onLongPress, delayLongPress, onPressOut,
-  accessibilityHint, accessibilityActions, onAccessibilityAction,
+  accessibilityHint, accessibilityActions, onAccessibilityAction, inList,
 }: {
   place: Place;
+  /** Search opened from a list to add to it: the bookmark's corner holds
+   *  that list's ⊕ / ✓ instead — see `ListToggle`. */
+  inList?: { on: boolean; title: string; onPress: () => void };
   /** The place's city, said before its district — "Hà Nội · Giảng Võ" —
    *  where cards from more than one city share a list (Search, owner,
    *  22 Oct 2026). Left off everywhere a list is one city's: there it
@@ -140,6 +144,16 @@ export default function PlaceCard({
               any sky — went with the price too. Three corners, three
               marks, one dark-glass material shared with the rating pill
               beside it. */}
+          {inList ? (
+            <ListToggle
+              on={inList.on}
+              title={inList.title}
+              onPress={inList.onPress}
+              overPhoto
+              style={s.saveSlot}
+              testID={testID && `${testID}-in-list`}
+            />
+          ) : (
           <PressableScale
             onPress={() => save(place)}
             scaleTo={0.9}
@@ -159,6 +173,7 @@ export default function PlaceCard({
               color={saved ? onPhoto.accent : onPhoto.text}
             />
           </PressableScale>
+          )}
           {/* The score belongs to the picture, not to the name under it:
               on the photo it is read at a glance with the place, and the
               body is left to the title and its chips. Bottom-left is the

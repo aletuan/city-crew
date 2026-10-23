@@ -80,7 +80,7 @@ vi.mock('../lib/data', async (orig) => ({
   logPlaceEvent,
 }));
 
-import { SaveProvider, useMyLists, useSave, useSaveActions } from '../lib/save';
+import { SaveProvider, useMyLists, useSave, useSaveActions, useSaveSheets } from '../lib/save';
 import SaveSheets from './SaveSheets';
 import { dropResume, takeResume } from '../lib/resume';
 
@@ -137,12 +137,14 @@ describe('the two halves', () => {
     lists?: ReturnType<typeof useMyLists>;
     acts?: ReturnType<typeof useSaveActions>;
     both?: ReturnType<typeof useSave>;
+    sheets?: ReturnType<typeof useSaveSheets>;
   } = {};
   function Probe() {
     const lists = useMyLists();
     const acts = useSaveActions();
     const both = useSave();
-    useEffect(() => { Object.assign(seen, { lists, acts, both }); });
+    const sheets = useSaveSheets();
+    useEffect(() => { Object.assign(seen, { lists, acts, both, sheets }); });
     return null;
   }
 
@@ -157,7 +159,9 @@ describe('the two halves', () => {
   it('hands out the acts on their own, and both as useSave', () => {
     world.mine = { ...world.mine, data: [list('weekend', ['cong-caphe'])] };
     render(<SaveProvider><Probe /></SaveProvider>);
-    expect(Object.keys(seen.acts!).sort()).toEqual(['askToSignIn', 'isSaved', 'save']);
+    expect(Object.keys(seen.acts!).sort()).toEqual(['askToSignIn', 'isSaved', 'save', 'toggle']);
+    // Search's ⊕ is the sheet's row, not a second way of writing.
+    expect(seen.acts!.toggle).toBe(seen.sheets!.toggle);
     expect(seen.acts!.isSaved('cong-caphe')).toBe(true);
     expect(seen.both!.save).toBe(seen.acts!.save);
     expect(seen.both!.mine.data.map((c) => c.slug)).toEqual(['weekend']);
