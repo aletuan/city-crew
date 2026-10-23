@@ -739,63 +739,49 @@ describe('publishing', () => {
     expect(screen.queryByText('This collection is now public')).toBeNull();
   });
 
-  it('refuses while places are pending or rejected, and says which in words', () => {
+  // Public with them in (owner, 23 Oct 2026): the list goes out, and the
+  // places not live stay out of everyone else's sight. It used to refuse,
+  // and a public list gaining one went private unannounced.
+  it('publishes with places not public yet, and says which on the row', async () => {
     state.places = [
       PHO,
       place('cafe', 'Cafe Giang', { is_published: false, review_status: 'pending' } as Partial<Place>),
       place('museum', 'Fine Arts Museum', { is_published: false, review_status: 'flagged' } as Partial<Place>),
     ];
-    show();
-    fireEvent.click(screen.getByTestId('collection-visibility'));
-    const row = screen.getByTestId('sheet-action-public');
-    // On the row reached for, in place of what Public would mean.
-    expect(row.textContent).toBe(
-      'PublicPrivate until every place is live — 1 place is not public yet, and 1 was not accepted.',
-    );
-    expect(row.getAttribute('aria-disabled')).toBe('true');
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    try {
-      fireEvent.click(row);
-      act(() => { vi.runAllTimers(); });
-    } finally {
-      vi.useRealTimers();
-    }
-    expect(spies.setCollectionPublic).not.toHaveBeenCalled();
-    // The sheet stays open over a refused tap, and nothing is said.
-    expect(screen.getByTestId('sheet-action-public')).toBeTruthy();
-    expect(screen.queryByTestId('collection-banner')).toBeNull();
-    // Private stays a live row.
-    expect(screen.getByTestId('sheet-action-private').getAttribute('aria-disabled')).not.toBe('true');
-  });
-
-  it('pluralises the blocker sentence', () => {
-    const pending = { is_published: false, review_status: 'pending' } as Partial<Place>;
-    state.places = [place('pho', 'Pho 10', pending), place('cafe', 'Cafe Giang', pending), MUSEUM];
-    show();
-    fireEvent.click(screen.getByTestId('collection-visibility'));
-    expect(screen.getByText('Private until every place is live — 2 places are not public yet.')).toBeTruthy();
-  });
-
-  it('still lets a blocked list be made private', async () => {
-    state.mine = [collection({ is_public: true })];
-    state.places = [place('pho', 'Pho 10', { review_status: 'flagged' } as Partial<Place>), CAFE, MUSEUM];
-    show();
-    // Public itself is live while it is the answer already given.
-    fireEvent.click(screen.getByTestId('collection-visibility'));
-    expect(screen.getByTestId('sheet-action-public').getAttribute('aria-disabled')).not.toBe('true');
-    expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
-    cleanup();
     spies.setCollectionPublic.mockImplementation(async (_slug: string, next: boolean) => {
       state.mine = [collection({ is_public: next })];
     });
     show();
-    chooseVisibility('private');
-    expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false);
-    expect(await screen.findByText('This collection is private again')).toBeTruthy();
-    // And the way back is now dimmed, with the reason on it.
     fireEvent.click(screen.getByTestId('collection-visibility'));
-    expect(screen.getByTestId('sheet-action-public').textContent)
-      .toBe('PublicPrivate until every place is live — 1 was not accepted.');
+    const row = screen.getByTestId('sheet-action-public');
+    // On the row reached for, in place of what Public would mean alone.
+    expect(row.textContent).toBe(
+      'PublicShown in Explore and in search, except 1 place not public yet and 1 not accepted',
+    );
+    expect(row.getAttribute('aria-disabled')).not.toBe('true');
+    chooseVisibility('public');
+    expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true);
+    expect(await screen.findByText('This collection is now public')).toBeTruthy();
+    // And says it again once public: the owner showing it to a friend is
+    // told what the friend will not see.
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    expect(screen.getByTestId('sheet-action-public').textContent).toBe(
+      'PublicShown in Explore and in search, except 1 place not public yet and 1 not accepted',
+    );
+  });
+
+  it('pluralises the sentence', () => {
+    const pending = { is_published: false, review_status: 'pending' } as Partial<Place>;
+    state.places = [place('pho', 'Pho 10', pending), place('cafe', 'Cafe Giang', pending), MUSEUM];
+    show();
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    expect(screen.getByText('Shown in Explore and in search, except 2 places not public yet')).toBeTruthy();
+  });
+
+  it('says only what Public means when every place is live', () => {
+    show();
+    fireEvent.click(screen.getByTestId('collection-visibility'));
+    expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
   });
 
   it('says so when the write fails, and shows no banner', async () => {

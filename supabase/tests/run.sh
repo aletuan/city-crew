@@ -534,3 +534,13 @@ for f in "$ROOT"/supabase/migrations/*_zh_hant.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/zh_hant_test.sql"
+
+# A public list stays public around a place that is not live (23 Oct
+# 2026): the place goes unseen instead of the list. Last, because it
+# removes the triggers `submissions_test` above asserts, and changes the
+# rule `blocks_rls_test`'s fixture was written around.
+echo "→ lists stay public around places that are not live"
+for f in "$ROOT"/supabase/migrations/*_lists_stay_public_around_unlive_places.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/lists_public_around_unlive_test.sql"

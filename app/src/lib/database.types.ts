@@ -1210,7 +1210,6 @@ export type Database = {
       }
       block_user: { Args: { target: string }; Returns: undefined }
       blocked_with: { Args: { other: string }; Returns: boolean }
-      collection_has_unlive_member: { Args: { cid: string }; Returns: boolean }
       collection_like_counts: {
         Args: never
         Returns: {

@@ -24,8 +24,8 @@ import { collectionKinds, narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  blockerSentence, blockUser, deleteCollection, membersOf, publishBlockers, reorderCollection,
-  setCollectionPublic, useProfileByHandle,
+  blockUser, deleteCollection, membersOf, reorderCollection,
+  setCollectionPublic, unseenMembers, unseenSentence, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
@@ -437,17 +437,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     fireHaptic('light');
     void toggleLike({ id: col.id, slug: col.slug });
   }, [uid, askToSignIn, col?.id, col?.slug, toggleLike]);
-  // Why this list cannot go out, counted rather than asserted. Derived
-  // from the members every time the screen opens, so it is right after a
-  // review lands without anything having to be told — and it disappears
-  // by itself when the last one clears, which is a truer signal than a
-  // message would be.
+  // What everyone else will not see of this list, counted rather than
+  // asserted. Derived from the members every time the screen opens, so
+  // it is right after a review lands without anything having to be told
+  // — and it disappears by itself when the last one clears, which is a
+  // truer signal than a message would be.
   //
   // Only the owner can compute this, and only because they are the one
   // person allowed to see their own unreviewed places. That is the same
-  // permission the reminder exists to explain.
-  const blockers = useMemo(() => publishBlockers(members), [members]);
-  const blocked = blockers.pending + blockers.flagged > 0;
+  // permission the sentence exists to explain.
+  const unseen = useMemo(() => unseenMembers(members), [members]);
+  const someUnseen = unseen.pending + unseen.flagged > 0;
   const tabClearance = useTabBarClearance();
   // The same scroll etiquette the tab home screens keep: reading down a
   // long list tucks the bar away, the first pull back up recalls it. A
@@ -628,10 +628,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    */
   const [banner, setBanner] = useState<null | 'public' | 'private'>(null);
   const [publishing, setPublishing] = useState(false);
-  // No check for places under review here. The sheet's Public row is
-  // dimmed while there are any and says why (see `whoSeesRows`), so
-  // nothing reaches this asking to publish a blocked list; the database
-  // refuses it anyway, and that is where the rule lives.
+  // No check for places under review here: a list goes public with them
+  // in, and they stay out of everyone else's sight until they are live
+  // (`*_lists_stay_public_around_unlive_places.sql`). The Public row says
+  // how many (see `whoSeesRows`).
   const setPublic = (next: boolean) => {
     if (!col || publishing) return;
     setPublishing(true);
@@ -1019,22 +1019,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      the grabber are the way out, and the backdrop is a control VoiceOver
      names "Close".
 
-     While places are still under review Public is drawn but dimmed, with
-     the sentence the banner would have said as its description. Hidden,
-     the owner would be left looking for a switch; live, it would open
-     onto a refusal. Dimmed, the reason is on the row they reached for.
-     A public list that has since gained a pending place keeps the row
-     live — it is the tick, and there is nothing to refuse. */
+     While some places are not public yet, Public says so in place of
+     its plain description: the list goes out without them, and the
+     owner who shows it to a friend should not be the one surprised that
+     a place is missing. Until 23 Oct 2026 the row was dimmed instead and
+     the list could not go public at all — and one already public went
+     private, unannounced, the moment it gained such a place. */
   const choose = (next: boolean) => () => { if (next !== isPublic) setPublic(next); };
   const whoSeesRows: SheetAction[] = [
     {
       key: 'public',
       icon: 'globe-outline',
       title: t('Public', 'Công khai', '公開', '公开', '公開'),
-      desc: blocked && !isPublic
-        ? blockerSentence(blockers, t)
+      desc: someUnseen
+        ? unseenSentence(unseen, t)
         : t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます', '会显示在探索和搜索中', '會顯示在探索和搜尋中'),
-      disabled: blocked && !isPublic,
       selected: isPublic,
       onPress: choose(true),
     },

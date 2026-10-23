@@ -8,6 +8,12 @@
 --
 -- Anything short of that is invisible to everyone but its submitter, and
 -- keeps the collections holding it private.
+--
+-- The second half was replaced on 23 Oct 2026: a public list now stays
+-- public and the place goes unseen instead
+-- (`*_lists_stay_public_around_unlive_places.sql`, tested in
+-- `lists_public_around_unlive_test.sql`, which runs last). What follows
+-- tests this migration as it stood, at the step `run.sh` applies it.
 
 -- ─────────────────────────────────────────────────── the vocabulary
 
