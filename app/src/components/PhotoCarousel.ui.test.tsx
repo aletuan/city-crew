@@ -126,6 +126,18 @@ describe('PhotoCarousel', () => {
     expect(order.indexOf('scrim')).toBeLessThan(order.indexOf('car-count'));
   });
 
+  // The pages can shrink under a page held still — photographs deleted
+  // in the gallery while the hero stood on page 3 (owner, 23 Oct 2026).
+  // Reading past the end took the whole place screen down.
+  it('reads the last page when the page it is given has run off the end', () => {
+    state.credit = true;
+    expect(() => draw({ page: 7 })).not.toThrow();
+    expect(screen.getByText('3 / 3')).toBeTruthy();
+    draw({ page: 7, pages: shots.slice(0, 2) });
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(screen.getByText('Minh')).toBeTruthy();
+  });
+
   it('draws nothing at all for no pages', () => {
     draw({ pages: [] });
     expect(screen.queryByTestId('car')).toBeNull();
