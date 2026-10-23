@@ -193,7 +193,10 @@ export function fakeSupabase() {
         verifyOtp: (req: unknown) => auth('verifyOtp', req),
         resetPasswordForEmail: (email: string) => auth('resetPasswordForEmail', email),
         updateUser: (patch: unknown) => auth('updateUser', patch),
-        signOut: () => auth('signOut'),
+        // With the scope it was asked for: the app signs out of this
+        // device alone (`lib/auth`), and a test pins that.
+        signOut: (opts?: unknown) => auth('signOut', opts),
+        refreshSession: () => auth('refreshSession'),
         // Timers, not requests: written down, answered with nothing, and
         // kept off the queue so they cannot eat a reply meant for a query.
         // The service-role half, which only an Edge Function holds: acts on

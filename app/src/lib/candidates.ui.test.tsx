@@ -35,6 +35,8 @@ const h = vi.hoisted(() => ({
   city: null as null | City,
   me: null as null | { lat: number; lng: number },
   askToSignIn: vi.fn(),
+  // Whether a refused session renews (`Auth.confirmSession`).
+  confirmSession: vi.fn(async () => false),
   searchPlaces: vi.fn(),
   knownByPlaceId: vi.fn(),
   suggestPlace: vi.fn(),
@@ -48,7 +50,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('./i18n', () => ({ useI18n: () => ({ t: (en: string) => en }) }));
 vi.mock('./auth', () => {
-  const m = { useAuth: () => ({ session: h.session }) };
+  const m = { useAuth: () => ({ session: h.session, confirmSession: h.confirmSession }) };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
@@ -95,6 +97,7 @@ beforeEach(() => {
   h.city = HANOI;
   h.me = null;
   h.askToSignIn.mockReset();
+  h.confirmSession.mockReset().mockResolvedValue(false);
   h.searchPlaces.mockReset();
   h.knownByPlaceId.mockReset().mockResolvedValue({});
   h.suggestPlace.mockReset();
@@ -220,12 +223,51 @@ describe('asking Google', () => {
     expect(alert).not.toHaveBeenCalled();
   });
 
-  it('answers a refused session with the sheet, not an alert', async () => {
+  // A token the server would not take, renewed: the search goes again,
+  // once, and the reader never sees the sheet (owner, 23 Oct 2026).
+  it('asks again, once, when a refused session renews', async () => {
+    h.searchPlaces.mockRejectedValueOnce(new SignedOutError()).mockResolvedValueOnce([cand('g1')]);
+    h.confirmSession.mockResolvedValueOnce(true);
+    const { result } = renderHook(() => useCandidates());
+    act(() => result.current.run('le vélo'));
+    await settle();
+
+    expect(h.searchPlaces).toHaveBeenCalledTimes(2);
+    expect(h.searchPlaces).toHaveBeenLastCalledWith('le vélo', 'hanoi');
+    expect(result.current.results).toEqual([cand('g1')]);
+    expect(h.askToSignIn).not.toHaveBeenCalled();
+  });
+
+  it('asks the sheet, not a third time, when the renewed session is refused too', async () => {
+    h.searchPlaces.mockRejectedValue(new SignedOutError());
+    h.confirmSession.mockResolvedValueOnce(true);
+    const { result } = renderHook(() => useCandidates());
+    act(() => result.current.run('le vélo'));
+    await settle();
+
+    expect(h.searchPlaces).toHaveBeenCalledTimes(2);
+    expect(h.confirmSession).toHaveBeenCalledTimes(1);
+    expect(h.askToSignIn).toHaveBeenCalledWith('search');
+  });
+
+  // Only a refusal is a question for the session: Google being down is not.
+  it('does not ask after the session when the search failed for another reason', async () => {
+    h.searchPlaces.mockRejectedValue(new Error('down'));
+    const { result } = renderHook(() => useCandidates());
+    act(() => result.current.run('le vélo'));
+    await settle();
+    expect(h.confirmSession).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalled();
+  });
+
+  it('answers a refused session that will not renew with the sheet, not an alert', async () => {
     h.searchPlaces.mockRejectedValue(new SignedOutError());
     const { result } = renderHook(() => useCandidates());
     act(() => result.current.run('le vélo'));
     await settle();
 
+    expect(h.confirmSession).toHaveBeenCalledTimes(1);
+    expect(h.searchPlaces).toHaveBeenCalledTimes(1);
     expect(h.askToSignIn).toHaveBeenCalledTimes(1);
     expect(h.askToSignIn).toHaveBeenCalledWith('search');
     expect(alert).not.toHaveBeenCalled();
