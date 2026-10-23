@@ -18,7 +18,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/data';
 import type { Candidate, Known } from '../lib/suggest';
@@ -31,6 +31,10 @@ const cat = vi.hoisted(() => ({
   // The count a heart shows, and the one a shelf ranks by.
   likes: {} as Record<string, number>,
   rankLikes: {} as Record<string, number>,
+  // Another city's catalog, by id, for Search opened from a list there;
+  // and every city the screen asked for.
+  elsewhere: {} as Record<string, unknown[]>,
+  asked: [] as (string | null)[],
 }));
 
 // The Google half, as a plain object the tests set before rendering. The
@@ -45,6 +49,8 @@ const g = vi.hoisted(() => ({
   run: vi.fn(),
   addMany: vi.fn(async () => ({ done: 0, skipped: 0, failed: 0, held: 0, made: [] as Place[] })),
   clear: vi.fn(),
+  // The city the screen asked Google about.
+  at: null as string | null,
 }));
 
 vi.mock('../lib/i18n', () => ({
@@ -71,8 +77,10 @@ vi.mock('../lib/city', () => {
   return { ...m, useCurrentCity: all, useCityList: all };
 });
 vi.mock('../lib/catalog', () => ({
-  usePlaces: () => ({ data: cat.places }),
-  useCollections: () => ({ data: cat.cols }),
+  useCatalogIn: (id: string | null) => {
+    cat.asked.push(id);
+    return { places: { data: (id && cat.elsewhere[id]) || cat.places }, collections: { data: cat.cols } };
+  },
   useLikes: () => ({ likes: cat.likes, rankLikes: cat.rankLikes }),
   useSearchTerms: () => cat.terms,
 }));
@@ -81,7 +89,7 @@ vi.mock('../lib/candidates', () => ({
   // network in behind it, and this one line is all the screen uses.
   freshOnly: (results: Candidate[], known: Record<string, Known>) =>
     results.filter((c) => (known[c.place_id]?.state ?? 'none') === 'none'),
-  useCandidates: () => ({ ...g, awayFrom: () => '' }),
+  useCandidates: (at?: { id: string } | null) => { g.at = at?.id ?? null; return { ...g, awayFrom: () => '' }; },
 }));
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => null }));
 // Every city's places: none until a test hands some over, and a record of
@@ -246,6 +254,8 @@ beforeEach(async () => {
   cat.terms = { heritage: ['temple'] };
   cat.likes = {};
   cat.rankLikes = {};
+  cat.elsewhere = {};
+  cat.asked = [];
   Object.assign(g, {
     results: null, known: {}, searching: false, adding: null,
     batch: { running: false, state: {}, done: 0, total: 0 },
@@ -1024,5 +1034,64 @@ describe('adding to a list', () => {
     await act(async () => {});
     expect(g.addMany).toHaveBeenCalled();
     expect(sv.toggle).not.toHaveBeenCalled();
+  });
+});
+
+// "Cà phê chậm ở Huế", opened while the app was in Ninh Bình, was offered
+// Ninh Bình's three chips and its pagoda (owner, 23 Oct 2026). Opened
+// from a list, Search answers in the city most of its places are in.
+describe('in the list’s city', () => {
+  const hue = (slug: string, over: Partial<Place> = {}) => place({ slug, city_id: 'hue', ...over });
+  const slow = hue('slow-cafe', {
+    name_en: 'Slow Cafe', categories: ['cafes'], rating: 4.6, rating_count: 300,
+    opening_hours: week('7:00 AM – 10:00 PM'), created_at: '2026-05-01T00:00:00Z',
+  } as Partial<Place>);
+  const citadel = hue('citadel', { name_en: 'Imperial Citadel', categories: ['heritage'], rating: 4.7, rating_count: 900 });
+  const list = (members: Place[]) => collection({
+    slug: 'hue-cafes', title_en: 'Slow coffee in Hue',
+    collection_places: members.map((m, i) => ({ sort_order: i, places: { slug: m.slug } })),
+    members,
+  });
+  const mountIn = () => {
+    const { n } = nav();
+    render(<SearchScreen navigation={n} route={{ params: { addTo: 'hue-cafes' } } as RootRoute<'Search'>} />);
+  };
+  beforeEach(() => {
+    CITIES.push({ id: 'hue', short_en: 'Hue', short_vi: 'Huế', short_ja: 'フエ' });
+    cat.elsewhere = { hue: [slow, citadel] };
+  });
+  afterEach(() => { CITIES.splice(CITIES.findIndex((c) => c.id === 'hue'), 1); });
+
+  it('answers in the city of the list’s places, and says so, while the app stays in its own', () => {
+    sv.lists = [list([slow, citadel, place({ slug: 'cong' })])];
+    mountIn();
+    expect(cat.asked.at(-1)).toBe('hue');
+    expect(g.at).toBe('hue');
+    expect(screen.getByTestId('search-adding-to').textContent).toBe('Adding to Slow coffee in Hue · Hue');
+    // Hue's own shelves and chips, not Hanoi's.
+    expect(textAfter('Most popular')).toContain('Imperial Citadel');
+    expect(screen.queryByText('Cong Caphe')).toBeNull();
+    expect(screen.getByText('Culture')).toBeTruthy();
+    expect(screen.queryByText('Eats')).toBeNull();
+  });
+
+  it('opens a search on the list’s city', () => {
+    sv.lists = [list([slow])];
+    mountIn();
+    type('slow');
+    expect(screen.getByText('Slow Cafe')).toBeTruthy();
+  });
+
+  // In the app's city already, or empty: the app's city, and no word
+  // about it — nothing on screen is somewhere else.
+  it('stays in the app’s city for a list that is in it, or has nothing in it', () => {
+    for (const members of [[pho, slow], []]) {
+      sv.lists = [list(members)];
+      mountIn();
+      expect(cat.asked.at(-1)).toBe('hanoi');
+      expect(g.at).toBe('hanoi');
+      expect(screen.getByTestId('search-adding-to').textContent).toBe('Adding to Slow coffee in Hue');
+      cleanup();
+    }
   });
 });

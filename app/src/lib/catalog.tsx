@@ -26,6 +26,7 @@ import { CATEGORIES } from './categories';
 import { normalizeHandle } from './handle';
 import { mergeTerms, type TermMap } from './search';
 import { useAuthEvent, useSession } from './auth';
+import { useCurrentCity } from './city';
 import { classifyLoadFail } from './loadfail';
 import { shouldRefresh } from './stale';
 import { supabase } from './supabase';
@@ -342,6 +343,28 @@ export function useCatalog(): Catalog {
  * call site does not care that the fetch moved — only the import did.
  */
 export const usePlaces = () => useContext(DataCtx).places;
+
+/**
+ * One city's places and public lists: the shared copy for the city on
+ * screen, and a copy of its own for any other.
+ *
+ * For Search opened from a list to add to it (owner, 23 Oct 2026), which
+ * answers in the list's city rather than the one chosen — "Cà phê chậm ở
+ * Huế", opened while the app was in Ninh Bình, offered Ninh Bình's three
+ * chips and its pagoda. The other city's copy is fetched, and remembered
+ * between launches, as the chosen city's is; it is read-only, so the one
+ * copy every screen keeps in step is still this provider's. Asked for the
+ * city on screen or for none, it fetches nothing.
+ */
+export function useCatalogIn(cityId: string | null): Pick<CatalogData, 'places' | 'collections'> {
+  const own = useContext(DataCtx);
+  const { city } = useCurrentCity();
+  const { session, userId } = useSession();
+  const other = cityId && cityId !== city?.id ? cityId : null;
+  const places = usePlacesQuery(session?.user?.id ?? userId, other);
+  const collections = useCollectionsQuery(other);
+  return other ? { places, collections } : { places: own.places, collections: own.collections };
+}
 
 /** Search synonyms, merged and ready for `placeHaystack`. */
 export const useSearchTerms = () => useContext(DataCtx).terms;

@@ -122,6 +122,28 @@ export function nextSortOrder(c: Collection): number {
  * catalog, which is scoped to the current city by design.
  */
 
+/**
+ * The city a list of your own is about: where most of its places are.
+ *
+ * Search opened from a list answers in this city (owner, 23 Oct 2026), so
+ * a list of Huế cafés is offered Huế's places whichever city the app is
+ * in. Most, not all — a list is allowed to stray, see `touchesCity` below.
+ * A tie goes to `fallback`, the city on screen, when it is one of the
+ * tied, and otherwise to whichever got there first in the list's order;
+ * an empty list, or one without its members attached, has no city of its
+ * own and takes `fallback`.
+ */
+export function cityOfList(c: Collection, fallback: string | null): string | null {
+  const counts = new Map<string, number>();
+  for (const p of c.members ?? []) if (p.city_id) counts.set(p.city_id, (counts.get(p.city_id) ?? 0) + 1);
+  let best = fallback;
+  let top = fallback ? counts.get(fallback) ?? 0 : 0;
+  for (const [id, n] of counts) {
+    if (n > top) { best = id; top = n; }
+  }
+  return best;
+}
+
 export function membersOf(c: Collection, places: Place[]): Place[] {
   if (c.members) return c.members;
   const bySlug = new Map(places.map((p) => [p.slug, p]));

@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity,
+  cityOfList, coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -300,5 +300,32 @@ describe('touchesCity', () => {
   // stays theoretical.
   it('does not match a member with no city on it', () => {
     expect(touchesCity([place({ slug: 'x' })], 'hanoi')).toBe(false);
+  });
+});
+
+// The city Search answers in when it is opened from a list (owner, 23 Oct
+// 2026): most of its places, the city on screen in a tie it is part of,
+// and the city on screen for a list with nothing in it.
+describe('cityOfList', () => {
+  const at = (...cities: (string | null)[]) => collection({
+    members: cities.map((city_id, i) => place({ slug: `p${i}`, city_id } as Partial<Place>)),
+  });
+  it('is the city most of the list’s places are in', () => {
+    expect(cityOfList(at('hue', 'hanoi', 'hue'), 'hanoi')).toBe('hue');
+  });
+  it('keeps the city on screen in a tie it is part of', () => {
+    expect(cityOfList(at('hue', 'hanoi'), 'hanoi')).toBe('hanoi');
+    expect(cityOfList(at('hanoi', 'hue'), 'hanoi')).toBe('hanoi');
+  });
+  it('takes the first to get there, in the list’s order, in a tie it is not part of', () => {
+    expect(cityOfList(at('hue', 'dalat'), 'hanoi')).toBe('hue');
+    expect(cityOfList(at('dalat', 'hue'), 'hanoi')).toBe('dalat');
+  });
+  it('takes the city on screen for a list with no places, or none it can place', () => {
+    expect(cityOfList(collection({ members: [] }), 'hanoi')).toBe('hanoi');
+    expect(cityOfList(collection(), 'hanoi')).toBe('hanoi');
+    expect(cityOfList(at(null), 'hanoi')).toBe('hanoi');
+    expect(cityOfList(at('hue'), null)).toBe('hue');
+    expect(cityOfList(collection(), null)).toBeNull();
   });
 });

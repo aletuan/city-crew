@@ -35,22 +35,26 @@ const pending = new Promise<never>(() => {}); // keeps skeletons up during city 
 // and it holds the query back exactly as an unresolved city does. The
 // reader is part of the question — see `cacheKey` — so asking before
 // knowing who asks is asking a question that is about to be replaced.
-export const usePlacesQuery = (meId: string | null | undefined) => {
+//
+// `cityId` asks for a city other than the one chosen — `useCatalogIn`'s,
+// for Search adding to a list from another city. `null` asks for nothing,
+// and the query waits as it does for an unresolved city.
+export const usePlacesQuery = (meId: string | null | undefined, cityId?: string | null) => {
   const { city } = useCurrentCity();
+  const id = cityId === undefined ? city?.id : cityId;
   const known = meId !== undefined;
   const fetcher = useCallback(
-    () => (city && known ? fetchPlaces(city.id, meId) : (pending as Promise<Place[]>)),
-    // `city.id` is the stable key. Depending on `city` changes the fetcher identity on renders
+    () => (id && known ? fetchPlaces(id, meId) : (pending as Promise<Place[]>)),
+    // The id is the stable key. Depending on `city` changes the fetcher identity on renders
     // where the city did not change, and useFetch reloads the whole catalog off that.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [city?.id, meId],
+    [id, known, meId],
   );
   // The two heavy catalog queries — this and collections below — remember
   // their last answer between launches; see `lib/data/cache` for what that
   // buys and costs. No key while the city is unresolved, because a cached
   // answer is an answer to a question, and there is no question yet.
   return usePersistedFetch(
-    CACHE_CATALOG && city && known ? cacheKey('places', city.id, meId) : null,
+    CACHE_CATALOG && id && known ? cacheKey('places', id, meId) : null,
     fetcher,
     [] as Place[],
   );
@@ -104,19 +108,20 @@ export const useMyLikesQuery = (meId?: string | null) => {
 // the reader's own published lists out of it — so one cached copy per
 // city serves the whole device, signed in or out, and signing in no
 // longer has to re-fetch a list that has not changed.
-export const useCollectionsQuery = () => {
+//
+// `cityId` as for `usePlacesQuery` above.
+export const useCollectionsQuery = (cityId?: string | null) => {
   const { city } = useCurrentCity();
+  const id = cityId === undefined ? city?.id : cityId;
   const fetcher = useCallback(
-    () => (city ? fetchCollections(city.id) : (pending as Promise<Collection[]>)),
-    // `city.id` is the stable key — see `usePlacesQuery` above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [city?.id],
+    () => (id ? fetchCollections(id) : (pending as Promise<Collection[]>)),
+    [id],
   );
   // Cached between launches like places above; like counts and avatars
   // are deliberately not — one is a social number that must be fresh,
   // the other arrives late harmlessly.
   return usePersistedFetch(
-    CACHE_CATALOG && city ? cacheKey('collections', city.id) : null,
+    CACHE_CATALOG && id ? cacheKey('collections', id) : null,
     fetcher,
     [] as Collection[],
   );
