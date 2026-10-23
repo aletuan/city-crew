@@ -417,6 +417,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .stat.approved b { color: var(--ok); }
 .stat.pending b { color: var(--warn); }
 .stat.flagged b { color: var(--bad); }
+/* Under the tiles, only while something is flagged: a flag hides the place
+   from the app, so the line is in the flag's colour. */
+.flagnote { margin: 6px 0 0; font-size: 12.5px; color: var(--bad); }
+.flagnote b { font-weight: 700; }
 
 .syncbtn {
   border: 1px solid var(--border-control); background: var(--surface-glass);

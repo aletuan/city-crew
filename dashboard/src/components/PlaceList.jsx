@@ -520,8 +520,8 @@ export default function PlaceList() {
   };
 
   // No confirm, unlike the delete beside it: approving is reversible from
-  // the editor screen and ships nothing by itself — publish is its own
-  // switch. And no page reset: approval only empties rows out of a
+  // the editor screen. It does ship — approved places go live at once
+  // (owner, 23 Oct 2026; see `approvePlaces`). And no page reset: approval only empties rows out of a
   // status-filtered view, so the reader usually stays exactly where they
   // were. Batch *flagging* is deliberately absent — a flag deserves a
   // look at the row it stamps, and usually a note, which is the editor

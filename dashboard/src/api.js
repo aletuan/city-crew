@@ -328,6 +328,12 @@ export const api = {
     }
     if (!Object.keys(patch).length) throw new Error('no fields');
     if ('review_status' in patch) patch.reviewed_at = new Date().toISOString();
+    // Approved means live (owner, 23 Oct 2026). A place shows in the app
+    // only when it is approved *and* published, and approving used to
+    // leave the second switch where it was — so a place the desk had said
+    // yes to could still be hidden, and its submitter still read "Chờ
+    // duyệt". The published box stays, for taking a place down by hand.
+    if (patch.review_status === 'approved') patch.is_published = true;
     patch.updated_at = new Date().toISOString();
     const rows = db(await supabase.from('places').update(patch).eq('slug', slug).select('slug'));
     if (!rows.length) throw new Error('not found (or not an editor — check the editors table)');
@@ -374,18 +380,22 @@ export const api = {
   // the list: a good scan run is a dozen keepable rows, and stamping them
   // one editor screen at a time is the same chore in the other direction.
   //
-  // `.neq` makes an already-approved selection a no-op rather than a
-  // re-stamp, so the returned count is the honest number of rows that
-  // changed; `reviewed_at` moves the same way updatePlace moves it for
-  // one. Nothing goes live off the back of this — publish is its own
-  // switch (see publishApproved below).
+  // Approving publishes, as it does for one place in savePlace (owner, 23
+  // Oct 2026): a batch approved here is live in the app at once. Until then
+  // approval shipped nothing and publish was a second switch; the owner
+  // chose one step over a staging gap nobody was using — every city was
+  // active and no approved place was unpublished that day.
+  //
+  // The filter skips rows already approved *and* live, so the returned
+  // count is the honest number of rows that changed — an approved place
+  // taken down by hand is put back up by approving it again.
   approvePlaces: async (slugs) => {
     if (!slugs?.length) return { ok: true, approved: 0 };
     const now = new Date().toISOString();
     const rows = db(await supabase.from('places')
-      .update({ review_status: 'approved', reviewed_at: now, updated_at: now })
+      .update({ review_status: 'approved', is_published: true, reviewed_at: now, updated_at: now })
       .in('slug', slugs)
-      .neq('review_status', 'approved')
+      .or('review_status.neq.approved,is_published.eq.false')
       .select('slug'));
     return { ok: true, approved: rows.length };
   },
@@ -423,7 +433,7 @@ export const api = {
   progress: async (city) => {
     const rows = await everyRow(() => {
       let query = supabase.from('places')
-        .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification, threads_handle, i18n')
+        .select('slug, name_en, review_status, reviewed_at, is_published, category, categories, vibe_tags, needs_classification, threads_handle, i18n')
         .order('slug');
       if (city) query = query.eq('city_id', city);
       return query;
@@ -443,6 +453,15 @@ export const api = {
       // could open. This is the number the publish button acts on, and the
       // number that makes it worth showing at all.
       unpublished: rows.filter((r) => r.review_status === 'approved' && !r.is_published).length,
+      // When the longest-flagged place was flagged. A flag hides a place
+      // from the app until it is approved again — the Threads skill flags
+      // every place it enriches, so the desk's re-review is the time the
+      // place is gone from every list holding it. The overview says how
+      // long the oldest has waited (owner, 23 Oct 2026). `reviewed_at` is
+      // stamped by the flag itself (savePlace).
+      oldest_flagged: rows
+        .filter((r) => r.review_status === 'flagged' && r.reviewed_at)
+        .reduce((min, r) => (min === null || r.reviewed_at < min ? r.reviewed_at : min), null),
       // Filed by nobody yet — the places themselves, not a number.
       //
       // A count could only ever send the editor to a filtered list to find
