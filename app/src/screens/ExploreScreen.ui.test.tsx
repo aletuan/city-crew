@@ -749,9 +749,9 @@ describe('the category filter', () => {
     expect(cardNames()).toHaveLength(2);
   });
 
-  // Any number chosen; a place shows if it carries any of them, so a
-  // second chip widens. A chip tapped again lets go of its kind.
-  it('narrows to any chosen category, widens with a second, and lets go on a second tap', () => {
+  // One at a time (owner, 24 Oct 2026): another kind moves to it rather
+  // than widening, and the chosen one tapped again lets go.
+  it('narrows to one category, moves to another, and lets go on a second tap', () => {
     state.places.data = mixed();
     render(<ExploreScreen navigation={nav()} />);
     expect(cardNames()).toHaveLength(3);
@@ -760,23 +760,20 @@ describe('the category filter', () => {
     expect(cardNames().every((n) => n.includes('cafe'))).toBe(true);
     expect(cardNames()).toHaveLength(2);
     fireEvent.click(chip('Eats'));
-    expect(on('Cafés') && on('Eats')).toBe(true);
-    expect(cardNames()).toHaveLength(3);
-    fireEvent.click(chip('Cafés'));
+    expect(on('Eats')).toBe(true);
     expect(on('Cafés')).toBe(false);
     expect(cardNames()).toHaveLength(1);
     expect(cardNames()[0]).toContain('Place bar1');
     fireEvent.click(chip('Eats'));
+    expect(on('Eats')).toBe(false);
     expect(cardNames()).toHaveLength(3);
   });
 
-  // A city switch retires one chosen chip and keeps the others.
-  it('lets go of a chosen chip a city switch retires, and keeps the rest', () => {
+  // A city switch retires a chosen kind its places do not have.
+  it('lets go of a chosen kind a city switch retires, and keeps one it still has', () => {
     state.places.data = mixed();
     const { rerender } = render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(chip('Eats'));
-    fireEvent.click(chip('Cafés'));
-    expect(cardNames()).toHaveLength(3);
     state.places.data = [
       place('cafe9', { categories: ['cafes'] }),
       place('cafe8', { categories: ['cafes'] }),
@@ -784,27 +781,38 @@ describe('the category filter', () => {
     ];
     rerender(<ExploreScreen navigation={nav()} />);
     expect(noChip('Eats')).toBeNull();
+    expect(on('Cafés') || on('Nature')).toBe(false);
+    expect(cardNames()).toHaveLength(3);
+    fireEvent.click(chip('Cafés'));
+    state.places.data = [place('cafe7', { categories: ['cafes'] }), place('bar7', { categories: ['nightlife'] })];
+    rerender(<ExploreScreen navigation={nav()} />);
     expect(on('Cafés')).toBe(true);
-    expect(cardNames()).toHaveLength(2);
+    expect(cardNames()).toHaveLength(1);
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
+  });
+
+  // Underlined, not chipped (owner, 24 Oct 2026): the row is
+  // `UnderlineChoice`, and its far end fades into the page.
+  it('draws the kinds as an underlined row that fades at its far end', () => {
+    state.places.data = mixed();
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByTestId('explore-kinds')).toBeTruthy();
+    expect(screen.getByTestId('explore-kinds-fade')).toBeTruthy();
   });
 });
 
-// The card's pill follows the pin's rule: under a chip it names the chip,
-// so the row, the pins and the cards say one thing. Under several, the
-// first chosen in the row's order that the place carries.
+// The card's pill follows the pin's rule: under a kind it names the kind,
+// so the row, the pins and the cards say one thing.
 describe('the card under a chip', () => {
-  it('names the chosen chip it answers to rather than what the place is most', () => {
+  it('names the chosen kind it answers to rather than what the place is most', () => {
     state.places.data = [place('work1', { categories: ['cafes', 'focus', 'eats'] })];
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+2');
     fireEvent.click(screen.getByRole('button', { name: 'Eats' }));
     expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Eats+2');
-    // Focus comes before Eats in the row, whatever order they were tapped.
     fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
     expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Focus+2');
     fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Eats' }));
     expect(screen.getByTestId('place-card-0-kind').textContent).toBe('Cafés+2');
   });
 });
