@@ -265,7 +265,10 @@ describe('the two halves', () => {
     show([trip({ day: GONE })]);
     expect(sections()).toEqual(['Past · 1']);
     expect(screen.queryByText(/Upcoming/)).toBeNull();
-    expect(screen.getByText('No plans coming up.')).toBeTruthy();
+    // A card in the upcoming section's place, with the trips' calendar.
+    const none = screen.getByTestId('trips-none-ahead');
+    expect(none.textContent).toBe('No upcoming trips');
+    expect(none.querySelector('[data-icon="calendar-outline"]')).toBeTruthy();
     expect(screen.queryByText('Your next plans, in order.')).toBeNull();
   });
 
@@ -273,7 +276,7 @@ describe('the two halves', () => {
     show([trip({ day: SOON })]);
     expect(sections()).toEqual(['Upcoming · 1']);
     expect(screen.getByText('Your next plans, in order.')).toBeTruthy();
-    expect(screen.queryByText('No plans coming up.')).toBeNull();
+    expect(screen.queryByTestId('trips-none-ahead')).toBeNull();
   });
 
   // Today is still upcoming: an evening you are on does not become a
