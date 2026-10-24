@@ -212,13 +212,6 @@ export const s = StyleSheet.create({
     borderRadius: radius.image, overflow: 'hidden',
     justifyContent: 'flex-end',
   },
-  shelfBadge: {
-    position: 'absolute', left: 10, top: 10,
-    width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(10,11,10,0.55)',
-    borderWidth: 1, borderColor: onPhoto.line,
-  },
   shelfCardText: { padding: 13, gap: 3 },
   shelfCardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
   shelfCardMeta: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.regular },
