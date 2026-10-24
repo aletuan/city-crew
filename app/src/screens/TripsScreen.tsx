@@ -531,22 +531,37 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               (UX-10, 17 Oct 2026). With nothing ahead it says so, which
               is also the line that makes "New trip" above it the obvious
               next move. */}
-          {!!mine.length && (
+          {!!mine.length && !!upcoming.length && (
             <Text style={s.lede}>
-              {upcoming.length
-                ? t(
-                  'Your next plans, in order.',
-                  'Những kế hoạch sắp tới của bạn, theo thứ tự.',
-                  'これからの予定を順番に。',
-                  '你接下来的计划，按顺序排列。', '你接下來的計畫，按順序排列。',
-                )
-                : t(
-                  'No plans coming up.',
-                  'Bạn chưa có kế hoạch sắp tới.',
-                  'これからの予定はまだありません。',
-                  '暂无即将到来的计划。', '暫無即將到來的計畫。',
-                )}
+              {t(
+                'Your next plans, in order.',
+                'Những kế hoạch sắp tới của bạn, theo thứ tự.',
+                'これからの予定を順番に。',
+                '你接下来的计划，按顺序排列。', '你接下來的計畫，按順序排列。',
+              )}
             </Text>
+          )}
+          {/* Nothing ahead is a state of the list, so it is drawn as one: a
+              quiet card where the upcoming trips would stand, not a
+              sentence under the title (owner, 24 Oct 2026). As a lede it
+              read as the screen's subtitle and was passed over; as a card
+              it takes the place of the section it stands in for, and the
+              first thing above "Past" says why there is no "Upcoming".
+              The calendar is coral, as every trip's calendar is — see
+              `IconSubtitle` on the one glyph wearing two colours. Not a
+              button: "New trip" is in the header, one glance up. */}
+          {!!mine.length && !upcoming.length && (
+            <View style={s.none} testID="trips-none-ahead">
+              <Ionicons name="calendar-outline" size={20} color={colors.accent} />
+              <Text style={s.noneText}>
+                {t(
+                  'No upcoming trips',
+                  'Chưa có chuyến đi sắp tới',
+                  'これからの旅はまだありません',
+                  '暂无即将到来的行程', '暫無即將到來的行程',
+                )}
+              </Text>
+            </View>
           )}
 
           {/* The count belongs on the heading rather than under it: this is
@@ -600,6 +615,14 @@ const s = StyleSheet.create({
   // first glyph of every title.
   body: { gap: space.cardGap, paddingHorizontal: space.page },
   lede: { ...type.body, color: colors.textSecondary, marginBottom: space.titleToContent },
+  // The trip card's own ground and corner, at a row's height.
+  none: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: space.cardPadding, paddingVertical: 16,
+    backgroundColor: colors.surfaceCard, borderRadius: radius.card,
+    marginBottom: space.titleToContent,
+  },
+  noneText: { ...type.body, color: colors.textSecondary, flexShrink: 1 },
 
   // Caption weight and letterspaced rather than a second title. There is
   // one title on this screen; these divide it, and at `type.section` they
