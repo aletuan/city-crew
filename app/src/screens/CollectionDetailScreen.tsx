@@ -1111,28 +1111,20 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   /* The card's foot: who can see it, how many places, and the heart.
      Under a hairline, the facts at the start and the heart at the end —
      the end of the row is where a thumb finds a gesture. Drawn on every
-     list, yours included: the count is the one line every list has.
-
-     The count is the pin and the figure, as the heart is the heart and
-     its figure (owner, 24 Oct 2026): "5 places" beside "♡ 1" said in a
-     word what the glyph beside it already says. The word stays for
-     VoiceOver, which has no glyph to read. On your own list the pin comes
-     back after the visibility, where the count used to follow a dot
-     without one: a bare "Public · 5" would not say five of what. */
-  const placesWord = t(
-    `${members.length} ${members.length === 1 ? 'place' : 'places'}`,
-    `${members.length} địa điểm`,
-    `${members.length}スポット`,
-    `${members.length} 个地点`, `${members.length} 個地點`,
-  );
+     list, yours included: the count is the one line every list has. On
+     your own the visibility leads, and the count follows after a dot
+     without its pin — the globe or padlock is already the row's glyph,
+     and two glyphs on one line of facts read as two controls. */
   const cardFoot = col ? (
     <View style={s.cardFoot} testID="collection-stats">
       <View style={s.footCount}>
         {visibility}
-        <View style={s.footPlaces} accessible accessibilityLabel={placesWord} testID="collection-count">
-          <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
-          <Text style={s.meta}>{members.length}</Text>
-        </View>
+        {visibility
+          ? <Text style={s.meta}>·</Text>
+          : <Ionicons name="location-outline" size={15} color={colors.textTertiary} />}
+        <Text style={s.meta}>
+          {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}
+        </Text>
       </View>
       {heart}
     </View>
@@ -1981,10 +1973,7 @@ const s = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
-  // The visibility and the count are two facts, so wider apart than a
-  // glyph from its own figure.
-  footCount: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  footPlaces: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   // `alignSelf` keeps the press to the words, as the curator row's does.
   descAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24 },
