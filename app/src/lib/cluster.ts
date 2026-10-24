@@ -82,6 +82,49 @@ export function clusterPins(
 }
 
 /**
+ * How close two places stand, in metres, before no zoom draws them apart.
+ *
+ * Six, measured rather than chosen. Google's deepest zoom on a phone shows
+ * about 27 m across and 35 m down, so a cell there is some 3.4 by 4.4 m,
+ * and two places closer than that can share one at every zoom there is: a
+ * bubble that a tap zooms into and that comes back the same bubble. Hanoi
+ * has five such pairs (24 Oct 2026) — three under a metre apart, two
+ * doors in one building at 27 Trần Bình Trọng, 47 Hàng Bè and ngõ 148 Mai
+ * Anh Tuấn, and two at 4.4 and 5.2 m. The next pair is 8.1 m apart and
+ * comes apart.
+ */
+export const STACK_M = 6;
+
+type At = { lat: number; lng: number };
+
+/** Metres between two points, flat-earth: at a few metres the curve is
+ *  nothing, and this runs for every pair in a bubble. */
+export function metresApart(a: At, b: At): number {
+  const y = (a.lat - b.lat) * 111_320;
+  const x = (a.lng - b.lng) * 111_320 * Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180));
+  return Math.hypot(x, y);
+}
+
+/** Whether a bubble's places all stand on one spot, so that a tap has
+ *  nothing to zoom into and should show them instead. */
+export function oneSpot(points: readonly At[]): boolean {
+  return points.every((a, i) => points.slice(i + 1).every((b) => metresApart(a, b) <= STACK_M));
+}
+
+/**
+ * The places standing on this one's spot, itself included, in the order
+ * given — what a tap on the chosen pin steps through. Pins this close are
+ * drawn one over another, and the chosen one is on top, so without this
+ * the place under it could never be reached. Empty for a slug that is not
+ * here.
+ */
+export function stackAt(points: readonly ClusterPoint[], slug: string): string[] {
+  const at = points.find((p) => p.slug === slug);
+  if (!at) return [];
+  return points.filter((p) => metresApart(p, at) <= STACK_M).map((p) => p.slug);
+}
+
+/**
  * How wide the bubble is drawn, by how much it holds.
  *
  * Three steps, not a curve: the reader is comparing bubbles at a glance,

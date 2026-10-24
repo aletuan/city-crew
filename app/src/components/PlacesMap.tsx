@@ -21,7 +21,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { clusterPins, clusterSize, clusterSkin } from '../lib/cluster';
+import { clusterPins, clusterSize, clusterSkin, oneSpot, stackAt } from '../lib/cluster';
 import { mapStyle } from '../lib/mapStyle';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
@@ -172,10 +172,18 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
     return () => clearTimeout(timer);
   }, [shape, ready]);
 
-  /** A tap on a bubble goes in far enough for it to come apart. */
+  /** A tap on a bubble goes in far enough for it to come apart — unless
+   *  its places stand on one spot, where no zoom will part them and the
+   *  tap used to land on the same bubble, deeper and deeper, for ever.
+   *  Those it shows instead: the first is chosen, which takes it out of
+   *  the bubble, and a tap on its pin steps to the next (`tapPin`). */
   const openCluster = (slugs: string[]) => {
     const members = slugs.map((slug) => at.get(slug)).filter((p): p is Pinned => !!p);
     if (!members.length) return;
+    if (oneSpot(members)) {
+      onSelect(members[0].slug);
+      return;
+    }
     ref.current?.fitToCoordinates(
       members.map((p) => ({ latitude: p.lat, longitude: p.lng })),
       // The screen's own insets, the same ones the full fit uses — the
@@ -184,6 +192,17 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
     );
   };
 
+  /** A tap on a pin chooses it; a tap on the pin already chosen steps to
+   *  the next place on the same spot, since that one is drawn under it
+   *  and cannot be reached any other way. Alone on its spot, it stays. */
+  const tapPin = (slug: string) => {
+    if (slug !== selectedSlug) {
+      onSelect(slug);
+      return;
+    }
+    const stack = stackAt(pins, slug);
+    onSelect(stack[(stack.indexOf(slug) + 1) % stack.length]);
+  };
   // Every pin here is Google Places content, which the API's terms allow
   // showing only on Google's own map — see the licence note atop
   // `MiniMap.tsx`. No Google map is not a reason to fall back to Apple's;
@@ -226,12 +245,19 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
                 tracksViewChanges={!settled}
                 onPress={() => openCluster(c.slugs)}
                 accessibilityRole="button"
-                accessibilityLabel={t(
-                  `${c.slugs.length} places, zoom in`,
-                  `${c.slugs.length} địa điểm, phóng to`,
-                  `${c.slugs.length}件、拡大`,
-                  `${c.slugs.length} 个地点，放大查看`, `${c.slugs.length} 個地點，放大檢視`,
-                )}
+                accessibilityLabel={oneSpot(c.slugs.map((slug) => at.get(slug)!))
+                  ? t(
+                    `${c.slugs.length} places at one address, show them`,
+                    `${c.slugs.length} địa điểm cùng một địa chỉ, xem từng nơi`,
+                    `同じ住所に${c.slugs.length}件、表示`,
+                    `同一地址有 ${c.slugs.length} 个地点，逐个查看`, `同一地址有 ${c.slugs.length} 個地點，逐個檢視`,
+                  )
+                  : t(
+                    `${c.slugs.length} places, zoom in`,
+                    `${c.slugs.length} địa điểm, phóng to`,
+                    `${c.slugs.length}件、拡大`,
+                    `${c.slugs.length} 个地点，放大查看`, `${c.slugs.length} 個地點，放大檢視`,
+                  )}
                 testID={`cluster-${c.key}`}
               >
                 <Bubble count={c.slugs.length} />
@@ -290,7 +316,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
             // invisible. Put the chosen pin on top.
             zIndex={p.slug === selectedSlug ? 1 : 0}
             tracksViewChanges={false}
-            onPress={() => onSelect(p.slug)}
+            onPress={() => tapPin(p.slug)}
           />
           );
         })}

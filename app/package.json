@@ -48,6 +48,7 @@
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^26.1.0",
     "opencc-js": "^1.4.2",
+    "patch-package": "^8.0.1",
     "prettier": "^3.9.6",
     "react-dom": "19.3.0",
     "react-native-web": "~0.21.4",
@@ -70,7 +71,8 @@
     "format:check": "prettier --check",
     "test:tz": "TEST_TZ=America/New_York vitest run",
     "coverage": "vitest run --coverage",
-    "smoke:ios": "bash .maestro/smoke.sh"
+    "smoke:ios": "bash .maestro/smoke.sh",
+    "postinstall": "patch-package"
   },
   "private": true,
   "expo": {
