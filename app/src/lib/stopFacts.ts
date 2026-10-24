@@ -1,70 +1,28 @@
 // The line under a stop's name on a plan the reader is choosing between.
 //
-// Three facts, each one only when it is true:
+// It is the district now, and only when the plan crosses districts: a plan
+// that never leaves one district said that district under every stop and
+// in its own heading. In Melbourne, where 59 of 66 places carry the
+// council's name "Melbourne City" rather than a suburb, that was the same
+// two words four times on one card. `sharedArea` below is the question the
+// card asks before it decides.
 //
-// - the district, which is what the line always said, and what the card's
-//   heading counts when no model named the plan — but only when the caller
-//   asks for it. A plan that never leaves one district said that district
-//   under every stop and in its own heading: in Melbourne, where 59 of 66
-//   places carry the council's name "Melbourne City" rather than a suburb,
-//   that was the same two words four times on one card. `sharedArea`
-//   below is the question the card asks before it decides;
-// - how long the stop is planned for, but only when the place says how
-//   long people stay. Of 800 places, 604 carry no duration, and every one
-//   of those gets the planner's 75 minutes — printed, that was the same
-//   "75 phút" under every stop of every plan, a figure that described the
-//   planner and not the place;
-// - whether it is open at the hour the plan arrives. The planner already
-//   keeps shut places out, so this is nearly always "open until", and the
-//   closing time is the fact that decides how long the evening can run.
+// ── what the line used to carry, and why it does not ──
 //
-// Read at the arrival, not at the moment the screen is looked at. A plan
-// for Saturday night, drawn on Thursday morning, is about Saturday night;
-// the editor's fact line reads `now`, which is right for a plan being run
-// and wrong for one being chosen.
+// `stopFacts` added two more facts, each only when true: the planned stay,
+// when the place says how long people stay (of 800 places 604 carried no
+// duration, and printing the planner's 75 minutes for each was a figure
+// about the planner), and whether the stop is open at the hour the plan
+// arrives, read on the plan's own day in the city's zone. Both went on 24
+// Oct 2026 with the card's hours (owner): the card is for choosing a
+// shape, and a closing time under a stop with no arrival beside it
+// answers a question the card no longer asks. The editor prints both.
 //
-// The rating is not here any more. It was, on the argument that between
-// two evenings it is the first thing a reader compares — and on the phone
-// it made the line the fourth thing under every stop, above a sentence
-// and a leg, on a card the reader is only choosing from. The star is one
-// tap away on the stop itself, and the card's job is the shape of the
-// evening, not the merits of each place in it.
+// The rating went before that, on the same argument: the star is one tap
+// away on the stop itself, and the card's job is the shape of the evening,
+// not the merits of each place in it.
 
-import { instantOn } from './clock';
-import { clockOf, fmtMinutes, openState } from './format';
-import { summaryLine } from './sketch';
 import type { Place } from './types';
-
-type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
-
-export function stopFacts(
-  place: Pick<Place, 'neighborhood_en' | 'duration_min' | 'duration_max' | 'opening_hours'>,
-  stop: { arriveMin: number; dwellMin: number },
-  day: string,
-  tz: string,
-  lang: string,
-  t: T,
-  /** `area: false` leaves the district off — for a plan whose stops all
-   *  share it, where the heading already says it once. */
-  opts: { area?: boolean } = {},
-): string {
-  const known = place.duration_min != null || place.duration_max != null;
-  const at = instantOn(day, stop.arriveMin, tz);
-  const state = at ? openState(place.opening_hours, at, tz) : null;
-  let hours: string | null = null;
-  if (state?.open && state.untilMin != null) {
-    const until = clockOf(state.untilMin);
-    hours = t(`open until ${until}`, `mở tới ${until}`, `${until}まで営業`, `营业至 ${until}`, `營業至 ${until}`);
-  } else if (state && !state.open && state.opensAtMin != null) {
-    const opens = clockOf(state.opensAtMin);
-    hours = t(`opens ${opens}`, `mở lúc ${opens}`, `${opens}開店`, `${opens} 开门`, `${opens} 開門`);
-  }
-  return summaryLine([
-    opts.area === false ? null : place.neighborhood_en,
-    known ? fmtMinutes(stop.dwellMin, lang) : null,
-    hours,
-  ]);
-}
 
 /**
  * Whether every place of a plan sits in one district — the case in which

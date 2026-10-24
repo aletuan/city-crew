@@ -45,14 +45,14 @@ import { DEFAULT_TZ } from '../lib/clock';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
-import { clockOf, dateline } from '../lib/format';
+import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useMyLists } from '../lib/save';
 import { summaryLine } from '../lib/sketch';
-import { sharedArea, stopFacts } from '../lib/stopFacts';
+import { sharedArea } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
 import StopRow from '../components/StopRow';
 import StopGallery, { hasPicture } from '../components/StopGallery';
@@ -86,11 +86,6 @@ function money(vnd: number): string {
     return `${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M ₫`;
   }
   return `${Math.round(vnd / 1000)}k ₫`;
-}
-
-function hours(windowMin: [number, number]): string {
-  const h = (windowMin[1] - windowMin[0]) / 60;
-  return `${Math.round(h * 2) / 2}h`;
 }
 
 export default function PlanOptionsScreen({ navigation, route }: {
@@ -307,8 +302,6 @@ export default function PlanOptionsScreen({ navigation, route }: {
               plan={plan}
               name={name}
               why={told?.why ?? null}
-              day={day}
-              tz={city?.tz ?? DEFAULT_TZ}
               nth={i}
               // The card's own name rides along, so the editor's header
               // matches the card that was tapped even if the cache has let
@@ -458,17 +451,14 @@ const CARD_STEP_MS = 60;
 
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
-function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
+function PlanCard({ plan, name, why, nth, onPress }: {
   plan: TripPlan; name: string; onPress: () => void;
   /** The model's sentence per stop, by slug, when it has written them. */
   why: ReadonlyMap<string, string> | null;
-  /** The plan's day and its city's zone: a stop is open or shut at the
-   *  hour the plan arrives, not at the hour the screen is read. */
-  day: string; tz: string;
   /** Which card down the list this is — the start marks settle in order. */
   nth: number;
 }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   // The paw on the first stop lands into the card, `CARD_IN` behind the
   // card's own delay, so it arrives into a card that has arrived rather
   // than hanging in the space where one is about to be. The mark and the
@@ -613,11 +603,17 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
               // is the one thing here that says *why* a stop, and the
               // second stop's reason is not less wanted than the first's.
               const line = why?.get(st.place.slug);
-              const facts = stopFacts(st.place, st, day, tz, lang, t, { area: !oneArea });
               return (
                 <StopRow
                   key={st.place.slug}
-                  time={clockOf(st.arriveMin)}
+                  // No hour (owner, 24 Oct 2026). Nor the closing time
+                  // under the name, nor the card's length at its foot:
+                  // the card is for choosing a shape — which places, in
+                  // what order, how far apart — and the planner's
+                  // 09:00, 10:15 and "~1.5h" read as a timetable the
+                  // reader had not set yet. The editor this card opens
+                  // prints every hour, and is where they become the
+                  // reader's own.
                   here={here}
                   first={i === 0}
                   last={i + 1 === plan.stops.length}
@@ -627,9 +623,12 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
                   // choice, a wrapped name pushes the next option down.
                   nameLines={1}
                   // The district under the name, as the editor and the saved
-                  // trip print it; what else the line carries, and when, is
-                  // `stopFacts`'s. Nothing at all when every fact is absent.
-                  meta={facts || null}
+                  // trip print it, and only when the plan leaves one: a plan
+                  // in a single district says it in its heading. The line
+                  // also carried the planned stay and the closing time at
+                  // arrival (`stopFacts`, removed with the hours); both
+                  // still stand in the editor.
+                  meta={oneArea ? null : st.place.neighborhood_en}
                   // The model's reason for the stop; the editor and the saved
                   // trip both print it, and this screen used to ask for it and
                   // then not show it.
@@ -646,11 +645,11 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
             <View style={s.foot}>
               {/* No stop count: the rows above are the stops, two or three
                   of them, and a reader counts two rows faster than they
-                  read "2 stops". The hours and the distance are what the
-                  rows do not say. The price waits on its switch. */}
+                  read "2 stops". No length either, with the hours (see
+                  the row above). The distance is what the rows do not
+                  say; the price waits on its switch. */}
               <Text style={s.summary}>
                 {summaryLine([
-                  `~${hours(plan.windowMin)}`,
                   km > 0 ? fmtDistance(km) : null,
                   showPrice && total > 0 ? `~${money(total)}` : null,
                 ])}
