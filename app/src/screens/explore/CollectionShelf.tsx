@@ -1,4 +1,15 @@
-// Explore's shelf of community collections, and the badge each card wears.
+// Explore's shelf of community collections.
+//
+// A card is its cover, its title, its count and its heart — what the
+// Collections tab's card shows, and nothing more (owner, 24 Oct 2026).
+// It used to wear a category badge in its top corner: the kind its
+// members shared most, as a glyph in that kind's colour. Removed, not
+// moved. The same list wore a mark on Explore and none on the
+// Collections tab, so the reader was left asking what the mark was for;
+// and one glyph cannot say what a mixed list holds — five places to eat
+// and four cafés came out as a fork and knife. The cover and the title
+// already say what the list is. Screen readers never heard the badge,
+// so nothing was lost for them.
 
 import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -6,9 +17,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fireHaptic, PressableScale, Skeleton } from '../../components/ui';
-import { CATEGORIES, categoriesOf, type CategoryStyle } from '../../lib/categories';
 import { useCurrentCity } from '../../lib/city';
-import { Collection, coverUriOf, membersOf, Place, touchesCity } from '../../lib/data';
+import { Collection, coverUriOf, membersOf, touchesCity } from '../../lib/data';
 import { useCollections, useLikes, usePlaces } from '../../lib/catalog';
 import { useSession } from '../../lib/auth';
 import { useSaveActions } from '../../lib/save';
@@ -17,38 +27,6 @@ import { useI18n } from '../../lib/i18n';
 import { colors, onPhoto, space } from '../../theme';
 import { type Nav } from '../../nav';
 import { s } from './styles';
-
-/**
- * A collection has no category of its own, so its badge is the category
- * its members share most — self-maintaining as membership changes. A
- * collection whose members carry none stays badge-free rather than
- * wearing a guess.
- *
- * Category, not vibe. This used to tally `vibe_tags` — the other axis,
- * how a place *feels* — and draw the winning vibe's glyph in white. Two
- * things were wrong with that at once. The vibe table borrows most of the
- * category table's glyphs (a wine glass, a cup, a fork and knife), so a
- * reader met what looked like a category badge that answered a different
- * question; and white on the scrim was the one place in the app a
- * category glyph did not wear its category's colour — every chip, tile,
- * well and pin does, from the same table, and the colour code is only a
- * code if it holds everywhere. `categoriesOf` is the same reading every
- * other surface takes, vibes folded into categories for places the desk
- * has not classified yet.
- */
-export function collectionBadge(members: Place[]): CategoryStyle | null {
-  const tally = new Map<string, number>();
-  for (const p of members) {
-    for (const c of categoriesOf(p)) {
-      if (CATEGORIES[c]) tally.set(c, (tally.get(c) ?? 0) + 1);
-    }
-  }
-  let best: string | null = null;
-  for (const [cat, n] of tally) {
-    if (!best || n > tally.get(best)!) best = cat;
-  }
-  return best ? CATEGORIES[best] : null;
-}
 
 export function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -153,7 +131,6 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
             const uri = coverFor(c);
             const members = membersOf(c, places);
             const count = members.length;
-            const badge = collectionBadge(members);
             return (
               <PressableScale
                 key={c.slug}
@@ -168,15 +145,6 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                   locations={[0, 0.42, 1]}
                   style={StyleSheet.absoluteFill}
                 />
-                {badge && (
-                  // The glyph in its category's colour, on the scrim every
-                  // control over a photograph wears: the pastel is solved
-                  // to be read as a mark on the app's own grounds, and on
-                  // the 0.55 scrim it reads at 6:1 and better.
-                  <View style={s.shelfBadge}>
-                    <Ionicons name={badge.icon} size={15} color={badge.color} />
-                  </View>
-                )}
                 <View style={s.shelfCardText}>
                   {/* One line, always. A second line pushed the count down
                       on some tiles and not others, so a row of cards that
