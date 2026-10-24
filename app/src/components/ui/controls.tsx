@@ -2,11 +2,12 @@
 // round and gradient buttons, the switch.
 
 import React, { useRef } from 'react';
-import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, Switch, Text, View, ViewStyle } from 'react-native';
+import { Animated, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Switch, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../../lib/i18n';
-import { type Color, colors, font, gradAI, labelScaleCap, radius, space } from '../../theme';
+import { useScheme } from '../../lib/theme';
+import { bgHex, type Color, colors, font, gradAI, labelScaleCap, radius, space } from '../../theme';
 import { CONTROL_H, useNarrowWindow } from './layout';
 import { type HapticKind, fireHaptic } from './haptics';
 import { useReducedMotion, useLoop } from './motion';
@@ -317,6 +318,82 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
   );
 }
 
+/** How wide the far end of an `UnderlineChoice` fades into the page. */
+const CHOICE_FADE = 36;
+
+/**
+ * A row of things to narrow by, one at a time, drawn as `UnderlineTabs`
+ * draws a switch: the word and a 2pt rule in the accent under the chosen
+ * one, no fill, no outline (owner, 24 Oct 2026 — Explore's categories,
+ * which were chips with a filled ground, the last boxed row in a header
+ * whose other controls had all lost theirs).
+ *
+ * Three things set it apart from the tabs, each because it narrows a list
+ * rather than switching between halves of a screen:
+ *
+ * - Nothing chosen is an answer: the whole list. So the chosen one tapped
+ *   again lets go, as every filter chip in the app does, and `chosen` may
+ *   be null. A tab bar always has a tab open.
+ * - It scrolls, and says so: nine categories are some 900pt of row on a
+ *   390pt phone, and a row that simply stops at the screen's edge reads
+ *   as finished. The far end fades into the page, and the row ends in
+ *   that fade's width of air, so the last item can scroll clear of it.
+ * - A glyph keeps its own colour, chosen or not — the rule `Chip` and
+ *   `Tile` keep, for their reason: the hue is what ties the category to
+ *   the dot it wears on a card and the pin it wears on the map. So the
+ *   chosen state is the word and the rule, never the glyph; two of the
+ *   category hues (Cafés, Eats) are warm enough to pass for the accent.
+ *
+ * `aria-selected` on a button rather than the tabs' role, which says
+ * "one of these is always open": this is a filter, and VoiceOver should
+ * read it as one.
+ */
+export function UnderlineChoice<K extends string>({ items, chosen, onPick, testID }: {
+  items: { key: K; label: string; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string }[];
+  chosen: K | null;
+  onPick: (k: K) => void;
+  testID?: string;
+}) {
+  // The page's own colour, as plain hex: the fade has to end in exactly
+  // the ground the row sits on, and a gradient takes no dynamic colour.
+  const bg = bgHex[useScheme().scheme];
+  return (
+    <View testID={testID}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.choiceRow}>
+        {items.map(({ key, label, icon, iconColor, testID: itemID }) => {
+          const on = chosen === key;
+          return (
+            <PressableScale
+              key={key}
+              contentStyle={[s.tabItem, on && s.tabItemOn]}
+              scaleTo={0.97}
+              haptic="selection"
+              // The row is 33pt drawn; the slop makes it the 44pt a
+              // target is, above and below, without spacing the words out.
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              onPress={() => onPick(key)}
+              testID={itemID}
+              accessibilityRole="button"
+              aria-selected={on}
+            >
+              {icon ? <Ionicons name={icon} size={16} color={iconColor ?? colors.textSecondary} /> : null}
+              <Text style={[s.choiceText, on && s.tabTextOn]} numberOfLines={1}>{label}</Text>
+            </PressableScale>
+          );
+        })}
+      </ScrollView>
+      <LinearGradient
+        pointerEvents="none"
+        colors={[`${bg}00`, bg]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={s.choiceFade}
+        testID={testID ? `${testID}-fade` : undefined}
+      />
+    </View>
+  );
+}
+
 export function RoundIconButton({ icon, onPress, label, size = 21, color, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
@@ -535,6 +612,14 @@ const s = StyleSheet.create({
   },
   tabItemOn: { borderBottomColor: colors.accent },
   tabText: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium, flexShrink: 1 },
+  // `UnderlineChoice`: the tabs' items with the page's margins and the
+  // tabs' 26pt gap brought down to 22 — nine of them rather than two, and
+  // the gap is what tells one from the next, not a box. The unchosen word
+  // a step brighter than a tab's: here it is the thing being read, where
+  // a tab's name is a door the reader already knows.
+  choiceRow: { gap: 22, paddingLeft: space.page, paddingRight: space.page + CHOICE_FADE },
+  choiceText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
+  choiceFade: { position: 'absolute', top: 0, bottom: 0, right: 0, width: CHOICE_FADE },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,

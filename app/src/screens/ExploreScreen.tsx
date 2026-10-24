@@ -10,7 +10,7 @@
 
 import { useSignupTour, useTourAnchor } from '../components/SignupTour';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, ScrollView, SectionList, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Platform, SectionList, Text, useWindowDimensions, View } from 'react-native';
 import { useScrollToTop, type ParamListBase } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import * as Location from 'expo-location';
@@ -18,7 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
-import { AmbientWarmth, Chip, Empty, PressableScale, Skeleton, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Empty, PressableScale, Skeleton, UnderlineChoice, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { useDockOffer } from '../components/DockSlot';
 import { CATEGORIES, categoriesOf, categoryLabel, chosenKind, pinTint, presentCategories } from '../lib/categories';
@@ -109,16 +109,18 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // and with it the only control that could have fixed anything.
   const fail = classifyLoadFail(error);
   const failedEmpty = fail !== null && places.length === 0;
-  // ── the chips: any number, and none is everything (owner, 15 Oct 2026) ──
+  // ── the kinds: one at a time, and none is everything ──
   //
-  // A place shows if it carries any chosen kind, so two chips widen; with
-  // none chosen the list is the whole city. There was an "All" chip, one
-  // kind at a time, until the collection screen tried this first and the
-  // owner brought it here: "All" was a chip that meant "no chip", and a
-  // tap on it was the only way to leave a choice. Now a chip tapped again
-  // lets go of its kind.
+  // With none chosen the list is the whole city; a kind tapped narrows to
+  // it, another moves to that one, and the chosen one tapped again lets
+  // go. There was an "All" chip until 15 Oct 2026: it meant "no chip", and
+  // a tap on it was the only way to leave a choice. From then until 24 Oct
+  // any number could be chosen, a place showing if it carried any of
+  // them; the owner took multiple choice out of every filter in the app
+  // that day. A list rather than one key because the map, the cards and
+  // the city switch below all read a list of chosen kinds.
   const [picked, setPicked] = useState<string[]>([]);
-  const pick = (c: string) => setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
+  const pick = (c: string) => setPicked((p) => (p.includes(c) ? [] : [c]));
   const [filterOpen, setFilterOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ExploreFilters>({
     sort: 'recommended', status: 'any', savedOnly: false, visitedOnly: false,
@@ -743,22 +745,16 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           </PressableScale>
         ) : null}
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: space.page }}
-      >
-        {cats.map((c) => (
-          <Chip
-            key={c}
-            label={categoryLabel(c, t)}
-            icon={CATEGORIES[c]?.icon}
-            iconColor={CATEGORIES[c]?.color}
-            active={picked.includes(c)}
-            onPress={() => pick(c)}
-          />
-        ))}
-      </ScrollView>
+      {/* Underlined rather than chipped (owner, 24 Oct 2026): see
+          `UnderlineChoice`. */}
+      <UnderlineChoice
+        items={cats.map((c) => ({
+          key: c, label: categoryLabel(c, t), icon: CATEGORIES[c]?.icon, iconColor: CATEGORIES[c]?.color,
+        }))}
+        chosen={picked[0] ?? null}
+        onPick={pick}
+        testID={floating ? undefined : 'explore-kinds'}
+      />
     </View>
   );
 
