@@ -2,8 +2,14 @@
 .DS_Store
 .claude/*
 # The repo's own skills are shared with every session on the repo
-# (docs/photo-labels.md §6); the rest of .claude/ is one machine's settings.
+# (docs/photo-labels.md §6), and so are its hooks and agents and the
+# settings.json that registers them: the cloud session that needs the
+# SessionStart hook is exactly the one that has no machine of its own.
+# settings.local.json and the rest stay one machine's.
 !.claude/skills/
+!.claude/hooks/
+!.claude/agents/
+!.claude/settings.json
 .playwright-mcp/
 *.jpeg
 data/.env
