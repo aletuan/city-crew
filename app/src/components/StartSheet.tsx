@@ -61,7 +61,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, AppState, Keyboard, Linking, Modal, Platform, Pressable,
+  ActivityIndicator, Alert, AppState, Keyboard, Linking, Modal, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import * as Location from 'expo-location';
@@ -70,7 +70,8 @@ import MiniMap from './MiniMap';
 import { Chip, GradientCta, PressableScale, SelectTick } from './ui';
 import { type City, useCity, useMyPosition } from '../lib/city';
 import { cityAround } from '../lib/geo';
-import { findSpots, nameOf, SignedOutError, type Spot } from '../lib/findplace';
+import { findSpots, nameOf, SearchLimitError, SignedOutError, type Spot } from '../lib/findplace';
+import { searchLimitWords } from '../lib/quota';
 import { useSession } from '../lib/auth';
 import { ctaMode } from '../lib/spots';
 import { useI18n } from '../lib/i18n';
@@ -411,6 +412,12 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
     } catch (e) {
       setFinding(false);
       if (e instanceof SignedOutError) { onNeedSignIn(); return; }
+      // A spent day's allowance, said as that — see `searchLimitWords`.
+      if (e instanceof SearchLimitError) {
+        const w = searchLimitWords(e.scope, e.limit, t);
+        Alert.alert(w.title, w.body);
+        return;
+      }
       throw e;
     }
     setFinding(false);

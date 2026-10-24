@@ -116,6 +116,13 @@ export const api = {
    */
   reports: async () => db(await supabase.rpc('reports_queue')) ?? [],
 
+  /**
+   * The week of Google calls `fetch-place` has counted, for the allowance
+   * bell: day totals against their caps, and the accounts past their own.
+   * Null for a reader who is not an editor. See `fetch_place_usage`.
+   */
+  fetchPlaceUsage: async () => db(await supabase.rpc('fetch_place_usage')),
+
   /** Mark one answered. `actioned` means the desk did something about
    *  the content; `dismissed` means it looked and found nothing wrong.
    *  Both are answers, and the queue counts neither. */

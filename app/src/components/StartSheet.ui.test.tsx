@@ -16,7 +16,7 @@
 // which the stand-in exposes as buttons and text.
 
 import React from 'react';
-import { AppState, Linking } from 'react-native';
+import { Alert, AppState, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -36,7 +36,10 @@ const world = vi.hoisted(() => ({
   session: { user: { id: 'u1' } } as { user: { id: string } } | null,
 }));
 const SignedOutError = vi.hoisted(() => class SignedOutError extends Error {});
-vi.mock('../lib/findplace', () => ({ findSpots, nameOf, SignedOutError }));
+const SearchLimitError = vi.hoisted(() => class SearchLimitError extends Error {
+  constructor(readonly scope: 'account' | 'app', readonly limit: number) { super('daily_limit'); }
+});
+vi.mock('../lib/findplace', () => ({ findSpots, nameOf, SearchLimitError, SignedOutError }));
 vi.mock('../lib/auth', () => {
   const m = { useAuth: () => ({ session: world.session }) };
   const all = () => (m as { useAuth: () => object }).useAuth();
@@ -281,6 +284,23 @@ describe('the search', () => {
     fireEvent.click(cta());
     await waitFor(() => expect(second.onNeedSignIn).toHaveBeenCalledTimes(1));
     expect(screen.queryByText(/Nothing found/)).toBeNull();
+  });
+
+  // A spent day's allowance is said as that, and the sheet stays open
+  // rather than showing "Nothing found" — the place may well exist.
+  it('says the day\'s searches are spent instead of "Nothing found"', async () => {
+    const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+    findSpots.mockRejectedValueOnce(new SearchLimitError('app', 0));
+    const { onDone, onNeedSignIn } = openSheet();
+    type('335 quan nhan');
+    fireEvent.click(cta());
+    await waitFor(() => expect(alert).toHaveBeenCalledWith(
+      'Google search is resting', 'City Crew has used all of today\'s searches on Google. Try again tomorrow.',
+    ));
+    expect(screen.queryByText(/Nothing found/)).toBeNull();
+    expect(onNeedSignIn).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+    alert.mockRestore();
   });
 
   // Where a pin may land. A result in another catalog city moves the app

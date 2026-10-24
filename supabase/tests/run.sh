@@ -544,3 +544,12 @@ for f in "$ROOT"/supabase/migrations/*_lists_stay_public_around_unlive_places.sq
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/lists_public_around_unlive_test.sql"
+
+# A day's allowance for asking Google (24 Oct 2026): `fetch-place`'s search
+# and reverse, counted per account and for everyone. Its own table and a
+# definer function, needing nothing above but the roles.
+echo "→ fetch-place allowance"
+for f in "$ROOT"/supabase/migrations/*_fetch_place_allowance.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/fetch_place_allowance_test.sql"

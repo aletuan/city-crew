@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useSearchParams } from 'react-route
 import { api } from './api.js';
 import { DAYS } from './contributors.js';
 import { signOut } from './auth.jsx';
+import AllowanceBell, { useAllowance } from './components/AllowanceBell.jsx';
 import { CategoryIcon } from './icons.jsx';
 import { ageLabel, newCount } from './reports.js';
 
@@ -311,6 +312,9 @@ export default function App() {
       .catch(() => {});
     return () => { alive = false; };
   }, [location.pathname]);
+  // The Google allowance, read on the same beat as the Reports count and
+  // for the same reason; one reading for both seats the bell has.
+  const allowance = useAllowance(location.pathname);
   useEffect(() => {
     if (!sheetOpen) return;
     const onKey = (e) => { if (e.key === 'Escape') setSheetOpen(false); };
@@ -542,6 +546,7 @@ export default function App() {
                     <span className="btnlabel">Add<span className="btnlabel-more"> place</span></span>
                   </Link>
                   <UnfiledBell places={progress?.unclassified} />
+                  <AllowanceBell {...allowance} />
                 </div>
               </header>
               <div className="shell">
@@ -620,6 +625,7 @@ export default function App() {
                     <span className="btnlabel">Add place</span>
                   </Link>
                   <UnfiledBell places={progress?.unclassified} />
+                  <AllowanceBell {...allowance} />
                 </div>
               </div>
               {/* A flag takes a place off the app until it is approved

@@ -95,6 +95,25 @@ const AT_BIAS_M = 20_000;
 // Editors are not counted at all; importing in bulk is their job.
 const DAILY_SUGGESTIONS = 50;
 
+// Searches and names for a point, per account per day, and every call of
+// both by every account per day (24 Oct 2026).
+//
+// `suggest` above needs no counter: each one leaves a row. These two leave
+// nothing, so until this date one free account and a loop was a Google
+// bill with no ceiling — the first finding of that day's security review.
+// The counter is `fetch_place_allowed` (20261024100000_fetch_place_allowance).
+//
+// Sixty searches is a long afternoon of adding a city's places and still a
+// wall for a script. Thirty names: the start sheet asks one per pin it
+// settles, and nobody settles thirty pins a day. Two thousand for
+// everyone: the day before this, all of `fetch-place` was asked 41 times,
+// desk imports included, so the ceiling is some fifty times the use — far
+// enough that a reader never meets it, and a bill that is a number.
+// Editors are counted towards it and have no allowance of their own.
+const SEARCHES_PER_DAY = 60;
+const NAMES_PER_DAY = 30;
+const CALLS_PER_DAY = 2_000;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -129,17 +148,37 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const city = await resolveCity(admin, String(body.city ?? "hcmc"));
 
+    /**
+     * Counts this call against the day's allowances and answers the
+     * refusal, or null to go ahead. After the request is known to be
+     * well formed, so a malformed one is neither billed nor counted.
+     *
+     * Both refusals are `daily_limit`, the word the app already reads for
+     * `suggest`, and `scope` says whose: `account` is this reader's day,
+     * `app` is everyone's, and the phone says different things for them.
+     * A counter that cannot be read is a door that stays shut, as the
+     * guest counter in `plan-assist` decided first: an open door on a
+     * broken meter is the one failure this exists to prevent.
+     */
+    const allowance = async (action: "search" | "reverse"): Promise<Response | null> => {
+      const limit = action === "search" ? SEARCHES_PER_DAY : NAMES_PER_DAY;
+      const { data, error } = await admin.rpc("fetch_place_allowed", {
+        p_user: uid, p_action: action, p_user_cap: isEditor ? null : limit, p_day_cap: CALLS_PER_DAY,
+      });
+      if (data === "ok") return null;
+      if (data === "account") return json({ error: "daily_limit", scope: "account", limit }, 429);
+      if (data === "app") return json({ error: "daily_limit", scope: "app" }, 429);
+      // An error, or an answer that is none of the three: shut.
+      return json({ error: "allowance unavailable" }, 503);
+    };
+
     // Open to any signed-in caller, because the phone's Add-a-place
-    // screen cannot work without it.
-    //
-    // Worth naming rather than leaving implicit: this is one Google call
-    // per press, uncapped per account. A cap would need a record of
-    // searches, which is state with nothing else to justify it, and the
-    // exposure is bounded by needing an account at all. If the bill ever
-    // shows it, the answer is a counter table — not a smaller field mask.
+    // screen cannot work without it — and counted, see `SEARCHES_PER_DAY`.
     if (body.action === "search") {
       const query = String(body.query ?? "").trim();
       if (!query) return json({ error: "query required" }, 400);
+      const refused = await allowance("search");
+      if (refused) return refused;
       const at = pointOf(body.at);
       const lang = langOf(body.lang);
       const data = await gapi("https://places.googleapis.com/v1/places:searchText", {
@@ -191,6 +230,8 @@ Deno.serve(async (req) => {
     if (body.action === "reverse") {
       const at = pointOf(body.at);
       if (!at) return json({ error: "at required" }, 400);
+      const refused = await allowance("reverse");
+      if (refused) return refused;
       const lang = langOf(body.lang);
       const u = new URL("https://maps.googleapis.com/maps/api/geocode/json");
       u.searchParams.set("latlng", `${at.lat},${at.lng}`);
