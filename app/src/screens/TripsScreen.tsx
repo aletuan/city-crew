@@ -57,7 +57,6 @@ import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
 import { splitTrips, tripCover } from '../lib/trips';
 import { useCrew } from '../lib/crew';
@@ -136,7 +135,6 @@ function TripCard({ trip, past, onPress, testID }: {
   const stops = trip.trip_stops;
   const shown = stops.slice(0, CARD_STOPS);
   const hidden = stops.length - shown.length;
-  const start = stops[0]?.arrive_min;
   const cover = tripCover(stops);
 
   return (
@@ -183,7 +181,14 @@ function TripCard({ trip, past, onPress, testID }: {
         <View style={s.metaRow}>
           <Ionicons name="calendar-outline" size={14} color={colors.accent} />
           <Text style={s.meta} numberOfLines={1}>
-            {/* The day and the hour, and not the city. The city used to
+            {/* The day alone: not the hour, and not the city.
+
+                The hour went on 24 Oct 2026 (owner). "from 09:00" was the
+                first stop's arrival, and the stops printed under it open
+                with that same 09:00 — the line said twice what the
+                timeline says once, a few points lower.
+
+                The city used to
                 join them once a reader's trips spanned two, and on 7 Oct
                 2026 the owner read "from 18:00 · Saigon" above a stop
                 whose ward is "Sài Gòn" — a ward of that name since the
@@ -192,10 +197,7 @@ function TripCard({ trip, past, onPress, testID }: {
                 "where", stop by stop, and the cover and the title say
                 the rest; the city was the one token on the card the
                 rest of it had made redundant. */}
-            {summaryLine([
-              day ? dateline(lang, day) : trip.day,
-              start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`, `${clockOf(start)} 起`, `${clockOf(start)} 起`) : null,
-            ])}
+            {day ? dateline(lang, day) : trip.day}
           </Text>
           {/* At the row's far end, and onto a line of its own when large
               type leaves no room beside the date — the row wraps rather

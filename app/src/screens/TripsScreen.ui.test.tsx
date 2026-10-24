@@ -291,9 +291,11 @@ describe('the two halves', () => {
 });
 
 describe('the card', () => {
-  it('prints the date, the start, and the stops with their hours and areas', () => {
+  it('prints the date, and the stops with their hours and areas', () => {
     show([trip()]);
-    expect(text()).toMatch(/from 18:00/);
+    // The first stop's hour is printed once, on the stop, not again on
+    // the date's line (owner, 24 Oct 2026).
+    expect(text()).not.toMatch(/from 18:00/);
     expect(screen.getByText('18:00')).toBeTruthy();
     expect(screen.getByText('19:00')).toBeTruthy();
     expect(screen.getByText('Pho 10')).toBeTruthy();
@@ -350,7 +352,7 @@ describe('the card', () => {
     // The date is SOON's, three days from whenever this runs: written as
     // the literal "Tue, 20 Oct" it held for one day, 17 Oct 2026 in Hanoi,
     // and turned CI red at midnight there.
-    expect(row.textContent).toBe(`${dateline('en', fromISO(SOON)!)} · from 18:00Friends`);
+    expect(row.textContent).toBe(`${dateline('en', fromISO(SOON)!)}Friends`);
   });
 
   it('has no cover and no badge when there is no picture and no company', () => {
@@ -383,8 +385,8 @@ describe('the card', () => {
     show([trip(), trip({ id: 't2', title: 'Down south', city_id: 'saigon' })]);
     expect(text()).not.toMatch(/Hanoi/);
     expect(text()).not.toMatch(/Saigon/);
-    // The date and the hour stay.
-    expect(text()).toMatch(/from 18:00/);
+    // The date stays.
+    expect(text()).toContain(dateline('en', fromISO(SOON)!));
   });
 
   it('dims a trip that has been, and keeps it legible', () => {
