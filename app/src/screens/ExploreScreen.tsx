@@ -674,7 +674,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             : t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え', '筛选和排序地点', '篩選和排序地點')}
           accessibilityState={{ selected: filterCount > 0 }}
           hitSlop={4}
-          contentStyle={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
+          contentStyle={s.filterButton}
           anchorRef={floating ? pinnedFilterAnchor : filterAnchor}
           testID={floating ? 'explore-filter-pinned' : 'explore-filter'}
         >
@@ -686,11 +686,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               upon. A control that wears it while nothing is filtered
               says the list has been narrowed when it has not, and it
               spends the one signal that would have said so.
-              So the two states differ in every part at once — glyph,
-              border, fill, and a badge counting the conditions. A badge
-              alone is 16pt of evidence; colour is what carries across
-              the screen, and the pair is the feedback for having
-              pressed Apply.
+              So the two states differ in the glyph's colour and in a
+              badge counting the conditions. A badge alone is 16pt of
+              evidence; colour is what carries across the screen, and the
+              pair is the feedback for having pressed Apply. The disc
+              behind it, which also turned coral, went (owner, 24 Oct
+              2026): the pair says it already, and a filled disc beside
+              the heading was the heaviest thing in the row.
               `accent` rather than `accentFill`: the paper theme's accent
               ink is deliberately the darker coral, because the button's
               bright one on a pale ground is a 3:1 glyph. Same accent,
@@ -713,6 +715,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           // screen lives; the map is somewhere it goes and comes back
           // from, and the way back has to say so — a reader who could
           // find the map and not the way out is the failure this fixes.
+          // So the way in is one word, "Map", and the way out keeps its
+          // verb: "Close Map" is the half that was ever in doubt.
           <PressableScale
             contentStyle={s.viewBtn}
             style={s.viewBtnSlot}
@@ -723,7 +727,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             accessibilityRole="button"
             accessibilityLabel={mapMode
               ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图', '關閉地圖')
-              : t('Open Map', 'Mở bản đồ', '地図を開く', '打开地图', '開啟地圖')}
+              : t('Map', 'Bản đồ', '地図', '地图', '地圖')}
             testID={floating ? 'explore-view-pinned' : 'explore-view'}
           >
             <Ionicons
@@ -734,7 +738,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <Text style={s.viewBtnText}>
               {mapMode
                 ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图', '關閉地圖')
-                : t('Open Map', 'Mở bản đồ', '地図を開く', '打开地图', '開啟地圖')}
+                : t('Map', 'Bản đồ', '地図', '地图', '地圖')}
             </Text>
           </PressableScale>
         ) : null}
