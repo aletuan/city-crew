@@ -10,10 +10,10 @@
 import { invokeFetchPlace } from './data/functions';
 import type { Lang } from './i18n';
 import { fromCandidates, type Spot } from './spots';
-import { bodyOf, SignedOutError, type Candidate } from './suggest';
+import { bodyOf, limitOf, SearchLimitError, SignedOutError, type Candidate } from './suggest';
 
 export type { Spot };
-export { SignedOutError };
+export { SearchLimitError, SignedOutError };
 
 /**
  * Places matching a name, biased towards a point.
@@ -56,6 +56,10 @@ export async function findSpots(
     const status = (res.error as { context?: { status?: number } }).context?.status;
     const body = await bodyOf(res.error);
     if (status === 401 || body?.error === 'not signed in') throw new SignedOutError();
+    // A spent allowance is not "nothing found" either: searching again,
+    // with fewer words or more, is the one thing that will not help.
+    const limit = limitOf(body);
+    if (limit) throw limit;
     return [];
   }
   const rows = (res.data as { candidates?: Candidate[] })?.candidates;

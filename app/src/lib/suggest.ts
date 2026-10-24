@@ -87,7 +87,7 @@ export async function readOutcome(res: Fn): Promise<SuggestOutcome> {
   return { ok: false, reason: 'error', message: body?.error ?? res.error.message ?? 'failed' };
 }
 
-type Body = { error?: string; live?: boolean; slug?: string; limit?: number };
+type Body = { error?: string; live?: boolean; slug?: string; limit?: number; scope?: string };
 
 export async function bodyOf(err: unknown): Promise<Body | null> {
   const ctx = (err as { context?: unknown })?.context;
@@ -114,13 +114,35 @@ export class SignedOutError extends Error {
   constructor() { super('not signed in'); this.name = 'SignedOutError'; }
 }
 
+/**
+ * The search was refused because a day's allowance is spent (24 Oct 2026):
+ * this reader's (`account`, with the number), or everyone's (`app`).
+ *
+ * Its own type for the reason `SignedOutError` has one: "could not reach
+ * Google Maps, try again in a moment" is the wrong sentence for it, and
+ * so is "nothing found". Trying again in a moment is the one thing that
+ * will not work.
+ */
+export class SearchLimitError extends Error {
+  constructor(readonly scope: 'account' | 'app', readonly limit: number) {
+    super('daily_limit');
+    this.name = 'SearchLimitError';
+  }
+}
+
+/** The allowance refusal in a function's answer, or null for any other. */
+export function limitOf(body: Body | null): SearchLimitError | null {
+  if (body?.error !== 'daily_limit') return null;
+  return new SearchLimitError(body.scope === 'app' ? 'app' : 'account', Number(body.limit) || 0);
+}
+
 export async function searchPlaces(query: string, cityId: string): Promise<Candidate[]> {
   const { data, error } = await invokeFetchPlace({ action: 'search', query, city: cityId });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     const body = await bodyOf(error);
     if (status === 401 || body?.error === 'not signed in') throw new SignedOutError();
-    throw new Error(error.message);
+    throw limitOf(body) ?? new Error(error.message);
   }
   return ((data as { candidates?: Candidate[] })?.candidates ?? []);
 }

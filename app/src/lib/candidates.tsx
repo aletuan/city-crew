@@ -28,7 +28,8 @@ import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
 import { fetchSearchPlaces, type Place } from './data';
 import { addToSearchIndex } from './searchIndex';
-import { Candidate, knownByPlaceId, Known, searchPlaces, SignedOutError, suggestPlace } from './suggest';
+import { Candidate, knownByPlaceId, Known, SearchLimitError, searchPlaces, SignedOutError, suggestPlace } from './suggest';
+import { searchLimitWords } from './quota';
 import { Batch, IDLE_BATCH, ItemState } from './batch';
 
 // Re-exported so call sites keep one import for the whole idea. The types
@@ -154,6 +155,12 @@ export function useCandidates(at?: City | null): Candidates {
       .catch((e: Error) => {
         // A session that lapsed between render and tap: same answer.
         if (e instanceof SignedOutError) { askToSignIn('search'); return; }
+        // A spent day's allowance: tomorrow, not "in a moment".
+        if (e instanceof SearchLimitError) {
+          const w = searchLimitWords(e.scope, e.limit, t);
+          Alert.alert(w.title, w.body);
+          return;
+        }
         // In the reader's words. The raw message was supabase-js's
         // "Edge Function returned a non-2xx status code", which names the
         // plumbing and says nothing about what to do.

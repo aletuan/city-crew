@@ -77,7 +77,7 @@ vi.mock('./suggest', async (orig) => ({
 }));
 
 import { freshOnly, IDLE_BATCH, useCandidates, type Tally } from './candidates';
-import { SignedOutError } from './suggest';
+import { SearchLimitError, SignedOutError } from './suggest';
 
 const cand = (place_id: string, at: { lat: number | null; lng: number | null } = { lat: null, lng: null }): Candidate => ({
   place_id, name: place_id, address: '', ...at, rating: null, rating_count: null,
@@ -285,6 +285,20 @@ describe('asking Google', () => {
       'Could not reach Google Maps just now. Try again in a moment.',
     );
     expect(JSON.stringify(alert.mock.calls)).not.toContain('non-2xx');
+    expect(h.askToSignIn).not.toHaveBeenCalled();
+    expect(result.current.searching).toBe(false);
+  });
+
+  // A spent allowance is "tomorrow", with the reader's number — never
+  // "try again in a moment", and never a question for the session.
+  it('says the day\'s allowance is spent, and asks nobody', async () => {
+    h.searchPlaces.mockRejectedValue(new SearchLimitError('account', 60));
+    const { result } = renderHook(() => useCandidates());
+    act(() => result.current.run('le vélo'));
+    await settle();
+
+    expect(alert).toHaveBeenCalledWith('That is enough for today', 'You can search Google 60 times a day. Come back tomorrow.');
+    expect(h.confirmSession).not.toHaveBeenCalled();
     expect(h.askToSignIn).not.toHaveBeenCalled();
     expect(result.current.searching).toBe(false);
   });

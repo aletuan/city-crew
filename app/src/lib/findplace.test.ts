@@ -12,7 +12,7 @@ vi.mock('./supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { findSpots, nameOf, SignedOutError } from './findplace';
+import { findSpots, nameOf, SearchLimitError, SignedOutError } from './findplace';
 import type { Candidate } from './suggest';
 
 const fake = () => h.fake!;
@@ -80,6 +80,15 @@ describe('findSpots', () => {
     await expect(findSpots('anywhere', null, 'hanoi', 'en')).rejects.toBeInstanceOf(SignedOutError);
     fake().replies({ error: { message: 'x', context: { status: 500, body: { error: 'Google 400' } } } as never });
     expect(await findSpots('anywhere', null, 'hanoi', 'en')).toEqual([]);
+  });
+
+  // Nor is a spent allowance: searching again is the one thing that will
+  // not help, so it is thrown for the sheet to say so.
+  it('throws SearchLimitError when a day\'s allowance is spent', async () => {
+    fake().replies({ error: { message: 'x', context: { status: 429, body: { error: 'daily_limit', scope: 'account', limit: 60 } } } as never });
+    const e = await findSpots('anywhere', null, 'hanoi', 'en').catch((x) => x);
+    expect(e).toBeInstanceOf(SearchLimitError);
+    expect(e).toMatchObject({ scope: 'account', limit: 60 });
   });
 
   it('answers nothing when the call itself throws', async () => {

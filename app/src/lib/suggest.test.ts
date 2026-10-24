@@ -7,7 +7,7 @@ vi.mock('./supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { knownByPlaceId, readOutcome, searchPlaces, SignedOutError, suggestPlace } from './suggest';
+import { knownByPlaceId, limitOf, readOutcome, SearchLimitError, searchPlaces, SignedOutError, suggestPlace } from './suggest';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -156,6 +156,27 @@ describe('searchPlaces', () => {
     const err = await searchPlaces('le velo', 'hanoi').catch((e) => e);
     expect(err).not.toBeInstanceOf(SignedOutError);
     expect(err.message).toBe('Edge Function returned a non-2xx status code');
+  });
+  // A spent allowance is thrown as itself, with whose allowance it was
+  // and its number, so the screen can say "tomorrow" and not "in a moment".
+  it('names a spent allowance as SearchLimitError', async () => {
+    fake().replies({ error: nonOk({ error: 'daily_limit', scope: 'account', limit: 60 }) });
+    const mine = await searchPlaces('le velo', 'hanoi').catch((e) => e);
+    expect(mine).toBeInstanceOf(SearchLimitError);
+    expect(mine).toMatchObject({ scope: 'account', limit: 60 });
+    fake().replies({ error: nonOk({ error: 'daily_limit', scope: 'app' }) });
+    expect(await searchPlaces('le velo', 'hanoi').catch((e) => e)).toMatchObject({ scope: 'app', limit: 0 });
+  });
+});
+
+describe('limitOf', () => {
+  it('reads the allowance refusal, and nothing else', () => {
+    expect(limitOf({ error: 'daily_limit', scope: 'app' })).toMatchObject({ scope: 'app', limit: 0, message: 'daily_limit' });
+    // No scope is the reader's: `suggest`'s own refusal has never sent one.
+    expect(limitOf({ error: 'daily_limit', limit: 30 })).toMatchObject({ scope: 'account', limit: 30 });
+    expect(limitOf({ error: 'daily_limit', scope: 'nonsense', limit: 60 })).toMatchObject({ scope: 'account', limit: 60 });
+    expect(limitOf({ error: 'quota' })).toBeNull();
+    expect(limitOf(null)).toBeNull();
   });
 });
 

@@ -120,6 +120,13 @@ const counted = (n: number | null) => ({ count: n }) as Reply;
 const door = (asEditor = false, c = HCMC) =>
   h.fake.replies(session(), asEditor ? editor : notEditor, city(c));
 
+/** Past the door and within the day's allowances: what every search and
+ *  every name for a point needs before it may reach Google. */
+const asks = (asEditor = false, c = HCMC) => {
+  door(asEditor, c);
+  h.fake.replies({ data: 'ok', error: null });
+};
+
 const sentTo = (kind: ReturnType<typeof endpoint>) =>
   google.mock.calls.filter(([url]) => endpoint(url) === kind);
 const gapiCalls = () => google.mock.calls.filter(([url]) => endpoint(url) !== 'copy');
@@ -168,7 +175,7 @@ describe('the door', () => {
   });
 
   it('looks the caller up on the editors list by the lowered email', async () => {
-    door();
+    asks();
     routes.search = { body: {} };
     await call({ action: 'search', query: 'phở' });
     expect(tables('editors')[0]).toMatchObject({ filters: [['email', 'reader@crew.test']], maybe: true });
@@ -184,13 +191,13 @@ describe('the door', () => {
   });
 
   it('resolves the city it is given, and Ho Chi Minh City when it is given none', async () => {
-    door(false, HANOI);
+    asks(false, HANOI);
     routes.search = { body: {} };
     await call({ action: 'search', query: 'phở', city: 'hanoi' });
     expect(tables('cities')[0].filters).toEqual([['id', 'hanoi'], ['is_active', true]]);
 
     h.fake.reset();
-    door();
+    asks();
     await call({ action: 'search', query: 'phở' });
     expect(tables('cities')[0].filters).toEqual([['id', 'hcmc'], ['is_active', true]]);
   });
@@ -222,7 +229,7 @@ describe('search', () => {
   });
 
   it('sends one call with the key, the trimmed query and the city’s circle, and maps what comes back', async () => {
-    door();
+    asks();
     routes.search = {
       body: {
         places: [
@@ -254,13 +261,13 @@ describe('search', () => {
   });
 
   it('answers no candidates when Google finds nothing', async () => {
-    door();
+    asks();
     routes.search = { body: {} };
     expect(await (await call({ action: 'search', query: 'zzz' })).json()).toEqual({ candidates: [] });
   });
 
   it('leans towards the pin, twenty kilometres wide, when the client sends one', async () => {
-    door();
+    asks();
     routes.search = { body: {} };
     await call({ action: 'search', query: 'phở', at: { lat: 21.0, lng: 105.8 } });
     expect(searchBody().locationBias).toEqual({ circle: { center: { latitude: 21.0, longitude: 105.8 }, radius: 20_000 } });
@@ -270,26 +277,26 @@ describe('search', () => {
     routes.search = { body: {} };
     for (const at of [null, { lat: '21', lng: 105.8 }, { lat: 21 }, { lat: 91, lng: 105.8 }, { lat: 21, lng: 181 }]) {
       google.mockClear();
-      door();
+      asks();
       await call({ action: 'search', query: 'phở', at });
       expect(searchBody().locationBias.circle.radius).toBe(15_000);
     }
   });
 
   it('asks in a language the app speaks and leaves any other to Google', async () => {
-    door();
+    asks();
     routes.search = { body: {} };
     await call({ action: 'search', query: 'phở', lang: 'vi' });
     expect(searchBody().languageCode).toBe('vi');
 
     google.mockClear();
-    door();
+    asks();
     await call({ action: 'search', query: 'phở', lang: 'fr' });
     expect(searchBody()).not.toHaveProperty('languageCode');
   });
 
   it('reports Google’s refusal with Google’s own words', async () => {
-    door();
+    asks();
     routes.search = { status: 403, body: 'API key not valid' };
     const res = await call({ action: 'search', query: 'phở' });
     expect(res.status).toBe(500);
@@ -306,7 +313,7 @@ describe('reverse', () => {
   };
 
   it('names the point with one Geocoding call carrying the point, the types and the key', async () => {
-    door();
+    asks();
     routes.geocode = { body: ward };
     const res = await call({ action: 'reverse', at: { lat: 21.03, lng: 105.85 }, lang: 'ja' });
     expect(await res.json()).toEqual({ name: 'Hoàn Kiếm' });
@@ -319,7 +326,7 @@ describe('reverse', () => {
   });
 
   it('leaves the language to Google when the client asks for one the app does not speak', async () => {
-    door();
+    asks();
     routes.geocode = { body: ward };
     await call({ action: 'reverse', at: { lat: 21.03, lng: 105.85 }, lang: 'xx' });
     expect(new URL(sentTo('geocode')[0][0]).searchParams.has('language')).toBe(false);
@@ -339,11 +346,84 @@ describe('reverse', () => {
   });
 
   it('reports Google’s refusal with Google’s own words', async () => {
-    door();
+    asks();
     routes.geocode = { status: 429, body: 'OVER_QUERY_LIMIT' };
     const res = await call({ action: 'reverse', at: { lat: 21, lng: 105 } });
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'Google 429: OVER_QUERY_LIMIT' });
+  });
+});
+
+// Searches and names for a point leave nothing behind to count, so the
+// function counts them (24 Oct 2026): `fetch_place_allowed`, per account
+// and for everyone, before Google is asked.
+describe('the day\'s allowances', () => {
+  const rpcs = () => h.fake.log.filter((a) => a.op === 'rpc');
+  const refuse = (scope: 'account' | 'app') => h.fake.replies({ data: scope, error: null });
+
+  it('counts a search against the account\'s sixty and everyone\'s two thousand, before asking Google', async () => {
+    asks();
+    routes.search = { body: {} };
+    await call({ action: 'search', query: 'phở' });
+    expect(rpcs()).toEqual([expect.objectContaining({
+      fn: 'fetch_place_allowed',
+      payload: { p_user: 'u1', p_action: 'search', p_user_cap: 60, p_day_cap: 2000 },
+    })]);
+  });
+
+  it('counts a name for a point against its own thirty', async () => {
+    asks();
+    routes.geocode = { body: { results: [] } };
+    await call({ action: 'reverse', at: { lat: 21, lng: 105 } });
+    expect(rpcs()[0].payload).toEqual({ p_user: 'u1', p_action: 'reverse', p_user_cap: 30, p_day_cap: 2000 });
+  });
+
+  it('counts an editor with no allowance of its own', async () => {
+    asks(true);
+    routes.search = { body: {} };
+    await call({ action: 'search', query: 'phở' });
+    expect(rpcs()[0].payload).toMatchObject({ p_user_cap: null, p_day_cap: 2000 });
+  });
+
+  it('refuses past the account\'s day as daily_limit, saying whose and how many, without asking Google', async () => {
+    door();
+    refuse('account');
+    const res = await call({ action: 'search', query: 'phở' });
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: 'daily_limit', scope: 'account', limit: 60 });
+    door();
+    refuse('account');
+    const named = await call({ action: 'reverse', at: { lat: 21, lng: 105 } });
+    expect(await named.json()).toEqual({ error: 'daily_limit', scope: 'account', limit: 30 });
+    expect(google).not.toHaveBeenCalled();
+  });
+
+  it('refuses past everyone\'s day as the app\'s, with no number that is not the reader\'s', async () => {
+    door();
+    refuse('app');
+    const res = await call({ action: 'search', query: 'phở' });
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: 'daily_limit', scope: 'app' });
+    expect(google).not.toHaveBeenCalled();
+  });
+
+  it('stays shut when the counter cannot be read, or answers something it does not know', async () => {
+    for (const reply of [{ data: null, error: { message: 'down' } }, { data: null, error: null }, { data: 'maybe', error: null }]) {
+      door();
+      h.fake.replies(reply);
+      const res = await call({ action: 'search', query: 'phở' });
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ error: 'allowance unavailable' });
+    }
+    expect(google).not.toHaveBeenCalled();
+  });
+
+  it('neither counts nor bills a request it would refuse as malformed', async () => {
+    door();
+    await call({ action: 'search', query: '  ' });
+    door();
+    await call({ action: 'reverse' });
+    expect(rpcs()).toHaveLength(0);
   });
 });
 
