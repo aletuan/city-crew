@@ -38,7 +38,7 @@ import {
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
@@ -420,7 +420,10 @@ describe('your own list', () => {
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
     // In the foot, before the count — not under the title any more.
-    expect(screen.getByTestId('collection-stats').textContent).toBe('Private·3 places');
+    // The pin and the figure; the word is VoiceOver's (owner, 24 Oct 2026).
+    expect(screen.getByTestId('collection-stats').textContent).toBe('Private3');
+    expect(screen.getByTestId('collection-count').querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('3 places');
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
     // No self-credit and no heart on your own list.
@@ -438,7 +441,7 @@ describe('your own list', () => {
     state.mine = [collection({ is_public: true }, [PHO])];
     show();
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Public');
-    expect(screen.getByText(/1 place$/)).toBeTruthy();
+    expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('1 place');
     expect(screen.queryByText(/Private/)).toBeNull();
   });
 
@@ -500,7 +503,7 @@ describe('your own list', () => {
     expect(screen.getByText('Nothing here yet.')).toBeTruthy();
     expect(screen.queryByText('No places in this collection yet.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
-    expect(screen.getByText(/0 places/)).toBeTruthy();
+    expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('0 places');
     expect(screen.getByRole('button', { name: 'Find places' }).querySelector('[data-icon="search"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Find places'));
     expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
@@ -644,12 +647,15 @@ describe('publishing', () => {
     }
   });
 
-  it('draws the padlock or the globe as the foot\u2019s glyph, with a chevron and no pin', () => {
+  // The pin comes back beside the count once the word went (owner, 24 Oct
+  // 2026): "Private · 3" would not say three of what.
+  it('draws the padlock or the globe with a chevron, and the pin beside the count', () => {
     show();
     let foot = screen.getByTestId('collection-stats');
     expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
     expect(foot.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
-    expect(foot.querySelector('[data-icon="location-outline"]')).toBeNull();
+    expect(screen.getByTestId('collection-visibility').querySelector('[data-icon="location-outline"]')).toBeNull();
+    expect(screen.getByTestId('collection-count').querySelector('[data-icon="location-outline"]')).toBeTruthy();
     cleanup();
     state.mine = [collection({ is_public: true })];
     show();
@@ -1282,7 +1288,7 @@ describe("somebody else's list", () => {
     state.cols = [theirs({}, [])];
     show();
     expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
-    expect(screen.getByTestId('collection-stats').textContent).toContain('0 places');
+    expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('0 places');
     expect(screen.getByText('No places in this collection yet.')).toBeTruthy();
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
     expect(screen.queryByText('Public')).toBeNull();
@@ -1382,7 +1388,7 @@ describe("somebody else's list", () => {
     // react-native-web drops `accessibilityState`, so the state is read
     // off the label and the glyph — which is what a reader gets anyway.
     expect(heart.querySelector('[data-icon="heart-outline"]')).toBeTruthy();
-    expect(screen.getByText('3')).toBeTruthy();
+    expect(within(heart).getByText('3')).toBeTruthy();
     fireEvent.click(heart);
     expect(spies.toggleLike).toHaveBeenCalledWith({ id: 'c1', slug: 'old-quarter' });
     expect(spies.askToSignIn).not.toHaveBeenCalled();
@@ -1574,7 +1580,8 @@ describe('the description, for a visitor', () => {
     state.mine = [];
     state.cols = [theirs({ desc_en: null })];
     show();
-    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrew.*places/);
+    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrew/);
+    expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toMatch(/places$/);
     expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
     expect(screen.queryByText('Add a description')).toBeNull();
   });
@@ -1792,7 +1799,7 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4 places');
+    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
