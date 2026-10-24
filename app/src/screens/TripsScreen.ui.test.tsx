@@ -291,15 +291,14 @@ describe('the two halves', () => {
 });
 
 describe('the card', () => {
-  it('prints the date, the start, the stops with their hours and areas, the count and the spend', () => {
+  it('prints the date, the start, and the stops with their hours and areas', () => {
     show([trip()]);
     expect(text()).toMatch(/from 18:00/);
     expect(screen.getByText('18:00')).toBeTruthy();
     expect(screen.getByText('19:00')).toBeTruthy();
     expect(screen.getByText('Pho 10')).toBeTruthy();
     expect(screen.getByText('Ba Dinh')).toBeTruthy();
-    // 60k + 35k, per person, and the badge the wizard's answer wears.
-    expect(text()).toMatch(/~95k ₫ \/ person/);
+    // The badge the wizard's answer wears.
     expect(screen.getByText('Friends')).toBeTruthy();
     expect(screen.getByText('View plan')).toBeTruthy();
   });
@@ -360,14 +359,15 @@ describe('the card', () => {
     expect(screen.queryByText('Friends')).toBeNull();
   });
 
-  it('says a million in millions', () => {
-    show([trip({ trip_stops: [stop(place({ price_vnd: 1_250_000 }))] })]);
-    expect(text()).toMatch(/~1\.3M ₫/);
-  });
-
-  it('says no spend at all when nothing has a price', () => {
-    show([trip({ trip_stops: [stop(place({ price_vnd: null }))] })]);
-    expect(text()).not.toMatch(/₫/);
+  // Neither the count nor the spend (owner, 24 Oct 2026): the stops are
+  // printed above, and the spend belongs to the trip's own screen. The
+  // default trip's stops are priced, so a spend would have a figure to
+  // print.
+  it('prints neither how many stops nor what they cost', () => {
+    show([trip()]);
+    expect(text()).not.toMatch(/₫|per person|\/ person/);
+    expect(text()).not.toMatch(/\b\d+ stops?\b/);
+    expect(screen.getByText('View plan')).toBeTruthy();
   });
 
   // The card never names the city, even across two of them. It used to

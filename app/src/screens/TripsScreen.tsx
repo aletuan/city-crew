@@ -51,15 +51,15 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
 import { fromISO, minutesOf, toISO } from '../lib/day';
-import { type Trip, type TripStopRow } from '../lib/data';
+import { type Trip } from '../lib/data';
 import { useMyTrips } from '../lib/mytrips';
 import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { stopCount, summaryLine } from '../lib/sketch';
+import { summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
-import { spendVnd, splitTrips, tripCover } from '../lib/trips';
+import { splitTrips, tripCover } from '../lib/trips';
 import { useCrew } from '../lib/crew';
 import { useInvitations } from '../lib/invitations';
 import { answerInvite } from '../lib/data';
@@ -68,10 +68,6 @@ import InviteCard from '../components/InviteCard';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 import PhotoCredit from '../components/PhotoCredit';
-
-const money = (vnd: number) => (vnd >= 1_000_000
-  ? `${Math.round(vnd / 100_000) / 10}M ₫`
-  : `${Math.round(vnd / 1000)}k ₫`);
 
 /**
  * One saved trip, whole.
@@ -138,7 +134,6 @@ function TripCard({ trip, past, onPress, testID }: {
   const { t, lang } = useI18n();
   const day = fromISO(trip.day);
   const stops = trip.trip_stops;
-  const spend = spendVnd(stops.map((st: TripStopRow) => st.places));
   const shown = stops.slice(0, CARD_STOPS);
   const hidden = stops.length - shown.length;
   const start = stops[0]?.arrive_min;
@@ -244,13 +239,15 @@ function TripCard({ trip, past, onPress, testID }: {
 
         <View style={s.divider} />
 
+        {/* The way in, and nothing beside it. The foot used to open with
+            the count and the spend — "1 stop · ~150k ₫ / person" — and the
+            owner took both off every card, upcoming and past (24 Oct
+            2026). The count repeats the stops printed just above it, with
+            "+N more" for the rest; the spend is a guess from the
+            catalog's price bands, and on a list of 55 trips it was the
+            same small figure under each one. Both still head the trip's
+            own screen, where a plan is weighed rather than recognised. */}
         <View style={s.foot}>
-          <Text style={s.footFacts} numberOfLines={1}>
-            {summaryLine([
-              stopCount(stops.length, t),
-              spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人', '人', '人')}` : null,
-            ])}
-          </Text>
           <View style={s.open}>
             <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る', '查看计划', '檢視計畫')}</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.accent} />
@@ -699,8 +696,7 @@ const s = StyleSheet.create({
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginTop: 14, marginBottom: 12,
   },
-  foot: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  footFacts: { ...CAPTION, color: colors.textSecondary, flex: 1 },
+  foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   open: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   openText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
 
