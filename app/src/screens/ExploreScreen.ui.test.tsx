@@ -19,6 +19,7 @@ import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
+import { colors } from '../theme';
 
 const tourState = vi.hoisted(() => ({ step: -1, next: vi.fn() }));
 vi.mock('../components/SignupTour', async orig => ({
@@ -1098,7 +1099,7 @@ describe('the view switch', () => {
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.getByTestId('explore-list')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Open Map' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Map' })).toBeTruthy();
     expect(screen.queryByTestId('places-map')).toBeNull();
   });
 
@@ -1111,7 +1112,7 @@ describe('the view switch', () => {
     // is a microtask, and inside the click's `act` it would land *after*
     // the tap and put the list back.
     await act(async () => {});
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Open Map' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map' })); });
     expect(screen.queryByTestId('explore-list')).toBeNull();
     expect(await AsyncStorage.getItem('citycrew.explore.view')).toBe('map');
   });
@@ -1123,7 +1124,7 @@ describe('the view switch', () => {
     mapState.canDrawMap = false;
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.queryByRole('button', { name: 'Open Map' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Map' })).toBeNull();
   });
 });
 
@@ -1143,7 +1144,7 @@ describe('the map', () => {
     render(<ExploreScreen navigation={nav()} />);
     await act(async () => {}); // the stored 'list' lands here, not after the tap
     expect(screen.getByTestId('explore-list')).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Open Map' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map' })); });
     expect(screen.getByTestId('places-map')).toBeTruthy();
     // The bar — and with it the switch — must survive the tap, or map mode
     // is a room with no door. In map mode there is exactly one copy.
@@ -1322,6 +1323,26 @@ describe('the map’s quick filters', () => {
     await act(async () => { fireEvent.click(status); });
     await act(async () => { fireEvent.click(status); });
     expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+
+  // No disc behind the filter glyph, on or off (owner, 24 Oct 2026): what
+  // says a filter is on is the glyph turning coral and the badge counting
+  // it. The only ground inside the button is the badge's.
+  it('draws the filter control as a glyph and a badge, with no disc', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const grounds = (btn: HTMLElement) => [btn, ...btn.querySelectorAll('div')]
+      .map((e) => window.getComputedStyle(e).backgroundColor)
+      .filter((c) => c && c !== 'transparent' && c !== 'rgba(0, 0, 0, 0)');
+    const off = screen.getByRole('button', { name: 'Filter and sort places' });
+    expect(grounds(off)).toEqual([]);
+    expect(off.querySelector('[data-icon="options-outline"]')!.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    const on = screen.getByRole('button', { name: 'Filter and sort places, 1 applied' });
+    expect(grounds(on)).toHaveLength(1);
+    expect(within(on).getByText('1')).toBeTruthy();
+    expect(on.querySelector('[data-icon="options-outline"]')!.getAttribute('data-color')).toBe(String(colors.accent));
   });
 
   it('shows the sheet already on Open now after the button chose it', async () => {

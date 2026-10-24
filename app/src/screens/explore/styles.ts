@@ -115,13 +115,13 @@ export const s = StyleSheet.create({
     marginBottom: space.headingToContent,
   },
   placesTitle: { color: colors.text, ...type.section },
+  // The glyph alone, with no disc (owner, 24 Oct 2026). The box keeps
+  // its 36pt: with the 4pt slop that is the 44pt target, and it is the
+  // box the guide's ring is drawn around.
   filterButton: {
     width: 36, height: 36, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  filterButtonOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
   // Map tiles are light in both schemes, so a disc that reads fine over
   // the hero's dark scrim goes nearly invisible over them — it needs a
   // ground of its own rather than the glass surface the rest of the row wears.
@@ -154,18 +154,23 @@ export const s = StyleSheet.create({
   // the thing that gets pressed, which is why the two are separate — see
   // `PressableScale` on where a width has to live.
   viewBtnSlot: { marginLeft: 'auto' },
+  // Words and a glyph, with no pill behind them (owner, 24 Oct 2026):
+  // the words already say it is a button. The padding stays, because it
+  // and the 6pt slop are what make the target 44pt tall.
   viewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   // Neutral in both states. Coral in this app means a filter is on, and
   // spending it here would say the list has been narrowed when all that
   // happened is the reader opened a map.
   viewBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
+  // On the glyph's shoulder rather than the box's corner: with no disc
+  // the box is invisible, and a badge at its corner floated 8pt off the
+  // mark it counts. The glyph is 19pt in the 36pt box, so its top-right
+  // sits 8.5pt in from each edge, and the badge is centred near it.
   filterBadge: {
-    position: 'absolute', top: -3, right: -3,
+    position: 'absolute', top: 1, right: 1,
     minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentFill,
   },
