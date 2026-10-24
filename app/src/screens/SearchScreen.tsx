@@ -234,11 +234,12 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // is on screen already and whole; the others from the index, asked for
   // as the screen opens (`useSearchIndex`). Until it lands the reader's
   // own city answers alone, as it always did, under a row that already
-  // stands — All without a figure, since it does not know one yet, and
-  // home — so the other cities' chips join it rather than push the list.
+  // stands — All without a figure, since it does not know one yet — so the
+  // other cities' chips join it rather than push the list.
   //
-  // `pick` is null until the reader taps a chip: their own city, then.
-  // State, not storage, so every visit to Search starts at home.
+  // `pick` is null until the reader taps a chip: All, then, whatever city
+  // the reader is in (owner, 24 Oct 2026). State, not storage, so every
+  // visit to Search starts on All.
   const searching = terms.length > 0;
   const index = useSearchIndex(userId);
   const everywhere = useMemo(
@@ -246,7 +247,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
     [index, places, home],
   );
   const [cityChoice, setCityChoice] = useState<CityPick | null>(null);
-  const pick: CityPick = useMemo(() => cityChoice ?? (home ? [home] : 'all'), [cityChoice, home]);
+  const pick: CityPick = cityChoice ?? 'all';
   // What every city found, for the chips' counts. The same match the list
   // runs (`findPlaces`), so a chip's figure is the list it opens.
   const counts = useMemo(

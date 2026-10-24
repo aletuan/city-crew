@@ -502,13 +502,15 @@ describe('typing a query', () => {
     expect(screen.getByTestId('search-result-0').textContent).toContain('Pending Bakery');
   });
 
-  it('finds collections in this city by title, with their size', () => {
+  // Under All, the start (owner, 24 Oct 2026), a list in another city
+  // answers too; a city chip narrows the lists with the places.
+  it('finds collections by title, with their size, in every city until a city is chosen', () => {
     mount();
     type('coffee');
     expect(screen.getByText('Collections')).toBeTruthy();
     expect(screen.getByText('Coffee crawl')).toBeTruthy();
     expect(screen.getByText('2 places')).toBeTruthy();
-    expect(screen.queryByText('Coffee in Saigon')).toBeNull();
+    expect(screen.getByText('Coffee in Saigon')).toBeTruthy();
   });
 
   it('finds a collection by the names of the places inside it, singular count', () => {
@@ -745,55 +747,57 @@ describe('every city', () => {
     expect(idx.asks.length).toBeGreaterThan(0);
   });
 
-  it('starts at home, All before it, the cities that found something after', () => {
+  // All to start, whatever city the reader is in (owner, 24 Oct 2026):
+  // a place typed by name is the place wanted, wherever it is.
+  it('starts on All, home first after it, the cities that found something after', () => {
     mount();
     type('bold');
     expect(chipIds()).toEqual(['all', 'hanoi', 'hcmc', 'dalat']);
     expect(chip('hanoi').textContent).toBe('Hanoi (1)');
     expect(chip('all').textContent).toBe('All (4)');
     expect(chip('hcmc').textContent).toBe('Saigon (2)');
-    expect(chip('hanoi').getAttribute('aria-selected')).toBe('true');
-    expect(chip('hcmc').getAttribute('aria-selected')).toBe('false');
-    // Home only, and one city on screen says no city on its cards.
-    expect(results()).toHaveLength(1);
-    expect(screen.getByTestId('search-result-0-district').textContent).toBe('Giang Vo');
+    expect(chip('all').getAttribute('aria-selected')).toBe('true');
+    expect(chip('hanoi').getAttribute('aria-selected')).toBe('false');
+    // Every city on screen, and every card says its city.
+    expect(results()).toHaveLength(4);
+    const lines = screen.getAllByTestId(/^search-result-\d+-district$/).map((e) => e.textContent);
+    expect(lines).toEqual(expect.arrayContaining(['Hanoi · Giang Vo', 'Saigon · District 1', 'Saigon · District 3', 'Dalat · Ward 2']));
   });
 
-  it('adds a city, and every card says its city', () => {
+  // One city at a time: a chip is that city alone, and another chip moves
+  // to its city rather than adding it.
+  it('narrows to one city, moves to another, and says no city on a card', () => {
     const dismiss = vi.spyOn(Keyboard, 'dismiss');
     mount();
     type('bold');
     fireEvent.click(chip('hcmc'));
     expect(dismiss).toHaveBeenCalled();
     expect(input().value).toBe('bold');
-    expect(results()).toHaveLength(3);
-    const lines = screen.getAllByTestId(/^search-result-\d+-district$/).map((e) => e.textContent);
-    expect(lines).toEqual(expect.arrayContaining(['Hanoi · Giang Vo', 'Saigon · District 1', 'Saigon · District 3']));
-  });
-
-  it('puts a city down while another stays, and never the last', () => {
-    mount();
-    type('bold');
-    fireEvent.click(chip('hcmc'));
+    expect(results()).toHaveLength(2);
+    expect(chip('all').getAttribute('aria-selected')).toBe('false');
+    expect(screen.getByTestId('search-result-0-district').textContent).toBe('District 1');
     fireEvent.click(chip('hanoi'));
-    expect(results()).toHaveLength(2);
-    expect(chip('hanoi').getAttribute('aria-selected')).toBe('false');
-    fireEvent.click(chip('hcmc'));
-    expect(results()).toHaveLength(2);
-    expect(chip('hcmc').getAttribute('aria-selected')).toBe('true');
+    expect(results()).toHaveLength(1);
+    expect(chip('hanoi').getAttribute('aria-selected')).toBe('true');
+    expect(chip('hcmc').getAttribute('aria-selected')).toBe('false');
+    expect(screen.getByTestId('search-result-0-district').textContent).toBe('Giang Vo');
   });
 
-  // From every city to one, never "every city but this one".
-  it('shows every city under All, and a city tapped under All alone', () => {
+  // The chosen chip lets go, as every filter chip in the app does; All
+  // is the way back too.
+  it('goes back to All when the chosen city is tapped again, or All is', () => {
     mount();
     type('bold');
-    fireEvent.click(chip('all'));
-    expect(results()).toHaveLength(4);
-    expect(chip('all').getAttribute('aria-selected')).toBe('true');
-    expect(chip('hanoi').getAttribute('aria-selected')).toBe('false');
     fireEvent.click(chip('dalat'));
     expect(results()).toHaveLength(1);
     expect(screen.getByTestId('search-result-0-district').textContent).toBe('Ward 2');
+    fireEvent.click(chip('dalat'));
+    expect(results()).toHaveLength(4);
+    expect(chip('all').getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(chip('hcmc'));
+    fireEvent.click(chip('all'));
+    expect(results()).toHaveLength(4);
+    expect(chip('hcmc').getAttribute('aria-selected')).toBe('false');
   });
 
   // The places in the chips' order, home's first: ranked by match alone,
@@ -802,11 +806,7 @@ describe('every city', () => {
     idx.places = [dl, sg1, hn, sg2];
     mount();
     type('bold');
-    fireEvent.click(chip('all'));
     expect(results().map((r) => r.match(/Bold Brew ([a-z]+\d*)/)![1])).toEqual(['hn', 'sg1', 'sg2', 'dl']);
-    fireEvent.click(chip('dalat'));
-    fireEvent.click(chip('hanoi'));
-    expect(results().map((r) => r.match(/Bold Brew ([a-z]+\d*)/)![1])).toEqual(['hn', 'dl']);
   });
 
   // A horizontal ScrollView grows by default (flexGrow 1), and the row
@@ -852,7 +852,6 @@ describe('every city', () => {
     mount();
     type('bold');
     fireEvent.click(chip('hcmc'));
-    fireEvent.click(chip('hanoi'));
     type('cong');
     expect(chipIds()).toEqual(['all', 'hanoi', 'hcmc']);
     expect(chip('hcmc').textContent).toBe('Saigon (0)');
@@ -865,21 +864,27 @@ describe('every city', () => {
   // Google stays on offer: the reader may mean one the catalog has not
   // got, and should not have to tap another city to be asked (owner,
   // 22 Oct 2026).
-  it('says nothing was found at home, that other cities have it, and still offers Google', () => {
-    cat.places = [cong, pho, museum];
-    idx.places = [sg1, dl];
+  it('says nothing was found in the chosen city, that other cities have it, and still offers Google', () => {
     mount();
     type('bold');
-    expect(chipIds()).toEqual(['all', 'hanoi', 'dalat', 'hcmc']);
-    expect(chip('hanoi').textContent).toBe('Hanoi (0)');
-    expect(screen.getByText('No matches for “bold” in Hanoi')).toBeTruthy();
+    fireEvent.click(chip('hcmc'));
+    type('cong');
+    expect(screen.getByText('No matches for “cong” in Saigon')).toBeTruthy();
     expect(screen.getByText('Other cities have it: choose one above.')).toBeTruthy();
     expect(screen.getByText('We look it up on Google Maps')).toBeTruthy();
     // The guesses at what else was meant stay out: the chips answer that.
     expect(screen.queryByText('OR TRY')).toBeNull();
-    fireEvent.click(chip('hcmc'));
-    fireEvent.click(chip('hanoi'));
-    expect(results()).toHaveLength(1);
+  });
+
+  // Home is not chosen for the reader any more, so a chip for a home that
+  // found nothing would only offer an empty screen.
+  it('leaves out home’s chip when home found nothing', () => {
+    cat.places = [cong, pho, museum];
+    idx.places = [sg1, dl];
+    mount();
+    type('bold');
+    expect(chipIds()).toEqual(['all', 'dalat', 'hcmc']);
+    expect(results()).toHaveLength(2);
   });
 });
 
@@ -901,9 +906,9 @@ describe('a place just suggested in another city', () => {
     mount();
     await act(async () => {});
     type('saigon concept');
-    expect(chipIds()).toEqual(['all', 'hanoi']);
+    expect(chipIds()).toEqual(['all']);
     await act(async () => { addToSearchIndex('u1', [concept]); });
-    expect(chipIds()).toEqual(['all', 'hanoi', 'hcmc']);
+    expect(chipIds()).toEqual(['all', 'hcmc']);
     expect(screen.getByTestId('search-city-hcmc').textContent).toBe('Saigon (1)');
   });
 

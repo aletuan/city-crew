@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  byCity, cityChips, countByCity, namesCities, picked, tapCity, totalFound, type CityPick,
+  byCity, cityChips, countByCity, namesCities, picked, tapCity, totalFound,
 } from './searchCities';
 
 const at = (...ids: (string | null)[]) => ids.map((city_id) => ({ city_id }));
@@ -14,24 +14,26 @@ describe('countByCity', () => {
 describe('cityChips', () => {
   it('puts the reader’s city first, then the rest most first, ties by id', () => {
     const counts = countByCity(at('hcmc', 'hcmc', 'hanoi', 'danang', 'dalat', 'hcmc', 'danang'));
-    expect(cityChips(counts, 'hanoi', ['hanoi'])).toEqual([
+    expect(cityChips(counts, 'hanoi', 'all')).toEqual([
       { id: 'hanoi', count: 1 }, { id: 'hcmc', count: 3 }, { id: 'danang', count: 2 }, { id: 'dalat', count: 1 },
     ]);
   });
 
-  // It is the one chosen, and "nothing in Hanoi" is read against it.
-  it('keeps the reader’s city when it found nothing', () => {
-    expect(cityChips(countByCity(at('hcmc')), 'hanoi', ['hanoi'])).toEqual([{ id: 'hanoi', count: 0 }, { id: 'hcmc', count: 1 }]);
+  // Nothing is chosen for the reader any more (24 Oct 2026), so a chip
+  // for a home that found nothing would only offer an empty screen.
+  it('leaves out the reader’s city when it found nothing and is not chosen', () => {
+    expect(cityChips(countByCity(at('hcmc')), 'hanoi', 'all')).toEqual([{ id: 'hcmc', count: 1 }]);
   });
 
-  it('keeps a chosen city’s chip when it found nothing', () => {
-    expect(cityChips(countByCity(at('hanoi')), 'hanoi', ['hanoi', 'dalat'])).toEqual([{ id: 'hanoi', count: 1 }, { id: 'dalat', count: 0 }]);
+  it('keeps a chosen city’s chip when it found nothing, home first if chosen', () => {
+    expect(cityChips(countByCity(at('hanoi')), 'hanoi', ['dalat'])).toEqual([{ id: 'hanoi', count: 1 }, { id: 'dalat', count: 0 }]);
+    expect(cityChips(countByCity(at('hcmc')), 'hanoi', ['hanoi'])).toEqual([{ id: 'hanoi', count: 0 }, { id: 'hcmc', count: 1 }]);
     expect(cityChips(countByCity(at('hanoi')), 'hanoi', 'all')).toEqual([{ id: 'hanoi', count: 1 }]);
   });
 
   it('holds still between ties', () => {
-    expect(cityChips(countByCity(at('vungtau', 'hue', 'dalat')), 'hanoi', ['hanoi']).map((c) => c.id))
-      .toEqual(['hanoi', 'dalat', 'hue', 'vungtau']);
+    expect(cityChips(countByCity(at('vungtau', 'hue', 'dalat')), 'hanoi', 'all').map((c) => c.id))
+      .toEqual(['dalat', 'hue', 'vungtau']);
   });
 });
 
@@ -65,22 +67,16 @@ describe('totalFound', () => {
 });
 
 describe('tapCity', () => {
-  it('adds a city not chosen', () => {
-    expect(tapCity(['hanoi'], 'hcmc')).toEqual(['hanoi', 'hcmc']);
+  // One city at a time (owner, 24 Oct 2026): another city moves to it.
+  it('moves to a city not chosen, alone', () => {
+    expect(tapCity(['hanoi'], 'hcmc')).toEqual(['hcmc']);
   });
 
-  it('puts down a chosen city while another stays', () => {
-    expect(tapCity(['hanoi', 'hcmc'], 'hanoi')).toEqual(['hcmc']);
+  // The chosen chip lets go, as every filter chip in the app does.
+  it('goes back to All when the chosen city is tapped again', () => {
+    expect(tapCity(['hanoi'], 'hanoi')).toBe('all');
   });
 
-  // Never a choice of nowhere: the very same pick comes back, so the
-  // screen can tell the tap did nothing.
-  it('will not put down the last chosen city', () => {
-    const pick: CityPick = ['hanoi'];
-    expect(tapCity(pick, 'hanoi')).toBe(pick);
-  });
-
-  // From every city to one, never "every city but this one".
   it('makes a city tapped under All the only one', () => {
     expect(tapCity('all', 'dalat')).toEqual(['dalat']);
   });
@@ -96,9 +92,8 @@ describe('picked', () => {
 });
 
 describe('namesCities', () => {
-  it('names a card’s city only when more than one city can be on screen', () => {
+  it('names a card’s city only under All, where more than one city can be on screen', () => {
     expect(namesCities(['hanoi'])).toBe(false);
-    expect(namesCities(['hanoi', 'hcmc'])).toBe(true);
     expect(namesCities('all')).toBe(true);
   });
 });

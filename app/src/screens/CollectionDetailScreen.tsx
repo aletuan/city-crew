@@ -483,10 +483,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   // ── the chips are the filter (owner, 15 Oct 2026) ──
   //
-  // A tap on a chip narrows the places to that kind; any number chosen,
-  // and a place stays if it carries any of them. Nothing chosen is the
+  // A tap on a chip narrows the places to that kind; nothing chosen is the
   // whole list — there is no "All" chip, by the owner's ruling, and the
-  // way back is the count line's "Clear" or the chips tapped off.
+  // way back is the count line's "Clear" or the chip tapped off.
+  //
+  // One kind at a time (owner, 24 Oct 2026). Any number could be chosen
+  // until then, a place staying if it carried any of them; the owner took
+  // multiple choice out of every filter in the app the same day. Another
+  // chip moves to its kind rather than adding it.
   //
   // It was a second row of the filter row's glyph chips under the card
   // for one build, and the owner saw the same kinds twice: in the card,
@@ -505,7 +509,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const filters = kinds.length > 1;
   const chosen = filters ? picked.filter((k) => kinds.includes(k)) : [];
   const narrowed = chosen.length > 0;
-  const pick = (k: string) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
+  const pick = (k: string) => setPicked((p) => (p.includes(k) ? [] : [k]));
   const kept = narrowed ? narrowTo(members, chosen).length : members.length;
   const kindRow = kinds.length > 0 ? (
     <View style={s.kindsBlock}>
