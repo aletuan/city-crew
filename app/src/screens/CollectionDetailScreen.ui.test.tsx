@@ -1652,7 +1652,7 @@ describe('the chips', () => {
     expect(screen.queryByTestId('collection-kinds')).toBeNull();
   });
 
-  it('narrows to any chosen kind, says how many, and clears in one tap', () => {
+  it('narrows to one chosen kind, says how many, and clears in one tap', () => {
     eatery();
     state.mine = [collection({}, four)];
     show();
@@ -1672,13 +1672,18 @@ describe('the chips', () => {
     expect(lit.backgroundColor).not.toBe(unlit.backgroundColor);
     expect(lit.borderTopColor).toBe(rgba(String(colors.borderGlass)));
     expect(lit.borderTopColor).not.toBe(rgba(String(colors.accent)));
-    // Any, not all: a second chip widens, in the list's own order.
+    // One kind at a time (owner, 24 Oct 2026): a second chip moves to its
+    // kind rather than widening.
     fireEvent.click(chip('heritage'));
-    expect(cards()).toEqual(['card:Cafe Giang', 'card:Fine Arts Museum']);
-    expect(screen.getByTestId('collection-filter-count').textContent).toBe('2 of 4 places');
-    // Tapped again, a chip lets go of its kind.
-    fireEvent.click(chip('nightlife'));
+    expect(on('heritage')).toBe(true);
+    expect(on('nightlife')).toBe(false);
     expect(cards()).toEqual(['card:Fine Arts Museum']);
+    expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 of 4 places');
+    // Tapped again, a chip lets go of its kind: the whole list.
+    fireEvent.click(chip('heritage'));
+    expect(cards()).toHaveLength(4);
+    expect(screen.queryByTestId('collection-filter-count')).toBeNull();
+    fireEvent.click(chip('nightlife'));
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     expect(['eats', 'cafes', 'heritage', 'nightlife'].some(on)).toBe(false);
     expect(cards()).toHaveLength(4);

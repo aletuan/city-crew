@@ -7,44 +7,46 @@
 // every city answers, under a row of chips that says how many places each
 // one found and lets the reader choose which to see:
 //
-// - The reader's own city comes first and is the one chosen to start with.
-//   Typing "bold" in Hanoi shows Hanoi's Bold Brews, and says that Saigon
-//   has four more.
-// - More than one can be chosen; their places are shown together.
+// - The reader's own city comes first.
 // - "All" chooses every one.
 //
-// ── the rules the owner settled (same day) ──
+// ── one city at a time, and All to start (owner, 24 Oct 2026) ──
+//
+// It started on the reader's own city, and more than one city could be
+// chosen at once. The owner took both back two days later, with the
+// multiple choice on every filter in the app: a search starts on All,
+// whatever city the reader is in, and a city chip is one city — tapping
+// another moves to it, tapping the chosen one goes back to All. A place
+// typed by name is the place wanted, wherever it is; narrowing to a city
+// is something the reader does, not something done for them.
+//
+// ── the rules the owner settled (22 Oct, and still standing) ──
 //
 // - A chip only for a city that found something, most first, the reader's
-//   own city first whatever it found: it is the one chosen, and the empty
-//   screen under it says "nothing in Hanoi", which needs its chip there to
-//   be read against.
+//   own city first when it found anything. Until 24 Oct the reader's city
+//   kept its chip whatever it found, because it was the one chosen and
+//   "nothing in Hanoi" needed its chip to be read against; nothing is
+//   chosen for the reader now, so an empty chip would only offer an
+//   empty screen.
 // - "All" first, the reader's city after it (owner, the same evening, on
 //   the phone): All is the whole of what the cities hold, and the cities
-//   are its parts. It was second, beside the reader's city, on the reading
-//   that the default should lead; the owner read the row as a total and
-//   its parts, which wants the total first.
+//   are its parts.
 // - The places in the order of the chips: the reader's city's first, then
 //   each other city's, most found first. A mixed list ranked by match
 //   alone put a Saigon café above the Hanoi one the reader was standing
 //   near.
-// - The last chosen city cannot be put down. A choice of nothing would be
-//   a search of nowhere; the tap does nothing and the chip stays lit.
-// - A city tapped while "All" is chosen becomes the only one: from every
-//   city to one is what that tap means, never "every city but this one".
-// - Nothing switches by itself. When the reader's city finds nothing and
+// - Nothing switches by itself. When the chosen city finds nothing and
 //   others do, the screen says so and the chips are there to tap; it does
 //   not choose for them.
 // - The row stands from the first letter to the last, whatever was found
-//   (owner, the same evening). It was left out when every place found was
-//   at home, on the reading that "All (6) · Hanoi (6)" says nothing; on
-//   the phone it came and went between keystrokes and the list jumped a
-//   row each time, which says less. It also says, while it stands, which
-//   city the list is from.
+//   (owner, the same evening): on the phone a row that came and went
+//   between keystrokes made the list jump.
 // - A chosen city keeps its chip, found nothing or not, or new words could
 //   strand the reader in a city with no chip left to leave it by.
 
-/** The cities chosen: some, by id, or every one. Never an empty list. */
+/** The city chosen, as a list of one, or every one. Never an empty list.
+ *  A list rather than an id because the rows ask "which cities", and one
+ *  city at a time is a rule about the chips, not about the rows. */
 export type CityPick = 'all' | readonly string[];
 
 /** How many places a search found in each city. */
@@ -55,10 +57,10 @@ export function countByCity(found: readonly { city_id?: string | null }[]): Map<
 }
 
 /**
- * The cities' chips in their order: `home` first, whatever it found, then
- * every other city that found something or is chosen, most first, ties by
- * id so the row holds still between keystrokes. "All" is drawn before
- * them all by the screen.
+ * The cities' chips in their order: every city that found something or is
+ * chosen, `home` first among them, the rest most first, ties by id so the
+ * row holds still between keystrokes. "All" is drawn before them all by
+ * the screen.
  */
 export function cityChips(counts: ReadonlyMap<string, number>, home: string, pick: CityPick): { id: string; count: number }[] {
   const chosen = pick === 'all' ? [] : pick;
@@ -67,7 +69,7 @@ export function cityChips(counts: ReadonlyMap<string, number>, home: string, pic
   const rest = [...found].filter(([id]) => id !== home)
     .sort(([a, x], [b, y]) => y - x || a.localeCompare(b))
     .map(([id, count]) => ({ id, count }));
-  return [{ id: home, count: counts.get(home) ?? 0 }, ...rest];
+  return found.has(home) ? [{ id: home, count: found.get(home)! }, ...rest] : rest;
 }
 
 /**
@@ -90,15 +92,10 @@ export function totalFound(counts: ReadonlyMap<string, number>): number {
   return n;
 }
 
-/**
- * A city's chip, tapped. Answers `pick` itself, the same object, when the
- * tap changes nothing — the last chosen city put down — so the screen can
- * tell that tap from one that did something.
- */
+/** A city's chip, tapped: that city alone, or All again when it was the
+ *  one chosen — the chip lets go, as every filter chip in the app does. */
 export function tapCity(pick: CityPick, id: string): CityPick {
-  if (pick === 'all') return [id];
-  if (!pick.includes(id)) return [...pick, id];
-  return pick.length === 1 ? pick : pick.filter((c) => c !== id);
+  return pick !== 'all' && pick[0] === id ? 'all' : [id];
 }
 
 /** Whether a place in `cityId` is among the chosen. */
@@ -107,7 +104,7 @@ export function picked(pick: CityPick, cityId: string | null | undefined): boole
 }
 
 /** Whether more than one city's places can be on screen, so each card
- *  says which city it is in (owner, 22 Oct 2026). */
+ *  says which city it is in (owner, 22 Oct 2026): under All. */
 export function namesCities(pick: CityPick): boolean {
-  return pick === 'all' || pick.length > 1;
+  return pick === 'all';
 }
