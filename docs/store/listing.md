@@ -571,6 +571,46 @@ Data Desk), test. Từ bản này VI có localization riêng trên App Store Con
 • スポットページを整理：ハイライトは独立した行に、雰囲気はチップで、出典は引用の最後に。
 ```
 
+## Release notes v1.0.9 (What's New)
+
+Viết từ các PR merge sau build 1.0.8 (33) — #918 → #959. Bản này phải build mới
+vì có native module mới (`modules/photo-score`, Apple Vision); EAS Update
+không mang được nó. Chấm ảnh chỉ dành cho local guide và editor, trên iOS 18
+trở lên. Không có mặt ở đây: write-blurb (server, Data Desk), test.
+
+### EN
+
+```
+• Lists describe themselves: a description card, and chips for the kinds of places a list holds. Tap any to narrow the list.
+• Plan a trip straight from a list.
+• Explore: pick several categories at once. Choose none to see everything.
+• Searching: Cancel sits inside the search box.
+• The community shelf now shows your own public lists too.
+• Local guides on iOS 18 can have the phone score a place's photos out of ten, with the reasons.
+```
+
+### VI
+
+```
+• List có thẻ mô tả và chip cho các loại địa điểm trong list. Chạm vào chip để lọc.
+• Lên kế hoạch ngay từ một list.
+• Khám phá: chọn nhiều thể loại cùng lúc. Không chọn gì là xem tất cả.
+• Tìm kiếm: nút Huỷ nằm ngay trong ô tìm.
+• Kệ list cộng đồng giờ có cả list công khai của bạn.
+• Local guide dùng iOS 18 có thể để máy chấm ảnh của địa điểm trên thang 10, kèm lý do.
+```
+
+### JA
+
+```
+• リストに説明カードと、含まれるスポットの種類のチップが付きました。タップで絞り込めます。
+• リストからそのままプランを作れます。
+• 探索：カテゴリーを複数同時に選べます。何も選ばなければすべて表示。
+• 検索：キャンセルは検索ボックスの中に。
+• みんなのリストに、あなたの公開リストも並びます。
+• iOS 18のローカルガイドは、スポットの写真を端末で10点満点で採点し、理由も確認できます。
+```
+
 ## Release notes v1.0.10 (What's New)
 
 Viết từ các PR merge sau build 1.0.9 (35) — #976 → #1117. Build 36 (từ
@@ -629,44 +669,62 @@ cấu trúc code), docs, test.
 • 修正：サインイン後、途中だった操作をそのまま続けられます。
 ```
 
-## Release notes v1.0.9 (What's New)
+## Release notes v1.0.11 (What's New)
 
-Viết từ các PR merge sau build 1.0.8 (33) — #918 → #959. Bản này phải build mới
-vì có native module mới (`modules/photo-score`, Apple Vision); EAS Update
-không mang được nó. Chấm ảnh chỉ dành cho local guide và editor, trên iOS 18
-trở lên. Không có mặt ở đây: write-blurb (server, Data Desk), test.
+Viết từ các PR merge sau bản dựng lại 1.0.10 (main 82b46ce) — #1118, #1120 →
+#1159. Bản này bắt buộc phải build mới: #1159 nâng Expo SDK 58 (React Native
+0.88, gesture-handler 3, `Swipeable` của v2 được vendor vào
+`src/components/Swipeable.tsx`), và `runtimeVersion` theo `sdkVersion` nên
+binary SDK 57 không nhận EAS Update của main nữa. Cần thử trên máy: chấm ảnh
+(Vision), bản đồ, vuốt thẻ, đăng nhập/đăng xuất. Không có mặt ở đây: review
+status phía Data Desk (#1152 chỉ phần app hiện ra), docs, test.
 
 ### EN
 
 ```
-• Lists describe themselves: a description card, and chips for the kinds of places a list holds. Tap any to narrow the list.
-• Plan a trip straight from a list.
-• Explore: pick several categories at once. Choose none to see everything.
-• Searching: Cancel sits inside the search box.
-• The community shelf now shows your own public lists too.
-• Local guides on iOS 18 can have the phone score a place's photos out of ten, with the reasons.
+• Collections can be viewed as a grid, three to a row. Hold a tile to drag it into place.
+• Add places to one of your collections straight from Search: tap ⊕ on any place. The bar at the top shows the list and how many places it holds.
+• Search looks in every city at once, with a chip for each city and its count. "sai gon" finds "Saigon".
+• Places only you can see say Pending or In review.
+• Pull down on a collection to refresh it.
+• Ticks in the save sheet move the moment you tap them.
+• Photo gallery: deleting a photo or choosing a cover shows at once.
+• Signing out on one device no longer signs you out of the others.
+• Places Google lists as permanently closed no longer appear.
+• Place names read better in Japanese and Chinese.
+• Fixed: the place page could close after you deleted photos.
 ```
 
 ### VI
 
 ```
-• List có thẻ mô tả và chip cho các loại địa điểm trong list. Chạm vào chip để lọc.
-• Lên kế hoạch ngay từ một list.
-• Khám phá: chọn nhiều thể loại cùng lúc. Không chọn gì là xem tất cả.
-• Tìm kiếm: nút Huỷ nằm ngay trong ô tìm.
-• Kệ list cộng đồng giờ có cả list công khai của bạn.
-• Local guide dùng iOS 18 có thể để máy chấm ảnh của địa điểm trên thang 10, kèm lý do.
+• Xem bộ sưu tập dạng lưới, ba ô một hàng. Giữ một ô để kéo đổi chỗ.
+• Thêm địa điểm vào bộ sưu tập ngay từ Tìm kiếm: chạm ⊕ trên địa điểm bất kỳ. Thanh trên cùng ghi tên bộ sưu tập và số địa điểm.
+• Tìm kiếm trong mọi thành phố cùng lúc, mỗi thành phố một chip kèm số kết quả. Gõ "sai gon" cũng ra "Saigon".
+• Địa điểm chỉ bạn thấy được ghi Chờ duyệt hoặc Đang xem lại.
+• Kéo xuống trong bộ sưu tập để tải lại.
+• Dấu tick trong bảng lưu đổi ngay khi chạm.
+• Thư viện ảnh: xoá ảnh hay chọn ảnh bìa hiện ra ngay.
+• Đăng xuất trên một máy không còn đăng xuất các máy khác.
+• Địa điểm Google ghi đã đóng cửa vĩnh viễn không còn hiện.
+• Tên địa điểm bằng tiếng Nhật và tiếng Trung tự nhiên hơn.
+• Sửa lỗi: trang địa điểm có thể bị đóng sau khi xoá ảnh.
 ```
 
 ### JA
 
 ```
-• リストに説明カードと、含まれるスポットの種類のチップが付きました。タップで絞り込めます。
-• リストからそのままプランを作れます。
-• 探索：カテゴリーを複数同時に選べます。何も選ばなければすべて表示。
-• 検索：キャンセルは検索ボックスの中に。
-• みんなのリストに、あなたの公開リストも並びます。
-• iOS 18のローカルガイドは、スポットの写真を端末で10点満点で採点し、理由も確認できます。
+• コレクションをグリッド表示（1行に3つ）で見られます。タイルを長押しして並べ替えできます。
+• 検索から直接コレクションにスポットを追加：スポットの ⊕ をタップ。上部のバーにコレクション名とスポット数を表示します。
+• すべての都市をまとめて検索。都市ごとのチップに件数を表示します。「sai gon」でも「Saigon」が見つかります。
+• 自分だけに見えるスポットには「審査待ち」または「再確認中」と表示されます。
+• コレクションを下に引いて更新できます。
+• 保存シートのチェックはタップした瞬間に切り替わります。
+• 写真ギャラリー：写真の削除やカバーの選択がすぐに反映されます。
+• ある端末でサインアウトしても、他の端末はサインアウトされなくなりました。
+• Googleで閉業と表示されたスポットは表示されなくなりました。
+• 日本語・中国語のスポット名がより自然になりました。
+• 修正：写真を削除した後にスポットページが閉じることがありました。
 ```
 
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
