@@ -20,7 +20,7 @@ import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
 import { Alert, Keyboard } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
@@ -1053,20 +1053,86 @@ describe('CollectionsScreen — search', () => {
   });
 
   // A chip is an answer; the keyboard asks for words. Tapped, it puts the
-  // keyboard away and leaves the panel up, so the box is one tap away.
-  it('a chip puts the keyboard away and keeps the panel open', () => {
-    state.places = [cafe('a'), bar('c')];
-    state.cols.data = [col('one', ['a']), col('two', ['c'])];
+  // keyboard away and folds the panel down to what it chose (owner, 24 Oct
+  // 2026: the panel stood over the shelf, and Cancel was the only way out).
+  it('a chip puts the keyboard away and folds the panel to the chips that are on', () => {
+    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
+    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
     const dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
     show();
+    expect(screen.queryByTestId('collections-chosen')).toBeNull();
     open();
+    // In the panel a chip is a choice, with no ✕: tapped, it is chosen.
+    expect(screen.getByRole('button', { name: 'Cafés' }).querySelector('[data-icon="close"]')).toBeNull();
     const blur = vi.spyOn(box(), 'blur');
     fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
     expect(dismiss).toHaveBeenCalledTimes(1);
     expect(blur).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('collections-panel')).toBeNull();
+    // What it chose stays in sight, said as removable, and so does Cancel.
+    const chosen = within(screen.getByTestId('collections-chosen'));
+    const cafes = chosen.getByRole('button', { name: 'Cafés' });
+    expect(cafes.getAttribute('aria-selected')).toBe('true');
+    expect(cafes.querySelector('[data-icon="close"]')).toBeTruthy();
+    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
+    expect(screen.getByText('Hanoi cafés')).toBeTruthy();
+    expect(screen.queryByText('Da Nang bars')).toBeNull();
+    // The box opens the panel again for a second choice, city first.
+    open();
     expect(screen.getByTestId('collections-panel')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Cafés' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByTestId('collections-chosen')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'hanoi' }));
+    const both = within(screen.getByTestId('collections-chosen')).getAllByRole('button').map((b) => b.textContent);
+    expect(both).toEqual(['hanoi', 'Cafés']);
+    // Each lets go of its own choice and nothing else; the row goes with
+    // the last of them, and Cancel with it.
+    fireEvent.click(within(screen.getByTestId('collections-chosen')).getByRole('button', { name: 'Cafés' }));
+    expect(screen.getByText('Hanoi cafés')).toBeTruthy();
+    expectSub('1 collection · hanoi');
+    fireEvent.click(within(screen.getByTestId('collections-chosen')).getByRole('button', { name: 'hanoi' }));
+    expect(screen.queryByTestId('collections-chosen')).toBeNull();
+    expect(screen.queryByTestId('collections-cancel')).toBeNull();
+    expect(screen.getByText('Da Nang bars')).toBeTruthy();
     dismiss.mockRestore();
+  });
+
+  // Dragging the shelf is asking to read it: the panel folds, and what it
+  // chose stays. React Native Web never fires a drag, so the list's own
+  // handler is called, found the way CollectionDetail's tests find theirs.
+  it('folds the panel when the shelf is dragged, and keeps what it chose', () => {
+    state.places = [cafe('a'), bar('c')];
+    state.cols.data = [col('one', ['a']), col('two', ['c'])];
+    show();
+    const drag = () => {
+      const key = Object.keys(box()).find((k) => k.startsWith('__reactFiber'))!;
+      type Fiber = { memoizedProps?: Record<string, unknown>; child?: Fiber; sibling?: Fiber; return?: Fiber };
+      let top = (box() as unknown as Record<string, Fiber>)[key];
+      while (top.return) top = top.return;
+      const stack: Fiber[] = [top];
+      while (stack.length) {
+        const fb = stack.pop()!;
+        const p = fb.memoizedProps;
+        if (p && typeof p.onScrollBeginDrag === 'function' && 'sections' in p) {
+          act(() => { (p.onScrollBeginDrag as () => void)(); });
+          return;
+        }
+        if (fb.sibling) stack.push(fb.sibling);
+        if (fb.child) stack.push(fb.child);
+      }
+      throw new Error('no list');
+    };
+    // At rest a drag is only a drag.
+    drag();
+    expect(screen.queryByTestId('collections-panel')).toBeNull();
+    open();
+    type('one');
+    drag();
+    expect(screen.queryByTestId('collections-panel')).toBeNull();
+    // Nothing chosen: no row; the words are still in the box, and Cancel
+    // is still the way to let them go.
+    expect(screen.queryByTestId('collections-chosen')).toBeNull();
+    expect(box().value).toBe('one');
+    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
   });
 
   // ── the panel ──
@@ -1100,6 +1166,7 @@ describe('CollectionsScreen — search', () => {
     show();
     open();
     fireEvent.click(screen.getByRole('button', { name: 'hanoi' }));
+    open();
     fireEvent.click(screen.getByRole('button', { name: 'Nightlife' }));
     // The words land on the first list's title, but the chip asks about
     // places, and it has no bar — and under words the miss names them.
@@ -1194,6 +1261,7 @@ describe('CollectionsScreen — search', () => {
       expect(JSON.parse((await AsyncStorage.getItem('citycrew.recentCollectionSearches')) ?? '[]')).toEqual(['coffee', 'rooftops']);
     });
     // Offered narrowed by what is typed, never the word already in the box.
+    open();
     expect(screen.queryByText('Suggestions')).toBeNull();
     type('');
     expect(screen.getByRole('button', { name: 'coffee' })).toBeTruthy();

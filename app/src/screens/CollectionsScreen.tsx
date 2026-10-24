@@ -678,9 +678,9 @@ export default function CollectionsScreen({ navigation, route }: {
   // meanwhile grown a box under its title with a panel of chips behind
   // it, and a reader who had learned that screen looked for the same
   // thing here. So this is that box, with that panel — recent searches,
-  // then the cities, then the kinds of place — opened by focus and closed
-  // by Cancel, for the reasons VisitedScreen gives at length. One city
-  // and one kind at a time, a chosen chip tapped again lets go.
+  // then the cities, then the kinds of place — opened by focus, folded by
+  // a choice (see `answered`) and let go of by Cancel. One city and one
+  // kind at a time, a chosen chip tapped again lets go.
   //
   // What the panel adds that the words could not: a chip asks about the
   // *places* in a list. Under "Cafés" a list is listed for the cafés in
@@ -703,12 +703,23 @@ export default function CollectionsScreen({ navigation, route }: {
     Keyboard.dismiss();
   };
   // A chip is an answer, and the keyboard asks for words. Tapped, it
-  // puts the keyboard away and leaves the panel up (the panel closes on
-  // Cancel, not on blur — see VisitedScreen): the reader sees the shelf
-  // the chip just narrowed, and the box is one tap away if words are
-  // still wanted. Before this the keyboard stood over the results of
-  // every chip (the owner, 14 Oct 2026).
-  const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); };
+  // puts the keyboard away (the owner, 14 Oct 2026: the keyboard stood
+  // over the results of every chip) — and since 24 Oct the panel folds
+  // with it, down to the chips that are on.
+  //
+  // It used to stay up until Cancel, for the reason VisitedScreen gives:
+  // closing it on a blur would take the chips out from under the reader
+  // mid-choice. Here that left the reader with no way to read the shelf.
+  // The panel is not in the list, as VisitedScreen's is, so it does not
+  // scroll away; with seven cities and nine kinds it stood over all but
+  // a fifth of the screen, and the only way out was Cancel, which let go
+  // of the chips it was meant to keep (the owner's screenshot, 24 Oct
+  // 2026). Folded, the chosen chips stay in sight under the box — each
+  // with its ✕, so a filter is never one nobody can see — the shelf gets
+  // the screen, and the box opens the panel again for a second choice.
+  // Dragging the shelf folds it too: that is the reader asking to read.
+  const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); setPanel(false); };
+  const fold = () => { if (panel) answered(); };
 
   // What this box remembered, in its own drawer — the visits screen's
   // mechanism, for its reasons: kept when a search *worked* (a card
@@ -912,9 +923,34 @@ export default function CollectionsScreen({ navigation, route }: {
               // the @ anyway. No "or": a list of four needs no conjunction
               // to be read as one.
               placeholder={t('Name, place, city, user', 'Tên, địa điểm, thành phố, người dùng', '名前・スポット・都市・ユーザー', '名称、地点、城市、用户', '名稱、地點、城市、使用者')}
-              // Inside the box, while the panel is up — see `SearchField`.
-              cancel={{ shown: panel, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
+              // Inside the box, while the panel is up or anything it chose
+              // is still on — see `SearchField`.
+              cancel={{ shown: panel || asked, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
             />
+          </View>
+        )}
+        {/* The panel, folded: only what it chose, each a tap from gone.
+            City before kind, the panel's own order. */}
+        {!holding && !panel && (cityPick || kind) && (
+          <View style={s.chosen} testID="collections-chosen">
+            {cityPick && (
+              <Chip
+                label={cityName(cityPick)}
+                active
+                remove={t('Removes this filter', 'Bỏ bộ lọc này', 'このフィルターを外す', '移除此筛选', '移除此篩選')}
+                onPress={() => setCityPick(null)}
+              />
+            )}
+            {kind && (
+              <Chip
+                label={categoryLabel(kind, t)}
+                icon={CATEGORIES[kind]?.icon}
+                iconColor={CATEGORIES[kind]?.color}
+                active
+                remove={t('Removes this filter', 'Bỏ bộ lọc này', 'このフィルターを外す', '移除此筛选', '移除此篩選')}
+                onPress={() => setKind(null)}
+              />
+            )}
           </View>
         )}
         {!holding && panel && (
@@ -1020,6 +1056,7 @@ export default function CollectionsScreen({ navigation, route }: {
             sections={sections}
             keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
             onScroll={duckScroll}
+            onScrollBeginDrag={fold}
             scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={<GuestNotice navigation={navigation} />}
@@ -1647,6 +1684,8 @@ const s = StyleSheet.create({
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
+  // Under the box, where the panel was, with the box's own margins.
+  chosen: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, marginHorizontal: space.page, marginBottom: 14 },
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {

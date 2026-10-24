@@ -65,7 +65,7 @@ export function PressableScale({ children, style, contentStyle, anchorRef, hapti
   );
 }
 
-export function Chip({ label, count, active, onPress, icon, iconColor, testID }: {
+export function Chip({ label, count, active, onPress, icon, iconColor, testID, remove }: {
   label: string;
   /** How many the chip stands for, after its word in brackets and the
    *  tertiary ink, as a rating's review count is: "Hà Nội (6)". Search's
@@ -81,6 +81,11 @@ export function Chip({ label, count, active, onPress, icon, iconColor, testID }:
    *  so selection must not repaint it. */
   icon?: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
+  /** For a chip whose tap takes its choice away: what VoiceOver says the
+   *  tap does, and a ✕ after the label for everyone else. A chosen filter
+   *  shown on its own, away from the choices it came from, reads as a
+   *  label without one — nothing says a tap lets it go. */
+  remove?: string;
 }) {
   return (
     // A chip is read as a button, and says whether it is chosen, only when
@@ -97,6 +102,7 @@ export function Chip({ label, count, active, onPress, icon, iconColor, testID }:
       contentStyle={[s.chip, onPress && s.chipTap, active && s.chipOn]}
       accessibilityRole={onPress ? 'button' : undefined}
       aria-selected={onPress ? !!active : undefined}
+      accessibilityHint={remove}
       testID={testID}
     >
       {icon ? <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} /> : null}
@@ -104,6 +110,7 @@ export function Chip({ label, count, active, onPress, icon, iconColor, testID }:
         {label}
         {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
       </Text>
+      {remove ? <Ionicons name="close" size={14} color={active ? colors.accent : colors.textTertiary} /> : null}
     </PressableScale>
   );
 }
