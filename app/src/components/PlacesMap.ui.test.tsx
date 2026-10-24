@@ -256,6 +256,42 @@ describe('PlacesMap', () => {
       }
     });
 
+    // Two doors of one building, half a metre apart (27 Trần Bình Trọng):
+    // no zoom parts them, so a tap that zoomed landed on the same bubble
+    // for ever. It shows them instead.
+    const DOORS = [place('donau', 21.02455, 105.84556), place('coeur', 21.024554, 105.845562)];
+
+    it('chooses the first of a bubble whose places stand on one spot, rather than zooming', () => {
+      const onSelect = vi.fn();
+      render(<PlacesMap places={DOORS} selectedSlug={null} onSelect={onSelect} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      zoomIn();
+      expect(markers()).toHaveLength(1);
+      expect(markers()[0].getAttribute('data-label')).toBe('2 places at one address, show them');
+      spies.fitToCoordinates.mockClear();
+      fireEvent.click(markers()[0]);
+      expect(onSelect).toHaveBeenCalledWith('donau');
+      expect(spies.fitToCoordinates).not.toHaveBeenCalled();
+    });
+
+    // The chosen pin is drawn on top, so the place under it can only be
+    // reached through it: a tap on the chosen pin steps along the spot.
+    it('steps to the next place on the spot when the chosen pin is tapped, and round again', () => {
+      const onSelect = vi.fn();
+      const view = render(<PlacesMap places={DOORS} selectedSlug="donau" onSelect={onSelect} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      fireEvent.click(document.querySelector('[data-slug="donau"]')!);
+      expect(onSelect).toHaveBeenLastCalledWith('coeur');
+      view.rerender(<PlacesMap places={DOORS} selectedSlug="coeur" onSelect={onSelect} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      fireEvent.click(document.querySelector('[data-slug="coeur"]')!);
+      expect(onSelect).toHaveBeenLastCalledWith('donau');
+    });
+
+    it('keeps a chosen pin chosen when nothing else stands on its spot', () => {
+      const onSelect = vi.fn();
+      render(<PlacesMap places={CLOSE} selectedSlug="b" onSelect={onSelect} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      fireEvent.click(document.querySelector('[data-slug="b"]')!);
+      expect(onSelect).toHaveBeenLastCalledWith('b');
+    });
+
     it('says the count out loud, and does not report a bubble as a place', () => {
       const onSelect = vi.fn();
       render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={onSelect} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);

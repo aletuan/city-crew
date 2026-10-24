@@ -1,0 +1,112 @@
+diff --git a/node_modules/react-native-maps/ios/AirGoogleMaps/AIRGoogleMapMarker.m b/node_modules/react-native-maps/ios/AirGoogleMaps/AIRGoogleMapMarker.m
+index 2102e49..32c60a7 100644
+--- a/node_modules/react-native-maps/ios/AirGoogleMaps/AIRGoogleMapMarker.m
++++ b/node_modules/react-native-maps/ios/AirGoogleMaps/AIRGoogleMapMarker.m
+@@ -17,6 +17,56 @@
+ #import "AIRGoogleMapCallout.h"
+ #import "AIRDummyView.h"
+ 
++// ── City Crew patch (patches/react-native-maps+1.29.11.patch) ──
++//
++// `image` and `icon` load through `[RCTBridge currentBridge]`'s ImageLoader.
++// On React Native 0.88 there is no legacy bridge: `+currentBridge` is a stub
++// that returns nil, so the lookup came back nil, no load ever started, and
++// every marker drawn from a picture was an empty 0x0 view — invisible, and
++// not even Google's default pin (seen on the 1.0.11 build, 24 Oct 2026).
++//
++// With no loader, read the bytes ourselves. A required asset resolves to a
++// file URL (the app bundle, or expo-updates' directory after an update) or,
++// in development, to Metro's http URL; both read with NSData, off the main
++// thread. The scale is the screen's because `Image.resolveAssetSource`
++// already chose the file drawn for this screen — the same scale the loader
++// was asked for — so a hashed file name with no `@3x` in it still comes out
++// the right size. `RCTImageFromLocalAssetURL` covers what has no file of its
++// own, an asset compiled into a catalog.
++static RCTImageLoaderCancellationBlock AIRGoogleLoadImage(NSString *src, CGSize size, RCTImageLoaderCompletionBlock done)
++{
++    NSURLRequest *request = [RCTConvert NSURLRequest:src];
++    id<RCTImageLoaderProtocol> loader = [[RCTBridge currentBridge] moduleForName:@"ImageLoader"];
++    if (loader) {
++        return [loader loadImageWithURLRequest:request
++                                          size:size
++                                         scale:RCTScreenScale()
++                                       clipped:YES
++                                    resizeMode:RCTResizeModeCenter
++                                 progressBlock:nil
++                              partialLoadBlock:nil
++                               completionBlock:done];
++    }
++    NSURL *url = request.URL;
++    CGFloat scale = RCTScreenScale();
++    __block BOOL cancelled = NO;
++    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
++        NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
++        UIImage *image = data ? [UIImage imageWithData:data scale:scale] : nil;
++        if (!image && url) {
++            image = RCTImageFromLocalAssetURL(url);
++        }
++        if (cancelled) {
++            return;
++        }
++        NSError *error = image ? nil : RCTErrorWithMessage([NSString stringWithFormat:@"Could not load marker image %@", src]);
++        done(error, image);
++    });
++    return ^{
++        cancelled = YES;
++    };
++}
++
+ CGRect unionRect(CGRect a, CGRect b) {
+     return CGRectMake(
+                       MIN(a.origin.x, b.origin.x),
+@@ -374,14 +424,7 @@ CGRect unionRect(CGRect a, CGRect b) {
+     }
+     __weak AIRGoogleMapMarker* weakSelf = self;
+ 
+-    _reloadImageCancellationBlock = [[[RCTBridge currentBridge] moduleForName:@"ImageLoader"] loadImageWithURLRequest:[RCTConvert NSURLRequest:_imageSrc]
+-                                                                                               size:self.bounds.size
+-                                                                                              scale:RCTScreenScale()
+-                                                                                            clipped:YES
+-                                                                                         resizeMode:RCTResizeModeCenter
+-                                                                                      progressBlock:nil
+-                                                                                   partialLoadBlock:nil
+-                                                                                    completionBlock:^(NSError *error, UIImage *image) {
++    _reloadImageCancellationBlock = AIRGoogleLoadImage(_imageSrc, self.bounds.size, ^(NSError *error, UIImage *image) {
+         if (error) {
+             // TODO(lmr): do something with the error?
+             NSLog(@"%@", error);
+@@ -422,7 +465,7 @@ CGRect unionRect(CGRect a, CGRect b) {
+             [strongSelf layoutSubviews];
+             [strongSelf.realMarker setIconView:strongSelf.iconView];
+         });
+-    }];
++    });
+ }
+ 
+ - (void)setIconSrc:(NSString *)iconSrc
+@@ -441,15 +484,7 @@ CGRect unionRect(CGRect a, CGRect b) {
+         _realMarker.icon = emptyImage;
+     }
+ 
+-    _reloadImageCancellationBlock =
+-    [[[RCTBridge currentBridge] moduleForName:@"ImageLoader"] loadImageWithURLRequest:[RCTConvert NSURLRequest:_iconSrc]
+-                                                               size:self.bounds.size
+-                                                              scale:RCTScreenScale()
+-                                                            clipped:YES
+-                                                         resizeMode:RCTResizeModeCenter
+-                                                      progressBlock:nil
+-                                                   partialLoadBlock:nil
+-                                                    completionBlock:^(NSError *error, UIImage *image) {
++    _reloadImageCancellationBlock = AIRGoogleLoadImage(_iconSrc, self.bounds.size, ^(NSError *error, UIImage *image) {
+         if (error) {
+             // TODO(lmr): do something with the error?
+             NSLog(@"%@", error);
+@@ -458,7 +493,7 @@ CGRect unionRect(CGRect a, CGRect b) {
+             self->_iconImage = image;
+             self->_realMarker.icon = image;
+         });
+-    }];
++    });
+ }
+ 
+ - (void)setTitle:(NSString *)title {

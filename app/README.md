@@ -55,6 +55,14 @@ Cài **Expo Go** (App Store / Play Store) rồi quét QR.
 > bản TestFlight/App Store cũ đứng yên ở update cuối của SDK cũ cho tới
 > khi binary mới được duyệt. Chạy *Release app to TestFlight* ngay sau khi
 > merge.
+>
+> **`patches/` là sửa native, đi kèm `npm ci`.** `postinstall` chạy
+> `patch-package`. Hiện có một bản vá: `react-native-maps` 1.29.11 tải ảnh
+> pin qua `RCTBridge currentBridge`, mà trên React Native 0.88 luôn là
+> `nil`, nên pin trên bản đồ (Explore và bản đồ nhỏ ở trang địa điểm) vô
+> hình trên iOS. Sửa bản vá là sửa native: phải có binary mới.
+> `scripts/patches.test.ts` đỏ khi nâng thư viện mà bản vá không còn khớp —
+> lúc đó xem bản mới đã sửa chưa trước khi vá lại.
 
 **Cách 2 — không cần máy tính (qua GitHub Actions):**
 

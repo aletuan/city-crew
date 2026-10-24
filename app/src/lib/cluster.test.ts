@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES, CATEGORY_ORDER } from './categories';
-import { clusterPins, clusterSize, clusterSkin, type ClusterPoint } from './cluster';
+import { clusterPins, clusterSize, clusterSkin, metresApart, oneSpot, STACK_M, stackAt, type ClusterPoint } from './cluster';
 
 const p = (slug: string, lat: number, lng: number): ClusterPoint => ({ slug, lat, lng });
 
@@ -152,5 +152,62 @@ describe('a bubble is not a kind of place', () => {
     };
     expect(lightness(clusterSkin(9).fill)).toBeGreaterThan(lightness(clusterSkin(10).fill));
     expect(lightness(clusterSkin(10).fill)).toBeGreaterThan(lightness(clusterSkin(100).fill));
+  });
+});
+
+// Two doors of one building, the pair that turned up on the phone: 0.5 m
+// apart at 27 Trần Bình Trọng, which no zoom draws apart.
+const DONAU = p('donau', 21.02455, 105.84556);
+const COEUR = p('coeur', 21.024554, 105.845562);
+// 37 m down Ngõ Hội Vũ: two places that do come apart.
+const RUSH = p('rush', 21.0282059, 105.8449146);
+const REO = p('reo', 21.028429, 105.8451741);
+
+describe('metresApart', () => {
+  it('measures a street-sized gap to within a metre', () => {
+    expect(metresApart(RUSH, REO)).toBeGreaterThan(36);
+    expect(metresApart(RUSH, REO)).toBeLessThan(38);
+  });
+
+  it('shrinks a degree of longitude by the latitude', () => {
+    // A thousandth of a degree east, at the equator and at 60°.
+    expect(metresApart({ lat: 0, lng: 0 }, { lat: 0, lng: 0.001 })).toBeCloseTo(111.32, 1);
+    expect(metresApart({ lat: 60, lng: 0 }, { lat: 60, lng: 0.001 })).toBeCloseTo(55.66, 1);
+  });
+});
+
+describe('oneSpot', () => {
+  it('is true for places standing within a doorway of each other', () => {
+    expect(metresApart(DONAU, COEUR)).toBeLessThan(1);
+    expect(oneSpot([DONAU, COEUR])).toBe(true);
+  });
+
+  it('is false once any pair is further apart than the deepest zoom can hold', () => {
+    expect(oneSpot([RUSH, REO])).toBe(false);
+    // Every pair, not only each against the first.
+    const east = p('east', 21.02455, 105.84556 + 5 / (111_320 * Math.cos((21.02455 * Math.PI) / 180)));
+    const west = p('west', 21.02455, 105.84556 - 5 / (111_320 * Math.cos((21.02455 * Math.PI) / 180)));
+    expect(metresApart(DONAU, east)).toBeLessThanOrEqual(STACK_M);
+    expect(metresApart(DONAU, west)).toBeLessThanOrEqual(STACK_M);
+    expect(oneSpot([DONAU, east, west])).toBe(false);
+  });
+
+  it('is true of a lone place and of none', () => {
+    expect(oneSpot([RUSH])).toBe(true);
+    expect(oneSpot([])).toBe(true);
+  });
+});
+
+describe('stackAt', () => {
+  it('names every place on this one\'s spot, itself included, in the order given', () => {
+    expect(stackAt([RUSH, COEUR, REO, DONAU], 'donau')).toEqual(['coeur', 'donau']);
+  });
+
+  it('is the place alone where nothing stands on it', () => {
+    expect(stackAt([RUSH, REO, DONAU], 'rush')).toEqual(['rush']);
+  });
+
+  it('is empty for a place that is not on the map', () => {
+    expect(stackAt([RUSH, REO], 'nowhere')).toEqual([]);
   });
 });
