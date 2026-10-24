@@ -242,10 +242,13 @@ describe('the cards', () => {
 
   // The rating is gone from the line: four facts under every stop, above a
   // sentence and a leg, made a card to read rather than one to choose.
-  it('prints each stop with its time and the leg out of it, and never the rating', () => {
+  // No hour either (owner, 24 Oct 2026): the card shows a plan's shape,
+  // and its timetable is the editor's.
+  it('prints each stop with the leg out of it, and neither its hour nor the rating', () => {
     renderScreen();
     expect(screen.getByText('Cộng Café')).toBeTruthy();
-    expect(screen.getByText('19:15')).toBeTruthy();
+    expect(screen.queryByText('18:00')).toBeNull();
+    expect(screen.queryByText('19:15')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
     expect(screen.getByText('350 m · ≈ 5 min')).toBeTruthy();
     expect(screen.getByText('4.2 km · ≈ 18 min')).toBeTruthy();
@@ -253,17 +256,17 @@ describe('the cards', () => {
     expect(document.querySelectorAll('[data-icon="car-outline"]')).toHaveLength(1);
   });
 
-  // The planner's 75 minutes, or whatever it chose, is printed only for a
-  // place that says how long people stay; and open or shut is read at the
-  // hour the plan arrives, on its own day, in the city's zone.
-  it('adds the dwell a place states and the closing time at arrival', () => {
+  // The line once added the stay a place states and its closing time at
+  // the plan's arrival. Both went with the hours (owner, 24 Oct 2026):
+  // the editor prints them, the card does not.
+  it('prints neither the stay nor the closing time, even for a place that states both', () => {
     const week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
       .map((d) => `${d}: 8:00 AM – 10:00 PM`);
     const timed = place('timed', 'Timed Café', { duration_min: 60, opening_hours: week } as Partial<Place>);
     planTrips.mockImplementation(() => [plan('match', [stop(timed, 18 * 60, 75)])]);
     renderScreen();
-    // One stop, one district: the heading names it and the line does not.
-    expect(screen.getByText('75 min · open until 22:00')).toBeTruthy();
+    expect(screen.getByText('Timed Café')).toBeTruthy();
+    expect(screen.queryByText(/75 min|open until|22:00/)).toBeNull();
   });
 
   // In Melbourne 59 of 66 places carry the council's "Melbourne City", and
@@ -308,11 +311,14 @@ describe('the cards', () => {
     const paws = [...document.querySelectorAll('[data-icon="paw"]')];
     // One apiece, and `FIRST` is three plans.
     expect(paws).toHaveLength(3);
-    // The mark sits in the dot column, whose neighbour is the arrival time.
-    const timeBeside = (el: Element) =>
-      el.parentElement?.parentElement?.previousElementSibling?.textContent;
-    expect(paws.map(timeBeside)).toEqual(['18:00', '18:00', '18:00']);
-    const later = screen.getByText('19:15').parentElement as HTMLElement;
+    // The mark sits in the dot column, whose neighbour is the stop it
+    // heads — each plan's first.
+    const stopBeside = (el: Element) =>
+      el.parentElement?.parentElement?.nextElementSibling?.textContent ?? '';
+    const firsts = ['Cộng Café', 'Temple of Literature', 'West Lake Walk'];
+    expect(paws.map((el) => firsts.find((n) => stopBeside(el).startsWith(n))).sort()).toEqual([...firsts].sort());
+    // Name → its lines → the body → the row.
+    const later = screen.getByText('Bún Chả Hương Liên').parentElement!.parentElement!.parentElement as HTMLElement;
     expect(later.querySelectorAll('[data-icon="paw"]')).toHaveLength(0);
   });
 
@@ -331,21 +337,23 @@ describe('the cards', () => {
 
   // No stop count: the rows are the stops. The spend shows only once the
   // price switch is on (#598); these two turn it on to pin the arithmetic.
-  it('summarises hours, distance and per-person spend, in thousands or millions', () => {
+  // No length either (owner, 24 Oct 2026), with the hours.
+  it('summarises distance and per-person spend, in thousands or millions', () => {
     appFlags.set('place_price', true);
     renderScreen();
-    expect(screen.getByText('~3h · 350 m · ~250k ₫')).toBeTruthy();
+    expect(screen.getByText('350 m · ~250k ₫')).toBeTruthy();
     // 900k + 200k + 30k.
-    expect(screen.getByText('~3h · 4.2 km · ~1.1M ₫')).toBeTruthy();
-    // No legs and nothing priced: distance and spend are left out, not zero.
-    expect(screen.getByText('~1.5h')).toBeTruthy();
+    expect(screen.getByText('4.2 km · ~1.1M ₫')).toBeTruthy();
+    // No legs and nothing priced: distance and spend are left out, not
+    // zero — and the plan's length, ~1.5h, is not printed at all.
+    expect(screen.queryByText(/~[\d.]+h/)).toBeNull();
   });
 
   // The default: the price has no home (#598), so the footer says the
-  // hours and the distance and keeps the sum to itself.
+  // distance and keeps the sum to itself.
   it('keeps the spend off the footer while the price switch is off', () => {
     renderScreen();
-    expect(screen.getByText('~3h · 350 m')).toBeTruthy();
+    expect(screen.getByText('350 m')).toBeTruthy();
     expect(screen.queryByText(/₫/)).toBeNull();
     expect(screen.queryByText(/\d stops? ·/)).toBeNull();
   });
@@ -356,7 +364,7 @@ describe('the cards', () => {
       plan('match', [stop(CAFE, 18 * 60)], { costVnd: { food: 1_000_000, activity: 0, transport: 0 } }),
     ]);
     renderScreen();
-    expect(screen.getByText('~1h · ~1M ₫')).toBeTruthy();
+    expect(screen.getByText('~1M ₫')).toBeTruthy();
   });
 
   it('drops a leg nobody measured rather than guessing one', () => {
@@ -365,7 +373,8 @@ describe('the cards', () => {
     ]);
     renderScreen();
     expect(screen.queryByText(/≈/)).toBeNull();
-    expect(screen.getByText('~2.5h')).toBeTruthy();
+    // And nothing stands in for it: the foot has no distance to print.
+    expect(screen.queryByText(/km|\d m\b/)).toBeNull();
   });
 
   it('heads a card with its areas when no model has named it', () => {
@@ -618,8 +627,9 @@ describe('the picture on each card', () => {
     stop(place('a', 'Pictured A', { place_photos: [photo('https://img/a.jpg')] } as Partial<Place>), 18 * 60),
     stop(place('b', 'Pictured B', { place_photos: [photo('https://img/b.jpg')] } as Partial<Place>), 19 * 60),
   ], { legs: [{ mode: 'walk', km: 0.2, minutes: 3 }] });
-  /** Class lists of the two stop times, which carry the mark. */
-  const times = () => ['18:00', '19:00'].map((h) => screen.getByText(h).className);
+  /** Class lists of the two stop names, which carry the mark now that
+   *  the card prints no hours. */
+  const names = () => ['Pictured A', 'Pictured B'].map((n) => screen.getByText(n).className);
   const galleryProps = () => {
     type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
     const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
@@ -646,10 +656,10 @@ describe('the picture on each card', () => {
     expect(galleryProps().aspectRatio).toBe(2.2);
     expect(container.querySelector('img[src="https://img/a.jpg"]')).toBeTruthy();
     expect(container.querySelector('img[src="https://img/b.jpg"]')).toBeTruthy();
-    const [first, second] = times();
+    const [first, second] = names();
     expect(first).not.toBe(second);
     act(() => galleryProps().onPage(1));
-    expect(times()).toEqual([second, first]);
+    expect(names()).toEqual([second, first]);
   });
 
   // The picture stands beside the card's button, not inside it, so that a
@@ -666,7 +676,7 @@ describe('the picture on each card', () => {
   it('marks no row when no stop has a picture', () => {
     renderScreen();
     expect(document.querySelector('[data-testid="plan-gallery"]')).toBeNull();
-    const [a, b] = [screen.getAllByText('18:00')[0], screen.getByText('19:15')].map((el) => el.className);
+    const [a, b] = [screen.getByText('Cộng Café'), screen.getByText('Bún Chả Hương Liên')].map((el) => el.className);
     expect(a).toBe(b);
   });
 });

@@ -10,7 +10,7 @@
 //
 // ── what the two screens still decide ──
 //
-// The words. The meta line is `stopFacts`'s on the options card and
+// The words. The meta line is the district alone on the options card and
 // `summaryLine`'s on the saved trip; the sentence is the model's, with
 // its language mark where the saved trip knows one; whether the body
 // opens a place, and what VoiceOver calls that. All of it arrives as
@@ -20,7 +20,8 @@
 // ── the pair of marks ──
 //
 // When the picture above is this stop's, the hour takes the accent and
-// the name goes a weight heavier. Weight only, and nothing dimmed: fading
+// the name goes a weight heavier — the name alone on the options card,
+// which has no hours. Weight only, and nothing dimmed: fading
 // the other rows would make the itinerary harder to read to say
 // something about the carousel, and the itinerary is why the screen
 // exists. Semibold to bold is a small shift on purpose — findable when
@@ -53,8 +54,10 @@ export default function StopRow({
   time, here = false, first, last, land, name, gone, meta, why, whyLang, whyLines, nameLines, leg,
   onPress, pressLabel, style, timeTestID,
 }: {
-  /** The arrival, already formatted; null prints a dash. */
-  time: string | null;
+  /** The arrival, already formatted; null prints a dash. Left out, the
+   *  row has no hour column at all — the options card, which shows the
+   *  shape of a plan and not its timetable (owner, 24 Oct 2026). */
+  time?: string | null;
   /** For the smoke flows, which read a stop's hour back by id. */
   timeTestID?: string;
   /** Whether the picture above is this stop's. */
@@ -101,7 +104,9 @@ export default function StopRow({
   );
   return (
     <View style={[s.row, !last && s.gap, style]}>
-      <Text style={[s.time, here && s.timeHere]} testID={timeTestID}>{time ?? '—'}</Text>
+      {time !== undefined && (
+        <Text style={[s.time, here && s.timeHere]} testID={timeTestID}>{time ?? '—'}</Text>
+      )}
       <RailColumn first={first} last={last} land={land} />
       <View style={s.body}>
         {onPress
