@@ -30,6 +30,10 @@
 -- refused, because the two are different sentences on the phone — "you
 -- have searched enough today" is untrue of a reader who searched twice.
 --
+-- Each row also keeps the two numbers it was last judged by, so the desk
+-- can say "412 of 60" without a copy of the function's constants that
+-- could drift from them: the counter is its own record of the rules.
+--
 -- ── why a function and not a policy ──
 --
 -- The same as `plan_assist_guest_calls` (20261001090000_guest_narration):
@@ -42,6 +46,9 @@ create table public.fetch_place_calls (
   user_id uuid not null,
   action text not null check (action in ('search', 'reverse')),
   n integer not null default 0 check (n >= 0),
+  -- Null for an editor, who has no allowance of their own.
+  user_cap integer,
+  day_cap integer not null,
   primary key (day, user_id, action)
 );
 
@@ -78,10 +85,10 @@ declare
 begin
   delete from public.fetch_place_calls where day < current_date - 7;
 
-  insert into public.fetch_place_calls (day, user_id, action, n)
-  values (current_date, p_user, p_action, 1)
+  insert into public.fetch_place_calls (day, user_id, action, n, user_cap, day_cap)
+  values (current_date, p_user, p_action, 1, p_user_cap, p_day_cap)
   on conflict (day, user_id, action) do update
-    set n = public.fetch_place_calls.n + 1
+    set n = public.fetch_place_calls.n + 1, user_cap = excluded.user_cap, day_cap = excluded.day_cap
   returning n into mine;
 
   select coalesce(sum(n), 0)::integer into total
@@ -104,3 +111,42 @@ begin
     grant execute on function public.fetch_place_allowed(uuid, text, integer, integer) to service_role;
   end if;
 end $$;
+
+-- ── what the desk is told ──
+--
+-- The owner asked (24 Oct 2026) for the desk to warn when an allowance is
+-- passed. It reads the week the table keeps: every day's total against
+-- the cap it ran under, and every account that went past its own. Rows
+-- with `n` over `user_cap` are exactly the accounts that were refused at
+-- least once — a refused call is counted, so `n - user_cap` is how many.
+--
+-- Definer, because the table is closed to every client; editor-gated
+-- inside the body, as `reports_queue` is, so the definer's reach cannot be
+-- borrowed. A reader who is not an editor gets null, not an error: the
+-- desk is the only caller, and it treats null as nothing to say.
+create or replace function public.fetch_place_usage()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case when public.is_editor() then jsonb_build_object(
+    'today', current_date,
+    'days', coalesce((
+      select jsonb_agg(d order by d.day desc) from (
+        select day, sum(n)::integer as total, max(day_cap) as cap
+          from public.fetch_place_calls group by day
+      ) d), '[]'::jsonb),
+    'over', coalesce((
+      select jsonb_agg(o order by o.day desc, o.n desc) from (
+        select c.day, c.user_id, p.handle, p.full_name, c.action, c.n, c.user_cap as cap
+          from public.fetch_place_calls c
+          left join public.profiles p on p.id = c.user_id
+         where c.user_cap is not null and c.n > c.user_cap
+      ) o), '[]'::jsonb)
+  ) end;
+$$;
+
+revoke all on function public.fetch_place_usage() from public, anon;
+grant execute on function public.fetch_place_usage() to authenticated;

@@ -44,6 +44,7 @@ const EMPTY_PROGRESS = {
 /** Every method on `api`, with the answer a quiet desk would give. */
 const API_DEFAULTS = {
   reports: async () => [],
+  fetchPlaceUsage: async () => null,
   markReport: async () => {},
   moderateCollection: async () => {},
   moderateProfile: async () => {},

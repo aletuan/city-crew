@@ -56,6 +56,17 @@ begin
     'an editor''s searches were not counted';
 end $$;
 
+-- ── each row keeps the numbers it was judged by ──
+do $$
+begin
+  assert (select (user_cap, day_cap) = (3, 100) from public.fetch_place_calls
+           where day = current_date and user_id = '00000000-0000-0000-0000-00000000000a' and action = 'search'),
+    'an account''s row does not keep the caps it was judged by';
+  assert (select user_cap is null and day_cap = 100 from public.fetch_place_calls
+           where day = current_date and user_id = '00000000-0000-0000-0000-0000000000ed' and action = 'search'),
+    'an editor''s row has an allowance of its own';
+end $$;
+
 -- ── the day's allowance, over every account ──
 do $$
 declare c uuid := '00000000-0000-0000-0000-00000000000c'; d uuid := '00000000-0000-0000-0000-00000000000d';
@@ -82,8 +93,9 @@ end $$;
 do $$
 declare x uuid := '00000000-0000-0000-0000-00000000000f';
 begin
-  insert into public.fetch_place_calls (day, user_id, action, n) values
-    (current_date - 8, x, 'search', 5), (current_date - 7, x, 'reverse', 5), (current_date - 1, x, 'search', 5);
+  insert into public.fetch_place_calls (day, user_id, action, n, user_cap, day_cap) values
+    (current_date - 8, x, 'search', 5, 3, 100), (current_date - 7, x, 'reverse', 5, 5, 100),
+    (current_date - 1, x, 'search', 5, 3, 100);
   perform public.fetch_place_allowed(x, 'reverse', 3, 1000);
   assert not exists (select 1 from public.fetch_place_calls where day = current_date - 8),
     'a row older than a week survived the sweep';
@@ -96,6 +108,54 @@ begin
     'today''s total counted another day''s rows';
 end $$;
 
+-- ── what the desk is told ──
+--
+-- Account a went past its own allowance today (4 of 3), and x yesterday
+-- (5 of 3); nobody else did — d was refused today, but by the day's cap,
+-- and is not an account over its own. The editor, uncapped, never is.
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-00000000000a', 'fp-looper@fp.test', '{}'),
+  ('00000000-0000-0000-0000-0000000000e1', 'fp-editor@fp.test', '{}')
+on conflict do nothing;
+insert into public.profiles (id, handle, full_name)
+values ('00000000-0000-0000-0000-00000000000a', 'fp_looper', 'Lớp Học')
+on conflict (id) do update set handle = excluded.handle, full_name = excluded.full_name;
+insert into public.editors (email) values ('fp-editor@fp.test') on conflict do nothing;
+
+do $$
+declare u jsonb;
+begin
+  assert not has_function_privilege('anon', 'public.fetch_place_usage()', 'execute'),
+    'fetch_place_usage is open to the signed-out';
+  assert has_function_privilege('authenticated', 'public.fetch_place_usage()', 'execute'),
+    'fetch_place_usage is closed to the desk';
+
+  set local role rls_client;
+  set local test.uid = '00000000-0000-0000-0000-00000000000a';
+  set local test.jwt = '{"email": "fp-looper@fp.test"}';
+  assert public.fetch_place_usage() is null, 'a reader who is not an editor was told the usage';
+
+  set local test.uid = '00000000-0000-0000-0000-0000000000e1';
+  set local test.jwt = '{"email": "fp-editor@fp.test"}';
+  u := public.fetch_place_usage();
+  assert (u->>'today')::date = current_date, 'the usage does not say which day is today';
+  assert u->'days'->0 = jsonb_build_object('day', current_date, 'total', 15, 'cap', 1000),
+    format('today''s total and cap are wrong: %s', u->'days'->0);
+  assert u->'days'->1 = jsonb_build_object('day', current_date - 1, 'total', 5, 'cap', 100),
+    format('yesterday is wrong, or out of order: %s', u->'days'->1);
+  assert jsonb_array_length(u->'days') = 3, 'a day is missing from the week, or one too many';
+  assert jsonb_array_length(u->'over') = 2,
+    format('the accounts over their own allowance are not exactly a and x: %s', u->'over');
+  assert u->'over'->0 @> jsonb_build_object('day', current_date, 'handle', 'fp_looper', 'full_name', 'Lớp Học',
+                                            'action', 'search', 'n', 4, 'cap', 3),
+    format('today''s account over its allowance is wrong: %s', u->'over'->0);
+  assert u->'over'->1 @> jsonb_build_object('day', current_date - 1, 'action', 'search', 'n', 5, 'cap', 3)
+     and u->'over'->1->'handle' = 'null'::jsonb,
+    format('yesterday''s account, with no profile, is wrong: %s', u->'over'->1);
+end $$;
+reset role;
+
 delete from public.fetch_place_calls;
+delete from public.editors where email = 'fp-editor@fp.test';
 
 select 'all fetch-place allowance checks passed' as result;

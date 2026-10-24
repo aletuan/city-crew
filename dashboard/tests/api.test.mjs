@@ -587,6 +587,14 @@ test('reports reads the queue through its function, and an empty answer is an em
   assert.equal(client.calls[0].fn, 'reports_queue');
 });
 
+test('fetchPlaceUsage asks its function, and passes on what it answers', async () => {
+  const usage = { today: '2026-10-24', days: [], over: [] };
+  const { api, client } = await loadApi([{ data: usage, error: null }]);
+  assert.deepEqual(await api.fetchPlaceUsage(), usage);
+  assert.equal(client.calls[0].kind, 'rpc');
+  assert.equal(client.calls[0].fn, 'fetch_place_usage');
+});
+
 test('moderateCollection names the list and which way the switch goes', async () => {
   const { api, client } = await loadApi([{ data: null, error: null }]);
   await api.moderateCollection('c1', false);
