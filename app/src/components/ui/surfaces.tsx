@@ -480,6 +480,39 @@ export function Empty({ text }: { text: string }) {
   );
 }
 
+/**
+ * A list with nothing in it yet, said as a state rather than a fault: the
+ * tab's glyph in a tinted well, what is missing as a heading, one sentence
+ * on how it fills, and — in `children` — the one thing to do next.
+ *
+ * `Empty`'s grey line says only "nothing here", and on a screen whose
+ * whole content it is, that reads as a page that failed to load (the owner
+ * read the community shelf's that way). This is the shape Collections'
+ * first-collection and empty-community cards already had, by their
+ * measures, taken out so that a third screen (Activity, 25 Oct 2026) did
+ * not make a third copy of it.
+ */
+export function EmptyState({ icon, title, body, children, testID }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  body: string;
+  /** The action, when there is one: a single `GradientCta`, sized to its
+   *  words. A state with nothing to offer draws none. */
+  children?: React.ReactNode;
+  testID?: string;
+}) {
+  return (
+    <View style={s.state} testID={testID}>
+      <View style={s.stateWell}>
+        <Ionicons name={icon} size={27} color={colors.accent} />
+      </View>
+      <Text style={s.stateTitle}>{title}</Text>
+      <Text style={s.stateBody}>{body}</Text>
+      {children}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   // Bottom-aligned so a header action sits on the title's optical centre
@@ -535,5 +568,23 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   empty: { padding: 48, alignItems: 'center' },
+  // `EmptyState`: Collections' `first` card, `firstIcon` well, title and
+  // body, by the same figures.
+  state: {
+    alignItems: 'center', gap: 10,
+    paddingHorizontal: space.cardPadding + 6, paddingTop: 26, paddingBottom: 22,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.card,
+  },
+  stateWell: {
+    width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
+    marginBottom: 2,
+  },
+  stateTitle: { color: colors.text, ...type.headline, textAlign: 'center' },
+  stateBody: {
+    color: colors.textSecondary, fontSize: 15, lineHeight: 21,
+    textAlign: 'center', marginBottom: 6,
+  },
   emptyText: { color: colors.textTertiary, ...type.meta, textAlign: 'center' },
 });

@@ -19,7 +19,7 @@ import { colors } from '../theme';
 const ME = 'me';
 const NOW = new Date('2026-09-11T12:00:00');
 
-type Col = { id: string; slug: string; title_en: string; title_vi: string; title_ja: string };
+type Col = { id: string; slug: string; title_en: string; title_vi: string; title_ja: string; is_public?: boolean };
 
 const data = vi.hoisted(() => ({
   fetchApplause: vi.fn(async (_since: string): Promise<Applause[]> => []),
@@ -72,7 +72,10 @@ vi.mock('../lib/i18n', () => ({
 
 import ActivityScreen from './ActivityScreen';
 
-const nav = () => ({ navigate: vi.fn(), goBack: vi.fn() }) as unknown as Nav & {
+// The tab navigator above the Profile stack, which the empty state's
+// ways out go through.
+const tabs = { navigate: vi.fn() };
+const nav = () => ({ navigate: vi.fn(), goBack: vi.fn(), getParent: () => tabs }) as unknown as Nav & {
   navigate: ReturnType<typeof vi.fn>; goBack: ReturnType<typeof vi.fn>;
 };
 
@@ -134,7 +137,7 @@ describe('a guest', () => {
     await renderScreen();
     expect(data.fetchApplause).not.toHaveBeenCalled();
     expect(screen.queryByText('Requests')).toBeNull();
-    expect(screen.getByText(/Quiet so far/)).toBeTruthy();
+    expect(screen.getByText('No activity yet')).toBeTruthy();
   });
 });
 
@@ -143,16 +146,109 @@ describe('the EARLIER states', () => {
     data.fetchApplause.mockImplementation(() => new Promise(() => {}));
     await renderScreen();
     expect(screen.getByRole('progressbar')).toBeTruthy();
-    expect(screen.queryByText(/Quiet so far/)).toBeNull();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
   });
 
-  it('treats a failed applause fetch as no applause rather than hanging', async () => {
+  // A failure used to read as "nobody liked anything" (owner, 25 Oct
+  // 2026): it says so now, and Try again asks once more.
+  it('says a failed load is one, rather than calling it quiet, and tries again', async () => {
     data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
     await renderScreen();
     expect(screen.queryByRole('progressbar')).toBeNull();
-    expect(screen.getByText(
-      'Quiet so far. When someone likes or copies one of your collections, you will see it here.',
-    )).toBeTruthy();
+    expect(screen.getByText("Couldn't load your activity")).toBeTruthy();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.queryByTestId('activity-try')).toBeNull();
+    let answer: (v: Applause[]) => void = () => {};
+    data.fetchApplause.mockImplementation(() => new Promise((ok) => { answer = ok; }));
+    fireEvent.click(screen.getByTestId('activity-retry'));
+    // Asked again, both halves, and waiting rather than still failed.
+    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(data.fetchCopies).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+    // Answered this time, and empty: the failure is forgotten.
+    await act(async () => { answer([]); });
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+  });
+
+  it('fails on the copies as on the likes', async () => {
+    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    await renderScreen();
+    expect(screen.getByTestId('activity-failed')).toBeTruthy();
+  });
+
+  it('shows what one half found when only the other failed', async () => {
+    data.mine = [col('c1', 'rooftops', 'Rooftops')];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T11:00:00', 'trang')]);
+    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    await renderScreen();
+    expect(screen.getByText('@trang liked “Rooftops”')).toBeTruthy();
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+  });
+});
+
+// ── empty (owner, 25 Oct 2026) ──
+//
+// A heading, the sentence and the one step that would end it — which
+// depends on what the reader has — and three ways into the rest of the
+// app under it.
+describe('the empty state', () => {
+  const body = 'When someone likes or copies one of your collections, you will see it here.';
+  const privateBody = 'Only public collections can be liked or copied — yours are all private for now.';
+
+  it('offers a first collection to a reader with none, through the Collections tab', async () => {
+    await renderScreen();
+    expect(screen.getByText('No activity yet')).toBeTruthy();
+    expect(screen.getByText(body)).toBeTruthy();
+    expect(screen.queryByTestId('activity-yours')).toBeNull();
+    fireEvent.click(screen.getByTestId('activity-create'));
+    expect(tabs.navigate).toHaveBeenCalledWith('Collections', { screen: 'CollectionForm', initial: false });
+  });
+
+  it('tells a reader whose lists are all private why nothing comes, and opens them', async () => {
+    data.mine = [col('c1', 'a', 'A'), { ...col('c2', 'b', 'B'), is_public: false }];
+    await renderScreen();
+    expect(screen.getByText(privateBody)).toBeTruthy();
+    expect(screen.queryByText(body)).toBeNull();
+    expect(screen.queryByTestId('activity-create')).toBeNull();
+    fireEvent.click(screen.getByTestId('activity-yours'));
+    expect(tabs.navigate).toHaveBeenCalledWith('Collections', { screen: 'CollectionsHome', params: { tab: 'yours', at: NOW.getTime() } });
+  });
+
+  it('offers nothing to do to a reader with a public list: it is a matter of waiting', async () => {
+    data.mine = [col('c1', 'a', 'A'), { ...col('c2', 'b', 'B'), is_public: true }];
+    await renderScreen();
+    expect(screen.getByText(body)).toBeTruthy();
+    expect(screen.queryByTestId('activity-create')).toBeNull();
+    expect(screen.queryByTestId('activity-yours')).toBeNull();
+  });
+
+  it('offers three ways into the rest of the app, each to its own place', async () => {
+    await renderScreen();
+    expect(screen.getByText('You could try')).toBeTruthy();
+    const card = screen.getByTestId('activity-try');
+    expect([...card.querySelectorAll('[role="button"]')].map((b) => b.textContent))
+      .toEqual(['Explore places', 'Browse community collections', 'Save places you love']);
+    expect([...card.querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon')))
+      .toEqual(['compass-outline', 'chevron-forward', 'globe-outline', 'chevron-forward', 'bookmark-outline', 'chevron-forward']);
+    fireEvent.click(screen.getByTestId('activity-try-explore'));
+    fireEvent.click(screen.getByTestId('activity-try-community'));
+    fireEvent.click(screen.getByTestId('activity-try-save'));
+    expect(tabs.navigate.mock.calls).toEqual([
+      ['Explore'],
+      ['Collections', { screen: 'CollectionsHome', params: { tab: 'community', at: NOW.getTime() } }],
+      ['Collections', { screen: 'CollectionsHome', params: { tab: 'yours', at: NOW.getTime() } }],
+    ]);
+  });
+
+  it('is not drawn once there is news', async () => {
+    data.mine = [col('c1', 'rooftops', 'Rooftops')];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T11:00:00', 'trang')]);
+    await renderScreen();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.queryByTestId('activity-try')).toBeNull();
   });
 });
 

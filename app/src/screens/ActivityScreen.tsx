@@ -21,12 +21,27 @@
 // liked…" survives only as the fallback for a liker whose profile is
 // gone. See the named_applause migration for why the owner is not
 // "the public" that the likes table's privacy promise protects against.
+//
+// ── empty (owner, 25 Oct 2026) ──
+//
+// Nothing to show was one grey sentence, and a failed load was the same
+// sentence: both fetches answered a failure with an empty list, so a
+// reader offline was told nobody had liked anything. Now the three are
+// apart. Empty is a state with a heading and the one step that would
+// end it, which depends on what the reader has: no collections — make
+// one; only private ones — only a public list can be liked or copied, so
+// say so and open the shelf where the switch is; a public one already —
+// nothing to do but wait, so no button. Under it, three ways into the
+// rest of the app ("You could try"), in the Profile stack's own rows.
+// A failure that leaves nothing to show says so, with Try again; one
+// half failing while the other has news still shows the news.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen } from '../components/authUi';
-import { Avatar, Card, Empty, PressableScale } from '../components/ui';
+import { Avatar, Card, EmptyState, GradientCta, PressableScale } from '../components/ui';
+import { SettingRow } from './profile/rows';
 import { useSession } from '../lib/auth';
 import { APPLAUSE_DAYS } from '../lib/activityWindow';
 import { numericDate } from '../lib/format';
@@ -52,15 +67,23 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
 
   const [applause, setApplause] = useState<Applause[] | null>(null);
   const [copies, setCopies] = useState<Copy[] | null>(null);
+  // Either half failing. It is only said when nothing came back at all —
+  // see the header.
+  const [failed, setFailed] = useState(false);
+  // Bumped by Try again, to run the fetches once more.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!me) { setApplause([]); setCopies([]); return; }
+    setApplause(null);
+    setCopies(null);
+    setFailed(false);
     const since = new Date(Date.now() - APPLAUSE_DAYS * 86400000).toISOString();
-    // Quiet on failure, each half on its own: the feed shows what it
-    // could get, and a dropped likes call does not take the copies with it.
-    fetchApplause(since).then(setApplause).catch(() => setApplause([]));
+    // Each half on its own: the feed shows what it could get, and a
+    // dropped likes call does not take the copies with it.
+    fetchApplause(since).then(setApplause).catch(() => { setFailed(true); setApplause([]); });
     // The same window: a copy is news for as long as a like is.
-    fetchCopies(since).then(setCopies).catch(() => setCopies([]));
-  }, [me]);
+    fetchCopies(since).then(setCopies).catch(() => { setFailed(true); setCopies([]); });
+  }, [me, attempt]);
 
   const earlier = useMemo<ActivityItem[]>(() => buildActivity(applause ?? [], copies ?? []), [applause, copies]);
 
@@ -99,19 +122,100 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // Only the two fetches the timeline is built from.
   const loading = applause === null || copies === null;
 
+  // The other tabs, which this screen's stack does not hold. A tab's own
+  // first screen needs no `initial: false`; the form, which is not
+  // Collections' first, does — see `goTo`.
+  const tabs = navigation.getParent();
+  const toCollections = (tab: 'yours' | 'community') =>
+    tabs?.navigate('Collections', { screen: 'CollectionsHome', params: { tab, at: Date.now() } });
+  const hasPublic = mine.data.some((c) => c.is_public);
+
+  const empty = (
+    <>
+      <EmptyState
+        icon="heart"
+        title={t('No activity yet', 'Chưa có hoạt động nào', 'まだアクティビティはありません', '还没有动态', '還沒有動態')}
+        body={mine.data.length > 0 && !hasPublic
+          ? t(
+            'Only public collections can be liked or copied — yours are all private for now.',
+            'Chỉ bộ sưu tập công khai mới được thích hay sao chép — các bộ sưu tập của bạn đều đang để riêng tư.',
+            'いいねやコピーができるのは公開コレクションだけです — あなたのリストは今すべて非公開です。',
+            '只有公开的合集才能被点赞或复制 — 你的合集目前都是私密的。', '只有公開的合集才能被按讚或複製 — 你的合集目前都是私密的。',
+          )
+          : t(
+            'When someone likes or copies one of your collections, you will see it here.',
+            'Khi có người thích hay sao chép bộ sưu tập của bạn, bạn sẽ thấy ở đây.',
+            'あなたのコレクションにいいねやコピーがあると、ここに表示されます。',
+            '有人点赞或复制你的合集时，会显示在这里。', '有人按讚或複製你的合集時，會顯示在這裡。',
+          )}
+        testID="activity-empty"
+      >
+        {mine.data.length === 0 ? (
+          <GradientCta
+            icon="add"
+            label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集', '建立你的第一個合集')}
+            onPress={() => tabs?.navigate('Collections', { screen: 'CollectionForm', initial: false })}
+            testID="activity-create"
+          />
+        ) : !hasPublic ? (
+          <GradientCta
+            icon="bookmark"
+            label={t('See your collections', 'Xem bộ sưu tập của bạn', 'あなたのコレクションを見る', '查看你的合集', '檢視你的合集')}
+            onPress={() => toCollections('yours')}
+            testID="activity-yours"
+          />
+        ) : null}
+      </EmptyState>
+      <Text style={s.head}>{t('You could try', 'Bạn có thể thử', 'こちらもどうぞ', '你可以试试', '你可以試試')}</Text>
+      {/* The glyphs these offers already wear elsewhere: the compass on
+          Collections' "Explore places", the globe on a public list, the
+          bookmark of the Collections tab. */}
+      <Card testID="activity-try">
+        <SettingRow
+          icon="compass-outline"
+          label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点', '探索地點')}
+          onPress={() => tabs?.navigate('Explore')}
+          testID="activity-try-explore"
+        />
+        <SettingRow
+          icon="globe-outline"
+          label={t('Browse community collections', 'Xem bộ sưu tập cộng đồng', 'みんなのコレクションを見る', '浏览社区合集', '瀏覽社群合集')}
+          onPress={() => toCollections('community')}
+          testID="activity-try-community"
+        />
+        <SettingRow
+          icon="bookmark-outline"
+          label={t('Save places you love', 'Lưu địa điểm yêu thích', 'お気に入りのスポットを保存', '收藏喜欢的地点', '收藏喜歡的地點')}
+          onPress={() => toCollections('yours')}
+          last
+          testID="activity-try-save"
+        />
+      </Card>
+    </>
+  );
+
   return (
     <AuthScreen>
       <AuthHeader onBack={() => navigation.goBack()} title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')} />
 
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
+      ) : earlier.length === 0 && failed ? (
+        <EmptyState
+          icon="cloud-offline"
+          title={t("Couldn't load your activity", 'Không tải được hoạt động', 'アクティビティを読み込めませんでした', '无法加载动态', '無法載入動態')}
+          body={t('Check your connection and try again.', 'Kiểm tra kết nối rồi thử lại.', '接続を確認して、もう一度お試しください。', '请检查网络连接后重试。', '請檢查網路連線後重試。')}
+          testID="activity-failed"
+        >
+          <GradientCta
+            icon="refresh"
+            label={t('Try again', 'Thử lại', '再試行', '重试', '重試')}
+            onPress={() => setAttempt((n) => n + 1)}
+            testID="activity-retry"
+          />
+        </EmptyState>
       ) : earlier.length === 0 ? (
-        <Empty text={t(
-          'Quiet so far. When someone likes or copies one of your collections, you will see it here.',
-          'Chưa có gì. Khi có người thích hay sao chép bộ sưu tập của bạn, bạn sẽ thấy ở đây.',
-          'まだ静かです。あなたのコレクションにいいねやコピーがあると、ここに表示されます。',
-          '暂时还很安静。有人点赞或复制你的合集时，会显示在这里。', '暫時還很安靜。有人按讚或複製你的合集時，會顯示在這裡。',
-        )} />
+        empty
       ) : (
             <Card testID="earlier-card">
               {earlier.map((item, i) => {
@@ -210,4 +314,6 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   line: { color: colors.text, fontSize: 15, lineHeight: LINE },
+  // The Profile stack's section heading (`profile/styles`' `section`).
+  head: { color: colors.text, ...type.section, marginTop: 10 },
 });
