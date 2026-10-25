@@ -672,10 +672,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         <Face p={p} />
                         <View style={{ flex: 1, gap: 2 }}>
                           <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
-                          <Text style={s.meta} numberOfLines={1}>
-                            {p ? `${atHandle(p.handle)} · ` : ''}
-                            {t('waiting on their answer', 'đang chờ trả lời', '返事待ち', '等待对方回复', '等待對方回覆')}
-                          </Text>
+                          {/* The handle alone. "waiting on their answer"
+                              sat beside it on every row, saying again what
+                              the "Sent" heading above already says (owner,
+                              26 Oct 2026). The sheet behind Cancel keeps
+                              it: there is no heading there to say it. */}
+                          {p ? <Text style={s.meta} numberOfLines={1}>{atHandle(p.handle)}</Text> : null}
                         </View>
                         <PressableScale contentStyle={s.quietBtn} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
                           <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す', '取消', '取消')}</Text>

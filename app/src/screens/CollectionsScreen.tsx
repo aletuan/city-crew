@@ -186,7 +186,8 @@ function EmptyCover() {
 /**
  * Signed in, nothing made yet. This is the one state with room to explain
  * what a collection is and why anyone would want one, so it takes the
- * whole card and the section's other create controls stand down.
+ * whole card. The header's "New" pill stays above it (owner, 26 Oct
+ * 2026): see the note on the pill.
  *
  * It mirrors the guest card one section up — same tinted well, same
  * gradient action — because they are the same argument aimed at two
@@ -1003,16 +1004,22 @@ export default function CollectionsScreen({ navigation, route }: {
   // The filter, beside the title (owner, 25 Oct 2026): Explore's glyph,
   // in Explore's two states — ink at rest, coral with a count once
   // something is applied (see the note on Explore's own) — and the sheet
-  // behind it. Only where the shelf has a choice to make, or one is on.
+  // behind it. It opens only where the shelf has a choice to make, or one
+  // is on. For a signed-in reader it is drawn either way, dimmed when
+  // there is nothing to choose: the owner found it missing on an empty
+  // Yours (26 Oct 2026), and a glyph that came and went with the tab
+  // moved the title, as the pill once did.
   const filterCount = (cityPick ? 1 : 0) + (kind ? 1 : 0);
   const canFilter = offerCities || kindChoices.length > 1 || filterCount > 0;
-  const filterButton = (floating: boolean) => (canFilter ? (
+  const filterButton = (floating: boolean) => (canFilter || session ? (
     <PressableScale
-      contentStyle={s.filterBtn}
+      contentStyle={[s.filterBtn, !canFilter && s.filterOff]}
       scaleTo={0.94}
       haptic="selection"
       hitSlop={4}
       onPress={openFilters}
+      disabled={!canFilter}
+      aria-disabled={!canFilter}
       accessibilityRole="button"
       accessibilityLabel={filterCount > 0
         ? `${t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}, ${filterCount}`
@@ -1039,7 +1046,7 @@ export default function CollectionsScreen({ navigation, route }: {
       <ScreenTitle
         title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
         accessory={filterButton(false)}
-        right={(onYours ? mineReady && mine.data.length > 0 : !!session) ? (
+        right={session ? (
           <AddPill
             tall
             label={t('New', 'Tạo mới', '新規', '新建', '新增')}
@@ -1129,14 +1136,17 @@ export default function CollectionsScreen({ navigation, route }: {
 
   return (
     // The door to a new list is the Trips screen's pill, in the header's
-    // right, on the Yours tab once there is a list. It was a dashed row at
+    // right, on both tabs for every signed-in reader. It was a dashed row at
     // the foot of the list, on the argument that the tab always showed
     // one door and a "New" pill on the heading was the same action a
     // third time. True at four lists and wrong at fifteen: the owner's
     // review (14 Oct 2026) found the row only by scrolling past every
     // list to reach it. The empty library keeps its own card and button,
-    // as Trips keeps its first-trip card, so on Yours the pill is never
-    // one of two doors on one screen.
+    // as Trips keeps its first-trip card, and until 26 Oct 2026 the pill
+    // stood down beside it so as not to be a second door. The owner saw
+    // what that cost: the header lost the pill's height, and the title
+    // and the tabs under it sat higher on an empty Yours than on
+    // Community. Two doors to one room is the smaller fault.
     //
     // On Community it shows for every signed-in reader, lists or none
     // (owner, 16 Oct 2026): browsing other people's lists is when the idea
@@ -1899,6 +1909,9 @@ const s = StyleSheet.create({
   // Explore's filter button's box (`filterButton` there): 36 with the
   // 4pt slop is the 44 a target is, and the badge rides its corner.
   filterBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  // Nothing to choose: there, and plainly not for now. The disabled
+  // opacity the other controls use (`choiceOff`).
+  filterOff: { opacity: 0.45 },
   filterBadge: {
     position: 'absolute', top: 1, right: 1, minWidth: 16, height: 16, borderRadius: 8,
     paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentFill,

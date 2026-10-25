@@ -294,10 +294,12 @@ describe('a request you sent', () => {
     crew.people = { o: person('o', 'oanh', 'Oanh') };
   });
 
-  it('is listed as waiting, and Cancel withdraws it through the sheet', async () => {
+  it('is listed under Sent by its handle alone, and Cancel withdraws it through the sheet', async () => {
     render(<CrewScreen navigation={nav()} />);
     expect(screen.getByText('Sent')).toBeTruthy();
-    expect(screen.getByText('@oanh · waiting on their answer')).toBeTruthy();
+    expect(screen.getByText('@oanh')).toBeTruthy();
+    // The heading says it is waiting; the row does not say it again.
+    expect(screen.queryByText(/waiting on their answer/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await pickSheetAction('Cancel the request');
     await waitFor(() => expect(data.removeFriendship).toHaveBeenCalledWith(ME, 'o'));
