@@ -132,6 +132,13 @@ describe('UnderlineChoice', () => {
     expect(from).toBe(`${to}00`);
   });
 
+  // On a sheet, the fade ends in the sheet's ground rather than the page's.
+  it('fades into the ground it is given', () => {
+    render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} ground="#123456" testID="row" />);
+    measureRow(380);
+    expect(screen.getByTestId('row-fade').getAttribute('colors')).toBe('#12345600,#123456');
+  });
+
   it('takes the fade away once scrolled to the end', () => {
     render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} testID="row" />);
     measureRow(390);

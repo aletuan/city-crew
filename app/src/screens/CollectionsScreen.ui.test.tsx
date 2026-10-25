@@ -18,7 +18,7 @@
 import React from 'react';
 import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
-import { Alert, Keyboard } from 'react-native';
+import { Alert } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
@@ -166,6 +166,23 @@ const listProps = (): { onRefresh: () => void; refreshing: boolean; onScroll: (e
     if (f.child) stack.push(f.child);
   }
   throw new Error('no SectionList in the committed tree');
+};
+
+// Whether the sheet is up, by its own prop: react-native-web keeps a
+// modal in the page through its fade, so absence is not the signal.
+const sheetShown = (): boolean => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && 'countFor' in p && 'visible' in p) return p.visible as boolean;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error('no filter sheet');
 };
 
 /** The committed props of every host-side element that offers a screen
@@ -1026,24 +1043,102 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByText('List one')).toBeTruthy();
   });
 
-  it('Cancel drops the panel, the words and the chips with them', () => {
-    state.places = [{ ...place('a', 'hanoi'), categories: ['cafes'] }, { ...place('b', 'hanoi'), categories: ['nightlife'] }];
+  // The filters are a sheet beside the title since 25 Oct 2026 (owner):
+  // opened from the glyph, drafted, and applied by the button that says
+  // what it will show.
+  const sheetPick = (pick: { city?: string; kind?: string }) => {
+    fireEvent.click(screen.getByTestId('collections-filters'));
+    if (pick.city) fireEvent.click(within(screen.getByTestId('collections-filter-cities')).getByRole('button', { name: pick.city }));
+    if (pick.kind) fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', { name: pick.kind }));
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
+  };
+
+  it('Cancel lets go of the words and the panel, and keeps the filters', () => {
+    state.places = [cafe('a'), bar('b')];
     state.cols.data = [col('rooftops', ['a'], { title_en: 'Rooftops' }), col('coffee', ['b'], { title_en: 'Coffee' })];
     show();
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
     open();
     expect(screen.getByTestId('collections-panel')).toBeTruthy();
     type('roof');
-    fireEvent.click(screen.getByRole('button', { name: 'Nightlife' }));
+    sheetPick({ kind: 'Nightlife' });
     expect(screen.queryByText('Rooftops')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByTestId('collections-panel')).toBeNull();
     expect(box().value).toBe('');
-    // Both lists back: the chip went with the words. A filter nobody can
-    // see is a trap.
+    // The filter is the sheet's, and stays, in sight under the box.
     expect(screen.getByText('Coffee')).toBeTruthy();
-    expect(screen.getByText('Rooftops')).toBeTruthy();
-    expectSub('2 collections · hanoi');
+    expect(screen.queryByText('Rooftops')).toBeNull();
+    expect(within(screen.getByTestId('collections-chosen')).getByText('Nightlife')).toBeTruthy();
+    expect(screen.queryByTestId('collections-cancel')).toBeNull();
+  });
+
+  it('keeps the panel to the box’s own business: suggestions, and no filters', () => {
+    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
+    state.cols.data = [col('one', ['a']), col('two', ['c'])];
+    show();
+    open();
+    const panel = within(screen.getByTestId('collections-panel'));
+    expect(panel.queryByText('City')).toBeNull();
+    expect(panel.queryByText('Kind of place')).toBeNull();
+    expect(panel.getByText('Type a name, a place, or a city.')).toBeTruthy();
+  });
+
+  it('filters from a sheet beside the title, drafted until applied', () => {
+    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
+    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
+    show();
+    const filters = screen.getByTestId('collections-filters');
+    // Beside the title, in ink while nothing is on.
+    expect(screen.getByTestId('collections-top').contains(filters)).toBe(true);
+    expect(filters.getAttribute('aria-label')).toBe('Filters');
+    fireEvent.click(filters);
+    expect(screen.getByTestId('collections-filter-cities-all').getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByTestId('collections-filter-reset')).toBeNull();
+    fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', { name: 'Cafés' }));
+    // A draft: the shelf has not moved, and the button says what it will.
+    expect(screen.getByText('Da Nang bars')).toBeTruthy();
+    expect(screen.getByTestId('collections-filter-apply').textContent).toContain('Show 1 collection');
+    expect(screen.getByTestId('collections-filter-reset')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
+    expect(sheetShown()).toBe(false);
+    expect(screen.queryByText('Da Nang bars')).toBeNull();
+    expect(screen.getByText('Hanoi cafés')).toBeTruthy();
+    // Coral, and counted, once something is on.
+    expect(screen.getByTestId('collections-filters').getAttribute('aria-label')).toBe('Filters, 1');
+    // Reset and close: nothing applied, nothing changed.
+    fireEvent.click(screen.getByTestId('collections-filters'));
+    fireEvent.click(screen.getByTestId('collections-filter-reset'));
+    expect(screen.getByTestId('collections-filter-apply').textContent).toContain('Show 2 collections');
+    fireEvent.click(screen.getByTestId('collections-filter-close'));
+    expect(sheetShown()).toBe(false);
+    expect(screen.queryByText('Da Nang bars')).toBeNull();
+  });
+
+  // What the sheet chose stays in sight under the box, each with a ✕ of
+  // its own (owner, 25 Oct 2026), and the words open the sheet again.
+  it('shows the chosen filters under the box: the words open the sheet, a ✕ lets go of its own', () => {
+    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
+    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
+    show();
+    expect(screen.queryByTestId('collections-chosen')).toBeNull();
+    type('café');
+    sheetPick({ city: 'hanoi', kind: 'Cafés' });
+    const row = screen.getByTestId('collections-chosen');
+    expect(within(row).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['hanoi', 'Remove hanoi', 'Cafés', 'Remove Cafés']);
+    // The glyph led this row once; it is beside the title now.
+    expect(row.querySelector('[data-icon="options-outline"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Cafés' }));
+    expectSub('1 collection · hanoi');
+    expect(screen.queryByTestId('collections-chosen-kind')).toBeNull();
+    // The words in the box are the box's: a ✕ leaves them.
+    expect(box().value).toBe('café');
+    fireEvent.click(within(screen.getByTestId('collections-chosen-city')).getByRole('button', { name: 'hanoi' }));
+    expect(sheetShown()).toBe(true);
+    expect(within(screen.getByTestId('collections-filter-cities')).getByRole('button', { name: 'hanoi' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByTestId('collections-filter-close'));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove hanoi' }));
+    expect(screen.queryByTestId('collections-chosen')).toBeNull();
   });
 
   it('on your own tab a miss shows the honest footer, and the pill stays', () => {
@@ -1053,123 +1148,6 @@ describe('CollectionsScreen — search', () => {
     type('zzz');
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'New collection' })).toBeTruthy();
-  });
-
-  // A chip is an answer; the keyboard asks for words. Tapped, it puts the
-  // keyboard away and folds the panel down to what it chose (owner, 24 Oct
-  // 2026: the panel stood over the shelf, and Cancel was the only way out).
-  it('a choice puts the keyboard away and folds the panel to what is chosen', () => {
-    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
-    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
-    const dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
-    show();
-    expect(screen.queryByTestId('collections-chosen')).toBeNull();
-    open();
-    const blur = vi.spyOn(box(), 'blur');
-    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
-    expect(dismiss).toHaveBeenCalledTimes(1);
-    expect(blur).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('collections-panel')).toBeNull();
-    // What it chose stays in sight, as words beside the filter glyph with
-    // no chip around them, a ✕ after each, and so does Cancel.
-    const row = screen.getByTestId('collections-chosen');
-    expect(within(screen.getByTestId('collections-filters')).queryByText(/./)).toBeNull();
-    expect(screen.getByTestId('collections-filters').querySelector('[data-icon="options-outline"]')).toBeTruthy();
-    expect(screen.getByTestId('collections-filters').getAttribute('aria-label')).toBe('Filters');
-    expect(row.querySelectorAll('[data-icon="close"]')).toHaveLength(1);
-    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
-    expect(screen.getByText('Hanoi cafés')).toBeTruthy();
-    expect(screen.queryByText('Da Nang bars')).toBeNull();
-    // The box opens the panel again for a second choice, city first.
-    open();
-    expect(screen.getByTestId('collections-panel')).toBeTruthy();
-    expect(screen.queryByTestId('collections-chosen')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'hanoi' }));
-    const items = within(screen.getByTestId('collections-chosen')).getAllByRole('button').map((b) => b.getAttribute('aria-label'));
-    expect(items).toEqual(['Filters', 'hanoi', 'Remove hanoi', 'Cafés', 'Remove Cafés']);
-    // Each ✕ lets go of its own choice and nothing else; the row goes with
-    // the last of them, and Cancel with it.
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Cafés' }));
-    expect(screen.getByText('Hanoi cafés')).toBeTruthy();
-    expectSub('1 collection · hanoi');
-    expect(screen.queryByTestId('collections-chosen-kind')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Remove hanoi' }));
-    expect(screen.queryByTestId('collections-chosen')).toBeNull();
-    expect(screen.queryByTestId('collections-cancel')).toBeNull();
-    expect(screen.getByText('Da Nang bars')).toBeTruthy();
-    dismiss.mockRestore();
-  });
-
-  // The words open the panel as the glyph does; the ✕ beside them only
-  // lets go. The ✕ keeps the words typed in the box.
-  it('opens the panel from a chosen word, and a ✕ keeps the words in the box', () => {
-    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
-    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
-    show();
-    open();
-    type('bars');
-    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
-    fireEvent.click(within(screen.getByTestId('collections-chosen-kind')).getByRole('button', { name: 'Cafés' }));
-    expect(screen.getByTestId('collections-panel')).toBeTruthy();
-    expect(within(screen.getByTestId('collections-kinds')).getByRole('button', { name: 'Cafés' }).getAttribute('aria-selected')).toBe('true');
-    // A second choice from there folds it again, both on.
-    fireEvent.click(within(screen.getByTestId('collections-cities')).getByRole('button', { name: 'danang' }));
-    expect(screen.getByTestId('collections-chosen-city')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Cafés' }));
-    expect(box().value).toBe('bars');
-    expect(screen.getByText('Da Nang bars')).toBeTruthy();
-    expect(screen.getByTestId('collections-chosen-city')).toBeTruthy();
-    // Something is still asked, so Cancel stays.
-    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
-  });
-
-  // The folded row leads with a way back to the panel that does not bring
-  // the keyboard up over it (owner, 25 Oct 2026); the box still does.
-  it('reopens the panel from the folded row without the keyboard', () => {
-    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
-    state.cols.data = [col('one', ['a']), col('two', ['c'])];
-    show();
-    open();
-    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
-    const focus = vi.spyOn(box(), 'focus');
-    const filters = screen.getByTestId('collections-filters');
-    // A door, not a choice: no ✕ and nothing to let go of.
-    expect(filters.querySelector('[data-icon="close"]')).toBeNull();
-    fireEvent.click(filters);
-    expect(screen.getByTestId('collections-panel')).toBeTruthy();
-    expect(screen.queryByTestId('collections-chosen')).toBeNull();
-    expect(focus).not.toHaveBeenCalled();
-    expect(document.activeElement).not.toBe(box());
-    // What it chose is still chosen, underlined in its row.
-    expect(within(screen.getByTestId('collections-kinds')).getByRole('button', { name: 'Cafés' }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByTestId('collections-kinds-all').getAttribute('aria-selected')).toBe('false');
-  });
-
-  // Each row starts with "All", underlined while that row has nothing
-  // chosen; tapped, it lets go of that row's choice and no other.
-  it('puts "All" first in each row, and "All" lets go of that row alone', () => {
-    state.places = [cafe('a', 'hanoi'), bar('c', 'danang'), bar('d', 'hanoi')];
-    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' }), col('three', ['d'], { title_en: 'Hanoi bars' })];
-    show();
-    open();
-    const cities = within(screen.getByTestId('collections-cities'));
-    expect(cities.getAllByRole('button').map((b) => b.textContent)[0]).toBe('All');
-    expect(screen.getByTestId('collections-cities-all').getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByTestId('collections-kinds-all').getAttribute('aria-selected')).toBe('true');
-    fireEvent.click(cities.getByRole('button', { name: 'hanoi' }));
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    fireEvent.click(within(screen.getByTestId('collections-kinds')).getByRole('button', { name: 'Nightlife' }));
-    expect(screen.getByText('Hanoi bars')).toBeTruthy();
-    expect(screen.queryByText('Hanoi cafés')).toBeNull();
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    expect(screen.getByTestId('collections-cities-all').getAttribute('aria-selected')).toBe('false');
-    fireEvent.click(screen.getByTestId('collections-cities-all'));
-    // The city went; the kind stayed.
-    expect(screen.getByText('Da Nang bars')).toBeTruthy();
-    expect(screen.getByText('Hanoi bars')).toBeTruthy();
-    expect(screen.queryByText('Hanoi cafés')).toBeNull();
-    expect(within(screen.getByTestId('collections-chosen')).queryByTestId('collections-chosen-city')).toBeNull();
-    expect(within(screen.getByTestId('collections-chosen-kind')).getByText('Nightlife')).toBeTruthy();
   });
 
   // Dragging the shelf is asking to read it: the panel folds, and what it
@@ -1222,17 +1200,17 @@ describe('CollectionsScreen — search', () => {
     state.places = [cafe('a'), cafe('b'), bar('c'), bar('d')];
     state.cols.data = [col('mixed', ['a', 'c', 'd'], { title_en: 'Mixed', curator_handle: 'minh' }), col('bars', ['d'], { title_en: 'Bars' })];
     show();
-    open();
+    fireEvent.click(screen.getByTestId('collections-filters'));
     expect(screen.getByText('Kind of place')).toBeTruthy();
     expect(screen.queryByText('Nature')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', { name: 'Cafés' }));
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
     expect(screen.getByText('Mixed')).toBeTruthy();
     expect(screen.queryByText('Bars')).toBeNull();
     expect(screen.getByText('1 of 3 places · Cafés')).toBeTruthy();
     expectSub('1 collection · Cafés');
-    // Tapped again, in the panel, the choice lets go.
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    fireEvent.click(within(screen.getByTestId('collections-kinds')).getByRole('button', { name: 'Cafés' }));
+    // Tapped again, in the sheet, the choice lets go.
+    sheetPick({ kind: 'Cafés' });
     expect(screen.getByText('Bars')).toBeTruthy();
     expect(screen.queryByText('1 of 3 places · Cafés')).toBeNull();
   });
@@ -1241,10 +1219,7 @@ describe('CollectionsScreen — search', () => {
     state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
     state.cols.data = [col('one', ['a'], { title_en: 'Cafés of Hanoi' }), col('two', ['c'], { title_en: 'Bars' })];
     show();
-    open();
-    fireEvent.click(screen.getByRole('button', { name: 'hanoi' }));
-    open();
-    fireEvent.click(screen.getByRole('button', { name: 'Nightlife' }));
+    sheetPick({ city: 'hanoi', kind: 'Nightlife' });
     // The words land on the first list's title, but the chip asks about
     // places, and it has no bar — and under words the miss names them.
     type('cafes');
@@ -1266,16 +1241,16 @@ describe('CollectionsScreen — search', () => {
     expectSub('2 collections · 2 cities');
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
-    open();
+    fireEvent.click(screen.getByTestId('collections-filters'));
     // Nothing chosen for the reader: the app's city is not pre-picked.
     expect(screen.getByRole('button', { name: 'hanoi' }).getAttribute('aria-selected')).toBe('false');
     fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
     expect(screen.getByText('Da Nang list')).toBeTruthy();
     expect(screen.queryByText('Hanoi list')).toBeNull();
     expectSub('1 collection · danang');
     // Let go of: every city.
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    fireEvent.click(within(screen.getByTestId('collections-cities')).getByRole('button', { name: 'danang' }));
+    sheetPick({ city: 'danang' });
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
     expectSub('2 collections · 2 cities');
@@ -1296,13 +1271,13 @@ describe('CollectionsScreen — search', () => {
     show();
     expectSub('2 collections · 2 cities');
     expect(screen.getByText('Mine in Da Nang')).toBeTruthy();
-    open();
+    fireEvent.click(screen.getByTestId('collections-filters'));
     expect(screen.getByRole('button', { name: 'danang' }).getAttribute('aria-selected')).toBe('false');
     fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
     expect(screen.queryByText('Mine in Hanoi')).toBeNull();
     expectSub('1 collection · danang');
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    fireEvent.click(within(screen.getByTestId('collections-cities')).getByRole('button', { name: 'danang' }));
+    sheetPick({ city: 'danang' });
     expectSub('2 collections · 2 cities');
   });
 
@@ -1405,6 +1380,13 @@ describe('scrolled', () => {
     const pinned = screen.getByTestId('collections-pinned');
     // Named, as Explore's pinned row is, and the name is a heading.
     expect(within(pinned).getByRole('heading').textContent).toBe('Collections');
+    // At Explore's measures: a 36pt row, 16 to the tabs, nothing above.
+    const head = within(pinned).getByRole('heading').parentElement!;
+    expect(getComputedStyle(head).minHeight).toBe('36px');
+    expect(getComputedStyle(head.parentElement!).marginBottom).toBe('16px');
+    // And the line under the title, which says how many and where.
+    expect(head.parentElement!.textContent).toBe(`Collections${screen.getByTestId('collections-scope').textContent}`);
+    expect(getComputedStyle(pinned).paddingTop).not.toBe('8px');
     expect(pinned.textContent).toContain('Yours');
     expect(pinned.textContent).toContain('Community');
     // A copy, unnamed: the tests still find one of each.
@@ -1420,20 +1402,22 @@ describe('scrolled', () => {
     expect(screen.queryByTestId('collections-pinned')).toBeNull();
   });
 
-  it('pins the chosen filters with the tabs, and opens the panel from them', () => {
+  it('pins the chosen filters and the glyph with the tabs, and opens the sheet from there', () => {
     signedIn();
     state.places = [{ ...place('a', 'hanoi'), categories: ['cafes'] }, { ...place('b', 'saigon'), categories: ['nightlife'] }];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1' }), col('m2', ['b'], { owner_id: 'u1' })];
     show();
-    fireEvent.focus(box());
-    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    fireEvent.click(screen.getByTestId('collections-filters'));
+    fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', { name: 'Cafés' }));
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
     laidOut();
     scrollTo(400);
     const pinned = within(screen.getByTestId('collections-pinned'));
     expect(pinned.getByRole('button', { name: 'Remove Cafés' })).toBeTruthy();
-    fireEvent.click(pinned.getByRole('button', { name: 'Filters' }));
-    expect(screen.getByTestId('collections-panel')).toBeTruthy();
-    expect(within(screen.getByTestId('collections-pinned')).queryByRole('button', { name: 'Remove Cafés' })).toBeNull();
+    // The glyph pins with the title, counted, and opens the sheet.
+    expect(sheetShown()).toBe(false);
+    fireEvent.click(pinned.getByRole('button', { name: 'Filters, 1' }));
+    expect(sheetShown()).toBe(true);
   });
 
   it('lends the dock once past the header with the bar away: the box, and a new list', async () => {
