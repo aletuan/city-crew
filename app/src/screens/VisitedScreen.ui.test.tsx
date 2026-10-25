@@ -211,7 +211,8 @@ describe('VisitedScreen', () => {
     const input = () => screen.getByTestId('visits-input') as HTMLInputElement;
     const open = () => fireEvent.focus(input());
     const type = (v: string) => fireEvent.change(input(), { target: { value: v } });
-    const chips = () => screen.queryAllByRole('button').filter((b) => b.hasAttribute('aria-selected'));
+    // The choices a row offers, without its "All" — that one has its own test.
+    const chips = () => screen.queryAllByRole('button').filter((b) => b.hasAttribute('aria-selected') && !b.dataset.testid?.endsWith('-all'));
     const chip = (label: string) => chips().find((b) => b.textContent === label)!;
     const selected = () => chips().filter((b) => b.getAttribute('aria-selected') === 'true').map((b) => b.textContent);
 
@@ -333,6 +334,28 @@ describe('VisitedScreen', () => {
       expect(names()).toHaveLength(3);
       expect(screen.getByText('3 places · 2 cities')).toBeTruthy();
       expect(selected()).toEqual([]);
+    });
+
+    // Each row starts with "All" (owner, 25 Oct 2026), underlined while
+    // that row has nothing chosen; tapped, it lets go of that row alone.
+    it('puts "All" first in each row, and "All" lets go of that row alone', () => {
+      data.visits.data = many();
+      show();
+      open();
+      const all = (row: string) => screen.getByTestId(`visits-${row}-all`);
+      expect(within(screen.getByTestId('visits-cities')).getAllByRole('button')[0]).toBe(all('cities'));
+      expect(within(screen.getByTestId('visits-kinds')).getAllByRole('button')[0]).toBe(all('kinds'));
+      expect(all('cities').getAttribute('aria-selected')).toBe('true');
+      fireEvent.click(chip('Saigon'));
+      fireEvent.click(chip('Cafés'));
+      expect(all('cities').getAttribute('aria-selected')).toBe('false');
+      expect(all('kinds').getAttribute('aria-selected')).toBe('false');
+      fireEvent.click(all('cities'));
+      expect(names()).toEqual(['cong en', 'bun en']);
+      expect(selected()).toEqual(['Cafés']);
+      expect(all('cities').getAttribute('aria-selected')).toBe('true');
+      // The panel stays up: it is in the list, and scrolls away with it.
+      expect(screen.getByTestId('visits-panel')).toBeTruthy();
     });
 
     it('narrows the chips\' answer by the words typed, and says so when nothing is left', () => {

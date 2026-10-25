@@ -45,7 +45,7 @@ import { ActivityIndicator, Alert, Keyboard, ScrollView, StyleSheet, Text, type 
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
-import { Card, Chip, Empty, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { Card, Empty, PressableScale, Screen, UnderlineChoice, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import {
@@ -92,7 +92,15 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   // came to scroll the list and never narrows it. The panel costs the
   // reader who narrows one tap — the one they were making anyway — and
   // costs the other nothing. It is the catalog's search screen's shape:
-  // suggestions, then "browse by", in one card.
+  // suggestions, then "browse by".
+  //
+  // Since 25 Oct 2026 the cities and the kinds are two `UnderlineChoice`
+  // rows, each with "All" first, where they were two wraps of chips — the
+  // Collections panel's change, made here too so the two screens that
+  // narrow a list of one's own keep one grammar. The rows are two lines
+  // where the wraps could be five. Unlike that panel this one is not
+  // folded by a choice: it is in the list and scrolls away with it, so it
+  // never stands over what it narrowed, and needs no way back in.
   //
   // The panel is opened by focus and closed by Cancel, not by blur. A
   // blur happens when the keyboard is put away to read the list the
@@ -102,11 +110,10 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   // nothing but the subtitle says the list is narrowed, and a filter
   // nobody can see is a trap.
   //
-  // One city and one kind at a time, and a chosen chip tapped again lets
-  // go — that is the "All" chip's job done by the chip itself. Multi-
-  // select is not here on purpose: on one's own check-ins "Hà Nội or Sài
-  // Gòn" is two taps either way, and the union is a second kind of
-  // control before anyone has asked for it. A group is offered only when
+  // One city and one kind at a time, and a chosen one tapped again lets
+  // go, as "All" does. Multi-select is not here on purpose: on one's own
+  // check-ins "Hà Nội or Sài Gòn" is two taps either way, and the union
+  // is a second kind of control before anyone has asked for it. A group is offered only when
   // there is a choice to make — one city is a fact, not a filter.
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -234,9 +241,9 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
           />
         </View>
         {open && (
-          <Card style={s.panel}>
+          <View style={s.panel} testID="visits-panel">
             {suggestions.length > 0 && (
-              <View style={s.group}>
+              <Card style={s.recents}>
                 <View style={s.legendRow}>
                   <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補', '推荐', '推薦')}</Text>
                   <PressableScale
@@ -262,39 +269,40 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                     <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
                   </PressableScale>
                 ))}
-              </View>
+              </Card>
             )}
             {cityChoices.length > 1 && (
               <View style={s.group}>
                 <Text style={s.legend}>{t('City', 'Thành phố', '都市', '城市', '城市')}</Text>
-                <View style={s.chipWrap}>
-                  {cityChoices.map((id) => (
-                    <Chip key={id} label={cityName(id)} active={city === id} onPress={() => { setCity(city === id ? null : id); answered(); }} />
-                  ))}
+                <View style={s.bleed}>
+                  <UnderlineChoice
+                    items={cityChoices.map((id) => ({ key: id, label: cityName(id) }))}
+                    chosen={city}
+                    onPick={(id) => { setCity(id === city ? null : id); answered(); }}
+                    all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+                    testID="visits-cities"
+                  />
                 </View>
               </View>
             )}
             {kindChoices.length > 1 && (
               <View style={s.group}>
                 <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
-                <View style={s.chipWrap}>
-                  {kindChoices.map((k) => (
-                    <Chip
-                      key={k}
-                      label={categoryLabel(k, t)}
-                      icon={CATEGORIES[k]?.icon}
-                      iconColor={CATEGORIES[k]?.color}
-                      active={kind === k}
-                      onPress={() => { setKind(kind === k ? null : k); answered(); }}
-                    />
-                  ))}
+                <View style={s.bleed}>
+                  <UnderlineChoice
+                    items={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
+                    chosen={kind}
+                    onPick={(k) => { setKind(k === kind ? null : k); answered(); }}
+                    all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+                    testID="visits-kinds"
+                  />
                 </View>
               </View>
             )}
             {suggestions.length === 0 && cityChoices.length <= 1 && kindChoices.length <= 1 && (
               <Text style={s.legend}>{t('Type a place or a city.', 'Gõ tên địa điểm hoặc thành phố.', '場所か都市を入力。', '输入地点或城市。', '輸入地點或城市。')}</Text>
             )}
-          </Card>
+          </View>
         )}
         {!visits.loaded ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
@@ -385,8 +393,17 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  panel: { padding: space.cardPadding, gap: space.headingToContent },
+  // The panel on the page's own ground, as the Collections screen's is
+  // (25 Oct 2026): the rows fade into the page, and a card's ground —
+  // translucent in every dark look — is not one a fade can end in. The
+  // suggestions, a list rather than a row, keep the card.
+  panel: { gap: space.headingToContent },
+  recents: { padding: space.cardPadding, gap: 10 },
   group: { gap: 10 },
+  // The list's own padding taken back, so a row runs to the screen's
+  // edges as Explore's does; `UnderlineChoice` brings the page's margin
+  // back inside itself.
+  bleed: { marginHorizontal: -space.page },
   legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // The reference's group labels: quiet, sentence case, not the
   // uppercase eyebrow the months wear — these name parts of one card,
@@ -395,9 +412,6 @@ const s = StyleSheet.create({
   clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
-  // The Search screen's `chipWrap`: the shared Chip carries its own
-  // right margin, so the wrap only owes the rhythm between lines.
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
   month: { gap: 8 },
   eyebrow: {
     color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
