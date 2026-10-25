@@ -12,7 +12,7 @@ import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Avatar, Card, Chip, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Chip, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill } from '../components/add';
@@ -687,6 +687,13 @@ export default function CollectionsScreen({ navigation, route }: {
   // it, and the card says how many of its places those are, because a
   // list of eight with three cafés and a list of three cafés are
   // different answers to the same chip.
+  //
+  // Since 25 Oct 2026 the cities and the kinds are two `UnderlineChoice`
+  // rows, each with "All" first, where they were two wraps of chips (the
+  // owner, on the review board that took Explore's boxes away). With
+  // seven cities and nine kinds the wraps were five lines of chips; the
+  // rows are two, and scroll, so the panel is a band under the box rather
+  // than a sheet over the shelf.
   const [query, setQuery] = useState('');
   const q = query.trim();
   const [panel, setPanel] = useState(false);
@@ -720,6 +727,11 @@ export default function CollectionsScreen({ navigation, route }: {
   // Dragging the shelf folds it too: that is the reader asking to read.
   const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); setPanel(false); };
   const fold = () => { if (panel) answered(); };
+  // The folded row's way back to the panel (owner, 25 Oct 2026). The box
+  // opens it too, but with the keyboard, which comes up over the rows it
+  // was opened to show; a second choice is a tap, not a word, so this
+  // opens the panel and leaves the keyboard where it is.
+  const reopen = () => setPanel(true);
 
   // What this box remembered, in its own drawer — the visits screen's
   // mechanism, for its reasons: kept when a search *worked* (a card
@@ -930,9 +942,16 @@ export default function CollectionsScreen({ navigation, route }: {
           </View>
         )}
         {/* The panel, folded: only what it chose, each a tap from gone.
-            City before kind, the panel's own order. */}
+            City before kind, the panel's own order — and ahead of them
+            the way back in, without the keyboard (see `reopen`). */}
         {!holding && !panel && (cityPick || kind) && (
           <View style={s.chosen} testID="collections-chosen">
+            <Chip
+              label={t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
+              icon="options-outline"
+              onPress={reopen}
+              testID="collections-filters"
+            />
             {cityPick && (
               <Chip
                 label={cityName(cityPick)}
@@ -954,9 +973,9 @@ export default function CollectionsScreen({ navigation, route }: {
           </View>
         )}
         {!holding && panel && (
-          <Card style={s.panel} testID="collections-panel">
+          <View style={s.panel} testID="collections-panel">
             {suggestions.length > 0 && (
-              <View style={s.group}>
+              <Card style={s.recents}>
                 <View style={s.legendRow}>
                   <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補', '推荐', '推薦')}</Text>
                   <PressableScale
@@ -982,44 +1001,36 @@ export default function CollectionsScreen({ navigation, route }: {
                     <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
                   </PressableScale>
                 ))}
-              </View>
+              </Card>
             )}
             {offerCities && (
               <View style={s.group}>
-                <Text style={s.legend}>{t('City', 'Thành phố', '都市', '城市', '城市')}</Text>
-                <View style={s.chipWrap}>
-                  {cityChoices.map((id) => (
-                    <Chip
-                      key={id}
-                      label={cityName(id)}
-                      active={scopeCity === id}
-                      onPress={() => { setCityPick(scopeCity === id ? null : id); answered(); }}
-                    />
-                  ))}
-                </View>
+                <Text style={[s.legend, s.onPage]}>{t('City', 'Thành phố', '都市', '城市', '城市')}</Text>
+                <UnderlineChoice
+                  items={cityChoices.map((id) => ({ key: id, label: cityName(id) }))}
+                  chosen={scopeCity}
+                  onPick={(id) => { setCityPick(id === scopeCity ? null : id); answered(); }}
+                  all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+                  testID="collections-cities"
+                />
               </View>
             )}
             {kindChoices.length > 1 && (
               <View style={s.group}>
-                <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
-                <View style={s.chipWrap}>
-                  {kindChoices.map((k) => (
-                    <Chip
-                      key={k}
-                      label={categoryLabel(k, t)}
-                      icon={CATEGORIES[k]?.icon}
-                      iconColor={CATEGORIES[k]?.color}
-                      active={kind === k}
-                      onPress={() => { setKind(kind === k ? null : k); answered(); }}
-                    />
-                  ))}
-                </View>
+                <Text style={[s.legend, s.onPage]}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
+                <UnderlineChoice
+                  items={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
+                  chosen={kind}
+                  onPick={(k) => { setKind(k === kind ? null : k); answered(); }}
+                  all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+                  testID="collections-kinds"
+                />
               </View>
             )}
             {suggestions.length === 0 && !offerCities && kindChoices.length <= 1 && (
-              <Text style={s.legend}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。', '输入名称、地点或城市。', '輸入名稱、地點或城市。')}</Text>
+              <Text style={[s.legend, s.onPage]}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。', '输入名称、地点或城市。', '輸入名稱、地點或城市。')}</Text>
             )}
-          </Card>
+          </View>
         )}
         {holding && (
           <View>
@@ -1676,14 +1687,19 @@ const s = StyleSheet.create({
   // the 8 a subtitle sits under its title in that header.
   scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginHorizontal: space.page, marginBottom: 14 },
-  panel: { marginHorizontal: space.page, marginBottom: 14, padding: space.cardPadding, gap: space.headingToContent },
+  // The panel on the page's own ground, not in a card: its rows run to
+  // the screen's edge and fade into the page, which a card's ground —
+  // translucent in every dark look — would not match. The suggestions,
+  // words in a list rather than a row, keep the card.
+  panel: { marginBottom: 14, gap: space.headingToContent },
+  recents: { marginHorizontal: space.page, padding: space.cardPadding, gap: 10 },
   group: { gap: 10 },
+  onPage: { marginHorizontal: space.page },
   legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   legend: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
   clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
   // Under the box, where the panel was, with the box's own margins.
   chosen: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, marginHorizontal: space.page, marginBottom: 14 },
 
