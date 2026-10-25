@@ -326,10 +326,6 @@ const CHOICE_FADE = 28;
 /** The row's spacing, and how far the gap may give to cut an item at the
  *  edge (`lib/peek`, where 14–34 is measured). */
 const CHOICE_ROW: PeekRow = { padLeft: space.page, base: 22, min: 14, max: 34 };
-/** How far a tap on the › moves the row: two thirds of what is on
- *  screen, so the item that was cut at the edge lands well inside it
- *  and the reader keeps their place. */
-const CHOICE_STEP = 2 / 3;
 /** The key the "All" item answers to: never a key a caller's item has. */
 const ALL_KEY = '__all__';
 
@@ -364,7 +360,7 @@ const ALL_KEY = '__all__';
  * "one of these is always open": this is a filter, and VoiceOver should
  * read it as one.
  *
- * ── "All", and the › (owner, 25 Oct 2026) ──
+ * ── "All" (owner, 25 Oct 2026) ──
  *
  * `all` puts an item first that stands for nothing chosen, and wears the
  * rule while nothing is. The owner took "All" out on 15 Oct, when it was
@@ -373,13 +369,13 @@ const ALL_KEY = '__all__';
  * word always underlined says what it is showing where a row with none
  * underlined says nothing. Tapping the chosen item still lets go.
  *
- * While the row sits at its start with more past the edge, a › stands on
- * the fade: the review board's resting state, a sign nobody has to read a
- * cut word to get, and a door too — a tap moves the row on by
- * `CHOICE_STEP`. It goes as soon as the row is moved, as the board draws
- * it: by then the reader knows, and the cut and the fade say the rest.
- * The cut is measured against where the fade begins, so the item it shows
- * shows clear of the ›.
+ * The cut is measured against where the fade begins, not the screen's
+ * edge, so the piece of the next item it shows is clear of the fade.
+ *
+ * A › on the fade, while the row sat at its start, shipped for a day
+ * (#1176) and came out (owner, 25 Oct 2026, on a phone): it stood on the
+ * very item the edge cuts, so the two signs that the row goes on drew
+ * over each other, and the cut alone says it.
  */
 export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, testID }: {
   items: { key: K; label: string; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string }[];
@@ -390,8 +386,6 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   all?: string;
   testID?: string;
 }) {
-  const { t } = useI18n();
-  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   // The page's own colour, as plain hex: the fade has to end in exactly
   // the ground the row sits on, and a gradient takes no dynamic colour.
   const bg = bgHex[useScheme().scheme];
@@ -409,11 +403,9 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   const known = edge > 0 && measured.every((w) => w > 0);
   const gap = known ? peekGap(measured, edge - CHOICE_FADE, CHOICE_ROW) : CHOICE_ROW.base;
   const more = known && moreToTheRight(rowWidth(measured, gap, space.page, space.page), edge, scrollX);
-  const atStart = scrollX <= 1;
   return (
     <View testID={testID}>
       <ScrollView
-        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[s.choiceRow, { gap }]}
@@ -456,20 +448,6 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
           style={s.choiceFade}
           testID={testID ? `${testID}-fade` : undefined}
         />
-      ) : null}
-      {more && atStart ? (
-        <PressableScale
-          style={s.choiceMore}
-          contentStyle={s.choiceMoreHit}
-          scaleTo={0.9}
-          haptic="selection"
-          onPress={() => scrollRef.current?.scrollTo({ x: edge * CHOICE_STEP, animated: true })}
-          accessibilityRole="button"
-          accessibilityLabel={t('Show more', 'Xem thêm', 'もっと見る', '查看更多', '檢視更多')}
-          testID={testID ? `${testID}-more` : undefined}
-        >
-          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-        </PressableScale>
       ) : null}
     </View>
   );
@@ -704,12 +682,6 @@ const s = StyleSheet.create({
   choiceRow: { paddingHorizontal: space.page },
   choiceText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
   choiceFade: { position: 'absolute', top: 0, bottom: 0, right: 0, width: CHOICE_FADE },
-  // On the fade, at the page's own edge rather than its margin: the
-  // glyph sits in the fade's last, solid stretch, so nothing scrolling
-  // under it shows through. 44pt tall and as wide as the fade, a target
-  // without pushing anything.
-  choiceMore: { position: 'absolute', top: 0, bottom: 0, right: 0, width: CHOICE_FADE, justifyContent: 'center' },
-  choiceMoreHit: { minHeight: 44, alignItems: 'flex-end', justifyContent: 'center', paddingRight: 6 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
