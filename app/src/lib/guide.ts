@@ -22,18 +22,40 @@ export const MAX_PER_DAY = 10;
 /**
  * The long edge, in pixels, a photograph is reduced to before upload.
  *
- * 1600 rather than the avatar's 512: this one is looked at, not worn at
- * 88pt in a circle. It is also the width the cards already draw at on a
- * 3× phone — a 349pt card is 1047 device pixels — with room left for the
- * detail screen's full-bleed hero, and it keeps a JPEG comfortably under
- * the bucket's 10MB ceiling without asking the phone to upload a 4000px
- * original over hotel wifi.
+ * 1200, and the number is `shrink-photos`' rather than this file's: that
+ * job re-encodes every photo in the bucket to fit 1200px within the hour,
+ * because 1200 device pixels is the widest the app ever draws one (the
+ * detail hero, edge to edge on a 3× phone). Anything sent above it is
+ * carried up the phone's slowest link and then thrown away.
+ *
+ * It was 1600 at 0.8 until 25 Oct 2026, and measured that day it was most
+ * of the wait. Three uploads from the owner's phone, on Viettel, read
+ * back from the edge logs: 1.55 MB in 60 s, 1.30 MB in 55 s, 705 KB in
+ * 35 s — 20 to 26 KB/s up, the same rate two hours apart, with the
+ * server's own part 0.3 to 0.8 s of it. The job had already rewritten
+ * the first two to 302 KB and 262 KB: four bytes in five that went up
+ * were discarded an hour later.
+ *
+ * The long edge, not the width, which is what this used to resize by: a
+ * portrait photograph went up 1200 wide and 1600 tall.
  */
-export const PHOTO_PX = 1600;
+export const PHOTO_PX = 1200;
 
-/** Matching the avatar's. Past 0.8 a JPEG pays in bytes for detail that
- *  a phone screen does not resolve. */
-export const PHOTO_QUALITY = 0.8;
+/** `shrink-photos`' JPEG quality, 74 on ImageMagick's scale, so the job
+ *  has nothing left to take out of a file this made. */
+export const PHOTO_QUALITY = 0.74;
+
+/**
+ * The resize that brings a picked photograph's long edge to `PHOTO_PX`,
+ * or null when it is already within it — a resize there would only
+ * enlarge it. A photograph the picker could not measure is resized by
+ * width, as every one was before the picker's sizes were read.
+ */
+export function shrinkTo(width?: number, height?: number): { width: number } | { height: number } | null {
+  if (!width || !height) return { width: PHOTO_PX };
+  if (Math.max(width, height) <= PHOTO_PX) return null;
+  return width >= height ? { width: PHOTO_PX } : { height: PHOTO_PX };
+}
 
 /** What the panel knows about the person looking at it. */
 export type Guide = {

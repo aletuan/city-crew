@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canAddPhoto, photoPath, photoRoom, refusePhoto, MAX_PER_DAY, MAX_PER_PLACE,
-  PHOTO_PX, PHOTO_QUALITY,
+  PHOTO_PX, PHOTO_QUALITY, shrinkTo,
 } from './guide';
 
 const ME = { uid: 'u1', granted: true };
@@ -152,8 +152,28 @@ describe('the limits, as the policy states them', () => {
     expect(MAX_PER_DAY).toBe(10);
   });
 
-  it('shrinks to a size a phone screen can use', () => {
-    expect(PHOTO_PX).toBe(1600);
-    expect(PHOTO_QUALITY).toBe(0.8);
+  it('shrinks to what shrink-photos keeps, and no further', () => {
+    expect(PHOTO_PX).toBe(1200);
+    expect(PHOTO_QUALITY).toBe(0.74);
+  });
+});
+
+describe('shrinkTo', () => {
+  it('brings the long edge down, whichever edge that is', () => {
+    expect(shrinkTo(4032, 3024)).toEqual({ width: 1200 });
+    expect(shrinkTo(3024, 4032)).toEqual({ height: 1200 });
+    expect(shrinkTo(2000, 2000)).toEqual({ width: 1200 });
+  });
+
+  it('leaves a photograph already within it alone', () => {
+    expect(shrinkTo(1200, 800)).toBeNull();
+    expect(shrinkTo(640, 1200)).toBeNull();
+    expect(shrinkTo(1201, 800)).toEqual({ width: 1200 });
+  });
+
+  it('resizes by width when the picker gave no size', () => {
+    expect(shrinkTo(undefined, undefined)).toEqual({ width: 1200 });
+    expect(shrinkTo(4032, 0)).toEqual({ width: 1200 });
+    expect(shrinkTo(0, 4032)).toEqual({ width: 1200 });
   });
 });
