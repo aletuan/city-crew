@@ -17,7 +17,7 @@ import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import ListToggle from '../components/ListToggle';
 import {
-  AmbientWarmth, Card, Chip, Empty, PressableScale, UnderlineChoice, useTabBarClearance,
+  AmbientWarmth, Card, Empty, PressableScale, UnderlineChoice, useTabBarClearance,
 } from '../components/ui';
 import { cityOfList, coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
 import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
@@ -511,21 +511,32 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
           }
           if (item.kind === 'chips') {
             return (
-              <View style={s.chipWrap}>
-                {cats.map((key) => (
-                  /* A chip *is* a search: it types the category's own
-                     label into the box, and the haystack — which carries
-                     every category's labels in all three languages — does
-                     the rest. No second code path, so a chip can never
-                     disagree with what typing the same word finds. */
-                  <Chip
-                    key={key}
-                    label={categoryLabel(key, t)}
-                    icon={CATEGORIES[key]?.icon}
-                    iconColor={CATEGORIES[key]?.color}
-                    onPress={() => setQuery(categoryLabel(key, t))}
-                  />
-                ))}
+              // Explore's underline row (owner, 25 Oct 2026, the review
+              // board's first way): one line that scrolls, the glyph in
+              // the category's own hue and the word, no box. The wrap of
+              // boxed chips it replaces was the last boxed row left in the
+              // app, three lines of it over the popular places.
+              //
+              // Nothing is ever chosen here. A tap *is* a search: it types
+              // the category's own label into the box, and the haystack —
+              // which carries every category's labels in all three
+              // languages — does the rest, so a tap can never disagree
+              // with typing the same word. The moment there is a word the
+              // zero-state yields to results and this row with it, so an
+              // underline on what was tapped would never be seen.
+              <View style={s.browseRow}>
+                <UnderlineChoice
+                  items={cats.map((key) => ({
+                    key,
+                    label: categoryLabel(key, t),
+                    icon: CATEGORIES[key]?.icon,
+                    iconColor: CATEGORIES[key]?.color,
+                    testID: `search-browse-${key}`,
+                  }))}
+                  chosen={null}
+                  onPick={(key) => { if (key) setQuery(categoryLabel(key, t)); }}
+                  testID="search-browse"
+                />
               </View>
             );
           }
@@ -896,8 +907,8 @@ const s = StyleSheet.create({
   // "boat" set its one card a third of the screen below the chips. The
   // row's ScrollView now sits inside this View, which does not grow.
   citiesRow: { flexGrow: 0, paddingBottom: 12 },
-  // Under the box, on the page's margin, before the chips. The pill is the
-  // Browse chip's glass and padding (`Chip`'s chipOn), sized to its words
+  // Under the box, on the page's margin, before the chips. The pill is
+  // `Chip`'s glass and padding (its chipOn), sized to its words
   // and stopped at the margin, where a long name ends in "…".
   addingToRow: { paddingHorizontal: space.page, paddingBottom: 12, flexDirection: 'row' },
   addingTo: {
@@ -938,12 +949,8 @@ const s = StyleSheet.create({
   recentHit: { flex: 1 },
   recentMain: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   recentTerm: { flex: 1, color: colors.text, fontSize: 16 },
-  // The shared Chip carries its own right margin; the wrap only owes the
-  // vertical rhythm between lines.
-  chipWrap: {
-    flexDirection: 'row', flexWrap: 'wrap', rowGap: 10,
-    paddingHorizontal: space.page, marginBottom: 4,
-  },
+  // The row brings the page's margins itself, to scroll under them.
+  browseRow: { marginBottom: 4 },
   row: { marginHorizontal: space.page, marginBottom: space.cardGap },
   card: {
     flexDirection: 'row', alignItems: 'center', gap: space.cardPadding,
