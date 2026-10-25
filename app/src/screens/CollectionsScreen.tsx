@@ -1874,7 +1874,7 @@ const s = StyleSheet.create({
   // lists, the one Explore's pinned row draws too.
   pinned: {
     position: 'absolute', left: 0, right: 0, top: 0, zIndex: 20,
-    paddingTop: 8, backgroundColor: colors.bg,
+    backgroundColor: colors.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
   },
   // Explore's filter button's box (`filterButton` there): 36 with the
@@ -1887,7 +1887,17 @@ const s = StyleSheet.create({
   filterBadgeText: { color: colors.accentInk, fontSize: 9, fontWeight: font.bold },
   chosenItem: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
   // Explore's pinned heading: the section size, the page's margin.
-  pinnedHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: space.page, marginBottom: 6 },
+  // Explore's pinned heading, measure for measure (`placesHead` and
+  // `filterBar` there): the row as tall as the 36pt filter button whether
+  // or not the button is drawn, straight under the status bar, and the
+  // 16 of `headingToContent` to the row under it. It was 8 above and 6
+  // below, and the owner saw the two pinned rows at two spacings (25 Oct
+  // 2026): the tabs sat some 12pt closer under the heading than Explore's
+  // kinds do.
+  pinnedHead: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 36,
+    marginHorizontal: space.page, marginBottom: space.headingToContent,
+  },
   pinnedTitle: { color: colors.text, ...type.section },
   chosenWordsSlot: { flexShrink: 1 },
   chosenWords: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
