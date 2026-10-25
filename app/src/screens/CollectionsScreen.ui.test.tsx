@@ -1443,7 +1443,7 @@ describe('scrolled', () => {
     await new Promise((r) => setTimeout(r, 200));
     expect(screen.queryByTestId('collections-dock')).toBeNull();
     scrollTo(260);
-    await waitFor(() => expect(screen.getByTestId('collections-dock').textContent).toBe('Find a collectionBy name or placeCollection'));
+    await waitFor(() => expect(screen.getByTestId('collections-dock').textContent).toBe('Find a collectionBy name or placeNew'));
     const pill = screen.getByTestId('collections-dock-new');
     expect(pill.getAttribute('aria-label')).toBe('New collection');
     fireEvent.click(pill);

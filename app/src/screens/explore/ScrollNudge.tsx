@@ -70,14 +70,16 @@ export function ScrollNudge({ visible, onSearch, onAdd }: {
         sub={t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加', '搜索，或自己添加', '搜尋，或自己新增')}
       />
       {/* `tall`: the 44 every other control has — see `AddPill`. The
-          word is the noun, "+ Địa điểm", the collection dock's word too
-          (owner, 17 Oct 2026): the glyph says add, the word says what,
-          and the screen's own title is the same noun. VoiceOver hears
-          the whole verb phrase. */}
+          word is "+ Tạo mới", the word every pill that makes something
+          wears (owner, 25 Oct 2026: Collections' and Trips' headers said
+          it, the docks said a noun). It was the noun, "+ Địa điểm", from
+          17 Oct. What it makes is the context's to say — the sentence
+          beside it, the screen under it — and VoiceOver hears it whole:
+          "Tạo địa điểm mới". */}
       <AddPill
         tall
-        label={t('Place', 'Địa điểm', 'スポット', '地点', '地點')}
-        accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
+        label={t('New', 'Tạo mới', '新規', '新建', '新增')}
+        accessibilityLabel={t('New place', 'Tạo địa điểm mới', '新しいスポット', '新建地点', '新增地點')}
         onPress={onAdd}
       />
     </DockSlot>

@@ -1346,6 +1346,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      The glyph says add; the word says what. VoiceOver hears the whole
      "Thêm địa điểm", which is what the ⋯ menu's row says too.
 
+     Explore's pill became "+ Tạo mới" on 25 Oct 2026, the word for a
+     pill that makes something. This one stays the noun: it puts a place
+     the catalog already has into the list, and "Tạo mới" beside "Lên kế
+     hoạch" would read as "a new plan".
+
      A list with no city has no copy to offer (see the ⋯ menu), so a
      visitor's dock there is the sentence alone. */
   const plan = () => {

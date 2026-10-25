@@ -1744,7 +1744,8 @@ export default function CollectionsScreen({ navigation, route }: {
       </View>
       {/* Explore's dock, with this screen's two actions: the whole island
           is the box (`findFromDock`), the pill a new list. "+ Bộ sưu tập",
-          the noun, as Explore's is "+ Địa điểm". Guests start no lists. */}
+          "+ Tạo mới", the word every pill that makes something wears, as
+          this screen's own header pill does. Guests start no lists. */}
       <DockSlot visible={dock} onPress={findFromDock} accessibilityRole="button" testID="collections-dock">
         <DockOffer
           icon="search"
@@ -1756,7 +1757,7 @@ export default function CollectionsScreen({ navigation, route }: {
         {session ? (
           <AddPill
             tall
-            label={t('Collection', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
+            label={t('New', 'Tạo mới', '新規', '新建', '新增')}
             accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
             onPress={startNew}
             testID="collections-dock-new"
