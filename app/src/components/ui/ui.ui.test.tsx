@@ -162,6 +162,28 @@ describe('UnderlineChoice', () => {
     expect(onPick).toHaveBeenLastCalledWith(null);
   });
 
+  // Search's cities carry the figures their chips did (owner, 25 Oct
+  // 2026): after the word, in brackets — and "All" its own, once known.
+  it('puts a figure after a word that has one, "All" included', () => {
+    const { rerender } = render(<UnderlineChoice items={[{ key: 'hn', label: 'Hà Nội', count: 6 }, { key: 'sg', label: 'Sài Gòn' }]} chosen={null} onPick={() => {}} all="All" allCount={24} testID="row" />);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['All (24)', 'Hà Nội (6)', 'Sài Gòn']);
+    rerender(<UnderlineChoice items={[{ key: 'hn', label: 'Hà Nội', count: 0 }]} chosen={null} onPick={() => {}} all="All" testID="row" />);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['All', 'Hà Nội (0)']);
+  });
+
+  // Under a search box the row is tapped with the keyboard up, and a
+  // ScrollView's default spends that tap on the keyboard. React Native Web
+  // has no keyboard to show it, so the prop is read off the row itself.
+  it('takes a tap with the keyboard up', () => {
+    render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} testID="row" />);
+    const el = screen.getByTestId('row-scroll');
+    const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
+    type Fiber = { memoizedProps?: Record<string, unknown>; return?: Fiber };
+    let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
+    while (f && !(f.memoizedProps && 'keyboardShouldPersistTaps' in f.memoizedProps)) f = f.return;
+    expect(f?.memoizedProps?.keyboardShouldPersistTaps).toBe('handled');
+  });
+
   // The › that stood on the fade came out (owner, 25 Oct 2026): it drew
   // over the item the edge cuts. Measured and scrolled, the row has none.
   it('draws no › on the fade, at its start or anywhere', () => {

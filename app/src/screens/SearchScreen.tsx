@@ -6,7 +6,7 @@
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Keyboard, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -17,7 +17,7 @@ import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import ListToggle from '../components/ListToggle';
 import {
-  AmbientWarmth, Card, Chip, Empty, PressableScale, useTabBarClearance,
+  AmbientWarmth, Card, Chip, Empty, PressableScale, UnderlineChoice, useTabBarClearance,
 } from '../components/ui';
 import { cityOfList, coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
 import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
@@ -426,32 +426,19 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
           away and keeps the words, as the reference does: the reader has
           stopped typing to look. */}
       {chips ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={s.citiesRow}
-          contentContainerStyle={s.cities}
-          testID="search-cities"
-        >
-          <Chip
-            label={t('All', 'Tất cả', 'すべて', '全部', '全部')}
-            count={index ? totalFound(counts) : undefined}
-            active={pick === 'all'}
-            onPress={() => { Keyboard.dismiss(); setCityChoice('all'); }}
-            testID="search-city-all"
+        // Explore's underline row (owner, 25 Oct 2026), with the figures
+        // the chips carried: one city at a time, the chosen one tapped
+        // again is All, as `tapCity` has it.
+        <View style={s.citiesRow}>
+          <UnderlineChoice
+            items={chips.map(({ id, count }) => ({ key: id, label: cityName(id) ?? id, count, testID: `search-city-${id}` }))}
+            chosen={pick === 'all' ? null : pick[0]}
+            onPick={(id) => { Keyboard.dismiss(); setCityChoice(id === null ? 'all' : tapCity(pick, id)); }}
+            all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+            allCount={index ? totalFound(counts) : undefined}
+            testID="search-cities"
           />
-          {chips.map(({ id, count }) => (
-            <Chip
-              key={id}
-              label={cityName(id) ?? id}
-              count={count}
-              active={pick !== 'all' && pick.includes(id)}
-              onPress={() => { Keyboard.dismiss(); setCityChoice(tapCity(pick, id)); }}
-              testID={`search-city-${id}`}
-            />
-          ))}
-        </ScrollView>
+        </View>
       ) : null}
 
       <FlatList
@@ -901,14 +888,14 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
-  // The chips' row: the page's margins, and the gap the Browse chips keep.
-  // A horizontal ScrollView grows by default (React Native's
-  // `baseHorizontal` is flexGrow 1), and this one is the list's sibling
-  // in the screen's column: with a short list the two split the empty
-  // height, and "boat" set its one card a third of the screen below the
-  // chips. With a long one the list's own size squeezed the row back to
-  // its chips, which is why "phở" looked right and hid it.
-  citiesRow: { flexGrow: 0 },
+  // The cities' row, under the box. `UnderlineChoice` brings the page's
+  // margins; this is the air between it and the list. It used to be a
+  // horizontal ScrollView of its own, the list's sibling in the screen's
+  // column, and grew by default (React Native's `baseHorizontal` is
+  // flexGrow 1): with a short list the two split the empty height, and
+  // "boat" set its one card a third of the screen below the chips. The
+  // row's ScrollView now sits inside this View, which does not grow.
+  citiesRow: { flexGrow: 0, paddingBottom: 12 },
   // Under the box, on the page's margin, before the chips. The pill is the
   // Browse chip's glass and padding (`Chip`'s chipOn), sized to its words
   // and stopped at the margin, where a long name ends in "…".
@@ -922,7 +909,6 @@ const s = StyleSheet.create({
   addingToText: { flexShrink: 1, color: colors.textSecondary, fontSize: 15 },
   addingToTitle: { color: colors.text, fontWeight: font.semibold },
   addingToCount: { flexShrink: 0, color: colors.textSecondary, fontSize: 15, marginLeft: -3 },
-  cities: { paddingHorizontal: space.page, paddingBottom: 12, gap: 8 },
 
   section: {
     color: colors.text, ...type.section,
