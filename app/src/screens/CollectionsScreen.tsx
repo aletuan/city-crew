@@ -6,15 +6,16 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Keyboard, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View, type ViewProps } from 'react-native';
+import { Alert, Animated, Keyboard, type NativeScrollEvent, type NativeSyntheticEvent, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View, type ViewProps } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, Screen, ScreenTitle, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
-import { useDuckOnScroll } from '../components/tabBarDuck';
+import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
+import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { AddPill } from '../components/add';
 import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
@@ -494,6 +495,35 @@ export default function CollectionsScreen({ navigation, route }: {
   // and React Native 0.88's SectionList do not meet, though the list
   // answers `getScrollResponder` as it always did.
   useScrollToTop(scrollRef as unknown as Parameters<typeof useScrollToTop>[0]);
+  const toTop = () => scrollRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: true });
+
+  // ── the pinned tabs, and the dock (owner, 25 Oct 2026) ──
+  //
+  // Explore's two moves, made here. The tabs go up with the list until
+  // they reach the top and then stay, drawn over the shelf by a copy
+  // (`tabsRow(true)`), as Explore's filter row does: the switch between
+  // the two shelves is the one thing on this screen a reader wants at
+  // every depth. The folded filters pin with them. And once the reader
+  // is past everything above the shelf, with the tab bar away, its dock
+  // offers the box and a new list (`DockSlot`), as Explore's offers its
+  // search and a place: the box itself is far above by then.
+  //
+  // Where each crossing is comes from layout, in the list's content:
+  // the tabs' top (`tabsY`) and the header's foot (`topH`). Refs, read by
+  // the scroll handler; state flips only at a crossing, one render each.
+  const tabsYRef = useRef(0);
+  const topHRef = useRef(0);
+  const [pinned, setPinned] = useState(false);
+  const [deep, setDeep] = useState(false);
+  const onShelfScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    duckScroll?.(e);
+    const y = e.nativeEvent.contentOffset.y;
+    const nowPinned = tabsYRef.current > 0 && y >= tabsYRef.current;
+    if (nowPinned !== pinned) setPinned(nowPinned);
+    const nowDeep = topHRef.current > 0 && y >= topHRef.current;
+    if (nowDeep !== deep) setDeep(nowDeep);
+  };
+  const ducked = useTabBarDucked();
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
   //
@@ -717,8 +747,8 @@ export default function CollectionsScreen({ navigation, route }: {
   // It used to stay up until Cancel, for the reason VisitedScreen gives:
   // closing it on a blur would take the chips out from under the reader
   // mid-choice. Here that left the reader with no way to read the shelf.
-  // The panel is not in the list, as VisitedScreen's is, so it does not
-  // scroll away; with seven cities and nine kinds it stood over all but
+  // The panel was not in the list then, as VisitedScreen's is, so it did
+  // not scroll away; with seven cities and nine kinds it stood over all but
   // a fifth of the screen, and the only way out was Cancel, which let go
   // of the chips it was meant to keep (the owner's screenshot, 24 Oct
   // 2026). Folded, what it chose stays in sight under the box, so a
@@ -744,7 +774,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // opens it too, but with the keyboard, which comes up over the rows it
   // was opened to show; a second choice is a tap, not a word, so this
   // opens the panel and leaves the keyboard where it is.
-  const reopen = () => setPanel(true);
+  const reopen = () => { toTop(); setPanel(true); };
   // One choice in the folded row: its words, which open the panel as the
   // glyph does, and a ✕ of its own that lets go of it and nothing else
   // (owner, 25 Oct 2026: with two choices on, letting go of one was a tap
@@ -756,7 +786,7 @@ export default function CollectionsScreen({ navigation, route }: {
     label: string,
     glyph: { icon: keyof typeof Ionicons.glyphMap; color: string } | null,
     letGo: () => void,
-    testID: string,
+    testID: string | undefined,
   ) => (
     <View style={s.chosenItem} testID={testID}>
       <PressableScale
@@ -880,6 +910,208 @@ export default function CollectionsScreen({ navigation, route }: {
     ? (mineReady ? [{ own: true, data: shape(sifted, true, view) }] : [])
     : [{ own: false, data: shape(sifted, false, view) }];
 
+  // Not while the panel is up: the box it would focus is already open.
+  const dock = useDockOffer(ducked && deep && !panel && !holding, navigation);
+  // The dock's search: the box, at the top of the list, focused — which
+  // opens the panel as a tap on it does.
+  const findFromDock = () => { toTop(); inputRef.current?.focus(); };
+
+  // The tab bar's own glyph for your shelf; the globe every public row
+  // already wears for everyone else's. Guests have no library, so they
+  // get the one half with no switch in front of it. Drawn twice: in the
+  // list, where it is measured (`tabsY`), and as the pinned copy once
+  // the list has carried it to the top — see `pinned`. The copy has no
+  // test names, so a test finds exactly one of each.
+  const tabsRow = (floating: boolean) => (session ? (
+      <UnderlineTabs
+        tabs={[
+          { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours' },
+          { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
+        ]}
+        active={tab}
+        onChange={pickTab}
+        // One preference, both shelves — see `shape`.
+        right={(
+          <View style={s.viewToggle}>
+            {(['row', 'tile'] as const).map((v) => (
+              <PressableScale
+                key={v}
+                contentStyle={[s.viewBtn, view === v && s.viewBtnOn]}
+                scaleTo={0.9}
+                haptic="selection"
+                // 26×22 drawn, and the two halves touch, so the slop
+                // grows each outward only: up, down, and away from its
+                // neighbour — 44×44 apiece without either stealing the
+                // other's taps. It was 38×34 at a flat 6.
+                hitSlop={v === 'row'
+                  ? { top: 11, bottom: 11, left: 18, right: 1 }
+                  : { top: 11, bottom: 11, left: 1, right: 18 }}
+                onPress={() => pickView(v)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: view === v }}
+                accessibilityLabel={v === 'tile'
+                  ? t('Tile view', 'Dạng lưới', 'タイル表示', '卡片视图', '卡片檢視')
+                  : t('List view', 'Dạng danh sách', 'リスト表示', '列表视图', '列表檢視')}
+              >
+                <Ionicons
+                  name={v === 'tile' ? 'grid-outline' : 'list-outline'}
+                  size={14}
+                  color={view === v ? colors.accent : colors.textTertiary}
+                />
+              </PressableScale>
+            ))}
+          </View>
+        )}
+      />
+  ) : null);
+
+  // The panel, folded: the filter glyph, then what it chose in words,
+  // each with its own ✕ — see `reopen` and `chosenItem`. Pinned with the
+  // tabs once they reach the top, so a filter that is on is never one
+  // the reader cannot see.
+  const chosenRow = (floating: boolean) => (!holding && !panel && (cityPick || kind) ? (
+    <View style={s.chosen} testID={floating ? undefined : 'collections-chosen'}>
+      <PressableScale
+        contentStyle={s.chosenOpen}
+        scaleTo={0.94}
+        haptic="selection"
+        hitSlop={4}
+        onPress={reopen}
+        accessibilityRole="button"
+        accessibilityLabel={t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
+        testID={floating ? undefined : 'collections-filters'}
+      >
+        {/* Explore's filter glyph, in Explore's coral for "applied":
+            the row is here only while something is. */}
+        <Ionicons name="options-outline" size={19} color={colors.accent} />
+      </PressableScale>
+      <View style={s.chosenRule} />
+      {cityPick && chosenItem(cityName(cityPick), null, () => setCityPick(null), floating ? undefined : 'collections-chosen-city')}
+      {kind && chosenItem(categoryLabel(kind, t), CATEGORIES[kind] ?? null, () => setKind(null), floating ? undefined : 'collections-chosen-kind')}
+    </View>
+  ) : null);
+
+  // Everything above the shelf, as the list's own header since 25 Oct
+  // 2026 (owner): the title, the line under it, the tabs, the box and its
+  // panel go up with the shelf, as Explore's hero does, and the tabs pin
+  // at the top once they get there. Fixed, they took a third of the phone
+  // from the lists. Measured, for the dock: past its foot is "deep".
+  const top = (
+    <View onLayout={(e) => { topHRef.current = Math.round(e.nativeEvent.layout.height); }} testID="collections-top">
+      <ScreenTitle
+        title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
+        right={(onYours ? mineReady && mine.data.length > 0 : !!session) ? (
+          <AddPill
+            tall
+            label={t('New', 'Tạo mới', '新規', '新建', '新增')}
+            onPress={startNew}
+            accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
+            testID="collection-new"
+          />
+        ) : undefined}
+      />
+      {/* The line under the title is in the body, as the Trips lede is,
+          and not the header's `lede`: the header row aligns its right
+          slot to the bottom of the title column, so a line in that
+          column drops the pill a line below the title — the owner saw
+          the two screens' pills at two heights (14 Oct 2026). */}
+      {!holding && (onYours ? mineReady : true) ? (
+        <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scope}</Text>
+      ) : null}
+      <View onLayout={(e) => { tabsYRef.current = Math.round(e.nativeEvent.layout.y); }} testID="collections-tabs">
+        {tabsRow(false)}
+      </View>
+      {/* The box, and the panel it opens. It stood outside the list
+          until 25 Oct 2026 — a box that scrolled away with the shelf was
+          the one the owner's review of 14 Oct called hard to find — and
+          goes up with the shelf now, because the dock brings it back from
+          any depth (`findFromDock`) and the screen it took is the lists'. */}
+      {!holding && (
+        <View style={s.searchRow}>
+          <SearchField
+            inputRef={inputRef}
+            value={query}
+            onChangeText={setQuery}
+            onFocus={() => setPanel(true)}
+            onSubmitEditing={noteSearch}
+            testID={{ input: 'collections-input', cancel: 'collections-cancel' }}
+            // The four things it answers by, named in the box itself.
+            // A person, not "@username" (owner, 21 Oct 2026): on a phone
+            // the box cut it to "@use…", which read as nothing, and the
+            // search finds a curator by the handle typed with or without
+            // the @ anyway. No "or": a list of four needs no conjunction
+            // to be read as one.
+            placeholder={t('Name, place, city, user', 'Tên, địa điểm, thành phố, người dùng', '名前・スポット・都市・ユーザー', '名称、地点、城市、用户', '名稱、地點、城市、使用者')}
+            // Inside the box, while the panel is up or anything it chose
+            // is still on — see `SearchField`.
+            cancel={{ shown: panel || asked, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
+          />
+        </View>
+      )}
+      {chosenRow(false)}
+      {!holding && panel && (
+        <View style={s.panel} testID="collections-panel">
+          {suggestions.length > 0 && (
+            <Card style={s.recents}>
+              <View style={s.legendRow}>
+                <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補', '推荐', '推薦')}</Text>
+                <PressableScale
+                  onPress={() => keepRecents([])}
+                  scaleTo={0.92}
+                  hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去', '清除推荐', '清除推薦')}
+                >
+                  <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除', '清除')}</Text>
+                </PressableScale>
+              </View>
+              {suggestions.map((term) => (
+                <PressableScale
+                  key={term}
+                  contentStyle={s.suggestion}
+                  scaleTo={0.97}
+                  onPress={() => { setQuery(term); answered(); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={term}
+                >
+                  <Ionicons name="search-outline" size={17} color={colors.textTertiary} />
+                  <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
+                </PressableScale>
+              ))}
+            </Card>
+          )}
+          {offerCities && (
+            <View style={s.group}>
+              <Text style={[s.legend, s.onPage]}>{t('City', 'Thành phố', '都市', '城市', '城市')}</Text>
+              <UnderlineChoice
+                items={cityChoices.map((id) => ({ key: id, label: cityName(id) }))}
+                chosen={scopeCity}
+                onPick={(id) => { setCityPick(id === scopeCity ? null : id); answered(); }}
+                all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+                testID="collections-cities"
+              />
+            </View>
+          )}
+          {kindChoices.length > 1 && (
+            <View style={s.group}>
+              <Text style={[s.legend, s.onPage]}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
+              <UnderlineChoice
+                items={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
+                chosen={kind}
+                onPick={(k) => { setKind(k === kind ? null : k); answered(); }}
+                all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
+                testID="collections-kinds"
+              />
+            </View>
+          )}
+          {suggestions.length === 0 && !offerCities && kindChoices.length <= 1 && (
+            <Text style={[s.legend, s.onPage]}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。', '输入名称、地点或城市。', '輸入名稱、地點或城市。')}</Text>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
   return (
     // The door to a new list is the Trips screen's pill, in the header's
     // right, on the Yours tab once there is a list. It was a dashed row at
@@ -901,182 +1133,12 @@ export default function CollectionsScreen({ navigation, route }: {
     // library, so no pill.
     <Screen
       title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
-      right={(onYours ? mineReady && mine.data.length > 0 : !!session) ? (
-        <AddPill
-          tall
-          label={t('New', 'Tạo mới', '新規', '新建', '新增')}
-          onPress={startNew}
-          accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
-          testID="collection-new"
-        />
-      ) : undefined}
-      // The search was a disc up here, where every screen keeps its
-      // utility; it is a box under the tabs now — see `panel`.
+      // The title is the list's to draw, and goes up with it — see `top`.
+      titleScrolls
     >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        {/* The line under the title is in the body, as the Trips lede is,
-            and not the header's `lede`: the header row aligns its right
-            slot to the bottom of the title column, so a line in that
-            column drops the pill a line below the title — the owner saw
-            the two screens' pills at two heights (14 Oct 2026). */}
-        {!holding && (onYours ? mineReady : true) ? (
-          <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scope}</Text>
-        ) : null}
-        {/* The tab bar's own glyph for your shelf; the globe every public
-            row already wears for everyone else's. Guests have no library,
-            so they get the one half with no switch in front of it. */}
-        {session ? (
-          <UnderlineTabs
-            tabs={[
-              { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: 'collections-yours' },
-              { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
-            ]}
-            active={tab}
-            onChange={pickTab}
-            // One preference, both shelves — see `shape`.
-            right={(
-              <View style={s.viewToggle}>
-                {(['row', 'tile'] as const).map((v) => (
-                  <PressableScale
-                    key={v}
-                    contentStyle={[s.viewBtn, view === v && s.viewBtnOn]}
-                    scaleTo={0.9}
-                    haptic="selection"
-                    // 26×22 drawn, and the two halves touch, so the slop
-                    // grows each outward only: up, down, and away from its
-                    // neighbour — 44×44 apiece without either stealing the
-                    // other's taps. It was 38×34 at a flat 6.
-                    hitSlop={v === 'row'
-                      ? { top: 11, bottom: 11, left: 18, right: 1 }
-                      : { top: 11, bottom: 11, left: 1, right: 18 }}
-                    onPress={() => pickView(v)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: view === v }}
-                    accessibilityLabel={v === 'tile'
-                      ? t('Tile view', 'Dạng lưới', 'タイル表示', '卡片视图', '卡片檢視')
-                      : t('List view', 'Dạng danh sách', 'リスト表示', '列表视图', '列表檢視')}
-                  >
-                    <Ionicons
-                      name={v === 'tile' ? 'grid-outline' : 'list-outline'}
-                      size={14}
-                      color={view === v ? colors.accent : colors.textTertiary}
-                    />
-                  </PressableScale>
-                ))}
-              </View>
-            )}
-          />
-        ) : null}
-        {/* The box, and the panel it opens. Outside the list rather than
-            as its header: a box that scrolled away with the shelf was the
-            one the owner's review called hard to find, and the panel is
-            short-lived — open while choosing, gone on Cancel. */}
-        {!holding && (
-          <View style={s.searchRow}>
-            <SearchField
-              inputRef={inputRef}
-              value={query}
-              onChangeText={setQuery}
-              onFocus={() => setPanel(true)}
-              onSubmitEditing={noteSearch}
-              testID={{ input: 'collections-input', cancel: 'collections-cancel' }}
-              // The four things it answers by, named in the box itself.
-              // A person, not "@username" (owner, 21 Oct 2026): on a phone
-              // the box cut it to "@use…", which read as nothing, and the
-              // search finds a curator by the handle typed with or without
-              // the @ anyway. No "or": a list of four needs no conjunction
-              // to be read as one.
-              placeholder={t('Name, place, city, user', 'Tên, địa điểm, thành phố, người dùng', '名前・スポット・都市・ユーザー', '名称、地点、城市、用户', '名稱、地點、城市、使用者')}
-              // Inside the box, while the panel is up or anything it chose
-              // is still on — see `SearchField`.
-              cancel={{ shown: panel || asked, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
-            />
-          </View>
-        )}
-        {/* The panel, folded: the filter glyph, then what it chose in
-            words, each with its own ✕ — see `reopen` and `chosenItem`. */}
-        {!holding && !panel && (cityPick || kind) && (
-          <View style={s.chosen} testID="collections-chosen">
-            <PressableScale
-              contentStyle={s.chosenOpen}
-              scaleTo={0.94}
-              haptic="selection"
-              hitSlop={4}
-              onPress={reopen}
-              accessibilityRole="button"
-              accessibilityLabel={t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
-              testID="collections-filters"
-            >
-              {/* Explore's filter glyph, in Explore's coral for "applied":
-                  the row is here only while something is. */}
-              <Ionicons name="options-outline" size={19} color={colors.accent} />
-            </PressableScale>
-            <View style={s.chosenRule} />
-            {cityPick && chosenItem(cityName(cityPick), null, () => setCityPick(null), 'collections-chosen-city')}
-            {kind && chosenItem(categoryLabel(kind, t), CATEGORIES[kind] ?? null, () => setKind(null), 'collections-chosen-kind')}
-          </View>
-        )}
-        {!holding && panel && (
-          <View style={s.panel} testID="collections-panel">
-            {suggestions.length > 0 && (
-              <Card style={s.recents}>
-                <View style={s.legendRow}>
-                  <Text style={s.legend}>{t('Suggestions', 'Gợi ý', '候補', '推荐', '推薦')}</Text>
-                  <PressableScale
-                    onPress={() => keepRecents([])}
-                    scaleTo={0.92}
-                    hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去', '清除推荐', '清除推薦')}
-                  >
-                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除', '清除')}</Text>
-                  </PressableScale>
-                </View>
-                {suggestions.map((term) => (
-                  <PressableScale
-                    key={term}
-                    contentStyle={s.suggestion}
-                    scaleTo={0.97}
-                    onPress={() => { setQuery(term); answered(); }}
-                    accessibilityRole="button"
-                    accessibilityLabel={term}
-                  >
-                    <Ionicons name="search-outline" size={17} color={colors.textTertiary} />
-                    <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
-                  </PressableScale>
-                ))}
-              </Card>
-            )}
-            {offerCities && (
-              <View style={s.group}>
-                <Text style={[s.legend, s.onPage]}>{t('City', 'Thành phố', '都市', '城市', '城市')}</Text>
-                <UnderlineChoice
-                  items={cityChoices.map((id) => ({ key: id, label: cityName(id) }))}
-                  chosen={scopeCity}
-                  onPick={(id) => { setCityPick(id === scopeCity ? null : id); answered(); }}
-                  all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
-                  testID="collections-cities"
-                />
-              </View>
-            )}
-            {kindChoices.length > 1 && (
-              <View style={s.group}>
-                <Text style={[s.legend, s.onPage]}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
-                <UnderlineChoice
-                  items={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
-                  chosen={kind}
-                  onPick={(k) => { setKind(k === kind ? null : k); answered(); }}
-                  all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
-                  testID="collections-kinds"
-                />
-              </View>
-            )}
-            {suggestions.length === 0 && !offerCities && kindChoices.length <= 1 && (
-              <Text style={[s.legend, s.onPage]}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。', '输入名称、地点或城市。', '輸入名稱、地點或城市。')}</Text>
-            )}
-          </View>
-        )}
+        {holding || (colsFail && cols.data.length === 0) ? top : null}
         {holding && (
           <View>
             <GuestNotice navigation={navigation} />
@@ -1103,19 +1165,26 @@ export default function CollectionsScreen({ navigation, route }: {
         {!holding && colsFail && cols.data.length === 0 && (
           <LoadFailEmpty kind={colsFail} onRetry={cols.reload} testID="collections-load-fail" />
         )}
-        {!holding && colsFail && cols.data.length > 0 && (
-          <LoadFailBanner kind={colsFail} onRetry={cols.reload} testID="collections-load-banner" />
-        )}
         {!holding && !(colsFail && cols.data.length === 0) && (
           <SectionList
             ref={scrollRef}
             sections={sections}
             keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
-            onScroll={duckScroll}
+            onScroll={onShelfScroll}
             onScrollBeginDrag={fold}
             scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
-            ListHeaderComponent={<GuestNotice navigation={navigation} />}
+            // The banner under the title rather than over it, now that the
+            // title is the list's.
+            ListHeaderComponent={(
+              <>
+                {top}
+                {colsFail && cols.data.length > 0 ? (
+                  <LoadFailBanner kind={colsFail} onRetry={cols.reload} testID="collections-load-banner" />
+                ) : null}
+                <GuestNotice navigation={navigation} />
+              </>
+            )}
             renderItem={({ item }) => {
               if (item.kind === 'pair') {
                 return (
@@ -1663,7 +1732,37 @@ export default function CollectionsScreen({ navigation, route }: {
             refreshing={pulling}
           />
         )}
+        {/* The tabs, pinned: a copy over the shelf rather than a sticky
+            header, as Explore's filter row is, so nothing it does can
+            move a row or eat a tap meant for one. */}
+        {pinned && !holding && session ? (
+          <View style={s.pinned} testID="collections-pinned">
+            {tabsRow(true)}
+            {chosenRow(true)}
+          </View>
+        ) : null}
       </View>
+      {/* Explore's dock, with this screen's two actions: the whole island
+          is the box (`findFromDock`), the pill a new list. "+ Bộ sưu tập",
+          the noun, as Explore's is "+ Địa điểm". Guests start no lists. */}
+      <DockSlot visible={dock} onPress={findFromDock} accessibilityRole="button" testID="collections-dock">
+        <DockOffer
+          icon="search"
+          title={t('Find a collection', 'Tìm bộ sưu tập', 'コレクションを探す', '查找合集', '查詢合集')}
+          // Short, for one line beside the pill: about 23 characters fit
+          // there (CollectionDetail's dock measured it, 17 Oct 2026).
+          sub={t('By name or place', 'Theo tên hoặc địa điểm', '名前やスポットで', '按名称或地点', '按名稱或地點')}
+        />
+        {session ? (
+          <AddPill
+            tall
+            label={t('Collection', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
+            accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
+            onPress={startNew}
+            testID="collections-dock-new"
+          />
+        ) : null}
+      </DockSlot>
     </Screen>
   );
 }
@@ -1750,6 +1849,14 @@ const s = StyleSheet.create({
   // glyph and the words, a hairline between them, a ✕ after each word.
   // 36pt tall, Explore's filter button's box; the slop makes it 44.
   chosen: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: space.page, marginBottom: 14 },
+  // The pinned copy: over the shelf, opaque because the shelf runs under
+  // it, and a hairline at its foot — the edge between the switch and the
+  // lists, the one Explore's pinned row draws too.
+  pinned: {
+    position: 'absolute', left: 0, right: 0, top: 0, zIndex: 20,
+    paddingTop: 8, backgroundColor: colors.bg,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
+  },
   chosenOpen: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   chosenRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: colors.borderGlass },
   chosenItem: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },

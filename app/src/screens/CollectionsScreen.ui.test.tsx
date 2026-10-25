@@ -20,13 +20,14 @@ import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
 import { Alert, Keyboard } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
 
 const state = vi.hoisted(() => ({
   uid: null as string | null,
+  ducked: false,
   city: { id: 'hanoi' } as { id: string } | null,
   places: [] as unknown[],
   placesLoaded: true,
@@ -81,7 +82,7 @@ vi.mock('../lib/data', async (orig) => ({
   deleteCollection: spies.deleteCollection,
   fetchProfilesById: spies.fetchProfilesById,
 }));
-vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined }));
+vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined, useTabBarDucked: () => state.ducked }));
 // Swipeable is a native gesture recognizer; there is no thumb in jsdom. The
 // stand-in draws the row and its revealed actions side by side (so Edit and
 // Delete are reachable by name), hands the render prop a real drag value,
@@ -138,6 +139,7 @@ const nav = (): NavSpy => {
   const parentNavigate = vi.fn();
   return {
     navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
+    addListener: vi.fn(() => () => {}),
     getParent: () => ({ navigate: parentNavigate }),
     parentNavigate,
   } as unknown as NavSpy;
@@ -151,7 +153,7 @@ const show = (params?: { tab?: 'community'; at?: number }) => {
 
 /** The SectionList's own props, reached through the committed fiber tree —
  *  a pull gesture does not exist in jsdom (same approach as Explore). */
-const listProps = (): { onRefresh: () => void; refreshing: boolean } => {
+const listProps = (): { onRefresh: () => void; refreshing: boolean; onScroll: (e: unknown) => void } => {
   type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
   const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
   const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
@@ -200,6 +202,7 @@ beforeEach(async () => {
   spies.fetchProfilesById.mockImplementation(async () => ({}));
   await AsyncStorage.removeItem('citycrew.collections.view');
   state.uid = null;
+  state.ducked = false;
   state.city = { id: 'hanoi' };
   state.places = [place('a', 'hanoi', 'https://img/a.jpg'), place('b'), place('s', 'saigon')];
   state.placesLoaded = true;
@@ -1355,5 +1358,117 @@ describe('its tab, pressed again', () => {
     show();
     const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as { current: unknown };
     expect(ref.current).toHaveProperty('scrollToLocation');
+  });
+});
+
+// ── the title goes up, the tabs pin, the dock comes (owner, 25 Oct 2026) ──
+describe('scrolled', () => {
+  type Layout = { __reactLayoutHandler: (e: unknown) => void };
+  const lay = (id: string, layout: { y: number; height: number }) => act(() => {
+    (screen.getByTestId(id) as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, width: 390, ...layout } } });
+  });
+  const scrollTo = (y: number) => act(() => {
+    listProps().onScroll({ nativeEvent: {
+      contentOffset: { x: 0, y }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+    } });
+  });
+  const box = () => screen.getByTestId('collections-input') as HTMLInputElement;
+  // The header as a phone lays it out: the tabs 120 down, the whole 260.
+  const laidOut = () => {
+    lay('collections-tabs', { y: 120, height: 44 });
+    lay('collections-top', { y: 0, height: 260 });
+  };
+  const signedIn = () => {
+    state.uid = 'u1';
+    state.mine.data = [col('m1', ['a'], { owner_id: 'u1', title_en: 'Mine' })];
+  };
+
+  it('scrolls the title, the box and the tabs with the shelf', () => {
+    signedIn();
+    show();
+    // One header holds them all: the title is the list's, not the screen's.
+    const top = screen.getByTestId('collections-top');
+    expect(within(top).getByText('Collections')).toBeTruthy();
+    expect(top.contains(box())).toBe(true);
+    expect(top.contains(screen.getByTestId('collections-yours'))).toBe(true);
+    expect(top.contains(screen.getByTestId('collection-new'))).toBe(true);
+    expect(screen.getAllByText('Collections')).toHaveLength(1);
+  });
+
+  it('pins the tabs once they reach the top, and lets them go above it', () => {
+    signedIn();
+    show();
+    laidOut();
+    scrollTo(119);
+    expect(screen.queryByTestId('collections-pinned')).toBeNull();
+    scrollTo(120);
+    const pinned = screen.getByTestId('collections-pinned');
+    expect(pinned.textContent).toContain('Yours');
+    expect(pinned.textContent).toContain('Community');
+    // A copy, unnamed: the tests still find one of each.
+    expect(screen.getAllByTestId('collections-yours')).toHaveLength(1);
+    scrollTo(40);
+    expect(screen.queryByTestId('collections-pinned')).toBeNull();
+  });
+
+  it('pins a guest nothing: there is no switch to keep', () => {
+    show();
+    laidOut();
+    scrollTo(300);
+    expect(screen.queryByTestId('collections-pinned')).toBeNull();
+  });
+
+  it('pins the chosen filters with the tabs, and opens the panel from them', () => {
+    signedIn();
+    state.places = [{ ...place('a', 'hanoi'), categories: ['cafes'] }, { ...place('b', 'saigon'), categories: ['nightlife'] }];
+    state.mine.data = [col('m1', ['a'], { owner_id: 'u1' }), col('m2', ['b'], { owner_id: 'u1' })];
+    show();
+    fireEvent.focus(box());
+    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    laidOut();
+    scrollTo(400);
+    const pinned = within(screen.getByTestId('collections-pinned'));
+    expect(pinned.getByRole('button', { name: 'Remove Cafés' })).toBeTruthy();
+    fireEvent.click(pinned.getByRole('button', { name: 'Filters' }));
+    expect(screen.getByTestId('collections-panel')).toBeTruthy();
+    expect(within(screen.getByTestId('collections-pinned')).queryByRole('button', { name: 'Remove Cafés' })).toBeNull();
+  });
+
+  it('lends the dock once past the header with the bar away: the box, and a new list', async () => {
+    signedIn();
+    state.ducked = true;
+    const { navigation } = show();
+    laidOut();
+    scrollTo(259);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(screen.queryByTestId('collections-dock')).toBeNull();
+    scrollTo(260);
+    await waitFor(() => expect(screen.getByTestId('collections-dock').textContent).toBe('Find a collectionBy name or placeCollection'));
+    const pill = screen.getByTestId('collections-dock-new');
+    expect(pill.getAttribute('aria-label')).toBe('New collection');
+    fireEvent.click(pill);
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
+    // The island is the box: focused, which opens the panel, and the
+    // dock steps aside for it.
+    fireEvent.click(screen.getByTestId('collections-dock').firstElementChild as HTMLElement);
+    expect(document.activeElement).toBe(box());
+    expect(screen.getByTestId('collections-panel')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId('collections-dock')).toBeNull());
+  });
+
+  it('offers a guest the box alone, and nothing while the bar is up', async () => {
+    state.ducked = true;
+    show();
+    laidOut();
+    scrollTo(400);
+    await waitFor(() => expect(screen.getByTestId('collections-dock')).toBeTruthy());
+    expect(screen.queryByTestId('collections-dock-new')).toBeNull();
+    cleanup();
+    state.ducked = false;
+    show();
+    laidOut();
+    scrollTo(400);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(screen.queryByTestId('collections-dock')).toBeNull();
   });
 });
