@@ -12,7 +12,7 @@ import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Avatar, Card, Chip, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill } from '../components/add';
@@ -721,10 +721,23 @@ export default function CollectionsScreen({ navigation, route }: {
   // scroll away; with seven cities and nine kinds it stood over all but
   // a fifth of the screen, and the only way out was Cancel, which let go
   // of the chips it was meant to keep (the owner's screenshot, 24 Oct
-  // 2026). Folded, the chosen chips stay in sight under the box — each
-  // with its ✕, so a filter is never one nobody can see — the shelf gets
-  // the screen, and the box opens the panel again for a second choice.
-  // Dragging the shelf folds it too: that is the reader asking to read.
+  // 2026). Folded, what it chose stays in sight under the box, so a
+  // filter is never one nobody can see; the shelf gets the screen, and
+  // the box opens the panel again for a second choice. Dragging the shelf
+  // folds it too: that is the reader asking to read.
+  //
+  // The folded row was chips, each with a ✕, behind a "Filters" chip.
+  // Since 25 Oct 2026 it is the review board's: Explore's filter glyph,
+  // with no word beside it (the owner: the glyph says it), then what is
+  // chosen as words with no ground, each a tap back into the panel and
+  // each with its own ✕. Left from the board: its "Clear all", which
+  // turned letting go of one of two choices into two taps (it shipped in
+  // a draft and came out the same day — the owner asked why the ✕ had
+  // gone; with two choices at most, a ✕ each is enough, and Cancel lets
+  // go of everything); its filter sheet, a fourth way of choosing beside
+  // the underline rows Explore, this panel and the visits panel now
+  // share; and several cities at once, which the owner took out of every
+  // filter on 24 Oct.
   const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); setPanel(false); };
   const fold = () => { if (panel) answered(); };
   // The folded row's way back to the panel (owner, 25 Oct 2026). The box
@@ -732,6 +745,46 @@ export default function CollectionsScreen({ navigation, route }: {
   // was opened to show; a second choice is a tap, not a word, so this
   // opens the panel and leaves the keyboard where it is.
   const reopen = () => setPanel(true);
+  // One choice in the folded row: its words, which open the panel as the
+  // glyph does, and a ✕ of its own that lets go of it and nothing else
+  // (owner, 25 Oct 2026: with two choices on, letting go of one was a tap
+  // on a ✕, and the board's single "Clear all" made it two). Two targets
+  // side by side rather than one inside the other: VoiceOver reads an
+  // element that is a button as one thing, and a ✕ inside it would never
+  // be reached.
+  const chosenItem = (
+    label: string,
+    glyph: { icon: keyof typeof Ionicons.glyphMap; color: string } | null,
+    letGo: () => void,
+    testID: string,
+  ) => (
+    <View style={s.chosenItem} testID={testID}>
+      <PressableScale
+        style={s.chosenWordsSlot}
+        contentStyle={s.chosenWords}
+        scaleTo={0.98}
+        haptic="selection"
+        onPress={reopen}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityHint={t('Opens the filters', 'Mở bộ lọc', 'フィルターを開く', '打开筛选', '開啟篩選')}
+      >
+        {glyph ? <Ionicons name={glyph.icon} size={16} color={glyph.color} /> : null}
+        <Text style={s.chosenText} numberOfLines={1}>{label}</Text>
+      </PressableScale>
+      <PressableScale
+        contentStyle={s.chosenX}
+        scaleTo={0.9}
+        haptic="selection"
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 8 }}
+        onPress={letGo}
+        accessibilityRole="button"
+        accessibilityLabel={`${t('Remove', 'Bỏ', '外す', '移除', '移除')} ${label}`}
+      >
+        <Ionicons name="close" size={14} color={colors.textTertiary} />
+      </PressableScale>
+    </View>
+  );
 
   // What this box remembered, in its own drawer — the visits screen's
   // mechanism, for its reasons: kept when a search *worked* (a card
@@ -941,35 +994,27 @@ export default function CollectionsScreen({ navigation, route }: {
             />
           </View>
         )}
-        {/* The panel, folded: only what it chose, each a tap from gone.
-            City before kind, the panel's own order — and ahead of them
-            the way back in, without the keyboard (see `reopen`). */}
+        {/* The panel, folded: the filter glyph, then what it chose in
+            words, each with its own ✕ — see `reopen` and `chosenItem`. */}
         {!holding && !panel && (cityPick || kind) && (
           <View style={s.chosen} testID="collections-chosen">
-            <Chip
-              label={t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
-              icon="options-outline"
+            <PressableScale
+              contentStyle={s.chosenOpen}
+              scaleTo={0.94}
+              haptic="selection"
+              hitSlop={4}
               onPress={reopen}
+              accessibilityRole="button"
+              accessibilityLabel={t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
               testID="collections-filters"
-            />
-            {cityPick && (
-              <Chip
-                label={cityName(cityPick)}
-                active
-                remove={t('Removes this filter', 'Bỏ bộ lọc này', 'このフィルターを外す', '移除此筛选', '移除此篩選')}
-                onPress={() => setCityPick(null)}
-              />
-            )}
-            {kind && (
-              <Chip
-                label={categoryLabel(kind, t)}
-                icon={CATEGORIES[kind]?.icon}
-                iconColor={CATEGORIES[kind]?.color}
-                active
-                remove={t('Removes this filter', 'Bỏ bộ lọc này', 'このフィルターを外す', '移除此筛选', '移除此篩選')}
-                onPress={() => setKind(null)}
-              />
-            )}
+            >
+              {/* Explore's filter glyph, in Explore's coral for "applied":
+                  the row is here only while something is. */}
+              <Ionicons name="options-outline" size={19} color={colors.accent} />
+            </PressableScale>
+            <View style={s.chosenRule} />
+            {cityPick && chosenItem(cityName(cityPick), null, () => setCityPick(null), 'collections-chosen-city')}
+            {kind && chosenItem(categoryLabel(kind, t), CATEGORIES[kind] ?? null, () => setKind(null), 'collections-chosen-kind')}
           </View>
         )}
         {!holding && panel && (
@@ -1700,8 +1745,20 @@ const s = StyleSheet.create({
   clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
-  // Under the box, where the panel was, with the box's own margins.
-  chosen: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, marginHorizontal: space.page, marginBottom: 14 },
+  // Under the box, where the panel was, with the box's own margins: the
+  // review board's folded filter (owner, 25 Oct 2026) — no chips, the
+  // glyph and the words, a hairline between them, a ✕ after each word.
+  // 36pt tall, Explore's filter button's box; the slop makes it 44.
+  chosen: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: space.page, marginBottom: 14 },
+  chosenOpen: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  chosenRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: colors.borderGlass },
+  chosenItem: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+  chosenWordsSlot: { flexShrink: 1 },
+  chosenWords: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
+  // The ✕ quiet, in the tertiary ink: the words are what is read, the
+  // ✕ is there for the hand. Its box is the row's height and 24 wide.
+  chosenX: { width: 24, height: 36, alignItems: 'center', justifyContent: 'center' },
+  chosenText: { color: colors.text, fontSize: 15, fontWeight: font.medium, flexShrink: 1 },
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {

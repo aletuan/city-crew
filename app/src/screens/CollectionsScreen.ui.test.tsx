@@ -1055,25 +1055,25 @@ describe('CollectionsScreen — search', () => {
   // A chip is an answer; the keyboard asks for words. Tapped, it puts the
   // keyboard away and folds the panel down to what it chose (owner, 24 Oct
   // 2026: the panel stood over the shelf, and Cancel was the only way out).
-  it('a chip puts the keyboard away and folds the panel to the chips that are on', () => {
+  it('a choice puts the keyboard away and folds the panel to what is chosen', () => {
     state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
     state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
     const dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
     show();
     expect(screen.queryByTestId('collections-chosen')).toBeNull();
     open();
-    // In the panel a chip is a choice, with no ✕: tapped, it is chosen.
-    expect(screen.getByRole('button', { name: 'Cafés' }).querySelector('[data-icon="close"]')).toBeNull();
     const blur = vi.spyOn(box(), 'blur');
     fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
     expect(dismiss).toHaveBeenCalledTimes(1);
     expect(blur).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('collections-panel')).toBeNull();
-    // What it chose stays in sight, said as removable, and so does Cancel.
-    const chosen = within(screen.getByTestId('collections-chosen'));
-    const cafes = chosen.getByRole('button', { name: 'Cafés' });
-    expect(cafes.getAttribute('aria-selected')).toBe('true');
-    expect(cafes.querySelector('[data-icon="close"]')).toBeTruthy();
+    // What it chose stays in sight, as words beside the filter glyph with
+    // no chip around them, a ✕ after each, and so does Cancel.
+    const row = screen.getByTestId('collections-chosen');
+    expect(within(screen.getByTestId('collections-filters')).queryByText(/./)).toBeNull();
+    expect(screen.getByTestId('collections-filters').querySelector('[data-icon="options-outline"]')).toBeTruthy();
+    expect(screen.getByTestId('collections-filters').getAttribute('aria-label')).toBe('Filters');
+    expect(row.querySelectorAll('[data-icon="close"]')).toHaveLength(1);
     expect(screen.getByTestId('collections-cancel')).toBeTruthy();
     expect(screen.getByText('Hanoi cafés')).toBeTruthy();
     expect(screen.queryByText('Da Nang bars')).toBeNull();
@@ -1082,18 +1082,42 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByTestId('collections-panel')).toBeTruthy();
     expect(screen.queryByTestId('collections-chosen')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'hanoi' }));
-    const both = within(screen.getByTestId('collections-chosen')).getAllByRole('button').map((b) => b.textContent);
-    expect(both).toEqual(['Filters', 'hanoi', 'Cafés']);
-    // Each lets go of its own choice and nothing else; the row goes with
+    const items = within(screen.getByTestId('collections-chosen')).getAllByRole('button').map((b) => b.getAttribute('aria-label'));
+    expect(items).toEqual(['Filters', 'hanoi', 'Remove hanoi', 'Cafés', 'Remove Cafés']);
+    // Each ✕ lets go of its own choice and nothing else; the row goes with
     // the last of them, and Cancel with it.
-    fireEvent.click(within(screen.getByTestId('collections-chosen')).getByRole('button', { name: 'Cafés' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Cafés' }));
     expect(screen.getByText('Hanoi cafés')).toBeTruthy();
     expectSub('1 collection · hanoi');
-    fireEvent.click(within(screen.getByTestId('collections-chosen')).getByRole('button', { name: 'hanoi' }));
+    expect(screen.queryByTestId('collections-chosen-kind')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove hanoi' }));
     expect(screen.queryByTestId('collections-chosen')).toBeNull();
     expect(screen.queryByTestId('collections-cancel')).toBeNull();
     expect(screen.getByText('Da Nang bars')).toBeTruthy();
     dismiss.mockRestore();
+  });
+
+  // The words open the panel as the glyph does; the ✕ beside them only
+  // lets go. The ✕ keeps the words typed in the box.
+  it('opens the panel from a chosen word, and a ✕ keeps the words in the box', () => {
+    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
+    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
+    show();
+    open();
+    type('bars');
+    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    fireEvent.click(within(screen.getByTestId('collections-chosen-kind')).getByRole('button', { name: 'Cafés' }));
+    expect(screen.getByTestId('collections-panel')).toBeTruthy();
+    expect(within(screen.getByTestId('collections-kinds')).getByRole('button', { name: 'Cafés' }).getAttribute('aria-selected')).toBe('true');
+    // A second choice from there folds it again, both on.
+    fireEvent.click(within(screen.getByTestId('collections-cities')).getByRole('button', { name: 'danang' }));
+    expect(screen.getByTestId('collections-chosen-city')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Cafés' }));
+    expect(box().value).toBe('bars');
+    expect(screen.getByText('Da Nang bars')).toBeTruthy();
+    expect(screen.getByTestId('collections-chosen-city')).toBeTruthy();
+    // Something is still asked, so Cancel stays.
+    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
   });
 
   // The folded row leads with a way back to the panel that does not bring
@@ -1141,8 +1165,8 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByText('Da Nang bars')).toBeTruthy();
     expect(screen.getByText('Hanoi bars')).toBeTruthy();
     expect(screen.queryByText('Hanoi cafés')).toBeNull();
-    const left = within(screen.getByTestId('collections-chosen')).getAllByRole('button').map((b) => b.textContent);
-    expect(left).toEqual(['Filters', 'Nightlife']);
+    expect(within(screen.getByTestId('collections-chosen')).queryByTestId('collections-chosen-city')).toBeNull();
+    expect(within(screen.getByTestId('collections-chosen-kind')).getByText('Nightlife')).toBeTruthy();
   });
 
   // Dragging the shelf is asking to read it: the panel folds, and what it
@@ -1203,8 +1227,9 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByText('Bars')).toBeNull();
     expect(screen.getByText('1 of 3 places · Cafés')).toBeTruthy();
     expectSub('1 collection · Cafés');
-    // Tapped again, the chip lets go.
-    fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+    // Tapped again, in the panel, the choice lets go.
+    fireEvent.click(screen.getByTestId('collections-filters'));
+    fireEvent.click(within(screen.getByTestId('collections-kinds')).getByRole('button', { name: 'Cafés' }));
     expect(screen.getByText('Bars')).toBeTruthy();
     expect(screen.queryByText('1 of 3 places · Cafés')).toBeNull();
   });
@@ -1246,7 +1271,8 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByText('Hanoi list')).toBeNull();
     expectSub('1 collection · danang');
     // Let go of: every city.
-    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    fireEvent.click(screen.getByTestId('collections-filters'));
+    fireEvent.click(within(screen.getByTestId('collections-cities')).getByRole('button', { name: 'danang' }));
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
     expectSub('2 collections · 2 cities');
@@ -1272,7 +1298,8 @@ describe('CollectionsScreen — search', () => {
     fireEvent.click(screen.getByRole('button', { name: 'danang' }));
     expect(screen.queryByText('Mine in Hanoi')).toBeNull();
     expectSub('1 collection · danang');
-    fireEvent.click(screen.getByRole('button', { name: 'danang' }));
+    fireEvent.click(screen.getByTestId('collections-filters'));
+    fireEvent.click(within(screen.getByTestId('collections-cities')).getByRole('button', { name: 'danang' }));
     expectSub('2 collections · 2 cities');
   });
 
