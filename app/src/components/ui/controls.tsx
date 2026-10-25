@@ -1,11 +1,12 @@
 // The pressable controls: the press itself, chips, tiles, tabs, the
 // round and gradient buttons, the switch.
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Animated, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Switch, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../../lib/i18n';
+import { moreToTheRight, peekGap, rowWidth, type PeekRow } from '../../lib/peek';
 import { useScheme } from '../../lib/theme';
 import { bgHex, type Color, colors, font, gradAI, labelScaleCap, radius, space } from '../../theme';
 import { CONTROL_H, useNarrowWindow } from './layout';
@@ -318,8 +319,13 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
   );
 }
 
-/** How wide the far end of an `UnderlineChoice` fades into the page. */
-const CHOICE_FADE = 36;
+/** How wide the far end of an `UnderlineChoice` fades into the page:
+ *  narrower than the `PEEK_SHOWN` the cut leaves, so the cut item's glyph
+ *  is in the clear and only its word goes under. */
+const CHOICE_FADE = 28;
+/** The row's spacing, and how far the gap may give to cut an item at the
+ *  edge (`lib/peek`, where 14–34 is measured). */
+const CHOICE_ROW: PeekRow = { padLeft: space.page, base: 22, min: 14, max: 34 };
 
 /**
  * A row of things to narrow by, one at a time, drawn as `UnderlineTabs`
@@ -336,8 +342,12 @@ const CHOICE_FADE = 36;
  *   be null. A tab bar always has a tab open.
  * - It scrolls, and says so: nine categories are some 900pt of row on a
  *   390pt phone, and a row that simply stops at the screen's edge reads
- *   as finished. The far end fades into the page, and the row ends in
- *   that fade's width of air, so the last item can scroll clear of it.
+ *   as finished. The edge always cuts an item — the gap gives a little,
+ *   measured against this phone, these words and this text size, so a
+ *   glyph and a letter of the next kind show (`lib/peek`) — and the far
+ *   end fades into the page while anything is left to scroll to, and
+ *   not once the row is at its end or fits whole (owner, 24 Oct 2026: on
+ *   one phone the edge fell in a gap, and the row read as finished).
  * - A glyph keeps its own colour, chosen or not — the rule `Chip` and
  *   `Tile` keep, for their reason: the hue is what ties the category to
  *   the dot it wears on a card and the pin it wears on the map. So the
@@ -357,14 +367,36 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, testI
   // The page's own colour, as plain hex: the fade has to end in exactly
   // the ground the row sits on, and a gradient takes no dynamic colour.
   const bg = bgHex[useScheme().scheme];
+  // What the row measures of itself: its own width, each item's, and how
+  // far it is scrolled. Until every item has been measured the row keeps
+  // its own gap and draws no fade — a beat, before the first frame shows.
+  const [edge, setEdge] = useState(0);
+  const [widths, setWidths] = useState<Partial<Record<K, number>>>({});
+  const [scrollX, setScrollX] = useState(0);
+  const measured = items.map((i) => widths[i.key] ?? 0);
+  const known = edge > 0 && measured.every((w) => w > 0);
+  const gap = known ? peekGap(measured, edge, CHOICE_ROW) : CHOICE_ROW.base;
+  const more = known && moreToTheRight(rowWidth(measured, gap, space.page, space.page), edge, scrollX);
   return (
     <View testID={testID}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.choiceRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[s.choiceRow, { gap }]}
+        onLayout={(e) => setEdge(e.nativeEvent.layout.width)}
+        onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+        scrollEventThrottle={32}
+        testID={testID ? `${testID}-scroll` : undefined}
+      >
         {items.map(({ key, label, icon, iconColor, testID: itemID }) => {
           const on = chosen === key;
           return (
             <PressableScale
               key={key}
+              onLayout={(e) => {
+                const w = e.nativeEvent.layout.width;
+                setWidths((was) => (was[key] === w ? was : { ...was, [key]: w }));
+              }}
               contentStyle={[s.tabItem, on && s.tabItemOn]}
               scaleTo={0.97}
               haptic="selection"
@@ -382,14 +414,16 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, testI
           );
         })}
       </ScrollView>
-      <LinearGradient
-        pointerEvents="none"
-        colors={[`${bg}00`, bg]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={s.choiceFade}
-        testID={testID ? `${testID}-fade` : undefined}
-      />
+      {more ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={[`${bg}00`, bg]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={s.choiceFade}
+          testID={testID ? `${testID}-fade` : undefined}
+        />
+      ) : null}
     </View>
   );
 }
@@ -617,7 +651,10 @@ const s = StyleSheet.create({
   // the gap is what tells one from the next, not a box. The unchosen word
   // a step brighter than a tab's: here it is the thing being read, where
   // a tab's name is a door the reader already knows.
-  choiceRow: { gap: 22, paddingLeft: space.page, paddingRight: space.page + CHOICE_FADE },
+  // The gap is the row's to choose (`CHOICE_ROW`); the paddings are the
+  // page's. No air for the fade at the end: the fade goes when the end
+  // comes into sight.
+  choiceRow: { paddingHorizontal: space.page },
   choiceText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
   choiceFade: { position: 'absolute', top: 0, bottom: 0, right: 0, width: CHOICE_FADE },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
