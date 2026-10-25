@@ -18,8 +18,8 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  acceptFriendRequest, blockUser, fetchApplause, fetchCopies, fetchCuratorAvatars, fetchFriendships,
-  fetchMutualSaves, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
+  acceptFriendRequest, blockUser, dismissSuggestion, fetchApplause, fetchCopies, fetchCuratorAvatars, fetchFriendships,
+  fetchListTitles, fetchMutualSaves, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
   removeFriendship, searchHandles, sendFriendRequest, submitReport, unblockUser,
 } from './people';
 
@@ -205,12 +205,18 @@ describe('removeFriendship', () => {
 });
 
 describe('fetchSuggestedFriends', () => {
-  it('asks the Postgres function by name', async () => {
-    fake().replies({ data: [{ id: 'u2', overlap: 3 }] });
-    expect(await fetchSuggestedFriends()).toHaveLength(1);
+  it('asks the Postgres function by name, and reads its row into the app\'s shape', async () => {
+    fake().replies({ data: [
+      { other: 'u2', reason: 'liked_yours', collection_id: 'c1', n: 1 },
+      { other: 'u3', reason: 'saves', collection_id: null, n: 4 },
+    ] });
+    expect(await fetchSuggestedFriends()).toEqual([
+      { other: 'u2', reason: 'liked_yours', collectionId: 'c1', n: 1 },
+      { other: 'u3', reason: 'saves', collectionId: null, n: 4 },
+    ]);
 
     const [q] = fake().log;
-    expect(q).toMatchObject({ op: 'rpc', fn: 'suggested_friends' });
+    expect(q).toMatchObject({ op: 'rpc', fn: 'friend_suggestions' });
     // No arguments: who you already know and who is blocked are questions
     // the function answers from the session, not from anything sent here.
     expect(q.payload).toBeUndefined();
@@ -227,6 +233,44 @@ describe('fetchSuggestedFriends', () => {
   it('answers empty when it returned nothing', async () => {
     fake().replies({ data: null });
     expect(await fetchSuggestedFriends()).toEqual([]);
+  });
+});
+
+describe('fetchListTitles', () => {
+  it('reads the three titles of the lists named, by id', async () => {
+    fake().replies({ data: [{ id: 'c1', title_en: 'Mornings', title_vi: 'Buổi sáng', title_ja: null }] });
+    expect(await fetchListTitles(['c1', 'c2'])).toEqual({
+      c1: { title_en: 'Mornings', title_vi: 'Buổi sáng', title_ja: null },
+    });
+    const [q] = fake().log;
+    expect(q).toMatchObject({ table: 'collections', op: 'select' });
+    expect(q.filters).toEqual([['id', ['c1', 'c2']]]);
+  });
+
+  it('asks nothing for no lists', async () => {
+    expect(await fetchListTitles([])).toEqual({});
+    expect(fake().log).toHaveLength(0);
+  });
+
+  it('throws when the read failed, and answers empty when it returned nothing', async () => {
+    fake().replies({ error: { message: 'offline' } });
+    await expect(fetchListTitles(['c1'])).rejects.toThrow('offline');
+    fake().replies({ data: null });
+    expect(await fetchListTitles(['c1'])).toEqual({});
+  });
+});
+
+describe('dismissSuggestion', () => {
+  it('writes one row, as the reader, about the person put away', async () => {
+    await dismissSuggestion('me', 'them');
+    const [q] = fake().log;
+    expect(q).toMatchObject({ table: 'suggestion_dismissals', op: 'insert' });
+    expect(q.payload).toEqual({ user_id: 'me', other: 'them' });
+  });
+
+  it('throws when the write was refused', async () => {
+    fake().replies({ error: { message: 'denied' } });
+    await expect(dismissSuggestion('me', 'them')).rejects.toThrow('denied');
   });
 });
 

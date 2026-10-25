@@ -16,9 +16,10 @@
 // Adding by exact @handle is still the only way to reach a *particular*
 // person: nobody is browsable and the lookup only ever answers about the
 // one account you named. Suggestions are the other direction — the app
-// naming people whose public lists overlap yours (see suggested_friends,
-// which invents no visibility: every place it counts is on a public
-// shelf already). The pure half of all of it — which pile an edge is in,
+// naming people for a reason it can state: they liked or copied a list
+// of yours, you liked or copied theirs, or their public lists hold places
+// you saved or went to (see friend_suggestions, which invents no
+// visibility: everything of theirs it reads is on a public shelf). The pure half of all of it — which pile an edge is in,
 // what stands between two accounts, which suggestions are still open —
 // lives in lib/friends, under the gate.
 
@@ -35,13 +36,13 @@ import {
 } from '../components/ui';
 import { useSession } from '../lib/auth';
 import {
-  acceptFriendRequest, blockUser, fetchProfilesById,
-  fetchSuggestedFriends, type FriendProfile, profileByHandle, removeFriendship,
+  acceptFriendRequest, blockUser, dismissSuggestion, fetchListTitles, fetchProfilesById,
+  fetchSuggestedFriends, type FriendProfile, type ListTitle, profileByHandle, removeFriendship,
   searchHandles, sendFriendRequest, unblockUser,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import {
-  MIN_SUGGEST_CHARS, openSuggestions, splitFriendships, standingWith,
+  MIN_SUGGEST_CHARS, openSuggestions, reasonLine, splitFriendships, standingWith,
   type Suggestion, suggestable,
 } from '../lib/friends';
 import { atHandle, handleProblem, normalizeHandle } from '../lib/handle';
@@ -125,9 +126,21 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     // suggestion earned survives into the crew when the reader adds them.
     fetchProfilesById(ids).then(absorb).catch(() => {});
   }, [suggested, absorb]);
+  // The lists a like or copy was about, for the row to name. Anybody's,
+  // in any city, so not on any shelf this screen holds; a failed read
+  // leaves the rows saying the same thing without the name.
+  const [titles, setTitles] = useState<Record<string, ListTitle>>({});
+  useEffect(() => {
+    const ids = [...new Set(suggested.map((sg) => sg.collectionId).filter((id): id is string => !!id))];
+    if (!ids.length) return;
+    fetchListTitles(ids).then(setTitles).catch(() => {});
+  }, [suggested]);
+  // Put away with the ×, this visit. The server leaves them out from the
+  // next one; until then this is what keeps the row gone.
+  const [dismissed, setDismissed] = useState<string[]>([]);
   const intros = useMemo(
-    () => openSuggestions(suggested, me ?? '', ships.data, blocks.data),
-    [suggested, me, ships.data, blocks.data],
+    () => openSuggestions(suggested, me ?? '', ships.data, [...blocks.data, ...dismissed]),
+    [suggested, me, ships.data, blocks.data, dismissed],
   );
 
   // ── the add flow ──
@@ -219,6 +232,15 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     () => { successHaptic(); ships.reload(); },
     failed(t('Could not send the request', 'Không gửi được lời mời', 'リクエストを送れませんでした', '无法发送请求', '無法傳送請求')),
   );
+
+  /** The ×: the row goes now and does not come back. No confirmation
+   *  and no undo (owner, 25 Oct 2026) — it is a suggestion, and the
+   *  person can still be added by handle. A write that fails costs only
+   *  their return on the next visit, which is not worth a message. */
+  const dismiss = (id: string) => {
+    setDismissed((d) => [...d, id]);
+    dismissSuggestion(me!, id).catch(() => {});
+  };
 
   const answer = (requester: string, yes: boolean) => run(
     requester,
@@ -665,26 +687,31 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
               </>
             )}
 
-            {/* The introductions. The heading carries its own reason —
-                a suggested stranger with no stated basis reads as the
-                app guessing, and this one is not guessing: these are
-                people whose public lists hold the places yours do. */}
+            {/* The introductions. Each row carries its own reason — a
+                suggested stranger with no stated basis reads as the app
+                guessing, and this one is not guessing. Three lines (the
+                owner's choice): who, their handle, and why. */}
             {intros.length > 0 && (
               <>
                 <Text style={s.head}>
-                  {t('Suggested · you save the same places', 'Gợi ý · cùng lưu những chỗ giống nhau', 'おすすめ · 同じスポットを保存', '推荐 · 你们保存了相同的地点', '推薦 · 你們儲存了相同的地點')}
+                  {t('Suggested for you', 'Gợi ý cho bạn', 'あなたへのおすすめ', '为你推荐', '為你推薦')}
                 </Text>
                 <Card>
                   {intros.map((sg, i) => {
                     const p = people[sg.other];
+                    const list = sg.collectionId ? titles[sg.collectionId] : undefined;
+                    const why = reasonLine(sg, list ? t(list.title_en, list.title_vi, list.title_ja ?? undefined) : null, t);
                     return (
                       <View key={sg.other} style={[s.row, i > 0 && s.rowDivider]}>
                         <Face p={p} />
                         <View style={{ flex: 1, gap: 2 }}>
                           <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
-                          <Text style={s.meta} numberOfLines={1}>
-                            {p ? `${atHandle(p.handle)} · ` : ''}{savesLine(sg.mutual)}
-                          </Text>
+                          {p ? <Text style={s.meta} numberOfLines={1}>{atHandle(p.handle)}</Text> : null}
+                          {/* Two lines: the longest public title on 25 Oct
+                              2026 was 27 characters, and with the sentence
+                              around it that is about 45 — past what one
+                              line holds beside the two buttons. */}
+                          <Text style={s.reason} numberOfLines={2} testID={`crew-suggestion-reason-${sg.other}`}>{why}</Text>
                         </View>
                         <PressableScale
                           onPress={() => askSuggested(sg.other)}
@@ -698,6 +725,16 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                             <Ionicons name="person-add-outline" size={15} color={colors.accentInk} />
                             <Text style={s.addText}>{t('Add', 'Thêm', '追加', '添加', '新增')}</Text>
                           </LinearGradient>
+                        </PressableScale>
+                        <PressableScale
+                          onPress={() => dismiss(sg.other)}
+                          scaleTo={0.9}
+                          style={s.dismiss}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('Hide suggestion', 'Ẩn gợi ý', 'おすすめを非表示', '隐藏推荐', '隱藏推薦')}
+                          testID={`crew-suggestion-dismiss-${sg.other}`}
+                        >
+                          <Ionicons name="close" size={18} color={colors.textTertiary} />
                         </PressableScale>
                       </View>
                     );
@@ -899,6 +936,11 @@ const s = StyleSheet.create({
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   name: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   meta: { color: colors.textTertiary, ...type.meta },
+  // The reason a suggestion is there: the line that decides, so a step
+  // brighter than the handle above it.
+  reason: { color: colors.textSecondary, ...type.meta },
+  // The ×, quiet beside Add: putting someone away is allowed, not urged.
+  dismiss: { padding: 4, marginLeft: -6 },
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
