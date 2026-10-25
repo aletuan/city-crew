@@ -553,3 +553,13 @@ for f in "$ROOT"/supabase/migrations/*_fetch_place_allowance.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/fetch_place_allowance_test.sql"
+
+# Friend suggestions from four sources, and the × (25 Oct 2026): likes,
+# copies, shared places and check-ins, each with its reason, and a table of
+# the people a reader put away. Reads likes, copies, check-ins, friendships
+# and blocks, all in place by now.
+echo "→ friend suggestions"
+for f in "$ROOT"/supabase/migrations/*_friend_suggestions.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/friend_suggestions_test.sql"
