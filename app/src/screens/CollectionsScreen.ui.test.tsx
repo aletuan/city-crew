@@ -29,6 +29,7 @@ const state = vi.hoisted(() => ({
   uid: null as string | null,
   ducked: false,
   city: { id: 'hanoi' } as { id: string } | null,
+  cities: [] as unknown[],
   places: [] as unknown[],
   placesLoaded: true,
   placesLoading: false,
@@ -62,7 +63,7 @@ vi.mock('../lib/auth', () => {
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
 vi.mock('../lib/city', () => {
-  const m = { useCity: () => ({ city: state.city, cities: [] }) };
+  const m = { useCity: () => ({ city: state.city, cities: state.cities }) };
   const all = () => (m as { useCity: () => object }).useCity();
   return { ...m, useCurrentCity: all, useCityList: all };
 });
@@ -221,6 +222,7 @@ beforeEach(async () => {
   state.uid = null;
   state.ducked = false;
   state.city = { id: 'hanoi' };
+  state.cities = [];
   state.places = [place('a', 'hanoi', 'https://img/a.jpg'), place('b'), place('s', 'saigon')];
   state.placesLoaded = true;
   state.placesLoading = false;
@@ -1277,6 +1279,30 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
     expectSub('2 collections · 2 cities');
+  });
+
+  // Past eight cities the row ends in "More" (owner, 25 Oct 2026), and its
+  // picker searches every name a city answers to, which the screen hands
+  // over from the city list: "ho chi" finds the city the app calls Saigon.
+  it('lets the filter find a city past the cut by any of its names', () => {
+    const ids = ['hanoi', 'melbourne', 'dalat', 'danang', 'hoian', 'hue', 'tokyo', 'osaka', 'hcmc'];
+    state.cities = ids.map((id) => (id === 'hcmc'
+      ? { id, short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'ホーチミン', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh', name_ja: 'ホーチミン市' }
+      : { id, short_en: id, short_vi: id, short_ja: id, name_en: id, name_vi: id, name_ja: id }));
+    state.places = ids.map((id) => place(id, id));
+    state.cols.data = ids.map((id) => col(`l-${id}`, [id], { title_en: `List ${id}` }));
+    show();
+    fireEvent.click(screen.getByTestId('collections-filters'));
+    // Nine cities, each in one list: the row keeps five and hides four.
+    expect(screen.getByTestId('collections-filter-cities-more').textContent).toBe('More (+4)');
+    expect(within(screen.getByTestId('collections-filter-cities')).queryByRole('button', word('Saigon'))).toBeNull();
+    fireEvent.click(screen.getByTestId('collections-filter-cities-more'));
+    fireEvent.change(screen.getByTestId('collections-filter-city-search'), { target: { value: 'ho chi' } });
+    fireEvent.click(screen.getByTestId('collections-filter-city-hcmc'));
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
+    expect(screen.getByText('List hcmc')).toBeTruthy();
+    expect(screen.queryByText('List hanoi')).toBeNull();
+    expectSub('1 collection · Saigon');
   });
 
   it('shows a list from another city with no chip to reach it', () => {

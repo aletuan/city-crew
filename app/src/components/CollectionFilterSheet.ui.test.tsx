@@ -6,8 +6,9 @@
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '../uitest/render';
-import CollectionFilterSheet, { type CollectionFilters } from './CollectionFilterSheet';
+import { Keyboard, Platform } from 'react-native';
+import { act, fireEvent, render, screen, within } from '../uitest/render';
+import CollectionFilterSheet, { CITY_ROW_KEEP, CITY_ROW_MAX, type CollectionFilters } from './CollectionFilterSheet';
 
 const CITIES = [{ key: 'hanoi', label: 'Hà Nội' }, { key: 'saigon', label: 'Sài Gòn' }];
 const KINDS = [{ key: 'cafes', label: 'Cafés', icon: 'cafe-outline' as const, iconColor: '#a66' }, { key: 'eats', label: 'Eats' }];
@@ -129,5 +130,178 @@ describe('the Collections filter sheet', () => {
     fireEvent.click(screen.getByLabelText('Close'));
     expect(onClose).toHaveBeenCalledTimes(2);
     expect(onApply).not.toHaveBeenCalled();
+  });
+});
+
+// ── many cities (owner, 25 Oct 2026) ──
+//
+// Ten cities, most-held first as the screen hands them over, each holding
+// ten fewer lists than the one before; Huế holds no eats.
+const MANY = [
+  ['hanoi', 'Hà Nội'], ['hcmc', 'Sài Gòn', 'Ho Chi Minh City'], ['melbourne', 'Melbourne'], ['dalat', 'Đà Lạt'],
+  ['danang', 'Đà Nẵng'], ['hoian', 'Hội An'], ['hue', 'Huế'], ['tokyo', 'Tokyo'], ['osaka', 'Osaka'], ['bangkok', 'Bangkok'],
+].map(([key, label, alias]) => ({ key, label, names: [label, alias, key] }));
+const manyCount = (f: CollectionFilters) => {
+  if (f.city === 'hue' && f.kind === 'eats') return 0;
+  const i = MANY.findIndex((c) => c.key === f.city);
+  return (f.city ? 100 - i * 10 : 1000) - (f.kind ? 1 : 0);
+};
+const openMany = (over: Partial<React.ComponentProps<typeof CollectionFilterSheet>> = {}) =>
+  open({ cities: MANY, countFor: manyCount, ...over });
+const more = () => screen.getByTestId('collections-filter-cities-more');
+const pickerRows = () => within(screen.getByTestId('collections-filter-city-list')).getAllByRole('button')
+  .map((b) => b.textContent);
+
+describe('the Collections filter sheet, with many cities', () => {
+  it('holds every city in the row up to eight', () => {
+    open({ cities: MANY.slice(0, CITY_ROW_MAX), countFor: manyCount });
+    expect(words('collections-filter-cities')).toHaveLength(1 + CITY_ROW_MAX);
+    expect(screen.queryByTestId('collections-filter-cities-more')).toBeNull();
+  });
+
+  it('past eight keeps the five most held, and ends in "More" saying how many it hides', () => {
+    expect(CITY_ROW_KEEP).toBe(5);
+    openMany();
+    expect(words('collections-filter-cities')).toEqual([
+      'All (1000)', 'Hà Nội (100)', 'Sài Gòn (90)', 'Melbourne (80)', 'Đà Lạt (70)', 'Đà Nẵng (60)', 'More (+5)',
+    ]);
+  });
+
+  it('stands a chosen city from past the cut first after "All", and hides one fewer', () => {
+    openMany({ applied: { city: 'tokyo', kind: null } });
+    expect(words('collections-filter-cities')).toEqual([
+      'All (1000)', 'Tokyo (30)', 'Hà Nội (100)', 'Sài Gòn (90)', 'Melbourne (80)', 'Đà Lạt (70)', 'Đà Nẵng (60)', 'More (+4)',
+    ]);
+    expect(answer('Tokyo').getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('opens a picker from "More": "All" and every city A to Z, each with its figure', () => {
+    openMany();
+    fireEvent.click(more());
+    expect(screen.getByText('Choose a city')).toBeTruthy();
+    // The questions and the button wait behind it.
+    expect(screen.queryByTestId('collections-filter-apply')).toBeNull();
+    expect(screen.queryByTestId('collections-filter-close')).toBeNull();
+    expect(pickerRows()).toEqual([
+      'All1000', 'Bangkok10', 'Đà Lạt70', 'Đà Nẵng60', 'Hà Nội100', 'Hội An50', 'Huế40', 'Melbourne80', 'Osaka20', 'Sài Gòn90', 'Tokyo30',
+    ]);
+    expect(screen.getByTestId('collections-filter-city-all').getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('chooses a city from the picker and goes back to the questions with it drafted, not applied', () => {
+    const { onApply } = openMany();
+    fireEvent.click(more());
+    fireEvent.change(screen.getByTestId('collections-filter-city-search'), { target: { value: 'osa' } });
+    fireEvent.click(screen.getByTestId('collections-filter-city-osaka'));
+    expect(screen.queryByTestId('collections-filter-city-list')).toBeNull();
+    expect(onApply).not.toHaveBeenCalled();
+    expect(words('collections-filter-cities')[1]).toBe('Osaka (20)');
+    expect(answer('Osaka').getAttribute('aria-selected')).toBe('true');
+    // What was typed went with the picker.
+    fireEvent.click(more());
+    expect((screen.getByTestId('collections-filter-city-search') as HTMLInputElement).value).toBe('');
+    fireEvent.click(screen.getByTestId('collections-filter-back'));
+    fireEvent.click(apply());
+    expect(onApply).toHaveBeenCalledWith({ city: 'osaka', kind: null });
+  });
+
+  it('lets go of the city by the picker\'s "All"', () => {
+    const { onApply } = openMany({ applied: { city: 'osaka', kind: null } });
+    fireEvent.click(more());
+    expect(screen.getByTestId('collections-filter-city-osaka').getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByTestId('collections-filter-city-all'));
+    fireEvent.click(apply());
+    expect(onApply).toHaveBeenCalledWith({ city: null, kind: null });
+  });
+
+  it('searches every name a city answers to, without its marks, and says when none does', () => {
+    openMany();
+    fireEvent.click(more());
+    const field = screen.getByTestId('collections-filter-city-search');
+    fireEvent.change(field, { target: { value: 'ho chi' } });
+    // Searching, "All" is not a match for anything and stands aside.
+    expect(pickerRows()).toEqual(['Sài Gòn90']);
+    fireEvent.change(field, { target: { value: 'hue' } });
+    expect(pickerRows()).toEqual(['Huế40']);
+    fireEvent.change(field, { target: { value: 'zz' } });
+    expect(screen.getByText('No city by that name')).toBeTruthy();
+    fireEvent.change(field, { target: { value: '' } });
+    expect(screen.queryByText('No city by that name')).toBeNull();
+    expect(pickerRows()[0]).toBe('All1000');
+  });
+
+  it('dims a city that would leave nothing under the drafted kind, but never the chosen one', () => {
+    openMany({ applied: { city: null, kind: 'eats' } });
+    fireEvent.click(more());
+    // "All" counts under the drafted kind too.
+    expect(pickerRows()[0]).toBe('All999');
+    const hue = screen.getByTestId('collections-filter-city-hue');
+    expect(hue.textContent).toBe('Huế0');
+    expect(hue.getAttribute('aria-disabled')).toBe('true');
+    expect(getComputedStyle(hue.firstElementChild as HTMLElement).opacity).toBe('0.45');
+    fireEvent.click(hue);
+    // Still the picker: the tap was not taken.
+    expect(screen.getByTestId('collections-filter-city-list')).toBeTruthy();
+    expect(screen.getByTestId('collections-filter-city-osaka').getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('keeps a chosen city that counts nothing in reach', () => {
+    openMany({ applied: { city: 'hue', kind: 'eats' } });
+    fireEvent.click(more());
+    const hue = screen.getByTestId('collections-filter-city-hue');
+    expect(hue.getAttribute('aria-selected')).toBe('true');
+    expect(hue.getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('goes back by its ‹ without choosing, and forgets what was typed', () => {
+    const { onApply } = openMany();
+    fireEvent.click(more());
+    fireEvent.change(screen.getByTestId('collections-filter-city-search'), { target: { value: 'osa' } });
+    fireEvent.click(screen.getByTestId('collections-filter-back'));
+    expect(screen.getByTestId('collections-filter-apply')).toBeTruthy();
+    fireEvent.click(more());
+    expect((screen.getByTestId('collections-filter-city-search') as HTMLInputElement).value).toBe('');
+    fireEvent.click(screen.getByTestId('collections-filter-back'));
+    fireEvent.click(apply());
+    expect(onApply).toHaveBeenCalledWith({ city: null, kind: null });
+  });
+
+  it('opens on its questions again, whatever page it was closed on', () => {
+    const props = {
+      applied: { city: null, kind: null }, cities: MANY, kinds: KINDS, countFor: manyCount,
+      onClose: () => {}, onApply: () => {},
+    };
+    const { rerender } = render(<CollectionFilterSheet visible {...props} />);
+    fireEvent.click(more());
+    fireEvent.change(screen.getByTestId('collections-filter-city-search'), { target: { value: 'osa' } });
+    rerender(<CollectionFilterSheet visible={false} {...props} />);
+    rerender(<CollectionFilterSheet visible {...props} />);
+    expect(screen.getByTestId('collections-filter-apply')).toBeTruthy();
+    fireEvent.click(more());
+    expect((screen.getByTestId('collections-filter-city-search') as HTMLInputElement).value).toBe('');
+  });
+
+  // The city sheet's keyboard (`CitySwitcher`'s suite says why it is
+  // played this way): iOS only, and the sheet stands on it.
+  it('stands on the keyboard while the picker is typed into, and gives up the height it took', () => {
+    const was = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
+    const spy = vi.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: () => {} } as never);
+    try {
+      openMany();
+      fireEvent.click(more());
+      const sheet = screen.getByTestId('collections-filter-sheet');
+      expect(sheet.style.bottom).toBe('0px');
+      const full = parseFloat(sheet.style.maxHeight);
+      const on = (name: string) => spy.mock.calls.find((c) => c[0] === name)![1] as (e?: unknown) => void;
+      act(() => on('keyboardWillShow')({ endCoordinates: { height: 336 } }));
+      expect(sheet.style.bottom).toBe('336px');
+      expect(parseFloat(sheet.style.maxHeight)).toBeCloseTo(full - 336 * 0.92, 1);
+      act(() => on('keyboardWillHide')());
+      expect(sheet.style.bottom).toBe('0px');
+    } finally {
+      spy.mockRestore();
+      Object.defineProperty(Platform, 'OS', { value: was, configurable: true });
+    }
   });
 });
