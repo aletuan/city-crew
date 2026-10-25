@@ -1743,9 +1743,15 @@ export default function CollectionsScreen({ navigation, route }: {
                 Explore's pinned row carries "Địa điểm" (owner, 25 Oct
                 2026): without it the pinned row was two tabs under a
                 clock, and nothing said whose lists these were. */}
-            <View style={s.pinnedHead}>
-              <Text style={s.pinnedTitle} accessibilityRole="header">{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
-              {filterButton(true)}
+            <View style={s.pinnedTop}>
+              <View style={s.pinnedHead}>
+                <Text style={s.pinnedTitle} accessibilityRole="header">{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
+                {filterButton(true)}
+              </View>
+              {/* The line under the title, kept (owner, 25 Oct 2026): how
+                  many lists and cities, and what a filter narrowed it to,
+                  is what a reader deep in the shelf wants said. */}
+              <Text style={s.pinnedScope} numberOfLines={1}>{scope}</Text>
             </View>
             {tabsRow(true)}
             {chosenRow(true)}
@@ -1894,10 +1900,11 @@ const s = StyleSheet.create({
   // below, and the owner saw the two pinned rows at two spacings (25 Oct
   // 2026): the tabs sat some 12pt closer under the heading than Explore's
   // kinds do.
-  pinnedHead: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 36,
-    marginHorizontal: space.page, marginBottom: space.headingToContent,
-  },
+  pinnedTop: { marginHorizontal: space.page, marginBottom: space.headingToContent },
+  pinnedHead: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 36 },
+  // `scope`'s type; the 36pt row already leaves 4 under the heading's
+  // line, so no margin of its own.
+  pinnedScope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
   pinnedTitle: { color: colors.text, ...type.section },
   chosenWordsSlot: { flexShrink: 1 },
   chosenWords: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },

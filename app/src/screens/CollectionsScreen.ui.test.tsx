@@ -1381,8 +1381,11 @@ describe('scrolled', () => {
     // Named, as Explore's pinned row is, and the name is a heading.
     expect(within(pinned).getByRole('heading').textContent).toBe('Collections');
     // At Explore's measures: a 36pt row, 16 to the tabs, nothing above.
-    const head = getComputedStyle(within(pinned).getByRole('heading').parentElement!);
-    expect([head.minHeight, head.marginBottom]).toEqual(['36px', '16px']);
+    const head = within(pinned).getByRole('heading').parentElement!;
+    expect(getComputedStyle(head).minHeight).toBe('36px');
+    expect(getComputedStyle(head.parentElement!).marginBottom).toBe('16px');
+    // And the line under the title, which says how many and where.
+    expect(head.parentElement!.textContent).toBe(`Collections${screen.getByTestId('collections-scope').textContent}`);
     expect(getComputedStyle(pinned).paddingTop).not.toBe('8px');
     expect(pinned.textContent).toContain('Yours');
     expect(pinned.textContent).toContain('Community');
