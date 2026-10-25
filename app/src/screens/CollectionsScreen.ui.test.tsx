@@ -595,7 +595,7 @@ describe('CollectionsScreen — signed in', () => {
     const { navigation } = show();
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.getByText('No collections yet')).toBeTruthy();
-    expect(screen.getByText('Only you can see your lists.')).toBeTruthy();
+    expect(screen.getByText('Only you can see them until you choose to share.')).toBeTruthy();
     expect(screen.queryByText('New collection')).toBeNull();
     fireEvent.click(screen.getByText('Create your first collection'));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');

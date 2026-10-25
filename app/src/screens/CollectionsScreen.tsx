@@ -203,12 +203,16 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
         <Text style={s.firstTitle}>
           {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}
         </Text>
+        {/* The owner's words (25 Oct 2026), with the app's own category
+            names in place of "cafe, ăn uống, cảnh vật hay địa điểm": it
+            says what a list is for — sharing, and planning a day from it,
+            both of which the app does — where it used to give occasions. */}
         <Text style={s.firstBody}>
           {t(
-            'Group places into lists — date nights, crew weekends, coffee crawls.',
-            'Nhóm địa điểm thành bộ sưu tập — buổi hẹn tối, cuối tuần với hội bạn, tour cà phê.',
-            'スポットをリストにまとめましょう — デートの夜、仲間との週末、カフェ巡り。',
-            '把地点整理成清单 — 约会之夜、朋友周末、咖啡巡游。', '把地點整理成清單 — 約會之夜、朋友週末、咖啡巡遊。',
+            'Group the places you love into lists by theme — cafés, eats, views. Share them, or use one to plan a day worth having.',
+            'Nhóm địa điểm yêu thích thành bộ sưu tập theo chủ đề — cà phê, ăn uống, ngắm cảnh. Chia sẻ, hoặc dùng để lên kế hoạch cho một ngày ý nghĩa.',
+            'お気に入りのスポットをテーマ別にリストにまとめましょう — カフェ、食事、景色。シェアしたり、特別な一日のプランに使ったり。',
+            '把喜欢的地点按主题整理成清单 — 咖啡、美食、风景。分享出去，或用来规划有意义的一天。', '把喜歡的地點按主題整理成清單 — 咖啡、美食、風景。分享出去，或用來規劃有意義的一天。',
           )}
         </Text>
         {/* A pill here, where the sheet's primary is a rounded rectangle:
@@ -220,8 +224,10 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
           label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集', '建立你的第一個合集')}
           onPress={onPress}
         />
+        {/* Private by default, said so that it does not contradict the
+            "share" above it: it read "Only you can see your lists." */}
         <Text style={s.firstFoot}>
-          {t('Only you can see your lists.', 'Chỉ mình bạn thấy bộ sưu tập của bạn.', 'リストはあなただけに表示されます。', '你的清单仅你可见。', '你的清單僅你可見。')}
+          {t('Only you can see them until you choose to share.', 'Mặc định chỉ mình bạn thấy — chia sẻ khi bạn muốn.', '共有するまで、あなただけに表示されます。', '默认仅你可见 — 想分享时再分享。', '預設僅你可見 — 想分享時再分享。')}
         </Text>
       </View>
     </View>
