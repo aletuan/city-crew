@@ -792,12 +792,15 @@ describe('the category filter', () => {
   });
 
   // Underlined, not chipped (owner, 24 Oct 2026): the row is
-  // `UnderlineChoice`, and its far end fades into the page.
-  it('draws the kinds as an underlined row that fades at its far end', () => {
+  // `UnderlineChoice`, whose cut and fade are tested with it in
+  // `components/ui`. Here: that Explore draws it, and draws no fade over
+  // a row it has not yet measured.
+  it('draws the kinds as an underlined row', () => {
     state.places.data = mixed();
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.getByTestId('explore-kinds')).toBeTruthy();
-    expect(screen.getByTestId('explore-kinds-fade')).toBeTruthy();
+    expect(screen.getByTestId('explore-kinds-scroll')).toBeTruthy();
+    expect(screen.queryByTestId('explore-kinds-fade')).toBeNull();
   });
 });
 

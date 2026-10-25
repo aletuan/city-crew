@@ -8,7 +8,7 @@
 import React from 'react';
 import { Animated, Text } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '../../uitest/render';
+import { act, fireEvent, render, screen, within } from '../../uitest/render';
 
 vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -89,16 +89,71 @@ describe('UnderlineChoice', () => {
     expect(screen.getByTestId('k-cafes')).toBe(cafes);
   });
 
-  it('chooses nothing when given nothing, and fades from the page’s colour to itself', () => {
+  it('chooses nothing when given nothing', () => {
     render(<UnderlineChoice items={items} chosen={null} onPick={() => {}} testID="row" />);
     expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-selected'))).toEqual(['false', 'false']);
-    const [from, to] = screen.getByTestId('row-fade').getAttribute('colors')!.split(',');
+  });
+
+  // ── the cut and the fade (owner, 24 Oct 2026) ──
+  //
+  // jsdom lays nothing out, so the row is measured by hand: react-native-web
+  // leaves each node's layout handler on it for a ResizeObserver to call.
+  type Layout = { __reactLayoutHandler: (e: unknown) => void };
+  const lay = (el: HTMLElement, width: number) => act(() => {
+    (el as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 0, width, height: 33 } } });
+  });
+  const kinds = ['a', 'b', 'c', 'd', 'e'].map((k) => ({ key: k, label: k.toUpperCase() }));
+  const gapOf = () => getComputedStyle(screen.getByTestId('row-scroll').firstElementChild as HTMLElement).columnGap
+    || getComputedStyle(screen.getByTestId('row-scroll').firstElementChild as HTMLElement).gap;
+  const measureRow = (edge: number, width = 100) => {
+    lay(screen.getByTestId('row-scroll'), edge);
+    for (const b of screen.getAllByRole('button')) lay(b, width);
+  };
+
+  it('draws no fade, and keeps its own gap, until it has been measured', () => {
+    render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} testID="row" />);
+    expect(screen.queryByTestId('row-fade')).toBeNull();
+    expect(gapOf()).toBe('22px');
+    // The row alone is not enough: every item has to be measured too.
+    lay(screen.getByTestId('row-scroll'), 390);
+    expect(screen.queryByTestId('row-fade')).toBeNull();
+  });
+
+  // Five items 100 wide from 22: at 22 the edge at 380 falls in the gap
+  // after the third (22–122, 144–244, 266–366, 388–488) — the case the
+  // owner's phone showed. The row takes another gap, and the edge cuts.
+  it('moves its gap so the edge cuts an item, and fades while there is more', () => {
+    render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} testID="row" />);
+    measureRow(380);
+    expect(gapOf()).not.toBe('22px');
+    const fade = screen.getByTestId('row-fade');
+    const [from, to] = fade.getAttribute('colors')!.split(',');
     expect(Object.values(bgHex)).toContain(to);
     expect(from).toBe(`${to}00`);
   });
 
+  it('takes the fade away once scrolled to the end', () => {
+    render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} testID="row" />);
+    measureRow(390);
+    expect(screen.getByTestId('row-fade')).toBeTruthy();
+    const scroll = screen.getByTestId('row-scroll');
+    scroll.scrollLeft = 1000;
+    fireEvent.scroll(scroll);
+    expect(screen.queryByTestId('row-fade')).toBeNull();
+  });
+
+  it('draws no fade, at its own gap, when every item fits', () => {
+    render(<UnderlineChoice items={kinds.slice(0, 2)} chosen={null} onPick={() => {}} testID="row" />);
+    measureRow(390, 60);
+    expect(screen.queryByTestId('row-fade')).toBeNull();
+    expect(gapOf()).toBe('22px');
+  });
+
   it('draws a fade with no name when the row has none', () => {
-    const { container } = render(<UnderlineChoice items={items} chosen={null} onPick={() => {}} />);
+    const { container } = render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} />);
+    // No test names to reach it by: the scroll view is the row's first child.
+    lay(container.firstElementChild!.firstElementChild as HTMLElement, 390);
+    for (const b of screen.getAllByRole('button')) lay(b, 100);
     expect(container.querySelector('[data-stub="LinearGradient"]')!.getAttribute('data-testid')).toBeNull();
   });
 });
