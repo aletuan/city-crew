@@ -456,6 +456,7 @@ describe('the empty states', () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));
     expect(screen.getByText('No requests yet')).toBeTruthy();
+    expect(screen.getByText('Friend requests and suggestions show up here.')).toBeTruthy();
     fireEvent.click(screen.getByTestId('crew-empty-add'));
     expect(screen.getByText('Their username')).toBeTruthy();
   });
