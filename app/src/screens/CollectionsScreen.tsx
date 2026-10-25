@@ -1075,7 +1075,10 @@ export default function CollectionsScreen({ navigation, route }: {
         </View>
       )}
       {chosenRow(false)}
-      {!holding && panel && (
+      {/* Drawn only when there is something in it: the box's own
+          placeholder already says what it answers, and a hint under it
+          saying the same was the owner's to strike (25 Oct 2026). */}
+      {!holding && panel && suggestions.length > 0 && (
         <View style={s.panel} testID="collections-panel">
           {suggestions.length > 0 && (
             <Card style={s.recents}>
@@ -1105,9 +1108,6 @@ export default function CollectionsScreen({ navigation, route }: {
                 </PressableScale>
               ))}
             </Card>
-          )}
-          {suggestions.length === 0 && (
-            <Text style={[s.legend, s.onPage]}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。', '输入名称、地点或城市。', '輸入名稱、地點或城市。')}</Text>
           )}
         </View>
       )}
