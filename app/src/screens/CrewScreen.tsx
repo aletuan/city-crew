@@ -689,8 +689,10 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
             {/* The introductions. Each row carries its own reason — a
                 suggested stranger with no stated basis reads as the app
-                guessing, and this one is not guessing. Three lines (the
-                owner's choice): who, their handle, and why. */}
+                guessing, and this one is not guessing. Two lines: who,
+                and why. The handle was a third until the owner saw it on
+                a phone (25 Oct 2026) and took it out; a person with no
+                name still shows as their handle, through `nameOf`. */}
             {intros.length > 0 && (
               <>
                 <Text style={s.head}>
@@ -706,7 +708,6 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         <Face p={p} />
                         <View style={{ flex: 1, gap: 2 }}>
                           <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
-                          {p ? <Text style={s.meta} numberOfLines={1}>{atHandle(p.handle)}</Text> : null}
                           {/* Two lines: the longest public title on 25 Oct
                               2026 was 27 characters, and with the sentence
                               around it that is about 45 — past what one

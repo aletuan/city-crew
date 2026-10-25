@@ -512,9 +512,9 @@ describe('introductions', () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));
     expect(await screen.findByText('Suggested for you')).toBeTruthy();
-    // Three lines: who, their handle, and why.
+    // Two lines: who, and why — no handle under a person with a name.
     expect(screen.getByText('Son')).toBeTruthy();
-    expect(screen.getByText('@son')).toBeTruthy();
+    expect(screen.queryByText('@son')).toBeNull();
     expect(screen.getByTestId('crew-suggestion-reason-s').textContent).toBe('2 places you both saved');
     // Nothing to name, so nothing asked.
     expect(data.fetchListTitles).not.toHaveBeenCalled();
@@ -539,6 +539,14 @@ describe('introductions', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.queryByText('Suggested for you')).toBeNull();
     expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
+  });
+
+  it('a person with no name is named by their handle, once', async () => {
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('s')]);
+    crew.people = { s: person('s', 'son') };
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    expect(await screen.findByText('@son')).toBeTruthy();
   });
 
   it('names the list a like was about, once its title is read, and each list is asked once', async () => {
