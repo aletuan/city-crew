@@ -58,6 +58,7 @@ const data = vi.hoisted(() => ({
   addPlacePhoto: vi.fn(async (_row: unknown) => 'photo-new'),
   uploaded: vi.fn((_path: string) => {}),
   picker: vi.fn(),
+  shrunk: vi.fn((_uri: string, _actions: unknown[]) => {}),
 }));
 // The two slow steps, held open by a test that wants to look at the
 // screen between them; by default each settles on its own. Outside
@@ -112,18 +113,23 @@ vi.mock('../lib/data', () => ({
   addPlacePhoto: data.addPlacePhoto,
   uploadPlacePhoto: async (path: string) => { data.uploaded(path); await gate(gates.upload); return `http://cdn/${path}`; },
 }));
+// What a phone's roll hands back: a portrait, a landscape, and one
+// already smaller than the upload size.
+const ROLL_SIZES = vi.hoisted(() => [
+  { width: 3024, height: 4032 }, { width: 4032, height: 3024 }, { width: 800, height: 600 },
+]);
 vi.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: (opts: unknown) => {
     data.picker(opts);
     return Promise.resolve(
       state.picked
-        ? { canceled: false, assets: Array.from({ length: state.pickedCount }, (_, i) => ({ uri: `file://roll/IMG_${i + 1}.HEIC` })) }
+        ? { canceled: false, assets: Array.from({ length: state.pickedCount }, (_, i) => ({ uri: `file://roll/IMG_${i + 1}.HEIC`, ...ROLL_SIZES[i % ROLL_SIZES.length] })) }
         : { canceled: true, assets: [] },
     );
   },
 }));
 vi.mock('expo-image-manipulator', () => ({
-  manipulateAsync: async () => { await gate(gates.shrink); return { base64: 'AAAA' }; },
+  manipulateAsync: async (uri: string, actions: unknown[]) => { data.shrunk(uri, actions); await gate(gates.shrink); return { base64: 'AAAA' }; },
   SaveFormat: { JPEG: 'jpeg' },
 }));
 vi.mock('base64-arraybuffer', () => ({ decode: () => new ArrayBuffer(4) }));
@@ -787,6 +793,13 @@ describe('adding one', () => {
     // and inserted last to first, because the cover trigger lands on the
     // newest row, and the cover should be the one they reached for first.
     expect(data.addPlacePhoto.mock.calls.map((c) => (c[0] as { sortOrder: number }).sortOrder)).toEqual([4, 3, 2]);
+    // Each brought to what `shrink-photos` keeps by its long edge, and the
+    // small one left as it is — last picked first, as they go up.
+    expect(data.shrunk.mock.calls).toEqual([
+      ['file://roll/IMG_3.HEIC', []],
+      ['file://roll/IMG_2.HEIC', [{ resize: { width: 1200 } }]],
+      ['file://roll/IMG_1.HEIC', [{ resize: { height: 1200 } }]],
+    ]);
     // One read-back for the batch, not one per photo.
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
     await leave();

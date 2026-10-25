@@ -21,7 +21,7 @@ import { useI18n } from '../lib/i18n';
 import { addPlacePhoto, fetchMyPhotoCounts, removePhotoFile, uploadPlacePhoto } from '../lib/data';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import {
-  canAddPhoto, photoPath, photoRoom, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
+  canAddPhoto, photoPath, photoRoom, refusePhoto, PHOTO_QUALITY, shrinkTo,
   type Guidable, type PhotoRefusal,
 } from '../lib/guide';
 import { successHaptic } from './ui';
@@ -121,7 +121,9 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
     // past everything already on the place, so the gallery — which is in
     // `sort_order` — puts them at the end rather than in front of
     // pictures that were here before them.
-    const batch = picked.assets.map((asset, i) => ({ uri: asset.uri, sortOrder: count + 1 + i })).reverse();
+    const batch = picked.assets.map((asset, i) => ({
+      uri: asset.uri, resize: shrinkTo(asset.width, asset.height), sortOrder: count + 1 + i,
+    })).reverse();
     const stamp = Date.now();
     const failed: Error[] = [];
     let landed = 0;
@@ -135,7 +137,7 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
         try {
           const shrunk = await manipulateAsync(
             item.uri,
-            [{ resize: { width: PHOTO_PX } }],
+            item.resize ? [{ resize: item.resize }] : [],
             { compress: PHOTO_QUALITY, format: SaveFormat.JPEG, base64: true },
           );
           if (!shrunk.base64) throw new Error('bad_image');
