@@ -377,7 +377,7 @@ const ALL_KEY = '__all__';
  * (6)", in the tertiary ink. "All" takes `allCount`, and draws none until
  * the caller knows it.
  */
-export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, testID }: {
+export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, ground, testID }: {
   /** `count`, when given, follows the word as `Chip`'s does: "Hà Nội (6)". */
   items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string }[];
   chosen: K | null;
@@ -386,11 +386,15 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   /** The "All" item's word, when the row has one, and its figure. */
   all?: string;
   allCount?: number;
+  /** The ground the row sits on, as plain hex, for the fade to end in:
+   *  the page's unless the row is on something else (a sheet). */
+  ground?: string;
   testID?: string;
 }) {
   // The page's own colour, as plain hex: the fade has to end in exactly
   // the ground the row sits on, and a gradient takes no dynamic colour.
-  const bg = bgHex[useScheme().scheme];
+  const page = bgHex[useScheme().scheme];
+  const bg = ground ?? page;
   // What the row measures of itself: its own width, each item's, and how
   // far it is scrolled. Until every item has been measured the row keeps
   // its own gap and draws no fade — a beat, before the first frame shows.

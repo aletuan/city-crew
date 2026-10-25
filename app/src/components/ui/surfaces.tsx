@@ -216,11 +216,14 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
 
 /** A tab root's large title, as `Screen` draws it — for a body that
  *  scrolls it away itself (`titleScrolls`). */
-export function ScreenTitle({ title, eyebrow, lede, right }: {
+export function ScreenTitle({ title, eyebrow, lede, right, accessory }: {
   title: string;
   eyebrow?: React.ReactNode;
   lede?: React.ReactNode;
   right?: React.ReactNode;
+  /** A control that belongs to the title, set right after its last word
+   *  — Collections' filter glyph, as Explore's sits after "Địa điểm". */
+  accessory?: React.ReactNode;
 }) {
   return (
     <View style={s.header}>
@@ -230,7 +233,12 @@ export function ScreenTitle({ title, eyebrow, lede, right }: {
             {typeof eyebrow === 'string' ? <EyebrowText>{eyebrow}</EyebrowText> : eyebrow}
           </View>
         ) : null}
-        <Text style={s.title}>{title}</Text>
+        {accessory ? (
+          <View style={s.titleRow}>
+            <Text style={s.title}>{title}</Text>
+            {accessory}
+          </View>
+        ) : <Text style={s.title}>{title}</Text>}
         {lede ?? null}
       </View>
       {right}
@@ -494,6 +502,7 @@ const s = StyleSheet.create({
   subtitle: { color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
   iconSubtitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { color: colors.text, ...type.title },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // The dateline is the one place a screen title gets colour: it says
   // "today", which is the app's whole premise, and it is short enough that
   // the accent stays a mark rather than a block of coloured text.

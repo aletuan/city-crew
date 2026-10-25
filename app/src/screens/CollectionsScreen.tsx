@@ -12,10 +12,11 @@ import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, Screen, ScreenTitle, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, Screen, ScreenTitle, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
+import CollectionFilterSheet, { type CollectionFilters } from '../components/CollectionFilterSheet';
 import { AddPill } from '../components/add';
 import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
@@ -724,6 +725,12 @@ export default function CollectionsScreen({ navigation, route }: {
   // seven cities and nine kinds the wraps were five lines of chips; the
   // rows are two, and scroll, so the panel is a band under the box rather
   // than a sheet over the shelf.
+  //
+  // And later that day the owner moved them out of the panel altogether:
+  // the city and the kind are a sheet from below now, opened by Explore's
+  // filter glyph beside the title (`CollectionFilterSheet`), so the box is
+  // for words and the glyph for narrowing, on both screens. The panel is
+  // the box's own: what was searched here before.
   const [query, setQuery] = useState('');
   const q = query.trim();
   const [panel, setPanel] = useState(false);
@@ -734,8 +741,12 @@ export default function CollectionsScreen({ navigation, route }: {
   // had to mean something other than unset.
   const [cityPick, setCityPick] = useState<string | null>(null);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  // Cancel is the box's: it lets go of the words and closes the panel.
+  // It let go of the city and the kind too while they were chosen in the
+  // panel; since they moved to the sheet (25 Oct 2026) they are the
+  // sheet's, shown under the box with a ✕ each, and outlive a search.
   const cancel = () => {
-    setPanel(false); setQuery(''); setKind(null); setCityPick(null);
+    setPanel(false); setQuery('');
     inputRef.current?.blur();
     Keyboard.dismiss();
   };
@@ -770,13 +781,13 @@ export default function CollectionsScreen({ navigation, route }: {
   // filter on 24 Oct.
   const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); setPanel(false); };
   const fold = () => { if (panel) answered(); };
-  // The folded row's way back to the panel (owner, 25 Oct 2026). The box
-  // opens it too, but with the keyboard, which comes up over the rows it
-  // was opened to show; a second choice is a tap, not a word, so this
-  // opens the panel and leaves the keyboard where it is.
-  const reopen = () => { toTop(); setPanel(true); };
-  // One choice in the folded row: its words, which open the panel as the
-  // glyph does, and a ✕ of its own that lets go of it and nothing else
+  // The filter sheet (`CollectionFilterSheet`), opened by the glyph
+  // beside the title and by the chosen words under the box. The keyboard
+  // goes: the sheet rises from where it stood.
+  const [filterOpen, setFilterOpen] = useState(false);
+  const openFilters = () => { Keyboard.dismiss(); setFilterOpen(true); };
+  // One choice in the row under the box: its words, which open the sheet
+  // as the glyph does, and a ✕ of its own that lets go of it and nothing else
   // (owner, 25 Oct 2026: with two choices on, letting go of one was a tap
   // on a ✕, and the board's single "Clear all" made it two). Two targets
   // side by side rather than one inside the other: VoiceOver reads an
@@ -794,7 +805,7 @@ export default function CollectionsScreen({ navigation, route }: {
         contentStyle={s.chosenWords}
         scaleTo={0.98}
         haptic="selection"
-        onPress={reopen}
+        onPress={openFilters}
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityHint={t('Opens the filters', 'Mở bộ lọc', 'フィルターを開く', '打开筛选', '開啟篩選')}
@@ -965,31 +976,45 @@ export default function CollectionsScreen({ navigation, route }: {
       />
   ) : null);
 
-  // The panel, folded: the filter glyph, then what it chose in words,
-  // each with its own ✕ — see `reopen` and `chosenItem`. Pinned with the
-  // tabs once they reach the top, so a filter that is on is never one
-  // the reader cannot see.
-  const chosenRow = (floating: boolean) => (!holding && !panel && (cityPick || kind) ? (
+  // What the filters chose, under the box: the words, each with its ✕,
+  // so a filter that is on is never one the reader cannot see. Pinned
+  // with the tabs once they reach the top. The filter glyph that led the
+  // row is beside the title now (`filterButton`).
+  const chosenRow = (floating: boolean) => (!holding && (cityPick || kind) ? (
     <View style={s.chosen} testID={floating ? undefined : 'collections-chosen'}>
-      <PressableScale
-        contentStyle={s.chosenOpen}
-        scaleTo={0.94}
-        haptic="selection"
-        hitSlop={4}
-        onPress={reopen}
-        accessibilityRole="button"
-        accessibilityLabel={t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
-        testID={floating ? undefined : 'collections-filters'}
-      >
-        {/* Explore's filter glyph, in Explore's coral for "applied":
-            the row is here only while something is. */}
-        <Ionicons name="options-outline" size={19} color={colors.accent} />
-      </PressableScale>
-      <View style={s.chosenRule} />
       {cityPick && chosenItem(cityName(cityPick), null, () => setCityPick(null), floating ? undefined : 'collections-chosen-city')}
       {kind && chosenItem(categoryLabel(kind, t), CATEGORIES[kind] ?? null, () => setKind(null), floating ? undefined : 'collections-chosen-kind')}
     </View>
   ) : null);
+
+  // The filter, beside the title (owner, 25 Oct 2026): Explore's glyph,
+  // in Explore's two states — ink at rest, coral with a count once
+  // something is applied (see the note on Explore's own) — and the sheet
+  // behind it. Only where the shelf has a choice to make, or one is on.
+  const filterCount = (cityPick ? 1 : 0) + (kind ? 1 : 0);
+  const canFilter = offerCities || kindChoices.length > 1 || filterCount > 0;
+  const filterButton = (floating: boolean) => (canFilter ? (
+    <PressableScale
+      contentStyle={s.filterBtn}
+      scaleTo={0.94}
+      haptic="selection"
+      hitSlop={4}
+      onPress={openFilters}
+      accessibilityRole="button"
+      accessibilityLabel={filterCount > 0
+        ? `${t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}, ${filterCount}`
+        : t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
+      testID={floating ? undefined : 'collections-filters'}
+    >
+      <Ionicons name="options-outline" size={19} color={filterCount > 0 ? colors.accent : colors.textSecondary} />
+      {filterCount > 0 ? (
+        <View style={s.filterBadge}>
+          <Text style={s.filterBadgeText}>{filterCount}</Text>
+        </View>
+      ) : null}
+    </PressableScale>
+  ) : null);
+  const filtersApplied = useMemo<CollectionFilters>(() => ({ city: cityPick, kind }), [cityPick, kind]);
 
   // Everything above the shelf, as the list's own header since 25 Oct
   // 2026 (owner): the title, the line under it, the tabs, the box and its
@@ -1000,6 +1025,7 @@ export default function CollectionsScreen({ navigation, route }: {
     <View onLayout={(e) => { topHRef.current = Math.round(e.nativeEvent.layout.height); }} testID="collections-top">
       <ScreenTitle
         title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
+        accessory={filterButton(false)}
         right={(onYours ? mineReady && mine.data.length > 0 : !!session) ? (
           <AddPill
             tall
@@ -1044,7 +1070,7 @@ export default function CollectionsScreen({ navigation, route }: {
             placeholder={t('Name, place, city, user', 'Tên, địa điểm, thành phố, người dùng', '名前・スポット・都市・ユーザー', '名称、地点、城市、用户', '名稱、地點、城市、使用者')}
             // Inside the box, while the panel is up or anything it chose
             // is still on — see `SearchField`.
-            cancel={{ shown: panel || asked, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
+            cancel={{ shown: panel || !!q, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
           />
         </View>
       )}
@@ -1080,31 +1106,7 @@ export default function CollectionsScreen({ navigation, route }: {
               ))}
             </Card>
           )}
-          {offerCities && (
-            <View style={s.group}>
-              <Text style={[s.legend, s.onPage]}>{t('City', 'Thành phố', '都市', '城市', '城市')}</Text>
-              <UnderlineChoice
-                items={cityChoices.map((id) => ({ key: id, label: cityName(id) }))}
-                chosen={scopeCity}
-                onPick={(id) => { setCityPick(id === scopeCity ? null : id); answered(); }}
-                all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
-                testID="collections-cities"
-              />
-            </View>
-          )}
-          {kindChoices.length > 1 && (
-            <View style={s.group}>
-              <Text style={[s.legend, s.onPage]}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
-              <UnderlineChoice
-                items={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
-                chosen={kind}
-                onPick={(k) => { setKind(k === kind ? null : k); answered(); }}
-                all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
-                testID="collections-kinds"
-              />
-            </View>
-          )}
-          {suggestions.length === 0 && !offerCities && kindChoices.length <= 1 && (
+          {suggestions.length === 0 && (
             <Text style={[s.legend, s.onPage]}>{t('Type a name, a place, or a city.', 'Gõ tên bộ sưu tập, địa điểm hoặc thành phố.', '名前、スポット、都市を入力。', '输入名称、地点或城市。', '輸入名稱、地點或城市。')}</Text>
           )}
         </View>
@@ -1741,12 +1743,24 @@ export default function CollectionsScreen({ navigation, route }: {
                 Explore's pinned row carries "Địa điểm" (owner, 25 Oct
                 2026): without it the pinned row was two tabs under a
                 clock, and nothing said whose lists these were. */}
-            <Text style={s.pinnedTitle} accessibilityRole="header">{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
+            <View style={s.pinnedHead}>
+              <Text style={s.pinnedTitle} accessibilityRole="header">{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
+              {filterButton(true)}
+            </View>
             {tabsRow(true)}
             {chosenRow(true)}
           </View>
         ) : null}
       </View>
+      <CollectionFilterSheet
+        visible={filterOpen}
+        applied={filtersApplied}
+        cities={offerCities ? cityChoices.map((id) => ({ key: id, label: cityName(id) })) : []}
+        kinds={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
+        countFor={(f) => siftCollections(shelf, { query: q, city: f.city, kind: f.kind }).length}
+        onClose={() => setFilterOpen(false)}
+        onApply={(f) => { setCityPick(f.city); setKind(f.kind); setFilterOpen(false); }}
+      />
       {/* Explore's dock, with this screen's two actions: the whole island
           is the box (`findFromDock`), the pill a new list. "+ Bộ sưu tập",
           "+ Tạo mới", the word every pill that makes something wears, as
@@ -1863,11 +1877,18 @@ const s = StyleSheet.create({
     paddingTop: 8, backgroundColor: colors.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
   },
-  chosenOpen: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  chosenRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: colors.borderGlass },
+  // Explore's filter button's box (`filterButton` there): 36 with the
+  // 4pt slop is the 44 a target is, and the badge rides its corner.
+  filterBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  filterBadge: {
+    position: 'absolute', top: 1, right: 1, minWidth: 16, height: 16, borderRadius: 8,
+    paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentFill,
+  },
+  filterBadgeText: { color: colors.accentInk, fontSize: 9, fontWeight: font.bold },
   chosenItem: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
   // Explore's pinned heading: the section size, the page's margin.
-  pinnedTitle: { color: colors.text, ...type.section, marginHorizontal: space.page, marginBottom: 6 },
+  pinnedHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: space.page, marginBottom: 6 },
+  pinnedTitle: { color: colors.text, ...type.section },
   chosenWordsSlot: { flexShrink: 1 },
   chosenWords: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
   // The ✕ quiet, in the tertiary ink: the words are what is read, the
