@@ -6,7 +6,7 @@
 // these are the paths that average was hiding.
 
 import React from 'react';
-import { Animated, Text } from 'react-native';
+import { Animated, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '../../uitest/render';
 
@@ -192,6 +192,38 @@ describe('UnderlineChoice', () => {
     fireEvent.click(a);
     fireEvent.click(b);
     expect(onPick.mock.calls).toEqual([['b']]);
+  });
+
+  // The size a Text was given, read off its props: the browser resolves
+  // react-native-web's font classes to its own default in jsdom.
+  const sizeOf = (el: HTMLElement) => {
+    const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
+    type Fiber = { memoizedProps?: { style?: unknown }; return?: Fiber };
+    let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
+    while (f && !f.memoizedProps?.style) f = f.return;
+    return (StyleSheet.flatten(f!.memoizedProps!.style as StyleProp<TextStyle>) ?? {}).fontSize;
+  };
+
+  // A row that launches rather than filters (owner, 25 Oct 2026): the
+  // glyph over the word, larger, each item at least a target wide, and the
+  // row's own spacing — the inline row's stays as it was.
+  it('stacks the glyph over the word when asked, larger, at least a target wide', () => {
+    const { unmount } = render(<UnderlineChoice items={items} chosen={null} onPick={() => {}} stacked testID="row" />);
+    const cafes = screen.getByRole('button', { name: 'Cafés' });
+    const box = cafes.firstElementChild as HTMLElement;
+    expect(getComputedStyle(box).flexDirection).toBe('column');
+    expect(getComputedStyle(box).minWidth).toBe('56px');
+    expect(cafes.querySelector('[data-icon]')!.getAttribute('data-size')).toBe('22');
+    expect(sizeOf(within(cafes).getByText('Cafés'))).toBe(13);
+    expect(gapOf()).toBe('16px');
+    // Afresh rather than re-rendered: the node keeps its first fiber.
+    unmount();
+    render(<UnderlineChoice items={items} chosen={null} onPick={() => {}} testID="row" />);
+    const inline = screen.getByRole('button', { name: 'Cafés' });
+    expect(getComputedStyle(inline.firstElementChild as HTMLElement).flexDirection).toBe('row');
+    expect(inline.querySelector('[data-icon]')!.getAttribute('data-size')).toBe('16');
+    expect(sizeOf(within(inline).getByText('Cafés'))).toBe(15);
+    expect(gapOf()).toBe('22px');
   });
 
   // Under a search box the row is tapped with the keyboard up, and a

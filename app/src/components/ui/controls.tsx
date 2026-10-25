@@ -319,6 +319,15 @@ const CHOICE_FADE = 28;
 /** The row's spacing, and how far the gap may give to cut an item at the
  *  edge (`lib/peek`, where 14–34 is measured). */
 const CHOICE_ROW: PeekRow = { padLeft: space.page, base: 22, min: 14, max: 34 };
+/** The stacked row's spacing. Each item already carries `STACK_MIN` of
+ *  width around a short word, so the air between two is partly its own,
+ *  and the base comes down from inline's 22 to 16 — a judgement to check
+ *  on a phone, not a measurement. The cut may give from 10 to 28. */
+const STACK_ROW: PeekRow = { padLeft: space.page, base: 16, min: 10, max: 28 };
+/** A stacked item's narrowest: the 44pt a target is, and room for the
+ *  22pt glyph to stand over a two-letter word without the next item's
+ *  glyph crowding it. */
+const STACK_MIN = 56;
 /** The key the "All" item answers to: never a key a caller's item has. */
 const ALL_KEY = '__all__';
 
@@ -386,8 +395,18 @@ const ALL_KEY = '__all__';
  * up and reorder under the reader's thumb each time the other question
  * changed. The chosen item is never off, whatever the caller says: it is
  * the way back to everything.
+ *
+ * ── stacked (owner, 25 Oct 2026) ──
+ *
+ * `stacked` sets the glyph over the word, larger, for a row that starts
+ * something rather than narrows it — Search's Browse, where a tap is a
+ * search and the row is gone the moment there is a word. A row of doors
+ * looks unlike a row of filters on purpose: the reader should not wait
+ * for an underline that a launcher never draws. The items are narrower,
+ * so more of the row is in sight, and the cut and the fade are the same
+ * measured ones.
  */
-export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, ground, testID }: {
+export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, ground, stacked, testID }: {
   /** `count`, when given, follows the word as `Chip`'s does: "Hà Nội (6)". */
   items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; off?: boolean }[];
   chosen: K | null;
@@ -399,6 +418,8 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   /** The ground the row sits on, as plain hex, for the fade to end in:
    *  the page's unless the row is on something else (a sheet). */
   ground?: string;
+  /** The glyph over the word: a row that launches rather than filters. */
+  stacked?: boolean;
   testID?: string;
 }) {
   // The page's own colour, as plain hex: the fade has to end in exactly
@@ -417,7 +438,8 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   ];
   const measured = row.map((i) => widths[i.key] ?? 0);
   const known = edge > 0 && measured.every((w) => w > 0);
-  const gap = known ? peekGap(measured, edge - CHOICE_FADE, CHOICE_ROW) : CHOICE_ROW.base;
+  const spacing = stacked ? STACK_ROW : CHOICE_ROW;
+  const gap = known ? peekGap(measured, edge - CHOICE_FADE, spacing) : spacing.base;
   const more = known && moreToTheRight(rowWidth(measured, gap, space.page, space.page), edge, scrollX);
   return (
     <View testID={testID}>
@@ -443,7 +465,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
                 const w = e.nativeEvent.layout.width;
                 setWidths((was) => (was[key] === w ? was : { ...was, [key]: w }));
               }}
-              contentStyle={[s.tabItem, on && s.tabItemOn, dim && s.choiceOff]}
+              contentStyle={[s.tabItem, stacked && s.stackItem, on && s.tabItemOn, dim && s.choiceOff]}
               scaleTo={dim ? 1 : 0.97}
               haptic="selection"
               // The row is 33pt drawn; the slop makes it the 44pt a
@@ -457,8 +479,8 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
               accessibilityRole="button"
               aria-selected={on}
             >
-              {icon ? <Ionicons name={icon} size={16} color={iconColor ?? colors.textSecondary} /> : null}
-              <Text style={[s.choiceText, on && s.tabTextOn]} numberOfLines={1}>
+              {icon ? <Ionicons name={icon} size={stacked ? 22 : 16} color={iconColor ?? colors.textSecondary} /> : null}
+              <Text style={[s.choiceText, stacked && s.stackText, on && s.tabTextOn]} numberOfLines={1}>
                 {label}
                 {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
               </Text>
@@ -712,6 +734,11 @@ const s = StyleSheet.create({
   // `ActionSheet`'s `rowOff`, so "not now" reads the same on a row of
   // words as on a row of actions.
   choiceOff: { opacity: 0.45 },
+  // Stacked: the glyph over the word, centred in at least `STACK_MIN`.
+  // The word a step smaller than inline's 15: under a glyph it is a
+  // caption, and the item stays near the width of its word.
+  stackItem: { flexDirection: 'column', gap: 5, minWidth: STACK_MIN },
+  stackText: { fontSize: 13 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
