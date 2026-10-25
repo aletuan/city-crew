@@ -483,13 +483,27 @@ describe('CollectionsScreen — signed in', () => {
     expect(navigation.navigate).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps the pill off an empty library, whose card is the door — but on its Community', () => {
+  // The header is the same on both tabs (owner, 26 Oct 2026): an empty
+  // Yours that dropped the pill drew its title and tabs higher than
+  // Community's, and lost the filter glyph beside the title.
+  it('keeps the pill and the filter glyph on an empty library too, beside its own card', () => {
     show();
-    // The greeting landed on Community, and the pill is there.
     expect(screen.getByTestId('collection-new')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
-    expect(screen.queryByRole('button', { name: 'New collection' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'New collection' })).toBeTruthy();
     expect(screen.getByText('Create your first collection')).toBeTruthy();
+    // Nothing of yours to filter: the glyph is there, and does nothing.
+    const filters = screen.getByTestId('collections-filters');
+    expect(filters.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(filters);
+    expect(screen.queryByTestId('collections-filter-apply')).toBeNull();
+  });
+
+  it('draws no filter glyph for a guest with nothing to choose', () => {
+    state.uid = null;
+    state.cols.data = [];
+    show();
+    expect(screen.queryByTestId('collections-filters')).toBeNull();
   });
 
   // The form goes back to whichever tab sent it; on Community a private
