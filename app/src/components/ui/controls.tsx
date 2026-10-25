@@ -326,6 +326,12 @@ const CHOICE_FADE = 28;
 /** The row's spacing, and how far the gap may give to cut an item at the
  *  edge (`lib/peek`, where 14–34 is measured). */
 const CHOICE_ROW: PeekRow = { padLeft: space.page, base: 22, min: 14, max: 34 };
+/** How far a tap on the › moves the row: two thirds of what is on
+ *  screen, so the item that was cut at the edge lands well inside it
+ *  and the reader keeps their place. */
+const CHOICE_STEP = 2 / 3;
+/** The key the "All" item answers to: never a key a caller's item has. */
+const ALL_KEY = '__all__';
 
 /**
  * A row of things to narrow by, one at a time, drawn as `UnderlineTabs`
@@ -357,13 +363,35 @@ const CHOICE_ROW: PeekRow = { padLeft: space.page, base: 22, min: 14, max: 34 };
  * `aria-selected` on a button rather than the tabs' role, which says
  * "one of these is always open": this is a filter, and VoiceOver should
  * read it as one.
+ *
+ * ── "All", and the › (owner, 25 Oct 2026) ──
+ *
+ * `all` puts an item first that stands for nothing chosen, and wears the
+ * rule while nothing is. The owner took "All" out on 15 Oct, when it was
+ * a chip that meant "no chip" and a tap on it was the only way to leave a
+ * choice; with the boxes gone the row has room for it, and a row with one
+ * word always underlined says what it is showing where a row with none
+ * underlined says nothing. Tapping the chosen item still lets go.
+ *
+ * While the row sits at its start with more past the edge, a › stands on
+ * the fade: the review board's resting state, a sign nobody has to read a
+ * cut word to get, and a door too — a tap moves the row on by
+ * `CHOICE_STEP`. It goes as soon as the row is moved, as the board draws
+ * it: by then the reader knows, and the cut and the fade say the rest.
+ * The cut is measured against where the fade begins, so the item it shows
+ * shows clear of the ›.
  */
-export function UnderlineChoice<K extends string>({ items, chosen, onPick, testID }: {
+export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, testID }: {
   items: { key: K; label: string; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string }[];
   chosen: K | null;
-  onPick: (k: K) => void;
+  /** The key tapped, or null for "All". */
+  onPick: (k: K | null) => void;
+  /** The "All" item's word, when the row has one. */
+  all?: string;
   testID?: string;
 }) {
+  const { t } = useI18n();
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   // The page's own colour, as plain hex: the fade has to end in exactly
   // the ground the row sits on, and a gradient takes no dynamic colour.
   const bg = bgHex[useScheme().scheme];
@@ -371,15 +399,21 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, testI
   // far it is scrolled. Until every item has been measured the row keeps
   // its own gap and draws no fade — a beat, before the first frame shows.
   const [edge, setEdge] = useState(0);
-  const [widths, setWidths] = useState<Partial<Record<K, number>>>({});
+  const [widths, setWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(0);
-  const measured = items.map((i) => widths[i.key] ?? 0);
+  const row: { key: string; label: string; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; on: boolean; pick: K | null }[] = [
+    ...(all ? [{ key: ALL_KEY, label: all, testID: testID ? `${testID}-all` : undefined, on: chosen === null, pick: null }] : []),
+    ...items.map((i) => ({ ...i, on: chosen === i.key, pick: i.key })),
+  ];
+  const measured = row.map((i) => widths[i.key] ?? 0);
   const known = edge > 0 && measured.every((w) => w > 0);
-  const gap = known ? peekGap(measured, edge, CHOICE_ROW) : CHOICE_ROW.base;
+  const gap = known ? peekGap(measured, edge - CHOICE_FADE, CHOICE_ROW) : CHOICE_ROW.base;
   const more = known && moreToTheRight(rowWidth(measured, gap, space.page, space.page), edge, scrollX);
+  const atStart = scrollX <= 1;
   return (
     <View testID={testID}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[s.choiceRow, { gap }]}
@@ -388,8 +422,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, testI
         scrollEventThrottle={32}
         testID={testID ? `${testID}-scroll` : undefined}
       >
-        {items.map(({ key, label, icon, iconColor, testID: itemID }) => {
-          const on = chosen === key;
+        {row.map(({ key, label, icon, iconColor, testID: itemID, on, pick }) => {
           return (
             <PressableScale
               key={key}
@@ -403,7 +436,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, testI
               // The row is 33pt drawn; the slop makes it the 44pt a
               // target is, above and below, without spacing the words out.
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              onPress={() => onPick(key)}
+              onPress={() => onPick(pick)}
               testID={itemID}
               accessibilityRole="button"
               aria-selected={on}
@@ -423,6 +456,20 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, testI
           style={s.choiceFade}
           testID={testID ? `${testID}-fade` : undefined}
         />
+      ) : null}
+      {more && atStart ? (
+        <PressableScale
+          style={s.choiceMore}
+          contentStyle={s.choiceMoreHit}
+          scaleTo={0.9}
+          haptic="selection"
+          onPress={() => scrollRef.current?.scrollTo({ x: edge * CHOICE_STEP, animated: true })}
+          accessibilityRole="button"
+          accessibilityLabel={t('Show more', 'Xem thêm', 'もっと見る', '查看更多', '檢視更多')}
+          testID={testID ? `${testID}-more` : undefined}
+        >
+          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+        </PressableScale>
       ) : null}
     </View>
   );
@@ -657,6 +704,12 @@ const s = StyleSheet.create({
   choiceRow: { paddingHorizontal: space.page },
   choiceText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
   choiceFade: { position: 'absolute', top: 0, bottom: 0, right: 0, width: CHOICE_FADE },
+  // On the fade, at the page's own edge rather than its margin: the
+  // glyph sits in the fade's last, solid stretch, so nothing scrolling
+  // under it shows through. 44pt tall and as wide as the fade, a target
+  // without pushing anything.
+  choiceMore: { position: 'absolute', top: 0, bottom: 0, right: 0, width: CHOICE_FADE, justifyContent: 'center' },
+  choiceMoreHit: { minHeight: 44, alignItems: 'flex-end', justifyContent: 'center', paddingRight: 6 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,

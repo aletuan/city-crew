@@ -736,11 +736,13 @@ describe('the category filter', () => {
 
   const on = (name: string) => chip(name).getAttribute('aria-selected') === 'true';
 
-  // No "All" chip (owner, 15 Oct 2026): nothing chosen is everything.
-  it('offers only the categories this city has, in taxonomy order, none chosen', () => {
+  // "All" first, and underlined while nothing is chosen: out on 15 Oct
+  // 2026 when it was a chip, back on 25 Oct as a word in the row.
+  it('offers All, then only the categories this city has, in taxonomy order, none chosen', () => {
     state.places.data = [place('bar1', { categories: ['nightlife'] }), place('cafe1', { categories: ['cafes'] })];
     render(<ExploreScreen navigation={nav()} />);
-    expect(noChip('All')).toBeNull();
+    expect(on('All')).toBe(true);
+    expect(chip('All').compareDocumentPosition(chip('Cafés')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const cafes = chip('Cafés');
     const night = chip('Nightlife');
     expect(cafes.compareDocumentPosition(night) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -766,6 +768,13 @@ describe('the category filter', () => {
     expect(cardNames()[0]).toContain('Place bar1');
     fireEvent.click(chip('Eats'));
     expect(on('Eats')).toBe(false);
+    expect(on('All')).toBe(true);
+    expect(cardNames()).toHaveLength(3);
+    // All is the way back too.
+    fireEvent.click(chip('Cafés'));
+    fireEvent.click(chip('All'));
+    expect(on('All')).toBe(true);
+    expect(on('Cafés')).toBe(false);
     expect(cardNames()).toHaveLength(3);
   });
 

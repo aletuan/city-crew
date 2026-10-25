@@ -149,11 +149,60 @@ describe('UnderlineChoice', () => {
     expect(gapOf()).toBe('22px');
   });
 
-  it('draws a fade with no name when the row has none', () => {
-    const { container } = render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} />);
+  // ── "All", and the › (owner, 25 Oct 2026) ──
+  it('puts "All" first, underlined while nothing is chosen, and hands back null for it', () => {
+    const onPick = vi.fn();
+    const { rerender } = render(<UnderlineChoice items={items} chosen={null} onPick={onPick} all="All" testID="row" />);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual(['All', 'Cafés', 'Eats']);
+    expect(screen.getByTestId('row-all').getAttribute('aria-selected')).toBe('true');
+    rerender(<UnderlineChoice items={items} chosen="eats" onPick={onPick} all="All" testID="row" />);
+    expect(screen.getByTestId('row-all').getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(screen.getByTestId('row-all'));
+    expect(onPick).toHaveBeenLastCalledWith(null);
+  });
+
+  it('stands a › on the fade at the start, moves the row on when tapped, and goes once moved', () => {
+    render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} all="All" testID="row" />);
+    expect(screen.queryByTestId('row-more')).toBeNull();
+    measureRow(390);
+    const more = screen.getByTestId('row-more');
+    expect(more.getAttribute('aria-label')).toBe('Show more');
+    const scroll = screen.getByTestId('row-scroll');
+    const to = vi.fn();
+    (scroll as unknown as { scroll: unknown }).scroll = to;
+    fireEvent.click(more);
+    expect(to).toHaveBeenCalledWith(expect.objectContaining({ left: 260 }));
+    scroll.scrollLeft = 40;
+    fireEvent.scroll(scroll);
+    expect(screen.queryByTestId('row-more')).toBeNull();
+    // The fade stays while there is more; only the › has said its piece.
+    expect(screen.getByTestId('row-fade')).toBeTruthy();
+  });
+
+  // The cut is judged where the fade begins, not at the screen's edge: the
+  // fade and the › cover the last 28pt, so a cut under them is not seen.
+  // Six items 100 wide on a 390 row: against 390 the gap would be 14,
+  // against 362 it is 28 — two different rows, so this tells them apart.
+  it('cuts an item where the fade begins, not under it', () => {
+    render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} all="All" testID="row" />);
+    measureRow(390);
+    expect(gapOf()).toBe('28px');
+  });
+
+  it('draws no › when every item fits', () => {
+    render(<UnderlineChoice items={kinds.slice(0, 2)} chosen={null} onPick={() => {}} all="All" testID="row" />);
+    measureRow(390, 60);
+    expect(screen.queryByTestId('row-more')).toBeNull();
+  });
+
+  it('draws a fade, a › and an "All" with no names when the row has none', () => {
+    const { container } = render(<UnderlineChoice items={kinds} chosen={null} onPick={() => {}} all="All" />);
     // No test names to reach it by: the scroll view is the row's first child.
     lay(container.firstElementChild!.firstElementChild as HTMLElement, 390);
     for (const b of screen.getAllByRole('button')) lay(b, 100);
     expect(container.querySelector('[data-stub="LinearGradient"]')!.getAttribute('data-testid')).toBeNull();
+    expect(container.querySelector('[data-testid]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show more' })).toBeTruthy();
   });
 });
