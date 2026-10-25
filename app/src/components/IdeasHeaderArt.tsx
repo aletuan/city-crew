@@ -74,11 +74,13 @@ export const ART_ASPECT = 600 / 572;
 /** Plain sky at the painting's left edge, in points at the rendered
  *  size: how far the title may run onto it. */
 export const OVERLAP = 50;
-/** The title-and-lede column at one line each: a 34pt title's line box,
+/** The title-and-lede column at one line each: the title's line box,
  *  three 24pt lede lines with the gap between, and the room the lede
  *  keeps under itself before the first section. The header row adds its
- *  own paddings (8 above, 14 below). */
-export const BAND = 41 + 6 + 3 * 24 + 12;
+ *  own paddings (8 above, 14 below). The line box was 41 at 34pt — the
+ *  display face's box is about 1.21 times its size — and is 36 at the
+ *  30 the title became on 25 Oct 2026. */
+export const BAND = 36 + 6 + 3 * 24 + 12;
 const ROW_PADDING = 8 + 14;
 
 /** Rendered height of the painting for a given top inset. Exported for

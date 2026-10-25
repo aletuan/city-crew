@@ -1403,6 +1403,8 @@ describe('scrolled', () => {
     expect(screen.queryByTestId('collections-pinned')).toBeNull();
     scrollTo(120);
     const pinned = screen.getByTestId('collections-pinned');
+    // Named, as Explore's pinned row is, and the name is a heading.
+    expect(within(pinned).getByRole('heading').textContent).toBe('Collections');
     expect(pinned.textContent).toContain('Yours');
     expect(pinned.textContent).toContain('Community');
     // A copy, unnamed: the tests still find one of each.

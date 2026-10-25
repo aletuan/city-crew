@@ -182,7 +182,7 @@ export function AddPill({ label, onPress, tall, busy, icon = 'add', accessibilit
    *  dock's visitor pill copies, and wears the ⋯ menu's copy glyph so one
    *  act has one mark (owner, 17 Oct 2026). */
   icon?: keyof typeof Ionicons.glyphMap;
-  /** At the 44pt control height: in a screen's header, beside a 34pt title
+  /** At the 44pt control height: in a screen's header, beside a large title
    *  and the 44pt round buttons the other tabs put in that slot, and in
    *  Explore's floating dock. */
   tall?: boolean;

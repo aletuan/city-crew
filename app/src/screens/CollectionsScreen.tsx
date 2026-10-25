@@ -1737,6 +1737,11 @@ export default function CollectionsScreen({ navigation, route }: {
             move a row or eat a tap meant for one. */}
         {pinned && !holding && session ? (
           <View style={s.pinned} testID="collections-pinned">
+            {/* The screen's name, at a section heading's size, as
+                Explore's pinned row carries "Địa điểm" (owner, 25 Oct
+                2026): without it the pinned row was two tabs under a
+                clock, and nothing said whose lists these were. */}
+            <Text style={s.pinnedTitle} accessibilityRole="header">{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
             {tabsRow(true)}
             {chosenRow(true)}
           </View>
@@ -1861,6 +1866,8 @@ const s = StyleSheet.create({
   chosenOpen: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   chosenRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: colors.borderGlass },
   chosenItem: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+  // Explore's pinned heading: the section size, the page's margin.
+  pinnedTitle: { color: colors.text, ...type.section, marginHorizontal: space.page, marginBottom: 6 },
   chosenWordsSlot: { flexShrink: 1 },
   chosenWords: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
   // The ✕ quiet, in the tertiary ink: the words are what is read, the

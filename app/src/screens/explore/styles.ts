@@ -76,7 +76,8 @@ export const s = StyleSheet.create({
   },
   // The screen title's scale, because this is the screen's title now —
   // the display face carrying a whole line, per theme.ts.
-  heroTitle: { color: onPhoto.text, ...type.title, lineHeight: 40 },
+  // The line height keeps the ratio it had at 34 (40, about 1.18).
+  heroTitle: { color: onPhoto.text, ...type.title, lineHeight: 36 },
   heroSub: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 21 },
   // The screen's one loud control: the accent at full strength — the same
   // primary-button material the auth screens use.
