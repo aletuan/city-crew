@@ -376,10 +376,20 @@ const ALL_KEY = '__all__';
  * an item may have one, set after its word as `Chip` sets it: "Hà Nội
  * (6)", in the tertiary ink. "All" takes `allCount`, and draws none until
  * the caller knows it.
+ *
+ * ── an item that would leave nothing (owner, 25 Oct 2026) ──
+ *
+ * `off` dims an item to the 0.45 `ActionSheet`'s rows wear for "not now"
+ * and takes the press away: on a sheet asking two questions, a city with
+ * none of the kind already chosen is a tap that would show nothing. Dimmed
+ * rather than dropped, the owner's choice — dropped, the row would close
+ * up and reorder under the reader's thumb each time the other question
+ * changed. The chosen item is never off, whatever the caller says: it is
+ * the way back to everything.
  */
 export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, ground, testID }: {
   /** `count`, when given, follows the word as `Chip`'s does: "Hà Nội (6)". */
-  items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string }[];
+  items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; off?: boolean }[];
   chosen: K | null;
   /** The key tapped, or null for "All". */
   onPick: (k: K | null) => void;
@@ -401,7 +411,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   const [edge, setEdge] = useState(0);
   const [widths, setWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(0);
-  const row: { key: string; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; on: boolean; pick: K | null }[] = [
+  const row: { key: string; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; off?: boolean; on: boolean; pick: K | null }[] = [
     ...(all ? [{ key: ALL_KEY, label: all, count: allCount, testID: testID ? `${testID}-all` : undefined, on: chosen === null, pick: null }] : []),
     ...items.map((i) => ({ ...i, on: chosen === i.key, pick: i.key })),
   ];
@@ -424,7 +434,8 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
         scrollEventThrottle={32}
         testID={testID ? `${testID}-scroll` : undefined}
       >
-        {row.map(({ key, label, count, icon, iconColor, testID: itemID, on, pick }) => {
+        {row.map(({ key, label, count, icon, iconColor, testID: itemID, off, on, pick }) => {
+          const dim = !!off && !on;
           return (
             <PressableScale
               key={key}
@@ -432,13 +443,16 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
                 const w = e.nativeEvent.layout.width;
                 setWidths((was) => (was[key] === w ? was : { ...was, [key]: w }));
               }}
-              contentStyle={[s.tabItem, on && s.tabItemOn]}
-              scaleTo={0.97}
+              contentStyle={[s.tabItem, on && s.tabItemOn, dim && s.choiceOff]}
+              scaleTo={dim ? 1 : 0.97}
               haptic="selection"
               // The row is 33pt drawn; the slop makes it the 44pt a
               // target is, above and below, without spacing the words out.
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               onPress={() => onPick(pick)}
+              // `disabled` alone, as `ActionSheet`'s rows: the press is
+              // dropped and VoiceOver says "dimmed" by itself.
+              disabled={dim}
               testID={itemID}
               accessibilityRole="button"
               aria-selected={on}
@@ -695,6 +709,9 @@ const s = StyleSheet.create({
   choiceRow: { paddingHorizontal: space.page },
   choiceText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
   choiceFade: { position: 'absolute', top: 0, bottom: 0, right: 0, width: CHOICE_FADE },
+  // `ActionSheet`'s `rowOff`, so "not now" reads the same on a row of
+  // words as on a row of actions.
+  choiceOff: { opacity: 0.45 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,

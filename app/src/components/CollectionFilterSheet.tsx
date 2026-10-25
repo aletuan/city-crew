@@ -12,6 +12,13 @@
 // both. What differs is the questions: one city and one kind, each an
 // underline row with "All" first, the rows Explore, this screen's panel
 // and the visits panel already narrow with.
+//
+// Each answer says how many lists it would leave, given the other
+// question's draft — "Huế (1)" while no kind is drafted, "Huế (0)" once
+// Nightlife is — and an answer that would leave none is dimmed and cannot
+// be taken (owner, 25 Oct 2026). Before, the sheet offered every city the
+// shelf holds whatever kind was drafted, and the only way to learn that a
+// pair held nothing was the button saying "Show 0".
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useRef, useState } from 'react';
@@ -63,6 +70,18 @@ export default function CollectionFilterSheet({ visible, applied, cities, kinds,
   };
   const count = countFor(draft);
   const all = t('All', 'Tất cả', 'すべて', '全部', '全部');
+  // Each answer counted against the other question's draft: a city is
+  // asked "how many, with this kind?", a kind "how many, in this city?".
+  // A shelf is some thirty lists and the questions some sixteen answers,
+  // so counting them all on each tap is cheap enough not to remember.
+  const cityRow = cities.map((c) => {
+    const n = countFor({ city: c.key, kind: draft.kind });
+    return { ...c, count: n, off: n === 0 };
+  });
+  const kindRow = kinds.map((k) => {
+    const n = countFor({ city: draft.city, kind: k.key });
+    return { ...k, count: n, off: n === 0 };
+  });
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -96,10 +115,11 @@ export default function CollectionFilterSheet({ visible, applied, cities, kinds,
                 edges and fades into the sheet's own ground. */}
             <View style={s.bleed}>
               <UnderlineChoice
-                items={cities}
+                items={cityRow}
                 chosen={draft.city}
                 onPick={(id) => choose({ ...draft, city: id === draft.city ? null : id })}
                 all={all}
+                allCount={countFor({ city: null, kind: draft.kind })}
                 ground={ground}
                 testID="collections-filter-cities"
               />
@@ -111,10 +131,11 @@ export default function CollectionFilterSheet({ visible, applied, cities, kinds,
             <Text style={[s.legend, cities.length > 1 ? null : s.legendFirst]}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
             <View style={s.bleed}>
               <UnderlineChoice
-                items={kinds}
+                items={kindRow}
                 chosen={draft.kind}
                 onPick={(k) => choose({ ...draft, kind: k === draft.kind ? null : k })}
                 all={all}
+                allCount={countFor({ city: draft.city, kind: null })}
                 ground={ground}
                 testID="collections-filter-kinds"
               />
