@@ -1059,7 +1059,7 @@ describe('CollectionsScreen — search', () => {
     show();
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
     open();
-    expect(screen.getByTestId('collections-panel')).toBeTruthy();
+    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
     type('roof');
     sheetPick({ kind: 'Nightlife' });
     expect(screen.queryByText('Rooftops')).toBeNull();
@@ -1073,15 +1073,25 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByTestId('collections-cancel')).toBeNull();
   });
 
-  it('keeps the panel to the box’s own business: suggestions, and no filters', () => {
+  // The panel is the box's: what was searched here before, and nothing
+  // else — no filters, and no hint repeating the placeholder (owner, 25
+  // Oct 2026). With nothing remembered it draws nothing at all.
+  it('keeps the panel to the box’s own business: suggestions, or nothing', async () => {
     state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
     state.cols.data = [col('one', ['a']), col('two', ['c'])];
     show();
     open();
-    const panel = within(screen.getByTestId('collections-panel'));
+    expect(screen.queryByTestId('collections-panel')).toBeNull();
+    expect(screen.queryByText('Type a name, a place, or a city.')).toBeNull();
+    cleanup();
+    await AsyncStorage.setItem('citycrew.recentCollectionSearches', JSON.stringify(['rooftops']));
+    show();
+    open();
+    const panel = within(await screen.findByTestId('collections-panel'));
+    expect(panel.getByText('rooftops')).toBeTruthy();
     expect(panel.queryByText('City')).toBeNull();
     expect(panel.queryByText('Kind of place')).toBeNull();
-    expect(panel.getByText('Type a name, a place, or a city.')).toBeTruthy();
+    await AsyncStorage.removeItem('citycrew.recentCollectionSearches');
   });
 
   it('filters from a sheet beside the title, drafted until applied', () => {
@@ -1438,7 +1448,7 @@ describe('scrolled', () => {
     // dock steps aside for it.
     fireEvent.click(screen.getByTestId('collections-dock').firstElementChild as HTMLElement);
     expect(document.activeElement).toBe(box());
-    expect(screen.getByTestId('collections-panel')).toBeTruthy();
+    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
     await waitFor(() => expect(screen.queryByTestId('collections-dock')).toBeNull());
   });
 
