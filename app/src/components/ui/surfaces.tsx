@@ -123,7 +123,7 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backTestID }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backTestID, titleScrolls }: {
   title: string;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
@@ -177,6 +177,14 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
   onBack?: () => void;
   /** For the smoke flows, which select by id: a pushed screen's way back. */
   backTestID?: string;
+  /**
+   * The large title goes up with the content instead of standing over it:
+   * the screen draws no header, and the body draws `ScreenTitle` at the
+   * top of its own scroll. A tab root whose list has a row that pins as
+   * Explore's does (Collections, owner 25 Oct 2026): a title that never
+   * moved kept a third of the phone from the list under it.
+   */
+  titleScrolls?: boolean;
 }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -198,22 +206,35 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
           </View>
           {right}
         </View>
-      ) : (
-        <View style={s.header}>
-          <View style={{ flex: 1 }}>
-            {eyebrow ? (
-              <View style={s.eyebrowRow}>
-                {typeof eyebrow === 'string' ? <EyebrowText>{eyebrow}</EyebrowText> : eyebrow}
-              </View>
-            ) : null}
-            <Text style={s.title}>{title}</Text>
-            {lede ?? null}
-          </View>
-          {right}
-        </View>
+      ) : titleScrolls ? null : (
+        <ScreenTitle title={title} eyebrow={eyebrow} lede={lede} right={right} />
       )}
       {children}
     </SafeAreaView>
+  );
+}
+
+/** A tab root's large title, as `Screen` draws it — for a body that
+ *  scrolls it away itself (`titleScrolls`). */
+export function ScreenTitle({ title, eyebrow, lede, right }: {
+  title: string;
+  eyebrow?: React.ReactNode;
+  lede?: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <View style={s.header}>
+      <View style={{ flex: 1 }}>
+        {eyebrow ? (
+          <View style={s.eyebrowRow}>
+            {typeof eyebrow === 'string' ? <EyebrowText>{eyebrow}</EyebrowText> : eyebrow}
+          </View>
+        ) : null}
+        <Text style={s.title}>{title}</Text>
+        {lede ?? null}
+      </View>
+      {right}
+    </View>
   );
 }
 

@@ -118,8 +118,10 @@ export function DockSlot({ visible, onPress, accessibilityRole, style, testID, c
  * what it is for. Explore's "Not finding it?" first; the collection
  * page's "Plan a trip" since 17 Oct 2026, on the owner's ask that the two
  * docks be one design — a sentence on the left that the whole island
- * answers to, and the gradient pill at the right for the second act —
- * "+ Địa điểm" on both, where a place is what it adds.
+ * answers to, and the gradient pill at the right for the second act.
+ * The pill makes something on Explore and Collections, and says "+ Tạo
+ * mới" there (owner, 25 Oct 2026); on a collection it adds a place the
+ * catalog has to the list, and keeps "+ Địa điểm" — see the note there.
  * Shared, so the two cannot drift apart a point at a time.
  *
  * The halo, because the glass under these words is thin and whatever
