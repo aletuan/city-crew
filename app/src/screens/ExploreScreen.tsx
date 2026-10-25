@@ -120,7 +120,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // that day. A list rather than one key because the map, the cards and
   // the city switch below all read a list of chosen kinds.
   const [picked, setPicked] = useState<string[]>([]);
-  const pick = (c: string) => setPicked((p) => (p.includes(c) ? [] : [c]));
+  // Null is "All" (owner, 25 Oct 2026: back, now that the row has room).
+  const pick = (c: string | null) => setPicked((p) => (c === null || p.includes(c) ? [] : [c]));
   const [filterOpen, setFilterOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ExploreFilters>({
     sort: 'recommended', status: 'any', savedOnly: false, visitedOnly: false,
@@ -753,6 +754,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         }))}
         chosen={picked[0] ?? null}
         onPick={pick}
+        all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
         testID={floating ? undefined : 'explore-kinds'}
       />
     </View>
