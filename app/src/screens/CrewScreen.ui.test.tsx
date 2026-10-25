@@ -15,12 +15,11 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
-import type { ListTitle } from '../lib/data';
+import type { FriendProfile, ListTitle } from '../lib/data';
 import type { FriendshipRow, Suggestion } from '../lib/friends';
 
 const sug = (other: string, reason: Suggestion['reason'] = 'saves', collectionId: string | null = null, n = 1): Suggestion =>
   ({ other, reason, collectionId, n });
-import type { FriendProfile } from '../lib/data';
 
 const ME = 'me';
 
