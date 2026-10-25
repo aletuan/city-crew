@@ -317,6 +317,8 @@ describe('the zero-state', () => {
     expect(items.map((b) => b.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false']);
     const cafes = screen.getByTestId('search-browse-cafes');
     expect(cafes.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(CATEGORIES.cafes.color);
+    // Stacked, the glyph over the word: a row of doors, not of filters.
+    expect(getComputedStyle(cafes.firstElementChild as HTMLElement).flexDirection).toBe('column');
     expect(screen.queryByTestId('search-browse-all')).toBeNull();
   });
 

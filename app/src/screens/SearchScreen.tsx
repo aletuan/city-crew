@@ -513,7 +513,9 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
             return (
               // Explore's underline row (owner, 25 Oct 2026, the review
               // board's first way): one line that scrolls, the glyph in
-              // the category's own hue and the word, no box. The wrap of
+              // the category's own hue over the word, no box. Stacked, the
+              // owner's choice the same day, where Explore's sits inline:
+              // that row filters and this one launches (`UnderlineChoice`). The wrap of
               // boxed chips it replaces was the last boxed row left in the
               // app, three lines of it over the popular places.
               //
@@ -535,6 +537,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                   }))}
                   chosen={null}
                   onPick={(key) => { if (key) setQuery(categoryLabel(key, t)); }}
+                  stacked
                   testID="search-browse"
                 />
               </View>
