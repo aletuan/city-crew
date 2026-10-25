@@ -45,7 +45,7 @@ const data = vi.hoisted(() => ({
 vi.mock('../lib/data', () => data);
 
 const crew = vi.hoisted(() => ({
-  ships: { data: [] as FriendshipRow[], loading: false, loadedAt: 1 as number | null, reload: vi.fn() },
+  ships: { data: [] as FriendshipRow[], loading: false, error: null as string | null, loadedAt: 1 as number | null, reload: vi.fn() },
   blocks: { data: [] as string[], error: null as string | null, reload: vi.fn() },
   people: {} as Record<string, FriendProfile>,
   mutual: {} as Record<string, number>,
@@ -105,6 +105,7 @@ beforeEach(() => {
   data.searchHandles.mockImplementation(async () => []);
   crew.ships.data = [];
   crew.ships.loading = false;
+  crew.ships.error = null;
   crew.ships.loadedAt = 1;
   crew.blocks.data = [];
   crew.blocks.error = null;
@@ -409,26 +410,88 @@ describe('the blocked list', () => {
 describe('empty and loading', () => {
   it('says there are no friends yet once loaded', () => {
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('No friends yet. Ask for a username and add them here.')).toBeTruthy();
+    expect(screen.getByText('No friends yet')).toBeTruthy();
+    expect(screen.getByTestId('crew-friends-empty')).toBeTruthy();
     expect(screen.queryByText('Blocked')).toBeNull();
   });
 
   it('shows a spinner, not the empty sentence, while loading', () => {
     crew.ships.loading = true;
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.queryByText(/No friends yet/)).toBeNull();
+    expect(screen.queryByTestId('crew-friends-empty')).toBeNull();
     expect(screen.getByRole('progressbar')).toBeTruthy();
     fireEvent.click(tab(/Requests/));
-    expect(screen.queryByText(/Nothing waiting/)).toBeNull();
+    expect(screen.queryByTestId('crew-requests-empty')).toBeNull();
     expect(screen.getByRole('progressbar')).toBeTruthy();
   });
 
   it('says nothing is waiting on an empty Requests tab', () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));
-    expect(screen.getByText(/^Nothing waiting\./)).toBeTruthy();
+    expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
     expect(screen.queryByText('Pending')).toBeNull();
     expect(screen.queryByText('Sent')).toBeNull();
+  });
+});
+
+// ── empty, and failed (owner, 25 Oct 2026) ──
+//
+// Each tab's nothing is a state with the one step that ends it — the ⊕'s
+// own "Add a friend", opening the field on Requests — and a list that
+// could not be read is said as one rather than as no friends.
+describe('the empty states', () => {
+  it('offers to add a friend from an empty Friends tab, on Requests, and stands down while the field is open', () => {
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByText('Ask a friend for their username and add them here — then you can invite each other on trips.')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('crew-empty-add'));
+    // The field is drawn on Requests alone: there is where this went.
+    expect(screen.getByText('Their username')).toBeTruthy();
+    // The field is open: the empty Requests tab still says what it is,
+    // but offers nothing twice.
+    expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
+    expect(screen.queryByTestId('crew-empty-add')).toBeNull();
+  });
+
+  it('offers the same from an empty Requests tab', () => {
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    expect(screen.getByText('No requests yet')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('crew-empty-add'));
+    expect(screen.getByText('Their username')).toBeTruthy();
+  });
+
+  it('says a crew that could not be read is one, on both tabs, and tries again', () => {
+    crew.ships.error = 'offline';
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByText("Couldn't load your crew")).toBeTruthy();
+    expect(screen.queryByTestId('crew-friends-empty')).toBeNull();
+    // The focus has asked once already; this is the second.
+    crew.ships.reload.mockClear();
+    fireEvent.click(screen.getByTestId('crew-retry'));
+    expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+    fireEvent.click(tab(/Requests/));
+    expect(screen.getByTestId('crew-failed')).toBeTruthy();
+    expect(screen.queryByTestId('crew-requests-empty')).toBeNull();
+  });
+
+  it('keeps a list it already holds when a refresh fails', () => {
+    crew.ships.error = 'offline';
+    crew.ships.data = [edge(ME, 'a', 'accepted')];
+    crew.people = { a: person('a', 'anh', 'Anh') };
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByTestId('crew-friend-0')).toBeTruthy();
+    expect(screen.queryByTestId('crew-failed')).toBeNull();
+  });
+
+  // What it holds is a request and no friend: the Friends tab is empty
+  // by what was read, not unread, and says so as empty.
+  it('calls a tab empty, not failed, when what it holds simply has nothing for it', () => {
+    crew.ships.error = 'offline';
+    crew.ships.data = [edge('b', ME, 'pending')];
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Your friends/));
+    expect(screen.getByTestId('crew-friends-empty')).toBeTruthy();
+    expect(screen.queryByTestId('crew-failed')).toBeNull();
   });
 });
 
@@ -442,7 +505,7 @@ describe('introductions', () => {
     fireEvent.click(tab(/Requests/));
     expect(await screen.findByText('Suggested · you save the same places')).toBeTruthy();
     expect(screen.getByText('@son · 2 mutual saves')).toBeTruthy();
-    expect(screen.queryByText(/Nothing waiting/)).toBeNull();
+    expect(screen.queryByTestId('crew-requests-empty')).toBeNull();
     await waitFor(() => expect(crew.absorb).toHaveBeenCalledWith([sg]));
     expect(data.fetchProfilesById).toHaveBeenCalledWith(['s']);
 
@@ -462,7 +525,7 @@ describe('introductions', () => {
     await waitFor(() => expect(data.fetchSuggestedFriends).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.queryByText('Suggested · you save the same places')).toBeNull();
-    expect(screen.getByText(/^Nothing waiting\./)).toBeTruthy();
+    expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
   });
 });
 
@@ -470,7 +533,7 @@ describe('adding by handle', () => {
   const openAdd = () => {
     render(<CrewScreen navigation={nav()} />);
     // Pressed from the Friends tab: the field belongs with the asking.
-    fireEvent.click(screen.getByRole('button', { name: 'Add a friend' }));
+    fireEvent.click(screen.getByTestId('crew-add'));
     return screen.getByRole('textbox') as HTMLInputElement;
   };
   const typeAndSend = async (input: HTMLInputElement, value: string) => {
@@ -481,8 +544,8 @@ describe('adding by handle', () => {
   it('the ⊕ opens the field on the Requests tab, and closes it again', () => {
     openAdd();
     expect(screen.getByText('Their username')).toBeTruthy();
-    expect(screen.getByText(/^Nothing waiting\./)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add a friend' }));
+    expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('crew-add'));
     expect(screen.queryByText('Their username')).toBeNull();
   });
 

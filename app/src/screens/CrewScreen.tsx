@@ -31,7 +31,7 @@ import { FieldRow, PrimaryButton } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
 import {
-  Avatar, Card, Empty, PressableScale, RoundIconButton, Screen, successHaptic, UnderlineTabs, useTabBarClearance,
+  Avatar, Card, EmptyState, GradientCta, PressableScale, RoundIconButton, Screen, successHaptic, UnderlineTabs, useTabBarClearance,
 } from '../components/ui';
 import { useSession } from '../lib/auth';
 import {
@@ -442,6 +442,42 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   const nothingWaiting = crew.incoming.length === 0 && crew.outgoing.length === 0 && intros.length === 0;
 
+  // ── empty, and failed (owner, 25 Oct 2026) ──
+  //
+  // Both tabs said "nothing" in one grey line, and both said it when the
+  // friendships could not be read at all — offline, the Friends tab told
+  // the reader they had no friends. A list that could not be read is now
+  // said as one, with Try again, wherever there is nothing else to show
+  // (the blocked list below has done this since it was written). Empty
+  // is an `EmptyState` with the one step that ends it: the header ⊕'s
+  // own words, "Add a friend", opening the same field on Requests — on
+  // both tabs, since it is one act, and not while the field is open.
+  const shipsFailed = !!ships.error && ships.data.length === 0;
+  const openAdd = () => {
+    setTab('requests');
+    setAdding(true);
+    setNote(null);
+    setFound([]);
+  };
+  const addCta = adding ? null : (
+    <GradientCta
+      icon="person-add"
+      label={t('Add a friend', 'Thêm bạn', '友達を追加', '添加好友', '新增好友')}
+      onPress={openAdd}
+      testID="crew-empty-add"
+    />
+  );
+  const failedState = (
+    <EmptyState
+      icon="cloud-offline"
+      title={t("Couldn't load your crew", 'Không tải được danh sách bạn bè', '友達を読み込めませんでした', '无法加载好友', '無法載入好友')}
+      body={t('Check your connection and try again.', 'Kiểm tra kết nối rồi thử lại.', '接続を確認して、もう一度お試しください。', '请检查网络连接后重试。', '請檢查網路連線後重試。')}
+      testID="crew-failed"
+    >
+      <GradientCta icon="refresh" label={t('Try again', 'Thử lại', '再試行', '重试', '重試')} onPress={() => ships.reload()} testID="crew-retry" />
+    </EmptyState>
+  );
+
   return (
     <Screen
       // "Thông tin bạn bè", the owner's wording (12 Oct 2026), and the
@@ -672,13 +708,20 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
             {nothingWaiting && (ships.loading ? (
               <ActivityIndicator color={colors.accent} style={{ marginTop: 28 }} />
-            ) : (
-              <Empty text={t(
-                'Nothing waiting. Add someone by username — and anyone who saves the places you save will turn up here.',
-                'Chưa có gì. Thêm bạn bằng username — và những người cùng lưu các chỗ giống bạn sẽ hiện ở đây.',
-                '今は何もありません。ユーザー名で追加してみましょう — 同じスポットを保存している人もここに出てきます。',
-                '暂无待处理的请求。可以通过用户名添加好友 — 保存了相同地点的人也会出现在这里。', '暫無待處理的請求。可以透過使用者名稱新增好友 — 儲存了相同地點的人也會出現在這裡。',
-              )} />
+            ) : shipsFailed ? failedState : (
+              <EmptyState
+                icon="mail"
+                title={t('No requests yet', 'Chưa có lời mời nào', 'リクエストはまだありません', '还没有好友请求', '還沒有好友請求')}
+                body={t(
+                  'Friend requests to you show up here, with people who save the places you save.',
+                  'Lời mời kết bạn gửi tới bạn sẽ hiện ở đây, cùng những người lưu các chỗ giống bạn.',
+                  'あなたへの友達リクエストは、同じスポットを保存している人と一緒にここに表示されます。',
+                  '发给你的好友请求会显示在这里，还有和你保存了相同地点的人。', '發給你的好友請求會顯示在這裡，還有和你儲存了相同地點的人。',
+                )}
+                testID="crew-requests-empty"
+              >
+                {addCta}
+              </EmptyState>
             ))}
           </>
         ) : (
@@ -722,13 +765,20 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
               </Card>
             ) : ships.loading ? (
               <ActivityIndicator color={colors.accent} style={{ marginTop: 28 }} />
-            ) : (
-              <Empty text={t(
-                'No friends yet. Ask for a username and add them here.',
-                'Chưa có bạn nào. Hỏi username của bạn bè rồi thêm ở đây.',
-                'まだ友達がいません。ユーザー名を聞いて追加しましょう。',
-                '还没有好友。问到对方的用户名后，在这里添加。', '還沒有好友。問到對方的使用者名稱後，在這裡新增。',
-              )} />
+            ) : shipsFailed ? failedState : (
+              <EmptyState
+                icon="people"
+                title={t('No friends yet', 'Chưa có bạn bè nào', 'まだ友達がいません', '还没有好友', '還沒有好友')}
+                body={t(
+                  'Ask a friend for their username and add them here — then you can invite each other on trips.',
+                  'Hỏi username của bạn bè rồi thêm ở đây — để rủ nhau vào chung chuyến đi.',
+                  '友達にユーザー名を聞いてここで追加しましょう — 旅程に誘い合えるようになります。',
+                  '问到朋友的用户名后在这里添加 — 就可以互相邀请加入行程。', '問到朋友的使用者名稱後在這裡新增 — 就可以互相邀請加入行程。',
+                )}
+                testID="crew-friends-empty"
+              >
+                {addCta}
+              </EmptyState>
             )}
 
             {/* The boundary, visible and reversible — a block managed
