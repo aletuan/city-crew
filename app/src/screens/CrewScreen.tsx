@@ -712,11 +712,16 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
               <EmptyState
                 icon="mail"
                 title={t('No requests yet', 'Chưa có lời mời nào', 'リクエストはまだありません', '还没有好友请求', '還沒有好友請求')}
+                // One line that is true of all three sections this tab
+                // draws — requests in, requests out, suggestions — in the
+                // owner's choice of words (25 Oct 2026). The longer one
+                // left the sent requests out and read as if the people
+                // who save your places were the ones asking.
                 body={t(
-                  'Friend requests to you show up here, with people who save the places you save.',
-                  'Lời mời kết bạn gửi tới bạn sẽ hiện ở đây, cùng những người lưu các chỗ giống bạn.',
-                  'あなたへの友達リクエストは、同じスポットを保存している人と一緒にここに表示されます。',
-                  '发给你的好友请求会显示在这里，还有和你保存了相同地点的人。', '發給你的好友請求會顯示在這裡，還有和你儲存了相同地點的人。',
+                  'Friend requests and suggestions show up here.',
+                  'Lời mời và gợi ý kết bạn sẽ hiện ở đây.',
+                  '友達リクエストとおすすめがここに表示されます。',
+                  '好友请求和推荐会显示在这里。', '好友請求和推薦會顯示在這裡。',
                 )}
                 testID="crew-requests-empty"
               >
