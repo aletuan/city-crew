@@ -1060,6 +1060,24 @@ export type Database = {
         }
         Relationships: []
       }
+      suggestion_dismissals: {
+        Row: {
+          created_at: string
+          other: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          other: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          other?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trip_invites: {
         Row: {
           created_at: string
@@ -1225,6 +1243,15 @@ export type Database = {
           copied_at: string
           copier_handle: string
           copier_name: string
+        }[]
+      }
+      friend_suggestions: {
+        Args: never
+        Returns: {
+          collection_id: string | null
+          n: number
+          other: string
+          reason: string
         }[]
       }
       guide_may_manage: { Args: { photo: string }; Returns: boolean }
