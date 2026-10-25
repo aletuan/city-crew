@@ -369,14 +369,23 @@ const ALL_KEY = '__all__';
  * (#1176) and came out (owner, 25 Oct 2026, on a phone): it stood on the
  * very item the edge cuts, so the two signs that the row goes on drew
  * over each other, and the cut alone says it.
+ *
+ * ── figures (owner, 25 Oct 2026) ──
+ *
+ * Search's cities came over from chips with the figures they carried, so
+ * an item may have one, set after its word as `Chip` sets it: "Hà Nội
+ * (6)", in the tertiary ink. "All" takes `allCount`, and draws none until
+ * the caller knows it.
  */
-export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, testID }: {
-  items: { key: K; label: string; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string }[];
+export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, testID }: {
+  /** `count`, when given, follows the word as `Chip`'s does: "Hà Nội (6)". */
+  items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string }[];
   chosen: K | null;
   /** The key tapped, or null for "All". */
   onPick: (k: K | null) => void;
-  /** The "All" item's word, when the row has one. */
+  /** The "All" item's word, when the row has one, and its figure. */
   all?: string;
+  allCount?: number;
   testID?: string;
 }) {
   // The page's own colour, as plain hex: the fade has to end in exactly
@@ -388,8 +397,8 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   const [edge, setEdge] = useState(0);
   const [widths, setWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(0);
-  const row: { key: string; label: string; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; on: boolean; pick: K | null }[] = [
-    ...(all ? [{ key: ALL_KEY, label: all, testID: testID ? `${testID}-all` : undefined, on: chosen === null, pick: null }] : []),
+  const row: { key: string; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; on: boolean; pick: K | null }[] = [
+    ...(all ? [{ key: ALL_KEY, label: all, count: allCount, testID: testID ? `${testID}-all` : undefined, on: chosen === null, pick: null }] : []),
     ...items.map((i) => ({ ...i, on: chosen === i.key, pick: i.key })),
   ];
   const measured = row.map((i) => widths[i.key] ?? 0);
@@ -404,10 +413,14 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
         contentContainerStyle={[s.choiceRow, { gap }]}
         onLayout={(e) => setEdge(e.nativeEvent.layout.width)}
         onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+        // A row under a search box is tapped with the keyboard up. The
+        // default ('never') spends that first tap on putting the keyboard
+        // away, and the choice is never made.
+        keyboardShouldPersistTaps="handled"
         scrollEventThrottle={32}
         testID={testID ? `${testID}-scroll` : undefined}
       >
-        {row.map(({ key, label, icon, iconColor, testID: itemID, on, pick }) => {
+        {row.map(({ key, label, count, icon, iconColor, testID: itemID, on, pick }) => {
           return (
             <PressableScale
               key={key}
@@ -427,7 +440,10 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
               aria-selected={on}
             >
               {icon ? <Ionicons name={icon} size={16} color={iconColor ?? colors.textSecondary} /> : null}
-              <Text style={[s.choiceText, on && s.tabTextOn]} numberOfLines={1}>{label}</Text>
+              <Text style={[s.choiceText, on && s.tabTextOn]} numberOfLines={1}>
+                {label}
+                {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
+              </Text>
             </PressableScale>
           );
         })}

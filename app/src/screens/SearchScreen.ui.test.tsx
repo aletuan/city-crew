@@ -730,9 +730,12 @@ describe('every city', () => {
   const sg1 = brew('sg1', 'hcmc', 'District 1');
   const sg2 = brew('sg2', 'hcmc', 'District 3');
   const dl = brew('dl', 'dalat', 'Ward 2');
-  const chip = (id: string) => screen.getByTestId(`search-city-${id}`);
-  const chipIds = () => [...screen.getByTestId('search-cities').querySelectorAll('[data-testid^="search-city-"]')]
-    .map((e) => e.getAttribute('data-testid')!.slice('search-city-'.length));
+  const chip = (id: string) => screen.getByTestId(id === 'all' ? 'search-cities-all' : `search-city-${id}`);
+  // The row's items in order, "All" (`search-cities-all`, the row's own
+  // name for it) as 'all'.
+  const chipIds = () => [...screen.getByTestId('search-cities').querySelectorAll('[aria-selected]')]
+    .map((e) => e.getAttribute('data-testid')!)
+    .map((id) => (id === 'search-cities-all' ? 'all' : id.slice('search-city-'.length)));
   const results = () => screen.queryAllByTestId(/^search-result-\d+$/).map((e) => e.textContent ?? '');
 
   beforeEach(() => {
@@ -812,12 +815,14 @@ describe('every city', () => {
   // A horizontal ScrollView grows by default (flexGrow 1), and the row
   // sits in the screen's column beside the list, which grows too: with a
   // short list the two split the empty height, and "boat" stood its one
-  // card a third of the screen below the chips (owner, 22 Oct 2026). jsdom
-  // lays nothing out, so the rule is read where it is written.
+  // card a third of the screen below the chips (owner, 22 Oct 2026). The
+  // row's ScrollView is inside `UnderlineChoice` now, and the View the
+  // screen holds it in is what must not grow. jsdom lays nothing out, so
+  // the rule is read where it is written.
   it('keeps the row to its chips’ height, however short the list under it', () => {
     mount();
     type('bold');
-    expect(getComputedStyle(screen.getByTestId('search-cities')).flexGrow).toBe('0');
+    expect(getComputedStyle(screen.getByTestId('search-cities').parentElement!).flexGrow).toBe('0');
   });
 
   // A row that came and went between keystrokes moved the list a row each
@@ -898,8 +903,11 @@ describe('a place just suggested in another city', () => {
     neighborhood_en: 'An Khánh', is_published: false, review_status: 'pending',
     address: '14 Trần Ngọc Diện, P. Phú Thuận, An Khánh, Hồ Chí Minh 700000, Vietnam',
   });
-  const chipIds = () => [...screen.getByTestId('search-cities').querySelectorAll('[data-testid^="search-city-"]')]
-    .map((e) => e.getAttribute('data-testid')!.slice('search-city-'.length));
+  // The row's items in order, "All" (`search-cities-all`, the row's own
+  // name for it) as 'all'.
+  const chipIds = () => [...screen.getByTestId('search-cities').querySelectorAll('[aria-selected]')]
+    .map((e) => e.getAttribute('data-testid')!)
+    .map((id) => (id === 'search-cities-all' ? 'all' : id.slice('search-city-'.length)));
 
   it('is counted on its city’s chip the moment it is laid in', async () => {
     idx.real = true;
