@@ -859,6 +859,13 @@ export default function CollectionsScreen({ navigation, route }: {
   // and not a choice — unless a chip is already chosen, when the group
   // is the way back to it.
   const cityChoices = useMemo(() => collectionCities(shelf), [shelf]);
+  // Every name a city answers to, for the filter's city search: the city
+  // sheet's list (`CitySwitcher`), so "saigon" finds Sài Gòn whatever
+  // language the app is in.
+  const cityNames = (id: string) => {
+    const c = cities.find((x) => x.id === id);
+    return c ? [c.short_en, c.short_vi, c.short_ja, c.name_en, c.name_vi, c.name_ja] : [id];
+  };
   const kindChoices = useMemo(() => collectionKinds(shelf), [shelf]);
   const scopeCity = cityPick;
   const offerCities = cityChoices.length > 1 || (cityChoices.length === 1 && cityChoices[0] !== scopeCity);
@@ -1761,7 +1768,7 @@ export default function CollectionsScreen({ navigation, route }: {
       <CollectionFilterSheet
         visible={filterOpen}
         applied={filtersApplied}
-        cities={offerCities ? cityChoices.map((id) => ({ key: id, label: cityName(id) })) : []}
+        cities={offerCities ? cityChoices.map((id) => ({ key: id, label: cityName(id), names: cityNames(id) })) : []}
         kinds={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
         countFor={(f) => siftCollections(shelf, { query: q, city: f.city, kind: f.kind }).length}
         onClose={() => setFilterOpen(false)}
