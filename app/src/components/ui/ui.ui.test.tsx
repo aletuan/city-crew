@@ -178,6 +178,22 @@ describe('UnderlineChoice', () => {
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['All', 'Hà Nội (0)']);
   });
 
+  // An answer that would leave nothing (owner, 25 Oct 2026): dimmed in
+  // place and not taken — but never the chosen one, which is the way back.
+  it('dims an item that is off, takes no tap on it, and never dims the chosen one', () => {
+    const onPick = vi.fn();
+    const off = [{ key: 'a', label: 'A', off: true }, { key: 'b', label: 'B', off: true }, { key: 'c', label: 'C' }];
+    render(<UnderlineChoice items={off} chosen="b" onPick={onPick} testID="row" />);
+    const [a, b, c] = screen.getAllByRole('button');
+    expect([a, b, c].map((el) => el.getAttribute('aria-disabled'))).toEqual(['true', null, null]);
+    const opacity = (el: HTMLElement) => getComputedStyle(el.firstElementChild as HTMLElement).opacity;
+    expect(opacity(a)).toBe('0.45');
+    expect([opacity(b), opacity(c)]).not.toContain('0.45');
+    fireEvent.click(a);
+    fireEvent.click(b);
+    expect(onPick.mock.calls).toEqual([['b']]);
+  });
+
   // Under a search box the row is tapped with the keyboard up, and a
   // ScrollView's default spends that tap on the keyboard. React Native Web
   // has no keyboard to show it, so the prop is read off the row itself.
