@@ -281,11 +281,12 @@ function FirstTrip({ onPress }: { onPress: () => void }) {
       {/* The owner's words (25 Oct 2026). It read "Answer four
           questions in Explore and keep the plan you like": a count where
           the point belonged, and a tab's name the button below already
-          goes to. */}
+          goes to. "chuyến đi", not "lịch trình", the same evening (owner):
+          the screen is called Chuyến đi, and so is what it suggests. */}
       <Text style={s.firstBody}>
         {t(
-          'Pick a few options and the app will suggest a plan that suits you.',
-          'Trả lời một vài lựa chọn để ứng dụng tự động gợi ý lịch trình phù hợp.',
+          'Pick a few options and the app will suggest a trip that suits you.',
+          'Trả lời một vài lựa chọn để ứng dụng tự động gợi ý chuyến đi phù hợp.',
           'いくつかの質問に答えると、アプリがぴったりのプランを自動で提案します。',
           '回答几个选项，应用会自动为你推荐合适的行程。', '回答幾個選項，App會自動為你推薦合適的行程。',
         )}

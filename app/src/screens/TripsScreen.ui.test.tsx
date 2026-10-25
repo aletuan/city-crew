@@ -214,7 +214,7 @@ describe('nothing saved yet', () => {
     expect(screen.getByText('No trips yet')).toBeTruthy();
     // The owner's sentence (25 Oct 2026), not a count of questions and a
     // tab's name.
-    expect(screen.getByText('Pick a few options and the app will suggest a plan that suits you.')).toBeTruthy();
+    expect(screen.getByText('Pick a few options and the app will suggest a trip that suits you.')).toBeTruthy();
     expect(screen.queryByText(/four questions/)).toBeNull();
     // One invitation to do one thing: the header pill waits for a list.
     expect(screen.queryByRole('button', { name: 'New trip' })).toBeNull();
