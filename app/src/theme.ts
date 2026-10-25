@@ -667,8 +667,11 @@ export const labelScaleCap = 1.3;
 
 /** Type scale. Hierarchy does the organising, so sizes stay few. */
 export const type = {
-  /** Large screen title — the one place the display face carries a whole line. */
-  title: { fontSize: 34, fontFamily: display.bold, letterSpacing: 0.35 },
+  /** Large screen title — the one place the display face carries a whole line.
+   *  30, from 34 (owner, 25 Oct 2026): beside the 22pt section headings it
+   *  stood a size too loud, and on the tabs whose title stays put it kept
+   *  height from the list. Still two clear steps above `section`. */
+  title: { fontSize: 30, fontFamily: display.bold, letterSpacing: 0.3 },
   /** Title of a screen that opens over another one, where a back control
    *  and the title share the top of the page. Same face as `title`: a
    *  screen's name should not change typeface with how it was reached. */

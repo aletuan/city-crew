@@ -45,7 +45,7 @@ export function AuthScreen({ children }: { children: React.ReactNode }) {
  * form it was costing about 60pt at the top of a screen whose lower half
  * the keyboard takes.
  *
- * `titleDetail`, not `title`: at 34pt beside a 44pt control, "Sign in"
+ * `titleDetail`, not `title`: at the large title's 30pt beside a 44pt control, "Sign in"
  * fits and "Bộ sưu tập mới" does not. It still wraps to two lines if a
  * translation needs it, which is why the row aligns to the top rather than
  * centring on a control whose height it cannot assume.

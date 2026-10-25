@@ -164,7 +164,7 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
    * when the control was first added and put on a line of its own above a
    * 34pt title. It cost about 60pt at the top of every pushed screen.
    *
-   * `titleDetail` at 26pt, not `title` at 34: beside a 44pt control, the
+   * `titleDetail` at 26pt, not `title` at 30: beside a 44pt control, the
    * larger one fits "Trips" and does not fit "River first, rooftop last".
    * The row aligns to the top rather than centring, because the title is
    * allowed to wrap and a control centred against two lines sits below
