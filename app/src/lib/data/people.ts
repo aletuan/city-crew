@@ -112,13 +112,45 @@ export async function removeFriendship(a: string, b: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Accounts whose public shelves overlap yours, strongest first — the
- *  crew screen's introductions. Excludes everyone already tied to you
- *  and anyone either side of a block; see `suggested_friends`. */
+/** People worth asking, strongest reason first — the crew screen's
+ *  introductions. Excludes everyone already tied to you, anyone either
+ *  side of a block and anyone you put away; see `friend_suggestions`. */
 export async function fetchSuggestedFriends(): Promise<import('../friends').Suggestion[]> {
-  const { data, error } = await supabase.rpc('suggested_friends');
+  const { data, error } = await supabase.rpc('friend_suggestions');
   if (error) throw new Error(error.message);
-  return (data ?? []) as import('../friends').Suggestion[];
+  return (data ?? []).map((r) => ({
+    other: r.other,
+    reason: r.reason as import('../friends').SuggestionReason,
+    collectionId: r.collection_id,
+    n: r.n,
+  }));
+}
+
+/** A list's title in the three languages it is written in. */
+export type ListTitle = { title_en: string; title_vi: string; title_ja: string | null };
+
+/** The titles of the lists a suggestion names, by id. A separate read
+ *  because the lists are anybody's in any city, and the screen holds
+ *  only the reader's own and the current city's shelf. RLS answers for
+ *  public lists and the reader's own, which is every list the function
+ *  names; one it no longer can is simply missing from the answer. */
+export async function fetchListTitles(ids: string[]): Promise<Record<string, ListTitle>> {
+  if (!ids.length) return {};
+  const { data, error } = await supabase
+    .from('collections')
+    .select('id, title_en, title_vi, title_ja')
+    .in('id', ids);
+  if (error) throw new Error(error.message);
+  const out: Record<string, ListTitle> = {};
+  for (const r of data ?? []) out[r.id] = { title_en: r.title_en, title_vi: r.title_vi, title_ja: r.title_ja };
+  return out;
+}
+
+/** Put a suggestion away for good: `friend_suggestions` leaves this
+ *  person out from now on. Theirs to never learn of — see the table. */
+export async function dismissSuggestion(me: string, other: string): Promise<void> {
+  const { error } = await supabase.from('suggestion_dismissals').insert({ user_id: me, other });
+  if (error) throw new Error(error.message);
 }
 
 /** places you have both put in public collections, by friend id. */

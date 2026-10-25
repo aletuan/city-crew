@@ -15,8 +15,11 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
+import type { FriendProfile, ListTitle } from '../lib/data';
 import type { FriendshipRow, Suggestion } from '../lib/friends';
-import type { FriendProfile } from '../lib/data';
+
+const sug = (other: string, reason: Suggestion['reason'] = 'saves', collectionId: string | null = null, n = 1): Suggestion =>
+  ({ other, reason, collectionId, n });
 
 const ME = 'me';
 
@@ -38,6 +41,8 @@ const data = vi.hoisted(() => ({
   unblockUser: vi.fn(async () => {}),
   sendFriendRequest: vi.fn(async () => {}),
   fetchSuggestedFriends: vi.fn(async (): Promise<Suggestion[]> => []),
+  fetchListTitles: vi.fn(async (_ids: string[]): Promise<Record<string, ListTitle>> => ({})),
+  dismissSuggestion: vi.fn(async (_me: string, _other: string) => {}),
   fetchProfilesById: vi.fn(async (): Promise<FriendProfile[]> => []),
   profileByHandle: vi.fn(async (): Promise<FriendProfile | null> => null),
   searchHandles: vi.fn(async (): Promise<FriendProfile[]> => []),
@@ -100,6 +105,8 @@ beforeEach(() => {
     fn.mockImplementation(async () => {});
   }
   data.fetchSuggestedFriends.mockImplementation(async () => []);
+  data.fetchListTitles.mockImplementation(async () => ({}));
+  data.dismissSuggestion.mockImplementation(async () => {});
   data.fetchProfilesById.mockImplementation(async () => []);
   data.profileByHandle.mockImplementation(async () => null);
   data.searchHandles.mockImplementation(async () => []);
@@ -499,13 +506,18 @@ describe('the empty states', () => {
 describe('introductions', () => {
   it('lists suggestions with their faces absorbed, and Add asks without a confirmation', async () => {
     const sg = person('s', 'son', 'Son');
-    data.fetchSuggestedFriends.mockImplementation(async () => [{ other: 's', mutual: 2 }]);
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('s', 'saves', null, 2)]);
     data.fetchProfilesById.mockImplementation(async () => [sg]);
     crew.people = { s: sg };
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));
-    expect(await screen.findByText('Suggested · you save the same places')).toBeTruthy();
-    expect(screen.getByText('@son · 2 mutual saves')).toBeTruthy();
+    expect(await screen.findByText('Suggested for you')).toBeTruthy();
+    // Three lines: who, their handle, and why.
+    expect(screen.getByText('Son')).toBeTruthy();
+    expect(screen.getByText('@son')).toBeTruthy();
+    expect(screen.getByTestId('crew-suggestion-reason-s').textContent).toBe('2 places you both saved');
+    // Nothing to name, so nothing asked.
+    expect(data.fetchListTitles).not.toHaveBeenCalled();
     expect(screen.queryByTestId('crew-requests-empty')).toBeNull();
     await waitFor(() => expect(crew.absorb).toHaveBeenCalledWith([sg]));
     expect(data.fetchProfilesById).toHaveBeenCalledWith(['s']);
@@ -518,15 +530,64 @@ describe('introductions', () => {
   });
 
   it('drops a suggestion that is already a friend or blocked', async () => {
-    data.fetchSuggestedFriends.mockImplementation(async () => [{ other: 'a', mutual: 2 }, { other: 'x', mutual: 1 }]);
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('a'), sug('x')]);
     crew.ships.data = [edge(ME, 'a', 'accepted')];
     crew.blocks.data = ['x'];
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));
     await waitFor(() => expect(data.fetchSuggestedFriends).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 0));
-    expect(screen.queryByText('Suggested · you save the same places')).toBeNull();
+    expect(screen.queryByText('Suggested for you')).toBeNull();
     expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
+  });
+
+  it('names the list a like was about, once its title is read, and each list is asked once', async () => {
+    data.fetchSuggestedFriends.mockImplementation(async () => [
+      sug('s', 'liked_yours', 'c1'), sug('v', 'you_copied', 'c1'), sug('w', 'visits', null, 3),
+    ]);
+    data.fetchListTitles.mockImplementation(async () => ({
+      c1: { title_en: 'Mornings', title_vi: 'Buổi sáng', title_ja: null },
+    }));
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    await waitFor(() => expect(screen.getByTestId('crew-suggestion-reason-s').textContent).toBe('Liked your “Mornings”'));
+    expect(screen.getByTestId('crew-suggestion-reason-v').textContent).toBe('You saved a copy of “Mornings”');
+    expect(screen.getByTestId('crew-suggestion-reason-w').textContent).toBe('3 places you have been to');
+    expect(data.fetchListTitles).toHaveBeenCalledTimes(1);
+    expect(data.fetchListTitles).toHaveBeenCalledWith(['c1']);
+  });
+
+  it('says the reason without the name when the titles could not be read', async () => {
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('s', 'liked_yours', 'c1')]);
+    data.fetchListTitles.mockImplementation(async () => { throw new Error('offline'); });
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    await waitFor(() => expect(data.fetchListTitles).toHaveBeenCalled());
+    expect((await screen.findByTestId('crew-suggestion-reason-s')).textContent).toBe('Liked your list');
+  });
+
+  it('the × puts a suggestion away at once, without asking, and writes it down', async () => {
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('s'), sug('t')]);
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    fireEvent.click(await screen.findByTestId('crew-suggestion-dismiss-s'));
+    expect(screen.queryByTestId('crew-suggestion-reason-s')).toBeNull();
+    expect(screen.getByTestId('crew-suggestion-reason-t')).toBeTruthy();
+    expect(data.dismissSuggestion).toHaveBeenCalledWith(ME, 's');
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Hide suggestion' })).toBeTruthy();
+  });
+
+  it('a × whose write fails still keeps the row away, and says nothing', async () => {
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('s')]);
+    data.dismissSuggestion.mockImplementation(async () => { throw new Error('offline'); });
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    fireEvent.click(await screen.findByTestId('crew-suggestion-dismiss-s'));
+    await waitFor(() => expect(data.dismissSuggestion).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByTestId('crew-suggestion-reason-s')).toBeNull();
+    expect(alert).not.toHaveBeenCalled();
   });
 });
 
@@ -747,7 +808,7 @@ describe('a write that fails says so', () => {
 
   it('adding a suggestion', async () => {
     failAll();
-    data.fetchSuggestedFriends.mockImplementation(async () => [{ other: 's', mutual: 2 }]);
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('s')]);
     crew.people = { s: person('s', 'son') };
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));

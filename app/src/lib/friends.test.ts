@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agoOf, buildActivity, MIN_SUGGEST_CHARS, openSuggestions, REQUEST_DAILY_CAP,
+  agoOf, buildActivity, MIN_SUGGEST_CHARS, openSuggestions, reasonLine, REQUEST_DAILY_CAP,
   splitFriendships, standingWith, SUGGEST_LIMIT, suggestable, SUGGESTED_SHOWN, type Applause, type FriendshipRow,
-  type Copy,
+  type Copy, type Suggestion,
 } from './friends';
 
 const edge = (
@@ -122,14 +122,11 @@ describe('suggestable', () => {
   });
 });
 
+const sug = (other: string, n = 1, reason: Suggestion['reason'] = 'saves', collectionId: string | null = null): Suggestion =>
+  ({ other, reason, collectionId, n });
+
 describe('openSuggestions', () => {
-  const rows = [
-    { other: 'stranger', mutual: 6 },
-    { other: 'friend', mutual: 4 },
-    { other: 'asked', mutual: 3 },
-    { other: 'asker', mutual: 2 },
-    { other: 'blocked', mutual: 1 },
-  ];
+  const rows = [sug('stranger', 6), sug('friend', 4), sug('asked', 3), sug('asker', 2), sug('blocked', 1)];
   const ships = [
     edge('me', 'friend', 'accepted'),
     edge('me', 'asked'),
@@ -142,22 +139,61 @@ describe('openSuggestions', () => {
   });
 
   it('an untouched list passes through in the order the server gave', () => {
-    const fresh = [{ other: 'a', mutual: 9 }, { other: 'b', mutual: 2 }];
+    const fresh = [sug('a', 9), sug('b', 2)];
     expect(openSuggestions(fresh, 'me', [])).toEqual(fresh);
   });
 
   it('caps at SUGGESTED_SHOWN', () => {
-    const many = Array.from({ length: 9 }, (_, i) => ({ other: `p${i}`, mutual: 9 - i }));
+    const many = Array.from({ length: 9 }, (_, i) => sug(`p${i}`, 9 - i));
     expect(openSuggestions(many, 'me', [])).toHaveLength(SUGGESTED_SHOWN);
     expect(openSuggestions(many, 'me', [], [], 2)).toHaveLength(2);
   });
 
   it('a suggestion acted on this second is gone this second', () => {
-    const one = [{ other: 'stranger', mutual: 3 }];
+    const one = [sug('stranger', 3)];
     expect(openSuggestions(one, 'me', [])).toHaveLength(1);
     // The Add tap lands: an outgoing edge now exists, and the row goes
     // without waiting for the server to be asked again.
     expect(openSuggestions(one, 'me', [edge('me', 'stranger')])).toEqual([]);
+  });
+});
+
+describe('reasonLine', () => {
+  // English and Vietnamese side by side, so each assertion pins the
+  // owner's wording as well as the English.
+  const t = (en: string, vi: string) => `${en} / ${vi}`;
+
+  it('names the list a like or a copy was about', () => {
+    expect(reasonLine(sug('a', 1, 'liked_yours', 'c'), 'Mornings', t))
+      .toBe('Liked your “Mornings” / Đã thích “Mornings” của bạn');
+    expect(reasonLine(sug('a', 1, 'copied_yours', 'c'), 'Mornings', t))
+      .toBe('Saved a copy of your “Mornings” / Đã lưu bản sao “Mornings” của bạn');
+    expect(reasonLine(sug('a', 1, 'you_liked', 'c'), 'Mornings', t))
+      .toBe('You liked “Mornings” / Bạn đã thích “Mornings”');
+    expect(reasonLine(sug('a', 1, 'you_copied', 'c'), 'Mornings', t))
+      .toBe('You saved a copy of “Mornings” / Bạn đã lưu bản sao “Mornings”');
+  });
+
+  it('says the same without the name when the title is not to hand', () => {
+    expect(reasonLine(sug('a', 1, 'liked_yours', 'c'), null, t))
+      .toBe('Liked your list / Đã thích danh sách của bạn');
+    expect(reasonLine(sug('a', 1, 'copied_yours', 'c'), null, t))
+      .toBe('Saved a copy of your list / Đã lưu bản sao danh sách của bạn');
+    expect(reasonLine(sug('a', 1, 'you_liked', 'c'), null, t))
+      .toBe('You liked their list / Bạn đã thích danh sách của họ');
+    expect(reasonLine(sug('a', 1, 'you_copied', 'c'), null, t))
+      .toBe('You saved a copy of their list / Bạn đã lưu bản sao danh sách của họ');
+  });
+
+  it('counts the places for saves and visits, one in the singular', () => {
+    expect(reasonLine(sug('a', 3, 'saves'), null, t)).toBe('3 places you both saved / Cùng lưu 3 chỗ với bạn');
+    expect(reasonLine(sug('a', 1, 'saves'), null, t)).toBe('1 place you both saved / Cùng lưu 1 chỗ với bạn');
+    expect(reasonLine(sug('a', 2, 'visits'), null, t)).toBe('2 places you have been to / Có 2 chỗ bạn từng ghé');
+    expect(reasonLine(sug('a', 1, 'visits'), null, t)).toBe('1 place you have been to / Có 1 chỗ bạn từng ghé');
+  });
+
+  it('says nothing for a reason this build does not know', () => {
+    expect(reasonLine(sug('a', 1, 'met_at_a_party' as Suggestion['reason']), 'X', t)).toBe('');
   });
 });
 

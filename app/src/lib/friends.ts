@@ -163,9 +163,58 @@ export function suggestable<T extends { id: string }>(
 
 // ── people worth asking ──
 
-/** One introduction, as `suggested_friends` returns it: an account and
- *  how many places you have both saved publicly. */
-export type Suggestion = { other: string; mutual: number };
+/** Why a person is suggested, strongest first — the four sources of
+ *  `friend_suggestions` (20261025120000), the acts split by who did them. */
+export type SuggestionReason =
+  | 'liked_yours' | 'copied_yours' | 'you_liked' | 'you_copied' | 'saves' | 'visits';
+
+/** One introduction, as `friend_suggestions` returns it: an account, its
+ *  strongest reason, the list a like or copy was about (null for the two
+ *  counts), and the count — places for `saves` and `visits`, 1 for an act. */
+export type Suggestion = {
+  other: string;
+  reason: SuggestionReason;
+  collectionId: string | null;
+  n: number;
+};
+
+type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
+
+/**
+ * The line under a suggestion that says why it is there.
+ *
+ * A like or a copy names the list it was about, in quotes the way
+ * Activity names one (owner's choice of wording, 25 Oct 2026: "Đã thích
+ * “X” của bạn"). The title is read separately and can be missing — the
+ * list deleted since, or the read failed — and the row then says the same
+ * thing without the name rather than going blank: the reason is the
+ * point of the row. A reason this build does not know reads as nothing,
+ * so a fifth source on the server cannot put a wrong sentence here.
+ */
+export function reasonLine(sg: Suggestion, title: string | null, t: Translate): string {
+  const n = sg.n;
+  const lines: Record<SuggestionReason, () => string> = {
+    liked_yours: () => (title
+      ? t(`Liked your “${title}”`, `Đã thích “${title}” của bạn`, `あなたの「${title}」にいいねしました`, `点赞了你的“${title}”`, `按讚了你的「${title}」`)
+      : t('Liked your list', 'Đã thích danh sách của bạn', 'あなたのリストにいいねしました', '点赞了你的列表', '按讚了你的列表')),
+    copied_yours: () => (title
+      ? t(`Saved a copy of your “${title}”`, `Đã lưu bản sao “${title}” của bạn`, `あなたの「${title}」のコピーを保存しました`, `保存了你的“${title}”的副本`, `儲存了你的「${title}」的副本`)
+      : t('Saved a copy of your list', 'Đã lưu bản sao danh sách của bạn', 'あなたのリストのコピーを保存しました', '保存了你的列表的副本', '儲存了你的列表的副本')),
+    you_liked: () => (title
+      ? t(`You liked “${title}”`, `Bạn đã thích “${title}”`, `あなたが「${title}」にいいねしました`, `你点赞了“${title}”`, `你按讚了「${title}」`)
+      : t('You liked their list', 'Bạn đã thích danh sách của họ', 'この人のリストにいいねしました', '你点赞了对方的列表', '你按讚了對方的列表')),
+    you_copied: () => (title
+      ? t(`You saved a copy of “${title}”`, `Bạn đã lưu bản sao “${title}”`, `あなたが「${title}」のコピーを保存しました`, `你保存了“${title}”的副本`, `你儲存了「${title}」的副本`)
+      : t('You saved a copy of their list', 'Bạn đã lưu bản sao danh sách của họ', 'この人のリストのコピーを保存しました', '你保存了对方列表的副本', '你儲存了對方列表的副本')),
+    saves: () => (n === 1
+      ? t('1 place you both saved', 'Cùng lưu 1 chỗ với bạn', '共通の保存スポット1件', '1 个共同收藏的地点', '1 個共同收藏的地點')
+      : t(`${n} places you both saved`, `Cùng lưu ${n} chỗ với bạn`, `共通の保存スポット${n}件`, `${n} 个共同收藏的地点`, `${n} 個共同收藏的地點`)),
+    visits: () => (n === 1
+      ? t('1 place you have been to', 'Có 1 chỗ bạn từng ghé', 'あなたが訪れたスポット1件', '有 1 个你去过的地点', '有 1 個你去過的地點')
+      : t(`${n} places you have been to`, `Có ${n} chỗ bạn từng ghé`, `あなたが訪れたスポット${n}件`, `有 ${n} 个你去过的地点`, `有 ${n} 個你去過的地點`)),
+  };
+  return lines[sg.reason]?.() ?? '';
+}
 
 /** How many introductions the crew screen offers at once. Five: enough
  *  to find somebody, few enough that the section stays an aside rather
@@ -182,16 +231,19 @@ export const SUGGESTED_SHOWN = 5;
  * instant it is acted on, rather than sitting there inviting a second
  * request the policy would refuse. `standingWith` is the same reading
  * the add flow uses, so one rule decides in both places.
+ *
+ * `hidden` is everyone the reader blocked or put away with the × since:
+ * the server excludes both too, but only on the next visit.
  */
 export function openSuggestions(
   rows: readonly Suggestion[],
   me: string,
   ships: readonly FriendshipRow[],
-  blocked: readonly string[] = [],
+  hidden: readonly string[] = [],
   limit: number = SUGGESTED_SHOWN,
 ): Suggestion[] {
   return rows
-    .filter((r) => standingWith(ships, me, r.other) === 'none' && !blocked.includes(r.other))
+    .filter((r) => standingWith(ships, me, r.other) === 'none' && !hidden.includes(r.other))
     .slice(0, limit);
 }
 
