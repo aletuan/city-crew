@@ -12,7 +12,7 @@ import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Avatar, Card, Chip, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, Screen, Skeleton, UnderlineChoice, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill } from '../components/add';
@@ -721,10 +721,21 @@ export default function CollectionsScreen({ navigation, route }: {
   // scroll away; with seven cities and nine kinds it stood over all but
   // a fifth of the screen, and the only way out was Cancel, which let go
   // of the chips it was meant to keep (the owner's screenshot, 24 Oct
-  // 2026). Folded, the chosen chips stay in sight under the box — each
-  // with its ✕, so a filter is never one nobody can see — the shelf gets
-  // the screen, and the box opens the panel again for a second choice.
-  // Dragging the shelf folds it too: that is the reader asking to read.
+  // 2026). Folded, what it chose stays in sight under the box, so a
+  // filter is never one nobody can see; the shelf gets the screen, and
+  // the box opens the panel again for a second choice. Dragging the shelf
+  // folds it too: that is the reader asking to read.
+  //
+  // The folded row was chips, each with a ✕, behind a "Filters" chip.
+  // Since 25 Oct 2026 it is the review board's: Explore's filter glyph,
+  // with no word beside it (the owner: the glyph says it), then what is
+  // chosen as words with no ground, all of it one tap back into the
+  // panel, and "Clear all" at the end. A choice is changed or let go of
+  // in the panel, where "All" is the way back; the ✕ on each chip is
+  // gone with the chips. Two things on the board were left: its filter
+  // sheet, a fourth way of choosing beside the underline rows Explore,
+  // this panel and the visits panel now share, and several cities at
+  // once, which the owner took out of every filter on 24 Oct.
   const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); setPanel(false); };
   const fold = () => { if (panel) answered(); };
   // The folded row's way back to the panel (owner, 25 Oct 2026). The box
@@ -941,35 +952,41 @@ export default function CollectionsScreen({ navigation, route }: {
             />
           </View>
         )}
-        {/* The panel, folded: only what it chose, each a tap from gone.
-            City before kind, the panel's own order — and ahead of them
-            the way back in, without the keyboard (see `reopen`). */}
+        {/* The panel, folded: the filter glyph and what it chose, in
+            words, and a way to let all of it go — see `reopen`. */}
         {!holding && !panel && (cityPick || kind) && (
           <View style={s.chosen} testID="collections-chosen">
-            <Chip
-              label={t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}
-              icon="options-outline"
+            <PressableScale
+              style={s.chosenOpen}
+              contentStyle={s.chosenWhat}
+              scaleTo={0.98}
+              haptic="selection"
               onPress={reopen}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('Filters', 'Bộ lọc', 'フィルター', '筛选', '篩選')}: ${[cityPick ? cityName(cityPick) : null, kind ? categoryLabel(kind, t) : null].filter(Boolean).join(', ')}`}
               testID="collections-filters"
-            />
-            {cityPick && (
-              <Chip
-                label={cityName(cityPick)}
-                active
-                remove={t('Removes this filter', 'Bỏ bộ lọc này', 'このフィルターを外す', '移除此筛选', '移除此篩選')}
-                onPress={() => setCityPick(null)}
-              />
-            )}
-            {kind && (
-              <Chip
-                label={categoryLabel(kind, t)}
-                icon={CATEGORIES[kind]?.icon}
-                iconColor={CATEGORIES[kind]?.color}
-                active
-                remove={t('Removes this filter', 'Bỏ bộ lọc này', 'このフィルターを外す', '移除此筛选', '移除此篩選')}
-                onPress={() => setKind(null)}
-              />
-            )}
+            >
+              {/* Explore's filter glyph, in Explore's coral for "applied":
+                  the row is here only while something is. */}
+              <Ionicons name="options-outline" size={19} color={colors.accent} />
+              <View style={s.chosenRule} />
+              {cityPick && <Text style={s.chosenText} numberOfLines={1}>{cityName(cityPick)}</Text>}
+              {kind && (
+                <View style={s.chosenKind}>
+                  {CATEGORIES[kind]?.icon ? <Ionicons name={CATEGORIES[kind].icon} size={16} color={CATEGORIES[kind].color} /> : null}
+                  <Text style={s.chosenText} numberOfLines={1}>{categoryLabel(kind, t)}</Text>
+                </View>
+              )}
+            </PressableScale>
+            <PressableScale
+              onPress={() => { setCityPick(null); setKind(null); }}
+              scaleTo={0.92}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              testID="collections-clear-filters"
+            >
+              <Text style={s.clear}>{t('Clear all', 'Xóa tất cả', 'すべて解除', '全部清除', '全部清除')}</Text>
+            </PressableScale>
           </View>
         )}
         {!holding && panel && (
@@ -1700,8 +1717,16 @@ const s = StyleSheet.create({
   clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
-  // Under the box, where the panel was, with the box's own margins.
-  chosen: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, marginHorizontal: space.page, marginBottom: 14 },
+  // Under the box, where the panel was, with the box's own margins: the
+  // review board's folded filter (owner, 25 Oct 2026) — no chips, the
+  // glyph and the words, a hairline between them, "Clear all" at the end.
+  // 36pt tall, Explore's filter button's box; the slop makes it 44.
+  chosen: { flexDirection: 'row', alignItems: 'center', gap: 16, marginHorizontal: space.page, marginBottom: 14 },
+  chosenOpen: { flexShrink: 1 },
+  chosenWhat: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 36 },
+  chosenRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: colors.borderGlass },
+  chosenKind: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  chosenText: { color: colors.text, fontSize: 15, fontWeight: font.medium, flexShrink: 1 },
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {
