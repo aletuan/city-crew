@@ -471,6 +471,8 @@ describe('fewer than three, and none', () => {
   it('says three when there are three', () => {
     renderScreen();
     expect(screen.getByText('Your evening, three ways')).toBeTruthy();
+    // Under cards, Regenerate is the way out: quiet, not the gradient.
+    expect(regen().querySelector('[data-stub="LinearGradient"]')).toBeNull();
     expect(screen.queryByText(/^Only /)).toBeNull();
   });
 
@@ -481,7 +483,8 @@ describe('fewer than three, and none', () => {
     expect(screen.queryByText(/^Tap one/)).toBeNull();
     expect(screen.queryByText(/^Only /)).toBeNull();
     expect(badges()).toEqual([]);
-    expect(regen()).toBeTruthy();
+    // With no card above it, it is the only way on: filled.
+    expect(regen().querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
     expect(prefetchNarration).not.toHaveBeenCalled();
   });
 });

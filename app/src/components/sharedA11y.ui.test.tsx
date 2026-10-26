@@ -23,6 +23,7 @@ vi.mock('../lib/i18n', () => ({
 
 import { Chip, GradientCta } from './ui';
 import { PrimaryButton } from './authUi';
+import { colors } from '../theme';
 
 describe('Chip', () => {
   it('is a button that says whether it is chosen', () => {
@@ -46,6 +47,19 @@ describe('Chip', () => {
 });
 
 describe('GradientCta', () => {
+  // The way out, not the way on (owner, 26 Oct 2026): `AddPill`'s quiet —
+  // glass, the body's ink, the mark in the accent — and no gradient.
+  it('is glass with the body\'s ink when quiet, the gradient otherwise', () => {
+    const { rerender } = render(<GradientCta icon="refresh" label="Regenerate" onPress={() => {}} />);
+    const glyph = () => document.querySelector('[data-icon="refresh"]')!;
+    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
+    expect(glyph().getAttribute('data-color')).toBe(colors.accentInk);
+    rerender(<GradientCta icon="refresh" label="Regenerate" onPress={() => {}} quiet />);
+    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
+    expect(glyph().getAttribute('data-color')).toBe(colors.accent);
+    expect(screen.getByRole('button', { name: 'Regenerate' })).toBeTruthy();
+  });
+
   it('is a button, neither busy nor dimmed, at rest', () => {
     const onPress = vi.fn();
     render(<GradientCta icon="sparkles" label="Sketch the plan" onPress={onPress} />);

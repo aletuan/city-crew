@@ -724,10 +724,15 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           aria-disabled={pending.has(sg.other)}
                           accessibilityRole="button"
                         >
-                          <LinearGradient {...gradAI} style={s.addBtn}>
-                            <Ionicons name="person-add-outline" size={15} color={colors.accentInk} />
+                          {/* Quiet (owner, 26 Oct 2026): one per row, so a
+                              list of five was five filled buttons, each as
+                              loud as the screen's one real decision. The
+                              glass of `AddPill`'s quiet; Accept, on a
+                              request made to you, stays filled. */}
+                          <View style={s.addBtn} testID={`crew-suggestion-add-${sg.other}`}>
+                            <Ionicons name="person-add-outline" size={15} color={colors.accent} />
                             <Text style={s.addText}>{t('Add', 'Thêm', '追加', '添加', '新增')}</Text>
-                          </LinearGradient>
+                          </View>
                         </PressableScale>
                         <PressableScale
                           onPress={() => dismiss(sg.other)}
@@ -948,8 +953,9 @@ const s = StyleSheet.create({
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9,
+    backgroundColor: colors.surfaceGlass,
   },
-  addText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
+  addText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
   // The two reversals — cancel a request, lift a block — wear the same
   // quiet outline: neither is a thing to encourage, both must be easy.
