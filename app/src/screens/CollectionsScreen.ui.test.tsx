@@ -1495,6 +1495,9 @@ describe('scrolled', () => {
     await waitFor(() => expect(screen.getByTestId('collections-dock').textContent).toBe('Find a collectionBy name or placeNew'));
     const pill = screen.getByTestId('collections-dock-new');
     expect(pill.getAttribute('aria-label')).toBe('New collection');
+    // Filled in the dock, quiet in the header (owner, 26 Oct 2026).
+    expect(pill.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
+    expect(screen.getByTestId('collection-new').querySelector('[data-stub="LinearGradient"]')).toBeNull();
     fireEvent.click(pill);
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
     // The island is the box: focused, which opens the panel, and the

@@ -331,7 +331,8 @@ describe('who may keep it', () => {
     show([mine('m')], place({ submitted_by: 'u2' }));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalled());
     expect(screen.queryByText('This is not yours to keep.')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Add a photo' })).toBeTruthy();
+    // Quiet: the header's weight, not the gradient (owner, 26 Oct 2026).
+    expect(screen.getByRole('button', { name: 'Add a photo' }).querySelector('[data-stub="LinearGradient"]')).toBeNull();
   });
 
   it('draws nothing but the header while the place is still loading', () => {

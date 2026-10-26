@@ -86,6 +86,35 @@ describe('AddPill', () => {
     expect(pill().minHeight).toBeUndefined();
   });
 
+  // The header's weight (owner, 26 Oct 2026): the round buttons' glass,
+  // the body's ink, the plus in the accent — and no gradient at all.
+  const glass = () => StyleSheet.flatten(propsWhere((p) => {
+    const st = StyleSheet.flatten(p.style as StyleProp<ViewStyle>);
+    return !!st && st.backgroundColor === colors.surfaceGlass;
+  }).style as StyleProp<ViewStyle>) ?? {};
+
+  it('is glass, not the gradient, when quiet — at the same height and size', () => {
+    const { rerender } = render(<AddPill label="Add" onPress={() => {}} tall />);
+    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
+    expect(word().color).toBe(colors.accentInk);
+    expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-color')).toBe(colors.accentInk);
+    rerender(<AddPill label="Add" onPress={() => {}} tall quiet />);
+    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
+    expect(glass().minHeight).toBe(44);
+    expect(word().color).toBe(colors.text);
+    expect(word().fontSize).toBe(16);
+    const plus = document.querySelector('[data-icon="add"]')!;
+    expect(plus.getAttribute('data-color')).toBe(colors.accent);
+    expect(plus.getAttribute('data-size')).toBe('18');
+  });
+
+  it('keeps the quiet pill quiet while busy, its spinner in the accent', () => {
+    render(<AddPill label="Add" onPress={() => {}} tall quiet busy />);
+    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
+    expect(screen.getByText('Add')).toBeTruthy();
+    expect(propsWhere((p) => 'animating' in p || ('size' in p && p.size === 'small')).color).toBe(colors.accent);
+  });
+
   it('draws the same word and plus at either height', () => {
     const { rerender } = render(<AddPill label="Add" onPress={() => {}} tall />);
     expect(word().fontSize).toBe(16);

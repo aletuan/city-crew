@@ -22,7 +22,8 @@
 //
 //   AddPill — the solid action, beside a heading or inside a floating
 //     bar. Filled, because it is a thing you do rather than a space you
-//     fill.
+//     fill; `quiet` in a screen's header, where it is the round buttons'
+//     neighbour and not the screen's first thing.
 //
 //   AddCell — the space for one more in a list of your own, the shape of
 //     the thing it adds: a tile among tiles, a row the cards' width above
@@ -169,15 +170,33 @@ export function AddCell({ label, onPress, size, testID }: {
  *
  * ── and where it goes ──
  *
- * Never twice on one screen. A tab with nothing in it has a card below
- * making the same offer with more words, and two invitations to do one
- * thing read as two different things — see how Collections hangs this on a
- * section heading only when that section has rows, and how Trips hides it
- * until the first trip exists.
+ * Not twice at the same weight. A tab with nothing in it has a card below
+ * making the same offer with more words, and two filled invitations to do
+ * one thing read as two different things — which is why Trips hides this
+ * until the first trip exists. Collections keeps it in its header on an
+ * empty Yours (owner, 26 Oct 2026, so the header is one height on both
+ * tabs), and there it is `quiet`: the card's filled button is the one the
+ * eye goes to.
+ *
+ * ── how loud ──
+ *
+ * Filled in the floating docks, where it is the bar's one action and
+ * sits over photographs that a lighter pill would vanish into. `quiet`
+ * in a screen's header (owner, 26 Oct 2026): filled there, it outweighed
+ * the title beside it and every round button in the same row. Quiet is
+ * the round buttons' own glass ground (`surfaceGlass`), the word in the
+ * body's ink and the plus in the accent. Not the accent on `accentSoft`,
+ * the tint the first proposal had: measured across every look that pair
+ * reads 4.14:1 on standard's paper, 4.26 on blush and 4.35 on duck, under
+ * the 4.5 a 16pt word needs. The body's ink on glass is 14.67 there and
+ * nowhere under 6.7. Not an outline either: outlined pills here are the
+ * reversals — Cancel, Unblock — and a way to make something is not one.
  */
-export function AddPill({ label, onPress, tall, busy, icon = 'add', accessibilityLabel, testID }: {
+export function AddPill({ label, onPress, tall, quiet, busy, icon = 'add', accessibilityLabel, testID }: {
   label: string;
   onPress: () => void;
+  /** The header's weight: glass, not the gradient. See "how loud". */
+  quiet?: boolean;
   /** The glyph before the word. A plus everywhere it adds; the collection
    *  dock's visitor pill copies, and wears the ⋯ menu's copy glyph so one
    *  act has one mark (owner, 17 Oct 2026). */
@@ -201,6 +220,18 @@ export function AddPill({ label, onPress, tall, busy, icon = 'add', accessibilit
   testID?: string;
 }) {
   const glyph = 18;
+  const mark = quiet ? colors.accent : colors.accentInk;
+  const face = [s.pill, tall && s.pillTall, quiet && s.pillQuiet, busy && s.pillBusy];
+  const inside = (
+    <>
+      {/* The spinner takes the plus's own box, so the word does not move
+          when one replaces the other. */}
+      {busy
+        ? <View style={{ width: glyph, height: glyph, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="small" color={mark} /></View>
+        : <Ionicons name={icon} size={glyph} color={mark} />}
+      <Text style={[s.pillText, quiet && s.pillTextQuiet]}>{label}</Text>
+    </>
+  );
   return (
     <PressableScale
       onPress={onPress}
@@ -213,14 +244,9 @@ export function AddPill({ label, onPress, tall, busy, icon = 'add', accessibilit
       aria-busy={busy}
       testID={testID}
     >
-      <LinearGradient {...gradAI} style={[s.pill, tall && s.pillTall, busy && s.pillBusy]}>
-        {/* The spinner takes the plus's own box, so the word does not move
-            when one replaces the other. */}
-        {busy
-          ? <View style={{ width: glyph, height: glyph, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="small" color={colors.accentInk} /></View>
-          : <Ionicons name={icon} size={glyph} color={colors.accentInk} />}
-        <Text style={s.pillText}>{label}</Text>
-      </LinearGradient>
+      {quiet
+        ? <View style={face}>{inside}</View>
+        : <LinearGradient {...gradAI} style={face}>{inside}</LinearGradient>}
     </PressableScale>
   );
 }
@@ -275,4 +301,6 @@ const s = StyleSheet.create({
   // carries a spinner saying so.
   pillBusy: { opacity: 0.7 },
   pillText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
+  pillQuiet: { backgroundColor: colors.surfaceGlass },
+  pillTextQuiet: { color: colors.text },
 });
