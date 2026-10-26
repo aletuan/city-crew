@@ -401,8 +401,8 @@ Deno.serve(async (req) => {
     const stops = Array.isArray(body.stops) ? body.stops.slice(0, MAX_STOPS) : [];
     if (!stops.length) return json({ error: "stops required" }, 400);
 
-    // The slugs the model is allowed to name, and the only ones it can:
-    // this list becomes the `enum` on the output schema.
+    // The slugs a line may land on. Not in the schema any more — the model
+    // answers by number — but the loop at the bottom keeps to this list.
     const slugs = stops.map((s: { slug?: unknown }) => String(s.slug ?? "")).filter(Boolean);
     if (!slugs.length) return json({ error: "stops need slugs" }, 400);
 
