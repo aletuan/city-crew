@@ -242,7 +242,7 @@ export default function WelcomeSheet() {
             title={t('Plan with ease', 'Lên kế hoạch dễ dàng', 'かんたんに計画する', '轻松规划', '輕鬆規劃')}
             body={t(
               'Say what kind of day you want, and City Crew suggests an itinerary to match.',
-              'Chỉ cần nói bạn muốn một ngày thế nào, City Crew sẽ gợi ý lịch trình phù hợp.',
+              'Chỉ cần nói bạn muốn một ngày thế nào, City Crew sẽ gợi ý chuyến đi phù hợp.',
               'どんな一日にしたいか伝えるだけで、City Crew がぴったりの旅程を提案します。',
               '说出你想要怎样的一天，City Crew 会推荐相应的行程。', '說出你想要怎樣的一天，City Crew 會推薦相應的行程。',
             )}
