@@ -551,8 +551,15 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color, testID
  * Distinct from `AddPill` on purpose. That one sits beside a heading or
  * inside a bar and is sized to stay quiet next to them; this one is the
  * only thing on its card and carries a full sentence of a label.
+ *
+ * `quiet` for a button that is the way out rather than the way on: the
+ * plans screen's "Regenerate", under three cards whose own "View & edit"
+ * is what the screen is for (owner, 26 Oct 2026). Filled, it was the
+ * largest solid thing on the screen and the cards' rival. Quiet is
+ * `AddPill`'s quiet — the round buttons' glass, the body's ink, the mark
+ * in the accent — so one word means one look.
  */
-export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID }: {
+export function GradientCta({ icon, label, onPress, wide, quiet, busy, disabled, testID }: {
   /**
    * Optional, and the omission is a choice rather than an oversight. A
    * glyph beside a label is a second way of saying the same thing, worth
@@ -569,6 +576,8 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
    *  only thing here", which is true at the foot of a sheet and false in
    *  the middle of a card. */
   wide?: boolean;
+  /** Glass, not the gradient: a second way on, not the first. */
+  quiet?: boolean;
   /**
    * Working, and not to be pressed again.
    *
@@ -599,6 +608,24 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
   // An iconless button still has to show that it is working, so `busy`
   // borrows a mark rather than leaving the reader with a dead press.
   const glyph = icon ?? (busy ? 'sync' : null);
+  const inside = (
+    <>
+      {/* The rotation wraps the glyph whether or not it is turning. At
+          rest `useLoop` holds zero, so it is the identity transform —
+          no branch between rest and busy, no reflow, and the icon
+          cannot shift by a pixel between the two states. The branch
+          here is over having a glyph at all, which does not change
+          while the button is on screen. */}
+      {glyph && (
+        <Animated.View
+          style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}
+        >
+          <Ionicons name={glyph} size={20} color={quiet ? colors.accent : colors.accentInk} />
+        </Animated.View>
+      )}
+      <Text style={[s.ctaText, quiet && s.ctaTextQuiet]}>{label}</Text>
+    </>
+  );
   return (
     <PressableScale
       onPress={onPress}
@@ -617,22 +644,9 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
           at zero — and without this the button would take a tap and show
           nothing at all to the readers who asked for less movement, which
           is worse than the label it replaces. Fade is not motion. */}
-      <LinearGradient {...gradAI} style={[s.cta, (busy || disabled) && s.ctaDim]}>
-        {/* The rotation wraps the glyph whether or not it is turning. At
-            rest `useLoop` holds zero, so it is the identity transform —
-            no branch between rest and busy, no reflow, and the icon
-            cannot shift by a pixel between the two states. The branch
-            here is over having a glyph at all, which does not change
-            while the button is on screen. */}
-        {glyph && (
-          <Animated.View
-            style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}
-          >
-            <Ionicons name={glyph} size={20} color={colors.accentInk} />
-          </Animated.View>
-        )}
-        <Text style={s.ctaText}>{label}</Text>
-      </LinearGradient>
+      {quiet
+        ? <View style={[s.cta, s.ctaQuiet, (busy || disabled) && s.ctaDim]}>{inside}</View>
+        : <LinearGradient {...gradAI} style={[s.cta, (busy || disabled) && s.ctaDim]}>{inside}</LinearGradient>}
     </PressableScale>
   );
 }
@@ -765,6 +779,9 @@ const s = StyleSheet.create({
   // this class gets. `wide` still stretches it in its parent; see
   // `GradientCta`.
   ctaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
+  // `AddPill`'s quiet, to the token: see the note on `GradientCta`.
+  ctaQuiet: { backgroundColor: colors.surfaceGlass },
+  ctaTextQuiet: { color: colors.text },
   tick: {
     width: 26, height: 26, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',

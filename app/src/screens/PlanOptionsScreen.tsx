@@ -329,9 +329,13 @@ export default function PlanOptionsScreen({ navigation, route }: {
         {!!droppedLine && <Text style={s.dropped}>{droppedLine}</Text>}
 
         <View style={s.regen}>
+          {/* Quiet (owner, 26 Oct 2026): the way out, under cards whose
+              own "View & edit" is the way on. With no card above it, it
+              is the only way on, and filled again. */}
           <GradientCta
             icon="refresh"
             wide
+            quiet={plans.length > 0}
             label={t('Regenerate', 'Thực hiện lại', '作り直す', '重新生成', '重新生成')}
             onPress={regenerate}
           />

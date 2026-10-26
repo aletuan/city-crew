@@ -177,6 +177,26 @@ thẳng với Supabase bằng session của editor, RLS quyết định ai đư�
 và gọi `fetch-place`, `scan-city`, `suspend-user` cho những thứ cần bí mật.
 Không có tầng nào giữa dashboard và database.
 
+## Bốn cấp nút
+
+Một màn hình mới chọn cấp trước, rồi mới chọn component. Mọi cấp lấy màu
+từ token của theme (`gradAI`, `accentInk`, `surfaceGlass`, `text`,
+`accent`), nên đổi theme trong Profile là đổi cả bốn; không nút nào được
+viết màu cứng.
+
+| Cấp | Trông thế nào | Component | Dùng cho |
+|---|---|---|---|
+| 1. Chính | gradient đặc | `GradientCta`, `PrimaryButton`, `AddPill` | **một** hành động chốt mỗi màn: "Lên kế hoạch", nút trong thẻ trống, đăng nhập, "Đồng ý" một lời mời, nút trong dock nổi |
+| 2. Phụ | kính (`surfaceGlass`), chữ `text`, dấu `accent` | `AddPill quiet`, `GradientCta quiet`, `RoundIconButton` | nút trên header cạnh tiêu đề; nút lặp lại mỗi dòng ("Thêm" ở gợi ý kết bạn); lối ra cạnh lối chính ("Thực hiện lại" khi đã có thẻ) |
+| 3. Huỷ / gỡ | viền | `quietBtn` của Crew | "Huỷ", "Bỏ chặn", "Từ chối" — việc được phép, không được mời |
+| 4. Liên kết | chữ `accent` | `Text` trong `PressableScale` | "Xem & sửa ›", "Xem thêm ·" |
+
+Hai nút cùng một việc trên một màn thì không cùng cấp: nút trong thẻ trống
+là cấp 1, nút "Tạo mới" trên header cùng màn là cấp 2. Cấp 2 không dùng
+`accent` trên `accentSoft`: đo ngày 26/10/2026 trên cả 20 bảng màu, cặp đó
+chỉ 4,14:1 trên paper (dưới 4,5 cho chữ 16pt); `text` trên kính thấp nhất
+6,77:1, dấu `accent` trên kính thấp nhất 4,10:1 (đủ 3:1 cho biểu tượng).
+
 ## Cố ý không có
 
 - **App server.** Mọi thứ nó làm được thì RLS hoặc một Edge Function đã làm,

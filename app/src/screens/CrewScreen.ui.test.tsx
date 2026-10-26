@@ -195,6 +195,8 @@ describe('answering a request', () => {
 
   it('Accept accepts the requester’s edge and reloads', async () => {
     render(<CrewScreen navigation={nav()} />);
+    // A request made to you is the screen's decision: filled.
+    expect(screen.getByRole('button', { name: /Accept/ }).querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
     crew.ships.reload.mockClear();
     fireEvent.click(screen.getByRole('button', { name: /Accept/ }));
     expect(data.acceptFriendRequest).toHaveBeenCalledWith('r', ME);
@@ -518,6 +520,9 @@ describe('introductions', () => {
     expect(screen.getByText('Son')).toBeTruthy();
     expect(screen.queryByText('@son')).toBeNull();
     expect(screen.getByTestId('crew-suggestion-reason-s').textContent).toBe('2 places you both saved');
+    // One per row, so quiet: glass, not the gradient (owner, 26 Oct 2026).
+    expect(screen.getByTestId('crew-suggestion-add-s').querySelector('[data-stub="LinearGradient"]')).toBeNull();
+    expect(screen.getByTestId('crew-suggestion-add-s').closest('[data-stub="LinearGradient"]')).toBeNull();
     // Nothing to name, so nothing asked.
     expect(data.fetchListTitles).not.toHaveBeenCalled();
     expect(screen.queryByTestId('crew-requests-empty')).toBeNull();
