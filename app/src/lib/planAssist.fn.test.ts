@@ -141,7 +141,7 @@ describe('the guest door', () => {
 
   it('asks the counter for the hashed first hop with both caps, and pays the model when it says yes', async () => {
     h.fake.replies({ data: true, error: null });
-    h.create.mockResolvedValue(says({ title: 'T', stops: [{ slug: 'a', why: 'Because.' }] }));
+    h.create.mockResolvedValue(says({ title: 'T', stops: [{ n: '1', why: 'Because.' }] }));
     const res = await guest({ 'x-forwarded-for': '203.0.113.9, 10.0.0.1' });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ title: 'T', stops: [{ slug: 'a', why: 'Because.' }] });
@@ -192,20 +192,64 @@ describe('narrate', () => {
     expect(h.create).not.toHaveBeenCalled();
   });
 
-  it('caps the plan it will describe, and lets the model name only those places', async () => {
+  it('caps the plan it will describe, and lets the model answer only by a stop’s number', async () => {
     h.create.mockResolvedValue(says({ title: 'T', stops: [] }));
     const nine = Array.from({ length: 9 }, (_, i) => stop(`p${i}`));
     await call({ action: 'narrate', stops: nine, lang: 'vi' });
-    const allowed = sent().output_config.format.schema.properties.stops.items.properties.slug.enum;
-    expect(allowed).toEqual(['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7']);
-    expect(sent().messages[0].content).not.toContain('p8');
+    const allowed = sent().output_config.format.schema.properties.stops.items.properties.n.enum;
+    expect(allowed).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+    expect(sent().messages[0].content).not.toContain('P8');
     expect(sent().messages[0].content).toContain('Language: Vietnamese');
   });
 
+  // The point of answering by number. A schema the API has not seen is
+  // compiled before it is answered, and new ones arriving together were
+  // compiled in turn: three cards' narrations finished at 3.6, 6.6 and
+  // 9.4 s, and the last missed the options screen's 8 s hold every time.
+  // One schema for every plan is compiled once.
+  it('sends the same schema for any two plans', async () => {
+    h.create.mockResolvedValue(says({ title: 'T', stops: [] }));
+    await call({ action: 'narrate', stops: [stop('cong'), stop('bun-cha')] });
+    const first = JSON.stringify(sent().output_config);
+    await call({ action: 'narrate', stops: [stop('artemis')] });
+    expect(JSON.stringify(sent().output_config)).toBe(first);
+    expect(first).not.toContain('cong');
+  });
+
+  it('puts the slug back from the number, and drops a number the plan does not have', async () => {
+    h.create.mockResolvedValue(says({
+      title: 'T',
+      stops: [
+        { n: '2', why: 'Second.' },
+        { n: '1', why: 'First.' },
+        { n: '3', why: 'Past the end.' },
+        { why: 'No number.' },
+      ],
+    }));
+    const res = await call({ action: 'narrate', stops: [stop('cong'), stop('bun-cha')] });
+    expect(await res.json()).toEqual({
+      title: 'T',
+      stops: [{ slug: 'bun-cha', why: 'Second.' }, { slug: 'cong', why: 'First.' }],
+    });
+  });
+
+  // A stop sent without a slug still took a number in the ask. Reading the
+  // answer against the slug list instead would hang stop 3's line on stop 2.
+  it('counts a stop with no slug, so the stop after it keeps its own line', async () => {
+    h.create.mockResolvedValue(says({
+      title: 'T',
+      stops: [{ n: '2', why: 'Nameless.' }, { n: '3', why: 'Mine.' }],
+    }));
+    const res = await call({ action: 'narrate', stops: [stop('a'), { name: 'no slug' }, stop('c')] });
+    expect(await res.json()).toEqual({ title: 'T', stops: [{ slug: 'c', why: 'Mine.' }] });
+  });
+
   it('asks for no cache on a narration, and still does on a parse', async () => {
-    // Measured 12 Oct 2026: the schema's per-plan slug enum sits in the
-    // cached prefix, so a narration's prefix was written on every call and
-    // read on none. A marker here is the 25% write premium for nothing.
+    // Measured 12 Oct 2026, when the schema's enum was the plan's own
+    // slugs: the prefix was written on every call and read on none. It is
+    // constant now, but three cards start in the same second and cannot
+    // read each other's write, so a marker is still the 25% premium for
+    // nothing at today's traffic.
     // Parse's schema only changes with the city, so its marker stays.
     h.create.mockResolvedValue(says({ title: 'T', stops: [] }));
     await call({ action: 'narrate', stops: [stop('a')] });
@@ -221,9 +265,9 @@ describe('narrate', () => {
     h.create.mockResolvedValue(says({
       title: '  An evening in the Old Quarter ',
       stops: [
-        { slug: 'cong', why: 'Coconut coffee on the corner.' },
-        { slug: 'invented-bar', why: 'Does not exist.' },
-        { slug: 'bun-cha', why: '   ' },
+        { n: '1', why: 'Coconut coffee on the corner.' },
+        { n: '7', why: 'Does not exist.' },
+        { n: '2', why: '   ' },
       ],
     }));
     const res = await call({ action: 'narrate', stops: [stop('cong'), stop('bun-cha')] });
@@ -241,7 +285,7 @@ describe('narrate', () => {
   });
 
   it('answers a refusal with an empty plan the app can fall back from', async () => {
-    h.create.mockResolvedValue(says({ title: 'x', stops: [{ slug: 'a', why: 'y' }] }, { stop_reason: 'refusal' }));
+    h.create.mockResolvedValue(says({ title: 'x', stops: [{ n: '1', why: 'y' }] }, { stop_reason: 'refusal' }));
     const res = await call({ action: 'narrate', stops: [stop('a')] });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ title: null, stops: [] });
@@ -430,7 +474,7 @@ describe('what is missing', () => {
       'When: an evening.',
       '',
       'The stops, in order:',
-      '1. bare',
+      '1.',
       '   name: —',
       '   kind: —',
       '   area: —',
@@ -465,8 +509,8 @@ describe('what is missing', () => {
     expect(await res.json()).toEqual({ title: null, stops: [] });
   });
 
-  it('drops a line with no slug or no words, rather than printing it under nobody', async () => {
-    h.create.mockResolvedValue(says({ title: 7, stops: [{ why: 'Orphan line.' }, { slug: 'a' }, { slug: 'b', why: 'Kept.' }] }));
+  it('drops a line with no number or no words, rather than printing it under nobody', async () => {
+    h.create.mockResolvedValue(says({ title: 7, stops: [{ why: 'Orphan line.' }, { n: '1' }, { n: '2', why: 'Kept.' }] }));
     const res = await call({ action: 'narrate', stops: [{ slug: 'a' }, { slug: 'b' }] });
     expect(await res.json()).toEqual({ title: null, stops: [{ slug: 'b', why: 'Kept.' }] });
   });
