@@ -84,5 +84,11 @@ export type Bounded = Centred & { radius_km: number };
 export function cityAround<T extends Bounded>(cities: T[], lat: number, lng: number): T | null {
   const c = nearestTo(cities, lat, lng);
   if (!c) return null;
-  return distanceKm(lat, lng, c.center_lat, c.center_lng) <= c.radius_km ? c : null;
+  return standsIn(c, lat, lng) ? c : null;
+}
+
+/** Whether a point lies within a city's own radius — the reader standing
+ *  in the city a screen is showing, rather than browsing it from another. */
+export function standsIn(c: Bounded, lat: number, lng: number): boolean {
+  return distanceKm(lat, lng, c.center_lat, c.center_lng) <= c.radius_km;
 }

@@ -193,6 +193,8 @@ describe('nearestAreaKm', () => {
 describe('startPoint', () => {
   const ME = { lat: 21.0313, lng: 105.8135 };      // 29 Liễu Giai
   const PIN = { lat: 21.0333, lng: 105.8500 };     // Old Quarter
+  const HANOI = { center_lat: 21.0285, center_lng: 105.8542, radius_km: 20 };
+  const CENTRE = { lat: 21.0285, lng: 105.8542 };
   const none = { district: null, at: null };
 
   // The bug. "Around Hanoi · near me" is drawn for the state where
@@ -201,11 +203,11 @@ describe('startPoint', () => {
   // stop no distance, and picked it from anywhere in the city while the
   // label went on saying "near me".
   it('starts the day where the reader is when they chose nothing', () => {
-    expect(startPoint(none, ME)).toEqual(ME);
+    expect(startPoint(none, ME, HANOI)).toEqual(ME);
   });
 
   it('prefers the pin, which is the thing they actually pointed at', () => {
-    expect(startPoint({ district: null, at: PIN }, ME)).toEqual(PIN);
+    expect(startPoint({ district: null, at: PIN }, ME, HANOI)).toEqual(PIN);
   });
 
   // The one that is easy to get backwards. A district must return *null*,
@@ -213,21 +215,43 @@ describe('startPoint', () => {
   // the district's own centre, so answering `me` here would plan a day in
   // Hà Đông around a sofa in Thanh Xuân.
   it('stands aside for a district instead of overriding it', () => {
-    expect(startPoint({ district: 'Ba Đình', at: null }, ME)).toBeNull();
+    expect(startPoint({ district: 'Ba Đình', at: null }, ME, HANOI)).toBeNull();
   });
 
   // Both set is not a contradiction to resolve by precedence alone —
   // picking an area drops a pin on it, so in the app the two agree. The
   // pin still wins, because it is the later and more specific of the two.
   it('lets the pin win when an area is also set', () => {
-    expect(startPoint({ district: 'Ba Đình', at: PIN }, ME)).toEqual(PIN);
+    expect(startPoint({ district: 'Ba Đình', at: PIN }, ME, HANOI)).toEqual(PIN);
   });
 
-  // Permission refused, or simply not read back yet. Null is the honest
-  // floor and it is the behaviour that shipped for months: no origin,
-  // rather than an origin somebody invented.
-  it('has no answer when there is no position to be had', () => {
-    expect(startPoint(none, null)).toBeNull();
+  // Browsing Hanoi from Đà Nẵng. The position is real and 600km away;
+  // every place would be charged the same capped distance, which chooses
+  // nothing, while the label said "near you". The centre instead.
+  it('starts at the centre for a reader in another city', () => {
+    expect(startPoint(none, { lat: 16.0544, lng: 108.2022 }, HANOI)).toEqual(CENTRE);
+  });
+
+  // The edge of the city counts as the city — the radius is the desk's
+  // own word for where it stops — and a step past it does not.
+  it('holds the reader to the city’s own radius', () => {
+    const inside = { lat: 21.0285 + 19.9 / 111.2, lng: 105.8542 };
+    const outside = { lat: 21.0285 + 20.1 / 111.2, lng: 105.8542 };
+    expect(startPoint(none, inside, HANOI)).toEqual(inside);
+    expect(startPoint(none, outside, HANOI)).toEqual(CENTRE);
+  });
+
+  // Permission refused, or simply not read back yet: the centre too, and
+  // the label says "centre" for it, so the anchor is never a secret.
+  it('starts at the centre when there is no position to be had', () => {
+    expect(startPoint(none, null, HANOI)).toEqual(CENTRE);
+  });
+
+  // No city to plan is the one case left without an anchor — a position
+  // with no city to hold it to is not one to trust either.
+  it('has no answer without a city', () => {
+    expect(startPoint(none, ME, null)).toBeNull();
+    expect(startPoint(none, null, null)).toBeNull();
   });
 
   // Not a hedge. `useMyPosition` resolves after the first render, so the
@@ -235,7 +259,7 @@ describe('startPoint', () => {
   // in that window — and a district chosen in that window must still
   // suppress, or a late position would arrive and quietly take over.
   it('keeps the district suppressed even before a position arrives', () => {
-    expect(startPoint({ district: 'Ba Đình', at: null }, null)).toBeNull();
+    expect(startPoint({ district: 'Ba Đình', at: null }, null, HANOI)).toBeNull();
   });
 });
 

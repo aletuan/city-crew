@@ -541,9 +541,54 @@ describe('planTrips avoiding what was already shown', () => {
     expect(repeated.length).toBeLessThan(shown.length);
   });
 
+  it('offers nothing already shown while anything else fits', () => {
+    const first = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1 });
+    const shown = first.flatMap((p) => p.stops.map((s) => s.place.slug));
+    const again = planTrips(EVENING, CATALOG, 'hanoi', { seed: 2, avoid: shown });
+    expect(again).toHaveLength(3);
+    expect(again.flatMap((p) => p.stops.map((s) => s.place.slug)).filter((s) => shown.includes(s))).toEqual([]);
+  });
+
+  // The case that was measured: the pull towards where the day starts is
+  // worth more than the old charge for a repeat, so the café next door the
+  // reader had just passed over came back first on every Regenerate.
+  it('does not reopen on the near place the reader passed over', () => {
+    const at = { lat: 21.07, lng: 105.82 };
+    // Equal but for the distance: 0.5km and 6km out. The old charge of 3
+    // left the near one 3.0 ahead, well outside the draw's band.
+    const near = place({ slug: 'next-door', categories: ['cafes'], lat: 21.0745, lng: 105.82 });
+    const across = place({ slug: 'six-km', categories: ['cafes'], lat: 21.124, lng: 105.82 });
+    const cafes = { ...EVENING, categories: ['cafes'], at };
+    expect(planTrips(cafes, [near, across], 'hanoi', { seed: 1 })[0].stops[0].place.slug).toBe('next-door');
+    const again = planTrips(cafes, [near, across], 'hanoi', { seed: 2, avoid: ['next-door'] });
+    expect(again[0].stops[0].place.slug).toBe('six-km');
+  });
+
+  // Per slot: the first slot has one fresh bar and must take it; the slot
+  // after it has nothing fresh left, and takes a repeat rather than going
+  // unfilled.
+  it('takes a repeat only for the slot nothing fresh can fill', () => {
+    const eats = many('eats', 2);
+    const bars = many('nightlife', 3);
+    const ask = { ...EVENING, categories: ['eats', 'nightlife'] };
+    const plans = planTrips(ask, [...eats, ...bars], 'hanoi',
+      { seed: 3, avoid: ['eats-0', 'eats-1', 'nightlife-0', 'nightlife-1'] });
+    const stops = plans[0].stops.map((s) => s.place.slug);
+    expect(stops[0]).toBe('nightlife-2');
+    expect(stops).toHaveLength(2);
+  });
+
+  // A collection's places are the reader's own picks, not the planner's
+  // offer, so Regenerate does not take them away.
+  it('keeps a pinned place, avoided or not', () => {
+    const mine = place({ slug: 'my-bar', categories: ['nightlife'] });
+    const plans = planTrips(EVENING, [...CATALOG, mine], 'hanoi', { seed: 4, pinned: [mine], avoid: ['my-bar'] });
+    expect(plans.some((p) => p.stops.some((s) => s.place.slug === 'my-bar'))).toBe(true);
+  });
+
   it('still returns the only place there is, however avoided', () => {
-    // A penalty and not an exclusion: Regenerate on a one-place category
-    // must not come back empty.
+    // Left out only while something else fits: Regenerate on a one-place
+    // category must not come back empty.
     const one = [place({ slug: 'only-market', categories: ['markets'] })];
     const plans = planTrips({ ...EVENING, categories: ['markets'] }, one, 'hanoi',
       { seed: 5, avoid: ['only-market'] });
