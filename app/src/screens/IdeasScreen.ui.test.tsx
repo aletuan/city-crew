@@ -33,13 +33,13 @@ import type { Nav } from '../nav';
 type Pos = { lat: number; lng: number } | null;
 type Coll = { slug: string; title_en: string; title_vi: string; title_ja: string; cover?: { photo_uri: string } | null };
 
-const HN = { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
-const SG = { id: 'sg', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン' };
-const DN = { id: 'dn', short_en: 'Da Nang', short_vi: 'Đà Nẵng', short_ja: 'ダナン' };
+const HN = { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ', center_lat: 21.0285, center_lng: 105.8542, radius_km: 20 };
+const SG = { id: 'sg', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009, radius_km: 25 };
+const DN = { id: 'dn', short_en: 'Da Nang', short_vi: 'Đà Nẵng', short_ja: 'ダナン', center_lat: 16.0544, center_lng: 108.2022, radius_km: 25 };
 const setCity = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({
-  city: { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as Record<string, string> | null,
-  cities: [] as Record<string, string>[],
+  city: null as Record<string, unknown> | null,
+  cities: [] as Record<string, unknown>[],
   places: [] as unknown[],
   mine: [] as unknown[],
   cols: [] as unknown[],
@@ -142,7 +142,7 @@ const sent = (navigation: { navigate: ReturnType<typeof vi.fn> }) => {
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(at(10));
-  state.city = { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
+  state.city = HN;
   state.lang = 'en';
   state.places = [place('a', ['cafes']), place('b', ['eats', 'views']), place('c', ['cafes'])];
   state.mine = [];
@@ -252,10 +252,12 @@ describe('the button', () => {
     expect(sent(navigation)).toEqual({
       company: 'friends',
       categories: ['eats', 'cafes'],
-      where: null,
+      // No position to be had: the day starts at the city's centre, and
+      // says so.
+      where: 'Hanoi · City centre',
       district: null,
-      atLat: undefined,
-      atLng: undefined,
+      atLat: 21.0285,
+      atLng: 105.8542,
       date: TODAY,
       when: 'evening',
       startMin: 18 * 60,
@@ -294,6 +296,28 @@ describe('the button', () => {
     expect(sent(navigation)).toMatchObject({
       where: 'Hanoi · Near you', district: null, atLat: 21.03, atLng: 105.85,
     });
+  });
+
+  // Browsing Hanoi from Đà Nẵng. The position is real, and 600km from
+  // every place on offer: "near you" would be a promise the planner could
+  // not keep, so the day starts at the centre and the label says that.
+  it('starts a reader in another city at the centre, and says so', () => {
+    state.me = { lat: 16.0544, lng: 108.2022 };
+    const navigation = renderScreen();
+    expect(screen.getByRole('button', { name: /^Hanoi · City centre/ })).toBeTruthy();
+    expect(screen.queryByText(/Near you/)).toBeNull();
+    tap('Couple');
+    tap('Cafés');
+    fireEvent.click(cta());
+    expect(sent(navigation)).toMatchObject({
+      where: 'Hanoi · City centre', district: null, atLat: 21.0285, atLng: 105.8542,
+    });
+  });
+
+  it('says “centre” in Vietnamese as Trung tâm', () => {
+    state.lang = 'vi';
+    renderScreen();
+    expect(screen.getByRole('button', { name: /^Hà Nội · Trung tâm/ })).toBeTruthy();
   });
 });
 
@@ -515,6 +539,7 @@ describe('day or evening', () => {
 
 describe('where the day starts', () => {
   it('says “near you” around the city, and the sheet opens on the empty answer', () => {
+    state.me = { lat: 21.03, lng: 105.85 };
     renderScreen();
     expect(sheet.props!.visible).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: /^Hanoi · Near you/ }));
@@ -530,7 +555,7 @@ describe('where the day starts', () => {
   it('hands a signed-out search to the door, and reopens the sheet after sign-in', () => {
     askToSignIn.mockClear();
     renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /^Hanoi · Near you/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Hanoi · City centre/ }));
     expect(screen.getByText('start-sheet-open')).toBeTruthy();
     act(() => { (sheet.props!.onNeedSignIn as () => void)(); });
     expect(screen.queryByText('start-sheet-open')).toBeNull();
@@ -552,7 +577,8 @@ describe('where the day starts', () => {
   // Japanese label — it borrows the English one.
   it('names the city in Japanese from the English short name when it has no Japanese one', () => {
     state.lang = 'ja';
-    state.city = { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: null } as unknown as Record<string, string>;
+    state.city = { ...HN, short_ja: null };
+    state.me = { lat: 21.03, lng: 105.85 };
     renderScreen();
     expect(screen.getByRole('button', { name: /^Hanoi · 現在地/ })).toBeTruthy();
     expect(screen.queryByText(/null/)).toBeNull();
@@ -561,7 +587,7 @@ describe('where the day starts', () => {
   it('takes a district from the sheet, and sends it with no coordinate even when the reader has one', () => {
     state.me = { lat: 1, lng: 2 };
     const navigation = renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Hanoi|Saigon) · / }));
     act(() => { (sheet.props!.onDone as (s: object) => void)({ district: 'Tây Hồ', at: null }); });
     expect(screen.queryByText('start-sheet-open')).toBeNull();
     expect(screen.getByText('Tây Hồ')).toBeTruthy();
@@ -575,7 +601,7 @@ describe('where the day starts', () => {
   it('takes a dropped pin, which wins over the reader’s own position', () => {
     state.me = { lat: 1, lng: 2 };
     const navigation = renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Hanoi|Saigon) · / }));
     act(() => { (sheet.props!.onDone as (s: object) => void)({ district: null, at: { lat: 21.04, lng: 105.81 } }); });
     expect(screen.getByText('A pin you dropped')).toBeTruthy();
     tap('Friends');
@@ -586,7 +612,7 @@ describe('where the day starts', () => {
 
   it('prints the name a pin was given, and sends those words on', () => {
     const navigation = renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Hanoi|Saigon) · / }));
     act(() => {
       (sheet.props!.onDone as (s: object) => void)({
         district: null, at: { lat: 21.04, lng: 105.81 }, atName: "Pizza 4P's Hoàng Thành Tower",
@@ -613,7 +639,7 @@ describe('a city switch and the pin', () => {
     return { again: () => view.rerender(<IdeasScreen navigation={navigation as unknown as Nav} />) };
   };
   const pin = (at: { lat: number; lng: number }, atName: string) => {
-    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Hanoi|Saigon) · / }));
     act(() => { (sheet.props!.onDone as (s: object) => void)({ district: null, at, atName }); });
   };
 
@@ -625,9 +651,9 @@ describe('a city switch and the pin', () => {
     state.city = SAIGON as unknown as typeof state.city;
     again();
     expect(screen.queryByText('Tràng Tiền')).toBeNull();
-    expect(screen.getByRole('button', { name: /^Saigon · Near you/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Saigon · City centre/ })).toBeTruthy();
     // A district the same way.
-    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Hanoi|Saigon) · / }));
     act(() => { (sheet.props!.onDone as (s: object) => void)({ district: 'Quận 1', at: null }); });
     expect(screen.getByText('Quận 1')).toBeTruthy();
     state.city = HANOI as unknown as typeof state.city;

@@ -24,7 +24,7 @@ import { useAuthActions, useSession } from './auth';
 import { useSaveActions } from './save';
 import { type City, useCurrentCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
-import { distanceKm, fmtDistance } from './geo';
+import { distanceKm, fmtDistance, standsIn } from './geo';
 import { useI18n } from './i18n';
 import { fetchSearchPlaces, type Place } from './data';
 import { addToSearchIndex } from './searchIndex';
@@ -196,8 +196,7 @@ export function useCandidates(at?: City | null): Candidates {
    * "1730 km", true and useless, and five identical numbers disambiguate
    * nothing — which was the entire job.
    */
-  const inThisCity = !!city && !!me
-    && distanceKm(me.lat, me.lng, city.center_lat, city.center_lng) <= city.radius_km;
+  const inThisCity = !!city && !!me && standsIn(city, me.lat, me.lng);
 
   const awayFrom = useCallback((c: Candidate) => (
     inThisCity && me && c.lat != null && c.lng != null

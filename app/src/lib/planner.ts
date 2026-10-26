@@ -123,9 +123,10 @@ export type PlanOptions = {
   /** Places from the collections the reader chose to build from. Hard
    *  priority, but still subject to the three gates. */
   pinned?: readonly Place[];
-  /** Slugs already shown, penalised so Regenerate moves rather than
-   *  relying on luck. A penalty and not an exclusion: a category with one
-   *  place in it must still be able to return that place. */
+  /** Slugs already shown, left out so Regenerate moves rather than
+   *  relying on luck. Left out of a slot only while something else fits
+   *  it: a category with one place in it must still be able to return
+   *  that place. See `buildPlan`. */
   avoid?: readonly string[];
 };
 
@@ -621,8 +622,10 @@ export function backtracks(path: readonly Place[], p: Place): boolean {
 }
 
 /** Applied to a place another plan in this batch already used, and to
- *  anything the screen asked to avoid. Strong enough to move the answer,
- *  soft enough that a category holding one place still returns it. */
+ *  anything the screen asked to avoid that still reaches the score — a
+ *  pinned place, or a slot nothing fresh could fill (see `buildPlan`).
+ *  Strong enough to move the answer, soft enough that a category holding
+ *  one place still returns it. */
 const REPEAT_PENALTY = 3;
 
 /**
@@ -857,6 +860,23 @@ function buildPlan(
   // divide" — zero would make every priced place infinitely over.
   const share = opts.budgetVnd ? opts.budgetVnd / slots.length : null;
 
+  // What an earlier set already offered is left out of a slot, not merely
+  // charged for. It used to be charged — `REPEAT_PENALTY`, 3 — and the
+  // pull towards where the day starts is worth up to 15, so the café 0.5km
+  // away that the reader had just passed over beat a better one 4km away
+  // on every Regenerate: 3.5 against 4. Measured on the Hanoi catalog,
+  // 26 Oct 2026, five Regenerates of a day of cafés and food from Tây Hồ:
+  // 8 of the 15 opening stops were ones already shown, from 8 places in
+  // all, and three cards were lost to plans too alike to keep. Left out,
+  // the same run opened 18 cards on 18 places, the median opening stop
+  // moving from 0.5km to 3.5km — still near, one ring further out.
+  //
+  // Per slot, and only while something else fits: a slot that only an
+  // avoided place can fill takes it, which is how a one-place category
+  // still answers. Pinned places are the reader's own picks and are not
+  // left out; they keep the charge.
+  const avoided = new Set(opts.avoid ?? []);
+
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i];
     const at = start + i * NOMINAL_STEP;
@@ -875,7 +895,9 @@ function buildPlan(
       if (chosen) pinnedUsed++;
     }
     if (!chosen) {
-      const cands = pool.filter(fits)
+      const open = pool.filter(fits);
+      const fresh = open.filter((p) => !avoided.has(p.slug));
+      const cands = (fresh.length ? fresh : open)
         .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, out, origin, opts, used, usedBrands, share) }));
       chosen = draw(cands, rnd);
     }

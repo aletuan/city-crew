@@ -44,7 +44,7 @@ import { type Lang, useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
-import { cityAround } from '../lib/geo';
+import { cityAround, standsIn } from '../lib/geo';
 import type { Nav } from '../nav';
 import { colors, font, quoteFace, radius, space, type } from '../theme';
 
@@ -328,6 +328,29 @@ export default function IdeasScreen({ navigation, route }: {
     })
     : [];
 
+  /**
+   * Where the reader is, for the default the label has always claimed.
+   *
+   * "Around Hanoi · near me" is the state where neither a district nor a
+   * pin has been chosen — which is to say, the empty one. It read as a
+   * promise and was not one: the draft carried no coordinate, `originOf`
+   * therefore had no origin, and the first stop was chosen on merit from
+   * anywhere in the city. The label said "near me" and the planner had
+   * never been told where that was.
+   *
+   * Read here rather than written into the draft, and that is the whole
+   * of why this is small. `draft.at` means *the point the reader chose*,
+   * and the label below distinguishes it from this one; filling it
+   * with a position nobody pointed at would make "A pin you dropped"
+   * appear over a pin nobody dropped. The two facts stay separate and
+   * meet once, below, in the coordinate handed to the next screen.
+   *
+   * Never prompts — `useMyPosition` reads the permission and does not ask.
+   * Denied means null, and null means the day starts at the city's centre,
+   * with the label saying "centre" rather than "near you".
+   */
+  const me = useMyPosition();
+
   // Plain "near you" until the city resolves: "Around  · near you" printed
   // the hole where its name goes.
   //
@@ -346,39 +369,24 @@ export default function IdeasScreen({ navigation, route }: {
   // a pin, and the plan subtitles repeat this string on three screens;
   // "Around" was the one word in it that said nothing a reader did not
   // know, and the owner asked for it to go. Japanese drops 周辺 with it.
+  //
+  // Only "near you" when it is: the reader standing in the city on screen.
+  // Anywhere else — browsing another city, or no position to be had — the
+  // day starts at the centre and the label says so (see `startPoint`).
+  const here = !!me && !!city && standsIn(city, me.lat, me.lng);
   const whereLabel = draft.district
     ?? (draft.at
       ? (draft.atName ?? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン', '你放置的图钉', '你放置的圖釘'))
       : city
-        ? t(`${city.short_en} · Near you`, `${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en} · 現在地`, `${city.short_en} · 你附近`, `${city.short_en} · 你附近`)
+        ? here
+          ? t(`${city.short_en} · Near you`, `${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en} · 現在地`, `${city.short_en} · 你附近`, `${city.short_en} · 你附近`)
+          : t(`${city.short_en} · City centre`, `${city.short_vi} · Trung tâm`, `${city.short_ja ?? city.short_en} · 中心部`, `${city.short_en} · 市中心`, `${city.short_en} · 市中心`)
         : t('Near you', 'Gần bạn', '現在地', '你附近', '你附近'));
 
   /**
-   * Where the reader is, for the default the label has always claimed.
-   *
-   * "Around Hanoi · near me" is the state where neither a district nor a
-   * pin has been chosen — which is to say, the empty one. It read as a
-   * promise and was not one: the draft carried no coordinate, `originOf`
-   * therefore had no origin, and the first stop was chosen on merit from
-   * anywhere in the city. The label said "near me" and the planner had
-   * never been told where that was.
-   *
-   * Read here rather than written into the draft, and that is the whole
-   * of why this is small. `draft.at` means *the point the reader chose*,
-   * and the label two lines up distinguishes it from this one; filling it
-   * with a position nobody pointed at would make "A pin you dropped"
-   * appear over a pin nobody dropped. The two facts stay separate and
-   * meet once, below, in the coordinate handed to the next screen.
-   *
-   * Never prompts — `useMyPosition` reads the permission and does not ask.
-   * Denied means null means the old behaviour, which is the honest floor:
-   * no origin rather than an invented one.
-   */
-  const me = useMyPosition();
-
-  /**
    * The point the day starts from — pin, else district-suppresses, else
-   * where they are. The rule and its reasoning live in `startPoint`.
+   * where they are if they are in this city, else its centre. The rule and
+   * its reasoning live in `startPoint`.
    *
    * Frozen into the route params at the tap rather than re-read
    * downstream. Three screens after this one rebuild the plan from these
@@ -386,7 +394,7 @@ export default function IdeasScreen({ navigation, route }: {
    * different plans for one draft — the same hazard `startMin` is
    * carried to avoid.
    */
-  const origin = startPoint(draft, me);
+  const origin = startPoint(draft, me, city);
 
   // The weekday and the date, always — including for today. "Today" alone
   // was tried and is worse here: the row sits beside Day/Evening with

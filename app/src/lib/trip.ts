@@ -9,7 +9,7 @@
 // `TripDraft` that a planner can read; the planner is a separate problem
 // and a later one.
 
-import { distanceKm } from './geo';
+import { distanceKm, standsIn, type Bounded } from './geo';
 import { membersOf } from './place';
 import type { Collection, Place } from './types';
 
@@ -318,9 +318,27 @@ function groupAreas(places: Place[]) {
  * Null here is what lets the district's centre be found there.
  *
  * Only the empty case falls through to `me`, which is exactly the case
- * whose label has been promising it all along. Null `me` — permission
- * refused, or not yet read — keeps the old behaviour: no origin rather
- * than an invented one.
+ * whose label has been promising it all along — and only while `me` is in
+ * the city being planned. Browsing Đà Nẵng from Hanoi put every place
+ * 600km from the origin, every one charged the same capped 15, and the
+ * charge separated nothing: the opening stop came from anywhere in the
+ * city while the label said "near you".
+ *
+ * Past that — the reader elsewhere, permission refused, or the position
+ * not read yet — the day starts at the city's centre (owner, 26 Oct 2026,
+ * over starting from nowhere). Somebody planning a city they are not in
+ * is usually about to arrive in it, and arrivals start central; a day
+ * that should start elsewhere has a district or a pin for that. The
+ * screen says "centre" in the label, so the anchor is never a secret.
+ * No city at all is the one case left with no origin.
+ *
+ * The centre is the desk's `center_lat/lng`, and it is only as good as
+ * where the desk put it. Measured 26 Oct 2026 against the live places:
+ * eight cities' centres sit within 0.5–3.8km of the mean of their places,
+ * with 81–96% of places inside 5km. Vũng Tàu's sits 10.3km off (44%
+ * within 5km) and Ninh Bình's 9.5km (none within 5km): there the opening
+ * stop leans to whichever of a handful of places is least far, which is
+ * the desk's to fix by moving the centre, not this rule's.
  *
  * Here rather than in the screen because a rule that lives in a render
  * body is a rule nothing can prove. The version this replaces was one
@@ -329,10 +347,12 @@ function groupAreas(places: Place[]) {
 export function startPoint(
   chosen: { district: string | null; at: { lat: number; lng: number } | null },
   me: { lat: number; lng: number } | null,
+  city: Bounded | null,
 ): { lat: number; lng: number } | null {
   if (chosen.at) return chosen.at;
   if (chosen.district) return null;
-  return me;
+  if (me && city && standsIn(city, me.lat, me.lng)) return me;
+  return city ? { lat: city.center_lat, lng: city.center_lng } : null;
 }
 
 /**

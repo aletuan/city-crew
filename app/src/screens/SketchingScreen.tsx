@@ -502,11 +502,10 @@ export default function SketchingScreen({ navigation, route }: {
   // a plan needs a day and a mood, not a place. `canPlan` asks for
   // `company` and at least one category and nothing else, and
   // `IdeasScreen` hands over `district ?? (origin ? whereLabel : null)`
-  // where `origin` is `startPoint` — null when the reader picked no
-  // district, dropped no pin, and has not granted location. That plan
-  // runs: the planner picks the first stop on merit from anywhere in the
-  // city, which the note on `me` there calls "the honest floor: no origin
-  // rather than an invented one".
+  // where `origin` is `startPoint`. Since 26 Oct 2026 that falls back to
+  // the city's centre — "Hà Nội · Trung tâm" — so it is null only when
+  // there is no city at all. That plan still runs: the planner picks the
+  // first stop on merit from anywhere it can.
   //
   // So the cell says that rather than disappearing. The city, and the
   // truth about how wide the search was — a reader who sees the day
