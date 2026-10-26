@@ -359,6 +359,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       right={mode === 'view' ? (
         <AddPill
           tall
+          quiet
           label={t('Add', 'Thêm', '追加', '添加', '新增')}
           busy={adder.busy}
           accessibilityLabel={t('Add a photo', 'Thêm ảnh', '写真を追加', '添加照片', '新增照片')}

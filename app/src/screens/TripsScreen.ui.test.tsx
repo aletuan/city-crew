@@ -225,6 +225,8 @@ describe('nothing saved yet', () => {
   it('offers the header pill once there is a list, and it leads to Ideas too', () => {
     const n = show([trip()]);
     expect(screen.queryByText('No trips yet')).toBeNull();
+    // Quiet: the header's weight, not the gradient (owner, 26 Oct 2026).
+    expect(screen.getByRole('button', { name: 'New trip' }).querySelector('[data-stub="LinearGradient"]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'New trip' }));
     expect(n.parent.navigate).toHaveBeenCalledWith('Ideas');
   });

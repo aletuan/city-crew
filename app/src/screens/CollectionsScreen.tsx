@@ -1049,6 +1049,7 @@ export default function CollectionsScreen({ navigation, route }: {
         right={session ? (
           <AddPill
             tall
+            quiet
             label={t('New', 'Tạo mới', '新規', '新建', '新增')}
             onPress={startNew}
             accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}

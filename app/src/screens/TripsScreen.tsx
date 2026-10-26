@@ -468,6 +468,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       right={trips.data.length > 0 ? (
         <AddPill
           tall
+          quiet
           label={t('New', 'Tạo mới', '新規', '新建', '新增')}
           onPress={() => navigation.getParent()?.navigate('Ideas')}
           accessibilityLabel={t('New trip', 'Chuyến đi mới', '新しい旅程', '新建行程', '新增行程')}
