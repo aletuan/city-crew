@@ -71,9 +71,9 @@ Store nhận ra ngay.
 ### EN
 
 ```
-City Crew is a hand-picked guide to seven cities: Ho Chi Minh City, Hanoi,
-Da Nang, Da Lat, Hue and Vung Tau in Vietnam, and Melbourne. No account
-needed to look around.
+City Crew is a hand-picked guide to Ho Chi Minh City, Hanoi, Da Nang, Hoi An,
+Hue, Da Lat, Hai Phong, Ninh Binh and Vung Tau in Vietnam, and Melbourne. No
+account needed to look around.
 
 PLACES
 Cafés, restaurants, bars and places worth going out of your way for. Our
@@ -111,9 +111,9 @@ More cities are on the way.
 ### VI
 
 ```
-City Crew là cẩm nang chọn tay cho bảy thành phố: TP. Hồ Chí Minh, Hà Nội,
-Đà Nẵng, Đà Lạt, Huế và Vũng Tàu ở Việt Nam, cùng Melbourne. Không cần tài
-khoản để xem.
+City Crew là cẩm nang chọn tay cho TP. Hồ Chí Minh, Hà Nội, Đà Nẵng, Hội An,
+Huế, Đà Lạt, Hải Phòng, Ninh Bình và Vũng Tàu ở Việt Nam, cùng Melbourne.
+Không cần tài khoản để xem.
 
 KHÁM PHÁ
 Quán cà phê, nhà hàng, bar và những nơi đáng đi xa một chút. Ban biên tập
@@ -150,8 +150,9 @@ Các thành phố khác sẽ sớm có mặt.
 ### JA
 
 ```
-City Crewは、7都市の厳選ガイドです。ベトナムのホーチミン市、ハノイ、ダナン、
-ダラット、フエ、ブンタウ、そしてメルボルン。アカウントなしで閲覧できます。
+City Crewは、ベトナムのホーチミン市、ハノイ、ダナン、ホイアン、フエ、ダラット、
+ハイフォン、ニンビン、ブンタウ、そしてメルボルンの厳選ガイドです。アカウント
+なしで閲覧できます。
 
 さがす
 カフェ、レストラン、バー、少し足を延ばす価値のある場所。編集部が一軒ずつ確認
@@ -671,24 +672,30 @@ cấu trúc code), docs, test.
 
 ## Release notes v1.0.11 (What's New)
 
-Viết từ các PR merge sau bản dựng lại 1.0.10 (main 82b46ce) — #1118, #1120 →
-#1159. Bản này bắt buộc phải build mới: #1159 nâng Expo SDK 58 (React Native
-0.88, gesture-handler 3, `Swipeable` của v2 được vendor vào
-`src/components/Swipeable.tsx`), và `runtimeVersion` theo `sdkVersion` nên
-binary SDK 57 không nhận EAS Update của main nữa. Cần thử trên máy: chấm ảnh
-(Vision), bản đồ, vuốt thẻ, đăng nhập/đăng xuất. Không có mặt ở đây: review
-status phía Data Desk (#1152 chỉ phần app hiện ra), docs, test.
+Viết từ các PR merge sau bản dựng lại 1.0.10 (build 37, main 0e89166) —
+#1118, #1120 → #1200. Bản này bắt buộc phải build mới: #1159 nâng Expo SDK 58
+(React Native 0.88, gesture-handler 3, `Swipeable` của v2 được vendor vào
+`src/components/Swipeable.tsx`), `runtimeVersion` theo `sdkVersion` nên binary
+SDK 57 (1.0.10 trở về trước) không nhận EAS Update của main từ lúc #1159 merge;
+#1167 vá react-native-maps bằng patch-package (pin ảnh không hiện trên SDK 58).
+Cần thử trên máy trước khi nộp: bản đồ và pin, chấm ảnh (Vision), vuốt thẻ,
+đăng nhập/đăng xuất, tải ảnh lên, gợi ý bạn bè. Không có mặt ở đây: lỗi pin
+bản đồ (#1167, chỉ có trên SDK 58, chưa từng tới người dùng), Data Desk, giới
+hạn fetch-place (#1168), Claude Code (#1169), docs, test, và các chỉnh giao
+diện nhỏ (thẻ Trips, empty state, nút, tiêu đề).
 
 ### EN
 
 ```
 • Collections can be viewed as a grid, three to a row. Hold a tile to drag it into place.
 • Add places to one of your collections straight from Search: tap ⊕ on any place. The bar at the top shows the list and how many places it holds.
-• Search looks in every city at once, with a chip for each city and its count. "sai gon" finds "Saigon".
+• Search looks in every city at once. Pick a city in the row under the box; each shows how many places it found. "sai gon" finds "Saigon".
+• Friends suggests people to add and says why, such as liking one of your collections or saving the same places. Tap × to hide a suggestion.
+• Collections: filter by city and by kind with the button beside the title.
+• Explore and Search: categories sit in one row you can scroll. Filters take one choice at a time.
+• Photos upload faster: the phone sends them at the size the app keeps.
 • Places only you can see say Pending or In review.
 • Pull down on a collection to refresh it.
-• Ticks in the save sheet move the moment you tap them.
-• Photo gallery: deleting a photo or choosing a cover shows at once.
 • Signing out on one device no longer signs you out of the others.
 • Places Google lists as permanently closed no longer appear.
 • Place names read better in Japanese and Chinese.
@@ -700,11 +707,13 @@ status phía Data Desk (#1152 chỉ phần app hiện ra), docs, test.
 ```
 • Xem bộ sưu tập dạng lưới, ba ô một hàng. Giữ một ô để kéo đổi chỗ.
 • Thêm địa điểm vào bộ sưu tập ngay từ Tìm kiếm: chạm ⊕ trên địa điểm bất kỳ. Thanh trên cùng ghi tên bộ sưu tập và số địa điểm.
-• Tìm kiếm trong mọi thành phố cùng lúc, mỗi thành phố một chip kèm số kết quả. Gõ "sai gon" cũng ra "Saigon".
+• Tìm kiếm trong mọi thành phố cùng lúc. Chọn thành phố ở hàng dưới ô tìm, mỗi thành phố kèm số kết quả. Gõ "sai gon" cũng ra "Saigon".
+• Bạn bè gợi ý người nên kết bạn kèm lý do, ví dụ đã thích bộ sưu tập của bạn hay cùng lưu những chỗ giống bạn. Chạm × để ẩn một gợi ý.
+• Bộ sưu tập: lọc theo thành phố và loại địa điểm bằng nút cạnh tiêu đề.
+• Khám phá và Tìm kiếm: các loại địa điểm nằm trên một hàng cuộn ngang. Bộ lọc chọn một mục mỗi lần.
+• Ảnh tải lên nhanh hơn: điện thoại gửi ảnh đúng kích thước app lưu.
 • Địa điểm chỉ bạn thấy được ghi Chờ duyệt hoặc Đang xem lại.
 • Kéo xuống trong bộ sưu tập để tải lại.
-• Dấu tick trong bảng lưu đổi ngay khi chạm.
-• Thư viện ảnh: xoá ảnh hay chọn ảnh bìa hiện ra ngay.
 • Đăng xuất trên một máy không còn đăng xuất các máy khác.
 • Địa điểm Google ghi đã đóng cửa vĩnh viễn không còn hiện.
 • Tên địa điểm bằng tiếng Nhật và tiếng Trung tự nhiên hơn.
@@ -716,11 +725,13 @@ status phía Data Desk (#1152 chỉ phần app hiện ra), docs, test.
 ```
 • コレクションをグリッド表示（1行に3つ）で見られます。タイルを長押しして並べ替えできます。
 • 検索から直接コレクションにスポットを追加：スポットの ⊕ をタップ。上部のバーにコレクション名とスポット数を表示します。
-• すべての都市をまとめて検索。都市ごとのチップに件数を表示します。「sai gon」でも「Saigon」が見つかります。
+• すべての都市をまとめて検索。検索欄の下の列から都市を選べます。都市ごとに見つかった件数を表示します。「sai gon」でも「Saigon」が見つかります。
+• 友達タブで、追加したい人を理由付きでおすすめします（あなたのコレクションに「いいね」した、同じスポットを保存している など）。× で非表示にできます。
+• コレクション：タイトル横のボタンで都市と種類で絞り込めます。
+• 探索と検索：カテゴリーは横にスクロールできる1列に。フィルターは一度に1つずつ選びます。
+• 写真のアップロードが速くなりました。アプリが保存するサイズで端末から送ります。
 • 自分だけに見えるスポットには「審査待ち」または「再確認中」と表示されます。
 • コレクションを下に引いて更新できます。
-• 保存シートのチェックはタップした瞬間に切り替わります。
-• 写真ギャラリー：写真の削除やカバーの選択がすぐに反映されます。
 • ある端末でサインアウトしても、他の端末はサインアウトされなくなりました。
 • Googleで閉業と表示されたスポットは表示されなくなりました。
 • 日本語・中国語のスポット名がより自然になりました。
@@ -731,22 +742,25 @@ status phía Data Desk (#1152 chỉ phần app hiện ra), docs, test.
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-10-03, database production có **7 thành phố active / 804 địa điểm đã
-duyệt** (Hải Phòng tắt `is_active` ngày 26/09 vì 0 địa điểm):
+2026-10-26, database production có **10 thành phố active / 1.138 địa điểm đã
+duyệt**:
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| TP. Hồ Chí Minh | 302 |
-| Hà Nội | 265 |
-| Đà Nẵng | 70 |
-| Melbourne | 69 |
-| Đà Lạt | 51 |
-| Huế | 39 |
-| Vũng Tàu | 8 |
-| Hải Phòng | 0 — **inactive** |
+| TP. Hồ Chí Minh | 420 |
+| Hà Nội | 390 |
+| Melbourne | 83 |
+| Đà Nẵng | 76 |
+| Đà Lạt | 71 |
+| Huế | 50 |
+| Hội An | 24 |
+| Hải Phòng | 10 |
+| Vũng Tàu | 9 |
+| Ninh Bình | 5 |
 
-Description bản 1.0.4 kể đúng bảy thành phố active. Bật lại Hải Phòng khi có
-địa điểm, và sửa câu mở đầu — cả ba bản — cùng lúc.
+Từ 1.0.11 câu mở đầu Description kể tên các thành phố, không đếm số ("seven
+cities" đã sai từ khi Hội An, Hải Phòng, Ninh Bình bật lên). Thêm hay tắt một
+thành phố thì sửa câu đó — cả ba bản — cùng lúc.
 
 Câu kiểm tra lại:
 `select c.id, c.is_active, count(p.*) filter (where p.is_published and p.review_status='approved') from cities c left join places p on p.city_id = c.id group by 1,2 order by 3 desc;`
