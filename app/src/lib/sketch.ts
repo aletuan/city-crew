@@ -103,7 +103,7 @@ export const SKETCH_STEPS: readonly Step[] = [
   // the only one drawn with a turning arc besides.
   {
     key: 'words',
-    en: 'Finalizing your itinerary', vi: 'Đang hoàn thiện lịch trình của bạn',
+    en: 'Finalizing your itinerary', vi: 'Đang hoàn thiện chuyến đi của bạn',
     ja: '旅程を仕上げています', zh: '正在完成你的行程', hant: '正在完成你的行程',
   },
 ];

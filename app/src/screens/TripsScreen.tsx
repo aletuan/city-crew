@@ -409,7 +409,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           <Text style={s.firstBody}>
             {t(
               'Plan a trip your way.',
-              'Lên lịch trình theo cách bạn thích.',
+              'Lên chuyến đi theo cách bạn thích.',
               '自分らしい旅を計画しましょう。',
               '按你的方式规划行程。', '按你的方式規劃行程。',
             )}
