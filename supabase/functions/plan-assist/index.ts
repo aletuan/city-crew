@@ -6,7 +6,8 @@
 // the evening, and one line per stop saying why it is on the list.
 //
 // POST { action: "narrate", draft, lang, stops: [...] }
-//   → { title, stops: [{ slug, why }] }
+//   → { title, stops: [{ slug, why }] }   (the model answers by number;
+//                                           the slug is put back here)
 // POST { action: "parse", text, today, categories, districts }
 //   → { company, categories, district, date, when }   (every field nullable)
 //
@@ -18,11 +19,13 @@
 // ── the model never picks a place, and never invents a word ──
 //
 // `narrate` receives the stops already chosen and may only write about
-// them. `slug` in the output schema is an `enum` of exactly the slugs sent,
-// so a made-up place is not a thing the model can return; the loop at the
-// bottom checks again anyway, and drops an unknown slug rather than the
-// whole answer. Losing one sentence is a worse outcome than losing the
-// plan, and both are better than printing a café that does not exist.
+// them. It answers each one by its number in the list — an `enum` of
+// "1".."8", the same for every plan — and this file turns the number back
+// into the slug, so a made-up place is not a thing the model can return;
+// a number past the end of the plan maps to nothing and is dropped by the
+// loop at the bottom, as an unknown slug always was, rather than the whole
+// answer. Losing one sentence is a worse outcome than losing the plan, and
+// both are better than printing a café that does not exist.
 //
 // `parse` is the same rule pointed at the taxonomy. It turns a sentence
 // into wizard answers, and every answer it can give is an `enum` built from
@@ -106,6 +109,11 @@ async function guestKey(req: Request): Promise<string> {
  *  than as a limit. */
 const MAX_TOKENS = 2000;
 
+/** What the model may answer a stop with: its place in the list, "1" to
+ *  "8". The enum used to be the plan's own slugs, which made every plan's
+ *  schema new — the note at the schema says what that cost. */
+const STOP_NUMBERS = Array.from({ length: MAX_STOPS }, (_, i) => String(i + 1));
+
 /** Past this the app stops waiting and prints the fallback. A plan the
  *  reader can already see is worth more than a better sentence about it. */
 const TIMEOUT_MS = 12_000;
@@ -160,13 +168,13 @@ const LANGS: Record<string, string> = {
  * the write premium (1.25×) on ~800 tokens for a read that never came —
  * about 9% more per call than no cache at all, on Haiku.
  *
- * The fix that makes the prefix constant is known — have the model answer
- * with the stop's number (a fixed enum "1".."8") instead of its slug, and
- * map it back here — and it is not worth a change in the output contract
- * yet: a read needs a second plan to start inside five minutes of the
- * first, and at today's traffic that is rare. The three cards of one
- * visit cannot read each other's write either; they start in the same
- * second. Turn it back on, with that fix, when `plan-assist narrate`
+ * The prefix is constant since 26 Oct 2026 — the model answers with the
+ * stop's number, a fixed enum, and the slug is mapped back here — but that
+ * was done for latency (see the schema), and the cache stays off for the
+ * reason it was always marginal: a read needs a second plan to start
+ * inside five minutes of the first, and at today's traffic that is rare.
+ * The three cards of one visit cannot read each other's write either; they
+ * start in the same second. Turn it back on when `plan-assist narrate`
  * entries sit under five minutes apart through the day. At Haiku prices
  * the whole difference is a third of a call that costs $0.00024.
  */
@@ -399,8 +407,10 @@ Deno.serve(async (req) => {
     if (!slugs.length) return json({ error: "stops need slugs" }, 400);
 
     const draft = body.draft ?? {};
+    // Numbered and nothing more: the number is what the model answers
+    // with, and a slug beside it would be a second name it cannot use.
     const facts = stops.map((s: Record<string, unknown>, i: number) => [
-      `${i + 1}. ${s.slug}`,
+      `${i + 1}.`,
       `   name: ${s.name ?? "—"}`,
       `   kind: ${Array.isArray(s.categories) ? s.categories.join(", ") : "—"}`,
       `   area: ${s.neighborhood ?? "—"}`,
@@ -439,12 +449,24 @@ Deno.serve(async (req) => {
                   items: {
                     type: "object",
                     properties: {
-                      // Not "a slug" — *these* slugs. The model cannot name a
-                      // place that is not in the plan it was handed.
-                      slug: { type: "string", enum: slugs },
+                      // The stop's number, from a list that is the same for
+                      // every plan. It was an enum of the plan's own slugs,
+                      // and that made every request's schema one the API had
+                      // never seen: a new schema is compiled before it is
+                      // answered, and new schemas arriving together were
+                      // compiled one after another. Measured 26 Oct 2026,
+                      // three narrations fired at once from one machine:
+                      // 4.2, 7.2 and 10.6 s with three new schemas; 2.7, 2.8
+                      // and 3.6 s with one schema seen before; 2.2 to 2.7 s
+                      // for the same three new ones a minute later, compiled
+                      // by then. The phone's logs had the same staircase —
+                      // 3.6, 6.6, 9.4 s — and the last card past the 8 s
+                      // hold every time, so it opened under its area's name
+                      // and the editor under the model's.
+                      n: { type: "string", enum: STOP_NUMBERS },
                       why: { type: "string" },
                     },
-                    required: ["slug", "why"],
+                    required: ["n", "why"],
                     additionalProperties: false,
                   },
                 },
@@ -471,15 +493,22 @@ Deno.serve(async (req) => {
 
     const parsed = JSON.parse(text.text) as {
       title?: unknown;
-      stops?: { slug?: unknown; why?: unknown }[];
+      stops?: { n?: unknown; why?: unknown }[];
     };
 
     // The schema already said this, and it is checked again here. A schema
     // is a request to the model; this is the app's own answer to "could a
     // place the reader never chose end up on their screen".
+    //
+    // The number is read against `stops`, the list it was printed from, not
+    // `slugs`: a stop sent without a slug still took a number, and counting
+    // past it would hang the next stop's line on the wrong place.
     const allowed = new Set(slugs);
     const out = (parsed.stops ?? [])
-      .map((s) => ({ slug: String(s.slug ?? ""), why: String(s.why ?? "").trim() }))
+      .map((s) => ({
+        slug: String(stops[Number(s.n) - 1]?.slug ?? ""),
+        why: String(s.why ?? "").trim(),
+      }))
       .filter((s) => allowed.has(s.slug) && s.why);
 
     console.log("plan-assist narrate", {
