@@ -79,7 +79,7 @@ vi.mock('../lib/crew', () => ({
   useCrew: () => ({ people: { lan: { id: 'lan', handle: 'lanphuong', full_name: 'Lan Phương', avatar_url: '' } } }),
 }));
 vi.mock('../lib/invitations', () => ({
-  useInvitations: () => ({ invites: { data: state.invites, reload: spies.invitesReload } }),
+  useInvitations: () => ({ invites: { data: state.invites, loaded: true, loading: false, error: null, reload: spies.invitesReload } }),
 }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),

@@ -56,3 +56,18 @@ appId: host.exp.Exponent
       id: "tab-profile"
     direction: UP
     timeout: 20000
+
+# Verify the actual session, not just the existence of a Sign out button.
+- scrollUntilVisible:
+    element:
+      id: "profile-email"
+    direction: UP
+    timeout: 20000
+- copyTextFrom:
+    id: "profile-email"
+- assertTrue: ${maestro.copiedText.trim().toLowerCase() === TEST_EMAIL.trim().toLowerCase()}
+- scrollUntilVisible:
+    element:
+      id: "tab-profile"
+    direction: UP
+    timeout: 20000

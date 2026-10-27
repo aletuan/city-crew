@@ -59,7 +59,7 @@ async function cleanFile(path) {
   return state;
 }
 
-async function prepare(dir) {
+export async function prepare(dir) {
   await mkdir(dir, { recursive: true, mode: 0o700 });
   // Retry interrupted runs before creating any new account. Never discard
   // credentials when the network cannot prove cleanup succeeded.
@@ -82,14 +82,14 @@ async function prepare(dir) {
     name: `Maestro ${id.slice(0, 8)}`, password: `Smoke-${randomBytes(18).toString('hex')}!` };
   const path = join(dir, `${id}.json`);
   await writeFile(path, JSON.stringify(f), { mode: 0o600, flag: 'wx' });
-  console.log(path);
+  return path;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const [command, path] = process.argv.slice(2);
     if (!path) throw new Error('Expected a fixture directory or file');
-    if (command === 'prepare') await prepare(path);
+    if (command === 'prepare') console.log(await prepare(path));
     else if (command === 'cleanup') {
       // A successful UI flow must have deleted its account already. Recover
       // a survivor, but return failure so cleanup cannot hide a UI defect.

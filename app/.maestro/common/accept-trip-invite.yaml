@@ -1,0 +1,31 @@
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-trips"
+- extendedWaitUntil:
+    visible:
+      id: "invite-accept-0"
+    timeout: 30000
+- tapOn:
+    id: "invite-accept-0"
+# Accepted, it leaves the invitations and joins B's own trips.
+- extendedWaitUntil:
+    visible:
+      id: "trip-upcoming-0"
+    timeout: 30000
+- assertNotVisible:
+    id: "invite-accept-0"
+# B's copy is a guest's: the button at the foot is Leave, never Delete —
+# one id, chosen by `owned` (TripDetailScreen).
+- tapOn:
+    id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-leave"
+    direction: DOWN
+    timeout: 20000
+
+# Lift the footer action above the floating tab bar before Leave is tapped.
+- scroll
+- assertNotVisible:
+    id: "trip-delete"

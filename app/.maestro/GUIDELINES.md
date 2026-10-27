@@ -23,7 +23,7 @@ minute or more per run; keep the suite short.
 | --- | --- |
 | Expo Go + `openLink` into the dev bundle | No native build needed to run locally. CI will need a dev client instead (see *Later*). |
 | Real Supabase data | Catches what fixtures hide — RLS, Edge Functions, auth. The cost: a flow must not assume specific rows. |
-| One persistent test account for signed-in flows | Fast and stable. Creating an account per run hits signup rate limits, breaks when email confirmation is on, and leaves orphans when a run dies. |
+| Persistent accounts for existing non-trip flows; disposable accounts for 05/13/16 | Trip tests require isolated run-owned data. Persist cleanup ledgers before signup, preflight email settings, and recover on the next run. |
 | Account from the macOS Keychain, via `smoke.sh` | Never typed, never in shell history, never in a flow or commit. |
 | Every run's report and screenshots in `.smoke-local/maestro/` | Anyone — or an agent — can read a failure afterwards without re-running it. |
 
@@ -48,10 +48,9 @@ minute or more per run; keep the suite short.
    Go, reopen the bundle, land on Explore). Never rely on where the
    previous flow left the app.
 5. **Declare the sign-in state you need** with `common/ensure-signed-in.yaml`
-   or `common/ensure-signed-out.yaml`, not by assuming it.
+   or `common/ensure-signed-out.yaml`, not by assuming it. Sign-in must verify the actual email, not just a Sign out button.
 6. **Clean up what you create, and clean up leftovers first.** A run can
-   die half way; the next one must still pass. `05` deletes leftover
-   upcoming trips before planning; `06` unsaves a place a failed run left
+   die half way; the next one must still pass. `05` requires an empty disposable account and never sweeps existing trips; `06` unsaves a place a failed run left
    saved.
 7. **Need no manual setup.** If the account lacks something, the flow
    makes it (`06` creates its "Maestro smoke" list the first time).

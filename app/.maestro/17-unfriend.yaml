@@ -1,8 +1,7 @@
 # Unfriend, and make friends again: A unfriends B from Your friends; B is
 # off A's list. A asks again by B's username; B finds the request on
 # Requests and accepts; A is on B's list. The second half is what puts
-# the fixture back — A and B friends, B A's only friend, which
-# 16-trip-invite needs — so the flow tests the whole friendship cycle and
+# the persistent fixture back — A and B friends, B A's only friend — so the flow tests the whole friendship cycle and
 # leaves nothing changed.
 #
 # What only a device shows: the `friendships` policies between two real

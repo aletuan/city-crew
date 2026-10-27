@@ -176,9 +176,10 @@ export function SettingRow({ icon, label, value, onPress, last, testID }: {
   );
 }
 
-export function AboutRow({ icon, label, value, children, last }: {
+export function AboutRow({ icon, label, value, children, last, valueTestID }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  valueTestID?: string;
   /** The plain answer. Omitted by the one row that draws its own. */
   value?: string;
   /** Drawn in the value's place — the taste row's chips, today. Kept as a
@@ -193,7 +194,7 @@ export function AboutRow({ icon, label, value, children, last }: {
       <RowGlyph name={icon} line={CAPTION_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.aboutLabel}>{label}</Text>
-        {children ?? <Text style={s.aboutValue}>{value}</Text>}
+        {children ?? <Text style={s.aboutValue} testID={valueTestID}>{value}</Text>}
       </View>
     </View>
   );
