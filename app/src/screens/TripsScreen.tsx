@@ -498,6 +498,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
 
       {trips.loaded && !(tripsFail && trips.data.length === 0) && (
         <ScrollView
+          testID={!trips.loading && !trips.fromCache && !trips.error ? 'trips-ready' : undefined}
           ref={scrollRef}
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}

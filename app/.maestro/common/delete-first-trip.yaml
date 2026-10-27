@@ -18,9 +18,15 @@ appId: host.exp.Exponent
 # three of the app's languages.
 - tapOn:
     text: "Delete|Xoá|削除"
+# The tab bar also exists on detail. Wait for navigation and the server
+# refresh, otherwise a cleanup loop can see and tap the deleted stale row.
+- extendedWaitUntil:
+    notVisible:
+      id: "trip-delete"
+    timeout: 30000
 - extendedWaitUntil:
     visible:
-      id: "tab-trips"
-    timeout: 15000
+      id: "trips-ready"
+    timeout: 30000
 - waitForAnimationToEnd:
     timeout: 5000

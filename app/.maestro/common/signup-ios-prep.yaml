@@ -1,0 +1,65 @@
+# Dedicated English iOS 26 smoke simulator only. Apple's strong-password
+# overlay is outside Expo's accessibility tree and swallows inputText.
+# Disable only strong-password suggestions; keep ordinary AutoFill on.
+# The row id is not the switch hit target: tap its value to the right.
+appId: com.apple.Preferences
+---
+- launchApp:
+    appId: com.apple.Preferences
+    stopApp: true
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      notVisible:
+        id: "SuggestStrongPasswordsToggle"
+    commands:
+      - runFlow:
+          when:
+            notVisible: "AutoFill & Passwords"
+          commands:
+            - scrollUntilVisible:
+                element:
+                  text: "General"
+                direction: UP
+                timeout: 15000
+            - waitForAnimationToEnd:
+                timeout: 5000
+            - tapOn: "General"
+            - waitForAnimationToEnd:
+                timeout: 5000
+      - scrollUntilVisible:
+          element:
+            text: "AutoFill & Passwords"
+          direction: DOWN
+          timeout: 15000
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - tapOn: "AutoFill & Passwords"
+- extendedWaitUntil:
+    visible:
+      id: "SuggestStrongPasswordsToggle"
+    timeout: 15000
+- runFlow:
+    when:
+      visible:
+        text: "1"
+        rightOf: "Suggest Strong Passwords"
+        above: "Automatically suggest unique, strong passwords when creating accounts or changing passwords in Safari and other apps."
+        below:
+          id: "AutoFillFromPasswordsToggle"
+    commands:
+      - tapOn:
+          text: "1"
+          rightOf: "Suggest Strong Passwords"
+          above: "Automatically suggest unique, strong passwords when creating accounts or changing passwords in Safari and other apps."
+          below:
+            id: "AutoFillFromPasswordsToggle"
+- extendedWaitUntil:
+    visible:
+      text: "0"
+      rightOf: "Suggest Strong Passwords"
+      above: "Automatically suggest unique, strong passwords when creating accounts or changing passwords in Safari and other apps."
+      below:
+        id: "AutoFillFromPasswordsToggle"
+    timeout: 5000

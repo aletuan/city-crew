@@ -16,8 +16,8 @@ import { describe, expect, it } from 'vitest';
 
 const app = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Expo Go's own controls, which the prep subflow taps — not ours. */
-const NOT_OURS = new Set(['gearshape.fill']);
+/** Expo Go and iOS Settings controls used by simulator prep, not app ids. */
+const NOT_OURS = new Set(['gearshape.fill', 'SuggestStrongPasswordsToggle', 'AutoFillFromPasswordsToggle']);
 
 const walk = (dir: string, keep: (f: string) => boolean): string[] =>
   readdirSync(dir).flatMap((name) => {

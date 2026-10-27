@@ -76,11 +76,11 @@ env:
 - tapOn:
     id: "crew-send"
     optional: true
-# The request lands under Sent. A request already sent by a run that
-# stopped here reads the same.
+# The request lands under Sent. Its former explanatory copy now lives
+# only in the Cancel sheet; assert the outgoing row, not that removed text.
 - extendedWaitUntil:
     visible:
-      text: ".*waiting on their answer.*"
+      id: "crew-sent-0"
     timeout: 15000
 
 # ── B accepts ──

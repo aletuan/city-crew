@@ -668,7 +668,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                   {crew.outgoing.map((r, i) => {
                     const p = people[r.addressee];
                     return (
-                      <View key={r.addressee} style={[s.row, i > 0 && s.rowDivider]}>
+                      <View key={r.addressee} style={[s.row, i > 0 && s.rowDivider]} testID={`crew-sent-${i}`}>
                         <Face p={p} />
                         <View style={{ flex: 1, gap: 2 }}>
                           <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>

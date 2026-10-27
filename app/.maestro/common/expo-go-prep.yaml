@@ -11,7 +11,7 @@
 # button" sits at the foot of its TOOLS list, below the fold. So: only when
 # the gear is actually there (the switch is ON — tapping it can then only
 # turn it OFF, never flip it back on), wait for the menu, scroll to the row,
-# flip it, scroll back up to Reload.
+# let the scroll settle, flip it, verify OFF, then scroll back up to Reload.
 appId: host.exp.Exponent
 ---
 - runFlow:
@@ -30,12 +30,28 @@ appId: host.exp.Exponent
             text: "Tools button"
           direction: DOWN
           timeout: 10000
-      # Tapping the row label does not flip a SwiftUI toggle; tap the switch
-      # itself — the "1"-valued element to the right of the label.
+      # The row can be visible while the menu is still moving. A tap then
+      # can use stale switch coordinates (00-launch, 27 October).
+      - waitForAnimationToEnd:
+          timeout: 5000
+      # rightOf alone also matches Fast refresh's switch above this row.
+      # Restrict both the tap and the OFF check to below Fast refresh.
       - tapOn:
           text: "1"
           rightOf:
             text: "Tools button"
+          below:
+            text: "Fast refresh"
+      # A completed tap is not proof that the switch changed. Verify its
+      # value before Reload hides the menu and makes the cause ambiguous.
+      - extendedWaitUntil:
+          visible:
+            text: "0"
+            rightOf:
+              text: "Tools button"
+            below:
+              text: "Fast refresh"
+          timeout: 5000
       - scrollUntilVisible:
           element:
             text: "Reload"

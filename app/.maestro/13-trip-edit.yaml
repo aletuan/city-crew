@@ -101,8 +101,14 @@ env:
     timeout: 60000
 
 # The saved trip wears the edited hour.
+- runFlow: common/dismiss-review.yaml
 - tapOn:
     id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-stop-time-0"
+    direction: DOWN
+    timeout: 20000
 - extendedWaitUntil:
     visible:
       id: "trip-stop-time-0"
@@ -119,6 +125,11 @@ env:
     timeout: 30000
 - tapOn:
     id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-stop-time-0"
+    direction: DOWN
+    timeout: 20000
 - extendedWaitUntil:
     visible:
       id: "trip-stop-time-0"

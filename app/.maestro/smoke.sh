@@ -70,15 +70,45 @@ mkdir -p "$run"
 targets=("$@")
 [ ${#targets[@]} -eq 0 ] && targets=(.maestro)
 
+# Only the signup lifecycle needs disposable credentials. Save them before
+# Maestro can create the account, so an interrupted run can be recovered.
+signup_fixture=""
+signup_args=()
+for target in "${targets[@]}"; do
+  if [ "$(basename "$target")" = "07-sign-up-delete.yaml" ] || [ "$(basename "$target")" = ".maestro" ]; then
+    signup_fixture="$(node scripts/maestro-account.mjs prepare "$repo/.smoke-local/signup-accounts")"
+    SIGNUP_NAME="$(node -e 'process.stdout.write(require(process.argv[1]).name)' "$signup_fixture")"
+    SIGNUP_EMAIL="$(node -e 'process.stdout.write(require(process.argv[1]).email)' "$signup_fixture")"
+    SIGNUP_PASSWORD="$(node -e 'process.stdout.write(require(process.argv[1]).password)' "$signup_fixture")"
+    signup_args=(-e "SIGNUP_NAME=$SIGNUP_NAME" -e "SIGNUP_EMAIL=$SIGNUP_EMAIL" -e "SIGNUP_PASSWORD=$SIGNUP_PASSWORD")
+    break
+  fi
+done
+cleanup_on_exit() {
+  status=$?
+  trap - EXIT
+  if [ -n "$signup_fixture" ]; then
+    node scripts/maestro-account.mjs cleanup "$signup_fixture" || status=1
+  fi
+  exit "$status"
+}
+trap cleanup_on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 printf '▶ %s as %s and %s → %s\n' "${targets[*]}" "$TEST_EMAIL" "$TEST_EMAIL_2" "${run#"$repo"/}"
 set +e
-maestro test "${targets[@]}" \
+maestro test "${targets[@]}" ${signup_args[@]+"${signup_args[@]}"} \
   -e EXPO_URL="$EXPO_URL" -e TEST_EMAIL="$TEST_EMAIL" -e TEST_PASSWORD="$TEST_PASSWORD" \
   -e TEST_EMAIL_2="$TEST_EMAIL_2" -e TEST_PASSWORD_2="$TEST_PASSWORD_2" \
   --format junit --output "$run/report.xml" \
   --test-output-dir "$run" --debug-output "$run" 2>&1 | tee "$run/console.log"
 code=${PIPESTATUS[0]}
 set -e
+if [ -n "$signup_fixture" ]; then
+  node scripts/maestro-account.mjs cleanup "$signup_fixture" || code=1
+  signup_fixture=""
+fi
 
 # The newest run, at a fixed path, for whoever reads the results next.
 ln -sfn "$(basename "$run")" "$repo/.smoke-local/maestro/latest"

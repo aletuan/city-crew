@@ -29,17 +29,18 @@ env:
 - tapOn:
     id: "search-input"
 - inputText: "cafe"
-- extendedWaitUntil:
-    visible:
-      id: "search-result-0"
-    timeout: 20000
-# The keyboard covers the lower half of the first result card, and Maestro
-# taps an element's centre — which lands on a key. Submitting the query
-# drops the keyboard (the field blurs on submit) before the tap.
+# Finish text entry before looking for a place. Matching collections come
+# first, so the first place may be off-screen even after the keyboard closes.
 - pressKey: Enter
-- hideKeyboard:
-    optional: true
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "search-result-0"
+    direction: DOWN
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
 - tapOn:
     id: "search-result-0"
 - extendedWaitUntil:
