@@ -1,0 +1,15 @@
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "collections-ready"
+    timeout: 30000
+- tapOn:
+    id: "collections-community"
+- tapOn:
+    id: "collections-input"
+- inputText: ${FIXTURE_privacyTitle}
+- pressKey: Enter
+- waitForAnimationToEnd

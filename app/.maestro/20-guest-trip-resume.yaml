@@ -1,0 +1,130 @@
+# Signing in returns to the same draft. It must not save a trip implicitly.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-owner.yaml
+- runFlow: common/assert-trips-empty.yaml
+- runFlow: common/ensure-signed-out.yaml
+# The wizard. Company and at least one mood are what `canPlan` asks for;
+# three moods rather than one so the planner has room at any hour.
+- tapOn:
+    id: "tab-ideas"
+- extendedWaitUntil:
+    visible:
+      id: "ideas-company-friends"
+    timeout: 30000
+- tapOn:
+    id: "ideas-company-friends"
+- tapOn:
+    id: "ideas-cat-0"
+- tapOn:
+    id: "ideas-cat-1"
+    optional: true
+- tapOn:
+    id: "ideas-cat-2"
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "ideas-sketch"
+    direction: DOWN
+    timeout: 10000
+# At the foot of the page it cannot be centred, and the first frame it
+# shows in can be under the floating tab bar: one more scroll lifts it.
+- scroll
+- tapOn:
+    id: "ideas-sketch"
+
+# Sketching holds its last step for the model's words, up to its cap.
+- extendedWaitUntil:
+    visible:
+      id: "plan-card-best"
+    timeout: 90000
+- tapOn:
+    id: "plan-card-best"
+- scrollUntilVisible:
+    element:
+      id: "plan-stop-name-0"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "plan-stop-earlier-0"
+- copyTextFrom:
+    id: "plan-stop-time-0"
+- evalScript: ${output.draftTime = maestro.copiedText}
+- copyTextFrom:
+    id: "plan-stop-name-0"
+- evalScript: ${output.draftName = maestro.copiedText}
+- scrollUntilVisible:
+    element:
+      id: "plan-save"
+    direction: DOWN
+    timeout: 20000
+- scroll
+- tapOn:
+    id: "plan-save"
+- tapOn:
+    id: "auth-sheet-sign-in"
+- runFlow:
+    file: common/submit-sign-in.yaml
+    env:
+      TEST_EMAIL: ${TRIP_EMAIL}
+      TEST_PASSWORD: ${TRIP_PASSWORD}
+# Returning from auth restores the draft at the top, not its old footer offset.
+- extendedWaitUntil:
+    visible:
+      id: "plan-stop-name-0"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "plan-stop-time-0"
+    direction: UP
+    timeout: 20000
+- copyTextFrom:
+    id: "plan-stop-time-0"
+- assertTrue: ${maestro.copiedText === output.draftTime}
+- copyTextFrom:
+    id: "plan-stop-name-0"
+- assertTrue: ${maestro.copiedText === output.draftName}
+- runFlow: common/assert-trips-empty.yaml
+# Check the actual resumed session, not only the draft and a Sign out control.
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-email"
+    direction: UP
+    timeout: 20000
+- copyTextFrom:
+    id: "profile-email"
+- assertTrue: ${maestro.copiedText.trim().toLowerCase() === TRIP_EMAIL.trim().toLowerCase()}
+- scrollUntilVisible:
+    element:
+      id: "tab-ideas"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "tab-ideas"
+- scrollUntilVisible:
+    element:
+      id: "plan-save"
+    direction: DOWN
+    timeout: 20000
+- scroll
+- tapOn:
+    id: "plan-save"
+- runFlow: common/dismiss-review.yaml
+- extendedWaitUntil:
+    visible:
+      id: "trips-ready"
+    timeout: 60000
+- assertVisible:
+    id: "trip-upcoming-0"
+- assertNotVisible:
+    id: "trip-upcoming-1"
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-trips"
+- runFlow: common/delete-first-trip.yaml
+- runFlow: common/assert-trips-empty.yaml

@@ -92,19 +92,31 @@ trap cleanup_on_exit EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+collection_mode=""
 for target in "${targets[@]}"; do
   case "$(basename "$target")" in
-    .maestro|05-plan-trip.yaml|13-trip-edit.yaml|16-trip-invite.yaml)
+    .maestro|18-guest-save-resume.yaml|19-collection-privacy.yaml) collection_mode=collections ;;
+  esac
+done
+for target in "${targets[@]}"; do
+  case "$(basename "$target")" in
+    .maestro|05-plan-trip.yaml|13-trip-edit.yaml|16-trip-invite.yaml|18-guest-save-resume.yaml|19-collection-privacy.yaml|20-guest-trip-resume.yaml)
       lock="$repo/.smoke-local/trip-accounts.lock"
       mkdir "$lock" 2>/dev/null || die "Trip fixture runner is locked. Check no other run is active before removing $lock"
       trip_lock="$lock"
       trip_fixture="$repo/.smoke-local/trip-accounts"
-      node scripts/maestro-trip-fixtures.mjs prepare "$trip_fixture"
+      node scripts/maestro-trip-fixtures.mjs prepare "$trip_fixture" "$collection_mode"
       TRIP_EMAIL="$(node -e 'process.stdout.write(require(process.argv[1]).email)' "$trip_fixture/current.json")"
       TRIP_PASSWORD="$(node -e 'process.stdout.write(require(process.argv[1]).password)' "$trip_fixture/current.json")"
       TRIP_EMAIL_2="$(node -e 'process.stdout.write(require(process.argv[1]).email2)' "$trip_fixture/current.json")"
       TRIP_PASSWORD_2="$(node -e 'process.stdout.write(require(process.argv[1]).password2)' "$trip_fixture/current.json")"
       trip_args=(-e "TRIP_EMAIL=$TRIP_EMAIL" -e "TRIP_PASSWORD=$TRIP_PASSWORD" -e "TRIP_EMAIL_2=$TRIP_EMAIL_2" -e "TRIP_PASSWORD_2=$TRIP_PASSWORD_2")
+      if [ -n "$collection_mode" ]; then
+        for field in url key resumeId resumeTitle privacyId privacyTitle placeSlug placeQuery; do
+          value="$(node -e 'process.stdout.write(require(process.argv[1])[process.argv[2]])' "$trip_fixture/current.json" "$field")"
+          trip_args+=(-e "FIXTURE_$field=$value")
+        done
+      fi
       break ;;
   esac
 done

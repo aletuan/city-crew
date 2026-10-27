@@ -199,3 +199,36 @@ Kiểm tra cuối: ledger `.smoke-local/signup-accounts/` không còn file pendi
 - Kiểm chứng tự động: **243 test PASS** (fixture setup/recovery, signup cleanup, Maestro IDs, Profile UI, Trips UI); ESLint, shell/Node syntax và diff check PASS. Typecheck vẫn fail ở import `opencc-js/cn2t` trong `scripts/hant.ts:24` như trước.
 - Simulator run `20261027-141135`: **3/3 Maestro flows PASS** — `05` 2m39, `13` 4m35, `16` 19m53. 16 xác nhận A xóa → cold start cả A/B đều rỗng, rồi trip khác B Leave → B restart vẫn rỗng và A còn trip với Can’t make it.
 - **Không sửa shell script đang chạy.** Trong run trên, sửa dòng log của `smoke.sh` khi Bash đang chờ Maestro khiến phần đọc tiếp của shell báo unexpected EOF dù `bash -n` trên file mới vẫn PASS. Runner exit 2 sau khi Maestro đã PASS; EXIT trap vẫn cleanup thành công, ledger còn 0. Đây là lỗi thao tác kiểm chứng, không phải lỗi app. Chạy lại `05` với script giữ nguyên: run `20261027-143939` **PASS 2m35, runner exit 0**, teardown PASS. Sau run, ledger credentials còn **0**, không còn lock.
+
+
+## Guest resume và quyền riêng tư collection (27/10/2026)
+
+- `leaveAuth` có hai hợp đồng: bookmark giữ callback để mở lại SaveSheet; guest lưu trip chỉ giữ tab/draft và cần người dùng bấm Save sau đăng nhập. Helper đăng nhập bình thường kiểm tra Explore rồi chuyển Profile, nên không thể dùng nguyên helper đó để kiểm tra resume. Tách `submit-sign-in.yaml`; caller phải kiểm tra đích đến và kết quả lưu thuộc đúng tài khoản tạm.
+- `fetchCollections` lọc `is_public=true` ở client. Không thấy collection trên UI chưa đủ chứng minh RLS: query trực tiếp bằng ID, không lọc owner/is_public, bằng session B để kiểm tra cả collections và collection_places; HTTP lỗi phải fail, không được hiểu là danh sách rỗng. Kiểm tra A vẫn sở hữu collection tránh false pass vì fixture bị mất.
+- Menu ⋯ vẫn có ở collection của người khác (copy/share/layout). Kiểm tra không có Edit/Delete trong menu, không assert toàn bộ menu biến mất.
+- Lượt `20261027-164058` bị chặn tại launch: Expo Go simulator không tương thích bundle SDK 58. Chưa chạy tới hành vi mới, không phân loại là app regression. Cài đúng Expo Go cho SDK trong package lock trước khi retry; không hạ dependency app để làm test qua.
+
+Lượt `20261027-164401`, flow 18 fail trước đăng nhập: `open-save-sheet.yaml` có hậu điều kiện `save-done`, chỉ đúng cho signed-in reader có collection. Guest đúng ra mở AuthSheet. Sửa flow guest bấm `detail-save` trực tiếp rồi chọn `auth-sheet-cancel`/`auth-sheet-sign-in`; không nới timeout hoặc sửa hành vi app.
+
+Flow 19 **PASS** trong `20261027-164401` (8m13s): Private → Public → Private qua UI A, B tìm kiếm Community sau đổi session; Public mở được detail và không có Edit/Delete. REST bằng session A/B kiểm tra collection và membership theo ID ở cả ba trạng thái. Đây là PASS riêng của 19; toàn lượt vẫn có lỗi test 18 kể trên, chưa kết luận toàn bộ nhóm đạt.
+
+Flow 20 ở `20261027-164401` fail tại `plan-stop-name-0`: hierarchy `step-082` có nút “Open Maison Marou – Nhà Thờ” nhưng không có Text con/name ID; time ID vẫn có. Native accessibility gộp Text trong Pressable có label. Chuyển `nameTestID` lên Pressable thay vì Text; `copyTextFrom` so sánh nhãn đầy đủ của cùng địa điểm trước/sau auth. Flow cũng đổi giờ đến −15 phút trước khi ghi nhận, để chứng minh trạng thái chỉnh sửa được giữ. Không sửa semantics hoặc tắt accessibility grouping.
+
+Flow 18 ở `20261027-165650` qua cancel → ordinary login (không replay), rồi guest login mở lại SaveSheet. Fail ở so sánh tên: detail dùng `splitName(...).title`, SaveSheet có tên đầy đủ “InBook International Bookstore – Ba Đình”. Không bỏ phần chi nhánh khi so sánh vì sẽ nhầm hai địa điểm cùng thương hiệu. Sửa chọn một địa điểm published cụ thể qua Search và kiểm tra slug ở detail, SaveSheet và membership backend. Query tìm kiếm được bỏ dấu để nhập bằng Maestro; danh tính vẫn là slug, không phải kết quả vị trí 0.
+
+Flow 20 ở `20261027-165650` đã trở về đúng bản nháp sau auth, screenshot `step-102` cho thấy Maison Marou và giờ đã sửa 17:45. Fail vì test đợi `plan-save` ở footer trong khi navigation đưa viewport về đầu trang. Sửa hậu điều kiện thành stop đầu tiên, so tên/giờ, kiểm tra Trips còn rỗng, rồi cuộn tới Save khi thực sự cần bấm. Không tăng timeout cho một phần tử đang ngoài viewport.
+
+Flow 18 **PASS** ở `20261027-170343` (3m04s): cancel không replay khi ordinary sign-in; lần bookmark tiếp theo tìm đúng địa điểm published qua Search/Hanoi, kiểm tra slug trên detail và SaveSheet sau auth, lưu đúng một membership có slug đó; cold start không tự mở lại sheet và dữ liệu vẫn còn. Không lấy tên rút gọn làm định danh.
+
+Flow 20 **PASS** ở `20261027-170343` (4m00s): giữ đúng stop đầu và giờ −15 phút sau auth; Trips vẫn rỗng; kiểm tra email phiên đăng nhập đúng fixture A; bấm Save mới có đúng một chuyến; cold start rồi xóa chuyến, Trips trở lại rỗng. Toàn lượt 18+20 PASS, runner exit 0 và cleanup cả hai tài khoản thành công.
+
+Kiểm tra âm phải có mốc dương: trước `assertNotVisible` Edit/Delete ở menu B, đợi `collection-menu-grid` xuất hiện. Nếu menu không mở/không có accessibility tree thì test phải fail, không được coi hai nút vắng mặt là chứng minh phân quyền.
+
+
+### Kết quả xác nhận cuối
+
+`20261027-171119`: **18 PASS 3m07s, 19 PASS 8m37s, 20 PASS 4m01s**; tổng 15m45s, runner **exit 0**. Mỗi flow mới đã PASS hai lần liên tiếp (đối chiếu các lượt riêng ở trên). Lượt cuối có kiểm tra menu đã mở trước assertion âm và kiểm tra email phiên sau guest trip resume. Cleanup xóa cả hai tài khoản; kiểm tra sau runner: **0 JSON credential records**, **không còn lock**.
+
+**509 unit/UI tests liên quan PASS** trên 10 file test (fixture/cleanup, oracle RLS, testID, AuthSheet, SaveSheet, StopCard, Collections, PlanEdit, PlaceDetail). ESLint, TypeScript, `maestro check-syntax` cho cả ba flow, `bash -n` và diff whitespace check đều PASS. Typecheck trong worktree cài dependency đúng lockfile hiện chạy được; lỗi `opencc-js/cn2t` được ghi ở các lượt cũ không còn tái hiện trong môi trường này.
+
+Config hiện có 21 flow. Chưa chạy lại toàn bộ suite sau đợt bổ sung này; các số PASS ở trên chỉ áp dụng cho phạm vi được nêu.

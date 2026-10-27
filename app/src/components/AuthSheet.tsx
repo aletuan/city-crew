@@ -115,6 +115,7 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
             it then resolves against that shrunken box. */}
         <PressableScale
           onPress={onSignIn}
+          testID="auth-sheet-sign-in"
           accessibilityRole="button"
           style={{ alignSelf: 'stretch' }}
         >
@@ -124,7 +125,7 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
             <Text style={s.primaryText}>{t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録', '登录 / 注册', '登入 / 註冊')}</Text>
           </LinearGradient>
         </PressableScale>
-        <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.secondary}>
+        <PressableScale testID="auth-sheet-cancel" onPress={onClose} accessibilityRole="button" contentStyle={s.secondary}>
           <Text style={s.secondaryText}>{t('Not now', 'Để sau', '今はしない', '暂不', '暫不')}</Text>
         </PressableScale>
       </Animated.View>

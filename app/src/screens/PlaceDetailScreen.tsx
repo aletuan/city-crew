@@ -586,6 +586,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     <View style={s.screen}>
       <AmbientWarmth style={{ top: heroH - 60, height: 620 }} />
       <ScrollView
+        testID={`detail-place-${place.slug}`}
         contentContainerStyle={{ paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}

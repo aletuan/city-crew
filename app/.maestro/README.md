@@ -38,6 +38,9 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `15-theme.yaml` | Two accounts. Signed in as A: Profile → Theme → Dark, the tick lands on it; signs out; as a guest picks Light; A signs back in and the sheet ticks Dark again, read from the account; B signs in on the phone A left on Dark and gets its own Light; A after B is Dark again; sets Auto; signs out. Grounds only — a look restarts the app, which Expo Go cannot do. Reads ticks in the row's label, never colours. |
 | `16-trip-invite.yaml` | Uses two disposable accounts with a verified friendship. A invites B; B accepts and has Leave, not Delete. A sees Coming and deletes; cold starts of both accounts verify empty, freshly loaded trip lists. A second trip checks B accepting then leaving, persistence after restart, and A seeing Can’t make it while retaining ownership; A deletes that trip. |
 | `17-unfriend.yaml` | Two accounts. A: Profile → Connect with friends → Your friends → long-press B's row (`crew-friend-0`; the ⋯ beside it is not in the iOS accessibility tree) → Unfriend → the alert's Unfriend; B is off the list. A asks again by B's username (`B_HANDLE` in the flow) → Send request; the SENT row appears (`crew-sent-0`). B signs in → Requests → Accept (`crew-accept-0`); A is on B's list. Restores the persistent friendship fixture, and starts from either state. |
+| `18-guest-save-resume.yaml` | Guest cancels a bookmark sign-in invitation; ordinary login must not replay it. A new guest bookmark resumes the same place after login, saves once to a generated collection, and survives restart. |
+| `19-collection-privacy.yaml` | A switches a populated collection Private → Public → Private through UI. B checks Community after each state; public detail has no Edit/Delete. Read-only REST checks both collection and members as A/B without client visibility filters. |
+| `20-guest-trip-resume.yaml` | Guest edits a draft’s arrival time, signs in, and returns to the same first stop/time. Verify session email; Trips remains empty until explicit Save; cold restart shows one trip, then it is deleted. |
 | `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
@@ -125,7 +128,7 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
 
 ## Trip fixtures and identity checks
 
-Run 05, 13, and 16 through `smoke.sh`. The runner provisions a fresh pair of
+Run 05, 13, 16, 18, 19, and 20 through `smoke.sh`. The runner provisions a fresh pair of
 `maestro-e2e-<UUID>@example.com` accounts and establishes their friendship
 using A's request and B's acceptance under normal RLS. It verifies the edge
 before launching Maestro. `TRIP_EMAIL`, `TRIP_PASSWORD`, `TRIP_EMAIL_2`, and
@@ -279,12 +282,12 @@ reaches the native view.
 | `DeleteAccountScreen` | `delete-account-confirm` (`DangerButton`) |
 | `IdeasScreen` | `ideas-company-<solo\|couple\|friends\|family>`, `ideas-cat-<index>`, `ideas-sketch` |
 | `PlanOptionsScreen` | `plan-card-best` |
-| `PlanEditScreen` | `plan-save`, `plan-stop-time-<index>`, `plan-stop-earlier-<index>` (the −15 min step) |
+| `PlanEditScreen` | `plan-save`, `plan-stop-name-<index>`, `plan-stop-time-<index>`, `plan-stop-earlier-<index>` (the −15 min step) |
 | `TripsScreen` | `trip-upcoming-<index>`, `trips-ready` (trips and invitations loaded without error/cache fallback), `trips-empty` (no owned/accepted trips or invitations) |
 | `TripDetailScreen` | `trip-delete` (owner), `trip-leave` (invitee), `trip-stop-time-<index>` |
 | `PlaceDetailScreen` | `detail-save` / `detail-saved` — one id per state |
 | `PlaceDetailScreen` (check-in) | `detail-checkin` / `detail-checked-in` — one id per state; in the visit sheet `checkin-head`, `checkin-visit` (each row), `checkin-visit-remove` (each row's trash), `detail-checkin-again` |
-| `SaveSheet` | `save-row-<index>`, `save-done` |
+| `SaveSheet` | `save-place-<slug>`, `save-row-<index>`, `save-done` |
 | `CollectionFormScreen` | `collection-name`, `collection-submit` |
 | `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the New pill in the header: on Yours once there is a list, on Community always when signed in) |
 | `CollectionDetailScreen` | `collection-place-<index>` (List), `collection-tile-<index>` (Grid), `collection-menu-grid`, `collection-back`, `collection-more`, `collection-menu-edit`, `collection-menu-delete` |
@@ -305,3 +308,32 @@ before you do.
   project or accept that a data change can fail the smoke.
 
 When those are in place, the suite itself needs no change beyond `appId`.
+
+### Guest resume and collection privacy fixtures
+
+18/19 request two private collections owned by generated A: one empty for
+bookmark resume, one with a published Hanoi place for privacy. Titles and IDs
+are unique per run; selecting these fixture titles is selecting test data,
+not translated UI copy. B is A's friend, so privacy must hold even for friends.
+The runner passes `FIXTURE_*` public backend configuration and row identifiers;
+no service-role key is used. All seeded data belongs to the disposable accounts
+and is removed by their existing ledger-backed cleanup, including failed runs.
+`TRIP_*` remains the shared disposable-account variable naming for compatibility.
+
+`common/submit-sign-in.yaml` submits without navigating elsewhere. Every caller
+must assert its destination; ordinary login still uses `common/sign-in.yaml`
+with its Explore landing and profile-email verification. Resume flows verify
+saved data through the fixture owner's session, or the empty Trips baseline
+and the sole created trip. Never use normal login's forced Profile navigation
+to test resume behavior.
+
+| Component | Additional testID |
+| --- | --- |
+| `AuthSheet` | `auth-sheet-sign-in`, `auth-sheet-cancel` |
+| `CollectionsScreen` | `collections-community`, `collections-ready` (fresh public catalog loaded successfully) |
+| `ActionSheet` | `sheet-action-public`, `sheet-action-private` (existing action-key IDs) |
+
+`PlaceDetailScreen` also exposes `detail-place-<slug>`. Flow 18 searches for
+a published fixture place, asserts that exact slug on detail and the resumed
+save sheet, then verifies the saved membership's slug through the backend.
+Display titles are not identifiers: detail can shorten a branch name.

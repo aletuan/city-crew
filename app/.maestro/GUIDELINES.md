@@ -23,7 +23,7 @@ minute or more per run; keep the suite short.
 | --- | --- |
 | Expo Go + `openLink` into the dev bundle | No native build needed to run locally. CI will need a dev client instead (see *Later*). |
 | Real Supabase data | Catches what fixtures hide — RLS, Edge Functions, auth. The cost: a flow must not assume specific rows. |
-| Persistent accounts for existing non-trip flows; disposable accounts for 05/13/16 | Trip tests require isolated run-owned data. Persist cleanup ledgers before signup, preflight email settings, and recover on the next run. |
+| Persistent accounts for existing non-trip flows; disposable accounts for 05/13/16/18/19/20 | Trip tests require isolated run-owned data. Persist cleanup ledgers before signup, preflight email settings, and recover on the next run. |
 | Account from the macOS Keychain, via `smoke.sh` | Never typed, never in shell history, never in a flow or commit. |
 | Every run's report and screenshots in `.smoke-local/maestro/` | Anyone — or an agent — can read a failure afterwards without re-running it. |
 
@@ -33,7 +33,9 @@ minute or more per run; keep the suite short.
 
 1. **Select by `testID`, never by label.** Every label is trilingual. The
    only exception is iOS's own alerts, which take no id — match those in
-   all three languages: `text: "Delete|Xoá|削除"`.
+   all three languages: `text: "Delete|Xoá|削除"`. Generated fixture titles
+   may be matched as data; they are not translated UI labels. Use a stable
+   slug to compare place identity across screens that shorten names differently.
 2. **Give a state its own id when the flow must wait on it.** The bookmark
    is `detail-save` / `detail-saved`, so a flow can wait for a save to
    land without reading a label.

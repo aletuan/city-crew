@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { cleanupPair, createPair } from './maestro-trip-fixtures.mjs';
+import { cleanupPair, createPair, seedCollections } from './maestro-trip-fixtures.mjs';
 const make = (id: string) => ({ owner: 'citycrew-maestro-signup-v1', id,
   email: `maestro-e2e-${id}@example.com`, password: 'Smoke-fixture-password!',
   url: 'https://project.example.com', key: 'public-key', name: 'Maestro test' });
@@ -66,4 +66,36 @@ it('retains a failed A ledger, cleans B, then recovers A on the next attempt', a
     expect(await readdir(join(dir, 'a'))).toEqual([]);
     await expect(readFile(join(dir, 'current.json'))).rejects.toMatchObject({ code: 'ENOENT' });
   } finally { vi.unstubAllGlobals(); await rm(dir, { recursive: true, force: true }); }
+});
+
+describe('collection fixture setup', () => {
+  it('refuses a persistent owner before writing', async () => {
+    const fetcher = vi.fn();
+    await expect(seedCollections({ ...a, email: 'persistent@example.com' }, fetcher)).rejects.toThrow('Refusing');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('requires the exact owner session before seeding', async () => {
+    const fetcher = vi.fn().mockResolvedValue(session(b));
+    await expect(seedCollections(a, fetcher)).rejects.toThrow('identity mismatch');
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it('creates two private lists and adds one live place only to privacy', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(session(a))
+      .mockResolvedValueOnce(response(200, [{ id: 'place', city_id: 'hanoi', slug: 'place-slug', name_en: 'Café – Hà Nội' }]))
+      .mockResolvedValueOnce(response(201)).mockResolvedValueOnce(response(201)).mockResolvedValueOnce(response(201));
+    const result = await seedCollections(a, fetcher);
+    expect(result.resumeId).not.toBe(result.privacyId);
+    expect(result.placeQuery).toBe('Cafe Ha Noi');
+    expect(result.placeSlug).toBe('place-slug');
+    for (const index of [2, 3]) {
+      expect(JSON.parse(fetcher.mock.calls[index][1].body)).toMatchObject({ owner_id: a.id, is_public: false });
+      expect(fetcher.mock.calls[index][1].headers.Authorization).toBe(`Bearer ${a.id}`);
+    }
+    expect(JSON.parse(fetcher.mock.calls[4][1].body)).toMatchObject({ collection_id: result.privacyId, place_id: 'place' });
+  });
+  it('fails instead of creating a public test with no discoverable place', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(session(a)).mockResolvedValueOnce(response(200, []));
+    await expect(seedCollections(a, fetcher)).rejects.toThrow('No published');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
 });
