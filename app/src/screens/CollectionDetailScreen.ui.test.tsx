@@ -576,6 +576,8 @@ describe('your own list', () => {
     expect(add.querySelector('[data-icon="add"]')?.getAttribute('data-color')).toBe(String(colors.accent));
     expect(screen.queryByText(/Add a few words/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
+    // Your own list keeps the pencil; the copy icon is for somebody else's.
+    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
     expect(card.getAttribute('role')).not.toBe('button');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       slug: 'old-quarter', title: 'Old Quarter eats', desc: '',
@@ -1353,6 +1355,20 @@ describe("somebody else's list", () => {
     });
   });
 
+  // The pencil's corner on somebody else's list: the same copy the menu
+  // row makes, one tap from the words that made the reader want it.
+  it('puts Save a copy where the owner’s pencil sits, and it copies the same', () => {
+    const { raw } = show();
+    expect(screen.queryByTestId('collection-desc-edit')).toBeNull();
+    const icon = screen.getByTestId('collection-desc-copy');
+    expect(icon.getAttribute('aria-label')).toBe('Save a copy');
+    expect(icon.querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
+    fireEvent.click(icon);
+    expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
+      copyFrom: expect.objectContaining({ sourceId: 'c1', cityId: 'hanoi', placeSlugs: ['pho', 'cafe', 'museum'] }),
+    });
+  });
+
   it('falls back to the city on screen, and omits an absent description', () => {
     state.cols = [theirs({ city_id: null, desc_en: null, curator_handle: null })];
     state.city = { id: 'saigon' };
@@ -1369,8 +1385,9 @@ describe("somebody else's list", () => {
     state.city = null;
     const { raw } = show();
     openMenu();
-    // A row that could only close the menu is not offered.
+    // A row that could only close the menu is not offered, nor the icon.
     expect(screen.queryByText('Save a copy')).toBeNull();
+    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
     expect(menuRow('Share')).toBeTruthy();
     expect(raw.navigate).not.toHaveBeenCalled();
   });
@@ -1466,6 +1483,13 @@ describe('signed out', () => {
     openMenu();
     fireEvent.click(menuRow('Save a copy'));
     // The sheet names what was reached for: a copy, not a place.
+    expect(spies.askToSignIn).toHaveBeenCalledWith('copy', expect.any(Function));
+    expect(raw.navigate).not.toHaveBeenCalled();
+  });
+
+  it('the card’s copy icon asks for sign-in the same way', () => {
+    const { raw } = show();
+    fireEvent.click(screen.getByTestId('collection-desc-copy'));
     expect(spies.askToSignIn).toHaveBeenCalledWith('copy', expect.any(Function));
     expect(raw.navigate).not.toHaveBeenCalled();
   });
