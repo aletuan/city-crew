@@ -571,3 +571,8 @@ for f in "$ROOT"/supabase/migrations/*_review_pace.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/review_pace_test.sql"
+
+# Ninh Bình's centre (28 Oct 2026): a data fix on one `cities` row that the
+# live project added by hand, so the test brings its own rows.
+echo "→ ninh binh centre"
+run "$DB" -f "$HERE/ninhbinh_centre_test.sql"
