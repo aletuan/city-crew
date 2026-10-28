@@ -23,7 +23,7 @@ import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { AVATAR_PRESETS, presetOf, type AvatarPreset } from '../lib/avatars';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
-import { GradientCta, PressableScale, successHaptic } from './ui';
+import { GradientCta, PressableScale, SECONDARY_CONTROL_H, successHaptic } from './ui';
 import { avatarSource, PRESET_IMAGES } from './avatarImages';
 import { useFailText } from './authUi';
 
@@ -320,7 +320,7 @@ const s = StyleSheet.create({
   pair: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
   source: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 13, borderRadius: radius.pill,
+    minHeight: SECONDARY_CONTROL_H, paddingVertical: 10, borderRadius: radius.pill,
     backgroundColor: colors.surfaceGlass,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },

@@ -77,7 +77,6 @@ export function ScrollNudge({ visible, onSearch, onAdd }: {
           beside it, the screen under it — and VoiceOver hears it whole:
           "Tạo địa điểm mới". */}
       <AddPill
-        tall
         label={t('New', 'Tạo mới', '新規', '新建', '新增')}
         accessibilityLabel={t('New place', 'Tạo địa điểm mới', '新しいスポット', '新建地点', '新增地點')}
         onPress={onAdd}

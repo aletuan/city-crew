@@ -35,7 +35,7 @@ import { localized } from '../lib/localized';
 import { summaryLine } from '../lib/sketch';
 import { tripCover } from '../lib/trips';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
-import { Avatar, PressableScale } from './ui';
+import { Avatar, PressableScale, SECONDARY_CONTROL_H } from './ui';
 import PhotoCredit from './PhotoCredit';
 
 export default function InviteCard({
@@ -212,13 +212,13 @@ const s = StyleSheet.create({
   busy: { opacity: 0.6 },
   yes: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    paddingVertical: 12, borderRadius: radius.pill,
+    minHeight: SECONDARY_CONTROL_H, paddingVertical: 10, borderRadius: radius.pill,
     backgroundColor: colors.accentFill,
   },
   yesText: { color: colors.accentInk, fontSize: 15, fontWeight: font.bold },
   no: {
     alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 12, borderRadius: radius.pill,
+    minHeight: SECONDARY_CONTROL_H, paddingVertical: 10, borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
   },
   noText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },

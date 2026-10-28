@@ -27,7 +27,7 @@ import { useI18n } from '../lib/i18n';
 import { crewOf, headcount, type InviteRow } from '../lib/invites';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, font, radius, space } from '../theme';
-import { Avatar, PressableScale } from './ui';
+import { Avatar, CHIP_H, CHIP_SLOP, PressableScale } from './ui';
 
 /** How many faces before the row starts counting instead. Four fits at
  *  320pt beside the button; past that the overlap stops reading as people
@@ -150,7 +150,7 @@ export default function TripCrew({
         </View>
 
         {canInvite ? (
-          <PressableScale onPress={onInvite} accessibilityRole="button" contentStyle={s.ghost} testID="trip-invite">
+          <PressableScale onPress={onInvite} accessibilityRole="button" hitSlop={CHIP_SLOP} contentStyle={s.ghost} testID="trip-invite">
             <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
             <Text style={s.ghostText}>{t('Invite', 'Mời', '招待', '邀请', '邀請')}</Text>
           </PressableScale>
@@ -208,7 +208,7 @@ const s = StyleSheet.create({
 
   ghost: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 13, paddingVertical: 8,
+    minHeight: CHIP_H, paddingHorizontal: 13, paddingVertical: 6,
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
     backgroundColor: colors.surfaceGlass,

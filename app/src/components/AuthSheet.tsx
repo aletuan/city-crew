@@ -36,7 +36,7 @@ import { useI18n } from '../lib/i18n';
 import type { SignInWhy } from '../lib/save';
 import { useScheme } from '../lib/theme';
 import { colors, display, font, gradAI, labelScaleCap, space } from '../theme';
-import { PressableScale, useNarrowWindow } from './ui';
+import { CONTROL_H, PressableScale, useNarrowWindow } from './ui';
 import artDark from '../../assets/signin-art-dark.webp';
 import artLight from '../../assets/signin-art-light.webp';
 
@@ -158,7 +158,8 @@ const s = StyleSheet.create({
   // height, so a wide one reads as a lozenge floating in the sheet rather
   // than as the block the sheet is asking you to press.
   primary: {
-    borderRadius: 18, paddingVertical: 17, alignItems: 'center', width: '100%',
+    borderRadius: 18, minHeight: CONTROL_H, paddingVertical: 10,
+    alignItems: 'center', justifyContent: 'center', width: '100%',
   },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
   secondary: { paddingVertical: 12 },

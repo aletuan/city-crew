@@ -2,6 +2,7 @@
 // the screen and its parts, as they were in one file.
 
 import { StyleSheet } from 'react-native';
+import { CHIP_H, SECONDARY_CONTROL_H } from '../../components/ui';
 import { colors, display, font, onPhoto, radius, space, type } from '../../theme';
 
 /**
@@ -70,7 +71,7 @@ export const s = StyleSheet.create({
   // chevron is what makes it read as a control rather than a caption.
   heroCity: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 7,
+    minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
     backgroundColor: 'rgba(10,11,10,0.55)',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
@@ -80,10 +81,14 @@ export const s = StyleSheet.create({
   heroTitle: { color: onPhoto.text, ...type.title, lineHeight: 36 },
   heroSub: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 21 },
   // The screen's one loud control: the accent at full strength — the same
-  // primary-button material the auth screens use.
+  // primary-button material the auth screens use. At the button scale's 44
+  // by number (owner, 28 Oct 2026): it was 44 already, as 12 + Space
+  // Grotesk's 20.4pt line + 12, which held only until the word or the face
+  // changed. 10 now leaves the height to `minHeight` and keeps the air
+  // for a label that wraps.
   heroCta: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: radius.pill, paddingHorizontal: 20, paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: SECONDARY_CONTROL_H,
+    borderRadius: radius.pill, paddingHorizontal: 20, paddingVertical: 10,
   },
   heroCtaText: { color: colors.accentInk, fontSize: 16, fontFamily: display.semibold },
 

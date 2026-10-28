@@ -17,7 +17,8 @@ import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import ListToggle from '../components/ListToggle';
 import {
-  AmbientWarmth, Card, Empty, PressableScale, UnderlineChoice, useTabBarClearance,
+  AmbientWarmth, Card, CHIP_H, CHIP_SLOP, Empty, PressableScale, UnderlineChoice,
+  useTabBarClearance,
 } from '../components/ui';
 import { cityOfList, coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
 import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
@@ -887,7 +888,7 @@ function ForkChip({ icon, label, onPress }: {
   onPress: () => void;
 }) {
   return (
-    <PressableScale onPress={onPress} haptic="selection" accessibilityRole="button">
+    <PressableScale onPress={onPress} haptic="selection" hitSlop={CHIP_SLOP} accessibilityRole="button">
       <View style={s.forkChip}>
         <Ionicons name={icon} size={15} color={colors.accent} />
         <Text style={s.forkChipText} numberOfLines={1}>{label}</Text>
@@ -1018,7 +1019,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     backgroundColor: colors.surfaceGlass, borderWidth: 1,
     borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
-    paddingHorizontal: 14, paddingVertical: 9,
+    paddingHorizontal: 14, minHeight: CHIP_H, paddingVertical: 6,
   },
   forkChipText: { color: colors.text, fontSize: 14, fontWeight: font.medium },
 });

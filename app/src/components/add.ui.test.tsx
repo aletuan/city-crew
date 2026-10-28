@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import { AddCell, AddPill, AddSlot } from './add';
 import { colors, space } from '../theme';
+import { SECONDARY_CONTROL_H } from './ui';
 
 describe('AddSlot', () => {
   it('ends with the row-end chevron at the app\'s one size, and opens on a tap', () => {
@@ -53,10 +54,11 @@ describe('AddPill', () => {
     expect(screen.getByRole('button', { name: 'Add' }).getAttribute('aria-busy')).toBe('true');
   });
 
-  // Two heights and one of everything else. `tall` is the 44 every
-  // control in a header or the dock has; beside a section heading the
-  // pill sizes to its content. The word and the plus never change size:
-  // the 14pt word and 16pt plus of the old `compact` made the dock's
+  // One height and one of everything else: the button scale's 44, the
+  // height of every control in a header or a dock (owner, 28 Oct 2026). A
+  // padding-sized second height beside section headings went when every
+  // caller had come to ask for the 44. The word and the plus never change
+  // size: the 14pt word and 16pt plus of the old `compact` made the dock's
   // "Add" a different button from Gallery's.
   //
   // Read off the committed props: the gradient is a stub under jsdom, so
@@ -79,11 +81,12 @@ describe('AddPill', () => {
   const pill = () => StyleSheet.flatten(propsWhere((p) => 'colors' in p).style as StyleProp<ViewStyle>) ?? {};
   const word = () => StyleSheet.flatten(propsWhere((p) => p.children === 'Add' && 'style' in p).style as StyleProp<TextStyle>) ?? {};
 
-  it('stands at 44 when tall and sizes to its content otherwise', () => {
-    const { rerender } = render(<AddPill label="Add" onPress={() => {}} tall />);
-    expect(pill().minHeight).toBe(44);
-    rerender(<AddPill label="Add" onPress={() => {}} />);
-    expect(pill().minHeight).toBeUndefined();
+  it('stands at the secondary 44, filled or quiet', () => {
+    const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
+    expect(pill().minHeight).toBe(SECONDARY_CONTROL_H);
+    expect(SECONDARY_CONTROL_H).toBe(44);
+    rerender(<AddPill label="Add" onPress={() => {}} quiet />);
+    expect(glass().minHeight).toBe(44);
   });
 
   // The header's weight (owner, 26 Oct 2026): the round buttons' glass,
@@ -94,11 +97,11 @@ describe('AddPill', () => {
   }).style as StyleProp<ViewStyle>) ?? {};
 
   it('is glass, not the gradient, when quiet — at the same height and size', () => {
-    const { rerender } = render(<AddPill label="Add" onPress={() => {}} tall />);
+    const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
     expect(word().color).toBe(colors.accentInk);
     expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-color')).toBe(colors.accentInk);
-    rerender(<AddPill label="Add" onPress={() => {}} tall quiet />);
+    rerender(<AddPill label="Add" onPress={() => {}} quiet />);
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
     expect(glass().minHeight).toBe(44);
     expect(word().color).toBe(colors.text);
@@ -109,17 +112,14 @@ describe('AddPill', () => {
   });
 
   it('keeps the quiet pill quiet while busy, its spinner in the accent', () => {
-    render(<AddPill label="Add" onPress={() => {}} tall quiet busy />);
+    render(<AddPill label="Add" onPress={() => {}} quiet busy />);
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
     expect(screen.getByText('Add')).toBeTruthy();
     expect(propsWhere((p) => 'animating' in p || ('size' in p && p.size === 'small')).color).toBe(colors.accent);
   });
 
-  it('draws the same word and plus at either height', () => {
-    const { rerender } = render(<AddPill label="Add" onPress={() => {}} tall />);
-    expect(word().fontSize).toBe(16);
-    expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('18');
-    rerender(<AddPill label="Add" onPress={() => {}} />);
+  it('draws the 16pt word and the 18pt plus', () => {
+    render(<AddPill label="Add" onPress={() => {}} />);
     expect(word().fontSize).toBe(16);
     expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('18');
   });

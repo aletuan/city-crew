@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space } from '../theme';
-import { TAB_BAR_HEIGHT, useTabBarLift } from './ui';
+import { SECONDARY_CONTROL_H, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { AttentionPulse, attentionRing } from './Attention';
 
 type Target = 'search' | 'filter' | 'save' | 'collections';
@@ -328,9 +328,9 @@ const s = StyleSheet.create({
   title: { flexShrink: 1, color: colors.text, fontSize: 18, fontWeight: font.semibold },
   body: { color: colors.textSecondary, fontSize: 15, lineHeight: 22 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-  skip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4, marginRight: 'auto' },
+  skip: { minHeight: SECONDARY_CONTROL_H, justifyContent: 'center', paddingHorizontal: 4, marginRight: 'auto' },
   skipText: { color: colors.textSecondary, fontSize: 13 },
   next: { borderRadius: radius.pill, overflow: 'hidden' },
-  nextFill: { minHeight: 44, paddingHorizontal: 18, justifyContent: 'center' },
+  nextFill: { minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 18, justifyContent: 'center' },
   nextText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
 });

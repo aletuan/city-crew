@@ -45,7 +45,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { HEADER_CONTROL_H, PressableScale } from './ui';
+import { PressableScale, SECONDARY_CONTROL_H } from './ui';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 /**
@@ -192,7 +192,7 @@ export function AddCell({ label, onPress, size, testID }: {
  * nowhere under 6.7. Not an outline either: outlined pills here are the
  * reversals — Cancel, Unblock — and a way to make something is not one.
  */
-export function AddPill({ label, onPress, tall, quiet, busy, icon = 'add', accessibilityLabel, testID }: {
+export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibilityLabel, testID }: {
   label: string;
   onPress: () => void;
   /** The header's weight: glass, not the gradient. See "how loud". */
@@ -201,10 +201,6 @@ export function AddPill({ label, onPress, tall, quiet, busy, icon = 'add', acces
    *  dock's visitor pill copies, and wears the ⋯ menu's copy glyph so one
    *  act has one mark (owner, 17 Oct 2026). */
   icon?: keyof typeof Ionicons.glyphMap;
-  /** At the 44pt control height: in a screen's header, beside a large title
-   *  and the 44pt round buttons the other tabs put in that slot, and in
-   *  Explore's floating dock. */
-  tall?: boolean;
   /** The thing it adds is on its way. The pill keeps its word and its
    *  width, the plus makes way for a spinner, and a tap does nothing.
    *
@@ -221,7 +217,7 @@ export function AddPill({ label, onPress, tall, quiet, busy, icon = 'add', acces
 }) {
   const glyph = 18;
   const mark = quiet ? colors.accent : colors.accentInk;
-  const face = [s.pill, tall && s.pillTall, quiet && s.pillQuiet, busy && s.pillBusy];
+  const face = [s.pill, quiet && s.pillQuiet, busy && s.pillBusy];
   const inside = (
     <>
       {/* The spinner takes the plus's own box, so the word does not move
@@ -285,16 +281,16 @@ const s = StyleSheet.create({
   },
   cellTileText: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, textAlign: 'center' },
 
+  // `SECONDARY_CONTROL_H`, so a pill and a round button in the same header
+  // slot are the same height, and the dock's pill is the header's. There
+  // was a second, padding-sized height for a pill beside a section heading
+  // (`tall` was the 44); every caller had come to pass `tall`, and the
+  // button scale (owner, 28 Oct 2026) has no place for a 37, so it went.
   pill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingLeft: 14, paddingRight: 18, paddingVertical: 9,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    minHeight: SECONDARY_CONTROL_H, paddingLeft: 14, paddingRight: 18, paddingVertical: 9,
     borderRadius: radius.pill,
   },
-  // `HEADER_CONTROL_H`, so a pill and a round button in the same header
-  // slot are the same height, and the dock's pill is the header's. Beside
-  // a section heading the pill sizes to its own content, which is right
-  // in open space and wrong beside a title or inside another button.
-  pillTall: { minHeight: HEADER_CONTROL_H, paddingHorizontal: 16, justifyContent: 'center' },
   // Dimmed, not greyed: the gradient stays so the pill is still plainly
   // the same object, and 0.7 is the figure `working` rows use elsewhere
   // for "taken, not yet answered" — a little less, since this one also

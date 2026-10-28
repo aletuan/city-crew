@@ -12,7 +12,10 @@ import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, Screen, ScreenTitle, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import {
+  AmbientWarmth, Avatar, Card, CHIP_H, Empty, fireHaptic, GradientCta, PressableScale, Screen,
+  ScreenTitle, Skeleton, UnderlineTabs, useTabBarClearance,
+} from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
@@ -1048,7 +1051,6 @@ export default function CollectionsScreen({ navigation, route }: {
         accessory={filterButton(false)}
         right={session ? (
           <AddPill
-            tall
             quiet
             label={t('New', 'Tạo mới', '新規', '新建', '新增')}
             onPress={startNew}
@@ -1805,7 +1807,6 @@ export default function CollectionsScreen({ navigation, route }: {
         />
         {session ? (
           <AddPill
-            tall
             label={t('New', 'Tạo mới', '新規', '新建', '新增')}
             accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
             onPress={startNew}
@@ -1835,7 +1836,7 @@ const s = StyleSheet.create({
   noticeBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
   noticeChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14,
+    minHeight: CHIP_H, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14,
   },
   noticeChipText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
 

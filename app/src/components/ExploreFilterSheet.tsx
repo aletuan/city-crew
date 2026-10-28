@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ExploreFilters, ExploreSort, ExploreStatus } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
-import { Card, fireHaptic, GradientCta, PressableScale, useReducedMotion } from './ui';
+import { Card, fireHaptic, GradientCta, PressableScale, SECONDARY_CONTROL_H, useReducedMotion } from './ui';
 import { SLIDE } from './SearchField';
 import { useSheetDrag } from './sheetDrag';
 
@@ -223,6 +223,7 @@ export default function ExploreFilterSheet({
                 // and then the words.
                 accessibilityLabel={sortLabel(value, t)}
                 style={s.segmentCell}
+                hitSlop={TRACK_SLOP}
                 contentStyle={[s.segment, s.segmentWithMark, active && s.segmentOn]}
               >
                 <Ionicons
@@ -260,6 +261,7 @@ export default function ExploreFilterSheet({
                 // entirely; `aria-checked` is what a test can actually read.
                 aria-checked={active}
                 style={s.segmentCell}
+                hitSlop={TRACK_SLOP}
                 contentStyle={[s.segment, active && s.segmentOn]}
               >
                 <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
@@ -439,6 +441,10 @@ export default function ExploreFilterSheet({
   );
 }
 
+/** The track's padding: the gutter round the selected segment. */
+const TRACK_INSET = 4;
+const TRACK_SLOP = { top: TRACK_INSET, bottom: TRACK_INSET };
+
 const s = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
   sheet: {
@@ -505,12 +511,17 @@ const s = StyleSheet.create({
   // The track is what makes three segments read as one question. Its
   // padding is the gutter the selected segment sits in.
   track: {
-    flexDirection: 'row', gap: 4, padding: 4,
+    flexDirection: 'row', gap: 4, padding: TRACK_INSET,
     backgroundColor: colors.surfaceGlass, borderRadius: radius.card - 2,
   },
   segmentCell: { flex: 1 },
+  // The track, not the segment, is the control the eye measures, so the
+  // track is what stands at `SECONDARY_CONTROL_H` (the button scale,
+  // owner, 28 Oct 2026): 44 overall where it was 48, the segment the 36
+  // left inside the gutter, and `TRACK_SLOP` giving each its 44pt target
+  // back out to the track's edge.
   segment: {
-    minHeight: 40, alignItems: 'center', justifyContent: 'center',
+    minHeight: SECONDARY_CONTROL_H - 2 * TRACK_INSET, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 6,
     borderWidth: 1, borderColor: 'transparent', borderRadius: radius.card - 7,
   },

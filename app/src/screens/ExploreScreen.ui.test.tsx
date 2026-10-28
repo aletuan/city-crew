@@ -1867,21 +1867,6 @@ describe('pull to refresh', () => {
 });
 
 describe('the scroll nudge', () => {
-  /** The `AddPill` the dock renders, by its props in the committed tree. */
-  const addPillProps = (): Record<string, unknown> => {
-    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
-    const stack: Fiber[] = [host[key].stateNode.current];
-    while (stack.length) {
-      const f = stack.pop()!;
-      const p = f.memoizedProps;
-      if (p && typeof p === 'object' && p.label === 'New' && typeof p.onPress === 'function') return p;
-      if (f.sibling) stack.push(f.sibling);
-      if (f.child) stack.push(f.child);
-    }
-    throw new Error('no AddPill in the committed tree');
-  };
   const long = () => Array.from({ length: 6 }, (_, i) => place(`p${i}`));
   // Mounted only while offered or fading out (`DockSlot`): absent is
   // away, and once there its fade says whether it has arrived.
@@ -1907,14 +1892,13 @@ describe('the scroll nudge', () => {
     settle();
     expect(shown()).toBe(true);
     expect(screen.getByText('Search, or add your own')).toBeTruthy();
-    // The dock's pill is the 44pt one, as in Gallery's header: the dock
-    // around it is a button to Search, so a small pill sent near misses
-    // there. Its word is "+ New", every making pill's word (owner, 25 Oct
+    // The dock's pill is `AddPill`, the 44pt one, as in Gallery's header:
+    // the dock around it is a button to Search, so a small pill sent near
+    // misses there. It has the one height now (the button scale, owner,
+    // 28 Oct 2026), pinned in add.ui.test. Its word is "+ New", every making pill's word (owner, 25 Oct
     // 2026), and VoiceOver hears what it makes: "New place".
     const add = screen.getByRole('button', { name: 'New place' });
     expect(add.textContent).toBe('New');
-    // Asked for by the prop: what `tall` draws is pinned in add.ui.test.
-    expect(addPillProps().tall).toBe(true);
     fireEvent.click(add);
     expect(navigation.navigate).toHaveBeenCalledWith('AddPlace');
     fireEvent.click(screen.getByText('Not finding it?'));

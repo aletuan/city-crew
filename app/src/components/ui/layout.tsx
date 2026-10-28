@@ -40,17 +40,62 @@ export const TAB_BAR_GAP = 10;
  */
 export const CONTROL_H = 52;
 
+// ── the button scale: 52, 44, 32, and nothing between (owner, 28 Oct 2026) ──
+//
+// Measured that day from the padding and the font's own line height, the
+// app's buttons stood at more than a dozen heights between 32 and 54 —
+// the sign-in sheet's 54, the invitation's 47, Sign out's 46, the invite
+// card's 42, Accept's 40, Search's fork chips at 37, a suggestion's Add
+// at 35 —
+// each a padding tuned around its own label. Only the 52 and the
+// header's 44 were set as numbers; Explore's hero button landed on 44 by
+// way of 12 + Space Grotesk's 20.4pt line + 12, and would have left it the
+// first time its word changed. Three sizes, each by role, each a
+// `minHeight` so a long translation still grows the control:
+//
+//   `CONTROL_H`            the one action a sheet or a card is for
+//   `SECONDARY_CONTROL_H`  every other action that stands on its own
+//   `CHIP_H`               a choice, or an action inside a row
+//
+// Badges and pills that only label something (a kind, a price, a score)
+// are not buttons and are not on the scale. `scripts/controlHeights.test.ts`
+// holds every style that is.
+
 /**
- * How tall a control in a screen's header is.
+ * How tall a button that is not the screen's main action is: a header
+ * action, a dock's pill, a round button, the hero's Explore, a segment.
  *
- * Smaller than `CONTROL_H` on purpose, and not a drift from it: a header
- * action sits beside a large title in a row that is read as one line, where
- * a full-size button reads as the screen's main action rather than as an
- * accessory to its title. The round buttons the other screens put in that
- * slot have always been this; naming it is what lets a pill join them
- * without inventing a third number.
+ * Smaller than `CONTROL_H` on purpose. A header action sits beside a large
+ * title in a row that is read as one line, where a full-size button reads
+ * as the screen's main action rather than as an accessory to its title.
+ * The round buttons have always been this. It was `HEADER_CONTROL_H` until
+ * the scale above gave it the rest of the app's secondary actions too.
  */
-export const HEADER_CONTROL_H = 44;
+export const SECONDARY_CONTROL_H = 44;
+
+/**
+ * How tall a chip is, and an action that lives inside a row — a friend
+ * request's Cancel, a suggestion's Add, a candidate's View, a Retry.
+ *
+ * 32 because the row actions stood at 32–35 and a display-only chip at
+ * 32.7, so this is where they already were, minus the drift. A tappable
+ * chip used to draw itself 44 tall to be a 44pt target; it draws 32 now
+ * and reaches the rest with `CHIP_SLOP`. The box is what the eye reads,
+ * the target is what the thumb finds, and they no longer have to be one.
+ */
+export const CHIP_H = 32;
+
+/**
+ * What a `CHIP_H` control adds above and below itself to make Apple's 44pt
+ * target: `hitSlop={CHIP_SLOP}`. Vertical only — beside it in a row is the
+ * next chip, 8pt away, and a sideways slop would take taps meant for that.
+ * A wrapped row below is 8pt away too, so there the two slops overlap by
+ * 4pt: a tap in that strip is a tap between two chips either way.
+ */
+export const CHIP_SLOP = {
+  top: (SECONDARY_CONTROL_H - CHIP_H) / 2,
+  bottom: (SECONDARY_CONTROL_H - CHIP_H) / 2,
+};
 
 /** Bottom padding that clears the floating tab bar plus breathing room. */
 export function useTabBarClearance(extra = 18): number {

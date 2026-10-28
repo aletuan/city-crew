@@ -32,7 +32,8 @@ import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFlag } from '../lib/useFlag';
 import {
-  AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
+  AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, SECONDARY_CONTROL_H,
+  useTabBarClearance,
 } from '../components/ui';
 import StopRow from '../components/StopRow';
 import { useProfile, useSession } from '../lib/auth';
@@ -582,7 +583,7 @@ const s = StyleSheet.create({
   // pushed right by `flex` so the chevron keeps the edge.
   // A whole row that opens another app, and it was as tall as its caption
   // (≈18pt). 44 makes it the target it reads as.
-  route: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
+  route: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: SECONDARY_CONTROL_H },
   routeText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
   routeSub: { ...CAPTION, color: colors.textTertiary, flex: 1, textAlign: 'right', marginRight: 2 },
 
@@ -614,7 +615,7 @@ const s = StyleSheet.create({
   delete: {
     alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    paddingVertical: 11, paddingHorizontal: 20, marginTop: 4, minHeight: 44,
+    paddingVertical: 11, paddingHorizontal: 20, marginTop: 4, minHeight: SECONDARY_CONTROL_H,
   },
   deleteText: { ...CAPTION, color: colors.bad, fontWeight: font.semibold },
 });

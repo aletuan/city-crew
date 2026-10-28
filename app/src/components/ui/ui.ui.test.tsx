@@ -14,7 +14,7 @@ vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import { Screen, UnderlineChoice, useArrival } from './index';
+import { CHIP_H, CHIP_SLOP, Chip, SECONDARY_CONTROL_H, Screen, UnderlineChoice, useArrival } from './index';
 import { bgHex } from '../../theme';
 
 describe('useArrival', () => {
@@ -267,5 +267,42 @@ describe('UnderlineChoice', () => {
     expect(container.querySelector('[data-stub="LinearGradient"]')!.getAttribute('data-testid')).toBeNull();
     expect(container.querySelector('[data-testid]')).toBeNull();
     expect(screen.getAllByRole('button')[0].textContent).toBe('All');
+  });
+});
+
+// The button scale (owner, 28 Oct 2026): a chip draws at `CHIP_H` and, when
+// it does something, reaches Apple's 44pt target with the slop rather than
+// by drawing itself 44 tall, as it used to.
+describe('Chip', () => {
+  /** The props React committed for the first host element `pick` accepts. */
+  const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const f = stack.pop()!;
+      const p = f.memoizedProps;
+      if (p && typeof p === 'object' && pick(p)) return p;
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    throw new Error('no matching element in the committed tree');
+  };
+  const face = () => StyleSheet.flatten(propsWhere((p) => 'contentStyle' in p).contentStyle as StyleProp<TextStyle>) ?? {};
+  const slop = () => propsWhere((p) => 'contentStyle' in p).hitSlop;
+
+  it('draws 32 tall and makes up the 44pt target above and below', () => {
+    render(<Chip label="Hoàn Kiếm" onPress={() => {}} />);
+    expect(face().minHeight).toBe(CHIP_H);
+    expect(CHIP_H).toBe(32);
+    expect(slop()).toEqual(CHIP_SLOP);
+    expect(CHIP_H + CHIP_SLOP.top + CHIP_SLOP.bottom).toBe(SECONDARY_CONTROL_H);
+  });
+
+  it('is the same 32 when it only shows something, and takes no slop', () => {
+    render(<Chip label="Cà phê" />);
+    expect(face().minHeight).toBe(CHIP_H);
+    expect(slop()).toBeUndefined();
   });
 });

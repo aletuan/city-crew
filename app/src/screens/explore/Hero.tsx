@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitySwitcherModal } from '../../components/CitySwitcher';
-import { PressableScale } from '../../components/ui';
+import { CHIP_SLOP, PressableScale } from '../../components/ui';
 import { useCurrentCity } from '../../lib/city';
 import { useSky } from '../../lib/sky';
 import { dayline } from '../../lib/format';
@@ -172,6 +172,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
         {city ? (
           <PressableScale
             haptic="selection"
+            hitSlop={CHIP_SLOP}
             onPress={() => setSwitcherOpen(true)}
             accessibilityRole="button"
             accessibilityLabel={t('Choose a city', 'Chọn thành phố', '都市を選択', '选择城市', '選擇城市')}
