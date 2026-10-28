@@ -18,7 +18,7 @@ insert into public.cities (id, center_lat, center_lng) values
   ('vungtau',  10.346,  107.0843)
 on conflict (id) do update set center_lat = excluded.center_lat, center_lng = excluded.center_lng;
 
-\ir ../migrations/20261028140000_ninhbinh_centre_tam_coc.sql
+\ir ../migrations/20261028135445_ninhbinh_centre_tam_coc.sql
 
 do $$
 declare c record;
@@ -35,7 +35,7 @@ end $$;
 
 -- The desk moves it somewhere else by hand; the file, run again, leaves that.
 update public.cities set center_lat = 20.24, center_lng = 105.93 where id = 'ninhbinh';
-\ir ../migrations/20261028140000_ninhbinh_centre_tam_coc.sql
+\ir ../migrations/20261028135445_ninhbinh_centre_tam_coc.sql
 
 do $$
 begin

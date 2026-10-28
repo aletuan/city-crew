@@ -342,7 +342,7 @@ function groupAreas(places: Place[]) {
  * Bình's moved to Tam Cốc – Tràng An on 28 Oct 2026, putting its three
  * cafés 1.6–3.2km away; Vũng Tàu's stayed, because the mean of its places
  * is the wetland between the city and Long Hải
- * (`migrations/20261028140000_ninhbinh_centre_tam_coc.sql`).
+ * (`migrations/20261028135445_ninhbinh_centre_tam_coc.sql`).
  *
  * Here rather than in the screen because a rule that lives in a render
  * body is a rule nothing can prove. The version this replaces was one
