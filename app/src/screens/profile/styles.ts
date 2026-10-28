@@ -3,6 +3,7 @@
 // dozen of these, and a copy per part would drift.
 
 import { StyleSheet } from 'react-native';
+import { SECONDARY_CONTROL_H } from '../../components/ui';
 import { colors, font, quoteFace, radius, space, type } from '../../theme';
 
 /**
@@ -171,15 +172,18 @@ export const s = StyleSheet.create({
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceCard, paddingHorizontal: 16, paddingVertical: 8,
     // 44, not the 33 the padding alone made: it is a button.
-    minHeight: 44, justifyContent: 'center',
+    minHeight: SECONDARY_CONTROL_H, justifyContent: 'center',
   },
   editBtnText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
   aboutLabel: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium, lineHeight: CAPTION_LINE },
   aboutValue: { color: colors.text, fontSize: 16, fontWeight: font.regular, lineHeight: 21 },
 
+  // Both on the button scale's 44 (owner, 28 Oct 2026), where padding
+  // alone had made Sign out 46 and Delete 40 in the same footer.
   signOutBtn: {
-    borderRadius: radius.input, paddingVertical: 13, alignItems: 'center', marginTop: 6,
+    minHeight: SECONDARY_CONTROL_H, justifyContent: 'center',
+    borderRadius: radius.input, paddingVertical: 10, alignItems: 'center', marginTop: 6,
     borderWidth: 1, borderColor: colors.borderGlassSoft, backgroundColor: colors.surfaceGlass,
   },
   signOutText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
@@ -188,7 +192,7 @@ export const s = StyleSheet.create({
   deleteBtn: {
     alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    paddingVertical: 11, paddingHorizontal: 20, marginTop: 22,
+    minHeight: SECONDARY_CONTROL_H, paddingVertical: 10, paddingHorizontal: 20, marginTop: 22,
   },
   deleteText: { color: colors.bad, fontSize: 13, fontWeight: font.semibold },
 

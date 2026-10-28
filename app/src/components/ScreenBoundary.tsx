@@ -35,7 +35,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Updates from 'expo-updates';
-import { BackButton, GradientCta, useTabBarClearance } from './ui';
+import { BackButton, GradientCta, SECONDARY_CONTROL_H, useTabBarClearance } from './ui';
 import { I18nProvider, useI18n } from '../lib/i18n';
 import { colors, display } from '../theme';
 
@@ -207,6 +207,6 @@ const s = StyleSheet.create({
   },
   actions: { marginTop: 10, alignItems: 'center', gap: 6 },
   // 44pt tall at the least, like every other thing a finger has to hit.
-  back: { minHeight: 44, paddingHorizontal: 20, justifyContent: 'center' },
+  back: { minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 20, justifyContent: 'center' },
   backText: { fontSize: 15, fontWeight: '600', color: colors.accent },
 });

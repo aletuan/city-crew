@@ -72,7 +72,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, gradAI, space } from '../theme';
-import { PressableScale } from './ui';
+import { CONTROL_H, PressableScale } from './ui';
 import { SwitchRow } from './authUi';
 import { goTo } from '../nav';
 import { launchSettled } from '../lib/launch';
@@ -362,6 +362,7 @@ const s = StyleSheet.create({
 
   // A rounded rectangle, not a pill: at full width a pill's end caps grow
   // with its height and it reads as a lozenge rather than a block to press.
-  primary: { borderRadius: 18, paddingVertical: 17, alignItems: 'center', width: '100%' },
+  primary: { borderRadius: 18, minHeight: CONTROL_H, paddingVertical: 10,
+    alignItems: 'center', justifyContent: 'center', width: '100%' },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
 });

@@ -25,7 +25,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  AmbientWarmth, Avatar, Card, Empty, PressableScale, Screen, useTabBarClearance,
+  AmbientWarmth, Avatar, Card, CONTROL_H, Empty, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
 import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
@@ -349,12 +349,12 @@ const s = StyleSheet.create({
   busy: { opacity: 0.6 },
   yes: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    paddingVertical: 14, borderRadius: radius.pill, backgroundColor: colors.accentFill,
+    minHeight: CONTROL_H, paddingVertical: 10, borderRadius: radius.pill, backgroundColor: colors.accentFill,
   },
   yesText: { color: colors.accentInk, fontSize: 16, fontWeight: font.bold },
   no: {
     alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 14, borderRadius: radius.pill,
+    minHeight: CONTROL_H, paddingVertical: 10, borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
   },
   noText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },

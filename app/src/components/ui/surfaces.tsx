@@ -430,7 +430,7 @@ export const glassHalo = (light: boolean) => ({
  * an 18pt glyph where the others compute `size * 0.4`.
  *
  * `size` has no default, and that is the point. `Face` in the crew list
- * defaulted to 44 — which is exactly `HEADER_CONTROL_H`, and exactly the
+ * defaulted to 44 — which is exactly `SECONDARY_CONTROL_H`, and exactly the
  * geometry of `backBtn` below. A caller has to say how big, so nobody
  * arrives at a button's diameter by not deciding.
  *

@@ -32,7 +32,8 @@ import { FieldRow, PrimaryButton } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
 import {
-  Avatar, Card, EmptyState, GradientCta, PressableScale, RoundIconButton, Screen, successHaptic, UnderlineTabs, useTabBarClearance,
+  Avatar, Card, CHIP_H, CHIP_SLOP, EmptyState, GradientCta, PressableScale, RoundIconButton,
+  Screen, SECONDARY_CONTROL_H, successHaptic, UnderlineTabs, useTabBarClearance,
 } from '../components/ui';
 import { useSession } from '../lib/auth';
 import {
@@ -679,7 +680,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                               it: there is no heading there to say it. */}
                           {p ? <Text style={s.meta} numberOfLines={1}>{atHandle(p.handle)}</Text> : null}
                         </View>
-                        <PressableScale contentStyle={s.quietBtn} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
+                        <PressableScale contentStyle={s.quietBtn} hitSlop={CHIP_SLOP} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
                           <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す', '取消', '取消')}</Text>
                         </PressableScale>
                       </View>
@@ -718,6 +719,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         </View>
                         <PressableScale
                           onPress={() => askSuggested(sg.other)}
+                          hitSlop={CHIP_SLOP}
                           scaleTo={0.94}
                           style={pending.has(sg.other) ? s.working : undefined}
                           disabled={pending.has(sg.other)}
@@ -850,6 +852,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         </View>
                         <PressableScale
                           contentStyle={s.quietBtn}
+                          hitSlop={CHIP_SLOP}
                           style={pending.has(id) ? s.working : undefined}
                           onPress={() => confirmUnblock(known(id))}
                           disabled={pending.has(id)}
@@ -880,6 +883,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     </Text>
                     <PressableScale
                       contentStyle={s.quietBtn}
+                      hitSlop={CHIP_SLOP}
                       onPress={() => blocks.reload()}
                       accessibilityRole="button"
                       testID="crew-blocks-retry"
@@ -928,12 +932,13 @@ const s = StyleSheet.create({
   working: { opacity: 0.5 },
   accept: {
     flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center',
-    borderRadius: radius.pill, paddingVertical: 11,
+    minHeight: SECONDARY_CONTROL_H, borderRadius: radius.pill, paddingVertical: 10,
   },
   acceptText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
   decline: {
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill, paddingVertical: 11,
+    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
+    minHeight: SECONDARY_CONTROL_H, paddingVertical: 10,
   },
   declineText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.semibold },
 
@@ -952,7 +957,7 @@ const s = StyleSheet.create({
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9,
+    minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6,
     backgroundColor: colors.surfaceGlass,
   },
   addText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
@@ -961,7 +966,7 @@ const s = StyleSheet.create({
   // quiet outline: neither is a thing to encourage, both must be easy.
   quietBtn: {
     borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
-    paddingHorizontal: 14, paddingVertical: 8,
+    minHeight: CHIP_H, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 6,
   },
   quietText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
 });

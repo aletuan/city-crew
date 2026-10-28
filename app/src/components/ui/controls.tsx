@@ -9,7 +9,7 @@ import { useI18n } from '../../lib/i18n';
 import { moreToTheRight, peekGap, rowWidth, type PeekRow } from '../../lib/peek';
 import { useScheme } from '../../lib/theme';
 import { bgHex, type Color, colors, font, gradAI, labelScaleCap, radius, space } from '../../theme';
-import { CONTROL_H, useNarrowWindow } from './layout';
+import { CHIP_H, CHIP_SLOP, CONTROL_H, SECONDARY_CONTROL_H, useNarrowWindow } from './layout';
 import { type HapticKind, fireHaptic } from './haptics';
 import { useReducedMotion, useLoop } from './motion';
 
@@ -96,7 +96,12 @@ export function Chip({ label, count, active, onPress, icon, iconColor, testID }:
       onPress={onPress}
       haptic="selection"
       scaleTo={0.94}
-      contentStyle={[s.chip, onPress && s.chipTap, active && s.chipOn]}
+      contentStyle={[s.chip, active && s.chipOn]}
+      // Only a chip that does something is a target, and a target is 44pt.
+      // It used to draw itself 44 tall to be one; it draws `CHIP_H`, the
+      // display-only chip's height too, and reaches the rest with the
+      // slop (owner, 28 Oct 2026: the button scale in `layout.tsx`).
+      hitSlop={onPress ? CHIP_SLOP : undefined}
       accessibilityRole={onPress ? 'button' : undefined}
       aria-selected={onPress ? !!active : undefined}
       testID={testID}
@@ -694,12 +699,8 @@ const s = StyleSheet.create({
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
-    paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,
+    minHeight: CHIP_H, paddingHorizontal: 14, paddingVertical: 6, marginRight: 8,
   },
-  // Only a chip that does something is a target, and a target is 44pt —
-  // it measured 31 drawn from padding alone. A display-only chip keeps
-  // the padding's height, so a row of facts does not swell into buttons.
-  chipTap: { minHeight: 44 },
   // Selected control carries the accent — same rule as the language pill.
   chipOn: { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
   chipText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
@@ -809,7 +810,8 @@ const s = StyleSheet.create({
   // ever drawn at 44 next to one of these, which is why `Avatar` refuses
   // to have a default size.
   backBtn: {
-    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+    width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, borderRadius: SECONDARY_CONTROL_H / 2,
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass,
   },
 });

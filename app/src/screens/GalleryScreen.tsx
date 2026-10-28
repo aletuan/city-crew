@@ -43,7 +43,9 @@ import type { SheetAction } from '../components/ActionSheet';
 import PhotoSheet from '../components/PhotoSheet';
 import { AddPill } from '../components/add';
 import { ScoreBadge, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
-import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
+import {
+  Card, Empty, PressableScale, Screen, SECONDARY_CONTROL_H, successHaptic, useTabBarClearance,
+} from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
@@ -358,7 +360,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       // the rule `AddPill` states.
       right={mode === 'view' ? (
         <AddPill
-          tall
           quiet
           label={t('Add', 'Thêm', '追加', '添加', '新增')}
           busy={adder.busy}
@@ -589,7 +590,7 @@ const s = StyleSheet.create({
   tools: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   tool: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    minHeight: 36, paddingHorizontal: 13,
+    minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 13,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceGlass,
     borderWidth: 1, borderColor: colors.borderGlassSoft,

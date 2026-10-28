@@ -45,7 +45,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { AddPill } from '../components/add';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, Skeleton,
+  useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { holdResume } from '../lib/resume';
@@ -467,7 +468,6 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       // the height are the ones every other tab uses.
       right={trips.data.length > 0 ? (
         <AddPill
-          tall
           quiet
           label={t('New', 'Tạo mới', '新規', '新建', '新增')}
           onPress={() => navigation.getParent()?.navigate('Ideas')}
@@ -755,7 +755,7 @@ const s = StyleSheet.create({
   },
   guestHint: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
   guestReturning: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginHorizontal: space.page, marginBottom: space.titleToContent },
-  guestSignIn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 },
+  guestSignIn: { minHeight: SECONDARY_CONTROL_H, justifyContent: 'center', paddingHorizontal: 6 },
   guestSignInText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold, textAlign: 'center' },
 
 });

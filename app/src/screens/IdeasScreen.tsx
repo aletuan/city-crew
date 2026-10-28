@@ -26,8 +26,8 @@ import { Image } from 'expo-image';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import StartSheet, { Start } from '../components/StartSheet';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, Screen, SelectTick, Tile, TileGrid,
-  useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, SelectTick, Tile,
+  TileGrid, useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import IdeasHeaderArt from '../components/IdeasHeaderArt';
@@ -584,7 +584,7 @@ export default function IdeasScreen({ navigation, route }: {
                       onPress={() => set('when', key)}
                       haptic="selection"
                       scaleTo={0.96}
-                      hitSlop={{ top: 3, bottom: 3 }}
+                      hitSlop={SEG_SLOP}
                       contentStyle={[s.segItem, on && s.segItemOn]}
                       accessibilityRole="radio"
                       aria-checked={on}
@@ -943,6 +943,11 @@ export default function IdeasScreen({ navigation, route }: {
   );
 }
 
+/** The Day / Evening track's padding and border, which its halves sit inside. */
+const SEG_PAD = 3;
+const SEG_BORDER = 1;
+const SEG_SLOP = { top: SEG_PAD + SEG_BORDER, bottom: SEG_PAD + SEG_BORDER };
+
 const s = StyleSheet.create({
   // The quote face the Profile footer wears, sized for a lede, in the
   // title's own column — so no page padding of its own. The 24pt line,
@@ -973,15 +978,17 @@ const s = StyleSheet.create({
   // recessed ground so the pair reads as a single switch rather than as
   // two buttons that happen to be adjacent.
   segment: {
-    flexDirection: 'row', padding: 3,
+    flexDirection: 'row', padding: SEG_PAD,
     borderRadius: radius.pill, backgroundColor: colors.bg,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderWidth: SEG_BORDER, borderColor: colors.borderGlassSoft,
   },
-  // 38 drawn, inside the track's 3pt padding, and the slop takes each half
-  // the 3pt above and below it: a 44pt target without a 52pt track. It
-  // measured 29 from padding alone.
+  // The track stands at `SECONDARY_CONTROL_H`, the button scale's 44
+  // (owner, 28 Oct 2026; it was 46 with a 38 inside), and each half is the
+  // 36 left inside its padding and hairline. The slop reaches back out to
+  // the track's edge, so each half is still a 44pt target. It measured 29
+  // from padding alone.
   segItem: {
-    minHeight: 38, paddingHorizontal: 14, paddingVertical: 6,
+    minHeight: SECONDARY_CONTROL_H - 2 * (SEG_PAD + SEG_BORDER), paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
   },
   segItemOn: { backgroundColor: colors.accentSoft },

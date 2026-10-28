@@ -12,7 +12,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { PressableScale, SelectTick } from './ui';
+import { CHIP_H, CHIP_SLOP, PressableScale, SelectTick } from './ui';
 import { ItemState, locksRow } from '../lib/batch';
 import type { Candidate, Known } from '../lib/suggest';
 import { useI18n } from '../lib/i18n';
@@ -113,7 +113,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
       </View>
 
       {openable ? (
-        <PressableScale onPress={() => onOpen(openable)} scaleTo={0.94} contentStyle={s.viewBtn}>
+        <PressableScale onPress={() => onOpen(openable)} scaleTo={0.94} hitSlop={CHIP_SLOP} contentStyle={s.viewBtn}>
           <Text style={s.viewText}>{t('View', 'Xem', '見る', '查看', '檢視')}</Text>
         </PressableScale>
       ) : mine || locksRow(item) ? null : busy ? (
@@ -163,7 +163,7 @@ const s = StyleSheet.create({
   subLive: { color: colors.ok, fontWeight: font.medium },
 
   viewBtn: {
-    paddingHorizontal: 14, paddingVertical: 8,
+    minHeight: CHIP_H, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceCard,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,

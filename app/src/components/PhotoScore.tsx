@@ -16,7 +16,7 @@ import { bothSources, kindNoun, type PhotoKind } from '../lib/photoKind';
 import { percentText } from '../lib/standing';
 import { useI18n } from '../lib/i18n';
 import { type Color, colors, display, font, onPhoto, radius, space } from '../theme';
-import { Card, PressableScale, useReducedMotion } from './ui';
+import { Card, PressableScale, SECONDARY_CONTROL_H, useReducedMotion } from './ui';
 
 /**
  * Each bar's travel, as shares of the glyph's height, and how long one
@@ -602,7 +602,7 @@ const s = StyleSheet.create({
   fill: { height: 6, borderRadius: 3, backgroundColor: colors.accentFill },
   dialogNote: { color: colors.textTertiary, fontSize: 13, textAlign: 'center' },
   dialogCancel: {
-    marginTop: 4, height: 40, paddingHorizontal: 22, borderRadius: radius.pill,
+    marginTop: 4, minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 22, borderRadius: radius.pill,
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlassStrong,
   },
   dialogCancelText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },

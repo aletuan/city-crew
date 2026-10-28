@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { BackButton, CONTROL_H, fireHaptic, HEADER_CONTROL_H, PressableScale, useTabBarClearance } from './ui';
+import { BackButton, CONTROL_H, fireHaptic, PressableScale, SECONDARY_CONTROL_H, useTabBarClearance } from './ui';
 import { useI18n } from '../lib/i18n';
 import { PASSWORD_MIN, passwordStrength } from '../lib/password';
 import { sentenceCase, type AuthFail } from '../lib/authfail';
@@ -692,7 +692,7 @@ const s = StyleSheet.create({
   title: { flex: 1, color: colors.text, ...type.titleDetail, paddingTop: 7 },
   // The back control's circle, on the other side of the title.
   headerAction: {
-    width: HEADER_CONTROL_H, height: HEADER_CONTROL_H, borderRadius: HEADER_CONTROL_H / 2,
+    width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, borderRadius: SECONDARY_CONTROL_H / 2,
     alignItems: 'center', justifyContent: 'center',
   },
   headerActionOn: { backgroundColor: colors.accentFill },

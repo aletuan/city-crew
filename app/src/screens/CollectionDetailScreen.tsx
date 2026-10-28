@@ -1895,7 +1895,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         />
         {owned ? (
           <AddPill
-            tall
             label={t('Place', 'Địa điểm', 'スポット', '地点', '地點')}
             accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
             onPress={addPlace}
@@ -1903,7 +1902,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           />
         ) : copyCityId ? (
           <AddPill
-            tall
             icon="duplicate-outline"
             label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
             onPress={copy}

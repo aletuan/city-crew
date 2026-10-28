@@ -22,7 +22,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import { loadFailStale, loadFailText, type LoadFail } from '../lib/loadfail';
 import { colors, font, radius, space, type } from '../theme';
-import { PressableScale } from './ui';
+import { CHIP_H, PressableScale, SECONDARY_CONTROL_H } from './ui';
 
 const ICON: Record<LoadFail, keyof typeof Ionicons.glyphMap> = {
   offline: 'cloud-offline-outline',
@@ -99,7 +99,7 @@ const s = StyleSheet.create({
   },
   bannerText: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
   retryPill: {
-    paddingHorizontal: 12, minHeight: 32, justifyContent: 'center',
+    paddingHorizontal: 12, minHeight: CHIP_H, justifyContent: 'center',
     borderRadius: radius.pill, backgroundColor: colors.bgElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
@@ -111,7 +111,7 @@ const s = StyleSheet.create({
   emptyText: { color: colors.textTertiary, ...type.meta, textAlign: 'center' },
   retry: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    minHeight: 44, paddingHorizontal: 18,
+    minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 18,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceGlassStrong,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
