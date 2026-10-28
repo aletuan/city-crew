@@ -192,16 +192,14 @@ export function shrunk(rating: number, count: number, mean: number, m: number): 
  * Does not mutate: the catalog's array is shared with everything else
  * that reads it.
  *
- * ── one branch per chain at the head ──
+ * ── a chain's branches, spaced ──
  *
  * With the prior at 50 the head of Hanoi's Eats was four branches of
  * Pizza 4P's, each 4.9 from tens of thousands of reviews: a chain the
- * reader meets once, shown four times before anything else. So each brand
- * (`brandKey`) keeps its best branch where the score puts it, and its
- * other branches follow every brand's first, in their own order. They
- * stay on the list — a reader who wants the Tràng Tiền one still finds
- * it — just not in place of four other kitchens. A place with no name to
- * judge by is its own brand.
+ * reader meets once, shown four times before anything else. So two
+ * branches of one brand (`brandKey`) stand at least `BRAND_GAP` places
+ * apart; see there for the number and the two rules it replaced. A place
+ * with no name to judge by is its own brand.
  */
 export function bestFirst<T extends Rated>(
   places: readonly T[], taste?: Affinity<T> | null,
@@ -228,19 +226,48 @@ export function bestFirst<T extends Rated>(
   return spreadBrands(ranked);
 }
 
-/** Each brand's best branch where it ranked; its other branches after
- *  every brand's first, still in rank order. See `bestFirst`. */
+/**
+ * How many other places stand between two branches of one chain.
+ *
+ * Ten, measured on Hanoi's Eats (199 places, 28 Oct 2026), where Pizza
+ * 4P's ranks 1, 2, 3 and 5 on score alone. Spaced by ten its branches
+ * stand 1, 12, 23 and 34, and the top ten are ten different kitchens.
+ * Five leaves a branch at 7, inside the first ten; twenty changes nothing
+ * at the head and only pushes the later branches further down. Ten cards
+ * are six or seven swipes on this screen — far enough that the name no
+ * longer reads as the one just passed.
+ *
+ * Two rules came before it, both measured on the same list and both worse:
+ *
+ * - Every brand's first, then all repeats (#1208). The Running Bean's
+ *   Nhà Thờ branch, 4.8 from 4,282, fell
+ *   from its own 34th to 184th — buried for sharing a name, not for
+ *   anything about it. Spaced, it stands at 32.
+ * - A score charge per repeated branch. The top thirty are 0.06 apart, so
+ *   even 0.05 threw the same branch to 64th, and how far it throws depends
+ *   on each city's spread. A gap in places is the same ten everywhere.
+ *
+ * A branch only ever moves down from its score's place, never up; and
+ * near the end, when nothing else is left, the next branch is taken
+ * anyway, so the list never loses a place.
+ */
+export const BRAND_GAP = 10;
+
+/** The ranked list with each brand's branches `BRAND_GAP` places apart:
+ *  at each place, the best-ranked place whose brand is not among the
+ *  last `BRAND_GAP` taken, else the best-ranked left. */
 function spreadBrands<T extends Rated>(ranked: T[]): T[] {
-  const seen = new Set<string>();
-  const firsts: T[] = [];
-  const repeats: T[] = [];
-  for (const p of ranked) {
-    const brand = brandKey(p.name_en);
-    if (brand !== '' && seen.has(brand)) repeats.push(p);
-    else {
-      firsts.push(p);
-      if (brand !== '') seen.add(brand);
-    }
+  const left = ranked.map((p) => ({ p, brand: brandKey(p.name_en) }));
+  const lastAt = new Map<string, number>();
+  const out: T[] = [];
+  while (left.length) {
+    const free = left.findIndex(({ brand }) => {
+      const at = lastAt.get(brand);
+      return brand === '' || at === undefined || out.length - at > BRAND_GAP;
+    });
+    const [{ p, brand }] = left.splice(free < 0 ? 0 : free, 1);
+    if (brand !== '') lastAt.set(brand, out.length);
+    out.push(p);
   }
-  return [...firsts, ...repeats];
+  return out;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestFirst, RATING_PRIOR, shrunk, TASTE_LIFT, type Rated } from './rank';
+import { bestFirst, BRAND_GAP, RATING_PRIOR, shrunk, TASTE_LIFT, type Rated } from './rank';
 
 // 5000 is about p90 of the real catalog. The default matters now that the
 // score is shrunk toward the catalog mean: at a count of zero every place
@@ -207,24 +207,53 @@ describe('how much evidence a high score needs', () => {
   });
 });
 
-describe('one branch per chain at the head', () => {
+describe('a chain’s branches, spaced', () => {
   const named = (slug: string, name: string | null, rating: number) =>
     ({ slug, name_en: name, rating, rating_count: 5000 });
+  // Twelve other kitchens, each a little below the last, so the score
+  // order is plain and only the gap can move a branch.
+  const others = Array.from({ length: 12 }, (_, i) => named(`k${i}`, `Kitchen ${i}`, 4.85 - i * 0.01));
 
-  it('keeps a chain’s best branch in place and puts the rest after every first', () => {
+  it('puts a second branch BRAND_GAP places after the first, not straight under it', () => {
     const order = bestFirst([
-      named('p4-bao-khanh', "Pizza 4P's – Bảo Khánh", 4.9),
-      named('p4-trang-tien', "Pizza 4P's – Tràng Tiền", 4.9),
-      named('pho-inn', 'Phở Inn', 4.8),
-      named('p4-centre', "Pizza 4P's – Hanoi Centre", 4.7),
-      named('bun-cha', 'Bún Chả Hương Liên', 4.5),
+      named('p4-a', "Pizza 4P's – Bảo Khánh", 4.9),
+      named('p4-b', "Pizza 4P's – Tràng Tiền", 4.9),
+      ...others,
     ]).map((x) => x.slug);
-    // Repeats keep their own order among themselves, after the firsts.
-    expect(order).toEqual(['p4-bao-khanh', 'pho-inn', 'bun-cha', 'p4-trang-tien', 'p4-centre']);
+    expect(BRAND_GAP).toBe(10);
+    expect(order[0]).toBe('p4-a');
+    expect(order.indexOf('p4-b')).toBe(BRAND_GAP + 1);
+    // Ten others between them, in their own order.
+    expect(order.slice(1, BRAND_GAP + 1)).toEqual(others.slice(0, BRAND_GAP).map((x) => x.slug));
   });
 
-  // Every unnamed place is its own brand; grouping them would push all
-  // but one to the end for having nothing in common.
+  // The gap only ever pushes a branch down. One whose score already puts
+  // it further away than the gap stays exactly where its score put it.
+  it('leaves a branch alone when its score already keeps it far enough away', () => {
+    const order = bestFirst([
+      named('rb-a', 'The Running Bean – Ngô Thì Nhậm', 4.9),
+      ...others,
+      named('rb-b', 'The Running Bean – Nhà Thờ', 4.745),
+    ]).map((x) => x.slug);
+    // Its score puts it 13th, between the eleventh and twelfth kitchens —
+    // past the gap, so it stays there rather than going to the end.
+    expect(order.indexOf('rb-b')).toBe(12);
+    expect(order[13]).toBe('k11');
+  });
+
+  // Nothing else left to put between them: the list keeps every place.
+  it('takes the next branch anyway once nothing else is left', () => {
+    const order = bestFirst([
+      named('p4-a', "Pizza 4P's – Bảo Khánh", 4.9),
+      named('p4-b', "Pizza 4P's – Tràng Tiền", 4.9),
+      named('pho-inn', 'Phở Inn', 4.8),
+      named('p4-c', "Pizza 4P's – Hanoi Centre", 4.7),
+    ]).map((x) => x.slug);
+    expect(order).toEqual(['p4-a', 'pho-inn', 'p4-b', 'p4-c']);
+  });
+
+  // Every unnamed place is its own brand; grouping them would space out
+  // places that have nothing in common.
   it('treats a place with no name as nobody’s branch', () => {
     const order = bestFirst([
       named('a', null, 4.9), named('b', null, 4.8), named('c', 'Cộng Cà Phê', 4.7),
