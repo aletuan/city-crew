@@ -21,13 +21,30 @@ env:
 - tapOn:
     id: "collection-card-0"
 
-# The collection's own page: its places, as cards.
+# The detail view has a separate persisted layout. Choose Grid explicitly;
+# its tiles use collection-tile-* rather than the list's collection-place-*.
 - extendedWaitUntil:
     visible:
-      id: "collection-place-0"
+      id: "collection-more"
     timeout: 20000
 - tapOn:
-    id: "collection-place-0"
+    id: "collection-more"
+- extendedWaitUntil:
+    visible:
+      id: "collection-menu-grid"
+    timeout: 10000
+- tapOn:
+    id: "collection-menu-grid"
+- extendedWaitUntil:
+    notVisible:
+      id: "collection-menu-grid"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "collection-tile-0"
+    timeout: 20000
+- tapOn:
+    id: "collection-tile-0"
 - extendedWaitUntil:
     visible:
       id: "detail-name"
@@ -40,7 +57,7 @@ env:
     id: "detail-back"
 - extendedWaitUntil:
     visible:
-      id: "collection-place-0"
+      id: "collection-tile-0"
     timeout: 10000
 - tapOn:
     id: "collection-back"

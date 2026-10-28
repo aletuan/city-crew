@@ -143,6 +143,10 @@ env:
 
 # Add a place: the first one on Explore, through its bookmark. A place a
 # failed 06 left saved shows `detail-saved`; either state opens the sheet.
+# After the create/edit navigation, iOS can expose an empty accessibility
+# tree for SaveSheet even though it is drawn. Reopen before that modal;
+# the persisted collection and signed-in session survive the restart.
+- runFlow: common/start.yaml
 - tapOn:
     id: "tab-explore"
 - extendedWaitUntil:
@@ -174,19 +178,38 @@ env:
     id: "collections-yours"
 - scrollUntilVisible:
     element:
-      text: "Maestro CRUD 2"
+      # A populated grid card groups its title and visibility in one label.
+      text: "Maestro CRUD 2(,.*)?"
     direction: UP
     timeout: 15000
 - tapOn:
-    text: "Maestro CRUD 2"
+    text: "Maestro CRUD 2(,.*)?"
+# Detail layout is remembered per reader. Select Grid explicitly so both
+# the presence and removal checks address the visible tile, not a list card.
 - extendedWaitUntil:
     visible:
-      id: "collection-place-0"
+      id: "collection-more"
+    timeout: 15000
+- tapOn:
+    id: "collection-more"
+- extendedWaitUntil:
+    visible:
+      id: "collection-menu-grid"
+    timeout: 10000
+- tapOn:
+    id: "collection-menu-grid"
+- extendedWaitUntil:
+    notVisible:
+      id: "collection-menu-grid"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "collection-tile-0"
     timeout: 15000
 
 # Take it out again, from the place's own page inside the collection.
 - tapOn:
-    id: "collection-place-0"
+    id: "collection-tile-0"
 - extendedWaitUntil:
     visible:
       id: "detail-saved"
@@ -204,7 +227,7 @@ env:
     timeout: 10000
 - extendedWaitUntil:
     notVisible:
-      id: "collection-place-0"
+      id: "collection-tile-0"
     timeout: 10000
 
 # And delete the list itself: back on Yours, and gone from it.

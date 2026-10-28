@@ -272,7 +272,7 @@ function TripCard({ trip, past, onPress, testID }: {
 function FirstTrip({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
-    <View style={s.first}>
+    <View style={s.first} testID="trips-empty">
       <View style={s.firstIcon}>
         <Ionicons name="map" size={27} color={colors.accent} />
       </View>
@@ -498,6 +498,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
 
       {trips.loaded && !(tripsFail && trips.data.length === 0) && (
         <ScrollView
+          testID={!trips.loading && !trips.fromCache && !trips.error && invites.loaded && !invites.loading && !invites.error ? 'trips-ready' : undefined}
           ref={scrollRef}
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}

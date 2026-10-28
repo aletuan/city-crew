@@ -324,6 +324,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           icon="mail-outline"
           label={t('Email', 'Email', 'メール', '邮箱', '電子郵件')}
           value={email ?? ''}
+          valueTestID="profile-email"
         />
         {profile.location ? (
           <AboutRow

@@ -954,7 +954,7 @@ export default function CollectionsScreen({ navigation, route }: {
       <UnderlineTabs
         tabs={[
           { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours' },
-          { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
+          { key: 'community', testID: floating ? undefined : 'collections-community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
         ]}
         active={tab}
         onChange={pickTab}
@@ -1195,6 +1195,7 @@ export default function CollectionsScreen({ navigation, route }: {
         )}
         {!holding && !(colsFail && cols.data.length === 0) && (
           <SectionList
+            testID={cols.loaded && !cols.loading && !cols.fromCache && !cols.error && placesLoaded && !placesLoading ? 'collections-ready' : undefined}
             ref={scrollRef}
             sections={sections}
             keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}

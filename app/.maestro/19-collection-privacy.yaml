@@ -1,0 +1,75 @@
+# A owns one populated private list. B is a friend, never its owner.
+# Cold starts and direct unfiltered reads distinguish RLS from UI filtering/cache.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-guest.yaml
+- runScript:
+    file: scripts/assert-collection.js
+    env:
+      MODE: private
+- runFlow: common/search-public-fixture.yaml
+- assertNotVisible:
+    id: "collection-card-0"
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-owner.yaml
+- runFlow: common/open-privacy-collection.yaml
+- tapOn:
+    id: "collection-visibility"
+- tapOn:
+    id: "sheet-action-public"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-public"
+    timeout: 10000
+- runFlow: common/start.yaml
+- runScript:
+    file: scripts/assert-collection.js
+    env:
+      MODE: public
+- runFlow: common/sign-in-trip-guest.yaml
+- runFlow: common/search-public-fixture.yaml
+- extendedWaitUntil:
+    visible:
+      id: "collection-card-0"
+    timeout: 20000
+- tapOn:
+    id: "collection-card-0"
+- assertVisible:
+    text: ${FIXTURE_privacyTitle}
+- assertNotVisible:
+    id: "collection-visibility"
+- tapOn:
+    id: "collection-more"
+# Establish that the menu really opened before checking absent owner controls.
+- extendedWaitUntil:
+    visible:
+      id: "collection-menu-grid"
+    timeout: 10000
+- assertNotVisible:
+    id: "collection-menu-edit"
+- assertNotVisible:
+    id: "collection-menu-delete"
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-owner.yaml
+- runFlow: common/open-privacy-collection.yaml
+- tapOn:
+    id: "collection-visibility"
+- tapOn:
+    id: "sheet-action-private"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-private"
+    timeout: 10000
+- runFlow: common/start.yaml
+- runScript:
+    file: scripts/assert-collection.js
+    env:
+      MODE: private
+- runFlow: common/sign-in-trip-guest.yaml
+- runFlow: common/search-public-fixture.yaml
+- assertNotVisible:
+    id: "collection-card-0"
+# Runner deletes both generated accounts and their owned data even on failure.

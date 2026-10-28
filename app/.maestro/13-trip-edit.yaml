@@ -12,26 +12,15 @@
 # The hours are read off the screen rather than assumed — the planner's
 # start depends on the clock — and carried in `output`. Saved trips have
 # no editor (only invites and delete), so the edit is the plan's, before
-# Save. Every upcoming trip is deleted first, as in 05, and this one at
-# the end.
+# Save. A unique run-owned account starts empty; only the created trip
+# is deleted at the end.
 appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
 ---
 - runFlow: common/start.yaml
-- runFlow: common/ensure-signed-in.yaml
-
-# Leftovers from a run that failed half way.
-- tapOn:
-    id: "tab-trips"
-- waitForAnimationToEnd:
-    timeout: 5000
-- repeat:
-    while:
-      visible:
-        id: "trip-upcoming-0"
-    commands:
-      - runFlow: common/delete-first-trip.yaml
+- runFlow: common/sign-in-trip-owner.yaml
+- runFlow: common/assert-trips-empty.yaml
 
 # The wizard, as in 05.
 - tapOn:
@@ -101,8 +90,14 @@ env:
     timeout: 60000
 
 # The saved trip wears the edited hour.
+- runFlow: common/dismiss-review.yaml
 - tapOn:
     id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-stop-time-0"
+    direction: DOWN
+    timeout: 20000
 - extendedWaitUntil:
     visible:
       id: "trip-stop-time-0"
@@ -119,26 +114,26 @@ env:
     timeout: 30000
 - tapOn:
     id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-stop-time-0"
+    direction: DOWN
+    timeout: 20000
 - extendedWaitUntil:
     visible:
       id: "trip-stop-time-0"
       text: ${output.after}
     timeout: 20000
 
-# Delete it, from the page already open.
-- scrollUntilVisible:
-    element:
-      id: "trip-delete"
-    direction: DOWN
-    timeout: 20000
-- scroll
+# Cold start back to the single fixture trip, then guarded UI cleanup.
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-owner.yaml
 - tapOn:
-    id: "trip-delete"
-- tapOn:
-    text: "Delete|Xoá|削除"
+    id: "tab-trips"
 - extendedWaitUntil:
     visible:
-      id: "tab-trips"
-    timeout: 15000
-- assertNotVisible:
-    id: "trip-upcoming-0"
+      id: "trips-ready"
+    timeout: 30000
+- runFlow: common/delete-first-trip.yaml
+- runFlow: common/assert-trips-empty.yaml
+- runFlow: common/ensure-signed-out.yaml

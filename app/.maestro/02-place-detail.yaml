@@ -29,8 +29,19 @@ env:
     timeout: 20000
 - assertVisible:
     id: "detail-photo"
+# Live places can have a long Highlights section above the address.
+- scrollUntilVisible:
+    element:
+      id: "detail-address"
+    direction: DOWN
+    timeout: 30000
 - assertVisible:
     id: "detail-address"
+- scrollUntilVisible:
+    element:
+      id: "detail-back"
+    direction: UP
+    timeout: 30000
 - tapOn:
     id: "detail-back"
 - extendedWaitUntil:

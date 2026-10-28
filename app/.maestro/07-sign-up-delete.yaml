@@ -1,53 +1,12 @@
-# Sign up as a brand-new, throwaway account, then delete it from inside
-# the app. The App Store's in-app account-deletion requirement (5.1.1(v))
-# has no flow covering it otherwise, and vitest cannot reach it either —
-# it needs the real SignUpScreen wizard, a real Supabase account, and the
-# `delete-account` edge function actually running.
-#
-# NOT RUN BY `npm run smoke:ios` — deliberately left out of config.yaml.
-# The password/confirm fields carry autoComplete="new-password", which
-# makes iOS pop its own "Use Strong Password?" panel the moment the
-# password field is focused. That panel is a separate process from the
-# app: a real run's own screen-hierarchy dump at the exact failing step
-# has no trace of it (only app elements show up), and Maestro's own
-# screenshot at that step doesn't render it either — so it cannot be
-# selected by id, matched by text, or asserted on at all. Three fixes
-# were tried for real on a device and all three failed: retyping the
-# password twice, waiting then erasing and retyping, and hideKeyboard
-# then re-tapping the field. A fourth (tapping the panel's own "Fill
-# Strong Password" button by text) failed the same way, for the same
-# reason: `Element not found`, confirmed against the hierarchy dump.
-# This is a Maestro/XCUITest limitation on iOS, not a bug in the app or
-# in this flow. Coverage for 5.1.1(v) is manual QA once per release
-# instead — see the checklist in GUIDELINES.md. Revisit only if Maestro
-# gains a way to interact with system-owned panels, or if there turns
-# out to be a reliable way to turn this suggestion off for the whole
-# simulator (Settings → Passwords → Password Options) without touching
-# the app's own AutoFill behaviour for real users.
-#
-# The steps below are still exactly what a person (or a future flow)
-# should do by hand, kept for reference:
-#
-# The account is disposable by construction: Maestro's own
-# `inputRandomPersonName` / `inputRandomEmail` give it a name and address
-# nobody chose and nothing else here reuses, created in this run and
-# deleted before it ends. It never touches the dedicated ${TEST_EMAIL}
-# account the other signed-in flows share, and needs no setup by hand.
-#
-# Assumes email confirmation is off (`mailer_autoconfirm` — see
-# lib/signup.ts, "this project's configuration today"), so `signUp` lands
-# straight on the taste picker with a session already made. If that is
-# ever turned on, sign-up stops at "Check your email" instead, and this
-# flow has no inbox to read a code from — it fails there on a timeout
-# rather than doing something wrong quietly.
-#
-# If a run dies after the account exists and before it is deleted, it is
-# an orphan: a Supabase-side sweep for it is still on the list (see
-# GUIDELINES.md).
+# Lifecycle smoke: create a unique account without email verification,
+# prove the session survives a cold start, delete it through the UI,
+# and prove its credentials can no longer sign in.
+# Run via smoke.sh: it supplies SIGNUP_* and cleans up even after failures.
 appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
 ---
+- runFlow: common/signup-ios-prep.yaml
 - runFlow: common/start.yaml
 - runFlow: common/ensure-signed-out.yaml
 - tapOn:
@@ -68,19 +27,31 @@ env:
 # failing the account into existence (see `handle_new_user`).
 - tapOn:
     id: "signup-name"
-- inputRandomPersonName
+- inputText: ${SIGNUP_NAME}
 - tapOn:
     id: "signup-email"
-- inputRandomEmail
+- inputText: ${SIGNUP_EMAIL}
 - tapOn:
     id: "signup-password"
-- inputText: "Maestro-smoke-1"
+- inputText: ${SIGNUP_PASSWORD}
+# Finish the first field before focusing the second: the keyboard can
+# move the form and consume the first tap, appending both inputs above.
+- pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "signup-confirm"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
 - tapOn:
     id: "signup-confirm"
-- inputText: "Maestro-smoke-1"
-- hideKeyboard
+- inputText: ${SIGNUP_PASSWORD}
+- pressKey: Enter
 - tapOn:
-    id: "signup-submit"
+    text: "Not Now"
+    optional: true
 
 # Taste picker: skip it, the same real answer a reader who has not
 # decided yet gets to give. TastePicker's grid can push "Skip for now"
@@ -108,6 +79,17 @@ env:
 - tapOn:
     id: "signup-welcome-continue"
 
+# A real session exists immediately, without an emailed code.
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-sign-out"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+
 # Delete it, from the same screen the persistent account's owner would
 # use — see DeleteAccountScreen.tsx for why this is one screen and one
 # button rather than a second confirmation. Reached via a mid-page tap on
@@ -122,6 +104,10 @@ env:
     timeout: 20000
 - tapOn:
     id: "profile-delete-account"
+- extendedWaitUntil:
+    visible:
+      text: ${SIGNUP_NAME}
+    timeout: 15000
 - scrollUntilVisible:
     element:
       id: "delete-account-confirm"
@@ -131,9 +117,44 @@ env:
 - tapOn:
     id: "delete-account-confirm"
 
-# The account and its session are gone; Profile falls back to the guest
-# view on its own, with no separate sign-out to do.
+# Wait for deletion to leave this screen, then recover Profile's scroll
+# position: its guest sign-in button is at the top, not the old footer.
+- extendedWaitUntil:
+    notVisible:
+      id: "delete-account-confirm"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "profile-sign-in"
+    direction: UP
+    centerElement: true
+    timeout: 20000
+
+# Guest UI alone could also mean sign-out. The deleted account must be
+# rejected by authentication, and remain a guest after another cold start.
+- tapOn:
+    id: "profile-sign-in"
+- extendedWaitUntil:
+    visible:
+      id: "signin-email"
+    timeout: 15000
+- tapOn:
+    id: "signin-email"
+- inputText: ${SIGNUP_EMAIL}
+- tapOn:
+    id: "signin-password"
+- inputText: ${SIGNUP_PASSWORD}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "auth-error"
+    timeout: 15000
+- assertVisible:
+    id: "signin-email"
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-profile"
 - extendedWaitUntil:
     visible:
       id: "profile-sign-in"
-    timeout: 20000
+    timeout: 15000
