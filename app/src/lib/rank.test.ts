@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestFirst, shrunk, TASTE_LIFT, type Rated } from './rank';
+import { bestFirst, RATING_PRIOR, shrunk, TASTE_LIFT, type Rated } from './rank';
 
 // 5000 is about p90 of the real catalog. The default matters now that the
 // score is shrunk toward the catalog mean: at a count of zero every place
@@ -182,5 +182,53 @@ describe('shrunk', () => {
     expect(many).toBeGreaterThan(4.9);
     expect(few).toBeLessThan(4.8);
     expect(many).toBeGreaterThan(few);
+  });
+});
+
+// The order the owner read as wrong (28 Oct 2026), with the catalog's own
+// figures: a 2024 opening with a perfect score from 61 reviews sat above
+// a 4.9 from 1,638. At a prior of 20 it did; at 50 it does not.
+describe('how much evidence a high score needs', () => {
+  it('ranks a 4.9 from 1,638 above a 5.0 from 61', () => {
+    expect(bestFirst([p('le-velo-bleu', 5.0, 61), p('running-bean', 4.9, 1638)]).map((x) => x.slug))
+      .toEqual(['running-bean', 'le-velo-bleu']);
+  });
+
+  // The crossing point the prior's note names: a perfect score passes a
+  // well-proven 4.9 at about 132 reviews, not before.
+  it('lets a perfect score pass a 4.9 with thousands only past ~132 reviews', () => {
+    const order = (n: number) => bestFirst([p('five', 5.0, n), p('pizza', 4.9, 29754)]).map((x) => x.slug);
+    expect(order(120)).toEqual(['pizza', 'five']);
+    expect(order(145)).toEqual(['five', 'pizza']);
+  });
+
+  it('is fifty imaginary reviews', () => {
+    expect(RATING_PRIOR).toBe(50);
+  });
+});
+
+describe('one branch per chain at the head', () => {
+  const named = (slug: string, name: string | null, rating: number) =>
+    ({ slug, name_en: name, rating, rating_count: 5000 });
+
+  it('keeps a chain’s best branch in place and puts the rest after every first', () => {
+    const order = bestFirst([
+      named('p4-bao-khanh', "Pizza 4P's – Bảo Khánh", 4.9),
+      named('p4-trang-tien', "Pizza 4P's – Tràng Tiền", 4.9),
+      named('pho-inn', 'Phở Inn', 4.8),
+      named('p4-centre', "Pizza 4P's – Hanoi Centre", 4.7),
+      named('bun-cha', 'Bún Chả Hương Liên', 4.5),
+    ]).map((x) => x.slug);
+    // Repeats keep their own order among themselves, after the firsts.
+    expect(order).toEqual(['p4-bao-khanh', 'pho-inn', 'bun-cha', 'p4-trang-tien', 'p4-centre']);
+  });
+
+  // Every unnamed place is its own brand; grouping them would push all
+  // but one to the end for having nothing in common.
+  it('treats a place with no name as nobody’s branch', () => {
+    const order = bestFirst([
+      named('a', null, 4.9), named('b', null, 4.8), named('c', 'Cộng Cà Phê', 4.7),
+    ]).map((x) => x.slug);
+    expect(order).toEqual(['a', 'b', 'c']);
   });
 });

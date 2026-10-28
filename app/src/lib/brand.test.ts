@@ -7,6 +7,14 @@ describe('brandKey', () => {
     expect(brandKey('OKKIO Caffe - Tự Do')).toBe('okkio caffe');
   });
 
+  // The catalog's own separator. Every branch suffix the desk has
+  // imported is an en dash; a key that only knew the hyphen grouped none.
+  it('strips a branch suffix after an en or em dash', () => {
+    expect(brandKey("Pizza 4P's – Bảo Khánh")).toBe("pizza 4p's");
+    expect(brandKey("Pizza 4P's – Tràng Tiền")).toBe("pizza 4p's");
+    expect(brandKey('Hadu Sushi — Tây Hồ')).toBe('hadu sushi');
+  });
+
   it('strips a parenthetical after " ("', () => {
     expect(brandKey('Blank Lounge (Landmark 81)')).toBe('blank lounge');
   });
@@ -20,6 +28,7 @@ describe('brandKey', () => {
   // imaginary chain.
   it('does not split on a hyphen inside a word', () => {
     expect(brandKey('Cai-Mam Eatery')).toBe('cai-mam eatery');
+    expect(brandKey('Bún chả–Hàng Mành')).toBe('bún chả–hàng mành');
   });
 
   // Callers must read '' as "no brand to judge by", never as a brand —
