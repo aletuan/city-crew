@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestFirst, shrunk, TASTE_LIFT, type Rated } from './rank';
+import { bestFirst, BRAND_GAP, RATING_PRIOR, shrunk, TASTE_LIFT, type Rated } from './rank';
 
 // 5000 is about p90 of the real catalog. The default matters now that the
 // score is shrunk toward the catalog mean: at a count of zero every place
@@ -182,5 +182,82 @@ describe('shrunk', () => {
     expect(many).toBeGreaterThan(4.9);
     expect(few).toBeLessThan(4.8);
     expect(many).toBeGreaterThan(few);
+  });
+});
+
+// The order the owner read as wrong (28 Oct 2026), with the catalog's own
+// figures: a 2024 opening with a perfect score from 61 reviews sat above
+// a 4.9 from 1,638. At a prior of 20 it did; at 50 it does not.
+describe('how much evidence a high score needs', () => {
+  it('ranks a 4.9 from 1,638 above a 5.0 from 61', () => {
+    expect(bestFirst([p('le-velo-bleu', 5.0, 61), p('running-bean', 4.9, 1638)]).map((x) => x.slug))
+      .toEqual(['running-bean', 'le-velo-bleu']);
+  });
+
+  // The crossing point the prior's note names: a perfect score passes a
+  // well-proven 4.9 at about 132 reviews, not before.
+  it('lets a perfect score pass a 4.9 with thousands only past ~132 reviews', () => {
+    const order = (n: number) => bestFirst([p('five', 5.0, n), p('pizza', 4.9, 29754)]).map((x) => x.slug);
+    expect(order(120)).toEqual(['pizza', 'five']);
+    expect(order(145)).toEqual(['five', 'pizza']);
+  });
+
+  it('is fifty imaginary reviews', () => {
+    expect(RATING_PRIOR).toBe(50);
+  });
+});
+
+describe('a chain’s branches, spaced', () => {
+  const named = (slug: string, name: string | null, rating: number) =>
+    ({ slug, name_en: name, rating, rating_count: 5000 });
+  // Twelve other kitchens, each a little below the last, so the score
+  // order is plain and only the gap can move a branch.
+  const others = Array.from({ length: 12 }, (_, i) => named(`k${i}`, `Kitchen ${i}`, 4.85 - i * 0.01));
+
+  it('puts a second branch BRAND_GAP places after the first, not straight under it', () => {
+    const order = bestFirst([
+      named('p4-a', "Pizza 4P's – Bảo Khánh", 4.9),
+      named('p4-b', "Pizza 4P's – Tràng Tiền", 4.9),
+      ...others,
+    ]).map((x) => x.slug);
+    expect(BRAND_GAP).toBe(10);
+    expect(order[0]).toBe('p4-a');
+    expect(order.indexOf('p4-b')).toBe(BRAND_GAP + 1);
+    // Ten others between them, in their own order.
+    expect(order.slice(1, BRAND_GAP + 1)).toEqual(others.slice(0, BRAND_GAP).map((x) => x.slug));
+  });
+
+  // The gap only ever pushes a branch down. One whose score already puts
+  // it further away than the gap stays exactly where its score put it.
+  it('leaves a branch alone when its score already keeps it far enough away', () => {
+    const order = bestFirst([
+      named('rb-a', 'The Running Bean – Ngô Thì Nhậm', 4.9),
+      ...others,
+      named('rb-b', 'The Running Bean – Nhà Thờ', 4.745),
+    ]).map((x) => x.slug);
+    // Its score puts it 13th, between the eleventh and twelfth kitchens —
+    // past the gap, so it stays there rather than going to the end.
+    expect(order.indexOf('rb-b')).toBe(12);
+    expect(order[13]).toBe('k11');
+  });
+
+  // Nothing else left to put between them: the list keeps every place.
+  it('takes the next branch anyway once nothing else is left', () => {
+    const order = bestFirst([
+      named('p4-a', "Pizza 4P's – Bảo Khánh", 4.9),
+      named('p4-b', "Pizza 4P's – Tràng Tiền", 4.9),
+      named('pho-inn', 'Phở Inn', 4.8),
+      named('p4-c', "Pizza 4P's – Hanoi Centre", 4.7),
+    ]).map((x) => x.slug);
+    expect(order).toEqual(['p4-a', 'pho-inn', 'p4-b', 'p4-c']);
+  });
+
+  // Every unnamed place is its own brand; grouping them would space out
+  // places that have nothing in common.
+  it('treats a place with no name as nobody’s branch', () => {
+    const order = bestFirst([
+      named('a', null, 4.9), named('b', null, 4.8), named('c', 'Cộng Cà Phê', 4.7),
+    ]).map((x) => x.slug);
+    expect(order).toEqual(['a', 'b', 'c']);
   });
 });

@@ -1416,6 +1416,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       An owner's list with no description still invites one: the line
       and the pencil open the form.
 
+      On somebody else's list the pencil's corner holds "Save a copy"
+      (owner, 27 Oct 2026): the one thing a visitor does to a list they
+      like, at the place the owner's own change-this sits.
+
       Checked on the text `t` picks, not on a hand-listed pair of
       columns: that left a Japanese-only description never drawn.
 
@@ -1566,7 +1570,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             ) : null}
             {kindRow}
           </View>
-          {owned && (
+          {owned ? (
             <PressableScale
               onPress={edit}
               scaleTo={0.85}
@@ -1583,7 +1587,29 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 style={s.descGlyph}
               />
             </PressableScale>
-          )}
+          ) : copyCityId ? (
+            // Somebody else's list: the corner the pencil holds on yours
+            // holds what you can do with theirs (owner, 27 Oct 2026). The
+            // same `copy` the menu row and the dock pill call, and the
+            // same glyph, so one action keeps one look; only where a city
+            // gives the copy somewhere to go, as both of those do.
+            <PressableScale
+              onPress={copy}
+              scaleTo={0.85}
+              haptic="selection"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
+              testID="collection-desc-copy"
+            >
+              <Ionicons
+                name="duplicate-outline"
+                size={20}
+                color={colors.textSecondary}
+                style={s.descGlyph}
+              />
+            </PressableScale>
+          ) : null}
         </View>
         {cardFoot}
       </Card>

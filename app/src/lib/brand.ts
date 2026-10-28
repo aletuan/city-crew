@@ -13,9 +13,10 @@
  * strangers. Never shown to a reader — it exists to be compared.
  *
  * The catalog writes branches two ways, and this strips both: a suffix
- * after ` - ` ("OKKIO Caffe - Lê Lợi") and a parenthetical after ` (`
- * ("Blank Lounge (Landmark 81)"). Same formula the #188 measurement used,
- * so what it groups is exactly what was counted.
+ * after a spaced dash ("Pizza 4P's – Bảo Khánh") and a parenthetical
+ * after ` (` ("Blank Lounge (Landmark 81)"). The #188 measurement split on
+ * the hyphen, which the names used then; they have since been rewritten
+ * with the en dash (see `BRANCH`).
  *
  * A name is a heuristic, and this one fails in the safe direction: two
  * unrelated venues that happen to share a first phrase are treated as one
@@ -24,5 +25,17 @@
  * it as no brand at all, or every unnamed place becomes one giant chain.
  */
 export function brandKey(name: string | null | undefined): string {
-  return (name ?? '').split(' - ')[0].split(' (')[0].trim().toLowerCase();
+  return (name ?? '').split(BRANCH)[0].split(' (')[0].trim().toLowerCase();
 }
+
+/**
+ * The suffix separator, in any of the three dashes the catalog could
+ * write. It was ` - ` alone, and measured on 28 Oct 2026 the published
+ * catalog holds **0** names with a spaced hyphen and **231 of 1,160**
+ * with a spaced en dash ("Pizza 4P's – Bảo Khánh") — the desk's import
+ * writes the typographic dash. So this grouped almost nothing: the
+ * planner's "no two branches of one chain in a day" rule was running on
+ * two brands in Hanoi instead of thirty. Spaces stay required on both
+ * sides, which is what keeps "Cai-Mam" one word.
+ */
+const BRANCH = / [-–—] /;
