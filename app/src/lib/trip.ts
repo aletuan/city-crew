@@ -336,9 +336,13 @@ function groupAreas(places: Place[]) {
  * where the desk put it. Measured 26 Oct 2026 against the live places:
  * eight cities' centres sit within 0.5–3.8km of the mean of their places,
  * with 81–96% of places inside 5km. Vũng Tàu's sits 10.3km off (44%
- * within 5km) and Ninh Bình's 9.5km (none within 5km): there the opening
- * stop leans to whichever of a handful of places is least far, which is
- * the desk's to fix by moving the centre, not this rule's.
+ * within 5km) and Ninh Bình's sat 9.5km off (none within 5km): there the
+ * opening stop leans to whichever of a handful of places is least far,
+ * which is the desk's to fix by moving the centre, not this rule's. Ninh
+ * Bình's moved to Tam Cốc – Tràng An on 28 Oct 2026, putting its three
+ * cafés 1.6–3.2km away; Vũng Tàu's stayed, because the mean of its places
+ * is the wetland between the city and Long Hải
+ * (`migrations/20261028135445_ninhbinh_centre_tam_coc.sql`).
  *
  * Here rather than in the screen because a rule that lives in a render
  * body is a rule nothing can prove. The version this replaces was one
