@@ -39,6 +39,15 @@
 // `price_vnd` is the desk's price, not Google's, and is never touched here;
 // `price_level` is refreshed beside it for the desk to reuse.
 //
+// ── the one thing it measures ──
+//
+// `review_pace`: how many reviews Google gained since the last refresh,
+// per 30 days — the recency TripAdvisor ranks by (owner, 28 Oct 2026). The
+// row still holds the last count and its date when Google answers, so the
+// difference is taken here, before the count is overwritten, and only the
+// result is kept. Why and what it looks like:
+// `migrations/20261028073138_review_pace.sql`.
+//
 // Pure except for the two things it is handed — a client and a fetch — so
 // it is tested from the app's runner, the way `rehost.ts` is.
 
@@ -87,7 +96,34 @@ export type Current = {
    *  is new, and not again on every run after. */
   business_status: string | null;
   review_note: string | null;
+  /** The last count, and when Google gave it: the earlier half of the
+   *  difference `review_pace` is. */
+  rating_count: number | null;
+  google_refreshed_at: string | null;
 };
+
+const DAY_MS = 86_400_000;
+
+/** The pace is per this many days: TripAdvisor's "recent" and the window
+ *  C1 reads into Google's terms are both a month. */
+export const PACE_DAYS = 30;
+
+/**
+ * Shorter than this since the last refresh and the old pace is kept. The
+ * job itself comes back after 25 days; only a refresh by hand comes sooner,
+ * and over two days Carmen Bar's 8 reviews a month is 0 or 1 review, which
+ * scaled to a month reads as 0 or 15.
+ */
+export const MIN_SPAN_DAYS = 20;
+
+/** New reviews per `PACE_DAYS` since the row's last refresh; `undefined`
+ *  when that was too recent to say, and null when either count is missing. */
+export function reviewPace(cur: Current, count: number | null, now: Date): number | null | undefined {
+  if (count == null || cur.rating_count == null || cur.google_refreshed_at == null) return null;
+  const days = (now.getTime() - Date.parse(cur.google_refreshed_at)) / DAY_MS;
+  if (!(days >= MIN_SPAN_DAYS)) return undefined;
+  return (count - cur.rating_count) * PACE_DAYS / days;
+}
 
 const empty = (s: string | null | undefined) => s == null || s.trim() === "";
 
@@ -113,6 +149,9 @@ export function refreshPatch(d: Details, cur: Current, now: Date): Record<string
     google_phone: phone,
     google_refreshed_at: now.toISOString(),
   };
+
+  const pace = reviewPace(cur, d.userRatingCount ?? null, now);
+  if (pace !== undefined) patch.review_pace = pace;
 
   const w = follow(cur.website, cur.google_website, website);
   if (w.change) patch.website = w.value;

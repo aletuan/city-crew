@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  NOT_FOUND, REFRESH_MASK, refreshPatch, refreshPlace,
+  MIN_SPAN_DAYS, NOT_FOUND, PACE_DAYS, REFRESH_MASK, refreshPatch, refreshPlace,
   type Current, type Details,
 } from '../../../supabase/functions/_shared/refresh-place';
 
@@ -37,6 +37,9 @@ const asImported: Current = {
   reviewer_source: 'google',
   business_status: 'OPERATIONAL',
   review_note: null,
+  // The job's own interval before NOW: 812 − 700 over 25 days.
+  rating_count: 700,
+  google_refreshed_at: '2026-09-02T03:00:00Z',
 };
 
 describe("Google's own fields", () => {
@@ -61,7 +64,7 @@ describe("Google's own fields", () => {
     const patch = refreshPatch({}, asImported, NOW);
     expect(patch).toMatchObject({
       rating: null, rating_count: null, price_level: null,
-      opening_hours: null, business_status: null, google_summary: null,
+      opening_hours: null, business_status: null, google_summary: null, review_pace: null,
     });
   });
 
@@ -141,6 +144,57 @@ describe('the description', () => {
     const blank = refreshPatch({ editorialSummary: { text: '   ' } }, { ...asImported, desc_en: null, reviewer_source: null }, NOW);
     expect(blank).not.toHaveProperty('desc_en');
     expect(blank.google_summary).toBeNull();
+  });
+});
+
+// Recency, the third of TripAdvisor's measures (owner, 28 Oct 2026): the
+// difference between the count the row holds and Google's new one, taken
+// before the new one overwrites it.
+describe('the review pace', () => {
+  const at = (days: number) => new Date(NOW.getTime() - days * 86_400_000).toISOString();
+
+  it('is the new reviews since the last refresh, per thirty days', () => {
+    expect(PACE_DAYS).toBe(30);
+    expect(refreshPatch(google, asImported, NOW).review_pace).toBeCloseTo(112 * 30 / 25);
+  });
+
+  // Over a longer gap the same gain is a slower pace, not the same one.
+  it('divides by the days that actually passed', () => {
+    const patch = refreshPatch(google, { ...asImported, google_refreshed_at: at(50) }, NOW);
+    expect(patch.review_pace).toBeCloseTo(112 * 30 / 50);
+  });
+
+  it('can be negative, when Google has taken reviews away', () => {
+    const patch = refreshPatch(google, { ...asImported, rating_count: 830 }, NOW);
+    expect(patch.review_pace).toBeCloseTo(-18 * 30 / 25);
+  });
+
+  // A refresh by hand a few days after the job's: too short to say, so
+  // the pace the job measured stands.
+  it('keeps the old pace when the last refresh was too recent', () => {
+    expect(MIN_SPAN_DAYS).toBe(20);
+    expect(refreshPatch(google, { ...asImported, google_refreshed_at: at(19.9) }, NOW))
+      .not.toHaveProperty('review_pace');
+    expect(refreshPatch(google, { ...asImported, google_refreshed_at: at(20) }, NOW).review_pace)
+      .toBeCloseTo(112 * 30 / 20);
+  });
+
+  it('is unknown without both counts or a date to measure from', () => {
+    for (const cur of [
+      { ...asImported, rating_count: null },
+      { ...asImported, google_refreshed_at: null },
+    ]) expect(refreshPatch(google, cur, NOW).review_pace).toBeNull();
+    // Google's count gone: the pace goes with it, however recent.
+    expect(refreshPatch({ ...google, userRatingCount: undefined },
+      { ...asImported, google_refreshed_at: at(1) }, NOW).review_pace).toBeNull();
+  });
+
+  // A count of 0 is a count. A truthiness test would read it as missing.
+  it('measures from a count of none', () => {
+    expect(refreshPatch(google, { ...asImported, rating_count: 0 }, NOW).review_pace)
+      .toBeCloseTo(812 * 30 / 25);
+    expect(refreshPatch({ ...google, userRatingCount: 0 }, asImported, NOW).review_pace)
+      .toBeCloseTo(-700 * 30 / 25);
   });
 });
 

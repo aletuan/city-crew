@@ -563,3 +563,11 @@ for f in "$ROOT"/supabase/migrations/*_friend_suggestions.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/friend_suggestions_test.sql"
+
+# The review pace (28 Oct 2026): one column on `places` that
+# `refresh-places` fills with new Google reviews per 30 days.
+echo "→ review pace"
+for f in "$ROOT"/supabase/migrations/*_review_pace.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/review_pace_test.sql"
