@@ -1,0 +1,103 @@
+# Cancel clears pending intent; a new bookmark resumes the exact place once.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+- tapOn:
+    id: "detail-save"
+- tapOn:
+    id: "auth-sheet-cancel"
+- assertVisible:
+    id: "detail-save"
+- tapOn:
+    id: "detail-back"
+- runFlow: common/sign-in-trip-owner.yaml
+# Ordinary sign-in must not replay the cancelled bookmark.
+- assertNotVisible:
+    id: "save-done"
+- runScript:
+    file: scripts/assert-collection.js
+    env:
+      MODE: empty
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "tab-explore"
+- tapOn:
+    id: "explore-search"
+- tapOn:
+    id: "search-input"
+- inputText: ${FIXTURE_placeQuery}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "search-city-hanoi"
+    timeout: 30000
+- runFlow:
+    when:
+      notVisible:
+        id: "search-city-hanoi"
+        selected: true
+    commands:
+      - tapOn:
+          id: "search-city-hanoi"
+- scrollUntilVisible:
+    element:
+      id: "search-result-0"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "search-result-0"
+- extendedWaitUntil:
+    visible:
+      id: ${'detail-place-' + FIXTURE_placeSlug}
+    timeout: 20000
+- tapOn:
+    id: "detail-save"
+- tapOn:
+    id: "auth-sheet-sign-in"
+- runFlow:
+    file: common/submit-sign-in.yaml
+    env:
+      TEST_EMAIL: ${TRIP_EMAIL}
+      TEST_PASSWORD: ${TRIP_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: "save-done"
+    timeout: 30000
+- assertVisible:
+    id: ${'save-place-' + FIXTURE_placeSlug}
+- tapOn:
+    text: ${'.*' + FIXTURE_resumeTitle + '.*'}
+- tapOn:
+    id: "save-done"
+- extendedWaitUntil:
+    visible:
+      id: "detail-saved"
+    timeout: 20000
+- runScript:
+    file: scripts/assert-collection.js
+    env:
+      MODE: saved
+# Cold start proves persistence and that the one-shot intent was consumed.
+- runFlow: common/start.yaml
+- assertNotVisible:
+    id: "save-done"
+- runScript:
+    file: scripts/assert-collection.js
+    env:
+      MODE: saved
+# Both generated accounts and collections are removed by the runner's trap.

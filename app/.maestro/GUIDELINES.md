@@ -23,7 +23,7 @@ minute or more per run; keep the suite short.
 | --- | --- |
 | Expo Go + `openLink` into the dev bundle | No native build needed to run locally. CI will need a dev client instead (see *Later*). |
 | Real Supabase data | Catches what fixtures hide — RLS, Edge Functions, auth. The cost: a flow must not assume specific rows. |
-| One persistent test account for signed-in flows | Fast and stable. Creating an account per run hits signup rate limits, breaks when email confirmation is on, and leaves orphans when a run dies. |
+| Persistent accounts for existing non-trip flows; disposable accounts for 05/13/16/18/19/20 | Trip tests require isolated run-owned data. Persist cleanup ledgers before signup, preflight email settings, and recover on the next run. |
 | Account from the macOS Keychain, via `smoke.sh` | Never typed, never in shell history, never in a flow or commit. |
 | Every run's report and screenshots in `.smoke-local/maestro/` | Anyone — or an agent — can read a failure afterwards without re-running it. |
 
@@ -33,7 +33,9 @@ minute or more per run; keep the suite short.
 
 1. **Select by `testID`, never by label.** Every label is trilingual. The
    only exception is iOS's own alerts, which take no id — match those in
-   all three languages: `text: "Delete|Xoá|削除"`.
+   all three languages: `text: "Delete|Xoá|削除"`. Generated fixture titles
+   may be matched as data; they are not translated UI labels. Use a stable
+   slug to compare place identity across screens that shorten names differently.
 2. **Give a state its own id when the flow must wait on it.** The bookmark
    is `detail-save` / `detail-saved`, so a flow can wait for a save to
    land without reading a label.
@@ -48,10 +50,9 @@ minute or more per run; keep the suite short.
    Go, reopen the bundle, land on Explore). Never rely on where the
    previous flow left the app.
 5. **Declare the sign-in state you need** with `common/ensure-signed-in.yaml`
-   or `common/ensure-signed-out.yaml`, not by assuming it.
+   or `common/ensure-signed-out.yaml`, not by assuming it. Sign-in must verify the actual email, not just a Sign out button.
 6. **Clean up what you create, and clean up leftovers first.** A run can
-   die half way; the next one must still pass. `05` deletes leftover
-   upcoming trips before planning; `06` unsaves a place a failed run left
+   die half way; the next one must still pass. `05` requires an empty disposable account and never sweeps existing trips; `06` unsaves a place a failed run left
    saved.
 7. **Need no manual setup.** If the account lacks something, the flow
    makes it (`06` creates its "Maestro smoke" list the first time).
@@ -91,6 +92,12 @@ minute or more per run; keep the suite short.
 
 ## Adding a flow — checklist
 
+When fixing an E2E failure, record each confirmed, reusable finding in
+[REVIEW.md](REVIEW.md) as soon as it is established. Include the symptom,
+evidence, fix, unsuccessful approaches, validation runs, and any remaining
+uncertainty. Update provisional conclusions when later evidence changes
+them; do not mark a fix verified before the relevant E2E branch passes.
+
 - [ ] The path is one a reader cannot do without, and vitest cannot cover it.
 - [ ] Numbered file (`07-….yaml`), added to `flowsOrder` in `config.yaml`.
 - [ ] Starts with `common/start.yaml` and an `ensure-signed-*` subflow.
@@ -99,19 +106,26 @@ minute or more per run; keep the suite short.
 - [ ] `maestro check-syntax` passes; `npm test` (maestroIds) passes.
 - [ ] Green twice in a row locally — the second run proves the cleanup.
 
-## Manual QA
+## Signup and deletion lifecycle
 
-One path has no automated coverage: signing up a new account and deleting
-it (App Store 5.1.1(v)). `07-sign-up-delete.yaml` documents the steps, but
-iOS's own "Use Strong Password?" panel on the password field is a
-separate process from the app and Maestro/XCUITest cannot see or interact
-with it — see the flow's own header for what was tried. Before each
-release, do this by hand once:
+`07-sign-up-delete.yaml` is automated and included in the suite. Run it
+through `smoke.sh`, which creates a unique disposable credential and checks
+that email confirmation is OFF before the flow starts. The flow verifies
+signup, session persistence, UI deletion, rejected sign-in, and guest state.
 
-- [ ] Sign up with a throwaway email and a real typed password.
-- [ ] Confirm the account lands on the taste picker, then Profile, signed in.
-- [ ] Profile → Delete account → confirm. Confirm it falls back to the
-      guest view with no separate sign-out step.
+Its simulator prep disables Suggest Strong Passwords on the dedicated
+English iOS 26 simulator. Select the actual switch to the right of its
+label, bounded above and below; tapping the row id does not toggle it.
+Keep production AutoFill behavior unchanged. See REVIEW.md for the failed
+approaches, keyboard focus and retained Profile scroll-position findings.
+
+Cleanup belongs to the runner as well as the UI test. A failed flow must
+not abandon a new account: the runner uses that fixture's own session to
+call `delete-account`. A successful UI flow that still needs fallback
+cleanup is a failure. Keep the local recovery ledger on uncertain network
+results; the next signup run retries it before creating another account.
+Do not run concurrent signup runners against the same ledger/simulator.
+Never reuse the persistent A/B accounts as disposable signup identities.
 
 ## Later
 
@@ -120,19 +134,7 @@ release, do this by hand once:
   Secrets.
 - **A staging Supabase project** before CI runs nightly, so tests never
   write to production.
-- **A sweep for orphans.** `07-sign-up-delete` (done) deletes the account it
-  makes at the end of the same run, but a run that dies between sign-up and
-  delete leaves one behind. It was sketched as a `+mae-<time>` alias of a
-  real address so a sweep could find them by pattern; it shipped as
-  Maestro's own `inputRandomPersonName` / `inputRandomEmail` instead — no
-  scripting needed to build the string, at the cost of orphans not being
-  greppable by a shared tag. Revisit if orphans turn out to matter enough
-  to write the sweep: either tag the address after all, or query auth.users
-  for accounts with no rows anywhere else and an old `created_at`.
-- **`07-sign-up-delete` running unattended again.** It is correct today,
-  just not runnable — the app never sees the "Use Strong Password?" panel,
-  so there is nothing in the app to fix. Two ways back in, neither tried
-  yet: turn AutoFill password suggestions off for the smoke simulator only
-  (Settings → Passwords → Password Options), so real users on their own
-  devices are unaffected; or wait for Maestro to add a way to interact
-  with system-owned panels on iOS.
+- **Cleanup after abrupt process loss.** EXIT/INT/TERM have cleanup, but
+  SIGKILL, power loss and offline servers require the next run's ledger
+  recovery. Preserve `.smoke-local/signup-accounts/` until confirmed clean;
+  see README.md for the explicit recovery command.

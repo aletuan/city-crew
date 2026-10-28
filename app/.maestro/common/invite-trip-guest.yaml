@@ -1,0 +1,28 @@
+appId: host.exp.Exponent
+---
+# ── A invites B ──
+- tapOn:
+    id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-invite"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn:
+    id: "trip-invite"
+- extendedWaitUntil:
+    visible:
+      id: "invite-friend-0"
+    timeout: 15000
+- tapOn:
+    id: "invite-friend-0"
+- tapOn:
+    id: "invite-send"
+# The crew list appears once somebody has been asked, and reads the row
+# back from the server (`invites.reload()` after the insert).
+- extendedWaitUntil:
+    visible:
+      id: "crew-said-0"
+      text: "Asked"
+    timeout: 20000

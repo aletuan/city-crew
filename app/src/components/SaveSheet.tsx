@@ -48,7 +48,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
         <View style={s.grabber} />
         <Text style={s.title}>{t('Save to', 'Lưu vào', '保存先', '保存到', '儲存到')}</Text>
         {place ? (
-          <Text style={s.subtitle} numberOfLines={1}>
+          <Text testID={`save-place-${place.slug}`} style={s.subtitle} numberOfLines={1}>
             {localized(place, 'name', lang)}
           </Text>
         ) : null}

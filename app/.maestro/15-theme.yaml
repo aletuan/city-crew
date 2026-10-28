@@ -33,10 +33,9 @@ env:
   EXPO_URL: exp://127.0.0.1:8081
 ---
 - runFlow: common/start.yaml
-# Signed out first, and A signed in by hand, not by `ensure-signed-in`:
-# that one keeps any session it finds, and a run of this flow that stops
-# between B's sign-in and its sign-out leaves B's. On 12 October the next
-# run took B for A, chose Dark on B's account, and failed on B's Light.
+# Explicitly select A. The old ensure-signed-in helper kept any session;
+# on 12 October a run took B for A and changed B to Dark. The shared
+# helper now also signs in explicitly and verifies the actual email.
 - runFlow: common/ensure-signed-out.yaml
 - tapOn:
     id: "profile-sign-in"

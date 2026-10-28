@@ -70,15 +70,85 @@ mkdir -p "$run"
 targets=("$@")
 [ ${#targets[@]} -eq 0 ] && targets=(.maestro)
 
-printf '▶ %s as %s and %s → %s\n' "${targets[*]}" "$TEST_EMAIL" "$TEST_EMAIL_2" "${run#"$repo"/}"
+# Register cleanup before provisioning; partial setup is recoverable too.
+signup_fixture=""
+signup_args=()
+trip_args=()
+trip_fixture=""
+trip_lock=""
+cleanup_on_exit() {
+  status=$?
+  trap - EXIT
+  if [ -n "$signup_fixture" ]; then
+    node scripts/maestro-account.mjs cleanup "$signup_fixture" || status=1
+  fi
+  if [ -n "$trip_fixture" ]; then
+    node scripts/maestro-trip-fixtures.mjs cleanup "$trip_fixture" || status=1
+  fi
+  if [ -n "$trip_lock" ]; then rmdir "$trip_lock" || status=1; fi
+  exit "$status"
+}
+trap cleanup_on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+collection_mode=""
+for target in "${targets[@]}"; do
+  case "$(basename "$target")" in
+    .maestro|18-guest-save-resume.yaml|19-collection-privacy.yaml) collection_mode=collections ;;
+  esac
+done
+for target in "${targets[@]}"; do
+  case "$(basename "$target")" in
+    .maestro|05-plan-trip.yaml|13-trip-edit.yaml|16-trip-invite.yaml|18-guest-save-resume.yaml|19-collection-privacy.yaml|20-guest-trip-resume.yaml)
+      lock="$repo/.smoke-local/trip-accounts.lock"
+      mkdir "$lock" 2>/dev/null || die "Trip fixture runner is locked. Check no other run is active before removing $lock"
+      trip_lock="$lock"
+      trip_fixture="$repo/.smoke-local/trip-accounts"
+      node scripts/maestro-trip-fixtures.mjs prepare "$trip_fixture" "$collection_mode"
+      TRIP_EMAIL="$(node -e 'process.stdout.write(require(process.argv[1]).email)' "$trip_fixture/current.json")"
+      TRIP_PASSWORD="$(node -e 'process.stdout.write(require(process.argv[1]).password)' "$trip_fixture/current.json")"
+      TRIP_EMAIL_2="$(node -e 'process.stdout.write(require(process.argv[1]).email2)' "$trip_fixture/current.json")"
+      TRIP_PASSWORD_2="$(node -e 'process.stdout.write(require(process.argv[1]).password2)' "$trip_fixture/current.json")"
+      trip_args=(-e "TRIP_EMAIL=$TRIP_EMAIL" -e "TRIP_PASSWORD=$TRIP_PASSWORD" -e "TRIP_EMAIL_2=$TRIP_EMAIL_2" -e "TRIP_PASSWORD_2=$TRIP_PASSWORD_2")
+      if [ -n "$collection_mode" ]; then
+        for field in url key resumeId resumeTitle privacyId privacyTitle placeSlug placeQuery; do
+          value="$(node -e 'process.stdout.write(require(process.argv[1])[process.argv[2]])' "$trip_fixture/current.json" "$field")"
+          trip_args+=(-e "FIXTURE_$field=$value")
+        done
+      fi
+      break ;;
+  esac
+done
+for target in "${targets[@]}"; do
+  if [ "$(basename "$target")" = "07-sign-up-delete.yaml" ] || [ "$(basename "$target")" = ".maestro" ]; then
+    signup_fixture="$(node scripts/maestro-account.mjs prepare "$repo/.smoke-local/signup-accounts")"
+    SIGNUP_NAME="$(node -e 'process.stdout.write(require(process.argv[1]).name)' "$signup_fixture")"
+    SIGNUP_EMAIL="$(node -e 'process.stdout.write(require(process.argv[1]).email)' "$signup_fixture")"
+    SIGNUP_PASSWORD="$(node -e 'process.stdout.write(require(process.argv[1]).password)' "$signup_fixture")"
+    signup_args=(-e "SIGNUP_NAME=$SIGNUP_NAME" -e "SIGNUP_EMAIL=$SIGNUP_EMAIL" -e "SIGNUP_PASSWORD=$SIGNUP_PASSWORD")
+    break
+  fi
+done
+
+printf '▶ %s → %s\n' "${targets[*]}" "${run#"$repo"/}"
 set +e
-maestro test "${targets[@]}" \
+maestro test "${targets[@]}" ${signup_args[@]+"${signup_args[@]}"} ${trip_args[@]+"${trip_args[@]}"} \
   -e EXPO_URL="$EXPO_URL" -e TEST_EMAIL="$TEST_EMAIL" -e TEST_PASSWORD="$TEST_PASSWORD" \
   -e TEST_EMAIL_2="$TEST_EMAIL_2" -e TEST_PASSWORD_2="$TEST_PASSWORD_2" \
   --format junit --output "$run/report.xml" \
   --test-output-dir "$run" --debug-output "$run" 2>&1 | tee "$run/console.log"
 code=${PIPESTATUS[0]}
 set -e
+if [ -n "$signup_fixture" ]; then
+  node scripts/maestro-account.mjs cleanup "$signup_fixture" || code=1
+  signup_fixture=""
+fi
+
+if [ -n "$trip_fixture" ]; then
+  node scripts/maestro-trip-fixtures.mjs cleanup "$trip_fixture" || code=1
+  trip_fixture=""
+fi
 
 # The newest run, at a fixed path, for whoever reads the results next.
 ln -sfn "$(basename "$run")" "$repo/.smoke-local/maestro/latest"

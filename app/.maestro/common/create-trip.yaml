@@ -1,0 +1,59 @@
+# Fixture account must start with an empty, freshly loaded Trips list.
+appId: host.exp.Exponent
+---
+# The wizard. Company and at least one mood are what `canPlan` asks for;
+# three moods rather than one so the planner has room at any hour.
+- tapOn:
+    id: "tab-ideas"
+- extendedWaitUntil:
+    visible:
+      id: "ideas-company-friends"
+    timeout: 30000
+- tapOn:
+    id: "ideas-company-friends"
+- tapOn:
+    id: "ideas-cat-0"
+- tapOn:
+    id: "ideas-cat-1"
+    optional: true
+- tapOn:
+    id: "ideas-cat-2"
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "ideas-sketch"
+    direction: DOWN
+    timeout: 10000
+# At the foot of the page it cannot be centred, and the first frame it
+# shows in can be under the floating tab bar: one more scroll lifts it.
+- scroll
+- tapOn:
+    id: "ideas-sketch"
+
+# Sketching holds its last step for the model's words, up to its cap.
+- extendedWaitUntil:
+    visible:
+      id: "plan-card-best"
+    timeout: 90000
+- tapOn:
+    id: "plan-card-best"
+- scrollUntilVisible:
+    element:
+      id: "plan-save"
+    direction: DOWN
+    timeout: 20000
+# At the foot of the page it cannot be centred, and the first frame it
+# shows in can be under the floating tab bar: one more scroll lifts it.
+- scroll
+- tapOn:
+    id: "plan-save"
+
+- runFlow: dismiss-review.yaml
+- extendedWaitUntil:
+    visible:
+      id: "trips-ready"
+    timeout: 60000
+- assertVisible:
+    id: "trip-upcoming-0"
+- assertNotVisible:
+    id: "trip-upcoming-1"

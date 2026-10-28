@@ -1,0 +1,15 @@
+# Fresh backend state, not the tab bar which also exists on detail.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-trips"
+- extendedWaitUntil:
+    visible:
+      id: "trips-ready"
+    timeout: 30000
+- assertVisible:
+    id: "trips-empty"
+- assertNotVisible:
+    id: "trip-upcoming-0"
+- assertNotVisible:
+    id: "invite-accept-0"

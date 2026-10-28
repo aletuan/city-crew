@@ -53,7 +53,7 @@ export { NUDGE_MIN };
 
 export default function StopCard({
   place, arriveMin, dwellMin, pinned, why, wrong, canMoveUp, canMoveDown,
-  onOpen, onHold, onRelease, onNudge, onRemove, onMove, timeTestID, earlierTestID,
+  onOpen, onHold, onRelease, onNudge, onRemove, onMove, timeTestID, earlierTestID, nameTestID,
 }: {
   place: Place;
   arriveMin: number;
@@ -75,6 +75,7 @@ export default function StopCard({
   onRemove: () => void;
   onMove: (dir: 'up' | 'down') => void;
   /** For the smoke flows: the hour, and the step that moves it earlier. */
+  nameTestID?: string;
   timeTestID?: string;
   earlierTestID?: string;
 }) {
@@ -101,6 +102,7 @@ export default function StopCard({
       <StopHero place={place} onPress={onOpen} onHold={onHold} onRelease={onRelease} testID="stop-hero" />
       <View style={s.cardBody}>
         <PressableScale
+          testID={nameTestID}
           contentStyle={s.identity}
           onPress={onOpen}
           onLongPress={onHold ? (e) => onHold(e.nativeEvent.pageY) : undefined}

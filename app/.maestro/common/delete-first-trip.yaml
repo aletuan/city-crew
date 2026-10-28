@@ -1,7 +1,14 @@
-# Reusable: open the first upcoming trip on the Trips tab and delete it.
-# Expects the Trips tab to be showing `trip-upcoming-0`.
+# Delete the sole trip belonging to this run. Caller has verified TRIP_EMAIL.
+# Never sweep a persistent account or a nonempty pre-run baseline.
 appId: host.exp.Exponent
 ---
+- assertTrue: ${new RegExp('^maestro-e2e-[0-9a-f-]+@example[.]com$').test(TRIP_EMAIL)}
+- extendedWaitUntil:
+    visible:
+      id: "trips-ready"
+    timeout: 30000
+- assertNotVisible:
+    id: "trip-upcoming-1"
 - tapOn:
     id: "trip-upcoming-0"
 - scrollUntilVisible:
@@ -18,9 +25,15 @@ appId: host.exp.Exponent
 # three of the app's languages.
 - tapOn:
     text: "Delete|Xoá|削除"
+# The tab bar also exists on detail. Wait for navigation and the server
+# refresh, otherwise a cleanup loop can see and tap the deleted stale row.
+- extendedWaitUntil:
+    notVisible:
+      id: "trip-delete"
+    timeout: 30000
 - extendedWaitUntil:
     visible:
-      id: "tab-trips"
-    timeout: 15000
+      id: "trips-ready"
+    timeout: 30000
 - waitForAnimationToEnd:
     timeout: 5000

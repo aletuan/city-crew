@@ -23,36 +23,41 @@ scripted from a Linux job). See "Why not CI" at the end.
 | --- | --- |
 | `00-launch.yaml` | Opens the `exp://` URL in Expo Go, dismisses the welcome sheet, sees the Explore tab. |
 | `01-explore.yaml` | First place card renders, list scrolls down and back up, city switcher opens, another city is chosen, default city restored. |
-| `02-place-detail.yaml` | Opens the first card, asserts name, address and hero photo, goes back to Explore. |
+| `02-place-detail.yaml` | Opens the first card, asserts name and hero photo, scrolls to the address below variable-length content, then returns to the top and back to Explore. |
 | `03-search.yaml` | Opens search, types `cafe`, opens the first hit, comes back, clears the query. |
 | `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in and lands on Explore (nothing was waiting on the sign-in — see `leaveAuth`); a cold start is still signed in; signs out. |
-| `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
+| `05-plan-trip.yaml` | Requires an empty run-owned disposable account; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip in that account; deletes it. |
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
+| `07-sign-up-delete.yaml` | Creates a unique runner-generated disposable account with email confirmation OFF; skips taste onboarding; verifies the signed-in session after a cold start; checks the fixture name on Delete account; deletes through the UI; signing in again must fail, and a cold start stays signed out. The runner retries leftover cleanup and performs a final backend check. See Signup lifecycle below for simulator setup and failure recovery. |
 | `08-explore-filter.yaml` | Pins the location to Hanoi; sorts Explore by distance, then adds "open now"; the filter button's count shows both; Reset clears them and the list is back. The map toggle is not covered — Expo Go on iOS draws no map. |
-| `09-collections-browse.yaml` | As a guest: the Collections tab's first community card opens on its places; the first place opens on its own page; Back walks place → collection → list. The card id is the same in grid and row view. |
+| `09-collections-browse.yaml` | As a guest: the Collections tab's first community card opens; the detail menu selects Grid explicitly; the first tile opens its place; Back walks place → collection → list. Community cards share an id across layouts; detail tiles use `collection-tile-*`, while detail list cards use `collection-place-*`. |
 | `10-check-in.yaml` | Opens the first place on Explore; takes back any visit a failed run left there; checks in and waits for the pill to read back the visit from the server; opens the visit sheet and removes it; the pill is bare again. Needs the `place_checkin` flag on. |
-| `11-collection-crud.yaml` | Deletes any "Maestro CRUD…" list a failed run left; creates "Maestro CRUD"; renames it "Maestro CRUD 2" from its menu; saves the first Explore place into it and sees it there; takes it out from inside the collection; deletes the list. Leaves 06's "Maestro smoke" alone. |
-| `13-trip-edit.yaml` | Deletes leftover upcoming trips; plans as 05 does; in the editor reads the first stop's hour, moves it 15 minutes earlier and sees it change; saves; the saved trip shows the edited hour — and still does after a cold start; deletes the trip. Saved trips have no editor, so the edit is the plan's, before Save. |
+| `11-collection-crud.yaml` | Deletes any "Maestro CRUD…" list a failed run left; creates "Maestro CRUD"; renames it "Maestro CRUD 2" from its menu; reopens the app after renaming so iOS exposes the Save sheet to Maestro; saves the first Explore place into it; selects Grid and opens its first tile; takes the place out and deletes the list. Matches the populated card's title with its visibility suffix. Leaves 06's "Maestro smoke" alone. |
+| `13-trip-edit.yaml` | Requires an empty run-owned disposable account; plans as 05 does; in the editor reads the first stop's hour, moves it 15 minutes earlier and sees it change; saves; dismisses the optional native review prompt and scrolls to the first stop; the saved trip shows the edited hour — and still does after a cold start; deletes the trip. Saved trips have no editor, so the edit is the plan's, before Save. |
 | `14-forgot-password.yaml` | As a guest: Sign in → Forgot password → asks for a code for `maestro-reset@example.com` (a reserved domain: no account, no mail sent — never the test account, whose address is a real mailbox) → reaches the code step with the resend link waiting → Reset with no code is refused by the form and stays put. Does not reach the server refusing a wrong code: that needs the new-password field, which raises iOS's "Use Strong Password?" panel. |
 | `15-theme.yaml` | Two accounts. Signed in as A: Profile → Theme → Dark, the tick lands on it; signs out; as a guest picks Light; A signs back in and the sheet ticks Dark again, read from the account; B signs in on the phone A left on Dark and gets its own Light; A after B is Dark again; sets Auto; signs out. Grounds only — a look restarts the app, which Expo Go cannot do. Reads ticks in the row's label, never colours. |
-| `16-trip-invite.yaml` | Two accounts. A plans a trip with friends (as 05), opens it, Invite → ticks B (`invite-friend-0`) → Send; the crew row reads "Asked". B signs in, accepts the invitation on Trips (`invite-accept-0`); the trip joins B's list, and its foot is `trip-leave`, not `trip-delete`. A signs back in, the crew row reads "Coming"; A deletes the trip, which ends B's copy too. Needs A and B to be friends (see Test account). |
-| `17-unfriend.yaml` | Two accounts. A: Profile → Connect with friends → Your friends → long-press B's row (`crew-friend-0`; the ⋯ beside it is not in the iOS accessibility tree) → Unfriend → the alert's Unfriend; B is off the list. A asks again by B's username (`B_HANDLE` in the flow) → Send request; it reads "waiting on their answer". B signs in → Requests → Accept (`crew-accept-0`); A is on B's list. Puts the 16 fixture back, and starts from either state. |
+| `16-trip-invite.yaml` | Uses two disposable accounts with a verified friendship. A invites B; B accepts and has Leave, not Delete. A sees Coming and deletes; cold starts of both accounts verify empty, freshly loaded trip lists. A second trip checks B accepting then leaving, persistence after restart, and A seeing Can’t make it while retaining ownership; A deletes that trip. |
+| `17-unfriend.yaml` | Two accounts. A: Profile → Connect with friends → Your friends → long-press B's row (`crew-friend-0`; the ⋯ beside it is not in the iOS accessibility tree) → Unfriend → the alert's Unfriend; B is off the list. A asks again by B's username (`B_HANDLE` in the flow) → Send request; the SENT row appears (`crew-sent-0`). B signs in → Requests → Accept (`crew-accept-0`); A is on B's list. Restores the persistent friendship fixture, and starts from either state. |
+| `18-guest-save-resume.yaml` | Guest cancels a bookmark sign-in invitation; ordinary login must not replay it. A new guest bookmark resumes the same place after login, saves once to a generated collection, and survives restart. |
+| `19-collection-privacy.yaml` | A switches a populated collection Private → Public → Private through UI. B checks Community after each state; public detail has no Edit/Delete. Read-only REST checks both collection and members as A/B without client visibility filters. |
+| `20-guest-trip-resume.yaml` | Guest edits a draft’s arrival time, signs in, and returns to the same first stop/time. Verify session email; Trips remains empty until explicit Save; cold restart shows one trip, then it is deleted. |
 | `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
-| `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
 notifications — saving a trip plants a reminder, and the permission alert
 would stand over Trips), `common/ensure-signed-in.yaml`,
 `common/ensure-signed-out.yaml`, `common/sign-in.yaml`,
-`common/delete-first-trip.yaml`, `common/open-save-sheet.yaml` (the
+`common/delete-first-trip.yaml` (waits for detail to close and `trips-ready` after the server refresh), `common/open-save-sheet.yaml` (the
 bookmark, in either state) and `common/delete-open-collection.yaml`
 (the open collection's menu → Delete → the system alert),
 `common/pick-language.yaml` (Profile → Language → `${LANG_ID}`),
 `common/pick-theme.yaml` (Profile → Theme → `${THEME_ID}`, the tick, close),
 `common/open-crew.yaml` (Profile → Connect with friends, by the row's text),
 `common/expect-theme.yaml` (the same sheet, the tick already on `${THEME_ID}`, close without choosing) and
-`common/open-first-place.yaml` (first Places card → its page → back). Every flow cleans up what it made, and
-cleans up what a failed earlier run left, before it starts.
+`common/open-first-place.yaml` (first Places card → its page → back). Trip flows never sweep pre-existing trips: they require empty disposable accounts and delete only their sole created trip. Other flows retain their documented fixture cleanup.
+
+`common/dismiss-review.yaml` closes the optional Apple review prompt with
+"Not Now" on the English smoke simulator after a save.
 
 `common/dismiss-welcome.yaml` and `common/expo-go-prep.yaml` are subflows
 every flow runs first, so a fresh Expo Go and a warm one behave the same.
@@ -62,7 +67,11 @@ and a tap there opens Expo's dev menu instead of Search. Expo Go remembers
 the setting, so after the first run those steps are no-ops. Expo Go 57's
 menu slides up a beat late and keeps the switch at the foot of its TOOLS
 list, so the subflow waits for the menu and scrolls to the row; it only
-runs while the gear is showing, so it can never switch the button back on. `config.yaml`
+runs while the gear is showing, so it can never switch the button back on.
+After scrolling, it waits for the menu to settle and targets the switch
+below **Fast refresh**, to the right of **Tools button**: `rightOf` alone
+can also match Fast refresh's switch. It verifies the Tools button's OFF
+value before Reload, then checks that the floating gear is gone. `config.yaml`
 restricts `maestro test .maestro` to the numbered flows and fixes their order.
 
 ## One-time setup
@@ -78,18 +87,16 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
 2. Xcode with an iOS simulator runtime, and Expo Go installed on that
    simulator. The first `npx expo start` → press `i` installs Expo Go for you.
 
-3. **A test account, used for nothing else.** Flows 04–06 sign in as it,
-   and 05 deletes every upcoming trip it owns. Once:
+3. **A test account, used for nothing else.** Flows such as 04, 06, 10, and 11 sign in as it. Trip flows 05, 13, and 16 use separate disposable accounts. Once:
 
    - Sign up in the app with an address you control (a `+maestro` alias
-     of your own works, e.g. `you+maestro@gmail.com`) and confirm the email.
+     of your own works, e.g. `you+maestro@gmail.com`) (email confirmation is currently disabled).
    - No collection is needed: flow 06 makes one ("Maestro smoke") the
      first time, through the form the bookmark opens, and reuses it.
    - Keep it off the editors list.
 
-   `07-sign-up-delete.yaml` needs none of this — it makes and deletes its
-   own throwaway account every run, and never touches this one — but it
-   isn't run by `npm run smoke:ios` (see GUIDELINES.md).
+   `07-sign-up-delete.yaml` makes and deletes its own throwaway account.
+   It never deletes either persistent test account.
 
    Then put it in the macOS Keychain — the runner reads it from there, so
    it is never typed per run, never in the shell history, and never in a
@@ -116,15 +123,70 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
    stopped while signed in as B, or the app leaked A's theme; set B back
    to Light by hand before the next run.
 
-   `16-trip-invite` also needs **A and B to be accepted friends, and B
-   to be A's only friend** — an invitation can only go to a friend, and
-   the flow ticks the first row of A's invite sheet. Make it once: as A,
-   Profile → Connect with friends → Add a friend → B's @handle → Send
-   request; as B, Requests → Accept. `17-unfriend` unfriends and makes
-   friends again, so a run that passes leaves this as it found it; one
-   that stops between the two leaves them not friends — run `17` again,
-   it starts from either state. It types B's username, which is in the
-   flow as `B_HANDLE`.
+   `17-unfriend` still uses persistent A/B and its configured `B_HANDLE`.
+   Its friend fixture is independent of the disposable trip accounts.
+
+## Trip fixtures and identity checks
+
+Run 05, 13, 16, 18, 19, and 20 through `smoke.sh`. The runner provisions a fresh pair of
+`maestro-e2e-<UUID>@example.com` accounts and establishes their friendship
+using A's request and B's acceptance under normal RLS. It verifies the edge
+before launching Maestro. `TRIP_EMAIL`, `TRIP_PASSWORD`, `TRIP_EMAIL_2`, and
+`TRIP_PASSWORD_2` are injected only for these flows (or the full suite).
+Signup requires email confirmation OFF. Persistent A/B are not used for trips.
+
+`ensure-signed-in` always signs out and signs in with the requested credentials.
+`sign-in` reads `profile-email` and compares the actual session's email before
+returning. Every trip flow asserts a freshly loaded empty baseline instead
+of deleting whatever happens to be there. A nonempty baseline fails the flow.
+The single-card selector is only used after this isolation and baseline check.
+
+Credentials are saved with mode 0600 beneath `.smoke-local/trip-accounts/a/`
+and `b/` before signup. The runner deletes both generated accounts at exit,
+including their owned test data via backend cascades. Failed cleanup retains
+the records and fails the run; the next trip run retries them. This is fixture
+teardown, not proof of UI deletion: the flows assert UI deletion separately.
+
+Only one trip runner may hold `.smoke-local/trip-accounts.lock`. After SIGKILL
+or power loss, first confirm no runner is active, remove the stale empty lock
+directory, and rerun. Do not remove credential records. To recover explicitly:
+
+```sh
+node scripts/maestro-trip-fixtures.mjs cleanup ../.smoke-local/trip-accounts
+```
+
+
+## Signup lifecycle
+
+Run `npm run smoke:ios -- .maestro/07-sign-up-delete.yaml` through the runner,
+not raw `maestro test`: it supplies `SIGNUP_NAME`, `SIGNUP_EMAIL`, and
+`SIGNUP_PASSWORD`. Email confirmation must be OFF; a settings preflight
+fails before creating anything if `mailer_autoconfirm` is not true.
+
+On the dedicated **English iOS 26 simulator**, `common/signup-ios-prep.yaml`
+opens Settings → General → AutoFill & Passwords and disables **Suggest
+Strong Passwords**, leaving ordinary AutoFill enabled. This simulator-only
+setting persists. The app's real password/AutoFill behavior is unchanged.
+The helper supports Settings home, General, or the AutoFill page; return to
+Settings home first if this simulator was left on another settings page.
+
+The runner writes a unique `maestro-e2e-<UUID>@example.com` fixture to
+`.smoke-local/signup-accounts/` with file mode 0600 before registration.
+At exit it authenticates only that fixture and calls the same own-account
+`delete-account` function if needed. Recovery after a supposedly successful
+UI flow makes the run fail, so cleanup cannot hide broken UI deletion.
+Offline/rate-limited/unknown results retain the ledger and fail the run;
+the next signup run retries pending records before creating another account.
+SIGKILL/power loss cannot run a trap, so do not delete pending ledger files.
+No service-role key is used. To retry one pending cleanup explicitly from app/:
+
+```sh
+node scripts/maestro-account.mjs cleanup ../.smoke-local/signup-accounts/<uuid>.json
+```
+
+Exit 0 means credentials are rejected; exit 2 means a survivor was deleted
+and verified; exit 1 means recovery still needs attention. Keep passwords,
+tokens, and raw ledger contents out of commits and reports.
 
 ## Running
 
@@ -170,6 +232,10 @@ If more than one simulator is booted, Maestro may pick either; pass
 
 ## Reading a failure
 
+See [REVIEW.md](REVIEW.md) for the Vietnamese troubleshooting review:
+confirmed causes, fixes, unsuccessful approaches, and regression evidence
+from the 27 October 2026 simulator runs.
+
 Maestro prints each step with ✅ / ❌ and stops the flow at the first
 failure. The reason is in the line right after the ❌, usually one of:
 
@@ -208,7 +274,7 @@ reaches the native view.
 | `CitySwitcher` | `city-search`, `city-row-<index>` (the A–Z list), `city-recent-<index>` (the recent section, when shown) |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-cancel`, `search-result-<index>` |
-| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language` |
+| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language`, `profile-email` (actual signed-in email) |
 | `LanguageSwitcher` | `lang-<en\|vi\|ja\|zh>` |
 | `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`), `signin-forgot`; `auth-error` (`FormError`) |
 | `ForgotPasswordScreen` | `forgot-email`, `forgot-submit`; on the code step `forgot-code`, `forgot-resend`, `forgot-reset` (`forgot-password` is set but no flow types into it — see `14`'s header) |
@@ -216,15 +282,16 @@ reaches the native view.
 | `DeleteAccountScreen` | `delete-account-confirm` (`DangerButton`) |
 | `IdeasScreen` | `ideas-company-<solo\|couple\|friends\|family>`, `ideas-cat-<index>`, `ideas-sketch` |
 | `PlanOptionsScreen` | `plan-card-best` |
-| `PlanEditScreen` | `plan-save`, `plan-stop-time-<index>`, `plan-stop-earlier-<index>` (the −15 min step) |
-| `TripsScreen` | `trip-upcoming-<index>` |
+| `PlanEditScreen` | `plan-save`, `plan-stop-name-<index>`, `plan-stop-time-<index>`, `plan-stop-earlier-<index>` (the −15 min step) |
+| `TripsScreen` | `trip-upcoming-<index>`, `trips-ready` (trips and invitations loaded without error/cache fallback), `trips-empty` (no owned/accepted trips or invitations) |
 | `TripDetailScreen` | `trip-delete` (owner), `trip-leave` (invitee), `trip-stop-time-<index>` |
 | `PlaceDetailScreen` | `detail-save` / `detail-saved` — one id per state |
 | `PlaceDetailScreen` (check-in) | `detail-checkin` / `detail-checked-in` — one id per state; in the visit sheet `checkin-head`, `checkin-visit` (each row), `checkin-visit-remove` (each row's trash), `detail-checkin-again` |
-| `SaveSheet` | `save-row-<index>`, `save-done` |
+| `SaveSheet` | `save-place-<slug>`, `save-row-<index>`, `save-done` |
 | `CollectionFormScreen` | `collection-name`, `collection-submit` |
 | `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the New pill in the header: on Yours once there is a list, on Community always when signed in) |
-| `CollectionDetailScreen` | `collection-place-<index>`, `collection-back`, `collection-more`, `collection-menu-edit`, `collection-menu-delete` |
+| `CollectionDetailScreen` | `collection-place-<index>` (List), `collection-tile-<index>` (Grid), `collection-menu-grid`, `collection-back`, `collection-more`, `collection-menu-edit`, `collection-menu-delete` |
+| `CrewScreen` | `crew-sent-<index>` (outgoing request), `crew-friend-<index>`, `crew-accept-<index>` |
 
 Renaming one of these is a breaking change for this suite, and
 `scripts/maestroIds.test.ts` fails in CI when a flow names an id the
@@ -241,3 +308,32 @@ before you do.
   project or accept that a data change can fail the smoke.
 
 When those are in place, the suite itself needs no change beyond `appId`.
+
+### Guest resume and collection privacy fixtures
+
+18/19 request two private collections owned by generated A: one empty for
+bookmark resume, one with a published Hanoi place for privacy. Titles and IDs
+are unique per run; selecting these fixture titles is selecting test data,
+not translated UI copy. B is A's friend, so privacy must hold even for friends.
+The runner passes `FIXTURE_*` public backend configuration and row identifiers;
+no service-role key is used. All seeded data belongs to the disposable accounts
+and is removed by their existing ledger-backed cleanup, including failed runs.
+`TRIP_*` remains the shared disposable-account variable naming for compatibility.
+
+`common/submit-sign-in.yaml` submits without navigating elsewhere. Every caller
+must assert its destination; ordinary login still uses `common/sign-in.yaml`
+with its Explore landing and profile-email verification. Resume flows verify
+saved data through the fixture owner's session, or the empty Trips baseline
+and the sole created trip. Never use normal login's forced Profile navigation
+to test resume behavior.
+
+| Component | Additional testID |
+| --- | --- |
+| `AuthSheet` | `auth-sheet-sign-in`, `auth-sheet-cancel` |
+| `CollectionsScreen` | `collections-community`, `collections-ready` (fresh public catalog loaded successfully) |
+| `ActionSheet` | `sheet-action-public`, `sheet-action-private` (existing action-key IDs) |
+
+`PlaceDetailScreen` also exposes `detail-place-<slug>`. Flow 18 searches for
+a published fixture place, asserts that exact slug on detail and the resumed
+save sheet, then verifies the saved membership's slug through the backend.
+Display titles are not identifiers: detail can shorten a branch name.

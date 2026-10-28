@@ -58,12 +58,23 @@ env:
 - tapOn:
     id: "city-search"
 - inputText: "saigon"
+# Finish text entry before selecting a row. With the keyboard up, the
+# recorded tap only dismissed it and moved the sheet, leaving the city
+# unchanged. Submit the search to dismiss the keyboard; hideKeyboard's
+# iOS gesture can dismiss this bottom sheet too. Reacquire the settled row.
+- pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 5000
 - extendedWaitUntil:
     visible:
       id: "city-row-0"
     timeout: 10000
 - tapOn:
     id: "city-row-0"
+- extendedWaitUntil:
+    notVisible:
+      id: "city-search"
+    timeout: 10000
 - extendedWaitUntil:
     visible:
       id: "place-card-0"

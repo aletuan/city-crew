@@ -1,9 +1,5 @@
 # `maestro test .maestro` runs these, in this order. Files under common/
 # are subflows and are only ever run through runFlow.
-#
-# 07-sign-up-delete.yaml is deliberately not in this list. See its own
-# header and GUIDELINES.md ("iOS's own AutoFill panel") for why: it needs
-# manual QA per release instead of a Maestro run.
 flows:
   - "00-launch.yaml"
   - "01-explore.yaml"
@@ -12,6 +8,7 @@ flows:
   - "04-sign-in.yaml"
   - "05-plan-trip.yaml"
   - "06-save-place.yaml"
+  - "07-sign-up-delete.yaml"
   - "08-explore-filter.yaml"
   - "09-collections-browse.yaml"
   - "10-check-in.yaml"
@@ -21,6 +18,9 @@ flows:
   - "15-theme.yaml"
   - "16-trip-invite.yaml"
   - "17-unfriend.yaml"
+  - "18-guest-save-resume.yaml"
+  - "19-collection-privacy.yaml"
+  - "20-guest-trip-resume.yaml"
   # Last: the language it picks persists on the device. See its header.
   - "12-language.yaml"
 executionOrder:
@@ -33,6 +33,7 @@ executionOrder:
     - 04-sign-in
     - 05-plan-trip
     - 06-save-place
+    - 07-sign-up-delete
     - 08-explore-filter
     - 09-collections-browse
     - 10-check-in
@@ -42,4 +43,7 @@ executionOrder:
     - 15-theme
     - 16-trip-invite
     - 17-unfriend
+    - 18-guest-save-resume
+    - 19-collection-privacy
+    - 20-guest-trip-resume
     - 12-language

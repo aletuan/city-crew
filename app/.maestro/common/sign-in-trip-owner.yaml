@@ -1,0 +1,9 @@
+# Never substitute a persistent TEST_EMAIL for this run-owned identity.
+appId: host.exp.Exponent
+---
+- assertTrue: ${new RegExp('^maestro-e2e-[0-9a-f-]+@example[.]com$').test(TRIP_EMAIL)}
+- runFlow:
+    file: ensure-signed-in.yaml
+    env:
+      TEST_EMAIL: ${TRIP_EMAIL}
+      TEST_PASSWORD: ${TRIP_PASSWORD}

@@ -1,8 +1,7 @@
 # Unfriend, and make friends again: A unfriends B from Your friends; B is
 # off A's list. A asks again by B's username; B finds the request on
 # Requests and accepts; A is on B's list. The second half is what puts
-# the fixture back — A and B friends, B A's only friend, which
-# 16-trip-invite needs — so the flow tests the whole friendship cycle and
+# the persistent fixture back — A and B friends, B A's only friend — so the flow tests the whole friendship cycle and
 # leaves nothing changed.
 #
 # What only a device shows: the `friendships` policies between two real
@@ -76,11 +75,11 @@ env:
 - tapOn:
     id: "crew-send"
     optional: true
-# The request lands under Sent. A request already sent by a run that
-# stopped here reads the same.
+# The request lands under Sent. Its former explanatory copy now lives
+# only in the Cancel sheet; assert the outgoing row, not that removed text.
 - extendedWaitUntil:
     visible:
-      text: ".*waiting on their answer.*"
+      id: "crew-sent-0"
     timeout: 15000
 
 # ── B accepts ──
