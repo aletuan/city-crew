@@ -793,6 +793,7 @@ export type Database = {
           primary_type: string | null
           rating: number | null
           rating_count: number | null
+          review_pace: number | null
           review_note: string | null
           review_status: string
           reviewed_at: string | null
@@ -842,6 +843,7 @@ export type Database = {
           primary_type?: string | null
           rating?: number | null
           rating_count?: number | null
+          review_pace?: number | null
           review_note?: string | null
           review_status?: string
           reviewed_at?: string | null
@@ -891,6 +893,7 @@ export type Database = {
           primary_type?: string | null
           rating?: number | null
           rating_count?: number | null
+          review_pace?: number | null
           review_note?: string | null
           review_status?: string
           reviewed_at?: string | null

@@ -99,6 +99,15 @@ Hai hệ quả phải biết:
   01/09 vẫn chưa được ghi lại. Muốn có tín hiệu xu hướng thì cần bảng
   snapshot có ngày, như C4 mô tả cho số liệu mạng xã hội.
 
+  *Cập nhật 28/10/2026:* không cần bảng. Job quay lại mỗi quán sau khoảng
+  25 ngày, nên lúc Google trả lời, dòng vẫn còn số cũ và ngày của nó. Job
+  lấy độ chênh trước khi ghi đè và chỉ giữ kết quả: `review_pace`, số
+  review mới trên 30 ngày (`migrations/20261028100000_review_pace.sql`).
+  Số đếm của Google vì vậy không bị giữ lâu hơn trước. Còn để ngỏ: con số
+  suy ra này có nằm trong giới hạn "nội dung Google" của ToS không. Nó cùng
+  vòng đời với `rating_count` (được tính lại mỗi lần làm mới), nhưng điều
+  đó chưa được đối chiếu với văn bản điều khoản.
+
 Một mâu thuẫn còn mở: **44** `desc_en` đang là chữ của Google
 (`reviewer_source = google`), trong khi câu trả lời gửi Apple
 (review-reply 2.1) nói mô tả do desk tự viết. Job làm mới giữ cho 44 dòng đó
