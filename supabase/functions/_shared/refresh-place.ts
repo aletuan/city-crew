@@ -46,7 +46,7 @@
 // row still holds the last count and its date when Google answers, so the
 // difference is taken here, before the count is overwritten, and only the
 // result is kept. Why and what it looks like:
-// `migrations/20261028100000_review_pace.sql`.
+// `migrations/20261028073138_review_pace.sql`.
 //
 // Pure except for the two things it is handed — a client and a fetch — so
 // it is tested from the app's runner, the way `rehost.ts` is.

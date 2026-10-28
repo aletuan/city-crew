@@ -20,7 +20,7 @@ end $$;
 
 -- The job writes one, and the file applied again leaves it.
 update public.places set review_pace = 134.4 where slug = 'paced';
-\ir ../migrations/20261028100000_review_pace.sql
+\ir ../migrations/20261028073138_review_pace.sql
 
 do $$
 begin

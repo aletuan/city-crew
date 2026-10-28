@@ -102,7 +102,7 @@ Hai hệ quả phải biết:
   *Cập nhật 28/10/2026:* không cần bảng. Job quay lại mỗi quán sau khoảng
   25 ngày, nên lúc Google trả lời, dòng vẫn còn số cũ và ngày của nó. Job
   lấy độ chênh trước khi ghi đè và chỉ giữ kết quả: `review_pace`, số
-  review mới trên 30 ngày (`migrations/20261028100000_review_pace.sql`).
+  review mới trên 30 ngày (`migrations/20261028073138_review_pace.sql`).
   Số đếm của Google vì vậy không bị giữ lâu hơn trước. Còn để ngỏ: con số
   suy ra này có nằm trong giới hạn "nội dung Google" của ToS không. Nó cùng
   vòng đời với `rating_count` (được tính lại mỗi lần làm mới), nhưng điều
