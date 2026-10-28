@@ -735,13 +735,23 @@ describe('openLabel', () => {
 describe('dayline', () => {
   const sun = new Date(2026, 9, 4); // Sunday, 4 October 2026
   it('spells the weekday and gives the day, in each language', () => {
-    expect(dayline('vi', sun)).toBe('Chủ Nhật 4');
-    expect(dayline('en', sun)).toBe('Sunday 4');
-    expect(dayline('ja', sun)).toBe('4日（日）');
+    expect(dayline('vi', sun, ICT)).toBe('Chủ Nhật 4');
+    expect(dayline('en', sun, ICT)).toBe('Sunday 4');
+    expect(dayline('ja', sun, ICT)).toBe('4日（日）');
+  });
+  // The city's day, not the phone's (28 Oct 2026). 21:00 on a Wednesday
+  // in Vietnam is 01:00 on Thursday in Melbourne, four hours ahead in
+  // its summer, and a reader in Hà Nội looking at Melbourne is looking
+  // at Thursday.
+  it('reads the day on the city’s clock', () => {
+    const at = new Date('2026-10-28T14:00:00Z');
+    expect(dayline('en', at, ICT)).toBe('Wednesday 28');
+    expect(dayline('en', at, 'Australia/Melbourne')).toBe('Thursday 29');
+    expect(dayline('vi', at, 'Australia/Melbourne')).toBe('Thứ Năm 29');
   });
   it('keeps the weekday whole on a weekday too', () => {
-    expect(dayline('vi', new Date(2026, 8, 25))).toBe('Thứ Sáu 25');
-    expect(dayline('en', new Date(2026, 8, 25))).toBe('Friday 25');
+    expect(dayline('vi', new Date(2026, 8, 25), ICT)).toBe('Thứ Sáu 25');
+    expect(dayline('en', new Date(2026, 8, 25), ICT)).toBe('Friday 25');
   });
 });
 
@@ -778,7 +788,7 @@ describe('in Chinese', () => {
   });
 
   it('writes the hero line as the weekday and the day', () => {
-    expect(dayline('zh', wed)).toBe('周三 7日');
+    expect(dayline('zh', wed, ICT)).toBe('周三 7日');
   });
 
   it('writes a day already past without its weekday', () => {
@@ -830,7 +840,7 @@ describe('in Traditional Chinese', () => {
   it('writes a day coming up with 週', () => {
     expect(dateline('zh-Hant', wed)).toBe('10月7日 週三');
     expect(dateline('zh-Hant', sun)).toBe('1月4日 週日');
-    expect(dayline('zh-Hant', wed)).toBe('週三 7日');
+    expect(dayline('zh-Hant', wed, ICT)).toBe('週三 7日');
     expect(numericDate('zh-Hant', wed)).toBe('10月7日');
   });
 

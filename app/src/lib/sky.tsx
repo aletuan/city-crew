@@ -35,8 +35,11 @@ export function useSky(lat: number | undefined, lng: number | undefined): Sky | 
     if (hit && Date.now() - hit.at < FRESH_MS) { setSky(hit.sky); return; }
     // Show the stale reading while the fresh one is on its way. An hour
     // old is closer to the truth than nothing, and it stops the eyebrow
-    // flickering empty on every visit.
-    if (hit) setSky(hit.sky);
+    // flickering empty on every visit. With no reading for this place at
+    // all, show none: what the state still held was the last city's, and
+    // switching Sài Gòn for Đà Lạt left Sài Gòn's 30° under Đà Lạt's name
+    // until the answer came — and for good when it did not (28 Oct 2026).
+    setSky(hit ? hit.sky : null);
 
     let alive = true;
     // Abandoned rather than retried. A missed reading costs a number

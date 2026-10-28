@@ -84,12 +84,19 @@ export function dateline(lang: string, now: Date): string {
  * the weather hanging off its end on a small phone, which "Thứ Năm, 7
  * tháng 8" and a temperature did not leave it.
  */
-export function dayline(lang: string, now: Date): string {
-  if (lang === 'vi') return `${DAYS_VI[now.getDay()]} ${now.getDate()}`;
-  if (lang === 'ja') return `${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
-  if (lang === 'zh') return `${DAYS_ZH[now.getDay()]} ${now.getDate()}日`;
-  if (lang === 'zh-Hant') return `${DAYS_HANT[now.getDay()]} ${now.getDate()}日`;
-  return `${DAYS_EN[now.getDay()]} ${now.getDate()}`;
+export function dayline(lang: string, now: Date, tz: string): string {
+  // On the city's wall clock, not the phone's (28 Oct 2026). The two agree
+  // for every Vietnamese city and a reader in Vietnam; Melbourne runs
+  // three or four hours ahead, so from 20:00 or 21:00 Vietnam's time the
+  // phone's date was a day behind the city on screen. `wallClock` counts the
+  // week from Monday; these tables count it from Sunday, as `getDay` does.
+  const { weekday, d } = wallClock(now, tz);
+  const day = (weekday + 1) % 7;
+  if (lang === 'vi') return `${DAYS_VI[day]} ${d}`;
+  if (lang === 'ja') return `${d}日（${DAYS_JA[day]}）`;
+  if (lang === 'zh') return `${DAYS_ZH[day]} ${d}日`;
+  if (lang === 'zh-Hant') return `${DAYS_HANT[day]} ${d}日`;
+  return `${DAYS_EN[day]} ${d}`;
 }
 
 /**

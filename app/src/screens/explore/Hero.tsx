@@ -12,6 +12,7 @@ import { CitySwitcherModal } from '../../components/CitySwitcher';
 import { CHIP_SLOP, PressableScale } from '../../components/ui';
 import { useCurrentCity } from '../../lib/city';
 import { useSky } from '../../lib/sky';
+import { DEFAULT_TZ } from '../../lib/clock';
 import { dayline } from '../../lib/format';
 import { coverOf, Place } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
@@ -141,7 +142,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           glass, because the top of this picture can be any sky. */}
       <View style={[s.heroTop, { top: insets.top + 6 }]}>
         <View style={s.heroDate}>
-          <Text style={s.heroDateText}>{dayline(lang, new Date())}</Text>
+          <Text style={s.heroDateText}>{dayline(lang, new Date(), city?.tz ?? DEFAULT_TZ)}</Text>
           {sky ? (
             <>
               <Ionicons name={sky.icon} size={14} color={sky.gold ? onPhoto.sun : onPhoto.textSecondary} />

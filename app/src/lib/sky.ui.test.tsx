@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // The weather above Explore's date: one request per city per half hour,
-// the old reading shown while a new one is fetched, and nothing at all —
+// that city's old reading shown while a new one is fetched, and nothing at all —
 // no spinner, no dash — when there is no answer. How a reply becomes a
 // `Sky` is `weather.ts`'s, held at 100% in Node; what is left here is the
 // clock, the cache and the network.
@@ -122,6 +122,32 @@ describe('the sky over a city', () => {
     expect(temp()).toBe(31);
     await act(async () => { land({ json: async () => reply(29) }); await Promise.resolve(); await Promise.resolve(); });
     await waitFor(() => expect(temp()).toBe(29));
+  });
+
+  // Switched to a city with no reading yet (28 Oct 2026): nothing, not
+  // the last city's number under this one's name, while the answer is on
+  // its way — and still nothing if it never comes.
+  it('shows nothing for a new city until its own reading lands', async () => {
+    const Where = await load();
+    const view = render(<Where lat={10.78} lng={106.7} />);
+    await waitFor(() => expect(temp()).toBe(31));
+    let land: (v: unknown) => void = () => {};
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { land = r; }));
+    view.rerender(<Where lat={11.94} lng={108.44} />);
+    await act(async () => { await Promise.resolve(); });
+    expect(seen).toBeNull();
+    await act(async () => { land({ json: async () => reply(19) }); await Promise.resolve(); await Promise.resolve(); });
+    await waitFor(() => expect(temp()).toBe(19));
+  });
+
+  it('does not leave the last city’s reading behind when the new one fails', async () => {
+    const Where = await load();
+    const view = render(<Where lat={10.78} lng={106.7} />);
+    await waitFor(() => expect(temp()).toBe(31));
+    fetchMock.mockRejectedValueOnce(new Error('offline'));
+    view.rerender(<Where lat={11.94} lng={108.44} />);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(seen).toBeNull();
   });
 
   // Decoration, not content: a failed or unreadable answer draws nothing,
