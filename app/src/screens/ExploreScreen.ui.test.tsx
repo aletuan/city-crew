@@ -44,6 +44,7 @@ const state = vi.hoisted(() => ({
   rankLikes: undefined as Record<string, number> | undefined,
   myLikes: [] as string[],
   uid: null as string | null,
+  pending: false,
   saved: new Set<string>(),
   checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
   locationGranted: true,
@@ -97,7 +98,12 @@ vi.mock('../lib/catalog', () => ({
 }));
 vi.mock('../lib/auth', () => {
   const m = {
-    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+    // `userId` as the provider gives it: undefined while the launch has
+    // read nothing (`pending`), then the session's id or null.
+    useAuth: () => ({
+      session: state.uid ? { user: { id: state.uid } } : null,
+      userId: state.pending ? undefined : state.uid ?? null,
+    }),
   };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
@@ -343,6 +349,7 @@ beforeEach(async () => {
   state.rankLikes = undefined;
   state.myLikes = [];
   state.uid = null;
+  state.pending = false;
   state.saved = new Set();
   state.checkins = [];
   state.locationGranted = true;
@@ -1721,6 +1728,29 @@ describe('the community shelf', () => {
     render(<ExploreScreen navigation={nav()} />);
     expect(within(shelfCard('List fresh')).getByTestId('new-badge')).toBeTruthy();
     expect(within(shelfCard('List old')).queryByTestId('new-badge')).toBeNull();
+    expect(within(shelfCard('List mine')).queryByTestId('new-badge')).toBeNull();
+  });
+
+  // The badge came and went as the app opened (owner, 29 Oct 2026): the
+  // session arrives after the shelf, and until it did the reader's own
+  // new list read as a stranger's. Unknown now marks nothing.
+  it('marks nothing until it knows who is reading, then only the others', () => {
+    const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+    state.pending = true;
+    state.places.data = [place('p1')];
+    state.cols.data = [
+      collection('mine', ['p1'], { owner_id: 'u1', created_at: ago(1) } as Partial<Collection>),
+      collection('theirs', ['p1'], { owner_id: 'u2', created_at: ago(1) } as Partial<Collection>),
+    ];
+    const { rerender } = render(<ExploreScreen navigation={nav()} />);
+    expect(screen.queryByTestId('new-badge')).toBeNull();
+    // Known to be nobody: a guest, to whom every new list is news.
+    state.pending = false;
+    rerender(<ExploreScreen navigation={nav()} />);
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(2);
+    state.uid = 'u1';
+    rerender(<ExploreScreen navigation={nav()} />);
+    expect(within(shelfCard('List theirs')).getByTestId('new-badge')).toBeTruthy();
     expect(within(shelfCard('List mine')).queryByTestId('new-badge')).toBeNull();
   });
 

@@ -40,7 +40,8 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { city } = useCurrentCity();
   const cols = useCollections();
   const { likes, rankLikes, myLikes, toggleLike } = useLikes();
-  const uid = useSession().session?.user?.id;
+  const { session, userId: reader } = useSession();
+  const uid = session?.user?.id;
   const { askToSignIn } = useSaveActions();
 
   // Signed out, the tap is an invitation rather than a failure: the same
@@ -153,7 +154,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                   locations={[0, 0.42, 1]}
                   style={StyleSheet.absoluteFill}
                 />
-                {isNewList(c, uid ?? null, now) ? <NewBadge /> : null}
+                {isNewList(c, reader, now) ? <NewBadge /> : null}
                 <View style={s.shelfCardText}>
                   {/* One line, always. A second line pushed the count down
                       on some tiles and not others, so a row of cards that

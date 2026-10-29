@@ -101,6 +101,8 @@ vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => null }));
 const idx = vi.hoisted(() => ({
   places: null as Place[] | null, asks: [] as (string | null | undefined)[],
   real: false, server: [] as Place[],
+  // The launch has not read who is signed in yet: `userId` undefined.
+  pending: false,
 }));
 vi.mock('../lib/searchIndex', async (orig) => {
   const real = await orig<typeof import('../lib/searchIndex')>();
@@ -118,7 +120,7 @@ vi.mock('../lib/data', async (orig) => ({
   fetchSearchIndex: async () => idx.server,
 }));
 vi.mock('../lib/auth', () => {
-  const m = { useAuth: () => ({ session: null, ready: true, email: null, userId: idx.real ? 'u1' : undefined }) };
+  const m = { useAuth: () => ({ session: null, ready: true, email: null, userId: idx.real ? 'u1' : idx.pending ? undefined : null }) };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
@@ -266,6 +268,7 @@ beforeEach(async () => {
   idx.places = null;
   idx.asks = [];
   idx.real = false;
+  idx.pending = false;
   idx.server = [];
   forgetSearchIndex();
   g.addMany.mockClear();
@@ -558,6 +561,15 @@ describe('typing a query', () => {
     };
     expect(within(row('Coffee crawl')).getByTestId('new-badge')).toBeTruthy();
     expect(within(row('Coffee gallery')).queryByTestId('new-badge')).toBeNull();
+  });
+
+  it('marks nothing while it does not yet know who is reading', () => {
+    idx.pending = true;
+    cat.cols = [{ ...crawl, created_at: new Date(Date.now() - 86_400_000).toISOString() }];
+    mount();
+    type('coffee');
+    expect(screen.getByText('Coffee crawl')).toBeTruthy();
+    expect(screen.queryByTestId('new-badge')).toBeNull();
   });
 
   it('opens a collection and remembers the query', () => {

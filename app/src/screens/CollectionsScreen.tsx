@@ -489,7 +489,7 @@ export default function CollectionsScreen({ navigation, route }: {
   route: { params?: { tab?: 'yours' | 'community'; at?: number } };
 }) {
   const { t } = useI18n();
-  const { session } = useSession();
+  const { session, userId: reader } = useSession();
   const { cities } = useCityList();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);
@@ -576,7 +576,10 @@ export default function CollectionsScreen({ navigation, route }: {
 
   const me = session?.user?.id;
   // Read once a render: a list that turns eight days old while the tab is
-  // open keeps its badge until the next one, which is soon enough.
+  // open keeps its badge until the next one, which is soon enough. Whose
+  // lists are whose comes from `reader` (`userId`), not `me`: `me` is
+  // undefined both before the session is read and for a guest, and the
+  // badge has to tell the two apart — see `isNewList`.
   const now = Date.now();
   const newWord = t('New', 'Mới', '新着', '新', '新');
 
@@ -1237,7 +1240,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       const members = membersOf(c, places).length;
                       const reason = reasonFor(c.slug);
                       const my = !!c.id && myLikes.includes(c.id);
-                      const fresh = isNewList(c, me ?? null, now);
+                      const fresh = isNewList(c, reader, now);
                       return (
                         <PressableScale
                           key={c.slug}
@@ -1388,7 +1391,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 // did.
                 const my = !!c.id && myLikes.includes(c.id);
                 const blurb = t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() || '';
-                const fresh = isNewList(c, me ?? null, now);
+                const fresh = isNewList(c, reader, now);
                 const byline = c.curator_handle
                   ? `${t('by', 'bởi', 'by', '来自', '來自')} ${atHandle(c.curator_handle)}, ${reason ?? placesOf(n)}`
                   : undefined;
