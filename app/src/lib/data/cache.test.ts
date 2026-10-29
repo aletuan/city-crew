@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CACHE_MAX_AGE_MS, CACHE_VERSION, cacheKey, packCache, unpackCache } from './cache';
+import { CACHE_MAX_AGE_MS, CACHE_VERSION, cacheKey, cacheKind, packCache, unpackCache } from './cache';
 
 const NOW = 1_756_000_000_000;
 
@@ -11,6 +11,20 @@ describe('cacheKey', () => {
   it('a signed-out reader is one shared key, not a fresh one per launch', () => {
     expect(cacheKey('places', 'hcmc')).toBe('citycrew.cache.places.hcmc.anon');
     expect(cacheKey('places', 'hcmc', null)).toBe('citycrew.cache.places.hcmc.anon');
+  });
+});
+
+describe('cacheKind', () => {
+  it('reads back the kind a key was made from', () => {
+    expect(cacheKind(cacheKey('places', 'hcmc', 'user-1'))).toBe('places');
+    expect(cacheKind(cacheKey('mine', 'all'))).toBe('mine');
+  });
+
+  it('calls any other key other', () => {
+    expect(cacheKind('hydrate-a')).toBe('other');
+    expect(cacheKind('somebody.cache.places.hcmc')).toBe('other');
+    expect(cacheKind('citycrew.prefs.places')).toBe('other');
+    expect(cacheKind('citycrew.cache.')).toBe('other');
   });
 });
 

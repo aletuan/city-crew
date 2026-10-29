@@ -90,7 +90,20 @@ xong (đủ muộn để không tranh chấp với thứ người dùng đang ch
 |---|---|
 | `platform`, `os_version`, `is_dev` | ios/android, phiên bản OS, có phải bản dev |
 | `total_ms` | tổng tới mốc cuối |
-| `marks[]` | `[{name, ms}]` — `city:bootstrap`, `city:committed`, `catalog:places`, `explore:mounted`, `explore:content`… |
+| `marks[]` | `[{name, ms}]` — `city:bootstrap`, `city:committed`, `catalog:places`, `explore:mounted`, `explore:content`… Vài mốc có thêm `value`, xem dưới. |
+
+**Mốc đo bản lưu** (từ 29/10/2026, `lib/data/fetch.ts › usePersistedFetch`).
+Lần đầu mỗi loại dữ liệu được đọc lại từ máy trong một lần mở app, nó ghi:
+
+| mốc | `value` |
+|---|---|
+| `cache:<loại>:chars` | độ dài bản lưu, tính bằng ký tự UTF-16 (gần bằng số byte) |
+| `cache:<loại>:parse-ms` | thời gian `unpackCache` (`JSON.parse` cả bản) trên luồng JS |
+| `cache:<loại>:unreadable` | không có `value`; đọc bản lưu bị lỗi, đây là dấu hiệu bản lưu vượt cửa sổ 2 MB của Android |
+
+`<loại>` là `kind` của `cacheKey`: `places`, `collections`, `mine`, `likes`,
+`mytrips`, `checkins`, `friendships`… Dùng để biết bản lưu nào to, parse mất
+bao lâu, và trên Android có bản nào đã không đọc lại được.
 
 Code: `app/src/lib/trace.ts` (ghi mốc) + `tracereport.ts` (gửi).
 
@@ -250,6 +263,16 @@ select (e->>'ms')::int as ms, (e->>'option')::int as opt,
 from public.deck_traces t, jsonb_array_elements(t.events) e
 where t.created_at = (select max(created_at) from public.deck_traces)
 order by ms;
+```
+
+```sql
+-- Bản lưu: to bao nhiêu, parse bao lâu, máy nào đọc không được
+select t.platform, m->>'name' as mark,
+       round(avg((m->>'value')::numeric)) as avg_value,
+       max((m->>'value')::numeric) as max_value, count(*) as launches
+from public.startup_traces t, jsonb_array_elements(t.marks) m
+where m->>'name' like 'cache:%' and t.created_at > now() - interval '7 days'
+group by 1, 2 order by 1, 2;
 ```
 
 ### Cách đọc một dòng thời gian khoẻ mạnh

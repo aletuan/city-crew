@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '../../uitest/render';
 import { packCache } from './cache';
 import { usePersistedFetch } from './fetch';
+import { startupTrace } from '../trace';
 
 function Probe({ k, fetcher }: { k: string | null; fetcher: () => Promise<string[]> }) {
   const q = usePersistedFetch(k, fetcher, [] as string[]);
@@ -115,5 +116,49 @@ describe('usePersistedFetch across a key change', () => {
 
     await act(async () => { second.resolve(['hanoi-cafe', 'hanoi-bar']); });
     expect(read('data')).toBe('hanoi-cafe,hanoi-bar');
+  });
+});
+
+// What a cache read costs, on the launch that pays it (owner, 29 Oct
+// 2026): the blob's length and the parse, and a mark of its own when the
+// read fails, which is what a blob past Android's 2 MB window looks like.
+describe('usePersistedFetch measures its cache read', () => {
+  it('marks the length read and the parse it cost, under the key\'s kind', async () => {
+    const spy = vi.spyOn(startupTrace, 'mark');
+    try {
+      const blob = packCache(['hue-market'], Date.now());
+      await AsyncStorage.setItem('citycrew.cache.probe.hue.anon', blob);
+      render(<Probe k="citycrew.cache.probe.hue.anon" fetcher={() => new Promise<string[]>(() => {})} />);
+      await waitFor(() => expect(read('data')).toBe('hue-market'));
+      expect(spy).toHaveBeenCalledWith('cache:probe:chars', blob.length);
+      const parse = spy.mock.calls.find(([name]) => name === 'cache:probe:parse-ms');
+      expect(parse?.[1]).toBeGreaterThanOrEqual(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('marks nothing when there is nothing stored', async () => {
+    const spy = vi.spyOn(startupTrace, 'mark');
+    try {
+      render(<Probe k="citycrew.cache.empty.hue.anon" fetcher={async () => ['fresh']} />);
+      await waitFor(() => expect(read('data')).toBe('fresh'));
+      expect(spy.mock.calls.filter(([name]) => String(name).startsWith('cache:empty'))).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('marks a read that failed, which is how a blob too large to read back shows', async () => {
+    const spy = vi.spyOn(startupTrace, 'mark');
+    const get = vi.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('Row too big to fit into CursorWindow'));
+    try {
+      render(<Probe k="citycrew.cache.huge.hcmc.anon" fetcher={() => new Promise<string[]>(() => {})} />);
+      await waitFor(() => expect(spy).toHaveBeenCalledWith('cache:huge:unreadable'));
+      expect(read('data')).toBe('');
+    } finally {
+      get.mockRestore();
+      spy.mockRestore();
+    }
   });
 });

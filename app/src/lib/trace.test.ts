@@ -11,6 +11,11 @@ describe('traceLine', () => {
   it('shows the running total and the gap since the previous mark', () => {
     expect(traceLine('cities:fetched', 812, 640)).toBe('[startup] 812ms (+640) cities:fetched');
   });
+
+  it('adds what a mark measured, when it measured something', () => {
+    expect(traceLine('cache:places:chars', 120, 4, 1_300_000)).toBe('[startup] 120ms (+4) cache:places:chars = 1300000');
+    expect(traceLine('cache:places:parse-ms', 124, 0, 0)).toBe('[startup] 124ms (+0) cache:places:parse-ms = 0');
+  });
 });
 
 describe('makeTrace', () => {
@@ -41,6 +46,19 @@ describe('makeTrace', () => {
     t.mark('first-frame');
     expect(lines).toHaveLength(1);
     expect(t.marks()).toEqual([{ name: 'first-frame', at: 10, ms: 10 }]);
+  });
+
+  it('records a value with the mark that measured it, and none on one that did not', () => {
+    const lines: string[] = [];
+    const t = makeTrace(true, clockAt([0, 10, 20]), (l) => lines.push(l));
+    t.mark('cache:places:chars', 42);
+    t.mark('explore:content');
+    expect(t.marks()).toEqual([
+      { name: 'cache:places:chars', at: 10, ms: 10, value: 42 },
+      { name: 'explore:content', at: 20, ms: 20 },
+    ]);
+    expect(t.marks()[1]).not.toHaveProperty('value');
+    expect(lines[0]).toBe('[startup] 10ms (+10) cache:places:chars = 42');
   });
 
   it('disabled, it neither logs nor records', () => {

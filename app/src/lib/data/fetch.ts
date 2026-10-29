@@ -7,7 +7,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { packCache, unpackCache } from './cache';
+import { startupTrace } from '../trace';
+import { cacheKind, packCache, unpackCache } from './cache';
 
 export type Fetch<T> = {
   loading: boolean;
@@ -132,15 +133,31 @@ export function usePersistedFetch<T>(
   useEffect(() => {
     if (!key) return;
     let live = true;
+    // What reading a cache back costs, measured on the launch that pays
+    // it (owner, 29 Oct 2026): how long the blob is, and how long
+    // `unpackCache` — a `JSON.parse` of all of it, on the JS thread —
+    // took. And a mark when the read itself fails, which is how a blob
+    // past Android's 2 MB cursor window shows up: not as a slow read but
+    // as no read at all (`searchIndex.tsx` declined to cache for exactly
+    // that). Length in UTF-16 units, not bytes: near enough for the
+    // question, and free. Marks dedupe by name, so this is the launch's
+    // first read of each kind and nothing after.
+    const kind = cacheKind(key);
     AsyncStorage.getItem(key)
       .then((raw) => {
         if (!live) return;
-        const hit = unpackCache<T>(raw, Date.now());
+        const t0 = Date.now();
+        const hit = unpackCache<T>(raw, t0);
+        if (raw) {
+          startupTrace.mark(`cache:${kind}:chars`, raw.length);
+          startupTrace.mark(`cache:${kind}:parse-ms`, Date.now() - t0);
+        }
         if (!hit) return;
         setState((s) => (s.loadedAt !== null ? s
           : { ...s, loaded: true, data: hit.data, loadedAt: hit.at, fromCache: true }));
       })
-      .catch(() => { /* an unreadable cache is no cache */ });
+      // An unreadable cache is no cache — but a counted one.
+      .catch(() => { startupTrace.mark(`cache:${kind}:unreadable`); });
     return () => { live = false; };
   }, [key]);
 
