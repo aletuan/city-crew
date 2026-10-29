@@ -235,6 +235,10 @@ beforeEach(async () => {
 // An answer in the filter sheet by its word: each carries its figure
 // after it, "Cafés (2)", which the accessible name runs together.
 const word = (w: string) => ({ name: new RegExp(`^${w} ?(\\(\\d+\\))?$`) });
+/** What each row's heart says aloud after its name: the count the row
+ *  prints bare beside it, as a sentence (`aria-valuetext`). */
+const heartsSay = () => screen.queryAllByRole('button', { name: /like this collection/i })
+  .map((b) => b.getAttribute('aria-valuetext'));
 
 describe('CollectionsScreen — as a guest', () => {
   it('leads with the sign-in card, which jumps to the Profile stack', () => {
@@ -585,7 +589,7 @@ describe('CollectionsScreen — signed in', () => {
     // The same on the row shape.
     fireEvent.click(screen.getByRole('button', { name: 'List view' }));
     expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(2);
-    expect(screen.getByText('2 likes')).toBeTruthy();
+    expect(heartsSay()).toContain('2 likes');
     state.likes = {};
   });
 
@@ -783,7 +787,7 @@ describe('CollectionsScreen — list view', () => {
     await AsyncStorage.setItem('citycrew.collections.view', 'row');
   };
 
-  it('your row shows its description, likes line, and an empty one says "No places yet"', async () => {
+  it('your row shows its description, the count and heart in its foot, and an empty one says "No places yet"', async () => {
     await rows();
     state.mine.data = [
       col('mine1', ['a'], { owner_id: 'u1', desc_en: '  Rooftops for Friday  ' }),
@@ -792,7 +796,20 @@ describe('CollectionsScreen — list view', () => {
     state.likes = { mine1: 1 };
     show();
     expect(await screen.findByText('Rooftops for Friday')).toBeTruthy();
-    expect(screen.getByText('1 like')).toBeTruthy();
+    // The number bare beside its heart, the sentence only aloud.
+    expect(screen.queryByText('1 like')).toBeNull();
+    expect(heartsSay()).toEqual(['1 like']);
+    // One line, the count at its start and the heart at its end, under
+    // the description (owner, 29 Oct 2026).
+    const heart = screen.getByRole('button', { name: 'Like this collection' });
+    const foot = screen.getByText('1 place').parentElement!.parentElement!;
+    expect(foot.contains(heart)).toBe(true);
+    expect(foot.lastElementChild!.contains(heart)).toBe(true);
+    expect(within(heart).getByText('1')).toBeTruthy();
+    expect(getComputedStyle(foot).flexDirection).toBe('row');
+    expect(getComputedStyle(foot).marginTop).toBe('auto');
+    const desc = screen.getByText('Rooftops for Friday');
+    expect(desc.compareDocumentPosition(foot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('No places yet')).toBeTruthy();
     // The empty one draws the waiting well, not a photograph.
     expect(icons('bookmark-outline')).toBeGreaterThanOrEqual(2); // tab glyph + empty cover
@@ -820,9 +837,10 @@ describe('CollectionsScreen — list view', () => {
       return ghost;
     });
     expect(ghosts[0].innerHTML).toBe(ghosts[1].innerHTML);
-    // Four lines: title, meta, two of description, likes.
-    expect(ghosts[0].children).toHaveLength(4);
-    expect(ghosts[0].children[2].textContent).toBe(' \n ');
+    // Three lines on yours: title, two of description, and the foot the
+    // count and the heart share.
+    expect(ghosts[0].children).toHaveLength(3);
+    expect(ghosts[0].children[1].textContent).toBe(' \n ');
     // The face is the ghost's sibling and covers it.
     for (const t of ['List bare', 'List full']) {
       const face = screen.getByText(t).parentElement!;
@@ -845,8 +863,12 @@ describe('CollectionsScreen — list view', () => {
     await screen.findByText('Rooftops');
     fireEvent.click(screen.getByText('swipe-open'));
     expect(screen.queryByText('Rooftops')).toBeNull();
+    // The heart too: open, the column is too narrow to hold it beside the count.
+    expect(screen.queryByRole('button', { name: 'Like this collection' })).toBeNull();
+    expect(screen.getByText('1 place')).toBeTruthy();
     fireEvent.click(screen.getByText('swipe-close'));
     expect(screen.getByText('Rooftops')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Like this collection' })).toBeTruthy();
   });
 
   it('Edit closes the row and opens the form with slug, title and description', async () => {
@@ -979,12 +1001,22 @@ describe('CollectionsScreen — list view', () => {
     state.likes = { theirs: 3, solo: 1 };
     state.myLikes = ['id-solo'];
     const { navigation } = show({ tab: 'community' });
-    expect(await screen.findByLabelText('by @trang, 2 places')).toBeTruthy();
+    // The byline is the face and the handle; the count went to the foot.
+    expect(await screen.findByLabelText('by @trang')).toBeTruthy();
+    expect(screen.getByText('@trang')).toBeTruthy();
     expect(screen.getByText('Coffee crawl')).toBeTruthy();
-    expect(screen.getByText('3 likes')).toBeTruthy();
-    expect(screen.getByText('1 like')).toBeTruthy();
-    // No byline, just the count, where there is no handle.
+    const foot = screen.getByText('2 places').parentElement!.parentElement!;
+    expect(foot.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(within(foot).getByRole('button', { name: 'Like this collection' })).toBeTruthy();
+    expect(within(foot).getByText('3')).toBeTruthy();
+    expect(heartsSay()).toEqual(['3 likes', '1 like']);
+    // No byline at all where there is no handle; the count is in the foot.
     expect(screen.getByText('1 place')).toBeTruthy();
+    expect(screen.getAllByLabelText(/^by /)).toHaveLength(1);
+    // Four lines held on this tab, the byline among them.
+    const ghost = screen.getByText('List solo').parentElement!.previousElementSibling!;
+    expect(ghost.getAttribute('aria-hidden')).toBe('true');
+    expect(ghost.children).toHaveLength(4);
     // Nothing to swipe on somebody else's list.
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Unlike this collection' }));
@@ -1049,6 +1081,21 @@ describe('CollectionsScreen — search', () => {
     // The one thing the card could not tell the reader: why it is here.
     expect(screen.getByText('Place b')).toBeTruthy();
     expect(screen.queryByText(/matches/)).toBeNull();
+  });
+
+  // The same answer in the list shape, where it now sits in the foot,
+  // beside the heart, in place of the count (owner, 29 Oct 2026).
+  it('says which place matched in a community row\'s foot', async () => {
+    await AsyncStorage.setItem('citycrew.collections.view', 'row');
+    state.cols.data = [col('one', ['a']), col('two', ['b'])];
+    show();
+    await screen.findByText('List one');
+    type('Place b');
+    const why = screen.getByText('Place b');
+    const foot = why.parentElement!.parentElement!;
+    expect(foot.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(within(foot).getByRole('button', { name: 'Like this collection' })).toBeTruthy();
+    expect(screen.queryByText('1 place')).toBeNull();
   });
 
   it('matches by the city the places are in, typed as words', () => {
