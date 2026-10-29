@@ -40,6 +40,15 @@ describe('buildRow', () => {
     expect(row.marks[0]).not.toHaveProperty('at');
   });
 
+  it('files a measured value with its mark, and adds none where there was none', () => {
+    const row = buildRow([{ ...mark('cache:places:chars', 90), value: 1_234 }, mark('explore:content', 300)], DEVICE)!;
+    expect(row.marks).toEqual([
+      { name: 'cache:places:chars', ms: 90, value: 1_234 },
+      { name: 'explore:content', ms: 300 },
+    ]);
+    expect(row.marks[1]).not.toHaveProperty('value');
+  });
+
   it('has nothing to say about a trace that marked nothing', () => {
     expect(buildRow([], DEVICE)).toBeNull();
   });

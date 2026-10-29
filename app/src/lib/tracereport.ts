@@ -46,7 +46,7 @@ export type TraceRow = {
   os_version: string;
   is_dev: boolean;
   total_ms: number;
-  marks: { name: string; ms: number }[];
+  marks: { name: string; ms: number; value?: number }[];
 };
 
 /**
@@ -63,7 +63,7 @@ export function buildRow(marks: TraceMark[], device: Device): TraceRow | null {
     total_ms: marks[marks.length - 1].ms,
     // `at` stays behind: a raw clock reading means nothing off the phone
     // that took it, and shipping it would only invite someone to read it.
-    marks: marks.map(({ name, ms }) => ({ name, ms })),
+    marks: marks.map(({ name, ms, value }) => (value === undefined ? { name, ms } : { name, ms, value })),
   };
 }
 

@@ -63,6 +63,13 @@ export function cacheKey(kind: string, cityId: string, meId?: string | null): st
   return `citycrew.cache.${kind}.${cityId}.${meId ?? 'anon'}`;
 }
 
+/** The `kind` a `cacheKey` was built from, or `other` for a key this
+ *  module did not make — the name a cache's trace marks go under. */
+export function cacheKind(key: string): string {
+  const [app, area, kind] = key.split('.');
+  return app === 'citycrew' && area === 'cache' && kind ? kind : 'other';
+}
+
 export function packCache(data: unknown, at: number): string {
   return JSON.stringify({ v: CACHE_VERSION, at, data });
 }

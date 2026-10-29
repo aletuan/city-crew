@@ -50,19 +50,23 @@ export const STARTUP_TRACE = !IS_PRODUCTION_CHANNEL;
 
 /** `at` is the clock's raw reading; `ms` is elapsed since the trace
  *  started — the number a report away from this device can use, since raw
- *  clock readings mean nothing off the phone that took them. */
-export type TraceMark = { name: string; at: number; ms: number };
+ *  clock readings mean nothing off the phone that took them. `value` is a
+ *  quantity the mark measured, for the few marks that are a size or a
+ *  cost rather than a moment — see `usePersistedFetch`'s cache marks. */
+export type TraceMark = { name: string; at: number; ms: number; value?: number };
 
 export type Trace = {
-  /** Log a named checkpoint, once. Repeats of the same name are ignored. */
-  mark: (name: string) => void;
+  /** Log a named checkpoint, once. Repeats of the same name are ignored.
+   *  `value`, when given, rides along with it. */
+  mark: (name: string, value?: number) => void;
   /** What has been marked so far, in order. A copy — mutate freely. */
   marks: () => TraceMark[];
 };
 
-/** One log line: total since the clock started, gap since the last mark. */
-export function traceLine(name: string, sinceStart: number, sinceLast: number): string {
-  return `[startup] ${sinceStart}ms (+${sinceLast}) ${name}`;
+/** One log line: total since the clock started, gap since the last mark,
+ *  and what the mark measured, if anything. */
+export function traceLine(name: string, sinceStart: number, sinceLast: number, value?: number): string {
+  return `[startup] ${sinceStart}ms (+${sinceLast}) ${name}${value === undefined ? '' : ` = ${value}`}`;
 }
 
 export function makeTrace(
@@ -73,13 +77,13 @@ export function makeTrace(
   const start = now();
   const seen: TraceMark[] = [];
   return {
-    mark(name) {
+    mark(name, value) {
       if (!enabled) return;
       if (seen.some((m) => m.name === name)) return;
       const at = now();
       const prev = seen.length ? seen[seen.length - 1].at : start;
-      seen.push({ name, at, ms: at - start });
-      sink(traceLine(name, at - start, at - prev));
+      seen.push(value === undefined ? { name, at, ms: at - start } : { name, at, ms: at - start, value });
+      sink(traceLine(name, at - start, at - prev, value));
     },
     marks: () => [...seen],
   };
