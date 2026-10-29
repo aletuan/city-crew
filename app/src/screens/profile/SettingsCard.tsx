@@ -69,8 +69,9 @@ export function SettingsCard() {
         <SettingRow
           icon="location-outline"
           // "City" alone read as a fact about the reader, sitting one card
-          // below "Hometown", which is one. This is the catalog the app is
-          // showing — it changes when you travel, and the label now says so.
+          // below the profile's own "City", which is one. This is the catalog
+          // the app is showing — it changes when you travel, and the label
+          // says so.
           label={t('Current city', 'Thành phố hiện tại', '現在の都市', '当前城市', '目前城市')}
           value={city ? t(city.short_en, city.short_vi, city.short_ja) : '…'}
           onPress={() => setOpen(true)}

@@ -326,10 +326,14 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           value={email ?? ''}
           valueTestID="profile-email"
         />
+        {/* "City", not "Hometown" (owner, 29 Oct 2026). The field asks
+            where you are — its placeholder is the city you have chosen —
+            and "Quê quán" reads as where your family is from, which for
+            most people in a big city is somewhere else. */}
         {profile.location ? (
           <AboutRow
             icon="location-outline"
-            label={t('Hometown', 'Quê quán', '出身地', '家乡', '家鄉')}
+            label={t('City', 'Thành phố', '都市', '城市', '城市')}
             value={profile.location}
             last={!memberSince}
           />
