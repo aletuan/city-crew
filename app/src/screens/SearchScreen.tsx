@@ -690,7 +690,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                     : <View style={s.thumb} />}
                   {/* 4pt in, not the 10 a larger cover takes: on a 64pt
                       thumb, 10 would leave the word half off its edge. */}
-                  {isNewList(item.collection, userId ?? null, now.getTime()) ? <NewBadge style={s.thumbBadge} /> : null}
+                  {isNewList(item.collection, userId, now.getTime()) ? <NewBadge style={s.thumbBadge} /> : null}
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={s.cardTitle} numberOfLines={2}>

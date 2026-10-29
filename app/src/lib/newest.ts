@@ -63,18 +63,25 @@ export function newestPlaces<T extends Dated>(places: readonly T[], n: number = 
 // instant the column was added, in August, so none of them can pass for
 // new. A list the reader made is never marked: "New" is news about
 // somebody else's work, and your own you know.
+//
+// Nor is any list while the reader is not yet known (`me` undefined —
+// `useSession().userId` before the launch has read anything). Answering
+// "a guest" then marked the reader's own fresh list for the second it
+// took the session to arrive, and the badge came and went on Explore as
+// the app opened (owner, 29 Oct 2026). Unknown waits; it never guesses.
 
 /** How long a collection is new for, in days. */
 export const NEW_LIST_DAYS = 7;
 
 /** Whether a collection gets the "New" mark: made in the last
- *  `NEW_LIST_DAYS`, by somebody other than `me`. */
+ *  `NEW_LIST_DAYS`, by somebody other than `me` — null for a guest,
+ *  undefined while nobody knows yet, which marks nothing. */
 export function isNewList(
   c: { created_at?: string | null; owner_id?: string | null },
-  me: string | null,
+  me: string | null | undefined,
   now: number,
 ): boolean {
-  if (!c.created_at || (me && c.owner_id === me)) return false;
+  if (me === undefined || !c.created_at || (me && c.owner_id === me)) return false;
   const age = now - Date.parse(c.created_at);
   return age >= 0 && age < NEW_LIST_DAYS * 86_400_000;
 }

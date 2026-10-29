@@ -27,6 +27,7 @@ import type { Nav } from '../nav';
 
 const state = vi.hoisted(() => ({
   uid: null as string | null,
+  pending: false,
   ducked: false,
   city: { id: 'hanoi' } as { id: string } | null,
   cities: [] as unknown[],
@@ -57,7 +58,12 @@ vi.mock('../lib/i18n', () => ({
 }));
 vi.mock('../lib/auth', () => {
   const m = {
-    useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+    // `userId` as the provider gives it: undefined while the launch has
+    // read nothing (`pending`), then the session's id or null.
+    useAuth: () => ({
+      session: state.uid ? { user: { id: state.uid } } : null,
+      userId: state.pending ? undefined : state.uid ?? null,
+    }),
   };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
@@ -220,6 +226,7 @@ beforeEach(async () => {
   spies.fetchProfilesById.mockImplementation(async () => ({}));
   await AsyncStorage.removeItem('citycrew.collections.view');
   state.uid = null;
+  state.pending = false;
   state.ducked = false;
   state.city = { id: 'hanoi' };
   state.cities = [];
@@ -1466,6 +1473,16 @@ describe('the New badge', () => {
     expect(within(row).getByTestId('new-badge')).toBeTruthy();
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'List old' })).toBeTruthy();
+  });
+
+  it('marks nothing on the shelf until it knows who is reading', () => {
+    state.pending = true;
+    state.cols.data = [col('fresh', ['a'], { owner_id: 'u2', created_at: ago(2) })];
+    const { rerender } = show();
+    expect(screen.queryByTestId('new-badge')).toBeNull();
+    state.pending = false;
+    rerender(<CollectionsScreen navigation={nav()} route={{ params: undefined }} />);
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
   });
 
   it('never on your own, on either tab, in either shape', async () => {

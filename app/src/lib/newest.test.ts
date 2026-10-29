@@ -77,6 +77,13 @@ describe('isNewList', () => {
     expect(isNewList({ created_at: at(DAY), owner_id: null }, null, NOW)).toBe(true);
   });
 
+  // Before the launch knows who is reading, nothing is new: a guest's
+  // answer then would mark the reader's own list until the session came.
+  it('marks nothing while the reader is not yet known', () => {
+    expect(isNewList({ created_at: at(DAY), owner_id: 'u-b' }, undefined, NOW)).toBe(false);
+    expect(isNewList({ created_at: at(DAY), owner_id: null }, undefined, NOW)).toBe(false);
+  });
+
   it('cannot call a list new that cannot say when it was made, or claims a time to come', () => {
     expect(isNewList({ created_at: null, owner_id: 'u-b' }, 'me', NOW)).toBe(false);
     expect(isNewList({ owner_id: 'u-b' }, 'me', NOW)).toBe(false);
