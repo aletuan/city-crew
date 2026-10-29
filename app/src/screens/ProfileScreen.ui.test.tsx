@@ -710,7 +710,8 @@ describe('friends card', () => {
     const { raw } = draw();
     press('Activity');
     expect(raw.navigate).toHaveBeenCalledWith('Activity');
-    expect(screen.getByText('Likes and copies of your collections.')).toBeTruthy();
+    // The owner's subtitle (28 Oct 2026): a log of your own acts too, not news alone.
+    expect(screen.getByText('A log of your activity on City Crew.')).toBeTruthy();
   });
 
   it('files Activity in the same card as the friends row, under it', () => {

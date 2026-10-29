@@ -1,9 +1,20 @@
-// Activity — what other people did with your collections while you were
-// away: applause, and copies saved of them, in one timeline. A row opens
-// the collection that earned it and wears the chevron that says so; one
-// on a collection that is gone opens nothing and wears none.
+// Activity — a log of what happened between you and other people on City
+// Crew over the last two weeks, in one timeline: who liked or copied your
+// collections, whose collections you liked or copied, and who became your
+// friend, whichever of you asked. A row about a list opens it and wears
+// the chevron that says so; one on a list that is gone opens nothing and
+// wears none, and a friendship row is a line to read.
 //
-// News only. Friend requests lived here too, as a REQUESTS section above
+// ── a log, not only news (owner, 28 Oct 2026) ──
+//
+// Until then this was news only: what others did with your lists. The
+// owner widened it to your own acts too, and kept the two weeks. It holds
+// what still stands: a like taken back, a copy deleted, a friendship
+// ended or a request declined left no row to read, and so leave no line.
+// Profile's count on the way in still counts only what others did — news
+// is the part worth a number.
+//
+// Friend requests waiting are still not here. They lived here once, as a REQUESTS section above
 // the timeline with the same Accept and Decline as the Requests tab on
 // Your crew — the same list in two places, and on Profile the same
 // request counted twice, as the dot on Connect with friends and inside
@@ -43,11 +54,14 @@ import { AuthHeader, AuthScreen } from '../components/authUi';
 import { Avatar, Card, EmptyState, GradientCta, PressableScale } from '../components/ui';
 import { SettingRow } from './profile/rows';
 import { useSession } from '../lib/auth';
-import { APPLAUSE_DAYS } from '../lib/activityWindow';
+import { windowStart } from '../lib/activityWindow';
 import { numericDate } from '../lib/format';
 import { useCollections } from '../lib/catalog';
-import { fetchApplause, fetchCopies, useCuratorAvatarsQuery, useMyCollections } from '../lib/data';
-import { type ActivityItem, agoOf, type Applause, buildActivity, type Copy } from '../lib/friends';
+import {
+  fetchApplause, fetchCopies, fetchMyActs, type FriendProfile, type MyActs, useCuratorAvatarsQuery, useMyCollections,
+} from '../lib/data';
+import { useCrew } from '../lib/crew';
+import { type ActivityItem, agoOf, type Applause, buildActivity, type Copy, friendsMade } from '../lib/friends';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { colors, space, type } from '../theme';
@@ -67,25 +81,36 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
 
   const [applause, setApplause] = useState<Applause[] | null>(null);
   const [copies, setCopies] = useState<Copy[] | null>(null);
+  // The reader's own side: the likes given and copies saved.
+  const [acts, setActs] = useState<MyActs | null>(null);
+  // Friendships come with the crew, already loaded for Profile.
+  const crew = useCrew();
   // Either half failing. It is only said when nothing came back at all —
   // see the header.
   const [failed, setFailed] = useState(false);
   // Bumped by Try again, to run the fetches once more.
   const [attempt, setAttempt] = useState(0);
+  // Where the two weeks open, fixed per load so the friendships, read from
+  // the crew, are cut at the same instant as the three fetches.
+  const [since, setSince] = useState(() => windowStart(new Date()));
   useEffect(() => {
-    if (!me) { setApplause([]); setCopies([]); return; }
+    if (!me) { setApplause([]); setCopies([]); setActs(NO_ACTS); return; }
     setApplause(null);
     setCopies(null);
+    setActs(null);
     setFailed(false);
-    const since = new Date(Date.now() - APPLAUSE_DAYS * 86400000).toISOString();
     // Each half on its own: the feed shows what it could get, and a
     // dropped likes call does not take the copies with it.
     fetchApplause(since).then(setApplause).catch(() => { setFailed(true); setApplause([]); });
     // The same window: a copy is news for as long as a like is.
     fetchCopies(since).then(setCopies).catch(() => { setFailed(true); setCopies([]); });
-  }, [me, attempt]);
+    fetchMyActs(me, since).then(setActs).catch(() => { setFailed(true); setActs(NO_ACTS); });
+  }, [me, attempt, since]);
 
-  const earlier = useMemo<ActivityItem[]>(() => buildActivity(applause ?? [], copies ?? []), [applause, copies]);
+  const earlier = useMemo<ActivityItem[]>(
+    () => buildActivity(applause ?? [], copies ?? [], acts ?? NO_ACTS, me ? friendsMade(crew.ships.data, me, since) : []),
+    [applause, copies, acts, crew.ships.data, me, since],
+  );
 
   // The faces, by handle: the same lookup the bylines use, because a
   // liker need not be a curator and need not be a friend, so neither the
@@ -93,8 +118,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // for every actor on the screen; a handle with no face gets the blank
   // disc, as does a like whose liker is unnamed.
   const actors = useMemo(
-    () => earlier.map((it) => (it.kind === 'applause' ? it.liker_handle : it.copier_handle) ?? '').filter(Boolean),
-    [earlier],
+    () => earlier.map((it) => handleOf(it, crew.people) ?? '').filter(Boolean),
+    [earlier, crew.people],
   );
   const faces = useCuratorAvatarsQuery(actors);
 
@@ -102,8 +127,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // are what the row needs. Both shelves are searched — the liked list is
   // yours, but "yours" spans the desk shelf and your own. One lookup for
   // both, so a row with a title always has somewhere to go.
+  const theirs = acts?.lists ?? [];
   const collectionOf = (collectionId: string) =>
-    [...mine.data, ...cols.data].find((c) => c.id === collectionId) ?? null;
+    [...mine.data, ...cols.data, ...theirs].find((c) => c.id === collectionId) ?? null;
 
   const agoLabel = (iso: string): string => {
     const ago = agoOf(iso, Date.now());
@@ -119,8 +145,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     return t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`, `${ago.n} 天前`, `${ago.n} 天前`);
   };
 
-  // Only the two fetches the timeline is built from.
-  const loading = applause === null || copies === null;
+  // Only the three fetches the timeline is built from; the crew's
+  // friendships join it when they land.
+  const loading = applause === null || copies === null || acts === null;
 
   // The other tabs, which this screen's stack does not hold. A tab's own
   // first screen needs no `initial: false`; the form, which is not
@@ -210,7 +237,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           <GradientCta
             icon="refresh"
             label={t('Try again', 'Thử lại', '再試行', '重试', '重試')}
-            onPress={() => setAttempt((n) => n + 1)}
+            onPress={() => { setSince(windowStart(new Date())); setAttempt((n) => n + 1); }}
             testID="activity-retry"
           />
         </EmptyState>
@@ -219,28 +246,21 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
       ) : (
             <Card testID="earlier-card">
               {earlier.map((item, i) => {
-                const col = collectionOf(item.collection_id);
+                const col = item.kind === 'friend' ? null : collectionOf(item.collection_id);
                 const title = col ? t(col.title_en, col.title_vi, col.title_ja) : null;
                 // The handle, not the full name: it is how the rest of the
                 // app names a person in public ("by @trang"), and it is the
                 // name they chose to be known by. The full name is for the
                 // request card on Your crew, where recognising a human is
                 // the decision being made.
-                const who = (item.kind === 'applause' ? item.liker_handle : item.copier_handle);
+                const who = handleOf(item, crew.people);
                 const by = who ? atHandle(who) : null;
                 const shown = title ?? '…';
-                // Two kinds, one sentence shape. The copy's verb is the
-                // button's own words — "Save a copy" is what they pressed.
-                const line = item.kind === 'applause'
-                  ? (by
-                    ? t(`${by} liked “${shown}”`, `${by} đã thích “${shown}”`, `${by} が「${shown}」にいいねしました`, `${by} 点赞了“${shown}”`, `${by} 按讚了「${shown}」`)
-                    : t(`Someone liked “${shown}”`, `Ai đó đã thích “${shown}”`, `誰かが「${shown}」にいいねしました`, `有人点赞了“${shown}”`, `有人按讚了「${shown}」`))
-                  : (by
-                    ? t(`${by} saved a copy of “${shown}”`, `${by} đã lưu bản sao “${shown}”`, `${by} が「${shown}」のコピーを保存しました`, `${by} 保存了“${shown}”的副本`, `${by} 儲存了「${shown}」的副本`)
-                    : t(`Someone saved a copy of “${shown}”`, `Ai đó đã lưu bản sao “${shown}”`, `誰かが「${shown}」のコピーを保存しました`, `有人保存了“${shown}”的副本`, `有人儲存了「${shown}」的副本`));
+                const line = lineOf(item, by, shown, t);
+                const key = item.kind === 'friend' ? `friend-${item.other}` : `${item.kind}-${item.collection_id}-${item.at}`;
                 return (
                   <PressableScale
-                    key={`${item.kind}-${item.collection_id}-${item.at}`}
+                    key={key}
                     contentStyle={[s.row, i > 0 && s.rowDivider]}
                     onPress={col ? () => navigation.navigate('CollectionDetail', { slug: col.slug }) : undefined}
                     // A button only when it goes somewhere — VoiceOver has to
@@ -257,7 +277,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     <View style={s.face} testID="row-face">
                       <Avatar url={who ? faces.data[who] : null} size={FACE} />
                       <View style={s.kind} testID="kind-badge">
-                        <Ionicons name={item.kind === 'applause' ? 'heart' : 'copy'} size={11} color={colors.accent} />
+                        <Ionicons name={BADGE[item.kind]} size={11} color={colors.accent} />
                       </View>
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
@@ -278,6 +298,65 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     </AuthScreen>
   );
 }
+
+/** The other person in a row, by handle: who liked or copied, whose list
+ *  it was, or who the new friend is — whoever the face is of. */
+function handleOf(it: ActivityItem, people: Record<string, FriendProfile>): string | null {
+  if (it.kind === 'applause') return it.liker_handle;
+  if (it.kind === 'copy') return it.copier_handle;
+  if (it.kind === 'friend') return people[it.other]?.handle ?? null;
+  return it.owner_handle;
+}
+
+type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
+
+/** The mark on the face's corner: what kind of thing happened. A like is
+ *  the heart and a copy the copy glyph whoever did it; a friendship is two
+ *  people. */
+const BADGE: Record<ActivityItem['kind'], keyof typeof Ionicons.glyphMap> = {
+  applause: 'heart', liked: 'heart', copy: 'copy', copied: 'copy', friend: 'people',
+};
+
+/**
+ * The sentence a row says. Two kinds are other people's acts on your
+ * lists, two are yours on theirs, one is a friendship; each has the one
+ * shape, and a missing name falls back rather than going blank. The
+ * copy's verb is the button's own words — "Save a copy" is what was
+ * pressed. Your own rows lead with you (owner's wording, 28 Oct 2026:
+ * "Bạn đã thích “Y” của @b").
+ */
+function lineOf(item: ActivityItem, by: string | null, shown: string, t: Translate): string {
+  switch (item.kind) {
+    case 'applause':
+      return by
+        ? t(`${by} liked “${shown}”`, `${by} đã thích “${shown}”`, `${by} が「${shown}」にいいねしました`, `${by} 点赞了“${shown}”`, `${by} 按讚了「${shown}」`)
+        : t(`Someone liked “${shown}”`, `Ai đó đã thích “${shown}”`, `誰かが「${shown}」にいいねしました`, `有人点赞了“${shown}”`, `有人按讚了「${shown}」`);
+    case 'copy':
+      return by
+        ? t(`${by} saved a copy of “${shown}”`, `${by} đã lưu bản sao “${shown}”`, `${by} が「${shown}」のコピーを保存しました`, `${by} 保存了“${shown}”的副本`, `${by} 儲存了「${shown}」的副本`)
+        : t(`Someone saved a copy of “${shown}”`, `Ai đó đã lưu bản sao “${shown}”`, `誰かが「${shown}」のコピーを保存しました`, `有人保存了“${shown}”的副本`, `有人儲存了「${shown}」的副本`);
+    case 'liked':
+      return by
+        ? t(`You liked ${by}’s “${shown}”`, `Bạn đã thích “${shown}” của ${by}`, `${by} の「${shown}」にいいねしました`, `你点赞了 ${by} 的“${shown}”`, `你按讚了 ${by} 的「${shown}」`)
+        : t(`You liked “${shown}”`, `Bạn đã thích “${shown}”`, `「${shown}」にいいねしました`, `你点赞了“${shown}”`, `你按讚了「${shown}」`);
+    case 'copied':
+      return by
+        ? t(`You saved a copy of ${by}’s “${shown}”`, `Bạn đã lưu bản sao “${shown}” của ${by}`, `${by} の「${shown}」のコピーを保存しました`, `你保存了 ${by} 的“${shown}”的副本`, `你儲存了 ${by} 的「${shown}」的副本`)
+        : t(`You saved a copy of “${shown}”`, `Bạn đã lưu bản sao “${shown}”`, `「${shown}」のコピーを保存しました`, `你保存了“${shown}”的副本`, `你儲存了「${shown}」的副本`);
+    case 'friend':
+      if (item.asked === 'you') {
+        return by
+          ? t(`${by} accepted your friend request`, `${by} đã chấp nhận lời mời kết bạn của bạn`, `${by} があなたの友達リクエストを承認しました`, `${by} 接受了你的好友请求`, `${by} 接受了你的好友請求`)
+          : t('Someone accepted your friend request', 'Ai đó đã chấp nhận lời mời kết bạn của bạn', '誰かがあなたの友達リクエストを承認しました', '有人接受了你的好友请求', '有人接受了你的好友請求');
+      }
+      return by
+        ? t(`You and ${by} are now friends`, `Bạn và ${by} đã thành bạn bè`, `${by} と友達になりました`, `你和 ${by} 成为了好友`, `你和 ${by} 成為了好友`)
+        : t('You made a new friend', 'Bạn đã có thêm một người bạn', '新しい友達ができました', '你有了一位新朋友', '你有了一位新朋友');
+  }
+}
+
+/** Nothing done yet, or nothing to read: the shape a failed fetch leaves. */
+const NO_ACTS: MyActs = { likes: [], copies: [], lists: [] };
 
 /** The feed line's line height, and the box that holds a 19pt glyph's
  *  whole line — see `mark`. */
