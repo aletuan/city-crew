@@ -382,17 +382,17 @@ describe('account identity', () => {
     expect(screen.getByText('minh.le@example.com')).toBeTruthy();
   });
 
-  it('shows Hometown and Member since only when they are known', () => {
+  it('shows City and Member since only when they are known', () => {
     draw();
-    expect(screen.queryByText('Hometown')).toBeNull();
+    expect(screen.queryByText('City')).toBeNull();
     expect(screen.queryByText('Member since')).toBeNull();
   });
 
-  it('shows Hometown and an English month for Member since', () => {
+  it('shows City and an English month for Member since', () => {
     state.profile = { location: 'Da Nang' };
     state.memberSince = new Date(2025, 2, 14);
     draw();
-    expect(screen.getByText('Hometown')).toBeTruthy();
+    expect(screen.getByText('City')).toBeTruthy();
     expect(screen.getByText('Da Nang')).toBeTruthy();
     expect(screen.getByText('March 2025')).toBeTruthy();
   });
@@ -406,7 +406,7 @@ describe('account identity', () => {
     draw();
     expect(document.querySelector('[data-testid="round-icon"]')).toBeNull();
     // Three facts, the crew card, and the settings rows — each with one glyph.
-    const about = screen.getByText('Hometown').closest('[data-testid="about-row"]');
+    const about = screen.getByText('City').closest('[data-testid="about-row"]');
     expect(about?.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
     const friends = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]');
     expect(friends?.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
@@ -423,7 +423,7 @@ describe('account identity', () => {
     draw();
     const slotOf = (text: string, row: string) =>
       getComputedStyle(screen.getByText(text).closest(`[data-testid="${row}"]`)!.querySelector('[data-testid="row-glyph"]')!);
-    const about = slotOf('Hometown', 'about-row');
+    const about = slotOf('City', 'about-row');
     expect(parseFloat(about.height)).toBeGreaterThan(19);
     expect(parseFloat(about.marginTop) + parseFloat(about.height) / 2).toBeCloseTo(15 / 2, 5);
     const friends = slotOf('Connect with friends', 'feature-row');

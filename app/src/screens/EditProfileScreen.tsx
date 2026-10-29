@@ -319,7 +319,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         // Same word the profile shows it under. The field and the row that
         // displays it drifting apart is how a reader ends up unsure whether
         // they are two different things.
-        label={t('Hometown', 'Quê quán', '出身地', '家乡', '家鄉')}
+        label={t('City', 'Thành phố', '都市', '城市', '城市')}
         placeholder={t(`${city?.short_en ?? 'Saigon'}, Vietnam`, `${city?.short_vi ?? 'Sài Gòn'}, Việt Nam`, `${city?.short_ja ?? 'サイゴン'}、ベトナム`, `${city?.short_en ?? 'Saigon'}，越南`, `${city?.short_en ?? 'Saigon'}，越南`)}
         value={location}
         onChangeText={setLocation}
