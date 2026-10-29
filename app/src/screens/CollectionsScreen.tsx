@@ -321,8 +321,11 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
  * the same styles, so it scales with them, and the row's real content is
  * laid over it (`cardFace`) instead of beside it.
  *
- * Four lines: a one-line title, the meta line, two lines of description
- * and the likes line, which is the most any row shows. The title drops
+ * Four lines on the Community tab: a one-line title, the byline, two
+ * lines of description and the foot, which is the most a row there
+ * shows. Three on yours, which has no byline (`byline` off): the count
+ * and the heart share the foot (owner, 29 Oct 2026), and a fourth line
+ * reserved for nothing would leave a gap under every one. The title drops
  * to one line for this. A two-line title would be the one thing able to
  * outgrow the ghost, and reserving a second title line in every row
  * would spend 22pt on space that few titles fill.
@@ -331,14 +334,16 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
  * list is virtualised, so a taller row scrolled into view would re-lay
  * every row above it while the reader is in the middle of them.
  */
-function RowGhost() {
+function RowGhost({ byline = false }: { byline?: boolean }) {
   return (
     <View style={s.ghost} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <Text style={s.title} numberOfLines={1}>{' '}</Text>
-      <View style={s.metaRow}>
-        <View style={s.ghostMark} />
-        <Text style={s.meta}>{' '}</Text>
-      </View>
+      {byline ? (
+        <View style={s.metaRow}>
+          <View style={s.ghostMark} />
+          <Text style={s.meta}>{' '}</Text>
+        </View>
+      ) : null}
       <Text style={s.blurb}>{' \n '}</Text>
       <View style={s.likesRow}><Text style={s.meta}>{' '}</Text></View>
     </View>
@@ -900,6 +905,9 @@ export default function CollectionsScreen({ navigation, route }: {
     cityPick ? cityName(cityPick) : null,
   ].filter((x): x is string => !!x);
   const placesOf = (n: number) => placesCount(n, t);
+  // A row's like count, as a screen reader says it: the row prints the
+  // number bare beside its heart, and a bare number aloud is just a number.
+  const likesSaid = (n: number) => t(n === 1 ? '1 like' : `${n} likes`, `${n} lượt thích`, `いいね${n}件`, `${n} 个赞`, `${n} 個讚`);
   // Who can see a list of yours, in words, for VoiceOver: on screen the
   // globe or the lock says it, and a glyph is not read out.
   const visibilityOf = (c: { is_public?: boolean | null }) => (c.is_public
@@ -1181,7 +1189,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 <Card style={s.card}>
                   <Skeleton style={[s.thumb, { width: coverW }]} />
                   <View style={s.cardText}>
-                    <RowGhost />
+                    <RowGhost byline />
                     <View style={s.cardFace}>
                       <Skeleton style={{ height: 18, width: '70%', borderRadius: 8 }} />
                       <Skeleton style={{ height: 13, width: '45%', borderRadius: 7 }} />
@@ -1405,7 +1413,7 @@ export default function CollectionsScreen({ navigation, route }: {
                           {fresh ? <NewBadge /> : null}
                         </View>
                         <View style={s.cardText}>
-                          <RowGhost />
+                          <RowGhost byline />
                           <View style={s.cardFace}>
                             <Text style={s.title} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                             {/* A face and a handle, and no word between
@@ -1431,32 +1439,34 @@ export default function CollectionsScreen({ navigation, route }: {
                                 where it is fetched, and the fetch is already
                                 paid for by the tiles.
 
-                                Width is a wash, not a saving: the word gave
-                                back about 26pt and the face spends 23. What
-                                changes is that the line is now facts
-                                separated by a dot, the same grammar the
-                                Yours row has always used, rather than half a
-                                sentence.
+                                The line is the person and nothing else now
+                                (owner, 29 Oct 2026): the count that followed
+                                the handle went down to the foot, beside the
+                                heart, as on your own rows. A long handle had
+                                been cut to make room for it. No handle, no
+                                line: a list without one has nobody to name,
+                                and the ghost keeps the line's height so its
+                                row stands as tall as the rest.
 
                                 The label is the part that is not decoration.
                                 `Avatar` is `accessible={false}`, so the face
-                                says nothing aloud, and this row has never
-                                carried a label — dropping the word without
-                                one would leave a screen reader saying
-                                "@trang, 5 places" and nothing to mark the
-                                handle as a name. So the sentence survives
-                                where it is still doing work. */}
-                            <View style={s.metaRow}>
-                              <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
-                              <Text
-                                style={s.meta}
-                                numberOfLines={1}
-                                accessibilityLabel={byline}
-                              >
-                                {c.curator_handle ? `${atHandle(c.curator_handle)}  ·  ` : ''}
-                                {reason ?? placesOf(n)}
-                              </Text>
-                            </View>
+                                says nothing aloud — dropping the word without
+                                a label would leave a screen reader saying
+                                "@trang" and nothing to mark the handle as a
+                                name. So the "by" survives where it is still
+                                doing work. */}
+                            {c.curator_handle ? (
+                              <View style={s.metaRow}>
+                                <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
+                                <Text
+                                  style={s.meta}
+                                  numberOfLines={1}
+                                  accessibilityLabel={`${t('by', 'bởi', 'by', '来自', '來自')} ${atHandle(c.curator_handle)}`}
+                                >
+                                  {atHandle(c.curator_handle)}
+                                </Text>
+                              </View>
+                            ) : null}
                             {/* The sentence the curator wrote, which was
                                 the one thing about this list you could
                                 search for and not read.
@@ -1494,70 +1504,80 @@ export default function CollectionsScreen({ navigation, route }: {
                             {blurb ? (
                               <Text style={s.blurb} numberOfLines={2}>{blurb}</Text>
                             ) : null}
-                            {/* The heart the tile wears, wearing it for the
-                                same reasons. On a public list somebody else
-                                made, this glyph is your own answer and the
-                                way you change it — the tile has always known
-                                that, and this row drew a tally instead:
-                                always filled, always coral, on every row at
-                                once. So a reader who had liked two lists saw
-                                six that claimed they had liked all six.
+                            {/* The foot, as on your own rows below: what the list
+                                holds, then the heart (owner, 29 Oct 2026). The count
+                                left the byline for it, which hands a long handle the
+                                width it was being cut at. The pin, because nothing
+                                else on this line says what the number counts. */}
+                            <View style={s.foot}>
+                              <View style={[s.metaRow, s.footFacts]}>
+                                <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                                <Text style={s.meta} numberOfLines={1}>{reason ?? placesOf(n)}</Text>
+                              </View>
+                              {/* The heart the tile wears, wearing it for the
+                                  same reasons. On a public list somebody else
+                                  made, this glyph is your own answer and the
+                                  way you change it — the tile has always known
+                                  that, and this row drew a tally instead:
+                                  always filled, always coral, on every row at
+                                  once. So a reader who had liked two lists saw
+                                  six that claimed they had liked all six.
 
-                                `accentFaint` was picked to keep the tally
-                                quiet, and it does keep it quiet — on
-                                charcoal, where it resolves to #904035 under
-                                an accent of #FF6F5B. On paper the same token
-                                resolves to #D27161 under an accent of
-                                #C4402C, and a dimmed coral is just coral.
-                                The lesson is in which axis was used: the
-                                split has to be **hue**, not weight. Grey is
-                                a count; coral is you. Weight does not
-                                survive a change of theme.
+                                  `accentFaint` was picked to keep the tally
+                                  quiet, and it does keep it quiet — on
+                                  charcoal, where it resolves to #904035 under
+                                  an accent of #FF6F5B. On paper the same token
+                                  resolves to #D27161 under an accent of
+                                  #C4402C, and a dimmed coral is just coral.
+                                  The lesson is in which axis was used: the
+                                  split has to be **hue**, not weight. Grey is
+                                  a count; coral is you. Weight does not
+                                  survive a change of theme.
 
-                                None of the rest is new either. The glyph
-                                pair, the two colours and the 15pt are what
-                                `CollectionDetailScreen` already draws for
-                                this exact fact, down to the count's gate —
-                                of the three places that show a like, this
-                                row was the only one not drawing it. 15
-                                rather than the tally's 13 because an outline
-                                heart that small spends its ink on a hairline
-                                and reads as a smudge, and because 15 is what
-                                a 15pt `meta` line is tuned for. `hitSlop`
-                                and no haptic of its own come from the tile:
-                                they are what let a button sit inside a row
-                                that is itself the target.
+                                  None of the rest is new either. The glyph
+                                  pair, the two colours and the 15pt are what
+                                  `CollectionDetailScreen` already draws for
+                                  this exact fact, down to the count's gate —
+                                  of the three places that show a like, this
+                                  row was the only one not drawing it. 15
+                                  rather than the tally's 13 because an outline
+                                  heart that small spends its ink on a hairline
+                                  and reads as a smudge, and because 15 is what
+                                  a 15pt `meta` line is tuned for. `hitSlop`
+                                  and no haptic of its own come from the tile:
+                                  they are what let a button sit inside a row
+                                  that is itself the target.
 
-                                The heart draws at any count. It is a control
-                                now, and the list nobody has liked yet is
-                                precisely the one that needs one. Only the
-                                number keeps the old rule. */}
-                            {c.id && c.is_public ? (
-                              <PressableScale
-                                style={s.likesWrap}
-                                contentStyle={s.likesRow}
-                                scaleTo={0.82}
-                                haptic="none"
-                                hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
-                                onPress={() => onHeart(c)}
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: my }}
-                                accessibilityLabel={my
-                                  ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
-                                  : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
-                              >
-                                <Ionicons
-                                  name={my ? 'heart' : 'heart-outline'}
-                                  size={15}
-                                  color={my ? colors.accent : colors.textTertiary}
-                                />
-                                {likesWorthShowing(likes[c.slug]) && (
-                                  <Text style={s.meta}>
-                                    {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね', '个赞', '個讚')}
-                                  </Text>
-                                )}
-                              </PressableScale>
-                            ) : null}
+                                  The heart draws at any count. It is a control
+                                  now, and the list nobody has liked yet is
+                                  precisely the one that needs one. Only the
+                                  number keeps the old rule. */}
+                              {c.id && c.is_public ? (
+                                <PressableScale
+                                  style={s.footHeart}
+                                  contentStyle={s.likesRow}
+                                  scaleTo={0.82}
+                                  haptic="none"
+                                  hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
+                                  onPress={() => onHeart(c)}
+                                  accessibilityRole="button"
+                                  aria-valuetext={likesWorthShowing(likes[c.slug]) ? likesSaid(likes[c.slug]) : undefined}
+                                  accessibilityState={{ selected: my }}
+                                  accessibilityLabel={my
+                                    ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
+                                    : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
+                                >
+                                  <Ionicons
+                                    name={my ? 'heart' : 'heart-outline'}
+                                    size={15}
+                                    color={my ? colors.accent : colors.textTertiary}
+                                  />
+                                  {likesWorthShowing(likes[c.slug]) && (
+                                    <Text style={s.meta}>{likes[c.slug]}</Text>
+                                  )}
+                                </PressableScale>
+                              ) : null}
+                            </View>
                           </View>
                         </View>
                       </Card>
@@ -1603,36 +1623,6 @@ export default function CollectionsScreen({ navigation, route }: {
                       <RowGhost />
                       <View style={s.cardFace}>
                         <Text style={s.title} numberOfLines={1}>{t(own.title_en, own.title_vi, own.title_ja)}</Text>
-                        <View style={s.metaRow}>
-                          {/* The padlock says whose it is without spending a
-                              word on it. It used to be the only answer,
-                              because every owned list was private; now the
-                              glyph carries which of the two it is, and the
-                              detail screen uses the same pair for the same
-                              fact.
-
-                              The glyph alone, as on the tiles (owner, 22 Oct
-                              2026). The row said it twice, the glyph and then
-                              "· Public" after the count, and the word was the
-                              one the eye did not need: the lock is the lock
-                              everywhere, and the globe is the Community tab's
-                              own glyph a few points above. The word is still
-                              on the list's own screen, where it is the switch
-                              that changes it, and it is in the card's spoken
-                              name, which had never carried it at all. */}
-                          <Ionicons
-                            name={own.is_public ? 'globe-outline' : 'lock-closed-outline'}
-                            size={13}
-                            color={own.is_public ? colors.ok : colors.textTertiary}
-                          />
-                          <Text style={s.meta} numberOfLines={1}>
-                            {/* "0 places" reads like a broken count; an empty
-                                list you just made deserves a sentence. */}
-                            {reasonFor(own.slug) ?? (count === 0
-                              ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点', '還沒有地點')
-                              : placesOf(count))}
-                          </Text>
-                        </View>
                         {/* The same sentence, for the same reason, because
                             this is the same view. The argument for showing
                             it is weakest on your own lists — you wrote them
@@ -1653,61 +1643,108 @@ export default function CollectionsScreen({ navigation, route }: {
                         {!open && ownBlurb ? (
                           <Text style={s.blurb} numberOfLines={2}>{ownBlurb}</Text>
                         ) : null}
-                        {/* How many people liked it — the answer to "is
-                            anybody reading this list", which the shelf could
-                            not give before and which a curator has no other
-                            way to find out.
+                        {/* ── the foot (owner, 29 Oct 2026) ──
+                            What the list holds at the start, the heart at the
+                            end: the line the list's own screen closes its card
+                            with, and the corner the tile keeps its heart in, so
+                            the three shapes put each fact in the same place.
+                            Pinned to the row's bottom (`foot`), so a list with no
+                            description ends where one with a description does.
 
-                            Its own line rather than the end of the meta one.
-                            On the meta line it was the fourth clause of a
-                            sentence that already reads "2 places · Public ·
-                            by @minh", competing with the byline for the last
-                            few points of width — and it is not the same kind
-                            of fact as the others. Those describe what the
-                            list *is*; this one is what other people did
-                            about it. A line of its own is also what buys the
-                            word "likes", so the number is read rather than
-                            decoded.
+                            It replaced two lines. The count sat under the title,
+                            and the likes had a line of their own, which bought
+                            them the word "likes" — the old argument being that a
+                            number alone on a line is decoded rather than read.
+                            Beside a heart it is read: the tile and the list's own
+                            screen have printed it bare all along. Spoken, it is
+                            still a sentence: `aria-valuetext`, which React
+                            Native reads as the heart's value and which the
+                            web build keeps, where it drops
+                            `accessibilityValue`.
 
-                            The heart draws on every public list of yours, at
-                            any count, and you may press it (owner, 17 Oct
-                            2026): a curator may like their own list, and the
-                            shelves rank by everybody's likes but theirs. The
-                            number keeps `likesWorthShowing`'s rule. A private
-                            list has none: the counts come from a function
-                            that returns public rows only, because a private
-                            list is one nobody else can see to like.
+                            The count keeps its word. The glyph before it is the
+                            globe or the padlock, which say who can see the list
+                            and not what is in it: "4" after a globe is four of
+                            nothing. */}
+                        <View style={s.foot}>
+                          <View style={[s.metaRow, s.footFacts]}>
+                            {/* The padlock says whose it is without spending a
+                                word on it. It used to be the only answer,
+                                because every owned list was private; now the
+                                glyph carries which of the two it is, and the
+                                detail screen uses the same pair for the same
+                                fact.
 
-                            A button inside a row that swipes, as the
-                            community row already has inside a row that
-                            opens: a tap is not a pan, and `hitSlop` stops at
-                            the heart's own line. */}
-                        {own.id && own.is_public ? (
-                          <PressableScale
-                            style={s.likesWrap}
-                            contentStyle={s.likesRow}
-                            scaleTo={0.82}
-                            haptic="none"
-                            hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
-                            onPress={() => onHeart(own)}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected: myLikes.includes(own.id) }}
-                            accessibilityLabel={myLikes.includes(own.id)
-                              ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
-                              : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
-                          >
+                                The glyph alone, as on the tiles (owner, 22 Oct
+                                2026). The row said it twice, the glyph and then
+                                "· Public" after the count, and the word was the
+                                one the eye did not need: the lock is the lock
+                                everywhere, and the globe is the Community tab's
+                                own glyph a few points above. The word is still
+                                on the list's own screen, where it is the switch
+                                that changes it, and it is in the card's spoken
+                                name, which had never carried it at all. */}
                             <Ionicons
-                              name={myLikes.includes(own.id) ? 'heart' : 'heart-outline'}
-                              size={15}
-                              color={myLikes.includes(own.id) ? colors.accent : colors.textTertiary}
+                              name={own.is_public ? 'globe-outline' : 'lock-closed-outline'}
+                              size={13}
+                              color={own.is_public ? colors.ok : colors.textTertiary}
                             />
-                            {likesWorthShowing(likes[own.slug]) && (
-                              <Text style={s.meta}>
-                                {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね', '个赞', '個讚')}
-                              </Text>
-                            )}
-                          </PressableScale>
-                        ) : null}
+                            <Text style={s.meta} numberOfLines={1}>
+                              {/* "0 places" reads like a broken count; an empty
+                                  list you just made deserves a sentence. */}
+                              {reasonFor(own.slug) ?? (count === 0
+                                ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点', '還沒有地點')
+                                : placesOf(count))}
+                            </Text>
+                          </View>
+                          {/* How many people liked it — the answer to "is
+                              anybody reading this list", which the shelf could
+                              not give before and which a curator has no other
+                              way to find out.
+
+                              The heart draws on every public list of yours, at
+                              any count, and you may press it (owner, 17 Oct
+                              2026): a curator may like their own list, and the
+                              shelves rank by everybody's likes but theirs. The
+                              number keeps `likesWorthShowing`'s rule. A private
+                              list has none: the counts come from a function
+                              that returns public rows only, because a private
+                              list is one nobody else can see to like.
+
+                              A button inside a row that swipes, as the
+                              community row already has inside a row that
+                              opens: a tap is not a pan, and `hitSlop` stops at
+                              the foot's own line.
+
+                              Not while the row is open. The column is about
+                              36pt then, and the heart would sit on the count;
+                              an open row is for its Edit and Delete. */}
+                          {own.id && own.is_public && !open ? (
+                            <PressableScale
+                              style={s.footHeart}
+                              contentStyle={s.likesRow}
+                              scaleTo={0.82}
+                              haptic="none"
+                              hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
+                              onPress={() => onHeart(own)}
+                              accessibilityRole="button"
+                              aria-valuetext={likesWorthShowing(likes[own.slug]) ? likesSaid(likes[own.slug]) : undefined}
+                              accessibilityState={{ selected: myLikes.includes(own.id) }}
+                              accessibilityLabel={myLikes.includes(own.id)
+                                ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
+                                : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
+                            >
+                              <Ionicons
+                                name={myLikes.includes(own.id) ? 'heart' : 'heart-outline'}
+                                size={15}
+                                color={myLikes.includes(own.id) ? colors.accent : colors.textTertiary}
+                              />
+                              {likesWorthShowing(likes[own.slug]) && (
+                                <Text style={s.meta}>{likes[own.slug]}</Text>
+                              )}
+                            </PressableScale>
+                          ) : null}
+                        </View>
                       </View>
                     </View>
                   </Card>
@@ -2076,13 +2113,18 @@ const s = StyleSheet.create({
   // so the two lines start on the same optical edge — the heart and the
   // padlock are both glyphs standing in for a word.
   likesRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  // Shrink-to-fit, on the Pressable rather than the row inside it. A
-  // column parent stretches its children, so without this the community
-  // row's heart would carry a tap target the full width of the text
-  // block — and every tap along that line would like the list instead of
-  // opening it. `alignSelf` positions the element in its parent, which is
-  // the half that belongs on the container; see `PressableScale`.
-  likesWrap: { alignSelf: 'flex-start' },
+  // A row's last line: what the list holds, then its heart at the far
+  // end. `marginTop: 'auto'` sends it to the bottom of the face, so every
+  // row's foot sits on the same line whatever is above it.
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 'auto' },
+  // The facts give way first: a long reason clamps to one line rather
+  // than pushing the heart off the card.
+  footFacts: { flexShrink: 1 },
+  // On the Pressable rather than the row inside it, since `marginLeft`
+  // positions the element in its parent — the half that belongs on the
+  // container; see `PressableScale`. In a row the heart already
+  // shrink-wraps: it only has to be sent to the end.
+  footHeart: { marginLeft: 'auto' },
   // The chevron that used to close this row is gone, and its 17pt plus
   // the 16pt gap beside it are what paid for the wider cover: the text
   // column still came out wider than it was.
