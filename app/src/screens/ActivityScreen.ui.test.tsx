@@ -1,19 +1,20 @@
 // @vitest-environment jsdom
 //
-// Activity is news only: who liked or copied your collections. What is
-// pinned here is the wording of every row (named and anonymous applause,
-// copies, relative time against a fixed clock), that only a row whose
-// collection is known navigates, and to which slug — and that a friend
-// request waiting on you is not here, since it moved to Your crew alone
-// (20 Oct 2026). `buildActivity` and `agoOf` run for real; only the I/O
-// seams are mocked.
+// Activity is a log of two weeks between you and other people: who liked
+// or copied your collections, whose you liked or copied, and the
+// friendships that began (owner, 28 Oct 2026). What is pinned here is the
+// wording of every row (named and anonymous, relative time against a
+// fixed clock), that only a row whose collection is known navigates, and
+// to which slug — and that a friend request waiting on you is not here,
+// since it moved to Your crew alone (20 Oct 2026). `buildActivity`,
+// `friendsMade` and `agoOf` run for real; only the I/O seams are mocked.
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Applause, Copy, FriendshipRow } from '../lib/friends';
-import type { FriendProfile } from '../lib/data';
+import type { FriendProfile, MyActs } from '../lib/data';
 import { colors } from '../theme';
 
 const ME = 'me';
@@ -24,6 +25,7 @@ type Col = { id: string; slug: string; title_en: string; title_vi: string; title
 const data = vi.hoisted(() => ({
   fetchApplause: vi.fn(async (_since: string): Promise<Applause[]> => []),
   fetchCopies: vi.fn(async (_since: string): Promise<Copy[]> => []),
+  fetchMyActs: vi.fn(async (_me: string, _since: string): Promise<MyActs> => ({ likes: [], copies: [], lists: [] })),
   mine: [] as Col[],
   useMyCollections: vi.fn(),
   avatars: {} as Record<string, string>,
@@ -32,6 +34,7 @@ const data = vi.hoisted(() => ({
 vi.mock('../lib/data', () => ({
   fetchApplause: data.fetchApplause,
   fetchCopies: data.fetchCopies,
+  fetchMyActs: data.fetchMyActs,
   useMyCollections: (id: string | null) => { data.useMyCollections(id); return { data: data.mine }; },
   useCuratorAvatarsQuery: (handles: string[]) => { data.avatarsAsked(handles); return { data: data.avatars }; },
 }));
@@ -103,6 +106,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   data.fetchApplause.mockImplementation(async () => []);
   data.fetchCopies.mockImplementation(async () => []);
+  data.fetchMyActs.mockImplementation(async () => ({ likes: [], copies: [], lists: [] }));
   data.mine = [];
   catalog.cols = [];
   crew.ships.data = [];
@@ -451,5 +455,112 @@ describe('a friend request', () => {
     expect(screen.queryByText(/wants to join your crew/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Accept' })).toBeNull();
     expect(screen.queryByText('Anh')).toBeNull();
+  });
+});
+
+// ── your own side (owner, 28 Oct 2026) ──
+//
+// The likes you gave and the copies you saved of other people's lists,
+// and the friendships that began — in the one timeline with the news.
+describe('your own acts', () => {
+  const theirs = col('c9', 'phở-tour', 'Phở tour');
+  const acts = (over: Partial<MyActs> = {}): MyActs => ({ likes: [], copies: [], lists: [theirs], ...over });
+
+  it('asks for them over the same two weeks, as the reader', async () => {
+    await renderScreen();
+    expect(data.fetchMyActs).toHaveBeenCalledWith(ME, new Date(NOW.getTime() - 14 * 86400000).toISOString());
+  });
+
+  it('says whose list you liked, and opens it', async () => {
+    data.fetchMyActs.mockImplementation(async () => acts({ likes: [{ collection_id: 'c9', at: '2026-09-11T10:00:00', owner_handle: 'bao' }] }));
+    const navigation = await renderScreen();
+    fireEvent.click(screen.getByText('You liked @bao’s “Phở tour”'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'phở-tour' });
+    expect(document.querySelector('[data-testid="kind-badge"] [data-icon="heart"]')).toBeTruthy();
+  });
+
+  it('says whose list you copied, in the reader\'s language', async () => {
+    i18n.lang = 'vi';
+    data.fetchMyActs.mockImplementation(async () => acts({ copies: [{ collection_id: 'c9', at: '2026-09-11T10:00:00', owner_handle: 'bao' }] }));
+    await renderScreen();
+    expect(screen.getByText('Bạn đã lưu bản sao “Phở tour (vi)” của @bao')).toBeTruthy();
+    expect(document.querySelector('[data-testid="kind-badge"] [data-icon="copy"]')).toBeTruthy();
+  });
+
+  it('keeps the sentence when the owner has no name to give', async () => {
+    data.fetchMyActs.mockImplementation(async () => acts({
+      likes: [{ collection_id: 'c9', at: '2026-09-11T10:00:00', owner_handle: null }],
+      copies: [{ collection_id: 'c9', at: '2026-09-11T09:00:00', owner_handle: null }],
+    }));
+    await renderScreen();
+    expect(screen.getByText('You liked “Phở tour”')).toBeTruthy();
+    expect(screen.getByText('You saved a copy of “Phở tour”')).toBeTruthy();
+  });
+
+  it('sits in time order with the news, newest first', async () => {
+    data.mine = [col('c1', 'rooftops', 'Rooftops')];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00', 'trang')]);
+    data.fetchMyActs.mockImplementation(async () => acts({ likes: [{ collection_id: 'c9', at: '2026-09-11T11:00:00', owner_handle: 'bao' }] }));
+    await renderScreen();
+    const lines = [...screen.getByTestId('earlier-card').querySelectorAll('[data-testid="row-face"] + *')]
+      .map((el) => el.textContent ?? '');
+    expect(lines[0]).toContain('You liked @bao’s “Phở tour”');
+    expect(lines[1]).toContain('@trang liked “Rooftops”');
+  });
+
+  it('counts a failure of its own as a failure, and asks again with the rest', async () => {
+    data.fetchMyActs.mockImplementation(async () => { throw new Error('offline'); });
+    await renderScreen();
+    expect(screen.getByTestId('activity-failed')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('activity-retry'));
+    expect(data.fetchMyActs).toHaveBeenCalledTimes(2);
+  });
+
+  it('is enough on its own to fill the screen: no empty state for a reader who only liked', async () => {
+    data.fetchMyActs.mockImplementation(async () => acts({ likes: [{ collection_id: 'c9', at: '2026-09-11T10:00:00', owner_handle: 'bao' }] }));
+    await renderScreen();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+  });
+});
+
+describe('a friendship that began', () => {
+  const made = (requester: string, addressee: string, responded_at: string): FriendshipRow =>
+    ({ requester, addressee, status: 'accepted', created_at: '2026-09-01', responded_at });
+
+  it('says who accepted the reader\'s request, with the face and the two-people mark', async () => {
+    crew.ships.data = [made(ME, 'u-c', '2026-09-11T10:00:00')];
+    crew.people = { 'u-c': person('u-c', 'chi') };
+    data.avatars = { chi: 'http://x/chi.jpg' };
+    await renderScreen();
+    expect(screen.getByText('@chi accepted your friend request')).toBeTruthy();
+    expect(document.querySelector('[data-testid="kind-badge"] [data-icon="people"]')).toBeTruthy();
+    expect(data.avatarsAsked).toHaveBeenCalledWith(['chi']);
+  });
+
+  it('says the reader and whoever asked are friends now, and goes nowhere on a tap', async () => {
+    crew.ships.data = [made('u-d', ME, '2026-09-11T10:00:00')];
+    crew.people = { 'u-d': person('u-d', 'dung') };
+    i18n.lang = 'vi';
+    await renderScreen();
+    expect(screen.getByText('Bạn và @dung đã thành bạn bè')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /dung/ })).toBeNull();
+  });
+
+  // The other person's profile not in yet: the sentence stands without the
+  // name rather than going blank, as an unnamed like does.
+  it('keeps both sentences when the other person has no name to give', async () => {
+    crew.ships.data = [made(ME, 'u-c', '2026-09-11T10:00:00'), made('u-d', ME, '2026-09-11T09:00:00')];
+    await renderScreen();
+    expect(screen.getByText('Someone accepted your friend request')).toBeTruthy();
+    expect(screen.getByText('You made a new friend')).toBeTruthy();
+    expect(data.avatarsAsked).toHaveBeenCalledWith([]);
+  });
+
+  it('is left out once older than the two weeks, and while still only asked', async () => {
+    crew.ships.data = [made(ME, 'u-c', '2026-08-01T10:00:00'), ask('u-e')];
+    crew.people = { 'u-c': person('u-c', 'chi'), 'u-e': person('u-e', 'em') };
+    await renderScreen();
+    expect(screen.queryByText(/chi/)).toBeNull();
+    expect(screen.queryByText(/em/)).toBeNull();
   });
 });

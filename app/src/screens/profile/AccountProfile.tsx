@@ -440,14 +440,16 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             Under the friends row rather than a bell in the header: who
             liked or copied your collections is this section's subject,
             and a header bell would be the one control on the screen
-            outside a card. Requests are not counted here any more: they
+            outside a card. Since 28 Oct 2026 the screen is a log of your
+            own acts too (the owner's subtitle); the count is still news
+            only, what others did. Requests are not counted here any more: they
             left Activity on 20 Oct 2026 and are the dot on the friends row
             above, so one request is one mark on this screen, not two. */}
         <FeatureRow
           icon="notifications-outline"
           title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}
           count={feed}
-          sub={t('Likes and copies of your collections.', 'Lượt thích và sao chép bộ sưu tập.', 'コレクションへのいいねとコピー。', '你的合集获得的点赞和复制。', '你的合集獲得的按讚和複製。')}
+          sub={t('A log of your activity on City Crew.', 'Nhật ký các hoạt động của bạn trên hệ thống.', 'City Crew でのあなたのアクティビティの記録。', '你在 City Crew 上的动态记录。', '你在 City Crew 上的動態記錄。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />

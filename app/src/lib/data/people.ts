@@ -17,7 +17,7 @@ export type FriendProfile = {
 export async function fetchFriendships(): Promise<import('../friends').FriendshipRow[]> {
   const { data, error } = await supabase
     .from('friendships')
-    .select('requester, addressee, status, created_at');
+    .select('requester, addressee, status, created_at, responded_at');
   if (error) throw new Error(error.message);
   return (data ?? []) as import('../friends').FriendshipRow[];
 }
@@ -242,6 +242,70 @@ export async function fetchCopies(sinceISO: string): Promise<import('../friends'
   const { data, error } = await supabase.rpc('copies_of_mine', { since: sinceISO });
   if (error) throw new Error(error.message);
   return (data ?? []) as import('../friends').Copy[];
+}
+
+/** A list somebody else made, as an Activity row needs it to name and
+ *  open it. */
+export type ActList = { id: string; slug: string; title_en: string; title_vi: string; title_ja: string | null };
+
+/** What the reader did to other people's lists since an instant: the
+ *  likes given, the copies saved, and those lists. */
+export type MyActs = {
+  likes: import('../friends').MyAct[];
+  copies: import('../friends').MyAct[];
+  lists: ActList[];
+};
+
+/**
+ * The reader's own side of the Activity log (owner, 28 Oct 2026): the
+ * other people's lists they liked or saved a copy of since `sinceISO`.
+ *
+ * Read from the tables rather than through a Postgres function, because
+ * nothing here is anyone else's to hide: RLS gives the reader their own
+ * likes and their own lists, and the lists they point at are read the way
+ * any reader reads a public list. A list that has since gone private or
+ * been deleted comes back as nothing, and its row is left out — it can be
+ * neither named nor opened. So is a like or a copy of the reader's own
+ * list: that is not something done to anybody.
+ *
+ * The owner is named by handle, from their profile; the desk's lists,
+ * which have no owner account, by their byline. Throws on any failed read,
+ * like the feed's other fetches; the screen catches and shows what it has.
+ */
+export async function fetchMyActs(meId: string, sinceISO: string): Promise<MyActs> {
+  const [liked, made] = await Promise.all([
+    supabase.from('collection_likes').select('collection_id, created_at')
+      .eq('user_id', meId).gte('created_at', sinceISO),
+    supabase.from('collections').select('copied_from, created_at')
+      .eq('owner_id', meId).gte('created_at', sinceISO),
+  ]);
+  if (liked.error) throw new Error(liked.error.message);
+  if (made.error) throw new Error(made.error.message);
+  const likes = ((liked.data ?? []) as { collection_id: string; created_at: string }[])
+    .map((r) => ({ collection_id: r.collection_id, at: r.created_at }));
+  const copies = ((made.data ?? []) as { copied_from: string | null; created_at: string }[])
+    .filter((r) => r.copied_from)
+    .map((r) => ({ collection_id: r.copied_from!, at: r.created_at }));
+  const ids = [...new Set([...likes, ...copies].map((a) => a.collection_id))];
+  if (!ids.length) return { likes: [], copies: [], lists: [] };
+
+  const { data, error } = await supabase.from('collections')
+    .select('id, slug, title_en, title_vi, title_ja, owner_id, curator_handle')
+    .in('id', ids);
+  if (error) throw new Error(error.message);
+  type Row = ActList & { owner_id: string | null; curator_handle: string | null };
+  const theirs = ((data ?? []) as Row[]).filter((c) => c.owner_id !== meId);
+  const owners = await fetchProfilesById([...new Set(theirs.map((c) => c.owner_id).filter((o): o is string => !!o))]);
+  const byId = new Map(theirs.map((c) => [c.id, c]));
+  const named = (a: { collection_id: string; at: string }) => {
+    const c = byId.get(a.collection_id)!;
+    return { ...a, owner_handle: c.owner_id ? owners[c.owner_id]?.handle ?? null : c.curator_handle };
+  };
+  return {
+    likes: likes.filter((a) => byId.has(a.collection_id)).map(named),
+    copies: copies.filter((a) => byId.has(a.collection_id)).map(named),
+    lists: theirs.map(({ id, slug, title_en, title_vi, title_ja }) => ({ id, slug, title_en, title_vi, title_ja })),
+  };
 }
 
 /** Recent likes on your public lists, each with its liker's name — see

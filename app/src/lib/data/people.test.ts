@@ -18,7 +18,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  acceptFriendRequest, blockUser, dismissSuggestion, fetchApplause, fetchCopies, fetchCuratorAvatars, fetchFriendships,
+  acceptFriendRequest, blockUser, dismissSuggestion, fetchApplause, fetchCopies, fetchCuratorAvatars, fetchFriendships, fetchMyActs,
   fetchListTitles, fetchMutualSaves, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
   removeFriendship, searchHandles, sendFriendRequest, submitReport, unblockUser,
 } from './people';
@@ -430,6 +430,80 @@ describe('fetchCopies', () => {
   it('answers empty when it returned nothing', async () => {
     fake().replies({ data: null });
     expect(await fetchCopies('2026-08-01T00:00:00Z')).toEqual([]);
+  });
+});
+
+// The reader's own side of Activity (owner, 28 Oct 2026): read from the
+// tables, scoped to the reader, then the lists they point at and their
+// owners' handles.
+describe('fetchMyActs', () => {
+  const SINCE = '2026-08-01T00:00:00Z';
+  const list = (id: string, owner_id: string | null, curator_handle: string | null = null) =>
+    ({ id, slug: `s-${id}`, title_en: id, title_vi: id, title_ja: null, owner_id, curator_handle });
+
+  it('asks for the reader\'s likes and lists since the instant, then the lists they point at', async () => {
+    fake().replies(
+      { data: [{ collection_id: 'c1', created_at: '2026-08-02T00:00:00Z' }] },
+      { data: [{ copied_from: 'c2', created_at: '2026-08-03T00:00:00Z' }, { copied_from: null, created_at: '2026-08-04T00:00:00Z' }] },
+      { data: [list('c1', 'u-b'), list('c2', null, 'desk')] },
+      { data: [profile('u-b', 'bao')] },
+    );
+    const out = await fetchMyActs('me', SINCE);
+    const [likes, made, lists, owners] = fake().log;
+    expect(likes).toMatchObject({ table: 'collection_likes', filters: [['user_id', 'me'], ['created_at>=', SINCE]] });
+    expect(made).toMatchObject({ table: 'collections', filters: [['owner_id', 'me'], ['created_at>=', SINCE]] });
+    expect(lists).toMatchObject({ table: 'collections', filters: [['id', ['c1', 'c2']]] });
+    expect(owners).toMatchObject({ table: 'profiles', filters: [['id', ['u-b']]] });
+    expect(out.likes).toEqual([{ collection_id: 'c1', at: '2026-08-02T00:00:00Z', owner_handle: 'bao' }]);
+    // A list of your own making is the copy itself, not a copy of anyone's.
+    // The desk's list is named by its byline.
+    expect(out.copies).toEqual([{ collection_id: 'c2', at: '2026-08-03T00:00:00Z', owner_handle: 'desk' }]);
+    expect(out.lists.map((l) => l.slug)).toEqual(['s-c1', 's-c2']);
+  });
+
+  it('leaves out your own list, and one that can no longer be read', async () => {
+    fake().replies(
+      { data: [{ collection_id: 'mine', created_at: '2026-08-02T00:00:00Z' }, { collection_id: 'gone', created_at: '2026-08-02T00:00:00Z' }] },
+      { data: [] },
+      { data: [list('mine', 'me')] },
+    );
+    expect(await fetchMyActs('me', SINCE)).toEqual({ likes: [], copies: [], lists: [] });
+  });
+
+  it('reads a lists answer of nothing as no lists, and leaves every act out', async () => {
+    fake().replies(
+      { data: [{ collection_id: 'c1', created_at: '2026-08-02T00:00:00Z' }] },
+      { data: [] },
+      { data: null },
+    );
+    expect(await fetchMyActs('me', SINCE)).toEqual({ likes: [], copies: [], lists: [] });
+  });
+
+  it('names an owner whose profile is gone as nobody', async () => {
+    fake().replies(
+      { data: [{ collection_id: 'c1', created_at: '2026-08-02T00:00:00Z' }] },
+      { data: null },
+      { data: [list('c1', 'u-gone')] },
+      { data: [] },
+    );
+    expect((await fetchMyActs('me', SINCE)).likes[0].owner_handle).toBeNull();
+  });
+
+  it('asks nothing more when the reader did nothing', async () => {
+    fake().replies({ data: null }, { data: [] });
+    expect(await fetchMyActs('me', SINCE)).toEqual({ likes: [], copies: [], lists: [] });
+    expect(fake().log).toHaveLength(2);
+  });
+
+  it('throws when any read failed', async () => {
+    fake().replies({ error: { message: 'likes down' } }, { data: [] });
+    await expect(fetchMyActs('me', SINCE)).rejects.toThrow('likes down');
+    fake().reset();
+    fake().replies({ data: [] }, { error: { message: 'lists down' } });
+    await expect(fetchMyActs('me', SINCE)).rejects.toThrow('lists down');
+    fake().reset();
+    fake().replies({ data: [{ collection_id: 'c1', created_at: '2026-08-02T00:00:00Z' }] }, { data: [] }, { error: { message: 'read down' } });
+    await expect(fetchMyActs('me', SINCE)).rejects.toThrow('read down');
   });
 });
 

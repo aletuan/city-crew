@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agoOf, buildActivity, MIN_SUGGEST_CHARS, openSuggestions, reasonLine, REQUEST_DAILY_CAP,
+  agoOf, buildActivity, friendsMade, MIN_SUGGEST_CHARS, openSuggestions, reasonLine, REQUEST_DAILY_CAP,
   splitFriendships, standingWith, SUGGEST_LIMIT, suggestable, SUGGESTED_SHOWN, type Applause, type FriendshipRow,
   type Copy, type Suggestion,
 } from './friends';
@@ -88,6 +88,66 @@ describe('buildActivity', () => {
     ]);
     expect(items[1]).toMatchObject({ kind: 'copy', collection_id: 'c1', copier_handle: 'cam', copier_name: 'Some One' });
     expect(items[3]).toMatchObject({ kind: 'copy', collection_id: 'c2', copier_handle: null });
+  });
+});
+
+// Your own side, in the same timeline (owner, 28 Oct 2026).
+describe('buildActivity, with your own acts', () => {
+  it('weaves the likes you gave, the copies you saved and new friends in with the news', () => {
+    const items = buildActivity(
+      [like('c1', '2026-08-22T10:00:00Z', 'anh')],
+      [],
+      {
+        likes: [{ collection_id: 'c7', at: '2026-08-24T10:00:00Z', owner_handle: 'bao' }],
+        copies: [{ collection_id: 'c8', at: '2026-08-21T10:00:00Z', owner_handle: null }],
+      },
+      [{ other: 'u-c', at: '2026-08-23T10:00:00Z', asked: 'you' }],
+    );
+    expect(items.map((i) => [i.kind, i.at])).toEqual([
+      ['liked', '2026-08-24T10:00:00Z'],
+      ['friend', '2026-08-23T10:00:00Z'],
+      ['applause', '2026-08-22T10:00:00Z'],
+      ['copied', '2026-08-21T10:00:00Z'],
+    ]);
+    expect(items[0]).toMatchObject({ collection_id: 'c7', owner_handle: 'bao' });
+    expect(items[1]).toMatchObject({ other: 'u-c', asked: 'you' });
+    expect(items[3]).toMatchObject({ collection_id: 'c8', owner_handle: null });
+  });
+
+  it('is the news alone when given nothing of yours', () => {
+    expect(buildActivity([like('c1', '2026-08-22T10:00:00Z')], []).map((i) => i.kind)).toEqual(['applause']);
+  });
+});
+
+describe('friendsMade', () => {
+  const SINCE = '2026-08-20T00:00:00Z';
+  const row = (requester: string, addressee: string, status: 'pending' | 'accepted', responded_at?: string | null) =>
+    ({ requester, addressee, status, created_at: '2026-08-01T00:00:00Z', responded_at });
+
+  it('dates a friendship by the yes, and says who had asked', () => {
+    expect(friendsMade([
+      row('me', 'u-a', 'accepted', '2026-08-25T10:00:00Z'),
+      row('u-b', 'me', 'accepted', '2026-08-21T10:00:00Z'),
+    ], 'me', SINCE)).toEqual([
+      { other: 'u-a', at: '2026-08-25T10:00:00Z', asked: 'you' },
+      { other: 'u-b', at: '2026-08-21T10:00:00Z', asked: 'them' },
+    ]);
+  });
+
+  it('leaves out a request still waiting, an answer before the window, and a row with no answer', () => {
+    expect(friendsMade([
+      row('u-a', 'me', 'pending', null),
+      row('me', 'u-b', 'accepted', '2026-08-19T23:59:59Z'),
+      row('me', 'u-c', 'accepted'),
+    ], 'me', SINCE)).toEqual([]);
+  });
+
+  it('counts a yes at the window\'s opening instant, which is inside it', () => {
+    expect(friendsMade([row('me', 'u-a', 'accepted', SINCE)], 'me', SINCE)).toHaveLength(1);
+  });
+
+  it('reads only the edges the reader is on', () => {
+    expect(friendsMade([row('u-x', 'u-y', 'accepted', '2026-08-25T10:00:00Z')], 'me', SINCE)).toEqual([]);
   });
 });
 

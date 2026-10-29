@@ -13,6 +13,10 @@ export type FriendshipRow = {
   addressee: string;
   status: 'pending' | 'accepted';
   created_at: string;
+  /** When the addressee answered: the moment two people became friends.
+   *  Optional because a crew snapshot cached before Activity read it has
+   *  none; such a row is simply not news until the next fetch. */
+  responded_at?: string | null;
 };
 
 /** Mirror of the insert policy's cap: twenty requests started per day.
@@ -94,9 +98,41 @@ export type Copy = {
   copier_name: string | null;
 };
 
+/** Something the reader did to somebody else's list — a like given, or a
+ *  copy saved — with the list's owner by handle (null when their profile
+ *  is gone). For a copy, `collection_id` is the original, not the copy:
+ *  the row names and opens what was copied. */
+export type MyAct = { collection_id: string; at: string; owner_handle: string | null };
+
+/** A friendship that began, with who asked: `you` when the other person
+ *  accepted the reader's request, `them` when the reader accepted theirs. */
+export type FriendMade = { other: string; at: string; asked: 'you' | 'them' };
+
 export type ActivityItem =
   | { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null }
-  | { kind: 'copy'; at: string; collection_id: string; copier_handle: string | null; copier_name: string | null };
+  | { kind: 'copy'; at: string; collection_id: string; copier_handle: string | null; copier_name: string | null }
+  | { kind: 'liked'; at: string; collection_id: string; owner_handle: string | null }
+  | { kind: 'copied'; at: string; collection_id: string; owner_handle: string | null }
+  | { kind: 'friend'; at: string; other: string; asked: 'you' | 'them' };
+
+/**
+ * The friendships among `rows` that began since `sinceISO`, as the reader
+ * would tell them: who it was, and who had asked.
+ *
+ * Accepted edges only, dated by the answer rather than the ask — the day
+ * two people became friends is the day one of them said yes. A request
+ * still waiting is not here: it is the Requests tab's (owner, 20 Oct
+ * 2026). A declined one left no row to read, and neither does a
+ * friendship since removed; the log holds what still stands.
+ */
+export function friendsMade(rows: readonly FriendshipRow[], me: string, sinceISO: string): FriendMade[] {
+  return rows
+    .filter((r) => r.status === 'accepted' && r.responded_at && r.responded_at >= sinceISO
+      && (r.requester === me || r.addressee === me))
+    .map((r) => r.requester === me
+      ? { other: r.addressee, at: r.responded_at!, asked: 'you' as const }
+      : { other: r.requester, at: r.responded_at!, asked: 'them' as const });
+}
 
 /**
  * The EARLIER section, assembled and ordered: applause and copies, in one
@@ -114,11 +150,24 @@ export type ActivityItem =
  * Trips used to lead this list, as a reminder. They went the same day:
  * by then the Trips tab's dot, the morning notification and the Trips
  * screen all said it, and this copy — one line, showing one trip when
- * there were two on the day — was the only one telling it wrong. Activity
- * is what other people did with your lists and your crew.
+ * there were two on the day — was the only one telling it wrong.
+ *
+ * Your own side joined on 28 Oct 2026, when the owner made Activity a log
+ * of what you do on City Crew rather than news alone: the lists of other
+ * people's you liked and copied (`mine`), and the friendships that began,
+ * whichever of you asked (`friends`). All of it in the one timeline, for
+ * the same reason the copies went into it.
  */
-export function buildActivity(applause: readonly Applause[], copies: readonly Copy[]): ActivityItem[] {
+export function buildActivity(
+  applause: readonly Applause[],
+  copies: readonly Copy[],
+  mine: { likes: readonly MyAct[]; copies: readonly MyAct[] } = { likes: [], copies: [] },
+  friends: readonly FriendMade[] = [],
+): ActivityItem[] {
   const out: ActivityItem[] = [];
+  for (const l of mine.likes) out.push({ kind: 'liked', at: l.at, collection_id: l.collection_id, owner_handle: l.owner_handle });
+  for (const c of mine.copies) out.push({ kind: 'copied', at: c.at, collection_id: c.collection_id, owner_handle: c.owner_handle });
+  for (const f of friends) out.push({ kind: 'friend', at: f.at, other: f.other, asked: f.asked });
   for (const a of applause) {
     out.push({
       kind: 'applause', at: a.liked_at, collection_id: a.collection_id,
