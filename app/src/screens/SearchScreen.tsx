@@ -34,7 +34,7 @@ import { useCatalogIn, useLikes, useSearchTerms } from '../lib/catalog';
 import { RECENTS_KEY, rememberSearch } from '../lib/recents';
 import { buildSearchRows } from '../lib/searchRows';
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
-import { newestPlaces } from '../lib/newest';
+import { isNewList, newestPlaces } from '../lib/newest';
 import { rankPopular } from '../lib/popular';
 import { findPlaces, queryTerms } from '../lib/search';
 import {
@@ -44,6 +44,7 @@ import { useSearchIndex } from '../lib/searchIndex';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
+import NewBadge from '../components/NewBadge';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
@@ -92,10 +93,10 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
 
   const [picked, setPicked] = useState<string[]>([]);
 
-  // The clock the zero-state rows read "until 22:00" against. Taken per
-  // render rather than memoised: a memo would freeze the screen at the
-  // minute it mounted, and this screen is exactly the kind that stays
-  // open across a closing time.
+  // The clock the zero-state rows read "until 22:00" against, and a
+  // list's "New" badge its age. Taken per render rather than memoised: a
+  // memo would freeze the screen at the minute it mounted, and this screen
+  // is exactly the kind that stays open across a closing time.
   const now = new Date();
 
   // The box, reachable: the ↗ on a recent row puts the term *into* the
@@ -683,9 +684,14 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
               }}
             >
               <Card style={s.card}>
-                {item.cover
-                  ? <Image source={{ uri: item.cover }} style={s.thumb} contentFit="cover" transition={200} />
-                  : <View style={s.thumb} />}
+                <View>
+                  {item.cover
+                    ? <Image source={{ uri: item.cover }} style={s.thumb} contentFit="cover" transition={200} />
+                    : <View style={s.thumb} />}
+                  {/* 4pt in, not the 10 a larger cover takes: on a 64pt
+                      thumb, 10 would leave the word half off its edge. */}
+                  {isNewList(item.collection, userId ?? null, now.getTime()) ? <NewBadge style={s.thumbBadge} /> : null}
+                </View>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={s.cardTitle} numberOfLines={2}>
                     {t(item.collection.title_en, item.collection.title_vi, item.collection.title_ja)}
@@ -960,6 +966,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.cardPadding,
     padding: space.cardPadding,
   },
+  thumbBadge: { top: 4, left: 4 },
   thumb: {
     width: 64, height: 64, borderRadius: radius.image,
     backgroundColor: colors.surfaceGlass,
