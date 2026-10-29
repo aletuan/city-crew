@@ -50,3 +50,31 @@ export function newestPlaces<T extends Dated>(places: readonly T[], n: number = 
     })
     .slice(0, n);
 }
+
+// ── the "New" mark on a collection (owner, 29 Oct 2026) ──
+//
+// A list made in the last week wears "New" wherever its card is drawn:
+// the Collections grid and list, Explore's shelf, Search. Seven days, not
+// fourteen, because a mark only works while it is rare: measured on 29 Oct
+// 2026, 3 of the 32 public lists were under a week old and 9 under two —
+// near a third of the grid, which is a pattern the eye stops reading.
+//
+// `created_at` carries the caveat above: the seeded lists share the
+// instant the column was added, in August, so none of them can pass for
+// new. A list the reader made is never marked: "New" is news about
+// somebody else's work, and your own you know.
+
+/** How long a collection is new for, in days. */
+export const NEW_LIST_DAYS = 7;
+
+/** Whether a collection gets the "New" mark: made in the last
+ *  `NEW_LIST_DAYS`, by somebody other than `me`. */
+export function isNewList(
+  c: { created_at?: string | null; owner_id?: string | null },
+  me: string | null,
+  now: number,
+): boolean {
+  if (!c.created_at || (me && c.owner_id === me)) return false;
+  const age = now - Date.parse(c.created_at);
+  return age >= 0 && age < NEW_LIST_DAYS * 86_400_000;
+}

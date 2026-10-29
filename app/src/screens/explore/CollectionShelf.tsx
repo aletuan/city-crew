@@ -10,6 +10,11 @@
 // and four cafés came out as a fork and knife. The cover and the title
 // already say what the list is. Screen readers never heard the badge,
 // so nothing was lost for them.
+//
+// The corner it left holds `NewBadge` now (owner, 29 Oct 2026), on a
+// list made this week. That one does not have the old badge's trouble:
+// it is the same word on every screen a list is drawn on, Collections
+// included, and it says one thing a cover cannot.
 
 import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -23,6 +28,8 @@ import { useCollections, useLikes, usePlaces } from '../../lib/catalog';
 import { useSession } from '../../lib/auth';
 import { useSaveActions } from '../../lib/save';
 import { likesWorthShowing, rankByLikes } from '../../lib/likes';
+import { isNewList } from '../../lib/newest';
+import NewBadge from '../../components/NewBadge';
 import { useI18n } from '../../lib/i18n';
 import { colors, onPhoto, space } from '../../theme';
 import { type Nav } from '../../nav';
@@ -69,6 +76,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
   );
 
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places));
+  const now = Date.now();
 
   // The card's width comes from the screen's, and the reason is what a
   // fixed 176 did between devices: a 430pt phone showed a 28pt sliver of
@@ -145,6 +153,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                   locations={[0, 0.42, 1]}
                   style={StyleSheet.absoluteFill}
                 />
+                {isNewList(c, uid ?? null, now) ? <NewBadge /> : null}
                 <View style={s.shelfCardText}>
                   {/* One line, always. A second line pushed the count down
                       on some tiles and not others, so a row of cards that

@@ -33,6 +33,8 @@ import { Collection, coverUriOf, deleteCollection, fetchProfilesById, type Frien
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
+import { isNewList } from '../lib/newest';
+import NewBadge from '../components/NewBadge';
 import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
 import { collectionCities, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
@@ -568,6 +570,10 @@ export default function CollectionsScreen({ navigation, route }: {
   }, [mine.reload]));
 
   const me = session?.user?.id;
+  // Read once a render: a list that turns eight days old while the tab is
+  // open keeps its badge until the next one, which is soon enough.
+  const now = Date.now();
+  const newWord = t('New', 'Mới', '新着', '新', '新');
 
   const cityName = useCallback(
     (id: string | null | undefined) => cityShortById(cities, id, t) ?? (id ?? ''),
@@ -1223,6 +1229,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       const members = membersOf(c, places).length;
                       const reason = reasonFor(c.slug);
                       const my = !!c.id && myLikes.includes(c.id);
+                      const fresh = isNewList(c, me ?? null, now);
                       return (
                         <PressableScale
                           key={c.slug}
@@ -1232,7 +1239,7 @@ export default function CollectionsScreen({ navigation, route }: {
                           accessibilityRole="button"
                           accessibilityLabel={item.own
                             ? `${t(c.title_en, c.title_vi, c.title_ja)}, ${visibilityOf(c)}`
-                            : t(c.title_en, c.title_vi, c.title_ja)}
+                            : `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}`}
                         >
                           {uri
                             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
@@ -1247,6 +1254,7 @@ export default function CollectionsScreen({ navigation, route }: {
                             locations={[0, 0.55, 1]}
                             style={StyleSheet.absoluteFill}
                           />
+                          {fresh ? <NewBadge /> : null}
                           <View style={s.gcardText}>
                             <Text style={s.gcardTitle} numberOfLines={1}>
                               {t(c.title_en, c.title_vi, c.title_ja)}
@@ -1372,6 +1380,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 // did.
                 const my = !!c.id && myLikes.includes(c.id);
                 const blurb = t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() || '';
+                const fresh = isNewList(c, me ?? null, now);
                 const byline = c.curator_handle
                   ? `${t('by', 'bởi', 'by', '来自', '來自')} ${atHandle(c.curator_handle)}, ${reason ?? placesOf(n)}`
                   : undefined;
@@ -1386,15 +1395,14 @@ export default function CollectionsScreen({ navigation, route }: {
                       onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
                       testID={`collection-card-${item.at}`}
                       accessibilityRole="button"
-                      accessibilityLabel={byline
-                        ? `${t(c.title_en, c.title_vi, c.title_ja)}, ${byline}`
-                        : t(c.title_en, c.title_vi, c.title_ja)}
+                      accessibilityLabel={`${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}${byline ? `, ${byline}` : ''}`}
                     >
                       <Card style={s.card}>
                         <View style={[s.thumb, { width: coverW }]}>
                           {cover
                             ? <Image source={{ uri: cover }} style={s.thumbFill} contentFit="cover" transition={200} />
                             : <EmptyCover />}
+                          {fresh ? <NewBadge /> : null}
                         </View>
                         <View style={s.cardText}>
                           <RowGhost />

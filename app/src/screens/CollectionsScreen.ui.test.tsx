@@ -1391,6 +1391,54 @@ describe('CollectionsScreen — search', () => {
 // Its tab pressed again at this root scrolls back to the top. The press
 // is React Navigation's to hear; what is this screen's is the ref, and a
 // ref left off the list would hand over null and scroll nothing.
+// ── "New", on a list made this week (owner, 29 Oct 2026) ──
+describe('the New badge', () => {
+  const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
+  it("sits on somebody's list made this week, and is in its spoken name", () => {
+    state.cols.data = [
+      col('fresh', ['a'], { created_at: ago(2) }),
+      col('old', ['a'], { created_at: ago(30) }),
+    ];
+    show();
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'List fresh, New' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List old' })).toBeTruthy();
+    // The badge is inside the tile it labels.
+    expect(within(screen.getByRole('button', { name: 'List fresh, New' })).getByTestId('new-badge')).toBeTruthy();
+  });
+
+  it('and in the list shape, before the byline', async () => {
+    await AsyncStorage.setItem('citycrew.collections.view', 'row');
+    state.cols.data = [
+      col('fresh', ['a'], { created_at: ago(2), curator_handle: 'Minh' }),
+      col('old', ['a'], { created_at: ago(30) }),
+    ];
+    show();
+    const row = await screen.findByRole('button', { name: 'List fresh, New, by @minh, 1 place' });
+    expect(within(row).getByTestId('new-badge')).toBeTruthy();
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'List old' })).toBeTruthy();
+  });
+
+  it('never on your own, on either tab, in either shape', async () => {
+    state.uid = 'u1';
+    const own = col('mine1', ['a'], { owner_id: 'u1', is_public: true, created_at: ago(1) });
+    state.mine.data = [own];
+    state.cols.data = [own];
+    show();
+    expect(screen.getByRole('button', { name: 'List mine1, Public' })).toBeTruthy();
+    expect(screen.queryByTestId('new-badge')).toBeNull();
+    cleanup();
+    show({ tab: 'community' });
+    expect(screen.getByText('List mine1')).toBeTruthy();
+    expect(screen.queryByTestId('new-badge')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    expect(screen.getByText('List mine1')).toBeTruthy();
+    expect(screen.queryByTestId('new-badge')).toBeNull();
+  });
+});
+
 describe('its tab, pressed again', () => {
   it('hands the scroll to the top the screen’s own list', async () => {
     show();

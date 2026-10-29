@@ -539,6 +539,27 @@ describe('typing a query', () => {
     expect(screen.getByText('1 place')).toBeTruthy();
   });
 
+  // "New" on a list made this week (owner, 29 Oct 2026), in the corner of
+  // its thumbnail, as on every other screen that draws the list.
+  it('marks a collection made this week New, and not an older one', () => {
+    const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+    cat.cols = [
+      { ...crawl, created_at: ago(2) },
+      { ...gallery, title_en: 'Coffee gallery', created_at: ago(40) },
+    ];
+    mount();
+    type('coffee');
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
+    // A row is the nearest box around its title that holds its chevron too.
+    const row = (title: string) => {
+      let el: HTMLElement | null = screen.getByText(title);
+      while (el && !el.querySelector('[data-icon="chevron-forward"]')) el = el.parentElement;
+      return el!;
+    };
+    expect(within(row('Coffee crawl')).getByTestId('new-badge')).toBeTruthy();
+    expect(within(row('Coffee gallery')).queryByTestId('new-badge')).toBeNull();
+  });
+
   it('opens a collection and remembers the query', () => {
     const { navigation } = mount();
     type('crawl');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NEWEST_SHOWN, newestPlaces } from './newest';
+import { isNewList, NEW_LIST_DAYS, NEWEST_SHOWN, newestPlaces } from './newest';
 
 const at = (slug: string, created_at: string | null) => ({ slug, created_at });
 
@@ -52,5 +52,34 @@ describe('newestPlaces', () => {
 
   it('has an answer for an empty catalog', () => {
     expect(newestPlaces([])).toEqual([]);
+  });
+});
+
+// The "New" mark on a collection (owner, 29 Oct 2026).
+describe('isNewList', () => {
+  const NOW = Date.parse('2026-10-29T12:00:00Z');
+  const DAY = 86_400_000;
+  const at = (msAgo: number) => new Date(NOW - msAgo).toISOString();
+
+  it('marks a list for seven days from when it was made', () => {
+    expect(NEW_LIST_DAYS).toBe(7);
+    expect(isNewList({ created_at: at(0), owner_id: 'u-b' }, 'me', NOW)).toBe(true);
+    expect(isNewList({ created_at: at(7 * DAY - 1), owner_id: 'u-b' }, 'me', NOW)).toBe(true);
+    expect(isNewList({ created_at: at(7 * DAY), owner_id: 'u-b' }, 'me', NOW)).toBe(false);
+  });
+
+  it('never marks the reader\'s own list, and marks the desk\'s like anyone\'s', () => {
+    expect(isNewList({ created_at: at(DAY), owner_id: 'me' }, 'me', NOW)).toBe(false);
+    expect(isNewList({ created_at: at(DAY), owner_id: null }, 'me', NOW)).toBe(true);
+    // Signed out, nothing is yours.
+    expect(isNewList({ created_at: at(DAY), owner_id: 'me' }, null, NOW)).toBe(true);
+    // Not even an ownerless one, which a careless match calls a guest's.
+    expect(isNewList({ created_at: at(DAY), owner_id: null }, null, NOW)).toBe(true);
+  });
+
+  it('cannot call a list new that cannot say when it was made, or claims a time to come', () => {
+    expect(isNewList({ created_at: null, owner_id: 'u-b' }, 'me', NOW)).toBe(false);
+    expect(isNewList({ owner_id: 'u-b' }, 'me', NOW)).toBe(false);
+    expect(isNewList({ created_at: at(-DAY), owner_id: 'u-b' }, 'me', NOW)).toBe(false);
   });
 });

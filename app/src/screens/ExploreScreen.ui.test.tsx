@@ -1706,6 +1706,24 @@ describe('the community shelf', () => {
     expect(icons).toEqual(['heart-outline']);
   });
 
+  // The one mark a card does wear (owner, 29 Oct 2026): "New", on a list
+  // made this week by somebody else — the same word the Collections tab
+  // puts on the same list.
+  it('marks a list made this week New, but not an older one or your own', () => {
+    const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+    state.uid = 'u1';
+    state.places.data = [place('p1')];
+    state.cols.data = [
+      collection('fresh', ['p1'], { created_at: ago(3) } as Partial<Collection>),
+      collection('old', ['p1'], { created_at: ago(9) } as Partial<Collection>),
+      collection('mine', ['p1'], { owner_id: 'u1', created_at: ago(1) } as Partial<Collection>),
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(within(shelfCard('List fresh')).getByTestId('new-badge')).toBeTruthy();
+    expect(within(shelfCard('List old')).queryByTestId('new-badge')).toBeNull();
+    expect(within(shelfCard('List mine')).queryByTestId('new-badge')).toBeNull();
+  });
+
   it('opens a list from its card', () => {
     state.places.data = [place('p1')];
     state.cols.data = [collection('bars', ['p1'])];
