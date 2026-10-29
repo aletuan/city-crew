@@ -139,6 +139,29 @@ describe('fetchPlaces', () => {
     fake().replies({ data: null });
     expect(await fetchPlaces('hanoi')).toEqual([]);
   });
+
+  // A city past the server's thousand-row cap (owner, 29 Oct 2026). One
+  // request was handed the first thousand and said nothing; every page,
+  // in the same total order, until one comes back short.
+  it('reads a city past a thousand places page by page, in one order', async () => {
+    const page = (n: number, at: number) => Array.from({ length: n }, (_, i) => row(`p${String(at + i).padStart(5, '0')}`));
+    fake().replies({ data: page(PAGE_ROWS, 0) }, { data: page(44, PAGE_ROWS) });
+    const out = await fetchPlaces('hcmc');
+    expect(out).toHaveLength(PAGE_ROWS + 44);
+    expect(out[PAGE_ROWS].slug).toBe(`p0${PAGE_ROWS}`);
+    expect(fake().log.map((q) => q.range)).toEqual([[0, PAGE_ROWS - 1], [PAGE_ROWS, 2 * PAGE_ROWS - 1]]);
+    for (const q of fake().log) {
+      expect(q.orders).toEqual([
+        ['sort_order', { ascending: true, nullsFirst: false }],
+        ['slug', { ascending: true }],
+      ]);
+    }
+  });
+
+  it('a failure on a later page throws, rather than answering half a city', async () => {
+    fake().replies({ data: Array.from({ length: PAGE_ROWS }, (_, i) => row(`p${i}`)) }, { error: { message: 'timeout' } });
+    await expect(fetchPlaces('hcmc')).rejects.toThrow('timeout');
+  });
 });
 
 describe('fetchPlaceBySlug', () => {

@@ -53,24 +53,42 @@ export async function fetchPlaces(cityId: string, meId?: string | null): Promise
       .order('slug', { ascending: true });
   };
 
-  let { data, error } = await run(PLACE_COLS(true), true);
+  // Every page, not the first (owner, 29 Oct 2026). The server answers a
+  // thousand rows to any one request and says so only in a header
+  // (`PAGE_ROWS`), and this is the read a city's whole catalog comes
+  // through: Saigon is at 444 today, and past a thousand the rest of the
+  // city would have gone missing from Explore, from its lists and from
+  // its search without a word. The order above is total — `slug` is
+  // unique — which is what lets the pages meet without a gap or a repeat.
+  //
+  // An error comes back as the message, not a throw, so the two retries
+  // below read as they did when this was one request.
+  const read = async (cols: string, withSubmissions: boolean) => {
+    try {
+      return { rows: await everyPage<Place>((from, to) => run(cols, withSubmissions).range(from, to)), error: null };
+    } catch (e) {
+      return { rows: [] as Place[], error: e as Error };
+    }
+  };
+
+  let { rows, error } = await read(PLACE_COLS(true), true);
   // A build can reach a database that has not run the categories migration
   // yet. Drop the column and retry rather than showing an error screen —
   // categoriesOf() derives a usable value from vibes in the meantime.
   if (error && error.message.includes('categories')) {
-    ({ data, error } = await run(PLACE_COLS(false), true));
+    ({ rows, error } = await read(PLACE_COLS(false), true));
   }
   // And one that has not run the submissions migration: `submitted_by` is
   // the newest column here, so a client that ships ahead of the database
   // asks for the catalog alone rather than showing an error screen. There
   // are no submissions to miss on a database that cannot hold one.
   if (error && error.message.includes('submitted_by')) {
-    ({ data, error } = await run(PLACE_COLS_LEGACY, false));
+    ({ rows, error } = await read(PLACE_COLS_LEGACY, false));
   }
-  if (error) throw new Error(error.message);
+  if (error) throw error;
   // Your own suggestions first. See `ownPendingFirst` — sorted here rather
   // than in the query because `sort_order` cannot express "mine".
-  return ownPendingFirst((data ?? []) as unknown as Place[], meId);
+  return ownPendingFirst(rows, meId);
 }
 
 /** The column list without anything the submissions migration added. */
