@@ -21,6 +21,25 @@ export function coverOf(p: Place): PlacePhoto | undefined {
 }
 
 /**
+ * A catalog place with its whole set of photographs — when the set agrees
+ * with it.
+ *
+ * The catalog carries one photograph a place (`fetchPlaces`) and the place
+ * page fetches the rest (`fetchPlacePhotos`). The two are separate answers
+ * and can disagree: set a new cover in the gallery and the catalog
+ * reloads with it, while the set fetched before the change still leads
+ * with the old one until its own refresh lands. Taking that set would put
+ * the old cover back on the page the keeper just changed it from. So the
+ * set is taken only when its cover is the catalog's; until then the page
+ * shows the cover alone, which is right, and the rest follow.
+ */
+export function withPhotos(p: Place, all: PlacePhoto[] | undefined): Place {
+  if (!all) return p;
+  const theirs = photosOf({ ...p, place_photos: all })[0];
+  return theirs?.id === coverOf(p)?.id ? { ...p, place_photos: all } : p;
+}
+
+/**
  * The photograph a collection's card wears: the one its owner chose, else
  * its first place's own cover, else none.
  *

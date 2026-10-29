@@ -79,9 +79,13 @@ vi.mock('../lib/assist', async (orig) => ({
   cachedNarration,
   prefetchNarration,
 }));
+// The rest of each stop's photographs, as `usePlacePhotos` answers, and
+// what it was asked for. One object, for the reason `NO_COLS` is.
+const stopPhotos = vi.hoisted(() => ({ data: {} as Record<string, unknown[]>, asked: [] as (string[] | null)[] }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   saveTrip,
+  usePlacePhotos: (slugs: string[] | null) => { stopPhotos.asked.push(slugs); return stopPhotos; },
 }));
 
 import PlanEditScreen from './PlanEditScreen';
@@ -254,6 +258,8 @@ beforeEach(() => {
   auth.current = { session: { user: { id: 'u1' } }, profile: { avatar_url: null } };
   cityState.current = { city: { id: 'hanoi' } };
   mine.current = [];
+  stopPhotos.data = {};
+  stopPhotos.asked = [];
 });
 
 describe('the plan as it arrives', () => {
@@ -270,6 +276,17 @@ describe('the plan as it arrives', () => {
     expect(screen.getByText('Coffee, noodles, skyline')).toBeTruthy();
     expect(screen.queryByText('An evening in the Old Quarter')).toBeNull();
     expect(screen.getByText(/Old Quarter/)).toBeTruthy();
+  });
+
+  // The planner plans over the catalog, which carries one photograph a
+  // place (owner, 29 Oct 2026); a stop card pages through them all.
+  it('pages a stop through every photograph, asked for by name', () => {
+    stopPhotos.data = { cafe: [...CAFE.place_photos, photo('https://img/cafe-3.jpg', 2)] };
+    planTrips.mockImplementation(() => [plan('classic', [stop(ROOF, 18 * 60, 60), stop(CAFE, 19 * 60 + 15, 60)])]);
+    renderScreen();
+    // Sorted, so dragging a stop does not ask again.
+    expect(stopPhotos.asked.at(-1)).toEqual(['cafe', 'roof']);
+    expect(document.querySelector('img[src="https://img/cafe-3.jpg"]')).not.toBeNull();
   });
 
   // The name line is the brand; the ward after the catalog's dash opens

@@ -16,13 +16,24 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, fetchPlacesByGoogleId, fetchSearchIndex, fetchSearchPlaces,
+  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlacePhotos, fetchPlaces, fetchPlacesByGoogleId, fetchSearchIndex, fetchSearchPlaces,
   PLACE_COLS, SEARCH_INDEX_COLS,
 } from './places';
 import { PAGE_ROWS } from './pages';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
+
+// The sorts on the rows themselves, and the ones on the embedded photos —
+// one `orders` list in the fake, told apart by `referencedTable`.
+type Sort = [string, { referencedTable?: string } | undefined];
+const onRows = (q: { orders?: unknown[][] }) => (q.orders as Sort[] | undefined)?.filter(([, o]) => !o?.referencedTable);
+const onPhotos = (q: { orders?: unknown[][] }) => (q.orders as Sort[] | undefined)?.filter(([, o]) => o?.referencedTable === 'place_photos');
+const ONE_COVER = [
+  ['is_cover', { referencedTable: 'place_photos', ascending: false }],
+  ['sort_order', { referencedTable: 'place_photos', ascending: true }],
+  ['id', { referencedTable: 'place_photos', ascending: true }],
+];
 
 const row = (slug: string, extra: Record<string, unknown> = {}) => ({
   slug, city_id: 'hanoi', is_published: true, review_status: 'approved',
@@ -56,7 +67,7 @@ describe('fetchPlaces', () => {
     const [q] = fake().log;
     expect(q.table).toBe('places');
     expect(q.filters).toEqual([
-      ['city_id', 'hanoi'], ['is_published', true], ['review_status', 'approved'],
+      ['city_id', 'hanoi'], ['is_published', true], ['review_status', 'approved'], ['place_photos.is_hidden', false],
     ]);
     // Two `eq`s, not a disjunction: signed out there is no "or mine" to add.
     expect(q.or).toBeUndefined();
@@ -70,7 +81,7 @@ describe('fetchPlaces', () => {
     // One `or`, not chained `eq`s: chaining would ask for both halves at
     // once, which no row can satisfy.
     expect(q.or).toBe('and(is_published.eq.true,review_status.eq.approved),submitted_by.eq.u1');
-    expect(q.filters).toEqual([['city_id', 'hanoi']]);
+    expect(q.filters).toEqual([['city_id', 'hanoi'], ['place_photos.is_hidden', false]]);
   });
 
   it('sorts by sort_order with the unranked last, slug as the tiebreak', async () => {
@@ -81,10 +92,26 @@ describe('fetchPlaces', () => {
     // Postgres answer in a different order per run — and the Explore
     // hero, picked by "first match", flipped covers between the cached
     // render and the fresh one on any city with no pinned hero.
-    expect(fake().log[0].orders).toEqual([
+    expect(onRows(fake().log[0])).toEqual([
       ['sort_order', { ascending: true, nullsFirst: false }],
       ['slug', { ascending: true }],
     ]);
+  });
+
+  // The cover alone (owner, 29 Oct 2026): the photographs were well over
+  // half of a city's cached catalog, and a card draws one of them.
+  it('carries one photograph a place — the one coverOf would draw', async () => {
+    fake().replies({ data: [] });
+    await fetchPlaces('hanoi', 'u1');
+    const [q] = fake().log;
+    // Visible only, the marked cover first, then the order the desk set,
+    // then the id so the pick is the same on every answer.
+    expect(q.filters).toContainEqual(['place_photos.is_hidden', false]);
+    expect(onPhotos(q)).toEqual(ONE_COVER);
+    expect(q.embedLimits).toEqual({ place_photos: 1 });
+    // One photograph a place, not one place.
+    expect(q.limit).toBeUndefined();
+    expect(String(q.payload)).toContain('place_photos(id, photo_uri, is_cover, is_hidden, sort_order, attribution_name)');
   });
 
   it('puts the reader’s own pending suggestion above the catalog', async () => {
@@ -108,6 +135,8 @@ describe('fetchPlaces', () => {
     expect(String(second.payload)).not.toContain(', categories');
     // Still the reader's own query: only the column list narrowed.
     expect(second.or).toContain('submitted_by.eq.u1');
+    // And still one photograph a place.
+    expect(second.embedLimits).toEqual({ place_photos: 1 });
   });
 
   it('falls back to the plain catalog on one that lacks submitted_by', async () => {
@@ -125,8 +154,10 @@ describe('fetchPlaces', () => {
     // so the disjunction goes with the column.
     expect(second.or).toBeUndefined();
     expect(second.filters).toEqual([
-      ['city_id', 'hanoi'], ['is_published', true], ['review_status', 'approved'],
+      ['city_id', 'hanoi'], ['is_published', true], ['review_status', 'approved'], ['place_photos.is_hidden', false],
     ]);
+    expect(onPhotos(second)).toEqual(ONE_COVER);
+    expect(second.embedLimits).toEqual({ place_photos: 1 });
   });
 
   it('throws when the failure is not one of the two it knows how to retry', async () => {
@@ -151,7 +182,7 @@ describe('fetchPlaces', () => {
     expect(out[PAGE_ROWS].slug).toBe(`p0${PAGE_ROWS}`);
     expect(fake().log.map((q) => q.range)).toEqual([[0, PAGE_ROWS - 1], [PAGE_ROWS, 2 * PAGE_ROWS - 1]]);
     for (const q of fake().log) {
-      expect(q.orders).toEqual([
+      expect(onRows(q)).toEqual([
         ['sort_order', { ascending: true, nullsFirst: false }],
         ['slug', { ascending: true }],
       ]);
@@ -161,6 +192,34 @@ describe('fetchPlaces', () => {
   it('a failure on a later page throws, rather than answering half a city', async () => {
     fake().replies({ data: Array.from({ length: PAGE_ROWS }, (_, i) => row(`p${i}`)) }, { error: { message: 'timeout' } });
     await expect(fetchPlaces('hcmc')).rejects.toThrow('timeout');
+  });
+});
+
+describe('fetchPlacePhotos', () => {
+  it('asks for every photograph of the places named, as slug → photos', async () => {
+    const ph = { id: 'a', photo_uri: 'u', is_cover: true, is_hidden: false, sort_order: 0, attribution_name: null };
+    fake().replies({ data: [{ slug: 'pho-10', place_photos: [ph] }, { slug: 'bare', place_photos: null }] });
+    const out = await fetchPlacePhotos(['pho-10', 'bare']);
+    expect(out).toEqual({ 'pho-10': [ph], bare: [] });
+
+    const [q] = fake().log;
+    expect(q.table).toBe('places');
+    expect(q.payload).toBe('slug, place_photos(id, photo_uri, is_cover, is_hidden, sort_order, attribution_name)');
+    expect(q.filters).toEqual([['slug', ['pho-10', 'bare']]]);
+    // All of them: no cap on the photographs, nor on the rows.
+    expect(q.embedLimits).toBeUndefined();
+    expect(q.limit).toBeUndefined();
+  });
+
+  it('asks nothing for no places', async () => {
+    expect(await fetchPlacePhotos([])).toEqual({});
+    expect(fake().log).toHaveLength(0);
+  });
+
+  it('answers empty when nothing comes back, and throws a refusal', async () => {
+    fake().replies({ data: null }, { error: { message: 'timeout' } });
+    expect(await fetchPlacePhotos(['pho-10'])).toEqual({});
+    await expect(fetchPlacePhotos(['pho-10'])).rejects.toThrow('timeout');
   });
 });
 

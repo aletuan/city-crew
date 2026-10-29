@@ -41,6 +41,8 @@ const WIDTH = vi.hoisted(() => {
 const state = vi.hoisted(() => ({
   catalog: { loading: false, data: [] as unknown[] },
   elsewhere: { loading: false, data: null as unknown },
+  // The rest of a catalog place's photographs, as `usePlacePhotos` answers.
+  photos: { loading: false, data: {} as Record<string, unknown[]> },
   saved: [] as string[],
   credit: false,
   city: null as null | Record<string, string>,
@@ -58,6 +60,7 @@ const spies = vi.hoisted(() => ({
   removeCheckin: vi.fn(async () => {}),
   reloadCheckins: vi.fn(),
   note: vi.fn(),
+  photos: vi.fn(),
   bySlug: vi.fn(),
   setStatusBarStyle: vi.fn(),
 }));
@@ -88,6 +91,7 @@ vi.mock('../lib/catalog', () => ({ usePlaces: () => state.catalog }));
 vi.mock('../lib/data', async () => ({
   ...(await vi.importActual<typeof import('../lib/place')>('../lib/place')),
   usePlaceBySlug: (slug: string | null) => { spies.bySlug(slug); return state.elsewhere; },
+  usePlacePhotos: (slugs: string[] | null, stamp?: unknown) => { spies.photos(slugs, stamp); return state.photos; },
   // What `LocalGuidePanel` reaches for. Answering "not a guide" is what
   // keeps every test below about the screen it is testing: the panel draws
   // nothing, exactly as it does for almost everybody. `state.guide` is
@@ -279,6 +283,8 @@ beforeEach(() => {
   vi.setSystemTime(WED_10AM);
   state.catalog = { loading: false, data: [] };
   state.elsewhere = { loading: false, data: null };
+  state.photos = { loading: false, data: {} };
+  spies.photos.mockReset();
   state.saved = [];
   state.credit = false;
   state.price = false;
@@ -943,6 +949,41 @@ describe('PlaceDetailScreen — hero', () => {
     r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
     expect(heroPage().page).toBe(0);
     expect(screen.getByText('1 / 2')).toBeTruthy();
+  });
+
+  // The catalog carries the cover alone (owner, 29 Oct 2026); the page
+  // asks for the rest and draws them when they come.
+  it('opens on the catalog’s cover, and adds the rest of the set when it comes', () => {
+    const cover = photo('a.jpg', { id: 'a', is_cover: true });
+    const p = place({ place_photos: [cover] });
+    state.catalog = { loading: false, data: [p] };
+    const n = nav();
+    const r = render(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    expect(heroPhotos()).toEqual(['a.jpg']);
+    // Asked by name, with the catalog's own row as the stamp.
+    expect(spies.photos).toHaveBeenLastCalledWith(['cong-caphe'], p);
+
+    state.photos = { loading: false, data: { 'cong-caphe': [photo('b.jpg', { id: 'b', sort_order: 1 }), cover, photo('c.jpg', { id: 'c', sort_order: 2 })] } };
+    r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    expect(heroPhotos()).toEqual(['a.jpg', 'b.jpg', 'c.jpg']);
+    expect(screen.getByText('1 / 3')).toBeTruthy();
+  });
+
+  // Back from the gallery with a new cover: the catalog has it, the set
+  // fetched before has not caught up. The page shows the new cover alone
+  // rather than putting the old one back in front.
+  it('keeps the new cover alone while the set still leads with the old one', () => {
+    state.photos = { loading: false, data: { 'cong-caphe': [photo('a.jpg', { id: 'a', is_cover: true }), photo('b.jpg', { id: 'b', sort_order: 1 })] } };
+    show(place({ place_photos: [photo('b.jpg', { id: 'b', is_cover: true, sort_order: 1 })] }));
+    expect(heroPhotos()).toEqual(['b.jpg']);
+  });
+
+  it('asks nothing more for a place from elsewhere, which brought its own set', () => {
+    state.catalog = { loading: false, data: [] };
+    state.elsewhere = { loading: false, data: place({ place_photos: [photo('a.jpg'), photo('b.jpg', { sort_order: 1 })] }) };
+    render(<PlaceDetailScreen navigation={nav()} route={route('cong-caphe')} />);
+    expect(spies.photos).toHaveBeenLastCalledWith(null, undefined);
+    expect(heroPhotos()).toEqual(['a.jpg', 'b.jpg']);
   });
 
   // Only a new cover moves the reader. A reload that changes nothing

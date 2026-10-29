@@ -103,7 +103,7 @@ import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
-import { saveTrip } from '../lib/data';
+import { saveTrip, usePlacePhotos, withPhotos } from '../lib/data';
 import { reviewAfterTripSaved } from '../lib/askReview';
 import { spendVnd } from '../lib/trips';
 import { clockOf, dateline } from '../lib/format';
@@ -251,6 +251,10 @@ export default function PlanEditScreen({ navigation, route }: {
       : []),
     [stops, picked],
   );
+  // The planner plans over the catalog, which carries one photograph a
+  // place; the stop cards page through them all, so the rest are asked for
+  // here. By name in a fixed order, so dragging a stop is not a new question.
+  const stopPhotos = usePlacePhotos(current.length ? current.map((st) => st.place.slug).sort() : null);
 
   // Edits live only here until Save: `stops` stays null until the first
   // one. Leaving with them used to drop them without a word — the header's
@@ -558,7 +562,7 @@ export default function PlanEditScreen({ navigation, route }: {
               <RailColumn first={i === 0} last={i === current.length - 1} />
               <View style={[s.column, i < current.length - 1 && s.columnGap]}>
             <StopCard
-              place={stop.place}
+              place={withPhotos(stop.place, stopPhotos.data[stop.place.slug])}
               arriveMin={stop.arriveMin}
               dwellMin={stop.dwellMin}
               pinned={stop.pinned}

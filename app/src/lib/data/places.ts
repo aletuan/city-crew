@@ -6,16 +6,19 @@
 // reach a database older than itself.
 
 import { supabase } from '../supabase';
-import type { Place } from '../types';
+import type { Place, PlacePhoto } from '../types';
 import { ownPendingFirst } from '../live';
 import { everyPage } from './pages';
+
+/** A place's photographs, as every card and page reads them (`photosOf`). */
+const PHOTO_EMBED = 'place_photos(id, photo_uri, is_cover, is_hidden, sort_order, attribution_name)';
 
 // `city_id` is selected, not just filtered on. A place that travels
 // outside the city query — inside a collection that reaches more than one
 // city — has to be able to say where it is, and a row that only ever
 // matched a `where` clause cannot. See `touchesCity`.
 export const PLACE_COLS = (withCategories: boolean) =>
-  `slug, city_id, google_place_id, name_en, name_vi, i18n, category${withCategories ? ', categories' : ''}, is_published, review_status, submitted_by, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, emoji, opening_hours, website, phone, instagram_handle, threads_handle, reviewer_source, reviewer_name, reviewer_url, created_at, place_photos(id, photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
+  `slug, city_id, google_place_id, name_en, name_vi, i18n, category${withCategories ? ', categories' : ''}, is_published, review_status, submitted_by, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, emoji, opening_hours, website, phone, instagram_handle, threads_handle, reviewer_source, reviewer_name, reviewer_url, created_at, ${PHOTO_EMBED}`;
 
 /**
  * The catalog for a city, plus whatever the reader suggested themselves.
@@ -50,7 +53,35 @@ export async function fetchPlaces(cityId: string, meId?: string | null): Promise
     // still (Đà Lạt, switching cities).
     return scoped
       .order('sort_order', { ascending: true, nullsFirst: false })
-      .order('slug', { ascending: true });
+      .order('slug', { ascending: true })
+      // One photograph a place, not all of them (owner, 29 Oct 2026). The
+      // catalog is drawn as cards, and a card shows its cover and nothing
+      // else; the place page asks for the rest when it opens
+      // (`fetchPlacePhotos`). Measured against the project that day, the
+      // photographs were 936,720 of Saigon's ~1.5 million cached
+      // characters — 446 places at about seven each — and the cover alone
+      // is 136,874: the launch cache roughly halves, and moves away from
+      // Android's 2 MB cursor window.
+      //
+      // The one kept is the one `coverOf` would pick from the whole set —
+      // visible, the marked cover first, then `sort_order` — so a card
+      // draws the same picture it drew from all seven. That covers the
+      // place with photographs and no marked cover (one, in Đà Nẵng, that
+      // day), which a bare `is_cover = true` filter, as the search index
+      // uses, would have left blank. `id` last makes the pick total, for
+      // the reason `slug` does above: the cached answer and the fresh one
+      // must draw the same cover.
+      //
+      // No `CACHE_VERSION` bump: a row is the shape it was, with a shorter
+      // list in one field. A cache written before this still holds every
+      // photograph and draws exactly as it did, until the next fetch
+      // replaces it — a bump would have bought each phone one launch
+      // without a cache, for nothing.
+      .eq('place_photos.is_hidden', false)
+      .order('is_cover', { referencedTable: 'place_photos', ascending: false })
+      .order('sort_order', { referencedTable: 'place_photos', ascending: true })
+      .order('id', { referencedTable: 'place_photos', ascending: true })
+      .limit(1, { referencedTable: 'place_photos' });
   };
 
   // Every page, not the first (owner, 29 Oct 2026). The server answers a
@@ -118,6 +149,29 @@ export async function fetchPlaceBySlug(slug: string): Promise<Place | null> {
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data ?? null) as unknown as Place | null;
+}
+
+/**
+ * Every photograph of each place named, as `slug → photos`.
+ *
+ * The catalog carries one photograph a place (`fetchPlaces`), and the two
+ * screens that want the rest ask here: the place page, for its carousel,
+ * and a copied list's cover picker, which offers every photograph of every
+ * member. The same embed as the rest of the app reads, so `photosOf` sorts
+ * and filters these exactly as it did the catalog's.
+ *
+ * A slug the reader may not see is simply absent — RLS answers here as it
+ * does for the catalog — and the caller keeps the cover it already has.
+ */
+export async function fetchPlacePhotos(slugs: string[]): Promise<Record<string, PlacePhoto[]>> {
+  if (!slugs.length) return {};
+  const { data, error } = await supabase
+    .from('places')
+    .select(`slug, ${PHOTO_EMBED}`)
+    .in('slug', slugs);
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as unknown as { slug: string; place_photos: PlacePhoto[] | null }[];
+  return Object.fromEntries(rows.map((r) => [r.slug, r.place_photos ?? []]));
 }
 
 /**

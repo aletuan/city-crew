@@ -10,10 +10,10 @@
 import { useCallback } from 'react';
 import { useCurrentCity } from '../city';
 import { normalizeHandle } from '../handle';
-import type { Collection, Place } from '../types';
+import type { Collection, Place, PlacePhoto } from '../types';
 import { CACHE_CATALOG, cacheKey } from './cache';
 import { type Fetch, useFetch, usePersistedFetch } from './fetch';
-import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlaces } from './places';
+import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlacePhotos, fetchPlaces } from './places';
 import {
   fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes, type LikeTally,
 } from './collections';
@@ -138,6 +138,29 @@ export const usePlaceBySlug = (slug: string | null) => {
     [slug],
   );
   return useFetch(fetcher, null as Place | null);
+};
+
+/**
+ * Every photograph of the places named — the rest of what the catalog's
+ * one-a-place leaves out (`fetchPlacePhotos`). Null asks for nothing.
+ *
+ * `stamp` asks again whenever it changes, and the place page passes the
+ * catalog's own row for it: the catalog reloads after the gallery changes
+ * a photograph, and a new row is the sign the set may be out of date.
+ * Not cached between launches — it is one place's worth, asked for on
+ * opening it, and the catalog's cover is on screen while it comes.
+ */
+const NO_PHOTOS: Record<string, PlacePhoto[]> = {};
+export const usePlacePhotos = (slugs: string[] | null, stamp?: unknown) => {
+  // Joined, so a caller's fresh array of the same names is the same question.
+  const asked = slugs ? slugs.join('\n') : null;
+  const fetcher = useCallback(
+    () => (asked ? fetchPlacePhotos(asked.split('\n')) : Promise.resolve(NO_PHOTOS)),
+    // `stamp` for its identity alone: see above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [asked, stamp],
+  );
+  return useFetch(fetcher, NO_PHOTOS);
 };
 
 /**
