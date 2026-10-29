@@ -31,6 +31,9 @@ const who = vi.hoisted(() => ({
 // bookmark tests below leave both empty, as they always were.
 const catalog = vi.hoisted(() => ({ data: [] as unknown[] }));
 const saved = vi.hoisted(() => ({ data: [] as unknown[] }));
+// The rest of the catalog's photographs, as `usePlacePhotos` answers, and
+// what it was asked for.
+const photos = vi.hoisted(() => ({ data: {} as Record<string, unknown[]>, asked: [] as (string[] | null)[] }));
 
 vi.mock('../lib/auth', () => {
   const m = {
@@ -67,6 +70,7 @@ vi.mock('../lib/data', async (orig) => ({
   addPlaceToCollection,
   updateCollection,
   copyCollection,
+  usePlacePhotos: (slugs: string[] | null) => { photos.asked.push(slugs); return { data: photos.data }; },
 }));
 // `goTo` reaches for the container ref, which no test mounts; the rest of
 // `nav` — `leaveAuth`, the types — stays real.
@@ -104,6 +108,8 @@ const create = (title: string) => {
 
 beforeEach(() => {
   listeners.clear();
+  photos.data = {};
+  photos.asked = [];
   createCollection.mockClear();
   addPlaceToCollection.mockClear();
   updateCollection.mockClear();
@@ -192,6 +198,8 @@ describe('the cover picker', () => {
     // best picture of a bar is often not the one the catalog marked as
     // that bar's cover, and one tile apiece hid it with no way through.
     openRename([HEIM, SAM]);
+    // Your own list's places are your lists' own rows, whole: nothing to ask.
+    expect(photos.asked.every((a) => a === null)).toBe(true);
 
     expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
     expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
@@ -550,6 +558,24 @@ describe('saving a copy of somebody else’s list', () => {
   it('lights ✓ for an untouched copy', () => {
     openCopy();
     expect(screen.getByRole('button', { name: 'Save the copy' }).getAttribute('aria-disabled')).not.toBe('true');
+  });
+
+  // The catalog carries one photograph a place (owner, 29 Oct 2026), and
+  // a copy's members come from the catalog: the picker offers the covers
+  // until the rest arrive, then every photograph, as it always did.
+  it('offers every photograph of the copied places once they come, the covers until then', () => {
+    const coverOnly = (p: Place) => ({ ...p, place_photos: p.place_photos.slice(0, 1) });
+    catalog.data = [coverOnly(HEIM), coverOnly(SAM)];
+    render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: SOURCE })} />);
+    expect(photos.asked.at(-1)).toEqual(['sam', 'heim']);
+    expect(screen.getByRole('button', { name: 'Heim' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'SÂM Saigon' })).toBeTruthy();
+
+    cleanup();
+    photos.data = { heim: HEIM.place_photos, sam: SAM.place_photos };
+    render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: SOURCE })} />);
+    expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
   });
 
   it('opens prefilled with its provenance, as a suggestion in an editable field', () => {

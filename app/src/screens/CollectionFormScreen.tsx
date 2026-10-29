@@ -29,11 +29,11 @@ import { useSession } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
 import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
-import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
+import { addPlaceToCollection, copyCollection, createCollection, updateCollection, usePlacePhotos } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
-import { coverOf, membersOf, photosOf } from '../lib/place';
+import { coverOf, membersOf, photosOf, withPhotos } from '../lib/place';
 import { useMyLists } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, radius, space } from '../theme';
@@ -113,8 +113,14 @@ export default function CollectionFormScreen({ navigation, route }: {
   // catalog — the source list belongs to somebody else, so no query of
   // "mine" can know it. Everything downstream (choices, Auto) is the
   // same either way.
+  //
+  // The catalog carries one photograph a place, so a copy asks for the
+  // rest, for the picker below; until they come it offers the covers.
+  // Your own list's members are your lists' own rows, which carry them all.
+  const copyPhotos = usePlacePhotos(copyFrom ? copyFrom.placeSlugs : null);
   const members = copyFrom
     ? copyFrom.placeSlugs.map((slug) => places.find((p) => p.slug === slug)).filter((p): p is Place => !!p)
+      .map((p) => withPhotos(p, copyPhotos.data[p.slug]))
     : col ? membersOf(col, places) : [];
   // Every photograph of every place, not one apiece.
   //

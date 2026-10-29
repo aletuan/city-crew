@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  cityOfList, coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity,
+  cityOfList, coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity, withPhotos,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -24,6 +24,32 @@ const collection = (c: Partial<Collection> = {}): Collection => ({
   slug: 'c', title_en: 'C', title_vi: 'C', title_ja: null, desc_en: null,
   desc_vi: null, desc_ja: null, curator_handle: null, cover: null,
   collection_places: [], ...c,
+});
+
+describe('withPhotos', () => {
+  const cover = photo({ id: 'c', is_cover: true });
+  const rest = [photo({ id: 'x', sort_order: 1 }), photo({ id: 'y', sort_order: 2 })];
+
+  it('takes the whole set when it leads with the catalog’s cover', () => {
+    const p = place({ place_photos: [cover] });
+    expect(photosOf(withPhotos(p, [...rest, cover])).map((ph) => ph.id)).toEqual(['c', 'x', 'y']);
+  });
+
+  it('keeps the cover alone while the set still leads with an older one', () => {
+    // The keeper has just made `x` the cover; the set was fetched before.
+    const p = place({ place_photos: [photo({ id: 'x', is_cover: true })] });
+    expect(withPhotos(p, [cover, ...rest])).toBe(p);
+  });
+
+  it('keeps the place as it is until the set arrives', () => {
+    const p = place({ place_photos: [cover] });
+    expect(withPhotos(p, undefined)).toBe(p);
+  });
+
+  it('takes an empty set for a place with no photographs', () => {
+    const p = place();
+    expect(withPhotos(p, [])).toEqual(p);
+  });
 });
 
 describe('photosOf', () => {

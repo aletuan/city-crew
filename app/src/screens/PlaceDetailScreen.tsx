@@ -24,7 +24,7 @@ import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug } from '../lib/data';
+import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
 import { reviewAfterCheckin } from '../lib/askReview';
 import { canRepeat, latestCheckin, visitsAt } from '../lib/checkin';
@@ -144,7 +144,16 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // and only once the catalog has actually settled — asking while it is
   // still loading would fire a request for every place you open.
   const elsewhere = usePlaceBySlug(!catalogLoading && !inCatalog ? route.params.slug : null);
-  const place = inCatalog ?? elsewhere.data ?? undefined;
+  // The catalog carries one photograph a place, and the carousel wants
+  // them all — asked for on opening, while the cover is already on
+  // screen. A place from elsewhere came with its own set and asks nothing.
+  // The catalog's row is the stamp: when it reloads after the gallery,
+  // the set is asked for again (`usePlacePhotos`, `withPhotos`).
+  const allPhotos = usePlacePhotos(inCatalog ? [inCatalog.slug] : null, inCatalog);
+  const place = useMemo(
+    () => (inCatalog ? withPhotos(inCatalog, allPhotos.data[inCatalog.slug]) : elsewhere.data ?? undefined),
+    [inCatalog, allPhotos.data, elsewhere.data],
+  );
   const saveAnchor = useTourAnchor('save', () => { if (place) save(place); }, () => navigation.isFocused());
   const loading = catalogLoading || elsewhere.loading;
   const [photoIndex, setPhotoIndex] = useState(0);

@@ -83,6 +83,11 @@ export type Asked = {
   /** The row cap, when one was asked for. A suggestion list that quietly
    *  stopped capping itself is a dropdown that grows without limit. */
   limit?: number;
+  /** A cap on an embedded table, by its name — `limit(n, { referencedTable })`.
+   *  Held apart from `limit`, which caps the rows themselves: the catalog
+   *  asks for every place and one photograph of each, and a fake that
+   *  wrote both into one field would read as a catalog of one place. */
+  embedLimits?: Record<string, number>;
 };
 
 export function fakeSupabase() {
@@ -132,7 +137,11 @@ export function fakeSupabase() {
       // Array overlap (`&&`): recorded with the operator, as `ilike` is,
       // because a test asserting it wants to see the kinds, not an `eq`.
       overlaps: (k: string, v: unknown) => { asked.filters.push([`${k}&&`, v]); return b; },
-      limit: (n: number) => { asked.limit = n; return b; },
+      limit: (n: number, opts?: { referencedTable?: string }) => {
+        if (opts?.referencedTable) (asked.embedLimits ??= {})[opts.referencedTable] = n;
+        else asked.limit = n;
+        return b;
+      },
       range: (from: number, to: number) => { asked.range = [from, to]; return b; },
       or: (s: string) => { asked.or = s; return b; },
       order: (...a: unknown[]) => {
