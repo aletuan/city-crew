@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { LOOK_DEFS, type Pinned } from './lib/look';
-import { colors, LOOKS, PALETTES } from './theme';
+import { colors, coverScrim, LOOKS, PALETTES } from './theme';
 
 /** `rgba(r,g,b,a)` → the three channels and the alpha. */
 function rgba(value: unknown): { rgb: [number, number, number]; alpha: number } {
@@ -158,5 +158,42 @@ describe('looks', () => {
   it('loads the standard look where nothing is stored', () => {
     expect(colors.bg).toBe(PALETTES.charcoal.bg);
     expect(colors.accentLine).toBe(PALETTES.paper.accentLine);
+  });
+});
+
+// The words on a collection's cover are white on whatever the photograph
+// is; a white photograph is the case to hold (owner, 30 Oct 2026). The
+// title's line box runs from 66% of the card's height (a 320pt phone) to
+// 86% (its foot on a 430pt one), the line under it from 80% to 95%: the
+// shelf's and the grid's geometry, measured in `coverScrim`'s note.
+describe('coverScrim', () => {
+  const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const darkAt = (f: number) => {
+    const at = coverScrim.locations;
+    const a = coverScrim.colors.map((c) => Number(/,\s*([\d.]+)\)$/.exec(c)![1]));
+    for (let i = 1; i < at.length; i++) {
+      if (f <= at[i]) return a[i - 1] + ((a[i] - a[i - 1]) * (f - at[i - 1])) / (at[i] - at[i - 1]);
+    }
+    return a[a.length - 1];
+  };
+  /** White ink (at `ink` strength) over a white photograph under the scrim. */
+  const contrastAt = (f: number, ink = 1) => {
+    const d = darkAt(f);
+    const bg = 255 * (1 - d) + 10 * d;
+    const fg = 247 * ink + bg * (1 - ink);
+    return (lin(fg) + 0.05) / (lin(bg) + 0.05);
+  };
+  const band = (from: number, to: number) => Array.from({ length: 21 }, (_, i) => from + ((to - from) * i) / 20);
+
+  it('holds the title at 4.5:1 or more over a white photograph, on every phone', () => {
+    for (const f of band(0.66, 0.86)) expect(contrastAt(f)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('holds the line under it, in the secondary ink, at 4.5:1 too', () => {
+    for (const f of band(0.8, 0.95)) expect(contrastAt(f, 0.82)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('leaves the top half of the picture nearly bare', () => {
+    for (const f of band(0, 0.5)) expect(darkAt(f)).toBeLessThanOrEqual(0.22);
   });
 });

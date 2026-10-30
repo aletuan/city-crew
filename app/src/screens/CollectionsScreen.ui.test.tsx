@@ -24,7 +24,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uit
 import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
-import { colors } from '../theme';
+import { colors, coverScrim } from '../theme';
 
 const state = vi.hoisted(() => ({
   uid: null as string | null,
@@ -354,6 +354,14 @@ describe('CollectionsScreen — as a guest', () => {
     const { navigation } = show();
     fireEvent.click(screen.getByRole('button', { name: 'List here' }));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'here' });
+  });
+
+  it('lays the cover scrim the Explore shelf wears under a tile’s words', () => {
+    state.cols.data = [col('here', ['a'])];
+    show();
+    const scrim = screen.getByTestId('collection-card-scrim');
+    expect(scrim.getAttribute('colors')).toBe(coverScrim.colors.join(','));
+    expect(scrim.getAttribute('locations')).toBe(coverScrim.locations.join(','));
   });
 
   it("a guest's heart asks them to sign in and writes nothing", () => {

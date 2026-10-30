@@ -31,7 +31,7 @@ import { likesWorthShowing, rankByLikes } from '../../lib/likes';
 import { isNewList } from '../../lib/newest';
 import NewBadge from '../../components/NewBadge';
 import { useI18n } from '../../lib/i18n';
-import { colors, onPhoto, space } from '../../theme';
+import { colors, coverScrim, onPhoto, space } from '../../theme';
 import { type Nav } from '../../nav';
 import { s } from './styles';
 
@@ -150,9 +150,10 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                   ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
                   : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
                 <LinearGradient
-                  colors={['rgba(10,11,10,0.22)', 'rgba(10,11,10,0.10)', 'rgba(10,11,10,0.94)']}
-                  locations={[0, 0.42, 1]}
+                  colors={coverScrim.colors}
+                  locations={coverScrim.locations}
                   style={StyleSheet.absoluteFill}
+                  testID="shelf-card-scrim"
                 />
                 {isNewList(c, reader, now) ? <NewBadge /> : null}
                 <View style={s.shelfCardText}>

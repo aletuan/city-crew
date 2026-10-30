@@ -467,6 +467,28 @@ export const onPhoto = {
   shut: 'rgba(151,47,43,0.82)',
 } as const;
 
+/**
+ * The dark a collection's cover card wears under its words: the Explore
+ * shelf and the Collections grid, one card language, one ramp.
+ *
+ * Measured, not chosen (owner, 30 Oct 2026). The words are white on
+ * whatever the photograph is, so the case that matters is a white one
+ * behind the title. The title's line box sits from 66% of the card's
+ * height on a 320pt phone to 76% on a 430pt one, both cards alike. The
+ * three-stop ramp it replaced was still only 0.56 dark there on the
+ * shelf (4.2:1 on a 393pt phone, 3.9 on 375) and 0.38 on the grid,
+ * whose ramp began later (2.5–3.3:1), against the 4.5 a 16pt title
+ * needs. A stop of 0.66 at 66% holds the title at 5.5:1 or more on every
+ * phone down to 320, and the line under it, in the 82% secondary ink,
+ * above 7. The ramp starts at half the card's height, later than the
+ * shelf's 42% and earlier than the grid's 55%: the top half of the
+ * picture stays the picture.
+ */
+export const coverScrim = {
+  colors: ['rgba(10,11,10,0.22)', 'rgba(10,11,10,0.10)', 'rgba(10,11,10,0.66)', 'rgba(10,11,10,0.94)'] as const,
+  locations: [0, 0.5, 0.66, 1] as const,
+};
+
 /** The accent as a gradient, for the rare loud surface. Left to right
  *  rather than corner to corner: on a wide pill a diagonal wash puts the
  *  lightest tone under one end of the label and the darkest under the
