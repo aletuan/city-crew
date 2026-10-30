@@ -5,7 +5,7 @@
 // instant, no extra queries, and it matches without diacritics so
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,9 +48,47 @@ import NewBadge from '../components/NewBadge';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
+/**
+ * A place among the results, drawn again only when something it shows has
+ * moved.
+ *
+ * The screen redraws on every letter typed and every ⊕ tapped, and each
+ * card used to be handed a fresh `onPress` and a fresh `inList` every
+ * time, so every result drew again to show what it already showed (owner,
+ * 30 Oct 2026). Its props here are values and two callbacks that outlive
+ * renders; the press and the ⊕ are made in here.
+ *
+ * `on` is null when Search was not opened from a list: no ⊕ at all.
+ */
+const SearchPlaceCard = memo(function SearchPlaceCard({ place, index, city, on, listTitle, open, toggle }: {
+  place: Place;
+  index: number;
+  city: string | null;
+  on: boolean | null;
+  listTitle: string;
+  open: (place: Place) => void;
+  toggle: (place: Place) => void;
+}) {
+  return (
+    <PlaceCard
+      place={place}
+      city={city}
+      testID={`search-result-${index}`}
+      inList={on === null ? undefined : { on, title: listTitle, onPress: () => toggle(place) }}
+      onPress={() => open(place)}
+    />
+  );
+});
+
 export default function SearchScreen({ navigation, route }: { navigation: Nav; route?: RootRoute<'Search'> }) {
   const { t, lang } = useI18n();
   const [query, setQuery] = useState('');
+  // What the results answer, a beat behind the box (owner, 30 Oct 2026).
+  // The box shows every letter as it is typed; the search over every
+  // city, its counts and its rows follow at a lower priority, so a letter
+  // is never held up by the list it is about to change. Typing fast, the
+  // in-between queries are skipped rather than queued.
+  const deferred = useDeferredValue(query);
   const { city } = useCurrentCity();
   const { cities: cityList } = useCityList();
   const { userId } = useSession();
@@ -131,14 +169,35 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // A search is worth remembering when it *worked* — the reader opened
   // one of its results. Called from every result row's onPress; blank
   // queries no-op inside rememberSearch.
-  const noteSearch = () => {
-    const next = rememberSearch(recents, query);
-    if (next !== recents) keepRecents(next);
-  };
+  //
+  // Read through `latest`, so this and the two below hold still from one
+  // render to the next and a result's card is not redrawn by every letter
+  // (`SearchPlaceCard`) — yet never act on a render gone by: the query
+  // remembered is the one in the box at the tap, not when the card was
+  // last drawn.
+  const latest = useRef({ query, recents, keepRecents, list, toggle });
+  latest.current = { query, recents, keepRecents, list, toggle };
+  const noteSearch = useCallback(() => {
+    const { query: now, recents: kept, keepRecents: keep } = latest.current;
+    const next = rememberSearch(kept, now);
+    if (next !== kept) keep(next);
+  }, []);
+  const openPlace = useCallback((pl: Place) => {
+    // This tap is what makes the query worth remembering: it found the
+    // thing. See lib/recents.
+    noteSearch();
+    navigation.navigate('PlaceDetail', { slug: pl.slug });
+  }, [noteSearch, navigation]);
+  const togglePlace = useCallback((pl: Place) => {
+    const { list: into, toggle: flip } = latest.current;
+    if (!into) return;
+    noteSearch();
+    void flip(into, pl);
+  }, [noteSearch]);
   // A ⊕ found the thing as surely as opening it did, so it is remembered
   // the same way.
   const inList = (pl: Place) => (list
-    ? { on: holds(list, pl.slug), title: listTitle, onPress: () => { noteSearch(); void toggle(list, pl); } }
+    ? { on: holds(list, pl.slug), title: listTitle, onPress: () => togglePlace(pl) }
     : undefined);
 
   // Cleared whenever the words change: a Google section answering the
@@ -214,14 +273,14 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // changed. Live rows only, for the same reason `popular` filters —
   // this must not advertise a place nobody else can open yet. The
   // ordering caveats live with the ranking, in lib/newest.
-  const latest = useMemo(() => newestPlaces(places.filter(isLive)), [places]);
+  const newest = useMemo(() => newestPlaces(places.filter(isLive)), [places]);
 
   // Only categories this city actually has — the same rule the Explore
   // filter row states: a chip never leads to an empty list. Counted over
   // the live catalog for the same reason `popular` is.
   const cats = useMemo(() => presentCategories(places.filter(isLive)), [places]);
 
-  const terms = useMemo(() => queryTerms(query), [query]);
+  const terms = useMemo(() => queryTerms(deferred), [deferred]);
   // The desk's synonyms, folded onto the app's own. This is what lets
   // "cinema" reach a multiplex whose record never says the word.
   const synonyms = useSearchTerms();
@@ -253,8 +312,8 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // What every city found, for the chips' counts. The same match the list
   // runs (`findPlaces`), so a chip's figure is the list it opens.
   const counts = useMemo(
-    () => countByCity(searching ? findPlaces(everywhere, query, synonyms).hits : []),
-    [searching, everywhere, query, synonyms],
+    () => countByCity(searching ? findPlaces(everywhere, deferred, synonyms).hits : []),
+    [searching, everywhere, deferred, synonyms],
   );
   const chips = searching && home ? cityChips(counts, home, pick) : null;
   const inPick = useMemo(() => everywhere.filter((p) => inCities(pick, p.city_id)), [everywhere, pick]);
@@ -265,13 +324,13 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
 
   const rows = useMemo(
     () => buildSearchRows({
-      terms, query, recents, cats, popular, latest, colMembers,
+      terms, query: deferred, recents, cats, popular, latest: newest, colMembers,
       places: searching ? inPick : places,
       cities: pick === 'all' ? null : pick,
       cityOrder: chips ? chips.map((c) => c.id) : null,
       fresh, synonyms,
     }, t),
-    [terms, query, places, inPick, searching, pick, chips, colMembers, fresh, synonyms, t, recents, popular, latest, cats],
+    [terms, deferred, places, inPick, searching, pick, chips, colMembers, fresh, synonyms, t, recents, popular, newest, cats],
   );
 
   // Row key → position among the place hits, so a UI test can address
@@ -299,8 +358,8 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // chips already answer that.
   const elsewhere = dead && totalFound(counts) > 0;
   const routes = useMemo(
-    () => (dead ? escapeRoutes(query, places, synonyms) : []),
-    [dead, query, places, synonyms],
+    () => (dead ? escapeRoutes(deferred, places, synonyms) : []),
+    [dead, deferred, places, synonyms],
   );
 
   // The words go with them. Someone who typed "Cộng Cà Phê" here and found
@@ -661,17 +720,14 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
           }
           if (item.kind === 'place') {
             return (
-              <PlaceCard
+              <SearchPlaceCard
                 place={item.place}
+                index={placeIndex.get(item.key) ?? 0}
                 city={namesCities(pick) ? cityName(item.place.city_id) : null}
-                testID={`search-result-${placeIndex.get(item.key) ?? 0}`}
-                inList={inList(item.place)}
-                onPress={() => {
-                  // This tap is what makes the query worth remembering:
-                  // it found the thing. See lib/recents.
-                  noteSearch();
-                  navigation.navigate('PlaceDetail', { slug: item.place.slug });
-                }}
+                on={list ? holds(list, item.place.slug) : null}
+                listTitle={listTitle}
+                open={openPlace}
+                toggle={togglePlace}
               />
             );
           }
