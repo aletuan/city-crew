@@ -93,7 +93,7 @@ import {
 import LegRow from '../components/LegRow';
 import StopCard from '../components/StopCard';
 import { RailColumn } from '../components/rail';
-import { useListDrag } from '../components/useListDrag';
+import { useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
 import {
   cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
   type Narration,
@@ -341,6 +341,8 @@ export default function PlanEditScreen({ navigation, route }: {
   // only ever used for the first frame. One stop has no order to change,
   // and a card that lifts to go nowhere is a gesture that seems broken.
   const canArrange = current.length > 1;
+  // A stop dragged at a slant is not a way back — see `useEdgeSwipeBack`.
+  useEdgeSwipeBack(navigation, canArrange);
   const { lift, panHandlers, onLift, onRelease, onPitch, styleOf } = useListDrag({
     keys: current.map((st) => st.place.slug),
     onMove: (from, to) => setStops(move(current, from, to)),

@@ -13,7 +13,7 @@ import {
   AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
-import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
+import { LIFT_AFTER_MS, useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
 import { AttentionRing } from '../components/Attention';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
@@ -833,6 +833,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // screen would be a move among places the reader cannot see, and the
   // list's real order is the one that saves.
   const canArrange = owned && drafted.length > 1 && !narrowed;
+  // A tile dragged right is not a way back — see `useEdgeSwipeBack`.
+  useEdgeSwipeBack(navigation, canArrange);
   const { width: winW } = useWindowDimensions();
   const tile = Math.floor((winW - space.page * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
 
