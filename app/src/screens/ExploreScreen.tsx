@@ -89,6 +89,17 @@ const DEEP_AFTER = 2;
  * bookmark's own fill is the card's subscription (`useIsSaved`), not a
  * prop, so the one card that changes still draws.
  */
+/**
+ * The top of the list — the photograph and the shelf of collections —
+ * drawn again only when what it is handed moves. The screen redraws on
+ * every card scrolled past (`firstVisible`), on the chips row pinning,
+ * and on a bookmark; each of those drew the photograph and every cover
+ * on the shelf again (owner, 30 Oct 2026). The shelf reads its
+ * collections and hearts itself, so it still draws when those change.
+ */
+const HeroBlock = memo(Hero);
+const Shelf = memo(CollectionShelf);
+
 const ExploreCard = memo(function ExploreCard({ place, index, chip, distanceKm, open }: {
   place: Place;
   index: number;
@@ -623,6 +634,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     }
     duckRef.current?.(e as never);
   }).current;
+  // Built once, as the comment over `firstRef` says it is. It was written
+  // inline on the list, so every redraw — each card scrolled past moves
+  // `firstVisible` — handed the list a new native event to detach the old
+  // one for and attach (owner, 30 Oct 2026). `scrollY` and the listener
+  // are both the screen's for its life.
+  const [onScroll] = useState(() => Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: true, listener: onScrollJS },
+  ));
 
   // Deep into a list long enough to get lost in. The length test is not
   // belt-and-braces: with four cards you can be five in only by rubber
@@ -671,23 +691,25 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // is that offset plus the block's own padding, less the inset the
   // floating copy will put above the heading instead.
   pinAtRef.current = headerH > 0 ? headerH + FILTER_PAD - insets.top : 0;
+  const startPlan = useCallback(() => goTo('Ideas', { screen: 'IdeasHome' }), []);
+  const openSearch = useCallback(() => navigation.navigate('Search'), [navigation]);
   const header = (
     <View onLayout={(e) => setHeaderH(Math.round(e.nativeEvent.layout.height))}>
       {/* Across to the Ideas tab, not down this screen.
           `goTo` rather than `navigation`: the planner lives in a sibling
           tab's stack, which this screen's own navigator cannot address —
           which is exactly what that helper exists for. */}
-      <Hero
+      <HeroBlock
         place={hero}
         heroH={heroH}
-        onStart={() => goTo('Ideas', { screen: 'IdeasHome' })}
-        onSearch={() => navigation.navigate('Search')}
+        onStart={startPlan}
+        onSearch={openSearch}
         scrollY={scrollY}
       />
       {fail && !failedEmpty ? (
         <LoadFailBanner kind={fail} onRetry={reload} testID="explore-load-banner" />
       ) : null}
-      <CollectionShelf navigation={navigation} />
+      <Shelf navigation={navigation} />
     </View>
   );
 
@@ -889,10 +911,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             onRefresh={() => { setPulling(true); reload(); }}
             refreshing={pulling}
             onScrollToIndexFailed={() => {}}
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-              { useNativeDriver: true, listener: onScrollJS },
-            )}
+            onScroll={onScroll}
             scrollEventThrottle={16}
             // Both stable refs: React Native refuses to have either of
             // these change between renders.
