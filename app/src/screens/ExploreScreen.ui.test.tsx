@@ -27,6 +27,19 @@ vi.mock('../components/SignupTour', async orig => ({
 }));
 beforeEach(() => { tourState.step = -1; tourState.next.mockClear(); });
 
+// Every card drawn, by slug — the real card underneath, counted on the way
+// through, for the test of what a redraw of the screen costs the list.
+const cardDraws = vi.hoisted(() => new Map<string, number>());
+vi.mock('../components/PlaceCard', async (orig) => {
+  const Real = (await orig<{ default: React.ComponentType<{ place: { slug: string } }> }>()).default;
+  return {
+    default: (props: { place: { slug: string } }) => {
+      cardDraws.set(props.place.slug, (cardDraws.get(props.place.slug) ?? 0) + 1);
+      return <Real {...props} />;
+    },
+  };
+});
+
 type City = Record<string, unknown> & { id: string; short_en: string };
 
 const state = vi.hoisted(() => ({
@@ -108,9 +121,14 @@ vi.mock('../lib/auth', () => {
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
+const NO_SAVED = vi.hoisted(() => new Set<string>());
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: vi.fn(), askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.has(slug) });
-  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave(),
+    // The bookmark's fill, a hook of its own — see `useIsSaved`.
+    useIsSaved: (slug: string) => useSave().isSaved(slug),
+    // The saved set, and an empty one while nothing asks — `useSavedSlugs`.
+    useSavedSlugs: (on: boolean) => (on ? state.saved : NO_SAVED) };
 });
 vi.mock('expo-location', () => ({
   Accuracy: { Low: 1 },
@@ -699,6 +717,34 @@ describe('the places list', () => {
     expect(cardNames()[0]).toContain('Place zeta');
   });
 
+  // A bookmark tapped redraws the screen: the reader's taste moves with
+  // their lists and the order is cut from it. Each card used to be handed a
+  // fresh `onPress` on every redraw, so all of them drew again to change one
+  // bookmark — measured here as five of five before `ExploreCard` (owner,
+  // 30 Oct 2026). Now a card whose place, figures and position are the
+  // same is left as it was; its fill is its own subscription.
+  it('leaves the cards alone when the screen redraws without changing them', () => {
+    state.places.data = ['a', 'b', 'c', 'd', 'e'].map((slug) => place(slug));
+    const navigation = nav();
+    const view = render(<ExploreScreen navigation={navigation} />);
+    cardDraws.clear();
+    // A new taste with the same verdicts: what a save hands the screen.
+    state.taste = { affinity: () => 0 };
+    view.rerender(<ExploreScreen navigation={navigation} />);
+    expect([...cardDraws.values()].reduce((a, b) => a + b, 0)).toBe(0);
+  });
+
+  it('draws the cards again when their place has changed', () => {
+    state.places.data = ['a', 'b'].map((slug) => place(slug));
+    const navigation = nav();
+    const view = render(<ExploreScreen navigation={navigation} />);
+    cardDraws.clear();
+    state.places.data = [place('a', { rating: 4.1 } as Partial<Place>), state.places.data[1]];
+    view.rerender(<ExploreScreen navigation={navigation} />);
+    expect(cardDraws.get('a')).toBe(1);
+    expect(cardDraws.get('b') ?? 0).toBe(0);
+  });
+
   it('opens a place’s detail from its card', () => {
     state.places.data = [place('bun-cha')];
     const navigation = nav();
@@ -949,6 +995,20 @@ describe('sort and filter', () => {
     fireEvent.click(screen.getByTestId('explore-filter'));
     expect(screen.queryByText('Visited only')).toBeNull();
     expect(screen.queryByTestId('filter-visited')).toBeNull();
+  });
+
+  // The saved set reaches the screen only while something asks it — the
+  // sheet open and counting, or the filter applied (owner, 30 Oct 2026) —
+  // so both have to see it: the count before Show, the list after.
+  it('keeps only the places the reader bookmarked, counted in the sheet and kept once it shuts', async () => {
+    state.uid = 'u1';
+    state.saved = new Set(['b']);
+    state.places.data = [place('a'), place('b'), place('c')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Bookmarked only' }));
+    await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
+    expect(cardNames().map((n) => n.match(/Place (\w+)/)?.[1])).toEqual(['b']);
   });
 
   it('keeps only the places the reader checked in at, and counts the filter', async () => {

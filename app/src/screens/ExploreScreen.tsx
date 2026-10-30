@@ -9,7 +9,7 @@
 // permanent control in a corner.
 
 import { useSignupTour, useTourAnchor } from '../components/SignupTour';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, SectionList, Text, useWindowDimensions, View } from 'react-native';
 import { useScrollToTop, type ParamListBase } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -27,7 +27,7 @@ import { cityTz } from '../lib/clock';
 import { fetchPlaceIndex, Place, PlaceIndexRow } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { useSession } from '../lib/auth';
-import { useSaveActions } from '../lib/save';
+import { useSavedSlugs, useSaveActions } from '../lib/save';
 import { useMyCheckins } from '../lib/checkins';
 import { bestFirst } from '../lib/rank';
 import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
@@ -77,11 +77,41 @@ const VIEW_CODEC: Codec<ExploreView> = { parse: parseView, format: (v) => v };
  */
 const DEEP_AFTER = 2;
 
+/**
+ * A card in the list, drawn again only when something it shows has moved.
+ *
+ * The screen redraws on every bookmark tapped — the reader's taste moves
+ * with their lists, and the order is cut from it (`useBrowseTaste`) — and
+ * `renderItem` used to hand every card a fresh `onPress` each time, so
+ * every card on screen drew again to change one bookmark (owner, 30 Oct
+ * 2026). Its props here are the place, two values and one `open` that
+ * outlives renders; the press is made in here, from the slug. The
+ * bookmark's own fill is the card's subscription (`useIsSaved`), not a
+ * prop, so the one card that changes still draws.
+ */
+const ExploreCard = memo(function ExploreCard({ place, index, chip, distanceKm, open }: {
+  place: Place;
+  index: number;
+  chip: string | null;
+  distanceKm: number | null;
+  open: (slug: string) => void;
+}) {
+  return (
+    <PlaceCard
+      place={place}
+      testID={`place-card-${index}`}
+      chip={chip}
+      distanceKm={distanceKm}
+      onPress={() => open(place.slug)}
+    />
+  );
+});
+
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city, cities, setCity } = useCity();
   const { session } = useSession();
-  const { isSaved, askToSignIn } = useSaveActions();
+  const { askToSignIn } = useSaveActions();
   const { loading, loaded, error, data: places, reload } = usePlaces();
   // The pull spinner belongs to the pull. `loading` alone also covers
   // refreshes nobody asked to watch — the launch cache's background
@@ -132,6 +162,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const visits = useMyCheckins();
   const visitedSlugs = useMemo(() => new Set(visits.data.map((v) => v.place_slug)), [visits.data]);
   const isVisited = useCallback((slug: string) => visitedSlugs.has(slug), [visitedSlugs]);
+  // The saved set only while something here asks it: the saved-only filter
+  // applied, or the filter sheet open and counting it. Otherwise an empty
+  // set that never moves, so a bookmark tapped on a card does not refilter
+  // the city (owner, 30 Oct 2026) — the card redraws its own fill alone.
+  const savedSlugs = useSavedSlugs(appliedFilters.savedOnly || filterOpen);
+  const isSaved = useCallback((slug: string) => savedSlugs.has(slug), [savedSlugs]);
+  // One for the screen's life, so a card's props hold still — see `ExploreCard`.
+  const openPlace = useCallback((slug: string) => navigation.navigate('PlaceDetail', { slug }), [navigation]);
   const checkinOn = useFlag('place_checkin');
   // For the quick-filter pill's shadow: a light scheme needs less of it.
   const light = useScheme().scheme === 'light';
@@ -803,9 +841,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             // screen instead. See `bar`.
             stickySectionHeadersEnabled={false}
             renderItem={({ item, index }) => (
-              <PlaceCard
+              <ExploreCard
                 place={item}
-                testID={`place-card-${index}`}
+                index={index}
                 chip={chosenKind(item, picked)}
                 // The figure goes with the sort, not with the fix: the
                 // reader may well have a position from the map or from
@@ -818,7 +856,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 distanceKm={appliedFilters.sort === 'distance' && sortOrigin && item.lat != null && item.lng != null
                   ? distanceKm(sortOrigin.lat, sortOrigin.lng, item.lat, item.lng)
                   : null}
-                onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })}
+                open={openPlace}
               />
             )}
             // A footer, not `ListEmptyComponent`, and the difference is not

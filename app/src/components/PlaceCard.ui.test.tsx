@@ -33,7 +33,9 @@ vi.mock('../lib/i18n', () => ({
 // own branching is `lib/save`'s to answer for.
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save, isSaved: (slug: string) => state.saved.has(slug) });
-  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave(),
+    // The bookmark's fill, a hook of its own — see `useIsSaved`.
+    useIsSaved: (slug: string) => useSave().isSaved(slug) };
 });
 
 import PlaceCard from './PlaceCard';

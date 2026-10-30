@@ -21,7 +21,9 @@ vi.mock('../lib/i18n', () => ({
 }));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: () => {}, isSaved: () => false });
-  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave(),
+    // The bookmark's fill, a hook of its own — see `useIsSaved`.
+    useIsSaved: () => false };
 });
 // Two cities in the list, each with its zone — the shape `cities.tz`
 // gives the app — and a third row hydrated before the column existed.

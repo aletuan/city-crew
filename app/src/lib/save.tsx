@@ -18,7 +18,7 @@
 // a third context, `useSaveSheets`. The callers of `useSave` and its two
 // halves see no difference.
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert } from 'react-native';
 import { useSession } from './auth';
 import {
@@ -29,6 +29,7 @@ import { useCurrentCity } from './city';
 import { useI18n } from './i18n';
 import { pendingKey, type PendingSaves, withPending } from './pendingSaves';
 import { DAILY_CAPS, isDailyLimit } from './quota';
+import { savedStore, type SavedStore } from './savedStore';
 import { goTo, navRef } from '../nav';
 import { dropResume, focusedTab, holdResume } from './resume';
 
@@ -75,8 +76,6 @@ type SaveActions = {
    * is not safe to repeat unasked; the reader is still taken back.
    */
   askToSignIn: (why?: SignInWhy, resume?: () => void) => void;
-  /** Is the place in any of their lists? Drives the bookmark's fill. */
-  isSaved: (placeSlug: string) => boolean;
   /**
    * One place into one of their lists, or out of it, drawn at once and
    * written behind — the same act as a row of the save sheet, which is
@@ -107,9 +106,11 @@ const NO_LISTS: MyLists = {
 const ActionsCtx = createContext<SaveActions>({
   save: () => {},
   askToSignIn: () => {},
-  isSaved: () => false,
   toggle: async () => {},
 });
+// Which places are saved — a store rather than a context value, so a card
+// can ask about its own place alone. See `lib/savedStore`.
+const SavedCtx = createContext<SavedStore>(savedStore(new Set()));
 const ListsCtx = createContext<MyLists>(NO_LISTS);
 
 /**
@@ -139,8 +140,32 @@ const SheetsCtx = createContext<SaveSheetsState>({
   closeAuth: () => {}, signIn: () => {}, closeSave: () => {}, toggle: async () => {}, newList: () => {},
 });
 
-/** The acts: `save`, `askToSignIn`, `isSaved`, `toggle`. */
+/** The acts: `save`, `askToSignIn`, `toggle`. */
 export const useSaveActions = () => useContext(ActionsCtx);
+
+/**
+ * Is this place in any of the reader's lists? Drives a bookmark's fill.
+ *
+ * Its own hook, out of `useSaveActions`, since 30 Oct 2026: there it was
+ * a function over the whole saved set, so every tap handed every card on
+ * screen a new value and all of them drew again. Here the answer is one
+ * boolean, and only the card whose boolean moved draws.
+ */
+export function useIsSaved(placeSlug: string): boolean {
+  const store = useContext(SavedCtx);
+  return useSyncExternalStore(store.subscribe, () => store.get().has(placeSlug));
+}
+
+const NOTHING_SAVED: ReadonlySet<string> = new Set();
+/**
+ * The whole saved set, for a filter that asks it of every place — or, with
+ * `enabled` false, an empty set that never changes, so a screen whose
+ * saved-only filter is off is not redrawn by every bookmark tapped on it.
+ */
+export function useSavedSlugs(enabled: boolean): ReadonlySet<string> {
+  const store = useContext(SavedCtx);
+  return useSyncExternalStore(store.subscribe, () => (enabled ? store.get() : NOTHING_SAVED));
+}
 /** The reader's own collections, as a `Fetch`. */
 export const useMyLists = () => useContext(ListsCtx);
 /** The sheets' state, for `components/SaveSheets` alone. */
@@ -340,12 +365,17 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     ask(why, resume);
   }, [ask]);
 
+  // One store for the provider's life, handed each new set after the
+  // commit that made it — in a layout effect, so a tapped bookmark fills
+  // before the frame is painted rather than one frame after.
+  const [saved] = useState(() => savedStore(savedSlugs));
+  useLayoutEffect(() => { saved.replace(savedSlugs); }, [saved, savedSlugs]);
+
   const actions = useMemo<SaveActions>(() => ({
     save,
     askToSignIn,
-    isSaved: (slug) => savedSlugs.has(slug),
     toggle,
-  }), [save, askToSignIn, savedSlugs, toggle]);
+  }), [save, askToSignIn, toggle]);
   const lists = useMemo<MyLists>(() => ({
     data: shown, loading: mine.loading, loaded: mine.loaded, error: mine.error,
     loadedAt: mine.loadedAt, fromCache: mine.fromCache, reload: mine.reload,
@@ -370,9 +400,11 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   return (
     <ListsCtx.Provider value={lists}>
     <ActionsCtx.Provider value={actions}>
+    <SavedCtx.Provider value={saved}>
     <SheetsCtx.Provider value={sheets}>
       {children}
     </SheetsCtx.Provider>
+    </SavedCtx.Provider>
     </ActionsCtx.Provider>
     </ListsCtx.Provider>
   );
