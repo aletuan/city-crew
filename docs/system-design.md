@@ -1,381 +1,378 @@
-# City Crew — system design
+# City Crew — thiết kế hệ thống
 
-The whole system on one page: what the parts are, what each one owns, and
-how a request travels between them. It is a map drawn from the source on
-30 Oct 2026. The reasoning behind each decision is in the header comment of
-the file that makes it, and this page names those files rather than
-repeating them. The rules between the app's layers, and what in CI turns
-red when one is broken, are in [`architecture.md`](architecture.md). Read
-that page before moving code.
+Toàn bộ hệ thống trên một trang: có những phần nào, mỗi phần giữ cái gì, và
+một yêu cầu đi giữa chúng ra sao. Đây là bản đồ vẽ từ mã nguồn ngày
+30/10/2026. Lý do của từng quyết định nằm ở comment đầu file làm ra quyết
+định đó; trang này chỉ gọi tên các file ấy chứ không chép lại. Luật giữa
+các tầng của app, và cái gì trong CI đỏ lên khi luật bị phá, nằm ở
+[`architecture.md`](architecture.md). Đọc trang đó trước khi chuyển code.
 
-## 1. What the product is
+## 1. Sản phẩm là gì
 
-A city guide for Vietnam (Ho Chi Minh City, Hanoi, Da Nang, Da Lat, Huế and
-others, each a row in `cities`) in five languages: English, Vietnamese,
-Japanese, Simplified and Traditional Chinese. A reader:
+Một cẩm nang thành phố cho Việt Nam (TP.HCM, Hà Nội, Đà Nẵng, Đà Lạt, Huế
+và các nơi khác, mỗi nơi một dòng trong `cities`) bằng năm ngôn ngữ: tiếng
+Anh, tiếng Việt, tiếng Nhật, tiếng Trung giản thể và phồn thể. Người đọc:
 
-- **explores** a curated catalog of places for one city (list and map,
-  filters, search in all languages at once);
-- **saves** places into collections, and can make them public;
-- **plans** a day: four answers (who with, what kind, where, when) become
-  up to three drafted itineraries, which can be edited, saved as a trip
-  and shared with a crew;
-- **checks in**, follows friends, sees what friends saved, and gets
-  reminders before a trip.
+- **khám phá** catalog địa điểm đã được tuyển chọn của một thành phố (danh
+  sách và bản đồ, bộ lọc, tìm kiếm trên mọi ngôn ngữ cùng lúc);
+- **lưu** địa điểm vào bộ sưu tập, và có thể công khai chúng;
+- **lên kế hoạch** cho một ngày: bốn câu trả lời (đi với ai, loại gì, ở
+  đâu, khi nào) thành tối đa ba lịch trình nháp, có thể sửa, lưu thành
+  chuyến đi và chia sẻ với crew;
+- **check-in**, kết bạn, xem bạn bè đã lưu gì, và nhận nhắc nhở trước
+  chuyến đi.
 
-Behind the reader there is an editorial desk (the dashboard) that curates
-the catalog, and a set of server jobs that keep Google data fresh and
-photos small.
+Phía sau người đọc có một desk biên tập (dashboard) tuyển chọn catalog, và
+một nhóm job phía server giữ dữ liệu Google luôn mới và ảnh luôn nhẹ.
 
-## 2. Topology
+## 2. Hình thái
 
-There is **no application server**. The phone app and the desk both talk
-directly to Supabase with the public key and the user's own session.
-**Postgres Row-Level Security is the authorization layer.** An Edge
-Function exists only where a secret is needed: the Google key, the
-Anthropic key, or the service role.
+**Không có app server.** App điện thoại và desk đều nói thẳng với Supabase
+bằng khoá công khai và session của chính người dùng. **Row-Level Security
+của Postgres là tầng phân quyền.** Edge Function chỉ tồn tại ở chỗ cần một
+bí mật: khoá Google, khoá Anthropic, hoặc service role.
 
 ```mermaid
 flowchart LR
-  subgraph Clients
+  subgraph Clients["Client"]
     APP["app/ — Expo / React Native<br/>iOS (TestFlight, App Store)"]
-    DESK["dashboard/ — Vite + React<br/>editors only"]
-    DATA["data/ — Node scripts<br/>seeds, review, backups"]
+    DESK["dashboard/ — Vite + React<br/>chỉ dành cho editor"]
+    DATA["data/ — script Node<br/>seed, review, backup"]
   end
 
   subgraph Supabase["Supabase · project amdvitzpogaejzzqroco"]
-    AUTH["Auth<br/>email + password, OTP codes"]
-    PG[("Postgres<br/>+ RLS + RPCs")]
+    AUTH["Auth<br/>email + mật khẩu, mã OTP"]
+    PG[("Postgres<br/>+ RLS + RPC")]
     ST[("Storage<br/>place-photos · avatars")]
     EF["Edge Functions (Deno)"]
     CRON["pg_cron + pg_net"]
   end
 
-  subgraph Third["Third parties"]
+  subgraph Third["Bên thứ ba"]
     GP["Google Places (New)<br/>+ Geocoding"]
     CL["Anthropic API<br/>(Claude Haiku / Sonnet / Opus)"]
-    OM["Open-Meteo<br/>(no key)"]
+    OM["Open-Meteo<br/>(không cần khoá)"]
     GM["Google Maps SDK<br/>(react-native-maps)"]
     EAS["Expo EAS<br/>Build · Update · Submit"]
   end
 
   APP -- "anon key + session" --> AUTH & PG & ST
-  APP -- "invoke" --> EF
+  APP -- "gọi" --> EF
   APP --> OM & GM
-  DESK -- "editor session" --> AUTH & PG & ST
-  DESK -- "invoke" --> EF
-  DATA -- "service role (local)" --> PG
+  DESK -- "session editor" --> AUTH & PG & ST
+  DESK -- "gọi" --> EF
+  DATA -- "service role (trên máy)" --> PG
   CRON -- "ops token" --> EF
   EF --> GP & CL
   EF -- "service role" --> PG & ST
-  EAS -. "OTA bundle" .-> APP
+  EAS -. "bundle OTA" .-> APP
 ```
 
-| part | where | runtime | deployed by |
+| phần | ở đâu | runtime | deploy bởi |
 |---|---|---|---|
-| Mobile app | `app/` | Expo SDK 58, React Native 0.88, React 19, TypeScript | EAS Update on every merge touching `app/` (`app-preview.yml`); binaries by hand (`app-release.yml`) |
-| Desk | `dashboard/` | Vite, React, React Router | `deploy-dashboard.yml` on push to `main` |
-| Database | `supabase/migrations/` (113 files) | Postgres + RLS | **applied by hand.** CI only tests them |
-| Edge Functions | `supabase/functions/` | Deno | deployed by hand |
-| Data tooling | `data/` | Node | run locally |
+| App di động | `app/` | Expo SDK 58, React Native 0.88, React 19, TypeScript | EAS Update mỗi lần merge chạm `app/` (`app-preview.yml`); binary thì chạy tay (`app-release.yml`) |
+| Desk | `dashboard/` | Vite, React, React Router | `deploy-dashboard.yml` khi push lên `main` |
+| Database | `supabase/migrations/` (113 file) | Postgres + RLS | **apply tay.** CI chỉ test |
+| Edge Functions | `supabase/functions/` | Deno | deploy tay |
+| Công cụ dữ liệu | `data/` | Node | chạy trên máy |
 
-## 3. The mobile app
+## 3. App di động
 
-### 3.1 Layers
+### 3.1 Các tầng
 
 ```
-screens/        one screen per file (23 + explore/, profile/ sub-parts)
+screens/        một màn một file (23 màn + phần con ở explore/, profile/)
    ↓
-components/     reusable UI; components/ui/ is the design system
+components/     UI dùng lại; components/ui/ là design system
    ↓
-lib/*.tsx       providers: shared state in React contexts
+lib/*.tsx       provider: trạng thái dùng chung trong React context
    ↓
-lib/data/       every question to Postgres / Storage, one file per aggregate
-lib/*.ts        pure domain logic: no React, no network, runs in Node
+lib/data/       mọi câu hỏi tới Postgres / Storage, mỗi aggregate một file
+lib/*.ts        nghiệp vụ thuần: không React, không mạng, chạy được trong Node
 ```
 
-Arrows only point down. No screen or component imports Supabase. ESLint's
-`no-restricted-imports` enforces this, and per-file coverage floors
-(100 % on `lib/*.ts`) keep the pure layer pure. See
-[`architecture.md`](architecture.md) for the full table.
+Mũi tên chỉ đi xuống. Không màn hình hay component nào import Supabase.
+`no-restricted-imports` của ESLint canh điều này, và sàn coverage từng file
+(100 % cho `lib/*.ts`) giữ tầng thuần luôn thuần. Bảng đầy đủ ở
+[`architecture.md`](architecture.md).
 
-### 3.2 Providers: the shared state
+### 3.2 Provider: trạng thái dùng chung
 
-`App.tsx` nests providers in dependency order. Each one reads the ones
-outside it:
+`App.tsx` lồng provider theo thứ tự phụ thuộc. Cái bên trong đọc những cái
+bên ngoài:
 
 ```
 ThemeProvider › AppBoundary › Auth › I18n › City › Catalog › Crew
   › Invitations › MyTrips › Checkins › Save › TabBarDuck
 ```
 
-| provider | owns | notes |
+| provider | giữ cái gì | ghi chú |
 |---|---|---|
-| `auth.tsx` | session, profile, sign-in/up/out, delete account | `userId` comes from the device cache within milliseconds, before `session` is confirmed, so per-reader queries do not wait a network round |
-| `city.tsx` | the current city | never renders one city and then switches. Order: manual pick › cached location fix (time-capped) › stored auto city › HCMC |
-| `i18n.tsx` | UI language, `t()` | fallback order is in `lang.ts`. Traditional Chinese is generated from Simplified (`scripts/hant.ts`) |
-| `catalog.tsx` | the city's public places and editorial collections, likes | one copy for the whole app. It used to be fetched by five screens separately |
-| `save.tsx` | the reader's private collections, the save sheets' state | the sheets themselves are drawn by `components/SaveSheets.tsx` |
-| `crew.tsx`, `invitations.tsx`, `mytrips.tsx`, `checkins.tsx` | friends, trip invites, own trips, check-ins | |
-| side-effect syncs | `ReminderSync`, `GuideGrantSync`, `SessionNavSync`, `ThemeAccountSync` | render nothing; keep the OS or the account in step |
+| `auth.tsx` | session, hồ sơ, đăng nhập/đăng ký/đăng xuất, xoá tài khoản | `userId` lấy từ cache trên máy trong vài ms, trước khi `session` được xác nhận, nên truy vấn theo người đọc không phải chờ một vòng mạng |
+| `city.tsx` | thành phố hiện tại | không bao giờ vẽ một thành phố rồi đổi sang thành phố khác. Thứ tự: chọn tay › vị trí đã cache (có giới hạn thời gian) › thành phố tự động đã lưu › TP.HCM |
+| `i18n.tsx` | ngôn ngữ giao diện, `t()` | thứ tự dự phòng ở `lang.ts`. Phồn thể được sinh từ giản thể (`scripts/hant.ts`) |
+| `catalog.tsx` | địa điểm công khai và bộ sưu tập biên tập của thành phố, lượt thích | một bản cho cả app. Trước đây năm màn tự fetch riêng |
+| `save.tsx` | bộ sưu tập riêng của người đọc, trạng thái của các sheet lưu | bản thân các sheet do `components/SaveSheets.tsx` vẽ |
+| `crew.tsx`, `invitations.tsx`, `mytrips.tsx`, `checkins.tsx` | bạn bè, lời mời chuyến đi, chuyến đi của mình, check-in | |
+| đồng bộ tác dụng phụ | `ReminderSync`, `GuideGrantSync`, `SessionNavSync`, `ThemeAccountSync` | không vẽ gì; giữ hệ điều hành hoặc tài khoản khớp với app |
 
-Where many readers each read only part of a provider, the context is split
-along those lines (`useSession` / `useProfile` / `useAuthActions`,
-`useMyLists` / `useSaveActions`, …). A change to one part then does not
-re-render readers of another. Render-count tests guard this.
+Ở chỗ nhiều người đọc một provider mà mỗi người chỉ đọc một phần, context
+được chia theo đúng đường đó (`useSession` / `useProfile` /
+`useAuthActions`, `useMyLists` / `useSaveActions`, …). Nhờ vậy một phần đổi
+không làm người đọc phần khác vẽ lại. Test đếm số lần vẽ canh điều này.
 
-### 3.3 Reads, writes and the cache
+### 3.3 Đọc, ghi và cache
 
 ```mermaid
 sequenceDiagram
-  participant S as Screen
+  participant S as Màn hình
   participant P as Provider / hook
   participant F as usePersistedFetch
-  participant C as AsyncStorage cache
+  participant C as Cache AsyncStorage
   participant DB as Supabase (RLS)
   S->>P: usePlaces()
   P->>F: fetch(placesQuery, key=city+user)
-  F->>C: read versioned launch cache
-  C-->>F: last session's rows
-  F-->>S: data (fromCache = true), first paint
+  F->>C: đọc cache khởi động có version
+  C-->>F: dữ liệu của phiên trước
+  F-->>S: data (fromCache = true), khung hình đầu
   F->>DB: select … (anon key + JWT)
-  DB-->>F: rows the policy allows
-  F->>C: write cache
+  DB-->>F: các dòng policy cho phép
+  F->>C: ghi cache
   F-->>S: data (fromCache = false), loadedAt
 ```
 
-- **Reads**: a pure async function in `lib/data/<aggregate>.ts` →
-  `lib/data/fetch.ts › usePersistedFetch` (versioned on-device cache,
-  stale-while-revalidate, `loaded` / `loadedAt` / `fromCache`) → hook in
-  `lib/data/hooks.ts` → provider or screen. `lib/stale.ts` decides when
-  to ask again.
-- **Writes** go straight to tables under RLS and **throw when refused**,
-  so a screen never draws a success that did not happen. Optimistic
-  updates are reconciled afterwards (`likes.ts`, and `pendingSaves.ts`,
-  which draws a save before the database confirms it). `quota.ts` turns
-  a daily-cap refusal into words.
-- **Authorization** is never decided in the client. Where the app repeats
-  a rule (`guide.ts`, `report.ts`), it does so only to avoid
-  offering a control the database would refuse.
+- **Đọc**: một hàm async thuần trong `lib/data/<aggregate>.ts` →
+  `lib/data/fetch.ts › usePersistedFetch` (cache trên máy có version,
+  stale-while-revalidate, `loaded` / `loadedAt` / `fromCache`) → hook trong
+  `lib/data/hooks.ts` → provider hoặc màn hình. `lib/stale.ts` quyết định
+  khi nào hỏi lại.
+- **Ghi** đi thẳng vào bảng dưới RLS và **ném lỗi khi bị từ chối**, để màn
+  hình không bao giờ vẽ một thành công không có thật. Cập nhật lạc quan
+  được đối chiếu lại sau (`likes.ts`, và `pendingSaves.ts`, vẽ một lượt lưu
+  trước khi database xác nhận). `quota.ts` dịch lời từ chối vì giới hạn
+  trong ngày thành câu chữ.
+- **Quyền** không bao giờ được quyết định ở client. Chỗ nào app lặp lại một
+  luật (`guide.ts`, `report.ts`) thì chỉ để khỏi đưa ra một nút mà database
+  sẽ từ chối.
 
-### 3.4 Navigation
+### 3.4 Điều hướng
 
-There are five tabs: **Ideas, Explore, Trips, Collections, Profile**. Each
-has its own native stack, and detail screens are registered in several
-stacks on purpose. Every screen is wrapped in a `ScreenBoundary`, with
-`AppBoundary` as the last resort. Typed routes are in `src/nav.ts`.
+Có năm tab: **Ideas, Explore, Trips, Collections, Profile**. Mỗi tab có
+native stack riêng, và màn chi tiết được khai báo ở nhiều stack có chủ ý.
+Màn nào cũng được bọc trong một `ScreenBoundary`, với `AppBoundary` là lớp
+cuối. Route có kiểu nằm ở `src/nav.ts`.
 
-### 3.5 Device-side features
+### 3.5 Tính năng trên máy
 
-| feature | how | file |
+| tính năng | cách làm | file |
 |---|---|---|
-| Maps | `react-native-maps` with Google provider, clustered pins | `components/PlacesMap.tsx`, `lib/cluster.ts` |
-| Location | `expo-location`, used only to pick the nearest city and bias search. Never sent to the weather API | `lib/city.tsx`, `lib/citypick.ts` |
-| Weather | Open-Meteo, keyless, queried with the *city's* centre | `lib/weather.ts`, `lib/sky.tsx` |
-| Trip reminders | **local** notifications (the evening before and the day of), no push server | `lib/reminders.ts`, `lib/remind.ts` |
-| Photo quality | native Expo module `modules/photo-score` (iOS, Apple Vision): aesthetics score and measurements, put into words in `photoScoreVision.ts` | `lib/photoScore*.ts` |
-| Data export | JSON file through the share sheet (not a signed URL, for privacy-policy reasons) | `lib/takeout.tsx`, `lib/export.ts` |
-| Remote switches | `app_flags` table read at launch, which reaches App Store binaries that OTA cannot | `lib/flags.ts` |
-| Themes | 20 palettes, synced to the account | `src/palettes.ts`, `lib/theme.tsx` |
+| Bản đồ | `react-native-maps` với provider Google, gom cụm ghim | `components/PlacesMap.tsx`, `lib/cluster.ts` |
+| Vị trí | `expo-location`, chỉ dùng để chọn thành phố gần nhất và ưu tiên kết quả tìm kiếm. Không bao giờ gửi cho API thời tiết | `lib/city.tsx`, `lib/citypick.ts` |
+| Thời tiết | Open-Meteo, không cần khoá, hỏi bằng tâm của *thành phố* | `lib/weather.ts`, `lib/sky.tsx` |
+| Nhắc chuyến đi | thông báo **cục bộ** (tối hôm trước và trong ngày), không có push server | `lib/reminders.ts`, `lib/remind.ts` |
+| Chất lượng ảnh | module Expo native `modules/photo-score` (iOS, Apple Vision): điểm thẩm mỹ và các số đo, diễn đạt thành lời ở `photoScoreVision.ts` | `lib/photoScore*.ts` |
+| Xuất dữ liệu | file JSON qua share sheet (không dùng signed URL, vì chính sách quyền riêng tư) | `lib/takeout.tsx`, `lib/export.ts` |
+| Công tắc từ xa | bảng `app_flags` đọc lúc mở app, tới được cả binary App Store mà OTA không tới được | `lib/flags.ts` |
+| Theme | 20 bảng màu, đồng bộ theo tài khoản | `src/palettes.ts`, `lib/theme.tsx` |
 
-## 4. Core domain
+## 4. Nghiệp vụ lõi
 
-### 4.1 Data model
+### 4.1 Mô hình dữ liệu
 
 ```mermaid
 erDiagram
-  cities ||--o{ places : has
-  places ||--o{ place_photos : has
-  place_photos ||--o{ photo_scores : "scored by (scorer)"
-  place_photos ||--o{ cover_reviews : reviewed
-  places ||--o{ collection_places : in
-  collections ||--o{ collection_places : holds
-  collections ||--o{ collection_likes : liked
-  profiles ||--o{ collections : owns
-  profiles ||--o{ trips : owns
-  trips ||--o{ trip_stops : "ordered stops"
-  trips ||--o{ trip_invites : crew
-  places ||--o{ trip_stops : visited
-  profiles ||--o{ checkins : makes
-  places ||--o{ checkins : at
-  profiles ||--o{ friendships : "edge (either side)"
-  profiles ||--o{ blocks : "edge (either side)"
-  profiles ||--|| preferences : has
-  profiles ||--o{ place_events : "private taste signal"
-  profiles ||--o{ reports : files
-  places ||--o{ local_guides : "guide grant"
+  cities ||--o{ places : "có"
+  places ||--o{ place_photos : "có"
+  place_photos ||--o{ photo_scores : "được chấm (theo scorer)"
+  place_photos ||--o{ cover_reviews : "được duyệt"
+  places ||--o{ collection_places : "nằm trong"
+  collections ||--o{ collection_places : "chứa"
+  collections ||--o{ collection_likes : "được thích"
+  profiles ||--o{ collections : "sở hữu"
+  profiles ||--o{ trips : "sở hữu"
+  trips ||--o{ trip_stops : "điểm dừng theo thứ tự"
+  trips ||--o{ trip_invites : "crew"
+  places ||--o{ trip_stops : "được ghé"
+  profiles ||--o{ checkins : "thực hiện"
+  places ||--o{ checkins : "tại"
+  profiles ||--o{ friendships : "cạnh (hai phía)"
+  profiles ||--o{ blocks : "cạnh (hai phía)"
+  profiles ||--|| preferences : "có"
+  profiles ||--o{ place_events : "tín hiệu khẩu vị riêng"
+  profiles ||--o{ reports : "gửi"
+  places ||--o{ local_guides : "quyền guide"
 ```
 
-| group | tables | notes |
+| nhóm | bảng | ghi chú |
 |---|---|---|
-| Catalog | `cities`, `places`, `place_photos`, `category_terms`, `editorial_collection_origin` | `places` carries names, blurbs and neighbourhoods per language (plus an `i18n` JSON for the newer languages), Google-derived fields (hours, rating, price), `review_status` / `is_published` for the desk's gate |
-| Photo judging | `photo_scores` (one row per photo per scorer, e.g. Vision, `claude-labels`), `cover_reviews` | see `docs/photo-labels.md`, `docs/photo-critic.md` |
-| People | `profiles`, `preferences`, `friendships`, `blocks`, `reserved_handles`, `local_guides`, `editors` | `profiles` is 1:1 with `auth.users`. Every personal table cascades on account delete |
-| Saving | `collections`, `collection_places`, `collection_likes`, `suggestion_dismissals` | collections are private or public. Editorial ones are owned by editorial accounts |
-| Planning | `trips`, `trip_stops`, `trip_invites` | a trip has a city, day, part of day, company and categories |
-| Activity | `checkins`, `place_events` | `place_events` feeds only the taste profile |
-| Safety | `reports`, `moderation_log` | daily caps and the ban on self-reports are enforced in policy |
-| Ops | `app_flags`, `ops_tokens`, `startup_traces`, `deck_traces` | traces are written only by diagnostic channels (§7) |
+| Catalog | `cities`, `places`, `place_photos`, `category_terms`, `editorial_collection_origin` | `places` mang tên, blurb và khu vực theo từng ngôn ngữ (cộng một JSON `i18n` cho các ngôn ngữ mới hơn), các trường lấy từ Google (giờ mở cửa, đánh giá, giá), và `review_status` / `is_published` cho cổng duyệt của desk |
+| Chấm ảnh | `photo_scores` (mỗi ảnh mỗi scorer một dòng, ví dụ Vision, `claude-labels`), `cover_reviews` | xem `docs/photo-labels.md`, `docs/photo-critic.md` |
+| Con người | `profiles`, `preferences`, `friendships`, `blocks`, `reserved_handles`, `local_guides`, `editors` | `profiles` là 1:1 với `auth.users`. Mọi bảng cá nhân xoá theo dây chuyền khi xoá tài khoản |
+| Lưu | `collections`, `collection_places`, `collection_likes`, `suggestion_dismissals` | bộ sưu tập là riêng tư hoặc công khai. Bộ sưu tập biên tập thuộc về tài khoản biên tập |
+| Lên kế hoạch | `trips`, `trip_stops`, `trip_invites` | một chuyến đi có thành phố, ngày, buổi, người đi cùng và loại hình |
+| Hoạt động | `checkins`, `place_events` | `place_events` chỉ nuôi hồ sơ khẩu vị |
+| An toàn | `reports`, `moderation_log` | giới hạn trong ngày và lệnh cấm tự báo cáo mình được thực thi trong policy |
+| Vận hành | `app_flags`, `ops_tokens`, `startup_traces`, `deck_traces` | trace chỉ được ghi bởi các channel có chẩn đoán (§7) |
 
-RPCs (`security definer` functions) cover what a plain policy cannot:
-counts across other people's rows (`collection_like_counts`,
-`trip_crew_counts`, `mutual_saves_counts`), social graph queries
-(`friend_suggestions`, `suggested_friends`, `block_user`), moderation
-(`moderate_collection`, `moderate_profile`, `reports_queue`), quotas
-(`own_place_photos_today`, `my_reports_today`) and guide powers
-(`guide_set_cover`, `guide_set_hidden`). Policies call `auth.uid()` and
-`is_editor()` once per query, written as `(select …)`. A test in
-`supabase/tests/` enforces this.
+RPC (hàm `security definer`) làm những gì một policy thường không làm
+được: đếm trên dòng của người khác (`collection_like_counts`,
+`trip_crew_counts`, `mutual_saves_counts`), truy vấn đồ thị xã hội
+(`friend_suggestions`, `suggested_friends`, `block_user`), kiểm duyệt
+(`moderate_collection`, `moderate_profile`, `reports_queue`), hạn mức
+(`own_place_photos_today`, `my_reports_today`) và quyền của guide
+(`guide_set_cover`, `guide_set_hidden`). Policy hỏi `auth.uid()` và
+`is_editor()` một lần mỗi truy vấn, viết dạng `(select …)`. Một test trong
+`supabase/tests/` canh điều này.
 
-### 4.2 The planner
+### 4.2 Bộ lên kế hoạch
 
 ```mermaid
 flowchart LR
-  Q["Sketching: 4 answers<br/>company · categories · district · when"] --> PL
-  CAT["catalog in memory<br/>(CatalogProvider)"] --> PL
-  TP["taste profile<br/>(taste.ts)"] --> PL
-  PL["planner.ts (pure)<br/>score × 3 lenses: match · iconic · lowkey<br/>opening hours, distance, seeded sampling"] --> D["≤ 3 drafts"]
-  D --> N["plan-assist › narrate<br/>title + one 'why' per stop"]
-  N --> O["PlanOptions → PlanEdit → save trip"]
-  T["free text"] -. "plan-assist › parse" .-> Q
+  Q["Sketching: 4 câu trả lời<br/>đi cùng · loại hình · khu vực · khi nào"] --> PL
+  CAT["catalog trong bộ nhớ<br/>(CatalogProvider)"] --> PL
+  TP["hồ sơ khẩu vị<br/>(taste.ts)"] --> PL
+  PL["planner.ts (thuần)<br/>chấm điểm × 3 lăng kính: match · iconic · lowkey<br/>giờ mở cửa, khoảng cách, lấy mẫu theo seed"] --> D["≤ 3 bản nháp"]
+  D --> N["plan-assist › narrate<br/>tiêu đề + một câu 'vì sao' mỗi điểm dừng"]
+  N --> O["PlanOptions → PlanEdit → lưu chuyến đi"]
+  T["chữ tự do"] -. "plan-assist › parse" .-> Q
 ```
 
-Choosing places is **arithmetic on the phone**, so a reader with no
-signal still gets a plan. `planner.ts` scores the catalog under three
-weightings. It honours opening hours on the city's clock (`clock.ts`,
-`format.ts › openState`), orders stops by distance (`travel.ts`, `geo.ts`)
-and samples among near-equals using an explicit `seed`, so that Regenerate
-means something and the function stays pure. `gaps.ts` returns fewer
-drafts when the catalog cannot honestly support three. Only the *wording*
-comes from a model: `plan-assist` uses Claude Haiku to name the plan and
-give a reason per stop, and can parse a typed request into the four
-answers.
+Chọn địa điểm là **phép tính trên điện thoại**, nên người đọc không có sóng
+vẫn có kế hoạch. `planner.ts` chấm điểm catalog dưới ba bộ trọng số. Nó tôn
+trọng giờ mở cửa theo đồng hồ của thành phố (`clock.ts`,
+`format.ts › openState`), xếp điểm dừng theo khoảng cách (`travel.ts`,
+`geo.ts`) và lấy mẫu giữa các lựa chọn gần ngang nhau bằng một `seed` tường
+minh, để nút Tạo lại có ý nghĩa mà hàm vẫn thuần. `gaps.ts` trả ít bản nháp
+hơn khi catalog không đủ để trung thực đưa ra ba. Chỉ *câu chữ* đến từ một
+model: `plan-assist` dùng Claude Haiku để đặt tên kế hoạch và viết một lý
+do cho mỗi điểm dừng, và có thể tách một yêu cầu gõ tay thành bốn câu trả
+lời.
 
-### 4.3 Search, taste and ranking
+### 4.3 Tìm kiếm, khẩu vị và xếp hạng
 
-- `search.ts` and `searchIndex.tsx` search one haystack across all
-  languages, with diacritics folded ("banh mi" finds "Bánh mì") and desk
-  synonyms from `category_terms`.
-- `taste.ts` and `tasteProfile.tsx` turn four signals (preferences, saved
-  collections, own suggestions, `place_events`) into a bounded affinity.
-  The planner reads it through the `Taste` interface.
-- `rank.ts`, `popular.ts` and `exploreView.ts` order Explore.
+- `search.ts` và `searchIndex.tsx` tìm trên một haystack gộp mọi ngôn ngữ,
+  bỏ dấu khi so ("banh mi" tìm ra "Bánh mì"), cùng các từ đồng nghĩa desk
+  nhập trong `category_terms`.
+- `taste.ts` và `tasteProfile.tsx` biến bốn tín hiệu (sở thích, bộ sưu tập
+  đã lưu, địa điểm tự đề xuất, `place_events`) thành một mức ưa thích có
+  giới hạn. Bộ lên kế hoạch đọc nó qua interface `Taste`.
+- `rank.ts`, `popular.ts` và `exploreView.ts` sắp thứ tự Explore.
 
-## 5. Server side
+## 5. Phía server
 
 ### 5.1 Edge Functions
 
-| function | caller | gate | what it does |
+| function | ai gọi | ai được gọi | làm gì |
 |---|---|---|---|
-| `fetch-place` | app (add / suggest a place), desk | signed in. `import` is for editors only | Google Places search, reverse geocode, import as a pending, unpublished place. Daily allowance (`fetch_place_allowance`) |
-| `plan-assist` | app | signed in | Claude Haiku: `narrate` a draft, `parse` free text |
-| `delete-account` | app | account owner | deletes the auth user, and the cascades remove the rest. Catalog contributions are set to null, not deleted |
-| `scan-city` | desk | editor | one curated Places query per category, imported as pending |
-| `suspend-user` | desk | editor | auth-level ban (needs the service role) |
-| `write-blurb` | desk | editor | Claude Haiku drafts blurbs per language and **writes nothing**: the desk's Save is the gate |
-| `label-photos`, `rate-photos` | desk, ops token | editor / token | Claude vision: photo type and cover criteria, beauty within kind. `label-photos` writes to `photo_scores` as `claude-labels` |
-| `refresh-places` | `pg_cron` nightly | ops token | re-asks Google about the stalest places (`_shared/refresh-place.ts`) |
-| `shrink-photos` | `pg_cron` hourly | ops token | resizes Storage photos to what the app draws |
-| `rehost-photos`, `refresh-photos`, `prune-photos` | run by hand | editor / token | copy Google photos into Storage, replace retired `photo_ref`s, delete orphan files |
+| `fetch-place` | app (thêm / đề xuất địa điểm), desk | người đã đăng nhập. `import` chỉ cho editor | tìm trên Google Places, geocode ngược, import thành địa điểm đang chờ, chưa công khai. Có hạn mức trong ngày (`fetch_place_allowance`) |
+| `plan-assist` | app | người đã đăng nhập | Claude Haiku: `narrate` một bản nháp, `parse` chữ tự do |
+| `delete-account` | app | chính chủ tài khoản | xoá user trong auth, dây chuyền xoá phần còn lại. Đóng góp vào catalog được đặt null, không bị xoá |
+| `scan-city` | desk | editor | mỗi loại hình một truy vấn Places đã tuyển, import ở trạng thái chờ |
+| `suspend-user` | desk | editor | cấm ở tầng auth (cần service role) |
+| `write-blurb` | desk | editor | Claude Haiku viết nháp blurb theo từng ngôn ngữ và **không ghi gì**: nút Lưu của desk là cổng |
+| `label-photos`, `rate-photos` | desk, ops token | editor / token | Claude vision: loại ảnh và tiêu chí ảnh bìa, độ đẹp trong cùng loại. `label-photos` ghi vào `photo_scores` dưới tên `claude-labels` |
+| `refresh-places` | `pg_cron` mỗi đêm | ops token | hỏi lại Google về những địa điểm cũ nhất (`_shared/refresh-place.ts`) |
+| `shrink-photos` | `pg_cron` mỗi giờ | ops token | thu ảnh trong Storage về đúng cỡ app vẽ |
+| `rehost-photos`, `refresh-photos`, `prune-photos` | chạy tay | editor / token | chép ảnh Google vào Storage, thay `photo_ref` đã bị thu hồi, xoá file mồ côi |
 
-`_shared/` holds the logic several functions need (`import-place.ts`,
-`rehost.ts`, `classify.ts`, `gate.ts`, `place-name.ts`, …). Its tests run
-from `app/src/lib/*.fn.test.ts`, under the Edge Function coverage floor.
+`_shared/` giữ logic mà nhiều function cùng cần (`import-place.ts`,
+`rehost.ts`, `classify.ts`, `gate.ts`, `place-name.ts`, …). Test của nó
+chạy từ `app/src/lib/*.fn.test.ts`, dưới sàn coverage của Edge Function.
 
-### 5.2 Scheduled work
+### 5.2 Việc định kỳ
 
-`pg_cron` + `pg_net` call functions with a token from `ops_tokens`. The
-schedules live in `supabase/functions/<job>/cron.sql` and are **applied by
-hand**, not as migrations: they mint a secret, and the migration test
-database has no `pg_cron`.
+`pg_cron` + `pg_net` gọi function với token trong `ops_tokens`. Lịch nằm ở
+`supabase/functions/<job>/cron.sql` và được **apply tay**, không phải
+migration: nó mint một bí mật lúc chạy, và database test migration không có
+`pg_cron`.
 
-### 5.3 The place lifecycle
+### 5.3 Vòng đời của một địa điểm
 
 ```mermaid
 stateDiagram-v2
   [*] --> pending: fetch-place (suggest/import)<br/>scan-city
-  pending --> reviewed: desk edits, blurb, cover
+  pending --> reviewed: desk sửa, viết blurb, chọn ảnh bìa
   reviewed --> published: is_published = true
-  published --> published: refresh-places (nightly)<br/>photos rehosted / shrunk / labelled
-  published --> unpublished: desk, or closed per Google
+  published --> published: refresh-places (mỗi đêm)<br/>ảnh được rehost / thu nhỏ / gắn nhãn
+  published --> unpublished: desk, hoặc Google báo đã đóng cửa
   unpublished --> published
 ```
 
-A place that a reader suggests is visible only to that reader and the desk
-until an editor publishes it. `isLive` (`lib/live.ts`) is the single
-definition of "show this to readers".
+Địa điểm do người đọc đề xuất chỉ người đó và desk nhìn thấy cho tới khi
+một editor công khai nó. `isLive` (`lib/live.ts`) là định nghĩa duy nhất
+của "hiện cái này cho người đọc".
 
-## 6. The desk (`dashboard/`)
+## 6. Desk (`dashboard/`)
 
-It uses the same model as the app. `api.js` talks to Supabase with an
-editor's session, and RLS (`is_editor()`) decides what may be written.
-Routes are in `dashboard/src/routes.jsx`:
+Cùng mô hình với app. `api.js` nói với Supabase bằng session của editor, và
+RLS (`is_editor()`) quyết định được ghi gì. Route nằm ở
+`dashboard/src/routes.jsx`:
 
-- **Places**: list, editor (fields, blurbs per language, photos, cover),
-  add, scan a city.
-- **City**: city hero and copy. **Search words**: synonyms.
-- **Reports**: moderation queue → unpublish, clear a field, suspend.
-- **Covers / photo rounds**: cover review and the measuring rounds for
-  photo labels and ratings.
-- **Analytics**: contributors, coverage per category.
+- **Địa điểm**: danh sách, trình sửa (các trường, blurb theo ngôn ngữ, ảnh,
+  ảnh bìa), thêm mới, quét một thành phố.
+- **Thành phố**: ảnh hero và lời giới thiệu. **Từ tìm kiếm**: từ đồng nghĩa.
+- **Báo cáo**: hàng đợi kiểm duyệt → gỡ công khai, xoá một trường, đình chỉ.
+- **Ảnh bìa / các vòng đo ảnh**: duyệt ảnh bìa và các vòng đo cho nhãn ảnh
+  và điểm ảnh.
+- **Phân tích**: người đóng góp, độ phủ theo loại hình.
 
-`data/` holds the offline side: seed JSON, `places.review.json`, backup and
-snapshot scripts, and the frozen bootstrap pipelines (`fetch-places.mjs`,
-`upsert-supabase.mjs`). These are kept for provenance and are no longer
-how places arrive.
+`data/` giữ phần ngoại tuyến: JSON seed, `places.review.json`, script backup
+và snapshot, và các pipeline khởi tạo đã đóng băng (`fetch-places.mjs`,
+`upsert-supabase.mjs`). Chúng được giữ để truy nguồn gốc, và không còn là
+đường địa điểm đi vào nữa.
 
-## 7. Release channels and diagnostics
+## 7. Channel phát hành và chẩn đoán
 
 ```mermaid
 flowchart LR
   PR["branch → draft PR"] --> CI["checks.yml<br/>app · bundle · dashboard · data · migrations"]
-  CI --> M["squash merge to main"]
-  M --> U["app-preview.yml<br/>EAS Update (JS only)"]
+  CI --> M["squash merge vào main"]
+  M --> U["app-preview.yml<br/>EAS Update (chỉ JS)"]
   M --> W["deploy-dashboard.yml"]
-  R["Actions → Release app to TestFlight<br/>(profile input)"] --> B["EAS Build → Submit"]
+  R["Actions → Release app to TestFlight<br/>(input profile)"] --> B["EAS Build → Submit"]
 ```
 
-The build profile stamps a channel into each binary (`eas.json`), and
-`lib/channel.ts` reads it back:
+Build profile đóng một channel vào mỗi binary (`eas.json`), và
+`lib/channel.ts` đọc lại nó:
 
-| channel | diagnostics |
+| channel | chẩn đoán |
 |---|---|
-| `development` | on, but timings are skewed by `__DEV__` |
-| `preview` | **on**: `startup_traces` (launch waterfall, `trace.ts`) and `deck_traces` (`decktrace.ts`) |
-| `production` | **off**. `lib/legal.ts` promises the App Store build sends nothing, and a test enforces it |
+| `development` | bật, nhưng số đo thời gian bị `__DEV__` làm lệch |
+| `preview` | **bật**: `startup_traces` (thác khởi động, `trace.ts`) và `deck_traces` (`decktrace.ts`) |
+| `production` | **tắt**. `lib/legal.ts` hứa bản App Store không gửi gì, và một test canh lời hứa đó |
 
-How to measure on a device is in [`tracing.md`](tracing.md).
+Cách đo trên máy thật ở [`tracing.md`](tracing.md).
 
-## 8. Quality gates
+## 8. Cổng chất lượng
 
-| gate | where |
+| cổng | ở đâu |
 |---|---|
-| typecheck, lint (zero warnings), vitest, the same suite on a DST clock, coverage floors per file | `app` job |
-| `expo export` bundles | `bundle` job |
-| desk lint + tests | `dashboard` job |
-| taxonomy in sync across app, desk and check constraint, plus data tests | `data` job |
-| every migration from scratch on a throwaway Postgres, plus RLS tests (run twice, the second time on rewritten policies) | `migrations` job (`supabase/tests/run.sh`) |
-| iOS simulator end-to-end (Maestro) | local only. See [`testing/e2e-simulator.md`](testing/e2e-simulator.md) |
+| typecheck, lint (không cảnh báo nào), vitest, cùng bộ test trên đồng hồ có giờ mùa hè, sàn coverage từng file | job `app` |
+| bundle bằng `expo export` | job `bundle` |
+| lint + test của desk | job `dashboard` |
+| taxonomy khớp giữa app, desk và check constraint, cộng test của data | job `data` |
+| mọi migration chạy từ đầu trên một Postgres dùng một lần, cộng test RLS (chạy hai lượt, lượt thứ hai trên policy đã viết lại) | job `migrations` (`supabase/tests/run.sh`) |
+| end-to-end trên simulator iOS (Maestro) | chỉ chạy trên máy. Xem [`testing/e2e-simulator.md`](testing/e2e-simulator.md) |
 
-## 9. Cross-cutting decisions
+## 9. Các quyết định xuyên suốt
 
-| decision | why | where it is argued |
+| quyết định | vì sao | lập luận ở đâu |
 |---|---|---|
-| No app server | RLS plus a few secret-holding functions cover everything a server would do, without another thing to deploy, pay for or break | `architecture.md` |
-| No Redux / TanStack Query | context plus `usePersistedFetch` covers this amount of shared state | `architecture.md` |
-| Plan on the device, narrate on the server | works offline, costs no model call to choose, keeps the choice testable | `planner.ts`, `plan-assist/index.ts` |
-| Photos rehosted and shrunk in own Storage | Google `photo_ref`s expire, and egress and storage limits on the plan | `rehost-photos`, `shrink-photos`, `refresh-photos` headers |
-| Google data cached longer than the Maps ToS allows | open item C1 | `tech-eval-app-store.md` |
-| Model output never written straight to reader-facing text | an editor's Save is the gate for every sentence the app shows | `write-blurb/index.ts` |
-| Local notifications, not push | the trip date is known when the trip is saved, so no push server or token is needed | `lib/reminders.ts` |
-| Keyless weather | a key in a bundle can be read by anyone | `lib/weather.ts` |
-| Account delete by cascade | App Store 5.1.1(v), and every personal table was built for it | `delete-account/index.ts` |
+| Không có app server | RLS cộng vài function giữ bí mật đã làm mọi việc một server làm, mà không thêm thứ để deploy, để trả tiền, để hỏng | `architecture.md` |
+| Không Redux / TanStack Query | context cộng `usePersistedFetch` đủ cho lượng trạng thái dùng chung này | `architecture.md` |
+| Lên kế hoạch trên máy, diễn đạt trên server | chạy được khi không có mạng, chọn địa điểm không tốn lượt gọi model, giữ việc chọn test được | `planner.ts`, `plan-assist/index.ts` |
+| Ảnh được rehost và thu nhỏ trong Storage của mình | `photo_ref` của Google hết hạn, và gói dịch vụ có giới hạn egress và dung lượng | header của `rehost-photos`, `shrink-photos`, `refresh-photos` |
+| Dữ liệu Google được cache lâu hơn ToS của Maps cho phép | việc còn mở C1 | `tech-eval-app-store.md` |
+| Đầu ra của model không bao giờ ghi thẳng vào chữ người đọc thấy | nút Lưu của editor là cổng cho mọi câu app hiển thị | `write-blurb/index.ts` |
+| Thông báo cục bộ, không dùng push | ngày của chuyến đi đã biết ngay lúc lưu, nên không cần push server hay token | `lib/reminders.ts` |
+| Thời tiết không cần khoá | khoá nằm trong bundle thì ai cũng đọc được | `lib/weather.ts` |
+| Xoá tài khoản bằng dây chuyền | App Store 5.1.1(v), và mọi bảng cá nhân đã được dựng cho việc đó | `delete-account/index.ts` |
 
-## 10. Known rough edges
+## 10. Chỗ còn thô
 
-These are listed in [`architecture.md`](architecture.md) § "Chỗ kiến trúc
-chưa sạch". The main one is large screen files: `PlaceDetailScreen`,
-`CollectionsScreen` and `CollectionDetailScreen` are each around 1,700 to
-1,800 lines. The coverage floors keep them correct, but not easy to read.
-Also open: the Google Places cache (C1) and the photo-critic steps in
+Đã ghi ở [`architecture.md`](architecture.md) mục "Chỗ kiến trúc chưa
+sạch". Chỗ chính là các file màn hình to: `PlaceDetailScreen`,
+`CollectionsScreen` và `CollectionDetailScreen` mỗi file khoảng 1.700 đến
+1.800 dòng. Sàn coverage giữ chúng đúng, nhưng không giữ chúng dễ đọc. Còn
+mở nữa: cache Google Places (C1) và các bước photo-critic trong
 [`photo-critic.md`](photo-critic.md).
