@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CACHE_MAX_AGE_MS, CACHE_VERSION, cacheKey, cacheKind, packCache, unpackCache } from './cache';
+import { CACHE_MAX_AGE_MS, CACHE_MAX_CHARS, CACHE_VERSION, cacheKey, cacheKind, fitsCache, packCache, unpackCache } from './cache';
 
 const NOW = 1_756_000_000_000;
 
@@ -25,6 +25,20 @@ describe('cacheKind', () => {
     expect(cacheKind('somebody.cache.places.hcmc')).toBe('other');
     expect(cacheKind('citycrew.prefs.places')).toBe('other');
     expect(cacheKind('citycrew.cache.')).toBe('other');
+  });
+});
+
+describe('fitsCache', () => {
+  // Android reads a stored value back through a 2 MB window; past the
+  // bound a blob is not written at all (`usePersistedFetch`).
+  it('stores a blob up to the bound and not a character past it', () => {
+    expect(fitsCache('x'.repeat(CACHE_MAX_CHARS))).toBe(true);
+    expect(fitsCache('x'.repeat(CACHE_MAX_CHARS + 1))).toBe(false);
+  });
+
+  it('keeps the bound inside the window at the densest text measured', () => {
+    // 1.154 UTF-8 bytes a character, Hanoi's catalog on 30 Oct 2026.
+    expect(CACHE_MAX_CHARS * 1.154).toBeLessThan(2 * 1024 * 1024);
   });
 });
 

@@ -100,6 +100,7 @@ Lần đầu mỗi loại dữ liệu được đọc lại từ máy trong mộ
 | `cache:<loại>:chars` | độ dài bản lưu, tính bằng ký tự UTF-16 (gần bằng số byte) |
 | `cache:<loại>:parse-ms` | thời gian `unpackCache` (`JSON.parse` cả bản) trên luồng JS |
 | `cache:<loại>:unreadable` | không có `value`; đọc bản lưu bị lỗi, đây là dấu hiệu bản lưu vượt cửa sổ 2 MB của Android |
+| `cache:<loại>:too-big` | độ dài bản vừa tải về, vượt `CACHE_MAX_CHARS` (1,5 triệu ký tự, khoảng 1,73 MB): bản này không được ghi, và bản lưu cũ của loại đó bị xoá; lần mở sau, loại này chờ mạng |
 
 `<loại>` là `kind` của `cacheKey`: `places`, `collections`, `mine`, `likes`,
 `mytrips`, `checkins`, `friendships`… Dùng để biết bản lưu nào to, parse mất
