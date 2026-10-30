@@ -134,6 +134,20 @@ vi.mock('../lib/save', () => {
     useIsSaved: () => false };
 });
 
+// Every draw of a result's card, by slug: the real card still draws, so
+// everything below reads what the reader would — this only counts.
+const cardDraws = vi.hoisted(() => new Map<string, number>());
+vi.mock('../components/PlaceCard', async (orig) => {
+  const Real = (await orig<{ default: React.ComponentType<{ place: { slug: string } }> }>()).default;
+  return {
+    default: (props: { place: { slug: string } }) => {
+      cardDraws.set(props.place.slug, (cardDraws.get(props.place.slug) ?? 0) + 1);
+      return <Real {...props} />;
+    },
+  };
+});
+const draws = () => [...cardDraws.values()].reduce((a, b) => a + b, 0);
+
 import { Keyboard } from 'react-native';
 import SearchScreen from './SearchScreen';
 import { addToSearchIndex, forgetSearchIndex } from '../lib/searchIndex';
@@ -617,6 +631,54 @@ describe('typing a query', () => {
     expect(input().parentElement!.contains(cancel)).toBe(true);
     fireEvent.click(cancel);
     expect(navigation.goBack).toHaveBeenCalled();
+  });
+});
+
+// The screen draws again on every letter and every ⊕; a result's card
+// draws again only when something it shows has moved (owner, 30 Oct
+// 2026). Before `SearchPlaceCard`, one more letter that changed nothing
+// drew both cards below again, and a ⊕ drew every card on the page.
+describe('drawing the results', () => {
+  it('leaves the cards alone when one more letter finds the same places', () => {
+    mount();
+    type('hoan kie');
+    expect(screen.getByTestId('search-result-0').textContent).toContain('Phở 10 Lý Quốc Sư');
+    expect(screen.getByTestId('search-result-1').textContent).toContain('Cong Caphe');
+    cardDraws.clear();
+    type('hoan kiem');
+    expect(screen.getByTestId('search-result-0').textContent).toContain('Phở 10 Lý Quốc Sư');
+    expect(screen.getByTestId('search-result-1').textContent).toContain('Cong Caphe');
+    expect(draws()).toBe(0);
+  });
+
+  // A card not drawn since the first letter still acts on the box as it
+  // stands: what is remembered is the query at the tap.
+  it('remembers the query in the box, not the one its card was drawn for', async () => {
+    const { navigation } = mount();
+    type('pho');
+    type('pho 10');
+    fireEvent.click(screen.getByTestId('search-result-0'));
+    expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'pho-10' });
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(RECENTS_KEY, JSON.stringify(['pho 10']));
+  });
+
+  it('draws again only the card a ⊕ ticked, and the others still put into the list as it is now', () => {
+    const { n } = nav();
+    const route = { params: { addTo: 'thao-dien' } } as RootRoute<'Search'>;
+    sv.lists = [collection({ slug: 'thao-dien', title_en: 'Thao Dien must visit', collection_places: members('pho-10') })];
+    const r = render(<SearchScreen navigation={n} route={route} />);
+    type('hoan kiem');
+    cardDraws.clear();
+    sv.lists = [collection({
+      slug: 'thao-dien', title_en: 'Thao Dien must visit', collection_places: members('pho-10', 'cong'),
+    })];
+    r.rerender(<SearchScreen navigation={n} route={route} />);
+    expect(Object.fromEntries(cardDraws)).toEqual({ cong: 1 });
+    expect(screen.getByTestId('search-result-1-in-list').getAttribute('aria-checked')).toBe('true');
+    // Phở 10's card was last drawn against the list before; its ⊕ acts
+    // on this one.
+    fireEvent.click(screen.getByTestId('search-result-0-in-list'));
+    expect(sv.toggle).toHaveBeenCalledWith(sv.lists[0], expect.objectContaining({ slug: 'pho-10' }));
   });
 });
 
