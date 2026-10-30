@@ -40,6 +40,27 @@ vi.mock('../components/PlaceCard', async (orig) => {
   };
 });
 
+// The top of the list the same way: the photograph and the shelf, real,
+// counted each time they draw.
+const topDraws = vi.hoisted(() => ({ hero: 0, shelf: 0 }));
+vi.mock('./explore/Hero', async (orig) => {
+  const real = await orig<typeof import('./explore/Hero')>();
+  return {
+    ...real,
+    Hero: (props: Parameters<typeof real.Hero>[0]) => { topDraws.hero += 1; return <real.Hero {...props} />; },
+  };
+});
+vi.mock('./explore/CollectionShelf', async (orig) => {
+  const real = await orig<typeof import('./explore/CollectionShelf')>();
+  return {
+    ...real,
+    CollectionShelf: (props: Parameters<typeof real.CollectionShelf>[0]) => {
+      topDraws.shelf += 1;
+      return <real.CollectionShelf {...props} />;
+    },
+  };
+});
+
 type City = Record<string, unknown> & { id: string; short_en: string };
 
 const state = vi.hoisted(() => ({
@@ -287,6 +308,7 @@ const shelfCard = (title: string): HTMLElement => {
  */
 type ListProps = {
   onViewableItemsChanged: (e: { viewableItems: { index: number | null }[] }) => void;
+  onScroll: unknown;
   onRefresh: () => void;
   refreshing: boolean;
 };
@@ -732,6 +754,27 @@ describe('the places list', () => {
     state.taste = { affinity: () => 0 };
     view.rerender(<ExploreScreen navigation={navigation} />);
     expect([...cardDraws.values()].reduce((a, b) => a + b, 0)).toBe(0);
+  });
+
+  // Each card scrolled past moves the topmost one on screen, and the
+  // screen draws again; the photograph and the shelf above used to draw
+  // with it every time (owner, 30 Oct 2026).
+  it('leaves the photograph and the shelf alone as the cards go by', () => {
+    state.places.data = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((slug) => place(slug));
+    const navigation = nav();
+    const view = render(<ExploreScreen navigation={navigation} />);
+    expect(topDraws.hero).toBeGreaterThan(0);
+    expect(topDraws.shelf).toBeGreaterThan(0);
+    const scroll = listProps().onScroll;
+    Object.assign(topDraws, { hero: 0, shelf: 0 });
+    seeCards(3, 4);
+    seeCards(6, 7);
+    state.taste = { affinity: () => 0 };
+    view.rerender(<ExploreScreen navigation={navigation} />);
+    expect(topDraws).toEqual({ hero: 0, shelf: 0 });
+    // And the list keeps the one scroll event it was given: a new one on
+    // every redraw is detached and attached again on the native side.
+    expect(listProps().onScroll).toBe(scroll);
   });
 
   it('draws the cards again when their place has changed', () => {
