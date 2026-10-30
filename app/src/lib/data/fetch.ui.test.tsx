@@ -15,7 +15,7 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '../../uitest/render';
-import { packCache } from './cache';
+import { CACHE_MAX_CHARS, packCache } from './cache';
 import { usePersistedFetch } from './fetch';
 import { startupTrace } from '../trace';
 
@@ -158,6 +158,42 @@ describe('usePersistedFetch measures its cache read', () => {
       expect(read('data')).toBe('');
     } finally {
       get.mockRestore();
+      spy.mockRestore();
+    }
+  });
+});
+
+// A blob too long for Android to read back (owner, 30 Oct 2026): not
+// written, the last one removed, and a mark to say so. Kept, the old blob
+// would go on opening the app with an answer every later fetch replaced.
+describe('usePersistedFetch keeps an oversize answer off the phone', () => {
+  it('writes nothing, removes the last blob, and marks the length', async () => {
+    const key = 'citycrew.cache.giant.hcmc.anon';
+    await AsyncStorage.setItem(key, packCache(['yesterday'], Date.now()));
+    const spy = vi.spyOn(startupTrace, 'mark');
+    const huge = 'x'.repeat(CACHE_MAX_CHARS);
+    try {
+      render(<Probe k={key} fetcher={async () => [huge]} />);
+      await waitFor(() => expect(read('fromCache')).toBe('false'));
+      // Still on screen: only the copy on the phone is refused.
+      expect(read('data')).toBe(huge);
+      await waitFor(async () => expect(await AsyncStorage.getItem(key)).toBeNull());
+      const mark = spy.mock.calls.find(([name]) => name === 'cache:giant:too-big');
+      // The packed blob's length: the answer plus its envelope, stamp included.
+      expect(mark?.[1]).toBe(packCache([huge], Date.now()).length);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('writes an answer inside the bound as it always did', async () => {
+    const key = 'citycrew.cache.small.hcmc.anon';
+    const spy = vi.spyOn(startupTrace, 'mark');
+    try {
+      render(<Probe k={key} fetcher={async () => ['fresh']} />);
+      await waitFor(async () => expect(await AsyncStorage.getItem(key)).toContain('fresh'));
+      expect(spy.mock.calls.filter(([name]) => String(name).endsWith(':too-big'))).toEqual([]);
+    } finally {
       spy.mockRestore();
     }
   });

@@ -46,6 +46,29 @@
  */
 export const CACHE_CATALOG = true;
 
+/**
+ * The longest blob written to the phone, in characters.
+ *
+ * Android reads a stored value back through a 2 MB cursor window, and a
+ * blob past it is not read slowly but not at all — `Row too big to fit
+ * into CursorWindow`, which `usePersistedFetch` marks as `unreadable`.
+ * The search index stays off the phone for exactly that reason
+ * (`searchIndex.tsx`). This is the same rule for the rest, before the
+ * write rather than after it.
+ *
+ * Characters, because the length is free and bytes are not. Measured on
+ * 30 Oct 2026, the cached catalog ran 1.135 (Saigon) and 1.154 (Hanoi)
+ * UTF-8 bytes a character — Vietnamese diacritics — so 1.5 million is
+ * about 1.73 MB, inside the window with room for a denser city. The
+ * largest blob that day was Saigon's places at 753,130: half of this.
+ */
+export const CACHE_MAX_CHARS = 1_500_000;
+
+/** Whether a packed blob is small enough to store — see `CACHE_MAX_CHARS`. */
+export function fitsCache(blob: string): boolean {
+  return blob.length <= CACHE_MAX_CHARS;
+}
+
 /** Bump on any change to the shape of cached rows — see the note above. */
 export const CACHE_VERSION = 1;
 

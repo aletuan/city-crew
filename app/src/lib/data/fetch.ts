@@ -8,7 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { startupTrace } from '../trace';
-import { cacheKind, packCache, unpackCache } from './cache';
+import { cacheKind, fitsCache, packCache, unpackCache } from './cache';
 
 export type Fetch<T> = {
   loading: boolean;
@@ -117,7 +117,21 @@ export function usePersistedFetch<T>(
         if (gen.current !== mine) return;
         setState({ loading: false, loaded: true, error: null, data, loadedAt: Date.now(), fromCache: false });
         if (asked) {
-          AsyncStorage.setItem(asked, packCache(data, Date.now())).catch(() => {});
+          const blob = packCache(data, Date.now());
+          // Too long to read back on Android (`CACHE_MAX_CHARS`): not
+          // written, and the last one removed with it. Kept, the old blob
+          // would go on opening the app for a week with an answer every
+          // later fetch had replaced — a closed place still listed, a new
+          // one missing. Without it, the next launch of this question
+          // waits for the network, which is the launch the app had before
+          // it cached anything. Marked, so a catalog that outgrows the
+          // phone shows up in the traces rather than as a slower launch.
+          if (fitsCache(blob)) {
+            AsyncStorage.setItem(asked, blob).catch(() => {});
+          } else {
+            AsyncStorage.removeItem(asked).catch(() => {});
+            startupTrace.mark(`cache:${cacheKind(asked)}:too-big`, blob.length);
+          }
         }
       })
       // `loadedAt` is deliberately left where it was: a refresh that failed
