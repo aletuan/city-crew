@@ -11,7 +11,7 @@ import { act, fireEvent, render, screen, within } from '../uitest/render';
 import CollectionFilterSheet, { CITY_ROW_KEEP, CITY_ROW_MAX, type CollectionFilters } from './CollectionFilterSheet';
 
 const CITIES = [{ key: 'hanoi', label: 'Hà Nội' }, { key: 'saigon', label: 'Sài Gòn' }];
-const KINDS = [{ key: 'cafes', label: 'Cafés', icon: 'cafe-outline' as const, iconColor: '#a66' }, { key: 'eats', label: 'Eats' }];
+const KINDS = [{ key: 'cafes', label: 'Cafés', icon: 'cafe-outline' as const }, { key: 'eats', label: 'Eats' }];
 
 // Four lists, each the (city, kind) pairs of its places. Sài Gòn holds
 // no eats, so that pair counts nothing — the case the dimming is for.

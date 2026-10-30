@@ -593,7 +593,6 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                     key,
                     label: categoryLabel(key, t),
                     icon: CATEGORIES[key]?.icon,
-                    iconColor: CATEGORIES[key]?.color,
                     testID: `search-browse-${key}`,
                   }))}
                   chosen={null}

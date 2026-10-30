@@ -357,11 +357,15 @@ const ALL_KEY = '__all__';
  *   end fades into the page while anything is left to scroll to, and
  *   not once the row is at its end or fits whole (owner, 24 Oct 2026: on
  *   one phone the edge fell in a gap, and the row read as finished).
- * - A glyph keeps its own colour, chosen or not — the rule `Chip` and
- *   `Tile` keep, for their reason: the hue is what ties the category to
- *   the dot it wears on a card and the pin it wears on the map. So the
- *   chosen state is the word and the rule, never the glyph; two of the
- *   category hues (Cafés, Eats) are warm enough to pass for the accent.
+ * - A glyph wears its word's ink: the secondary ink idle, the accent
+ *   chosen (owner, 30 Oct 2026). It used to keep its category's hue, the
+ *   rule `Chip` and `Tile` keep, to tie the row to the dot on a card and
+ *   the pin on the map. On paper those hues are pastels at 1.7–2.2:1
+ *   against the page, under the 3:1 a meaningful glyph wants, so in a
+ *   row of 16pt glyphs they did not read as colours at all but as a
+ *   muddy grey beside each word. The dot and the pin keep the hue, where
+ *   it is large enough or on a ground that carries it; a row of words
+ *   says its kinds in words.
  *
  * `aria-selected` on a button rather than the tabs' role, which says
  * "one of these is always open": this is a filter, and VoiceOver should
@@ -413,7 +417,7 @@ const ALL_KEY = '__all__';
  */
 export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, ground, stacked, testID }: {
   /** `count`, when given, follows the word as `Chip`'s does: "Hà Nội (6)". */
-  items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; off?: boolean }[];
+  items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; testID?: string; off?: boolean }[];
   chosen: K | null;
   /** The key tapped, or null for "All". */
   onPick: (k: K | null) => void;
@@ -437,7 +441,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   const [edge, setEdge] = useState(0);
   const [widths, setWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(0);
-  const row: { key: string; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string; testID?: string; off?: boolean; on: boolean; pick: K | null }[] = [
+  const row: { key: string; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; testID?: string; off?: boolean; on: boolean; pick: K | null }[] = [
     ...(all ? [{ key: ALL_KEY, label: all, count: allCount, testID: testID ? `${testID}-all` : undefined, on: chosen === null, pick: null }] : []),
     ...items.map((i) => ({ ...i, on: chosen === i.key, pick: i.key })),
   ];
@@ -461,7 +465,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
         scrollEventThrottle={32}
         testID={testID ? `${testID}-scroll` : undefined}
       >
-        {row.map(({ key, label, count, icon, iconColor, testID: itemID, off, on, pick }) => {
+        {row.map(({ key, label, count, icon, testID: itemID, off, on, pick }) => {
           const dim = !!off && !on;
           return (
             <PressableScale
@@ -484,7 +488,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
               accessibilityRole="button"
               aria-selected={on}
             >
-              {icon ? <Ionicons name={icon} size={stacked ? 22 : 16} color={iconColor ?? colors.textSecondary} /> : null}
+              {icon ? <Ionicons name={icon} size={stacked ? 22 : 16} color={on ? colors.accent : colors.textSecondary} /> : null}
               <Text style={[s.choiceText, stacked && s.stackText, on && s.tabTextOn]} numberOfLines={1}>
                 {label}
                 {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}

@@ -24,6 +24,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uit
 import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
+import { colors } from '../theme';
 
 const state = vi.hoisted(() => ({
   uid: null as string | null,
@@ -1214,6 +1215,9 @@ describe('CollectionsScreen — search', () => {
     expect(within(row).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['hanoi', 'Remove hanoi', 'Cafés', 'Remove Cafés']);
     // The glyph led this row once; it is beside the title now.
     expect(row.querySelector('[data-icon="options-outline"]')).toBeNull();
+    // The kind's glyph in its word's ink, as the filter rows wear it.
+    expect(within(screen.getByTestId('collections-chosen-kind')).getByRole('button', { name: 'Cafés' })
+      .querySelector('[data-icon="cafe-outline"]')!.getAttribute('data-color')).toBe(String(colors.text));
     fireEvent.click(screen.getByRole('button', { name: 'Remove Cafés' }));
     expectSub('1 collection · hanoi');
     expect(screen.queryByTestId('collections-chosen-kind')).toBeNull();

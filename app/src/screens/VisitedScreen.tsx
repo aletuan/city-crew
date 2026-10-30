@@ -290,7 +290,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                 <Text style={s.legend}>{t('Kind of place', 'Thể loại', '種類', '地点类型', '地點類型')}</Text>
                 <View style={s.bleed}>
                   <UnderlineChoice
-                    items={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
+                    items={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon }))}
                     chosen={kind}
                     onPick={(k) => { setKind(k === kind ? null : k); answered(); }}
                     all={t('All', 'Tất cả', 'すべて', '全部', '全部')}
