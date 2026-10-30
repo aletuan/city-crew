@@ -819,7 +819,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // be reached.
   const chosenItem = (
     label: string,
-    glyph: { icon: keyof typeof Ionicons.glyphMap; color: string } | null,
+    glyph: { icon: keyof typeof Ionicons.glyphMap } | null,
     letGo: () => void,
     testID: string | undefined,
   ) => (
@@ -834,7 +834,8 @@ export default function CollectionsScreen({ navigation, route }: {
         accessibilityLabel={label}
         accessibilityHint={t('Opens the filters', 'Mở bộ lọc', 'フィルターを開く', '打开筛选', '開啟篩選')}
       >
-        {glyph ? <Ionicons name={glyph.icon} size={16} color={glyph.color} /> : null}
+        {/* The word's ink, as the rows' glyphs wear it — see `UnderlineChoice`. */}
+        {glyph ? <Ionicons name={glyph.icon} size={16} color={colors.text} /> : null}
         <Text style={s.chosenText} numberOfLines={1}>{label}</Text>
       </PressableScale>
       <PressableScale
@@ -1837,7 +1838,7 @@ export default function CollectionsScreen({ navigation, route }: {
         visible={filterOpen}
         applied={filtersApplied}
         cities={offerCities ? cityChoices.map((id) => ({ key: id, label: cityName(id), names: cityNames(id) })) : []}
-        kinds={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color }))}
+        kinds={kindChoices.map((k) => ({ key: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon }))}
         countFor={(f) => siftCollections(shelf, { query: q, city: f.city, kind: f.kind }).length}
         onClose={() => setFilterOpen(false)}
         onApply={(f) => { setCityPick(f.city); setKind(f.kind); setFilterOpen(false); }}

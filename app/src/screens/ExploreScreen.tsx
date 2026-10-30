@@ -810,7 +810,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           `UnderlineChoice`. */}
       <UnderlineChoice
         items={cats.map((c) => ({
-          key: c, label: categoryLabel(c, t), icon: CATEGORIES[c]?.icon, iconColor: CATEGORIES[c]?.color,
+          key: c, label: categoryLabel(c, t), icon: CATEGORIES[c]?.icon,
         }))}
         chosen={picked[0] ?? null}
         onPick={pick}

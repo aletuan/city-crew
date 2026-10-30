@@ -8,14 +8,14 @@
 import React from 'react';
 import { Animated, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '../../uitest/render';
+import { act, cleanup, fireEvent, render, screen, within } from '../../uitest/render';
 
 vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
 import { CHIP_H, CHIP_SLOP, Chip, SECONDARY_CONTROL_H, Screen, UnderlineChoice, useArrival } from './index';
-import { bgHex } from '../../theme';
+import { bgHex, colors } from '../../theme';
 
 describe('useArrival', () => {
   // A reader who asked for less motion gets the arrived state, not the
@@ -63,22 +63,23 @@ describe('Screen', () => {
 });
 
 // Explore's kinds, one at a time (owner, 24 Oct 2026): the word and the
-// rule say which is chosen, the glyph keeps its own hue, and the far end
-// fades into the page the row sits on.
+// rule say which is chosen, the glyph wears the word's ink, and the far
+// end fades into the page the row sits on.
 describe('UnderlineChoice', () => {
   const items = [
-    { key: 'cafes', label: 'Cafés', icon: 'cafe-outline' as const, iconColor: '#D2A679', testID: 'k-cafes' },
+    { key: 'cafes', label: 'Cafés', icon: 'cafe-outline' as const, testID: 'k-cafes' },
     { key: 'eats', label: 'Eats' },
   ];
 
-  it('marks the chosen one, keeps every glyph its own colour, and hands back the key tapped', () => {
+  it('marks the chosen one, inks every glyph as its word, and hands back the key tapped', () => {
     const onPick = vi.fn();
     render(<UnderlineChoice items={items} chosen="cafes" onPick={onPick} testID="row" />);
     const cafes = screen.getByRole('button', { name: 'Cafés' });
     expect(cafes.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('button', { name: 'Eats' }).getAttribute('aria-selected')).toBe('false');
-    // The hue is the category's, chosen or not; an item with no glyph has none.
-    expect(cafes.querySelector('[data-icon]')!.getAttribute('data-color')).toBe('#D2A679');
+    // The accent on the chosen one, the secondary ink on the rest (owner,
+    // 30 Oct 2026); an item with no glyph has none.
+    expect(cafes.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.accent));
     expect(screen.getByRole('button', { name: 'Eats' }).querySelector('[data-icon]')).toBeNull();
     // The word carries the choice.
     expect(getComputedStyle(within(cafes).getByText('Cafés')).color)
@@ -87,6 +88,11 @@ describe('UnderlineChoice', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Eats' }));
     expect(onPick.mock.calls).toEqual([['cafes'], ['eats']]);
     expect(screen.getByTestId('k-cafes')).toBe(cafes);
+    // Not chosen, the same glyph is the word's secondary ink.
+    cleanup();
+    render(<UnderlineChoice items={items} chosen={null} onPick={onPick} />);
+    expect(screen.getByTestId('k-cafes').querySelector('[data-icon]')!.getAttribute('data-color'))
+      .toBe(String(colors.textSecondary));
   });
 
   it('chooses nothing when given nothing', () => {

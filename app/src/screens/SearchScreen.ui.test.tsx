@@ -23,8 +23,7 @@ import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/data';
 import type { Candidate, Known } from '../lib/suggest';
 import { RECENTS_KEY } from '../lib/recents';
-import { font } from '../theme';
-import { CATEGORIES } from '../lib/categories';
+import { colors, font } from '../theme';
 
 const cat = vi.hoisted(() => ({
   places: [] as unknown[],
@@ -325,9 +324,10 @@ describe('the zero-state', () => {
 
   // The review board's first way (owner, 25 Oct 2026): Explore's underline
   // row, one line that scrolls, each word with its category's glyph in the
-  // category's hue — and nothing chosen, since a tap is a search and the
-  // row is gone once there is a word. No "All": there is nothing to undo.
-  it('browses by one underline row: every category in it, its own hue, nothing chosen', () => {
+  // word's ink (owner, 30 Oct 2026: the hues were pastels that read as grey
+  // on paper) — and nothing chosen, since a tap is a search and the row is
+  // gone once there is a word. No "All": there is nothing to undo.
+  it('browses by one underline row: every category in it, in the word’s ink, nothing chosen', () => {
     mount();
     const row = screen.getByTestId('search-browse');
     expect(within(row).getByTestId('search-browse-scroll')).toBeTruthy();
@@ -335,7 +335,7 @@ describe('the zero-state', () => {
     expect(items.map((b) => b.textContent)).toEqual(['Cafés', 'Eats', 'Culture']);
     expect(items.map((b) => b.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false']);
     const cafes = screen.getByTestId('search-browse-cafes');
-    expect(cafes.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(CATEGORIES.cafes.color);
+    expect(cafes.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.textSecondary));
     // Stacked, the glyph over the word: a row of doors, not of filters.
     expect(getComputedStyle(cafes.firstElementChild as HTMLElement).flexDirection).toBe('column');
     expect(screen.queryByTestId('search-browse-all')).toBeNull();

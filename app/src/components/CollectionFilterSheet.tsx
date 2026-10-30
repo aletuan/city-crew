@@ -69,7 +69,7 @@ export default function CollectionFilterSheet({ visible, applied, cities, kinds,
   /** The choices the shelf holds, in the screen's order. A group with
    *  fewer than two is a fact rather than a choice and is not asked. */
   cities: { key: string; label: string; names?: (string | null | undefined)[] }[];
-  kinds: { key: string; label: string; icon?: keyof typeof Ionicons.glyphMap; iconColor?: string }[];
+  kinds: { key: string; label: string; icon?: keyof typeof Ionicons.glyphMap }[];
   /** How many lists a draft leaves, for the button. */
   countFor: (f: CollectionFilters) => number;
   onClose: () => void;
