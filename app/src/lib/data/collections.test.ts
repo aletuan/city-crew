@@ -281,6 +281,29 @@ const embedded = (slug: string, cps: { sort_order: number; places: unknown }[]) 
   id: `c-${slug}`, slug, is_public: true, collection_places: cps,
 });
 
+// The members' photographs are reached through the list, and every call
+// that shapes them names this path; the rest are the list's own.
+const MEMBER_PHOTOS = 'collection_places.places.place_photos';
+type Call = [string, unknown];
+const onMembers = (calls: unknown[][] | undefined) =>
+  (calls as Call[] | undefined)?.filter(([k, o]) => k.startsWith(MEMBER_PHOTOS)
+    || (o as { referencedTable?: string } | undefined)?.referencedTable === MEMBER_PHOTOS);
+const onLists = (calls: unknown[][] | undefined) => {
+  const mine = onMembers(calls) ?? [];
+  return calls?.filter((c) => !mine.includes(c as Call));
+};
+// One photograph a member, the one `coverOf` would draw — the same
+// shaping the catalog's places get (`oneCover`).
+const ONE_COVER = {
+  filters: [[`${MEMBER_PHOTOS}.is_hidden`, false]],
+  orders: [
+    ['is_cover', { referencedTable: MEMBER_PHOTOS, ascending: false }],
+    ['sort_order', { referencedTable: MEMBER_PHOTOS, ascending: true }],
+    ['id', { referencedTable: MEMBER_PHOTOS, ascending: true }],
+  ],
+  embedLimits: { [MEMBER_PHOTOS]: 1 },
+};
+
 describe('fetchCollections', () => {
   it('asks for public lists only, newest first with the desk’s order as tie-break', async () => {
     fake().replies({ data: [embedded('coffee', [])] });
@@ -288,14 +311,27 @@ describe('fetchCollections', () => {
 
     const [q] = fake().log;
     expect(q.table).toBe('collections');
-    expect(q.filters).toEqual([['is_public', true]]);
+    expect(onLists(q.filters)).toEqual([['is_public', true]]);
     // Time leads because a list published this morning is the reason to
     // open the tab. `sort_order` decides only the editorial rows, which all
     // share one timestamp and would otherwise come back in no order at all.
-    expect(q.orders).toEqual([
+    expect(onLists(q.orders)).toEqual([
       ['created_at', { ascending: false }],
       ['sort_order', { nullsFirst: false }],
     ]);
+  });
+
+  // The members' photographs were over half of what the shelf downloaded
+  // (owner, 30 Oct 2026); a card draws one.
+  it('carries one photograph a member — the one coverOf would draw', async () => {
+    fake().replies({ data: [] });
+    await fetchCollections('hanoi');
+    const [q] = fake().log;
+    expect(onMembers(q.filters)).toEqual(ONE_COVER.filters);
+    expect(onMembers(q.orders)).toEqual(ONE_COVER.orders);
+    expect(q.embedLimits).toEqual(ONE_COVER.embedLimits);
+    // Every list still: the cap is on the photographs, not the rows.
+    expect(q.limit).toBeUndefined();
   });
 
   // Nobody is excluded, the reader included.
@@ -315,7 +351,7 @@ describe('fetchCollections', () => {
     fake().replies({ data: [] });
     await fetchCollections('hanoi');
     expect(fake().log[0].or).toBeUndefined();
-    expect(fake().log[0].filters).toEqual([['is_public', true]]);
+    expect(onLists(fake().log[0].filters)).toEqual([['is_public', true]]);
   });
 
   it('is not filtered by city — a list appears in every city it reaches', async () => {
@@ -339,6 +375,9 @@ describe('fetchCollections', () => {
     expect(legacy.filters).toEqual([['is_public', true], ['city_id', 'hanoi']]);
     expect(legacy.order).toEqual(['sort_order']);
     expect(String(legacy.payload)).not.toContain('owner_id');
+    // Its members are slugs, with no photographs to shape — and a filter
+    // on an embed the select does not name is a refused query.
+    expect(legacy.embedLimits).toBeUndefined();
   });
 
   it('throws when even the fallback fails', async () => {
@@ -430,8 +469,17 @@ describe('fetchMyCollections', () => {
     expect(await fetchMyCollections('u1')).toHaveLength(1);
 
     const [q] = fake().log;
-    expect(q.filters).toEqual([['owner_id', 'u1']]);
-    expect(q.orders).toEqual([['created_at', { ascending: false }]]);
+    expect(onLists(q.filters)).toEqual([['owner_id', 'u1']]);
+    expect(onLists(q.orders)).toEqual([['created_at', { ascending: false }]]);
+  });
+
+  it('carries one photograph a member, as the public lists do', async () => {
+    fake().replies({ data: [] });
+    await fetchMyCollections('u1');
+    const [q] = fake().log;
+    expect(onMembers(q.filters)).toEqual(ONE_COVER.filters);
+    expect(onMembers(q.orders)).toEqual(ONE_COVER.orders);
+    expect(q.embedLimits).toEqual(ONE_COVER.embedLimits);
   });
 
   // Not filtered by city and not filtered by published: a list made in

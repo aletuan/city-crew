@@ -11,7 +11,7 @@ import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import type { Collection, Place } from '../types';
 import type { KindChoice } from '../collectionKinds';
 import { slugify } from '../place';
-import { PLACE_COLS } from './places';
+import { oneCover, PLACE_COLS } from './places';
 
 /**
  * A public list and everything in it.
@@ -29,9 +29,9 @@ import { PLACE_COLS } from './places';
  * That question is asked in `touchesCity`, over these embedded rows.
  *
  * It costs more than the slug embed did: every public list arrives with
- * its places and their photos, rather than one city's worth of ids. At
- * this catalog's size that is a handful of lists. If it stops being one,
- * the lever is a narrower column set for embedded members — the shelf
+ * its places, rather than one city's worth of ids — each with its cover
+ * alone since 30 Oct 2026 (see the query). If that stops being cheap, the
+ * next lever is a narrower column set for embedded members — the shelf
  * needs a name, a photo and a vibe, not opening hours — not a return to
  * truncating by city.
  */
@@ -47,6 +47,9 @@ import { PLACE_COLS } from './places';
 // on a public list never appeared at all.
 const COLLECTION_COLS = (withOwner: boolean) =>
   `id, slug, is_public, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id, kinds_hidden, kinds_added' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri)`;
+
+/** A member's photographs, as the embed is reached from a list. */
+const MEMBER_PHOTOS = 'collection_places.places.place_photos';
 
 export async function fetchCollections(cityId: string): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
@@ -90,7 +93,17 @@ export async function fetchCollections(cityId: string): Promise<Collection[]> {
     // nothing, and Postgres is free to return that nothing differently
     // each call. The tie-break decides exactly the rows where the clock
     // has no answer, and the desk's order is the answer it has.
-    return q.order('created_at', { ascending: false }).order('sort_order', { nullsFirst: false });
+    // And one photograph a member (owner, 30 Oct 2026), as the catalog
+    // carries since #1221: a list's places are drawn as cards, and a card
+    // draws its cover. Measured against the project that morning, the 33
+    // public lists came to 1,256,347 characters, 657,081 of them their
+    // members' photographs; one apiece brings the whole to 703,167. The
+    // screens that page through a member's photographs ask for them
+    // (`fetchPlacePhotos`).
+    return oneCover(
+      q.order('created_at', { ascending: false }).order('sort_order', { nullsFirst: false }),
+      MEMBER_PHOTOS,
+    );
   };
 
   const { data, error } = await run(true);
@@ -147,12 +160,14 @@ const MY_COLLECTION_COLS =
   `id, slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, kinds_hidden, kinds_added, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
 
 export async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
-  const { data, error } = await supabase
+  // One photograph a member, as the public lists carry (`fetchCollections`).
+  // The cover picker, which offers every one, asks for the rest itself.
+  const { data, error } = await oneCover(supabase
     .from('collections')
     .select(MY_COLLECTION_COLS)
     // Newest first: the one you just made is the one you came back for.
     .eq('owner_id', ownerId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }), MEMBER_PHOTOS);
   if (error) throw new Error(error.message);
   return withMembers(data);
 }
