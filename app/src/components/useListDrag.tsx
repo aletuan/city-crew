@@ -71,7 +71,7 @@
 // the floating tab bar lies over is not "showing": the edge is measured
 // from the bar's top.
 
-import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Animated, PanResponder, StyleSheet, useWindowDimensions, View, type GestureResponderHandlers, type NativeScrollEvent,
   type StyleProp, type ViewStyle,
@@ -282,23 +282,53 @@ export function useListDrag({ keys, onMove, pitchGuess, grid = null, scroll = nu
     onPanResponderTerminate: () => dragTo.current.onDrop(),
     onPanResponderTerminationRequest: () => false,
   }));
-  const onPitch = (key: string, pitch: number) => { pitchByKey.current.set(key, pitch); };
+  // The three a row is handed, the same from one render to the next, so a
+  // row drawn behind `memo` is not drawn again for receiving them (owner,
+  // 30 Oct 2026): every slot the held row passes is a render of the whole
+  // list. Each reads the latest of itself, as the responder does above.
+  const onPitch = useCallback((key: string, pitch: number) => { pitchByKey.current.set(key, pitch); }, []);
+  const rowGets = useRef({ onLift, onRelease });
+  useEffect(() => { rowGets.current = { onLift, onRelease }; });
+  const stableLift = useCallback(
+    (index: number, pageY: number, pageX?: number) => rowGets.current.onLift(index, pageY, pageX),
+    [],
+  );
+  const stableRelease = useCallback(() => rowGets.current.onRelease(), []);
 
+  // What a row wears is a new object only when where it stands has moved.
+  // The held row's never does — it travels on `dragX` and `dragY`, which
+  // are the hook's for its life — and a row stepped aside keeps the one
+  // object for as long as it stays the same distance aside. So a slot
+  // passed redraws the rows that moved, not the list.
+  const [liftedStyle] = useState(() => [
+    s.lifted, { transform: [{ translateX: dragX }, { translateY: dragY }, { scale: 1.02 }] },
+  ]);
+  const asides = useRef(new Map<string, ViewStyle>());
+  const aside = (dx: number, dy: number) => {
+    const key = `${dx},${dy}`;
+    let style = asides.current.get(key);
+    if (!style) {
+      style = { transform: dx !== 0 ? [{ translateX: dx }, { translateY: dy }] : [{ translateY: dy }] };
+      asides.current.set(key, style);
+    }
+    return style;
+  };
   const styleOf = (i: number): Animated.WithAnimatedValue<StyleProp<ViewStyle>> => {
     if (!lift) return undefined;
-    if (lift.from === i) {
-      return [s.lifted, { transform: [{ translateX: dragX }, { translateY: dragY }, { scale: 1.02 }] }];
-    }
+    if (lift.from === i) return liftedStyle;
     if (grid) {
       const lead = grid.lead ?? 0;
       const { dx, dy } = gridStepAside(i + lead, lift.from + lead, lift.to + lead, grid.cols, grid.pitch);
-      return dx !== 0 || dy !== 0 ? { transform: [{ translateX: dx }, { translateY: dy }] } : undefined;
+      return dx !== 0 || dy !== 0 ? aside(dx, dy) : undefined;
     }
     const shift = stepAside(i, lift.from, lift.to, lift.pitch);
-    return shift !== 0 ? { transform: [{ translateY: shift }] } : undefined;
+    return shift !== 0 ? aside(0, shift) : undefined;
   };
 
-  return { lift, dragY, dragX, panHandlers: drag.panHandlers, onLift, onRelease, onPitch, styleOf, areaRef, onScrolled, onContentSizeChange };
+  return {
+    lift, dragY, dragX, panHandlers: drag.panHandlers, onLift: stableLift, onRelease: stableRelease, onPitch,
+    styleOf, areaRef, onScrolled, onContentSizeChange,
+  };
 }
 
 const s = StyleSheet.create({

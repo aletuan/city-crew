@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type AccessibilityActionEvent, AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, LayoutAnimation, Modal,
   type NativeScrollEvent,
@@ -227,8 +227,8 @@ function LiftCell({ index, style, children, ...cell }: {
  * VoiceOver cannot drag, so the card offers "Move up" and "Move down" as
  * accessibility actions, and says so in its hint.
  */
-function DraggableCard({
-  place, index, count, style, onOpen, onUp, onDown, onLift, onRelease, onPitch,
+const DraggableCard = memo(function DraggableCard({
+  place, index, count, style, onOpen, onStep, onLift, onRelease, onPitch,
 }: {
   place: Place;
   index: number;
@@ -236,9 +236,9 @@ function DraggableCard({
   /** What this card wears right now — raised and travelling, stepped
    *  aside, or nothing — from `useListDrag`'s `styleOf`. */
   style: ReturnType<ReturnType<typeof useListDrag>['styleOf']>;
-  onOpen: () => void;
-  onUp: () => void;
-  onDown: () => void;
+  onOpen: (slug: string) => void;
+  /** Move the place at `index` one step: -1 up, 1 down. */
+  onStep: (index: number, by: -1 | 1) => void;
   /** The hold completed: `pageY` is where the finger is, which the drag
    *  measures its travel from. */
   onLift: (index: number, pageY: number) => void;
@@ -256,16 +256,16 @@ function DraggableCard({
     >
       <PlaceCard
         place={place}
-        onPress={onOpen}
+        onPress={() => onOpen(place.slug)}
         testID={`collection-place-${index}`}
         onLongPress={(e) => onLift(index, e.nativeEvent.pageY)}
         delayLongPress={LIFT_AFTER_MS}
         onPressOut={onRelease}
-        {...stepsFor(t, index, count, 'list', onUp, onDown)}
+        {...stepsFor(t, index, count, 'list', () => onStep(index, -1), () => onStep(index, 1))}
       />
     </Animated.View>
   );
-}
+});
 
 /**
  * What VoiceOver is offered in place of the drag, and told in the hint: a
@@ -311,17 +311,16 @@ function stepsFor(
  * grid's (see `useListDrag`). Every tile is one size, so unlike the card
  * it reports no pitch.
  */
-function DraggableTile({
-  place, index, count, size, style, onOpen, onUp, onDown, onLift, onRelease,
+const DraggableTile = memo(function DraggableTile({
+  place, index, count, size, style, onOpen, onStep, onLift, onRelease,
 }: {
   place: Place;
   index: number;
   count: number;
   size: number;
   style: ReturnType<ReturnType<typeof useListDrag>['styleOf']>;
-  onOpen: () => void;
-  onUp: () => void;
-  onDown: () => void;
+  onOpen: (slug: string) => void;
+  onStep: (index: number, by: -1 | 1) => void;
   onLift: (index: number, pageY: number, pageX: number) => void;
   onRelease: () => void;
 }) {
@@ -331,16 +330,40 @@ function DraggableTile({
       <PlaceTile
         place={place}
         size={size}
-        onPress={onOpen}
+        onPress={() => onOpen(place.slug)}
         testID={`collection-tile-${index}`}
         onLongPress={(e) => onLift(index, e.nativeEvent.pageY, e.nativeEvent.pageX)}
         delayLongPress={LIFT_AFTER_MS}
         onPressOut={onRelease}
-        {...stepsFor(t, index, count, 'grid', onUp, onDown)}
+        {...stepsFor(t, index, count, 'grid', () => onStep(index, -1), () => onStep(index, 1))}
       />
     </Animated.View>
   );
-}
+});
+
+/**
+ * A place in somebody else's list, or in yours while it cannot be
+ * arranged: a card or a tile that only opens. Behind `memo` like the two
+ * above, for the same reason — see "drawn again only when it moved".
+ */
+const StillCard = memo(function StillCard({ place, index, chip, onOpen }: {
+  place: Place;
+  index: number;
+  chip: string | null | undefined;
+  onOpen: (slug: string) => void;
+}) {
+  return (
+    <PlaceCard place={place} onPress={() => onOpen(place.slug)} chip={chip} testID={`collection-place-${index}`} />
+  );
+});
+const StillTile = memo(function StillTile({ place, index, size, onOpen }: {
+  place: Place;
+  index: number;
+  size: number;
+  onOpen: (slug: string) => void;
+}) {
+  return <PlaceTile place={place} size={size} onPress={() => onOpen(place.slug)} testID={`collection-tile-${index}`} />;
+});
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
@@ -846,6 +869,20 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       coveredBelow: barCovers,
     },
   });
+
+  // ── drawn again only when it moved ──
+  //
+  // The screen draws again on a save anywhere (it reads your lists), on
+  // every slot a held card passes, and on a chip; each card used to be
+  // handed a fresh open and a fresh up and down every time, so every card
+  // drew again to show what it already showed (owner, 30 Oct 2026). The
+  // cards are behind `memo` now and handed these, which hold still: a
+  // step reads the order through `latest`, so a card not drawn since the
+  // last move still moves the place where it stands now.
+  const latest = useRef(shuffle);
+  useEffect(() => { latest.current = shuffle; });
+  const openPlace = useCallback((slug: string) => navigation.navigate('PlaceDetail', { slug }), [navigation]);
+  const step = useCallback((index: number, by: -1 | 1) => latest.current(index, index + by), []);
 
   // Deliberately inert, and now inert for two different reasons — which
   // is why the sentence branches. A private list has no address to send
@@ -1674,9 +1711,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             renderItem={({ item, index: at }) => {
               if (item === ADD_CELL) return addCell(tile);
               const index = at - lead;
-              const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
-              const up = () => shuffle(index, index - 1);
-              const down = () => shuffle(index, index + 1);
               if (grid) {
                 return canArrange
                   ? (
@@ -1686,14 +1720,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                       count={drafted.length}
                       size={tile}
                       style={styleOf(index)}
-                      onOpen={open}
-                      onUp={up}
-                      onDown={down}
+                      onOpen={openPlace}
+                      onStep={step}
                       onLift={onLift}
                       onRelease={onRelease}
                     />
                   )
-                  : <PlaceTile place={item} size={tile} onPress={open} testID={`collection-tile-${index}`} />;
+                  : <StillTile place={item} index={index} size={tile} onOpen={openPlace} />;
               }
               return canArrange
                 ? (
@@ -1702,9 +1735,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                     index={index}
                     count={drafted.length}
                     style={styleOf(index)}
-                    onOpen={open}
-                    onUp={up}
-                    onDown={down}
+                    onOpen={openPlace}
+                    onStep={step}
                     onLift={onLift}
                     onRelease={onRelease}
                     onPitch={onPitch}
@@ -1716,11 +1748,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 // the first of them in the card's order — as the pin and
                 // card do under a chip on Explore.
                 : (
-                  <PlaceCard
+                  <StillCard
                     place={item}
-                    onPress={open}
+                    index={index}
+                    onOpen={openPlace}
                     chip={narrowed ? kinds.find((k) => chosen.includes(k) && categoriesOf(item).includes(k)) : null}
-                    testID={`collection-place-${index}`}
                   />
                 );
             }}
