@@ -152,11 +152,15 @@ type CardProps = {
   onAccessibilityAction?: (e: { nativeEvent: { actionName: string } }) => void;
 };
 const cardProps = vi.hoisted(() => new Map<string, CardProps>());
+// And how many times each card and tile was drawn, by slug.
+const draws = vi.hoisted(() => new Map<string, number>());
+const drew = (slug: string) => draws.set(slug, (draws.get(slug) ?? 0) + 1);
 vi.mock('../components/PlaceCard', async () => {
   const { Pressable, Text } = await import('react-native');
   return {
     default: (p: CardProps) => {
       cardProps.set(p.place.slug, p);
+      drew(p.place.slug);
       return (
         <Pressable accessibilityRole="button" onPress={p.onPress}>
           <Text>{`card:${p.place.name_en}`}</Text>
@@ -193,6 +197,7 @@ vi.mock('../components/PlaceTile', async () => {
   return {
     default: (p: TileProps) => {
       tileProps.set(p.place.slug, p);
+      drew(p.place.slug);
       return (
         <Pressable accessibilityRole="button" onPress={p.onPress} testID={p.testID}>
           <Text>{`tile:${p.place.name_en}`}</Text>
@@ -1236,6 +1241,106 @@ describe('reordering', () => {
 it('does not show instructional tip boxes in collections', () => {
   show();
   expect(document.querySelector('[data-testid^="tip-"]')).toBeNull();
+});
+
+// The screen draws again on a save anywhere, on every slot a held card
+// passes and on a chip; a card draws again only when something it shows
+// has moved (owner, 30 Oct 2026). Before, each of those drew every card.
+describe('drawing the cards', () => {
+  const STALL = place('stall', 'Banh Mi Stall');
+  const route = { params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>;
+  const Y0 = 480;
+  const evt = {} as never;
+  const at = (dy: number) => ({ moveY: Y0 + dy }) as never;
+  beforeEach(() => {
+    state.places = [PHO, CAFE, MUSEUM, STALL];
+    state.mine = [collection({}, [PHO, CAFE, MUSEUM, STALL])];
+    responder.config = null;
+  });
+  const drawn = () => Object.fromEntries(draws);
+
+  // What a bookmark tapped anywhere hands the screen: your lists again,
+  // fetched afresh, this one unchanged.
+  it('draws no card again when your lists come back with this one unchanged', () => {
+    const { n } = nav();
+    const r = render(<CollectionDetailScreen navigation={n} route={route} />);
+    draws.clear();
+    state.mine = [collection({}, [PHO, CAFE, MUSEUM, STALL])];
+    r.rerender(<CollectionDetailScreen navigation={n} route={route} />);
+    expect(screen.getAllByText(/^card:/)).toHaveLength(4);
+    expect(drawn()).toEqual({});
+  });
+
+  it('draws no tile again either, on the grid', () => {
+    const { n } = nav();
+    views.fallback = null;
+    const r = render(<CollectionDetailScreen navigation={n} route={route} />);
+    expect(screen.getAllByText(/^tile:/)).toHaveLength(4);
+    draws.clear();
+    state.mine = [collection({}, [PHO, CAFE, MUSEUM, STALL])];
+    r.rerender(<CollectionDetailScreen navigation={n} route={route} />);
+    expect(drawn()).toEqual({});
+  });
+
+  it('draws again, for a slot the held card passes, only the card that stepped aside', () => {
+    show();
+    act(() => { cardProps.get('pho')!.onLongPress!({ nativeEvent: { pageY: Y0 } }); });
+    act(() => {
+      responder.config!.onMoveShouldSetPanResponderCapture!(evt, at(0));
+      responder.config!.onPanResponderGrant!(evt, at(0));
+      cardProps.get('pho')!.onPressOut!();
+    });
+    draws.clear();
+    // Past half of the next card: Cafe Giang steps up into the room.
+    act(() => { responder.config!.onPanResponderMove!(evt, at(170)); });
+    expect(screen.getByTestId('drag-cafe').style.transform).not.toBe('');
+    expect(drawn()).toEqual({ cafe: 1 });
+    // On past the museum too: the cafe stays as far aside as it was, so
+    // only the museum moves.
+    draws.clear();
+    act(() => { responder.config!.onPanResponderMove!(evt, at(500)); });
+    expect(drawn()).toEqual({ museum: 1 });
+  });
+
+  // Somebody else's list: cards that only open, and tiles the same.
+  it('draws no card or tile of somebody else’s list again when the catalog comes back unchanged', () => {
+    const { n } = nav();
+    state.mine = [];
+    state.cols = [theirs({}, [PHO, CAFE, MUSEUM, STALL])];
+    const r = render(<CollectionDetailScreen navigation={n} route={route} />);
+    expect(screen.getAllByText(/^card:/)).toHaveLength(4);
+    draws.clear();
+    state.cols = [theirs({}, [PHO, CAFE, MUSEUM, STALL])];
+    r.rerender(<CollectionDetailScreen navigation={n} route={route} />);
+    expect(drawn()).toEqual({});
+    cleanup();
+    views.fallback = null;
+    const g = render(<CollectionDetailScreen navigation={n} route={route} />);
+    expect(screen.getAllByText(/^tile:/)).toHaveLength(4);
+    draws.clear();
+    state.cols = [theirs({}, [PHO, CAFE, MUSEUM, STALL])];
+    g.rerender(<CollectionDetailScreen navigation={n} route={route} />);
+    expect(drawn()).toEqual({});
+  });
+
+  // A card not drawn since the last move still moves the place from where
+  // it stands now, not from where it stood when it was last drawn.
+  it('steps a card the last move left alone from the order as it is now', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      show();
+      draws.clear();
+      act(() => { cardProps.get('pho')!.onAccessibilityAction!({ nativeEvent: { actionName: 'moveDown' } }); });
+      // The two that changed places drew again; the stall, still fourth, did not.
+      expect(drawn()).toEqual({ cafe: 1, pho: 1 });
+      act(() => { cardProps.get('stall')!.onAccessibilityAction!({ nativeEvent: { actionName: 'moveUp' } }); });
+      expect(screen.getAllByText(/^card:/).map((e) => e.textContent)).toEqual([
+        'card:Cafe Giang', 'card:Pho 10', 'card:Banh Mi Stall', 'card:Fine Arts Museum',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('deleting', () => {
