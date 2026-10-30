@@ -77,6 +77,7 @@ import {
   type StyleProp, type ViewStyle,
 } from 'react-native';
 import { dropSlot, edgeSpeed, gridSlot, gridStepAside, stepAside } from '../lib/order';
+import type { Nav } from '../nav';
 import { fireHaptic } from './ui';
 
 /**
@@ -104,6 +105,31 @@ export const LIFT_AFTER_MS = 400;
  */
 export const SCROLL_EDGE = 72;
 export const SCROLL_MAX = 14;
+
+/**
+ * Back is a swipe from the left edge only, while the screen's rows can be
+ * held and dragged.
+ *
+ * iOS 26 made a swipe to the right from anywhere on a screen a way back,
+ * and react-native-screens turns it on for every screen that does not say
+ * otherwise (`fullScreenGestureEnabled`). It is a native recognizer, so it
+ * has the finger before the responder here can ask for it, and it yields
+ * only to a list that scrolls sideways. A tile dragged right across the
+ * collection's grid took the whole screen back with it instead (owner, 30
+ * Oct 2026); a card dragged up or down at a slant did the same.
+ *
+ * Turned off for the screen, not for the drag: the recognizer decides
+ * whether it may have a touch when the finger lands
+ * (`gestureRecognizer:shouldReceiveTouch:`), and a row lifts 400 ms after
+ * that, so a switch thrown at the lift arrives too late for the very drag
+ * it is for. The edge swipe stays, as it was before iOS 26, and so does
+ * the back button.
+ */
+export function useEdgeSwipeBack(navigation: Pick<Nav, 'setOptions'>, arranging: boolean) {
+  useEffect(() => {
+    navigation.setOptions({ fullScreenGestureEnabled: !arranging });
+  }, [navigation, arranging]);
+}
 
 /** The row in the finger: where it came from, the slot it hovers over, its
  *  own pitch, where the finger was when it lifted, and how far the list

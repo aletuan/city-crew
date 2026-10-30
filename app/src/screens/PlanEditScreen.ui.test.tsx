@@ -148,6 +148,7 @@ const nav = (): TestNav => {
   const action = { type: 'GO_BACK' };
   return {
     navigate: vi.fn(), goBack: vi.fn(), popToTop: vi.fn(), getParent: vi.fn(() => parent), parent,
+    setOptions: vi.fn(),
     dispatch: vi.fn(),
     addListener: vi.fn((name: string, fn: BeforeRemove) => {
       if (name !== 'beforeRemove') return () => {};
@@ -665,6 +666,24 @@ describe('editing', () => {
     (navigation.navigate as ReturnType<typeof vi.fn>).mockClear();
     press('add', 1);
     expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+});
+
+// iOS 26 goes back on a swipe to the right from anywhere, and a stop
+// dragged at a slant took the screen with it (owner, 30 Oct 2026). While
+// the stops can be put in order, back is the left edge's alone.
+describe('the swipe back', () => {
+  const swipeFromAnywhere = (n: TestNav) =>
+    ((n.setOptions as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as
+      { fullScreenGestureEnabled?: boolean } | undefined)?.fullScreenGestureEnabled;
+
+  it('is the left edge’s alone while the stops can be put in order', () => {
+    expect(swipeFromAnywhere(renderScreen())).toBe(false);
+  });
+
+  it('is anywhere on a plan of one stop, which has no order to change', () => {
+    planTrips.mockImplementation(() => [plan('classic', [stop(CAFE, 18 * 60, 60)])]);
+    expect(swipeFromAnywhere(renderScreen())).toBe(true);
   });
 });
 

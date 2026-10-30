@@ -252,7 +252,7 @@ const nav = () => {
   focusListeners.length = 0;
   const parent = { navigate: vi.fn() };
   const n = {
-    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent),
+    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), setOptions: vi.fn(),
     // The dock hands its slot back on focus; a test fires it through here.
     addListener: vi.fn((_e: string, cb: () => void) => { focusListeners.push(cb); return () => {}; }),
   };
@@ -1340,6 +1340,49 @@ describe('drawing the cards', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// iOS 26 goes back on a swipe to the right from anywhere, and that swipe
+// took a dragged tile's screen with it (owner, 30 Oct 2026). While the
+// list can be arranged, back is the left edge's alone.
+describe('the swipe back', () => {
+  /** The last word the screen gave on the swipe from anywhere. */
+  const swipeFromAnywhere = (raw: { setOptions: ReturnType<typeof vi.fn> }) =>
+    (raw.setOptions.mock.calls.at(-1)?.[0] as { fullScreenGestureEnabled?: boolean } | undefined)
+      ?.fullScreenGestureEnabled;
+
+  it('is the left edge’s alone on a list of yours that can be arranged', () => {
+    const { raw } = show();
+    expect(swipeFromAnywhere(raw)).toBe(false);
+  });
+
+  it('is anywhere again on a list of yours with one place, which has no order to change', () => {
+    state.mine = [collection({}, [PHO])];
+    const { raw } = show();
+    expect(swipeFromAnywhere(raw)).toBe(true);
+  });
+
+  it('is anywhere on somebody else’s list', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    const { raw } = show();
+    expect(swipeFromAnywhere(raw)).toBe(true);
+  });
+
+  // Narrowed by a chip, the cards do not lift; cleared, they do again.
+  it('follows the chips: anywhere while they narrow the list, the edge once they let it go', () => {
+    state.places = [
+      place('pho', 'Pho 10', { categories: ['eats'] } as Partial<Place>),
+      place('cafe', 'Cafe Giang', { categories: ['cafes'] } as Partial<Place>),
+    ];
+    state.mine = [collection({}, state.places as Place[])];
+    const { raw } = show();
+    expect(swipeFromAnywhere(raw)).toBe(false);
+    fireEvent.click(screen.getByTestId('collection-kinds-cafes'));
+    expect(swipeFromAnywhere(raw)).toBe(true);
+    fireEvent.click(screen.getByTestId('collection-kinds-cafes'));
+    expect(swipeFromAnywhere(raw)).toBe(false);
   });
 });
 
