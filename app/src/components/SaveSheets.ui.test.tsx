@@ -16,7 +16,7 @@
 // importing a component, its tests included. It was `lib/save.ui.test.tsx`
 // until 20 Oct 2026, when the drawing moved out of the provider.
 
-import React, { useEffect } from 'react';
+import React, { memo, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -80,7 +80,7 @@ vi.mock('../lib/data', async (orig) => ({
   logPlaceEvent,
 }));
 
-import { SaveProvider, useMyLists, useSave, useSaveActions, useSaveSheets } from '../lib/save';
+import { SaveProvider, useIsSaved, useMyLists, useSave, useSaveActions, useSavedSlugs, useSaveSheets } from '../lib/save';
 import SaveSheets from './SaveSheets';
 import { dropResume, takeResume } from '../lib/resume';
 
@@ -94,11 +94,12 @@ const list = (slug: string, members: string[] = []): Collection => ({
 
 /** A consumer, because `useSave` is the whole surface under test. */
 function Tapper({ target = place }: { target?: Place }) {
-  const { save, isSaved, mine } = useSave();
+  const { save, mine } = useSave();
+  const saved = useIsSaved(target.slug);
   return (
     <>
       <button type="button" onClick={() => save(target)}>tap the bookmark</button>
-      <span data-testid="saved">{String(isSaved(target.slug))}</span>
+      <span data-testid="saved">{String(saved)}</span>
       <span data-testid="count">{mine.data.length}</span>
     </>
   );
@@ -138,13 +139,19 @@ describe('the two halves', () => {
     acts?: ReturnType<typeof useSaveActions>;
     both?: ReturnType<typeof useSave>;
     sheets?: ReturnType<typeof useSaveSheets>;
+    isSaved?: boolean;
+    allSaved?: ReadonlySet<string>;
+    noneAsked?: ReadonlySet<string>;
   } = {};
   function Probe() {
     const lists = useMyLists();
     const acts = useSaveActions();
     const both = useSave();
     const sheets = useSaveSheets();
-    useEffect(() => { Object.assign(seen, { lists, acts, both, sheets }); });
+    const isSaved = useIsSaved('cong-caphe');
+    const allSaved = useSavedSlugs(true);
+    const noneAsked = useSavedSlugs(false);
+    useEffect(() => { Object.assign(seen, { lists, acts, both, sheets, isSaved, allSaved, noneAsked }); });
     return null;
   }
 
@@ -159,10 +166,13 @@ describe('the two halves', () => {
   it('hands out the acts on their own, and both as useSave', () => {
     world.mine = { ...world.mine, data: [list('weekend', ['cong-caphe'])] };
     render(<SaveProvider><Probe /></SaveProvider>);
-    expect(Object.keys(seen.acts!).sort()).toEqual(['askToSignIn', 'isSaved', 'save', 'toggle']);
+    expect(Object.keys(seen.acts!).sort()).toEqual(['askToSignIn', 'save', 'toggle']);
     // Search's ⊕ is the sheet's row, not a second way of writing.
     expect(seen.acts!.toggle).toBe(seen.sheets!.toggle);
-    expect(seen.acts!.isSaved('cong-caphe')).toBe(true);
+    expect(seen.isSaved).toBe(true);
+    expect([...seen.allSaved!]).toEqual(['cong-caphe']);
+    // Not asked for, the set is empty — the saved-only filter is off.
+    expect(seen.noneAsked!.size).toBe(0);
     expect(seen.both!.save).toBe(seen.acts!.save);
     expect(seen.both!.mine.data.map((c) => c.slug)).toEqual(['weekend']);
   });
@@ -170,7 +180,7 @@ describe('the two halves', () => {
   it('reads as nothing saved and nothing loaded outside a provider', () => {
     render(<Probe />);
     expect(seen.lists).toMatchObject({ data: [], loaded: false, error: null, loadedAt: null });
-    expect(seen.acts!.isSaved('anything')).toBe(false);
+    expect(seen.isSaved).toBe(false);
     seen.acts!.save({} as never);
     seen.acts!.askToSignIn();
     seen.lists!.reload();
@@ -716,5 +726,38 @@ describe('finishing what a guest started', () => {
     mount();
     tap();
     expect(takeResume(Date.now())?.tab).toBeNull();
+  });
+});
+
+// The bookmark's fill, asked one place at a time (owner, 30 Oct 2026).
+// It was a function over the whole saved set on the actions context, so a
+// tap handed every card a new value and every card drew again; now a card
+// draws only when its own answer moves.
+describe('useIsSaved', () => {
+  const draws: Record<string, number> = {};
+  // Memoised as a list's card is, so only its own subscription can draw it.
+  const Fill = memo(function Fill({ slug }: { slug: string }) {
+    const saved = useIsSaved(slug);
+    // After each commit of this card, not during its render.
+    useEffect(() => { draws[slug] = (draws[slug] ?? 0) + 1; });
+    return <span data-testid={`fill-${slug}`}>{String(saved)}</span>;
+  });
+  const fills = <><Fill slug="a" /><Fill slug="b" /><Fill slug="c" /></>;
+
+  it('draws the one card whose place was saved, and leaves the rest', () => {
+    for (const k of Object.keys(draws)) delete draws[k];
+    world.mine = { ...world.mine, data: [list('weekend', ['a'])] };
+    const view = render(<SaveProvider>{fills}</SaveProvider>);
+    expect(screen.getByTestId('fill-b').textContent).toBe('false');
+    const before = { ...draws };
+
+    // `b` goes into the list; `a` stays in it and `c` stays out.
+    world.mine = { ...world.mine, data: [list('weekend', ['a', 'b'])] };
+    view.rerender(<SaveProvider>{fills}</SaveProvider>);
+
+    expect(screen.getByTestId('fill-b').textContent).toBe('true');
+    expect(draws.b).toBe(before.b + 1);
+    expect(draws.a).toBe(before.a);
+    expect(draws.c).toBe(before.c);
   });
 });

@@ -48,7 +48,7 @@ import { useI18n } from '../lib/i18n';
 import { localized, localizedLang } from '../lib/localized';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
-import { useSaveActions } from '../lib/save';
+import { useIsSaved, useSaveActions } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
@@ -132,7 +132,7 @@ const HISTORY_ROW = 48;
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
   const { city, cities } = useCity();
-  const { save, isSaved, askToSignIn } = useSaveActions();
+  const { save, askToSignIn } = useSaveActions();
   const { width } = useWindowDimensions();
   const { loading: catalogLoading, data: places } = usePlaces();
   const inCatalog = useMemo(
@@ -205,7 +205,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // after it is a hook that some renders do not reach.
   const [measured, setMeasured] = useState<number | null>(null);
   const [addrOpen, setAddrOpen] = useState(false);
-  const saved = isSaved(route.params.slug);
+  const saved = useIsSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
 

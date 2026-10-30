@@ -43,7 +43,9 @@ vi.mock('../lib/i18n', () => ({
 }));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: () => {}, isSaved: () => false });
-  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave(),
+    // The bookmark's fill, a hook of its own — see `useIsSaved`.
+    useIsSaved: () => false };
 });
 vi.mock('../lib/auth', () => {
   const m = { useAuth: () => ({ session: { user: { id: 'me' } } }) };

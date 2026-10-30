@@ -129,7 +129,9 @@ vi.mock('../lib/auth', () => {
 const sv = vi.hoisted(() => ({ lists: [] as unknown[], toggle: vi.fn(async (_c: unknown, _p: unknown) => {}) }));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: vi.fn(), isSaved: () => false, toggle: sv.toggle });
-  return { useSave, useMyLists: () => ({ data: sv.lists }), useSaveActions: () => useSave() };
+  return { useSave, useMyLists: () => ({ data: sv.lists }), useSaveActions: () => useSave(),
+    // The bookmark's fill, a hook of its own — see `useIsSaved`.
+    useIsSaved: () => false };
 });
 
 import { Keyboard } from 'react-native';

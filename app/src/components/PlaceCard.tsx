@@ -13,7 +13,7 @@ import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
-import { useSaveActions } from '../lib/save';
+import { useIsSaved, useSaveActions } from '../lib/save';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
@@ -55,8 +55,8 @@ export default function PlaceCard({
   onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
 }) {
   const { t, lang } = useI18n();
-  const { save, isSaved } = useSaveActions();
-  const saved = isSaved(place.slug);
+  const { save } = useSaveActions();
+  const saved = useIsSaved(place.slug);
   const cover = coverOf(place);
   const reviews = fmtCount(place.rating_count);
   // The clock is read per render, not memoised, for the reason the Search

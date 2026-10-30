@@ -117,7 +117,9 @@ vi.mock('../lib/auth', () => {
 });
 vi.mock('../lib/save', () => {
   const useSave = () => ({ save: spies.save, askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.includes(slug) });
-  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
+  return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave(),
+    // The bookmark's fill, a hook of its own — see `useIsSaved`.
+    useIsSaved: (slug: string) => useSave().isSaved(slug) };
 });
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 // Two switches now, and they are not the same answer. `place_price` ships
