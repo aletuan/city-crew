@@ -114,14 +114,14 @@ export default function CollectionFormScreen({ navigation, route }: {
   // "mine" can know it. Everything downstream (choices, Auto) is the
   // same either way.
   //
-  // The catalog carries one photograph a place, so a copy asks for the
-  // rest, for the picker below; until they come it offers the covers.
-  // Your own list's members are your lists' own rows, which carry them all.
-  const copyPhotos = usePlacePhotos(copyFrom ? copyFrom.placeSlugs : null);
-  const members = copyFrom
+  // Both carry one photograph a place — the catalog since #1221, your own
+  // lists since the step after — so the picker below asks for the rest,
+  // and offers the covers until they come.
+  const listed = copyFrom
     ? copyFrom.placeSlugs.map((slug) => places.find((p) => p.slug === slug)).filter((p): p is Place => !!p)
-      .map((p) => withPhotos(p, copyPhotos.data[p.slug]))
     : col ? membersOf(col, places) : [];
+  const allPhotos = usePlacePhotos(listed.length ? listed.map((p) => p.slug) : null);
+  const members = listed.map((p) => withPhotos(p, allPhotos.data[p.slug]));
   // Every photograph of every place, not one apiece.
   //
   // One apiece was the rule for a day, and the reasoning was sound on

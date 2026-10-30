@@ -13,6 +13,39 @@ import { everyPage } from './pages';
 /** A place's photographs, as every card and page reads them (`photosOf`). */
 const PHOTO_EMBED = 'place_photos(id, photo_uri, is_cover, is_hidden, sort_order, attribution_name)';
 
+/** The query-builder calls `oneCover` makes — narrowed to them, so it
+ *  takes any read whatever its row type. */
+type Shapes<Q> = {
+  eq(column: string, value: boolean): Q;
+  order(column: string, options: { referencedTable: string; ascending: boolean }): Q;
+  limit(count: number, options: { referencedTable: string }): Q;
+};
+
+/**
+ * Narrow an embedded `place_photos` to the one photograph a card draws.
+ *
+ * `table` is the embed's path from the row being read — `place_photos` on
+ * a place, `collection_places.places.place_photos` on a list. The one kept
+ * is the one `coverOf` would pick from the whole set — visible, the marked
+ * cover first, then `sort_order` — so a card draws the same picture it
+ * drew from all of them. That covers the place with photographs and no
+ * marked cover (one, in Đà Nẵng, on 29 Oct 2026), which a bare
+ * `is_cover = true` filter, as the search index uses, would have left
+ * blank. `id` last makes the pick total: a sort with ties is free to break
+ * them differently per execution, and the cached answer and the fresh one
+ * must draw the same cover.
+ *
+ * Whatever wants the rest asks `fetchPlacePhotos`.
+ */
+export function oneCover<Q extends Shapes<Q>>(q: Q, table: string): Q {
+  return q
+    .eq(`${table}.is_hidden`, false)
+    .order('is_cover', { referencedTable: table, ascending: false })
+    .order('sort_order', { referencedTable: table, ascending: true })
+    .order('id', { referencedTable: table, ascending: true })
+    .limit(1, { referencedTable: table });
+}
+
 // `city_id` is selected, not just filtered on. A place that travels
 // outside the city query — inside a collection that reaches more than one
 // city — has to be able to say where it is, and a row that only ever
@@ -51,37 +84,24 @@ export async function fetchPlaces(cityId: string, meId?: string | null): Promise
     // the same order — the hero, picked by "first match", was flipping
     // covers between the two on any city with no pinned hero to hold it
     // still (Đà Lạt, switching cities).
-    return scoped
+    const sorted = scoped
       .order('sort_order', { ascending: true, nullsFirst: false })
-      .order('slug', { ascending: true })
-      // One photograph a place, not all of them (owner, 29 Oct 2026). The
-      // catalog is drawn as cards, and a card shows its cover and nothing
-      // else; the place page asks for the rest when it opens
-      // (`fetchPlacePhotos`). Measured against the project that day, the
-      // photographs were 936,720 of Saigon's ~1.5 million cached
-      // characters — 446 places at about seven each — and the cover alone
-      // is 136,874: the launch cache roughly halves, and moves away from
-      // Android's 2 MB cursor window.
-      //
-      // The one kept is the one `coverOf` would pick from the whole set —
-      // visible, the marked cover first, then `sort_order` — so a card
-      // draws the same picture it drew from all seven. That covers the
-      // place with photographs and no marked cover (one, in Đà Nẵng, that
-      // day), which a bare `is_cover = true` filter, as the search index
-      // uses, would have left blank. `id` last makes the pick total, for
-      // the reason `slug` does above: the cached answer and the fresh one
-      // must draw the same cover.
-      //
-      // No `CACHE_VERSION` bump: a row is the shape it was, with a shorter
-      // list in one field. A cache written before this still holds every
-      // photograph and draws exactly as it did, until the next fetch
-      // replaces it — a bump would have bought each phone one launch
-      // without a cache, for nothing.
-      .eq('place_photos.is_hidden', false)
-      .order('is_cover', { referencedTable: 'place_photos', ascending: false })
-      .order('sort_order', { referencedTable: 'place_photos', ascending: true })
-      .order('id', { referencedTable: 'place_photos', ascending: true })
-      .limit(1, { referencedTable: 'place_photos' });
+      .order('slug', { ascending: true });
+    // One photograph a place, not all of them (owner, 29 Oct 2026). The
+    // catalog is drawn as cards, and a card shows its cover and nothing
+    // else; the place page asks for the rest when it opens
+    // (`fetchPlacePhotos`). Measured against the project that day, the
+    // photographs were 936,720 of Saigon's ~1.5 million cached
+    // characters — 446 places at about seven each — and the cover alone
+    // is 136,874: the launch cache roughly halves, and moves away from
+    // Android's 2 MB cursor window.
+    //
+    // No `CACHE_VERSION` bump: a row is the shape it was, with a shorter
+    // list in one field. A cache written before this still holds every
+    // photograph and draws exactly as it did, until the next fetch
+    // replaces it — a bump would have bought each phone one launch
+    // without a cache, for nothing.
+    return oneCover(sorted, 'place_photos');
   };
 
   // Every page, not the first (owner, 29 Oct 2026). The server answers a

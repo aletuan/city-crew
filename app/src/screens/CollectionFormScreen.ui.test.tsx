@@ -198,11 +198,29 @@ describe('the cover picker', () => {
     // best picture of a bar is often not the one the catalog marked as
     // that bar's cover, and one tile apiece hid it with no way through.
     openRename([HEIM, SAM]);
-    // Your own list's places are your lists' own rows, whole: nothing to ask.
-    expect(photos.asked.every((a) => a === null)).toBe(true);
 
     expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
     expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
+  });
+
+  // Your own lists carry one photograph a member too (owner, 30 Oct
+  // 2026): the picker asks for the rest, and offers the covers meanwhile.
+  it('asks for the rest of each member’s photographs, offering covers until they come', () => {
+    const coverOnly = (p: Place) => ({ ...p, place_photos: p.place_photos.slice(0, 1) });
+    openRename([coverOnly(HEIM), coverOnly(SAM)]);
+    expect(photos.asked.at(-1)).toEqual(['heim', 'sam']);
+    expect(screen.getByRole('button', { name: 'Heim' })).toBeTruthy();
+
+    cleanup();
+    photos.data = { heim: HEIM.place_photos, sam: SAM.place_photos };
+    openRename([coverOnly(HEIM), coverOnly(SAM)]);
+    expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
+  });
+
+  it('asks nothing for a brand-new list, which has no places to picture', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    expect(photos.asked.every((a) => a === null)).toBe(true);
   });
 
   it('numbers the tiles within a place, which a flat list of photos could not', () => {
