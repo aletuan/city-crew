@@ -19,7 +19,7 @@ import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
-import { colors } from '../theme';
+import { colors, coverScrim } from '../theme';
 
 const tourState = vi.hoisted(() => ({ step: -1, next: vi.fn() }));
 vi.mock('../components/SignupTour', async orig => ({
@@ -1766,6 +1766,17 @@ describe('the community shelf', () => {
     const quiet = screen.getByText('List quiet');
     expect(loved.compareDocumentPosition(quiet) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('7')).toBeTruthy();
+  });
+
+  // The one ramp both cover cards wear — see `coverScrim` for why it is
+  // these stops.
+  it('lays the cover scrim under each card’s words', () => {
+    state.places.data = [place('p1')];
+    state.cols.data = [collection('quiet', ['p1'])];
+    render(<ExploreScreen navigation={nav()} />);
+    const scrim = screen.getByTestId('shelf-card-scrim');
+    expect(scrim.getAttribute('colors')).toBe(coverScrim.colors.join(','));
+    expect(scrim.getAttribute('locations')).toBe(coverScrim.locations.join(','));
   });
 
   it('counts members with the right plural', () => {

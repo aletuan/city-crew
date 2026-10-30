@@ -42,7 +42,7 @@ import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { accentFade, colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
+import { accentFade, colors, coverScrim, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 type ListRow = ShelfRow<Collection>;
@@ -1256,15 +1256,16 @@ export default function CollectionsScreen({ navigation, route }: {
                           {uri
                             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
                             : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
-                          {/* The Explore shelf's scrim, verbatim — same
-                              object, same card language, second surface. */}
+                          {/* The Explore shelf's scrim, the one `coverScrim`
+                              — same object, same card language, second
+                              surface. It began at 55% here once, to give the
+                              picture back; that left a white photograph's
+                              title at 2.5:1. See `coverScrim`. */}
                           <LinearGradient
-                            colors={['rgba(10,11,10,0.22)', 'rgba(10,11,10,0.10)', 'rgba(10,11,10,0.94)']}
-                            // Was 0.42, when the text ran to three lines. Two
-                            // lines need less covering, and every point the ramp
-                            // starts later is picture given back.
-                            locations={[0, 0.55, 1]}
+                            colors={coverScrim.colors}
+                            locations={coverScrim.locations}
                             style={StyleSheet.absoluteFill}
+                            testID="collection-card-scrim"
                           />
                           {fresh ? <NewBadge /> : null}
                           <View style={s.gcardText}>
