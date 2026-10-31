@@ -102,6 +102,8 @@ const idx = vi.hoisted(() => ({
   real: false, server: [] as Place[],
   // The launch has not read who is signed in yet: `userId` undefined.
   pending: false,
+  // Who is signed in once it has, when not the real index's 'u1'.
+  uid: null as string | null,
 }));
 vi.mock('../lib/searchIndex', async (orig) => {
   const real = await orig<typeof import('../lib/searchIndex')>();
@@ -119,7 +121,7 @@ vi.mock('../lib/data', async (orig) => ({
   fetchSearchIndex: async () => idx.server,
 }));
 vi.mock('../lib/auth', () => {
-  const m = { useAuth: () => ({ session: null, ready: true, email: null, userId: idx.real ? 'u1' : idx.pending ? undefined : null }) };
+  const m = { useAuth: () => ({ session: null, ready: true, email: null, userId: idx.real ? 'u1' : idx.pending ? undefined : idx.uid }) };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
@@ -284,6 +286,7 @@ beforeEach(async () => {
   idx.asks = [];
   idx.real = false;
   idx.pending = false;
+  idx.uid = null;
   idx.server = [];
   forgetSearchIndex();
   g.addMany.mockClear();
@@ -579,13 +582,19 @@ describe('typing a query', () => {
     expect(within(row('Coffee gallery')).queryByTestId('new-badge')).toBeNull();
   });
 
-  it('marks nothing while it does not yet know who is reading', () => {
+  // Yours too (owner, 31 Oct 2026), and so the same answer before the
+  // launch knows who is reading as after: nothing to come and go.
+  it('marks the reader’s own new list too, before and after it knows who they are', () => {
     idx.pending = true;
-    cat.cols = [{ ...crawl, created_at: new Date(Date.now() - 86_400_000).toISOString() }];
-    mount();
+    cat.cols = [{ ...crawl, owner_id: 'u1', created_at: new Date(Date.now() - 86_400_000).toISOString() }];
+    const { rerender } = mount();
     type('coffee');
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
+    idx.pending = false;
+    idx.uid = 'u1';
+    rerender();
     expect(screen.getByText('Coffee crawl')).toBeTruthy();
-    expect(screen.queryByTestId('new-badge')).toBeNull();
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
   });
 
   it('opens a collection and remembers the query', () => {

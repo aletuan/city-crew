@@ -489,7 +489,7 @@ export default function CollectionsScreen({ navigation, route }: {
   route: { params?: { tab?: 'yours' | 'community'; at?: number } };
 }) {
   const { t } = useI18n();
-  const { session, userId: reader } = useSession();
+  const { session } = useSession();
   const { cities } = useCityList();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);
@@ -576,10 +576,7 @@ export default function CollectionsScreen({ navigation, route }: {
 
   const me = session?.user?.id;
   // Read once a render: a list that turns eight days old while the tab is
-  // open keeps its badge until the next one, which is soon enough. Whose
-  // lists are whose comes from `reader` (`userId`), not `me`: `me` is
-  // undefined both before the session is read and for a guest, and the
-  // badge has to tell the two apart — see `isNewList`.
+  // open keeps its badge until the next one, which is soon enough.
   const now = Date.now();
   const newWord = t('New', 'Mới', '新着', '新', '新');
 
@@ -1241,7 +1238,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       const members = membersOf(c, places).length;
                       const reason = reasonFor(c.slug);
                       const my = !!c.id && myLikes.includes(c.id);
-                      const fresh = isNewList(c, reader, now);
+                      const fresh = isNewList(c, now);
                       return (
                         <PressableScale
                           key={c.slug}
@@ -1250,7 +1247,7 @@ export default function CollectionsScreen({ navigation, route }: {
                           testID={item.own ? undefined : `collection-card-${item.at + j}`}
                           accessibilityRole="button"
                           accessibilityLabel={item.own
-                            ? `${t(c.title_en, c.title_vi, c.title_ja)}, ${visibilityOf(c)}`
+                            ? `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}, ${visibilityOf(c)}`
                             : `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}`}
                         >
                           {uri
@@ -1393,7 +1390,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 // did.
                 const my = !!c.id && myLikes.includes(c.id);
                 const blurb = t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() || '';
-                const fresh = isNewList(c, reader, now);
+                const fresh = isNewList(c, now);
                 const byline = c.curator_handle
                   ? `${t('by', 'bởi', 'by', '来自', '來自')} ${atHandle(c.curator_handle)}, ${reason ?? placesOf(n)}`
                   : undefined;

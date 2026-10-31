@@ -3,8 +3,8 @@
 // One mark for every place a collection card is drawn — the Collections
 // grid and list, Explore's shelf, Search — so a list made this week looks
 // new everywhere it turns up, not on one screen. Which lists are new is
-// `isNewList` (`lib/newest`): made in the last seven days, by somebody
-// other than the reader.
+// `isNewList` (`lib/newest`): made in the last seven days, by anyone —
+// the reader's own included (owner, 31 Oct 2026).
 //
 // A label, not a button: it sits on a card that is already the control,
 // so it takes no press and is not on the button scale. The card's own

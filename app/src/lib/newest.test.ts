@@ -63,30 +63,23 @@ describe('isNewList', () => {
 
   it('marks a list for seven days from when it was made', () => {
     expect(NEW_LIST_DAYS).toBe(7);
-    expect(isNewList({ created_at: at(0), owner_id: 'u-b' }, 'me', NOW)).toBe(true);
-    expect(isNewList({ created_at: at(7 * DAY - 1), owner_id: 'u-b' }, 'me', NOW)).toBe(true);
-    expect(isNewList({ created_at: at(7 * DAY), owner_id: 'u-b' }, 'me', NOW)).toBe(false);
+    expect(isNewList({ created_at: at(0) }, NOW)).toBe(true);
+    expect(isNewList({ created_at: at(7 * DAY - 1) }, NOW)).toBe(true);
+    expect(isNewList({ created_at: at(7 * DAY) }, NOW)).toBe(false);
   });
 
-  it('never marks the reader\'s own list, and marks the desk\'s like anyone\'s', () => {
-    expect(isNewList({ created_at: at(DAY), owner_id: 'me' }, 'me', NOW)).toBe(false);
-    expect(isNewList({ created_at: at(DAY), owner_id: null }, 'me', NOW)).toBe(true);
-    // Signed out, nothing is yours.
-    expect(isNewList({ created_at: at(DAY), owner_id: 'me' }, null, NOW)).toBe(true);
-    // Not even an ownerless one, which a careless match calls a guest's.
-    expect(isNewList({ created_at: at(DAY), owner_id: null }, null, NOW)).toBe(true);
-  });
-
-  // Before the launch knows who is reading, nothing is new: a guest's
-  // answer then would mark the reader's own list until the session came.
-  it('marks nothing while the reader is not yet known', () => {
-    expect(isNewList({ created_at: at(DAY), owner_id: 'u-b' }, undefined, NOW)).toBe(false);
-    expect(isNewList({ created_at: at(DAY), owner_id: null }, undefined, NOW)).toBe(false);
+  // Yours too (owner, 31 Oct 2026): the mark is the list's, whoever reads
+  // it, so a list's owner — or its having none — changes nothing.
+  it('marks a new list whoever made it', () => {
+    const yours = { created_at: at(DAY), owner_id: 'me' };
+    const desks = { created_at: at(DAY), owner_id: null };
+    expect(isNewList(yours, NOW)).toBe(true);
+    expect(isNewList(desks, NOW)).toBe(true);
   });
 
   it('cannot call a list new that cannot say when it was made, or claims a time to come', () => {
-    expect(isNewList({ created_at: null, owner_id: 'u-b' }, 'me', NOW)).toBe(false);
-    expect(isNewList({ owner_id: 'u-b' }, 'me', NOW)).toBe(false);
-    expect(isNewList({ created_at: at(-DAY), owner_id: 'u-b' }, 'me', NOW)).toBe(false);
+    expect(isNewList({ created_at: null }, NOW)).toBe(false);
+    expect(isNewList({}, NOW)).toBe(false);
+    expect(isNewList({ created_at: at(-DAY) }, NOW)).toBe(false);
   });
 });
