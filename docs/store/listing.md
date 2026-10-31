@@ -738,25 +738,82 @@ diện nhỏ (thẻ Trips, empty state, nút, tiêu đề).
 • 修正：写真を削除した後にスポットページが閉じることがありました。
 ```
 
+## Release notes v1.0.12 (What's New)
+
+Viết từ các PR merge sau build 1.0.11 (40, main 6206203) — #1202 → #1232.
+1.0.11 đã lên App Store nên train của nó đã đóng; bản này nâng lên 1.0.12.
+Binary mới cần vì #1207/#1213/#1217 nâng các bản vá Expo SDK 58 (expo
+58.0.21, React Native 0.88.1); `runtimeVersion` vẫn là exposdk:58.0.0 nên OTA
+vẫn tới 1.0.11. Cần thử trên máy: bản đồ và pin, nhãn "Mới", Hoạt động, Lưu
+bản sao, Thực hiện lại kế hoạch, kéo ô trong lưới trên iOS 26, cuộn Khám phá. Không có mặt ở đây: plan-assist (#1202,
+#1203, server), review_pace (#1210, Data Desk), Maestro (#1206), thang nút
+(#1211), "chuyến đi" thay "lịch trình" (#1205, chỉ chữ tiếng Việt), tâm Ninh
+Bình (#1212, nằm trong dòng kế hoạch), trace (#1219), cache Android
+(#1223), độ tương phản (#1229, #1230), docs, test. #1220–#1227 gộp thành
+dòng "mượt hơn".
+
+### EN
+
+```
+• Collections made in the last seven days wear a "New" badge.
+• Activity is now a log of you and other people: besides likes and copies of your collections, it shows collections you liked or saved a copy of, and new friendships.
+• Save a copy of someone's collection from the corner of its card.
+• Explore puts proven favorites first: a perfect score needs many reviews behind it, and a chain's branches no longer crowd the top.
+• Plans: Regenerate suggests places other than the ones you just saw. A plan for a city you're not in starts at its center.
+• Explore shows the date and weather of the city you're looking at.
+• Profile: "Hometown" is now "City".
+• Explore, Search and collections open faster and scroll and type more smoothly.
+• Fixed: on iOS 26, dragging a tile to the right in a collection's grid could take you back a screen.
+```
+
+### VI
+
+```
+• Bộ sưu tập tạo trong bảy ngày gần đây có nhãn "Mới".
+• Hoạt động giờ là nhật ký giữa bạn và mọi người: ngoài lượt thích và sao chép bộ sưu tập của bạn, còn có bộ sưu tập bạn đã thích hay lưu bản sao, và những người vừa thành bạn bè.
+• Lưu bản sao bộ sưu tập của người khác ngay ở góc thẻ.
+• Khám phá xếp những chỗ đã được nhiều người kiểm chứng lên trước: điểm tuyệt đối phải có nhiều đánh giá, và các chi nhánh cùng chuỗi không còn chiếm hết đầu danh sách.
+• Kế hoạch: Thực hiện lại gợi ý những chỗ khác với lần vừa xem. Lên kế hoạch cho thành phố bạn không ở thì bắt đầu từ trung tâm.
+• Khám phá hiện ngày và thời tiết của thành phố bạn đang xem.
+• Hồ sơ: "Quê quán" đổi thành "Thành phố".
+• Khám phá, Tìm kiếm và bộ sưu tập mở nhanh hơn, cuộn và gõ mượt hơn.
+• Sửa lỗi: trên iOS 26, kéo một ô sang phải trong lưới bộ sưu tập có thể bị quay lại màn trước.
+```
+
+### JA
+
+```
+• 作成から7日以内のコレクションに「新着」バッジが付きます。
+• アクティビティが、あなたと他の人とのやりとりの記録になりました。あなたのコレクションへの「いいね」やコピーに加え、あなたが「いいね」やコピーをしたコレクション、新しくつながった友達も表示します。
+• 他の人のコレクションは、カードの角から「コピーを保存」できます。
+• 探索では実績のあるスポットが先に並びます。満点の評価には十分なレビュー数が必要になり、同じチェーンの店舗が上位を占めなくなりました。
+• プラン：「作り直す」で、直前に表示されたのとは別のスポットを提案します。今いない都市のプランは、その都市の中心から始まります。
+• 探索に、表示中の都市の日付と天気が出ます。
+• プロフィール：「出身地」は「都市」になりました。
+• 探索・検索・コレクションの表示が速くなり、スクロールと入力がよりスムーズに。
+• 修正：iOS 26で、コレクションのグリッドでタイルを右にドラッグすると前の画面に戻ることがありました。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-10-26, database production có **10 thành phố active / 1.138 địa điểm đã
+2026-10-31, database production có **11 thành phố active / 1.242 địa điểm đã
 duyệt**:
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| TP. Hồ Chí Minh | 420 |
-| Hà Nội | 390 |
+| TP. Hồ Chí Minh | 448 |
+| Hà Nội | 412 |
+| Đà Lạt | 94 |
+| Đà Nẵng | 89 |
 | Melbourne | 83 |
-| Đà Nẵng | 76 |
-| Đà Lạt | 71 |
-| Huế | 50 |
-| Hội An | 24 |
-| Hải Phòng | 10 |
+| Huế | 64 |
+| Hội An | 26 |
+| Hải Phòng | 11 |
 | Vũng Tàu | 9 |
 | Ninh Bình | 5 |
+| Buôn Ma Thuột | 1 — **chưa có trong Description** |
 
 Từ 1.0.11 câu mở đầu Description kể tên các thành phố, không đếm số ("seven
 cities" đã sai từ khi Hội An, Hải Phòng, Ninh Bình bật lên). Thêm hay tắt một
