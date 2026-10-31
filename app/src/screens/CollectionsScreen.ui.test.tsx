@@ -1487,31 +1487,34 @@ describe('the New badge', () => {
     expect(screen.getByRole('button', { name: 'List old' })).toBeTruthy();
   });
 
-  it('marks nothing on the shelf until it knows who is reading', () => {
+  it('marks the shelf before it knows who is reading, and keeps it', () => {
     state.pending = true;
     state.cols.data = [col('fresh', ['a'], { owner_id: 'u2', created_at: ago(2) })];
     const { rerender } = show();
-    expect(screen.queryByTestId('new-badge')).toBeNull();
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     state.pending = false;
     rerender(<CollectionsScreen navigation={nav()} route={{ params: undefined }} />);
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
   });
 
-  it('never on your own, on either tab, in either shape', async () => {
+  // Yours too (owner, 31 Oct 2026): the author sees their new list the
+  // way everybody else does.
+  it('on your own as well, on either tab, in either shape', async () => {
     state.uid = 'u1';
     const own = col('mine1', ['a'], { owner_id: 'u1', is_public: true, created_at: ago(1) });
-    state.mine.data = [own];
-    state.cols.data = [own];
+    const older = col('mine2', ['a'], { owner_id: 'u1', is_public: true, created_at: ago(30) });
+    state.mine.data = [own, older];
+    state.cols.data = [own, older];
     show();
-    expect(screen.getByRole('button', { name: 'List mine1, Public' })).toBeTruthy();
-    expect(screen.queryByTestId('new-badge')).toBeNull();
+    expect(within(screen.getByRole('button', { name: 'List mine1, New, Public' })).getByTestId('new-badge')).toBeTruthy();
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     cleanup();
     show({ tab: 'community' });
     expect(screen.getByText('List mine1')).toBeTruthy();
-    expect(screen.queryByTestId('new-badge')).toBeNull();
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'List view' }));
     expect(screen.getByText('List mine1')).toBeTruthy();
-    expect(screen.queryByTestId('new-badge')).toBeNull();
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
   });
 });
 

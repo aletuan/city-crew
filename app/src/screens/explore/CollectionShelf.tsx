@@ -40,7 +40,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { city } = useCurrentCity();
   const cols = useCollections();
   const { likes, rankLikes, myLikes, toggleLike } = useLikes();
-  const { session, userId: reader } = useSession();
+  const { session } = useSession();
   const uid = session?.user?.id;
   const { askToSignIn } = useSaveActions();
 
@@ -155,7 +155,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                   style={StyleSheet.absoluteFill}
                   testID="shelf-card-scrim"
                 />
-                {isNewList(c, reader, now) ? <NewBadge /> : null}
+                {isNewList(c, now) ? <NewBadge /> : null}
                 <View style={s.shelfCardText}>
                   {/* One line, always. A second line pushed the count down
                       on some tiles and not others, so a row of cards that

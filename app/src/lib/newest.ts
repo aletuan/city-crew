@@ -61,27 +61,29 @@ export function newestPlaces<T extends Dated>(places: readonly T[], n: number = 
 //
 // `created_at` carries the caveat above: the seeded lists share the
 // instant the column was added, in August, so none of them can pass for
-// new. A list the reader made is never marked: "New" is news about
-// somebody else's work, and your own you know.
+// new.
 //
-// Nor is any list while the reader is not yet known (`me` undefined —
-// `useSession().userId` before the launch has read anything). Answering
-// "a guest" then marked the reader's own fresh list for the second it
-// took the session to arrive, and the badge came and went on Explore as
-// the app opened (owner, 29 Oct 2026). Unknown waits; it never guesses.
+// ── yours too (owner, 31 Oct 2026) ──
+//
+// The mark is the same for whoever is reading, the author included: a
+// list says what it is, not what it is to you, and an author looking at
+// the shelf sees their new list the way everybody else does. So it
+// depends on the list alone, on every tab — Yours as well as Community.
+//
+// Rejected, and what it was: from 29 to 31 Oct the reader's own list was
+// never marked ("New" as news about somebody else's work), which needed
+// the reader — and so a third answer while the session had not been read
+// yet, marking nothing, because answering "a guest" then had the badge on
+// the reader's own list come and go as the app opened. With no reader in
+// the question, there is no moment at launch for it to be wrong in.
 
 /** How long a collection is new for, in days. */
 export const NEW_LIST_DAYS = 7;
 
 /** Whether a collection gets the "New" mark: made in the last
- *  `NEW_LIST_DAYS`, by somebody other than `me` — null for a guest,
- *  undefined while nobody knows yet, which marks nothing. */
-export function isNewList(
-  c: { created_at?: string | null; owner_id?: string | null },
-  me: string | null | undefined,
-  now: number,
-): boolean {
-  if (me === undefined || !c.created_at || (me && c.owner_id === me)) return false;
+ *  `NEW_LIST_DAYS`, by anyone. */
+export function isNewList(c: { created_at?: string | null }, now: number): boolean {
+  if (!c.created_at) return false;
   const age = now - Date.parse(c.created_at);
   return age >= 0 && age < NEW_LIST_DAYS * 86_400_000;
 }

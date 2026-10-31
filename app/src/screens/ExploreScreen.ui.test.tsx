@@ -1828,9 +1828,9 @@ describe('the community shelf', () => {
   });
 
   // The one mark a card does wear (owner, 29 Oct 2026): "New", on a list
-  // made this week by somebody else — the same word the Collections tab
-  // puts on the same list.
-  it('marks a list made this week New, but not an older one or your own', () => {
+  // made this week — the same word the Collections tab puts on the same
+  // list, and on the reader's own as well (owner, 31 Oct 2026).
+  it('marks a list made this week New, your own too, but not an older one', () => {
     const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
     state.uid = 'u1';
     state.places.data = [place('p1')];
@@ -1842,13 +1842,13 @@ describe('the community shelf', () => {
     render(<ExploreScreen navigation={nav()} />);
     expect(within(shelfCard('List fresh')).getByTestId('new-badge')).toBeTruthy();
     expect(within(shelfCard('List old')).queryByTestId('new-badge')).toBeNull();
-    expect(within(shelfCard('List mine')).queryByTestId('new-badge')).toBeNull();
+    expect(within(shelfCard('List mine')).getByTestId('new-badge')).toBeTruthy();
   });
 
-  // The badge came and went as the app opened (owner, 29 Oct 2026): the
-  // session arrives after the shelf, and until it did the reader's own
-  // new list read as a stranger's. Unknown now marks nothing.
-  it('marks nothing until it knows who is reading, then only the others', () => {
+  // The badge came and went as the app opened (owner, 29 Oct 2026),
+  // while the shelf waited on the session to tell the reader's own list
+  // from a stranger's. It no longer asks, so it no longer waits.
+  it('marks the same lists before it knows who is reading as after', () => {
     const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
     state.pending = true;
     state.places.data = [place('p1')];
@@ -1857,15 +1857,14 @@ describe('the community shelf', () => {
       collection('theirs', ['p1'], { owner_id: 'u2', created_at: ago(1) } as Partial<Collection>),
     ];
     const { rerender } = render(<ExploreScreen navigation={nav()} />);
-    expect(screen.queryByTestId('new-badge')).toBeNull();
-    // Known to be nobody: a guest, to whom every new list is news.
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(2);
     state.pending = false;
     rerender(<ExploreScreen navigation={nav()} />);
     expect(screen.getAllByTestId('new-badge')).toHaveLength(2);
     state.uid = 'u1';
     rerender(<ExploreScreen navigation={nav()} />);
     expect(within(shelfCard('List theirs')).getByTestId('new-badge')).toBeTruthy();
-    expect(within(shelfCard('List mine')).queryByTestId('new-badge')).toBeNull();
+    expect(within(shelfCard('List mine')).getByTestId('new-badge')).toBeTruthy();
   });
 
   it('opens a list from its card', () => {
