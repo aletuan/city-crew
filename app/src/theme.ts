@@ -546,6 +546,14 @@ export const ringTrack = { light: SIDES.light.ringTrack, dark: SIDES.dark.ringTr
 export const pillInk = { light: SIDES.light.pillInk, dark: SIDES.dark.pillInk } as const;
 /** The welcome art's heart, per side — see `welcomeArt`. */
 export const heartInk = { light: SIDES.light.heartInk, dark: SIDES.dark.heartInk } as const;
+/** The add-a-place tile's little map, per side — see `AddCell`. An SVG
+ *  fill takes no dynamic pair, so each side is read out here: the hills
+ *  in the look's `ok` (its sage), the route in `accentLine`, the pin in
+ *  `accent` with its eye in `bgElevated`. */
+export const addArt = {
+  light: { hill: SIDES.light.ok, route: SIDES.light.accentLine, pin: SIDES.light.accent, eye: SIDES.light.bgElevated },
+  dark: { hill: SIDES.dark.ok, route: SIDES.dark.accentLine, pin: SIDES.dark.accent, eye: SIDES.dark.bgElevated },
+} as const;
 /** The frosted glass's veil and its type halo, per side — see `GlassMaterial`. */
 export const glass = {
   veil: { light: SIDES.light.glassVeil, dark: SIDES.dark.glassVeil },
