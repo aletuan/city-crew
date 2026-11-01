@@ -1153,7 +1153,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      list, yours included: the count is the one line every list has. On
      your own the visibility leads, and the count follows after a dot
      without its pin — the globe or padlock is already the row's glyph,
-     and two glyphs on one line of facts read as two controls. */
+     and two glyphs on one line of facts read as two controls.
+
+     Beside the pin the count is the figure alone (owner, 31 Oct 2026):
+     the pin already says what is counted, so "19 places" said it twice.
+     Without the pin — your own list, after the dot — the word stays,
+     since a bare "Public · 19" says nothing. A screen reader hears the
+     word either way: it cannot see the pin. */
+  const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
   const cardFoot = col ? (
     <View style={s.cardFoot} testID="collection-stats">
       <View style={s.footCount}>
@@ -1161,8 +1168,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         {visibility
           ? <Text style={s.meta}>·</Text>
           : <Ionicons name="location-outline" size={15} color={colors.textTertiary} />}
-        <Text style={s.meta}>
-          {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}
+        <Text style={s.meta} accessibilityLabel={`${members.length} ${placesWord}`}>
+          {visibility ? `${members.length} ${placesWord}` : members.length}
         </Text>
       </View>
       {heart}
