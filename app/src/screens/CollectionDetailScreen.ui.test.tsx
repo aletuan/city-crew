@@ -38,7 +38,7 @@ import {
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
@@ -1432,7 +1432,11 @@ describe("somebody else's list", () => {
     state.cols = [theirs({}, [])];
     show();
     expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
-    expect(screen.getByTestId('collection-stats').textContent).toContain('0 places');
+    // Beside the pin, the figure alone; the word is still what is heard.
+    const stats = screen.getByTestId('collection-stats');
+    expect(stats.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(stats.textContent).toBe('0');
+    expect(screen.getByLabelText('0 places')).toBeTruthy();
     expect(screen.getByText('No places in this collection yet.')).toBeTruthy();
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
     expect(screen.queryByText('Public')).toBeNull();
@@ -1547,7 +1551,8 @@ describe("somebody else's list", () => {
     // react-native-web drops `accessibilityState`, so the state is read
     // off the label and the glyph — which is what a reader gets anyway.
     expect(heart.querySelector('[data-icon="heart-outline"]')).toBeTruthy();
-    expect(screen.getByText('3')).toBeTruthy();
+    // In the heart: the place count beside the pin is a bare figure too.
+    expect(within(heart).getByText('3')).toBeTruthy();
     fireEvent.click(heart);
     expect(spies.toggleLike).toHaveBeenCalledWith({ id: 'c1', slug: 'old-quarter' });
     expect(spies.askToSignIn).not.toHaveBeenCalled();
@@ -1746,7 +1751,8 @@ describe('the description, for a visitor', () => {
     state.mine = [];
     state.cols = [theirs({ desc_en: null })];
     show();
-    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrew.*places/);
+    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrew/);
+    expect(screen.getByLabelText('3 places')).toBeTruthy();
     expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
     expect(screen.queryByText('Add a description')).toBeNull();
   });
@@ -1964,7 +1970,8 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4 places');
+    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4');
+    expect(screen.getByLabelText('4 places')).toBeTruthy();
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
