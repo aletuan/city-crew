@@ -37,7 +37,10 @@ describe('SearchField', () => {
   });
 
   // Inside the box, as the box's own child: the frame keeps its width.
-  it('puts Cancel inside the box, in the theme’s glass and accent, and runs it on a tap', () => {
+  // The word alone, in the accent, as "Xóa" is (owner, 2 Nov 2026): no
+  // pill under it, 16pt in from the box's right edge as the magnifier is
+  // from its left.
+  it('puts Cancel inside the box, the accent\u2019s word with no ground, and runs it on a tap', () => {
     const onPress = vi.fn();
     render(<SearchField value="hanoi" onChangeText={() => {}} placeholder="p"
       cancel={{ shown: true, label: 'Hủy', onPress }} />);
@@ -46,8 +49,10 @@ describe('SearchField', () => {
     expect(button.getAttribute('aria-label')).toBe('Hủy');
     const box = screen.getByTestId('search-input').parentElement!;
     expect(box.contains(button)).toBe(true);
-    const pill = getComputedStyle(button.firstElementChild as HTMLElement);
-    expect(pill.backgroundColor).toBe(String(colors.surfaceGlassStrong).replace(/,(?=\S)/g, ', '));
+    const face = getComputedStyle(button.firstElementChild as HTMLElement);
+    expect(face.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect([face.height, face.paddingRight]).toEqual(['34px', '12px']);
+    expect(getComputedStyle(box).paddingRight).toBe('4px');
     const word = button.querySelector('div[dir="auto"]') as HTMLElement;
     expect(word.textContent).toBe('Hủy');
     const hex = String(colors.accent);

@@ -21,12 +21,27 @@
 // "empty this" was one more thing to tell apart. Emptying the words is
 // the keyboard's delete.
 //
-// Its colours are the theme's, so it follows the look chosen in Profile:
-// the glass a step heavier than the box for the pill, the accent for the
-// word — the ink "Clear" and "Bỏ lọc" already wear as words that do
+// Its colour is the theme's, so it follows the look chosen in Profile:
+// the accent, the ink "Xóa" and "Bỏ lọc" already wear as words that do
 // something. Not the accent as a fill: in this app that is a row or a
 // chip the reader has chosen (`accentSoft`), and Cancel would read as
 // one.
+//
+// ── the word alone (owner, 2 Nov 2026) ──
+//
+// It stood on a pill of the glass a step heavier than the box, and was
+// the heaviest thing at the top of the screen — heavier than "Xóa" a line
+// below it, which is the same kind of word and has no ground at all. Now
+// it is the word as "Xóa" is. Its 12pt sides put it 16pt in from the
+// box's right edge (4 of the box's own, 12 of its own), the 16 the
+// magnifier sits in from the left, and it keeps its 34pt height, so the
+// tap it takes is the one it took.
+//
+// Not a cross in a circle, which came with the same round (a 36pt grey
+// disc, a terracotta ×, both as fixed hex): a × at the end of a search box
+// is "empty the words" everywhere else, and this one leaves the screen —
+// the reason the clear (x) went on 15 Oct. And the fixed hex would have
+// been a pale grey disc on every dark look.
 //
 // Decorative chrome only otherwise: no title, no back control. The screen
 // owns the row the box sits in, and when Cancel shows — on focus for a
@@ -123,9 +138,6 @@ const s = StyleSheet.create({
   // above and below: a 34pt pill in a 44pt box less its 1pt hairline.
   fieldWithCancel: { paddingRight: 4 },
   input: { flex: 1, color: colors.text, fontSize: 16, padding: 0 },
-  cancel: {
-    height: 34, paddingHorizontal: 14, borderRadius: radius.pill,
-    justifyContent: 'center', backgroundColor: colors.surfaceGlassStrong,
-  },
+  cancel: { height: 34, paddingHorizontal: 12, justifyContent: 'center' },
   cancelText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
 });

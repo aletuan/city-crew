@@ -34,7 +34,6 @@ const src = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const NOT_BUTTONS: Record<string, string> = {
   'components/ReviewBadge.tsx pill': 'a label on a card; the card is the button',
   'components/ThemeSwitcher.tsx word': 'the "Popular" / "New" flag on a look card',
-  'components/SearchField.tsx cancel': 'sits inside the 44pt field, which is the control the eye measures',
   'components/ui/controls.tsx tile': 'a grid tile, sized by its cell',
   'screens/CollectionDetailScreen.tsx banner': 'a full-width banner; the banner is a row, not a button',
 };
