@@ -11,8 +11,13 @@ import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'reac
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import { AddCell, AddPill, AddSlot } from './add';
-import { colors, PALETTES, space } from '../theme';
+import { colors, PALETTES, space, textTertiaryHex } from '../theme';
 import { SECONDARY_CONTROL_H } from './ui';
+
+// The app's scheme, which the tile's ring is picked by in JS: a `dyn`
+// pair on a border follows the phone, not the app (see `bgHex`).
+const theme = vi.hoisted(() => ({ scheme: 'light' as 'light' | 'dark' }));
+vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
 
 describe('AddSlot', () => {
   it('ends with the row-end chevron at the app\'s one size, and opens on a tap', () => {
@@ -44,8 +49,8 @@ describe('AddCell', () => {
   });
 
   // Laid out as a photo tile (owner, 2 Nov 2026): the count and its pin
-  // in the top corner, the plus in a 44pt disc, the word along the foot;
-  // no drawing and no dashes. The row keeps its dashes and puts the count
+  // in the top corner, the plus in a dashed 44pt ring, the word along the
+  // foot; no drawing, and no dashes on the tile's own edge. The row keeps its dashes and puts the count
   // at its end. Both say the count with the word.
   it('carries the count in the tile\u2019s corner and at the row\u2019s end, and says both', () => {
     const count = { n: 4, said: '4 places' };
@@ -60,10 +65,18 @@ describe('AddCell', () => {
     // The word along the foot, as a tile's name sits.
     const word = screen.getByText('Add place');
     expect([getComputedStyle(word).position, getComputedStyle(word).bottom]).toEqual(['absolute', '6px']);
-    // The plus in the button scale's 44pt disc.
-    const disc = document.querySelector('[data-icon="add"]')!.parentElement as HTMLElement;
-    expect([getComputedStyle(disc).width, getComputedStyle(disc).height])
+    // The plus, in the accent, inside the button scale's 44pt ring: dashed,
+    // unfilled, and in the tertiary ink for the app's own scheme.
+    const plus = document.querySelector('[data-icon="add"]')!;
+    expect(plus.getAttribute('data-color')).toBe(colors.accent);
+    const ring = plus.parentElement as HTMLElement;
+    expect([getComputedStyle(ring).width, getComputedStyle(ring).height])
       .toEqual([`${SECONDARY_CONTROL_H}px`, `${SECONDARY_CONTROL_H}px`]);
+    expect(getComputedStyle(ring).borderTopStyle).toBe('dashed');
+    expect(getComputedStyle(ring).borderTopWidth).toBe('1px');
+    expect(getComputedStyle(ring).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    const ink = (c: string) => { const d = document.createElement('div'); d.style.color = c; return d.style.color; };
+    expect(ring.style.borderTopColor).toBe(ink(textTertiaryHex.light));
     rerender(<AddCell label="Add place" count={count} onPress={() => {}} testID="cell" />);
     expect(getComputedStyle(face()).borderTopStyle).toBe('dashed');
     expect(screen.getByTestId('cell-count').textContent).toBe('4');
@@ -89,6 +102,47 @@ describe('AddCell', () => {
       const [hi, lo] = [lum(hex(p.text)), lum(ground)].sort((x, y) => y - x);
       expect([name, (hi + 0.05) / (lo + 0.05) >= 4.5]).toEqual([name, true]);
     }
+  });
+  // The ring is picked by the app's scheme, not the phone's: on a phone in
+  // Dark under the app's Light, a `dyn` ring would draw the dark side's ink.
+  it('rings the plus in the tertiary ink of the app\u2019s own scheme', () => {
+    const ink = (c: string) => { const d = document.createElement('div'); d.style.color = c; return d.style.color; };
+    const ring = () => (document.querySelector('[data-icon="add"]')!.parentElement as HTMLElement).style.borderTopColor;
+    theme.scheme = 'dark';
+    const { unmount } = render(<AddCell label="Add place" size={110} onPress={() => {}} />);
+    expect(ring()).toBe(ink(textTertiaryHex.dark));
+    unmount();
+    theme.scheme = 'light';
+    render(<AddCell label="Add place" size={110} onPress={() => {}} />);
+    expect(ring()).toBe(ink(textTertiaryHex.light));
+    // The standard look's own tertiary ink, the one the contrast below is
+    // worked out for.
+    expect(textTertiaryHex).toEqual({ light: PALETTES.paper.textTertiary, dark: PALETTES.charcoal.textTertiary });
+    expect(textTertiaryHex.light).not.toBe(textTertiaryHex.dark);
+  });
+
+  // The ring is a control's outline and the plus a glyph: both owe 3:1 to
+  // the tint over the page they sit on, in every look. The lowest today are
+  // the ring on Chocolate (3.68) and the plus on Paper (4.14).
+  it('keeps the ring and the plus at 3:1 or better on the tile, in every look', () => {
+    const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    const ratio = (a: number[], b: number[]) => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    let low = Infinity;
+    for (const [name, p] of Object.entries(PALETTES)) {
+      const [, r, g, b, a] = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(p.accentSoft)!.map(Number);
+      const ground = hex(p.bg).map((c, i) => c * (1 - a) + [r, g, b][i] * a);
+      for (const ink of [p.textTertiary, p.accent]) {
+        const k = ratio(hex(ink), ground);
+        low = Math.min(low, k);
+        expect([name, ink, k >= 3]).toEqual([name, ink, true]);
+      }
+    }
+    expect(low).toBeGreaterThan(3.6);
   });
 });
 

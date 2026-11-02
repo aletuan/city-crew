@@ -47,7 +47,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { PressableScale, SECONDARY_CONTROL_H } from './ui';
 import { useScheme } from '../lib/theme';
-import { borderGlassHex, colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, gradAI, radius, space, textTertiaryHex, type } from '../theme';
 
 /**
  * The dashed slot at the end of a list.
@@ -110,11 +110,23 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * tile's name is. On your own list that is the count's one place; the
  * card above no longer repeats it. The row keeps it too, at its end.
  *
- * The plus stands in a 44pt disc, the button scale's middle step, in the
- * raised ground and ringed in the hairline: on the dark side the raised
- * ground is darker than the tint, and the ring is what keeps it a disc.
- * It is the tile's mark, not a second button — the whole tile is one
- * control, named by its word and its count.
+ * The plus stands in a dashed 44pt ring, the button scale's middle step,
+ * and is the accent's colour (owner, 2 Nov 2026). It was a solid disc in
+ * the raised ground for a day, and a white disc on a tint is a button, a
+ * second one inside the tile; the dashes say "an empty place, to fill",
+ * the language the list's row and the new-collection tile already speak.
+ * The ring is `textTertiary`, the quietest ink there is: on the tint over
+ * the page it measures 3.68:1 at its lowest (Chocolate) and 6.0 at its
+ * highest, over the 3:1 a control's outline needs; the plus in the accent
+ * is 4.14 at its lowest (Paper) — both worked out in add.ui.test.tsx,
+ * against every look. The dash is the row's own 1pt. The whole tile is
+ * still one control, named by its word and its count.
+ *
+ * From the same round (a mock with a "COLLECTION" kicker, a zero-padded
+ * "04" and "Add a new place"), the ring and the accent plus were taken
+ * and the rest was not: the kicker names what the screen's title already
+ * names, the leading zero is a figure no other count in the app wears,
+ * and "new" says nothing a place you add is not.
  *
  * Not `AddSlot`. That one ends a list, where the reader arrives with
  * nothing on screen to say what the row is for, so it takes a second line
@@ -154,8 +166,8 @@ export function AddCell({ label, onPress, size, count, testID }: {
         testID={testID}
       >
         {figure ? <View style={s.cellTileCorner}>{figure}</View> : null}
-        <View style={[s.cellDisc, { borderColor: borderGlassHex[scheme] }]}>
-          <Ionicons name="add" size={24} color={colors.text} />
+        <View style={[s.cellDisc, { borderColor: textTertiaryHex[scheme] }]}>
+          <Ionicons name="add" size={24} color={colors.accent} />
         </View>
         <Text style={s.cellTileText} numberOfLines={1}>{label}</Text>
       </PressableScale>
@@ -332,8 +344,8 @@ const s = StyleSheet.create({
   },
   cellDisc: {
     width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, borderRadius: SECONDARY_CONTROL_H / 2,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated,
-    borderWidth: StyleSheet.hairlineWidth, marginTop: -6,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderStyle: 'dashed', marginTop: -6,
   },
   // Where a photo tile puts its status and its name (`PlaceTile`): 8 in,
   // 7 from the top, 6 from the foot, the name's 12pt semibold.

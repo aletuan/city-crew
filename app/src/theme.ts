@@ -157,9 +157,10 @@ export const bgElevatedHex = { light: SIDES.light.bgElevated, dark: SIDES.dark.b
 /** `colors.text` as plain hex, for a prop typed `string` (the tab bar's
  *  idle glyphs) — the same escape hatch as `bgHex`, for another reason. */
 export const textHex = { light: SIDES.light.text, dark: SIDES.dark.text } as const;
-/** `colors.borderGlass` as a plain pair, for a border that must show —
- *  see `bgHex`. The add-place tile's disc (`AddCell`) rings itself in it. */
-export const borderGlassHex = { light: SIDES.light.borderGlass, dark: SIDES.dark.borderGlass } as const;
+/** `colors.textTertiary` as a plain pair, for a border that must show —
+ *  see `bgHex`. The add-place tile's dashed ring (`AddCell`) is drawn in
+ *  it: the quietest ink that still clears 3:1 on the accent's tint. */
+export const textTertiaryHex = { light: SIDES.light.textTertiary, dark: SIDES.dark.textTertiary } as const;
 /** `colors.badgeSolid` as plain hex, for a border — see `bgHex`. */
 export const badgeSolidHex = { light: SIDES.light.badgeSolid, dark: SIDES.dark.badgeSolid } as const;
 
