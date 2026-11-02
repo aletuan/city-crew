@@ -430,8 +430,12 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Yours', 'Community']);
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.queryByText('List theirs')).toBeNull();
-    expect(screen.getByText('2 places')).toBeTruthy();
-    expect(screen.getByText('1 place')).toBeTruthy();
+    // The pin and the figure on the tile (owner, 2 Nov 2026), the word
+    // only in what is heard.
+    expect(screen.getByLabelText('2 places').textContent).toBe('2');
+    expect(screen.getByLabelText('2 places').querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(screen.getByLabelText('1 place').textContent).toBe('1');
+    expect(screen.queryByText(/places?$/)).toBeNull();
     expect(icons('lock-closed-outline')).toBe(1);
     expect(icons('globe-outline')).toBeGreaterThanOrEqual(2); // the tab's glyph + the public tile
     // Signed in, the guest card is gone.
@@ -768,19 +772,19 @@ describe('CollectionsScreen — list view', () => {
     state.mine.data = [col('mine1', ['a', 'b'], { is_public: false, owner_id: 'u1' })];
     show();
     // Tiles by default: the count stands alone, no status word beside it.
-    expect(screen.getByText('2 places')).toBeTruthy();
+    expect(screen.getByLabelText('2 places')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'List view' }));
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.view', 'row');
     // Rows, which a row's Delete says. Their count stands alone too now
     // (owner, 22 Oct 2026): the lock says it, and the word is not drawn.
     expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
-    expect(screen.getByText('2 places')).toBeTruthy();
+    expect(screen.getByLabelText('2 places')).toBeTruthy();
     expect(screen.queryByText(/Private/)).toBeNull();
     // And back again.
     fireEvent.click(screen.getByRole('button', { name: 'Tile view' }));
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('citycrew.collections.view', 'tile');
-    expect(screen.getByText('2 places')).toBeTruthy();
+    expect(screen.getByLabelText('2 places')).toBeTruthy();
   });
 
   it('a stored row preference is what the screen opens in', async () => {
@@ -796,7 +800,7 @@ describe('CollectionsScreen — list view', () => {
     show();
     await act(async () => {});
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
-    expect(screen.getByText('1 place')).toBeTruthy();
+    expect(screen.getByLabelText('1 place')).toBeTruthy();
   });
 
   const rows = async () => {
@@ -818,7 +822,9 @@ describe('CollectionsScreen — list view', () => {
     // One line, the count at its start and the heart at its end, under
     // the description (owner, 29 Oct 2026).
     const heart = screen.getByRole('button', { name: 'Like this collection' });
-    const foot = screen.getByText('1 place').parentElement!.parentElement!;
+    // The figure alone beside the pin; the word is what is heard.
+    expect(screen.getByLabelText('1 place').textContent).toBe('1');
+    const foot = screen.getByLabelText('1 place').parentElement!.parentElement!;
     expect(foot.contains(heart)).toBe(true);
     expect(foot.lastElementChild!.contains(heart)).toBe(true);
     expect(within(heart).getByText('1')).toBeTruthy();
@@ -881,7 +887,7 @@ describe('CollectionsScreen — list view', () => {
     expect(screen.queryByText('Rooftops')).toBeNull();
     // The heart too: open, the column is too narrow to hold it beside the count.
     expect(screen.queryByRole('button', { name: 'Like this collection' })).toBeNull();
-    expect(screen.getByText('1 place')).toBeTruthy();
+    expect(screen.getByLabelText('1 place')).toBeTruthy();
     fireEvent.click(screen.getByText('swipe-close'));
     expect(screen.getByText('Rooftops')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Like this collection' })).toBeTruthy();
@@ -1021,13 +1027,15 @@ describe('CollectionsScreen — list view', () => {
     expect(await screen.findByLabelText('by @trang')).toBeTruthy();
     expect(screen.getByText('@trang')).toBeTruthy();
     expect(screen.getByText('Coffee crawl')).toBeTruthy();
-    const foot = screen.getByText('2 places').parentElement!.parentElement!;
+    // The figure alone beside the pin; the word is what is heard.
+    expect(screen.getByLabelText('2 places').textContent).toBe('2');
+    const foot = screen.getByLabelText('2 places').parentElement!.parentElement!;
     expect(foot.querySelector('[data-icon="location-outline"]')).toBeTruthy();
     expect(within(foot).getByRole('button', { name: 'Like this collection' })).toBeTruthy();
     expect(within(foot).getByText('3')).toBeTruthy();
     expect(heartsSay()).toEqual(['3 likes', '1 like']);
     // No byline at all where there is no handle; the count is in the foot.
-    expect(screen.getByText('1 place')).toBeTruthy();
+    expect(screen.getByLabelText('1 place')).toBeTruthy();
     expect(screen.getAllByLabelText(/^by /)).toHaveLength(1);
     // Four lines held on this tab, the byline among them.
     const ghost = screen.getByText('List solo').parentElement!.previousElementSibling!;
@@ -1045,7 +1053,7 @@ describe('CollectionsScreen — list view', () => {
     await rows();
     state.cols.data = [col('shut', ['b'], { is_public: false })];
     show({ tab: 'community' });
-    expect(await screen.findByText(/1 place/)).toBeTruthy();
+    expect(await screen.findByLabelText('1 place')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
   });
 });

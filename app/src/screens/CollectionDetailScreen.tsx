@@ -1150,27 +1150,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   /* The card's foot: who can see it, how many places, and the heart.
      Under a hairline, the facts at the start and the heart at the end —
      the end of the row is where a thumb finds a gesture. Drawn on every
-     list, yours included: the count is the one line every list has. On
-     your own the visibility leads, and the count follows after a dot
-     without its pin — the globe or padlock is already the row's glyph,
-     and two glyphs on one line of facts read as two controls.
+     list, yours included: the count is the one line every list has.
 
-     Beside the pin the count is the figure alone (owner, 31 Oct 2026):
-     the pin already says what is counted, so "19 places" said it twice.
-     Without the pin — your own list, after the dot — the word stays,
-     since a bare "Public · 19" says nothing. A screen reader hears the
+     The count is the pin and the figure, never the word (owner, 31 Oct
+     and 2 Nov 2026): the pin says what is counted, so "19 places" said
+     it twice. On your own the visibility leads and the pin follows after
+     a dot — it was left off there once, for fear that two glyphs on one
+     line of facts read as two controls, and the bare "Public · 19" that
+     would have left was the reason it came back: only the globe has a
+     chevron, and only the globe answers a tap. A screen reader hears the
      word either way: it cannot see the pin. */
   const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
   const cardFoot = col ? (
     <View style={s.cardFoot} testID="collection-stats">
       <View style={s.footCount}>
         {visibility}
-        {visibility
-          ? <Text style={s.meta}>·</Text>
-          : <Ionicons name="location-outline" size={15} color={colors.textTertiary} />}
-        <Text style={s.meta} accessibilityLabel={`${members.length} ${placesWord}`}>
-          {visibility ? `${members.length} ${placesWord}` : members.length}
-        </Text>
+        {visibility ? <Text style={s.meta}>·</Text> : null}
+        <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+        <Text style={s.meta} accessibilityLabel={`${members.length} ${placesWord}`}>{members.length}</Text>
       </View>
       {heart}
     </View>

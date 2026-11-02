@@ -1783,8 +1783,9 @@ describe('the community shelf', () => {
     state.places.data = [place('p1'), place('p2')];
     state.cols.data = [collection('one', ['p1']), collection('two', ['p1', 'p2'])];
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByText('1 place')).toBeTruthy();
-    expect(screen.getByText('2 places')).toBeTruthy();
+    // The pin and the figure on the card; the word is what is heard.
+    expect(screen.getByLabelText('1 place').textContent).toBe('1');
+    expect(screen.getByLabelText('2 places').textContent).toBe('2');
   });
 
   it('is absent altogether when no list touches the city', () => {
@@ -1824,7 +1825,8 @@ describe('the community shelf', () => {
     state.cols.data = [collection('bars', ['p1', 'p2'])];
     render(<ExploreScreen navigation={nav()} />);
     const icons = [...shelfCard('List bars').querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'));
-    expect(icons).toEqual(['heart-outline']);
+    // The count's pin and the heart, and no kind's glyph between them.
+    expect(icons).toEqual(['location-outline', 'heart-outline']);
   });
 
   // The one mark a card does wear (owner, 29 Oct 2026): "New", on a list

@@ -1337,13 +1337,24 @@ export default function CollectionsScreen({ navigation, route }: {
                                   reader just asked. */}
                               {reason ? (
                                 <Text style={s.gcardMeta} numberOfLines={1}>{reason}</Text>
-                              ) : item.own && (
+                              ) : item.own && (members === 0 ? (
                                 <Text style={s.gcardMeta} numberOfLines={1}>
-                                  {members === 0
-                                    ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点', '還沒有地點')
-                                    : `${members} ${t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}`}
+                                  {t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点', '還沒有地點')}
                                 </Text>
-                              )}
+                              ) : (
+                                // The pin and the figure (owner, 2 Nov 2026),
+                                // as on the Explore shelf and the list's own
+                                // card; spoken in full.
+                                <View
+                                  style={s.gcardCount}
+                                  accessible
+                                  accessibilityLabel={placesOf(members)}
+                                  testID="collection-tile-count"
+                                >
+                                  <Ionicons name="location-outline" size={13} color={onPhoto.textSecondary} />
+                                  <Text style={s.gcardMeta}>{members}</Text>
+                                </View>
+                              ))}
                               {/* Only where a like is possible: a private
                                   list is one nobody may like, and a heart
                                   on it would be an invitation to nothing.
@@ -1524,7 +1535,9 @@ export default function CollectionsScreen({ navigation, route }: {
                             <View style={s.foot}>
                               <View style={[s.metaRow, s.footFacts]}>
                                 <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
-                                <Text style={s.meta} numberOfLines={1}>{reason ?? placesOf(n)}</Text>
+                                {/* The figure alone beside the pin (owner, 2 Nov 2026);
+                                    a reason, when the shelf is narrowed, says more. */}
+                                <Text style={s.meta} numberOfLines={1} accessibilityLabel={reason ?? placesOf(n)}>{reason ?? n}</Text>
                               </View>
                               {/* The heart the tile wears, wearing it for the
                                   same reasons. On a public list somebody else
@@ -1701,13 +1714,20 @@ export default function CollectionsScreen({ navigation, route }: {
                               size={13}
                               color={own.is_public ? colors.ok : colors.textTertiary}
                             />
-                            <Text style={s.meta} numberOfLines={1}>
-                              {/* "0 places" reads like a broken count; an empty
-                                  list you just made deserves a sentence. */}
-                              {reasonFor(own.slug) ?? (count === 0
-                                ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点', '還沒有地點')
-                                : placesOf(count))}
-                            </Text>
+                            {/* "0 places" reads like a broken count; an empty
+                                list you just made deserves a sentence. Any
+                                other count is the pin and the figure (owner,
+                                2 Nov 2026), spoken in full. */}
+                            {!reasonFor(own.slug) && count > 0 ? (
+                              <View style={s.metaRow} accessible accessibilityLabel={placesOf(count)}>
+                                <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                                <Text style={s.meta} numberOfLines={1}>{count}</Text>
+                              </View>
+                            ) : (
+                              <Text style={s.meta} numberOfLines={1}>
+                                {reasonFor(own.slug) ?? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません', '还没有地点', '還沒有地點')}
+                              </Text>
+                            )}
                           </View>
                           {/* How many people liked it — the answer to "is
                               anybody reading this list", which the shelf could
@@ -1915,6 +1935,7 @@ const s = StyleSheet.create({
   // other — the same list moved as you switched tabs.
   gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, minHeight: 18 },
   gcardMeta: { color: onPhoto.textSecondary, fontSize: 13 },
+  gcardCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   // The tile/list switch — two glyphs in a quiet glass capsule, the
