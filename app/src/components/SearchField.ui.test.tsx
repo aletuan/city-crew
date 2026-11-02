@@ -7,7 +7,7 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { AccessibilityInfo, LayoutAnimation } from 'react-native';
 import { act, fireEvent, render, screen } from '../uitest/render';
-import { colors } from '../theme';
+import { colors, PALETTES } from '../theme';
 import SearchField from './SearchField';
 
 describe('SearchField', () => {
@@ -37,10 +37,10 @@ describe('SearchField', () => {
   });
 
   // Inside the box, as the box's own child: the frame keeps its width.
-  // The word alone, in the accent, as "Xóa" is (owner, 2 Nov 2026): no
-  // pill under it, 16pt in from the box's right edge as the magnifier is
-  // from its left.
-  it('puts Cancel inside the box, the accent\u2019s word with no ground, and runs it on a tap', () => {
+  // A cross in a 34pt circle (owner, 2 Nov 2026): the circle in the
+  // theme's heavier glass, the cross in its accent, the word kept for
+  // VoiceOver only.
+  it('puts Cancel inside the box, a cross in the theme\u2019s glass and accent, and runs it on a tap', () => {
     const onPress = vi.fn();
     render(<SearchField value="hanoi" onChangeText={() => {}} placeholder="p"
       cancel={{ shown: true, label: 'Hủy', onPress }} />);
@@ -49,17 +49,38 @@ describe('SearchField', () => {
     expect(button.getAttribute('aria-label')).toBe('Hủy');
     const box = screen.getByTestId('search-input').parentElement!;
     expect(box.contains(button)).toBe(true);
+    expect(button.textContent).toBe('');
     const face = getComputedStyle(button.firstElementChild as HTMLElement);
-    expect(face.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    expect([face.height, face.paddingRight]).toEqual(['34px', '12px']);
+    expect(face.backgroundColor).toBe(String(colors.surfaceGlassStrong).replace(/,(?=\S)/g, ', '));
+    expect([face.width, face.height, face.borderTopLeftRadius]).toEqual(['34px', '34px', '17px']);
     expect(getComputedStyle(box).paddingRight).toBe('4px');
-    const word = button.querySelector('div[dir="auto"]') as HTMLElement;
-    expect(word.textContent).toBe('Hủy');
-    const hex = String(colors.accent);
-    const n = parseInt(hex.slice(1), 16);
-    expect(getComputedStyle(word).color).toBe(hex.startsWith('#') ? `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})` : hex);
+    const cross = button.querySelector('[data-icon="close"]')!;
+    expect(cross.getAttribute('data-color')).toBe(colors.accent);
+    expect(cross.getAttribute('data-size')).toBe('18');
     fireEvent.click(button);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  // The cross on its circle: the glass over the box's card over the page,
+  // in every look. 3:1 is what a glyph owes; Coffee is the floor today, at
+  // 3.68.
+  it('keeps the cross at 3:1 or better on its circle, in every look', () => {
+    const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    const rgba = (h: string): number[] => h.startsWith('#')
+      ? [...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), 1]
+      : [.../\(([^)]+)\)/.exec(h)![1].split(',').map(Number), 1].slice(0, 4);
+    const over = (top: number[], under: number[]) => under.slice(0, 3).map((c, i) => c * (1 - top[3]) + top[i] * top[3]);
+    const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    let low = Infinity;
+    for (const [name, p] of Object.entries(PALETTES)) {
+      const card = over(rgba(p.surfaceCard), rgba(p.bg));
+      const ground = over(rgba(p.surfaceGlassStrong), [...card, 1]);
+      const [hi, lo] = [lum(rgba(p.accent)), lum(ground)].sort((x, y) => y - x);
+      const k = (hi + 0.05) / (lo + 0.05);
+      low = Math.min(low, k);
+      expect([name, k >= 3]).toEqual([name, true]);
+    }
+    expect(low).toBeGreaterThan(3.6);
   });
 
   // The slide is configured before the render that moves things: on the
