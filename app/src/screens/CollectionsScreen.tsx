@@ -915,7 +915,17 @@ export default function CollectionsScreen({ navigation, route }: {
     ? t('Public', 'Công khai', '公開', '公开', '公開')
     : t('Private', 'Riêng tư', '非公開', '私密', '私密'));
   const reasonFor = (slug: string) => shelfReason(hitBy.get(slug), chosen, t);
-  const scope = scopeLine({ count: hits.length, chosen, cities: cityChoices, cityName }, t);
+  // The line under the title (owner, 2 Nov 2026). At rest it says what
+  // the tab is, in a sentence: "39 collections · 7 cities" read as a
+  // ledger, and the count is the one thing the grid under it already
+  // shows. Asked anything — words in the box, a kind, a city — it goes
+  // back to the count and the chips (`scopeLine`), since then the line is
+  // the answer to the question and the only place the chips are named.
+  const scope = asked
+    ? scopeLine({ count: hits.length, chosen, cities: cityChoices, cityName }, t)
+    : !onYours
+      ? t('Good corners, through the community’s eyes.', 'Những góc hay, qua lăng kính cộng đồng.', 'みんなの目で見つけた、いい場所。', '社区眼中的好去处。', '社群眼中的好去處。')
+      : t('The corners you’ve kept.', 'Những góc bạn đã giữ lại.', 'あなたが取っておいた場所。', '你收藏下来的好去处。', '你收藏下來的好去處。');
 
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
