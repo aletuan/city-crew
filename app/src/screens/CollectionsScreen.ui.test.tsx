@@ -1336,14 +1336,16 @@ describe('CollectionsScreen — search', () => {
 
   // ── the city scope, said and switched ──
   //
-  // Both shelves show every city and say how many under the title (owner,
-  // 15 Oct 2026 — Community was scoped to the app's city until then). The
-  // city chip narrows to one, and letting go of it is every city again.
-  it('counts every city on Community, and narrows to one through the chip', () => {
+  // Both shelves show every city (owner, 15 Oct 2026 — Community was
+  // scoped to the app's city until then). The city chip narrows to one,
+  // and letting go of it is every city again. At rest the line under the
+  // title is the tab's sentence (owner, 2 Nov 2026); narrowed, the count
+  // and the chip.
+  it('shows every city on Community, and narrows to one through the chip', () => {
     state.places = [place('a', 'hanoi'), place('b', 'danang'), place('c', 'danang')];
     state.cols.data = [col('hn', ['a'], { title_en: 'Hanoi list' }), col('dn', ['b', 'c'], { title_en: 'Da Nang list' })];
     show();
-    expectSub('2 collections · 2 cities');
+    expectSub('Good corners, through the community’s eyes.');
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
     fireEvent.click(screen.getByTestId('collections-filters'));
@@ -1358,7 +1360,7 @@ describe('CollectionsScreen — search', () => {
     sheetPick({ city: 'danang' });
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
-    expectSub('2 collections · 2 cities');
+    expectSub('Good corners, through the community’s eyes.');
   });
 
   // Past eight cities the row ends in "More" (owner, 25 Oct 2026), and its
@@ -1390,15 +1392,14 @@ describe('CollectionsScreen — search', () => {
     state.cols.data = [col('dn', ['b'], { title_en: 'Da Nang list' })];
     show();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
-    expectSub('1 collection · danang');
   });
 
-  it('counts every city on Yours, and narrows to one through the chip without an “all”', () => {
+  it('shows every city on Yours, and narrows to one through the chip without an “all”', () => {
     state.uid = 'u1';
     state.places = [place('a', 'hanoi'), place('b', 'danang')];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1', title_en: 'Mine in Hanoi' }), col('m2', ['b'], { owner_id: 'u1', title_en: 'Mine in Da Nang' })];
     show();
-    expectSub('2 collections · 2 cities');
+    expectSub('Your own favourite places.');
     expect(screen.getByText('Mine in Da Nang')).toBeTruthy();
     fireEvent.click(screen.getByTestId('collections-filters'));
     expect(screen.getByRole('button', word('danang')).getAttribute('aria-selected')).toBe('false');
@@ -1407,16 +1408,20 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByText('Mine in Hanoi')).toBeNull();
     expectSub('1 collection · danang');
     sheetPick({ city: 'danang' });
-    expectSub('2 collections · 2 cities');
+    expectSub('Your own favourite places.');
   });
 
-  it('names the one city on Yours when there is one', () => {
+  // Words in the box count as asking: the line is the answer then, and
+  // names the one city it reaches.
+  it('says what Yours is at rest, and counts what the box finds', () => {
     state.uid = 'u1';
     state.places = [place('a', 'hanoi')];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1' })];
     show();
-    expectSub('1 collection · hanoi');
+    expectSub('Your own favourite places.');
     expect(screen.queryByText('City')).toBeNull();
+    type('list');
+    expectSub('1 collection · hanoi');
   });
 
   it('remembers the words when a card they found is opened', async () => {
