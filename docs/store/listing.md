@@ -794,26 +794,64 @@ dòng "mượt hơn".
 • 修正：iOS 26で、コレクションのグリッドでタイルを右にドラッグすると前の画面に戻ることがありました。
 ```
 
+## Release notes v1.0.13 (What's New)
+
+Viết từ các PR merge sau build 1.0.12 (42, main 0e13d99) — #1234 → #1238.
+1.0.12 đã được duyệt nên train của nó đã đóng; bản này nâng lên 1.0.13. Lý do
+chính của bản này là bộ 7 ảnh App Store mới (cùng 7 tiêu đề như bộ 1.0.5,
+ảnh chụp màn hình bên trong chụp lại trên app hiện tại), đã upload sẵn vào
+bản nháp 1.0.13 trên App Store Connect: ảnh là metadata theo version, nên muốn
+ảnh lên trang chính thì phải nộp một version mới kèm build. Binary mới cũng
+mang các bản vá Expo SDK 58 (#1234: expo 58.0.22, expo-updates 58.0.20,
+react-native-screens 4.30.1); `runtimeVersion` vẫn là exposdk:58.0.0. Cần thử
+trên máy: Bộ sưu tập (dòng dưới tiêu đề, thẻ có ghim và số), ô thêm địa điểm
+trong lưới. Không có mặt ở đây: #1235 (hình vẽ bản đồ trên ô thêm địa điểm, đã
+bỏ ở #1238), docs, test.
+
+### EN
+
+```
+• Collections: the line under the title now says what each tab holds. Search or filter, and it shows the count instead.
+• Collection cards show how many places they hold next to the pin.
+• In your own collection's grid, the first tile shows how many places it holds. Tap it to add one.
+```
+
+### VI
+
+```
+• Bộ sưu tập: dòng dưới tiêu đề cho biết mỗi tab chứa gì. Khi tìm hoặc lọc, dòng này hiện số kết quả.
+• Thẻ bộ sưu tập hiện số địa điểm ngay cạnh biểu tượng ghim.
+• Trong lưới bộ sưu tập của bạn, ô đầu tiên cho biết có bao nhiêu địa điểm. Chạm vào để thêm.
+```
+
+### JA
+
+```
+• コレクション：タイトル下の一文で各タブの内容を案内します。検索や絞り込みをすると件数を表示します。
+• コレクションのカードに、ピンと一緒にスポット数を表示します。
+• 自分のコレクションのグリッドでは、最初のタイルにスポット数を表示。タップして追加できます。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-10-31, database production có **11 thành phố active / 1.242 địa điểm đã
+2026-11-02, database production có **11 thành phố active / 1.269 địa điểm đã
 duyệt**:
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| TP. Hồ Chí Minh | 448 |
-| Hà Nội | 412 |
-| Đà Lạt | 94 |
+| TP. Hồ Chí Minh | 461 |
+| Hà Nội | 422 |
+| Đà Lạt | 96 |
 | Đà Nẵng | 89 |
 | Melbourne | 83 |
-| Huế | 64 |
+| Huế | 65 |
 | Hội An | 26 |
 | Hải Phòng | 11 |
 | Vũng Tàu | 9 |
 | Ninh Bình | 5 |
-| Buôn Ma Thuột | 1 — **chưa có trong Description** |
+| Buôn Ma Thuột | 2 — **chưa có trong Description** |
 
 Từ 1.0.11 câu mở đầu Description kể tên các thành phố, không đếm số ("seven
 cities" đã sai từ khi Hội An, Hải Phòng, Ninh Bình bật lên). Thêm hay tắt một
