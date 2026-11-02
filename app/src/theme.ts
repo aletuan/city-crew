@@ -695,7 +695,7 @@ export const font = {
  * setting — 0.82× at the smallest, 3.12× at AX5. Nearly everything in
  * this app is laid out to take that: buttons and fields are `minHeight`,
  * rows are padding around their words, cards wrap. Three places are not,
- * and cannot be: the tab bar is a 64pt island the screens clear a fixed
+ * and cannot be: the tab bar is a 60pt island the screens clear a fixed
  * distance for, the shut sash is a 20pt band drawn across a photograph
  * at an angle, and the count badge on a tab is a 21pt disc. Text left to
  * grow inside those does not wrap or push — it is clipped, and a clipped
