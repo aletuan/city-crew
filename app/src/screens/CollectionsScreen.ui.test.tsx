@@ -436,8 +436,13 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getByLabelText('2 places').querySelector('[data-icon="location-outline"]')).toBeTruthy();
     expect(screen.getByLabelText('1 place').textContent).toBe('1');
     expect(screen.queryByText(/places?$/)).toBeNull();
-    expect(icons('lock-closed-outline')).toBe(1);
-    expect(icons('globe-outline')).toBeGreaterThanOrEqual(2); // the tab's glyph + the public tile
+    // Only the exception is marked (owner, 2 Nov 2026): the private tile
+    // wears a padlock in its top corner, the public one nothing — the only
+    // globe left is the Community tab's own.
+    expect(screen.getAllByTestId('collection-tile-lock')).toHaveLength(1);
+    expect(icons('lock-closed')).toBe(1);
+    expect(icons('lock-closed-outline')).toBe(0);
+    expect(icons('globe-outline')).toBe(1);
     // Signed in, the guest card is gone.
     expect(screen.queryByText('Start a collection')).toBeNull();
   });
@@ -472,13 +477,37 @@ describe('CollectionsScreen — signed in', () => {
   });
 
   // The same list sits at the same height on both tabs: the meta row is
-  // as tall as a face whether it leads with one or with a padlock.
+  // as tall as a face whether it leads with one or with a bare count.
   it('holds the tile\u2019s meta row at the avatar\u2019s height on either tab', () => {
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', is_public: false })];
     show();
     const foot = screen.getByTestId('collection-tile-foot');
     expect(getComputedStyle(foot).minHeight).toBe('18px');
-    expect(foot.querySelector('[data-icon="lock-closed-outline"]')!.getAttribute('data-size')).toBe('14');
+    expect(foot.querySelector('[data-icon^="lock-closed"]')).toBeNull();
+  });
+
+  // The padlock sits in the top-right corner, in a 24pt disc of the card
+  // ground ("New" wears the same, top-left), and only on a private list.
+  it('marks a private tile with a padlock in its top corner, and a public one with nothing', () => {
+    state.mine.data = [
+      col('shut', ['a'], { owner_id: 'u1', is_public: false }),
+      col('open', ['a'], { owner_id: 'u1', is_public: true }),
+    ];
+    show();
+    const lock = screen.getByTestId('collection-tile-lock');
+    const st = getComputedStyle(lock);
+    expect([st.position, st.top, st.right, st.width, st.height, st.borderTopLeftRadius])
+      .toEqual(['absolute', '10px', '10px', '24px', '24px', '12px']);
+    expect(st.backgroundColor).toBe(String(colors.surfaceCard).replace(/,(?=\S)/g, ', '));
+    expect(lock.querySelector('[data-icon="lock-closed"]')!.getAttribute('data-size')).toBe('12');
+    expect(screen.getByRole('button', { name: 'List shut, Private' }).contains(lock)).toBe(true);
+    const open = screen.getByRole('button', { name: 'List open, Public' });
+    expect(open.querySelector('[data-testid="collection-tile-lock"]')).toBeNull();
+    expect(open.querySelector('[data-icon="globe-outline"]')).toBeNull();
+    // The list rows follow: the padlock on the private row only, no globe.
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    expect(icons('lock-closed-outline')).toBe(1);
+    expect(icons('globe-outline')).toBe(1); // the Community tab's own
   });
 
   it('an own tile with nothing in it says so in words, and is named by its title', () => {
