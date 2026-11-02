@@ -16,7 +16,15 @@ import { space } from '../../theme';
 // owner's choice: every screen's bottom clearance is measured off this
 // number, and the selected pill now sits in it 4pt from the rim. See
 // FloatingTabBar.
-export const TAB_BAR_HEIGHT = 64;
+//
+// 60 since 2 Nov 2026, measured against the owner's screenshots of the
+// two floating bars this one is read beside (1290px wide, 3px a point):
+// Threads' island 61pt tall and 21pt off the screen's foot, Instagram's
+// 60 and 22, ours 64 and 16. Their footprint is ours give or take two
+// points — 82 against 80 — so the bar did not take more of the screen;
+// it was thicker and sat lower, and read as heavier. 60 and 20
+// (`useTabBarLift`) is their shape at the footprint we already had.
+export const TAB_BAR_HEIGHT = 60;
 
 /** The air between the island and the safe area's bottom edge. */
 export const TAB_BAR_GAP = 10;
@@ -119,7 +127,10 @@ export function useTabBarClearance(extra = 18): number {
  */
 export function useTabBarLift(): number {
   const insets = useSafeAreaInsets();
-  return Math.max(insets.bottom - 18, TAB_BAR_GAP);
+  // 14 under the 34pt inset puts the island 20pt off the screen's foot,
+  // where Threads and Instagram sit theirs (21 and 22, measured — see
+  // `TAB_BAR_HEIGHT`). It was 18, and 16pt off.
+  return Math.max(insets.bottom - 14, TAB_BAR_GAP);
 }
 
 /**

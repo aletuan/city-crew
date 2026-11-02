@@ -547,6 +547,27 @@ export const gradAI = {
 export const ringTrack = { light: SIDES.light.ringTrack, dark: SIDES.dark.ringTrack } as const;
 /** The tab bar's selected-pill ink, per side — see `FloatingTabBar`. */
 export const pillInk = { light: SIDES.light.pillInk, dark: SIDES.dark.pillInk } as const;
+/** `a` carried `t` of the way to `b`, both `#RRGGBB`. */
+const toward = (a: string, b: string, t: number) => `#${[1, 3, 5]
+  .map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t)
+    .toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+/** How far the selected tab's pill is carried from `badgeSolid` toward
+ *  the page — see `pillGround`. */
+export const PILL_FADE = 0.2;
+/**
+ * The selected tab's pill, per side: the look's `badgeSolid` carried a
+ * fifth of the way to its page (owner, 2 Nov 2026), so the mark is a step
+ * quieter than the badge it was. Mixed here, to an opaque colour, rather
+ * than drawn at 80% opacity: the pill went solid because a translucent
+ * one lets the photograph scrolling under the glass become the glyph's
+ * ground (see FloatingTabBar's `inkOf`). A fifth is the furthest step
+ * that keeps every look's `pillInk` over 3.6:1 on it — cosmic is the
+ * floor, at 3.69; a quarter left it at 3.43.
+ */
+export const pillGround = {
+  light: toward(SIDES.light.badgeSolid, SIDES.light.bg, PILL_FADE),
+  dark: toward(SIDES.dark.badgeSolid, SIDES.dark.bg, PILL_FADE),
+} as const;
 /** The welcome art's heart, per side — see `welcomeArt`. */
 export const heartInk = { light: SIDES.light.heartInk, dark: SIDES.dark.heartInk } as const;
 /** The frosted glass's veil and its type halo, per side — see `GlassMaterial`. */
@@ -582,8 +603,9 @@ export const radius = {
   image: 18,
   input: 12,
   pill: 999,
-  /** The floating tab container. */
-  tabBar: 32,
+  /** The floating tab container: half its 60pt height, so its ends are
+   *  round and concentric with the 52pt pill 4pt inside them. */
+  tabBar: 30,
 };
 
 /** Vertical rhythm and page margins, in iOS points. */
