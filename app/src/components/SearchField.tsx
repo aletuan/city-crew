@@ -54,7 +54,7 @@ import { colors, radius } from '../theme';
 import { PressableScale, useReducedMotion } from './ui';
 
 /**
- * The slide: 200ms, eased out, the pill fading as the words give way —
+ * The slide: 200ms, eased out, the circle fading as the words give way —
  * long enough to be seen as the box making room, short enough not to
  * stand between the tap and the keyboard. Configured before the render
  * that moves things, which is how `LayoutAnimation` works, so it runs
@@ -133,8 +133,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: radius.pill, paddingHorizontal: 16, height: 44,
   },
-  // The pill sits 4pt inside the box's own edge on the right, as it does
-  // above and below: a 34pt pill in a 44pt box less its 1pt hairline.
+  // The circle sits 4pt inside the box's own edge on the right, as it does
+  // above and below: a 34pt circle in a 44pt box less its 1pt hairline.
   fieldWithCancel: { paddingRight: 4 },
   input: { flex: 1, color: colors.text, fontSize: 16, padding: 0 },
   cancel: {
