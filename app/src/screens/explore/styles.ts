@@ -227,6 +227,8 @@ export const s = StyleSheet.create({
   shelfCardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
   shelfCardMeta: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.regular },
   shelfCardFoot: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // The pin closer to its figure than the figure is to the heart.
+  shelfCardCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Right edge of the foot row, so the gesture is a corner rather than
   // a word in the middle of a sentence.
   shelfLikeHit: { marginLeft: 'auto' },

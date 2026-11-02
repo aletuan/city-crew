@@ -425,7 +425,9 @@ describe('your own list', () => {
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
     // In the foot, before the count — not under the title any more.
-    expect(screen.getByTestId('collection-stats').textContent).toBe('Private·3 places');
+    // The pin and the figure after the dot; the word is what is heard.
+    expect(screen.getByTestId('collection-stats').textContent).toBe('Private·3');
+    expect(screen.getByLabelText('3 places')).toBeTruthy();
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
     // No self-credit and no heart on your own list.
@@ -443,7 +445,7 @@ describe('your own list', () => {
     state.mine = [collection({ is_public: true }, [PHO])];
     show();
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Public');
-    expect(screen.getByText(/1 place$/)).toBeTruthy();
+    expect(screen.getByLabelText('1 place')).toBeTruthy();
     expect(screen.queryByText(/Private/)).toBeNull();
   });
 
@@ -505,7 +507,7 @@ describe('your own list', () => {
     expect(screen.getByText('Nothing here yet.')).toBeTruthy();
     expect(screen.queryByText('No places in this collection yet.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
-    expect(screen.getByText(/0 places/)).toBeTruthy();
+    expect(screen.getByLabelText('0 places')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Find places' }).querySelector('[data-icon="search"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Find places'));
     expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
@@ -651,12 +653,15 @@ describe('publishing', () => {
     }
   });
 
-  it('draws the padlock or the globe as the foot\u2019s glyph, with a chevron and no pin', () => {
+  // The pin came back after the dot (owner, 2 Nov 2026): the count is the
+  // pin and the figure on every list, and only the globe has a chevron.
+  it('draws the padlock or the globe as the foot\u2019s glyph, with a chevron, then the pin', () => {
     show();
     let foot = screen.getByTestId('collection-stats');
     expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
     expect(foot.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
-    expect(foot.querySelector('[data-icon="location-outline"]')).toBeNull();
+    expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
+      .toEqual(['lock-closed-outline', 'chevron-down', 'location-outline']);
     cleanup();
     state.mine = [collection({ is_public: true })];
     show();

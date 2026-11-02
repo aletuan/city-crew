@@ -162,8 +162,18 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                       should read as one band came out ragged. */}
                   <Text style={s.shelfCardTitle} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <View style={s.shelfCardFoot}>
-                    {/* English is the only of the three that inflects. */}
-                    <Text style={s.shelfCardMeta}>{count} {t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}</Text>
+                    {/* The pin and the figure, as on the list's own card
+                        (owner, 2 Nov 2026): the pin says what is counted,
+                        so the word said it twice. Spoken in full — a
+                        screen reader cannot see the pin. */}
+                    <View
+                      style={s.shelfCardCount}
+                      accessible
+                      accessibilityLabel={`${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}`}
+                    >
+                      <Ionicons name="location-outline" size={13} color={onPhoto.textSecondary} />
+                      <Text style={s.shelfCardMeta}>{count}</Text>
+                    </View>
                     {/* One heart, and it is both the gesture and the
                         tally.
 
