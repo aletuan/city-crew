@@ -1275,6 +1275,27 @@ export default function CollectionsScreen({ navigation, route }: {
                             testID="collection-card-scrim"
                           />
                           {fresh ? <NewBadge /> : null}
+                          {/* ── only the exception is marked (owner, 2 Nov 2026) ──
+                              A private list of yours wears a padlock in the
+                              top-right corner; a public one wears nothing.
+                              The globe stood in every tile's foot, and most
+                              of your lists are public (five of six on the
+                              owner's screen), so it said the default on
+                              nearly every tile. The padlock alone says the
+                              one thing that differs, and its absence reads
+                              as "anyone can see this".
+
+                              In a 24pt disc of the card ground, the "New"
+                              badge's own (top-left, 10pt in), so the two
+                              marks on a photograph are one kind of thing:
+                              a bare glyph under the scrim's 0.22 top was
+                              lost on a white sky. VoiceOver still hears
+                              Public or Private in the tile's name. */}
+                          {item.own && !c.is_public ? (
+                            <View style={s.gcardLock} testID="collection-tile-lock">
+                              <Ionicons name="lock-closed" size={12} color={colors.text} />
+                            </View>
+                          ) : null}
                           <View style={s.gcardText}>
                             <Text style={s.gcardTitle} numberOfLines={1}>
                               {t(c.title_en, c.title_vi, c.title_ja)}
@@ -1295,15 +1316,10 @@ export default function CollectionsScreen({ navigation, route }: {
                                 before either — three surfaces, one grammar,
                                 no verb in any of them. On your own tab neither
                                 appears — the byline would only say your own
-                                name, so the padlock speaks instead. */}
+                                name — and the padlock, which once led this
+                                row, sits in the top corner now, private
+                                lists only. */}
                             <View style={s.gcardFoot} testID="collection-tile-foot">
-                              {item.own && (
-                                <Ionicons
-                                  name={c.is_public ? 'globe-outline' : 'lock-closed-outline'}
-                                  size={14}
-                                  color={c.is_public ? colors.ok : onPhoto.textSecondary}
-                                />
-                              )}
                               {!item.own && c.curator_handle ? (
                                 <>
                                   <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
@@ -1687,9 +1703,9 @@ export default function CollectionsScreen({ navigation, route }: {
                             web build keeps, where it drops
                             `accessibilityValue`.
 
-                            The count keeps its word. The glyph before it is the
-                            globe or the padlock, which say who can see the list
-                            and not what is in it: "4" after a globe is four of
+                            The count keeps its pin: the padlock before it, on a
+                            private list, says who can see the list and not what
+                            is in it, and "4" after a padlock is four of
                             nothing. */}
                         <View style={s.foot}>
                           <View style={[s.metaRow, s.footFacts]}>
@@ -1708,12 +1724,14 @@ export default function CollectionsScreen({ navigation, route }: {
                                 own glyph a few points above. The word is still
                                 on the list's own screen, where it is the switch
                                 that changes it, and it is in the card's spoken
-                                name, which had never carried it at all. */}
-                            <Ionicons
-                              name={own.is_public ? 'globe-outline' : 'lock-closed-outline'}
-                              size={13}
-                              color={own.is_public ? colors.ok : colors.textTertiary}
-                            />
+                                name, which had never carried it at all.
+
+                                And then private only (owner, 2 Nov 2026), as on
+                                the tiles: a public list is the default and
+                                wears nothing; the padlock marks the exception. */}
+                            {own.is_public ? null : (
+                              <Ionicons name="lock-closed-outline" size={13} color={colors.textTertiary} />
+                            )}
                             {/* "0 places" reads like a broken count; an empty
                                 list you just made deserves a sentence. Any
                                 other count is the pin and the figure (owner,
@@ -1935,6 +1953,10 @@ const s = StyleSheet.create({
   // other — the same list moved as you switched tabs.
   gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, minHeight: 18 },
   gcardMeta: { color: onPhoto.textSecondary, fontSize: 13 },
+  gcardLock: {
+    position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceCard,
+  },
   gcardCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
