@@ -45,8 +45,10 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { PressableScale, SECONDARY_CONTROL_H } from './ui';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { useScheme } from '../lib/theme';
+import { addArt, colors, font, gradAI, radius, space, type } from '../theme';
 
 /**
  * The dashed slot at the end of a list.
@@ -89,9 +91,39 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * The space for one more place in your own collection (owner, 22 Oct
  * 2026), from two mockups the owner drew: a dashed tile in the grid's
  * first cell, and a dashed row over the first card in the list. The
- * glyph is the bare plus of the second mockup, in both; the first had a
+ * glyph was the bare plus of the second mockup, in both; the first had a
  * picture with a plus on it, which says "add a photo", and this adds a
  * place.
+ *
+ * ── the tile's little map (owner, 1 Nov 2026) ──
+ *
+ * The tile now carries a picture after all, and it is the answer to the
+ * reason the first one was turned down: a dashed route, a pin and two
+ * hills say "a place", not "a photo". It is the same hand as the app's
+ * two paintings — the dashed trail the paper plane leaves on the sign-in
+ * sheet, the sage of their trees, the accent of their awnings — at the
+ * size of one tile.
+ *
+ * Drawn, not painted (`AddCellArt`): a tile is 100–130pt across the
+ * phones this app runs on, and every colour in it is a token of the
+ * look, so the dark side and all twenty looks come with it rather than
+ * as forty files. The reference had a cloud and two trees too; at 111pt
+ * that was a picture to read before the plus, so they went, and the
+ * route runs along the top so the middle is the plus's and the word's.
+ *
+ * No dashed edge on the tile any more: the picture is what says this is
+ * a space and not a place, and a dashed rule round a map read as a map
+ * cut out. The row keeps its dashes — at 48pt there is no room for a
+ * picture, and the dashes are still what says it.
+ *
+ * The plus stands in a 44pt disc, the button scale's middle step, in the
+ * raised ground: it is the tile's mark, not a second button — the whole
+ * tile is one control, named by its word. The word is in the body's ink
+ * at medium weight, where the bare tile had it secondary and regular: on
+ * a picture it has the drawing to stand out from, not empty paper. Both
+ * inks pass on the tint (the secondary no lower than 5.6:1, the body no
+ * lower than 7.8 across the looks); `add.ui.test.tsx` holds the body's
+ * to 4.5 in every look.
  *
  * Not `AddSlot`. That one ends a list, where the reader arrives with
  * nothing on screen to say what the row is for, so it takes a second line
@@ -111,19 +143,79 @@ export function AddCell({ label, onPress, size, testID }: {
   size?: number;
   testID?: string;
 }) {
-  const tile = size !== undefined;
+  if (size !== undefined) {
+    return (
+      <PressableScale
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        contentStyle={[s.cellTile, { width: size, height: size }]}
+        testID={testID}
+      >
+        <AddCellArt />
+        <View style={s.cellDisc}>
+          <Ionicons name="add" size={24} color={colors.text} />
+        </View>
+        <Text style={s.cellTileText} numberOfLines={2}>{label}</Text>
+      </PressableScale>
+    );
+  }
   return (
     <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={tile ? undefined : s.cellRowWrap}
-      contentStyle={tile ? [s.cellTile, { width: size, height: size }] : s.cellRow}
+      style={s.cellRowWrap}
+      contentStyle={s.cellRow}
       testID={testID}
     >
       <Ionicons name="add" size={24} color={colors.text} />
-      <Text style={tile ? s.cellTileText : s.cellRowText} numberOfLines={2}>{label}</Text>
+      <Text style={s.cellRowText} numberOfLines={2}>{label}</Text>
     </PressableScale>
+  );
+}
+
+/**
+ * The tile's map, on a 100-unit square scaled to cover the tile.
+ *
+ * Kept out of the middle: the route runs above the disc's top edge (the
+ * disc starts about 20% down with the word on one line) and the hills
+ * rise no higher than 83%, under the word's line (it ends about 80%
+ * down), so neither the plus nor a letter sits on a stroke. A word that
+ * wraps (a longer language, a larger text size) lifts the pair by half a
+ * line and drops the word onto the hills' crest; it stays in the body's
+ * ink over a tint of at most a third.
+ *
+ * Decorative: hidden from the screen reader and inert to touch.
+ */
+function AddCellArt() {
+  const { scheme } = useScheme();
+  const ink = addArt[scheme];
+  return (
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      aria-hidden
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      testID="add-cell-art"
+    >
+      <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+        <Path d="M0 91 C18 83 34 85 50 91 S82 88 100 92 V100 H0 Z" fill={ink.hill} fillOpacity={0.2} />
+        <Path d="M0 96 C22 91 44 93 62 97 S88 94 100 96 V100 H0 Z" fill={ink.hill} fillOpacity={0.34} />
+        <Path d="M91 84 L87.5 92 H94.5 Z" fill={ink.hill} fillOpacity={0.55} />
+        <Path
+          d="M-2 30 C10 14 24 22 36 11 S62 3 77 12"
+          stroke={ink.route}
+          strokeWidth={1.6}
+          strokeDasharray="3 3"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <Path d="M83 21 C83 21 77.5 14.5 77.5 11 A5.5 5.5 0 0 1 88.5 11 C88.5 14.5 83 21 83 21 Z" fill={ink.pin} />
+        <Circle cx={83} cy={11} r={2} fill={ink.eye} />
+      </Svg>
+    </View>
   );
 }
 
@@ -274,12 +366,21 @@ const s = StyleSheet.create({
     borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
   },
   cellRowText: { color: colors.textSecondary, fontSize: 16, lineHeight: 22 },
-  // The tile's own radius (`PlaceTile`), so the cell reads as one of them.
+  // The tile's own radius (`PlaceTile`), so the cell reads as one of them,
+  // on the accent's tint: the warm paper of the reference in the light
+  // look, a warm dusk in the dark one.
   cellTile: {
-    alignItems: 'center', justifyContent: 'center', gap: 6, padding: 8,
-    borderRadius: radius.input, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
+    alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 4,
+    borderRadius: radius.input, overflow: 'hidden', backgroundColor: colors.accentSoft,
   },
-  cellTileText: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, textAlign: 'center' },
+  cellDisc: {
+    width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, borderRadius: SECONDARY_CONTROL_H / 2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated,
+  },
+  // 13pt and 4pt of side padding, so "Thêm địa điểm" stays one line on a
+  // 111pt tile (measured: two lines at 14pt in 8pt of padding, and the
+  // second sat on the hills).
+  cellTileText: { color: colors.text, fontSize: 13, lineHeight: 17, fontWeight: font.medium, textAlign: 'center' },
 
   // `SECONDARY_CONTROL_H`, so a pill and a round button in the same header
   // slot are the same height, and the dock's pill is the header's. There

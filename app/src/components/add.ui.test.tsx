@@ -11,7 +11,7 @@ import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'reac
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import { AddCell, AddPill, AddSlot } from './add';
-import { colors, space } from '../theme';
+import { colors, PALETTES, space } from '../theme';
 import { SECONDARY_CONTROL_H } from './ui';
 
 describe('AddSlot', () => {
@@ -26,8 +26,8 @@ describe('AddSlot', () => {
   });
 });
 
-// A plus and a word, the plus the owner's mockup chose (22 Oct 2026):
-// the bare one, not a picture with a plus, since what it adds is a place.
+// A plus and a word, the plus the owner's mockup chose (22 Oct 2026). The
+// tile has since gained a little map (owner, 1 Nov 2026); the row has not.
 describe('AddCell', () => {
   it('is a tile the side it is given, and a row the list’s width without one', () => {
     const onPress = vi.fn();
@@ -41,6 +41,44 @@ describe('AddCell', () => {
     expect(box().style.width).toBe('');
     expect(getComputedStyle(screen.getByTestId('cell')).marginLeft).toBe(`${space.page}px`);
     expect(document.querySelector('[data-icon="add"]')).toBeTruthy();
+  });
+
+  // The tile wears the map and no dashes; the row keeps its dashes and
+  // has no room for a map.
+  it('draws the map on the tile, edge-free, and dashes the row instead', () => {
+    const { rerender } = render(<AddCell label="Add place" size={110} onPress={() => {}} testID="cell" />);
+    const face = () => screen.getByTestId('cell').firstElementChild as HTMLElement;
+    const art = screen.getByTestId('add-cell-art');
+    expect(art.querySelectorAll('[data-stub="Path"]').length).toBeGreaterThan(0);
+    // Out of the reader's way: VoiceOver hears the word, not the drawing.
+    expect(art.getAttribute('aria-hidden')).toBe('true');
+    expect(getComputedStyle(face()).borderTopStyle).not.toBe('dashed');
+    // The plus in the button scale's 44pt disc.
+    const disc = document.querySelector('[data-icon="add"]')!.parentElement as HTMLElement;
+    expect([disc.style.width || getComputedStyle(disc).width, getComputedStyle(disc).height])
+      .toEqual([`${SECONDARY_CONTROL_H}px`, `${SECONDARY_CONTROL_H}px`]);
+    rerender(<AddCell label="Add place" onPress={() => {}} testID="cell" />);
+    expect(screen.queryByTestId('add-cell-art')).toBeNull();
+    expect(getComputedStyle(face()).borderTopStyle).toBe('dashed');
+  });
+
+  // The word sits on the accent's tint over the page, in the body's ink —
+  // read off the word as drawn, then worked out against every look's tint.
+  it('keeps its word at 4.5:1 or better on the tile, in every look', () => {
+    render(<AddCell label="Add place" size={110} onPress={() => {}} />);
+    const drawn = getComputedStyle(screen.getByText('Add place')).color;
+    const probe = document.createElement('div');
+    probe.style.color = String(colors.text);
+    expect(drawn).toBe(probe.style.color);
+    const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    for (const [name, p] of Object.entries(PALETTES)) {
+      const [, r, g, b, a] = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(p.accentSoft)!.map(Number);
+      const ground = hex(p.bg).map((c, i) => c * (1 - a) + [r, g, b][i] * a);
+      const [hi, lo] = [lum(hex(p.text)), lum(ground)].sort((x, y) => y - x);
+      expect([name, (hi + 0.05) / (lo + 0.05) >= 4.5]).toEqual([name, true]);
+    }
   });
 });
 
