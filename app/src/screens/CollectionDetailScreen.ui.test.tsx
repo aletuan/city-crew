@@ -425,9 +425,10 @@ describe('your own list', () => {
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
     // In the foot, before the count — not under the title any more.
-    // The pin and the figure after the dot; the word is what is heard.
-    expect(screen.getByTestId('collection-stats').textContent).toBe('Private·3');
-    expect(screen.getByLabelText('3 places')).toBeTruthy();
+    // On your own the count is the Add place cell's (owner, 2 Nov 2026),
+    // so the foot is who can see it and nothing else.
+    expect(screen.getByTestId('collection-stats').textContent).toBe('Private');
+    expect(screen.getByTestId('collection-add-cell-count').textContent).toBe('3');
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
     // No self-credit and no heart on your own list.
@@ -445,7 +446,7 @@ describe('your own list', () => {
     state.mine = [collection({ is_public: true }, [PHO])];
     show();
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Public');
-    expect(screen.getByLabelText('1 place')).toBeTruthy();
+    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Add place, 1 place');
     expect(screen.queryByText(/Private/)).toBeNull();
   });
 
@@ -485,7 +486,9 @@ describe('your own list', () => {
     const { parent, raw } = show();
     expect(screen.queryByText('From search or your bookmarks')).toBeNull();
     const add = screen.getByTestId('collection-add-cell');
-    expect(add.getAttribute('aria-label')).toBe('Add place');
+    // The word, then the count it carries in its corner.
+    expect(add.getAttribute('aria-label')).toBe('Add place, 3 places');
+    expect(screen.getByTestId('collection-add-cell-count').querySelector('[data-icon="location-outline"]')).toBeTruthy();
     expect(add.querySelector('[data-icon="add"]')).toBeTruthy();
     const follows = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect(follows(screen.getByTestId('collection-intro'), add)).toBe(true);
@@ -498,7 +501,7 @@ describe('your own list', () => {
   it('says Add place in the reader’s language', () => {
     state.lang = 'vi';
     show();
-    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Thêm địa điểm');
+    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Thêm địa điểm, 3 địa điểm');
   });
 
   it('greets an empty list with one invitation to find places for it, and no footer', () => {
@@ -507,7 +510,9 @@ describe('your own list', () => {
     expect(screen.getByText('Nothing here yet.')).toBeTruthy();
     expect(screen.queryByText('No places in this collection yet.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
-    expect(screen.getByLabelText('0 places')).toBeTruthy();
+    // No cell, and so no count: the card is the whole answer.
+    expect(screen.queryByTestId('collection-add-cell')).toBeNull();
+    expect(screen.getByTestId('collection-stats').querySelector('[data-icon="location-outline"]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Find places' }).querySelector('[data-icon="search"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Find places'));
     expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
@@ -653,15 +658,15 @@ describe('publishing', () => {
     }
   });
 
-  // The pin came back after the dot (owner, 2 Nov 2026): the count is the
-  // pin and the figure on every list, and only the globe has a chevron.
-  it('draws the padlock or the globe as the foot\u2019s glyph, with a chevron, then the pin', () => {
+  // On your own the foot is the visibility alone (owner, 2 Nov 2026): the
+  // count moved into the Add place cell's corner.
+  it('draws the padlock or the globe as the foot\u2019s glyph, with a chevron and no count', () => {
     show();
     let foot = screen.getByTestId('collection-stats');
     expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
     expect(foot.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
     expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
-      .toEqual(['lock-closed-outline', 'chevron-down', 'location-outline']);
+      .toEqual(['lock-closed-outline', 'chevron-down']);
     cleanup();
     state.mine = [collection({ is_public: true })];
     show();

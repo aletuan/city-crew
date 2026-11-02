@@ -1159,15 +1159,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      line of facts read as two controls, and the bare "Public · 19" that
      would have left was the reason it came back: only the globe has a
      chevron, and only the globe answers a tap. A screen reader hears the
-     word either way: it cannot see the pin. */
+     word either way: it cannot see the pin.
+
+     On your own it is gone again (owner, 2 Nov 2026), and for a better
+     reason: the "Add place" cell under the card now carries the count in
+     its corner, the photo tiles' layout, so the foot would say it twice.
+     Your foot is who can see it, and the heart. An empty list of yours
+     has no cell, and no count anywhere: "Nothing here yet" is the
+     card's whole answer. */
   const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
   const cardFoot = col ? (
     <View style={s.cardFoot} testID="collection-stats">
       <View style={s.footCount}>
-        {visibility}
-        {visibility ? <Text style={s.meta}>·</Text> : null}
-        <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
-        <Text style={s.meta} accessibilityLabel={`${members.length} ${placesWord}`}>{members.length}</Text>
+        {visibility ?? (
+          <>
+            <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+            <Text style={s.meta} accessibilityLabel={`${members.length} ${placesWord}`}>{members.length}</Text>
+          </>
+        )}
       </View>
       {heart}
     </View>
@@ -1498,11 +1507,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      offers of one act read as two acts. While a filter narrows the list
      it stays: the place you add is added whatever is shown. It goes
      where the ⋯ menu's row and the dock's pill go, `addPlace`. */
+  // The list's count rides the cell (owner, 2 Nov 2026): on your own list
+  // it is the cell's corner and not the card's foot.
   const addCell = (size?: number) => (
     <AddCell
       label={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
       onPress={addPlace}
       size={size}
+      count={{ n: members.length, said: `${members.length} ${placesWord}` }}
       testID="collection-add-cell"
     />
   );

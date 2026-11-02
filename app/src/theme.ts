@@ -157,6 +157,9 @@ export const bgElevatedHex = { light: SIDES.light.bgElevated, dark: SIDES.dark.b
 /** `colors.text` as plain hex, for a prop typed `string` (the tab bar's
  *  idle glyphs) — the same escape hatch as `bgHex`, for another reason. */
 export const textHex = { light: SIDES.light.text, dark: SIDES.dark.text } as const;
+/** `colors.borderGlass` as a plain pair, for a border that must show —
+ *  see `bgHex`. The add-place tile's disc (`AddCell`) rings itself in it. */
+export const borderGlassHex = { light: SIDES.light.borderGlass, dark: SIDES.dark.borderGlass } as const;
 /** `colors.badgeSolid` as plain hex, for a border — see `bgHex`. */
 export const badgeSolidHex = { light: SIDES.light.badgeSolid, dark: SIDES.dark.badgeSolid } as const;
 
@@ -546,14 +549,6 @@ export const ringTrack = { light: SIDES.light.ringTrack, dark: SIDES.dark.ringTr
 export const pillInk = { light: SIDES.light.pillInk, dark: SIDES.dark.pillInk } as const;
 /** The welcome art's heart, per side — see `welcomeArt`. */
 export const heartInk = { light: SIDES.light.heartInk, dark: SIDES.dark.heartInk } as const;
-/** The add-a-place tile's little map, per side — see `AddCell`. An SVG
- *  fill takes no dynamic pair, so each side is read out here: the hills
- *  in the look's `ok` (its sage), the route in `accentLine`, the pin in
- *  `accent` with its eye in `bgElevated`. */
-export const addArt = {
-  light: { hill: SIDES.light.ok, route: SIDES.light.accentLine, pin: SIDES.light.accent, eye: SIDES.light.bgElevated },
-  dark: { hill: SIDES.dark.ok, route: SIDES.dark.accentLine, pin: SIDES.dark.accent, eye: SIDES.dark.bgElevated },
-} as const;
 /** The frosted glass's veil and its type halo, per side — see `GlassMaterial`. */
 export const glass = {
   veil: { light: SIDES.light.glassVeil, dark: SIDES.dark.glassVeil },
