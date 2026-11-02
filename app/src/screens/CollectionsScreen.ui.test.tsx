@@ -1399,7 +1399,7 @@ describe('CollectionsScreen — search', () => {
     state.places = [place('a', 'hanoi'), place('b', 'danang')];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1', title_en: 'Mine in Hanoi' }), col('m2', ['b'], { owner_id: 'u1', title_en: 'Mine in Da Nang' })];
     show();
-    expectSub('The corners you’ve kept.');
+    expectSub('Your own favourite places.');
     expect(screen.getByText('Mine in Da Nang')).toBeTruthy();
     fireEvent.click(screen.getByTestId('collections-filters'));
     expect(screen.getByRole('button', word('danang')).getAttribute('aria-selected')).toBe('false');
@@ -1408,7 +1408,7 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByText('Mine in Hanoi')).toBeNull();
     expectSub('1 collection · danang');
     sheetPick({ city: 'danang' });
-    expectSub('The corners you’ve kept.');
+    expectSub('Your own favourite places.');
   });
 
   // Words in the box count as asking: the line is the answer then, and
@@ -1418,7 +1418,7 @@ describe('CollectionsScreen — search', () => {
     state.places = [place('a', 'hanoi')];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1' })];
     show();
-    expectSub('The corners you’ve kept.');
+    expectSub('Your own favourite places.');
     expect(screen.queryByText('City')).toBeNull();
     type('list');
     expectSub('1 collection · hanoi');

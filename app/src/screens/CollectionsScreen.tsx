@@ -925,7 +925,7 @@ export default function CollectionsScreen({ navigation, route }: {
     ? scopeLine({ count: hits.length, chosen, cities: cityChoices, cityName }, t)
     : !onYours
       ? t('Good corners, through the community’s eyes.', 'Những góc hay, qua lăng kính cộng đồng.', 'みんなの目で見つけた、いい場所。', '社区眼中的好去处。', '社群眼中的好去處。')
-      : t('The corners you’ve kept.', 'Những góc bạn đã giữ lại.', 'あなたが取っておいた場所。', '你收藏下来的好去处。', '你收藏下來的好去處。');
+      : t('Your own favourite places.', 'Nơi chốn yêu thích của riêng bạn.', 'あなただけのお気に入りの場所。', '专属于你的心仪去处。', '專屬於你的心儀去處。');
 
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
