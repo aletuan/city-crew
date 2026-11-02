@@ -4,7 +4,7 @@
 //
 // A reader's text size multiplies every `Text` in the app, and nearly
 // every layout here takes that: buttons are `minHeight`, rows are padding
-// around their words. Three boxes are fixed by their nature — the 64pt
+// around their words. Three boxes are fixed by their nature — the 60pt
 // tab bar, the 20pt shut sash drawn across a photograph, the 21pt count
 // badge. The sash and the badge cap their caption at `labelScaleCap` so
 // it is smaller rather than clipped; the tab bar has carried no words
@@ -67,7 +67,7 @@ afterEach(() => { vi.useRealTimers(); });
 
 describe('the three boxes that cannot grow', () => {
   // Glyphs only: the names are VoiceOver's, and no word is drawn that a
-  // reader's text size could push out of the 64pt island.
+  // reader's text size could push out of the 60pt island.
   it('draws no words in the tab bar for a text size to grow', () => {
     const names = ['Ideas', 'Explore', 'Trips', 'Collections', 'Profile'];
     const props = {

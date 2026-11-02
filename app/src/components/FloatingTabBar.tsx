@@ -48,7 +48,7 @@ import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
-import { badgeSolidHex, bgHex, colors, pillInk, radius, textHex } from '../theme';
+import { badgeSolidHex, bgHex, colors, pillGround, pillInk, radius, textHex } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useReducedMotion, useTabBarFrame, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 import PlacesGlyph from './PlacesGlyph';
@@ -414,7 +414,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         >
           <Animated.View
             style={[s.pillGround, {
-              backgroundColor: colors.badgeSolid,
+              // A step quieter than the badge (`pillGround`), and opaque.
+              backgroundColor: light ? pillGround.light : pillGround.dark,
               transform: [{ scaleX: stretch }, { scale: rise.interpolate({ inputRange: [0, 1], outputRange: [1, LIFT_SCALE] }) }],
             }]}
           >
@@ -482,7 +483,8 @@ const s = StyleSheet.create({
   tabInner: { alignItems: 'center', justifyContent: 'center' },
   // A pill that fills its cell, Threads' shape: `PILL_INSET` from the
   // island's rim on every side it meets. Its round ends are concentric
-  // with the island's, since 56/2 is the island's 32pt radius less 4.
+  // with the island's, since 52/2 is the island's 30pt radius less 4
+  // (56 in a 64pt island until 2 Nov 2026 — see `TAB_BAR_HEIGHT`).
   //
   // It went through a 52pt disc and then a 60×44 pill the same day (11 Oct
   // 2026). Both left a wide band of glass between the mark and the rim,

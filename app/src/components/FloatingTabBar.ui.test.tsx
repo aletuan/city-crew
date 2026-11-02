@@ -49,7 +49,7 @@ vi.mock('./SignupTour', async (orig) => {
   return { ...real, useTourAnchor: (...args: Parameters<typeof real.useTourAnchor>) => { anchorCalls.push(args); return real.useTourAnchor(...args); } };
 });
 
-import { PALETTES } from '../theme';
+import { PALETTES, PILL_FADE } from '../theme';
 import FloatingTabBar from './FloatingTabBar';
 import PlacesGlyph from './PlacesGlyph';
 import { TabBarDuckProvider, useTabBarDuck } from './tabBarDuck';
@@ -212,16 +212,37 @@ describe('the five tabs', () => {
     expect(ink('Ideas')).toBe(PALETTES.paper.text);
   });
 
-  // The pill is the look's solid badge: the cell's width, 56 tall in the
-  // 64pt island, round-ended. One of it, whichever tab is selected.
-  it('draws one pill, a cell wide, in the look’s badge colour', () => {
+  // The pill is the look's solid badge carried a fifth of the way to the
+  // page (owner, 2 Nov 2026): the cell's width, 52 tall in the 60pt
+  // island, round-ended, opaque. One of it, whichever tab is selected.
+  it('draws one pill, a cell wide, a step quieter than the look’s badge', () => {
     mount(propsFor(2).props);
     expect(screen.getAllByTestId('tab-pill')).toHaveLength(1);
     expect(parseFloat(pill().style.width)).toBeCloseTo(CELL);
     const style = getComputedStyle(ground());
-    expect(style.backgroundColor).toBe('rgb(255, 111, 91)'); // charcoal's badgeSolid
-    expect(getComputedStyle(pill()).height).toBe('56px');
-    expect(style.borderTopLeftRadius).toBe('28px');
+    // charcoal's badgeSolid #FF6F5B, a fifth of the way to its #0A0B0A.
+    expect(style.backgroundColor).toBe('rgb(206, 91, 75)');
+    expect(getComputedStyle(pill()).height).toBe('52px');
+    expect(style.borderTopLeftRadius).toBe('26px');
+    // The island round-ended at its 60pt height, so its ends and the
+    // pill's are concentric: 30 = 26 + the 4pt inset.
+    const island = screen.getAllByRole('tab')[0].parentElement!.parentElement!;
+    expect(getComputedStyle(island).height).toBe('60px');
+    expect(getComputedStyle(island).borderTopLeftRadius).toBe('30px');
+  });
+
+  // Solid, so the glass under it never becomes the glyph's ground, and
+  // no lighter than every look's ink can stand on.
+  it('keeps every look’s pill ink over 3.6:1 on the quieter pill', () => {
+    const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const lum = (c: number[]) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    for (const [name, p] of Object.entries(PALETTES)) {
+      const ground = rgb(p.badgeSolid).map((c, i) => Math.round(c * (1 - PILL_FADE) + rgb(p.bg)[i] * PILL_FADE));
+      const [hi, lo] = [lum(rgb(p.pillInk)), lum(ground)].sort((a, b) => b - a);
+      expect([name, (hi + 0.05) / (lo + 0.05) > 3.6]).toEqual([name, true]);
+    }
+    expect(PILL_FADE).toBeGreaterThan(0);
   });
 
   // Drawn at 25, not 22: at 22 the ink came out a few points smaller than
@@ -245,7 +266,7 @@ describe('the five tabs', () => {
     mount(propsFor(0).props);
     const cell = tab('Ideas');
     const row = getComputedStyle(cell.parentElement!);
-    const above = (64 - parseFloat(getComputedStyle(pill()).height)) / 2;
+    const above = (TAB_BAR_HEIGHT - parseFloat(getComputedStyle(pill()).height)) / 2;
     expect(above).toBe(4);
     expect(parseFloat(row.paddingLeft)).toBe(above);
     expect(parseFloat(row.paddingRight)).toBe(above);
