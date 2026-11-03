@@ -20,6 +20,11 @@ import { useI18n } from '../lib/i18n';
 import { colors, onPhoto } from '../theme';
 import { PressableScale } from './ui';
 
+/** The disc over a photograph — the card's bookmark and this ⊕ in its
+ *  place, one size: see `saveFab` in PlaceCard for why 36. Here rather
+ *  than there because the card imports this, not the other way round. */
+export const SAVE_DISC = 36;
+
 export default function ListToggle({ on, title, onPress, overPhoto, style, testID }: {
   on: boolean;
   /** The list's name, for a screen reader: "Add to Thảo Điền, checked". */
@@ -50,7 +55,7 @@ export default function ListToggle({ on, title, onPress, overPhoto, style, testI
     >
       <Ionicons
         name={on ? 'checkmark' : 'add'}
-        size={overPhoto ? 22 : 20}
+        size={20}
         color={on ? colors.accentInk : overPhoto ? onPhoto.text : colors.accent}
       />
     </PressableScale>
@@ -58,9 +63,12 @@ export default function ListToggle({ on, title, onPress, overPhoto, style, testI
 }
 
 const s = StyleSheet.create({
-  // The bookmark's disc, to the point: 40pt, the same glass and hairline.
+  // The bookmark's disc, to the point: its size (36 since 4 Nov 2026, see
+  // `saveFab` in PlaceCard), the same glass and hairline. The glyph is 20
+  // in it as in a row's 34: 22 was 40's, and the ⊕ keeps the bookmark's
+  // proportion to its disc.
   photo: {
-    width: 40, height: 40, borderRadius: 20,
+    width: SAVE_DISC, height: SAVE_DISC, borderRadius: SAVE_DISC / 2,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(10,11,10,0.58)',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
