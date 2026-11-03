@@ -32,7 +32,7 @@ import { DEFAULT_TZ } from '../lib/clock';
 import { openFragment, openState } from '../lib/format';
 import { useCatalogIn, useLikes, useSearchTerms } from '../lib/catalog';
 import { RECENTS_KEY, rememberSearch } from '../lib/recents';
-import { buildSearchRows } from '../lib/searchRows';
+import { browseColumns, buildSearchRows } from '../lib/searchRows';
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
 import { isNewList, newestPlaces } from '../lib/newest';
 import { rankPopular } from '../lib/popular';
@@ -590,6 +590,14 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
               // (measured on a mock of this page, 3 Nov) — the price of
               // seeing all nine, and the owner's call to pay it.
               //
+              // The rows are even (owner, 3 Nov 2026): a city with eight
+              // kinds drew five over three, and a short second row reads
+              // as the leftovers. `browseColumns` splits them in half, five
+              // and under on one row. And 12pt between the two rows: with
+              // none, a word sat 10pt over the next row's glyph — closer
+              // than the 22 its own glyph was above it — so the second
+              // row read as hanging off the first.
+              //
               // Nothing is ever chosen here. A tap *is* a search: it types
               // the category's own label into the box, and the haystack —
               // which carries every category's labels in all three
@@ -597,7 +605,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
               // with typing the same word. The moment there is a word the
               // zero-state yields to results and this grid with it.
               <View style={s.browseGrid} testID="search-browse">
-                <TileGrid cols={5} gap={0}>
+                <TileGrid cols={browseColumns(cats.length)} gap={0} rowGap={12}>
                   {cats.map((key) => (
                     <Tile
                       key={key}

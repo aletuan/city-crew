@@ -371,10 +371,24 @@ describe('TileGrid', () => {
     expect(rows().map((r) => r.children.length)).toEqual([5, 5]);
     expect(rows().map((r) => r.querySelectorAll('[role="button"]').length)).toEqual([5, 4]);
     expect(rows()[0].style.gap).toBe('0px');
+    // The rows take the same gap when given no other.
+    expect(rows()[0].parentElement!.style.gap).toBe('0px');
   });
 
   it('keeps 8 between cells unless told otherwise', () => {
     grid();
     expect(rows()[0].style.gap).toBe('8px');
+    expect(rows()[0].parentElement!.style.gap).toBe('8px');
+  });
+
+  // Search's Browse: none across, 12 between its two rows.
+  it('takes its own gap between the rows', () => {
+    render(
+      <TileGrid cols={5} gap={0} rowGap={12}>
+        {['a', 'b', 'c', 'd', 'e', 'f'].map((k) => <Tile key={k} label={k} icon="cafe-outline" />)}
+      </TileGrid>,
+    );
+    expect(rows()[0].style.gap).toBe('0px');
+    expect(rows()[0].parentElement!.style.gap).toBe('12px');
   });
 });

@@ -225,19 +225,22 @@ export function Tile({ label, icon, active, compact, onPress, testID }: {
  * two normal rows and then one cell twice the width of the others,
  * reading as emphasis on whichever concept happened to be seventh.
  */
-export function TileGrid({ cols, gap = 8, children }: {
+export function TileGrid({ cols, gap = 8, rowGap = gap, children }: {
   cols: number;
   /** Between the cells, both ways. 0 where a cell has no ground until it
    *  is chosen and never is (Search's Browse): the air is then the cells'
    *  own padding, and the width goes to the words. */
   gap?: number;
+  /** Between the rows, when it is not `gap`: Browse's 0 across leaves its
+   *  rows too close (see SearchScreen). */
+  rowGap?: number;
   children: React.ReactNode;
 }) {
   const items = React.Children.toArray(children);
   const rows: React.ReactNode[][] = [];
   for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
   return (
-    <View style={{ gap }}>
+    <View style={{ gap: rowGap }}>
       {rows.map((row, i) => (
         <View key={i} style={[s.tileRow, { gap }]}>
           {row}
