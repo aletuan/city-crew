@@ -573,6 +573,17 @@ describe('your own list', () => {
     });
   });
 
+  // A long note stops at five lines with "… Read more" on the fifth
+  // (owner, 3 Nov 2026): it had filled the screen the places are for.
+  // `MoreText` has its own tests; this pins that the card draws with it.
+  it('draws the description through the five-line "Read more"', () => {
+    show();
+    const desc = propsWhere((p) => p.testID === 'collection-desc-text' && !('text' in p)) as
+      { onTextLayout: (e: unknown) => void };
+    act(() => desc.onTextLayout({ nativeEvent: { lines: Array.from({ length: 6 }, () => ({ text: 'Where ', width: 60 })) } }));
+    expect(screen.getByTestId('collection-desc-text').textContent!.endsWith('… Read more')).toBe(true);
+  });
+
   // The line and the pencil are the press, not the whole card: the
   // chips under the line are the list's filter (see "the chips").
   it('invites the owner to write one when there is none, the line and the pencil the press', () => {

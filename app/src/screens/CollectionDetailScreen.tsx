@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
 import PlaceTile from '../components/PlaceTile';
+import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
 import {
   AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
@@ -1596,7 +1597,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           <View style={s.descBody}>
             {curatorRow}
             {desc ? (
-              <Text style={s.descText}>{desc}</Text>
+              // Five lines, then "… Đọc thêm" (owner, 3 Nov 2026): a long
+              // note had filled the screen the places are for. See
+              // `MoreText`.
+              <MoreText text={desc} style={s.descText} testID="collection-desc-text" />
             ) : owned ? (
               // The invitation: the line and the pencil open the form.
               // Not the whole card, since the chips under the line are
