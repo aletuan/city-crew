@@ -20,7 +20,8 @@
 
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { Animated } from 'react-native';
+import { Animated, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
+import { font } from '../theme';
 import { appFlags } from '../lib/flags';
 import { act, fireEvent, render, screen, within } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
@@ -63,6 +64,27 @@ vi.mock('../lib/assist', async (orig) => ({
 }));
 
 import PlanOptionsScreen from './PlanOptionsScreen';
+
+/** The flattened style a Text was committed with, by its words: jsdom does
+ *  not resolve react-native-web's atomic font classes, so a weight is read
+ *  off the props rather than the computed style. */
+const weightOf = (words: string): unknown => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && p.children === words && 'style' in p) {
+      return StyleSheet.flatten(p.style as StyleProp<TextStyle>)?.fontWeight;
+    }
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error(`no text "${words}" in the committed tree`);
+};
+
 
 const place = (slug: string, name: string, extra: Partial<Place> = {}): Place => ({
   slug, name_en: name, name_vi: name, name_ja: null, category: 'food', is_featured: false,
@@ -473,6 +495,8 @@ describe('fewer than three, and none', () => {
     expect(screen.getByText('Your evening, three ways')).toBeTruthy();
     // Under cards, Regenerate is the way out: quiet, not the gradient.
     expect(regen().querySelector('[data-stub="LinearGradient"]')).toBeNull();
+    // Its word in medium, as the header's quiet "New" (owner, 3 Nov 2026).
+    expect(weightOf('Regenerate')).toBe(font.medium);
     expect(screen.queryByText(/^Only /)).toBeNull();
   });
 

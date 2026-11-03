@@ -786,7 +786,9 @@ const s = StyleSheet.create({
   ctaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   // `AddPill`'s quiet, to the token: see the note on `GradientCta`.
   ctaQuiet: { backgroundColor: colors.surfaceGlass },
-  ctaTextQuiet: { color: colors.text },
+  // And in medium, as `AddPill`'s quiet word is (owner, 3 Nov 2026): one
+  // look for the way out wherever it stands.
+  ctaTextQuiet: { color: colors.text, fontWeight: font.medium },
   tick: {
     width: 26, height: 26, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',

@@ -11,7 +11,7 @@ import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'reac
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import { AddCell, AddPill, AddSlot } from './add';
-import { colors, PALETTES, space, textTertiaryHex } from '../theme';
+import { colors, font, PALETTES, space, textTertiaryHex } from '../theme';
 import { SECONDARY_CONTROL_H } from './ui';
 
 // The app's scheme, which the tile's ring is picked by in JS: a `dyn`
@@ -218,6 +218,41 @@ describe('AddPill', () => {
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
     expect(screen.getByText('Add')).toBeTruthy();
     expect(propsWhere((p) => 'animating' in p || ('size' in p && p.size === 'small')).color).toBe(colors.accent);
+  });
+
+  // Lighter beside a title (owner, 3 Nov 2026): the quiet word in medium
+  // and 12/16 of side padding; the filled pill in the docks keeps its
+  // semibold and its 14/18.
+  it('sets the quiet word in medium on narrower sides, and leaves the filled pill as it was', () => {
+    const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
+    expect(word().fontWeight).toBe(font.semibold);
+    expect([pill().paddingLeft, pill().paddingRight]).toEqual([14, 18]);
+    rerender(<AddPill label="Add" onPress={() => {}} quiet />);
+    expect(word().fontWeight).toBe(font.medium);
+    expect([glass().paddingLeft, glass().paddingRight, glass().minHeight]).toEqual([12, 16, 44]);
+  });
+
+  // Every look's own glass, ink and accent — the pill has no colour of its
+  // own, so it changes with the look chosen in Profile. Worked out on the
+  // glass over each look's page: the word owes 4.5:1 at 16pt medium, the
+  // plus 3:1 as a glyph.
+  it('keeps the quiet word and plus readable on its glass, in every look', () => {
+    const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    const rgba = (h: string): number[] => h.startsWith('#')
+      ? [...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), 1]
+      : [.../\(([^)]+)\)/.exec(h)![1].split(',').map(Number), 1].slice(0, 4);
+    const over = (top: number[], under: number[]) => under.slice(0, 3).map((c, i) => c * (1 - top[3]) + top[i] * top[3]);
+    const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    const ratio = (a: number[], b: number[]) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+    for (const [name, p] of Object.entries(PALETTES)) {
+      const ground = over(rgba(p.surfaceGlass), rgba(p.bg));
+      expect([name, 'word', ratio(rgba(p.text), ground) >= 4.5]).toEqual([name, 'word', true]);
+      expect([name, 'plus', ratio(rgba(p.accent), ground) >= 3]).toEqual([name, 'plus', true]);
+    }
+    // And it draws those tokens, not a colour of its own.
+    render(<AddPill label="Add" onPress={() => {}} quiet />);
+    expect(glass().backgroundColor).toBe(colors.surfaceGlass);
+    expect(word().color).toBe(colors.text);
   });
 
   it('draws the 16pt word and the 18pt plus', () => {

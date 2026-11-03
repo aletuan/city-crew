@@ -960,7 +960,9 @@ const s = StyleSheet.create({
     minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6,
     backgroundColor: colors.surfaceGlass,
   },
-  addText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
+  // Medium, as `AddPill`'s quiet word is (owner, 3 Nov 2026): the glass
+  // pill wears one weight wherever it stands.
+  addText: { color: colors.text, fontSize: 14, fontWeight: font.medium },
 
   // The two reversals — cancel a request, lift a block — wear the same
   // quiet outline: neither is a thing to encourage, both must be easy.
