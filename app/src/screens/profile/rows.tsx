@@ -5,7 +5,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CountBadge, PressableScale, Toggle } from '../../components/ui';
-import { colors, type Color } from '../../theme';
+import { colors } from '../../theme';
 import { GLYPH_BOX, CAPTION_LINE, TITLE_LINE, s } from './styles';
 
 /**
@@ -30,18 +30,16 @@ import { GLYPH_BOX, CAPTION_LINE, TITLE_LINE, s } from './styles';
  * and the Activity screen's feed marks followed the same day, to these
  * figures; the well is gone from the Profile stack.
  */
-export function RowGlyph({ name, line, color = colors.textTertiary }: {
+export function RowGlyph({ name, line }: {
   name: keyof typeof Ionicons.glyphMap;
   /** The height of the row's first line, when the glyph should sit level
    *  with it rather than with the row's middle — see `GLYPH_BOX`. */
   line?: number;
-  /** The tertiary ink by default; an interest wears its category's hue. */
-  color?: Color;
 }) {
   const lift = line == null ? undefined : { height: GLYPH_BOX, marginTop: (line - GLYPH_BOX) / 2 };
   return (
     <View style={[s.rowGlyph, lift]} testID="row-glyph">
-      <Ionicons name={name} size={19} color={color} />
+      <Ionicons name={name} size={19} color={colors.textTertiary} />
     </View>
   );
 }

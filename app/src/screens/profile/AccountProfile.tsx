@@ -365,8 +365,12 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           envelope, the pin and the calendar make a card above, and the
           pills read as smudges on the white card. Each interest is now
           laid out as an About row is: the same `RowGlyph` — a 44pt slot,
-          a 19pt glyph — in the category's hue, and the name in the
-          value's type 14pt after it. So the glyphs stand on the column
+          a 19pt glyph in the tertiary ink — and the name in the value's
+          type 14pt after it. Not the category's hue: the glyphs stand in
+          the column the envelope and the pin stand in, and one column in
+          two colours read as two kinds of thing; the filter rows on
+          Search and Explore draw the same glyphs neutral too, and keep
+          colour for a choice (owner, 3 Nov 2026). So the glyphs stand on the column
           above and the names start where "Hanoi" does, on every line the
           row wraps to, and the card is the card above it in grammar. */}
       <Text style={s.section}>{t('Interests', 'Sở thích', '興味', '兴趣', '興趣')}</Text>
@@ -375,7 +379,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           <View style={s.tasteChips}>
             {taste.map((k) => (
               <View key={k} style={s.tasteItem} testID={`interest-${k}`}>
-                <RowGlyph name={CATEGORIES[k].icon} color={CATEGORIES[k].color} />
+                <RowGlyph name={CATEGORIES[k].icon} />
                 <Text style={s.aboutValue}>
                   {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja, CATEGORIES[k].zh, CATEGORIES[k].hant)}
                 </Text>

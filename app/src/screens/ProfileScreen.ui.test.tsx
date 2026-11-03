@@ -472,7 +472,7 @@ describe('interests', () => {
   });
 
   // On the facts card's grid (owner, 3 Nov 2026): each interest's glyph
-  // in the About rows' own 44pt slot at 19pt, in its category's hue, its
+  // in the About rows' own 44pt slot at 19pt, in the column's ink, its
   // name in the value's type 14pt after — so the glyphs share the column
   // the envelope and the pin stand in. No pill under it, and not a control.
   it('lays each interest on the About rows\u2019 glyph column, as a fact', () => {
@@ -489,7 +489,10 @@ describe('interests', () => {
     const glyph = slot.querySelector('[data-icon]')!;
     expect(glyph.getAttribute('data-icon')).toBe(CATEGORIES.cafes.icon);
     expect(glyph.getAttribute('data-size')).toBe('19');
-    expect(glyph.getAttribute('data-color')).toBe(CATEGORIES.cafes.color);
+    // In the column's own ink, as the envelope is — neutral, as Search's
+    // category glyphs are at rest (owner, 3 Nov 2026).
+    expect(glyph.getAttribute('data-color')).toBe(document.querySelector('[data-icon="mail-outline"]')!.getAttribute('data-color'));
+    expect(glyph.getAttribute('data-color')).not.toBe(CATEGORIES.cafes.color);
     expect(getComputedStyle(item).columnGap || getComputedStyle(item).gap).toBe('14px');
     // Two interests sit further apart than a glyph and its own name: 18 +
     // the slot's 12.5 of air (30.5) against 12.5 + 14 (26.5).
