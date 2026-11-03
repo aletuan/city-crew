@@ -35,6 +35,7 @@
 import React from 'react';
 import {
   AccessibilityInfo, Alert, Animated, Dimensions, FlatList, LayoutAnimation, PanResponder, type PanResponderCallbacks,
+  StyleSheet, type StyleProp, type TextStyle,
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -582,6 +583,13 @@ describe('your own list', () => {
       { onTextLayout: (e: unknown) => void };
     act(() => desc.onTextLayout({ nativeEvent: { lines: Array.from({ length: 6 }, () => ({ text: 'Where ', width: 60 })) } }));
     expect(screen.getByTestId('collection-desc-text').textContent!.endsWith('… Read more')).toBe(true);
+  });
+
+  // Justified, both edges (owner, 3 Nov 2026); the description only.
+  it('sets the description justified', () => {
+    show();
+    const desc = propsWhere((p) => p.testID === 'collection-desc-text' && !('text' in p));
+    expect(StyleSheet.flatten(desc.style as StyleProp<TextStyle>)?.textAlign).toBe('justify');
   });
 
   // The line and the pencil are the press, not the whole card: the

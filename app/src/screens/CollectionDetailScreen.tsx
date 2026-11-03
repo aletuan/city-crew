@@ -2057,7 +2057,14 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
   footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  descText: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
+  // Justified (owner, 3 Nov 2026), the owner's call over the case put
+  // against it: a 318pt column holds some 44 characters, iOS does not
+  // hyphenate Vietnamese, and the up-to-25pt each ragged line stopped
+  // short now goes into its nine or so spaces — some open to near twice
+  // a space. The last line stays ragged, as justified text always ends,
+  // so "… Đọc thêm" and "Thu gọn" keep their own spacing. Here only: the
+  // place blurbs and every other paragraph stay set ragged-right.
+  descText: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'justify' },
   // `alignSelf` keeps the press to the words, as the curator row's does.
   descAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24 },
   descAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
