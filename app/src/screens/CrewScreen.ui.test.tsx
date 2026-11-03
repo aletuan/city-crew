@@ -12,6 +12,8 @@
 // `openSuggestions`) run for real; only the I/O seams are mocked.
 
 import React from 'react';
+import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
+import { font } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
@@ -75,6 +77,27 @@ const report = vi.hoisted(() => vi.fn());
 vi.mock('../components/reportFlow', () => ({ useReport: () => ({ report, node: null }) }));
 
 import CrewScreen from './CrewScreen';
+
+/** The flattened style a Text was committed with, by its words: jsdom does
+ *  not resolve react-native-web's atomic font classes, so a weight is read
+ *  off the props rather than the computed style. */
+const weightOf = (words: string): unknown => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && p.children === words && 'style' in p) {
+      return StyleSheet.flatten(p.style as StyleProp<TextStyle>)?.fontWeight;
+    }
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error(`no text "${words}" in the committed tree`);
+};
+
 
 const nav = () => ({
   navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
@@ -523,6 +546,8 @@ describe('introductions', () => {
     // One per row, so quiet: glass, not the gradient (owner, 26 Oct 2026).
     expect(screen.getByTestId('crew-suggestion-add-s').querySelector('[data-stub="LinearGradient"]')).toBeNull();
     expect(screen.getByTestId('crew-suggestion-add-s').closest('[data-stub="LinearGradient"]')).toBeNull();
+    // Its word in medium, as every quiet glass pill's is (owner, 3 Nov 2026).
+    expect(weightOf('Add')).toBe(font.medium);
     // Nothing to name, so nothing asked.
     expect(data.fetchListTitles).not.toHaveBeenCalled();
     expect(screen.queryByTestId('crew-requests-empty')).toBeNull();
