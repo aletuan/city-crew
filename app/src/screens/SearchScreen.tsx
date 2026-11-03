@@ -17,7 +17,7 @@ import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import ListToggle from '../components/ListToggle';
 import {
-  AmbientWarmth, Card, CHIP_H, CHIP_SLOP, Empty, PressableScale, UnderlineChoice,
+  AmbientWarmth, Card, CHIP_H, CHIP_SLOP, Empty, PressableScale, Tile, TileGrid, UnderlineChoice,
   useTabBarClearance,
 } from '../components/ui';
 import { cityOfList, coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
@@ -572,34 +572,43 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
           }
           if (item.kind === 'chips') {
             return (
-              // Explore's underline row (owner, 25 Oct 2026, the review
-              // board's first way): one line that scrolls, the glyph in
-              // the category's own hue over the word, no box. Stacked, the
-              // owner's choice the same day, where Explore's sits inline:
-              // that row filters and this one launches (`UnderlineChoice`). The wrap of
-              // boxed chips it replaces was the last boxed row left in the
-              // app, three lines of it over the popular places.
+              // A grid of nine doors, two rows of five (owner, 3 Nov
+              // 2026). It was Explore's underline row, stacked (25 Oct):
+              // one line that scrolled, which on a 390pt phone showed five
+              // and a half of the nine and hid Shopping, Nightlife and Fun
+              // — and a row that launches is for seeing what there is,
+              // where a row that filters is for someone who already knows.
+              // The planner and the taste picker were already grids of
+              // the same `Tile`.
+              //
+              // Five across, not the planner's three: the keyboard is up
+              // whenever this shows, and three rows of 82pt cells pushed
+              // the popular places under it. Two rows of the compact cell
+              // are 104pt where the row was 42. With three recent searches
+              // on a 390pt phone the first popular place was whole above
+              // the keys and is now two-thirds of it, some 30pt under them
+              // (measured on a mock of this page, 3 Nov) — the price of
+              // seeing all nine, and the owner's call to pay it.
               //
               // Nothing is ever chosen here. A tap *is* a search: it types
               // the category's own label into the box, and the haystack —
               // which carries every category's labels in all three
               // languages — does the rest, so a tap can never disagree
               // with typing the same word. The moment there is a word the
-              // zero-state yields to results and this row with it, so an
-              // underline on what was tapped would never be seen.
-              <View style={s.browseRow}>
-                <UnderlineChoice
-                  items={cats.map((key) => ({
-                    key,
-                    label: categoryLabel(key, t),
-                    icon: CATEGORIES[key]?.icon,
-                    testID: `search-browse-${key}`,
-                  }))}
-                  chosen={null}
-                  onPick={(key) => { if (key) setQuery(categoryLabel(key, t)); }}
-                  stacked
-                  testID="search-browse"
-                />
+              // zero-state yields to results and this grid with it.
+              <View style={s.browseGrid} testID="search-browse">
+                <TileGrid cols={5} gap={0}>
+                  {cats.map((key) => (
+                    <Tile
+                      key={key}
+                      compact
+                      label={categoryLabel(key, t)}
+                      icon={CATEGORIES[key]?.icon ?? 'ellipse-outline'}
+                      onPress={() => setQuery(categoryLabel(key, t))}
+                      testID={`search-browse-${key}`}
+                    />
+                  ))}
+                </TileGrid>
               </View>
             );
           }
@@ -1014,8 +1023,10 @@ const s = StyleSheet.create({
   recentHit: { flex: 1 },
   recentMain: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   recentTerm: { flex: 1, color: colors.text, fontSize: 16 },
-  // The row brings the page's margins itself, to scroll under them.
-  browseRow: { marginBottom: 4 },
+  // 8 at the sides, not the page's 20: the cells have no ground, so what
+  // lines up with the page is the first word, centred in its cell — and
+  // the 24pt it gives back is what keeps "Thiên nhiên" on one line.
+  browseGrid: { paddingHorizontal: 8, marginBottom: 4 },
   row: { marginHorizontal: space.page, marginBottom: space.cardGap },
   card: {
     flexDirection: 'row', alignItems: 'center', gap: space.cardPadding,
