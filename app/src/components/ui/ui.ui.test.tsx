@@ -14,7 +14,7 @@ vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import { CHIP_H, CHIP_SLOP, Chip, SECONDARY_CONTROL_H, Screen, Tile, UnderlineChoice, useArrival } from './index';
+import { CHIP_H, CHIP_SLOP, Chip, SECONDARY_CONTROL_H, Screen, Tile, TileGrid, UnderlineChoice, useArrival } from './index';
 import { bgHex, colors } from '../../theme';
 
 describe('useArrival', () => {
@@ -210,20 +210,10 @@ describe('UnderlineChoice', () => {
     return (StyleSheet.flatten(f!.memoizedProps!.style as StyleProp<TextStyle>) ?? {}).fontSize;
   };
 
-  // A row that launches rather than filters (owner, 25 Oct 2026): the
-  // glyph over the word, larger, each item at least a target wide, and the
-  // row's own spacing — the inline row's stays as it was.
-  it('stacks the glyph over the word when asked, larger, at least a target wide', () => {
-    const { unmount } = render(<UnderlineChoice items={items} chosen={null} onPick={() => {}} stacked testID="row" />);
-    const cafes = screen.getByRole('button', { name: 'Cafés' });
-    const box = cafes.firstElementChild as HTMLElement;
-    expect(getComputedStyle(box).flexDirection).toBe('column');
-    expect(getComputedStyle(box).minWidth).toBe('56px');
-    expect(cafes.querySelector('[data-icon]')!.getAttribute('data-size')).toBe('22');
-    expect(sizeOf(within(cafes).getByText('Cafés'))).toBe(13);
-    expect(gapOf()).toBe('16px');
-    // Afresh rather than re-rendered: the node keeps its first fiber.
-    unmount();
+  // A row of filters: the glyph beside its word, 16 to the word's 15
+  // (its stacked form, for Search's Browse, went when Browse became a
+  // grid of tiles on 3 Nov 2026).
+  it('sets the glyph beside its word', () => {
     render(<UnderlineChoice items={items} chosen={null} onPick={() => {}} testID="row" />);
     const inline = screen.getByRole('button', { name: 'Cafés' });
     expect(getComputedStyle(inline.firstElementChild as HTMLElement).flexDirection).toBe('row');
@@ -338,5 +328,53 @@ describe('Tile', () => {
     expect(glyph()).toBe(String(colors.accent));
     expect(screen.getByRole('button').getAttribute('aria-selected')).toBe('true');
     expect(getComputedStyle(screen.getByText('Cà phê')).color).not.toBe(idle);
+  });
+
+  // Search's Browse (owner, 3 Nov 2026): the smaller cell, to fit two rows
+  // of five over the keyboard; the planner's stays as it was.
+  it('draws a smaller cell when compact', () => {
+    const face = (label: string) => {
+      const box = screen.getByRole('button', { name: label }).firstElementChild as HTMLElement;
+      return { minHeight: getComputedStyle(box).minHeight, glyph: box.querySelector('[data-icon]')!.getAttribute('data-size') };
+    };
+    // The committed size, since jsdom does not resolve RN-web's classes.
+    // Past the host's own inline style, which a two-line clamp gives it.
+    const sizeOf = (el: HTMLElement) => {
+      const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
+      type Fiber = { memoizedProps?: { style?: unknown }; return?: Fiber };
+      const size = (f: Fiber) => StyleSheet.flatten(f.memoizedProps?.style as StyleProp<TextStyle>)?.fontSize;
+      let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
+      while (f && size(f) === undefined) f = f.return;
+      return f && size(f);
+    };
+    const { unmount } = render(<Tile label="Cà phê" icon="cafe-outline" compact onPress={() => {}} />);
+    expect(face('Cà phê')).toEqual({ minHeight: '52px', glyph: '22' });
+    expect(sizeOf(screen.getByText('Cà phê'))).toBe(13);
+    unmount();
+    render(<Tile label="Cà phê" icon="cafe-outline" onPress={() => {}} />);
+    expect(face('Cà phê')).toEqual({ minHeight: '82px', glyph: '24' });
+    expect(sizeOf(screen.getByText('Cà phê'))).toBe(14);
+  });
+});
+
+// Even columns, the last row padded; the gap between cells both ways.
+describe('TileGrid', () => {
+  const grid = (gap?: number) => render(
+    <TileGrid cols={5} gap={gap}>
+      {['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'].map((k) => <Tile key={k} label={k} icon="cafe-outline" />)}
+    </TileGrid>,
+  );
+  const rows = () => [...screen.getByRole('button', { name: 'a' }).parentElement!.parentElement!.children] as HTMLElement[];
+
+  it('lays nine into rows of five and four, the fourth padded to five', () => {
+    grid(0);
+    expect(rows().map((r) => r.children.length)).toEqual([5, 5]);
+    expect(rows().map((r) => r.querySelectorAll('[role="button"]').length)).toEqual([5, 4]);
+    expect(rows()[0].style.gap).toBe('0px');
+  });
+
+  it('keeps 8 between cells unless told otherwise', () => {
+    grid();
+    expect(rows()[0].style.gap).toBe('8px');
   });
 });

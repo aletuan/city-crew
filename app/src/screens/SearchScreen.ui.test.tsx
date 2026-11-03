@@ -325,22 +325,26 @@ describe('the zero-state', () => {
     expect(screen.queryByText('Nightlife')).toBeNull();
   });
 
-  // The review board's first way (owner, 25 Oct 2026): Explore's underline
-  // row, one line that scrolls, each word with its category's glyph in the
-  // word's ink (owner, 30 Oct 2026: the hues were pastels that read as grey
-  // on paper) — and nothing chosen, since a tap is a search and the row is
-  // gone once there is a word. No "All": there is nothing to undo.
-  it('browses by one underline row: every category in it, in the word’s ink, nothing chosen', () => {
+  // Browse as a grid (owner, 3 Nov 2026): every category the catalog
+  // holds as a cell, its glyph over its word, both in the secondary ink
+  // (owner, 30 Oct 2026: the hues were pastels that read as grey on
+  // paper), five to a row — and nothing chosen, since a tap is a search
+  // and the grid is gone once there is a word. No "All": there is nothing
+  // to undo, and no row that scrolls to hide the end of the list.
+  it('browses by a grid: every category in it, in the word’s ink, nothing chosen', () => {
     mount();
-    const row = screen.getByTestId('search-browse');
-    expect(within(row).getByTestId('search-browse-scroll')).toBeTruthy();
-    const items = within(row).getAllByRole('button');
+    const grid = screen.getByTestId('search-browse');
+    expect(within(grid).queryByTestId('search-browse-scroll')).toBeNull();
+    const items = within(grid).getAllByRole('button');
     expect(items.map((b) => b.textContent)).toEqual(['Cafés', 'Eats', 'Culture']);
     expect(items.map((b) => b.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false']);
     const cafes = screen.getByTestId('search-browse-cafes');
     expect(cafes.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.textSecondary));
-    // Stacked, the glyph over the word: a row of doors, not of filters.
+    // The compact cell, the glyph over the word.
+    expect(cafes.querySelector('[data-icon]')!.getAttribute('data-size')).toBe('22');
     expect(getComputedStyle(cafes.firstElementChild as HTMLElement).flexDirection).toBe('column');
+    // One row of five: three cells and two spacers.
+    expect((cafes.parentElement as HTMLElement).children.length).toBe(5);
     expect(screen.queryByTestId('search-browse-all')).toBeNull();
   });
 

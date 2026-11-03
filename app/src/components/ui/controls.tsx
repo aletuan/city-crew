@@ -183,10 +183,13 @@ export function Toggle(props: React.ComponentProps<typeof Switch>) {
  * `UnderlineChoice` came to the same rule first (30 Oct 2026), and
  * `Chip` follows it here so no chooser in the app is left on the old one.
  */
-export function Tile({ label, icon, active, onPress, testID }: {
+export function Tile({ label, icon, active, compact, onPress, testID }: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   active?: boolean;
+  /** The smaller cell, for a grid that shares the screen with a keyboard:
+   *  Search's Browse — see `s.tileCompact`. */
+  compact?: boolean;
   onPress?: () => void;
   testID?: string;
 }) {
@@ -196,19 +199,19 @@ export function Tile({ label, icon, active, onPress, testID }: {
       haptic="selection"
       scaleTo={0.97}
       style={{ flex: 1 }}
-      contentStyle={[s.tile, active && s.tileOn]}
+      contentStyle={[s.tile, compact && s.tileCompact, active && s.tileOn]}
       accessibilityRole="button"
       // `aria-selected` rather than `accessibilityState`, which
       // react-native-web drops — see `Chip`.
       aria-selected={!!active}
       testID={testID}
     >
-      <Ionicons name={icon} size={24} color={active ? colors.accent : colors.textSecondary} />
+      <Ionicons name={icon} size={compact ? 22 : 24} color={active ? colors.accent : colors.textSecondary} />
       {/* Two lines allowed, and needed: "Nightlife" is "Về đêm" in one
           language and "ナイトライフ" in another, and a cell a third of
           the screen wide cannot hold the third on one line. Centred, so
           a wrapped label stays under its own glyph. */}
-      <Text style={[s.tileText, active && s.tileTextOn]} numberOfLines={2}>{label}</Text>
+      <Text style={[s.tileText, compact && s.tileTextCompact, active && s.tileTextOn]} numberOfLines={2}>{label}</Text>
     </PressableScale>
   );
 }
@@ -222,14 +225,21 @@ export function Tile({ label, icon, active, onPress, testID }: {
  * two normal rows and then one cell twice the width of the others,
  * reading as emphasis on whichever concept happened to be seventh.
  */
-export function TileGrid({ cols, children }: { cols: number; children: React.ReactNode }) {
+export function TileGrid({ cols, gap = 8, children }: {
+  cols: number;
+  /** Between the cells, both ways. 0 where a cell has no ground until it
+   *  is chosen and never is (Search's Browse): the air is then the cells'
+   *  own padding, and the width goes to the words. */
+  gap?: number;
+  children: React.ReactNode;
+}) {
   const items = React.Children.toArray(children);
   const rows: React.ReactNode[][] = [];
   for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap }}>
       {rows.map((row, i) => (
-        <View key={i} style={s.tileRow}>
+        <View key={i} style={[s.tileRow, { gap }]}>
           {row}
           {Array.from({ length: cols - row.length }, (_, k) => (
             <View key={`pad${k}`} style={{ flex: 1 }} />
@@ -326,15 +336,6 @@ const CHOICE_FADE = 28;
 /** The row's spacing, and how far the gap may give to cut an item at the
  *  edge (`lib/peek`, where 14–34 is measured). */
 const CHOICE_ROW: PeekRow = { padLeft: space.page, base: 22, min: 14, max: 34 };
-/** The stacked row's spacing. Each item already carries `STACK_MIN` of
- *  width around a short word, so the air between two is partly its own,
- *  and the base comes down from inline's 22 to 16 — a judgement to check
- *  on a phone, not a measurement. The cut may give from 10 to 28. */
-const STACK_ROW: PeekRow = { padLeft: space.page, base: 16, min: 10, max: 28 };
-/** A stacked item's narrowest: the 44pt a target is, and room for the
- *  22pt glyph to stand over a two-letter word without the next item's
- *  glyph crowding it. */
-const STACK_MIN = 56;
 /** The key the "All" item answers to: never a key a caller's item has. */
 const ALL_KEY = '__all__';
 
@@ -407,17 +408,14 @@ const ALL_KEY = '__all__';
  * changed. The chosen item is never off, whatever the caller says: it is
  * the way back to everything.
  *
- * ── stacked (owner, 25 Oct 2026) ──
+ * ── no longer stacked (owner, 3 Nov 2026) ──
  *
- * `stacked` sets the glyph over the word, larger, for a row that starts
- * something rather than narrows it — Search's Browse, where a tap is a
- * search and the row is gone the moment there is a word. A row of doors
- * looks unlike a row of filters on purpose: the reader should not wait
- * for an underline that a launcher never draws. The items are narrower,
- * so more of the row is in sight, and the cut and the fade are the same
- * measured ones.
+ * It had a `stacked` form, the glyph over the word, for Search's Browse:
+ * a row that launches rather than filters. Browse became a grid of
+ * `Tile`s, because a row that scrolls showed five and a half of nine
+ * doors and hid the rest, and doors are for seeing. Nothing else drew it.
  */
-export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, ground, stacked, testID }: {
+export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, allCount, ground, testID }: {
   /** `count`, when given, follows the word as `Chip`'s does: "Hà Nội (6)". */
   items: { key: K; label: string; count?: number; icon?: keyof typeof Ionicons.glyphMap; testID?: string; off?: boolean }[];
   chosen: K | null;
@@ -429,8 +427,6 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   /** The ground the row sits on, as plain hex, for the fade to end in:
    *  the page's unless the row is on something else (a sheet). */
   ground?: string;
-  /** The glyph over the word: a row that launches rather than filters. */
-  stacked?: boolean;
   testID?: string;
 }) {
   // The page's own colour, as plain hex: the fade has to end in exactly
@@ -449,8 +445,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   ];
   const measured = row.map((i) => widths[i.key] ?? 0);
   const known = edge > 0 && measured.every((w) => w > 0);
-  const spacing = stacked ? STACK_ROW : CHOICE_ROW;
-  const gap = known ? peekGap(measured, edge - CHOICE_FADE, spacing) : spacing.base;
+  const gap = known ? peekGap(measured, edge - CHOICE_FADE, CHOICE_ROW) : CHOICE_ROW.base;
   const more = known && moreToTheRight(rowWidth(measured, gap, space.page, space.page), edge, scrollX);
   return (
     <View testID={testID}>
@@ -476,7 +471,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
                 const w = e.nativeEvent.layout.width;
                 setWidths((was) => (was[key] === w ? was : { ...was, [key]: w }));
               }}
-              contentStyle={[s.tabItem, stacked && s.stackItem, on && s.tabItemOn, dim && s.choiceOff]}
+              contentStyle={[s.tabItem, on && s.tabItemOn, dim && s.choiceOff]}
               scaleTo={dim ? 1 : 0.97}
               haptic="selection"
               // The row is 33pt drawn; the slop makes it the 44pt a
@@ -490,8 +485,8 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
               accessibilityRole="button"
               aria-selected={on}
             >
-              {icon ? <Ionicons name={icon} size={stacked ? 22 : 16} color={on ? colors.accent : colors.textSecondary} /> : null}
-              <Text style={[s.choiceText, stacked && s.stackText, on && s.tabTextOn]} numberOfLines={1}>
+              {icon ? <Ionicons name={icon} size={16} color={on ? colors.accent : colors.textSecondary} /> : null}
+              <Text style={[s.choiceText, on && s.tabTextOn]} numberOfLines={1}>
                 {label}
                 {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
               </Text>
@@ -723,6 +718,16 @@ const s = StyleSheet.create({
     textAlign: 'center', lineHeight: 18,
   },
   tileTextOn: { color: colors.accent, fontWeight: font.semibold },
+  // Search's Browse (owner, 3 Nov 2026): two rows of five over the
+  // keyboard. The glyph a step down from 24 and the word from 14, as the
+  // stacked underline row it replaced drew them, and the air trimmed to
+  // what a row of glyphs needs: 6 + 22 + 4 + 16 + 4 is a 52pt row. No
+  // padding at the sides, since that grid sets no gap either — the width
+  // goes to the word. "Thiên nhiên" at 13pt medium measures 72.9pt (Inter,
+  // a little wider than SF), and a cell on a 390pt phone is 74.8; a wrap
+  // on a narrower phone costs that row 16pt and nothing else.
+  tileCompact: { minHeight: 52, paddingHorizontal: 0, paddingTop: 6, paddingBottom: 4, gap: 4 },
+  tileTextCompact: { fontSize: 13, lineHeight: 16 },
   tileRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   chipTextOn: { color: colors.accent, fontWeight: font.semibold },
   // The same in either state: the figure is not what is chosen.
@@ -755,11 +760,6 @@ const s = StyleSheet.create({
   // `ActionSheet`'s `rowOff`, so "not now" reads the same on a row of
   // words as on a row of actions.
   choiceOff: { opacity: 0.45 },
-  // Stacked: the glyph over the word, centred in at least `STACK_MIN`.
-  // The word a step smaller than inline's 15: under a glyph it is a
-  // caption, and the item stays near the width of its word.
-  stackItem: { flexDirection: 'column', gap: 5, minWidth: STACK_MIN },
-  stackText: { fontSize: 13 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
