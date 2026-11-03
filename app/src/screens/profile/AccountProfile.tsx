@@ -357,15 +357,26 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           are the picker's own, glyph and hue, at rest. No "Edit" beside
           the heading: it was there for one build and opened the same
           screen as the Edit profile button four lines up, and two ways
-          to the same place on one screen is one too many. */}
+          to the same place on one screen is one too many.
+
+          ── on the facts card's grid (owner, 3 Nov 2026) ──
+          The chips sat on their own grid: a 15pt glyph 14pt into a faint
+          glass pill, so the first one stood left of the column the
+          envelope, the pin and the calendar make a card above, and the
+          pills read as smudges on the white card. Each interest is now
+          laid out as an About row is: the same `RowGlyph` — a 44pt slot,
+          a 19pt glyph — in the category's hue, and the name in the
+          value's type 14pt after it. So the glyphs stand on the column
+          above and the names start where "Hanoi" does, on every line the
+          row wraps to, and the card is the card above it in grammar. */}
       <Text style={s.section}>{t('Interests', 'Sở thích', '興味', '兴趣', '興趣')}</Text>
       <Card style={s.featureCard}>
         {taste.length ? (
           <View style={s.tasteChips}>
             {taste.map((k) => (
-              <View key={k} style={s.tasteChip} testID={`interest-${k}`}>
-                <Ionicons name={CATEGORIES[k].icon} size={15} color={CATEGORIES[k].color} />
-                <Text style={s.tasteChipText}>
+              <View key={k} style={s.tasteItem} testID={`interest-${k}`}>
+                <RowGlyph name={CATEGORIES[k].icon} color={CATEGORIES[k].color} />
+                <Text style={s.aboutValue}>
                   {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja, CATEGORIES[k].zh, CATEGORIES[k].hant)}
                 </Text>
               </View>

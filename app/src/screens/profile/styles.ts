@@ -29,22 +29,16 @@ export const CAPTION_LINE = 15;
 export const TITLE_LINE = 19;
 
 export const s = StyleSheet.create({
-  // The picker's chip, at rest: same glyph and hue, no press state and no
-  // border — this card is a page of answers, not a set of controls. A
-  // size up from when they sat in a table's value column: with the card's
-  // width to themselves, 13.5pt chips read as leftovers.
-  //
-  // 44 tall, from the 37 its padding made: the same category chip is 44
-  // on Search, Places and a place's own facts row, and a Cafés pill at
-  // two heights across the app reads as two different things. Still no
-  // border and no press state — the height is for the family, not a tap.
-  tasteChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 14 },
-  tasteChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
-    paddingHorizontal: 14, paddingVertical: 9, minHeight: 44,
-  },
-  tasteChipText: { color: colors.text, fontSize: 15, fontWeight: font.medium },
+  // An About row's grammar, inline (owner, 3 Nov 2026): each interest is
+  // a `RowGlyph` slot and a name 14pt after it — `twoLineRow`'s gap — so
+  // the glyphs sit on the facts card's column and the names on its value
+  // column, on every line the row wraps to. 14pt above and below, as the
+  // card's rows. Between two interests, 18: with the slot's own 12.5 of
+  // air before the next glyph, a name and the next glyph are 30.5 apart,
+  // more than the 26.5 between a glyph and its own name — at 10 they were
+  // 22.5, closer than that, and "Cà phê" read as the next glyph's label.
+  tasteChips: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, paddingVertical: 14 },
+  tasteItem: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   tasteEmpty: { paddingVertical: 14 },
   // The role badge and the Edit profile button, one row under the name.
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },
