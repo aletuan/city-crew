@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanTaste, tasteFull, TASTE_MAX, toggleTaste } from './tastepick';
+import { cleanTaste, ruleAfter, tasteFull, TASTE_MAX, toggleTaste } from './tastepick';
 import { CATEGORIES } from './categories';
 
 const KNOWN = Object.keys(CATEGORIES);
@@ -71,5 +71,32 @@ describe('cleanTaste', () => {
   // draws and this quietly throws away.
   it('accepts every key the app can actually draw', () => {
     expect(cleanTaste(KNOWN.slice(0, TASTE_MAX), KNOWN)).toEqual(KNOWN.slice(0, TASTE_MAX));
+  });
+});
+
+describe('ruleAfter', () => {
+  it('draws the rule between two interests on one line', () => {
+    expect(ruleAfter([10, 10, 10], 0, 3)).toBe(true);
+    expect(ruleAfter([10, 10, 10], 1, 3)).toBe(true);
+  });
+
+  it('draws none after the last interest', () => {
+    expect(ruleAfter([10, 10], 1, 2)).toBe(false);
+    expect(ruleAfter([10], 0, 1)).toBe(false);
+    expect(ruleAfter([], 1, 2)).toBe(false);
+  });
+
+  it('draws none where the next interest starts a new line', () => {
+    expect(ruleAfter([10, 10, 50], 1, 3)).toBe(false);
+    expect(ruleAfter([10, 10, 50], 0, 3)).toBe(true);
+  });
+
+  // Nothing measured yet — the first frame, or a build that does not
+  // measure — is one line, the common case.
+  it('draws it until both tops are measured', () => {
+    expect(ruleAfter([], 0, 2)).toBe(true);
+    expect(ruleAfter([undefined, undefined], 0, 2)).toBe(true);
+    expect(ruleAfter([10, undefined], 0, 2)).toBe(true);
+    expect(ruleAfter([undefined, 10], 0, 2)).toBe(true);
   });
 });

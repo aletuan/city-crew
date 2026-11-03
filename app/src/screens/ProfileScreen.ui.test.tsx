@@ -24,6 +24,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommonActions, StackRouter } from '@react-navigation/routers';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
+import { colors } from '../theme';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
 
@@ -471,33 +472,78 @@ describe('interests', () => {
     expect(screen.queryByText('Edit profile to add your interests.')).toBeNull();
   });
 
-  // On the facts card's grid (owner, 3 Nov 2026): each interest's glyph
-  // in the About rows' own 44pt slot at 19pt, in the column's ink, its
-  // name in the value's type 14pt after — so the glyphs share the column
-  // the envelope and the pin stand in. No pill under it, and not a control.
-  it('lays each interest on the About rows\u2019 glyph column, as a fact', () => {
+  // On the facts card's column, its name by its glyph (owner, 3 Nov
+  // 2026): the first glyph centred where the envelope's is — the middle of
+  // a 44pt slot from the card's edge, so the row starts (44 − 19) / 2 in —
+  // each name 8pt after its glyph, the next interest 24 on. The glyphs at
+  // the About rows' size and in their ink. No pill, and not a control.
+  it('puts the first glyph on the About rows\u2019 column and each name by its glyph, as a fact', () => {
     state.categories = ['cafes', 'views'];
     draw();
     const item = screen.getByTestId('interest-cafes');
     expect(item.getAttribute('role')).toBeNull();
     expect(getComputedStyle(item).backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    const slot = within(item).getByTestId('row-glyph');
-    const envelope = document.querySelector('[data-icon="mail-outline"]')!.parentElement!;
-    // The column is the slot's width from the card's edge: the same 44.
-    expect(getComputedStyle(slot).width).toBe(getComputedStyle(envelope).width);
-    expect(getComputedStyle(slot).width).toBe('44px');
-    const glyph = slot.querySelector('[data-icon]')!;
+    const row = item.parentElement!;
+    const envelope = document.querySelector('[data-icon="mail-outline"]')!;
+    const slot = parseFloat(getComputedStyle(envelope.parentElement!).width);
+    const glyph = item.querySelector('[data-icon]')!;
+    const size = Number(glyph.getAttribute('data-size'));
+    expect(size).toBe(Number(envelope.getAttribute('data-size')));
+    // The first glyph's middle is the envelope's: half the slot in.
+    expect(parseFloat(getComputedStyle(row).paddingLeft) + size / 2).toBe(slot / 2);
+    expect(getComputedStyle(row).paddingLeft).toBe('12.5px');
     expect(glyph.getAttribute('data-icon')).toBe(CATEGORIES.cafes.icon);
-    expect(glyph.getAttribute('data-size')).toBe('19');
     // In the column's own ink, as the envelope is — neutral, as Search's
-    // category glyphs are at rest (owner, 3 Nov 2026).
-    expect(glyph.getAttribute('data-color')).toBe(document.querySelector('[data-icon="mail-outline"]')!.getAttribute('data-color'));
+    // category glyphs are at rest.
+    expect(glyph.getAttribute('data-color')).toBe(envelope.getAttribute('data-color'));
     expect(glyph.getAttribute('data-color')).not.toBe(CATEGORIES.cafes.color);
-    expect(getComputedStyle(item).columnGap || getComputedStyle(item).gap).toBe('14px');
-    // Two interests sit further apart than a glyph and its own name: 18 +
-    // the slot's 12.5 of air (30.5) against 12.5 + 14 (26.5).
-    expect(getComputedStyle(item.parentElement!).columnGap).toBe('18px');
-    expect(screen.getByTestId('interest-views')).toBeTruthy();
+    // The name by its glyph; the next interest 12, a faint rule, 12 on.
+    expect(getComputedStyle(item).columnGap || getComputedStyle(item).gap).toBe('8px');
+    expect(getComputedStyle(row).columnGap).toBe('12px');
+    expect(within(screen.getByTestId('interest-views')).getByText('Views')).toBeTruthy();
+  });
+
+  // The faint rule between two interests (owner, 3 Nov 2026): one between
+  // each pair, none after the last, and none where the next has wrapped
+  // to a new line — still taking its room, so nothing moves back.
+  it('draws a faint rule between interests on one line, and none at a line\u2019s end', () => {
+    state.categories = ['cafes', 'views', 'eats'];
+    draw();
+    const rules = screen.getAllByTestId('interest-rule');
+    expect(rules).toHaveLength(2);
+    expect(screen.getByTestId('interest-cafes').contains(rules[0])).toBe(true);
+    expect(screen.getByTestId('interest-eats').querySelector('[data-testid="interest-rule"]')).toBeNull();
+    const rule = getComputedStyle(rules[0]);
+    expect(rule.height).toBe('18px');
+    expect(rule.opacity).not.toBe('0');
+    expect(rule.backgroundColor).toBe(String(colors.borderGlassSoft).replace(/,(?=\S)/g, ', '));
+    // Laid out: cafes and views on the first line, eats wrapped below.
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const layOut = (testID: string, y: number) => {
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && p.testID === testID && typeof p.onLayout === 'function') {
+          act(() => { (p.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { x: 0, y, width: 100, height: 24 } } }); });
+          return;
+        }
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error(`no ${testID}`);
+    };
+    layOut('interest-cafes', 0);
+    layOut('interest-views', 0);
+    layOut('interest-eats', 36);
+    const [first, second] = screen.getAllByTestId('interest-rule');
+    expect(getComputedStyle(first).opacity).not.toBe('0');
+    expect(getComputedStyle(second).opacity).toBe('0');
+    // The same top again changes nothing.
+    layOut('interest-eats', 36);
+    expect(getComputedStyle(screen.getAllByTestId('interest-rule')[1]).opacity).toBe('0');
   });
 
   it('points at Edit profile when nothing usable is stored', () => {

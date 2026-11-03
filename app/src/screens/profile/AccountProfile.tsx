@@ -20,7 +20,7 @@ import { useCrew } from '../../lib/crew';
 import { splitFriendships } from '../../lib/friends';
 import { useMyLists } from '../../lib/save';
 import { CATEGORIES } from '../../lib/categories';
-import { cleanTaste } from '../../lib/tastepick';
+import { cleanTaste, ruleAfter } from '../../lib/tastepick';
 import { Lang, useI18n } from '../../lib/i18n';
 import { useScheme } from '../../lib/theme';
 import { bgElevatedHex, colors } from '../../theme';
@@ -28,7 +28,7 @@ import { goTo, type Nav } from '../../nav';
 import { RowGlyph, FeatureRow, AboutRow } from './rows';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
-import { TITLE_LINE, s } from './styles';
+import { ROW_GLYPH, TITLE_LINE, s } from './styles';
 
 export const MONTHS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -77,6 +77,8 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   const { profile, memberSince } = useProfile();
   const { signOut } = useAuthActions();
   const [busy, setBusy] = useState(false);
+  // The interests' measured tops, for the rule between them (`ruleAfter`).
+  const [tasteYs, setTasteYs] = useState<(number | undefined)[]>([]);
   // The visits, for the one number the row below shows — the app's one
   // copy, so a check-in made a moment ago on a place's screen is already
   // in this count. Its own copy here said 2 under a list of 29 once.
@@ -359,30 +361,50 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           screen as the Edit profile button four lines up, and two ways
           to the same place on one screen is one too many.
 
-          ── on the facts card's grid (owner, 3 Nov 2026) ──
+          ── on the facts card's column (owner, 3 Nov 2026) ──
           The chips sat on their own grid: a 15pt glyph 14pt into a faint
           glass pill, so the first one stood left of the column the
-          envelope, the pin and the calendar make a card above, and the
-          pills read as smudges on the white card. Each interest is now
-          laid out as an About row is: the same `RowGlyph` — a 44pt slot,
-          a 19pt glyph in the tertiary ink — and the name in the value's
-          type 14pt after it. Not the category's hue: the glyphs stand in
-          the column the envelope and the pin stand in, and one column in
-          two colours read as two kinds of thing; the filter rows on
-          Search and Explore draw the same glyphs neutral too, and keep
-          colour for a choice (owner, 3 Nov 2026). So the glyphs stand on the column
-          above and the names start where "Hanoi" does, on every line the
-          row wraps to, and the card is the card above it in grammar. */}
+          envelope, the pin and the calendar make in the card above, and
+          the pills read as smudges on the white card. Each interest is now
+          a bare 19pt glyph — the About rows' size, in their tertiary ink —
+          and its name 8pt after it, the first glyph centred on that column.
+          Not the category's hue: one column in two colours read as two
+          kinds of thing, and Search and Explore draw the same glyphs
+          neutral, keeping colour for a choice.
+
+          A day in between, each glyph took the About rows' whole 44pt slot
+          and its name started at the value column, 26.5pt off: in a row of
+          names that read as a gap, and the glyph as nobody's (owner, the
+          same day). The name sits by its glyph now, as on the reference,
+          and a faint rule stands between two interests on one line, as
+          the reference has it; only the first glyph keeps the column. */}
       <Text style={s.section}>{t('Interests', 'Sở thích', '興味', '兴趣', '興趣')}</Text>
       <Card style={s.featureCard}>
         {taste.length ? (
           <View style={s.tasteChips}>
-            {taste.map((k) => (
-              <View key={k} style={s.tasteItem} testID={`interest-${k}`}>
-                <RowGlyph name={CATEGORIES[k].icon} />
+            {taste.map((k, i) => (
+              <View
+                key={k}
+                style={s.tasteItem}
+                testID={`interest-${k}`}
+                onLayout={(e) => {
+                  const y = Math.round(e.nativeEvent.layout.y);
+                  setTasteYs((ys) => (ys[i] === y ? ys : Object.assign([...ys], { [i]: y })));
+                }}
+              >
+                <Ionicons name={CATEGORIES[k].icon} size={ROW_GLYPH} color={colors.textTertiary} />
                 <Text style={s.aboutValue}>
                   {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja, CATEGORIES[k].zh, CATEGORIES[k].hant)}
                 </Text>
+                {/* The faint rule between two interests on one line
+                    (owner, 3 Nov 2026), part of the interest before it so
+                    the room it takes never moves; see `ruleAfter`. */}
+                {i < taste.length - 1 ? (
+                  <View
+                    style={[s.tasteRule, !ruleAfter(tasteYs, i, taste.length) && s.tasteRuleOff]}
+                    testID="interest-rule"
+                  />
+                ) : null}
               </View>
             ))}
           </View>
@@ -468,7 +490,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           icon="notifications-outline"
           title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}
           count={feed}
-          sub={t('A log of your activity on City Crew.', 'Nhật ký các hoạt động của bạn trên hệ thống.', 'City Crew でのあなたのアクティビティの記録。', '你在 City Crew 上的动态记录。', '你在 City Crew 上的動態記錄。')}
+          sub={t('A log of your activity on City Crew.', 'Nhật ký hoạt động trên hệ thống.', 'City Crew でのあなたのアクティビティの記録。', '你在 City Crew 上的动态记录。', '你在 City Crew 上的動態記錄。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />
