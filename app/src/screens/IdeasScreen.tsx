@@ -504,7 +504,6 @@ export default function IdeasScreen({ navigation, route }: {
               key={c.key}
               label={t(c.en, c.vi, c.ja, c.zh, c.hant)}
               icon={c.icon as keyof typeof Ionicons.glyphMap}
-              iconColor={c.color}
               active={draft.company === c.key}
               testID={`ideas-company-${c.key}`}
               onPress={() => set('company', draft.company === c.key ? null : c.key)}
@@ -524,7 +523,6 @@ export default function IdeasScreen({ navigation, route }: {
               testID={`ideas-cat-${i}`}
               label={categoryLabel(c, t)}
               icon={CATEGORIES[c]?.icon ?? 'ellipse-outline'}
-              iconColor={CATEGORIES[c]?.color}
               active={draft.categories.includes(c)}
               onPress={() => set('categories', toggle(draft.categories, c))}
             />

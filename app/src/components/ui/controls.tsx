@@ -67,7 +67,7 @@ export function PressableScale({ children, style, contentStyle, anchorRef, hapti
   );
 }
 
-export function Chip({ label, count, active, onPress, icon, iconColor, testID }: {
+export function Chip({ label, count, active, onPress, icon, testID }: {
   label: string;
   /** How many the chip stands for, after its word in brackets and the
    *  tertiary ink, as a rating's review count is: "Hà Nội (6)". Search's
@@ -78,11 +78,8 @@ export function Chip({ label, count, active, onPress, icon, iconColor, testID }:
   testID?: string;
   active?: boolean;
   onPress?: () => void;
-  /** Optional leading glyph. It keeps its own colour in both states — the
-   *  hue is what ties a chip to the dot the same concept wears on a card,
-   *  so selection must not repaint it. */
+  /** Optional leading glyph, in its word's ink — see `Tile`. */
   icon?: keyof typeof Ionicons.glyphMap;
-  iconColor?: string;
 }) {
   return (
     // A chip is read as a button, and says whether it is chosen, only when
@@ -106,7 +103,7 @@ export function Chip({ label, count, active, onPress, icon, iconColor, testID }:
       aria-selected={onPress ? !!active : undefined}
       testID={testID}
     >
-      {icon ? <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} /> : null}
+      {icon ? <Ionicons name={icon} size={15} color={active ? colors.accent : colors.textSecondary} /> : null}
       <Text style={[s.chipText, active && s.chipTextOn]}>
         {label}
         {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
@@ -171,19 +168,24 @@ export function Toggle(props: React.ComponentProps<typeof Switch>) {
  * run down the column; inline, each one sits wherever its label's width
  * put it.
  *
- * ── the two colours ──
+ * ── one ink (owner, 3 Nov 2026) ──
  *
- * The icon keeps its category's hue in both states, exactly as `Chip`
- * does and for the same reason: the hue is what ties this cell to the dot
- * the same concept wears on a place card, so selection must not repaint
- * it. What selection changes is the ground and the word — `accentSoft`
- * under `accent`, the pair the app already uses for a chosen control.
+ * The glyph wears its word's ink: the secondary ink idle, the accent
+ * chosen, on the `accentSoft` ground selection lays under both. It used
+ * to keep its concept's own hue in both states, to tie the cell to the
+ * dot the same kind wears on a place card. On the planner that was
+ * thirteen fixed hues in two grids under an illustration, and the one
+ * thing a chooser must show at a glance — which cells are chosen — was
+ * a pale ground among colours that did not change: the hues are the same
+ * hex on every look, so on Rose the pink heart read as already picked.
+ * The reader tells the kinds apart by their words; the dot on a card and
+ * the well of a stop keep the hue, where it is the only label there is.
+ * `UnderlineChoice` came to the same rule first (30 Oct 2026), and
+ * `Chip` follows it here so no chooser in the app is left on the old one.
  */
-export function Tile({ label, icon, iconColor, active, onPress, testID }: {
+export function Tile({ label, icon, active, onPress, testID }: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
-  /** The concept's own hue, kept through selection. */
-  iconColor?: string;
   active?: boolean;
   onPress?: () => void;
   testID?: string;
@@ -201,7 +203,7 @@ export function Tile({ label, icon, iconColor, active, onPress, testID }: {
       aria-selected={!!active}
       testID={testID}
     >
-      <Ionicons name={icon} size={24} color={iconColor ?? colors.textSecondary} />
+      <Ionicons name={icon} size={24} color={active ? colors.accent : colors.textSecondary} />
       {/* Two lines allowed, and needed: "Nightlife" is "Về đêm" in one
           language and "ナイトライフ" in another, and a cell a third of
           the screen wide cannot hold the third on one line. Centred, so
@@ -359,7 +361,7 @@ const ALL_KEY = '__all__';
  *   one phone the edge fell in a gap, and the row read as finished).
  * - A glyph wears its word's ink: the secondary ink idle, the accent
  *   chosen (owner, 30 Oct 2026). It used to keep its category's hue, the
- *   rule `Chip` and `Tile` keep, to tie the row to the dot on a card and
+ *   rule `Chip` and `Tile` kept until 3 Nov, to tie the row to the dot on a card and
  *   the pin on the map. On paper those hues are pastels at 1.7–2.2:1
  *   against the page, under the 3:1 a meaningful glyph wants, so in a
  *   row of 16pt glyphs they did not read as colours at all but as a

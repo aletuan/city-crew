@@ -14,7 +14,7 @@ vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import { CHIP_H, CHIP_SLOP, Chip, SECONDARY_CONTROL_H, Screen, UnderlineChoice, useArrival } from './index';
+import { CHIP_H, CHIP_SLOP, Chip, SECONDARY_CONTROL_H, Screen, Tile, UnderlineChoice, useArrival } from './index';
 import { bgHex, colors } from '../../theme';
 
 describe('useArrival', () => {
@@ -310,5 +310,33 @@ describe('Chip', () => {
     render(<Chip label="Cà phê" />);
     expect(face().minHeight).toBe(CHIP_H);
     expect(slop()).toBeUndefined();
+  });
+
+  // Its glyph in its word's ink, as `Tile` and `UnderlineChoice` (owner,
+  // 3 Nov 2026): the secondary ink idle, the accent chosen.
+  it('inks its glyph as its word', () => {
+    render(<Chip label="Cà phê" icon="cafe-outline" onPress={() => {}} />);
+    expect(document.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    cleanup();
+    render(<Chip label="Cà phê" icon="cafe-outline" active onPress={() => {}} />);
+    expect(document.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.accent));
+  });
+});
+
+// The planner's and the taste picker's cells (owner, 3 Nov 2026): one ink
+// for the glyph and its word, so the chosen cells are the ones in colour.
+describe('Tile', () => {
+  const glyph = () => document.querySelector('[data-icon]')!.getAttribute('data-color');
+
+  it('is the secondary ink idle and the accent chosen, glyph and word alike', () => {
+    render(<Tile label="Cà phê" icon="cafe-outline" onPress={() => {}} />);
+    expect(glyph()).toBe(String(colors.textSecondary));
+    const idle = getComputedStyle(screen.getByText('Cà phê')).color;
+    expect(screen.getByRole('button').getAttribute('aria-selected')).toBe('false');
+    cleanup();
+    render(<Tile label="Cà phê" icon="cafe-outline" active onPress={() => {}} />);
+    expect(glyph()).toBe(String(colors.accent));
+    expect(screen.getByRole('button').getAttribute('aria-selected')).toBe('true');
+    expect(getComputedStyle(screen.getByText('Cà phê')).color).not.toBe(idle);
   });
 });
