@@ -6,7 +6,7 @@ import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CountBadge, PressableScale, Toggle } from '../../components/ui';
 import { colors } from '../../theme';
-import { GLYPH_BOX, CAPTION_LINE, TITLE_LINE, s } from './styles';
+import { GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './styles';
 
 /**
  * The glyph every row on this screen leads with: bare, 19pt, in the
@@ -39,7 +39,7 @@ export function RowGlyph({ name, line }: {
   const lift = line == null ? undefined : { height: GLYPH_BOX, marginTop: (line - GLYPH_BOX) / 2 };
   return (
     <View style={[s.rowGlyph, lift]} testID="row-glyph">
-      <Ionicons name={name} size={19} color={colors.textTertiary} />
+      <Ionicons name={name} size={ROW_GLYPH} color={colors.textTertiary} />
     </View>
   );
 }

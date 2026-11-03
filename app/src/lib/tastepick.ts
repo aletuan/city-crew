@@ -70,3 +70,20 @@ export function cleanTaste(stored: readonly string[], known: readonly string[]):
   }
   return out;
 }
+
+/**
+ * Whether the faint rule after interest `i` on Profile is drawn: only when
+ * the next interest stands on the same line (owner, 3 Nov 2026). Five
+ * interests wrap, and a rule ending a line, or starting one, separates
+ * nothing. `count` is how many interests there are; `ys` their measured
+ * tops, as many as have been measured; until both are measured
+ * the rule is drawn, as one line is the common case. The rule keeps its
+ * room when it is not drawn, so hiding it never moves an interest from
+ * one line to the other and back.
+ */
+export function ruleAfter(ys: readonly (number | undefined)[], i: number, count: number): boolean {
+  if (i >= count - 1) return false;
+  const here = ys[i];
+  const next = ys[i + 1];
+  return here === undefined || next === undefined || here === next;
+}

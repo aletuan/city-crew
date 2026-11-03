@@ -28,17 +28,32 @@ export const CAPTION_LINE = 15;
 
 export const TITLE_LINE = 19;
 
+/** The About rows' glyph slot (`rowGlyph`) and the glyph in it: the
+ *  column every glyph on the facts card and the interests stands on. */
+export const GLYPH_SLOT = 44;
+export const ROW_GLYPH = 19;
+
 export const s = StyleSheet.create({
-  // An About row's grammar, inline (owner, 3 Nov 2026): each interest is
-  // a `RowGlyph` slot and a name 14pt after it — `twoLineRow`'s gap — so
-  // the glyphs sit on the facts card's column and the names on its value
-  // column, on every line the row wraps to. 14pt above and below, as the
-  // card's rows. Between two interests, 18: with the slot's own 12.5 of
-  // air before the next glyph, a name and the next glyph are 30.5 apart,
-  // more than the 26.5 between a glyph and its own name — at 10 they were
-  // 22.5, closer than that, and "Cà phê" read as the next glyph's label.
-  tasteChips: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, paddingVertical: 14 },
-  tasteItem: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  // The first glyph on the About rows' column, the rest by their names
+  // (owner, 3 Nov 2026). The column is the middle of `rowGlyph`'s 44pt
+  // slot, so the row starts half of what is left beside a 19pt glyph in:
+  // (44 − 19) / 2. A name 8pt after its glyph; 24 between one interest and
+  // the next, with the faint rule halfway: 12, the rule, 12. Up to five
+  // wrap to a second line, 12 below, starting on the column; a rule
+  // whose next interest has wrapped is not drawn (`ruleAfter`). 14 above
+  // and below, as the card's rows.
+  tasteChips: {
+    flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 12,
+    paddingVertical: 14, paddingLeft: (GLYPH_SLOT - ROW_GLYPH) / 2,
+  },
+  tasteItem: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 24 },
+  // The card's own row divider, stood on end: its hairline and its ink.
+  // 18 tall, a little under the name's 21 line, as the reference draws it.
+  tasteRule: {
+    width: StyleSheet.hairlineWidth, height: 18, marginLeft: 4,
+    backgroundColor: colors.borderGlassSoft,
+  },
+  tasteRuleOff: { opacity: 0 },
   tasteEmpty: { paddingVertical: 14 },
   // The role badge and the Edit profile button, one row under the name.
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },
@@ -82,7 +97,7 @@ export const s = StyleSheet.create({
   rowEnd: { alignSelf: 'center' },
   featureRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
   // The old well's footprint without the well — see `RowGlyph`.
-  rowGlyph: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  rowGlyph: { width: GLYPH_SLOT, height: GLYPH_SLOT, alignItems: 'center', justifyContent: 'center' },
   featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
   // Regular, not semibold: a settings label names a row, it does not head
   // a paragraph. The value takes the rest of the line and is pushed right
