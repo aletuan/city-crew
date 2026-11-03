@@ -11,7 +11,7 @@ import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'reac
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import { AddCell, AddPill, AddSlot } from './add';
-import { colors, PALETTES, space, textTertiaryHex } from '../theme';
+import { colors, font, PALETTES, space, textTertiaryHex } from '../theme';
 import { SECONDARY_CONTROL_H } from './ui';
 
 // The app's scheme, which the tile's ring is picked by in JS: a `dyn`
@@ -218,6 +218,18 @@ describe('AddPill', () => {
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
     expect(screen.getByText('Add')).toBeTruthy();
     expect(propsWhere((p) => 'animating' in p || ('size' in p && p.size === 'small')).color).toBe(colors.accent);
+  });
+
+  // Lighter beside a title (owner, 3 Nov 2026): the quiet word in medium
+  // and 12/16 of side padding; the filled pill in the docks keeps its
+  // semibold and its 14/18.
+  it('sets the quiet word in medium on narrower sides, and leaves the filled pill as it was', () => {
+    const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
+    expect(word().fontWeight).toBe(font.semibold);
+    expect([pill().paddingLeft, pill().paddingRight]).toEqual([14, 18]);
+    rerender(<AddPill label="Add" onPress={() => {}} quiet />);
+    expect(word().fontWeight).toBe(font.medium);
+    expect([glass().paddingLeft, glass().paddingRight, glass().minHeight]).toEqual([12, 16, 44]);
   });
 
   it('draws the 16pt word and the 18pt plus', () => {

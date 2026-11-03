@@ -253,6 +253,17 @@ export function AddCell({ label, onPress, size, count, testID }: {
  * the 4.5 a 16pt word needs. The body's ink on glass is 14.67 there and
  * nowhere under 6.7. Not an outline either: outlined pills here are the
  * reversals — Cancel, Unblock — and a way to make something is not one.
+ *
+ * Lighter still (owner, 3 Nov 2026): the word in medium, not semibold,
+ * and 12/16 of side padding, not 14/18. Beside a display title the
+ * semibold word was a second heading asking to be read, and the 18pt
+ * plus — a thin glyph — looked weaker than the word after it; at medium
+ * the two weigh the same. The pill is 4pt narrower and as tall: the 44
+ * is the button scale's. The ground stays the round buttons' glass,
+ * which a proposal in the same round would have made fainter: it is 5%
+ * ink on paper already, a fainter one loses the pill's edge on the page,
+ * and it would stop being the ground of the round buttons in the same
+ * row. The filled pill in the docks keeps its semibold and its 14/18.
  */
 export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibilityLabel, testID }: {
   label: string;
@@ -373,6 +384,6 @@ const s = StyleSheet.create({
   // carries a spinner saying so.
   pillBusy: { opacity: 0.7 },
   pillText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
-  pillQuiet: { backgroundColor: colors.surfaceGlass },
-  pillTextQuiet: { color: colors.text },
+  pillQuiet: { backgroundColor: colors.surfaceGlass, paddingLeft: 12, paddingRight: 16 },
+  pillTextQuiet: { color: colors.text, fontWeight: font.medium },
 });
