@@ -101,9 +101,10 @@ const CARD_STOPS = 3;
 const ROW_H = 30;
 const ROW_GAP = 6;
 
-/** The wizard's answer, worn as a badge. Its own glyph colour, like every
- *  other chip in this app — the hue is what ties a concept together across
- *  screens, so a state must not repaint it. */
+/** The wizard's answer, worn as a badge, its glyph in the badge's own
+ *  accent ink. It wore the companion's fixed hue until 3 Nov 2026, when
+ *  the planner's choosers went to one ink (see `Tile`): a blue figure or
+ *  a pink heart here would be the one place that answer still wore it. */
 function CompanyChip({ company }: { company: string | null }) {
   const { t } = useI18n();
   const c = COMPANY.find((x) => x.key === company);
@@ -111,7 +112,7 @@ function CompanyChip({ company }: { company: string | null }) {
   return (
     <View style={s.badge}>
       {c.icon ? (
-        <Ionicons name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={c.color} />
+        <Ionicons name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={colors.accent} />
       ) : null}
       <Text style={s.badgeText}>{t(c.en, c.vi, c.ja, c.zh, c.hant)}</Text>
     </View>

@@ -28,32 +28,22 @@ import type { Collection, Place } from './types';
 export type Company = 'solo' | 'couple' | 'friends' | 'family';
 
 /**
- * Who the chips are for, and what colour each one's glyph wears.
+ * Who the chips are for: a glyph and the words.
  *
- * Coloured for the same reason the category row below it is: a row of grey
- * glyphs beside a row of coloured ones reads as the unfinished half of a
- * screen. The hues are chosen, not decorative — blue for the one person,
- * rose for the two, amber for a group, green for a household.
- *
- * They are not a code. Category colour means something beyond its row —
- * it is the hue that concept wears on a place card too — and nothing here
- * appears anywhere else. So these only have to belong to the same family,
- * stay apart from each other, and avoid reading as one of the seven.
- *
- * Which is why they were measured rather than picked. Each sits at least
- * 15° of hue from every category colour, and each was solved for the same
- * contrast on the light background — 2.14:1, inside the seven's own
- * 1.87–2.51 range — because equal HSL lightness across hues does not mean
- * equal contrast, and a naive amber came out at 1.52:1, visibly fainter
- * than everything beside it.
+ * Each wore a hue of its own until 3 Nov 2026 — blue for the one person,
+ * rose for the two, amber for a group, green for a household — measured to
+ * sit with the category hues without reading as one of them. The planner's
+ * choosers went to their words' ink that day (see `Tile`), and the trip
+ * card's badge with them, so the hues went: a colour nothing draws is a
+ * colour the next person has to wonder about.
  */
 export const COMPANY: {
-  key: Company; icon: string; color: string; en: string; vi: string; ja: string; zh: string; hant: string;
+  key: Company; icon: string; en: string; vi: string; ja: string; zh: string; hant: string;
 }[] = [
-  { key: 'solo', icon: 'person-outline', color: '#8CA9D0', en: 'Just me', vi: 'Một mình', ja: 'ひとり', zh: '独自一人', hant: '獨自一人' },
-  { key: 'couple', icon: 'heart-outline', color: '#D496A5', en: 'Couple', vi: 'Hai người', ja: 'ふたり', zh: '情侣', hant: '情侶' },
-  { key: 'friends', icon: 'people-outline', color: '#B9A654', en: 'Friends', vi: 'Bạn bè', ja: '友だち', zh: '朋友', hant: '朋友' },
-  { key: 'family', icon: 'home-outline', color: '#65B690', en: 'Family', vi: 'Gia đình', ja: '家族', zh: '家人', hant: '家人' },
+  { key: 'solo', icon: 'person-outline', en: 'Just me', vi: 'Một mình', ja: 'ひとり', zh: '独自一人', hant: '獨自一人' },
+  { key: 'couple', icon: 'heart-outline', en: 'Couple', vi: 'Hai người', ja: 'ふたり', zh: '情侣', hant: '情侶' },
+  { key: 'friends', icon: 'people-outline', en: 'Friends', vi: 'Bạn bè', ja: '友だち', zh: '朋友', hant: '朋友' },
+  { key: 'family', icon: 'home-outline', en: 'Family', vi: 'Gia đình', ja: '家族', zh: '家人', hant: '家人' },
 ];
 
 /** Day or evening. Not a clock time: the wizard's own promise is that

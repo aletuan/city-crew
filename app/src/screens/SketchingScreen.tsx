@@ -641,7 +641,6 @@ export default function SketchingScreen({ navigation, route }: {
                     key={c}
                     label={categoryLabel(c, t)}
                     icon={CATEGORIES[c].icon}
-                    iconColor={CATEGORIES[c].color}
                   />
                 ))}
                 {moreWants > 0 && <Chip label={`+${moreWants}`} />}

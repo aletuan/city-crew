@@ -103,6 +103,7 @@ vi.mock('../components/InviteCard', async () => {
 });
 
 import TripsScreen from './TripsScreen';
+import { colors } from '../theme';
 
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 
@@ -362,6 +363,15 @@ describe('the card', () => {
     // the literal "Tue, 20 Oct" it held for one day, 17 Oct 2026 in Hanoi,
     // and turned CI red at midnight there.
     expect(row.textContent).toBe(`${dateline('en', fromISO(SOON)!)}Friends`);
+  });
+
+  // The badge's glyph is the badge's own accent ink, not the companion's
+  // old hue (owner, 3 Nov 2026), as the planner's chooser now draws it.
+  it('inks the company glyph in the badge\'s accent', () => {
+    show([trip({ company: 'friends' })]);
+    const badge = screen.getByText('Friends').parentElement!;
+    const glyph = badge.querySelector('[data-icon="people-outline"]')!;
+    expect(glyph.getAttribute('data-color')).toBe(String(colors.accent));
   });
 
   it('has no cover and no badge when there is no picture and no company', () => {
