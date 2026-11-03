@@ -18,7 +18,7 @@ import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } 
 import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 import ReviewBadge from './ReviewBadge';
-import ListToggle from './ListToggle';
+import ListToggle, { SAVE_DISC } from './ListToggle';
 import { KindPill } from './KindPill';
 
 export default function PlaceCard({
@@ -169,7 +169,7 @@ export default function PlaceCard({
           >
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={19}
+              size={17}
               color={saved ? onPhoto.accent : onPhoto.text}
             />
           </PressableScale>
@@ -611,8 +611,19 @@ const s = StyleSheet.create({
   // decoration — it separates this tap from the card's own (press the
   // disc and you save, press anywhere else and the place opens) and it
   // holds the 40pt target that makes that separation reachable.
+  //
+  // ── 36, not 40 (owner, 4 Nov 2026) ──
+  // A reference asked for the disc a step quieter: smaller, and its ground
+  // down to 25–30% black. Smaller it is — 36 and a 17pt glyph, the same
+  // proportion as 40 and 19, and the 8pt slop keeps the target at 52. The
+  // ground stays: over a white wall, which the second card in the
+  // reference is all but, 58% black under a white glyph is 4.9:1, and
+  // 25–30% is 1.8–2.0 — under the 3:1 a glyph needs, which 43% is the
+  // least that reaches. The rating pill shares this ground and its words
+  // need 56%. The place screen's bookmark stays 40, in line with the
+  // back button beside it.
   saveFab: {
-    width: 40, height: 40, borderRadius: 20,
+    width: SAVE_DISC, height: SAVE_DISC, borderRadius: SAVE_DISC / 2,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(10,11,10,0.58)',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,

@@ -14,7 +14,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import ListToggle from './ListToggle';
+import ListToggle, { SAVE_DISC } from './ListToggle';
 import { colors, onPhoto } from '../theme';
 
 const box = () => screen.getByRole('checkbox', { name: 'Add to Thảo Điền' });
@@ -39,11 +39,14 @@ describe('ListToggle', () => {
     expect(disc().backgroundColor).toBe(colors.accentFill);
   });
 
-  it('takes the bookmark’s disc on a photograph: 40pt, dark glass, a white ⊕', () => {
+  // 36 since 4 Nov 2026, the card's bookmark's size (see `saveFab`).
+  it('takes the bookmark’s disc on a photograph: 36pt, dark glass, a white ⊕', () => {
     render(<ListToggle on={false} title="Thảo Điền" onPress={() => {}} overPhoto />);
     expect(icon().getAttribute('data-color')).toBe(String(onPhoto.text));
-    expect(icon().getAttribute('data-size')).toBe('22');
-    expect([disc().width, disc().borderColor]).toEqual([40, onPhoto.line]);
+    expect(icon().getAttribute('data-size')).toBe('20');
+    expect(SAVE_DISC).toBe(36);
+    expect([disc().width, disc().height, disc().borderColor]).toEqual([36, 36, onPhoto.line]);
+    expect(disc().backgroundColor).toBe('rgba(10,11,10,0.58)');
   });
 
   it('is a row’s 34pt disc off one', () => {

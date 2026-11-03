@@ -10,6 +10,7 @@
 // about; see `src/uitest/setup.tsx`.
 
 import React from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
@@ -179,6 +180,30 @@ describe('the bookmark', () => {
     state.saved = new Set(['cong-caphe']);
     render(<PlaceCard place={place()} onPress={() => {}} />);
     expect(document.querySelector('[data-icon="bookmark"]')).toBeTruthy();
+  });
+
+  // A step quieter (owner, 4 Nov 2026): a 36pt disc and a 17pt glyph,
+  // the target still 52 with the slop, and the ground left at 58% — the
+  // least a white glyph keeps 3:1 over a white wall is 43%.
+  it('draws the bookmark as a 36pt disc on the rating’s ground, its target still 52', () => {
+    render(<PlaceCard place={place()} onPress={() => {}} />);
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    let props: Record<string, unknown> | null = null;
+    while (stack.length && !props) {
+      const f = stack.pop()!;
+      const p = f.memoizedProps;
+      if (p && typeof p === 'object' && p.accessibilityLabel === 'Save to a collection' && 'contentStyle' in p) props = p;
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    const face = StyleSheet.flatten(props!.contentStyle as StyleProp<ViewStyle>) ?? {};
+    expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
+    expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
+    expect(36 + 2 * (props!.hitSlop as number)).toBeGreaterThanOrEqual(44);
+    expect(document.querySelector('[data-icon="bookmark-outline"]')!.getAttribute('data-size')).toBe('17');
   });
 
   it('speaks the reader’s language', () => {
