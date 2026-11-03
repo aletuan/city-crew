@@ -794,6 +794,15 @@ dòng "mượt hơn".
 • 修正：iOS 26で、コレクションのグリッドでタイルを右にドラッグすると前の画面に戻ることがありました。
 ```
 
+## Release notes v1.0.14 (chưa viết)
+
+1.0.13 đã được duyệt nên train của nó đã đóng; app.json nâng lên 1.0.14
+ngày 4/11/2026, trước bản build TestFlight `preview` mang các bản vá Expo
+SDK 58 mới (#1251: expo 58.0.23, expo-constants 58.0.15, expo-notifications
+58.1.8, expo-sharing 58.0.22, expo-updates 58.0.21, react-native-safe-area-
+context 5.11.1); `runtimeVersion` vẫn là exposdk:58.0.0. What's New viết
+trước khi nộp lên App Store, từ các PR merge sau 1.0.13 (#1240 trở đi).
+
 ## Release notes v1.0.13 (What's New)
 
 Viết từ các PR merge sau build 1.0.12 (42, main 0e13d99) — #1234 → #1238.
