@@ -343,8 +343,10 @@ describe('the zero-state', () => {
     // The compact cell, the glyph over the word.
     expect(cafes.querySelector('[data-icon]')!.getAttribute('data-size')).toBe('22');
     expect(getComputedStyle(cafes.firstElementChild as HTMLElement).flexDirection).toBe('column');
-    // One row of five: three cells and two spacers.
-    expect((cafes.parentElement as HTMLElement).children.length).toBe(5);
+    // Three kinds fit one row, three across with no spacers
+    // (`browseColumns`), and 12 between rows were there a second.
+    expect((cafes.parentElement as HTMLElement).children.length).toBe(3);
+    expect((cafes.parentElement!.parentElement as HTMLElement).style.gap).toBe('12px');
     expect(screen.queryByTestId('search-browse-all')).toBeNull();
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSearchRows, type SearchRowsInput } from './searchRows';
+import { BROWSE_ROW_MAX, browseColumns, buildSearchRows, type SearchRowsInput } from './searchRows';
 import { RECENTS_SHOWN } from './recents';
 import { fold } from './search';
 import type { Collection, Place } from './types';
@@ -153,5 +153,22 @@ describe('buildSearchRows — results', () => {
     expect(keys({ terms: ['mono'], query: 'mono', places: [mono], fresh: [candidate] }))
       .toEqual(['h-place', 'p-mono', 'h-google', 'g-g1']);
     expect(keys({ terms: ['mono'], query: 'mono', places: [mono], fresh: [] })).toEqual(['h-place', 'p-mono']);
+  });
+});
+
+// Browse's grid in even rows (owner, 3 Nov 2026): eight kinds were five
+// over three, and a short second row reads as the leftovers.
+describe('browseColumns', () => {
+  it('sets up to five on one row', () => {
+    expect(BROWSE_ROW_MAX).toBe(5);
+    expect([1, 3, 5].map(browseColumns)).toEqual([1, 3, 5]);
+  });
+
+  it('splits more into two rows, even or the first one longer', () => {
+    expect([6, 7, 8, 9].map(browseColumns)).toEqual([3, 4, 4, 5]);
+  });
+
+  it('never asks for no columns', () => {
+    expect(browseColumns(0)).toBe(1);
   });
 });

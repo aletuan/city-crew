@@ -168,3 +168,18 @@ export function buildSearchRows(
   }
   return out;
 }
+
+/** Most cells Browse sets on one row: five fit a 390pt phone over the
+ *  keyboard, at the compact cell's width (`Tile`). */
+export const BROWSE_ROW_MAX = 5;
+
+/**
+ * How many of Browse's cells go across (owner, 3 Nov 2026): all of them
+ * on one row while they fit, otherwise half — rounded up — so the two rows
+ * are even or one apart. Eight kinds were five over three, and a second
+ * row that short reads as what was left over. Never less than one: a grid
+ * of no columns has no rows to stop at.
+ */
+export function browseColumns(count: number): number {
+  return Math.max(1, count <= BROWSE_ROW_MAX ? count : Math.ceil(count / 2));
+}
