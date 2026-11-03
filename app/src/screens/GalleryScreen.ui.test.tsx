@@ -45,6 +45,10 @@ const data = vi.hoisted(() => ({
   reload: vi.fn(),
   reloadLists: vi.fn(),
   reloadMine: vi.fn(),
+  reloadTrips: vi.fn(),
+  reloadVisits: vi.fn(),
+  fetchSearchPlaces: vi.fn(async (slugs: readonly string[]) => slugs.map((slug) => ({ slug, fresh: true }))),
+  refreshInSearchIndex: vi.fn(),
   fetchPlaceId: vi.fn(async () => 'place-uuid'),
   fetchGallery: vi.fn(async () => state.rows),
   setCover: vi.fn(async () => {}),
@@ -99,8 +103,12 @@ vi.mock('../lib/save', () => {
   const useSave = () => ({ mine: { reload: data.reloadMine } });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
 });
+vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ reload: data.reloadTrips }) }));
+vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ reload: data.reloadVisits }) }));
+vi.mock('../lib/searchIndex', () => ({ refreshInSearchIndex: data.refreshInSearchIndex }));
 vi.mock('../lib/data', () => ({
   usePlaceBySlug: () => state.elsewhere,
+  fetchSearchPlaces: data.fetchSearchPlaces,
   fetchPlaceId: data.fetchPlaceId,
   fetchGallery: data.fetchGallery,
   setCover: data.setCover,
@@ -365,10 +373,19 @@ describe('the menu on one photograph', () => {
     await waitFor(() => expect(data.setCover).toHaveBeenCalledWith('a'));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
     expect(data.reload).not.toHaveBeenCalled();
+    expect(data.fetchSearchPlaces).not.toHaveBeenCalled();
     await leave();
     expect(data.reload).toHaveBeenCalledTimes(1);
     expect(data.reloadLists).toHaveBeenCalledTimes(1);
     expect(data.reloadMine).toHaveBeenCalledTimes(1);
+    // And every other copy of its cover held for the run (owner, 3 Nov
+    // 2026: Search drew Hermanos café's old cover): the trips, the
+    // check-ins, and this place's row of Search's index, read alone.
+    expect(data.reloadTrips).toHaveBeenCalledTimes(1);
+    expect(data.reloadVisits).toHaveBeenCalledTimes(1);
+    expect(data.fetchSearchPlaces).toHaveBeenCalledTimes(1);
+    expect(data.fetchSearchPlaces.mock.calls[0][0]).toEqual(['cong-caphe']);
+    await waitFor(() => expect(data.refreshInSearchIndex).toHaveBeenCalledWith([{ slug: 'cong-caphe', fresh: true }]));
   });
 
   // Three slots on the cover too: its own held, the star filled green, a

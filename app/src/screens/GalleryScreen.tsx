@@ -49,7 +49,7 @@ import {
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { fetchGallery, fetchPlaceId, removePlacePhotos, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
+import { fetchGallery, fetchPlaceId, fetchSearchPlaces, removePlacePhotos, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
 import {
   applyEdit, canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryEdit, type GalleryPhoto,
 } from '../lib/gallery';
@@ -59,7 +59,10 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { SHOWN, bestOf, needsScore, scoreAll, toTen, type PhotoScorer } from '../lib/photoScore';
 import { photoScorer } from '../lib/photoScoreNative';
+import { useMyCheckins } from '../lib/checkins';
+import { useMyTrips } from '../lib/mytrips';
 import { useMyLists } from '../lib/save';
+import { refreshInSearchIndex } from '../lib/searchIndex';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -93,7 +96,20 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // Royal Botanic Gardens' new cover showed on its own page and not in
   // the collection beside it (owner, 15 Oct 2026). Both shelves, the
   // public lists and the reader's own, since a place can be in either.
-  const reloadCatalog = () => { reloadPlaces(); reloadLists(); mine.reload(); };
+  //
+  // And every other copy of the place's cover held for the run (owner,
+  // 3 Nov 2026: Hermanos café's new cover, and Search still drew the old
+  // one). Search's index is kept in memory for the run, so only this place's
+  // row is read again and laid over the old one — a few hundred bytes, not
+  // the 420 kB index. The trips and the check-ins carry each place's cover
+  // in their own lists, read once a launch; they are read again too. A
+  // failed read leaves the old row: the next launch reads the index anew.
+  const trips = useMyTrips();
+  const visits = useMyCheckins();
+  const reloadCatalog = () => {
+    reloadPlaces(); reloadLists(); mine.reload(); trips.reload(); visits.reload();
+    if (slug) fetchSearchPlaces([slug]).then(refreshInSearchIndex, () => {});
+  };
   const inCatalog = useMemo(() => places.find((p) => p.slug === slug), [places, slug]);
   const elsewhere = usePlaceBySlug(!catalogLoading && !inCatalog ? slug : null);
   const place = inCatalog ?? elsewhere.data ?? null;
