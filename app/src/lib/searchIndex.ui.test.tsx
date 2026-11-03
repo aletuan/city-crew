@@ -5,7 +5,7 @@
 import React, { useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render } from '../uitest/render';
-import { addToSearchIndex, forgetSearchIndex, useSearchIndex } from './searchIndex';
+import { addToSearchIndex, forgetSearchIndex, refreshInSearchIndex, useSearchIndex } from './searchIndex';
 import type { Place } from './data';
 
 const data = vi.hoisted(() => ({ fetch: vi.fn(async (_me: string | null): Promise<Place[]> => []) }));
@@ -134,5 +134,43 @@ describe('addToSearchIndex', () => {
     await act(async () => { addToSearchIndex(null, []); });
     expect(seen.places).toBe(before);
     expect(reads).toBe(1);
+  });
+});
+
+// A place changed during the run — a new cover set in Gallery — laid over
+// its old row where it stands (owner, 3 Nov 2026: Hermanos café's new
+// cover, and Search still drew the old one).
+describe('refreshInSearchIndex', () => {
+  const at = (slug: string, cover: string) => ({ slug, city_id: 'hanoi', place_photos: [{ photo_uri: cover }] }) as unknown as Place;
+
+  it('lays the fresh row over the old one, in its place, and the screen reads it again', async () => {
+    data.fetch.mockImplementation(async () => [at('a', 'a1'), at('b', 'b1'), at('c', 'c1')]);
+    render(<Probe reader="u1" />);
+    await settle();
+    await act(async () => { refreshInSearchIndex([at('b', 'b2')]); });
+    expect(seen.places).toEqual([at('a', 'a1'), at('b', 'b2'), at('c', 'c1')]);
+    expect(data.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reaches every reader\u2019s index, and adds no place the index never had', async () => {
+    data.fetch.mockImplementation(async () => [at('b', 'b1')]);
+    render(<Probe reader="u1" />).unmount();
+    await settle();
+    render(<Probe reader={null} />);
+    await settle();
+    await act(async () => { refreshInSearchIndex([at('b', 'b2'), at('new', 'n1')]); });
+    expect(seen.places).toEqual([at('b', 'b2')]);
+    render(<Probe reader="u1" />);
+    await settle();
+    expect(seen.places).toEqual([at('b', 'b2')]);
+    expect(data.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads nothing again for nothing to lay', async () => {
+    render(<Probe reader={null} />);
+    await settle();
+    const before = seen.places;
+    await act(async () => { refreshInSearchIndex([]); });
+    expect(seen.places).toBe(before);
   });
 });

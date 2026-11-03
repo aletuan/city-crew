@@ -52,6 +52,26 @@ export function addToSearchIndex(reader: string | null, places: readonly Place[]
 }
 
 /**
+ * Lay fresh copies of `places` over the rows already kept, where they
+ * are and in every reader's answer, and leave a place the index never had
+ * out of it. The way back for a place changed during the run: a guide set
+ * Hermanos café's new cover in Gallery, and Search, which read the index
+ * before the change, still drew the old one (owner, 3 Nov 2026). Not
+ * `addToSearchIndex`, which puts its rows first: a changed place keeps its
+ * place in the order.
+ */
+export function refreshInSearchIndex(places: readonly Place[]): void {
+  if (!places.length) return;
+  const fresh = new Map(places.map((p) => [p.slug, p]));
+  for (const [key, answer] of [...asked]) {
+    const next = answer.then((list) => list.map((p) => fresh.get(p.slug) ?? p));
+    asked.set(key, next);
+    next.catch(() => asked.delete(key));
+  }
+  readers.forEach((read) => read());
+}
+
+/**
  * Every city's places for `reader` (`useSession().userId`: undefined while
  * unknown, null for nobody); null until the answer is in.
  */
