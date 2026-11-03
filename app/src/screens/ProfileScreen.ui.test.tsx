@@ -22,7 +22,8 @@ import type { Pref } from '../lib/look';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommonActions, StackRouter } from '@react-navigation/routers';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { CATEGORIES } from '../lib/categories';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
 
@@ -470,14 +471,33 @@ describe('interests', () => {
     expect(screen.queryByText('Edit profile to add your interests.')).toBeNull();
   });
 
-  // The height every category chip in the app wears now — Search, Places,
-  // a place's facts row — so the family reads as one. Still not a control.
-  it('draws each chip 44 tall, and as a fact rather than a button', () => {
-    state.categories = ['cafes'];
+  // On the facts card's grid (owner, 3 Nov 2026): each interest's glyph
+  // in the About rows' own 44pt slot at 19pt, in the column's ink, its
+  // name in the value's type 14pt after — so the glyphs share the column
+  // the envelope and the pin stand in. No pill under it, and not a control.
+  it('lays each interest on the About rows\u2019 glyph column, as a fact', () => {
+    state.categories = ['cafes', 'views'];
     draw();
-    const chip = screen.getByTestId('interest-cafes');
-    expect(getComputedStyle(chip).minHeight).toBe('44px');
-    expect(chip.getAttribute('role')).toBeNull();
+    const item = screen.getByTestId('interest-cafes');
+    expect(item.getAttribute('role')).toBeNull();
+    expect(getComputedStyle(item).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    const slot = within(item).getByTestId('row-glyph');
+    const envelope = document.querySelector('[data-icon="mail-outline"]')!.parentElement!;
+    // The column is the slot's width from the card's edge: the same 44.
+    expect(getComputedStyle(slot).width).toBe(getComputedStyle(envelope).width);
+    expect(getComputedStyle(slot).width).toBe('44px');
+    const glyph = slot.querySelector('[data-icon]')!;
+    expect(glyph.getAttribute('data-icon')).toBe(CATEGORIES.cafes.icon);
+    expect(glyph.getAttribute('data-size')).toBe('19');
+    // In the column's own ink, as the envelope is — neutral, as Search's
+    // category glyphs are at rest (owner, 3 Nov 2026).
+    expect(glyph.getAttribute('data-color')).toBe(document.querySelector('[data-icon="mail-outline"]')!.getAttribute('data-color'));
+    expect(glyph.getAttribute('data-color')).not.toBe(CATEGORIES.cafes.color);
+    expect(getComputedStyle(item).columnGap || getComputedStyle(item).gap).toBe('14px');
+    // Two interests sit further apart than a glyph and its own name: 18 +
+    // the slot's 12.5 of air (30.5) against 12.5 + 14 (26.5).
+    expect(getComputedStyle(item.parentElement!).columnGap).toBe('18px');
+    expect(screen.getByTestId('interest-views')).toBeTruthy();
   });
 
   it('points at Edit profile when nothing usable is stored', () => {
