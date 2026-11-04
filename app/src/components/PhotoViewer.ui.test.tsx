@@ -79,14 +79,29 @@ describe('PhotoViewer', () => {
   // The disc every control over a photo wears (owner, 4 Nov 2026): it
   // was 36 already, on a 62% ground with no rim; the count stays centred
   // because the balance on its other side is the disc's width.
-  it('draws the × as the card’s 36pt disc, a 44pt target, the count still centred', () => {
+  it('draws the × as the card’s 36pt disc, a 52pt target, the count still centred', () => {
     render(<PhotoViewer photos={gallery(3)} index={1} onIndex={() => {}} onClose={() => {}} />);
     const close = pressable('photo-viewer-close');
     const face = flat(close.contentStyle);
     expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
     expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
     expect(face.borderWidth).toBeGreaterThan(0);
-    expect(36 + 2 * (close.hitSlop as number)).toBe(44);
+    // 52, the card's: 44 was found too small the day it shipped.
+    expect(36 + 2 * (close.hitSlop as number)).toBe(52);
+    // Its row reaches the slop's foot: iOS takes no touch past a parent.
+    const row = (() => {
+      type F = { child: F | null; sibling: F | null; memoizedProps: Record<string, unknown> | null };
+      const h = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: F } }>;
+      const st: F[] = [h[Object.keys(h).find((k) => k.startsWith('__reactContainer'))!].stateNode.current];
+      while (st.length) {
+        const f = st.pop()!;
+        if (f.memoizedProps?.pointerEvents === 'box-none') return f.memoizedProps;
+        if (f.sibling) st.push(f.sibling);
+        if (f.child) st.push(f.child);
+      }
+      throw new Error('no top row');
+    })();
+    expect(flat(row.style).paddingBottom).toBeGreaterThanOrEqual(close.hitSlop as number);
     expect(document.querySelector('[data-icon="close"]')!.getAttribute('data-size')).toBe('18');
     // The empty view after the count, by its committed props: jsdom does
     // not resolve the class react-native-web writes its width to.

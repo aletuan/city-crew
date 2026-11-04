@@ -18,7 +18,7 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import { colors, onPhoto } from '../theme';
-import { photoDisc, PressableScale } from './ui';
+import { PHOTO_SLOP, photoDisc, PressableScale } from './ui';
 
 export default function ListToggle({ on, title, onPress, overPhoto, style, testID }: {
   on: boolean;
@@ -43,7 +43,7 @@ export default function ListToggle({ on, title, onPress, overPhoto, style, testI
       // What react-native-web keeps of the state — see `SaveSheet`.
       aria-checked={on}
       accessibilityLabel={t(`Add to ${title}`, `Thêm vào ${title}`, `「${title}」に追加`, `添加到“${title}”`, `新增到「${title}」`)}
-      hitSlop={overPhoto ? 8 : 10}
+      hitSlop={overPhoto ? PHOTO_SLOP : 10}
       testID={testID}
       style={style}
       contentStyle={[overPhoto ? s.photo : s.row, on && s.on]}

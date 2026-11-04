@@ -48,6 +48,8 @@ describe('ListToggle', () => {
     expect(PHOTO_DISC).toBe(36);
     expect([disc().width, disc().height, disc().borderColor]).toEqual([36, 36, onPhoto.line]);
     expect(disc().backgroundColor).toBe('rgba(10,11,10,0.58)');
+    // 52 to the thumb, as the bookmark it stands in for.
+    expect(36 + 2 * (pressable().hitSlop as number)).toBe(52);
   });
 
   it('is a row’s 34pt disc off one', () => {
@@ -59,6 +61,11 @@ describe('ListToggle', () => {
 
 /** The disc's committed style — what `contentStyle` was handed. */
 function disc(): ViewStyle {
+  return StyleSheet.flatten(pressable().contentStyle as StyleProp<ViewStyle>) ?? {};
+}
+
+/** The committed props of the `PressableScale` the toggle is. */
+function pressable(): Record<string, unknown> {
   type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
   const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
   const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
@@ -66,7 +73,7 @@ function disc(): ViewStyle {
   while (stack.length) {
     const f = stack.pop()!;
     const p = f.memoizedProps;
-    if (p && typeof p === 'object' && 'contentStyle' in p) return StyleSheet.flatten(p.contentStyle as StyleProp<ViewStyle>) ?? {};
+    if (p && typeof p === 'object' && 'contentStyle' in p) return p;
     if (f.sibling) stack.push(f.sibling);
     if (f.child) stack.push(f.child);
   }

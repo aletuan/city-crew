@@ -329,10 +329,11 @@ const s = StyleSheet.create({
   frame: { borderRadius: radius.card, overflow: 'hidden', backgroundColor: 'rgb(6,5,8)' },
   // `photoDisc` (owner, 4 Nov 2026): these were 32 on the viewer's own
   // ground, the one size on a photograph that was neither the card's nor
-  // the viewer's. Now the disc every control over a photo wears, 44 to
-  // the thumb with `PHOTO_SLOP`. The corner is the Pressable's, not the
-  // disc's: placed on the inner view, the Pressable had no size of its
-  // own and a slop had nothing to grow from.
+  // the viewer's. Now the disc every control over a photo wears, 52 to
+  // the thumb with `PHOTO_SLOP` — which stays inside the frame, 10 from
+  // its edge, since iOS takes no touch past a parent's bounds. The corner
+  // is the Pressable's, not the disc's: placed on the inner view, the
+  // Pressable had no size of its own and a slop had nothing to grow from.
   round: photoDisc,
   corner: { position: 'absolute' },
   close: { top: 10, right: 10 },

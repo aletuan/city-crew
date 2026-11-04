@@ -144,11 +144,15 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: space.page,
+    // The ×'s slop below it is inside this row, not past its edge: iOS
+    // hit-tests a child only where its parent is, and the row is
+    // `box-none`, so the band it adds takes no touch from the photograph.
+    paddingBottom: PHOTO_SLOP,
   },
   // `photoDisc`, the place screen's back button on the same photograph
   // (owner, 4 Nov 2026): this × was 36 already, on its own ground — 62%
   // of the scrim's ink, no rim — and is now the one disc every control
-  // over a photo wears, 44 to the thumb with `PHOTO_SLOP`.
+  // over a photo wears, 52 to the thumb with `PHOTO_SLOP`.
   round: photoDisc,
   balance: { width: PHOTO_DISC },
   count: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },

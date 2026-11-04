@@ -202,7 +202,8 @@ describe('the bookmark', () => {
     const face = StyleSheet.flatten(props!.contentStyle as StyleProp<ViewStyle>) ?? {};
     expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
     expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
-    expect(36 + 2 * (props!.hitSlop as number)).toBeGreaterThanOrEqual(44);
+    // 52: the same target every disc on a photograph now has.
+    expect(36 + 2 * (props!.hitSlop as number)).toBe(52);
     expect(document.querySelector('[data-icon="bookmark-outline"]')!.getAttribute('data-size')).toBe('17');
   });
 

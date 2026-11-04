@@ -1029,7 +1029,7 @@ describe('PlaceDetailScreen — floating controls', () => {
   // The card's disc, on the photograph the card led to (owner, 4 Nov
   // 2026): 36 drawn and 44 to the thumb, the 58% ground and its rim, the
   // three in one row and still 8 apart.
-  it('draws back, share and bookmark as the card’s 36pt disc, each a 44pt target', () => {
+  it('draws back, share and bookmark as the card’s 36pt disc, each a 52pt target that stays out of its neighbour’s', () => {
     show();
     const flat = (v: unknown) => StyleSheet.flatten(v as StyleProp<ViewStyle>) ?? {};
     const discs = ['Back', 'Share', 'Save to a collection'].map((label) =>
@@ -1039,8 +1039,15 @@ describe('PlaceDetailScreen — floating controls', () => {
       expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
       expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
       expect(face.borderWidth).toBeGreaterThan(0);
-      expect(36 + 2 * (d.hitSlop as unknown as number)).toBe(44);
     }
+    // 52, the card's (owner, 4 Nov 2026: 44 felt too small). Share and
+    // bookmark are 8 apart, so the edges they share take 4 each: the two
+    // targets meet and neither reaches the other's disc.
+    type Slop = { top: number; bottom: number; left: number; right: number };
+    const [backSlop, shareSlop, saveSlop] = discs.map((d) => d.hitSlop as unknown as number | Slop);
+    expect(36 + 2 * (backSlop as number)).toBe(52);
+    expect(shareSlop).toEqual({ top: 8, bottom: 8, left: 8, right: 4 });
+    expect(saveSlop).toEqual({ top: 8, bottom: 8, left: 4, right: 8 });
     const [back, share, save] = discs.map((d) => flat(d.style));
     expect(new Set([back.top, share.top, save.top]).size).toBe(1);
     // Centred where the 44pt disc was, 8 under the inset (none here), so

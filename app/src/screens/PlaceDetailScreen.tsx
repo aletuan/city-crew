@@ -478,7 +478,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </PressableScale>
             <PressableScale
               onPress={share} scaleTo={0.9}
-              style={[s.fabSlot, { right: space.page + PHOTO_DISC + FAB_GAP, top: insets.top + FAB_TOP }]} contentStyle={s.fab} hitSlop={PHOTO_SLOP} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
+              style={[s.fabSlot, { right: space.page + PHOTO_DISC + FAB_GAP, top: insets.top + FAB_TOP }]} contentStyle={s.fab} hitSlop={SHARE_SLOP} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
               accessibilityRole="button"
             >
               <Ionicons name="share-outline" size={PHOTO_GLYPH} color={onPhoto.text} />
@@ -490,7 +490,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <PressableScale
               anchorRef={saveAnchor}
               onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-              style={[s.fabSlot, { right: space.page, top: insets.top + FAB_TOP }]} contentStyle={s.fab} hitSlop={PHOTO_SLOP}
+              style={[s.fabSlot, { right: space.page, top: insets.top + FAB_TOP }]} contentStyle={s.fab} hitSlop={SAVE_SLOP}
               accessibilityRole="button"
               accessibilityState={{ selected: saved }}
               // Two ids for the two states, so a smoke flow can wait on the
@@ -1518,6 +1518,11 @@ const FACT_HEIGHT = 44;
  *  when they shrank; 8 between share and bookmark, as before. */
 const FAB_TOP = 12;
 const FAB_GAP = 8;
+// Share and bookmark sit `FAB_GAP` apart: each takes the full slop on
+// its three open edges and half the gap on the one they share, so the
+// two targets meet in the middle and neither covers the other's disc.
+const SHARE_SLOP = { top: PHOTO_SLOP, bottom: PHOTO_SLOP, left: PHOTO_SLOP, right: FAB_GAP / 2 };
+const SAVE_SLOP = { top: PHOTO_SLOP, bottom: PHOTO_SLOP, left: FAB_GAP / 2, right: PHOTO_SLOP };
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -1559,7 +1564,7 @@ const s = StyleSheet.create({
   //
   // ── 36, the card's (owner, 4 Nov 2026) ──
   // The three discs are `photoDisc` now, the bookmark's on the card that
-  // led here: 36 drawn, 44 to the thumb with `PHOTO_SLOP`, the 58% ground.
+  // led here: 36 drawn, 52 to the thumb with `PHOTO_SLOP`, the 58% ground.
   // They were 44 on Explore's 0.55, a step louder than the card for no
   // reason the reader could see. The back chevron is a point heavier than
   // the other two glyphs: a bare chevron is thinner than a filled shape.

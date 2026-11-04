@@ -18,9 +18,15 @@ import { useReducedMotion, useLoop } from './motion';
  * the place screen's back, share and bookmark, the photo viewers' × and
  * full-screen (owner, 4 Nov 2026: one size for all of them, the card's).
  *
- * 36 drawn, and `PHOTO_SLOP` all round makes it the 44 a target needs: a disc
- * over a picture is chrome, and the smaller it is the more of the picture
- * the reader sees, but the thumb does not get smaller with it.
+ * 36 drawn, and `PHOTO_SLOP` all round makes it a 52pt target, the card's
+ * bookmark's: a disc over a picture is chrome, and the smaller it is the
+ * more of the picture the reader sees, but the thumb does not get smaller
+ * with it. The first cut was 4 all round, to 44 — the place screen's old
+ * target exactly — and the owner found it too small the same day: the
+ * finger aims at the disc it sees, and 4pt past an edge 8pt nearer than
+ * it was is a miss. 8 is what the card had all along, and nobody missed it.
+ * Where two discs sit 8 apart, the edges they share take half the gap
+ * each, so neither target reaches into the other's.
  *
  * The ground is 58% black under an `onPhoto.line` hairline, the rating
  * pill's: over a white wall a white glyph on it is 4.9:1, and 43% is the
@@ -34,7 +40,7 @@ import { useReducedMotion, useLoop } from './motion';
  * `layout.tsx`; this is the other family, and the two differ on purpose.
  */
 export const PHOTO_DISC = 36;
-export const PHOTO_SLOP = (SECONDARY_CONTROL_H - PHOTO_DISC) / 2;
+export const PHOTO_SLOP = 8;
 /** A 36pt disc's glyph: 17, the bookmark's, about half the disc. */
 export const PHOTO_GLYPH = 17;
 export const photoDisc = {

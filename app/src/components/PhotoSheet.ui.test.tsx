@@ -101,7 +101,7 @@ describe('PhotoSheet', () => {
   // 32 on the viewer's ground until 4 Nov 2026 (owner): now the disc
   // every control over a photo wears, 44 to the thumb. The corner is on
   // the Pressable, so the slop grows from a body that has the disc's size.
-  it('draws × and full screen as the card’s 36pt disc, each a 44pt target in its corner', () => {
+  it('draws × and full screen as the card’s 36pt disc, each a 52pt target in its corner', () => {
     render(<PhotoSheet {...props({ photos: gallery(3), index: 0 })} />);
     for (const [id, corner, icon, glyph] of [
       ['photo-sheet-close', { top: 10, right: 10 }, 'close', '18'],
@@ -114,7 +114,10 @@ describe('PhotoSheet', () => {
       expect(face.borderWidth).toBeGreaterThan(0);
       expect(face.position).toBeUndefined();
       expect(flat(btn.style)).toEqual({ position: 'absolute', ...corner });
-      expect(36 + 2 * (btn.hitSlop as number)).toBe(44);
+      const slop = btn.hitSlop as number;
+      expect(36 + 2 * slop).toBe(52);
+      // Inside the frame: iOS takes no touch past a parent's bounds.
+      expect(slop).toBeLessThanOrEqual(10);
       expect(document.querySelector(`[data-icon="${icon}"]`)!.getAttribute('data-size')).toBe(glyph);
     }
   });

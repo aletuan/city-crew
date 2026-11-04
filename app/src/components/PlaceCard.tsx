@@ -15,7 +15,7 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { useIsSaved, useSaveActions } from '../lib/save';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
-import { Card, photoDisc, PressableScale } from './ui';
+import { Card, PHOTO_SLOP, photoDisc, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 import ReviewBadge from './ReviewBadge';
 import ListToggle from './ListToggle';
@@ -163,7 +163,7 @@ export default function PlaceCard({
             accessibilityLabel={saved
               ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
               : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
-            hitSlop={8}
+            hitSlop={PHOTO_SLOP}
             style={s.saveSlot}
             contentStyle={s.saveFab}
           >
