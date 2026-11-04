@@ -1026,30 +1026,28 @@ describe('PlaceDetailScreen — hero', () => {
 });
 
 describe('PlaceDetailScreen — floating controls', () => {
-  // The card's disc, on the photograph the card led to (owner, 4 Nov
-  // 2026): 36 drawn and 44 to the thumb, the 58% ground and its rim, the
-  // three in one row and still 8 apart.
-  it('draws back, share and bookmark as the card’s 36pt disc, each a 44pt target', () => {
+  // 44, and no slop needed (owner, 4 Nov 2026): these tried the card's
+  // 36 for a day and were too small to hit on the phone. Explore's 0.55
+  // ground and its rim, the three in one row, share 8 from the bookmark.
+  it('draws back, share and bookmark as 44pt discs, each its own target', () => {
     show();
     const flat = (v: unknown) => StyleSheet.flatten(v as StyleProp<ViewStyle>) ?? {};
     const discs = ['Back', 'Share', 'Save to a collection'].map((label) =>
       propsWhere((p) => p.accessibilityLabel === label && 'contentStyle' in p));
     for (const d of discs) {
       const face = flat(d.contentStyle);
-      expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
-      expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
+      expect([face.width, face.height, face.borderRadius]).toEqual([44, 44, 22]);
+      expect(face.backgroundColor).toBe('rgba(10,11,10,0.55)');
       expect(face.borderWidth).toBeGreaterThan(0);
-      expect(36 + 2 * (d.hitSlop as unknown as number)).toBe(44);
+      expect(d.hitSlop).toBeUndefined();
     }
     const [back, share, save] = discs.map((d) => flat(d.style));
     expect(new Set([back.top, share.top, save.top]).size).toBe(1);
-    // Centred where the 44pt disc was, 8 under the inset (none here), so
-    // the row did not move on the photograph, only shrank about its line.
-    expect((back.top as number) + 36 / 2).toBe(8 + 44 / 2);
-    expect((share.right as number) - (save.right as number)).toBe(36 + 8);
+    expect(back.top).toBe(8);
+    expect((share.right as number) - (save.right as number)).toBe(44 + 8);
     expect(back.left).toBe(save.right);
     const size = (icon: string) => document.querySelector(`[data-icon="${icon}"]`)!.getAttribute('data-size');
-    expect([size('chevron-back'), size('share-outline'), size('bookmark-outline')]).toEqual(['18', '17', '17']);
+    expect([size('chevron-back'), size('share-outline'), size('bookmark-outline')]).toEqual(['22', '20', '20']);
   });
 
   // UX-07: these two were English literals, read as "Back" and "Share"

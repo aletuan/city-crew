@@ -58,8 +58,8 @@ export const s = StyleSheet.create({
     letterSpacing: 1.4, textTransform: 'uppercase',
   },
   // In the date pill's material, so the pair reads as one set. Not
-  // `photoDisc`: the place screen's discs went to 36 on 4 Nov 2026 and the
-  // owner kept this one at 44 the same day — it is the way into search,
+  // `photoDisc` (36): the owner kept this one at 44 on 4 Nov 2026, as the
+  // place screen's back, share and bookmark are — it is the way into search,
   // the one control over a photo that starts something rather than
   // returning, and the one that should not have to be looked for.
   heroSearch: {

@@ -15,8 +15,8 @@ import { useReducedMotion, useLoop } from './motion';
 
 /**
  * A round control over a photograph — the card's bookmark and its list ⊕,
- * the place screen's back, share and bookmark, the photo viewers' × and
- * full-screen (owner, 4 Nov 2026: one size for all of them, the card's).
+ * the photo viewers' × and full-screen (owner, 4 Nov 2026: one size for
+ * them, the card's).
  *
  * 36 drawn, and `PHOTO_SLOP` all round makes it the 44 a target needs: a disc
  * over a picture is chrome, and the smaller it is the more of the picture
@@ -28,8 +28,11 @@ import { useReducedMotion, useLoop } from './motion';
  * asked for 25–30%). The photo viewers' discs were `rgba(6,5,8,0.62)` with
  * no hairline — a second recipe for the same thing, retired here.
  *
- * Not every disc on a picture: Explore's search stays 44 (owner, same
- * day) — the screen's way in, and it should look like one. A round
+ * Not every disc on a picture. Explore's search stays 44 (owner, same
+ * day) — the screen's way in, and it should look like one. The place
+ * screen's back, share and bookmark took this disc and went back to 44
+ * the same day: on the phone the target felt too small (see `fab` in
+ * PlaceDetailScreen). A round
  * control on the page's ground is `RoundIconButton`, 44, on the scale in
  * `layout.tsx`; this is the other family, and the two differ on purpose.
  */

@@ -620,8 +620,9 @@ const s = StyleSheet.create({
   // reference is all but, 58% black under a white glyph is 4.9:1, and
   // 25–30% is 1.8–2.0 — under the 3:1 a glyph needs, which 43% is the
   // least that reaches. The rating pill shares this ground and its words
-  // need 56%. The disc is `photoDisc` now, every round control over a
-  // picture: the place screen's three took the same size that day.
+  // need 56%. The disc is `photoDisc` now, shared with the list ⊕ and the
+  // photo viewers' controls. The place screen's three stay 44: they tried
+  // this size the same day and the owner found them too small to hit.
   saveFab: photoDisc,
   name: { color: colors.text, ...type.cardTitle },
   // District and hour on the left, the kind pill on the right, on one line.
