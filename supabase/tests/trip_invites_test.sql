@@ -421,6 +421,159 @@ begin
   assert again = 0, 'a declined invitation could be re-answered';
 end $$;
 
+-- ── the row stays where it was sent ──────────────────────────────────
+--
+-- The update policies above pin who may answer and what the answer may
+-- be. They do not pin which trip the answer is about, and an invitee who
+-- rewrote `trip_id` was, to `on_trip()`, invited to the trip they named.
+-- Found in the 4 Nov 2026 review; `keep_parties_where_they_were` closes
+-- it with a trigger, for the reason given at the top of that file. The
+-- same hole on `friendships` let an addressee rewrite `requester` and be
+-- accepted friends with whoever they chose.
+--
+-- Two fresh trips so the arithmetic above keeps its numbers: `…0002` is
+-- the owner's, with 2222… invited; `…0003` is 3333…'s, with nobody.
+insert into public.trips (id, owner_id, city_id, title, company, categories, day, when_part) values
+  ('bbbbbbbb-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111',
+   'hanoi', 'Tối thử dời lời mời', 'friends', '{cafes}', date '2026-08-30', 'evening'),
+  ('bbbbbbbb-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333',
+   'hanoi', 'Tối của người khác', 'friends', '{cafes}', date '2026-08-31', 'evening');
+
+do $$
+begin
+  set local role rls_client;
+  set local test.uid = '11111111-1111-1111-1111-111111111111';
+  insert into public.trip_invites (trip_id, invitee_id, inviter_id)
+  values ('bbbbbbbb-0000-0000-0000-000000000002',
+          '22222222-2222-2222-2222-222222222222',
+          '11111111-1111-1111-1111-111111111111');
+  reset role;
+end $$;
+
+-- The invitee points their invitation at a trip they were never asked to.
+-- The refusal has to come from the database, in the same voice as every
+-- other refusal here, and the other trip has to stay unreadable after.
+--
+-- `status` changes in the same statement, on purpose: left at 'pending'
+-- the update already fails the policy's `with check`, and this file
+-- would pass with no trigger at all — which a mutation run showed. The
+-- attack sets both, so the check sets both.
+do $$
+declare seen int;
+begin
+  set local role rls_client;
+  set local test.uid = '22222222-2222-2222-2222-222222222222';
+  begin
+    update public.trip_invites
+       set trip_id = 'bbbbbbbb-0000-0000-0000-000000000003', status = 'accepted'
+     where trip_id = 'bbbbbbbb-0000-0000-0000-000000000002'
+       and invitee_id = '22222222-2222-2222-2222-222222222222';
+    assert false, 'an invitee moved their invitation onto somebody else''s trip';
+  exception when insufficient_privilege then null;
+  end;
+  select count(*) into seen from public.trips
+   where id = 'bbbbbbbb-0000-0000-0000-000000000003';
+  reset role;
+  assert seen = 0, 'a repointed invitation opened the other trip';
+end $$;
+
+-- Nor may they rewrite who asked.
+do $$
+begin
+  set local role rls_client;
+  set local test.uid = '22222222-2222-2222-2222-222222222222';
+  begin
+    update public.trip_invites
+       set inviter_id = '33333333-3333-3333-3333-333333333333', status = 'accepted'
+     where trip_id = 'bbbbbbbb-0000-0000-0000-000000000002'
+       and invitee_id = '22222222-2222-2222-2222-222222222222';
+    assert false, 'an invitee rewrote who invited them';
+  exception when insufficient_privilege then null;
+  end;
+  reset role;
+end $$;
+
+-- And the answer itself still goes through: the trigger is on the ends
+-- of the row, not on the status.
+do $$
+declare answered int;
+begin
+  set local role rls_client;
+  set local test.uid = '22222222-2222-2222-2222-222222222222';
+  with u as (
+    update public.trip_invites set status = 'accepted', responded_at = now()
+     where trip_id = 'bbbbbbbb-0000-0000-0000-000000000002'
+       and invitee_id = '22222222-2222-2222-2222-222222222222' returning 1
+  ) select count(*) into answered from u;
+  reset role;
+  assert answered = 1, 'pinning the ends of an invitation stopped the invitee answering it';
+end $$;
+
+-- The friendship side. A fourth account is the victim: nobody has asked
+-- them anything. 3333… asks 2222…, as a real request would land, and
+-- 2222… tries to accept it as a request from the victim instead.
+insert into auth.users (id, email, raw_user_meta_data)
+values ('44444444-4444-4444-4444-444444444444', 'd@x.com', '{}');
+
+insert into public.friendships (requester, addressee, status)
+values ('33333333-3333-3333-3333-333333333333',
+        '22222222-2222-2222-2222-222222222222', 'pending');
+
+do $$
+declare forged int;
+begin
+  set local role rls_client;
+  set local test.uid = '22222222-2222-2222-2222-222222222222';
+  begin
+    update public.friendships
+       set requester = '44444444-4444-4444-4444-444444444444', status = 'accepted'
+     where requester = '33333333-3333-3333-3333-333333333333'
+       and addressee = '22222222-2222-2222-2222-222222222222';
+    assert false, 'an addressee accepted a request on somebody else''s behalf';
+  exception when insufficient_privilege then null;
+  end;
+  reset role;
+  select count(*) into forged from public.friendships
+   where '44444444-4444-4444-4444-444444444444' in (requester, addressee);
+  assert forged = 0, 'a friendship appeared for an account that asked for none';
+end $$;
+
+-- Saying yes to the request as it was sent is still one update.
+do $$
+declare answered int;
+begin
+  set local role rls_client;
+  set local test.uid = '22222222-2222-2222-2222-222222222222';
+  with u as (
+    update public.friendships set status = 'accepted', responded_at = now()
+     where requester = '33333333-3333-3333-3333-333333333333'
+       and addressee = '22222222-2222-2222-2222-222222222222' returning 1
+  ) select count(*) into answered from u;
+  reset role;
+  assert answered = 1, 'pinning the ends of a request stopped the addressee accepting it';
+end $$;
+
+-- The guard itself, named: both triggers, on these two tables and no
+-- fewer, and the function pins its path like every other.
+do $$
+declare n int;
+begin
+  select count(*) into n from pg_trigger
+   where tgname in ('friendships_keep_parties', 'trip_invites_keep_parties')
+     and tgrelid in ('public.friendships'::regclass, 'public.trip_invites'::regclass)
+     and not tgisinternal;
+  assert n = 2, format('%s of the two keep-parties triggers are in place', n);
+end $$;
+
+-- The bench as it was found: the fourth account goes (its edges with it,
+-- by cascade), and so do the edge and the two trips this section made.
+delete from public.friendships
+ where requester = '33333333-3333-3333-3333-333333333333'
+   and addressee = '22222222-2222-2222-2222-222222222222';
+delete from auth.users where id = '44444444-4444-4444-4444-444444444444';
+delete from public.trips where id in ('bbbbbbbb-0000-0000-0000-000000000002',
+                                      'bbbbbbbb-0000-0000-0000-000000000003');
+
 -- ── shape ────────────────────────────────────────────────────────────
 
 -- One row per (trip, person). Inviting the same friend twice is the same

@@ -214,10 +214,15 @@ run "$DB" -f "$HERE/collection_likes_test.sql"
 # Its test does something no other file here does: it forces RLS on and
 # drives the policies as a role that owns nothing, because static policy
 # text cannot show what a client actually gets back.
+#
+# The fourth file (4 Nov 2026) pins the ends of a request and of an
+# invitation; its checks live in the same test file, which is why it is
+# applied here and not in a block of its own. Listed, not globbed for.
 echo "→ trip invites"
 for f in "$ROOT"/supabase/migrations/*_friendships.sql \
          "$ROOT"/supabase/migrations/*_trip_invites.sql \
-         "$ROOT"/supabase/migrations/*_trip_invites_leave.sql; do
+         "$ROOT"/supabase/migrations/*_trip_invites_leave.sql \
+         "$ROOT"/supabase/migrations/*_keep_parties_where_they_were.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/trip_invites_test.sql"
