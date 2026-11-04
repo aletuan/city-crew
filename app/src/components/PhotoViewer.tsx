@@ -145,10 +145,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: space.page,
   },
-  // `photoDisc`, the place screen's back button on the same photograph
-  // (owner, 4 Nov 2026): this × was 36 already, on its own ground — 62%
-  // of the scrim's ink, no rim — and is now the one disc every control
-  // over a photo wears, 44 to the thumb with `PHOTO_SLOP`.
+  // `photoDisc`, the card's bookmark (owner, 4 Nov 2026): this × was 36
+  // already, on its own ground — 62% of the scrim's ink, no rim — and now
+  // wears the card's, 44 to the thumb with `PHOTO_SLOP`.
   round: photoDisc,
   balance: { width: PHOTO_DISC },
   count: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
