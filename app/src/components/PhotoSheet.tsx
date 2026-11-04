@@ -79,7 +79,7 @@ import { SheetStrip, type SheetAction } from './ActionSheet';
 import { ScoreDetails, ScoreStanding, ScoreTen } from './PhotoScore';
 import PhotoViewer, { settledPage } from './PhotoViewer';
 import { useSheetDrag } from './sheetDrag';
-import { PressableScale } from './ui';
+import { PHOTO_GLYPH, PHOTO_SLOP, photoDisc, PressableScale } from './ui';
 import type { GalleryPhoto } from '../lib/gallery';
 import { useI18n } from '../lib/i18n';
 import { kindIcon, kindName } from '../lib/photoKind';
@@ -232,25 +232,29 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               ))}
             </ScrollView>
             <PressableScale
-              contentStyle={[s.round, s.close]}
+              style={[s.corner, s.close]}
+              contentStyle={s.round}
+              hitSlop={PHOTO_SLOP}
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
               testID="photo-sheet-close"
             >
-              <Ionicons name="close" size={18} color={onPhoto.text} />
+              <Ionicons name="close" size={PHOTO_GLYPH + 1} color={onPhoto.text} />
             </PressableScale>
             <View style={s.count} pointerEvents="none">
               <Text style={s.countText}>{count}</Text>
             </View>
             <PressableScale
-              contentStyle={[s.round, s.expand]}
+              style={[s.corner, s.expand]}
+              contentStyle={s.round}
+              hitSlop={PHOTO_SLOP}
               onPress={() => setFull(true)}
               accessibilityRole="button"
               accessibilityLabel={t('Full screen', 'Toàn màn hình', '全画面', '全屏', '全螢幕')}
               testID="photo-sheet-full"
             >
-              <Ionicons name="expand" size={17} color={onPhoto.text} />
+              <Ionicons name="expand" size={PHOTO_GLYPH} color={onPhoto.text} />
             </PressableScale>
           </View>
 
@@ -323,12 +327,14 @@ const s = StyleSheet.create({
   // The dark ground a squarer picture sits on — the scrim's ink, so the
   // bars either side read as the frame and not as part of the photo.
   frame: { borderRadius: radius.card, overflow: 'hidden', backgroundColor: 'rgb(6,5,8)' },
-  round: {
-    position: 'absolute',
-    width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(6,5,8,0.62)',
-  },
+  // `photoDisc` (owner, 4 Nov 2026): these were 32 on the viewer's own
+  // ground, the one size on a photograph that was neither the card's nor
+  // the viewer's. Now the disc every control over a photo wears, 44 to
+  // the thumb with `PHOTO_SLOP`. The corner is the Pressable's, not the
+  // disc's: placed on the inner view, the Pressable had no size of its
+  // own and a slop had nothing to grow from.
+  round: photoDisc,
+  corner: { position: 'absolute' },
   close: { top: 10, right: 10 },
   expand: { bottom: 10, right: 10 },
   count: {

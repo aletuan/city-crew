@@ -15,10 +15,10 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { useIsSaved, useSaveActions } from '../lib/save';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
-import { Card, PressableScale } from './ui';
+import { Card, photoDisc, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 import ReviewBadge from './ReviewBadge';
-import ListToggle, { SAVE_DISC } from './ListToggle';
+import ListToggle from './ListToggle';
 import { KindPill } from './KindPill';
 
 export default function PlaceCard({
@@ -620,14 +620,9 @@ const s = StyleSheet.create({
   // reference is all but, 58% black under a white glyph is 4.9:1, and
   // 25–30% is 1.8–2.0 — under the 3:1 a glyph needs, which 43% is the
   // least that reaches. The rating pill shares this ground and its words
-  // need 56%. The place screen's bookmark stays 40, in line with the
-  // back button beside it.
-  saveFab: {
-    width: SAVE_DISC, height: SAVE_DISC, borderRadius: SAVE_DISC / 2,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(10,11,10,0.58)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
+  // need 56%. The disc is `photoDisc` now, every round control over a
+  // picture: the place screen's three took the same size that day.
+  saveFab: photoDisc,
   name: { color: colors.text, ...type.cardTitle },
   // District and hour on the left, the kind pill on the right, on one line.
   // The text cluster takes the slack and the pill keeps its size — see the

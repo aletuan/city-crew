@@ -8,6 +8,7 @@
 // Gallery screen's — tested there.
 
 import React from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
@@ -79,7 +80,45 @@ describe('frameHeight', () => {
   });
 });
 
+/** Props of the committed `PressableScale` whose testID is `id`. */
+const pressable = (id: string): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && p.testID === id && 'contentStyle' in p) return p;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error(`no PressableScale ${id}`);
+};
+const flat = (v: unknown) => StyleSheet.flatten(v as StyleProp<ViewStyle>) ?? {};
+
 describe('PhotoSheet', () => {
+  // 32 on the viewer's ground until 4 Nov 2026 (owner): now the disc
+  // every control over a photo wears, 44 to the thumb. The corner is on
+  // the Pressable, so the slop grows from a body that has the disc's size.
+  it('draws × and full screen as the card’s 36pt disc, each a 44pt target in its corner', () => {
+    render(<PhotoSheet {...props({ photos: gallery(3), index: 0 })} />);
+    for (const [id, corner, icon, glyph] of [
+      ['photo-sheet-close', { top: 10, right: 10 }, 'close', '18'],
+      ['photo-sheet-full', { bottom: 10, right: 10 }, 'expand', '17'],
+    ] as const) {
+      const btn = pressable(id);
+      const face = flat(btn.contentStyle);
+      expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
+      expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
+      expect(face.borderWidth).toBeGreaterThan(0);
+      expect(face.position).toBeUndefined();
+      expect(flat(btn.style)).toEqual({ position: 'absolute', ...corner });
+      expect(36 + 2 * (btn.hitSlop as number)).toBe(44);
+      expect(document.querySelector(`[data-icon="${icon}"]`)!.getAttribute('data-size')).toBe(glyph);
+    }
+  });
+
   it('is nothing until a photograph has been opened', () => {
     render(<PhotoSheet {...props({ index: null })} />);
     expect(screen.queryByTestId('photo-sheet')).toBeNull();

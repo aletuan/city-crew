@@ -18,12 +18,7 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import { colors, onPhoto } from '../theme';
-import { PressableScale } from './ui';
-
-/** The disc over a photograph — the card's bookmark and this ⊕ in its
- *  place, one size: see `saveFab` in PlaceCard for why 36. Here rather
- *  than there because the card imports this, not the other way round. */
-export const SAVE_DISC = 36;
+import { photoDisc, PressableScale } from './ui';
 
 export default function ListToggle({ on, title, onPress, overPhoto, style, testID }: {
   on: boolean;
@@ -63,16 +58,10 @@ export default function ListToggle({ on, title, onPress, overPhoto, style, testI
 }
 
 const s = StyleSheet.create({
-  // The bookmark's disc, to the point: its size (36 since 4 Nov 2026, see
-  // `saveFab` in PlaceCard), the same glass and hairline. The glyph is 20
-  // in it as in a row's 34: 22 was 40's, and the ⊕ keeps the bookmark's
-  // proportion to its disc.
-  photo: {
-    width: SAVE_DISC, height: SAVE_DISC, borderRadius: SAVE_DISC / 2,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(10,11,10,0.58)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
+  // The bookmark's disc, to the point: `photoDisc`, every round control
+  // over a picture. The glyph is 20 in it as in a row's 34: 22 was 40's,
+  // and the ⊕ keeps the bookmark's proportion to its disc.
+  photo: photoDisc,
   // A row's: 34pt beside a 64pt thumbnail, with the 10pt slop making 54.
   row: {
     width: 34, height: 34, borderRadius: 17,

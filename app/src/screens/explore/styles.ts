@@ -57,8 +57,11 @@ export const s = StyleSheet.create({
     color: onPhoto.text, fontSize: 12, fontFamily: display.semibold,
     letterSpacing: 1.4, textTransform: 'uppercase',
   },
-  // The same disc the detail screen floats on its photos, in the pill's
-  // material, so the pair reads as one set.
+  // In the date pill's material, so the pair reads as one set. Not
+  // `photoDisc`: the place screen's discs went to 36 on 4 Nov 2026 and the
+  // owner kept this one at 44 the same day — it is the way into search,
+  // the one control over a photo that starts something rather than
+  // returning, and the one that should not have to be looked for.
   heroSearch: {
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
