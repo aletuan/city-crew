@@ -7,6 +7,7 @@
 // UIScrollView's own, which jsdom cannot play, and is left to the phone.
 
 import React from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
@@ -57,7 +58,52 @@ describe('settledPage', () => {
   });
 });
 
+/** Props of the committed `PressableScale` whose testID is `id`. */
+const pressable = (id: string): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && p.testID === id && 'contentStyle' in p) return p;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error(`no PressableScale ${id}`);
+};
+const flat = (v: unknown) => StyleSheet.flatten(v as StyleProp<ViewStyle>) ?? {};
+
 describe('PhotoViewer', () => {
+  // The disc every control over a photo wears (owner, 4 Nov 2026): it
+  // was 36 already, on a 62% ground with no rim; the count stays centred
+  // because the balance on its other side is the disc's width.
+  it('draws the × as the card’s 36pt disc, a 44pt target, the count still centred', () => {
+    render(<PhotoViewer photos={gallery(3)} index={1} onIndex={() => {}} onClose={() => {}} />);
+    const close = pressable('photo-viewer-close');
+    const face = flat(close.contentStyle);
+    expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
+    expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
+    expect(face.borderWidth).toBeGreaterThan(0);
+    expect(36 + 2 * (close.hitSlop as number)).toBe(44);
+    expect(document.querySelector('[data-icon="close"]')!.getAttribute('data-size')).toBe('18');
+    // The empty view after the count, by its committed props: jsdom does
+    // not resolve the class react-native-web writes its width to.
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    let balance: Record<string, unknown> | undefined;
+    while (stack.length && !balance) {
+      const f = stack.pop()!;
+      if (f.memoizedProps?.testID === 'photo-viewer-count') balance = f.sibling?.memoizedProps ?? undefined;
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    expect(flat(balance!.style)).toEqual({ width: 36 });
+  });
+
   it('lays every photograph out as a page, whole, and counts the one shown', () => {
     render(<PhotoViewer photos={gallery(3)} index={1} onIndex={() => {}} onClose={() => {}} />);
     for (const id of ['p1', 'p2', 'p3']) {

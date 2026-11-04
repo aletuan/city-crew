@@ -8,10 +8,41 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../../lib/i18n';
 import { moreToTheRight, peekGap, rowWidth, type PeekRow } from '../../lib/peek';
 import { useScheme } from '../../lib/theme';
-import { bgHex, type Color, colors, font, gradAI, labelScaleCap, radius, space } from '../../theme';
+import { bgHex, type Color, colors, font, gradAI, labelScaleCap, onPhoto, radius, space } from '../../theme';
 import { CHIP_H, CHIP_SLOP, CONTROL_H, SECONDARY_CONTROL_H, useNarrowWindow } from './layout';
 import { type HapticKind, fireHaptic } from './haptics';
 import { useReducedMotion, useLoop } from './motion';
+
+/**
+ * A round control over a photograph — the card's bookmark and its list ⊕,
+ * the place screen's back, share and bookmark, the photo viewers' × and
+ * full-screen (owner, 4 Nov 2026: one size for all of them, the card's).
+ *
+ * 36 drawn, and `PHOTO_SLOP` all round makes it the 44 a target needs: a disc
+ * over a picture is chrome, and the smaller it is the more of the picture
+ * the reader sees, but the thumb does not get smaller with it.
+ *
+ * The ground is 58% black under an `onPhoto.line` hairline, the rating
+ * pill's: over a white wall a white glyph on it is 4.9:1, and 43% is the
+ * least that keeps 3:1 (see `saveFab` in PlaceCard for the reference that
+ * asked for 25–30%). The photo viewers' discs were `rgba(6,5,8,0.62)` with
+ * no hairline — a second recipe for the same thing, retired here.
+ *
+ * Not every disc on a picture: Explore's search stays 44 (owner, same
+ * day) — the screen's way in, and it should look like one. A round
+ * control on the page's ground is `RoundIconButton`, 44, on the scale in
+ * `layout.tsx`; this is the other family, and the two differ on purpose.
+ */
+export const PHOTO_DISC = 36;
+export const PHOTO_SLOP = (SECONDARY_CONTROL_H - PHOTO_DISC) / 2;
+/** A 36pt disc's glyph: 17, the bookmark's, about half the disc. */
+export const PHOTO_GLYPH = 17;
+export const photoDisc = {
+  width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
+  alignItems: 'center', justifyContent: 'center',
+  backgroundColor: 'rgba(10,11,10,0.58)',
+  borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+} as const;
 
 /**
  * Pressable that sinks slightly under the finger (spring scale) and gives

@@ -14,7 +14,8 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import ListToggle, { SAVE_DISC } from './ListToggle';
+import ListToggle from './ListToggle';
+import { PHOTO_DISC } from './ui';
 import { colors, onPhoto } from '../theme';
 
 const box = () => screen.getByRole('checkbox', { name: 'Add to Thảo Điền' });
@@ -44,7 +45,7 @@ describe('ListToggle', () => {
     render(<ListToggle on={false} title="Thảo Điền" onPress={() => {}} overPhoto />);
     expect(icon().getAttribute('data-color')).toBe(String(onPhoto.text));
     expect(icon().getAttribute('data-size')).toBe('20');
-    expect(SAVE_DISC).toBe(36);
+    expect(PHOTO_DISC).toBe(36);
     expect([disc().width, disc().height, disc().borderColor]).toEqual([36, 36, onPhoto.line]);
     expect(disc().backgroundColor).toBe('rgba(10,11,10,0.58)');
   });

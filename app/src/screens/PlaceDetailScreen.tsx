@@ -52,7 +52,7 @@ import { useIsSaved, useSaveActions } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Card, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, CountBadge, Empty, GradientCta, PHOTO_DISC, PHOTO_GLYPH, PHOTO_SLOP, photoDisc, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import { KindPills } from '../components/KindPill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
@@ -466,7 +466,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
             <PressableScale
               onPress={() => navigation.goBack()} scaleTo={0.9}
-              style={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} contentStyle={s.fab}
+              style={[s.fabSlot, { left: space.page, top: insets.top + FAB_TOP }]} contentStyle={s.fab} hitSlop={PHOTO_SLOP}
               // In the reader's language, like every other control: these
               // two were English literals, and VoiceOver read "Back" and
               // "Share" in the middle of a Vietnamese screen (UX-07).
@@ -474,14 +474,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               accessibilityRole="button"
               testID="detail-back"
             >
-              <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
+              <Ionicons name="chevron-back" size={PHOTO_GLYPH + 1} color={onPhoto.text} />
             </PressableScale>
             <PressableScale
               onPress={share} scaleTo={0.9}
-              style={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} contentStyle={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
+              style={[s.fabSlot, { right: space.page + PHOTO_DISC + FAB_GAP, top: insets.top + FAB_TOP }]} contentStyle={s.fab} hitSlop={PHOTO_SLOP} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
               accessibilityRole="button"
             >
-              <Ionicons name="share-outline" size={20} color={onPhoto.text} />
+              <Ionicons name="share-outline" size={PHOTO_GLYPH} color={onPhoto.text} />
             </PressableScale>
             {/* The same control as the bookmark on the card that got you
                 here — same glyph, same sheet, same rows underneath. It was a
@@ -490,7 +490,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <PressableScale
               anchorRef={saveAnchor}
               onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-              style={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} contentStyle={s.fab}
+              style={[s.fabSlot, { right: space.page, top: insets.top + FAB_TOP }]} contentStyle={s.fab} hitSlop={PHOTO_SLOP}
               accessibilityRole="button"
               accessibilityState={{ selected: saved }}
               // Two ids for the two states, so a smoke flow can wait on the
@@ -500,7 +500,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
                 : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
             >
-              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
+              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={PHOTO_GLYPH} color={saved ? onPhoto.accent : onPhoto.text} />
             </PressableScale>
 
             {/* Where the reader is in the photographs is `PageCount`'s
@@ -1513,6 +1513,12 @@ const ADDRESS_LINES = 2;
  *  44, the height the same chips have on Search and Places. */
 const FACT_HEIGHT = 44;
 
+/** The discs' row: 12 under the status bar puts a 36pt disc's centre
+ *  where the 44pt one's was (8 + 22 = 12 + 18), so the row did not move
+ *  when they shrank; 8 between share and bookmark, as before. */
+const FAB_TOP = 12;
+const FAB_GAP = 8;
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
@@ -1550,11 +1556,14 @@ const s = StyleSheet.create({
   // dark photograph. The alphas are each sibling's own: a 44pt disc is
   // Explore's 0.55, a labelled pill is the rating pill's 0.58, and the
   // dot track stays lightest because it holds no type.
-  fab: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
+  //
+  // ── 36, the card's (owner, 4 Nov 2026) ──
+  // The three discs are `photoDisc` now, the bookmark's on the card that
+  // led here: 36 drawn, 44 to the thumb with `PHOTO_SLOP`, the 58% ground.
+  // They were 44 on Explore's 0.55, a step louder than the card for no
+  // reason the reader could see. The back chevron is a point heavier than
+  // the other two glyphs: a bare chevron is thinner than a filled shape.
+  fab: photoDisc,
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
   // Above the page count, right-aligned to it: the line its old seat's note

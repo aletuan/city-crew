@@ -26,7 +26,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScoreTen, ScoreWhy } from './PhotoScore';
-import { PressableScale } from './ui';
+import { PHOTO_DISC, PHOTO_GLYPH, PHOTO_SLOP, photoDisc, PressableScale } from './ui';
 import type { GalleryPhoto } from '../lib/gallery';
 import { useI18n } from '../lib/i18n';
 import { font, onPhoto, radius, space } from '../theme';
@@ -113,12 +113,13 @@ export default function PhotoViewer({ photos, index, onIndex, onClose }: {
           <View style={[s.top, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
             <PressableScale
               contentStyle={s.round}
+              hitSlop={PHOTO_SLOP}
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
               testID="photo-viewer-close"
             >
-              <Ionicons name="close" size={20} color={onPhoto.text} />
+              <Ionicons name="close" size={PHOTO_GLYPH + 1} color={onPhoto.text} />
             </PressableScale>
             <Text style={s.count} testID="photo-viewer-count">{count}</Text>
             {/* The ×'s width on the other side, so the count is centred. */}
@@ -144,12 +145,12 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: space.page,
   },
-  round: {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(6,5,8,0.62)',
-  },
-  balance: { width: 36 },
+  // `photoDisc`, the place screen's back button on the same photograph
+  // (owner, 4 Nov 2026): this × was 36 already, on its own ground — 62%
+  // of the scrim's ink, no rim — and is now the one disc every control
+  // over a photo wears, 44 to the thumb with `PHOTO_SLOP`.
+  round: photoDisc,
+  balance: { width: PHOTO_DISC },
   count: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
   bottom: {
     position: 'absolute', left: space.page, right: space.page, bottom: 0,
