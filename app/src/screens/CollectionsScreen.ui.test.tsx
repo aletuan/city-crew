@@ -18,13 +18,13 @@
 import React from 'react';
 import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
-import { Alert } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
-import { colors, coverScrim } from '../theme';
+import { colors, coverScrim, mosaicScrim, onPhoto } from '../theme';
 
 const state = vi.hoisted(() => ({
   uid: null as string | null,
@@ -1853,33 +1853,101 @@ describe('CollectionsScreen — Mosaic', () => {
   });
 });
 
-describe('Mosaic proportional scrims', () => {
-  it('caps the whole fade at 40% for every photo shape, independent of text', () => {
+/** Committed props of the element whose testID is `id`. The gradients'
+ *  `start`, `end` and style objects do not survive into the DOM. */
+const propsOf = (id: string): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && p.testID === id) return p;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error(`no element ${id}`);
+};
+
+// The dark follows the words (owner, 5 Nov 2026): it lives inside the
+// caption, so it is as long as the caption is, and a tail hangs off the
+// caption's far side. Both run from the edge the caption sits on.
+describe('Mosaic scrims follow the caption', () => {
+  const desc = 'A longer description for the featured collection that the dark has to reach';
+  beforeEach(() => {
     state.cols.data = Array.from({ length: 12 }, (_, i) => col(`mosaic-${i}`, ['a'], {
       title_en: `A very long collection title mosaic-${i}`,
       curator_handle: `curator${i}`,
-      desc_en: 'A longer description for the featured collection that must not extend the gradient',
+      desc_en: desc,
     }));
+  });
+
+  it('lays the dark behind every word of an on-photo caption, from the caption’s own edge', () => {
     show();
     const photos = screen.getAllByTestId(/^collection-mosaic-mosaic-/);
+    const sides = new Set<string>();
     for (const photo of photos) {
       const id = photo.dataset.testid!;
       const slug = id.replace('collection-mosaic-', '').replace(/-(top|bottom|below)$/, '');
-      const overlay = screen.queryByTestId(`collection-mosaic-scrim-${slug}`);
+      const scrim = screen.queryByTestId(`collection-mosaic-scrim-${slug}`);
       if (id.endsWith('-below')) {
-        expect(overlay).toBeNull();
+        expect(scrim).toBeNull();
         expect(photo.querySelector('[data-stub="LinearGradient"]')).toBeNull();
-      } else {
-        expect(overlay!.parentElement).toBe(photo);
-        expect(overlay!.textContent).toBe('');
-        expect(getComputedStyle(overlay!).height).toBe('40%');
-        expect(photo.querySelectorAll('[data-stub="LinearGradient"]')).toHaveLength(1);
-        const gradient = overlay!.querySelector('[data-stub="LinearGradient"]')!;
-        expect(gradient.getAttribute('colors')).toMatch(/,0\)$/);
-        expect(getComputedStyle(overlay!)[id.endsWith('-top') ? 'top' : 'bottom']).toBe('0px');
-        expect(within(photo).getByText(`A very long collection title ${slug}`)).toBeTruthy();
+        continue;
+      }
+      const top = id.endsWith('-top');
+      sides.add(top ? 'top' : 'bottom');
+      // The caption is the scrim: its words are inside it, on the photo.
+      expect(scrim!.parentElement).toBe(photo);
+      expect(within(scrim!).getByText(`A very long collection title ${slug}`)).toBeTruthy();
+      expect(within(scrim!).getByText(`@curator${slug.replace('mosaic-', '')}`)).toBeTruthy();
+      // Two gradients, both inside it: the body under the words, the tail past them.
+      expect(scrim!.querySelectorAll('[data-stub="LinearGradient"]')).toHaveLength(2);
+      const body = propsOf(`collection-mosaic-body-${slug}`);
+      const tail = propsOf(`collection-mosaic-tail-${slug}`);
+      expect(body.style).toEqual(StyleSheet.absoluteFill);
+      expect(body.colors).toEqual(mosaicScrim.body);
+      expect(tail.colors).toEqual(mosaicScrim.tail);
+      const tailStyle = StyleSheet.flatten(tail.style as never) as Record<string, unknown>;
+      expect(tailStyle.height).toBe(mosaicScrim.tailHeight);
+      expect(tailStyle[top ? 'top' : 'bottom']).toBe('100%');
+      expect(tailStyle[top ? 'bottom' : 'top']).toBeUndefined();
+      for (const g of [body, tail]) {
+        expect(g.start).toEqual({ x: 0, y: top ? 0 : 1 });
+        expect(g.end).toEqual({ x: 0, y: top ? 1 : 0 });
       }
     }
-    expect(screen.getAllByText('A longer description for the featured collection that must not extend the gradient').length).toBeGreaterThan(0);
+    // The fixture reaches both sides, or the direction above proved half.
+    expect(sides).toEqual(new Set(['top', 'bottom']));
+  });
+
+  it('keeps the featured description on the photo, inside the dark, in full white', () => {
+    show();
+    const scrims = screen.getAllByTestId(/^collection-mosaic-scrim-/);
+    const held = scrims.filter((sc) => within(sc).queryByText(desc));
+    expect(held.length).toBeGreaterThan(0);
+    const inkOf = (text: string) => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && typeof p === 'object' && p.children === text && 'style' in p) {
+          return (StyleSheet.flatten(p.style as never) as { color?: string }).color;
+        }
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error(`no text ${text}`);
+    };
+    expect(inkOf(desc)).toBe(onPhoto.text);
+    // And the byline on every on-photo caption, in the same full white.
+    for (const sc of scrims) {
+      const handle = within(sc).getByText(/^@curator\d+$/).textContent!;
+      expect(inkOf(handle)).toBe(onPhoto.text);
+    }
   });
 });

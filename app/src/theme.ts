@@ -493,14 +493,50 @@ export const coverScrim = {
   locations: [0, 0.5, 0.66, 1] as const,
 };
 
-/** One soft edge fade, entirely contained within the photo-height budget.
- *  Every on-photo caption uses 40% of photo height, including the clear
- *  tail. Text length never expands the fade. This treatment does
- *  not guarantee contrast for every caption on every photograph. */
+/**
+ * The dark under a Mosaic caption: as long as the caption, then a fade.
+ *
+ * Owner, 5 Nov 2026, from a phone: the featured card's description and
+ * byline could not be read on a white plate. The fade before this one was
+ * 40% of the photograph's height whatever the words were (#1262), and
+ * measured on a 430pt phone that left every on-photo caption short of the
+ * dark it needed over a white picture:
+ *
+ *   featured, 238pt high, caption 168pt: the fade was 95pt and clear by
+ *     its end, so the title sat at 1.1:1 and the description and byline
+ *     were entirely outside it;
+ *   small, 219pt, two-line title: 88pt of fade under 88pt of words, the
+ *     title 1.5:1 and the byline 1.1:1;
+ *   tall, 452pt: 181pt of fade under 69pt of words, and the byline still
+ *     only 2.1:1, because the fade had already thinned by its line.
+ *
+ * So the dark follows the words instead of the photograph. `body` lies
+ * behind the whole caption, from the photo's edge to the caption's far
+ * padding; `tail` continues past it and fades out over `tailHeight`, so
+ * there is no hard band where the words stop. The gradient runs from
+ * whichever edge the caption sits on — top captions darken downwards,
+ * bottom ones upwards.
+ *
+ * The far end of `body` is the number that matters: every line of the
+ * caption sits at or above it. White ink over a white photograph needs
+ * 0.58 for 4.5:1 (the description and byline, 12–13pt) and 0.46 for 3:1
+ * (the title, 16pt semibold and larger); 0.60 holds both. The 82% ink
+ * those two lines wore needed 0.65, so on a photograph they are full
+ * white now and the hierarchy is carried by size alone.
+ *
+ * Not #1258's 0.78/0.68: that was the same shape, darker than any line
+ * needs, and read as heavy. The cost of following the words is coverage:
+ * the featured card, whose caption is 168pt of a 238pt picture, is
+ * darkened over about 87% of it; a small card with a two-line title over
+ * about 58%; a tall card over about 25%. The owner chose that over
+ * moving the description off the photograph, resizing the card or
+ * cutting the description to a line (5 Nov 2026).
+ */
 export const mosaicScrim = {
-  colors: ['rgba(10,11,10,0.70)', 'rgba(10,11,10,0.42)', 'rgba(10,11,10,0.18)', 'rgba(10,11,10,0)'] as const,
-  locations: [0, 0.25, 0.65, 1] as const,
-  height: '40%' as const,
+  body: ['rgba(10,11,10,0.72)', 'rgba(10,11,10,0.60)'] as const,
+  tail: ['rgba(10,11,10,0.60)', 'rgba(10,11,10,0.34)', 'rgba(10,11,10,0.12)', 'rgba(10,11,10,0)'] as const,
+  tailLocations: [0, 0.35, 0.7, 1] as const,
+  tailHeight: 40,
 };
 
 /** The accent as a gradient, for the rare loud surface. Left to right
