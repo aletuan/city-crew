@@ -1638,21 +1638,64 @@ describe('scrolled', () => {
     expect(screen.queryByTestId('collections-pinned')).toBeNull();
     scrollTo(120);
     const pinned = screen.getByTestId('collections-pinned');
-    // Named, as Explore's pinned row is, and the name is a heading.
-    expect(within(pinned).getByRole('heading').textContent).toBe('Collections');
-    // At Explore's measures: a 36pt row, 16 to the tabs, nothing above.
-    const head = within(pinned).getByRole('heading').parentElement!;
-    expect(getComputedStyle(head).minHeight).toBe('36px');
-    expect(getComputedStyle(head.parentElement!).marginBottom).toBe('16px');
-    // And the line under the title, which says how many and where.
-    expect(head.parentElement!.textContent).toBe(`Collections${screen.getByTestId('collections-scope').textContent}`);
-    expect(getComputedStyle(pinned).paddingTop).not.toBe('8px');
+    expect(within(pinned).queryByRole('heading')).toBeNull();
+    expect(within(pinned).queryByRole('button', { name: 'Filters' })).toBeNull();
+    expect(within(pinned).queryByText('New')).toBeNull();
     expect(pinned.textContent).toContain('Yours');
     expect(pinned.textContent).toContain('Community');
-    // A copy, unnamed: the tests still find one of each.
-    expect(screen.getAllByTestId('collections-yours')).toHaveLength(1);
-    scrollTo(40);
+    expect(screen.getByTestId('collections-top').getAttribute('aria-hidden')).toBe('true');
+    scrollTo(400);
+    scrollTo(395); // Thumb wobble does not reveal the header.
+    expect(screen.queryByTestId('collections-floating-top')).toBeNull();
+    scrollTo(380);
+    expect(within(pinned).getByText('Collections').textContent).toBe('Collections');
+    expect(within(pinned).getByRole('button', { name: 'New collection' })).toBeTruthy();
+    expect(within(pinned).getByRole('button', { name: 'Filters' })).toBeTruthy();
+    expect(screen.getByTestId('collections-floating-input')).toBeTruthy();
+    scrollTo(40); // Full header stays available before reaching the top.
+    expect(screen.getByTestId('collections-floating-top')).toBeTruthy();
+    scrollTo(0);
     expect(screen.queryByTestId('collections-pinned')).toBeNull();
+    expect(screen.getByTestId('collections-top').getAttribute('aria-hidden')).not.toBe('true');
+  });
+
+  it.each([['community', 'row'], ['community', 'tile'], ['community', 'mosaic'], ['yours', 'row'], ['yours', 'tile']] as const)('collapses and reveals %s in %s without a scroll jump', async (tab, layout) => {
+    signedIn();
+    state.cols.data = [col('public', ['a'])];
+    await AsyncStorage.setItem(tab === 'community' ? 'citycrew.collections.community.view' : 'citycrew.collections.view', layout);
+    const { navigation } = show(tab === 'community' ? { tab } : undefined);
+    await waitFor(() => expect(screen.getByRole('button', { name: layout === 'row' ? 'List view' : layout === 'tile' ? 'Tile view' : 'Mosaic view' }).getAttribute('aria-selected')).toBe('true'));
+    laidOut();
+    scrollTo(500);
+    const pinned = screen.getByTestId('collections-pinned');
+    expect(within(pinned).queryByRole('heading')).toBeNull();
+    scrollTo(480);
+    const floating = screen.getByTestId('collections-floating-top');
+    const input = screen.getByTestId('collections-floating-input');
+    expect(getComputedStyle(screen.getByTestId('collections-top')).height).toBe('260px');
+    fireEvent.focus(input);
+    expect(within(floating).getByTestId('collections-floating-cancel')).toBeTruthy();
+    fireEvent.change(input, { target: { value: 'public' } });
+    expect(screen.getByTestId('collections-input').getAttribute('value')).toBe('public');
+    fireEvent.click(within(floating).getByRole('button', { name: 'Filters' }));
+    expect(sheetShown()).toBe(true);
+    fireEvent.click(screen.getByTestId('collections-filter-apply'));
+    fireEvent.click(within(floating).getByRole('button', { name: 'New collection' }));
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
+    fireEvent.click(screen.getByTestId('collections-floating-cancel'));
+    expect(screen.getByTestId('collections-floating-input').getAttribute('value')).toBe('');
+    expect(getComputedStyle(screen.getByTestId('collections-top')).height).toBe('260px');
+    scrollTo(488); // Small reversal is ignored.
+    expect(screen.getByTestId('collections-floating-top')).toBeTruthy();
+    scrollTo(510);
+    expect(screen.queryByTestId('collections-floating-top')).toBeNull();
+    // Bottom rubber-band excursion and return cannot reveal the header.
+    scrollTo(2156);
+    scrollTo(2200);
+    scrollTo(2156);
+    expect(screen.queryByTestId('collections-floating-top')).toBeNull();
+    scrollTo(2136);
+    expect(screen.getByTestId('collections-floating-top')).toBeTruthy();
   });
 
   it('pins a guest nothing: there is no switch to keep', () => {
@@ -1662,7 +1705,7 @@ describe('scrolled', () => {
     expect(screen.queryByTestId('collections-pinned')).toBeNull();
   });
 
-  it('pins the chosen filters and the glyph with the tabs, and opens the sheet from there', () => {
+  it('reveals the chosen filters and glyph on reverse scroll, and opens the sheet there', () => {
     signedIn();
     state.places = [{ ...place('a', 'hanoi'), categories: ['cafes'] }, { ...place('b', 'saigon'), categories: ['nightlife'] }];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1' }), col('m2', ['b'], { owner_id: 'u1' })];
@@ -1672,6 +1715,8 @@ describe('scrolled', () => {
     fireEvent.click(screen.getByTestId('collections-filter-apply'));
     laidOut();
     scrollTo(400);
+    expect(screen.queryByTestId('collections-floating-top')).toBeNull();
+    scrollTo(380);
     const pinned = within(screen.getByTestId('collections-pinned'));
     expect(pinned.getByRole('button', { name: 'Remove Cafés' })).toBeTruthy();
     // The glyph pins with the title, counted, and opens the sheet.
