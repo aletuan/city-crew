@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { LOOK_DEFS, type Pinned } from './lib/look';
-import { colors, coverScrim, LOOKS, mosaicScrim, onPhoto, PALETTES } from './theme';
+import { colors, coverScrim, LOOKS, mosaicScrim, PALETTES } from './theme';
 
 /** `rgba(r,g,b,a)` → the three channels and the alpha. */
 function rgba(value: unknown): { rgb: [number, number, number]; alpha: number } {
