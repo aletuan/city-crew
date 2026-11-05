@@ -1204,33 +1204,32 @@ export default function CollectionsScreen({ navigation, route }: {
             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
             : <EmptyCover />}
           {!below ? (
-            <>
-              {/* The entire fade fits inside 40% of the photo.
-                  Caption length cannot enlarge or darken the backdrop. */}
-              <View
-                style={[
-                  s.mosaicOverlay,
-                  caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom,
-                  { height: mosaicScrim.height },
-                ]}
-                pointerEvents="none"
-                testID={`collection-mosaic-scrim-${c.slug}`}
-              >
-                <LinearGradient
-                  colors={mosaicScrim.colors}
-                  locations={mosaicScrim.locations}
-                  start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
-                  end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
-                  style={StyleSheet.absoluteFill}
-                />
-              </View>
-              <View
-                style={[s.mosaicOverlay, caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom]}
-                pointerEvents="none"
-              >
-                {words}
-              </View>
-            </>
+            // The dark lives inside the caption, so it is exactly as long
+            // as the words are, and the tail hangs off its far side into
+            // the photograph — no measuring, no first frame without it.
+            // Both run from the edge the caption sits on. See `mosaicScrim`.
+            <View
+              style={[s.mosaicOverlay, caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom]}
+              pointerEvents="none"
+              testID={`collection-mosaic-scrim-${c.slug}`}
+            >
+              <LinearGradient
+                colors={mosaicScrim.body}
+                start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
+                end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
+                style={StyleSheet.absoluteFill}
+                testID={`collection-mosaic-body-${c.slug}`}
+              />
+              <LinearGradient
+                colors={mosaicScrim.tail}
+                locations={mosaicScrim.tailLocations}
+                start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
+                end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
+                style={[s.mosaicTail, caption === 'top' ? s.mosaicTailBelow : s.mosaicTailAbove]}
+                testID={`collection-mosaic-tail-${c.slug}`}
+              />
+              {words}
+            </View>
           ) : null}
         </View>
         {below ? words : null}
@@ -2027,6 +2026,9 @@ const s = StyleSheet.create({
   mosaicPhoto: { flex: 1, borderRadius: radius.image, overflow: 'hidden' },
   mosaicWords: { gap: 6, padding: 14 },
   mosaicOverlay: { position: 'absolute', left: 0, right: 0 },
+  mosaicTail: { position: 'absolute', left: 0, right: 0, height: mosaicScrim.tailHeight },
+  mosaicTailBelow: { top: '100%' },
+  mosaicTailAbove: { bottom: '100%' },
   mosaicWordsBottom: { position: 'absolute', bottom: 0 },
   mosaicWordsTop: { position: 'absolute', top: 0 },
   mosaicWordsBelow: { paddingHorizontal: 2, paddingTop: 11, paddingBottom: 0 },
@@ -2034,9 +2036,12 @@ const s = StyleSheet.create({
   mosaicTitleFeatured: { ...type.titleDetail, color: onPhoto.text, lineHeight: 32 },
   mosaicInkShadow: { textShadowColor: 'rgba(0,0,0,0.65)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   mosaicTitleBelow: { color: colors.text },
-  mosaicAuthor: { color: onPhoto.textSecondary, fontSize: 12, lineHeight: 16 },
+  // Full white on a photograph, not the 82% secondary ink: at 82% a 12–13pt
+  // line over a white picture needs 0.65 of dark, at full white 0.58, and
+  // `mosaicScrim` holds 0.60 behind every line. Size carries the order.
+  mosaicAuthor: { color: onPhoto.text, fontSize: 12, lineHeight: 16 },
   mosaicAuthorBelow: { color: colors.textSecondary },
-  mosaicBlurb: { color: onPhoto.textSecondary, fontSize: 13, lineHeight: 18 },
+  mosaicBlurb: { color: onPhoto.text, fontSize: 13, lineHeight: 18 },
   gcardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 19 },
   gcardBy: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.medium, flexShrink: 1 },
   // As tall as the avatar on every tile (owner, 17 Oct 2026). A

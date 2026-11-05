@@ -199,17 +199,39 @@ describe('coverScrim', () => {
 });
 
 
-describe('Mosaic proportional fade', () => {
-  it('starts at the requested 70% opacity and reaches clear inside its bounds', () => {
-    const stops = mosaicScrim.colors.map(rgba);
-    expect(stops[0].alpha).toBe(0.70);
-    expect(stops.at(-1)!.alpha).toBe(0);
-    expect(mosaicScrim.locations[0]).toBe(0);
-    expect(mosaicScrim.locations.at(-1)).toBe(1);
-    for (let i = 1; i < stops.length; i++) {
-      expect(stops[i].alpha).toBeLessThan(stops[i - 1].alpha);
-      expect(mosaicScrim.locations[i]).toBeGreaterThan(mosaicScrim.locations[i - 1]);
-      expect(stops[i].rgb).toEqual(stops[0].rgb);
-    }
+// The Mosaic caption's dark (owner, 5 Nov 2026). Every line of a caption
+// sits on `body`, so its far end — the lightest point any word can land
+// on — is the one to hold, and over a white photograph, the worst case.
+describe('mosaicScrim', () => {
+  const white: [number, number, number] = [255, 255, 255];
+  const ink: [number, number, number] = [247, 247, 245];
+  const body = mosaicScrim.body.map(rgba);
+  const tail = mosaicScrim.tail.map(rgba);
+  const lightest = body.at(-1)!;
+
+  it('holds the description and byline, full white, at 4.5:1 on a white photograph', () => {
+    expect(contrast(ink, over(lightest, white))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('holds the title, as large text, at 3:1 or more there too', () => {
+    expect(contrast(ink, over(lightest, white))).toBeGreaterThanOrEqual(3);
+  });
+
+  it('is darkest at the photo’s edge and never lightens inside the caption', () => {
+    expect(body[0].alpha).toBeGreaterThanOrEqual(lightest.alpha);
+  });
+
+  it('carries on from the body without a step and fades to nothing', () => {
+    expect(tail[0].alpha).toBe(lightest.alpha);
+    expect(tail.at(-1)!.alpha).toBe(0);
+    for (let i = 1; i < tail.length; i++) expect(tail[i].alpha).toBeLessThan(tail[i - 1].alpha);
+    expect(mosaicScrim.tailLocations[0]).toBe(0);
+    expect(mosaicScrim.tailLocations.at(-1)).toBe(1);
+    expect(mosaicScrim.tailLocations).toHaveLength(tail.length);
+    expect(mosaicScrim.tailHeight).toBeGreaterThan(0);
+  });
+
+  it('is one ink throughout, the onPhoto dark', () => {
+    for (const s of [...body, ...tail]) expect(s.rgb).toEqual([10, 11, 10]);
   });
 });
