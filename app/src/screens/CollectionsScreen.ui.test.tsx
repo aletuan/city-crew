@@ -1854,7 +1854,7 @@ describe('CollectionsScreen — Mosaic', () => {
 });
 
 describe('Mosaic proportional scrims', () => {
-  it('caps the whole fade at 30% for short photos and 40% for tall photos, independent of text', () => {
+  it('caps the whole fade at 40% for every photo shape, independent of text', () => {
     state.cols.data = Array.from({ length: 12 }, (_, i) => col(`mosaic-${i}`, ['a'], {
       title_en: `A very long collection title mosaic-${i}`,
       curator_handle: `curator${i}`,
@@ -1872,8 +1872,7 @@ describe('Mosaic proportional scrims', () => {
       } else {
         expect(overlay!.parentElement).toBe(photo);
         expect(overlay!.textContent).toBe('');
-        const tall = ['mosaic-1', 'mosaic-7'].includes(slug);
-        expect(getComputedStyle(overlay!).height).toBe(tall ? '40%' : '30%');
+        expect(getComputedStyle(overlay!).height).toBe('40%');
         expect(photo.querySelectorAll('[data-stub="LinearGradient"]')).toHaveLength(1);
         const gradient = overlay!.querySelector('[data-stub="LinearGradient"]')!;
         expect(gradient.getAttribute('colors')).toMatch(/,0\)$/);

@@ -1169,7 +1169,7 @@ export default function CollectionsScreen({ navigation, route }: {
     </View>
   );
 
-  const mosaicCard = ({ c, at }: MosaicEntry<Collection>, width: number, height: number, featured = false, tall = false) => {
+  const mosaicCard = ({ c, at }: MosaicEntry<Collection>, width: number, height: number, featured = false) => {
     const caption = mosaicCaption(c.slug);
     const below = caption === 'below';
     const uri = coverFor(c);
@@ -1205,13 +1205,13 @@ export default function CollectionsScreen({ navigation, route }: {
             : <EmptyCover />}
           {!below ? (
             <>
-              {/* The entire fade fits inside 30%/40% of the photo.
+              {/* The entire fade fits inside 40% of the photo.
                   Caption length cannot enlarge or darken the backdrop. */}
               <View
                 style={[
                   s.mosaicOverlay,
                   caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom,
-                  { height: tall ? mosaicScrim.tallHeight : mosaicScrim.shortHeight },
+                  { height: mosaicScrim.height },
                 ]}
                 pointerEvents="none"
                 testID={`collection-mosaic-scrim-${c.slug}`}
@@ -1324,7 +1324,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       ? mosaicCard(item.items[0], width, Math.round(gcardW * 1.28), true)
                       : item.layout === 'stack' ? (
                         <>
-                          {mosaicCard(item.items[0], gcardW, gcardH * 2 + space.cardGap, false, true)}
+                          {mosaicCard(item.items[0], gcardW, gcardH * 2 + space.cardGap)}
                           <View style={{ gap: space.cardGap }}>
                             {item.items.slice(1).map((entry) => mosaicCard(entry, gcardW, gcardH))}
                           </View>
