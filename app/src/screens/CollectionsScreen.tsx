@@ -1169,7 +1169,7 @@ export default function CollectionsScreen({ navigation, route }: {
     </View>
   );
 
-  const mosaicCard = ({ c, at }: MosaicEntry<Collection>, width: number, height: number, featured = false) => {
+  const mosaicCard = ({ c, at }: MosaicEntry<Collection>, width: number, height: number, featured = false, tall = false) => {
     const caption = mosaicCaption(c.slug);
     const below = caption === 'below';
     const uri = coverFor(c);
@@ -1183,11 +1183,11 @@ export default function CollectionsScreen({ navigation, route }: {
         featured && !below && s.mosaicWordsFeatured,
       ]}>
         <Text
-          style={[s.gcardTitle, featured && s.mosaicTitleFeatured, below && s.mosaicTitleBelow]}
+          style={[s.gcardTitle, featured && s.mosaicTitleFeatured, below ? s.mosaicTitleBelow : s.mosaicInkShadow]}
           numberOfLines={2}
         >{title}</Text>
-        {blurb ? <Text style={s.mosaicBlurb} numberOfLines={2}>{blurb}</Text> : null}
-        {author ? <Text style={[s.mosaicAuthor, below && s.mosaicAuthorBelow]} numberOfLines={1}>{author}</Text> : null}
+        {blurb ? <Text style={[s.mosaicBlurb, s.mosaicInkShadow]} numberOfLines={2}>{blurb}</Text> : null}
+        {author ? <Text style={[s.mosaicAuthor, below ? s.mosaicAuthorBelow : s.mosaicInkShadow]} numberOfLines={1}>{author}</Text> : null}
       </View>
     );
     return (
@@ -1204,30 +1204,33 @@ export default function CollectionsScreen({ navigation, route }: {
             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
             : <EmptyCover />}
           {!below ? (
-            // Intrinsic text height is the backdrop's height. Only the
-            // short fade extends into the image; a tall photo therefore
-            // has no larger dark region than a small one with the same
-            // caption. No onLayout/state pass or first-frame flash.
-            <View
-              style={[s.mosaicOverlay, caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom]}
-              pointerEvents="none"
-              testID={`collection-mosaic-scrim-${c.slug}`}
-            >
-              <LinearGradient
-                colors={mosaicScrim.body}
-                start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
-                end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <LinearGradient
-                colors={mosaicScrim.fade}
-                start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
-                end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
-                style={[s.mosaicFade, caption === 'top' ? s.mosaicFadeBelow : s.mosaicFadeAbove]}
-                testID={`collection-mosaic-fade-${c.slug}`}
-              />
-              {words}
-            </View>
+            <>
+              {/* The entire fade fits inside 30%/40% of the photo.
+                  Caption length cannot enlarge or darken the backdrop. */}
+              <View
+                style={[
+                  s.mosaicOverlay,
+                  caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom,
+                  { height: tall ? mosaicScrim.tallHeight : mosaicScrim.shortHeight },
+                ]}
+                pointerEvents="none"
+                testID={`collection-mosaic-scrim-${c.slug}`}
+              >
+                <LinearGradient
+                  colors={mosaicScrim.colors}
+                  locations={mosaicScrim.locations}
+                  start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
+                  end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </View>
+              <View
+                style={[s.mosaicOverlay, caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom]}
+                pointerEvents="none"
+              >
+                {words}
+              </View>
+            </>
           ) : null}
         </View>
         {below ? words : null}
@@ -1321,7 +1324,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       ? mosaicCard(item.items[0], width, Math.round(gcardW * 1.28), true)
                       : item.layout === 'stack' ? (
                         <>
-                          {mosaicCard(item.items[0], gcardW, gcardH * 2 + space.cardGap)}
+                          {mosaicCard(item.items[0], gcardW, gcardH * 2 + space.cardGap, false, true)}
                           <View style={{ gap: space.cardGap }}>
                             {item.items.slice(1).map((entry) => mosaicCard(entry, gcardW, gcardH))}
                           </View>
@@ -2024,14 +2027,12 @@ const s = StyleSheet.create({
   mosaicPhoto: { flex: 1, borderRadius: radius.image, overflow: 'hidden' },
   mosaicWords: { gap: 6, padding: 14 },
   mosaicOverlay: { position: 'absolute', left: 0, right: 0 },
-  mosaicFade: { position: 'absolute', left: 0, right: 0, height: mosaicScrim.fadeHeight },
-  mosaicFadeBelow: { top: '100%' },
-  mosaicFadeAbove: { bottom: '100%' },
   mosaicWordsBottom: { position: 'absolute', bottom: 0 },
   mosaicWordsTop: { position: 'absolute', top: 0 },
   mosaicWordsBelow: { paddingHorizontal: 2, paddingTop: 11, paddingBottom: 0 },
   mosaicWordsFeatured: { padding: 20 },
   mosaicTitleFeatured: { ...type.titleDetail, color: onPhoto.text, lineHeight: 32 },
+  mosaicInkShadow: { textShadowColor: 'rgba(0,0,0,0.65)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   mosaicTitleBelow: { color: colors.text },
   mosaicAuthor: { color: onPhoto.textSecondary, fontSize: 12, lineHeight: 16 },
   mosaicAuthorBelow: { color: colors.textSecondary },
