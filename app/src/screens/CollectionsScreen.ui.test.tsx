@@ -1807,3 +1807,30 @@ describe('CollectionsScreen — Mosaic', () => {
     expect(screen.queryByRole('tab')).toBeNull();
   });
 });
+
+describe('Mosaic text-sized scrims', () => {
+  it('puts each overlay behind its own caption, fades outside it, and leaves outside captions bare', () => {
+    state.cols.data = Array.from({ length: 12 }, (_, i) => col(`mosaic-${i}`, ['a'], {
+      curator_handle: `curator${i}`,
+      desc_en: 'A longer description for the featured collection',
+    }));
+    show();
+    const photos = screen.getAllByTestId(/^collection-mosaic-mosaic-/);
+    for (const photo of photos) {
+      const id = photo.dataset.testid!;
+      const slug = id.replace('collection-mosaic-', '').replace(/-(top|bottom|below)$/, '');
+      const overlay = screen.queryByTestId(`collection-mosaic-scrim-${slug}`);
+      if (id.endsWith('-below')) {
+        expect(overlay).toBeNull();
+        expect(photo.querySelector('[data-stub="LinearGradient"]')).toBeNull();
+      } else {
+        expect(overlay!.parentElement).toBe(photo);
+        expect(within(overlay!).getByText(`List ${slug}`)).toBeTruthy();
+        expect(getComputedStyle(overlay!).height).not.toBe('100%');
+        const fade = screen.getByTestId(`collection-mosaic-fade-${slug}`);
+        expect(fade.parentElement).toBe(overlay);
+        expect(fade.getAttribute('colors')).toMatch(/,0\)$/);
+      }
+    }
+  });
+});
