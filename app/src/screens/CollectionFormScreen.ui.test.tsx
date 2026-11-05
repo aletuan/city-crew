@@ -21,6 +21,9 @@ const copyCollection = vi.hoisted(() => vi.fn(async () => 'copied-list'));
 const goTo = vi.hoisted(() => vi.fn());
 const note = vi.hoisted(() => vi.fn());
 const reload = vi.hoisted(() => vi.fn());
+// The catalog's public lists — a separate copy from `mine`, and the one
+// the Community tab and Explore draw a public list from.
+const colsReload = vi.hoisted(() => vi.fn());
 // Mutable so a test can take the session or the city away — the two
 // guards `submit` runs before it writes anything.
 const who = vi.hoisted(() => ({
@@ -55,6 +58,7 @@ vi.mock('../lib/i18n', () => ({
 }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => catalog,
+  useCollections: () => ({ data: [], reload: colsReload }),
 }));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ mine: { data: saved.data, reload } });
@@ -117,6 +121,7 @@ beforeEach(() => {
   goTo.mockClear();
   note.mockClear();
   reload.mockClear();
+  colsReload.mockClear();
   catalog.data = [];
   saved.data = [];
   who.session = { user: { id: 'u1' } };
@@ -473,6 +478,49 @@ describe('renaming a list', () => {
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(reload).toHaveBeenCalled();
     expect(goTo).not.toHaveBeenCalled();
+  });
+
+  // A public list's cover, name and words are drawn from the catalog's
+  // copy everywhere but "Yours"; saving left that copy as it was, so a new
+  // cover stayed unseen on the Community tab until a pull (5 Nov 2026).
+  describe('the public catalog', () => {
+    const edit = (isPublic: boolean) => {
+      const navigation = nav();
+      catalog.data = [HEIM, SAM];
+      saved.data = [{ ...(listOf([HEIM, SAM]) as object), is_public: isPublic }];
+      render(<CollectionFormScreen navigation={navigation} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 2 of 3' }));
+      return navigation;
+    };
+
+    it('is refetched once a public list’s new cover is saved, and not before', async () => {
+      let done!: () => void;
+      updateCollection.mockImplementationOnce(() => new Promise<void>((r) => { done = r; }));
+      const navigation = edit(true);
+      save();
+      await waitFor(() => expect(updateCollection).toHaveBeenCalled());
+      expect(colsReload).not.toHaveBeenCalled();
+      done();
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      expect(colsReload).toHaveBeenCalledTimes(1);
+      expect(reload).toHaveBeenCalled();
+    });
+
+    it('is left alone for a private list, which it does not hold', async () => {
+      const navigation = edit(false);
+      save();
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      expect(reload).toHaveBeenCalled();
+      expect(colsReload).not.toHaveBeenCalled();
+    });
+
+    it('is left alone when the save failed', async () => {
+      updateCollection.mockRejectedValueOnce(new Error('row is locked'));
+      edit(true);
+      save();
+      await screen.findByText('Row is locked');
+      expect(colsReload).not.toHaveBeenCalled();
+    });
   });
 
   // Lit only when the rename would write something new — and dim again
