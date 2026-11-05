@@ -226,6 +226,7 @@ beforeEach(async () => {
   spies.deleteCollection.mockImplementation(async () => {});
   spies.fetchProfilesById.mockImplementation(async () => ({}));
   await AsyncStorage.removeItem('citycrew.collections.view');
+  await AsyncStorage.removeItem('citycrew.collections.community.view');
   state.uid = null;
   state.pending = false;
   state.ducked = false;
@@ -356,17 +357,21 @@ describe('CollectionsScreen — as a guest', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'here' });
   });
 
-  it('lays the cover scrim the Explore shelf wears under a tile’s words', () => {
+  it('lays the cover scrim the Explore shelf wears under a tile’s words', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.cols.data = [col('here', ['a'])];
     show();
+    await act(async () => {});
     const scrim = screen.getByTestId('collection-card-scrim');
     expect(scrim.getAttribute('colors')).toBe(coverScrim.colors.join(','));
     expect(scrim.getAttribute('locations')).toBe(coverScrim.locations.join(','));
   });
 
-  it("a guest's heart asks them to sign in and writes nothing", () => {
+  it("a guest's heart asks them to sign in and writes nothing", async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.cols.data = [col('here', ['a'])];
     show();
+    await act(async () => {});
     fireEvent.click(screen.getByRole('button', { name: 'Like this collection' }));
     expect(spies.askToSignIn).toHaveBeenCalledTimes(1);
     // A heart raises the heart sheet, not the bookmark one.
@@ -375,12 +380,14 @@ describe('CollectionsScreen — as a guest', () => {
   });
 
   it("community tiles wear the curator's handle and face, not a place count", async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.cols.data = [
       col('here', ['a'], { curator_handle: 'Minh', owner_id: 'o1' }),
       col('there', ['b'], { owner_id: 'o1' }),
     ];
     spies.fetchProfilesById.mockImplementation(async () => ({ o1: { avatar_url: 'https://face/o1.jpg' } }));
     show();
+    await act(async () => {});
     expect(screen.getByText('@minh')).toBeTruthy();
     // One batched lookup, each owner once.
     expect(spies.fetchProfilesById).toHaveBeenCalledWith(['o1']);
@@ -623,12 +630,14 @@ describe('CollectionsScreen — signed in', () => {
   // and a list that answers both belongs on both. It used to be filtered
   // out, and on a city where the only public list was the owner's the
   // shelf read "0 collections" under a card promising it would show.
-  it('shows your own published list on Community, with your byline and the same heart', () => {
+  it('shows your own published list on Community, with your byline and the same heart', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     const own = col('mine1', ['a'], { owner_id: 'u1', curator_handle: 'me', is_public: true });
     state.mine.data = [own];
     state.cols.data = [own, col('theirs', ['a'], { curator_handle: 'them' })];
     state.likes = { mine1: 2, theirs: 1 };
     show({ tab: 'community' });
+    await act(async () => {});
     expect(screen.getByText('List theirs')).toBeTruthy();
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.getByText('@me')).toBeTruthy();
@@ -738,19 +747,23 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.queryByText('List mine1')).toBeNull();
   });
 
-  it("the heart on somebody else's tile writes the like by id and slug", () => {
+  it("the heart on somebody else's tile writes the like by id and slug", async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.cols.data = [col('theirs', ['a'])];
     show({ tab: 'community' });
+    await act(async () => {});
     fireEvent.click(screen.getByRole('button', { name: 'Like this collection' }));
     expect(spies.toggleLike).toHaveBeenCalledWith({ id: 'id-theirs', slug: 'theirs' });
     expect(spies.askToSignIn).not.toHaveBeenCalled();
   });
 
-  it('a liked tile offers Unlike and shows the count', () => {
+  it('a liked tile offers Unlike and shows the count', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.cols.data = [col('theirs', ['a'])];
     state.myLikes = ['id-theirs'];
     state.likes = { theirs: 7 };
     show({ tab: 'community' });
+    await act(async () => {});
     const heart = screen.getByRole('button', { name: 'Unlike this collection' });
     expect(heart.textContent).toContain('7');
     expect(heart.querySelector('[data-icon="heart"]')).toBeTruthy();
@@ -818,6 +831,7 @@ describe('CollectionsScreen — list view', () => {
 
   it('a stored row preference is what the screen opens in', async () => {
     await AsyncStorage.setItem('citycrew.collections.view', 'row');
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
     expect(await screen.findByRole('button', { name: 'Delete' })).toBeTruthy();
@@ -834,6 +848,7 @@ describe('CollectionsScreen — list view', () => {
 
   const rows = async () => {
     await AsyncStorage.setItem('citycrew.collections.view', 'row');
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
   };
 
   it('your row shows its description, the count and heart in its foot, and an empty one says "No places yet"', async () => {
@@ -1125,9 +1140,11 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByTestId('collections-clear')).toBeNull();
   });
 
-  it('matches by a place inside the list, and says which place', () => {
+  it('matches by a place inside the list, and says which place', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.cols.data = [col('one', ['a']), col('two', ['b'])];
     show();
+    await act(async () => {});
     type('Place b');
     expect(screen.getByText('List two')).toBeTruthy();
     expect(screen.queryByText('List one')).toBeNull();
@@ -1140,6 +1157,7 @@ describe('CollectionsScreen — search', () => {
   // beside the heart, in place of the count (owner, 29 Oct 2026).
   it('says which place matched in a community row\'s foot', async () => {
     await AsyncStorage.setItem('citycrew.collections.view', 'row');
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
     state.cols.data = [col('one', ['a']), col('two', ['b'])];
     show();
     await screen.findByText('List one');
@@ -1331,10 +1349,12 @@ describe('CollectionsScreen — search', () => {
   const cafe = (slug: string, city = 'hanoi') => ({ ...place(slug, city), categories: ['cafes'] } as unknown as Place);
   const bar = (slug: string, city = 'hanoi') => ({ ...place(slug, city), categories: ['nightlife'] } as unknown as Place);
 
-  it('offers only the kinds its lists hold, narrows by one, and counts the places it reached', () => {
+  it('offers only the kinds its lists hold, narrows by one, and counts the places it reached', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.places = [cafe('a'), cafe('b'), bar('c'), bar('d')];
     state.cols.data = [col('mixed', ['a', 'c', 'd'], { title_en: 'Mixed', curator_handle: 'minh' }), col('bars', ['d'], { title_en: 'Bars' })];
     show();
+    await act(async () => {});
     fireEvent.click(screen.getByTestId('collections-filters'));
     expect(screen.getByText('Kind of place')).toBeTruthy();
     expect(screen.queryByText('Nature')).toBeNull();
@@ -1503,12 +1523,14 @@ describe('CollectionsScreen — search', () => {
 describe('the New badge', () => {
   const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
 
-  it("sits on somebody's list made this week, and is in its spoken name", () => {
+  it("sits on somebody's list made this week, and is in its spoken name", async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.cols.data = [
       col('fresh', ['a'], { created_at: ago(2) }),
       col('old', ['a'], { created_at: ago(30) }),
     ];
     show();
+    await act(async () => {});
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'List fresh, New' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'List old' })).toBeTruthy();
@@ -1518,6 +1540,7 @@ describe('the New badge', () => {
 
   it('and in the list shape, before the byline', async () => {
     await AsyncStorage.setItem('citycrew.collections.view', 'row');
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
     state.cols.data = [
       col('fresh', ['a'], { created_at: ago(2), curator_handle: 'Minh' }),
       col('old', ['a'], { created_at: ago(30) }),
@@ -1529,10 +1552,12 @@ describe('the New badge', () => {
     expect(screen.getByRole('button', { name: 'List old' })).toBeTruthy();
   });
 
-  it('marks the shelf before it knows who is reading, and keeps it', () => {
+  it('marks the shelf before it knows who is reading, and keeps it', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.pending = true;
     state.cols.data = [col('fresh', ['a'], { owner_id: 'u2', created_at: ago(2) })];
     const { rerender } = show();
+    await act(async () => {});
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     state.pending = false;
     rerender(<CollectionsScreen navigation={nav()} route={{ params: undefined }} />);
@@ -1542,16 +1567,19 @@ describe('the New badge', () => {
   // Yours too (owner, 31 Oct 2026): the author sees their new list the
   // way everybody else does.
   it('on your own as well, on either tab, in either shape', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.uid = 'u1';
     const own = col('mine1', ['a'], { owner_id: 'u1', is_public: true, created_at: ago(1) });
     const older = col('mine2', ['a'], { owner_id: 'u1', is_public: true, created_at: ago(30) });
     state.mine.data = [own, older];
     state.cols.data = [own, older];
     show();
+    await act(async () => {});
     expect(within(screen.getByRole('button', { name: 'List mine1, New, Public' })).getByTestId('new-badge')).toBeTruthy();
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     cleanup();
     show({ tab: 'community' });
+    await act(async () => {});
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'List view' }));
@@ -1691,5 +1719,92 @@ describe('scrolled', () => {
     scrollTo(400);
     await new Promise((r) => setTimeout(r, 200));
     expect(screen.queryByTestId('collections-dock')).toBeNull();
+  });
+});
+
+describe('CollectionsScreen — Mosaic', () => {
+  const seed = () => {
+    state.cols.data = Array.from({ length: 12 }, (_, i) => col(`mosaic-${i}`, ['a'], {
+      curator_handle: `curator${i}`,
+      desc_en: i === 0 ? 'A morning across the city' : null,
+    }));
+  };
+
+  it('opens Community in Mosaic, preserving order and navigation without tile actions or place counts', () => {
+    state.uid = 'u1';
+    seed();
+    const { navigation } = show({ tab: 'community' });
+    expect(screen.getByRole('button', { name: 'Mosaic view' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getAllByTestId('collection-mosaic-row-feature')).toHaveLength(2);
+    expect(screen.getAllByTestId('collection-mosaic-row-stack')).toHaveLength(2);
+    expect(screen.getAllByTestId('collection-mosaic-row-pair')).toHaveLength(2);
+    expect(screen.getAllByTestId(/^collection-card-/).map(c => c.getAttribute('aria-label')))
+      .toEqual(Array.from({ length: 12 }, (_, i) => `List mosaic-${i}, @curator${i}`));
+    expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
+    expect(screen.queryByTestId('collection-tile-count')).toBeNull();
+    fireEvent.click(screen.getByTestId('collection-card-3'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'mosaic-3' });
+  });
+
+  it('keeps each caption with its collection while searching changes its position and card size', () => {
+    seed();
+    show();
+    const captions = screen.getAllByTestId(/^collection-mosaic-mosaic-/).map(e => e.dataset.testid);
+    expect(captions.some(id => id!.endsWith('-top'))).toBe(true);
+    expect(captions.some(id => id!.endsWith('-bottom'))).toBe(true);
+    expect(captions.some(id => id!.endsWith('-below'))).toBe(true);
+    const original = captions.find(id => id!.includes('mosaic-3-'))!;
+    fireEvent.change(screen.getByPlaceholderText('Name, place, city, user'), { target: { value: 'List mosaic-3' } });
+    expect(screen.getByTestId(original)).toBeTruthy();
+    expect(screen.queryByText('List mosaic-0')).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText('Name, place, city, user'), { target: { value: '' } });
+    expect(screen.getByTestId(original)).toBeTruthy();
+  });
+
+  it('remembers the three-way community switch separately from your library', async () => {
+    state.uid = 'u1';
+    state.cols.data = [col('theirs', ['a'])];
+    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
+    show({ tab: 'community' });
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'row');
+    fireEvent.click(screen.getByRole('button', { name: 'Tile view' }));
+    expect(screen.queryByTestId('collection-mosaic-row-feature')).toBeNull();
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'tile');
+    fireEvent.click(screen.getByRole('button', { name: 'Mosaic view' }));
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'mosaic');
+    fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
+    expect(screen.queryByRole('button', { name: 'Mosaic view' })).toBeNull();
+    expect(screen.getByTestId('collection-tile-foot')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
+    expect(screen.getByTestId('collection-mosaic-row-feature')).toBeTruthy();
+    cleanup();
+    show({ tab: 'community' });
+    await screen.findByTestId('collection-mosaic-row-feature');
+    expect(screen.getByRole('button', { name: 'Mosaic view' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('renders chosen and missing photos, optional authors and a feature description', () => {
+    state.cols.data = [
+      col('mosaic-0', ['a'], { desc_en: 'A morning across the city', cover: { photo_uri: 'https://img/feature.jpg' } }),
+      col('mosaic-1', ['b']), col('mosaic-2', ['a']), col('mosaic-3', ['a']), col('mosaic-4', ['a']),
+    ];
+    show();
+    expect(document.querySelector('img[src="https://img/feature.jpg"]')).toBeTruthy();
+    expect(screen.getByText('A morning across the city')).toBeTruthy();
+    expect(getComputedStyle(screen.getByText('List mosaic-0')).lineHeight).toBe('32px');
+    expect(screen.queryByText(/^@/)).toBeNull();
+    expect(icons('bookmark-outline')).toBeGreaterThan(0);
+    expect(screen.getAllByTestId(/^collection-card-/)).toHaveLength(5);
+  });
+
+  it('ignores an invalid community preference and gives guests the Mosaic default', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'bogus');
+    state.cols.data = [col('mosaic-0', ['a'])];
+    show();
+    await act(async () => {});
+    expect(screen.getByTestId('collection-mosaic-row-feature')).toBeTruthy();
+    expect(screen.queryByRole('tab')).toBeNull();
   });
 });
