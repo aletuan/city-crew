@@ -21,6 +21,7 @@ import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import CollectionFilterSheet, { type CollectionFilters } from '../components/CollectionFilterSheet';
 import { AddPill } from '../components/add';
+import { createDuckTracker } from '../lib/duck';
 import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
 import { useCityList } from '../lib/city';
@@ -518,28 +519,24 @@ export default function CollectionsScreen({ navigation, route }: {
   useScrollToTop(scrollRef as unknown as Parameters<typeof useScrollToTop>[0]);
   const toTop = () => scrollRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: true });
 
-  // ── the pinned tabs, and the dock (owner, 25 Oct 2026) ──
-  //
-  // Explore's two moves, made here. The tabs go up with the list until
-  // they reach the top and then stay, drawn over the shelf by a copy
-  // (`tabsRow(true)`), as Explore's filter row does: the switch between
-  // the two shelves is the one thing on this screen a reader wants at
-  // every depth. The folded filters pin with them. And once the reader
-  // is past everything above the shelf, with the tab bar away, its dock
-  // offers the box and a new list (`DockSlot`), as Explore's offers its
-  // search and a place: the box itself is far above by then.
-  //
-  // Where each crossing is comes from layout, in the list's content:
-  // the tabs' top (`tabsY`) and the header's foot (`topH`). Refs, read by
-  // the scroll handler; state flips only at a crossing, one render each.
+  // Keep the natural header's geometry. The overlay pins only tabs and
+  // layouts on descent; reversing reveals the full header in place.
+  // The tab bar's tracker supplies hysteresis and overscroll clamping.
   const tabsYRef = useRef(0);
   const topHRef = useRef(0);
+  const [headerTracker] = useState(() => createDuckTracker({ topSlack: 0 }));
   const [pinned, setPinned] = useState(false);
+  const [headerExpanded, setHeaderExpanded] = useState(false);
   const [deep, setDeep] = useState(false);
   const onShelfScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     duckScroll?.(e);
-    const y = e.nativeEvent.contentOffset.y;
-    const nowPinned = tabsYRef.current > 0 && y >= tabsYRef.current;
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const maxY = Math.max(0, contentSize.height - layoutMeasurement.height);
+    const y = Math.min(maxY, Math.max(0, contentOffset.y));
+    const direction = headerTracker.report(y, maxY);
+    if (direction) setHeaderExpanded(direction === 'show');
+    // Keep the revealed header until the natural one is fully at rest.
+    const nowPinned = tabsYRef.current > 0 && (y >= tabsYRef.current || (pinned && y > 0));
     if (nowPinned !== pinned) setPinned(nowPinned);
     const nowDeep = topHRef.current > 0 && y >= topHRef.current;
     if (nowDeep !== deep) setDeep(nowDeep);
@@ -961,7 +958,7 @@ export default function CollectionsScreen({ navigation, route }: {
     : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }];
 
   // Not while the panel is up: the box it would focus is already open.
-  const dock = useDockOffer(ducked && deep && !panel && !holding, navigation);
+  const dock = useDockOffer(ducked && deep && !panel && !holding && !(pinned && headerExpanded), navigation);
   // The dock's search: the box, at the top of the list, focused — which
   // opens the panel as a tap on it does.
   const findFromDock = () => { toTop(); inputRef.current?.focus(); };
@@ -1070,18 +1067,27 @@ export default function CollectionsScreen({ navigation, route }: {
   // panel go up with the shelf, as Explore's hero does, and the tabs pin
   // at the top once they get there. Fixed, they took a third of the phone
   // from the lists. Measured, for the dock: past its foot is "deep".
-  const top = (
-    <View onLayout={(e) => { topHRef.current = Math.round(e.nativeEvent.layout.height); }} testID="collections-top">
+  const top = (floating = false) => (
+    <View
+      onLayout={floating ? undefined : (e) => { topHRef.current = Math.round(e.nativeEvent.layout.height); }}
+      testID={floating ? 'collections-floating-top' : 'collections-top'}
+      // Preserve layout while exposing only one copy to touch and a11y.
+      style={!floating && pinned && session ? [s.hiddenHeader, { height: topHRef.current }] : undefined}
+      pointerEvents={!floating && pinned && session ? 'none' : 'auto'}
+      accessibilityElementsHidden={!floating && pinned && !!session}
+      importantForAccessibility={!floating && pinned && session ? 'no-hide-descendants' : 'auto'}
+      aria-hidden={!floating && pinned && !!session}
+    >
       <ScreenTitle
         title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
-        accessory={filterButton(false)}
+        accessory={filterButton(floating)}
         right={session ? (
           <AddPill
             quiet
             label={t('New', 'Tạo mới', '新規', '新建', '新增')}
             onPress={startNew}
             accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
-            testID="collection-new"
+            testID={floating ? 'collection-floating-new' : 'collection-new'}
           />
         ) : undefined}
       />
@@ -1091,10 +1097,10 @@ export default function CollectionsScreen({ navigation, route }: {
           column drops the pill a line below the title — the owner saw
           the two screens' pills at two heights (14 Oct 2026). */}
       {!holding && (onYours ? mineReady : true) ? (
-        <Text style={s.scope} numberOfLines={1} testID="collections-scope">{scope}</Text>
+        <Text style={s.scope} numberOfLines={1} testID={floating ? 'collections-floating-scope' : 'collections-scope'}>{scope}</Text>
       ) : null}
-      <View onLayout={(e) => { tabsYRef.current = Math.round(e.nativeEvent.layout.y); }} testID="collections-tabs">
-        {tabsRow(false)}
+      <View onLayout={floating ? undefined : (e) => { tabsYRef.current = Math.round(e.nativeEvent.layout.y); }} testID={floating ? 'collections-floating-tabs' : 'collections-tabs'}>
+        {tabsRow(floating)}
       </View>
       {/* The box, and the panel it opens. It stood outside the list
           until 25 Oct 2026 — a box that scrolled away with the shelf was
@@ -1104,12 +1110,12 @@ export default function CollectionsScreen({ navigation, route }: {
       {!holding && (
         <View style={s.searchRow}>
           <SearchField
-            inputRef={inputRef}
+            inputRef={!floating && pinned && headerExpanded && session ? undefined : inputRef}
             value={query}
             onChangeText={setQuery}
             onFocus={() => setPanel(true)}
             onSubmitEditing={noteSearch}
-            testID={{ input: 'collections-input', cancel: 'collections-cancel' }}
+            testID={{ input: floating ? 'collections-floating-input' : 'collections-input', cancel: floating ? 'collections-floating-cancel' : 'collections-cancel' }}
             // The four things it answers by, named in the box itself.
             // A person, not "@username" (owner, 21 Oct 2026): on a phone
             // the box cut it to "@use…", which read as nothing, and the
@@ -1123,12 +1129,12 @@ export default function CollectionsScreen({ navigation, route }: {
           />
         </View>
       )}
-      {chosenRow(false)}
+      {chosenRow(floating)}
       {/* Drawn only when there is something in it: the box's own
           placeholder already says what it answers, and a hint under it
           saying the same was the owner's to strike (25 Oct 2026). */}
       {!holding && panel && suggestions.length > 0 && (
-        <View style={s.panel} testID="collections-panel">
+        <View style={s.panel} testID={floating ? 'collections-floating-panel' : 'collections-panel'}>
           {suggestions.length > 0 && (
             <Card style={s.recents}>
               <View style={s.legendRow}>
@@ -1258,7 +1264,7 @@ export default function CollectionsScreen({ navigation, route }: {
     >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        {holding || (colsFail && cols.data.length === 0) ? top : null}
+        {holding || (colsFail && cols.data.length === 0) ? top() : null}
         {holding && (
           <View>
             <GuestNotice navigation={navigation} />
@@ -1299,7 +1305,7 @@ export default function CollectionsScreen({ navigation, route }: {
             // title is the list's.
             ListHeaderComponent={(
               <>
-                {top}
+                {top()}
                 {colsFail && cols.data.length > 0 ? (
                   <LoadFailBanner kind={colsFail} onRetry={cols.reload} testID="collections-load-banner" />
                 ) : null}
@@ -1945,22 +1951,7 @@ export default function CollectionsScreen({ navigation, route }: {
             move a row or eat a tap meant for one. */}
         {pinned && !holding && session ? (
           <View style={s.pinned} testID="collections-pinned">
-            {/* The screen's name, at a section heading's size, as
-                Explore's pinned row carries "Địa điểm" (owner, 25 Oct
-                2026): without it the pinned row was two tabs under a
-                clock, and nothing said whose lists these were. */}
-            <View style={s.pinnedTop}>
-              <View style={s.pinnedHead}>
-                <Text style={s.pinnedTitle} accessibilityRole="header">{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
-                {filterButton(true)}
-              </View>
-              {/* The line under the title, kept (owner, 25 Oct 2026): how
-                  many lists and cities, and what a filter narrowed it to,
-                  is what a reader deep in the shelf wants said. */}
-              <Text style={s.pinnedScope} numberOfLines={1}>{scope}</Text>
-            </View>
-            {tabsRow(true)}
-            {chosenRow(true)}
+            {headerExpanded ? top(true) : tabsRow(true)}
           </View>
         ) : null}
       </View>
@@ -2121,20 +2112,7 @@ const s = StyleSheet.create({
   },
   filterBadgeText: { color: colors.accentInk, fontSize: 9, fontWeight: font.bold },
   chosenItem: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-  // Explore's pinned heading: the section size, the page's margin.
-  // Explore's pinned heading, measure for measure (`placesHead` and
-  // `filterBar` there): the row as tall as the 36pt filter button whether
-  // or not the button is drawn, straight under the status bar, and the
-  // 16 of `headingToContent` to the row under it. It was 8 above and 6
-  // below, and the owner saw the two pinned rows at two spacings (25 Oct
-  // 2026): the tabs sat some 12pt closer under the heading than Explore's
-  // kinds do.
-  pinnedTop: { marginHorizontal: space.page, marginBottom: space.headingToContent },
-  pinnedHead: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 36 },
-  // `scope`'s type; the 36pt row already leaves 4 under the heading's
-  // line, so no margin of its own.
-  pinnedScope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
-  pinnedTitle: { color: colors.text, ...type.section },
+  hiddenHeader: { opacity: 0 },
   chosenWordsSlot: { flexShrink: 1 },
   chosenWords: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
   // The ✕ quiet, in the tertiary ink: the words are what is read, the
