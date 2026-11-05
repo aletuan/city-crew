@@ -493,6 +493,16 @@ export const coverScrim = {
   locations: [0, 0.5, 0.66, 1] as const,
 };
 
+/** Mosaic captions size their own backdrop, independently of the photo.
+ *  Keep the whole text block above the contrast floor, then fade outside
+ *  its padding to a completely untouched image. Both stops are fixed:
+ *  like onPhoto ink, a photograph's readability is independent of theme. */
+export const mosaicScrim = {
+  body: ['rgba(10,11,10,0.78)', 'rgba(10,11,10,0.68)'] as const,
+  fade: ['rgba(10,11,10,0.68)', 'rgba(10,11,10,0)'] as const,
+  fadeHeight: 48,
+};
+
 /** The accent as a gradient, for the rare loud surface. Left to right
  *  rather than corner to corner: on a wide pill a diagonal wash puts the
  *  lightest tone under one end of the label and the darkest under the

@@ -43,7 +43,7 @@ import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { accentFade, colors, coverScrim, font, gradAI, onPhoto, radius, space, type } from '../theme';
+import { accentFade, colors, coverScrim, font, gradAI, mosaicScrim, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 type ListRow = ShelfRow<Collection> | MosaicRow<Collection>;
@@ -1173,7 +1173,7 @@ export default function CollectionsScreen({ navigation, route }: {
     const words = (
       <View style={[
         s.mosaicWords,
-        below ? s.mosaicWordsBelow : caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom,
+        below && s.mosaicWordsBelow,
         featured && !below && s.mosaicWordsFeatured,
       ]}>
         <Text
@@ -1198,15 +1198,31 @@ export default function CollectionsScreen({ navigation, route }: {
             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
             : <EmptyCover />}
           {!below ? (
-            <LinearGradient
-              colors={coverScrim.colors}
-              locations={coverScrim.locations}
-              start={{ x: 0, y: caption === 'top' ? 1 : 0 }}
-              end={{ x: 0, y: caption === 'top' ? 0 : 1 }}
-              style={StyleSheet.absoluteFill}
-            />
+            // Intrinsic text height is the backdrop's height. Only the
+            // short fade extends into the image; a tall photo therefore
+            // has no larger dark region than a small one with the same
+            // caption. No onLayout/state pass or first-frame flash.
+            <View
+              style={[s.mosaicOverlay, caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom]}
+              pointerEvents="none"
+              testID={`collection-mosaic-scrim-${c.slug}`}
+            >
+              <LinearGradient
+                colors={mosaicScrim.body}
+                start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
+                end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <LinearGradient
+                colors={mosaicScrim.fade}
+                start={{ x: 0, y: caption === 'top' ? 0 : 1 }}
+                end={{ x: 0, y: caption === 'top' ? 1 : 0 }}
+                style={[s.mosaicFade, caption === 'top' ? s.mosaicFadeBelow : s.mosaicFadeAbove]}
+                testID={`collection-mosaic-fade-${c.slug}`}
+              />
+              {words}
+            </View>
           ) : null}
-          {!below ? words : null}
         </View>
         {below ? words : null}
       </PressableScale>
@@ -2015,7 +2031,11 @@ const s = StyleSheet.create({
   gcardText: { padding: 12, gap: 2 },
   mosaicCard: { gap: 0 },
   mosaicPhoto: { flex: 1, borderRadius: radius.image, overflow: 'hidden' },
-  mosaicWords: { gap: 6, padding: 14, left: 0, right: 0 },
+  mosaicWords: { gap: 6, padding: 14 },
+  mosaicOverlay: { position: 'absolute', left: 0, right: 0 },
+  mosaicFade: { position: 'absolute', left: 0, right: 0, height: mosaicScrim.fadeHeight },
+  mosaicFadeBelow: { top: '100%' },
+  mosaicFadeAbove: { bottom: '100%' },
   mosaicWordsBottom: { position: 'absolute', bottom: 0 },
   mosaicWordsTop: { position: 'absolute', top: 0 },
   mosaicWordsBelow: { paddingHorizontal: 2, paddingTop: 11, paddingBottom: 0 },

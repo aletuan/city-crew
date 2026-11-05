@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { LOOK_DEFS, type Pinned } from './lib/look';
-import { colors, coverScrim, LOOKS, PALETTES } from './theme';
+import { colors, coverScrim, LOOKS, mosaicScrim, onPhoto, PALETTES } from './theme';
 
 /** `rgba(r,g,b,a)` → the three channels and the alpha. */
 function rgba(value: unknown): { rgb: [number, number, number]; alpha: number } {
@@ -195,5 +195,25 @@ describe('coverScrim', () => {
 
   it('leaves the top half of the picture nearly bare', () => {
     for (const f of band(0, 0.5)) expect(darkAt(f)).toBeLessThanOrEqual(0.22);
+  });
+});
+
+
+describe('Mosaic caption contrast', () => {
+  it('keeps title and secondary ink above 4.5:1 throughout the text backdrop on bright photographs', () => {
+    const white: [number, number, number] = [255, 255, 255];
+    const outer = rgba(mosaicScrim.body[0]);
+    const inner = rgba(mosaicScrim.body[1]);
+    for (let i = 0; i <= 20; i++) {
+      const alpha = outer.alpha + (inner.alpha - outer.alpha) * i / 20;
+      const background = over({ rgb: inner.rgb, alpha }, white);
+      expect(contrast(hex(onPhoto.text), background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(over(rgba(onPhoto.textSecondary), background), background)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('joins the caption continuously, then leaves the rest of the image completely untouched', () => {
+    expect(rgba(mosaicScrim.fade[0])).toEqual(rgba(mosaicScrim.body[1]));
+    expect(rgba(mosaicScrim.fade[1]).alpha).toBe(0);
   });
 });
