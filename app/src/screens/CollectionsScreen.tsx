@@ -2014,7 +2014,7 @@ const s = StyleSheet.create({
   gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
   gcardText: { padding: 12, gap: 2 },
   mosaicCard: { gap: 0 },
-  mosaicPhoto: { flex: 1, minHeight: 0, borderRadius: radius.image, overflow: 'hidden' },
+  mosaicPhoto: { flex: 1, borderRadius: radius.image, overflow: 'hidden' },
   mosaicWords: { gap: 6, padding: 14, left: 0, right: 0 },
   mosaicWordsBottom: { position: 'absolute', bottom: 0 },
   mosaicWordsTop: { position: 'absolute', top: 0 },

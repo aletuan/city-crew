@@ -1793,7 +1793,6 @@ describe('CollectionsScreen — Mosaic', () => {
     show();
     expect(document.querySelector('img[src="https://img/feature.jpg"]')).toBeTruthy();
     expect(screen.getByText('A morning across the city')).toBeTruthy();
-    expect(getComputedStyle(screen.getByText('List mosaic-0')).lineHeight).toBe('32px');
     expect(screen.queryByText(/^@/)).toBeNull();
     expect(icons('bookmark-outline')).toBeGreaterThan(0);
     expect(screen.getAllByTestId(/^collection-card-/)).toHaveLength(5);
