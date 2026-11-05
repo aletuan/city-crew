@@ -76,7 +76,7 @@ vi.mock('../lib/city', () => {
 });
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ ...state.cols, reload: spies.colsReload }),
-  useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
+  useLikes: () => ({ likes: state.likes, rankLikes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
   usePlaces: () => ({ data: state.places, loading: state.placesLoading, loaded: state.placesLoaded, reload: spies.placesReload }),
 }));
 vi.mock('../lib/save', () => {
@@ -1873,6 +1873,56 @@ const propsOf = (id: string): Record<string, unknown> => {
 // The dark follows the words (owner, 5 Nov 2026): it lives inside the
 // caption, so it is as long as the caption is, and a tail hangs off the
 // caption's far side. Both run from the edge the caption sits on.
+// One block a city, under its name (owner, 5 Nov 2026): Ốc Hà Nội sat
+// over Ngọt Sài Gòn beside Hội An and Đà Lạt for no reason but the date.
+describe('the Community Mosaic, one block a city', () => {
+  const seed = () => {
+    state.uid = 'u1';
+    state.cities = ['hanoi', 'hcmc', 'hue', 'dalat'].map((id) => ({
+      id, short_en: { hanoi: 'Hanoi', hcmc: 'Saigon', hue: 'Huế', dalat: 'Đà Lạt' }[id], short_vi: id, short_ja: id, name_en: id, name_vi: id, name_ja: id,
+    }));
+    state.places = [place('n', 'hanoi'), place('s', 'hcmc'), place('h', 'hue'), place('d', 'dalat')];
+    // Newest first, cities interleaved, as the catalog sends them; one
+    // list stamped Saigon with its places in Hanoi.
+    state.cols.data = [
+      col('s1', ['s']), col('n1', ['n']), col('h1', ['h']), col('s2', ['s']), col('n2', ['n']),
+      col('d1', ['d']), col('s3', ['s']), col('n3', ['n'], { city_id: 'hcmc' }), col('s4', ['s']),
+    ];
+    state.likes = { s3: 2 };
+  };
+  const heads = () => screen.queryAllByTestId(/^collection-mosaic-city-/).map((h) => h.textContent);
+  const order = () => screen.getAllByTestId(/^collection-card-/).map((c) => c.getAttribute('aria-label'));
+
+  it('heads each city with its name and count, the reader’s city first, the small ones together last', () => {
+    seed();
+    show({ tab: 'community' });
+    expect(heads()).toEqual(['Hanoi3', 'Saigon4', 'Elsewhere2']);
+    // The block is the city's: liked list first, then arrival order.
+    // The list draws its first ten items (rows and headings alike) on
+    // mount; the last pair of "elsewhere" is past them.
+    expect(order()).toEqual(['List n1', 'List n2', 'List n3', 'List s3', 'List s1', 'List s2', 'List s4', 'List h1']);
+    expect(screen.getAllByTestId(/^collection-card-/).map((c) => c.dataset.testid))
+      .toEqual(Array.from({ length: 8 }, (_, i) => `collection-card-${i}`));
+    const head = screen.getByTestId('collection-mosaic-city-hanoi');
+    expect(head.getAttribute('role')).toBe('heading');
+  });
+
+  it('is one shelf again, in the answer’s order, once anything is asked', () => {
+    seed();
+    show({ tab: 'community' });
+    fireEvent.change(screen.getByPlaceholderText('Name, place, city, user'), { target: { value: 'List' } });
+    expect(heads()).toEqual([]);
+    expect(order()).toEqual(['List s1', 'List n1', 'List h1', 'List s2', 'List n2', 'List d1', 'List s3', 'List n3', 'List s4']);
+  });
+
+  it('leaves the list and tile shapes as they were', () => {
+    seed();
+    show({ tab: 'community' });
+    fireEvent.click(screen.getByRole('button', { name: 'Tile view' }));
+    expect(heads()).toEqual([]);
+  });
+});
+
 describe('Mosaic scrims follow the caption', () => {
   const desc = 'A longer description for the featured collection that the dark has to reach';
   beforeEach(() => {
