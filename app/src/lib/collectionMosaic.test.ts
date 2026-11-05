@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mosaicCaption, mosaicRows } from './collectionMosaic';
+import { leadingCity, MOSAIC_MIN_CITY, mosaicCaption, mosaicGroups, mosaicRows } from './collectionMosaic';
 
 describe('mosaicRows', () => {
   it('packs six collections in editorial order without reordering them', () => {
@@ -30,5 +30,82 @@ describe('mosaicCaption', () => {
     expect(new Set(bySlug.values())).toEqual(new Set(['bottom', 'top', 'below']));
     expect(slugs.reverse().map(slug => mosaicCaption(slug))).toEqual(slugs.map(slug => bySlug.get(slug)));
     expect(mosaicCaption('')).toBe(mosaicCaption(''));
+  });
+});
+
+describe('mosaicRows from', () => {
+  it('numbers the cards from where the shelf starts in the whole list', () => {
+    expect(mosaicRows(['a', 'b'], 7).flatMap(r => r.items.map(e => e.at))).toEqual([7, 8]);
+  });
+});
+
+describe('leadingCity', () => {
+  it('is where most of the places are, not where the list was stamped', () => {
+    // "[DALAT][CAFE] BEEN TO": stamped Saigon, every place in Đà Lạt.
+    expect(leadingCity(['dalat', 'dalat', 'hcmc'], 'hcmc')).toBe('dalat');
+  });
+  it('keeps the stamp on a tie it is part of, and the first city to lead otherwise', () => {
+    expect(leadingCity(['hanoi', 'hcmc'], 'hcmc')).toBe('hcmc');
+    expect(leadingCity(['hanoi', 'hcmc'], 'hue')).toBe('hanoi');
+    expect(leadingCity(['hanoi', 'hcmc', 'hcmc', 'hanoi'], null)).toBe('hanoi');
+  });
+  it('falls back to the stamp, then to nothing, when no place says', () => {
+    expect(leadingCity([null, undefined], 'hue')).toBe('hue');
+    expect(leadingCity([], null)).toBeNull();
+    expect(leadingCity([], undefined)).toBeNull();
+  });
+});
+
+describe('mosaicGroups', () => {
+  type L = { slug: string; city: string | null; kind: string | null };
+  const l = (slug: string, city: string | null, kind: string | null = 'cafes'): L => ({ slug, city, kind });
+  const group = (lists: L[], likes: Record<string, number> = {}, home?: string | null) =>
+    mosaicGroups(lists, { cityOf: c => c.city, kindOf: c => c.kind, likes, home });
+  const slugs = (g: ReturnType<typeof group>[number]) => g.rows.flatMap(r => r.items.map(e => e.c.slug));
+
+  it('is one block a city, the reader’s own first, then the biggest, then everything small last', () => {
+    const lists = [
+      l('h1', 'hue'), l('s1', 'hcmc'), l('a1', 'hoian'), l('n1', 'hanoi'), l('s2', 'hcmc'), l('h2', 'hue'),
+      l('n2', 'hanoi'), l('s3', 'hcmc'), l('n3', 'hanoi'), l('s4', 'hcmc'), l('h3', 'hue'), l('d1', 'danang'), l('x', null), l('a2', 'hoian'),
+    ];
+    const groups = group(lists, {}, 'hue');
+    expect(groups.map(g => [g.city, g.count])).toEqual([['hue', 3], ['hcmc', 4], ['hanoi', 3], [null, 4]]);
+    // Elsewhere keeps the order the lists arrived in, across its cities —
+    // not Hội An's two together because Hội An was met first.
+    expect(slugs(groups[3])).toEqual(['a1', 'd1', 'x', 'a2']);
+    // No home, or a home with too few lists: sized order alone.
+    expect(group(lists).map(g => g.city)).toEqual(['hcmc', 'hue', 'hanoi', null]);
+    expect(group(lists, {}, 'danang').map(g => g.city)).toEqual(['hcmc', 'hue', 'hanoi', null]);
+  });
+
+  it('keeps a city of exactly the minimum as its own block', () => {
+    expect(MOSAIC_MIN_CITY).toBe(3);
+    const three = [l('a', 'hue'), l('b', 'hue'), l('c', 'hue')];
+    expect(group(three).map(g => g.city)).toEqual(['hue']);
+    expect(group(three.slice(0, 2)).map(g => g.city)).toEqual([null]);
+  });
+
+  it('gives the wide card to the most-liked list, and keeps arrival order on a tie', () => {
+    const lists = [l('a', 'hue'), l('b', 'hue'), l('c', 'hue'), l('d', 'hue')];
+    expect(slugs(group(lists, { c: 2, d: 1 })[0])).toEqual(['c', 'd', 'a', 'b']);
+    expect(slugs(group(lists)[0])).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('puts lists of the same leading kind side by side, each run where its best list stands', () => {
+    const lists = [
+      l('lead', 'hue', 'food'), l('bar1', 'hue', 'nightlife'), l('cafe1', 'hue', 'cafes'),
+      l('bar2', 'hue', 'nightlife'), l('cafe2', 'hue', 'cafes'), l('odd', 'hue', null),
+    ];
+    // The cafés' best list outranks the bars', so the café run comes first.
+    expect(slugs(group(lists, { lead: 9, cafe2: 3, bar1: 1 })[0]))
+      .toEqual(['lead', 'cafe2', 'cafe1', 'bar1', 'bar2', 'odd']);
+  });
+
+  it('numbers every card once, from the top of the whole shelf, across blocks', () => {
+    const lists = Array.from({ length: 11 }, (_, i) => l(`c${i}`, i % 2 ? 'hue' : 'hanoi'));
+    const groups = group(lists);
+    expect(groups.flatMap(g => g.rows.flatMap(r => r.items.map(e => e.at)))).toEqual(Array.from({ length: 11 }, (_, i) => i));
+    expect(groups.flatMap(slugs).sort()).toEqual(lists.map(x => x.slug).sort());
+    expect(group([])).toEqual([]);
   });
 });

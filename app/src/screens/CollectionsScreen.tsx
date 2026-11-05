@@ -24,7 +24,7 @@ import { AddPill } from '../components/add';
 import { createDuckTracker } from '../lib/duck';
 import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
-import { useCityList } from '../lib/city';
+import { useCityList, useCurrentCity } from '../lib/city';
 import { cityShortById } from '../lib/cityName';
 import {
   placesOf as placesCount, reasonFor as shelfReason, scopeLine, shape, type ShelfRow,
@@ -35,7 +35,8 @@ import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import { isNewList } from '../lib/newest';
-import { mosaicCaption, mosaicRows, type MosaicEntry, type MosaicRow } from '../lib/collectionMosaic';
+import { leadingCity, mosaicCaption, mosaicGroups, mosaicRows, type MosaicEntry, type MosaicRow } from '../lib/collectionMosaic';
+import { collectionKinds as listKinds } from '../lib/collectionKinds';
 import NewBadge from '../components/NewBadge';
 import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
@@ -62,7 +63,7 @@ type RowA11y = Pick<ViewProps, 'accessibilityActions' | 'onAccessibilityAction'>
 /** A section of the list: yours or the community's, with its rows. The
  *  rows are named here, not only by the list: React Native 0.88 types a
  *  section handed back to a render prop as possibly the extra fields alone. */
-type Section = { own: boolean; data: ListRow[] };
+type Section = { own: boolean; data: ListRow[]; city?: { id: string | null; count: number } };
 
 /** What the two actions take up behind an open row: two 62pt buttons, the
  *  8pt between them, and the 8pt separating them from the card. The row
@@ -495,6 +496,7 @@ export default function CollectionsScreen({ navigation, route }: {
   const { t } = useI18n();
   const { session } = useSession();
   const { cities } = useCityList();
+  const { city: here } = useCurrentCity();
   const cols = useCollections();
   const colsFail = classifyLoadFail(cols.error);
   // Shared with the save sheet — see SaveProvider. Reading it here through
@@ -506,7 +508,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // likes but theirs (`rankLikes`, read where a shelf is sorted). It is
   // the control the Explore shelf taps, backed by the same provider, one
   // copy of the truth.
-  const { likes, myLikes, toggleLike } = useLikes();
+  const { likes, rankLikes, myLikes, toggleLike } = useLikes();
   const { data: places, loading: placesLoading, loaded: placesLoaded, reload: placesReload } = usePlaces();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -930,7 +932,8 @@ export default function CollectionsScreen({ navigation, route }: {
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
   const mineReady = mine.loaded;
-  // The shelf, as the sift ordered it — by likes when nothing is asked,
+  // The shelf, as the sift ordered it — the catalog's own order, newest
+  // first, when nothing is asked (it said "by likes" here, and never was);
   // lists found by their own words first and then by hits when it is.
   const sifted = hits.map((h) => h.c);
 
@@ -953,9 +956,22 @@ export default function CollectionsScreen({ navigation, route }: {
 
   // Tiles pack two to a row-item; see `ShelfRow` for why every row-item
   // carries whose it is and where it sits in the whole list.
+  //
+  // The Community Mosaic at rest is one block a city, each under its name
+  // (owner, 5 Nov 2026); see `mosaicGroups` for the order and for what was
+  // ruled out. Asked anything, it is one shelf again, in the answer's
+  // order — a chip already says which city, and a search ranks by hits.
+  const groups = useMemo(() => (onYours || communityView !== 'mosaic' || asked ? null : mosaicGroups(sifted, {
+    cityOf: (c) => leadingCity(membersOf(c, places).map((p) => p.city_id), c.city_id),
+    kindOf: (c) => listKinds(membersOf(c, places), { hidden: c.kinds_hidden ?? [] })[0] ?? null,
+    likes: rankLikes,
+    home: here?.id,
+  })), [onYours, communityView, asked, sifted, places, rankLikes, here?.id]);
   const sections: Section[] = onYours
     ? (mineReady ? [{ own: true, data: shape(sifted, true, ownView) }] : [])
-    : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }];
+    : groups?.length
+      ? groups.map((g) => ({ own: false, data: g.rows, city: { id: g.city, count: g.count } }))
+      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }];
 
   // Not while the panel is up: the box it would focus is already open.
   const dock = useDockOffer(ducked && deep && !panel && !holding && !(pinned && headerExpanded), navigation);
@@ -1912,6 +1928,17 @@ export default function CollectionsScreen({ navigation, route }: {
                 </View>
               );
             }}
+            stickySectionHeadersEnabled={false}
+            renderSectionHeader={({ section }) => (section.city ? (
+              <View style={s.cityHead} testID={`collection-mosaic-city-${section.city.id ?? 'elsewhere'}`} accessibilityRole="header">
+                <Text style={s.cityHeadName} numberOfLines={1}>
+                  {section.city.id
+                    ? cityName(section.city.id)
+                    : t('Elsewhere', 'Nơi khác', 'その他の街', '其他城市', '其他城市')}
+                </Text>
+                <Text style={s.cityHeadCount}>{section.city.count}</Text>
+              </View>
+            ) : null)}
             renderSectionFooter={({ section }) => {
               // Under a query, the only footer is the honest one: nothing
               // matched. The creation rows stay out of it — "start your
@@ -2016,6 +2043,18 @@ const s = StyleSheet.create({
   // The community grid. Sized in the component — the width is the
   // screen's business — and dressed in the Explore shelf card's clothes:
   // photo, three-stop scrim, light ink.
+  // A city's name over its block: the section size, so it reads as a
+  // heading over cards and not as one more card's caption; the count
+  // beside it in the quiet step, as the scope line prints its numbers.
+  // Above it, the row gap already left by the block before plus the
+  // page's title gap; below, the theme's heading-to-content step, so the
+  // name sits closer to the cards it heads than to the ones it follows.
+  cityHead: {
+    flexDirection: 'row', alignItems: 'baseline', gap: 8,
+    paddingHorizontal: space.page, paddingTop: space.titleToContent, paddingBottom: space.headingToContent,
+  },
+  cityHeadName: { ...type.section, color: colors.text, flexShrink: 1 },
+  cityHeadCount: { fontSize: 15, fontWeight: font.medium, color: colors.textTertiary },
   gridRow: {
     flexDirection: 'row', gap: space.cardGap,
     marginHorizontal: space.page, marginBottom: space.cardGap,
