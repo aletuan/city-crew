@@ -199,21 +199,18 @@ describe('coverScrim', () => {
 });
 
 
-describe('Mosaic caption contrast', () => {
-  it('keeps title and secondary ink above 4.5:1 throughout the text backdrop on bright photographs', () => {
-    const white: [number, number, number] = [255, 255, 255];
-    const outer = rgba(mosaicScrim.body[0]);
-    const inner = rgba(mosaicScrim.body[1]);
-    for (let i = 0; i <= 20; i++) {
-      const alpha = outer.alpha + (inner.alpha - outer.alpha) * i / 20;
-      const background = over({ rgb: inner.rgb, alpha }, white);
-      expect(contrast(hex(onPhoto.text), background)).toBeGreaterThanOrEqual(4.5);
-      expect(contrast(over(rgba(onPhoto.textSecondary), background), background)).toBeGreaterThanOrEqual(4.5);
+describe('Mosaic proportional fade', () => {
+  it('keeps the fade lighter than the old 68–78% backdrop and reaches clear inside its bounds', () => {
+    const stops = mosaicScrim.colors.map(rgba);
+    expect(stops[0].alpha).toBeGreaterThan(0);
+    expect(stops[0].alpha).toBeLessThanOrEqual(0.55);
+    expect(stops.at(-1)!.alpha).toBe(0);
+    expect(mosaicScrim.locations[0]).toBe(0);
+    expect(mosaicScrim.locations.at(-1)).toBe(1);
+    for (let i = 1; i < stops.length; i++) {
+      expect(stops[i].alpha).toBeLessThan(stops[i - 1].alpha);
+      expect(mosaicScrim.locations[i]).toBeGreaterThan(mosaicScrim.locations[i - 1]);
+      expect(stops[i].rgb).toEqual(stops[0].rgb);
     }
-  });
-
-  it('joins the caption continuously, then leaves the rest of the image completely untouched', () => {
-    expect(rgba(mosaicScrim.fade[0])).toEqual(rgba(mosaicScrim.body[1]));
-    expect(rgba(mosaicScrim.fade[1]).alpha).toBe(0);
   });
 });

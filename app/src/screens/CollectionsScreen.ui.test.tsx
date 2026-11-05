@@ -1853,11 +1853,12 @@ describe('CollectionsScreen — Mosaic', () => {
   });
 });
 
-describe('Mosaic text-sized scrims', () => {
-  it('puts each overlay behind its own caption, fades outside it, and leaves outside captions bare', () => {
+describe('Mosaic proportional scrims', () => {
+  it('caps the whole fade at 30% for short photos and 40% for tall photos, independent of text', () => {
     state.cols.data = Array.from({ length: 12 }, (_, i) => col(`mosaic-${i}`, ['a'], {
+      title_en: `A very long collection title mosaic-${i}`,
       curator_handle: `curator${i}`,
-      desc_en: 'A longer description for the featured collection',
+      desc_en: 'A longer description for the featured collection that must not extend the gradient',
     }));
     show();
     const photos = screen.getAllByTestId(/^collection-mosaic-mosaic-/);
@@ -1870,12 +1871,16 @@ describe('Mosaic text-sized scrims', () => {
         expect(photo.querySelector('[data-stub="LinearGradient"]')).toBeNull();
       } else {
         expect(overlay!.parentElement).toBe(photo);
-        expect(within(overlay!).getByText(`List ${slug}`)).toBeTruthy();
-        expect(getComputedStyle(overlay!).height).not.toBe('100%');
-        const fade = screen.getByTestId(`collection-mosaic-fade-${slug}`);
-        expect(fade.parentElement).toBe(overlay);
-        expect(fade.getAttribute('colors')).toMatch(/,0\)$/);
+        expect(overlay!.textContent).toBe('');
+        const tall = ['mosaic-1', 'mosaic-7'].includes(slug);
+        expect(getComputedStyle(overlay!).height).toBe(tall ? '40%' : '30%');
+        expect(photo.querySelectorAll('[data-stub="LinearGradient"]')).toHaveLength(1);
+        const gradient = overlay!.querySelector('[data-stub="LinearGradient"]')!;
+        expect(gradient.getAttribute('colors')).toMatch(/,0\)$/);
+        expect(getComputedStyle(overlay!)[id.endsWith('-top') ? 'top' : 'bottom']).toBe('0px');
+        expect(within(photo).getByText(`A very long collection title ${slug}`)).toBeTruthy();
       }
     }
+    expect(screen.getAllByText('A longer description for the featured collection that must not extend the gradient').length).toBeGreaterThan(0);
   });
 });

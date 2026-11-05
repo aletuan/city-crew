@@ -493,14 +493,15 @@ export const coverScrim = {
   locations: [0, 0.5, 0.66, 1] as const,
 };
 
-/** Mosaic captions size their own backdrop, independently of the photo.
- *  Keep the whole text block above the contrast floor, then fade outside
- *  its padding to a completely untouched image. Both stops are fixed:
- *  like onPhoto ink, a photograph's readability is independent of theme. */
+/** One soft edge fade, entirely contained within the photo-height budget.
+ *  Small/wide photos use 30%; tall photos use 40%, including the clear
+ *  tail. Text length never expands the fade. This lighter treatment does
+ *  not guarantee contrast for every caption on every photograph. */
 export const mosaicScrim = {
-  body: ['rgba(10,11,10,0.78)', 'rgba(10,11,10,0.68)'] as const,
-  fade: ['rgba(10,11,10,0.68)', 'rgba(10,11,10,0)'] as const,
-  fadeHeight: 48,
+  colors: ['rgba(10,11,10,0.55)', 'rgba(10,11,10,0.42)', 'rgba(10,11,10,0.18)', 'rgba(10,11,10,0)'] as const,
+  locations: [0, 0.25, 0.65, 1] as const,
+  shortHeight: '30%' as const,
+  tallHeight: '40%' as const,
 };
 
 /** The accent as a gradient, for the rare loud surface. Left to right
