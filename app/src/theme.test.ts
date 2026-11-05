@@ -200,10 +200,9 @@ describe('coverScrim', () => {
 
 
 describe('Mosaic proportional fade', () => {
-  it('keeps the fade lighter than the old 68–78% backdrop and reaches clear inside its bounds', () => {
+  it('starts at the requested 70% opacity and reaches clear inside its bounds', () => {
     const stops = mosaicScrim.colors.map(rgba);
-    expect(stops[0].alpha).toBeGreaterThan(0);
-    expect(stops[0].alpha).toBeLessThanOrEqual(0.55);
+    expect(stops[0].alpha).toBe(0.70);
     expect(stops.at(-1)!.alpha).toBe(0);
     expect(mosaicScrim.locations[0]).toBe(0);
     expect(mosaicScrim.locations.at(-1)).toBe(1);

@@ -495,10 +495,10 @@ export const coverScrim = {
 
 /** One soft edge fade, entirely contained within the photo-height budget.
  *  Small/wide photos use 30%; tall photos use 40%, including the clear
- *  tail. Text length never expands the fade. This lighter treatment does
+ *  tail. Text length never expands the fade. This treatment does
  *  not guarantee contrast for every caption on every photograph. */
 export const mosaicScrim = {
-  colors: ['rgba(10,11,10,0.55)', 'rgba(10,11,10,0.42)', 'rgba(10,11,10,0.18)', 'rgba(10,11,10,0)'] as const,
+  colors: ['rgba(10,11,10,0.70)', 'rgba(10,11,10,0.42)', 'rgba(10,11,10,0.18)', 'rgba(10,11,10,0)'] as const,
   locations: [0, 0.25, 0.65, 1] as const,
   shortHeight: '30%' as const,
   tallHeight: '40%' as const,
