@@ -34,6 +34,7 @@ import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import { isNewList } from '../lib/newest';
+import { mosaicCaption, mosaicRows, type MosaicEntry, type MosaicRow } from '../lib/collectionMosaic';
 import NewBadge from '../components/NewBadge';
 import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
@@ -45,10 +46,11 @@ import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { accentFade, colors, coverScrim, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-type ListRow = ShelfRow<Collection>;
+type ListRow = ShelfRow<Collection> | MosaicRow<Collection>;
 
-/** The two layouts the list remembers. */
+/** Yours keeps its two layouts; Community adds the editorial Mosaic. */
 const TILE_OR_ROW = oneOf('tile', 'row');
+const COMMUNITY_VIEWS = oneOf('row', 'tile', 'mosaic');
 
 /** What `renderRightActions` hands back, and what the card animates from. */
 type Drag = ReturnType<Animated.Value['interpolate']>;
@@ -68,6 +70,7 @@ type Section = { own: boolean; data: ListRow[] };
 const ACTIONS_W = 62 * 2 + 8 + 8;
 /** Where the Yours tab's tile/list choice sleeps between launches. */
 const VIEW_KEY = 'citycrew.collections.view';
+const COMMUNITY_VIEW_KEY = 'citycrew.collections.community.view';
 /** The cover's width. Its height is whatever the text beside it comes to,
  *  which is the point: an image with a fixed height floats in a card the
  *  text has made taller, and once the description arrived it made it much
@@ -934,17 +937,9 @@ export default function CollectionsScreen({ navigation, route }: {
   // lists found by their own words first and then by hits when it is.
   const sifted = hits.map((h) => h.c);
 
-  // Both halves default to tiles — covers first, in the Explore shelf's
-  // own card language, six covers where the rows showed three — and one
-  // small switch turns both back into rows, because a shelf is browsed
-  // on some days and scanned by name on others. One preference, not one
-  // per tab: a reader who chose rows chose how they read lists, not how
-  // they read one tab. The choice is remembered. What your own tiles
-  // give up — the swipe shortcuts — the rows keep, one flick away, and
-  // the collection's own screen has in its ⋯ menu regardless.
-  //
-  // The switch rides the tabs row, though, and only a signed-in reader
-  // has one — so a guest gets tiles and no way out of them.
+  // Community explores by default; Yours keeps its management grid and
+  // its existing preference. A separate key lets either shelf remember a
+  // choice without the other tab changing it. Guests explore in Mosaic too.
   const { width: winW } = useWindowDimensions();
   const gcardW = Math.round((winW - space.page * 2 - space.cardGap) / 2);
   const gcardH = Math.round(gcardW * 1.18);
@@ -955,13 +950,15 @@ export default function CollectionsScreen({ navigation, route }: {
   // were budgeted for twenty-three. At 320 this comes out at 99, and the
   // column keeps 145.
   const coverW = Math.min(COVER, Math.round((winW - space.page * 2) * 0.36));
-  const [view, pickView] = useStored<'tile' | 'row'>(VIEW_KEY, 'tile', TILE_OR_ROW);
+  const [ownView, pickOwnView] = useStored<'tile' | 'row'>(VIEW_KEY, 'tile', TILE_OR_ROW);
+  const [communityView, pickCommunityView] = useStored<'row' | 'tile' | 'mosaic'>(COMMUNITY_VIEW_KEY, 'mosaic', COMMUNITY_VIEWS);
+  const view = onYours ? ownView : communityView;
 
   // Tiles pack two to a row-item; see `ShelfRow` for why every row-item
   // carries whose it is and where it sits in the whole list.
   const sections: Section[] = onYours
-    ? (mineReady ? [{ own: true, data: shape(sifted, true, view) }] : [])
-    : [{ own: false, data: shape(sifted, false, view) }];
+    ? (mineReady ? [{ own: true, data: shape(sifted, true, ownView) }] : [])
+    : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }];
 
   // Not while the panel is up: the box it would focus is already open.
   const dock = useDockOffer(ducked && deep && !panel && !holding, navigation);
@@ -983,31 +980,35 @@ export default function CollectionsScreen({ navigation, route }: {
         ]}
         active={tab}
         onChange={pickTab}
-        // One preference, both shelves — see `shape`.
+        // The community adds Mosaic to the existing list/grid capsule.
         right={(
           <View style={s.viewToggle}>
-            {(['row', 'tile'] as const).map((v) => (
+            {(onYours ? ['row', 'tile'] as const : ['row', 'tile', 'mosaic'] as const).map((v) => (
               <PressableScale
                 key={v}
                 contentStyle={[s.viewBtn, view === v && s.viewBtnOn]}
                 scaleTo={0.9}
                 haptic="selection"
-                // 26×22 drawn, and the two halves touch, so the slop
-                // grows each outward only: up, down, and away from its
-                // neighbour — 44×44 apiece without either stealing the
-                // other's taps. It was 38×34 at a flat 6.
+                // Keep the capsule compact; extend the outer edges and the
+                // vertical hit area without overlapping neighbouring modes.
                 hitSlop={v === 'row'
                   ? { top: 11, bottom: 11, left: 18, right: 1 }
-                  : { top: 11, bottom: 11, left: 1, right: 18 }}
-                onPress={() => pickView(v)}
+                  : { top: 11, bottom: 11, left: 1, right: v === 'mosaic' || onYours ? 18 : 1 }}
+                onPress={() => {
+                  if (onYours && v !== 'mosaic') pickOwnView(v);
+                  else pickCommunityView(v);
+                }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: view === v }}
-                accessibilityLabel={v === 'tile'
+                aria-selected={view === v}
+                accessibilityLabel={v === 'mosaic'
+                  ? t('Mosaic view', 'Dạng Mosaic', 'モザイク表示', '拼贴视图', '拼貼檢視')
+                  : v === 'tile'
                   ? t('Tile view', 'Dạng lưới', 'タイル表示', '卡片视图', '卡片檢視')
                   : t('List view', 'Dạng danh sách', 'リスト表示', '列表视图', '列表檢視')}
               >
                 <Ionicons
-                  name={v === 'tile' ? 'grid-outline' : 'list-outline'}
+                  name={v === 'mosaic' ? 'albums-outline' : v === 'tile' ? 'grid-outline' : 'list-outline'}
                   size={14}
                   color={view === v ? colors.accent : colors.textTertiary}
                 />
@@ -1162,6 +1163,56 @@ export default function CollectionsScreen({ navigation, route }: {
     </View>
   );
 
+  const mosaicCard = ({ c, at }: MosaicEntry<Collection>, width: number, height: number, featured = false) => {
+    const caption = mosaicCaption(c.slug);
+    const below = caption === 'below';
+    const uri = coverFor(c);
+    const title = t(c.title_en, c.title_vi, c.title_ja);
+    const author = c.curator_handle ? atHandle(c.curator_handle) : '';
+    const blurb = featured && !below ? t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() : '';
+    const words = (
+      <View style={[
+        s.mosaicWords,
+        below ? s.mosaicWordsBelow : caption === 'top' ? s.mosaicWordsTop : s.mosaicWordsBottom,
+        featured && !below && s.mosaicWordsFeatured,
+      ]}>
+        <Text
+          style={[s.gcardTitle, featured && s.mosaicTitleFeatured, below && s.mosaicTitleBelow]}
+          numberOfLines={2}
+        >{title}</Text>
+        {blurb ? <Text style={s.mosaicBlurb} numberOfLines={2}>{blurb}</Text> : null}
+        {author ? <Text style={[s.mosaicAuthor, below && s.mosaicAuthorBelow]} numberOfLines={1}>{author}</Text> : null}
+      </View>
+    );
+    return (
+      <PressableScale
+        key={c.slug}
+        contentStyle={[s.mosaicCard, { width, height }]}
+        onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
+        testID={`collection-card-${at}`}
+        accessibilityRole="button"
+        accessibilityLabel={`${title}${author ? `, ${author}` : ''}`}
+      >
+        <View style={s.mosaicPhoto} testID={`collection-mosaic-${c.slug}-${caption}`}>
+          {uri
+            ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            : <EmptyCover />}
+          {!below ? (
+            <LinearGradient
+              colors={coverScrim.colors}
+              locations={coverScrim.locations}
+              start={{ x: 0, y: caption === 'top' ? 1 : 0 }}
+              end={{ x: 0, y: caption === 'top' ? 0 : 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
+          {!below ? words : null}
+        </View>
+        {below ? words : null}
+      </PressableScale>
+    );
+  };
+
   return (
     // The door to a new list is the Trips screen's pill, in the header's
     // right, on both tabs for every signed-in reader. It was a dashed row at
@@ -1223,7 +1274,7 @@ export default function CollectionsScreen({ navigation, route }: {
             testID={cols.loaded && !cols.loading && !cols.fromCache && !cols.error && placesLoaded && !placesLoading ? 'collections-ready' : undefined}
             ref={scrollRef}
             sections={sections}
-            keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
+            keyExtractor={(row) => (row.kind === 'mosaic' ? `mosaic-${row.items[0].c.slug}` : row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
             onScroll={onShelfScroll}
             onScrollBeginDrag={fold}
             scrollEventThrottle={16}
@@ -1240,6 +1291,23 @@ export default function CollectionsScreen({ navigation, route }: {
               </>
             )}
             renderItem={({ item }) => {
+              if (item.kind === 'mosaic') {
+                const width = winW - space.page * 2;
+                return (
+                  <View style={s.gridRow} testID={`collection-mosaic-row-${item.layout}`}>
+                    {item.layout === 'feature'
+                      ? mosaicCard(item.items[0], width, Math.round(gcardW * 1.28), true)
+                      : item.layout === 'stack' ? (
+                        <>
+                          {mosaicCard(item.items[0], gcardW, gcardH * 2 + space.cardGap)}
+                          <View style={{ gap: space.cardGap }}>
+                            {item.items.slice(1).map((entry) => mosaicCard(entry, gcardW, gcardH))}
+                          </View>
+                        </>
+                      ) : item.items.map((entry) => mosaicCard(entry, gcardW, gcardH))}
+                  </View>
+                );
+              }
               if (item.kind === 'pair') {
                 return (
                   <View style={s.gridRow}>
@@ -1945,6 +2013,18 @@ const s = StyleSheet.create({
   },
   gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
   gcardText: { padding: 12, gap: 2 },
+  mosaicCard: { gap: 0 },
+  mosaicPhoto: { flex: 1, borderRadius: radius.image, overflow: 'hidden' },
+  mosaicWords: { gap: 6, padding: 14, left: 0, right: 0 },
+  mosaicWordsBottom: { position: 'absolute', bottom: 0 },
+  mosaicWordsTop: { position: 'absolute', top: 0 },
+  mosaicWordsBelow: { paddingHorizontal: 2, paddingTop: 11, paddingBottom: 0 },
+  mosaicWordsFeatured: { padding: 20 },
+  mosaicTitleFeatured: { ...type.titleDetail, color: onPhoto.text, lineHeight: 32 },
+  mosaicTitleBelow: { color: colors.text },
+  mosaicAuthor: { color: onPhoto.textSecondary, fontSize: 12, lineHeight: 16 },
+  mosaicAuthorBelow: { color: colors.textSecondary },
+  mosaicBlurb: { color: onPhoto.textSecondary, fontSize: 13, lineHeight: 18 },
   gcardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 19 },
   gcardBy: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.medium, flexShrink: 1 },
   // As tall as the avatar on every tile (owner, 17 Oct 2026). A
