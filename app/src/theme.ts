@@ -500,7 +500,7 @@ export const coverScrim = {
 export const mosaicScrim = {
   body: ['rgba(10,11,10,0.78)', 'rgba(10,11,10,0.68)'] as const,
   fade: ['rgba(10,11,10,0.68)', 'rgba(10,11,10,0)'] as const,
-  fadeHeight: 32,
+  fadeHeight: 48,
 };
 
 /** The accent as a gradient, for the rare loud surface. Left to right
