@@ -26,7 +26,7 @@ import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '
 import { KindToggles } from '../components/KindPill';
 import { PressableScale, successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
-import { usePlaces } from '../lib/catalog';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
 import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection, usePlacePhotos } from '../lib/data';
@@ -78,6 +78,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   const { session } = useSession();
   const { city } = useCurrentCity();
   const mine = useMyLists();
+  const cols = useCollections();
   const editing = route.params?.slug;
   const addPlaceSlug = route.params?.addPlaceSlug;
   const copyFrom = route.params?.copyFrom;
@@ -290,6 +291,14 @@ export default function CollectionFormScreen({ navigation, route }: {
         await updateCollection(editing, {
           title: name, desc, coverPhotoId: coverId, kinds: kindsChanged ? kindChoice : undefined,
         });
+        // A public list is drawn from the catalog's copy too — the
+        // Community tab, Explore's shelf, Ideas — and that copy refreshes
+        // only on a pull or a stale foreground. A new cover went unseen
+        // there until one came (owner, 5 Nov 2026). Only when public: a
+        // private list is not in that copy, and refetching the whole
+        // catalog for it would change nothing anyone sees. A copy needs
+        // none either way; it is born private.
+        if (col?.is_public) cols.reload();
       } else {
         const slug = await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
         // Reached from a place's bookmark with nowhere to put it: the list
