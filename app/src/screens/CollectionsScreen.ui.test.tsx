@@ -1950,11 +1950,33 @@ describe('the Community Mosaic, one block a city', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 120)); });
     expect(go).toHaveBeenCalledWith(expect.objectContaining({ sectionIndex: 2, itemIndex: 0 }));
     // An index inside a block, not on its heading, is not chased — not
-    // even into the next block's.
+    // even into the next block's. (A fresh jump first: the retry above
+    // has spent this one's.)
+    fireEvent.click(screen.getByRole('button', { name: 'Saigon, 4 collections' }));
+    fireEvent.click(screen.getByTestId('sheet-action-elsewhere'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 250)); });
     go.mockClear();
+    responder.scrollTo.mockClear();
     act(() => props.onScrollToIndexFailed({ index: props.sections[0].data.length + 3, averageItemLength: 100 }));
+    expect(responder.scrollTo).toHaveBeenCalledTimes(1);
     await act(async () => { await new Promise((r) => setTimeout(r, 120)); });
     expect(go).not.toHaveBeenCalled();
+    // Once. If the retry misses too, the screen stays where it scrolled to
+    // rather than chasing the block every 100 ms.
+    act(() => props.onScrollToIndexFailed({ index: headingOf2, averageItemLength: 100 }));
+    await act(async () => { await new Promise((r) => setTimeout(r, 120)); });
+    go.mockClear();
+    responder.scrollTo.mockClear();
+    act(() => props.onScrollToIndexFailed({ index: headingOf2, averageItemLength: 100 }));
+    await act(async () => { await new Promise((r) => setTimeout(r, 120)); });
+    expect(responder.scrollTo).not.toHaveBeenCalled();
+    expect(go).not.toHaveBeenCalled();
+    // A fresh jump from the sheet gets its own retry.
+    fireEvent.click(screen.getByRole('button', { name: 'Saigon, 4 collections' }));
+    fireEvent.click(screen.getByTestId('sheet-action-elsewhere'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 250)); });
+    act(() => props.onScrollToIndexFailed({ index: headingOf2, averageItemLength: 100 }));
+    expect(responder.scrollTo).toHaveBeenCalledTimes(1);
   });
 
   // The heading rides under the pinned tabs once its own has gone up past
@@ -1996,6 +2018,54 @@ describe('the Community Mosaic, one block a city', () => {
     // And from the bar, the sheet marks the block you are in.
     fireEvent.click(screen.getByTestId('collections-city-bar'));
     expect(screen.getByTestId('sheet-action-hanoi').getAttribute('aria-selected')).toBe('true');
+  });
+
+  // The freeze it shipped with (6 Nov 2026), on the path that froze: the
+  // list's own conversion of what is in view, which hands the extractor a
+  // section for a heading or footer token. jsdom never makes the list
+  // report, so the report is made here, through the list itself.
+  it('keys a heading the list reports as in view, so the report reaches the screen', () => {
+    seed();
+    show({ tab: 'community' });
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; stateNode: unknown };
+    type SectionListInstance = {
+      _onViewableItemsChanged: (i: { viewableItems: unknown[]; changed: unknown[] }) => void;
+    };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const stack: Fiber[] = [host[Object.keys(host).find((k) => k.startsWith('__reactContainer'))!].stateNode.current];
+    let list: SectionListInstance | undefined;
+    while (stack.length && !list) {
+      const f = stack.pop()!;
+      const node = f.stateNode as Partial<SectionListInstance> & { _convertViewable?: unknown } | null;
+      if (node && typeof node === 'object' && typeof node._convertViewable === 'function') list = node as SectionListInstance;
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    expect(list).toBeTruthy();
+    const { sections } = listProps() as unknown as { sections: { data: unknown[]; city?: { id: string | null } }[] };
+    const [hanoi, saigon] = sections;
+    // Flat indices, as the list counts: a heading, the rows, a footer, per
+    // section. Hanoi's heading and first row, then Saigon's second row
+    // with its heading gone.
+    const saigonRow = hanoi.data.length + 2 + 1 + 1;
+    const token = (index: number, item: unknown) => ({ index, item, key: String(index), isViewable: true });
+    type Layout = { __reactLayoutHandler: (e: unknown) => void };
+    act(() => {
+      (screen.getByTestId('collections-tabs') as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 44 } } });
+    });
+    act(() => (listProps() as unknown as { onScroll: (e: unknown) => void }).onScroll({ nativeEvent: {
+      contentOffset: { x: 0, y: 900 }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+    } }));
+    expect(() => act(() => list!._onViewableItemsChanged({
+      viewableItems: [token(0, hanoi), token(1, hanoi.data[0])],
+      changed: [token(0, hanoi)],
+    }))).not.toThrow();
+    expect(screen.queryByTestId('collections-city-bar')).toBeNull();
+    act(() => list!._onViewableItemsChanged({
+      viewableItems: [token(saigonRow, saigon.data[1])],
+      changed: [token(0, hanoi), token(saigonRow, saigon.data[1])],
+    }));
+    expect(screen.getByTestId('collections-city-bar').textContent).toBe('Saigon4 collections');
   });
 
   // The freeze it shipped with (6 Nov 2026): a list handed new `data`

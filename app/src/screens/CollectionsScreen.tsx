@@ -65,6 +65,28 @@ type RowA11y = Pick<ViewProps, 'accessibilityActions' | 'onAccessibilityAction'>
  *  rows are named here, not only by the list: React Native 0.88 types a
  *  section handed back to a render prop as possibly the extra fields alone. */
 type Section = { own: boolean; data: ListRow[]; city?: { id: string | null; count: number } };
+
+/**
+ * A row's key — and a section's, because the list asks for both.
+ *
+ * With `onViewableItemsChanged` set, React Native's VirtualizedSectionList
+ * runs every token it reports through `_convertViewable`, which calls this
+ * extractor on the token's item. For a section's heading or footer that
+ * item is the section itself, not a row (`_getItem` returns the section
+ * for those two indices). The first build read `row.c.slug` on it and
+ * threw on the list's first report — the heading of the first block is
+ * always in view — and the app froze on opening this tab, the tab bar
+ * included (6 Nov 2026). Measured on the simulator with flow 21: red on
+ * every build carrying the city tracker, green with only this guard
+ * added, its log showing the throw "on a section" and never on a row.
+ * vitest never saw it: jsdom has no layout, so the list never reports.
+ */
+const rowKey = (row: ListRow | Section): string => {
+  // What the key says does not matter — the list keys its own cells; this
+  // one only labels the token handed back — only that it is a string.
+  if ('data' in row) return `section:${row.city?.id}`;
+  return row.kind === 'mosaic' ? `mosaic-${row.items[0].c.slug}` : row.kind === 'pair' ? row.pair[0].slug : row.c.slug;
+};
 /** What the list says is on screen — `onSeen` reads the city from it. */
 type Seen = Parameters<NonNullable<SectionListProps<ListRow, Section>['onViewableItemsChanged']>>[0];
 
@@ -1015,24 +1037,24 @@ export default function CollectionsScreen({ navigation, route }: {
   //
   // ── the freeze it shipped with (6 Nov 2026) ──
   //
-  // The first build kept the section's own city object in state, and the
-  // sections were a new array every render. A virtualized list that is
-  // handed new `data` forgets what it last reported in view and reports
-  // it again (`resetViewableIndices`, VirtualizedList's componentDidUpdate),
-  // so: report → a new object into state → a render → new sections → a
-  // fresh report → … for as long as a block's heading was out of view. The
-  // JS thread never rested, and the app froze — the tab bar included —
-  // within a scroll of opening this tab (owner, 6 Nov 2026). Two guards,
-  // either of which breaks the loop alone: the state is the city's key, a
-  // string, which React drops when it is unchanged; and the sections are
-  // memoised, so a render the list did not cause hands it the same data.
+  // The state is the city's key, a string, which React drops when it is
+  // unchanged, and the sections are memoised, so a render the list did not
+  // cause hands it the same data: a list given new `data` reports what is
+  // in view again (`resetViewableIndices`), and an object in state would
+  // turn every report into a render. These were the first guess at the
+  // 6 Nov freeze and did not cure it — the cause was `rowKey`'s, above —
+  // but they keep the report from costing a render it does not need.
   const onSeen = useRef(({ viewableItems }: Seen) => {
     const sectionOf = (v: Seen['viewableItems'][number]) => v.section as Section | undefined;
     const row = viewableItems.find((v) => v.index != null && sectionOf(v)?.city);
     const heading = row && viewableItems.find((v) => v.index == null && v.section === row.section);
     setAtKey(row && !heading ? (sectionOf(row)!.city!.id ?? '') : null);
   }).current;
-  const jumpTo = (sectionIndex: number) => {
+  // One retry per jump, never a chase: a block the list still cannot
+  // reach after it has scrolled near it stays where the scroll left it.
+  const jumpRetried = useRef(false);
+  const jumpTo = (sectionIndex: number, again = false) => {
+    jumpRetried.current = again;
     setJumpOpen(false);
     scrollRef.current?.scrollToLocation({
       sectionIndex, itemIndex: 0, viewOffset: pinned ? tabsHRef.current : 0, animated: true,
@@ -1406,7 +1428,7 @@ export default function CollectionsScreen({ navigation, route }: {
             testID={cols.loaded && !cols.loading && !cols.fromCache && !cols.error && placesLoaded && !placesLoading ? 'collections-ready' : undefined}
             ref={scrollRef}
             sections={sections}
-            keyExtractor={(row) => (row.kind === 'mosaic' ? `mosaic-${row.items[0].c.slug}` : row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
+            keyExtractor={rowKey}
             onScroll={onShelfScroll}
             onScrollBeginDrag={fold}
             scrollEventThrottle={16}
@@ -2026,10 +2048,11 @@ export default function CollectionsScreen({ navigation, route }: {
             // A jump to a block not yet drawn: go near it on the average
             // row, which draws it, then land on its heading.
             onScrollToIndexFailed={(info) => {
+              if (jumpRetried.current) return;
               scrollRef.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
               setTimeout(() => {
                 const sectionIndex = sections.findIndex((x, i) => sections.slice(0, i).reduce((n, y) => n + y.data.length + 2, 0) === info.index);
-                if (sectionIndex >= 0) jumpTo(sectionIndex);
+                if (sectionIndex >= 0) jumpTo(sectionIndex, true);
               }, 100);
             }}
             renderSectionFooter={({ section }) => {
