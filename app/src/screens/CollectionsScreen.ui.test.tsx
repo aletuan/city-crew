@@ -1896,15 +1896,95 @@ describe('the Community Mosaic, one block a city', () => {
   it('heads each city with its name and count, the reader’s city first, the small ones together last', () => {
     seed();
     show({ tab: 'community' });
-    expect(heads()).toEqual(['Hanoi3', 'Saigon4', 'Elsewhere2']);
+    expect(heads()).toEqual(['Hanoi3 collections', 'Saigon4 collections', 'Elsewhere2 collections']);
     // The block is the city's: liked list first, then arrival order.
     // The list draws its first ten items (rows and headings alike) on
     // mount; the last pair of "elsewhere" is past them.
     expect(order()).toEqual(['List n1', 'List n2', 'List n3', 'List s3', 'List s1', 'List s2', 'List s4', 'List h1']);
     expect(screen.getAllByTestId(/^collection-card-/).map((c) => c.dataset.testid))
       .toEqual(Array.from({ length: 8 }, (_, i) => `collection-card-${i}`));
-    const head = screen.getByTestId('collection-mosaic-city-hanoi');
-    expect(head.getAttribute('role')).toBe('heading');
+  });
+
+  // Six blocks, the first sixteen long (owner, 6 Nov 2026): either heading
+  // opens the cities, and a city takes the reader to its block.
+  it('opens the cities from a heading, says where you are, and jumps to the one chosen', async () => {
+    seed();
+    show({ tab: 'community' });
+    const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as unknown as { current: { scrollToLocation: (p: unknown) => void } };
+    const go = vi.spyOn(ref.current, 'scrollToLocation').mockImplementation(() => {});
+    const head = screen.getByRole('button', { name: 'Saigon, 4 collections' });
+    fireEvent.click(head);
+    expect(screen.getByText('Go to a city')).toBeTruthy();
+    const rows = ['hanoi', 'hcmc', 'elsewhere'].map((k) => screen.getByTestId(`sheet-action-${k}`));
+    expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual(['Hanoi', 'Saigon', 'Elsewhere']);
+    // Nothing scrolled yet: the first block is the one in view.
+    expect(rows.map((r) => r.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
+    fireEvent.click(rows[2]);
+    // The sheet goes first; the jump follows it (`SheetRows`).
+    await act(async () => { await new Promise((r) => setTimeout(r, 250)); });
+    expect(go).toHaveBeenCalledWith(expect.objectContaining({ sectionIndex: 2, itemIndex: 0 }));
+
+    // A block not drawn yet: the list says so, the screen scrolls near it
+    // on the average row and tries its heading again.
+    go.mockClear();
+    const responder = { scrollTo: vi.fn() };
+    vi.spyOn(ref.current as unknown as { getScrollResponder: () => unknown }, 'getScrollResponder').mockReturnValue(responder);
+    const props = listProps() as unknown as {
+      sections: { data: unknown[] }[];
+      onScrollToIndexFailed: (i: { index: number; averageItemLength: number }) => void;
+    };
+    const headingOf2 = props.sections.slice(0, 2).reduce((n, x) => n + x.data.length + 2, 0);
+    act(() => props.onScrollToIndexFailed({ index: headingOf2, averageItemLength: 100 }));
+    expect(responder.scrollTo).toHaveBeenCalledWith({ y: 100 * headingOf2, animated: false });
+    await act(async () => { await new Promise((r) => setTimeout(r, 120)); });
+    expect(go).toHaveBeenCalledWith(expect.objectContaining({ sectionIndex: 2, itemIndex: 0 }));
+    // An index inside a block, not on its heading, is not chased — not
+    // even into the next block's.
+    go.mockClear();
+    act(() => props.onScrollToIndexFailed({ index: props.sections[0].data.length + 3, averageItemLength: 100 }));
+    await act(async () => { await new Promise((r) => setTimeout(r, 120)); });
+    expect(go).not.toHaveBeenCalled();
+  });
+
+  // The heading rides under the pinned tabs once its own has gone up past
+  // them — never both at once, so the name is not printed twice.
+  it('pins the block’s heading under the tabs once its own is out of view', () => {
+    seed();
+    show({ tab: 'community' });
+    type Layout = { __reactLayoutHandler: (e: unknown) => void };
+    act(() => {
+      (screen.getByTestId('collections-tabs') as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 44 } } });
+    });
+    const props = listProps() as unknown as {
+      sections: { city?: { id: string | null } }[];
+      onScroll: (e: unknown) => void;
+      onViewableItemsChanged: (i: { viewableItems: { index: number | null; section: unknown }[] }) => void;
+    };
+    act(() => props.onScroll({ nativeEvent: {
+      contentOffset: { x: 0, y: 900 }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+    } }));
+    const [hanoi, saigon] = props.sections;
+    // Saigon's heading at the top of the screen, above its rows: no
+    // pinned copy, or the name would be printed twice.
+    act(() => props.onViewableItemsChanged({ viewableItems: [
+      { index: null, section: saigon }, { index: 0, section: saigon },
+    ] }));
+    expect(screen.queryByTestId('collections-city-bar')).toBeNull();
+    // Its heading gone up: the rows under the tabs are Saigon's, and say so.
+    act(() => props.onViewableItemsChanged({ viewableItems: [
+      { index: 0, section: saigon }, { index: 1, section: saigon },
+    ] }));
+    const bar = within(screen.getByTestId('collections-pinned')).getByTestId('collections-city-bar');
+    expect(bar.textContent).toBe('Saigon4 collections');
+    // The next block's heading further down does not count: the rows at
+    // the top are Hanoi's, whose heading has gone.
+    act(() => props.onViewableItemsChanged({ viewableItems: [
+      { index: 1, section: hanoi }, { index: null, section: saigon },
+    ] }));
+    expect(within(screen.getByTestId('collections-pinned')).getByTestId('collections-city-bar').textContent).toBe('Hanoi3 collections');
+    // And from the bar, the sheet marks the block you are in.
+    fireEvent.click(screen.getByTestId('collections-city-bar'));
+    expect(screen.getByTestId('sheet-action-hanoi').getAttribute('aria-selected')).toBe('true');
   });
 
   it('is one shelf again, in the answer’s order, once anything is asked', () => {
