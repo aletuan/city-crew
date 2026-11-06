@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AmbientWarmth, Avatar, Card, CHIP_H, Empty, fireHaptic, GradientCta, PressableScale, Screen,
-  ScreenTitle, Skeleton, UnderlineTabs, useTabBarClearance,
+  ScreenTitle, Skeleton, TABS_ROW_GAP, UnderlineTabs, useTabBarClearance,
 } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
@@ -66,7 +66,7 @@ type RowA11y = Pick<ViewProps, 'accessibilityActions' | 'onAccessibilityAction'>
  *  section handed back to a render prop as possibly the extra fields alone. */
 type Section = { own: boolean; data: ListRow[]; city?: { id: string | null; count: number } };
 
-/** Under the search box; the first city heading takes it off its own top. */
+/** Under the search box; the first block's gap takes it off its own. */
 const SEARCH_ROW_GAP = 14;
 
 /**
@@ -1047,10 +1047,17 @@ export default function CollectionsScreen({ navigation, route }: {
   // turn every report into a render. These were the first guess at the
   // 6 Nov freeze and did not cure it — the cause was `rowKey`'s, above —
   // but they keep the report from costing a render it does not need.
+  //
+  // The first block draws no heading of its own (see `renderSectionHeader`),
+  // so its slot in view says nothing: its rows count as the first city's
+  // from the top, and the pinned bar names it as soon as the tabs pin.
+  const firstSection = useRef<Section | undefined>(undefined);
+  firstSection.current = sections[0];
   const onSeen = useRef(({ viewableItems }: Seen) => {
     const sectionOf = (v: Seen['viewableItems'][number]) => v.section as Section | undefined;
     const row = viewableItems.find((v) => v.index != null && sectionOf(v)?.city);
-    const heading = row && viewableItems.find((v) => v.index == null && v.section === row.section);
+    const heading = row && row.section !== firstSection.current
+      && viewableItems.find((v) => v.index == null && v.section === row.section);
     setAtKey(row && !heading ? (sectionOf(row)!.city!.id ?? '') : null);
   }).current;
   // One retry per jump, never a chase: a block the list still cannot
@@ -1074,10 +1081,14 @@ export default function CollectionsScreen({ navigation, route }: {
     selected: atCity ? atCity.id === g.city : i === 0,
     onPress: () => jumpTo(i),
   }));
-  const cityHead = (city: { id: string | null; count: number }, pinnedCopy: boolean, first = false) => (
+  const cityHead = (city: { id: string | null; count: number }, pinnedCopy: boolean) => (
     <PressableScale
       onPress={() => setJumpOpen(true)}
-      contentStyle={pinnedCopy ? s.cityBar : first ? [s.cityHead, s.cityHeadFirst] : s.cityHead}
+      contentStyle={pinnedCopy ? [s.cityBar, !session && s.cityBarAlone] : s.cityHead}
+      // Under the tabs the bar takes their 14 below for its reach up, so
+      // the target is 14 + the line + 12 — past 44 — with nothing of the
+      // tabs' own under it.
+      hitSlop={pinnedCopy && session ? { top: TABS_ROW_GAP } : undefined}
       testID={pinnedCopy ? 'collections-city-bar' : `collection-mosaic-city-${city.id ?? 'elsewhere'}`}
       accessibilityRole="button"
       accessibilityLabel={`${cityWord(city.id)}, ${listsWord(city.count, t)}`}
@@ -2046,7 +2057,9 @@ export default function CollectionsScreen({ navigation, route }: {
               );
             }}
             stickySectionHeadersEnabled={false}
-            renderSectionHeader={({ section }) => (section.city ? cityHead(section.city, false, section === sections[0]) : null)}
+            renderSectionHeader={({ section }) => (!section.city ? null : section === sections[0]
+              ? <View style={s.firstGap} testID="collections-first-gap" />
+              : cityHead(section.city, false))}
             onViewableItemsChanged={onSeen}
             // A jump to a block not yet drawn: go near it on the average
             // row, which draws it, then land on its heading.
@@ -2183,14 +2196,13 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'baseline', gap: 8,
     paddingHorizontal: space.page, paddingTop: space.titleToContent, paddingBottom: space.headingToContent,
   },
-  // The first block's heading sits under the search box, whose own 14
-  // already parts them: the 24 above every heading — there to part a city
-  // from the block before it — doubled up, and "Hà Nội" floated 43pt under
-  // the box but 20pt over its own cards (owner, 6 Nov 2026). The two add
-  // to `titleToContent`, the gap under a screen's head everywhere else.
-  // A guest has the sign-in notice between them (its own 24 below), and
-  // gets 34: that card wants parting from the lists anyway.
-  cityHeadFirst: { paddingTop: space.titleToContent - SEARCH_ROW_GAP },
+  // The first block has no heading at rest (owner, 7 Nov 2026): the city
+  // is named once the list moves, by the bar under the pinned tabs. What
+  // stands in its slot is the gap — the search box's 14 and this make
+  // `titleToContent`, the gap under a screen's head everywhere else (6 Nov:
+  // with the heading, "Hà Nội" had floated 43pt under the box). Later
+  // blocks keep their headings: those are where one city ends.
+  firstGap: { height: space.titleToContent - SEARCH_ROW_GAP },
   cityHeadName: { ...type.section, color: colors.text, flexShrink: 1 },
   // The ▾ says the name opens something: the list of cities to jump to.
   cityHeadChevron: { alignSelf: 'center', marginLeft: -4 },
@@ -2199,12 +2211,20 @@ const s = StyleSheet.create({
   cityHeadCount: { fontSize: 15, fontWeight: font.medium, color: colors.textTertiary },
   // The same heading, pinned under the tabs: a step smaller so the row it
   // rides under stays the bigger thing, the count pushed to the far edge
-  // as the reference drew it, and a 44pt row to tap.
+  // as the reference drew it.
+  //
+  // Close under the tabs (owner, 7 Nov 2026): it sat ~29pt below their
+  // underline — the tabs' own 14, a hairline, then the name centred in a
+  // 44pt row. Now the tabs' 14 is the whole gap, the same the tabs leave
+  // above the search box at rest; the hairline went, the underline and
+  // the bar's ground part them already. The target stays past 44 through
+  // `hitSlop` (see `cityHead`).
   cityBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44,
-    paddingHorizontal: space.page,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: space.page, paddingBottom: 12,
   },
+  // A guest's pinned row is the bar alone, at the top of the screen.
+  cityBarAlone: { paddingTop: 12 },
   cityBarName: { ...type.cardTitle, color: colors.text, flexShrink: 1 },
   cityBarCount: { marginLeft: 'auto', fontSize: 13 },
   jumpTitle: { color: colors.text, ...type.cardTitle },

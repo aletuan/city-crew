@@ -311,6 +311,10 @@ export function TileGrid({ cols, gap = 8, rowGap = gap, children }: {
  * new. Zero draws nothing here too: "Friends (0)" states an absence
  * twice. A tab carries one kind or the other, not both.
  */
+/** What the tabs leave under themselves. A screen that hangs a row just
+ *  below them (Collections' pinned city bar) reaches up into it. */
+export const TABS_ROW_GAP = 14;
+
 export function UnderlineTabs<K extends string>({ tabs, active, onChange, right }: {
   tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number; tally?: number; testID?: string }[];
   active: K;
@@ -771,7 +775,7 @@ const s = StyleSheet.create({
   chipCount: { color: colors.textTertiary, fontWeight: font.regular },
   tabsRow: {
     flexDirection: 'row', alignItems: 'center', gap: 26,
-    marginHorizontal: space.page, marginBottom: 14,
+    marginHorizontal: space.page, marginBottom: TABS_ROW_GAP,
   },
   tabsRowNarrow: { gap: 18 },
   tabItem: {
