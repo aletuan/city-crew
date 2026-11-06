@@ -42,6 +42,9 @@ const state = vi.hoisted(() => ({
   mine: { data: [] as unknown[], loaded: true, loading: false },
   likes: {} as Record<string, number>,
   myLikes: [] as string[],
+  // How many times the screen has rendered: the catalog hook runs once a
+  // render. Read by the freeze test below.
+  renders: 0,
 }));
 const spies = vi.hoisted(() => ({
   colsReload: vi.fn(),
@@ -54,8 +57,12 @@ const spies = vi.hoisted(() => ({
   swipeClose: vi.fn(),
 }));
 
+// One `t` for every render, as the real provider's memoised value gives:
+// a new one each render would rebuild everything keyed on it, which the
+// app never does and the freeze test below must not be fooled by.
+const i18n = vi.hoisted(() => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }));
 vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+  useI18n: () => i18n,
 }));
 vi.mock('../lib/auth', () => {
   const m = {
@@ -75,7 +82,7 @@ vi.mock('../lib/city', () => {
   return { ...m, useCurrentCity: all, useCityList: all };
 });
 vi.mock('../lib/catalog', () => ({
-  useCollections: () => ({ ...state.cols, reload: spies.colsReload }),
+  useCollections: () => { state.renders += 1; return { ...state.cols, reload: spies.colsReload }; },
   useLikes: () => ({ likes: state.likes, rankLikes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
   usePlaces: () => ({ data: state.places, loading: state.placesLoading, loaded: state.placesLoaded, reload: spies.placesReload }),
 }));
@@ -1985,6 +1992,37 @@ describe('the Community Mosaic, one block a city', () => {
     // And from the bar, the sheet marks the block you are in.
     fireEvent.click(screen.getByTestId('collections-city-bar'));
     expect(screen.getByTestId('sheet-action-hanoi').getAttribute('aria-selected')).toBe('true');
+  });
+
+  // The freeze it shipped with (6 Nov 2026): a list handed new `data`
+  // reports what is in view again, and a report that changed state made a
+  // render that made new data — round and round, the JS thread never free.
+  it('settles after the list reports what is in view, instead of rendering for ever', () => {
+    seed();
+    show({ tab: 'community' });
+    const props = () => listProps() as unknown as {
+      sections: { city?: { id: string | null; count: number } }[];
+      onViewableItemsChanged: (i: { viewableItems: { index: number | null; section: unknown }[] }) => void;
+    };
+    const before = props().sections;
+    const saigon = before[1];
+    // As the list would report it after any render: a copy of the section,
+    // its city a new object with the same city in it.
+    const report = () => props().onViewableItemsChanged({ viewableItems: [
+      { index: 0, section: { ...saigon, city: { ...saigon.city! } } },
+    ] });
+    act(report);
+    // One render for the change of block, and the list keeps its data: the
+    // same array, so it has nothing to report again.
+    expect(props().sections).toBe(before);
+    // Reported again with the same block: React may render once more on
+    // its way to dropping an unchanged state, never more than that.
+    act(report);
+    const settled = state.renders;
+    act(report);
+    act(report);
+    act(report);
+    expect(state.renders).toBe(settled);
   });
 
   it('is one shelf again, in the answer’s order, once anything is asked', () => {
