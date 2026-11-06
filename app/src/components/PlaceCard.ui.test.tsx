@@ -529,6 +529,23 @@ describe('the card without a frame', () => {
     expect(getComputedStyle(kind.children[1]).color.replace(/\s/g, '')).toBe(ink(colors.textSecondary));
   });
 
+  // Beside the district, not at the far edge (owner, 6 Nov 2026): the
+  // district cluster no longer stretches, so the kind follows it, and the
+  // district is still the one that gives way.
+  it('sets the kind right after the district, the district still the one that shrinks', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['cafes', 'views'], neighborhood_en: 'Hong Ha' })} />);
+    const district = screen.getByTestId('c-district');
+    const cluster = getComputedStyle(district.parentElement!);
+    expect(cluster.flexGrow).not.toBe('1');
+    expect(cluster.flexShrink).toBe('1');
+    expect(getComputedStyle(district.parentElement!.parentElement!).columnGap || getComputedStyle(district.parentElement!.parentElement!).gap).toContain('14px');
+    // In reading order: the district, then the kind with its dot and count.
+    const kind = screen.getByTestId('c-kind');
+    expect(district.compareDocumentPosition(kind) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(kind.textContent).toBe('Cafés+1');
+    expect(getComputedStyle(kind).flexShrink).toBe('0');
+  });
+
   // Only the card lost its pill: the place page and a list's chips still
   // draw one, fill, rule and all.
   it('leaves the pill whole everywhere else', () => {

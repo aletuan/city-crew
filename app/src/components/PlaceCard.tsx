@@ -671,8 +671,19 @@ const s = StyleSheet.create({
   // 16.9. Two ways of measuring the difference — ink to ink, and baseline
   // to baseline — both land between 7 and 8, and 8 is the one this file
   // already owns.
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
-  whereRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  //
+  // ── the kind beside the district, not at the far edge (owner, 6 Nov
+  // 2026) ──
+  //
+  // With the frame gone the kind sat alone at the right margin, a word
+  // floating a card's width from the line it belongs to. It follows the
+  // district now, 14pt after it — wider than the 4 between the pin and
+  // the district, so "Hồng Hà" and "● Cà phê" read as two facts and not
+  // one name. The district still takes the ellipsis and the kind is
+  // still drawn whole: the cluster only stopped stretching (`flexShrink`,
+  // not `flex: 1`), so a long district gives way exactly as before.
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
+  whereRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
   // The district shrinks and takes the ellipsis; nothing else on the
