@@ -44,8 +44,11 @@ import { PressableScale } from './ui';
  * out. A key the table has not learned keeps its word, tidied, and has
  * no dot: a colour is a category's, and an unknown one has none to give.
  */
-export function KindPill({ kind, more = 0, chosen = false, off = false, testID }: {
+export function KindPill({ kind, more = 0, chosen = false, off = false, bare = false, testID }: {
   kind: string; more?: number;
+  /** The place card's form (owner, 6 Nov 2026): the dot and the word on
+   *  the page itself, with no pill under them — see `bare` below. */
+  bare?: boolean;
   /** Lit as a chosen filter — see `KindPills`. */
   chosen?: boolean;
   /** Hidden by the list's owner — see `KindToggles`. */
@@ -55,12 +58,12 @@ export function KindPill({ kind, more = 0, chosen = false, off = false, testID }
   const { t } = useI18n();
   const style = CATEGORIES[kind];
   return (
-    <View style={[s.pill, chosen && s.pillOn, off && s.pillOff]} testID={testID}>
+    <View style={[bare ? s.bare : s.pill, chosen && s.pillOn, off && s.pillOff]} testID={testID}>
       {style ? <View style={[s.dot, { backgroundColor: off ? colors.textTertiary : style.color }]} /> : null}
-      <Text style={[s.label, chosen && s.labelOn]} numberOfLines={1}>{categoryLabel(kind, t)}</Text>
+      <Text style={[s.label, bare && s.labelBare, chosen && s.labelOn]} numberOfLines={1}>{categoryLabel(kind, t)}</Text>
       {more > 0 ? (
         <>
-          <View style={s.sep} />
+          {bare ? null : <View style={s.sep} />}
           <Text style={s.more}>{`+${more}`}</Text>
         </>
       ) : null}
@@ -183,6 +186,15 @@ const s = StyleSheet.create({
   // found heavy beside Explore's quiet one (15 Oct 2026). The step is
   // from the pill's own resting glass, as `Chip`'s is from its clear one,
   // so the change is the same size on both.
+  // Bare (owner, 6 Nov 2026): the place card lost its frame, its words
+  // now sit on the page, and a filled pill was the one box left among
+  // them. The dot stays — it is what ties a card to its pin (see the top
+  // of this file); the fill and the rule before the count go, since with
+  // no fill there is nothing for the rule to divide. The word steps down
+  // to the secondary ink, medium: on the page it sits beside the grey
+  // district as its equal, not as a label shouting over it.
+  bare: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  labelBare: { color: colors.textSecondary, fontWeight: font.medium },
   pillOn: { backgroundColor: colors.surfaceGlassStrong, borderColor: colors.borderGlass },
   // Hidden, in the form: faded whole rather than struck through — a
   // strike on a 13pt word in a 25pt pill reads as a rendering fault.

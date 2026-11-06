@@ -147,6 +147,7 @@ type CardProps = {
   chip?: string | null;
   onLongPress?: (e: { nativeEvent: { pageX?: number; pageY: number } }) => void;
   delayLongPress?: number;
+  raised?: boolean;
   onPressOut?: () => void;
   accessibilityHint?: string;
   accessibilityActions?: { name: string; label: string }[];
@@ -1102,6 +1103,9 @@ describe('reordering', () => {
     expect(el('museum').style.transform).toBe('translateY(-320px)');
     expect(getComputedStyle(el('pho').parentElement!).zIndex).toBe('10');
     expect(getComputedStyle(el('cafe').parentElement!).zIndex).not.toBe('10');
+    // The card has no frame of its own (6 Nov 2026): the one in the finger
+    // takes a ground, so its words are not drawn over the cards it crosses.
+    expect([card('pho').raised, card('cafe').raised, card('museum').raised]).toEqual([true, false, false]);
     move(170);
     expect(el('cafe').style.transform).toBe('translateY(-320px)');
     expect(el('museum').style.transform).toBe('');
@@ -1109,6 +1113,7 @@ describe('reordering', () => {
     for (const slug of ['pho', 'cafe', 'museum']) {
       expect(el(slug).style.transform).toBe('');
       expect(getComputedStyle(el(slug).parentElement!).zIndex).not.toBe('10');
+      expect(card(slug).raised).toBe(false);
     }
     expect(getComputedStyle(scroller()).overflowY).not.toBe('hidden');
   });

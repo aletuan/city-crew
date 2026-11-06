@@ -42,6 +42,8 @@ vi.mock('../lib/save', () => {
 import PlaceCard from './PlaceCard';
 import { CATEGORIES } from '../lib/categories';
 import { appFlags } from '../lib/flags';
+import { colors, radius } from '../theme';
+import { KindPill } from './KindPill';
 
 const place = (over: Partial<Place> = {}): Place => ({
   slug: 'cong-caphe',
@@ -479,6 +481,64 @@ describe('the hour', () => {
 // What is asserted is what a reader sees — the word, the dot's colour and
 // whether a number appears beside it — not the layout, which
 // `react-native-web` does not simulate.
+// The frame came off (owner, 6 Nov 2026): the photograph rounds on its
+// own and the words sit on the page, flush with its margin.
+describe('the card without a frame', () => {
+  const css = (id: string) => getComputedStyle(screen.getByTestId(id));
+  /** A colour as the DOM reports it, spaces out, for a token in any form. */
+  const ink = (c: unknown) => {
+    const probe = document.createElement('i');
+    probe.style.color = String(c);
+    return probe.style.color.replace(/\s/g, '');
+  };
+
+  it('draws no box round the card, rounds the photograph itself, and spaces the cards apart', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['cafes'] })} />);
+    const card = css('c-card');
+    expect(['', 'rgba(0,0,0,0)', 'transparent']).toContain(card.backgroundColor.replace(/\s/g, ''));
+    expect(['', '0px']).toContain(card.borderTopWidth);
+    expect(card.marginBottom).toBe('28px');
+    const frame = css('c-frame');
+    expect(frame.borderTopLeftRadius).toBe(`${radius.card}px`);
+    expect(frame.overflowX ?? frame.overflow).toBe('hidden');
+    const body = css('c-body');
+    expect(['', '0px']).toContain(body.paddingLeft);
+    expect(body.paddingTop).toBe('10px');
+  });
+
+  // Held in a collection's drag it travels over its neighbours; without a
+  // ground its words would be drawn over theirs.
+  it('takes a ground while it is held, without moving by a point', () => {
+    render(<PlaceCard testID="c" raised onPress={() => {}} place={place({ categories: ['cafes'] })} />);
+    const card = css('c-card');
+    expect(card.backgroundColor.replace(/\s/g, '')).toBe(ink(colors.surfaceCard));
+    const px = (v: string) => Number(v.replace('px', '') || 0);
+    expect(px(card.marginLeft) + px(card.paddingLeft)).toBe(22);
+    expect(px(card.marginTop) + px(card.paddingTop)).toBe(0);
+    expect(px(card.marginBottom) + px(card.paddingBottom)).toBe(28);
+  });
+
+  it('names the kind as a dot and a word on the page, with no pill under it', () => {
+    render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['views', 'cafes'] })} />);
+    const kind = screen.getByTestId('c-kind');
+    expect(['', 'rgba(0,0,0,0)', 'transparent']).toContain(getComputedStyle(kind).backgroundColor.replace(/\s/g, ''));
+    expect(['', '0px']).toContain(getComputedStyle(kind).paddingLeft);
+    // The dot, the word, the count — no rule between the last two.
+    expect(kind.children).toHaveLength(3);
+    expect(kind.textContent).toBe('Cafés+1');
+    expect(getComputedStyle(kind.children[1]).color.replace(/\s/g, '')).toBe(ink(colors.textSecondary));
+  });
+
+  // Only the card lost its pill: the place page and a list's chips still
+  // draw one, fill, rule and all.
+  it('leaves the pill whole everywhere else', () => {
+    render(<KindPill kind="cafes" more={1} testID="k" />);
+    const pill = screen.getByTestId('k');
+    expect(getComputedStyle(pill).backgroundColor.replace(/\s/g, '')).toBe(ink(colors.surfaceGlass));
+    expect(pill.children).toHaveLength(4);
+  });
+});
+
 describe('the kind pill', () => {
   const pill = () => screen.getByTestId('c-kind');
   const dot = () => pill().firstElementChild as HTMLElement;

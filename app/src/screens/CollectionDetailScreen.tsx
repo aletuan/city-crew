@@ -249,6 +249,7 @@ const DraggableCard = memo(function DraggableCard({
   onPitch: (slug: string, pitch: number) => void;
 }) {
   const { t } = useI18n();
+  const raised = useContext(LiftedCard) === index;
   return (
     <Animated.View
       onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height)}
@@ -259,6 +260,7 @@ const DraggableCard = memo(function DraggableCard({
         place={place}
         onPress={() => onOpen(place.slug)}
         testID={`collection-place-${index}`}
+        raised={raised}
         onLongPress={(e) => onLift(index, e.nativeEvent.pageY)}
         delayLongPress={LIFT_AFTER_MS}
         onPressOut={onRelease}
