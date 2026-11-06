@@ -533,8 +533,10 @@ export default function CollectionsScreen({ navigation, route }: {
   const [pinned, setPinned] = useState(false);
   const [headerExpanded, setHeaderExpanded] = useState(false);
   // The city block under the pinned row, once its own heading has gone
-  // under the row (see `onSeen`); null while a heading is in view.
-  const [atCity, setAtCity] = useState<{ id: string | null; count: number } | null>(null);
+  // under the row (see `onSeen`); null while a heading is in view. Its key
+  // only — the city's id, '' for "elsewhere" — never the section's object:
+  // see the freeze noted at `onSeen`.
+  const [atKey, setAtKey] = useState<string | null>(null);
   const [jumpOpen, setJumpOpen] = useState(false);
   // How tall the pinned tabs are, so a jump lands its heading just
   // under them rather than behind them.
@@ -945,7 +947,10 @@ export default function CollectionsScreen({ navigation, route }: {
   // The shelf, as the sift ordered it — the catalog's own order, newest
   // first, when nothing is asked (it said "by likes" here, and never was);
   // lists found by their own words first and then by hits when it is.
-  const sifted = hits.map((h) => h.c);
+  // Memoised with `hits`: the city blocks and the sections are built from
+  // it, and a new array every render rebuilt them every render — see the
+  // freeze noted at `onSeen`.
+  const sifted = useMemo(() => hits.map((h) => h.c), [hits]);
 
   // Community explores by default; Yours keeps its management grid and
   // its existing preference. A separate key lets either shelf remember a
@@ -977,11 +982,15 @@ export default function CollectionsScreen({ navigation, route }: {
     likes: rankLikes,
     home: here?.id,
   })), [onYours, communityView, asked, sifted, places, rankLikes, here?.id]);
-  const sections: Section[] = onYours
+  // Memoised: a new array here makes the list reset what it has reported
+  // in view and report it again — see the freeze noted at `onSeen`.
+  const sections: Section[] = useMemo(() => (onYours
     ? (mineReady ? [{ own: true, data: shape(sifted, true, ownView) }] : [])
     : groups?.length
       ? groups.map((g) => ({ own: false, data: g.rows, city: { id: g.city, count: g.count } }))
-      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }];
+      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }]
+  ), [onYours, mineReady, sifted, ownView, groups, communityView]);
+  const atCity = atKey == null ? null : sections.find((x) => x.city && (x.city.id ?? '') === atKey)?.city ?? null;
 
   // ── the city you are in, pinned, and a way to the others (owner,
   // 6 Nov 2026) ──
@@ -1003,11 +1012,25 @@ export default function CollectionsScreen({ navigation, route }: {
   // heading is still in view — it is the header token of the same section,
   // ahead of its rows — the pinned copy stays away, so the name is never
   // printed twice.
+  //
+  // ── the freeze it shipped with (6 Nov 2026) ──
+  //
+  // The first build kept the section's own city object in state, and the
+  // sections were a new array every render. A virtualized list that is
+  // handed new `data` forgets what it last reported in view and reports
+  // it again (`resetViewableIndices`, VirtualizedList's componentDidUpdate),
+  // so: report → a new object into state → a render → new sections → a
+  // fresh report → … for as long as a block's heading was out of view. The
+  // JS thread never rested, and the app froze — the tab bar included —
+  // within a scroll of opening this tab (owner, 6 Nov 2026). Two guards,
+  // either of which breaks the loop alone: the state is the city's key, a
+  // string, which React drops when it is unchanged; and the sections are
+  // memoised, so a render the list did not cause hands it the same data.
   const onSeen = useRef(({ viewableItems }: Seen) => {
     const sectionOf = (v: Seen['viewableItems'][number]) => v.section as Section | undefined;
     const row = viewableItems.find((v) => v.index != null && sectionOf(v)?.city);
     const heading = row && viewableItems.find((v) => v.index == null && v.section === row.section);
-    setAtCity(row && !heading ? sectionOf(row)!.city! : null);
+    setAtKey(row && !heading ? (sectionOf(row)!.city!.id ?? '') : null);
   }).current;
   const jumpTo = (sectionIndex: number) => {
     setJumpOpen(false);
