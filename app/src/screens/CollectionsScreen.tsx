@@ -1014,6 +1014,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 accessibilityRole="button"
                 accessibilityState={{ selected: view === v }}
                 aria-selected={view === v}
+                testID={floating ? undefined : `collections-view-${v}`}
                 accessibilityLabel={v === 'mosaic'
                   ? t('Mosaic view', 'Dạng Mosaic', 'モザイク表示', '拼贴视图', '拼貼檢視')
                   : v === 'tile'

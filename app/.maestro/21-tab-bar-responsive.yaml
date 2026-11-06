@@ -1,0 +1,35 @@
+# The tab bar answers: every tab opens its screen within ten seconds,
+# after Collections has been opened, scrolled and left — as a guest, and
+# again after a cold start signed in.
+#
+# Written on 6 November after two OTA builds froze on launch: the reader
+# was on Explore, nothing on screen took a touch, and Collections had
+# never been opened. Both builds carried #1267 (the pinned city heading
+# and its jump sheet in `CollectionsScreen`); rolling back to the build
+# before it cured it twice. Vitest cannot see this — jsdom has no layout,
+# so a list's viewability and scroll callbacks never fire there. This
+# flow is the check a rebuilt heading has to pass before it merges.
+#
+# A frozen JS thread fails it on the first tab tap: the bar is drawn by
+# `FloatingTabBar` in JS, so neither the selected state nor the next
+# screen arrives, and the ten-second waits run out. The timeouts are
+# short on purpose. A healthy tab switch lands in well under a second;
+# the long waits are only for data the first load has to fetch.
+#
+# The city-jump part runs only where the heading opens a sheet (the
+# #1267 build). On main the heading is plain text and the part is
+# skipped, so the same file runs against both builds — see README.md,
+# "Reproducing the 6 November freeze".
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- runFlow: common/tab-round.yaml
+
+# Signed in, from a cold start: the state the freeze was reported in.
+- runFlow: common/ensure-signed-in.yaml
+- runFlow: common/start.yaml
+- runFlow: common/tab-round.yaml
+- runFlow: common/ensure-signed-out.yaml

@@ -1,0 +1,170 @@
+# Reusable: one round of 21-tab-bar-responsive. Starts and ends on Explore.
+#
+# Every tab tap waits for the tab to read as selected, then for something
+# of its screen. Ten seconds is generous for a switch that takes a frame;
+# the 30 s waits are for the first fetch of places and collections only.
+#
+# Scrolling ducks the tab bar (lib/duck.ts), so each scroll is followed by
+# a scroll back up to the bar before the next tap (GUIDELINES rule 8).
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- swipe:
+    direction: UP
+    duration: 600
+- swipe:
+    direction: DOWN
+    duration: 600
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 20000
+
+- tapOn:
+    id: "tab-ideas"
+- extendedWaitUntil:
+    visible:
+      id: "tab-ideas"
+      selected: true
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "ideas-company-friends"
+    timeout: 10000
+
+# Trips has no id of its own for a guest; the selected tab is the signal.
+- tapOn:
+    id: "tab-trips"
+- extendedWaitUntil:
+    visible:
+      id: "tab-trips"
+      selected: true
+    timeout: 10000
+
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "tab-collections"
+      selected: true
+    timeout: 10000
+# Signed in, the screen opens on Yours, whose cards carry no
+# collection-card id; the city blocks are Community's, and only in Mosaic
+# (the view is remembered per device, so it is chosen here). The view
+# buttons have no id on the #1267 build, hence optional: Mosaic is the
+# default there, and nothing on that simulator chose another.
+- tapOn:
+    id: "collections-community"
+    optional: true
+- tapOn:
+    id: "collections-view-mosaic"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "collection-card-0"
+    timeout: 30000
+# Down through the first city block and past its heading — where the
+# #1267 build pinned a copy of it.
+- swipe:
+    direction: UP
+    duration: 500
+- swipe:
+    direction: UP
+    duration: 500
+- swipe:
+    direction: UP
+    duration: 500
+- swipe:
+    direction: UP
+    duration: 500
+# The jump, where there is one: a heading that opens the city sheet, and
+# its last row, "Elsewhere" — the block furthest down, so the list has to
+# scroll over cells it has never measured.
+- runFlow:
+    when:
+      visible:
+        id: "collection-mosaic-city-.*"
+    commands:
+      - tapOn:
+          id: "collection-mosaic-city-.*"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - runFlow:
+          when:
+            visible:
+              id: "sheet-action-elsewhere"
+          commands:
+            - tapOn:
+                id: "sheet-action-elsewhere"
+            - waitForAnimationToEnd:
+                timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "tab-collections"
+    direction: UP
+    timeout: 20000
+
+# Away from Collections: its list stays mounted behind the other tabs.
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+      selected: true
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 10000
+- swipe:
+    direction: UP
+    duration: 600
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "tab-trips"
+- extendedWaitUntil:
+    visible:
+      id: "tab-trips"
+      selected: true
+    timeout: 10000
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "tab-profile"
+      selected: true
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "profile-scroll"
+    timeout: 10000
+
+# Back to Collections and out again, once more.
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "tab-collections"
+      selected: true
+    timeout: 10000
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+      selected: true
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 10000

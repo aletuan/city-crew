@@ -41,6 +41,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `18-guest-save-resume.yaml` | Guest cancels a bookmark sign-in invitation; ordinary login must not replay it. A new guest bookmark resumes the same place after login, saves once to a generated collection, and survives restart. |
 | `19-collection-privacy.yaml` | A switches a populated collection Private → Public → Private through UI. B checks Community after each state; public detail has no Edit/Delete. Read-only REST checks both collection and members as A/B without client visibility filters. |
 | `20-guest-trip-resume.yaml` | Guest edits a draft’s arrival time, signs in, and returns to the same first stop/time. Verify session email; Trips remains empty until explicit Save; cold restart shows one trip, then it is deleted. |
+| `21-tab-bar-responsive.yaml` | As a guest, then signed in after a cold start: every tab opens its screen within 10 s (the tab reads selected, then its content shows); Collections → Community → Mosaic, scrolled past the first city heading — and, where the heading opens a city sheet, a jump to Elsewhere — then away to Explore, Trips, Profile and back. Written for the 6 November freeze; see *Reproducing the 6 November freeze*. |
 | `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
@@ -230,6 +231,33 @@ of a session can take a minute, which is why the flows wait up to 90 s for
 If more than one simulator is booted, Maestro may pick either; pass
 `--device <UDID>` (from `xcrun simctl list devices booted`) to pin one.
 
+## Reproducing the 6 November freeze
+
+Two OTA builds froze on launch on 6 November: on Explore, nothing took a
+touch, the tab bar included. Both carried #1267's pinned city heading in
+`CollectionsScreen`; rolling back cured it both times, and the cause was
+never seen. `21-tab-bar-responsive` is the check, and it runs against
+either build. Run it twice, from the repo root, Metro in its own tab as
+above:
+
+```sh
+# A — the build that froze (main with #1267, #1268 and #1269). Expect red.
+git fetch origin && git switch --detach bd83d5862c60a1ce14c0d4f0b8487bc9be9d2525
+git checkout origin/main -- app/.maestro/21-tab-bar-responsive.yaml app/.maestro/common/tab-round.yaml
+cd app && npm ci && npx expo start --clear     # tab 1
+npm run smoke:ios -- .maestro/21-tab-bar-responsive.yaml   # tab 2, from app/
+
+# B — main. Expect green.
+git checkout -- . && git switch main && git pull
+cd app && npm ci && npx expo start --clear     # tab 1
+npm run smoke:ios -- .maestro/21-tab-bar-responsive.yaml   # tab 2
+```
+
+What answers the question is A's **Metro terminal**: the dev bundle reports
+a render loop as "Maximum update depth exceeded" (a red box, and a stack in
+the log), and a busy JS thread as the flow timing out on a tab's
+`selected: true`. Keep that log with the run folder.
+
 ## Reading a failure
 
 See [REVIEW.md](REVIEW.md) for the Vietnamese troubleshooting review:
@@ -330,7 +358,7 @@ to test resume behavior.
 | Component | Additional testID |
 | --- | --- |
 | `AuthSheet` | `auth-sheet-sign-in`, `auth-sheet-cancel` |
-| `CollectionsScreen` | `collections-community`, `collections-ready` (fresh public catalog loaded successfully) |
+| `CollectionsScreen` | `collections-community`, `collections-ready` (fresh public catalog loaded successfully), `collections-view-<row\|tile\|mosaic>` (the view buttons, signed in only), `collection-mosaic-city-<city id\|elsewhere>` (a Mosaic city heading) |
 | `ActionSheet` | `sheet-action-public`, `sheet-action-private` (existing action-key IDs) |
 
 `PlaceDetailScreen` also exposes `detail-place-<slug>`. Flow 18 searches for
