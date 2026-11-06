@@ -1818,6 +1818,10 @@ describe('CollectionsScreen — Mosaic', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'tile');
     fireEvent.click(screen.getByRole('button', { name: 'Mosaic view' }));
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'mosaic');
+    // The ids 21-tab-bar-responsive picks a view by, one per button.
+    for (const [v, name] of [['row', 'List view'], ['tile', 'Tile view'], ['mosaic', 'Mosaic view']]) {
+      expect(screen.getByTestId(`collections-view-${v}`).getAttribute('aria-label')).toBe(name);
+    }
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.queryByRole('button', { name: 'Mosaic view' })).toBeNull();
     expect(screen.getByTestId('collection-tile-foot')).toBeTruthy();
