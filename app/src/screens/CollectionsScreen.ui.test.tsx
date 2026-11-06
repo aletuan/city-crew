@@ -25,6 +25,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
 import { colors, coverScrim, mosaicScrim, onPhoto, space } from '../theme';
+import { TABS_ROW_GAP } from '../components/ui';
 
 const state = vi.hoisted(() => ({
   uid: null as string | null,
@@ -1907,7 +1908,10 @@ describe('the Community Mosaic, one block a city', () => {
   it('heads each city with its name and count, the reader’s city first, the small ones together last', () => {
     seed();
     show({ tab: 'community' });
-    expect(heads()).toEqual(['Hanoi3 collections', 'Saigon4 collections', 'Elsewhere2 collections']);
+    // The first block is named only once the list moves (owner, 7 Nov
+    // 2026), by the pinned bar; at rest its slot is a gap.
+    expect(heads()).toEqual(['Saigon4 collections', 'Elsewhere2 collections']);
+    expect(screen.getByTestId('collections-first-gap')).toBeTruthy();
     // The block is the city's: liked list first, then arrival order.
     // The list draws its first ten items (rows and headings alike) on
     // mount; the last pair of "elsewhere" is past them.
@@ -1916,23 +1920,21 @@ describe('the Community Mosaic, one block a city', () => {
       .toEqual(Array.from({ length: 8 }, (_, i) => `collection-card-${i}`));
   });
 
-  // The first heading sits under the search box, whose own gap already
-  // parts them: the two add to the gap under a screen's head (owner,
-  // 6 Nov 2026 — "Hà Nội" floated 43pt under the box, 20pt over its cards).
-  // Every later heading keeps the full 24 that parts it from the block
-  // before.
-  it('puts the first city heading a screen-head gap under the search box, the rest a block apart', () => {
+  // At rest no city is named under the search box (owner, 7 Nov 2026);
+  // the first block's slot is the gap, and box + gap is a screen head's
+  // gap, as the heading's was (6 Nov). Later headings keep the 24 that
+  // parts a block from the one before.
+  it('leaves a screen-head gap under the search box where the first heading was, the rest a block apart', () => {
     seed();
     show({ tab: 'community' });
-    // The ids sit on the pressables; the padding is the box they draw.
-    const pad = (id: string) => getComputedStyle(screen.getByTestId(id).firstElementChild as HTMLElement).paddingTop;
-    // The search box's own row: the nearest box above the input with a gap below it.
+    expect(screen.queryByTestId('collection-mosaic-city-hanoi')).toBeNull();
     let row = screen.getByTestId('collections-input').parentElement;
     while (row && !(parseFloat(getComputedStyle(row).marginBottom) > 0)) row = row.parentElement;
     const under = parseFloat(getComputedStyle(row as HTMLElement).marginBottom);
-    expect(under + parseFloat(pad('collection-mosaic-city-hanoi'))).toBe(space.titleToContent);
-    // 14 under the box, 10 over the name: 24 in all, not the 38 it was.
-    expect([under, pad('collection-mosaic-city-hanoi')]).toEqual([14, '10px']);
+    const gap = parseFloat(getComputedStyle(screen.getByTestId('collections-first-gap')).height);
+    expect([under, gap]).toEqual([14, 10]);
+    expect(under + gap).toBe(space.titleToContent);
+    const pad = (id: string) => getComputedStyle(screen.getByTestId(id).firstElementChild as HTMLElement).paddingTop;
     expect(pad('collection-mosaic-city-hcmc')).toBe(`${space.titleToContent}px`);
     expect(pad('collection-mosaic-city-elsewhere')).toBe(`${space.titleToContent}px`);
   });
@@ -2077,16 +2079,83 @@ describe('the Community Mosaic, one block a city', () => {
     act(() => (listProps() as unknown as { onScroll: (e: unknown) => void }).onScroll({ nativeEvent: {
       contentOffset: { x: 0, y: 900 }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
     } }));
+    // The first block's heading slot (a gap since 7 Nov) in view with its
+    // rows: the slot names nothing, so the bar names the first city.
     expect(() => act(() => list!._onViewableItemsChanged({
       viewableItems: [token(0, hanoi), token(1, hanoi.data[0])],
       changed: [token(0, hanoi)],
     }))).not.toThrow();
+    expect(screen.getByTestId('collections-city-bar').textContent).toBe('Hanoi3 collections');
+    // A later block's heading in view over its rows: no bar, or the name
+    // would be printed twice.
+    const saigonHead = hanoi.data.length + 2;
+    act(() => list!._onViewableItemsChanged({
+      viewableItems: [token(saigonHead, saigon), token(saigonHead + 1, saigon.data[0])],
+      changed: [token(saigonHead, saigon)],
+    }));
     expect(screen.queryByTestId('collections-city-bar')).toBeNull();
     act(() => list!._onViewableItemsChanged({
       viewableItems: [token(saigonRow, saigon.data[1])],
-      changed: [token(0, hanoi), token(saigonRow, saigon.data[1])],
+      changed: [token(saigonHead, saigon), token(saigonRow, saigon.data[1])],
     }));
     expect(screen.getByTestId('collections-city-bar').textContent).toBe('Saigon4 collections');
+  });
+
+  // Not named at rest, named once the list moves, and close under the
+  // tabs when it is (owner, 7 Nov 2026: it sat ~29pt below their
+  // underline). The tabs' own 14 is the gap; the bar reaches up into it.
+  it('names the first city only once the tabs pin, close under them', () => {
+    seed();
+    show({ tab: 'community' });
+    const props = () => listProps() as unknown as {
+      sections: { data: unknown[] }[];
+      onScroll: (e: unknown) => void;
+      onViewableItemsChanged: (i: { viewableItems: { index: number | null; section: unknown }[] }) => void;
+    };
+    const [hanoi] = props().sections;
+    act(() => props().onViewableItemsChanged({ viewableItems: [{ index: null, section: hanoi }, { index: 0, section: hanoi }] }));
+    expect(screen.queryByTestId('collections-city-bar')).toBeNull();
+    type Layout = { __reactLayoutHandler: (e: unknown) => void };
+    act(() => {
+      (screen.getByTestId('collections-tabs') as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 44 } } });
+    });
+    act(() => props().onScroll({ nativeEvent: {
+      contentOffset: { x: 0, y: 300 }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+    } }));
+    const bar = screen.getByTestId('collections-city-bar');
+    expect(bar.textContent).toBe('Hanoi3 collections');
+    const box = getComputedStyle(bar.firstElementChild as HTMLElement);
+    expect([box.paddingTop, box.paddingBottom, box.borderTopWidth, box.minHeight]).toEqual(['0px', '12px', '0px', '0px']);
+    expect(TABS_ROW_GAP).toBe(14);
+    const slop = propsOf('collections-city-bar').hitSlop as { top: number } | undefined;
+    // 14 above, the 22pt line, 12 below: past the 44 a target is.
+    expect(slop).toEqual({ top: TABS_ROW_GAP });
+    expect(slop!.top + 22 + 12).toBeGreaterThanOrEqual(44);
+  });
+
+  // A guest has no tabs to pin: the bar is the whole pinned row, at the
+  // top of the screen, and carries its own 12 above.
+  it('gives a guest’s bar its own room above, with nothing to reach into', () => {
+    seed();
+    state.uid = null;
+    show({ tab: 'community' });
+    const props = () => listProps() as unknown as {
+      sections: { data: unknown[] }[];
+      onScroll: (e: unknown) => void;
+      onViewableItemsChanged: (i: { viewableItems: { index: number | null; section: unknown }[] }) => void;
+    };
+    type Layout = { __reactLayoutHandler: (e: unknown) => void };
+    act(() => {
+      (screen.getByTestId('collections-tabs') as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 0 } } });
+    });
+    act(() => props().onScroll({ nativeEvent: {
+      contentOffset: { x: 0, y: 300 }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+    } }));
+    const [first] = props().sections;
+    act(() => props().onViewableItemsChanged({ viewableItems: [{ index: 0, section: first }] }));
+    const bar = screen.getByTestId('collections-city-bar');
+    expect(getComputedStyle(bar.firstElementChild as HTMLElement).paddingTop).toBe('12px');
+    expect(propsOf('collections-city-bar').hitSlop).toBeUndefined();
   });
 
   // The freeze it shipped with (6 Nov 2026): a list handed new `data`

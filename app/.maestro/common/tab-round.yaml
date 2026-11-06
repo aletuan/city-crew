@@ -69,8 +69,8 @@ appId: host.exp.Exponent
     visible:
       id: "collection-card-0"
     timeout: 30000
-# Down through the first city block and past its heading — where the
-# #1267 build pinned a copy of it.
+# Down through the first city block — named only by the bar pinned under
+# the tabs once the list moves (7 Nov) — to the next block's heading.
 - swipe:
     direction: UP
     duration: 500
