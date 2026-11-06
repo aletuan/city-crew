@@ -6,7 +6,7 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Keyboard, type NativeScrollEvent, type NativeSyntheticEvent, SectionList, StyleSheet, Text, type TextInput, useWindowDimensions, View, type ViewProps } from 'react-native';
+import { Alert, Animated, Keyboard, type NativeScrollEvent, type NativeSyntheticEvent, SectionList, StyleSheet, Text, type TextInput, type SectionListProps, useWindowDimensions, View, type ViewProps } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Swipeable from '../components/Swipeable';
 import { Image } from 'expo-image';
@@ -27,8 +27,9 @@ import { useSession } from '../lib/auth';
 import { useCityList, useCurrentCity } from '../lib/city';
 import { cityShortById } from '../lib/cityName';
 import {
-  placesOf as placesCount, reasonFor as shelfReason, scopeLine, shape, type ShelfRow,
+  listsWord, placesOf as placesCount, reasonFor as shelfReason, scopeLine, shape, type ShelfRow,
 } from '../lib/collectionShelf';
+import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { Collection, coverUriOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
 import { atHandle } from '../lib/handle';
@@ -64,6 +65,30 @@ type RowA11y = Pick<ViewProps, 'accessibilityActions' | 'onAccessibilityAction'>
  *  rows are named here, not only by the list: React Native 0.88 types a
  *  section handed back to a render prop as possibly the extra fields alone. */
 type Section = { own: boolean; data: ListRow[]; city?: { id: string | null; count: number } };
+
+/**
+ * A row's key — and a section's, because the list asks for both.
+ *
+ * With `onViewableItemsChanged` set, React Native's VirtualizedSectionList
+ * runs every token it reports through `_convertViewable`, which calls this
+ * extractor on the token's item. For a section's heading or footer that
+ * item is the section itself, not a row (`_getItem` returns the section
+ * for those two indices). The first build read `row.c.slug` on it and
+ * threw on the list's first report — the heading of the first block is
+ * always in view — and the app froze on opening this tab, the tab bar
+ * included (6 Nov 2026). Measured on the simulator with flow 21: red on
+ * every build carrying the city tracker, green with only this guard
+ * added, its log showing the throw "on a section" and never on a row.
+ * vitest never saw it: jsdom has no layout, so the list never reports.
+ */
+const rowKey = (row: ListRow | Section): string => {
+  // What the key says does not matter — the list keys its own cells; this
+  // one only labels the token handed back — only that it is a string.
+  if ('data' in row) return `section:${row.city?.id}`;
+  return row.kind === 'mosaic' ? `mosaic-${row.items[0].c.slug}` : row.kind === 'pair' ? row.pair[0].slug : row.c.slug;
+};
+/** What the list says is on screen — `onSeen` reads the city from it. */
+type Seen = Parameters<NonNullable<SectionListProps<ListRow, Section>['onViewableItemsChanged']>>[0];
 
 /** What the two actions take up behind an open row: two 62pt buttons, the
  *  8pt between them, and the 8pt separating them from the card. The row
@@ -529,6 +554,15 @@ export default function CollectionsScreen({ navigation, route }: {
   const [headerTracker] = useState(() => createDuckTracker({ topSlack: 0 }));
   const [pinned, setPinned] = useState(false);
   const [headerExpanded, setHeaderExpanded] = useState(false);
+  // The city block under the pinned row, once its own heading has gone
+  // under the row (see `onSeen`); null while a heading is in view. Its key
+  // only — the city's id, '' for "elsewhere" — never the section's object:
+  // see the freeze noted at `onSeen`.
+  const [atKey, setAtKey] = useState<string | null>(null);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  // How tall the pinned tabs are, so a jump lands its heading just
+  // under them rather than behind them.
+  const tabsHRef = useRef(0);
   const [deep, setDeep] = useState(false);
   const onShelfScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     duckScroll?.(e);
@@ -935,7 +969,10 @@ export default function CollectionsScreen({ navigation, route }: {
   // The shelf, as the sift ordered it — the catalog's own order, newest
   // first, when nothing is asked (it said "by likes" here, and never was);
   // lists found by their own words first and then by hits when it is.
-  const sifted = hits.map((h) => h.c);
+  // Memoised with `hits`: the city blocks and the sections are built from
+  // it, and a new array every render rebuilt them every render — see the
+  // freeze noted at `onSeen`.
+  const sifted = useMemo(() => hits.map((h) => h.c), [hits]);
 
   // Community explores by default; Yours keeps its management grid and
   // its existing preference. A separate key lets either shelf remember a
@@ -967,11 +1004,87 @@ export default function CollectionsScreen({ navigation, route }: {
     likes: rankLikes,
     home: here?.id,
   })), [onYours, communityView, asked, sifted, places, rankLikes, here?.id]);
-  const sections: Section[] = onYours
+  // Memoised: a new array here makes the list reset what it has reported
+  // in view and report it again — see the freeze noted at `onSeen`.
+  const sections: Section[] = useMemo(() => (onYours
     ? (mineReady ? [{ own: true, data: shape(sifted, true, ownView) }] : [])
     : groups?.length
       ? groups.map((g) => ({ own: false, data: g.rows, city: { id: g.city, count: g.count } }))
-      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }];
+      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : shape(sifted, false, communityView) }]
+  ), [onYours, mineReady, sifted, ownView, groups, communityView]);
+  const atCity = atKey == null ? null : sections.find((x) => x.city && (x.city.id ?? '') === atKey)?.city ?? null;
+
+  // ── the city you are in, pinned, and a way to the others (owner,
+  // 6 Nov 2026) ──
+  //
+  // Six blocks, the first sixteen lists long: a reader after Huế scrolled
+  // past thirty cards to find it, and half-way down nothing on screen said
+  // which city the cards were in. The block's heading now rides under the
+  // pinned tabs once its own has gone up past them, and either heading
+  // opens the list of cities to jump to.
+  //
+  // Rejected, from the same reference: a "preferred city" setting of this
+  // tab's own. The reader's city already leads, and a third place to pick
+  // a city — after the app's city and the filter's — would leave nobody
+  // sure which one decides what. A jump does the job without being a
+  // setting.
+  //
+  // Which block is under the row is read from what the list says is in
+  // view: the section of the first row on screen. While that block's own
+  // heading is still in view — it is the header token of the same section,
+  // ahead of its rows — the pinned copy stays away, so the name is never
+  // printed twice.
+  //
+  // ── the freeze it shipped with (6 Nov 2026) ──
+  //
+  // The state is the city's key, a string, which React drops when it is
+  // unchanged, and the sections are memoised, so a render the list did not
+  // cause hands it the same data: a list given new `data` reports what is
+  // in view again (`resetViewableIndices`), and an object in state would
+  // turn every report into a render. These were the first guess at the
+  // 6 Nov freeze and did not cure it — the cause was `rowKey`'s, above —
+  // but they keep the report from costing a render it does not need.
+  const onSeen = useRef(({ viewableItems }: Seen) => {
+    const sectionOf = (v: Seen['viewableItems'][number]) => v.section as Section | undefined;
+    const row = viewableItems.find((v) => v.index != null && sectionOf(v)?.city);
+    const heading = row && viewableItems.find((v) => v.index == null && v.section === row.section);
+    setAtKey(row && !heading ? (sectionOf(row)!.city!.id ?? '') : null);
+  }).current;
+  // One retry per jump, never a chase: a block the list still cannot
+  // reach after it has scrolled near it stays where the scroll left it.
+  const jumpRetried = useRef(false);
+  const jumpTo = (sectionIndex: number, again = false) => {
+    jumpRetried.current = again;
+    setJumpOpen(false);
+    scrollRef.current?.scrollToLocation({
+      sectionIndex, itemIndex: 0, viewOffset: pinned ? tabsHRef.current : 0, animated: true,
+    });
+  };
+  const cityWord = (id: string | null) => (id
+    ? cityName(id)
+    : t('Elsewhere', 'Nơi khác', 'その他の街', '其他城市', '其他城市'));
+  const jumpActions: SheetAction[] = (groups ?? []).map((g, i) => ({
+    key: g.city ?? 'elsewhere',
+    icon: 'location-outline' as const,
+    title: cityWord(g.city),
+    desc: listsWord(g.count, t),
+    selected: atCity ? atCity.id === g.city : i === 0,
+    onPress: () => jumpTo(i),
+  }));
+  const cityHead = (city: { id: string | null; count: number }, pinnedCopy: boolean) => (
+    <PressableScale
+      onPress={() => setJumpOpen(true)}
+      contentStyle={pinnedCopy ? s.cityBar : s.cityHead}
+      testID={pinnedCopy ? 'collections-city-bar' : `collection-mosaic-city-${city.id ?? 'elsewhere'}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${cityWord(city.id)}, ${listsWord(city.count, t)}`}
+      accessibilityHint={t('Go to another city', 'Đến thành phố khác', '別の都市へ移動', '前往其他城市', '前往其他城市')}
+    >
+      <Text style={pinnedCopy ? s.cityBarName : s.cityHeadName} numberOfLines={1}>{cityWord(city.id)}</Text>
+      <Ionicons name="chevron-down" size={pinnedCopy ? 16 : 18} color={colors.textSecondary} style={s.cityHeadChevron} />
+      <Text style={[s.cityHeadCount, pinnedCopy && s.cityBarCount]}>{listsWord(city.count, t)}</Text>
+    </PressableScale>
+  );
 
   // Not while the panel is up: the box it would focus is already open.
   const dock = useDockOffer(ducked && deep && !panel && !holding && !(pinned && headerExpanded), navigation);
@@ -1315,7 +1428,7 @@ export default function CollectionsScreen({ navigation, route }: {
             testID={cols.loaded && !cols.loading && !cols.fromCache && !cols.error && placesLoaded && !placesLoading ? 'collections-ready' : undefined}
             ref={scrollRef}
             sections={sections}
-            keyExtractor={(row) => (row.kind === 'mosaic' ? `mosaic-${row.items[0].c.slug}` : row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
+            keyExtractor={rowKey}
             onScroll={onShelfScroll}
             onScrollBeginDrag={fold}
             scrollEventThrottle={16}
@@ -1930,16 +2043,18 @@ export default function CollectionsScreen({ navigation, route }: {
               );
             }}
             stickySectionHeadersEnabled={false}
-            renderSectionHeader={({ section }) => (section.city ? (
-              <View style={s.cityHead} testID={`collection-mosaic-city-${section.city.id ?? 'elsewhere'}`} accessibilityRole="header">
-                <Text style={s.cityHeadName} numberOfLines={1}>
-                  {section.city.id
-                    ? cityName(section.city.id)
-                    : t('Elsewhere', 'Nơi khác', 'その他の街', '其他城市', '其他城市')}
-                </Text>
-                <Text style={s.cityHeadCount}>{section.city.count}</Text>
-              </View>
-            ) : null)}
+            renderSectionHeader={({ section }) => (section.city ? cityHead(section.city, false) : null)}
+            onViewableItemsChanged={onSeen}
+            // A jump to a block not yet drawn: go near it on the average
+            // row, which draws it, then land on its heading.
+            onScrollToIndexFailed={(info) => {
+              if (jumpRetried.current) return;
+              scrollRef.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+              setTimeout(() => {
+                const sectionIndex = sections.findIndex((x, i) => sections.slice(0, i).reduce((n, y) => n + y.data.length + 2, 0) === info.index);
+                if (sectionIndex >= 0) jumpTo(sectionIndex, true);
+              }, 100);
+            }}
             renderSectionFooter={({ section }) => {
               // Under a query, the only footer is the honest one: nothing
               // matched. The creation rows stay out of it — "start your
@@ -1979,11 +2094,22 @@ export default function CollectionsScreen({ navigation, route }: {
         {/* The tabs, pinned: a copy over the shelf rather than a sticky
             header, as Explore's filter row is, so nothing it does can
             move a row or eat a tap meant for one. */}
-        {pinned && !holding && session ? (
+        {pinned && !holding && (session || (groups && atCity)) ? (
           <View style={s.pinned} testID="collections-pinned">
-            {headerExpanded ? top(true) : tabsRow(true)}
+            {session ? (
+              <View onLayout={(e) => { tabsHRef.current = Math.round(e.nativeEvent.layout.height); }}>
+                {headerExpanded ? top(true) : tabsRow(true)}
+              </View>
+            ) : null}
+            {groups && atCity ? cityHead(atCity, true) : null}
           </View>
         ) : null}
+        <ActionSheet
+          visible={jumpOpen}
+          onClose={() => setJumpOpen(false)}
+          actions={jumpActions}
+          header={<Text style={s.jumpTitle}>{t('Go to a city', 'Đến thành phố', '都市へ移動', '前往城市', '前往城市')}</Text>}
+        />
       </View>
       <CollectionFilterSheet
         visible={filterOpen}
@@ -2055,7 +2181,22 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: space.titleToContent, paddingBottom: space.headingToContent,
   },
   cityHeadName: { ...type.section, color: colors.text, flexShrink: 1 },
+  // The ▾ says the name opens something: the list of cities to jump to.
+  cityHeadChevron: { alignSelf: 'center', marginLeft: -4 },
+  // "16 collections", not "16": a bare number beside a city's name read
+  // as anything — a rank, a district (owner, 6 Nov 2026).
   cityHeadCount: { fontSize: 15, fontWeight: font.medium, color: colors.textTertiary },
+  // The same heading, pinned under the tabs: a step smaller so the row it
+  // rides under stays the bigger thing, the count pushed to the far edge
+  // as the reference drew it, and a 44pt row to tap.
+  cityBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44,
+    paddingHorizontal: space.page,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+  },
+  cityBarName: { ...type.cardTitle, color: colors.text, flexShrink: 1 },
+  cityBarCount: { marginLeft: 'auto', fontSize: 13 },
+  jumpTitle: { color: colors.text, ...type.cardTitle },
   gridRow: {
     flexDirection: 'row', gap: space.cardGap,
     marginHorizontal: space.page, marginBottom: space.cardGap,

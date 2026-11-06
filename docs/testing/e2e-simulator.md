@@ -169,6 +169,32 @@ kiểm code cũ, và một lần xanh không nói lên điều gì.
 Bài học: một bước `optional` tap trượt thì im lặng, và lỗi hiện ra ở một assert
 xa phía sau. Bước nào là điều kiện cho cả suite thì không để `optional`.
 
+## 4b. App treo khi mở Bộ sưu tập (06/11) — lỗi app mà chỉ simulator thấy
+
+Hai bản OTA có #1267 (tiêu đề thành phố dính ở tab Cộng đồng) làm app treo
+hẳn, cả thanh tab. Rút về thì hết. vitest xanh suốt: jsdom không có layout,
+nên danh sách không bao giờ báo phần đang hiện.
+
+| Bước | Kết quả |
+|---|---|
+| Flow 21 (`21-tab-bar-responsive`) trên bản lỗi | đỏ ngay lần chạm Bộ sưu tập đầu tiên: *"process main thread busy for 30.0s"*; Metro không có lỗi nào |
+| Chia đôi: bỏ từng phần của #1267, kèm bộ đếm `[freeze]` trong log | chỉ bỏ `onViewableItemsChanged` là xanh; ở bản đỏ JS dừng sau lần vẽ đầu, callback chưa chạy lần nào |
+| Giữ nguyên, chỉ bắt lỗi trong `keyExtractor` | xanh; log: `Cannot read property 'slug' of undefined … on a section`, không lần nào "on a row" |
+
+Nguyên nhân: khi có `onViewableItemsChanged`, `VirtualizedSectionList`
+(RN 0.88) đổi từng token qua `_convertViewable`, gọi `keyExtractor` với
+item của token, và với tiêu đề/chân section thì item đó là **chính
+section**. `keyExtractor` chỉ biết hàng nên ném lỗi ở lần báo đầu tiên.
+Sửa: `rowKey` trong `CollectionsScreen.tsx` nhận cả section; test đi đúng
+đường đó qua chính `_onViewableItemsChanged` của danh sách.
+
+Bài học:
+- Thay đổi chạm danh sách ảo hoá (viewability, `scrollToLocation`) phải
+  chạy flow 21 trên simulator trước khi gộp. vitest không thay được.
+- Lỗi ném trong đường viewability có thể ra **treo**, không ra hộp đỏ, nên
+  "Metro không báo gì" không có nghĩa là không có lỗi JS. Bộ đếm in mỗi
+  giây (`tick`) cho biết JS còn sống hay không.
+
 ## 5. Độ phủ hiện tại
 
 ```mermaid
