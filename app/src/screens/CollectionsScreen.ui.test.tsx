@@ -24,7 +24,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uit
 import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
-import { colors, coverScrim, mosaicScrim, onPhoto } from '../theme';
+import { colors, coverScrim, mosaicScrim, onPhoto, space } from '../theme';
 
 const state = vi.hoisted(() => ({
   uid: null as string | null,
@@ -1914,6 +1914,27 @@ describe('the Community Mosaic, one block a city', () => {
     expect(order()).toEqual(['List n1', 'List n2', 'List n3', 'List s3', 'List s1', 'List s2', 'List s4', 'List h1']);
     expect(screen.getAllByTestId(/^collection-card-/).map((c) => c.dataset.testid))
       .toEqual(Array.from({ length: 8 }, (_, i) => `collection-card-${i}`));
+  });
+
+  // The first heading sits under the search box, whose own gap already
+  // parts them: the two add to the gap under a screen's head (owner,
+  // 6 Nov 2026 — "Hà Nội" floated 43pt under the box, 20pt over its cards).
+  // Every later heading keeps the full 24 that parts it from the block
+  // before.
+  it('puts the first city heading a screen-head gap under the search box, the rest a block apart', () => {
+    seed();
+    show({ tab: 'community' });
+    // The ids sit on the pressables; the padding is the box they draw.
+    const pad = (id: string) => getComputedStyle(screen.getByTestId(id).firstElementChild as HTMLElement).paddingTop;
+    // The search box's own row: the nearest box above the input with a gap below it.
+    let row = screen.getByTestId('collections-input').parentElement;
+    while (row && !(parseFloat(getComputedStyle(row).marginBottom) > 0)) row = row.parentElement;
+    const under = parseFloat(getComputedStyle(row as HTMLElement).marginBottom);
+    expect(under + parseFloat(pad('collection-mosaic-city-hanoi'))).toBe(space.titleToContent);
+    // 14 under the box, 10 over the name: 24 in all, not the 38 it was.
+    expect([under, pad('collection-mosaic-city-hanoi')]).toEqual([14, '10px']);
+    expect(pad('collection-mosaic-city-hcmc')).toBe(`${space.titleToContent}px`);
+    expect(pad('collection-mosaic-city-elsewhere')).toBe(`${space.titleToContent}px`);
   });
 
   // Six blocks, the first sixteen long (owner, 6 Nov 2026): either heading

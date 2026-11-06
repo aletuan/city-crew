@@ -66,6 +66,9 @@ type RowA11y = Pick<ViewProps, 'accessibilityActions' | 'onAccessibilityAction'>
  *  section handed back to a render prop as possibly the extra fields alone. */
 type Section = { own: boolean; data: ListRow[]; city?: { id: string | null; count: number } };
 
+/** Under the search box; the first city heading takes it off its own top. */
+const SEARCH_ROW_GAP = 14;
+
 /**
  * A row's key — and a section's, because the list asks for both.
  *
@@ -1071,10 +1074,10 @@ export default function CollectionsScreen({ navigation, route }: {
     selected: atCity ? atCity.id === g.city : i === 0,
     onPress: () => jumpTo(i),
   }));
-  const cityHead = (city: { id: string | null; count: number }, pinnedCopy: boolean) => (
+  const cityHead = (city: { id: string | null; count: number }, pinnedCopy: boolean, first = false) => (
     <PressableScale
       onPress={() => setJumpOpen(true)}
-      contentStyle={pinnedCopy ? s.cityBar : s.cityHead}
+      contentStyle={pinnedCopy ? s.cityBar : first ? [s.cityHead, s.cityHeadFirst] : s.cityHead}
       testID={pinnedCopy ? 'collections-city-bar' : `collection-mosaic-city-${city.id ?? 'elsewhere'}`}
       accessibilityRole="button"
       accessibilityLabel={`${cityWord(city.id)}, ${listsWord(city.count, t)}`}
@@ -2043,7 +2046,7 @@ export default function CollectionsScreen({ navigation, route }: {
               );
             }}
             stickySectionHeadersEnabled={false}
-            renderSectionHeader={({ section }) => (section.city ? cityHead(section.city, false) : null)}
+            renderSectionHeader={({ section }) => (section.city ? cityHead(section.city, false, section === sections[0]) : null)}
             onViewableItemsChanged={onSeen}
             // A jump to a block not yet drawn: go near it on the average
             // row, which draws it, then land on its heading.
@@ -2180,6 +2183,14 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'baseline', gap: 8,
     paddingHorizontal: space.page, paddingTop: space.titleToContent, paddingBottom: space.headingToContent,
   },
+  // The first block's heading sits under the search box, whose own 14
+  // already parts them: the 24 above every heading — there to part a city
+  // from the block before it — doubled up, and "Hà Nội" floated 43pt under
+  // the box but 20pt over its own cards (owner, 6 Nov 2026). The two add
+  // to `titleToContent`, the gap under a screen's head everywhere else.
+  // A guest has the sign-in notice between them (its own 24 below), and
+  // gets 34: that card wants parting from the lists anyway.
+  cityHeadFirst: { paddingTop: space.titleToContent - SEARCH_ROW_GAP },
   cityHeadName: { ...type.section, color: colors.text, flexShrink: 1 },
   // The ▾ says the name opens something: the list of cities to jump to.
   cityHeadChevron: { alignSelf: 'center', marginLeft: -4 },
@@ -2260,7 +2271,7 @@ const s = StyleSheet.create({
   // margins. The header ends 14 under the title; -6 brings this line to
   // the 8 a subtitle sits under its title in that header.
   scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginHorizontal: space.page, marginBottom: 14 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginHorizontal: space.page, marginBottom: SEARCH_ROW_GAP },
   // The panel on the page's own ground, not in a card: its rows run to
   // the screen's edge and fade into the page, which a card's ground —
   // translucent in every dark look — would not match. The suggestions,
