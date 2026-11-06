@@ -15,7 +15,7 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { useIsSaved, useSaveActions } from '../lib/save';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
-import { Card, photoDisc, PressableScale } from './ui';
+import { photoDisc, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 import ReviewBadge from './ReviewBadge';
 import ListToggle from './ListToggle';
@@ -23,8 +23,12 @@ import { KindPill } from './KindPill';
 
 export default function PlaceCard({
   place, onPress, testID, distanceKm, chip, city, onLongPress, delayLongPress, onPressOut,
-  accessibilityHint, accessibilityActions, onAccessibilityAction, inList,
+  accessibilityHint, accessibilityActions, onAccessibilityAction, inList, raised = false,
 }: {
+  /** Held in a finger and travelling over its neighbours (a collection's
+   *  drag): the card takes a ground for as long as that lasts — see
+   *  `raised` in the styles. */
+  raised?: boolean;
   place: Place;
   /** Search opened from a list to add to it: the bookmark's corner holds
    *  that list's ⊕ / ✓ instead — see `ListToggle`. */
@@ -107,8 +111,8 @@ export default function PlaceCard({
       accessibilityActions={accessibilityActions}
       onAccessibilityAction={onAccessibilityAction}
     >
-      <Card style={s.card}>
-        <View>
+      <View style={[s.card, raised && s.raised]} testID={testID && `${testID}-card`}>
+        <View style={s.frame} testID={testID && `${testID}-frame`}>
           {cover ? (
             <>
               <Image
@@ -260,7 +264,7 @@ export default function PlaceCard({
             </View>
           ) : null}
         </View>
-        <View style={s.body}>
+        <View style={s.body} testID={testID && `${testID}-body`}>
           {/* The whole line is the name's now that the bookmark rides the
               photograph — a 40pt disc used to sit beside it, and the
               names this catalog actually holds are long enough that the
@@ -453,7 +457,7 @@ export default function PlaceCard({
                   ) : null}
                 </View>
               ) : null}
-              {kind ? <KindPill kind={kind} more={more} testID={testID ? `${testID}-kind` : undefined} /> : null}
+              {kind ? <KindPill kind={kind} more={more} bare testID={testID ? `${testID}-kind` : undefined} /> : null}
             </View>
           )}
           {/* Only its owner sees this card's place, so the marker is not a
@@ -477,13 +481,37 @@ export default function PlaceCard({
             </View>
           )}
         </View>
-      </Card>
+      </View>
     </PressableScale>
   );
 }
 
 const s = StyleSheet.create({
-  card: { marginHorizontal: space.page, marginBottom: space.cardGap },
+  // ── no frame (owner, 6 Nov 2026) ──
+  //
+  // The card was a white box with a hairline, the photograph at its top
+  // and the words padded 16pt inside it. The owner's reference took the
+  // box away: the photograph rounds on its own and the words sit on the
+  // page under it, flush with the page margin — 32pt more line for a
+  // name, one box fewer on a page of boxes.
+  //
+  // Without a frame the only thing saying where one place ends is space,
+  // so the two gaps have to differ by enough to be read: 10 from a
+  // photograph to its own name, 28 from the last line to the next
+  // photograph — near three to one, so a name never reads as the caption
+  // of the picture under it.
+  card: { marginHorizontal: space.page, marginBottom: 28 },
+  frame: { borderRadius: radius.card, overflow: 'hidden' },
+  // In a finger (a collection's drag), the card passes over the ones
+  // around it, and with no ground of its own its words would be drawn
+  // over theirs. It takes the old card's ground for the length of the
+  // lift, 10pt round its edges and the same 10 taken back out of its
+  // margins, so nothing under it moves by a point as it is picked up.
+  raised: {
+    backgroundColor: colors.surfaceCard, borderRadius: radius.card + 10,
+    marginHorizontal: space.page - 10, paddingHorizontal: 10,
+    marginTop: -10, paddingTop: 10, marginBottom: 28 - 10, paddingBottom: 10,
+  },
   photo: { width: '100%', aspectRatio: 16 / 10, backgroundColor: colors.surfaceGlass },
   photoFallback: { alignItems: 'center', justifyContent: 'center' },
   // Google asks for the photo's author attribution wherever the photo is
@@ -499,7 +527,7 @@ const s = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   // ~10% tighter than the standard card body: this is a feed, not a form.
-  body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
+  body: { paddingTop: 10 },
   // Top-right of the image, mirroring the attribution bottom-right.
   saveSlot: { position: 'absolute', top: 10, right: 10 },
   /**
