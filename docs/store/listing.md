@@ -794,15 +794,6 @@ dòng "mượt hơn".
 • 修正：iOS 26で、コレクションのグリッドでタイルを右にドラッグすると前の画面に戻ることがありました。
 ```
 
-## Release notes v1.0.14 (chưa viết)
-
-1.0.13 đã được duyệt nên train của nó đã đóng; app.json nâng lên 1.0.14
-ngày 4/11/2026, trước bản build TestFlight `preview` mang các bản vá Expo
-SDK 58 mới (#1251: expo 58.0.23, expo-constants 58.0.15, expo-notifications
-58.1.8, expo-sharing 58.0.22, expo-updates 58.0.21, react-native-safe-area-
-context 5.11.1); `runtimeVersion` vẫn là exposdk:58.0.0. What's New viết
-trước khi nộp lên App Store, từ các PR merge sau 1.0.13 (#1240 trở đi).
-
 ## Release notes v1.0.13 (What's New)
 
 Viết từ các PR merge sau build 1.0.12 (42, main 0e13d99) — #1234 → #1238.
@@ -841,24 +832,78 @@ bỏ ở #1238), docs, test.
 • 自分のコレクションのグリッドでは、最初のタイルにスポット数を表示。タップして追加できます。
 ```
 
+## Release notes v1.0.14 (What's New)
+
+Viết từ các PR merge sau build 1.0.13 (43, main 1772f47) — #1240 → #1278.
+1.0.13 đã được duyệt nên train của nó đã đóng; app.json đã nâng lên 1.0.14
+ở #1252. Binary mới mang các bản vá Expo SDK 58 (#1251: expo 58.0.23,
+expo-constants 58.0.15, expo-notifications 58.1.8, expo-sharing 58.0.22,
+expo-updates 58.0.21, react-native-safe-area-context 5.11.1);
+`runtimeVersion` vẫn là exposdk:58.0.0. Build TestFlight `preview` làm ngày
+4/11 KHÔNG được nộp: nó bật chẩn đoán và thiếu #1253 trở đi — bản nộp là build
+`production` mới từ tag v1.0.14. Cần thử trên máy: tab Cộng đồng (Mosaic, thanh
+thành phố ghim dưới tab — #1267 từng làm treo app qua OTA, đã sửa ở #1268/#1272),
+tìm trong Bộ sưu tập, thẻ địa điểm, Tìm kiếm › Duyệt theo. Không có mặt ở đây:
+chính sách RLS lời mời kết bạn / chuyến đi (#1256, server), Maestro (#1271,
+#1276), các chỉnh cỡ nút và kính (#1243, #1253, #1255), docs, test.
+
+### EN
+
+```
+• Community collections in a new photo layout, grouped by city. The city you're scrolling stays pinned under the tabs; tap it to jump to another.
+• Collections: one search for words and kinds. Type a city's full name to see its collections.
+• Place cards lose the frame: the photo, then the name, area and kind beneath it.
+• Search: browse all nine categories at a glance.
+• Long collection descriptions stop at five lines, with "Read more".
+• Only private collections are marked, with a padlock.
+• A new cover photo shows everywhere at once, including Search, Community, trips and check-ins.
+• A lighter tab bar and search box.
+```
+
+### VI
+
+```
+• Bộ sưu tập Cộng đồng có giao diện ảnh mới, xếp theo thành phố. Thành phố bạn đang xem được ghim dưới tab; chạm vào để chuyển sang thành phố khác.
+• Bộ sưu tập: một ô tìm cho cả chữ lẫn loại địa điểm. Gõ đủ tên một thành phố để xem bộ sưu tập ở đó.
+• Thẻ địa điểm bỏ khung: ảnh ở trên, tên, khu vực và loại ngay bên dưới.
+• Tìm kiếm: thấy cả chín loại địa điểm trong một lần nhìn ở mục Duyệt theo.
+• Mô tả bộ sưu tập dài dừng ở năm dòng, kèm "Đọc thêm".
+• Chỉ bộ sưu tập riêng tư mới có dấu, là một ổ khoá.
+• Ảnh bìa mới hiện ngay ở mọi nơi, kể cả Tìm kiếm, Cộng đồng, chuyến đi và check-in.
+• Thanh tab và ô tìm kiếm nhẹ hơn.
+```
+
+### JA
+
+```
+• 「みんなの」コレクションが写真中心の新しいレイアウトに。都市ごとにまとまり、見ている都市はタブの下に固定表示。タップで他の都市へ移動できます。
+• コレクション：キーワードと種類をひとつの検索で。都市名を最後まで入力すると、その都市のコレクションを表示します。
+• スポットカードの枠をなくしました。写真の下に名前・エリア・種類を表示します。
+• 検索：9つのカテゴリーをひと目で見渡せます。
+• 長いコレクションの説明は5行で区切り、「続きを読む」を表示します。
+• 非公開のコレクションだけに鍵マークを付けます。
+• 新しいカバー写真が、検索・みんなの・プラン・チェックインにもすぐ反映されます。
+• タブバーと検索欄がすっきりしました。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-11-02, database production có **11 thành phố active / 1.269 địa điểm đã
+2026-11-07, database production có **11 thành phố active / 1.368 địa điểm đã
 duyệt**:
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| TP. Hồ Chí Minh | 461 |
-| Hà Nội | 422 |
-| Đà Lạt | 96 |
-| Đà Nẵng | 89 |
+| TP. Hồ Chí Minh | 502 |
+| Hà Nội | 446 |
+| Đà Lạt | 108 |
+| Đà Nẵng | 90 |
 | Melbourne | 83 |
-| Huế | 65 |
-| Hội An | 26 |
+| Huế | 66 |
+| Hội An | 29 |
+| Vũng Tàu | 26 |
 | Hải Phòng | 11 |
-| Vũng Tàu | 9 |
 | Ninh Bình | 5 |
 | Buôn Ma Thuột | 2 — **chưa có trong Description** |
 
