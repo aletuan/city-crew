@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listsWord, pairUp, placesOf, reasonFor, scopeLine, shape } from './collectionShelf';
+import { listsWord, pairUp, placesOf, reasonFor } from './collectionShelf';
 
 const en = (e: string) => e;
 const vi = (_e: string, v: string) => v;
@@ -56,40 +56,16 @@ describe('reasonFor', () => {
   });
 });
 
-describe('scopeLine', () => {
-  const cityName = (id: string) => ({ hn: 'Hanoi' } as Record<string, string>)[id] ?? id;
-
-  it('names the chips when the shelf is narrowed', () => {
-    expect(scopeLine({ count: 2, chosen: ['Cafés', 'Hanoi'], cities: ['hn', 'sg'], cityName }, en))
-      .toBe('2 collections · Cafés · Hanoi');
-  });
-
-  it('names the one city, counts several, and says nothing of none', () => {
-    expect(scopeLine({ count: 1, chosen: [], cities: ['hn'], cityName }, en)).toBe('1 collection · Hanoi');
-    expect(scopeLine({ count: 5, chosen: [], cities: ['hn', 'sg', 'dn'], cityName }, en)).toBe('5 collections · 3 cities');
-    expect(scopeLine({ count: 5, chosen: [], cities: ['hn', 'sg'], cityName }, vi)).toBe('5 bộ sưu tập · 2 thành phố');
-    expect(scopeLine({ count: 5, chosen: [], cities: ['hn', 'sg'], cityName }, zh)).toBe('5 个合集 · 2 个城市');
-    expect(scopeLine({ count: 0, chosen: [], cities: [], cityName }, en)).toBe('0 collections');
-  });
-});
-
-describe('pairUp and shape', () => {
+describe('pairUp', () => {
   it('packs tiles two to a row-item, the odd last one alone, each knowing where it sits', () => {
     expect(pairUp(['a', 'b', 'c'], true)).toEqual([
       { kind: 'pair', pair: ['a', 'b'], own: true, at: 0 },
       { kind: 'pair', pair: ['c'], own: true, at: 2 },
     ]);
-    expect(shape(['a', 'b', 'c'], false, 'tile')).toEqual(pairUp(['a', 'b', 'c'], false));
-  });
-
-  // `at` is the card's place in the whole list, whichever shape it wears.
-  it('gives rows one card each; the community’s carry where they sit', () => {
-    expect(shape(['a', 'b'], true, 'row')).toEqual([{ kind: 'own', c: 'a' }, { kind: 'own', c: 'b' }]);
-    expect(shape(['a', 'b'], false, 'row')).toEqual([{ kind: 'com', c: 'a', at: 0 }, { kind: 'com', c: 'b', at: 1 }]);
+    expect(pairUp(['a', 'b'], false)).toEqual([{ kind: 'pair', pair: ['a', 'b'], own: false, at: 0 }]);
   });
 
   it('has no row-items for no lists', () => {
-    expect(shape([], true, 'tile')).toEqual([]);
-    expect(shape([], true, 'row')).toEqual([]);
+    expect(pairUp([], true)).toEqual([]);
   });
 });
