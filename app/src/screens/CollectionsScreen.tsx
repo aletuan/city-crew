@@ -968,6 +968,20 @@ export default function CollectionsScreen({ navigation, route }: {
           />
         ) : undefined}
       />
+      {/* What the tab is, in a sentence — the two lines of 2 Nov 2026,
+          back on 7 Nov (owner) after a day without them: at rest the
+          screen went from the tabs straight into photographs, with
+          nothing saying which shelf this was. Static now: the answer line
+          a search once turned it into stays gone (the kinds row counts).
+          In the body, as the Trips lede is, and not the header's `lede`:
+          the header row aligns its right slot to the bottom of the title
+          column, so a line in that column drops the pill a line below
+          the title (14 Oct 2026). */}
+      <Text style={s.scope} numberOfLines={1} testID={floating ? 'collections-floating-scope' : 'collections-scope'}>
+        {onYours
+          ? t('Your own favourite places.', 'Nơi chốn yêu thích của riêng bạn.', 'あなただけのお気に入りの場所。', '专属于你的心仪去处。', '專屬於你的心儀去處。')
+          : t('Good corners, through the community’s eyes.', 'Những góc hay, qua lăng kính cộng đồng.', 'みんなの目で見つけた、いい場所。', '社区眼中的好去处。', '社群眼中的好去處。')}
+      </Text>
       <View onLayout={floating ? undefined : (e) => { tabsYRef.current = Math.round(e.nativeEvent.layout.y); }} testID={floating ? 'collections-floating-tabs' : 'collections-tabs'}>
         {tabsRow(floating)}
       </View>
@@ -1628,6 +1642,9 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
   },
   hiddenHeader: { opacity: 0 },
+  // The header's own subtitle type, drawn up under the title by the 6 the
+  // header's 14 below it has to spare, and 12 clear of the tabs.
+  scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },
   // The empty Mosaic cover's well, filling the photograph's box.
   thumbFill: { width: '100%', flex: 1 },
   thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
