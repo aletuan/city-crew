@@ -508,19 +508,29 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getByText('Create your first collection')).toBeTruthy();
   });
 
-  // The title stands alone (owner, 7 Nov 2026): no 🔍 beside it, no line
-  // under it, for a guest or anyone — the dock is the way to the box.
-  it('draws the title alone: no 🔍, no filter glyph and no line under it, for anyone', () => {
+  // No 🔍 beside the title, for a guest or anyone — the dock is the way to
+  // the box (owner, 7 Nov 2026) — and under it the tab's sentence, back the
+  // same day, which a search no longer turns into an answer.
+  it('draws no 🔍 beside the title, and the tab’s own sentence under it, searching or not', () => {
     for (const uid of [null, 'u1']) {
       state.uid = uid;
-      state.cols.data = [col('theirs', ['a'])];
+      state.places = [place('a', 'hanoi')];
+      state.cols.data = [col('theirs', ['a'], { title_en: 'Theirs' })];
+      state.mine.data = uid ? [col('mine1', ['a'], { owner_id: 'u1', title_en: 'Mine' })] : [];
       show({ tab: 'community' });
       const top = screen.getByTestId('collections-top');
       expect(screen.queryByTestId('collections-search')).toBeNull();
       expect(screen.queryByTestId('collections-filters')).toBeNull();
-      expect(screen.queryByTestId('collections-scope')).toBeNull();
-      expect(within(top).queryByText('Good corners, through the community’s eyes.')).toBeNull();
       expect(top.querySelector('[data-icon="search-outline"]')).toBeNull();
+      expect(screen.getByTestId('collections-scope').textContent).toBe('Good corners, through the community’s eyes.');
+      // Asked something, the line stays the tab's.
+      openBox();
+      fireEvent.change(screen.getByTestId('collections-input'), { target: { value: 'theirs' } });
+      expect(screen.getByTestId('collections-scope').textContent).toBe('Good corners, through the community’s eyes.');
+      if (uid) {
+        fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
+        expect(screen.getByTestId('collections-scope').textContent).toBe('Your own favourite places.');
+      }
       cleanup();
     }
   });
