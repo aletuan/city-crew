@@ -1548,10 +1548,10 @@ describe('the Community Mosaic, one block a city', () => {
     fireEvent.click(head);
     expect(screen.getByText('Go to a city')).toBeTruthy();
     const rows = ['hanoi', 'hcmc', 'elsewhere'].map((k) => screen.getByTestId(`collections-jump-${k}`));
-    // Explore's city rows (owner, 7 Nov 2026): the name, the figure bare
-    // on the right, said in full; no pin, no tick, no card.
-    expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual(['Hanoi, 3 collections', 'Saigon, 4 collections', 'Elsewhere, 2 collections']);
-    expect(rows.map((r) => r.textContent)).toEqual(['Hanoi3', 'Saigon4', 'ElsewhereHuế · Đà Lạt2']);
+    // Explore's city rows (owner, 7 Nov 2026): the name alone — no figure,
+    // the heading has it — and no pin, no tick, no card.
+    expect(rows.map((r) => r.textContent)).toEqual(['Hanoi', 'Saigon', 'ElsewhereHuế · Đà Lạt']);
+    rows.forEach((r) => expect(r.textContent).not.toMatch(/\d/));
     rows.forEach((r) => {
       expect(r.querySelector('[data-icon="location-outline"]')).toBeNull();
       expect(r.querySelector('[data-icon="checkmark"]')).toBeNull();
@@ -1585,7 +1585,6 @@ describe('the Community Mosaic, one block a city', () => {
       return `rgb(${[0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
     })();
     expect(getComputedStyle(within(rows[0]).getByText('Hanoi')).color).toBe(accent);
-    expect(getComputedStyle(within(rows[0]).getByText('3')).color).toBe(accent);
     expect(getComputedStyle(within(rows[1]).getByText('Saigon')).color).not.toBe(accent);
     fireEvent.click(rows[2]);
     // The sheet goes first; the jump follows it (`SheetRows`).
