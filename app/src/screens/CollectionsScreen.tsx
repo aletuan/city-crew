@@ -27,7 +27,8 @@ import { cityShortById } from '../lib/cityName';
 import {
   listsWord, pairUp, placesOf as placesCount, reasonFor as shelfReason, type ShelfRow,
 } from '../lib/collectionShelf';
-import ActionSheet, { type SheetAction } from '../components/ActionSheet';
+import ActionSheet from '../components/ActionSheet';
+import { CityRow } from '../components/CityRow';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
 import { atHandle } from '../lib/handle';
@@ -802,14 +803,29 @@ export default function CollectionsScreen({ navigation, route }: {
   const cityWord = (id: string | null) => (id
     ? cityName(id)
     : t('Elsewhere', 'Nơi khác', 'その他の街', '其他城市', '其他城市'));
-  const jumpActions: SheetAction[] = (groups ?? []).map((g, i) => ({
-    key: g.city ?? 'elsewhere',
-    icon: 'location-outline' as const,
-    title: cityWord(g.city),
-    desc: listsWord(g.count, t),
-    selected: atCity ? atCity.id === g.city : i === 0,
-    onPress: () => jumpTo(i),
-  }));
+  // The sheet's rows are Explore's city rows (owner, 7 Nov 2026): it was
+  // a menu of acts — a pin on every row saying the same thing six times,
+  // "12 collections" under each name, a tick — beside an app whose other
+  // city list is names on the left and figures in a column on the right,
+  // the one on screen in the tint. "Elsewhere" goes last, under a rule,
+  // and names the cities it gathers: a reader after Hội An could not know
+  // to look in it.
+  const jumpRows = (groups ?? []).map((g, i) => {
+    const there = g.city == null;
+    return (
+      <CityRow
+        key={g.city ?? 'elsewhere'}
+        title={cityWord(g.city)}
+        sub={there && g.within?.length ? g.within.map(cityName).join(' · ') : null}
+        count={g.count}
+        active={atCity ? atCity.id === g.city : i === 0}
+        divided={i > 0}
+        onPress={() => jumpTo(i)}
+        testID={`collections-jump-${g.city ?? 'elsewhere'}`}
+        accessibilityLabel={`${cityWord(g.city)}, ${listsWord(g.count, t)}`}
+      />
+    );
+  });
   const cityHead = (city: { id: string | null; count: number }, pinnedCopy: boolean) => (
     <PressableScale
       onPress={() => setJumpOpen(true)}
@@ -1411,9 +1427,11 @@ export default function CollectionsScreen({ navigation, route }: {
         <ActionSheet
           visible={jumpOpen}
           onClose={() => setJumpOpen(false)}
-          actions={jumpActions}
           header={<Text style={s.jumpTitle}>{t('Go to a city', 'Đến thành phố', '都市へ移動', '前往城市', '前往城市')}</Text>}
-        />
+        >
+          {/* No card around them, as Explore's list has none. */}
+          <View>{jumpRows}</View>
+        </ActionSheet>
       </View>
       {/* Explore's dock, with this screen's two actions: the whole island
           is the box (`findFromDock`), the pill a new list. "+ Bộ sưu tập",

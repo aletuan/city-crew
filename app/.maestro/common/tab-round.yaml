@@ -99,10 +99,10 @@ appId: host.exp.Exponent
           id: "collections-city-bar"
       - extendedWaitUntil:
           visible:
-            id: "sheet-action-elsewhere"
+            id: "collections-jump-elsewhere"
           timeout: 10000
       - tapOn:
-          id: "sheet-action-elsewhere"
+          id: "collections-jump-elsewhere"
       - waitForAnimationToEnd:
           timeout: 5000
 - runFlow:
@@ -116,10 +116,10 @@ appId: host.exp.Exponent
           id: "collection-mosaic-city-.*"
       - extendedWaitUntil:
           visible:
-            id: "sheet-action-elsewhere"
+            id: "collections-jump-elsewhere"
           timeout: 10000
       - tapOn:
-          id: "sheet-action-elsewhere"
+          id: "collections-jump-elsewhere"
       - waitForAnimationToEnd:
           timeout: 5000
 - scrollUntilVisible:

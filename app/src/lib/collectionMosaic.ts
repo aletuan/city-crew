@@ -68,6 +68,11 @@ export type MosaicGroup<C> = {
   city: string | null;
   count: number;
   rows: MosaicRow<C>[];
+  /** "Elsewhere" only: the cities it gathers, most lists first — so the
+   *  city sheet can say where "Elsewhere" is (owner, 7 Nov 2026: a reader
+   *  after Hội An could not know it was in there). Lists in no city add
+   *  none. */
+  within?: string[];
 };
 
 /**
@@ -118,10 +123,16 @@ export function mosaicGroups<C extends { slug: string }>(collections: readonly C
   }
   const blocks: [string | null, C[]][] = [];
   const elsewhere: C[] = [];
+  const gathered: [string, number][] = [];
   for (const [city, lists] of byCity) {
     if (city && lists.length >= min) blocks.push([city, lists]);
-    else elsewhere.push(...lists);
+    else {
+      elsewhere.push(...lists);
+      if (city) gathered.push([city, lists.length]);
+    }
   }
+  // Stable: equal counts keep the order their first list arrived in.
+  const within = gathered.sort(([, a], [, b]) => b - a).map(([city]) => city);
   // Stable: equal counts keep the order their first list arrived in.
   blocks.sort(([a, x], [b, y]) => Number(b === o.home) - Number(a === o.home) || y.length - x.length);
   // `elsewhere` gathered in city order; put it back in arrival order.
@@ -144,6 +155,6 @@ export function mosaicGroups<C extends { slug: string }>(collections: readonly C
   return blocks.map(([city, lists]) => {
     const rows = mosaicRows(arrange(lists), from);
     from += lists.length;
-    return { city, count: lists.length, rows };
+    return city ? { city, count: lists.length, rows } : { city, count: lists.length, rows, within };
   });
 }

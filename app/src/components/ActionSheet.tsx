@@ -81,11 +81,16 @@ export type SheetAction = {
   onPress: () => void;
 };
 
-export default function ActionSheet({ visible, header, actions, onClose }: {
+export default function ActionSheet({ visible, header, actions, children, onClose }: {
   visible: boolean;
   /** What the menu is about, drawn above the rows. */
   header: React.ReactNode;
-  actions: SheetAction[];
+  actions?: SheetAction[];
+  /** A body of the caller's own in place of the rows — for a sheet that
+   *  is a list to choose from rather than a menu of acts: Collections'
+   *  "Go to a city" draws `CityRow`s here (7 Nov 2026). The chrome — the
+   *  backdrop, the spring, the grabber, the header — stays this sheet's. */
+  children?: React.ReactNode;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -109,7 +114,7 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
 
         {header}
 
-        <SheetRows actions={actions} onClose={onClose} />
+        {children ?? <SheetRows actions={actions ?? []} onClose={onClose} />}
       </Animated.View>
     </Modal>
   );

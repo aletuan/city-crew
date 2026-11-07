@@ -78,6 +78,19 @@ describe('mosaicGroups', () => {
     expect(group(lists, {}, 'danang').map(g => g.city)).toEqual(['hcmc', 'hue', 'hanoi', null]);
   });
 
+  // So the city sheet can say where "Elsewhere" is (owner, 7 Nov 2026).
+  it('names the cities "elsewhere" gathers, most lists first, and only there', () => {
+    const lists = [
+      l('d1', 'danang'), l('h1', 'hue'), l('h2', 'hue'), l('h3', 'hue'), l('a1', 'hoian'),
+      l('x', null), l('a2', 'hoian'), l('v1', 'vungtau'),
+    ];
+    const groups = group(lists);
+    expect(groups.map(g => g.within)).toEqual([undefined, ['hoian', 'danang', 'vungtau']]);
+    expect('within' in groups[0]).toBe(false);
+    // A list in no city gathers none; with nothing else, the list is empty.
+    expect(group([l('x', null)])[0].within).toEqual([]);
+  });
+
   it('keeps a city of exactly the minimum as its own block', () => {
     expect(MOSAIC_MIN_CITY).toBe(3);
     const three = [l('a', 'hue'), l('b', 'hue'), l('c', 'hue')];

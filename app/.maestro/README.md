@@ -358,7 +358,7 @@ to test resume behavior.
 | Component | Additional testID |
 | --- | --- |
 | `AuthSheet` | `auth-sheet-sign-in`, `auth-sheet-cancel` |
-| `CollectionsScreen` | `collections-community`, `collections-ready` (fresh public catalog loaded successfully), `collections-dock` (the dock, offered once the shelf is scrolled with the tab bar ducked — its middle opens the box, which is not on the page at rest), `collections-input` (the box, once open), `collections-kind-<key>` (a kind under the open box), `collections-view-<tile\|mosaic>` (Community's view buttons, signed in only; Yours has none), `collection-mosaic-city-<city id\|elsewhere>` (a Mosaic city heading — every block but the first), `collections-first-gap` (the first block's slot), `collections-city-bar` (the pinned city bar) |
+| `CollectionsScreen` | `collections-community`, `collections-ready` (fresh public catalog loaded successfully), `collections-dock` (the dock, offered once the shelf is scrolled with the tab bar ducked — its middle opens the box, which is not on the page at rest), `collections-input` (the box, once open), `collections-kind-<key>` (a kind under the open box), `collections-view-<tile\|mosaic>` (Community's view buttons, signed in only; Yours has none), `collection-mosaic-city-<city id\|elsewhere>` (a Mosaic city heading — every block but the first), `collections-first-gap` (the first block's slot), `collections-city-bar` (the pinned city bar), `collections-jump-<city id\|elsewhere>` (a row of the city sheet either one opens) |
 | `ActionSheet` | `sheet-action-public`, `sheet-action-private` (existing action-key IDs) |
 
 `PlaceDetailScreen` also exposes `detail-place-<slug>`. Flow 18 searches for

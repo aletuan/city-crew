@@ -53,8 +53,9 @@ import { useI18n } from '../lib/i18n';
 import { useFlag } from '../lib/useFlag';
 import { cityBook } from '../lib/cityBook';
 import { colors, font, radius, space } from '../theme';
-import { fireHaptic, PressableScale } from './ui';
+import { PressableScale } from './ui';
 import { useSheetDrag } from './sheetDrag';
+import { CityRow } from './CityRow';
 
 /** Under this many live places a city is introduced as new — a promise
  *  kept small on purpose, so nobody walks into a young catalog expecting
@@ -154,49 +155,21 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   };
 
   // One row, in either list: the same tap, the same count, the same mark
-  // for the city on screen.
+  // for the city on screen. The row is `CityRow`, shared with the
+  // Collections screen's "Go to a city" since 7 Nov 2026.
   const cityRow = (c: (typeof cities)[number], testID: string, divided: boolean) => {
-    const active = c.id === city?.id;
     const n = counts[c.id];
     return (
-      <View key={testID}>
-        {divided && <View style={s.sep} />}
-        <PressableScale
-          haptic="selection"
-          contentStyle={[s.row, active && s.rowOn]}
-          onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
-          accessibilityRole="button"
-          // `aria-*` rather than `accessibilityState`, which
-          // react-native-web drops — the same reason `Chip` does
-          // it this way, and now the only thing besides colour
-          // saying which row is chosen.
-          aria-selected={active}
-          testID={testID}
-        >
-          <View style={s.nameRow}>
-            <Text style={[s.rowTitle, active && { color: colors.accent }]}>
-              {t(c.short_en, c.short_vi, c.short_ja)}
-            </Text>
-            {/* Beside the name, because that is the noun it means.
-                Under it — as "15 places · new" — it sat next to
-                the count instead, and read as fifteen *newly
-                added* places rather than a young catalog. A chip
-                against the city's own name cannot say that. */}
-            {n != null && n < YOUNG_CITY_MAX && (
-              <View style={s.newChip}>
-                <Text style={s.newChipText}>{t('NEW', 'MỚI', '新着', '新', '新')}</Text>
-              </View>
-            )}
-          </View>
-          {/* Right edge, so the numbers line up in a column you
-              can read down. A city with nothing in it yet shows
-              no number rather than a zero: the row is an offer,
-              and "0" reads as a broken one. */}
-          {showCounts && n != null && (
-            <Text style={[s.count, active && { color: colors.accent }]}>{n}</Text>
-          )}
-        </PressableScale>
-      </View>
+      <CityRow
+        key={testID}
+        title={t(c.short_en, c.short_vi, c.short_ja)}
+        count={showCounts ? n : null}
+        active={c.id === city?.id}
+        isNew={n != null && n < YOUNG_CITY_MAX}
+        divided={divided}
+        onPress={() => { setCity(c.id); onClose(); }}
+        testID={testID}
+      />
     );
   };
 
@@ -342,32 +315,8 @@ const s = StyleSheet.create({
     padding: 14, borderRadius: radius.card - 6,
     backgroundColor: colors.accentSoft, marginBottom: 8,
   },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 15, paddingHorizontal: 12,
-  },
-  // The chosen row wears the well's own tint — one material for "this is
-  // the special one" across the sheet — plus the tick above.
-  rowOn: { backgroundColor: colors.accentSoft, borderRadius: radius.card - 6 },
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.medium },
   rowSub: { color: colors.textTertiary, fontSize: 13, marginTop: 2 },
-  nameRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  // Tabular figures so the column of counts lines up digit for digit;
-  // 274 above 43 with proportional numerals reads as a ragged edge.
-  count: {
-    color: colors.textTertiary, fontSize: 15,
-    fontVariant: ['tabular-nums'],
-  },
-  // Outlined rather than filled: the chosen row already wears accentSoft
-  // as its ground, and a soft-tinted chip would vanish into it on the one
-  // row most likely to carry this — the young city you just switched to.
-  newChip: {
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.accentLine,
-  },
-  newChipText: {
-    color: colors.accent, fontSize: 10, fontWeight: font.semibold, letterSpacing: 0.6,
-  },
   // The two sections' headings: the eyebrow the Search screen's sections
   // wear, so a heading reads as one thing across the app.
   section: {
@@ -378,21 +327,4 @@ const s = StyleSheet.create({
   sectionNext: { paddingTop: 18 },
   // The empty-handed answer, under the well it answers for.
   note: { color: colors.accent, fontSize: 13, lineHeight: 17, paddingHorizontal: 4, marginBottom: 6 },
-  // `marginVertical`, and it is the whole reason this line is visible.
-  //
-  // Without it the hairline sits flush against the next row, which is fine
-  // between two plain ones and invisible against the selected pill: an 8%
-  // hairline touching the top edge of an `accentSoft` fill reads as the
-  // pill's own border, not as a divider. The language sheet got away with
-  // it because its selected row is usually the first, so its dividers fall
-  // between plain rows; the appearance sheet has two rows and one divider,
-  // and when Light is chosen that divider is the one hugging the pill.
-  //
-  // Three points either side is enough to put sheet colour between the
-  // line and the fill, and small enough that the rhythm between plain rows
-  // does not change.
-  sep: {
-    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
-    marginHorizontal: 4, marginVertical: 3,
-  },
 });
