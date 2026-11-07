@@ -562,6 +562,7 @@ export function siftCollections<C extends SearchableCollection>(
 ): CollectionHit<C>[] {
   const terms = queryTerms(sift.query);
   const bare = terms.map((t) => t.replace(/^@/, ''));
+  const typed = markedTerms(sift.query);
   const narrowed = !!(sift.city || sift.kind);
   const asked = narrowed || terms.length > 0;
   const chipPass = (m: SiftMember) =>
@@ -572,6 +573,14 @@ export function siftCollections<C extends SearchableCollection>(
     // too, so that "da nang" lands on a list of Da Nang places.
     const whole = `${collectionHaystack(c)} ${members.map(memberHaystack).join(' ')}`;
     if (terms.length && !matches(whole, bare)) return;
+    // And `collectionMatches`' rule for marks, which this sift had lost:
+    // "Đà Lạt" typed with its marks is not answered by a list whose English
+    // says "After Dark" and "until late" (owner, 7 Nov 2026 — two lists
+    // with no place in Đà Lạt came back for it).
+    if (typed.length && !marksAgree(wordsAsWritten([
+      c.title_en, c.title_vi, c.title_ja, c.desc_en, c.desc_vi, c.desc_ja, c.curator_handle,
+      ...members.flatMap((m) => [...allLocalized(m, 'name'), m.city_name]),
+    ].join(' ')), typed)) return;
     const byTitle = terms.length > 0 && matches(collectionHaystack(c), bare);
     const onWords = (m: SiftMember) => {
       const hay = memberHaystack(m);
@@ -591,6 +600,31 @@ export function siftCollections<C extends SearchableCollection>(
     out.sort((a, b) => Number(b.byTitle) - Number(a.byTitle) || b.hits - a.hits);
   }
   return out.map(({ byTitle: _, ...hit }) => hit);
+}
+
+/**
+ * The city a whole query names, by any name it goes by: "Đà Lạt", "da
+ * lat", "Dalat", "ダラット". Null when the query is anything more or less
+ * than a city's name.
+ *
+ * Typed whole, a city is a question about places — the lists with a place
+ * there — and not a pair of words to find anywhere on a list. As words,
+ * "da lat" was answered by "After Dark … until late" and by "Đà Nẵng …
+ * run late" (owner, 7 Nov 2026), on the day the city filter went: the
+ * Collections screen asks this first and narrows by the city it names.
+ *
+ * Spaces and punctuation do not count, so "da lat", "dalat" and "Đà-Lạt"
+ * are one name; marks do not either (`fold`). Three letters at least, so
+ * "hu" while typing "Huế" is still words.
+ */
+export function cityInQuery(
+  query: string,
+  cities: readonly { id: string; names: readonly (string | null | undefined)[] }[],
+): string | null {
+  const squash = (x: string) => fold(x).replace(/[^\p{L}\p{N}]+/gu, '');
+  const q = squash(query);
+  if (q.length < 3) return null;
+  return cities.find((c) => c.names.some((n) => !!n && squash(n) === q))?.id ?? null;
 }
 
 /** Distinct values across every member, most frequent first — the chips

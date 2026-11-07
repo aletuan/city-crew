@@ -40,7 +40,7 @@ import { collectionKinds as listKinds } from '../lib/collectionKinds';
 import NewBadge from '../components/NewBadge';
 import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
-import { collectionCities, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
+import { cityInQuery, collectionCities, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
@@ -891,10 +891,20 @@ export default function CollectionsScreen({ navigation, route }: {
   // kind leads to an empty shelf.
   const kindChoices = useMemo(() => collectionKinds(shelf), [shelf]);
   const asked = !!(q || kind);
+  // A city typed whole is a city chosen (owner, 7 Nov 2026): "Đà Lạt" lists
+  // the lists with a place there, not every list whose words begin "da"
+  // and "lat" somewhere — "After Dark … until late" came back for it. It
+  // stands in for the city filter that went the same day; anything more
+  // or less than a city's name stays words.
+  const cityAsked = useMemo(
+    () => cityInQuery(q, cities.map((c) => ({ id: c.id, names: [c.short_en, c.short_vi, c.short_ja, c.name_en, c.name_vi, c.name_ja] }))),
+    [q, cities],
+  );
+  const words = cityAsked ? '' : q;
 
   const hits = useMemo(
-    () => siftCollections(shelf, { query: q, city: null, kind }),
-    [shelf, q, kind],
+    () => siftCollections(shelf, { query: words, city: cityAsked, kind }),
+    [shelf, words, cityAsked, kind],
   );
   const hitBy = useMemo(() => new Map(hits.map((h) => [h.c.slug, h])), [hits]);
   // The cities the answer reaches, for the line under the title: with no
@@ -907,15 +917,18 @@ export default function CollectionsScreen({ navigation, route }: {
 
   // The chips' own labels, as the heading and the cards' reasons print
   // them. The words themselves are `lib/collectionShelf`'s.
-  const chosen = kind ? [categoryLabel(kind, t)] : [];
+  const chosen = [
+    kind ? categoryLabel(kind, t) : null,
+    cityAsked ? cityName(cityAsked) : null,
+  ].filter((x): x is string => !!x);
   // Each kind's row figure: the lists the words so far would leave with
   // that kind chosen, so a kind that would empty the shelf says 0 and is
   // drawn off rather than hidden.
   const kindCounts = useMemo(
-    () => new Map(kindChoices.map((k) => [k, siftCollections(shelf, { query: q, city: null, kind: k }).length])),
-    [shelf, q, kindChoices],
+    () => new Map(kindChoices.map((k) => [k, siftCollections(shelf, { query: words, city: cityAsked, kind: k }).length])),
+    [shelf, words, cityAsked, kindChoices],
   );
-  const wordsCount = useMemo(() => siftCollections(shelf, { query: q, city: null, kind: null }).length, [shelf, q]);
+  const wordsCount = useMemo(() => siftCollections(shelf, { query: words, city: cityAsked, kind: null }).length, [shelf, words, cityAsked]);
   const placesOf = (n: number) => placesCount(n, t);
   // A row's like count, as a screen reader says it: the row prints the
   // number bare beside its heart, and a bare number aloud is just a number.

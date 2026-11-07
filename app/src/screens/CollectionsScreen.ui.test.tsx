@@ -1380,6 +1380,46 @@ describe('CollectionsScreen — search', () => {
     expectSub('1 collection · danang');
   });
 
+  // A city typed whole is a city chosen (owner, 7 Nov 2026): "Đà Lạt" was
+  // answered by a Hanoi list "… After Dark … until late" and by "Đà Nẵng
+  // … run late", neither with a place in Đà Lạt.
+  it('narrows to the city a whole query names, by any of its names, and says so', () => {
+    state.cities = [
+      { id: 'dalat', short_en: 'Da Lat', short_vi: 'Đà Lạt', short_ja: 'ダラット', name_en: 'Da Lat', name_vi: 'Đà Lạt', name_ja: 'ダラット' },
+      { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ', name_en: 'Hanoi', name_vi: 'Hà Nội', name_ja: 'ハノイ' },
+      { id: 'hue', short_en: 'Hue', short_vi: 'Huế', short_ja: 'フエ', name_en: 'Hue', name_vi: 'Huế', name_ja: 'フエ' },
+    ];
+    state.places = [cafe('a', 'hanoi'), place('b', 'danang'), cafe('d', 'dalat')];
+    state.cols.data = [
+      col('hn', ['a'], { title_en: 'Hoan Kiem After Dark', desc_en: 'Open until late' }),
+      col('dn', ['b'], { title_en: 'Da Nang late', desc_en: 'Places that run late' }),
+      col('dl', ['d'], { title_en: 'Pine hills' }),
+    ];
+    show();
+    // The Japanese name is on no list's words: only the city answers it.
+    for (const q of ['Đà Lạt', 'da lat', 'Dalat', 'ダラット']) {
+      type(q);
+      expect(screen.queryByText('Hoan Kiem After Dark')).toBeNull();
+      expect(screen.queryByText('Da Nang late')).toBeNull();
+      expect(screen.getByText('Pine hills')).toBeTruthy();
+      expectSub('1 collection · Da Lat');
+      // The kinds count inside the city too: one list, not the Hanoi café's as well.
+      expect(screen.getByTestId('collections-kinds-all').textContent).toBe('All (1)');
+      expect(screen.getByTestId('collections-kind-cafes').textContent).toBe('Cafés (1)');
+    }
+    // A city with no list is still the question, and the line names it.
+    type('Huế');
+    expect(screen.queryByText('Pine hills')).toBeNull();
+    expectSub('0 collections · Hue');
+    // One word more and it is words again, found where they land.
+    type('da lat pine');
+    expect(screen.getByText('Pine hills')).toBeTruthy();
+    expectSub('1 collection · Da Lat');
+    type('dark');
+    expect(screen.getByText('Hoan Kiem After Dark')).toBeTruthy();
+    expect(screen.queryByText('Pine hills')).toBeNull();
+  });
+
   it('shows a list from another city with no chip to reach it', () => {
     state.places = [place('b', 'danang')];
     state.cols.data = [col('dn', ['b'], { title_en: 'Da Nang list' })];
