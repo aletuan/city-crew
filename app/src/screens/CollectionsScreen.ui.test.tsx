@@ -184,23 +184,6 @@ const listProps = (): { onRefresh: () => void; refreshing: boolean; onScroll: (e
   throw new Error('no SectionList in the committed tree');
 };
 
-// Whether the sheet is up, by its own prop: react-native-web keeps a
-// modal in the page through its fade, so absence is not the signal.
-const sheetShown = (): boolean => {
-  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
-  const stack: Fiber[] = [host[key].stateNode.current];
-  while (stack.length) {
-    const f = stack.pop()!;
-    const p = f.memoizedProps;
-    if (p && typeof p === 'object' && 'countFor' in p && 'visible' in p) return p.visible as boolean;
-    if (f.sibling) stack.push(f.sibling);
-    if (f.child) stack.push(f.child);
-  }
-  throw new Error('no filter sheet');
-};
-
 /** The committed props of every host-side element that offers a screen
  *  reader actions — VoiceOver's rotor has no jsdom counterpart, and
  *  react-native-web drops the props from the DOM, so the handler is
@@ -252,6 +235,12 @@ beforeEach(async () => {
 // An answer in the filter sheet by its word: each carries its figure
 // after it, "Cafés (2)", which the accessible name runs together.
 const word = (w: string) => ({ name: new RegExp(`^${w} ?(\\(\\d+\\))?$`) });
+// The box is not on the page at rest (owner, 7 Nov 2026): the 🔍 beside
+// the title opens it, with the kinds as a row under it.
+const openBox = () => {
+  if (!screen.queryByPlaceholderText('Name, place, city, user')) fireEvent.click(screen.getByTestId('collections-search'));
+};
+const pickKind = (label: string) => fireEvent.click(within(screen.getByTestId('collections-kinds')).getByRole('button', word(label)));
 /** What each row's heart says aloud after its name: the count the row
  *  prints bare beside it, as a sentence (`aria-valuetext`). */
 const heartsSay = () => screen.queryAllByRole('button', { name: /like this collection/i })
@@ -554,23 +543,24 @@ describe('CollectionsScreen — signed in', () => {
   // The header is the same on both tabs (owner, 26 Oct 2026): an empty
   // Yours that dropped the pill drew its title and tabs higher than
   // Community's, and lost the filter glyph beside the title.
-  it('keeps the pill and the filter glyph on an empty library too, beside its own card', () => {
+  it('keeps the pill and the 🔍 on an empty library too, beside its own card', () => {
     show();
     expect(screen.getByTestId('collection-new')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.getByRole('button', { name: 'New collection' })).toBeTruthy();
     expect(screen.getByText('Create your first collection')).toBeTruthy();
-    // Nothing of yours to filter: the glyph is there, and does nothing.
-    const filters = screen.getByTestId('collections-filters');
-    expect(filters.getAttribute('aria-disabled')).toBe('true');
-    fireEvent.click(filters);
-    expect(screen.queryByTestId('collections-filter-apply')).toBeNull();
+    // Nothing of yours to narrow: the 🔍 still opens the box, with no
+    // kinds under it.
+    fireEvent.click(screen.getByTestId('collections-search'));
+    expect(screen.getByTestId('collections-input')).toBeTruthy();
+    expect(screen.queryByTestId('collections-kinds')).toBeNull();
   });
 
-  it('draws no filter glyph for a guest with nothing to choose', () => {
+  it('gives a guest the 🔍 too, and no filter glyph to anyone', () => {
     state.uid = null;
     state.cols.data = [];
     show();
+    expect(screen.getByTestId('collections-search')).toBeTruthy();
     expect(screen.queryByTestId('collections-filters')).toBeNull();
   });
 
@@ -1111,25 +1101,44 @@ describe('CollectionsScreen — list view', () => {
 });
 
 describe('CollectionsScreen — search', () => {
-  const box = () => screen.getByPlaceholderText('Name, place, city, user') as HTMLInputElement;
+  const box = () => { openBox(); return screen.getByPlaceholderText('Name, place, city, user') as HTMLInputElement; };
   const type = (v: string) => fireEvent.change(box(), { target: { value: v } });
   const open = () => fireEvent.focus(box());
   const expectSub = (line: string) => expect(screen.getByTestId('collections-scope').textContent).toBe(line);
 
-  // Cancel lives inside the box (owner, 15 Oct 2026): absent at rest, in
-  // the box's own frame once the box is focused, gone again when pressed.
-  it('shows Cancel inside the box on focus, and takes it away on the tap', () => {
-    state.cols.data = [col('coffee', ['b'], { title_en: 'Coffee' })];
+  // One way in (owner, 7 Nov 2026): no box at rest; the 🔍 beside the
+  // title opens it, ready for words, with Cancel inside it (15 Oct) and
+  // the kinds under it; Cancel puts it all away. No city to choose — a
+  // city is typed, and Mosaic is drawn by city.
+  it('keeps the box away at rest; the 🔍 opens it with Cancel and the kinds, and Cancel puts it away', () => {
+    state.places = [cafe('a'), bar('b', 'danang')];
+    state.cols.data = [col('coffee', ['a'], { title_en: 'Coffee' }), col('bars', ['b'], { title_en: 'Bars' })];
     show();
-    expect(screen.queryByTestId('collections-cancel')).toBeNull();
-    open();
+    expect(screen.queryByTestId('collections-input')).toBeNull();
+    expect(screen.queryByTestId('collections-kinds')).toBeNull();
+    const find = screen.getByTestId('collections-search');
+    expect(screen.getByTestId('collections-top').contains(find)).toBe(true);
+    expect(find.getAttribute('aria-label')).toBe('Find a collection');
+    fireEvent.click(find);
     const cancel = screen.getByTestId('collections-cancel');
     expect(box().parentElement!.contains(cancel)).toBe(true);
+    expect(document.activeElement).toBe(box());
+    const kinds = within(screen.getByTestId('collections-kinds'));
+    expect(kinds.getAllByRole('button')).toHaveLength(3);
+    ['All', 'Cafés', 'Nightlife'].forEach((k) => expect(kinds.getByRole('button', word(k))).toBeTruthy());
+    // No city among them.
+    expect(kinds.queryByRole('button', word('danang'))).toBeNull();
     type('cof');
+    // Words that leave no bar: Nightlife says 0 and is drawn off, not hidden.
+    expect(kinds.getByRole('button', word('Nightlife')).textContent).toBe('Nightlife (0)');
+    expect(kinds.getByRole('button', word('Nightlife')).getAttribute('aria-disabled')).toBe('true');
+    expect(kinds.getByRole('button', word('Cafés')).getAttribute('aria-disabled')).not.toBe('true');
     fireEvent.click(cancel);
-    expect(box().value).toBe('');
+    expect(screen.queryByTestId('collections-input')).toBeNull();
     expect(screen.queryByTestId('collections-cancel')).toBeNull();
+    expect(screen.queryByTestId('collections-kinds')).toBeNull();
     expect(screen.queryByTestId('collections-panel')).toBeNull();
+    expect(screen.getByText('Bars')).toBeTruthy();
   });
 
   it('filters by name, says when nothing matches, and comes back when emptied', () => {
@@ -1189,36 +1198,21 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByText('List one')).toBeTruthy();
   });
 
-  // The filters are a sheet beside the title since 25 Oct 2026 (owner):
-  // opened from the glyph, drafted, and applied by the button that says
-  // what it will show.
-  const sheetPick = (pick: { city?: string; kind?: string }) => {
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    if (pick.city) fireEvent.click(within(screen.getByTestId('collections-filter-cities')).getByRole('button', word(pick.city)));
-    if (pick.kind) fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', word(pick.kind)));
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
-  };
-
-  it('Cancel lets go of the words and the panel, and keeps the filters', () => {
+  // Cancel lets go of everything the box holds — the words and the kind
+  // — since they are one tool again (7 Nov 2026).
+  it('Cancel lets go of the words and the kind, and puts the box away', () => {
     state.places = [cafe('a'), bar('b')];
     state.cols.data = [col('rooftops', ['a'], { title_en: 'Rooftops' }), col('coffee', ['b'], { title_en: 'Coffee' })];
     show();
-    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
     open();
-    expect(screen.getByTestId('collections-cancel')).toBeTruthy();
-    // The filter first: with "roof" in the box the sheet would count no
-    // nightlife on this shelf, and dim it.
-    sheetPick({ kind: 'Nightlife' });
+    pickKind('Nightlife');
     type('roof');
     expect(screen.queryByText('Rooftops')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByTestId('collections-panel')).toBeNull();
-    expect(box().value).toBe('');
-    // The filter is the sheet's, and stays, in sight under the box.
+    expect(screen.queryByTestId('collections-input')).toBeNull();
     expect(screen.getByText('Coffee')).toBeTruthy();
-    expect(screen.queryByText('Rooftops')).toBeNull();
-    expect(within(screen.getByTestId('collections-chosen')).getByText('Nightlife')).toBeTruthy();
-    expect(screen.queryByTestId('collections-cancel')).toBeNull();
+    expect(screen.getByText('Rooftops')).toBeTruthy();
+    expect(screen.getByTestId('collections-search').getAttribute('aria-label')).toBe('Find a collection');
   });
 
   // The panel is the box's: what was searched here before, and nothing
@@ -1238,68 +1232,38 @@ describe('CollectionsScreen — search', () => {
     const panel = within(await screen.findByTestId('collections-panel'));
     expect(panel.getByText('rooftops')).toBeTruthy();
     expect(panel.queryByText('City')).toBeNull();
-    expect(panel.queryByText('Kind of place')).toBeNull();
+    // The kinds are their own row, outside the suggestions.
+    expect(panel.queryByRole('button', word('All'))).toBeNull();
     await AsyncStorage.removeItem('citycrew.recentCollectionSearches');
   });
 
-  it('filters from a sheet beside the title, drafted until applied', () => {
+  // While a kind is on the box stays open, the kind in sight in its
+  // row, and the 🔍 says so in coral with a 1 — even once the keyboard
+  // has gone with the panel.
+  it('keeps the box and the kind in sight while a kind is on, and the 🔍 counts it', () => {
     state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
     state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
     show();
-    const filters = screen.getByTestId('collections-filters');
-    // Beside the title, in ink while nothing is on.
-    expect(screen.getByTestId('collections-top').contains(filters)).toBe(true);
-    expect(filters.getAttribute('aria-label')).toBe('Filters');
-    fireEvent.click(filters);
-    expect(screen.getByTestId('collections-filter-cities-all').getAttribute('aria-selected')).toBe('true');
-    expect(screen.queryByTestId('collections-filter-reset')).toBeNull();
-    fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', word('Cafés')));
-    // A draft: the shelf has not moved, and the button says what it will.
-    expect(screen.getByText('Da Nang bars')).toBeTruthy();
-    expect(screen.getByTestId('collections-filter-apply').textContent).toContain('Show 1 collection');
-    expect(screen.getByTestId('collections-filter-reset')).toBeTruthy();
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
-    expect(sheetShown()).toBe(false);
+    open();
+    expect(screen.getByTestId('collections-kinds-all').getAttribute('aria-selected')).toBe('true');
+    pickKind('Cafés');
+    // A kind is an answer: the panel and the keyboard go, the box stays.
+    expect(screen.queryByTestId('collections-panel')).toBeNull();
+    expect(document.activeElement).not.toBe(box());
+    expect(screen.getByTestId('collections-kind-cafes').getAttribute('aria-selected')).toBe('true');
     expect(screen.queryByText('Da Nang bars')).toBeNull();
     expect(screen.getByText('Hanoi cafés')).toBeTruthy();
-    // Coral, and counted, once something is on.
-    expect(screen.getByTestId('collections-filters').getAttribute('aria-label')).toBe('Filters, 1');
-    // Reset and close: nothing applied, nothing changed.
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    fireEvent.click(screen.getByTestId('collections-filter-reset'));
-    expect(screen.getByTestId('collections-filter-apply').textContent).toContain('Show 2 collections');
-    fireEvent.click(screen.getByTestId('collections-filter-close'));
-    expect(sheetShown()).toBe(false);
-    expect(screen.queryByText('Da Nang bars')).toBeNull();
-  });
-
-  // What the sheet chose stays in sight under the box, each with a ✕ of
-  // its own (owner, 25 Oct 2026), and the words open the sheet again.
-  it('shows the chosen filters under the box: the words open the sheet, a ✕ lets go of its own', () => {
-    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
-    state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
-    show();
-    expect(screen.queryByTestId('collections-chosen')).toBeNull();
-    type('café');
-    sheetPick({ city: 'hanoi', kind: 'Cafés' });
-    const row = screen.getByTestId('collections-chosen');
-    expect(within(row).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['hanoi', 'Remove hanoi', 'Cafés', 'Remove Cafés']);
-    // The glyph led this row once; it is beside the title now.
-    expect(row.querySelector('[data-icon="options-outline"]')).toBeNull();
-    // The kind's glyph in its word's ink, as the filter rows wear it.
-    expect(within(screen.getByTestId('collections-chosen-kind')).getByRole('button', { name: 'Cafés' })
-      .querySelector('[data-icon="cafe-outline"]')!.getAttribute('data-color')).toBe(String(colors.text));
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Cafés' }));
-    expectSub('1 collection · hanoi');
-    expect(screen.queryByTestId('collections-chosen-kind')).toBeNull();
-    // The words in the box are the box's: a ✕ leaves them.
-    expect(box().value).toBe('café');
-    fireEvent.click(within(screen.getByTestId('collections-chosen-city')).getByRole('button', { name: 'hanoi' }));
-    expect(sheetShown()).toBe(true);
-    expect(within(screen.getByTestId('collections-filter-cities')).getByRole('button', word('hanoi')).getAttribute('aria-selected')).toBe('true');
-    fireEvent.click(screen.getByTestId('collections-filter-close'));
-    fireEvent.click(screen.getByRole('button', { name: 'Remove hanoi' }));
-    expect(screen.queryByTestId('collections-chosen')).toBeNull();
+    const find = screen.getByTestId('collections-search');
+    expect(find.getAttribute('aria-label')).toBe('Find a collection, 1');
+    expect(find.querySelector('[data-icon="search-outline"]')!.getAttribute('data-color')).toBe(String(colors.accent));
+    // The 🔍 again, while open: the keyboard comes back to the box.
+    fireEvent.click(find);
+    expect(document.activeElement).toBe(box());
+    // "All" lets go of the kind; the box stays while it is asked for.
+    pickKind('All');
+    expect(screen.getByText('Da Nang bars')).toBeTruthy();
+    expect(find.getAttribute('aria-label')).toBe('Find a collection');
+    expect(screen.getByTestId('collections-input')).toBeTruthy();
   });
 
   it('on your own tab a miss shows the honest footer, and the pill stays', () => {
@@ -1319,9 +1283,10 @@ describe('CollectionsScreen — search', () => {
     state.cols.data = [col('one', ['a']), col('two', ['c'])];
     show();
     const drag = () => {
-      const key = Object.keys(box()).find((k) => k.startsWith('__reactFiber'))!;
+      const el = screen.getByTestId('collections-top');
+      const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
       type Fiber = { memoizedProps?: Record<string, unknown>; child?: Fiber; sibling?: Fiber; return?: Fiber };
-      let top = (box() as unknown as Record<string, Fiber>)[key];
+      let top = (el as unknown as Record<string, Fiber>)[key];
       while (top.return) top = top.return;
       const stack: Fiber[] = [top];
       while (stack.length) {
@@ -1343,9 +1308,8 @@ describe('CollectionsScreen — search', () => {
     type('one');
     drag();
     expect(screen.queryByTestId('collections-panel')).toBeNull();
-    // Nothing chosen: no row; the words are still in the box, and Cancel
-    // is still the way to let them go.
-    expect(screen.queryByTestId('collections-chosen')).toBeNull();
+    // The words are still in the box, and Cancel is still the way to let
+    // them go.
     expect(box().value).toBe('one');
     expect(screen.getByTestId('collections-cancel')).toBeTruthy();
   });
@@ -1363,93 +1327,57 @@ describe('CollectionsScreen — search', () => {
     state.cols.data = [col('mixed', ['a', 'c', 'd'], { title_en: 'Mixed', curator_handle: 'minh' }), col('bars', ['d'], { title_en: 'Bars' })];
     show();
     await act(async () => {});
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    expect(screen.getByText('Kind of place')).toBeTruthy();
-    expect(screen.queryByText('Nature')).toBeNull();
-    fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', word('Cafés')));
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
+    open();
+    expect(screen.queryByRole('button', word('Nature'))).toBeNull();
+    pickKind('Cafés');
     expect(screen.getByText('Mixed')).toBeTruthy();
     expect(screen.queryByText('Bars')).toBeNull();
     expect(screen.getByText('1 of 3 places · Cafés')).toBeTruthy();
     expectSub('1 collection · Cafés');
-    // Tapped again, in the sheet, the choice lets go.
-    sheetPick({ kind: 'Cafés' });
+    // "All" lets go.
+    pickKind('All');
     expect(screen.getByText('Bars')).toBeTruthy();
     expect(screen.queryByText('1 of 3 places · Cafés')).toBeNull();
   });
 
-  // The sheet dims a pair that holds nothing (25 Oct 2026), so a reader
-  // reaches one only by carrying a choice to the other shelf.
-  it('says so when nothing has a place the chips ask for, in words or without', () => {
+  // A kind the shelf holds none of is drawn off, not hidden; carried to
+  // the other shelf, a kind that reaches nothing says so.
+  it('says so when nothing has a place the kind asks for, in words or without', () => {
     state.uid = 'u1';
-    state.places = [cafe('a', 'hanoi'), cafe('b', 'danang'), bar('c', 'danang')];
+    state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1', title_en: 'My cafés' }), col('m2', ['c'], { owner_id: 'u1', title_en: 'My bars' })];
-    state.cols.data = [col('one', ['b'], { title_en: 'Cafés of Da Nang' }), col('two', ['c'], { title_en: 'Bars' })];
+    state.cols.data = [col('two', ['c'], { title_en: 'Bars' })];
     show();
-    sheetPick({ city: 'hanoi', kind: 'Cafés' });
+    open();
+    pickKind('Cafés');
     expect(screen.getByText('My cafés')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Community' }));
-    // The words land on the first list's title, but the chips ask about
-    // places, and it has no café in Hanoi — and under words the miss
-    // names them.
+    // Words: the miss names them.
     type('cafes');
     expect(screen.getByText('Nothing here matches "cafes".')).toBeTruthy();
-    // Chips alone: Community has no café in Hanoi.
+    // The kind alone: Community has no café — and the kind is still in
+    // the row, on, where this shelf would not offer it.
     type('');
     expect(screen.getByText('No collections match that choice.')).toBeTruthy();
+    expect(screen.getByTestId('collections-kind-cafes').getAttribute('aria-selected')).toBe('true');
   });
 
-  // ── the city scope, said and switched ──
+  // ── no city to choose ──
   //
-  // Both shelves show every city (owner, 15 Oct 2026 — Community was
-  // scoped to the app's city until then). The city chip narrows to one,
-  // and letting go of it is every city again. At rest the line under the
-  // title is the tab's sentence (owner, 2 Nov 2026); narrowed, the count
-  // and the chip.
-  it('shows every city on Community, and narrows to one through the chip', () => {
+  // Both shelves show every city (owner, 15 Oct 2026). Since 7 Nov 2026
+  // there is no city filter: a city is typed (see the city test above),
+  // and Mosaic is drawn by city. At rest the line under the title is the
+  // tab's sentence (owner, 2 Nov 2026).
+  it('shows every city on Community at rest, and narrows to one typed by name', () => {
     state.places = [place('a', 'hanoi'), place('b', 'danang'), place('c', 'danang')];
     state.cols.data = [col('hn', ['a'], { title_en: 'Hanoi list' }), col('dn', ['b', 'c'], { title_en: 'Da Nang list' })];
     show();
     expectSub('Good corners, through the community’s eyes.');
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    // Nothing chosen for the reader: the app's city is not pre-picked.
-    expect(screen.getByRole('button', word('hanoi')).getAttribute('aria-selected')).toBe('false');
-    fireEvent.click(screen.getByRole('button', word('danang')));
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
-    expect(screen.getByText('Da Nang list')).toBeTruthy();
+    type('danang');
     expect(screen.queryByText('Hanoi list')).toBeNull();
     expectSub('1 collection · danang');
-    // Let go of: every city.
-    sheetPick({ city: 'danang' });
-    expect(screen.getByText('Hanoi list')).toBeTruthy();
-    expect(screen.getByText('Da Nang list')).toBeTruthy();
-    expectSub('Good corners, through the community’s eyes.');
-  });
-
-  // Past eight cities the row ends in "More" (owner, 25 Oct 2026), and its
-  // picker searches every name a city answers to, which the screen hands
-  // over from the city list: "ho chi" finds the city the app calls Saigon.
-  it('lets the filter find a city past the cut by any of its names', () => {
-    const ids = ['hanoi', 'melbourne', 'dalat', 'danang', 'hoian', 'hue', 'tokyo', 'osaka', 'hcmc'];
-    state.cities = ids.map((id) => (id === 'hcmc'
-      ? { id, short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'ホーチミン', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh', name_ja: 'ホーチミン市' }
-      : { id, short_en: id, short_vi: id, short_ja: id, name_en: id, name_vi: id, name_ja: id }));
-    state.places = ids.map((id) => place(id, id));
-    state.cols.data = ids.map((id) => col(`l-${id}`, [id], { title_en: `List ${id}` }));
-    show();
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    // Nine cities, each in one list: the row keeps five and hides four.
-    expect(screen.getByTestId('collections-filter-cities-more').textContent).toBe('More (+4)');
-    expect(within(screen.getByTestId('collections-filter-cities')).queryByRole('button', word('Saigon'))).toBeNull();
-    fireEvent.click(screen.getByTestId('collections-filter-cities-more'));
-    fireEvent.change(screen.getByTestId('collections-filter-city-search'), { target: { value: 'ho chi' } });
-    fireEvent.click(screen.getByTestId('collections-filter-city-hcmc'));
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
-    expect(screen.getByText('List hcmc')).toBeTruthy();
-    expect(screen.queryByText('List hanoi')).toBeNull();
-    expectSub('1 collection · Saigon');
   });
 
   it('shows a list from another city with no chip to reach it', () => {
@@ -1457,23 +1385,6 @@ describe('CollectionsScreen — search', () => {
     state.cols.data = [col('dn', ['b'], { title_en: 'Da Nang list' })];
     show();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
-  });
-
-  it('shows every city on Yours, and narrows to one through the chip without an “all”', () => {
-    state.uid = 'u1';
-    state.places = [place('a', 'hanoi'), place('b', 'danang')];
-    state.mine.data = [col('m1', ['a'], { owner_id: 'u1', title_en: 'Mine in Hanoi' }), col('m2', ['b'], { owner_id: 'u1', title_en: 'Mine in Da Nang' })];
-    show();
-    expectSub('Your own favourite places.');
-    expect(screen.getByText('Mine in Da Nang')).toBeTruthy();
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    expect(screen.getByRole('button', word('danang')).getAttribute('aria-selected')).toBe('false');
-    fireEvent.click(screen.getByRole('button', word('danang')));
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
-    expect(screen.queryByText('Mine in Hanoi')).toBeNull();
-    expectSub('1 collection · danang');
-    sheetPick({ city: 'danang' });
-    expectSub('Your own favourite places.');
   });
 
   // Words in the box count as asking: the line is the answer then, and
@@ -1615,7 +1526,7 @@ describe('scrolled', () => {
       contentOffset: { x: 0, y }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
     } });
   });
-  const box = () => screen.getByTestId('collections-input') as HTMLInputElement;
+  const box = () => { openBox(); return screen.getByTestId('collections-input') as HTMLInputElement; };
   // The header as a phone lays it out: the tabs 120 down, the whole 260.
   const laidOut = () => {
     lay('collections-tabs', { y: 120, height: 44 });
@@ -1647,7 +1558,7 @@ describe('scrolled', () => {
     scrollTo(120);
     const pinned = screen.getByTestId('collections-pinned');
     expect(within(pinned).queryByRole('heading')).toBeNull();
-    expect(within(pinned).queryByRole('button', { name: 'Filters' })).toBeNull();
+    expect(within(pinned).queryByRole('button', { name: 'Find a collection' })).toBeNull();
     expect(within(pinned).queryByText('New')).toBeNull();
     expect(pinned.textContent).toContain('Yours');
     expect(pinned.textContent).toContain('Community');
@@ -1658,8 +1569,9 @@ describe('scrolled', () => {
     scrollTo(380);
     expect(within(pinned).getByText('Collections').textContent).toBe('Collections');
     expect(within(pinned).getByRole('button', { name: 'New collection' })).toBeTruthy();
-    expect(within(pinned).getByRole('button', { name: 'Filters' })).toBeTruthy();
-    expect(screen.getByTestId('collections-floating-input')).toBeTruthy();
+    expect(within(pinned).getByRole('button', { name: 'Find a collection' })).toBeTruthy();
+    // The box is not open, so the copy draws none either.
+    expect(screen.queryByTestId('collections-floating-input')).toBeNull();
     scrollTo(40); // Full header stays available before reaching the top.
     expect(screen.getByTestId('collections-floating-top')).toBeTruthy();
     scrollTo(0);
@@ -1673,6 +1585,7 @@ describe('scrolled', () => {
     await AsyncStorage.setItem(tab === 'community' ? 'citycrew.collections.community.view' : 'citycrew.collections.view', layout);
     const { navigation } = show(tab === 'community' ? { tab } : undefined);
     await waitFor(() => expect(screen.getByRole('button', { name: layout === 'row' ? 'List view' : layout === 'tile' ? 'Tile view' : 'Mosaic view' }).getAttribute('aria-selected')).toBe('true'));
+    openBox();
     laidOut();
     scrollTo(500);
     const pinned = screen.getByTestId('collections-pinned');
@@ -1685,13 +1598,13 @@ describe('scrolled', () => {
     expect(within(floating).getByTestId('collections-floating-cancel')).toBeTruthy();
     fireEvent.change(input, { target: { value: 'public' } });
     expect(screen.getByTestId('collections-input').getAttribute('value')).toBe('public');
-    fireEvent.click(within(floating).getByRole('button', { name: 'Filters' }));
-    expect(sheetShown()).toBe(true);
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
+    fireEvent.click(within(floating).getByRole('button', { name: 'Find a collection' }));
     fireEvent.click(within(floating).getByRole('button', { name: 'New collection' }));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
+    // Cancel puts the box away, from the copy as from the header.
     fireEvent.click(screen.getByTestId('collections-floating-cancel'));
-    expect(screen.getByTestId('collections-floating-input').getAttribute('value')).toBe('');
+    expect(screen.queryByTestId('collections-floating-input')).toBeNull();
+    expect(screen.queryByTestId('collections-input')).toBeNull();
     expect(getComputedStyle(screen.getByTestId('collections-top')).height).toBe('260px');
     scrollTo(488); // Small reversal is ignored.
     expect(screen.getByTestId('collections-floating-top')).toBeTruthy();
@@ -1713,24 +1626,21 @@ describe('scrolled', () => {
     expect(screen.queryByTestId('collections-pinned')).toBeNull();
   });
 
-  it('reveals the chosen filters and glyph on reverse scroll, and opens the sheet there', () => {
+  it('reveals the open box, its kind and the counted 🔍 on reverse scroll', () => {
     signedIn();
     state.places = [{ ...place('a', 'hanoi'), categories: ['cafes'] }, { ...place('b', 'saigon'), categories: ['nightlife'] }];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1' }), col('m2', ['b'], { owner_id: 'u1' })];
     show();
-    fireEvent.click(screen.getByTestId('collections-filters'));
-    fireEvent.click(within(screen.getByTestId('collections-filter-kinds')).getByRole('button', word('Cafés')));
-    fireEvent.click(screen.getByTestId('collections-filter-apply'));
+    openBox();
+    pickKind('Cafés');
     laidOut();
     scrollTo(400);
     expect(screen.queryByTestId('collections-floating-top')).toBeNull();
     scrollTo(380);
     const pinned = within(screen.getByTestId('collections-pinned'));
-    expect(pinned.getByRole('button', { name: 'Remove Cafés' })).toBeTruthy();
-    // The glyph pins with the title, counted, and opens the sheet.
-    expect(sheetShown()).toBe(false);
-    fireEvent.click(pinned.getByRole('button', { name: 'Filters, 1' }));
-    expect(sheetShown()).toBe(true);
+    expect(screen.getByTestId('collections-floating-input')).toBeTruthy();
+    expect(pinned.getByRole('button', word('Cafés')).getAttribute('aria-selected')).toBe('true');
+    expect(pinned.getByRole('button', { name: 'Find a collection, 1' })).toBeTruthy();
   });
 
   it('lends the dock once past the header with the bar away: the box, and a new list', async () => {
@@ -1807,6 +1717,7 @@ describe('CollectionsScreen — Mosaic', () => {
     expect(captions.some(id => id!.endsWith('-bottom'))).toBe(true);
     expect(captions.some(id => id!.endsWith('-below'))).toBe(true);
     const original = captions.find(id => id!.includes('mosaic-3-'))!;
+    openBox();
     fireEvent.change(screen.getByPlaceholderText('Name, place, city, user'), { target: { value: 'List mosaic-3' } });
     expect(screen.getByTestId(original)).toBeTruthy();
     expect(screen.queryByText('List mosaic-0')).toBeNull();
@@ -1924,16 +1835,32 @@ describe('the Community Mosaic, one block a city', () => {
   // the first block's slot is the gap, and box + gap is a screen head's
   // gap, as the heading's was (6 Nov). Later headings keep the 24 that
   // parts a block from the one before.
-  it('leaves a screen-head gap under the search box where the first heading was, the rest a block apart', () => {
+  // The row above it is the tabs at rest (the box is shut since 7 Nov
+  // 2026) and the box once open; both leave the same 14.
+  it('leaves a screen-head gap under the last row where the first heading was, the rest a block apart', () => {
     seed();
     show({ tab: 'community' });
     expect(screen.queryByTestId('collection-mosaic-city-hanoi')).toBeNull();
+    const below = (el: HTMLElement): number => {
+      const walk = [el];
+      while (walk.length) {
+        const n = walk.shift()!;
+        const m = parseFloat(getComputedStyle(n).marginBottom);
+        if (m > 0) return m;
+        walk.push(...(Array.from(n.children) as HTMLElement[]));
+      }
+      return 0;
+    };
+    const gap = parseFloat(getComputedStyle(screen.getByTestId('collections-first-gap')).height);
+    const tabs = below(screen.getByTestId('collections-tabs'));
+    expect([tabs, gap]).toEqual([14, 10]);
+    expect(tabs + gap).toBe(space.titleToContent);
+    // Opened, the box and the kinds row sit between, and the last of them
+    // leaves the same 14.
+    openBox();
     let row = screen.getByTestId('collections-input').parentElement;
     while (row && !(parseFloat(getComputedStyle(row).marginBottom) > 0)) row = row.parentElement;
-    const under = parseFloat(getComputedStyle(row as HTMLElement).marginBottom);
-    const gap = parseFloat(getComputedStyle(screen.getByTestId('collections-first-gap')).height);
-    expect([under, gap]).toEqual([14, 10]);
-    expect(under + gap).toBe(space.titleToContent);
+    expect(parseFloat(getComputedStyle(row as HTMLElement).marginBottom)).toBe(14);
     const pad = (id: string) => getComputedStyle(screen.getByTestId(id).firstElementChild as HTMLElement).paddingTop;
     expect(pad('collection-mosaic-city-hcmc')).toBe(`${space.titleToContent}px`);
     expect(pad('collection-mosaic-city-elsewhere')).toBe(`${space.titleToContent}px`);
@@ -2192,6 +2119,7 @@ describe('the Community Mosaic, one block a city', () => {
   it('is one shelf again, in the answer’s order, once anything is asked', () => {
     seed();
     show({ tab: 'community' });
+    openBox();
     fireEvent.change(screen.getByPlaceholderText('Name, place, city, user'), { target: { value: 'List' } });
     expect(heads()).toEqual([]);
     expect(order()).toEqual(['List s1', 'List n1', 'List h1', 'List s2', 'List n2', 'List d1', 'List s3', 'List n3', 'List s4']);
