@@ -83,27 +83,45 @@ appId: host.exp.Exponent
 - swipe:
     direction: UP
     duration: 500
-# The jump, where there is one: a heading that opens the city sheet, and
-# its last row, "Elsewhere" — the block furthest down, so the list has to
-# scroll over cells it has never measured.
+# The jump: the city sheet, and its last row, "Elsewhere" — the block
+# furthest down, so the list has to scroll over cells it has never
+# measured. From the pinned bar when it is up: it is always on top, where
+# a heading in the list can sit under the pinned tabs and take a tap meant
+# for them (7 Nov 2026 — signed in, after the search box left the header,
+# the heading Maestro saw was under the tabs and the sheet never opened).
+# Otherwise from a heading in the list. Once tapped, the sheet must open.
+- runFlow:
+    when:
+      visible:
+        id: "collections-city-bar"
+    commands:
+      - tapOn:
+          id: "collections-city-bar"
+      - extendedWaitUntil:
+          visible:
+            id: "sheet-action-elsewhere"
+          timeout: 10000
+      - tapOn:
+          id: "sheet-action-elsewhere"
+      - waitForAnimationToEnd:
+          timeout: 5000
 - runFlow:
     when:
       visible:
         id: "collection-mosaic-city-.*"
+      notVisible:
+        id: "collections-city-bar"
     commands:
       - tapOn:
           id: "collection-mosaic-city-.*"
+      - extendedWaitUntil:
+          visible:
+            id: "sheet-action-elsewhere"
+          timeout: 10000
+      - tapOn:
+          id: "sheet-action-elsewhere"
       - waitForAnimationToEnd:
           timeout: 5000
-      - runFlow:
-          when:
-            visible:
-              id: "sheet-action-elsewhere"
-          commands:
-            - tapOn:
-                id: "sheet-action-elsewhere"
-            - waitForAnimationToEnd:
-                timeout: 5000
 - scrollUntilVisible:
     element:
       id: "tab-collections"

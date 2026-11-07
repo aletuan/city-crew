@@ -16,10 +16,9 @@
 # short on purpose. A healthy tab switch lands in well under a second;
 # the long waits are only for data the first load has to fetch.
 #
-# The city-jump part runs only where the heading opens a sheet (the
-# #1267 build). On main the heading is plain text and the part is
-# skipped, so the same file runs against both builds — see README.md,
-# "Reproducing the 6 November freeze".
+# The city jump opens the sheet from the pinned city bar when it is up,
+# else from a heading in the list, and must reach "Elsewhere" once
+# tapped (see common/tab-round.yaml).
 appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
