@@ -1547,10 +1547,46 @@ describe('the Community Mosaic, one block a city', () => {
     const head = screen.getByRole('button', { name: 'Saigon, 4 collections' });
     fireEvent.click(head);
     expect(screen.getByText('Go to a city')).toBeTruthy();
-    const rows = ['hanoi', 'hcmc', 'elsewhere'].map((k) => screen.getByTestId(`sheet-action-${k}`));
-    expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual(['Hanoi', 'Saigon', 'Elsewhere']);
-    // Nothing scrolled yet: the first block is the one in view.
+    const rows = ['hanoi', 'hcmc', 'elsewhere'].map((k) => screen.getByTestId(`collections-jump-${k}`));
+    // Explore's city rows (owner, 7 Nov 2026): the name, the figure bare
+    // on the right, said in full; no pin, no tick, no card.
+    expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual(['Hanoi, 3 collections', 'Saigon, 4 collections', 'Elsewhere, 2 collections']);
+    expect(rows.map((r) => r.textContent)).toEqual(['Hanoi3', 'Saigon4', 'ElsewhereHuế · Đà Lạt2']);
+    rows.forEach((r) => {
+      expect(r.querySelector('[data-icon="location-outline"]')).toBeNull();
+      expect(r.querySelector('[data-icon="checkmark"]')).toBeNull();
+    });
+    expect(screen.queryByTestId('sheet-glyph')).toBeNull();
+    // A rule between rows, and so above "Elsewhere": two, under the first.
+    expect(screen.getAllByTestId('city-divider')).toHaveLength(2);
+    expect(rows[2].parentElement!.firstElementChild!.getAttribute('data-testid')).toBe('city-divider');
+    expect(rows[0].parentElement!.querySelector('[data-testid="city-divider"]')).toBeNull();
+    // Nothing scrolled yet: the first block is the one in view, in the tint
+    // and the accent.
     expect(rows.map((r) => r.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
+    // The tint is on the scaled face, `contentStyle`.
+    const face = (id: string) => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const stack: Fiber[] = [host[Object.keys(host).find((k) => k.startsWith('__reactContainer'))!].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && typeof p === 'object' && p.testID === id && 'contentStyle' in p) return StyleSheet.flatten(p.contentStyle as never) as { backgroundColor?: unknown };
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error(`no face ${id}`);
+    };
+    expect(face('collections-jump-hanoi').backgroundColor).toBe(colors.accentSoft);
+    expect(face('collections-jump-hcmc').backgroundColor).toBeUndefined();
+    const accent = (() => {
+      const h = String(colors.accent).replace('#', '');
+      return `rgb(${[0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
+    })();
+    expect(getComputedStyle(within(rows[0]).getByText('Hanoi')).color).toBe(accent);
+    expect(getComputedStyle(within(rows[0]).getByText('3')).color).toBe(accent);
+    expect(getComputedStyle(within(rows[1]).getByText('Saigon')).color).not.toBe(accent);
     fireEvent.click(rows[2]);
     // The sheet goes first; the jump follows it (`SheetRows`).
     await act(async () => { await new Promise((r) => setTimeout(r, 250)); });
@@ -1573,8 +1609,8 @@ describe('the Community Mosaic, one block a city', () => {
     // An index inside a block, not on its heading, is not chased — not
     // even into the next block's. (A fresh jump first: the retry above
     // has spent this one's.)
-    fireEvent.click(screen.getByRole('button', { name: 'Saigon, 4 collections' }));
-    fireEvent.click(screen.getByTestId('sheet-action-elsewhere'));
+    fireEvent.click(screen.getByTestId('collection-mosaic-city-hcmc'));
+    fireEvent.click(screen.getByTestId('collections-jump-elsewhere'));
     await act(async () => { await new Promise((r) => setTimeout(r, 250)); });
     go.mockClear();
     responder.scrollTo.mockClear();
@@ -1593,8 +1629,8 @@ describe('the Community Mosaic, one block a city', () => {
     expect(responder.scrollTo).not.toHaveBeenCalled();
     expect(go).not.toHaveBeenCalled();
     // A fresh jump from the sheet gets its own retry.
-    fireEvent.click(screen.getByRole('button', { name: 'Saigon, 4 collections' }));
-    fireEvent.click(screen.getByTestId('sheet-action-elsewhere'));
+    fireEvent.click(screen.getByTestId('collection-mosaic-city-hcmc'));
+    fireEvent.click(screen.getByTestId('collections-jump-elsewhere'));
     await act(async () => { await new Promise((r) => setTimeout(r, 250)); });
     act(() => props.onScrollToIndexFailed({ index: headingOf2, averageItemLength: 100 }));
     expect(responder.scrollTo).toHaveBeenCalledTimes(1);
@@ -1638,7 +1674,7 @@ describe('the Community Mosaic, one block a city', () => {
     expect(within(screen.getByTestId('collections-pinned')).getByTestId('collections-city-bar').textContent).toBe('Hanoi3 collections');
     // And from the bar, the sheet marks the block you are in.
     fireEvent.click(screen.getByTestId('collections-city-bar'));
-    expect(screen.getByTestId('sheet-action-hanoi').getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('collections-jump-hanoi').getAttribute('aria-selected')).toBe('true');
   });
 
   // The freeze it shipped with (6 Nov 2026), on the path that froze: the

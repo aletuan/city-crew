@@ -32,6 +32,7 @@ import { describe, expect, it } from 'vitest';
 const src = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
 const NOT_BUTTONS: Record<string, string> = {
+  'components/CityRow.tsx newChip': 'the "New" flag beside a city\'s name; the row is the button',
   'components/ReviewBadge.tsx pill': 'a label on a card; the card is the button',
   'components/ThemeSwitcher.tsx word': 'the "Popular" / "New" flag on a look card',
   'components/ui/controls.tsx tile': 'a grid tile, sized by its cell',
