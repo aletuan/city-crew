@@ -810,6 +810,19 @@ export default function CollectionsScreen({ navigation, route }: {
   // the one on screen in the tint. "Elsewhere" goes last, under a rule,
   // and names the cities it gathers: a reader after Hội An could not know
   // to look in it.
+  //
+  // No figures (owner, the same day): the block's heading and the pinned
+  // bar already say "12 collections", and nobody picks a city to jump to
+  // by how many lists it holds.
+  //
+  // Rejected, on the owner's question: Explore's "Use my location" and
+  // "Recent". This sheet is a jump within the shelf, not the app's city —
+  // nothing chosen here is kept — and the reader's own city already
+  // leads it (`mosaicGroups`' `home`), so "my location" would repeat the
+  // first row, or else become a third place to set a city, which the
+  // 6 Nov note above ruled out. "Recent" earns its room in a list of
+  // dozens; here five or six rows are read at a glance, and a recent
+  // section would repeat them and make the sheet longer than its list.
   const jumpRows = (groups ?? []).map((g, i) => {
     const there = g.city == null;
     return (
@@ -817,12 +830,10 @@ export default function CollectionsScreen({ navigation, route }: {
         key={g.city ?? 'elsewhere'}
         title={cityWord(g.city)}
         sub={there && g.within?.length ? g.within.map(cityName).join(' · ') : null}
-        count={g.count}
         active={atCity ? atCity.id === g.city : i === 0}
         divided={i > 0}
         onPress={() => jumpTo(i)}
         testID={`collections-jump-${g.city ?? 'elsewhere'}`}
-        accessibilityLabel={`${cityWord(g.city)}, ${listsWord(g.count, t)}`}
       />
     );
   });
