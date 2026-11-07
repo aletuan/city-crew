@@ -8,6 +8,10 @@ appId: host.exp.Exponent
     timeout: 30000
 - tapOn:
     id: "collections-community"
+# The box is not on the page at rest (7 Nov 2026): the search glyph
+# beside the title opens it, focused.
+- tapOn:
+    id: "collections-search"
 - tapOn:
     id: "collections-input"
 - inputText: ${FIXTURE_privacyTitle}
