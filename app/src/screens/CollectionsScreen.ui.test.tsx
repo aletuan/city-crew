@@ -18,7 +18,7 @@
 import React from 'react';
 import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
-import { Alert, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
@@ -53,9 +53,7 @@ const spies = vi.hoisted(() => ({
   placesReload: vi.fn(),
   askToSignIn: vi.fn(),
   toggleLike: vi.fn(async () => {}),
-  deleteCollection: vi.fn(async (_slug: string) => {}),
   fetchProfilesById: vi.fn(async (_ids: string[]) => ({}) as Record<string, { avatar_url: string }>),
-  swipeClose: vi.fn(),
 }));
 
 // One `t` for every render, as the real provider's memoised value gives:
@@ -91,49 +89,23 @@ vi.mock('../lib/save', () => {
   const useSave = () => ({ mine: { ...state.mine, reload: spies.mineReload }, askToSignIn: spies.askToSignIn });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
 });
-// Only the two calls that leave the device are stood in for; the rest of
+// Only the call that leaves the device is stood in for; the rest of
 // the module is the real membership and city arithmetic.
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<typeof import('../lib/data')>()),
-  deleteCollection: spies.deleteCollection,
   fetchProfilesById: spies.fetchProfilesById,
 }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined, useTabBarDucked: () => state.ducked }));
-// Swipeable is a native gesture recognizer; there is no thumb in jsdom. The
-// stand-in draws the row and its revealed actions side by side (so Edit and
-// Delete are reachable by name), hands the render prop a real drag value,
-// and offers two buttons that play the open/close callbacks a swipe fires.
-vi.mock('../components/Swipeable', async () => {
-  const R = await import('react');
-  const { Animated } = await import('react-native');
-  type P = {
-    children: React.ReactNode;
-    renderRightActions: (p: unknown, d: unknown) => React.ReactNode;
-    onSwipeableWillOpen: () => void;
-    onSwipeableWillClose: () => void;
-  };
-  const Swipeable = R.forwardRef<{ close: () => void }, P>((p, ref) => {
-    R.useImperativeHandle(ref, () => ({ close: spies.swipeClose }));
-    const [drag] = R.useState(() => new Animated.Value(0));
-    return R.createElement('div', { 'data-stub': 'Swipeable' },
-      p.children,
-      p.renderRightActions(drag, drag),
-      R.createElement('button', { type: 'button', onClick: p.onSwipeableWillOpen }, 'swipe-open'),
-      R.createElement('button', { type: 'button', onClick: p.onSwipeableWillClose }, 'swipe-close'));
-  });
-  return { default: Swipeable };
-});
+// The dock's settle gate is the dock's own business (DockSlot's tests);
+// here it offers the moment the screen says it may, so a test can open
+// the box through it without waiting out the gate.
+vi.mock('../components/DockSlot', async (orig) => ({
+  ...(await orig<typeof import('../components/DockSlot')>()),
+  useDockOffer: (eligible: boolean) => eligible,
+}));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CollectionsScreen from './CollectionsScreen';
-
-// Spied where the screen looks: under the web alias `Alert.alert` is a
-// silent no-op, so an unspied assertion could only ever pass vacuously.
-const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
-const pressInAlert = (label: string) => {
-  const buttons = alert.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
-  buttons.find((b) => b.text === label)!.onPress?.();
-};
 
 const place = (slug: string, city = 'hanoi', photo?: string): Place => ({
   slug, city_id: city, name_en: `Place ${slug}`, name_vi: slug, name_ja: null,
@@ -184,37 +156,10 @@ const listProps = (): { onRefresh: () => void; refreshing: boolean; onScroll: (e
   throw new Error('no SectionList in the committed tree');
 };
 
-/** The committed props of every host-side element that offers a screen
- *  reader actions — VoiceOver's rotor has no jsdom counterpart, and
- *  react-native-web drops the props from the DOM, so the handler is
- *  reached the way `listProps` reaches the pull. */
-type A11yProps = {
-  accessibilityLabel?: string;
-  accessibilityActions: { name: string; label: string }[];
-  onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => void;
-};
-const actionRows = (): A11yProps[] => {
-  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
-  const stack: Fiber[] = [host[key].stateNode.current];
-  const out = new Set<A11yProps>();
-  while (stack.length) {
-    const f = stack.pop()!;
-    const p = f.memoizedProps;
-    if (p && typeof p === 'object' && 'accessibilityActions' in p && 'onPress' in p) out.add(p as never);
-    if (f.sibling) stack.push(f.sibling);
-    if (f.child) stack.push(f.child);
-  }
-  return [...out];
-};
-
 const icons = (name: string) => document.querySelectorAll(`[data-icon="${name}"]`).length;
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  alert.mockImplementation(() => {});
-  spies.deleteCollection.mockImplementation(async () => {});
   spies.fetchProfilesById.mockImplementation(async () => ({}));
   await AsyncStorage.removeItem('citycrew.collections.view');
   await AsyncStorage.removeItem('citycrew.collections.community.view');
@@ -235,16 +180,35 @@ beforeEach(async () => {
 // An answer in the filter sheet by its word: each carries its figure
 // after it, "Cafés (2)", which the accessible name runs together.
 const word = (w: string) => ({ name: new RegExp(`^${w} ?(\\(\\d+\\))?$`) });
-// The box is not on the page at rest (owner, 7 Nov 2026): the 🔍 beside
-// the title opens it, with the kinds as a row under it.
+type Layout = { __reactLayoutHandler: (e: unknown) => void };
+const lay = (id: string, layout: { y: number; height: number }) => act(() => {
+  (screen.getByTestId(id) as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, width: 390, ...layout } } });
+});
+const scrollTo = (y: number) => act(() => {
+  listProps().onScroll({ nativeEvent: {
+    contentOffset: { x: 0, y }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+  } });
+});
+// The header as a phone lays it out: the tabs 120 down, the whole 260.
+const laidOut = () => {
+  lay('collections-tabs', { y: 120, height: 44 });
+  lay('collections-top', { y: 0, height: 260 });
+};
+// The box is not on the page at rest (owner, 7 Nov 2026), and nothing
+// beside the title opens it: the dock does, once the reader has scrolled
+// into the shelf with the bar away. Opened, the list goes back to the
+// top, as `toTop` takes it on a phone, with the kinds under the box.
 const openBox = () => {
-  if (!screen.queryByPlaceholderText('Name, place, city, user')) fireEvent.click(screen.getByTestId('collections-search'));
+  if (screen.queryByPlaceholderText('Name, place, city, user')) return;
+  const ducked = state.ducked;
+  state.ducked = true;
+  laidOut();
+  scrollTo(400);
+  fireEvent.click(screen.getByTestId('collections-dock').firstElementChild as HTMLElement);
+  scrollTo(0);
+  state.ducked = ducked;
 };
 const pickKind = (label: string) => fireEvent.click(within(screen.getByTestId('collections-kinds')).getByRole('button', word(label)));
-/** What each row's heart says aloud after its name: the count the row
- *  prints bare beside it, as a sentence (`aria-valuetext`). */
-const heartsSay = () => screen.queryAllByRole('button', { name: /like this collection/i })
-  .map((b) => b.getAttribute('aria-valuetext'));
 
 describe('CollectionsScreen — as a guest', () => {
   it('leads with the sign-in card, which jumps to the Profile stack', () => {
@@ -464,15 +428,14 @@ describe('CollectionsScreen — signed in', () => {
     expect(spies.toggleLike).toHaveBeenCalledWith(expect.objectContaining({ slug: 'mine1' }));
   });
 
-  // At any count, on the row shape too — and never on a private list.
-  it('your own public row offers the heart before anybody has liked it', () => {
+  // At any count — and never on a private list.
+  it('your own public tile offers the heart before anybody has liked it', () => {
     state.mine.data = [
       col('mine1', ['a'], { owner_id: 'u1' }),
       col('shut', ['a'], { owner_id: 'u1', is_public: false }),
     ];
     state.likes = {};
     show();
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
     const hearts = screen.getAllByRole('button', { name: 'Like this collection' });
     expect(hearts).toHaveLength(1);
     expect(screen.queryByText(/likes?$/)).toBeNull();
@@ -508,10 +471,6 @@ describe('CollectionsScreen — signed in', () => {
     const open = screen.getByRole('button', { name: 'List open, Public' });
     expect(open.querySelector('[data-testid="collection-tile-lock"]')).toBeNull();
     expect(open.querySelector('[data-icon="globe-outline"]')).toBeNull();
-    // The list rows follow: the padlock on the private row only, no globe.
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
-    expect(icons('lock-closed-outline')).toBe(1);
-    expect(icons('globe-outline')).toBe(1); // the Community tab's own
   });
 
   it('an own tile with nothing in it says so in words, and is named by its title', () => {
@@ -519,8 +478,6 @@ describe('CollectionsScreen — signed in', () => {
     show();
     expect(screen.getByText('No places yet')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'List fresh, Public' })).toBeTruthy();
-    // Tiles keep no swipe, so they carry no actions either.
-    expect(actionRows()).toEqual([]);
   });
 
   // The Trips screen's pill, in the header, on Yours once there is a
@@ -542,26 +499,30 @@ describe('CollectionsScreen — signed in', () => {
 
   // The header is the same on both tabs (owner, 26 Oct 2026): an empty
   // Yours that dropped the pill drew its title and tabs higher than
-  // Community's, and lost the filter glyph beside the title.
-  it('keeps the pill and the 🔍 on an empty library too, beside its own card', () => {
+  // Community's.
+  it('keeps the pill on an empty library too, beside its own card', () => {
     show();
     expect(screen.getByTestId('collection-new')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.getByRole('button', { name: 'New collection' })).toBeTruthy();
     expect(screen.getByText('Create your first collection')).toBeTruthy();
-    // Nothing of yours to narrow: the 🔍 still opens the box, with no
-    // kinds under it.
-    fireEvent.click(screen.getByTestId('collections-search'));
-    expect(screen.getByTestId('collections-input')).toBeTruthy();
-    expect(screen.queryByTestId('collections-kinds')).toBeNull();
   });
 
-  it('gives a guest the 🔍 too, and no filter glyph to anyone', () => {
-    state.uid = null;
-    state.cols.data = [];
-    show();
-    expect(screen.getByTestId('collections-search')).toBeTruthy();
-    expect(screen.queryByTestId('collections-filters')).toBeNull();
+  // The title stands alone (owner, 7 Nov 2026): no 🔍 beside it, no line
+  // under it, for a guest or anyone — the dock is the way to the box.
+  it('draws the title alone: no 🔍, no filter glyph and no line under it, for anyone', () => {
+    for (const uid of [null, 'u1']) {
+      state.uid = uid;
+      state.cols.data = [col('theirs', ['a'])];
+      show({ tab: 'community' });
+      const top = screen.getByTestId('collections-top');
+      expect(screen.queryByTestId('collections-search')).toBeNull();
+      expect(screen.queryByTestId('collections-filters')).toBeNull();
+      expect(screen.queryByTestId('collections-scope')).toBeNull();
+      expect(within(top).queryByText('Good corners, through the community’s eyes.')).toBeNull();
+      expect(top.querySelector('[data-icon="search-outline"]')).toBeNull();
+      cleanup();
+    }
   });
 
   // The form goes back to whichever tab sent it; on Community a private
@@ -642,10 +603,6 @@ describe('CollectionsScreen — signed in', () => {
     // Two heart controls, yours and theirs: a curator may like their own.
     expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(2);
     expect(screen.getByText('2')).toBeTruthy();
-    // The same on the row shape.
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
-    expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(2);
-    expect(heartsSay()).toContain('2 likes');
     state.likes = {};
   });
 
@@ -788,13 +745,17 @@ describe('CollectionsScreen — signed in', () => {
   });
 });
 
-describe('CollectionsScreen — list view', () => {
+// One shape a tab (owner, 7 Nov 2026): the list view went from both.
+// Yours is the grid with no switch; Community keeps the grid and Mosaic,
+// Mosaic first. Edit and Delete, which the list's swipe offered, are in
+// the list's own ⋯.
+describe('CollectionsScreen — one shape a tab', () => {
   beforeEach(() => { state.uid = 'u1'; });
 
   // Who can see a list of yours is a glyph on screen, which VoiceOver
-  // does not read, so the card's spoken name carries it — in either view,
-  // and only on your own: somebody else's list is public by being there.
-  it('says in the card’s spoken name who can see a list of yours, in either view', async () => {
+  // does not read, so the card's spoken name carries it — only on your
+  // own: somebody else's list is public by being there.
+  it('says in the tile’s spoken name who can see a list of yours', () => {
     state.mine.data = [
       col('mine1', ['a'], { is_public: false, owner_id: 'u1' }),
       col('mine2', ['a'], { is_public: true, owner_id: 'u1' }),
@@ -802,301 +763,27 @@ describe('CollectionsScreen — list view', () => {
     show();
     expect(screen.getByRole('button', { name: 'List mine1, Private' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'List mine2, Public' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
-    await screen.findByRole('button', { name: 'List mine1, Private' });
-    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'List mine2, Public' })).toBeTruthy();
   });
 
-  it('the switch turns tiles into rows and remembers the choice', async () => {
-    state.mine.data = [col('mine1', ['a', 'b'], { is_public: false, owner_id: 'u1' })];
-    show();
-    // Tiles by default: the count stands alone, no status word beside it.
-    expect(screen.getByLabelText('2 places')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.view', 'row');
-    // Rows, which a row's Delete says. Their count stands alone too now
-    // (owner, 22 Oct 2026): the lock says it, and the word is not drawn.
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
-    expect(screen.getByLabelText('2 places')).toBeTruthy();
-    expect(screen.queryByText(/Private/)).toBeNull();
-    // And back again.
-    fireEvent.click(screen.getByRole('button', { name: 'Tile view' }));
-    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('citycrew.collections.view', 'tile');
-    expect(screen.getByLabelText('2 places')).toBeTruthy();
-  });
-
-  it('a stored row preference is what the screen opens in', async () => {
+  it('draws Yours as tiles with no switch, whatever a phone remembered', async () => {
     await AsyncStorage.setItem('citycrew.collections.view', 'row');
-    await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
-    show();
-    expect(await screen.findByRole('button', { name: 'Delete' })).toBeTruthy();
-  });
-
-  it('ignores a stored value that is neither view', async () => {
-    await AsyncStorage.setItem('citycrew.collections.view', 'bogus');
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
     await act(async () => {});
+    expect(screen.queryByTestId(/^collections-view-/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'List view' })).toBeNull();
+    // The tile's count, and no swipe's Delete.
+    expect(screen.getByTestId('collection-tile-count')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
-    expect(screen.getByLabelText('1 place')).toBeTruthy();
   });
 
-  const rows = async () => {
-    await AsyncStorage.setItem('citycrew.collections.view', 'row');
+  it('offers Community the grid and Mosaic only, Mosaic first, and a remembered list falls back to it', async () => {
     await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
-  };
-
-  it('your row shows its description, the count and heart in its foot, and an empty one says "No places yet"', async () => {
-    await rows();
-    state.mine.data = [
-      col('mine1', ['a'], { owner_id: 'u1', desc_en: '  Rooftops for Friday  ' }),
-      col('fresh', [], { owner_id: 'u1', is_public: false }),
-    ];
-    state.likes = { mine1: 1 };
-    show();
-    expect(await screen.findByText('Rooftops for Friday')).toBeTruthy();
-    // The number bare beside its heart, the sentence only aloud.
-    expect(screen.queryByText('1 like')).toBeNull();
-    expect(heartsSay()).toEqual(['1 like']);
-    // One line, the count at its start and the heart at its end, under
-    // the description (owner, 29 Oct 2026).
-    const heart = screen.getByRole('button', { name: 'Like this collection' });
-    // The figure alone beside the pin; the word is what is heard.
-    expect(screen.getByLabelText('1 place').textContent).toBe('1');
-    const foot = screen.getByLabelText('1 place').parentElement!.parentElement!;
-    expect(foot.contains(heart)).toBe(true);
-    expect(foot.lastElementChild!.contains(heart)).toBe(true);
-    expect(within(heart).getByText('1')).toBeTruthy();
-    expect(getComputedStyle(foot).flexDirection).toBe('row');
-    expect(getComputedStyle(foot).marginTop).toBe('auto');
-    const desc = screen.getByText('Rooftops for Friday');
-    expect(desc.compareDocumentPosition(foot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('No places yet')).toBeTruthy();
-    // The empty one draws the waiting well, not a photograph.
-    expect(icons('bookmark-outline')).toBeGreaterThanOrEqual(2); // tab glyph + empty cover
-  });
-
-  // One height for every row, whatever it has to say (the owner's two
-  // screenshots, 10 Oct 2026: 62pt beside 121). jsdom lays nothing out, so
-  // what is held here is the mechanism: every row carries the same hidden
-  // ghost, the tallest row there is, and draws its own text over it rather
-  // than beside it, so nothing the row says can make it taller.
-  it('sizes every row by the same hidden ghost, with its own text laid over it', async () => {
-    await rows();
-    state.mine.data = [
-      col('bare', ['a'], { owner_id: 'u1', is_public: false }),
-      col('full', ['a', 'b'], { owner_id: 'u1', desc_en: 'A sentence long enough to wrap onto a second line' }),
-    ];
-    state.likes = { full: 3 };
-    show();
-    await screen.findByText('A sentence long enough to wrap onto a second line');
-    const column = (title: string) => screen.getByText(title).parentElement!.parentElement!;
-    const ghosts = ['List bare', 'List full'].map((t) => {
-      const ghost = column(t).firstElementChild as HTMLElement;
-      expect(ghost.getAttribute('aria-hidden')).toBe('true');
-      expect(ghost.textContent!.trim()).toBe('');
-      return ghost;
-    });
-    expect(ghosts[0].innerHTML).toBe(ghosts[1].innerHTML);
-    // Three lines on yours: title, two of description, and the foot the
-    // count and the heart share.
-    expect(ghosts[0].children).toHaveLength(3);
-    expect(ghosts[0].children[1].textContent).toBe(' \n ');
-    // The face is the ghost's sibling and covers it.
-    for (const t of ['List bare', 'List full']) {
-      const face = screen.getByText(t).parentElement!;
-      expect(face.previousElementSibling?.getAttribute('aria-hidden')).toBe('true');
-      expect(getComputedStyle(face).position).toBe('absolute');
-      // From the top, so every title starts on the same line of its card.
-      expect(getComputedStyle(face).justifyContent).toBe('flex-start');
-    }
-    // A one-line title, the only line that could outgrow the ghost: the
-    // same clamp class the ghost's own title line wears.
-    const ghostTitle = ghosts[0].firstElementChild!.className;
-    expect(screen.getByText('List bare').className).toBe(ghostTitle);
-    expect(screen.getByText('List full').className).toBe(ghostTitle);
-  });
-
-  it('opening the swipe drops the description; closing brings it back', async () => {
-    await rows();
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', desc_en: 'Rooftops' })];
-    show();
-    await screen.findByText('Rooftops');
-    fireEvent.click(screen.getByText('swipe-open'));
-    expect(screen.queryByText('Rooftops')).toBeNull();
-    // The heart too: open, the column is too narrow to hold it beside the count.
-    expect(screen.queryByRole('button', { name: 'Like this collection' })).toBeNull();
-    expect(screen.getByLabelText('1 place')).toBeTruthy();
-    fireEvent.click(screen.getByText('swipe-close'));
-    expect(screen.getByText('Rooftops')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Like this collection' })).toBeTruthy();
-  });
-
-  it('Edit closes the row and opens the form with slug, title and description', async () => {
-    await rows();
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', desc_en: 'Rooftops' })];
-    const { navigation } = show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    expect(spies.swipeClose).toHaveBeenCalled();
-    expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm', {
-      slug: 'mine1', title: 'List mine1', desc: 'Rooftops',
-    });
-  });
-
-  it('tapping your row opens it', async () => {
-    await rows();
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
-    const { navigation } = show();
-    // Wait for the stored preference to land, or the tap hits a tile the
-    // row is about to replace.
-    await screen.findByRole('button', { name: 'Delete' });
-    fireEvent.click(screen.getByText('List mine1'));
-    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'mine1' });
-  });
-
-  it('Delete asks first; Cancel deletes nothing', async () => {
-    await rows();
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
-    show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
-    expect(spies.swipeClose).toHaveBeenCalled();
-    expect(alert).toHaveBeenCalledWith(
-      'Delete this collection?', '"List mine1" will be gone for good.', expect.any(Array),
-    );
-    pressInAlert('Cancel');
-    expect(spies.deleteCollection).not.toHaveBeenCalled();
-  });
-
-  it('confirming deletes by slug and reloads your library and the public catalog', async () => {
-    await rows();
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
-    show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
-    spies.mineReload.mockClear();
-    spies.colsReload.mockClear();
-    await act(async () => pressInAlert('Delete'));
-    expect(spies.deleteCollection).toHaveBeenCalledWith('mine1');
-    expect(spies.mineReload).toHaveBeenCalledTimes(1);
-    // A public list is on the Community shelf too; it must go from there.
-    expect(spies.colsReload).toHaveBeenCalledTimes(1);
-  });
-
-  it('a screen reader gets Edit and Delete on your row, and Delete still asks first', async () => {
-    await rows();
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', desc_en: 'Rooftops' })];
-    const { navigation } = show();
-    await screen.findByRole('button', { name: 'Delete' });
-    const [row] = actionRows();
-    expect(row.accessibilityLabel).toBe('List mine1, Public');
-    expect(row.accessibilityActions).toEqual([{ name: 'edit', label: 'Edit' }, { name: 'delete', label: 'Delete' }]);
-    act(() => row.onAccessibilityAction({ nativeEvent: { actionName: 'edit' } }));
-    expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm', {
-      slug: 'mine1', title: 'List mine1', desc: 'Rooftops',
-    });
-    act(() => row.onAccessibilityAction({ nativeEvent: { actionName: 'delete' } }));
-    expect(spies.swipeClose).toHaveBeenCalledTimes(2);
-    expect(alert).toHaveBeenCalledWith(
-      'Delete this collection?', '"List mine1" will be gone for good.', expect.any(Array),
-    );
-    expect(spies.deleteCollection).not.toHaveBeenCalled();
-    await act(async () => pressInAlert('Delete'));
-    expect(spies.deleteCollection).toHaveBeenCalledWith('mine1');
-    // An action it does not know does nothing.
-    alert.mockClear();
-    act(() => row.onAccessibilityAction({ nativeEvent: { actionName: 'magicTap' } }));
-    expect(alert).not.toHaveBeenCalled();
-  });
-
-  it('every row is a button named by its title; a community byline stays in the name', async () => {
-    await rows();
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
-    state.cols.data = [col('theirs', ['a', 'b'], { curator_handle: 'trang' }), col('solo', ['a'])];
-    show();
-    expect(await screen.findByRole('button', { name: 'List mine1, Public' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
-    expect(screen.getByRole('button', { name: 'List theirs, by @trang, 2 places' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'List solo' })).toBeTruthy();
-    // Somebody else's list offers nothing to edit.
-    expect(actionRows()).toEqual([]);
-  });
-
-  it('a failed delete says so with the reason', async () => {
-    await rows();
-    spies.deleteCollection.mockImplementation(async () => { throw new Error('forbidden'); });
-    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
-    show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
-    spies.mineReload.mockClear();
-    await act(async () => pressInAlert('Delete'));
-    expect(alert).toHaveBeenLastCalledWith('Could not delete', 'forbidden');
-    expect(spies.mineReload).not.toHaveBeenCalled();
-  });
-
-  // The same ghost under somebody else's lists, so the two tabs keep one
-  // row height between them as well as within each.
-  it('sizes a community row by the same ghost as your own', async () => {
-    await rows();
-    state.cols.data = [
-      col('theirs', ['a', 'b'], { curator_handle: 'trang', desc_en: 'Coffee crawl' }),
-      col('solo', ['a']),
-    ];
     show({ tab: 'community' });
-    await screen.findByText('Coffee crawl');
-    const ghosts = ['List theirs', 'List solo'].map((t) => {
-      const face = screen.getByText(t).parentElement!;
-      expect(getComputedStyle(face).position).toBe('absolute');
-      return face.previousElementSibling as HTMLElement;
-    });
-    expect(ghosts[0].getAttribute('aria-hidden')).toBe('true');
-    expect(ghosts[0].innerHTML).toBe(ghosts[1].innerHTML);
-    expect(ghosts[0].children).toHaveLength(4);
-    expect(screen.getByText('List theirs').className).toBe(ghosts[0].firstElementChild!.className);
-  });
-
-  it('a community row names its curator for a screen reader and draws the heart', async () => {
-    await rows();
-    state.cols.data = [
-      col('theirs', ['a', 'b'], { curator_handle: 'trang', desc_en: 'Coffee crawl' }),
-      col('solo', ['a']),
-    ];
-    state.likes = { theirs: 3, solo: 1 };
-    state.myLikes = ['id-solo'];
-    const { navigation } = show({ tab: 'community' });
-    // The byline is the face and the handle; the count went to the foot.
-    expect(await screen.findByLabelText('by @trang')).toBeTruthy();
-    expect(screen.getByText('@trang')).toBeTruthy();
-    expect(screen.getByText('Coffee crawl')).toBeTruthy();
-    // The figure alone beside the pin; the word is what is heard.
-    expect(screen.getByLabelText('2 places').textContent).toBe('2');
-    const foot = screen.getByLabelText('2 places').parentElement!.parentElement!;
-    expect(foot.querySelector('[data-icon="location-outline"]')).toBeTruthy();
-    expect(within(foot).getByRole('button', { name: 'Like this collection' })).toBeTruthy();
-    expect(within(foot).getByText('3')).toBeTruthy();
-    expect(heartsSay()).toEqual(['3 likes', '1 like']);
-    // No byline at all where there is no handle; the count is in the foot.
-    expect(screen.getByLabelText('1 place')).toBeTruthy();
-    expect(screen.getAllByLabelText(/^by /)).toHaveLength(1);
-    // Four lines held on this tab, the byline among them.
-    const ghost = screen.getByText('List solo').parentElement!.previousElementSibling!;
-    expect(ghost.getAttribute('aria-hidden')).toBe('true');
-    expect(ghost.children).toHaveLength(4);
-    // Nothing to swipe on somebody else's list.
-    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Unlike this collection' }));
-    expect(spies.toggleLike).toHaveBeenCalledWith({ id: 'id-solo', slug: 'solo' });
-    fireEvent.click(screen.getByText('List theirs'));
-    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'theirs' });
-  });
-
-  it('a private community row has no heart', async () => {
-    await rows();
-    state.cols.data = [col('shut', ['b'], { is_public: false })];
-    show({ tab: 'community' });
-    expect(await screen.findByLabelText('1 place')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
+    await act(async () => {});
+    expect(screen.getAllByTestId(/^collections-view-/).map((b) => b.dataset.testid)).toEqual(['collections-view-tile', 'collections-view-mosaic']);
+    expect(screen.getByTestId('collections-view-mosaic').getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'List view' })).toBeNull();
   });
 });
 
@@ -1104,22 +791,19 @@ describe('CollectionsScreen — search', () => {
   const box = () => { openBox(); return screen.getByPlaceholderText('Name, place, city, user') as HTMLInputElement; };
   const type = (v: string) => fireEvent.change(box(), { target: { value: v } });
   const open = () => fireEvent.focus(box());
-  const expectSub = (line: string) => expect(screen.getByTestId('collections-scope').textContent).toBe(line);
 
-  // One way in (owner, 7 Nov 2026): no box at rest; the 🔍 beside the
-  // title opens it, ready for words, with Cancel inside it (15 Oct) and
-  // the kinds under it; Cancel puts it all away. No city to choose — a
-  // city is typed, and Mosaic is drawn by city.
-  it('keeps the box away at rest; the 🔍 opens it with Cancel and the kinds, and Cancel puts it away', () => {
+  // One way in (owner, 7 Nov 2026): no box at rest and nothing beside the
+  // title; the dock opens it, ready for words, with Cancel inside it
+  // (15 Oct) and the kinds under it; Cancel puts it all away. No city to
+  // choose — a city is typed, and Mosaic is drawn by city.
+  it('keeps the box away at rest; the dock opens it with Cancel and the kinds, and Cancel puts it away', () => {
     state.places = [cafe('a'), bar('b', 'danang')];
     state.cols.data = [col('coffee', ['a'], { title_en: 'Coffee' }), col('bars', ['b'], { title_en: 'Bars' })];
     show();
     expect(screen.queryByTestId('collections-input')).toBeNull();
     expect(screen.queryByTestId('collections-kinds')).toBeNull();
-    const find = screen.getByTestId('collections-search');
-    expect(screen.getByTestId('collections-top').contains(find)).toBe(true);
-    expect(find.getAttribute('aria-label')).toBe('Find a collection');
-    fireEvent.click(find);
+    expect(screen.queryByTestId('collections-search')).toBeNull();
+    openBox();
     const cancel = screen.getByTestId('collections-cancel');
     expect(box().parentElement!.contains(cancel)).toBe(true);
     expect(document.activeElement).toBe(box());
@@ -1170,22 +854,6 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByText(/matches/)).toBeNull();
   });
 
-  // The same answer in the list shape, where it now sits in the foot,
-  // beside the heart, in place of the count (owner, 29 Oct 2026).
-  it('says which place matched in a community row\'s foot', async () => {
-    await AsyncStorage.setItem('citycrew.collections.view', 'row');
-    await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
-    state.cols.data = [col('one', ['a']), col('two', ['b'])];
-    show();
-    await screen.findByText('List one');
-    type('Place b');
-    const why = screen.getByText('Place b');
-    const foot = why.parentElement!.parentElement!;
-    expect(foot.querySelector('[data-icon="location-outline"]')).toBeTruthy();
-    expect(within(foot).getByRole('button', { name: 'Like this collection' })).toBeTruthy();
-    expect(screen.queryByText('1 place')).toBeNull();
-  });
-
   it('matches by the city the places are in, typed as words', () => {
     state.places = [place('a', 'hanoi'), place('b', 'danang')];
     state.cols.data = [col('one', ['a']), col('two', ['b'])];
@@ -1212,7 +880,7 @@ describe('CollectionsScreen — search', () => {
     expect(screen.queryByTestId('collections-input')).toBeNull();
     expect(screen.getByText('Coffee')).toBeTruthy();
     expect(screen.getByText('Rooftops')).toBeTruthy();
-    expect(screen.getByTestId('collections-search').getAttribute('aria-label')).toBe('Find a collection');
+    expect(screen.queryByTestId('collections-kinds')).toBeNull();
   });
 
   // The panel is the box's: what was searched here before, and nothing
@@ -1238,9 +906,8 @@ describe('CollectionsScreen — search', () => {
   });
 
   // While a kind is on the box stays open, the kind in sight in its
-  // row, and the 🔍 says so in coral with a 1 — even once the keyboard
-  // has gone with the panel.
-  it('keeps the box and the kind in sight while a kind is on, and the 🔍 counts it', () => {
+  // row — even once the keyboard has gone with the panel.
+  it('keeps the box and the kind in sight while a kind is on, and the dock puts the keyboard back', () => {
     state.places = [cafe('a', 'hanoi'), bar('c', 'danang')];
     state.cols.data = [col('one', ['a'], { title_en: 'Hanoi cafés' }), col('two', ['c'], { title_en: 'Da Nang bars' })];
     show();
@@ -1253,16 +920,16 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByTestId('collections-kind-cafes').getAttribute('aria-selected')).toBe('true');
     expect(screen.queryByText('Da Nang bars')).toBeNull();
     expect(screen.getByText('Hanoi cafés')).toBeTruthy();
-    const find = screen.getByTestId('collections-search');
-    expect(find.getAttribute('aria-label')).toBe('Find a collection, 1');
-    expect(find.querySelector('[data-icon="search-outline"]')!.getAttribute('data-color')).toBe(String(colors.accent));
-    // The 🔍 again, while open: the keyboard comes back to the box.
-    fireEvent.click(find);
+    // The dock again, from deep in the shelf, while open: the keyboard
+    // comes back to the box.
+    state.ducked = true;
+    scrollTo(400);
+    fireEvent.click(screen.getByTestId('collections-dock').firstElementChild as HTMLElement);
+    scrollTo(0);
     expect(document.activeElement).toBe(box());
     // "All" lets go of the kind; the box stays while it is asked for.
     pickKind('All');
     expect(screen.getByText('Da Nang bars')).toBeTruthy();
-    expect(find.getAttribute('aria-label')).toBe('Find a collection');
     expect(screen.getByTestId('collections-input')).toBeTruthy();
   });
 
@@ -1333,7 +1000,6 @@ describe('CollectionsScreen — search', () => {
     expect(screen.getByText('Mixed')).toBeTruthy();
     expect(screen.queryByText('Bars')).toBeNull();
     expect(screen.getByText('1 of 3 places · Cafés')).toBeTruthy();
-    expectSub('1 collection · Cafés');
     // "All" lets go.
     pickKind('All');
     expect(screen.getByText('Bars')).toBeTruthy();
@@ -1366,18 +1032,68 @@ describe('CollectionsScreen — search', () => {
   //
   // Both shelves show every city (owner, 15 Oct 2026). Since 7 Nov 2026
   // there is no city filter: a city is typed (see the city test above),
-  // and Mosaic is drawn by city. At rest the line under the title is the
-  // tab's sentence (owner, 2 Nov 2026).
+  // and Mosaic is drawn by city.
   it('shows every city on Community at rest, and narrows to one typed by name', () => {
     state.places = [place('a', 'hanoi'), place('b', 'danang'), place('c', 'danang')];
     state.cols.data = [col('hn', ['a'], { title_en: 'Hanoi list' }), col('dn', ['b', 'c'], { title_en: 'Da Nang list' })];
     show();
-    expectSub('Good corners, through the community’s eyes.');
     expect(screen.getByText('Hanoi list')).toBeTruthy();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
     type('danang');
     expect(screen.queryByText('Hanoi list')).toBeNull();
-    expectSub('1 collection · danang');
+    expect(screen.getByText('Da Nang list')).toBeTruthy();
+  });
+
+  // A city typed whole is a city chosen (owner, 7 Nov 2026): "Đà Lạt" was
+  // answered by a Hanoi list "… After Dark … until late" and by "Đà Nẵng
+  // … run late", neither with a place in Đà Lạt.
+  it('narrows to the city a whole query names, by any of its names', () => {
+    state.cities = [
+      { id: 'dalat', short_en: 'Da Lat', short_vi: 'Đà Lạt', short_ja: 'ダラット', name_en: 'Da Lat', name_vi: 'Đà Lạt', name_ja: 'ダラット' },
+      { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ', name_en: 'Hanoi', name_vi: 'Hà Nội', name_ja: 'ハノイ' },
+      { id: 'hue', short_en: 'Hue', short_vi: 'Huế', short_ja: 'フエ', name_en: 'Hue', name_vi: 'Huế', name_ja: 'フエ' },
+    ];
+    state.places = [cafe('a', 'hanoi'), place('b', 'danang'), cafe('d', 'dalat')];
+    state.cols.data = [
+      col('hn', ['a'], { title_en: 'Hoan Kiem After Dark', desc_en: 'Open until late' }),
+      col('dn', ['b'], { title_en: 'Da Nang late', desc_en: 'Places that run late' }),
+      col('dl', ['d'], { title_en: 'Pine hills' }),
+    ];
+    show();
+    // The Japanese name is on no list's words: only the city answers it.
+    for (const q of ['Đà Lạt', 'da lat', 'Dalat', 'ダラット']) {
+      type(q);
+      expect(screen.queryByText('Hoan Kiem After Dark')).toBeNull();
+      expect(screen.queryByText('Da Nang late')).toBeNull();
+      expect(screen.getByText('Pine hills')).toBeTruthy();
+      // The kinds count inside the city too: one list, not the Hanoi café's as well.
+      expect(screen.getByTestId('collections-kinds-all').textContent).toBe('All (1)');
+      expect(screen.getByTestId('collections-kind-cafes').textContent).toBe('Cafés (1)');
+    }
+    // A city with no list is still the question: nothing, not every list.
+    type('Huế');
+    expect(screen.queryByText('Pine hills')).toBeNull();
+    expect(screen.queryByText('Hoan Kiem After Dark')).toBeNull();
+    expect(screen.getByTestId('collections-kinds-all').textContent).toBe('All (0)');
+    // One word more and it is words again, found where they land.
+    type('da lat pine');
+    expect(screen.getByText('Pine hills')).toBeTruthy();
+    type('dark');
+    expect(screen.getByText('Hoan Kiem After Dark')).toBeTruthy();
+    expect(screen.queryByText('Pine hills')).toBeNull();
+  });
+
+  // With the line under the title gone, the city typed is named where the
+  // answer is partial: on the tile, "1 of 2 places · Da Lat".
+  it('names the typed city on a tile it reaches only in part', async () => {
+    await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
+    state.cities = [{ id: 'dalat', short_en: 'Da Lat', short_vi: 'Đà Lạt', short_ja: 'ダラット', name_en: 'Da Lat', name_vi: 'Đà Lạt', name_ja: 'ダラット' }];
+    state.places = [place('d', 'dalat'), place('h', 'hanoi')];
+    state.cols.data = [col('both', ['d', 'h'], { title_en: 'Two cities' })];
+    show();
+    await act(async () => {});
+    type('Đà Lạt');
+    expect(screen.getByText('1 of 2 places · Da Lat')).toBeTruthy();
   });
 
   it('shows a list from another city with no chip to reach it', () => {
@@ -1385,19 +1101,6 @@ describe('CollectionsScreen — search', () => {
     state.cols.data = [col('dn', ['b'], { title_en: 'Da Nang list' })];
     show();
     expect(screen.getByText('Da Nang list')).toBeTruthy();
-  });
-
-  // Words in the box count as asking: the line is the answer then, and
-  // names the one city it reaches.
-  it('says what Yours is at rest, and counts what the box finds', () => {
-    state.uid = 'u1';
-    state.places = [place('a', 'hanoi')];
-    state.mine.data = [col('m1', ['a'], { owner_id: 'u1' })];
-    show();
-    expectSub('Your own favourite places.');
-    expect(screen.queryByText('City')).toBeNull();
-    type('list');
-    expectSub('1 collection · hanoi');
   });
 
   it('remembers the words when a card they found is opened', async () => {
@@ -1457,20 +1160,6 @@ describe('the New badge', () => {
     expect(within(screen.getByRole('button', { name: 'List fresh, New' })).getByTestId('new-badge')).toBeTruthy();
   });
 
-  it('and in the list shape, before the byline', async () => {
-    await AsyncStorage.setItem('citycrew.collections.view', 'row');
-    await AsyncStorage.setItem('citycrew.collections.community.view', 'row');
-    state.cols.data = [
-      col('fresh', ['a'], { created_at: ago(2), curator_handle: 'Minh' }),
-      col('old', ['a'], { created_at: ago(30) }),
-    ];
-    show();
-    const row = await screen.findByRole('button', { name: 'List fresh, New, by @minh, 1 place' });
-    expect(within(row).getByTestId('new-badge')).toBeTruthy();
-    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'List old' })).toBeTruthy();
-  });
-
   it('marks the shelf before it knows who is reading, and keeps it', async () => {
     await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.pending = true;
@@ -1485,7 +1174,7 @@ describe('the New badge', () => {
 
   // Yours too (owner, 31 Oct 2026): the author sees their new list the
   // way everybody else does.
-  it('on your own as well, on either tab, in either shape', async () => {
+  it('on your own as well, on either tab', async () => {
     await AsyncStorage.setItem('citycrew.collections.community.view', 'tile');
     state.uid = 'u1';
     const own = col('mine1', ['a'], { owner_id: 'u1', is_public: true, created_at: ago(1) });
@@ -1501,9 +1190,6 @@ describe('the New badge', () => {
     await act(async () => {});
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
-    expect(screen.getByText('List mine1')).toBeTruthy();
-    expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
   });
 });
 
@@ -1517,21 +1203,7 @@ describe('its tab, pressed again', () => {
 
 // ── the title goes up, the tabs pin, the dock comes (owner, 25 Oct 2026) ──
 describe('scrolled', () => {
-  type Layout = { __reactLayoutHandler: (e: unknown) => void };
-  const lay = (id: string, layout: { y: number; height: number }) => act(() => {
-    (screen.getByTestId(id) as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, width: 390, ...layout } } });
-  });
-  const scrollTo = (y: number) => act(() => {
-    listProps().onScroll({ nativeEvent: {
-      contentOffset: { x: 0, y }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
-    } });
-  });
   const box = () => { openBox(); return screen.getByTestId('collections-input') as HTMLInputElement; };
-  // The header as a phone lays it out: the tabs 120 down, the whole 260.
-  const laidOut = () => {
-    lay('collections-tabs', { y: 120, height: 44 });
-    lay('collections-top', { y: 0, height: 260 });
-  };
   const signedIn = () => {
     state.uid = 'u1';
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1', title_en: 'Mine' })];
@@ -1569,7 +1241,8 @@ describe('scrolled', () => {
     scrollTo(380);
     expect(within(pinned).getByText('Collections').textContent).toBe('Collections');
     expect(within(pinned).getByRole('button', { name: 'New collection' })).toBeTruthy();
-    expect(within(pinned).getByRole('button', { name: 'Find a collection' })).toBeTruthy();
+    // Nothing beside the title in the copy either (owner, 7 Nov 2026).
+    expect(within(pinned).queryByRole('button', { name: 'Find a collection' })).toBeNull();
     // The box is not open, so the copy draws none either.
     expect(screen.queryByTestId('collections-floating-input')).toBeNull();
     scrollTo(40); // Full header stays available before reaching the top.
@@ -1579,12 +1252,14 @@ describe('scrolled', () => {
     expect(screen.getByTestId('collections-top').getAttribute('aria-hidden')).not.toBe('true');
   });
 
-  it.each([['community', 'row'], ['community', 'tile'], ['community', 'mosaic'], ['yours', 'row'], ['yours', 'tile']] as const)('collapses and reveals %s in %s without a scroll jump', async (tab, layout) => {
+  it.each([['community', 'tile'], ['community', 'mosaic'], ['yours', 'tile']] as const)('collapses and reveals %s in %s without a scroll jump', async (tab, layout) => {
     signedIn();
     state.cols.data = [col('public', ['a'])];
-    await AsyncStorage.setItem(tab === 'community' ? 'citycrew.collections.community.view' : 'citycrew.collections.view', layout);
+    if (tab === 'community') await AsyncStorage.setItem('citycrew.collections.community.view', layout);
     const { navigation } = show(tab === 'community' ? { tab } : undefined);
-    await waitFor(() => expect(screen.getByRole('button', { name: layout === 'row' ? 'List view' : layout === 'tile' ? 'Tile view' : 'Mosaic view' }).getAttribute('aria-selected')).toBe('true'));
+    if (tab === 'community') {
+      await waitFor(() => expect(screen.getByRole('button', { name: layout === 'tile' ? 'Tile view' : 'Mosaic view' }).getAttribute('aria-selected')).toBe('true'));
+    }
     openBox();
     laidOut();
     scrollTo(500);
@@ -1598,7 +1273,6 @@ describe('scrolled', () => {
     expect(within(floating).getByTestId('collections-floating-cancel')).toBeTruthy();
     fireEvent.change(input, { target: { value: 'public' } });
     expect(screen.getByTestId('collections-input').getAttribute('value')).toBe('public');
-    fireEvent.click(within(floating).getByRole('button', { name: 'Find a collection' }));
     fireEvent.click(within(floating).getByRole('button', { name: 'New collection' }));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
     // Cancel puts the box away, from the copy as from the header.
@@ -1626,7 +1300,7 @@ describe('scrolled', () => {
     expect(screen.queryByTestId('collections-pinned')).toBeNull();
   });
 
-  it('reveals the open box, its kind and the counted 🔍 on reverse scroll', () => {
+  it('reveals the open box and its kind on reverse scroll', () => {
     signedIn();
     state.places = [{ ...place('a', 'hanoi'), categories: ['cafes'] }, { ...place('b', 'saigon'), categories: ['nightlife'] }];
     state.mine.data = [col('m1', ['a'], { owner_id: 'u1' }), col('m2', ['b'], { owner_id: 'u1' })];
@@ -1640,7 +1314,6 @@ describe('scrolled', () => {
     const pinned = within(screen.getByTestId('collections-pinned'));
     expect(screen.getByTestId('collections-floating-input')).toBeTruthy();
     expect(pinned.getByRole('button', word('Cafés')).getAttribute('aria-selected')).toBe('true');
-    expect(pinned.getByRole('button', { name: 'Find a collection, 1' })).toBeTruthy();
   });
 
   it('lends the dock once past the header with the bar away: the box, and a new list', async () => {
@@ -1725,26 +1398,24 @@ describe('CollectionsScreen — Mosaic', () => {
     expect(screen.getByTestId(original)).toBeTruthy();
   });
 
-  it('remembers the three-way community switch separately from your library', async () => {
+  it('remembers the community’s grid-or-Mosaic choice, and draws Yours as tiles either way', async () => {
     state.uid = 'u1';
     state.cols.data = [col('theirs', ['a'])];
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show({ tab: 'community' });
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'row');
     fireEvent.click(screen.getByRole('button', { name: 'Tile view' }));
     expect(screen.queryByTestId('collection-mosaic-row-feature')).toBeNull();
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'tile');
     fireEvent.click(screen.getByRole('button', { name: 'Mosaic view' }));
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collections.community.view', 'mosaic');
     // The ids 21-tab-bar-responsive picks a view by, one per button.
-    for (const [v, name] of [['row', 'List view'], ['tile', 'Tile view'], ['mosaic', 'Mosaic view']]) {
+    for (const [v, name] of [['tile', 'Tile view'], ['mosaic', 'Mosaic view']]) {
       expect(screen.getByTestId(`collections-view-${v}`).getAttribute('aria-label')).toBe(name);
     }
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.queryByRole('button', { name: 'Mosaic view' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tile view' })).toBeNull();
     expect(screen.getByTestId('collection-tile-foot')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
     fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
     expect(screen.getByTestId('collection-mosaic-row-feature')).toBeTruthy();
     cleanup();

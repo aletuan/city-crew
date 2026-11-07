@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from './categories';
 import {
-  collectionCities, collectionHaystack, collectionKinds, collectionMatches, findCollections, findPlaces, fold, kindAnswersTo,
+  cityInQuery, collectionCities, collectionHaystack, collectionKinds, collectionMatches, findCollections, findPlaces, fold, kindAnswersTo,
   matches, mergeTerms, placeHaystack, queryTerms, rankHits, relevance, type Searchable, type SearchableCollection,
   siftCollections, type SiftMember,
 } from './search';
@@ -837,12 +837,76 @@ describe('siftCollections', () => {
     expect(siftCollections([bare], { ...none, query: 'nameless' })[0]).toMatchObject({ hits: 1, place: bare.members[0] });
   });
 
+  it('holds words typed with marks to the marks, as the places search does', () => {
+    // 7 Nov 2026: "Đà Lạt" was answered by "After Dark … until late" in
+    // Hanoi and by "Đà Nẵng … run late", with no place in Đà Lạt.
+    const afterDark = {
+      c: { title_en: 'Hoàn Kiếm After Dark', desc_en: 'Open until late' },
+      members: [m('Bia Hơi Tạ Hiện', 'hanoi', ['nightlife'], 'Hà Nội')],
+    };
+    const danangLate = {
+      c: { title_en: 'Đà Nẵng về khuya', desc_en: 'Places that run late' },
+      members: [m('Bếp Hên', 'danang', ['eats'], 'Đà Nẵng')],
+    };
+    const dalat = {
+      c: { title_en: 'Pine hills' },
+      members: [m('Tiệm Cà Phê Túi Mơ To', 'dalat', ['cafes'], 'Đà Lạt')],
+    };
+    const shelf = [afterDark, danangLate, dalat];
+    expect(slugs(siftCollections(shelf, { ...none, query: 'Đà Lạt' }))).toEqual(['Pine hills']);
+    // Typed bare, the words are only words, and land where they land.
+    expect(slugs(siftCollections(shelf, { ...none, query: 'da lat' }))).toEqual(['Hoàn Kiếm After Dark', 'Đà Nẵng về khuya', 'Pine hills']);
+    // A mark on a member's name counts as much as one on the list's.
+    expect(slugs(siftCollections(shelf, { ...none, query: 'Bếp' }))).toEqual(['Đà Nẵng về khuya']);
+    // And on the curator's handle: "lân" is the curator, not the "Làn" of the title.
+    const curated = { c: { title_en: 'Làn picks', curator_handle: 'lân' }, members: [] as SiftMember[] };
+    const titled = { c: { title_en: 'Làn picks', curator_handle: 'minh' }, members: [] as SiftMember[] };
+    expect(slugs(siftCollections([curated, titled], { ...none, query: 'lân' }))).toEqual(['Làn picks']);
+    expect(siftCollections([curated, titled], { ...none, query: 'lân' })[0].c).toBe(curated.c);
+    // Written with no marks at all, a word answers any marks typed for it.
+    expect(siftCollections([{ c: { title_en: 'Dalat Da Lat' }, members: [] }], { ...none, query: 'Đà Lạt' })).toHaveLength(1);
+  });
+
   it('offers the cities and kinds its members have, most common first', () => {
     expect(collectionCities(pairs)).toEqual(['hanoi', 'danang', 'hcmc']);
     expect(collectionKinds(pairs)).toEqual(['cafes', 'eats', 'nightlife', 'views']);
     const loose = [{ members: [{ name_en: 'x' } as SiftMember, { name_en: 'y', city_id: null, categories: null } as SiftMember] }];
     expect(collectionCities(loose)).toEqual([]);
     expect(collectionKinds(loose)).toEqual([]);
+  });
+});
+
+// ── a city typed whole ──
+describe('cityInQuery', () => {
+  const cities = [
+    { id: 'hanoi', names: ['Hanoi', 'Hà Nội', 'ハノイ', null] },
+    { id: 'dalat', names: [undefined, 'Đà Lạt', 'Da Lat', 'Dalat', 'ダラット'] },
+    { id: 'hue', names: ['Hue', 'Huế', 'フエ'] },
+  ];
+
+  it('knows a city by any of its names, marks, spaces and case aside', () => {
+    for (const q of ['Đà Lạt', 'da lat', 'Dalat', 'DALAT', 'đà-lạt', '  Da  Lat ', 'ダラット']) {
+      expect(cityInQuery(q, cities)).toBe('dalat');
+    }
+    expect(cityInQuery('ha noi', cities)).toBe('hanoi');
+    expect(cityInQuery('Huế', cities)).toBe('hue');
+    // A city whose names all carry marks is still found typed without them.
+    expect(cityInQuery('vung tau', [{ id: 'vungtau', names: ['Vũng Tàu'] }])).toBe('vungtau');
+  });
+
+  it('is null for anything more or less than a whole name', () => {
+    expect(cityInQuery('da lat cafe', cities)).toBeNull();
+    expect(cityInQuery('dala', cities)).toBeNull();
+    expect(cityInQuery('saigon', cities)).toBeNull();
+    expect(cityInQuery('', cities)).toBeNull();
+    expect(cityInQuery('Đà Lạt', [])).toBeNull();
+  });
+
+  it('leaves fewer than three letters to the words, so "hu" on the way to "Huế" is not Huế', () => {
+    const short = [{ id: 'hu', names: ['Hu'] }];
+    expect(cityInQuery('hu', short)).toBeNull();
+    expect(cityInQuery('h u', short)).toBeNull();
+    expect(cityInQuery('hue', cities)).toBe('hue');
   });
 });
 

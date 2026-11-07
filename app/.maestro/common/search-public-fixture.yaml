@@ -8,10 +8,22 @@ appId: host.exp.Exponent
     timeout: 30000
 - tapOn:
     id: "collections-community"
-# The box is not on the page at rest (7 Nov 2026): the search glyph
-# beside the title opens it, focused.
+# The box is not on the page at rest, and nothing beside the title opens
+# it (7 Nov 2026): the dock does, once the list has scrolled into the
+# shelf and the tab bar has ducked. Tapped — its middle is the search
+# half; the pill on its right starts a new list — it takes the list back
+# to the top with the box open.
+- scrollUntilVisible:
+    element:
+      id: "collections-dock"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
-    id: "collections-search"
+    id: "collections-dock"
+- extendedWaitUntil:
+    visible:
+      id: "collections-input"
+    timeout: 10000
 - tapOn:
     id: "collections-input"
 - inputText: ${FIXTURE_privacyTitle}
