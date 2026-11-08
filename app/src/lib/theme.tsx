@@ -39,9 +39,10 @@ import {
 
 export type { Look, Pref, Return, Scheme } from './look';
 
-/** Follow the phone. Someone who never opens the setting gets the app in
- *  the same ground as everything else they are looking at — and the two
- *  readings are both the design, so neither is a downgrade. */
+/** Follow the phone: the setting before the stored one has been read,
+ *  and where nothing can be read. A reader who never chose is no longer
+ *  this on iOS — they open in `FIRST_LOOK`, Slate (owner, 8 Nov 2026) —
+ *  but Android and the web, which cannot keep a look, still are. */
 const DEFAULT: Pref = 'system';
 /** The ground to stand on when the phone will not say (Android, the web
  *  build, a simulator that answers null). Dark is the app's original. */
@@ -158,7 +159,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORE_KEY)
       .then((v) => {
         if (!live) return;
-        const stored = parsePref(v);
+        // Nothing stored is a reader who never chose: the setting is the
+        // look the install opened in — `FIRST_LOOK` where a look can be
+        // kept (lib/look), Automatic where it cannot.
+        const stored = v == null && look !== 'standard' ? look : parsePref(v);
         // A setting whose look is not the one loaded — the look was lost,
         // or kept by a build that did not know this one. The look is put
         // right for the next launch and not restarted into now: a restart
@@ -204,6 +208,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     setPrefState(next);
     apply(next);
+    // The look too, though it has not changed: an install that never
+    // wrote one opens in `FIRST_LOOK`, and a choice of Automatic, Light or
+    // Dark made in the standard look has to say so for the next launch.
+    writeLook(store(), lookOf(next));
     // Read the phone back rather than trusting the last event: iOS may
     // have changed ground while the app sat on an explicit override, and
     // no listener fired for it because the window was not following.

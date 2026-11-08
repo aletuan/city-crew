@@ -159,17 +159,50 @@ describe('remembering the choice on the account', () => {
 });
 
 describe('a fresh install', () => {
-  // The decision this setting was added to make: nobody is asked, and the
-  // app arrives in the ground the rest of the phone is already in.
-  it('follows the phone without being told to', async () => {
+  // Nobody is asked: an install that never chose opens in Slate (owner,
+  // 8 Nov 2026), on its own light ground whatever the phone's. It followed
+  // the phone, in the standard look, until then.
+  it('opens in Slate, on its light ground, without being told to', async () => {
+    rn.get.mockReturnValue('dark');
+    mount();
+    await settled();
+    expect(screen.getByTestId('look').textContent).toBe('slate');
+    expect(screen.getByTestId('pref').textContent).toBe('slate');
+    expect(screen.getByTestId('scheme').textContent).toBe('light');
+    expect(rn.set).toHaveBeenCalledWith('light');
+    // Nothing is written for a choice nobody made, and nothing restarts.
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+    expect(updates.reloadAsync).not.toHaveBeenCalled();
+  });
+
+  // Chose Automatic, Light or Dark in the standard look before there was a
+  // first look: the look was never written, so this launch opens in Slate,
+  // and the setting puts the standard look back for every launch after —
+  // without a restart now.
+  it('gives an install that kept Automatic its standard look back from the next launch', async () => {
+    await AsyncStorage.setItem(KEY, 'system');
     mount();
     await settled();
     expect(screen.getByTestId('pref').textContent).toBe('system');
-    expect(screen.getByTestId('scheme').textContent).toBe('light');
-    expect(rn.set).toHaveBeenCalledWith('unspecified');
+    expect(rn.kept['citycrew.look']).toBe('standard');
+    expect(updates.reloadAsync).not.toHaveBeenCalled();
   });
 
-  it('stands on dark when the platform will not say', async () => {
+  // And from now on such a choice writes the look down itself.
+  it('writes the standard look down with a choice of Automatic, Light or Dark', async () => {
+    rn.kept['citycrew.look'] = 'standard';
+    mount();
+    await settled();
+    act(() => { screen.getByText('dark').click(); });
+    expect(rn.kept['citycrew.look']).toBe('standard');
+    delete rn.kept['citycrew.look'];
+    act(() => { screen.getByText('auto').click(); });
+    expect(rn.kept['citycrew.look']).toBe('standard');
+  });
+
+  // The standard look, on Automatic: the ground the phone says.
+  it('stands on dark in the standard look when the platform will not say', async () => {
+    rn.kept['citycrew.look'] = 'standard';
     rn.get.mockReturnValue(null);
     mount();
     await settled();
@@ -241,6 +274,7 @@ describe('the phone changes its mind', () => {
   // lands on the right ground in the same frame rather than after the
   // next time the phone happens to change.
   it('is caught up with the moment the window is handed back', async () => {
+    rn.kept['citycrew.look'] = 'standard';
     await AsyncStorage.setItem(KEY, 'light');
     mount();
     await settled();
@@ -258,6 +292,7 @@ describe('another look', () => {
   // The colours are built once at import, so a look is a restart: kept
   // first, where the next launch's import will find it, then reloaded.
   it('keeps the look and the setting, then restarts into them', async () => {
+    rn.kept[LOOK] = 'standard';
     mount();
     await settled();
     rn.set.mockClear();
@@ -384,10 +419,10 @@ describe('another look', () => {
     expect(text('pref')).toBe('system');
   });
 
-  it('can keep one on iOS', async () => {
+  it('can keep one on iOS, and opens a fresh install in Slate there', async () => {
     mount();
     await settled();
     expect(text('looks')).toBe('true');
-    expect(text('look')).toBe('standard');
+    expect(text('look')).toBe('slate');
   });
 });

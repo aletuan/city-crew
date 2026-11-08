@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   LOOK_DEFS, LOOK_KEY, PINNED, PREFS, RETURN_KEY, RETURN_TTL_MS, canHoldLook, landingState, lookOf, storeOf, needsRestart,
-  parseLook, parsePref, pinnedScheme, readLook, takeReturn, writeLook, writeReturn,
+  FIRST_LOOK, parseLook, parsePref, pinnedScheme, readLook, takeReturn, writeLook, writeReturn,
 } from './look';
 
 describe('look', () => {
@@ -79,12 +79,20 @@ describe('look', () => {
     expect(LOOK_KEY).toBe('citycrew.look');
   });
 
-  it('reads the look off a store, and nothing off a missing or broken one', () => {
-    expect(readLook({ get: (k) => (k === LOOK_KEY ? 'rose' : 'coffee') })).toBe('rose');
+  // Nothing kept is a look never chosen: Slate (owner, 8 Nov 2026) where a
+  // look can be kept, the standard look where it cannot (Android, web).
+  it('reads the look off a store; nothing kept is the first look, nothing to keep it in is standard', () => {
+    const set = () => {};
+    expect(FIRST_LOOK).toBe('slate');
+    expect(readLook({ get: (k) => (k === LOOK_KEY ? 'rose' : 'coffee'), set })).toBe('rose');
+    expect(readLook({ get: () => 'standard', set })).toBe('standard');
+    expect(readLook({ get: () => null, set })).toBe('slate');
+    expect(readLook({ get: () => undefined, set })).toBe('slate');
+    expect(readLook({ get: () => 'charcoal', set })).toBe('standard');
     expect(readLook({ get: () => null })).toBe('standard');
     expect(readLook({})).toBe('standard');
     expect(readLook(undefined)).toBe('standard');
-    expect(readLook({ get: () => { throw new Error('no defaults'); } })).toBe('standard');
+    expect(readLook({ get: () => { throw new Error('no defaults'); }, set })).toBe('standard');
   });
 
   it('fetches the store, and nothing where the fetch throws', () => {
