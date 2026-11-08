@@ -188,10 +188,28 @@ export function canHoldLook(store: LookStore): boolean {
   return typeof store?.get === 'function' && typeof store.set === 'function';
 }
 
-/** The stored look; a store that throws is read as holding nothing. */
+/**
+ * The look an install wears before anyone has chosen one: Slate (owner,
+ * 8 Nov 2026). It was the standard look on Automatic — paper by day,
+ * charcoal by the phone's night — which is still one tap away as
+ * "Automatic". Only where a look can be kept: a store that cannot hold one
+ * (Android, the web build) offers no looks, so it stays standard there.
+ *
+ * Nothing stored is read as never chosen. An install that chose
+ * Automatic, Light or Dark from the standard look before this did not
+ * always write the look down (only a change of look did), so it reads as
+ * never chosen too: it opens once in Slate, and the setting it kept puts
+ * the standard look back for every launch after (`ThemeProvider`).
+ */
+export const FIRST_LOOK: Pinned = 'slate';
+
+/** The stored look; nothing stored is `FIRST_LOOK` where a look can be
+ *  kept, and a store that throws is read as the standard look. */
 export function readLook(store: LookStore): Look {
+  if (!canHoldLook(store)) return 'standard';
   try {
-    return parseLook(store?.get?.(LOOK_KEY));
+    const v = store!.get!(LOOK_KEY);
+    return v == null ? FIRST_LOOK : parseLook(v);
   } catch {
     return 'standard';
   }
