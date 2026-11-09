@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AccessibilityInfo, LayoutAnimation } from 'react-native';
+import { AccessibilityInfo, Dimensions, LayoutAnimation, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { ExploreFilters } from '../lib/exploreFilters';
 import { colors } from '../theme';
@@ -22,6 +22,7 @@ const open = (applied: ExploreFilters = NONE) => render(
     visitedAvailable
     // Fewer places for any narrowing, so the label says which draft it counts.
     countFor={(f) => (f.status === 'open' ? 3 : f.savedOnly ? 2 : 10)}
+    nowMin={14 * 60 + 37}
     onClose={() => {}}
     onApply={async () => null}
     onNeedSignIn={() => {}}
@@ -88,5 +89,53 @@ describe('the sheet’s foot', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Open now' }));
     fireEvent.click(screen.getByTestId('filter-reset'));
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('a sheet taller than the screen', () => {
+  type Fiber = { return: Fiber | null; memoizedProps: Record<string, unknown> };
+  /** The props React holds for the nearest component carrying this testID
+   *  and this prop. */
+  const propsOf = (testID: string, prop: string) => {
+    const node = screen.getByTestId(testID);
+    const key = Object.keys(node).find((k) => k.startsWith('__reactFiber'))!;
+    let f = (node as unknown as Record<string, Fiber>)[key];
+    while (f && !(f.memoizedProps.testID === testID && prop in f.memoizedProps)) f = f.return!;
+    return f.memoizedProps;
+  };
+  /** Whether the pull to close is on this element: its responder asks to
+   *  capture a move. */
+  const pulls = (testID: string) => typeof screen.getByTestId(testID) === 'object'
+    && typeof (propsOf(testID, 'testID') as Record<string, unknown>).onMoveShouldSetResponderCapture === 'function';
+  const measure = (view: number, content: number) => act(() => {
+    (propsOf('filter-questions', 'onLayout').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { height: view } } });
+    (propsOf('filter-questions', 'onContentSizeChange').onContentSizeChange as (w: number, h: number) => void)(350, content);
+  });
+
+  // Where the questions fit, nothing scrolls and the whole sheet pulls.
+  it('does not scroll where its questions fit, and pulls from anywhere', () => {
+    open();
+    measure(560, 560);
+    expect(propsOf('filter-questions', 'scrollEnabled').scrollEnabled).toBe(false);
+    expect(pulls('filter-sheet')).toBe(true);
+    expect(pulls('filter-sheet-top')).toBe(false);
+  });
+
+  // An iPhone SE with check-in on: the questions scroll, Apply stays put,
+  // and the pull moves to the handle and title so the finger can scroll.
+  it('scrolls its questions where they do not fit, and pulls from the top only', () => {
+    open();
+    measure(420, 560);
+    expect(propsOf('filter-questions', 'scrollEnabled').scrollEnabled).toBe(true);
+    expect(pulls('filter-sheet')).toBe(false);
+    expect(pulls('filter-sheet-top')).toBe(true);
+    expect(screen.getByTestId('filter-questions').contains(screen.getByTestId('filter-apply'))).toBe(false);
+  });
+
+  it('is never taller than the screen below the status bar', () => {
+    open();
+    // The insets are zero here; the window is whatever jsdom says it is.
+    expect(StyleSheet.flatten(propsOf('filter-sheet', 'style').style as never))
+      .toEqual(expect.objectContaining({ maxHeight: Dimensions.get('window').height - 24 }));
   });
 });

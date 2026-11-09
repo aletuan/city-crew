@@ -1,14 +1,24 @@
 import { categoriesOf } from './categories';
 import type { Place } from './data';
-import { openState } from './format';
+import { openState, openThroughout } from './format';
 import { distanceKm } from './geo';
 
 export type ExploreSort = 'recommended' | 'distance' | 'rating';
-export type ExploreStatus = 'any' | 'open' | 'closed';
+/** `window` is the slider's: open for the whole of `ExploreFilters.window`.
+ *  The three named ones are the segments above it. */
+export type ExploreStatus = 'any' | 'open' | 'closed' | 'window';
+
+/** A stretch of today's trading day, in minutes from `DAY_START`, 0–1440.
+ *  `from === to` is a moment. See `openThroughout`. */
+export type HoursWindow = { from: number; to: number };
 
 export type ExploreFilters = {
   sort: ExploreSort;
   status: ExploreStatus;
+  /** Read only while `status` is `window`. Kept beside the status rather
+   *  than folded into it so the three segments stay the plain words the
+   *  map's button and its spoken label already switch on. */
+  window?: HoursWindow;
   savedOnly: boolean;
   /** Only places this reader has checked in at. Off for a guest, who has
    *  checked in nowhere; the sheet shows the switch only behind the
@@ -42,6 +52,7 @@ export function matchesExplore(row: Filterable, options: {
    *  no "All" chip, and two chips widen rather than narrow). */
   categories: readonly string[];
   status: ExploreStatus;
+  window?: HoursWindow;
   savedOnly: boolean;
   isSaved: (slug: string) => boolean;
   visitedOnly: boolean;
@@ -53,10 +64,30 @@ export function matchesExplore(row: Filterable, options: {
   tz: (cityId: string | null | undefined) => string;
 }): boolean {
   return (!options.categories.length || categoriesOf(row).some((c) => options.categories.includes(c)))
-    && (options.status === 'any'
-      || openState(row.opening_hours as Parameters<typeof openState>[0], options.now, options.tz(row.city_id))?.open === (options.status === 'open'))
+    && passesHours(row, options)
     && (!options.savedOnly || options.isSaved(row.slug))
     && (!options.visitedOnly || options.isVisited(row.slug));
+}
+
+/**
+ * The hours half of `matchesExplore`. A row whose hours cannot answer
+ * fails every question but "any time": a café with no hours stored is
+ * not one anybody can promise is open, or shut.
+ *
+ * A `window` status with no window is no filter. Nothing sets one — the
+ * sheet always writes both — but a filter that cannot say what it asks
+ * should ask nothing rather than hide the catalog.
+ */
+function passesHours(row: Filterable, options: {
+  status: ExploreStatus; window?: HoursWindow; now: Date; tz: (cityId: string | null | undefined) => string;
+}): boolean {
+  if (options.status === 'any') return true;
+  const hours = row.opening_hours as Parameters<typeof openState>[0];
+  const zone = options.tz(row.city_id);
+  if (options.status === 'window') {
+    return !options.window || openThroughout(hours, options.window, options.now, zone) === true;
+  }
+  return openState(hours, options.now, zone)?.open === (options.status === 'open');
 }
 
 /**
