@@ -23,7 +23,7 @@ import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { useDockOffer } from '../components/DockSlot';
 import { CATEGORIES, categoriesOf, categoryLabel, chosenKind, pinTint, presentCategories } from '../lib/categories';
 import { useCity } from '../lib/city';
-import { cityTz } from '../lib/clock';
+import { cityTz, wallClock } from '../lib/clock';
 import { fetchPlaceIndex, Place, PlaceIndexRow } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { useSession } from '../lib/auth';
@@ -208,6 +208,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       ? countsByCity(cityIndex, {
         categories: picked,
         status: appliedFilters.status,
+        window: appliedFilters.window,
         savedOnly: appliedFilters.savedOnly,
         isSaved,
         visitedOnly: appliedFilters.visitedOnly,
@@ -228,7 +229,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         lat: c.center_lat,
         lng: c.center_lng,
       }));
-  }, [cities, city?.id, cityIndex, picked, appliedFilters.status, appliedFilters.savedOnly, isSaved, appliedFilters.visitedOnly, isVisited, t]);
+  }, [cities, city?.id, cityIndex, picked, appliedFilters.status, appliedFilters.window, appliedFilters.savedOnly, isSaved, appliedFilters.visitedOnly, isVisited, t]);
   // How the places are looked at, remembered the way Collections
   // remembers its tiles-or-rows: one word in storage, read once on
   // mount. Until it has been read the list shows, which is also the
@@ -958,7 +959,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     onPress={pickStatus}
                     haptic="selection"
                     accessibilityRole="button"
-                    accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}: ${statusLabel(appliedFilters.status, t)}`}
+                    accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}: ${statusLabel(appliedFilters.status, t, appliedFilters.window)}`}
                     accessibilityState={{ selected: appliedFilters.status !== 'any' }}
                     hitSlop={4}
                     contentStyle={[s.mapCell, appliedFilters.status !== 'any' && s.mapCellOn]}
@@ -1070,6 +1071,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           signedIn={!!session}
           visitedAvailable={checkinOn}
           countFor={(next) => filteredFor(next).length}
+          // This city's clock, read as the sheet opens: the "now" its
+          // slider draws is the one the count is taken at.
+          nowMin={wallClock(new Date(), cityTz(cities, city?.id)).mins}
           onClose={() => setFilterOpen(false)}
           onApply={applyFilters}
           onNeedSignIn={() => {

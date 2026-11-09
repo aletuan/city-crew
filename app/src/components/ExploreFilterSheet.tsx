@@ -1,11 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, LayoutAnimation, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, LayoutAnimation, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ExploreFilters, ExploreSort, ExploreStatus } from '../lib/exploreFilters';
+import type { ExploreFilters, ExploreSort, ExploreStatus, HoursWindow } from '../lib/exploreFilters';
+import { clockOf } from '../lib/format';
+import { answerFor, axisOf, clockAt, headsFor } from '../lib/hoursSlider';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
 import { Card, fireHaptic, GradientCta, PressableScale, SECONDARY_CONTROL_H, useReducedMotion } from './ui';
+import { HoursSlider } from './HoursSlider';
 import { SLIDE } from './SearchField';
 import { useSheetDrag } from './sheetDrag';
 
@@ -21,6 +24,8 @@ const isDirty = (f: ExploreFilters) => f.sort !== NOTHING_APPLIED.sort
   || f.visitedOnly !== NOTHING_APPLIED.visitedOnly;
 
 const SORTS: ExploreSort[] = ['recommended', 'distance', 'rating'];
+/** The three answers drawn as segments. The fourth, `window`, is the
+ *  slider's, and lights none of them. */
 const STATUSES: ExploreStatus[] = ['any', 'open', 'closed'];
 
 /**
@@ -74,12 +79,40 @@ function sortIcon(value: ExploreSort): keyof typeof Ionicons.glyphMap {
  * middle of trading" and 営業時間外 is "outside business hours", both
  * about now, and neither needs a 今 in front of it to say so.
  */
-export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t']) {
+export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t'], window?: HoursWindow) {
+  // A span set on the slider has no word, only its two ends — which is
+  // what the map's button says aloud for it.
+  if (value === 'window' && window) return spanText(window);
   if (value === 'open') return t('Open now', 'Đang mở cửa', '営業中', '营业中', '營業中');
   if (value === 'closed') return t('Closed now', 'Đang đóng cửa', '営業時間外', '已打烊', '已打烊');
   // "Any time", not "Any": it sits under a heading that asks about
   // opening hours, and the other two answers are about now.
   return t('Any time', 'Mọi giờ', '指定なし', '不限', '不限');
+}
+
+/** "08:00–22:00", or the one time when the span is a moment. */
+function spanText(w: HoursWindow) {
+  return w.from === w.to ? clockAt(w.from) : `${clockAt(w.from)}–${clockAt(w.to)}`;
+}
+
+/**
+ * What the hours heading says on its right, in words, of what the heads
+ * show — the only place the span's two ends are always written, since
+ * the time over a head is drawn only while it is held.
+ *
+ * "Open throughout" says the rule out loud. Without it 08:00–22:00 reads
+ * as "open at some point between eight and ten", which is a different
+ * filter and nearly no filter; see `openThroughout`.
+ */
+function hoursNote(f: ExploreFilters, nowMin: number, t: ReturnType<typeof useI18n>['t']) {
+  if (f.status === 'open') return `${t('Now', 'Bây giờ', '現在', '现在', '現在')} · ${clockOf(nowMin)}`;
+  if (f.status === 'closed') return `${t('Closed at', 'Đóng lúc', '営業時間外 ·', '已打烊 ·', '已打烊 ·')} ${clockOf(nowMin)}`;
+  if (f.status === 'window' && f.window) {
+    return f.window.from === f.window.to
+      ? `${t('Open at', 'Mở lúc', '営業中 ·', '营业于', '營業於')} ${clockAt(f.window.from)}`
+      : `${t('Open throughout', 'Mở suốt', '通し営業', '全程营业', '全程營業')} ${spanText(f.window)}`;
+  }
+  return null;
 }
 
 /**
@@ -112,6 +145,7 @@ export default function ExploreFilterSheet({
   signedIn,
   visitedAvailable,
   countFor,
+  nowMin,
   onClose,
   onApply,
   onNeedSignIn,
@@ -123,6 +157,9 @@ export default function ExploreFilterSheet({
    *  sheet has three questions, as it did before the fourth. */
   visitedAvailable: boolean;
   countFor: (filters: ExploreFilters) => number;
+  /** The minute it is on the city's own clock, 0–1439: where "Open now"
+   *  puts the slider's heads. */
+  nowMin: number;
   onClose: () => void;
   onApply: (filters: ExploreFilters) => Promise<string | null>;
   onNeedSignIn: () => void;
@@ -157,6 +194,16 @@ export default function ExploreFilterSheet({
     setDraft(next);
   };
 
+  // The heads, answered. No haptic here: the slider ticks on the hour,
+  // and a tick on every step on top of that would be a buzz.
+  const nowAt = axisOf(nowMin);
+  const moveHeads = (span: HoursWindow) => {
+    setError(null);
+    const next = { ...draft, ...answerFor(span, nowAt) };
+    if (isDirty(next) !== isDirty(draft)) slide();
+    setDraft(next);
+  };
+
   const apply = async () => {
     if (busy) return;
     setBusy(true);
@@ -168,16 +215,35 @@ export default function ExploreFilterSheet({
 
   const count = countFor(draft);
   const dirty = isDirty(draft);
+
+  // Whether the questions outgrow the screen, and so scroll. With the
+  // hours slider (9 Nov 2026) the sheet is 710pt on a 390pt phone, which
+  // fits under its 47pt status bar with 87 to spare — and 676pt on an
+  // iPhone SE, which is 667 tall: the title went under the clock
+  // (measured in Chromium through react-native-web, check-in on). So the
+  // questions sit in a scroll view that the sheet's height caps, and
+  // Apply stays at the foot either way.
+  //
+  // Where they fit, nothing scrolls and the pull to close stays on the
+  // whole sheet, as it was. Where they do not, the pull moves to the
+  // handle and the title, as `useSheetDrag` says a scrolling sheet's
+  // must, so the questions keep the finger to scroll with.
+  const { height: screenH } = useWindowDimensions();
+  const [box, setBox] = useState({ view: 0, content: 0 });
+  const scrolls = box.content > box.view + 1;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
-        {...handlers}
+        {...(scrolls ? {} : handlers)}
+        testID="filter-sheet"
         style={[s.sheet, {
+          maxHeight: screenH - insets.top - SHEET_CLEARANCE,
           paddingBottom: 14 + insets.bottom,
           transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 420] }) }, { translateY: drag }],
         }]}
       >
+        <View {...(scrolls ? handlers : {})} testID="filter-sheet-top">
         <View style={s.handle} />
         <View style={s.head}>
           <Text style={s.title}>{t('Sort & filter', 'Sắp xếp & lọc', '並べ替え・絞り込み', '排序和筛选', '排序和篩選')}</Text>
@@ -191,6 +257,17 @@ export default function ExploreFilterSheet({
             <Ionicons name="close" size={19} color={colors.text} />
           </PressableScale>
         </View>
+        </View>
+
+        <ScrollView
+          style={s.questions}
+          scrollEnabled={scrolls}
+          bounces={false}
+          showsVerticalScrollIndicator={scrolls}
+          testID="filter-questions"
+          onLayout={(e) => { const view = e.nativeEvent.layout.height; setBox((b) => (b.view === view ? b : { ...b, view })); }}
+          onContentSizeChange={(_, content) => setBox((b) => (b.content === content ? b : { ...b, content }))}
+        >
 
         {/* A track of three segments, with a mark each — the shape the
             opening-hours question below already takes, so the two
@@ -246,7 +323,10 @@ export default function ExploreFilterSheet({
             accent the rest of the app wears when something is chosen —
             not the white raised tile of a native iOS segmented control,
             which has no counterpart on the dark theme. */}
-        <Text style={s.legend}>{t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}</Text>
+        <View style={s.legendRow}>
+          <Text style={[s.legend, s.legendInRow]}>{t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}</Text>
+          <Text style={s.legendNote} numberOfLines={1} testID="filter-hours-note">{hoursNote(draft, nowMin, t)}</Text>
+        </View>
         <View style={s.track} accessibilityRole="radiogroup">
           {STATUSES.map((value) => {
             const active = draft.status === value;
@@ -271,6 +351,9 @@ export default function ExploreFilterSheet({
             );
           })}
         </View>
+        {/* The segments' other drawing: see `lib/hoursSlider` for the
+            rule between them, both ways. */}
+        <HoursSlider heads={headsFor(draft, nowAt)} now={nowAt} onMove={moveHeads} />
 
         {/* Its own card, for the same reason the sorts got one: a single
             row with no frame beside two framed blocks reads as the one
@@ -375,6 +458,8 @@ export default function ExploreFilterSheet({
           </>
         ) : null}
 
+        </ScrollView>
+
         {error ? <Text style={s.error} accessibilityRole="alert">{error}</Text> : null}
         {/* One track, always drawn, holding the button and — when there is
             something to undo — Reset beside it. The owner's ask (17 Oct
@@ -441,6 +526,11 @@ export default function ExploreFilterSheet({
   );
 }
 
+/** What the sheet leaves above itself under the status bar when it is as
+ *  tall as it can be: enough of the screen behind it to show it is a
+ *  sheet over something, and to tap to close. */
+const SHEET_CLEARANCE = 24;
+
 /** The track's padding: the gutter round the selected segment. */
 const TRACK_INSET = 4;
 const TRACK_SLOP = { top: TRACK_INSET, bottom: TRACK_INSET };
@@ -454,6 +544,10 @@ const s = StyleSheet.create({
     borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
+  // Shrinks, and only shrinks: a scroll view grows to fill by default,
+  // and this one should be as tall as its questions until the screen
+  // says otherwise.
+  questions: { flexGrow: 0, flexShrink: 1 },
   handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary, marginBottom: 10 },
   head: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -483,6 +577,17 @@ const s = StyleSheet.create({
   // own air — same exception TripsScreen makes for the heading at the
   // top of the screen.
   legendFirst: { marginTop: 0 },
+  // The hours heading carries the span in words on its right, so the
+  // row takes the heading's gaps and the heading inside it none.
+  legendRow: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
+    marginTop: space.titleToContent, marginBottom: space.headingToContent,
+  },
+  legendInRow: { marginTop: 0, marginBottom: 0 },
+  legendNote: {
+    flexShrink: 1, color: colors.accent, fontSize: 13, fontWeight: font.semibold,
+    fontVariant: ['tabular-nums'],
+  },
 
   // One row shape for every switch in this sheet — the saved toggle and
   // the visited one — so the eye learns it once.

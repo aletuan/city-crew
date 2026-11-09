@@ -506,6 +506,67 @@ export function openState(lines: string[] | null | undefined, now: Date, tz: str
 }
 
 /**
+ * Where the Explore filter's day begins: six in the morning, not midnight.
+ *
+ * The day the filter's slider draws is a trading day, 06:00 to 06:00. A
+ * midnight-to-midnight axis cannot hold a bar that opens at seven in the
+ * evening and shuts at two: its right-hand head would have to pass 24:00.
+ * Across the 1,387 approved places on 9 Nov 2026, about 209 (15%) close at
+ * or after midnight — 100 of them between one and six — and only 15 open
+ * before six, 10 of those at five. Six sits between the two crowds: the
+ * bars have shut, and the breakfast places open on the axis rather than
+ * off it. What it gives up is the hour from five to six, for those 15
+ * and the places open around the clock.
+ */
+export const DAY_START = 6 * 60;
+
+/**
+ * Whether a place stays open for the whole of a stretch of today's
+ * trading day, or `null` when its hours cannot answer.
+ *
+ * `span` is minutes from `DAY_START`, 0 to 1440. A span of no length is
+ * a moment, and asks whether the place is open at it, which is the
+ * question `openState` answers for now.
+ *
+ * "The whole of", and not "at some point in": the slider reads as "I am
+ * free from two to four, where can I go". Read as an overlap, 08:00–22:00
+ * would pass nearly every place in the catalog, and a filter that every
+ * row passes has filtered nothing.
+ *
+ * The trading day is the one holding `now` on the place's clock, so at
+ * half past one in the morning it is still yesterday's. Yesterday's
+ * windows that run past midnight and tomorrow's early ones are read on
+ * that day's clock, and windows that meet are joined, so a place open
+ * around the clock on both days is open across the join at midnight.
+ */
+export function openThroughout(
+  lines: string[] | null | undefined,
+  span: { from: number; to: number },
+  now: Date,
+  tz: string,
+): boolean | null {
+  const week = readWeek(lines, now, tz);
+  if (!week) return null;
+  const { mins, today, dayAt } = week;
+  const day = mins < DAY_START ? today - 1 : today;
+  const wins = dayAt(day);
+  if (!wins) return null;
+  // A neighbouring day in a shape this does not read is no windows, as it
+  // is for `openState`'s look back at yesterday: today's own line is the
+  // one that decides whether there is an answer at all.
+  const shifted = (i: number, by: number) => (dayAt(i) ?? []).map((w) => ({ from: w.from + by, to: w.to + by }));
+  const joined: Window[] = [];
+  for (const w of [...shifted(day - 1, -DAY), ...wins, ...shifted(day + 1, DAY)].sort((a, b) => a.from - b.from)) {
+    const last = joined[joined.length - 1];
+    if (last && w.from <= last.to) last.to = Math.max(last.to, w.to);
+    else joined.push({ ...w });
+  }
+  const a = DAY_START + span.from;
+  const b = DAY_START + span.to;
+  return joined.some((w) => w.from <= a && (a === b ? a < w.to : b <= w.to));
+}
+
+/**
  * How long before closing an hour is worth printing.
  *
  * Forty-five minutes, and the number came from the catalog rather than

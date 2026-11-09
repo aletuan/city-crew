@@ -9,7 +9,7 @@
 // predicate the list itself is filtered by — one function, two callers,
 // no way for them to drift.
 
-import { matchesExplore, type ExploreStatus, type Filterable } from './exploreFilters';
+import { matchesExplore, type ExploreStatus, type Filterable, type HoursWindow } from './exploreFilters';
 
 /** What this needs of an indexed row: enough to be filtered, plus which
  *  city to count it under. */
@@ -29,6 +29,7 @@ export function countsByCity(
   options: {
     categories: readonly string[];
     status: ExploreStatus;
+    window?: HoursWindow;
     savedOnly: boolean;
     isSaved: (slug: string) => boolean;
     visitedOnly: boolean;
