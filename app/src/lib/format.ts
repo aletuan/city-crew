@@ -521,25 +521,45 @@ export function openState(lines: string[] | null | undefined, now: Date, tz: str
 export const DAY_START = 6 * 60;
 
 /**
- * Whether a place stays open for the whole of a stretch of today's
- * trading day, or `null` when its hours cannot answer.
+ * Whether a place is open at any moment of a stretch of today's trading
+ * day, or `null` when its hours cannot answer.
  *
  * `span` is minutes from `DAY_START`, 0 to 1440. A span of no length is
  * a moment, and asks whether the place is open at it, which is the
  * question `openState` answers for now.
  *
- * "The whole of", and not "at some point in": the slider reads as "I am
- * free from two to four, where can I go". Read as an overlap, 08:00–22:00
- * would pass nearly every place in the catalog, and a filter that every
- * row passes has filtered nothing.
+ * "At some moment of", and not "for the whole of". The slider shipped
+ * reading "for the whole of" (#1282), and on the phone it fell off a
+ * cliff (owner, 10 Nov 2026): Any time is both heads on the ends, and
+ * one step in from either end asked for places open around the clock.
+ * Saigon on a Tuesday, the 502 approved places with hours, read on
+ * Tuesday's own line (10 Nov 2026):
+ *
+ *                     for the whole   at some moment
+ *   06:00–06:00             17             494
+ *   08:30–06:00             17             494
+ *   18:00–06:00             17             471
+ *   08:00–22:00            158             494
+ *   14:00–16:00            389             426
+ *   23:00–02:00             33             118
+ *   06:00–07:00             34             137
+ *   at 14:00               401             401
+ *
+ * "For the whole" counts more as the span narrows, which is the opposite
+ * of what a slider says by narrowing, and it is why Any time (511) and
+ * one step in from it (17) were neighbours. "At some moment" only ever
+ * counts fewer as the span narrows, and says the same as before for a
+ * moment, so "Open now" is unchanged. What it gives up is the wide span
+ * as a filter — 08:00–22:00 keeps nearly everything — and the wide span
+ * is not where anybody filters: the narrow ones are, the late night and
+ * the early morning, and those it answers.
  *
  * The trading day is the one holding `now` on the place's clock, so at
  * half past one in the morning it is still yesterday's. Yesterday's
  * windows that run past midnight and tomorrow's early ones are read on
- * that day's clock, and windows that meet are joined, so a place open
- * around the clock on both days is open across the join at midnight.
+ * that day's clock.
  */
-export function openThroughout(
+export function openDuring(
   lines: string[] | null | undefined,
   span: { from: number; to: number },
   now: Date,
@@ -555,15 +575,16 @@ export function openThroughout(
   // is for `openState`'s look back at yesterday: today's own line is the
   // one that decides whether there is an answer at all.
   const shifted = (i: number, by: number) => (dayAt(i) ?? []).map((w) => ({ from: w.from + by, to: w.to + by }));
-  const joined: Window[] = [];
-  for (const w of [...shifted(day - 1, -DAY), ...wins, ...shifted(day + 1, DAY)].sort((a, b) => a.from - b.from)) {
-    const last = joined[joined.length - 1];
-    if (last && w.from <= last.to) last.to = Math.max(last.to, w.to);
-    else joined.push({ ...w });
-  }
   const a = DAY_START + span.from;
   const b = DAY_START + span.to;
-  return joined.some((w) => w.from <= a && (a === b ? a < w.to : b <= w.to));
+  // Some moment of [a, b], both ends included, inside [from, to), the
+  // closing minute excluded: a place opening at seven is open at seven,
+  // one shutting at two is not open at two. Both ends in, because a
+  // moment is a span with its ends together, and a span that left out
+  // its own end would count a place at the moment and not at the span
+  // around it.
+  return [...shifted(day - 1, -DAY), ...wins, ...shifted(day + 1, DAY)]
+    .some((w) => w.from <= b && a < w.to);
 }
 
 /**

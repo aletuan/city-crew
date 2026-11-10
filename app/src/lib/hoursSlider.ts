@@ -12,10 +12,10 @@
 //   Closed now →  both heads on the present moment, drawn muted: the
 //                 slider asks what is open, and has no drawing for its
 //                 opposite. Moving a head turns it into a window.
-//   (none)     ⇔ any other span: open for the whole of it
+//   (none)     ⇔ any other span: open at some moment of it
 //
 // Positions are minutes from `DAY_START` (06:00), 0 to 1440 — see
-// `openThroughout` for why the axis starts at six.
+// `DAY_START` for why the axis starts at six.
 
 import type { ExploreFilters, HoursWindow } from './exploreFilters';
 import { clockOf, DAY_START } from './format';

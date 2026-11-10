@@ -138,7 +138,7 @@ describe('heads to segments', () => {
     drag('from', 120);
     drag('to', -8 * 60);
     expect(checked()).toBeNull();
-    expect(note()).toBe('Open throughout 08:00–22:00');
+    expect(note()).toBe('Open within 08:00–22:00');
     expect(screen.getByText('Show 7 places')).toBeTruthy();
     expect(screen.getByTestId('filter-reset')).toBeTruthy();
   });
@@ -158,7 +158,7 @@ describe('heads to segments', () => {
     open({ ...NONE, status: 'open' });
     drag('to', 60);
     expect(checked()).toBeNull();
-    expect(note()).toBe('Open throughout 14:30–15:30');
+    expect(note()).toBe('Open within 14:30–15:30');
     drag('to', -60);
     expect(checked()).toBe('Open now');
     expect(note()).toBe('Now · 14:37');

@@ -100,9 +100,9 @@ function spanText(w: HoursWindow) {
  * show — the only place the span's two ends are always written, since
  * the time over a head is drawn only while it is held.
  *
- * "Open throughout" says the rule out loud. Without it 08:00–22:00 reads
- * as "open at some point between eight and ten", which is a different
- * filter and nearly no filter; see `openThroughout`.
+ * "Open within" says the rule out loud: open at some moment between the
+ * two ends, not for the whole of them — see `openDuring`, and the cliff
+ * the other reading fell off.
  */
 function hoursNote(f: ExploreFilters, nowMin: number, t: ReturnType<typeof useI18n>['t']) {
   if (f.status === 'open') return `${t('Now', 'Bây giờ', '現在', '现在', '現在')} · ${clockOf(nowMin)}`;
@@ -110,7 +110,7 @@ function hoursNote(f: ExploreFilters, nowMin: number, t: ReturnType<typeof useI1
   if (f.status === 'window' && f.window) {
     return f.window.from === f.window.to
       ? `${t('Open at', 'Mở lúc', '営業中 ·', '营业于', '營業於')} ${clockAt(f.window.from)}`
-      : `${t('Open throughout', 'Mở suốt', '通し営業', '全程营业', '全程營業')} ${spanText(f.window)}`;
+      : `${t('Open within', 'Có mở trong', '営業あり', '营业时段内', '營業時段內')} ${spanText(f.window)}`;
   }
   return null;
 }
