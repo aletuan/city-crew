@@ -138,9 +138,20 @@ describe('heads to segments', () => {
     drag('from', 120);
     drag('to', -8 * 60);
     expect(checked()).toBeNull();
-    expect(note()).toBe('Open within 08:00–22:00');
+    expect(note()).toBe('Open throughout 08:00–22:00');
     expect(screen.getByText('Show 7 places')).toBeTruthy();
     expect(screen.getByTestId('filter-reset')).toBeTruthy();
+  });
+
+  // The owner's two questions (11 Nov 2026): one head moved, the other
+  // left on its end and asking nothing.
+  it('says "open at" for the left head alone and "open until" for the right', () => {
+    open();
+    drag('from', 180);
+    expect(note()).toBe('Open at 09:00');
+    drag('from', -180);
+    drag('to', -7 * 60);
+    expect(note()).toBe('Open until 23:00');
   });
 
   it('lights Any time again when both heads are back on the ends', () => {
@@ -158,7 +169,7 @@ describe('heads to segments', () => {
     open({ ...NONE, status: 'open' });
     drag('to', 60);
     expect(checked()).toBeNull();
-    expect(note()).toBe('Open within 14:30–15:30');
+    expect(note()).toBe('Open throughout 14:30–15:30');
     drag('to', -60);
     expect(checked()).toBe('Open now');
     expect(note()).toBe('Now · 14:37');
@@ -278,9 +289,11 @@ describe('VoiceOver', () => {
 
 describe('the map button’s words', () => {
   const t = ((en: string) => en) as unknown as Parameters<typeof statusLabel>[1];
-  it('reads a span as its two ends, and a moment as one', () => {
-    expect(statusLabel('window', t, { from: 120, to: 960 })).toBe('08:00–22:00');
-    expect(statusLabel('window', t, { from: 120, to: 120 })).toBe('08:00');
+  it('says what the heads ask, as the heading does', () => {
+    expect(statusLabel('window', t, { from: 120, to: 960 })).toBe('Open throughout 08:00–22:00');
+    expect(statusLabel('window', t, { from: 120, to: 120 })).toBe('Open at 08:00');
+    expect(statusLabel('window', t, { from: 180, to: AXIS })).toBe('Open at 09:00');
+    expect(statusLabel('window', t, { from: 0, to: 1020 })).toBe('Open until 23:00');
     expect(statusLabel('window', t)).toBe('Any time');
   });
 });

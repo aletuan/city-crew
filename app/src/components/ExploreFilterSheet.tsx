@@ -4,7 +4,7 @@ import { Animated, LayoutAnimation, Modal, Pressable, ScrollView, StyleSheet, Te
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ExploreFilters, ExploreSort, ExploreStatus, HoursWindow } from '../lib/exploreFilters';
 import { clockOf } from '../lib/format';
-import { answerFor, axisOf, clockAt, headsFor } from '../lib/hoursSlider';
+import { answerFor, AXIS, axisOf, clockAt, headsFor } from '../lib/hoursSlider';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
 import { Card, fireHaptic, GradientCta, PressableScale, SECONDARY_CONTROL_H, useReducedMotion } from './ui';
@@ -80,9 +80,9 @@ function sortIcon(value: ExploreSort): keyof typeof Ionicons.glyphMap {
  * about now, and neither needs a 今 in front of it to say so.
  */
 export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t'], window?: HoursWindow) {
-  // A span set on the slider has no word, only its two ends — which is
-  // what the map's button says aloud for it.
-  if (value === 'window' && window) return spanText(window);
+  // A span set on the slider is said as the heading says it, so the
+  // map's button reads aloud what the sheet wrote.
+  if (value === 'window' && window) return spanWords(window, t);
   if (value === 'open') return t('Open now', 'Đang mở cửa', '営業中', '营业中', '營業中');
   if (value === 'closed') return t('Closed now', 'Đang đóng cửa', '営業時間外', '已打烊', '已打烊');
   // "Any time", not "Any": it sits under a heading that asks about
@@ -90,28 +90,33 @@ export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>[
   return t('Any time', 'Mọi giờ', '指定なし', '不限', '不限');
 }
 
-/** "08:00–22:00", or the one time when the span is a moment. */
-function spanText(w: HoursWindow) {
-  return w.from === w.to ? clockAt(w.from) : `${clockAt(w.from)}–${clockAt(w.to)}`;
+/**
+ * What the two heads ask, in words — see `openFor`, which they ask it of.
+ * A head left on its end asks nothing, so it is not said: the left head
+ * alone is "open at nine", the right head alone "open until eleven", and
+ * only both together are a span, "open from nine until eleven".
+ *
+ * Written with the time in the sentence rather than after it, because
+ * Japanese puts "until" after the hour (23:00まで) and a prefix cannot.
+ */
+function spanWords(w: HoursWindow, t: ReturnType<typeof useI18n>['t']) {
+  const at = (pos: number) => t('Open at {}', 'Mở lúc {}', '{} 営業中', '{} 营业中', '{} 營業中').replace('{}', clockAt(pos));
+  if (w.from === w.to || w.to === AXIS) return at(w.from);
+  if (w.from === 0) return t('Open until {}', 'Mở đến {}', '{}まで営業', '营业至 {}', '營業至 {}').replace('{}', clockAt(w.to));
+  return t('Open throughout {}', 'Mở suốt {}', '{} 通し営業', '{} 全程营业', '{} 全程營業').replace('{}', `${clockAt(w.from)}–${clockAt(w.to)}`);
 }
 
 /**
  * What the hours heading says on its right, in words, of what the heads
- * show — the only place the span's two ends are always written, since
- * the time over a head is drawn only while it is held.
- *
- * "Open within" says the rule out loud: open at some moment between the
- * two ends, not for the whole of them — see `openDuring`, and the cliff
- * the other reading fell off.
+ * show — the only place their times are always written, since the time
+ * over a head is drawn only while it is held. It says the rule as well
+ * as the times ("until", "throughout"), because two heads at nine and
+ * eleven can be read three ways, and only one of them is the filter.
  */
 function hoursNote(f: ExploreFilters, nowMin: number, t: ReturnType<typeof useI18n>['t']) {
   if (f.status === 'open') return `${t('Now', 'Bây giờ', '現在', '现在', '現在')} · ${clockOf(nowMin)}`;
   if (f.status === 'closed') return `${t('Closed at', 'Đóng lúc', '営業時間外 ·', '已打烊 ·', '已打烊 ·')} ${clockOf(nowMin)}`;
-  if (f.status === 'window' && f.window) {
-    return f.window.from === f.window.to
-      ? `${t('Open at', 'Mở lúc', '営業中 ·', '营业于', '營業於')} ${clockAt(f.window.from)}`
-      : `${t('Open within', 'Có mở trong', '営業あり', '营业时段内', '營業時段內')} ${spanText(f.window)}`;
-  }
+  if (f.status === 'window' && f.window) return spanWords(f.window, t);
   return null;
 }
 
