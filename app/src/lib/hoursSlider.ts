@@ -12,7 +12,9 @@
 //   Closed now →  both heads on the present moment, drawn muted: the
 //                 slider asks what is open, and has no drawing for its
 //                 opposite. Moving a head turns it into a window.
-//   (none)     ⇔ any other span: open at some moment of it
+//   (none)     ⇔ any other span: each head its own question, a head on
+//                its end none — open at A, until B, or from A until B
+//                (`openFor`)
 //
 // Positions are minutes from `DAY_START` (06:00), 0 to 1440 — see
 // `DAY_START` for why the axis starts at six.

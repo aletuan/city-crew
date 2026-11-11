@@ -1,15 +1,15 @@
 import { categoriesOf } from './categories';
 import type { Place } from './data';
-import { openDuring, openState } from './format';
+import { openFor, openState } from './format';
 import { distanceKm } from './geo';
 
 export type ExploreSort = 'recommended' | 'distance' | 'rating';
-/** `window` is the slider's: open at some moment of `ExploreFilters.window`.
+/** `window` is the slider's: what its two heads ask, see `openFor`.
  *  The three named ones are the segments above it. */
 export type ExploreStatus = 'any' | 'open' | 'closed' | 'window';
 
 /** A stretch of today's trading day, in minutes from `DAY_START`, 0–1440.
- *  `from === to` is a moment. See `openDuring`. */
+ *  `from === to` is a moment; a head on its end asks nothing. */
 export type HoursWindow = { from: number; to: number };
 
 export type ExploreFilters = {
@@ -85,7 +85,7 @@ function passesHours(row: Filterable, options: {
   const hours = row.opening_hours as Parameters<typeof openState>[0];
   const zone = options.tz(row.city_id);
   if (options.status === 'window') {
-    return !options.window || openDuring(hours, options.window, options.now, zone) === true;
+    return !options.window || openFor(hours, options.window, options.now, zone) === true;
   }
   return openState(hours, options.now, zone)?.open === (options.status === 'open');
 }
