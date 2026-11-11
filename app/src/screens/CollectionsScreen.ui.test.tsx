@@ -1201,6 +1201,37 @@ describe('the New badge', () => {
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.getAllByTestId('new-badge')).toHaveLength(1);
   });
+  // Community's own view, the Mosaic, marks a new list too — it did not
+  // from #1257 until the owner missed it (11 Nov 2026). The three captions
+  // each put it somewhere sensible: on the photograph's corner, unless
+  // the caption itself holds that corner, where it heads the caption.
+  it('on the Mosaic too, in the corner whichever way the caption sits', async () => {
+    // new3 → caption top, new1 → bottom, new2 → below (`mosaicCaption`).
+    state.cols.data = [
+      col('new3', ['a'], { created_at: ago(1), curator_handle: 'c3' }),
+      col('new1', ['a'], { created_at: ago(2), curator_handle: 'c1' }),
+      col('new2', ['a'], { created_at: ago(3), curator_handle: 'c2' }),
+      col('old', ['a'], { created_at: ago(30), curator_handle: 'c0' }),
+    ];
+    show({ tab: 'community' });
+    await act(async () => {});
+    expect(screen.getAllByTestId('new-badge')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'List new3, New, @c3' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List old, @c0' })).toBeTruthy();
+    // Caption on top: the badge heads the caption, before the title.
+    const top = screen.getByTestId('collection-mosaic-scrim-new3');
+    const badge = within(top).getByTestId('new-badge');
+    expect(badge.compareDocumentPosition(within(top).getByText('List new3')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(getComputedStyle(badge).position).toBe('relative');
+    // Caption at the foot or below: the badge is the photograph's own,
+    // pinned in its corner, and not inside the caption.
+    for (const slug of ['new1', 'new2']) {
+      const photo = screen.getByTestId(new RegExp(`^collection-mosaic-${slug}-(bottom|below)$`));
+      const mark = within(photo).getByTestId('new-badge');
+      expect(getComputedStyle(mark).position).toBe('absolute');
+      expect(mark.parentElement).toBe(photo);
+    }
+  });
 });
 
 describe('its tab, pressed again', () => {

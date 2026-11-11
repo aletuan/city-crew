@@ -1064,12 +1064,21 @@ export default function CollectionsScreen({ navigation, route }: {
     const title = t(c.title_en, c.title_vi, c.title_ja);
     const author = c.curator_handle ? atHandle(c.curator_handle) : '';
     const blurb = featured && !below ? t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() : '';
+    // "New" on the Mosaic as on a tile. Mosaic has been Community's own
+    // view since #1257 and never drew the mark, so a list made this week
+    // went unmarked on the screen most readers open (owner, 11 Nov 2026).
+    // Top-left of the photograph as everywhere else — except where the
+    // caption itself sits top-left, over the words' first line: there the
+    // badge rides at the head of the caption, above the title, still in
+    // the corner and over nothing.
+    const fresh = isNewList(c, now);
     const words = (
       <View style={[
         s.mosaicWords,
         below && s.mosaicWordsBelow,
         featured && !below && s.mosaicWordsFeatured,
       ]}>
+        {fresh && caption === 'top' ? <NewBadge style={s.mosaicBadgeInline} /> : null}
         <Text
           style={[s.gcardTitle, featured && s.mosaicTitleFeatured, below ? s.mosaicTitleBelow : s.mosaicInkShadow]}
           numberOfLines={2}
@@ -1085,12 +1094,13 @@ export default function CollectionsScreen({ navigation, route }: {
         onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
         testID={`collection-card-${at}`}
         accessibilityRole="button"
-        accessibilityLabel={`${title}${author ? `, ${author}` : ''}`}
+        accessibilityLabel={`${title}${fresh ? `, ${newWord}` : ''}${author ? `, ${author}` : ''}`}
       >
         <View style={s.mosaicPhoto} testID={`collection-mosaic-${c.slug}-${caption}`}>
           {uri
             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
             : <EmptyCover />}
+          {fresh && caption !== 'top' ? <NewBadge /> : null}
           {!below ? (
             // The dark lives inside the caption, so it is exactly as long
             // as the words are, and the tail hangs off its far side into
@@ -1566,6 +1576,9 @@ const s = StyleSheet.create({
   mosaicTailAbove: { bottom: '100%' },
   mosaicWordsBottom: { position: 'absolute', bottom: 0 },
   mosaicWordsTop: { position: 'absolute', top: 0 },
+  // In the caption's flow rather than pinned: the caption's own 14pt
+  // padding puts it in the corner, where the pinned badge would sit.
+  mosaicBadgeInline: { position: 'relative', top: 0, left: 0, alignSelf: 'flex-start' },
   mosaicWordsBelow: { paddingHorizontal: 2, paddingTop: 11, paddingBottom: 0 },
   mosaicWordsFeatured: { padding: 20 },
   mosaicTitleFeatured: { ...type.titleDetail, color: onPhoto.text, lineHeight: 32 },

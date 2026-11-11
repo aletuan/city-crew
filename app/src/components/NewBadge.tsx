@@ -1,7 +1,7 @@
 // "New", in the corner of a collection's cover (owner, 29 Oct 2026).
 //
 // One mark for every place a collection card is drawn — the Collections
-// grid and list, Explore's shelf, Search — so a list made this week looks
+// tiles and Mosaic, Explore's shelf, Search — so a list made this week looks
 // new everywhere it turns up, not on one screen. Which lists are new is
 // `isNewList` (`lib/newest`): made in the last seven days, by anyone —
 // the reader's own included (owner, 31 Oct 2026).
