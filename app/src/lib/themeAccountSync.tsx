@@ -21,6 +21,14 @@
 //    that is what the next guest, or the next account, starts from.
 // 4. An account that has never chosen (null on the server) takes the
 //    device's theme and keeps it, so its first sign-in never restarts.
+// 5. An account's 'system' meeting a device that never chose is read as
+//    never chosen too (11 Nov 2026), and rule 4 applies. Before #1281 gave
+//    an unchosen install a first look, rule 4 wrote 'system' for almost
+//    every account whether anyone chose it or not — and a reader who signs
+//    up on the very first launch, which still runs the old bundle, still
+//    gets it written. Read as a choice, it restarted the next launch out of
+//    the first look into Automatic. The server cannot tell the two apart;
+//    a device that kept a setting can, so only an unchosen device yields.
 //
 // A value this build does not know — a look from a newer build — is left
 // alone both ways: not put on, and not overwritten with this build's
@@ -44,12 +52,12 @@ function currentTab(): string | undefined {
 
 export function ThemeAccountSync() {
   const { userId } = useSession();
-  const { pref, look, ready, setPref } = useScheme();
+  const { pref, look, ready, chosen, setPref } = useScheme();
   // Read at the moment of the sign-in, not re-run on every change of
   // theme: a choice made on this device after the read is the account's
   // already, through `remember`.
-  const now = useRef({ pref, look, setPref });
-  now.current = { pref, look, setPref };
+  const now = useRef({ pref, look, chosen, setPref });
+  now.current = { pref, look, chosen, setPref };
   // Whose theme was last read, so a re-render with the same account —
   // and a re-render while the account is still being read, which hands
   // out last launch's id — reads nothing twice.
@@ -62,8 +70,10 @@ export function ThemeAccountSync() {
     let live = true;
     fetchTheme(userId).then((remote) => {
       if (!live) return;
-      const { pref: mine, look: worn, setPref: choose } = now.current;
-      if (remote == null) { saveTheme(userId, mine).catch(() => {}); return; }
+      const { pref: mine, look: worn, chosen: kept, setPref: choose } = now.current;
+      // Rule 5: an unchosen device meets 'system' as it meets null.
+      const unchosen = remote == null || (remote === 'system' && !kept);
+      if (unchosen) { if (remote !== mine) saveTheme(userId, mine).catch(() => {}); return; }
       if (!isPref(remote) || remote === mine) return;
       const tab = needsRestart(worn, remote) ? currentTab() : undefined;
       choose(remote, tab ? { tab } : undefined);
