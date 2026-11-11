@@ -581,3 +581,9 @@ run "$DB" -f "$HERE/review_pace_test.sql"
 # live project added by hand, so the test brings its own rows.
 echo "→ ninh binh centre"
 run "$DB" -f "$HERE/ninhbinh_centre_test.sql"
+
+# An unchosen theme follows Slate (11 Nov 2026): a data fix on
+# `preferences.theme`, 'system' to null. The test seeds its own rows and
+# applies the migration itself, after everything that creates the table.
+echo "→ unchosen theme follows slate"
+run "$DB" -f "$HERE/unchosen_theme_follows_slate_test.sql"
