@@ -886,6 +886,46 @@ chính sách RLS lời mời kết bạn / chuyến đi (#1256, server), Maestro
 • タブバーと検索欄がすっきりしました。
 ```
 
+## Release notes v1.0.15 (What's New)
+
+Viết từ các PR merge sau tag v1.0.14 (809b92b, #1279): #1280 → #1289.
+1.0.14 đã được duyệt nên train của nó đã đóng; app.json đã nâng lên 1.0.15
+ở #1289. Binary mới mang 12 bản vá Expo SDK 58 của #1288 (expo 58.0.24,
+expo-updates 58.0.22, expo-notifications 58.1.9, expo-location 58.0.21…);
+`runtimeVersion` vẫn là exposdk:58.0.0, nên mọi thay đổi JS dưới đây đã tới
+máy 1.0.14 qua EAS Update — bản này đưa phần native của các bản vá lên cho
+khớp. Cần thử trên máy: thanh trượt giờ trong Sắp xếp & lọc (kéo trong sheet,
+máy nhỏ thì phần câu hỏi cuộn được), nhãn "Mới" trên Mosaic, theme Xanh xám
+trên một máy cài mới. Không có mặt ở đây: #1283 (bản trung gian của luật lọc,
+thay hẳn bởi #1284), #1285 (dữ liệu, server), phần CI của #1288, docs, test.
+
+### EN
+
+```
+• Filter places by opening hours with a new slider: open at 9, open until 11 pm, or open the whole way between two times. "Open now" puts both handles on the current time.
+• New community collections are marked "New" in the photo layout too.
+• Collections: a short line under the title again, saying what each tab holds.
+• New installs start in the Slate theme.
+```
+
+### VI
+
+```
+• Lọc địa điểm theo giờ mở cửa bằng thanh trượt mới: mở lúc 9 giờ, mở đến 23 giờ, hoặc mở suốt giữa hai mốc giờ. "Đang mở cửa" đặt cả hai đầu trượt vào giờ hiện tại.
+• Bộ sưu tập mới của cộng đồng có nhãn "Mới" cả ở giao diện ảnh.
+• Bộ sưu tập: có lại dòng giới thiệu ngắn dưới tiêu đề cho mỗi tab.
+• Cài đặt mới bắt đầu với giao diện Xanh xám.
+```
+
+### JA
+
+```
+• 営業時間で絞り込める新しいスライダー：9時に営業中、23時まで営業、2つの時刻の間ずっと営業、から選べます。「営業中」を選ぶと両方のつまみが現在時刻に移動します。
+• 「みんなの」の新しいコレクションに、写真レイアウトでも「新着」マークを表示します。
+• コレクション：タイトルの下に、各タブの内容を伝える一文が戻りました。
+• 新規インストールはスレートのテーマで始まります。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
