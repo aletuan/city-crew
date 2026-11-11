@@ -61,7 +61,7 @@ const KEY = 'citycrew.scheme';
 const remember = { fn: vi.fn<() => Promise<unknown>>(async () => {}) };
 
 function Probe() {
-  const { scheme, pref, setPref, look, looks, ready, resume, claimResume } = useScheme();
+  const { scheme, pref, setPref, look, looks, ready, chosen, resume, claimResume } = useScheme();
   const [claimed, setClaimed] = React.useState<string>('');
   return (
     <>
@@ -70,6 +70,7 @@ function Probe() {
       <span data-testid="look">{look}</span>
       <span data-testid="looks">{String(looks)}</span>
       <span data-testid="ready">{String(ready)}</span>
+      <span data-testid="chosen">{String(chosen)}</span>
       <span data-testid="resume">{resume ? `${resume.tab}/${resume.sheet ?? '-'}/${resume.y ?? '-'}` : 'none'}</span>
       <span data-testid="claimed">{claimed}</span>
       <button type="button" onClick={() => setClaimed(JSON.stringify(claimResume()))}>claim</button>
@@ -198,6 +199,25 @@ describe('a fresh install', () => {
     delete rn.kept['citycrew.look'];
     act(() => { screen.getByText('auto').click(); });
     expect(rn.kept['citycrew.look']).toBe('standard');
+  });
+
+  // `chosen` (11 Nov 2026): what the account sync asks before it reads an
+  // account's Automatic as a choice. Nothing kept is unchosen; a kept
+  // setting, or one made now, is chosen.
+  it('says whether the device keeps a setting', async () => {
+    rn.kept['citycrew.look'] = 'standard';
+    mount();
+    await settled();
+    expect(screen.getByTestId('chosen').textContent).toBe('false');
+    act(() => { screen.getByText('dark').click(); });
+    expect(screen.getByTestId('chosen').textContent).toBe('true');
+  });
+
+  it('counts a kept setting as chosen', async () => {
+    await AsyncStorage.setItem(KEY, 'system');
+    mount();
+    await settled();
+    expect(screen.getByTestId('chosen').textContent).toBe('true');
   });
 
   // The standard look, on Automatic: the ground the phone says.

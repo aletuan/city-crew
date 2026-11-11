@@ -13,6 +13,7 @@ const world = vi.hoisted(() => ({
   pref: 'system' as string,
   look: 'standard' as string,
   ready: true,
+  chosen: true,
   remote: null as string | null,
   tab: 'Explore' as string | undefined,
 }));
@@ -28,7 +29,7 @@ vi.mock('./auth', () => {
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
 vi.mock('./theme', () => ({
-  useScheme: () => ({ pref: world.pref, look: world.look, ready: world.ready, setPref }),
+  useScheme: () => ({ pref: world.pref, look: world.look, ready: world.ready, chosen: world.chosen, setPref }),
 }));
 vi.mock('./data', () => data);
 vi.mock('../nav', () => ({
@@ -53,6 +54,7 @@ beforeEach(() => {
   world.pref = 'system';
   world.look = 'standard';
   world.ready = true;
+  world.chosen = true;
   world.remote = null;
   world.tab = 'Explore';
   setPref.mockClear();
@@ -67,6 +69,37 @@ describe('on signing in', () => {
     await signedIn();
     await waitFor(() => expect(data.saveTheme).toHaveBeenCalledWith('me', 'dark'));
     expect(setPref).not.toHaveBeenCalled();
+  });
+
+  // Rule 5: 'system' on the account, written for it by an old first
+  // sign-in, meets an install that never chose and wears the first look.
+  it('reads an account\u2019s Automatic as unchosen on a device that never chose', async () => {
+    world.pref = 'slate';
+    world.look = 'slate';
+    world.chosen = false;
+    world.remote = 'system';
+    await signedIn();
+    await waitFor(() => expect(data.saveTheme).toHaveBeenCalledWith('me', 'slate'));
+    expect(setPref).not.toHaveBeenCalled();
+  });
+
+  it('still puts on an account\u2019s Automatic where the device kept a setting', async () => {
+    world.pref = 'sand';
+    world.look = 'sand';
+    world.chosen = true;
+    world.remote = 'system';
+    await signedIn();
+    await waitFor(() => expect(setPref).toHaveBeenCalledWith('system', { tab: 'Explore' }));
+    expect(data.saveTheme).not.toHaveBeenCalled();
+  });
+
+  it('puts on any other account theme on a device that never chose', async () => {
+    world.pref = 'slate';
+    world.look = 'slate';
+    world.chosen = false;
+    world.remote = 'light';
+    await signedIn();
+    await waitFor(() => expect(setPref).toHaveBeenCalledWith('light', { tab: 'Explore' }));
   });
 
   // Rule 2, a ground: put on at once, nowhere to come back to.
