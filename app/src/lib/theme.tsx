@@ -82,6 +82,11 @@ type ThemeCtx = {
   /** False until the stored choice has been read once — the app holds its
    *  first frame on this, so a dark-mode user never sees a white flash. */
   ready: boolean;
+  /** Whether this device keeps a setting at all: chosen in the Theme sheet,
+   *  or put on by the account. False for an install that never chose, which
+   *  wears `FIRST_LOOK` — `ThemeAccountSync` reads an account's 'system' as
+   *  unchosen against it (11 Nov 2026). Meaningful once `ready`. */
+  chosen: boolean;
   /** Where the restart this launch came from left the reader, or null on
    *  any other launch. Read once, before the navigator mounts. */
   resume: Return | null;
@@ -92,7 +97,7 @@ type ThemeCtx = {
 };
 
 const Ctx = createContext<ThemeCtx>({
-  scheme: FALLBACK, pref: DEFAULT, setPref: () => {}, look: 'standard', looks: false, ready: true,
+  scheme: FALLBACK, pref: DEFAULT, setPref: () => {}, look: 'standard', looks: false, ready: true, chosen: false,
   resume: null, claimResume: () => null,
 });
 
@@ -140,6 +145,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [pref, setPrefState] = useState<Pref>(DEFAULT);
   const [phone, setPhone] = useState<Scheme>(phoneScheme);
   const [ready, setReady] = useState(false);
+  const [chosen, setChosen] = useState(false);
   // Read once, as `theme.ts` read it at import — this module may not
   // import that one (docs/architecture.md), so it asks the same store.
   const [look] = useState<Look>(() => readLook(store()));
@@ -163,6 +169,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // look the install opened in — `FIRST_LOOK` where a look can be
         // kept (lib/look), Automatic where it cannot.
         const stored = v == null && look !== 'standard' ? look : parsePref(v);
+        setChosen(v != null);
         // A setting whose look is not the one loaded — the look was lost,
         // or kept by a build that did not know this one. The look is put
         // right for the next launch and not restarted into now: a restart
@@ -207,6 +214,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setPrefState(next);
+    setChosen(true);
     apply(next);
     // The look too, though it has not changed: an install that never
     // wrote one opens in `FIRST_LOOK`, and a choice of Automatic, Light or
@@ -225,8 +233,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const looks = Platform.OS === 'ios' && canHoldLook(store());
 
   const value = useMemo<ThemeCtx>(
-    () => ({ scheme, pref, setPref, look, looks, ready, resume, claimResume }),
-    [scheme, pref, setPref, look, looks, ready, resume, claimResume],
+    () => ({ scheme, pref, setPref, look, looks, ready, chosen, resume, claimResume }),
+    [scheme, pref, setPref, look, looks, ready, chosen, resume, claimResume],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

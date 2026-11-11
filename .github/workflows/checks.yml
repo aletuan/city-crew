@@ -256,16 +256,29 @@ jobs:
           --health-timeout 5s --health-retries 10
         ports:
           - 5432:5432
+    # The suite runs inside the service's own image, which already has
+    # psql, rather than on the runner after `apt-get install
+    # postgresql-client`. On 11 Nov 2026 the runner could not resolve the
+    # Ubuntu archive three times in a row (#1287, #1288), and every PR
+    # stood red on a package download. The image is pulled for the
+    # service anyway; `--network host` puts the service's port on
+    # localhost, and the checkout is mounted at its own path, so run.sh
+    # finds its files where it always did.
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get install -y --no-install-recommends postgresql-client
-      - run: supabase/tests/run.sh
+      - run: >-
+          docker run --rm --network host
+          -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE"
+          -e PG_URL postgres:16 supabase/tests/run.sh
         env:
           PG_URL: postgres://tester:tester@localhost:5432
       # The same suite with the ask-once rewrite applied after every
       # migration: every RLS test, against rewritten policies. See
       # supabase/migrations/*_rls_ask_once.sql.
-      - run: supabase/tests/run.sh
+      - run: >-
+          docker run --rm --network host
+          -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE"
+          -e PG_URL -e ASK_ONCE_EVERY_STEP postgres:16 supabase/tests/run.sh
         env:
           PG_URL: postgres://tester:tester@localhost:5432
           ASK_ONCE_EVERY_STEP: '1'
