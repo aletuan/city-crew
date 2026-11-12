@@ -168,12 +168,12 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); appFlags.reset(); });
 
 describe('the header', () => {
-  // The request read back, and when (owner, 12 Nov 2026): what, where,
-  // with whom — not a count of the cards, not a line about the machine.
-  it('reads the request back as its heading, says when under it, and goes back', () => {
+  // What and when as the heading, with whom and where under it (owner,
+  // 12 Nov 2026) — not a count of the cards, not a line about the machine.
+  it('heads the screen with what and when, who and where under it, and goes back', () => {
     const navigation = renderScreen();
-    expect(screen.getByText('Going out in Old Quarter with friends')).toBeTruthy();
-    expect(screen.getByText('Tonight')).toBeTruthy();
+    expect(screen.getByText('Cafés & eats tonight')).toBeTruthy();
+    expect(screen.getByText('With friends · Old Quarter')).toBeTruthy();
     expect(screen.queryByText(/Distances checked/)).toBeNull();
     expect(screen.queryByText(/three ways/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
@@ -197,13 +197,14 @@ describe('the header', () => {
 
   it('calls a day planned from the wizard today, not tonight', () => {
     renderScreen({ when: 'day' });
-    expect(screen.getByText('Today')).toBeTruthy();
-    expect(screen.queryByText('Tonight')).toBeNull();
+    expect(screen.getByText('Cafés & eats today')).toBeTruthy();
+    expect(screen.queryByText(/tonight/)).toBeNull();
   });
 
   it('says what one kind of place is, and where the wizard said it starts', () => {
     renderScreen({ categories: ['eats'], company: 'couple', where: null, district: null, whereKind: 'near' });
-    expect(screen.getByText('Dinner near you for two')).toBeTruthy();
+    expect(screen.getByText('Dinner tonight')).toBeTruthy();
+    expect(screen.getByText('For two · near you')).toBeTruthy();
   });
 
   // The cards are right there; a thin set says so under them.
@@ -211,19 +212,17 @@ describe('the header', () => {
     for (const set of [[MATCH], [MATCH, LOWKEY], []]) {
       planTrips.mockImplementation(() => set);
       const { unmount } = render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />);
-      expect(screen.getByText('Going out in Old Quarter with friends')).toBeTruthy();
+      expect(screen.getByText('Cafés & eats tonight')).toBeTruthy();
       expect(screen.queryByText(/ways?$|one way/)).toBeNull();
       unmount();
     }
   });
 
-  // Further off than a word can say, the date and the half of it; the
-  // place and the company are the heading's, not this line's.
-  it('dates a day further off, with the half of it', () => {
-    const date = addDays(todayISO(), 3);
+  // Past a week a weekday no longer says which day; the date does.
+  it('dates a day more than a week off', () => {
+    const date = addDays(todayISO(), 9);
     renderScreen({ date });
-    expect(screen.getByText(`${dateline('en', fromISO(date)!)} · evening`)).toBeTruthy();
-    expect(screen.queryByText(/· Old Quarter/)).toBeNull();
+    expect(screen.getByText(`Cafés & eats · ${dateline('en', fromISO(date)!)}`)).toBeTruthy();
     // And no sparkle beside it. That glyph is what every product now uses
     // for "a model made this", and these plans come out of a scoring
     // function — the line was carrying the one claim the screen's own
@@ -233,7 +232,7 @@ describe('the header', () => {
 
   it('dates a past or missing day as today', () => {
     renderScreen({ date: '2000-01-01', where: null });
-    expect(screen.getByText('Tonight')).toBeTruthy();
+    expect(screen.getByText('Cafés & eats tonight')).toBeTruthy();
     expect(planTrips.mock.calls[0][0]).toMatchObject({ date: todayISO() });
   });
 });

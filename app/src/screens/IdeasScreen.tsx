@@ -763,7 +763,7 @@ export default function IdeasScreen({ navigation, route }: {
                   // answer to "starting from where".
                   where: draft.district ?? (origin ? whereLabel : null),
                   // Which of those the words are, for the options
-                  // heading's sentence (`planTitle`): the same order
+                  // heading's second line (`planSub`): the same order
                   // `whereLabel` decides them in.
                   whereKind: draft.district ? 'district'
                     : draft.at ? (draft.atName ? 'place' : 'pin')
