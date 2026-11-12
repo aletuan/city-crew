@@ -43,7 +43,11 @@ WHITE = (255, 255, 255, 255)
 def parse_table():
     """(key, icon, fill) for each category, in the file's own order."""
     src = CATEGORIES_TS.read_text()
-    body = src.split('export const CATEGORIES', 1)[1]
+    # The table is `STYLES` (typed against `Category` so a missing row does
+    # not compile) and `CATEGORIES` is its loose-typed alias after it; the
+    # parse used to start at the alias, and found nothing once the table
+    # moved above it. Read from the table to the end of its literal.
+    body = src.split('const STYLES = {', 1)[1].split('} satisfies', 1)[0]
     out = []
     for m in re.finditer(
         r"\n  (\w+): \{(.*?)\n  \},", body, re.S

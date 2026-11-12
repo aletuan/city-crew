@@ -230,6 +230,22 @@ function hue(hex: string): number {
 
 const WHITE = '#FFFFFF';
 
+// Cafés and eats, the two kinds most often side by side (owner, 12 Nov
+// 2026): they sat 6° apart at one lightness, and could not be told apart
+// on a collection's card. Pulled apart in lightness, the one difference
+// every kind of colour vision keeps — see the note above `STYLES`.
+describe('cafés and eats', () => {
+  it('differ in lightness on the page and on the map', () => {
+    expect(contrast(CATEGORIES.cafes.color, CATEGORIES.eats.color)).toBeGreaterThanOrEqual(1.5);
+    expect(contrast(CATEGORIES.cafes.pin, CATEGORIES.eats.pin)).toBeGreaterThanOrEqual(1.8);
+  });
+
+  it('stay coffee-brown and orange, on their own hues', () => {
+    expect(hue(CATEGORIES.cafes.color)).toBeCloseTo(30.3, 0);
+    expect(hue(CATEGORIES.eats.color)).toBeCloseTo(22, 0);
+  });
+});
+
 describe('the map pin palette', () => {
   it('gives every category in the filter row a fill', () => {
     for (const key of CATEGORY_ORDER) {

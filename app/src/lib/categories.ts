@@ -53,7 +53,8 @@ export type CategoryStyle = {
    * Hue is identical to `color`, which is what makes this the same colour
    * rather than a second one. Solved in that order and no other: exact
    * hue first, then saturation at or above 55%, then the lightest
-   * remaining step whose glyph still clears 4.5:1. Never against a fixed
+   * remaining step whose glyph still clears 4.5:1 — save `cafes`, taken
+   * darker to stand off `eats` (see above `STYLES`). Never against a fixed
    * lightness — blue and green carry more luminance at the same HSL step
    * and would hand `nature` a 2.32:1 glyph. `views` lands at 6.63 because
    * the lighter candidates on its line miss the hue by a fifth of a
@@ -82,15 +83,39 @@ export type Category = typeof CATEGORY_ORDER[number];
 /** Every key in `CATEGORY_ORDER` has a row, or this does not compile —
  *  a category added to the order without its style used to surface as a
  *  chip with no glyph. */
+// ── cafés and eats, pulled apart (owner, 12 Nov 2026) ──
+//
+// They sat 6° apart, at 30° and 24°, at one lightness: side by side on a
+// collection's card the owner could not tell them apart, and measured
+// they were 2.7 apart in CIEDE2000 at the worst of normal, deuteranopic
+// and protanopic vision — about the step at which two colours start to
+// separate at all. Their pins were worse: eats sat 1.1 from nature for a
+// red-green reader.
+//
+// Kept on the convention a reader already holds — coffee is brown, food
+// is orange, as both phone map apps colour them — and pulled apart in
+// lightness, the one difference no kind of colour blindness takes away.
+// Cafés went down to a coffee brown, eats up to a brighter orange, each
+// on its own hue as before:
+//
+//              dot                 pin               dots apart  pin's nearest
+//   was   cafés #D2A679  eats #E09A6B   #B75F05 #A45E2F    2.7      eats–nature 1.1
+//   now   cafés #A6733F  eats #EB8347   #6E451C #B16133   10.0      eats–nature 3.9
+//
+// The cost is that the cafés' dot is the darkest of the nine on paper
+// (3.6:1 against the others' 1.8–2.5), and its pin is darker than the
+// rule under `pin` gives: the lightest step on its line, #A36A2F, was 0.5
+// from the eats pin. Coffee is the kind the catalog holds most of, and
+// a darker brown is still coffee.
 const STYLES = {
   cafes: {
-    en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', zh: '咖啡馆', hant: '咖啡館', icon: 'cafe-outline', color: '#D2A679',
-    pin: '#B75F05', food: true,
+    en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', zh: '咖啡馆', hant: '咖啡館', icon: 'cafe-outline', color: '#A6733F',
+    pin: '#6E451C', food: true,
     terms: ['coffee', 'espresso', 'latte', 'quán cà phê', 'cà phê', 'コーヒー', '喫茶', '咖啡'],
   },
   eats: {
-    en: 'Eats', vi: 'Ăn uống', ja: '食事', zh: '美食', hant: '美食', icon: 'restaurant-outline', color: '#E09A6B',
-    pin: '#A45E2F', food: true,
+    en: 'Eats', vi: 'Ăn uống', ja: '食事', zh: '美食', hant: '美食', icon: 'restaurant-outline', color: '#EB8347',
+    pin: '#B16133', food: true,
     terms: ['restaurant', 'food', 'dining', 'lunch', 'dinner', 'nhà hàng', 'quán ăn', 'ăn uống', 'レストラン', 'グルメ', '餐厅', '美食', '餐廳'],
   },
   views: {
