@@ -771,16 +771,21 @@ export const type = {
    *  screen's name should not change typeface with how it was reached. */
   titleDetail: { fontSize: 26, fontFamily: display.bold, letterSpacing: 0.25 },
   /**
-   * The name of a thing, at the top of its own page: a place, a trip.
-   * Same face as the two above, a size the length of such names allows
-   * (owner, 12 Nov 2026). A screen's own name is short and the app's —
-   * "Your crew", "Trips" — and takes `titleDetail`; a thing's name is
-   * the catalog's or the planner's, and runs long: trip titles average
-   * 30 characters, and at 26 only 26% of them fitted one line beside the
-   * back control on a 440pt phone, against 89% at 20. A place's name sits
-   * centred in its bar at the same size, so the two read as one level.
+   * The title of a page reached from another one: a place, a trip, a
+   * collection, and the rooms off the Profile tab — friends, activity,
+   * check-ins. One size for all of them (owner, 12 Nov 2026), the same
+   * display bold as the two above, so the tab's own name is the one
+   * thing that stands a level over them.
+   *
+   * 20, because the longest of them sets it: a trip's title averages 30
+   * characters, and beside the back control on a 440pt phone only 26% of
+   * them fitted one line at 26, against 89% at 20. A place's name sits
+   * centred in its bar at the same size.
+   *
+   * Opted into per screen (`Screen`'s and `AuthHeader`'s `compactTitle`),
+   * so the pushed screens not yet moved keep `titleDetail` until they are.
    */
-  titleName: { fontSize: 20, fontFamily: display.bold, letterSpacing: 0.2 },
+  titleCompact: { fontSize: 20, fontFamily: display.bold, letterSpacing: 0.2 },
   /** A headline standing in for content — empty states, "coming soon".
    *  Display face, because it is the only title that screen has. */
   headline: { fontSize: 20, fontFamily: display.bold, letterSpacing: 0.2 },

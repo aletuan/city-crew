@@ -39,7 +39,7 @@ import {
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
@@ -450,6 +450,8 @@ describe('your own list', () => {
     })];
     show();
     expect(screen.getByText('Old Quarter eats')).toBeTruthy();
+    // One size for a page reached from another (owner, 12 Nov 2026).
+    expect(fontSizeOf(screen.getByText('Old Quarter eats'))).toBe(20);
     expect(screen.getByText('Where we eat.')).toBeTruthy();
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);

@@ -123,13 +123,12 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backBare, backTestID, titleScrolls, titleIsName }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backBare, backTestID, titleScrolls, compactTitle }: {
   title: string;
-  /** The title is the name of the thing the page is about — a trip —
-   *  rather than the screen's own name, and takes `type.titleName`. Its
-   *  first line is still centred on the back control. Compact header
-   *  only. */
-  titleIsName?: boolean;
+  /** The title at `type.titleCompact`, the one size of a page reached
+   *  from another (see there). Its first line is still centred on the
+   *  back control. Compact header only. */
+  compactTitle?: boolean;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
    *  screen with both is a screen with three headings.
@@ -199,8 +198,8 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
       {onBack ? (
         <View style={s.headerInline}>
           <BackButton onPress={onBack} bare={backBare} testID={backTestID} />
-          <View style={[s.headerText, titleIsName && s.headerTextName]}>
-            <Text style={titleIsName ? s.titleName : s.titleInline} numberOfLines={2}>{title}</Text>
+          <View style={[s.headerText, compactTitle && s.headerTextCompact]}>
+            <Text style={compactTitle ? s.titleCompact : s.titleInline} numberOfLines={2}>{title}</Text>
             {/* The falsy guard comes first and stays: a caller computing
                 its line can hand over an empty string, and `typeof ''` is
                 still 'string' — which would draw a blank line the height
@@ -535,9 +534,9 @@ const s = StyleSheet.create({
   // size (ascent 984 + descent 292 per 1000), so a first line's middle
   // sits on the 44pt control's at 22 − 25.5 / 2 = 9.2 down. At 26 the
   // same sum gives 5.4, the 5 above.
-  headerTextName: { paddingTop: 9 },
+  headerTextCompact: { paddingTop: 9 },
   titleInline: { color: colors.text, ...type.titleDetail },
-  titleName: { color: colors.text, ...type.titleName },
+  titleCompact: { color: colors.text, ...type.titleCompact },
   subtitle: { color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
   iconSubtitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { color: colors.text, ...type.title },

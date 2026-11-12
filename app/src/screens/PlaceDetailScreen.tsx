@@ -1528,11 +1528,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: space.page, paddingBottom: 12,
   },
-  // `type.titleName`, the size a trip's title takes too, so a thing's name
-  // is one level across the app (owner, 12 Nov 2026). It shipped at 19,
+  // `type.titleCompact`, the one size of a page reached from another
+  // (owner, 12 Nov 2026). It shipped at 19,
   // the size at which the mock-up's own name set at its width there; at
   // 20 "Lazyly Coffee & Quiet Eatery" is 272pt of the bar's 326.
-  barName: { flex: 1, textAlign: 'center', color: colors.text, ...type.titleName },
+  barName: { flex: 1, textAlign: 'center', color: colors.text, ...type.titleCompact },
   barControl: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   saveHang: { marginRight: -SAVE_HANG },
 

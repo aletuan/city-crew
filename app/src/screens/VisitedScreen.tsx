@@ -212,6 +212,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   return (
     <Screen
       title={t('Check-ins', 'Địa điểm check-in', 'チェックインした場所', '打卡', '打卡')}
+      compactTitle
       subtitle={visits.loaded && visits.data.length > 0 ? summaryLine : undefined}
       onBack={() => navigation.goBack()}
       // The chevron alone, hung to the margin the search box and the

@@ -130,8 +130,10 @@ export type HeaderAction = {
   testID?: string;
 };
 
-export function AuthHeader({ onBack, title, action, backBare }: {
+export function AuthHeader({ onBack, title, action, backBare, compactTitle }: {
   onBack: () => void; title: string; action?: HeaderAction;
+  /** The title at `type.titleCompact`, as `Screen`'s `compactTitle`. */
+  compactTitle?: boolean;
   /** The way back as the chevron alone, with no disc — see
    *  `RoundIconButton`'s `bare`. Per screen, while the owner tries it. */
   backBare?: boolean;
@@ -140,7 +142,7 @@ export function AuthHeader({ onBack, title, action, backBare }: {
   return (
     <View style={s.header}>
       <BackButton onPress={onBack} bare={backBare} />
-      <Text style={s.title}>{title}</Text>
+      <Text style={compactTitle ? s.titleCompact : s.title}>{title}</Text>
       {action ? (
         <PressableScale
           onPress={action.busy || action.disabled ? undefined : action.onPress}
@@ -693,6 +695,10 @@ const s = StyleSheet.create({
   // `paddingTop` optically centres a 26pt line against the 44pt control
   // without pinning either to the other's height.
   title: { flex: 1, color: colors.text, ...type.titleDetail, paddingTop: 7 },
+  // The same line at 20: the display face's line box is 1.276 of its
+  // size, so a line 7.7pt shorter needs 3.8 more above it to keep its
+  // middle where the 26pt one had it.
+  titleCompact: { flex: 1, color: colors.text, ...type.titleCompact, paddingTop: 11 },
   // The back control's circle, on the other side of the title.
   headerAction: {
     width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, borderRadius: SECONDARY_CONTROL_H / 2,

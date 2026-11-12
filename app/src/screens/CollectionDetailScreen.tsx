@@ -1689,6 +1689,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       onBack={() => navigation.goBack()}
       backTestID="collection-back"
       backBare
+      compactTitle
       right={headerRight}
     >
       <AmbientWarmth />
