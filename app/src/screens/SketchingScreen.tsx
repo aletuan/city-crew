@@ -563,7 +563,7 @@ export default function SketchingScreen({ navigation, route }: {
   const moreWants = wants.length - shownWants.length;
 
   return (
-    <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}>
+    <Screen compactTitle title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}>
       <ScrollView
         contentContainerStyle={[s.body, { paddingBottom: clearance }]}
         showsVerticalScrollIndicator={false}

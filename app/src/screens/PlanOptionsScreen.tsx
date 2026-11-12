@@ -258,6 +258,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
 
   return (
     <Screen
+      compactTitle
       // What and when ("Cà phê tối nay"), and with whom · where under it
       // ("Cùng người ấy · gần bạn") — the owner's choice of three shapes
       // (12 Nov 2026). It was "Your evening, three ways" over "Distances
