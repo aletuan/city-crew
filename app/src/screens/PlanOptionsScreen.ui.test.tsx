@@ -201,6 +201,24 @@ describe('the header', () => {
     expect(screen.queryByText(/tonight/)).toBeNull();
   });
 
+  // "Near me", by name: the area around where the reader stood (owner,
+  // 12 Nov 2026). Three placed rows make Ba Đình an area; without a point,
+  // or with nothing placeable, it is still "near you".
+  it('names the area a near-me plan starts in, and says near you without a point', () => {
+    const placed = [1, 2, 3].map((i) => place(`bd${i}`, `Ba Đình ${i}`, { neighborhood_en: 'Ba Đình', lat: 21.035, lng: 105.82 } as Partial<Place>));
+    PLACES.push(...placed);
+    try {
+      const { unmount } = render(<PlanOptionsScreen navigation={nav() as unknown as Nav}
+        route={routeWith({ where: 'Hanoi · Near you', district: null, whereKind: 'near', atLat: 21.036, atLng: 105.821 })} />);
+      expect(screen.getByText('With friends · near Ba Đình')).toBeTruthy();
+      unmount();
+    } finally {
+      PLACES.splice(PLACES.length - placed.length, placed.length);
+    }
+    renderScreen({ where: 'Hanoi · Near you', district: null, whereKind: 'near', atLat: 21.036, atLng: 105.821 });
+    expect(screen.getByText('With friends · near you')).toBeTruthy();
+  });
+
   it('says what one kind of place is, and where the wizard said it starts', () => {
     renderScreen({ categories: ['eats'], company: 'couple', where: null, district: null, whereKind: 'near' });
     expect(screen.getByText('Dinner tonight')).toBeTruthy();

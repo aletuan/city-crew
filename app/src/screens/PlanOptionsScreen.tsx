@@ -57,7 +57,7 @@ import { sharedArea } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
 import StopRow from '../components/StopRow';
 import StopGallery, { hasPicture } from '../components/StopGallery';
-import { draftFrom, type TripDraft, seedMembers } from '../lib/trip';
+import { areaAround, draftFrom, type TripDraft, seedMembers } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
@@ -177,6 +177,11 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const ask = {
     company: p.company, categories: p.categories, when: p.when === 'day' ? 'day' as const : 'evening' as const,
     where: p.where, whereKind: p.whereKind, district: p.district, city: cityName,
+    // Where "near me" was, by name: the area around the point the plan
+    // starts from (`areaAround`).
+    nearArea: p.whereKind === 'near' && p.atLat != null && p.atLng != null
+      ? areaAround(places, { lat: p.atLat, lng: p.atLng })
+      : null,
   };
   const today = todayISO();
   const title = planTitle(ask, {

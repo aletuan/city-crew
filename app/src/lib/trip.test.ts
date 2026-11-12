@@ -1,7 +1,7 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, seedMembers, startPoint, toggle } from './trip';
+import { areaAround, areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, seedMembers, startPoint, toggle } from './trip';
 import type { Collection, Place } from './types';
 
 const at = (neighborhood_en: string | null): Place => ({
@@ -406,5 +406,31 @@ describe('seedMembers', () => {
   it('pins a list on both shelves once, and a place in two lists twice', () => {
     const lists = [list('own', [a, b]), list('own', [a, b]), list('pub', [b])];
     expect(seedMembers(['own', 'pub'], lists, [])).toEqual([a, b, b]);
+  });
+});
+
+// The area a point is named by in the plan heading: the nearest with
+// three places or more, so a stray label on one row ("Hoan Kiem") never
+// names the old quarter (owner, 12 Nov 2026).
+describe('areaAround', () => {
+  const at = (slug: string, area: string | null, lat: number | null, lng: number | null) =>
+    ({ slug, neighborhood_en: area, lat, lng }) as unknown as Place;
+  const big = [1, 2, 3].map((i) => at(`hk${i}`, 'Hoàn Kiếm', 21.032, 105.850));
+  const stray = at('s', 'Hoan Kiem', 21.0287, 105.8521);
+
+  it('names the nearest area big enough to be one, passing a stray beside the point', () => {
+    expect(areaAround([...big, stray], { lat: 21.0287, lng: 105.8521 })).toBe('Hoàn Kiếm');
+  });
+
+  it('takes an area of exactly three, and none smaller', () => {
+    const two = [at('a', 'Ba Đình', 21.035, 105.82), at('b', 'Ba Đình', 21.035, 105.82)];
+    expect(areaAround([...two, ...big], { lat: 21.035, lng: 105.82 })).toBe('Hoàn Kiếm');
+    expect(areaAround([...two, at('c', 'Ba Đình', 21.035, 105.82), ...big], { lat: 21.035, lng: 105.82 })).toBe('Ba Đình');
+  });
+
+  it('names nothing with no point, or nothing it can place', () => {
+    expect(areaAround(big, null)).toBeNull();
+    expect(areaAround([stray], { lat: 21.0287, lng: 105.8521 })).toBeNull();
+    expect(areaAround([1, 2, 3].map((i) => at(`u${i}`, 'Unplaced', null, null)), { lat: 21, lng: 105 })).toBeNull();
   });
 });

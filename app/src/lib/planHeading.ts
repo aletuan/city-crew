@@ -39,6 +39,14 @@ export type PlanHeadingInput = {
   district?: string | null;
   /** The city's short name, for a plan from its centre. */
   city: string | null;
+  /**
+   * The area nearest where the reader stood when they asked, for a plan
+   * from "near me" — said instead of "gần bạn" (owner, 12 Nov 2026): a
+   * plan is read again later, often from somewhere else, and "near you"
+   * then names nowhere. Absent until the places it is counted from have
+   * loaded, when "near you" is all there is to say.
+   */
+  nearArea?: string | null;
 };
 
 /** The day the plan is for, and the two days a word can name. */
@@ -133,7 +141,12 @@ function place(a: PlanHeadingInput, t: T): string | null {
   if (kind === 'district' && a.where) return a.where;
   if (kind === 'place' && a.where) return t(`near ${a.where}`, `gần ${a.where}`, `${a.where}の近く`, `${a.where}附近`, `${a.where}附近`);
   if (kind === 'pin') return t('near your pin', 'gần điểm ghim', 'ピンの近く', '图钉附近', '圖釘附近');
-  if (kind === 'near') return t('near you', 'gần bạn', '近く', '你附近', '你附近');
+  if (kind === 'near') {
+    const at = a.nearArea;
+    return at
+      ? t(`near ${at}`, `gần ${at}`, `${at}の近く`, `${at}附近`, `${at}附近`)
+      : t('near you', 'gần bạn', '近く', '你附近', '你附近');
+  }
   if (kind === 'city' && a.city) return a.city;
   return null;
 }

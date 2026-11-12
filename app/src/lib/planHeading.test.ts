@@ -81,6 +81,15 @@ describe('planSub: with whom, and where', () => {
     expect(sub({ whereKind: 'pin' })).toBe('Gần điểm ghim');
   });
 
+  // Read later, often from somewhere else, "near you" names nowhere: the
+  // area nearest where the reader stood is said instead (owner, 12 Nov
+  // 2026), and "near you" only until the places have loaded.
+  it('names the area the reader stood in, rather than "near you"', () => {
+    expect(sub({ company: 'couple', whereKind: 'near', nearArea: 'Ba Đình' })).toBe('Cùng người ấy · gần Ba Đình');
+    expect(sub({ whereKind: 'near', nearArea: 'Ba Đình' }, 'en')).toBe('Near Ba Đình');
+    expect(sub({ company: 'couple', whereKind: 'near', nearArea: null })).toBe('Cùng người ấy · gần bạn');
+  });
+
   it('draws no line when there is nothing to say', () => {
     expect(sub({ company: 'someone-new', whereKind: 'city', city: null })).toBeNull();
   });
