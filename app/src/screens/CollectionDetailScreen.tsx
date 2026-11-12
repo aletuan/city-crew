@@ -1026,13 +1026,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      is not private any more. The chevron is what says the word opens
      something; without it the row reads as a label.
 
-     A pill (owner, 12 Nov 2026, from a reference): the glass fill and
-     hairline a kind pill wears, so the word reads as a thing to press
-     rather than a line of the card's text, and neutral, because the
-     state is a setting and not news. The word stays: the reference drew
-     the pill with the glyph alone, and a third state (a list shared with
-     chosen friends) is coming whose glyph nobody could guess. VoiceOver
-     hears the word either way.
+     Bare: the glyph, the word and the chevron on the card, no fill and
+     no outline (owner, 12 Nov 2026). It wore a pill for a day — the
+     glass fill and hairline a kind pill wears, from a reference — and
+     the owner took it off again: the kinds above it had just lost their
+     pills, and one boxed word under a row of bare ones read as the odd
+     one out. The chevron is what says it opens something. The word
+     stays: the reference drew the glyph alone, and a third state (a
+     list shared with chosen friends) is coming whose glyph nobody could
+     guess. VoiceOver hears the word either way.
 
      Both states wear one grey (owner, 12 Nov 2026). Public was the
      app's green, semibold, as "the state worth checking". It read as
@@ -1957,18 +1959,11 @@ const s = StyleSheet.create({
   // The 20pt was a workaround for long collection names truncating, which
   // `Screen` answers better: two lines at 26pt hold far more of a name
   // than one line at 20 ever did.
-  // The glyph, the word and the chevron, as one press. The 5 the header
-  // line it came from used, so the three still read as one phrase. The
-  // pill is `KindPill`'s glass fill and pill radius, with the hairline
-  // its chosen state draws as the outline the owner asked for, and
-  // `CHIP_H` tall with `Chip`'s 14 of side padding: a pressable chip
-  // stands on the button scale.
-  visibility: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    height: CHIP_H, paddingHorizontal: 14,
-    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
-    borderWidth: 1, borderColor: colors.borderGlass,
-  },
+  // The glyph, the word and the chevron, as one press, on nothing: see
+  // `visibility` above. The 5 the header line it came from used, so the
+  // three still read as one phrase. Still `CHIP_H` tall, with no fill to
+  // show it, so `CHIP_SLOP` keeps making the 44pt target.
+  visibility: { flexDirection: 'row', alignItems: 'center', gap: 5, height: CHIP_H },
   // A question, so it is the sheet's whole header: the rows under it are
   // the answers, and the title VoiceOver hears first. The size and face
   // Visited's sheet titles use.
