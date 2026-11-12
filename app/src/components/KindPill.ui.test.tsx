@@ -98,6 +98,33 @@ describe('KindPills as a filter', () => {
   });
 });
 
+// Bare (owner, 12 Nov 2026): a collection's kinds on its card with no
+// pill. As a filter the chosen one wears Explore's accent rule under the
+// word, drawn clear on the rest; a row that filters nothing has no rule.
+describe('KindPills, bare', () => {
+  const face = (id: string) => getComputedStyle(screen.getByTestId(id).firstElementChild!.firstElementChild as HTMLElement);
+  const accent = String(colors.accent).replace(/,(?=\S)/g, ', ');
+  const hex = (h: string) => { const n = parseInt(h.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
+
+  it('rules the chosen one in the accent, the rest clear, on no fill', () => {
+    render(<KindPills kinds={['eats', 'views']} chosen={['views']} onPick={() => {}} bare testID="row" />);
+    expect(face('row-views').borderBottomColor).toBe(accent.startsWith('#') ? hex(accent) : accent);
+    expect(face('row-eats').borderBottomColor).toBe('rgba(0, 0, 0, 0)');
+    for (const id of ['row-views', 'row-eats']) {
+      expect(face(id).borderBottomWidth).toBe('2px');
+      expect(face(id).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    }
+    expect(getComputedStyle(screen.getByTestId('row')).columnGap).toBe('18px');
+  });
+
+  it('is the dot and the word alone where it filters nothing', () => {
+    render(<KindPills kinds={['eats']} bare testID="row" />);
+    const one = getComputedStyle(screen.getByTestId('row-eats'));
+    expect(one.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(one.borderBottomWidth).not.toBe('2px');
+  });
+});
+
 // The list form's show/hide row (owner, 16 Oct 2026): the page's pills,
 // each a toggle. Shown is drawn as the page draws it; hidden fades in
 // place with its dot greyed.

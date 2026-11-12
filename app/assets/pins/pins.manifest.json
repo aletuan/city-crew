@@ -1,7 +1,7 @@
 {
   "cafes": {
     "file": "cafes.png",
-    "fill": "#B75F05",
+    "fill": "#6E451C",
     "icon": "cafe-outline",
     "ink": "#FFFFFF"
   },
@@ -13,7 +13,7 @@
   },
   "eats": {
     "file": "eats.png",
-    "fill": "#A45E2F",
+    "fill": "#B16133",
     "icon": "restaurant-outline",
     "ink": "#FFFFFF"
   },

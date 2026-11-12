@@ -44,11 +44,14 @@ import { PressableScale } from './ui';
  * out. A key the table has not learned keeps its word, tidied, and has
  * no dot: a colour is a category's, and an unknown one has none to give.
  */
-export function KindPill({ kind, more = 0, chosen = false, off = false, bare = false, testID }: {
+export function KindPill({ kind, more = 0, chosen = false, off = false, bare = false, underline = false, testID }: {
   kind: string; more?: number;
   /** The place card's form (owner, 6 Nov 2026): the dot and the word on
    *  the page itself, with no pill under them — see `bare` below. */
   bare?: boolean;
+  /** Bare and a filter: chosen says itself with Explore's rule under the
+   *  word rather than a lit pill — see `KindPills`. */
+  underline?: boolean;
   /** Lit as a chosen filter — see `KindPills`. */
   chosen?: boolean;
   /** Hidden by the list's owner — see `KindToggles`. */
@@ -58,7 +61,7 @@ export function KindPill({ kind, more = 0, chosen = false, off = false, bare = f
   const { t } = useI18n();
   const style = CATEGORIES[kind];
   return (
-    <View style={[bare ? s.bare : s.pill, chosen && s.pillOn, off && s.pillOff]} testID={testID}>
+    <View style={[bare ? s.bare : s.pill, bare && underline && s.rule, chosen && (bare ? underline && s.ruleOn : s.pillOn), off && s.pillOff]} testID={testID}>
       {style ? <View style={[s.dot, { backgroundColor: off ? colors.textTertiary : style.color }]} /> : null}
       <Text style={[s.label, bare && s.labelBare, chosen && s.labelOn]} numberOfLines={1}>{categoryLabel(kind, t)}</Text>
       {more > 0 ? (
@@ -87,8 +90,16 @@ export function KindPill({ kind, more = 0, chosen = false, off = false, bare = f
  * and pills, so two pills' slops meet and never overlap — a tap lands on
  * the pill it is nearest.
  */
-export function KindPills({ kinds, chosen = [], onPick, style, testID }: {
+export function KindPills({ kinds, chosen = [], onPick, bare = false, style, testID }: {
   kinds: readonly string[];
+  /**
+   * The dot and the word with no pill (owner, 12 Nov 2026): on a
+   * collection's card the pills were a box inside a box. As a filter the
+   * chosen one takes Explore's rule under the word and the accent on it,
+   * so the two filter rows in the app say "chosen" the same way; a lone
+   * kind, which filters nothing, is the dot and the word alone.
+   */
+  bare?: boolean;
   chosen?: readonly string[];
   onPick?: (kind: string) => void;
   style?: StyleProp<ViewStyle>;
@@ -97,10 +108,10 @@ export function KindPills({ kinds, chosen = [], onPick, style, testID }: {
   const { t } = useI18n();
   if (!kinds.length) return null;
   return (
-    <View style={[s.row, style]} testID={testID}>
+    <View style={[s.row, bare && s.rowBare, style]} testID={testID}>
       {kinds.map((k) => {
         const id = testID ? `${testID}-${k}` : undefined;
-        if (!onPick) return <KindPill key={k} kind={k} testID={id} />;
+        if (!onPick) return <KindPill key={k} kind={k} bare={bare} testID={id} />;
         const on = chosen.includes(k);
         return (
           <PressableScale
@@ -114,7 +125,7 @@ export function KindPills({ kinds, chosen = [], onPick, style, testID }: {
             aria-selected={on}
             testID={id}
           >
-            <KindPill kind={k} chosen={on} />
+            <KindPill kind={k} chosen={on} bare={bare} underline={bare} />
           </PressableScale>
         );
       })}
@@ -220,4 +231,12 @@ const s = StyleSheet.create({
   // paper, 6:1 on charcoal).
   moreBare: { color: colors.textTertiary },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // With no pill, the gap is what tells one kind from the next: Explore's
+  // 22 between 15pt words, scaled to these 13pt ones (19), down a point
+  // for the dot each of these carries in front of its word.
+  rowBare: { columnGap: 18 },
+  // Explore's rule (`tabItem`): drawn clear when unchosen, so choosing one
+  // changes a colour and moves nothing.
+  rule: { paddingVertical: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  ruleOn: { borderBottomColor: colors.accent },
 });
