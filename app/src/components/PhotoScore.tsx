@@ -10,7 +10,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Modal, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { band, bandLabel, interpreterOf, toTen, type Detail, type PhotoScore, type T } from '../lib/photoScore';
 import { bothSources, kindNoun, type PhotoKind } from '../lib/photoKind';
 import { percentText } from '../lib/standing';
@@ -290,7 +290,7 @@ export function ScoredCard({ scored, failed, best, onClose }: {
   return (
     <Card style={s.done} testID="scored-card">
       <View style={s.doneIcon}>
-        <Ionicons name="checkmark" size={16} color={colors.accentInk} />
+        <Glyph name="checkmark" size={16} color={colors.accentInk} />
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.doneTitle}>
@@ -315,7 +315,7 @@ export function ScoredCard({ scored, failed, best, onClose }: {
         accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
         testID="scored-close"
       >
-        <Ionicons name="close" size={18} color={colors.textTertiary} />
+        <Glyph name="close" size={18} color={colors.textTertiary} />
       </PressableScale>
     </Card>
   );
@@ -444,7 +444,7 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
         testID="score-detail-toggle"
       >
         <Text style={s.detailTitle}>{t('Detailed analysis', 'Phân tích chi tiết', '詳しい分析', '详细分析', '詳細分析')}</Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
+        <Glyph name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
       </PressableScale>
       {open && (
         <View style={s.detailBody}>
@@ -454,14 +454,14 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
               <View style={s.tipsHead}>
                 {/* Amber: every tip answers something that held the
                     photograph back, which is what the amber rows say. */}
-                <Ionicons name="bulb-outline" size={16} color={colors.warnInk} />
+                <Glyph name="bulb-outline" size={16} color={colors.warnInk} />
                 <Text style={s.tipsTitle}>{t('To improve', 'Gợi ý cải thiện', '改善のヒント', '改进建议', '改進建議')}</Text>
               </View>
               {/* Each under the mark of the quality it would help, so a
                   tip reads back to its row without saying which. */}
               {tips.map((tip) => (
                 <View key={tip.text} style={s.tipRow}>
-                  <Ionicons name={tip.icon} size={15} color={colors.textSecondary} style={s.tipIcon} />
+                  <Glyph name={tip.icon} size={15} color={colors.textSecondary} style={s.tipIcon} />
                   <Text style={s.tip}>{tip.text}</Text>
                 </View>
               ))}
@@ -472,7 +472,7 @@ export function ScoreDetails({ score, kind, open, onToggle }: {
               The ⓘ marks it as a note about the analysis, not a part of
               it. */}
           <View style={s.sourceRow} testID="score-source">
-            <Ionicons name="information-circle-outline" size={14} color={colors.textTertiary} />
+            <Glyph name="information-circle-outline" size={14} color={colors.textTertiary} />
             <Text style={s.whySource}>{kind ? bothSources(t) : how.source(t)}</Text>
           </View>
         </View>
@@ -506,7 +506,7 @@ function DetailRow({ d }: { d: Detail }) {
   const { t } = useI18n();
   return (
     <View style={s.row} testID={`score-detail-${d.key}`}>
-      <Ionicons name={d.icon} size={18} color={colors.textSecondary} />
+      <Glyph name={d.icon} size={18} color={colors.textSecondary} />
       <View style={s.rowText}>
         <View style={s.rowLine}>
           <Text style={s.rowLabel}>{d.label}</Text>

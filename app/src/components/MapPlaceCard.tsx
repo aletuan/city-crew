@@ -8,7 +8,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { coverOf, fmtCount, type Place } from '../lib/data';
 import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
@@ -83,7 +83,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
       </View>
       {/* 17, the one size a row-end chevron has in this app (Profile,
           Search, the planning screen); this was 16 for no written reason. */}
-      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
     </PressableScale>
   );
 }

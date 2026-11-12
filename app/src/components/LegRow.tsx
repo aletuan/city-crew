@@ -15,7 +15,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useI18n } from '../lib/i18n';
 import { legLine, modeIcon, type Leg } from '../lib/travel';
 import { colors, font } from '../theme';
@@ -28,7 +28,7 @@ export default function LegRow({ leg, style, testID }: {
   const { lang } = useI18n();
   return (
     <View style={[s.row, style]} testID={testID}>
-      <Ionicons name={modeIcon(leg.mode)} size={12} color={colors.textTertiary} />
+      <Glyph name={modeIcon(leg.mode)} size={12} color={colors.textTertiary} />
       <Text style={s.text}>{legLine(leg, lang)}</Text>
     </View>
   );

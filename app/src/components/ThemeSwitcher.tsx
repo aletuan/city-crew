@@ -131,6 +131,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../lib/auth';
 import { fetchPopularThemes, saveTheme } from '../lib/data';
@@ -416,7 +417,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                 // see `.maestro/README.md`.
                 testID={`theme-${o.id}`}
               >
-                <Ionicons name={o.icon} size={18} color={active ? colors.accent : colors.textTertiary} />
+                <Glyph name={o.icon} size={18} color={active ? colors.accent : colors.textTertiary} />
                 <View style={{ flex: 1 }}>
                   <Text style={[s.rowTitle, active && { color: colors.accent }]}>
                     {schemeLabel(o.id, t)}
@@ -425,7 +426,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                     <Text style={s.rowNote}>{systemNow(pref === 'system', scheme, t)}</Text>
                   )}
                 </View>
-                {active && <Ionicons name="checkmark" size={18} color={colors.accent} testID={`theme-${o.id}-on`} />}
+                {active && <Glyph name="checkmark" size={18} color={colors.accent} testID={`theme-${o.id}-on`} />}
               </PressableScale>
             </View>
           );
@@ -491,7 +492,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                         {word && (
                           <View style={s.word} testID={`theme-${o.id}-${word}`}>
                             {word === 'popular'
-                              ? <Ionicons name="people" size={10} color={pillInk[scheme]} />
+                              ? <Glyph name="people" size={10} color={pillInk[scheme]} />
                               : <View style={[s.wordDot, { backgroundColor: pillInk[scheme] }]} testID={`theme-${o.id}-new-dot`} />}
                             <Text style={[s.wordText, { color: pillInk[scheme] }]}>
                               {word === 'popular' ? t('Popular', 'Phổ biến', '人気', '热门', '熱門') : t('New', 'Mới', '新着', '新', '新')}
@@ -499,11 +500,11 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                           </View>
                         )}
                         <View style={s.cardLabel}>
-                          <Ionicons name={o.icon} size={16} color={active ? colors.accent : colors.textTertiary} />
+                          <Glyph name={o.icon} size={16} color={active ? colors.accent : colors.textTertiary} />
                           <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
                             {schemeLabel(o.id, t)}
                           </Text>
-                          {active && <Ionicons name="checkmark" size={16} color={colors.accent} testID={`theme-${o.id}-on`} />}
+                          {active && <Glyph name="checkmark" size={16} color={colors.accent} testID={`theme-${o.id}-on`} />}
                         </View>
                       </PressableScale>
                     );

@@ -19,6 +19,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useI18n } from '../lib/i18n';
 import { loadFailStale, loadFailText, type LoadFail } from '../lib/loadfail';
 import { colors, font, radius, space, type } from '../theme';
@@ -47,7 +48,7 @@ export function LoadFailBanner({ kind, onRetry, testID }: {
   const { t } = useI18n();
   return (
     <View style={s.banner} testID={testID} accessibilityRole="alert">
-      <Ionicons name={ICON[kind]} size={16} color={colors.textSecondary} />
+      <Glyph name={ICON[kind]} size={16} color={colors.textSecondary} />
       <Text style={s.bannerText} numberOfLines={2}>
         {loadFailText(kind, t)} {loadFailStale(t)}
       </Text>
@@ -76,11 +77,11 @@ export function LoadFailEmpty({ kind, onRetry, testID }: {
   const { t } = useI18n();
   return (
     <View style={s.empty} testID={testID}>
-      <Ionicons name={ICON[kind]} size={28} color={colors.textTertiary} />
+      <Glyph name={ICON[kind]} size={28} color={colors.textTertiary} />
       <Text style={s.emptyText}>{loadFailText(kind, t)}</Text>
       {onRetry && kind !== 'expired' ? (
         <PressableScale onPress={onRetry} accessibilityRole="button" contentStyle={s.retry} scaleTo={0.96}>
-          <Ionicons name="refresh" size={16} color={colors.text} />
+          <Glyph name="refresh" size={16} color={colors.text} />
           <Text style={s.retryText}>{t('Try again', 'Thử lại', '再試行', '重试', '重試')}</Text>
         </PressableScale>
       ) : null}

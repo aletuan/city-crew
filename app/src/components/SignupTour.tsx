@@ -4,7 +4,7 @@ import { AccessibilityInfo, Modal, Pressable, ScrollView, StyleSheet, Text, useW
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space } from '../theme';
@@ -253,7 +253,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     {notice && <View ref={noticeRef} testID="guide-notice" accessibilityLiveRegion="polite"
       style={[s.notice, { bottom: lift + TAB_BAR_HEIGHT + 12 }]}
       onLayout={() => noticeRef.current?.measureInWindow((_x, y) => setNoticeTop(y))}>
-      <View style={s.noticeMark}><Ionicons name="bulb-outline" size={20} color={colors.accent} /></View>
+      <View style={s.noticeMark}><Glyph name="bulb-outline" size={20} color={colors.accent} /></View>
       <View style={s.noticeText}>
         <Text style={s.noticeTitle}>{notice === 'off'
           ? t('Guide turned off', 'Đã tắt hướng dẫn', 'ガイドをオフにしました', '新手引导已关闭', '新手引導已關閉')
@@ -267,7 +267,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
       </View>
       <Pressable onPress={() => setNotice(null)} accessibilityRole="button" accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
         hitSlop={4} style={s.noticeClose}>
-        <Ionicons name="close" size={20} color={colors.textSecondary} />
+        <Glyph name="close" size={20} color={colors.textSecondary} />
       </Pressable>
     </View>}
     <Modal visible={step >= 0 && !!rect && owner === uid} transparent animationType="none" statusBarTranslucent onRequestClose={dismiss}

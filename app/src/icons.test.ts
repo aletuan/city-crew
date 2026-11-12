@@ -26,8 +26,10 @@
 // ── what this can and cannot see ──
 //
 // It reads the source with a regular expression, the same trade `nav.test`
-// takes and for the same reason: the literal `<Ionicons name="..." />`
-// that every direct call site in this app is written as. A glyph name held
+// takes and for the same reason: the literal `<Glyph name="..." />`
+// that every direct call site in this app is written as (`Glyph` since
+// 12 Nov 2026, when the calendar and four other marks moved to Lucide's
+// line set — see components/ui/glyph.tsx). A glyph name held
 // in a variable would go unseen. Two indirections do hold one — the
 // header's `IconSubtitle` and Profile's `RoundIcon` — so `IconSubtitle`,
 // the one that draws a dateline, gets its own assertion below. `RoundIcon`
@@ -51,8 +53,8 @@ function sources(dir: string): string[] {
   return out;
 }
 
-/** `<Ionicons name="calendar-outline" … color={X} …/>`, X captured. */
-const CALENDAR = /<Ionicons\s+[^>]*?name="calendar-outline"[^>]*?color=\{([^}]+)\}/g;
+/** `<Glyph name="calendar-outline" … color={X} …/>`, X captured. */
+const CALENDAR = /<Glyph\s+[^>]*?name="calendar-outline"[^>]*?color=\{([^}]+)\}/g;
 
 describe('the calendar glyph', () => {
   const files = sources(ROOT);
@@ -82,6 +84,21 @@ describe('the calendar glyph', () => {
     const ui = readFileSync(join(ROOT, 'components/ui/surfaces.tsx'), 'utf8');
     const body = /export function IconSubtitle\([\s\S]*?\n\}\n/.exec(ui)?.[0];
     expect(body).toBeTruthy();
-    expect(body).toMatch(/<Ionicons\s+name=\{icon\}[^>]*?color=\{colors\.accent\}/);
+    expect(body).toMatch(/<Glyph\s+name=\{icon\}[^>]*?color=\{colors\.accent\}/);
+  });
+});
+
+// Every glyph goes through `Glyph`, so a calendar, a bookmark, a person, a
+// compass or the Places pin is the line set's wherever it is drawn (owner,
+// 12 Nov 2026: "the matching icons on the other screens too"). A direct
+// `<Ionicons` would draw the old mark beside the new one on the next
+// screen to add one.
+describe('the glyph sets', () => {
+  it('are reached only through Glyph', () => {
+    const direct = sources(ROOT)
+      .filter((f) => !f.endsWith(join('components', 'ui', 'glyph.tsx')))
+      .filter((f) => /<Ionicons\b/.test(readFileSync(f, 'utf8')))
+      .map((f) => f.slice(ROOT.length + 1));
+    expect(direct).toEqual([]);
   });
 });

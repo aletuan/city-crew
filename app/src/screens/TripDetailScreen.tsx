@@ -29,7 +29,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { useFlag } from '../lib/useFlag';
 import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, SECONDARY_CONTROL_H,
@@ -465,7 +465,7 @@ export default function TripDetailScreen({ navigation, route }: {
                   contentStyle={s.route}
                   accessibilityRole="button"
                 >
-                  <Ionicons name="navigate-outline" size={16} color={colors.accent} />
+                  <Glyph name="navigate-outline" size={16} color={colors.accent} />
                   <Text style={s.routeText}>
                     {t('Open the route', 'Mở lộ trình', 'ルートを開く', '打开路线', '開啟路線')}
                   </Text>
@@ -491,7 +491,7 @@ export default function TripDetailScreen({ navigation, route }: {
                         : null,
                     ])}
                   </Text>
-                  <Ionicons name="chevron-forward" size={15} color={colors.accent} />
+                  <Glyph name="chevron-forward" size={15} color={colors.accent} />
                 </PressableScale>
               </>
             )}
@@ -536,7 +536,7 @@ export default function TripDetailScreen({ navigation, route }: {
           accessibilityRole="button"
           testID={owned ? 'trip-delete' : 'trip-leave'}
         >
-          <Ionicons name={owned ? 'trash-outline' : 'exit-outline'} size={15} color={colors.bad} />
+          <Glyph name={owned ? 'trash-outline' : 'exit-outline'} size={15} color={colors.bad} />
           <Text style={s.deleteText}>
             {owned
               ? t('Delete this trip', 'Xoá chuyến đi này', 'この旅程を削除', '删除这个行程', '刪除這個行程')

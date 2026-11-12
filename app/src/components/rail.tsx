@@ -43,7 +43,7 @@
 
 import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { colors } from '../theme';
 
 /** The mark on the first stop. With `land`, it settles into place — the
@@ -58,7 +58,7 @@ export function StartMark({ land }: { land?: Animated.Value }) {
     : undefined;
   return (
     <Animated.View style={[s.start, landing]} testID="rail-start">
-      <Ionicons name="paw" size={9} color={colors.accentInk} />
+      <Glyph name="paw" size={9} color={colors.accentInk} />
     </Animated.View>
   );
 }

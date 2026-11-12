@@ -28,6 +28,7 @@ import {
   Animated, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { LinearGradient } from 'expo-linear-gradient';
 import SketchDeck from '../components/SketchDeck';
 import { CHANNEL } from '../lib/channel';
@@ -160,7 +161,7 @@ function FindingFeed({ previous, current, still }: {
           }]}
         >
           <View style={s.findingBadge}>
-            <Ionicons
+            <Glyph
               name={previous.icon as React.ComponentProps<typeof Ionicons>['name']}
               size={15}
               color={colors.textSecondary}
@@ -177,7 +178,7 @@ function FindingFeed({ previous, current, still }: {
               fact this is was spending that meaning on a label. What
               marks the line as the current one is the pulse around this
               view and the weight of the text, both of which stay. */}
-          <Ionicons
+          <Glyph
             name={current.icon as React.ComponentProps<typeof Ionicons>['name']}
             size={15}
             color={colors.textSecondary}
@@ -776,7 +777,7 @@ function Fact({ icon, primary, secondary }: {
   return (
     <View style={s.factCell}>
       <View style={s.factDisc}>
-        <Ionicons name={icon} size={19} color={colors.text} />
+        <Glyph name={icon} size={19} color={colors.text} />
       </View>
       <View style={s.factText}>
         <Text style={s.factPrimary} numberOfLines={1}>{primary}</Text>
@@ -792,7 +793,7 @@ function StepMark({ state, still }: { state: StepState; still: boolean }) {
   if (state === 'done') {
     return (
       <LinearGradient {...gradAI} style={s.mark}>
-        <Ionicons name="checkmark" size={14} color={colors.accentInk} />
+        <Glyph name="checkmark" size={14} color={colors.accentInk} />
       </LinearGradient>
     );
   }

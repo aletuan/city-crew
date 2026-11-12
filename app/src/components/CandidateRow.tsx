@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { CHIP_H, CHIP_SLOP, PressableScale, SelectTick } from './ui';
 import { ItemState, locksRow } from '../lib/batch';
 import type { Candidate, Known } from '../lib/suggest';
@@ -85,7 +85,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
         {item === 'running' ? (
           <ActivityIndicator size="small" color={colors.accent} />
         ) : (
-          <Ionicons
+          <Glyph
             name={live || mine || item === 'done' ? 'checkmark' : 'location-outline'}
             size={18}
             color={live || item === 'done' ? colors.ok : mine ? colors.textSecondary : colors.accent}

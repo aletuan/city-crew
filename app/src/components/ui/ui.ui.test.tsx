@@ -14,7 +14,7 @@ vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import { CHIP_H, CHIP_SLOP, Chip, SECONDARY_CONTROL_H, Screen, Tile, TileGrid, UnderlineChoice, useArrival } from './index';
+import { CHIP_H, CHIP_SLOP, Chip, Glyph, LINE_STROKE, SECONDARY_CONTROL_H, Screen, Tile, TileGrid, UnderlineChoice, isLineGlyph, useArrival } from './index';
 import { bgHex, colors } from '../../theme';
 
 describe('useArrival', () => {
@@ -418,5 +418,52 @@ describe('TileGrid', () => {
     );
     expect(rows()[0].style.gap).toBe('0px');
     expect(rows()[0].parentElement!.style.gap).toBe('12px');
+  });
+});
+
+// The five marks the tab bar is made of come from Lucide's line set
+// wherever they are drawn; every other name is Ionicons, untouched
+// (owner, 12 Nov 2026).
+describe('Glyph', () => {
+  const drawn = () => document.querySelector('[data-icon]')!;
+
+  it('draws the five marks from the line set, at Ionicons’ weight', () => {
+    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places'] as const) {
+      const { unmount } = render(<Glyph name={name} size={20} color="#123456" />);
+      expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual([name, 'lucide']);
+      expect([drawn().getAttribute('data-size'), drawn().getAttribute('data-color')]).toEqual(['20', '#123456']);
+      expect(drawn().getAttribute('data-stroke')).toBe(String(LINE_STROKE));
+      unmount();
+    }
+    // 32 units on Ionicons' 512 grid is a sixteenth; so is 1.5 on 24.
+    expect(LINE_STROKE / 24).toBe(32 / 512);
+  });
+
+  it('fills only the saved bookmark; a solid compass, calendar or person is its outline', () => {
+    const { unmount } = render(<Glyph name="bookmark" size={20} color="#c00" />);
+    expect(drawn().getAttribute('data-icon')).toBe('bookmark');
+    unmount();
+    for (const [name, line] of [['compass', 'compass-outline'], ['calendar', 'calendar-outline'], ['person', 'person-outline']] as const) {
+      const r = render(<Glyph name={name} size={20} color="#c00" />);
+      expect(drawn().getAttribute('data-icon')).toBe(line);
+      r.unmount();
+    }
+  });
+
+  it('passes every other name, and none, to Ionicons as it was', () => {
+    const { unmount } = render(<Glyph name="chevron-back" size={22} color="#000" strokeWidth={9} />);
+    expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual(['chevron-back', null]);
+    expect(drawn().getAttribute('data-size')).toBe('22');
+    unmount();
+    const { container } = render(<Glyph size={15} color="#000" />);
+    // Ionicons' own answer to no name: its box, holding nothing.
+    expect(container.querySelector('[data-icon]')).toBeNull();
+    expect(container.querySelector('[data-size="15"]')).toBeTruthy();
+    expect([isLineGlyph('places'), isLineGlyph('location-outline')]).toEqual([true, false]);
+  });
+
+  it('takes a lighter line where it is asked for one', () => {
+    render(<Glyph name="compass-outline" size={22} color="#000" strokeWidth={1.2} />);
+    expect(drawn().getAttribute('data-stroke')).toBe('1.2');
   });
 });

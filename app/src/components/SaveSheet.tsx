@@ -7,7 +7,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Collection, holds, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
@@ -72,7 +72,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
                 contentStyle={s.row}
               >
                 <View style={[s.tick, on && s.tickOn]}>
-                  {on ? <Ionicons name="checkmark" size={15} color={colors.accentInk} /> : null}
+                  {on ? <Glyph name="checkmark" size={15} color={colors.accentInk} /> : null}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.rowText} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
@@ -94,7 +94,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
           contentStyle={s.newRow}
         >
           <View style={s.newIcon}>
-            <Ionicons name="add" size={19} color={colors.accent} />
+            <Glyph name="add" size={19} color={colors.accent} />
           </View>
           <Text style={s.newText}>{t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}</Text>
         </PressableScale>

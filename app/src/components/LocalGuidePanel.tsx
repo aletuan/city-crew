@@ -38,7 +38,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { Image } from 'expo-image';
 import welcomeLogo from '../../assets/welcome-logo.png';
 import { useProfile, useSession } from '../lib/auth';
@@ -161,7 +161,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
             it is the accessible name above, and the gallery screen's
             title. It is not drawn here because the question beside it
             already says the word. */}
-        <Ionicons name="chevron-forward" size={17} color={colors.accent} />
+        <Glyph name="chevron-forward" size={17} color={colors.accent} />
       </PressableScale>
     </View>
   );

@@ -11,3 +11,4 @@ export * from './haptics';
 export * from './motion';
 export * from './controls';
 export * from './surfaces';
+export * from './glyph';

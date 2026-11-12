@@ -38,6 +38,7 @@ import {
   ActivityIndicator, Alert, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { Image } from 'expo-image';
 import type { SheetAction } from '../components/ActionSheet';
 import PhotoSheet from '../components/PhotoSheet';
@@ -462,13 +463,13 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                       point, and the dimming says what the row says. */}
                   {p.is_hidden && (
                     <View style={[StyleSheet.absoluteFill, s.hiddenVeil]} testID="gallery-hidden">
-                      <Ionicons name="eye-off" size={22} color={onPhoto.text} />
+                      <Glyph name="eye-off" size={22} color={onPhoto.text} />
                     </View>
                   )}
 
                   {p.is_cover && (
                     <View style={s.badge} testID="gallery-cover">
-                      <Ionicons name="star" size={10} color={onPhoto.accent} />
+                      <Glyph name="star" size={10} color={onPhoto.accent} />
                       <Text style={s.badgeText}>{t('Cover', 'Bìa', 'カバー', '封面', '封面')}</Text>
                     </View>
                   )}
@@ -477,7 +478,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
                   {picks && (
                     <View style={[s.tick, picked.includes(p.id) && s.tickOn]} testID={`gallery-tick-${p.id}`}>
-                      {picked.includes(p.id) && <Ionicons name="checkmark" size={14} color={colors.accentInk} />}
+                      {picked.includes(p.id) && <Glyph name="checkmark" size={14} color={colors.accentInk} />}
                     </View>
                   )}
                 </PressableScale>
@@ -587,7 +588,7 @@ function Tool({ icon, glyph, label, onPress, destructive, testID }: {
       contentStyle={[s.tool, destructive && s.toolBad]}
       testID={testID}
     >
-      {glyph ?? <Ionicons name={icon} size={15} color={ink} />}
+      {glyph ?? <Glyph name={icon} size={15} color={ink} />}
       <Text style={[s.toolText, { color: ink }]}>{label}</Text>
     </PressableScale>
   );

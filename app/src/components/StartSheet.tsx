@@ -65,7 +65,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import * as Location from 'expo-location';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import MiniMap from './MiniMap';
 import { Chip, GradientCta, PressableScale, SelectTick } from './ui';
 import { type City, useCity, useMyPosition } from '../lib/city';
@@ -586,7 +586,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
             aria-selected={onMe}
           >
             <View style={s.meIcon}>
-              <Ionicons name="navigate" size={16} color={colors.accent} />
+              <Glyph name="navigate" size={16} color={colors.accent} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={s.hitName} numberOfLines={1}>
@@ -612,7 +612,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
               unbidden is a nag. */}
           {blocked && (
             <View style={s.blocked}>
-              <Ionicons name="location-outline" size={17} color={colors.textSecondary} />
+              <Glyph name="location-outline" size={17} color={colors.textSecondary} />
               <View style={{ flex: 1, gap: 6 }}>
                 <Text style={s.missed}>
                   {t(
@@ -635,7 +635,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
           )}
 
           <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
-            <Ionicons name="search" size={18} color={colors.textTertiary} />
+            <Glyph name="search" size={18} color={colors.textTertiary} />
             <TextInput
               value={query}
               onChangeText={(v) => { setQuery(v); setMissed(false); }}
@@ -667,7 +667,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
               "none": the catalog has not reached there, not the place. */}
           {elsewhere && (
             <View style={[s.well, s.warnWell]} testID="start-elsewhere">
-              <Ionicons name="alert-circle" size={18} color={colors.warnInk} />
+              <Glyph name="alert-circle" size={18} color={colors.warnInk} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[s.wellTitle, { color: colors.warnInk }]}>
                   {t(
@@ -707,7 +707,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
               was a report of the one thing a cancel takes back. */}
           {moved && (
             <View style={[s.well, s.okWell]} testID="start-moved">
-              <Ionicons name="checkmark-circle" size={18} color={colors.okInk} />
+              <Glyph name="checkmark-circle" size={18} color={colors.okInk} />
               <Text style={[s.wellBody, { color: colors.okInk, flex: 1 }]}>
                 {t(
                   `The plan will be made in ${cityName(moved)}.`,
@@ -740,7 +740,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
                   accessibilityRole="button"
                 >
                   <View style={[s.hit, i > 0 && s.hitTop]}>
-                    <Ionicons name="location-outline" size={17} color={colors.accent} />
+                    <Glyph name="location-outline" size={17} color={colors.accent} />
                     <View style={{ flex: 1 }}>
                       <Text style={s.hitName} numberOfLines={1}>{h.name}</Text>
                       {/* Only when it says something the name did not —

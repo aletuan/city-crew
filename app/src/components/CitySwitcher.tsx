@@ -46,7 +46,7 @@ import {
   TextInput, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useCity } from '../lib/city';
 import { fetchPlaceCountByCity } from '../lib/data';
 import { useI18n } from '../lib/i18n';
@@ -198,7 +198,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
         </View>
 
         <View style={s.search}>
-          <Ionicons name="search" size={17} color={colors.textTertiary} />
+          <Glyph name="search" size={17} color={colors.textTertiary} />
           <TextInput
             style={s.searchInput}
             value={query}
@@ -214,7 +214,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
         </View>
 
         <PressableScale haptic="selection" contentStyle={s.locWell} onPress={locate}>
-          <Ionicons name="navigate-outline" size={19} color={colors.accent} />
+          <Glyph name="navigate-outline" size={19} color={colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={s.rowTitle}>
               {locating ? t('Locating…', 'Đang định vị…', '位置情報を取得中…', '定位中…', '定位中…') : t('Use my location', 'Dùng vị trí của tôi', '現在地を使う', '使用我的位置', '使用我的位置')}

@@ -15,6 +15,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { useScheme } from '../lib/theme';
 import { colors, font, radius } from '../theme';
@@ -135,7 +136,7 @@ export function DockOffer({ icon, title, sub }: {
   const light = useScheme().scheme === 'light';
   return (
     <>
-      <Ionicons name={icon} size={18} color={colors.text} style={glassHalo(light)} />
+      <Glyph name={icon} size={18} color={colors.text} style={glassHalo(light)} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[s.title, glassHalo(light)]} numberOfLines={1}>{title}</Text>
         <Text style={[s.sub, glassHalo(light)]} numberOfLines={1}>{sub}</Text>

@@ -12,7 +12,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LANGS, useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';
@@ -59,7 +59,7 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
                 <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
                   {l.label}
                 </Text>
-                {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                {active && <Glyph name="checkmark" size={18} color={colors.accent} />}
               </PressableScale>
             </View>
           );

@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import PlaceCard from '../components/PlaceCard';
 import PlaceTile from '../components/PlaceTile';
 import MoreText from '../components/MoreText';
@@ -57,7 +58,7 @@ function OwnEmpty({ onAdd }: { onAdd: () => void }) {
     <View style={s.emptyWrap}>
       <View style={s.empty}>
         <View style={s.emptyIcon}>
-          <Ionicons name="bookmark-outline" size={26} color={colors.accent} />
+          <Glyph name="bookmark-outline" size={26} color={colors.accent} />
         </View>
         {/* One line. The second sentence was telling you to go looking,
             which is what the button underneath already says — a card this
@@ -103,9 +104,9 @@ function MenuRow({ icon, label, onPress, danger, first, checked, testID }: {
       aria-selected={checked}
       style={({ pressed }) => [s.menuRow, !first && s.menuDivider, pressed && s.menuRowOn]}
     >
-      <Ionicons name={icon} size={21} color={danger ? colors.bad : colors.text} />
+      <Glyph name={icon} size={21} color={danger ? colors.bad : colors.text} />
       <Text style={[s.menuText, danger && { color: colors.bad }]} numberOfLines={1}>{label}</Text>
-      {checked && <Ionicons name="checkmark" size={20} color={colors.accent} style={s.menuCheck} />}
+      {checked && <Glyph name="checkmark" size={20} color={colors.accent} style={s.menuCheck} />}
     </Pressable>
   );
 }
@@ -1058,7 +1059,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       )}
       testID="collection-visibility"
     >
-      <Ionicons
+      <Glyph
         name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
         size={15}
         color={isPublic ? colors.ok : colors.textTertiary}
@@ -1066,7 +1067,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <Text style={isPublic ? s.metaPublic : s.meta}>
         {isPublic ? t('Public', 'Công khai', '公開', '公开', '公開') : t('Private', 'Riêng tư', '非公開', '私密', '私密')}
       </Text>
-      <Ionicons name="chevron-down" size={13} color={colors.textTertiary} />
+      <Glyph name="chevron-down" size={13} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
 
@@ -1139,7 +1140,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         ? t('Unlike', 'Bỏ thích', 'いいねを取り消す', '取消点赞', '取消按讚')
         : t('Like', 'Thích', 'いいね', '点赞', '按讚')}
     >
-      <Ionicons
+      <Glyph
         name={liked ? 'heart' : 'heart-outline'}
         size={15}
         color={liked ? colors.accent : colors.textTertiary}
@@ -1176,7 +1177,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <View style={s.footCount}>
         {visibility ?? (
           <>
-            <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+            <Glyph name="location-outline" size={15} color={colors.textTertiary} />
             <Text style={s.meta} accessibilityLabel={`${members.length} ${placesWord}`}>{members.length}</Text>
           </>
         )}
@@ -1537,7 +1538,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      read as one kind of thing. */
   const gridNotice = (
     <View style={s.notice} testID="collection-grid-notice" accessibilityLiveRegion="polite">
-      <View style={s.noticeMark}><Ionicons name="grid-outline" size={16} color={colors.accent} /></View>
+      <View style={s.noticeMark}><Glyph name="grid-outline" size={16} color={colors.accent} /></View>
       <View style={s.noticeText}>
         <Text style={s.noticeTitle}>
           {t('Now in grid view', 'Bộ sưu tập hiển thị dạng lưới',
@@ -1570,7 +1571,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               <>
                 {before}
                 <View style={s.moreChip} testID="collection-grid-notice-more">
-                  <Ionicons name="ellipsis-horizontal" size={12} color={colors.text} />
+                  <Glyph name="ellipsis-horizontal" size={12} color={colors.text} />
                 </View>
                 {after}
               </>
@@ -1580,7 +1581,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       </View>
       <Pressable onPress={closeNotice} accessibilityRole="button" hitSlop={4} style={s.noticeClose}
         accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} testID="collection-grid-notice-close">
-        <Ionicons name="close" size={20} color={colors.textSecondary} />
+        <Glyph name="close" size={20} color={colors.textSecondary} />
       </Pressable>
     </View>
   );
@@ -1595,7 +1596,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           {/* The note glyph, only on your own list and only when there
               is no handle to lead with: it says "your words go here". */}
           {owned && !ownTag ? (
-            <Ionicons
+            <Glyph
               name="document-text-outline"
               size={20}
               color={desc ? colors.textSecondary : colors.textTertiary}
@@ -1631,7 +1632,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 contentStyle={s.descAdd}
                 testID="collection-desc-add"
               >
-                <Ionicons name="add" size={17} color={colors.accent} />
+                <Glyph name="add" size={17} color={colors.accent} />
                 <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加', '添加简介', '新增簡介')}</Text>
               </PressableScale>
             ) : null}
@@ -1647,7 +1648,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集', '编辑简介', '編輯簡介')}
               testID="collection-desc-edit"
             >
-              <Ionicons
+              <Glyph
                 name="create-outline"
                 size={20}
                 color={desc ? colors.textSecondary : colors.textTertiary}
@@ -1669,7 +1670,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               accessibilityLabel={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
               testID="collection-desc-copy"
             >
-              <Ionicons
+              <Glyph
                 name="duplicate-outline"
                 size={20}
                 color={colors.textSecondary}
@@ -1708,7 +1709,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           accessibilityHint={t('Dismisses this message', 'Ẩn thông báo này', 'このメッセージを閉じます', '关闭这条消息', '關閉這條訊息')}
           testID="collection-banner"
         >
-          <Ionicons
+          <Glyph
             name={banner === 'public' ? 'checkmark-circle' : 'lock-closed'}
             size={19}
             color={banner === 'public' ? colors.ok : colors.textSecondary}

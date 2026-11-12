@@ -43,7 +43,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, ScrollView, StyleSheet, Text, type TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { Card, Empty, PressableScale, Screen, UnderlineChoice, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
@@ -270,7 +270,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                     accessibilityRole="button"
                     accessibilityLabel={term}
                   >
-                    <Ionicons name="search-outline" size={17} color={colors.textTertiary} />
+                    <Glyph name="search-outline" size={17} color={colors.textTertiary} />
                     <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
                   </PressableScale>
                 ))}
@@ -349,7 +349,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                           {v.place?.cover ? (
                             <Image source={{ uri: v.place.cover }} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden />
                           ) : (
-                            <Ionicons name="location-outline" size={19} color={colors.textTertiary} />
+                            <Glyph name="location-outline" size={19} color={colors.textTertiary} />
                           )}
                         </View>
                         <View style={{ flex: 1, gap: 2 }}>
@@ -357,7 +357,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.meta} testID="visit-meta">{metaOf(v)}</Text>
                         </View>
                         {opens ? (
-                          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
+                          <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
                         ) : (
                           <PressableScale
                             onPress={() => setMenuFor(v)}
@@ -367,7 +367,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                             accessibilityRole="button"
                             accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项', '選項')}
                           >
-                            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+                            <Glyph name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
                           </PressableScale>
                         )}
                       </PressableScale>

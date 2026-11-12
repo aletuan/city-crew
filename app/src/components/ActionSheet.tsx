@@ -41,6 +41,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from './ui';
 import { useI18n } from '../lib/i18n';
@@ -162,7 +163,7 @@ export function SheetRows({ actions, onClose }: {
           aria-selected={a.selected}
         >
           <View style={s.glyph} testID="sheet-glyph">
-            <Ionicons
+            <Glyph
               name={a.icon}
               size={19}
               color={a.destructive ? colors.bad : colors.text}
@@ -174,7 +175,7 @@ export function SheetRows({ actions, onClose }: {
           </View>
           {a.selected && (
             <View style={s.glyph} testID="sheet-selected">
-              <Ionicons name="checkmark" size={19} color={colors.accent} />
+              <Glyph name="checkmark" size={19} color={colors.accent} />
             </View>
           )}
         </PressableScale>
@@ -220,7 +221,7 @@ export function SheetStrip({ actions, onClose }: {
           accessibilityHint={a.desc}
           aria-selected={a.selected}
         >
-          <Ionicons name={a.icon} size={19} color={a.destructive ? colors.bad : a.selected ? colors.okInk : colors.text} />
+          <Glyph name={a.icon} size={19} color={a.destructive ? colors.bad : a.selected ? colors.okInk : colors.text} />
           <Text style={[s.stripLabel, a.destructive && s.rowTitleBad]} numberOfLines={1}>{a.short ?? a.title}</Text>
         </PressableScale>
       ))}

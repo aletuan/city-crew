@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../../components/ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitySwitcherModal } from '../../components/CitySwitcher';
 import { CHIP_SLOP, PressableScale } from '../../components/ui';
@@ -185,7 +185,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           <Text style={s.heroDateText}>{dayline(lang, new Date(), city?.tz ?? DEFAULT_TZ)}</Text>
           {sky ? (
             <>
-              <Ionicons name={sky.icon} size={14} color={sky.gold ? onPhoto.sun : onPhoto.textSecondary} />
+              <Glyph name={sky.icon} size={14} color={sky.gold ? onPhoto.sun : onPhoto.textSecondary} />
               <Text style={s.heroDateText}>{`${sky.temp}°`}</Text>
             </>
           ) : null}
@@ -199,7 +199,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           anchorRef={searchAnchor}
           testID="explore-search"
         >
-          <Ionicons name="search-outline" size={22} color={onPhoto.text} />
+          <Glyph name="search-outline" size={22} color={onPhoto.text} />
         </PressableScale>
       </Animated.View>
       <Animated.View
@@ -228,9 +228,9 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
             style={{ alignSelf: 'flex-start' }}
             contentStyle={s.heroCity}
           >
-            <Ionicons name="location-outline" size={13} color={onPhoto.textSecondary} />
+            <Glyph name="location-outline" size={13} color={onPhoto.textSecondary} />
             <Text style={s.heroDateText}>{t(city.short_en, city.short_vi, city.short_ja)}</Text>
-            <Ionicons name="chevron-down" size={12} color={onPhoto.textSecondary} />
+            <Glyph name="chevron-down" size={12} color={onPhoto.textSecondary} />
           </PressableScale>
         ) : null}
         <Text
@@ -273,7 +273,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
                 ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja, city.hero_cta_zh, city.hero_cta_zh_hant)
                 : t('Explore', 'Khám phá', '探索する', '探索', '探索')}
             </Text>
-            <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
+            <Glyph name="arrow-forward" size={17} color={colors.accentInk} />
           </LinearGradient>
         </PressableScale>
       </Animated.View>

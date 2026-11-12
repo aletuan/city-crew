@@ -10,6 +10,7 @@ import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, Vie
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import PlaceCard from '../components/PlaceCard';
 import SearchField from '../components/SearchField';
 import { AddSlot } from '../components/add';
@@ -467,7 +468,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
               `正在添加到“${listTitle}”，${listCount} 个地点`, `正在新增到「${listTitle}」，${listCount} 個地點`,
             )}
           >
-            <Ionicons name="bookmark-outline" size={15} color={colors.textTertiary} />
+            <Glyph name="bookmark-outline" size={15} color={colors.textTertiary} />
             <Text style={s.addingToText} numberOfLines={1}>
               {t('Add to collection: ', 'Thêm vào bộ sưu tập: ', 'コレクションに追加：', '添加到合集：', '新增到合集：')}
               <Text style={s.addingToTitle}>{listTitle}</Text>
@@ -550,7 +551,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                   accessibilityRole="button"
                   accessibilityLabel={item.term}
                 >
-                  <Ionicons name="time-outline" size={18} color={colors.textTertiary} />
+                  <Glyph name="time-outline" size={18} color={colors.textTertiary} />
                   <Text style={s.recentTerm} numberOfLines={1}>{item.term}</Text>
                 </PressableScale>
                 <PressableScale
@@ -560,7 +561,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                   accessibilityRole="button"
                   accessibilityLabel={t('Edit this search', 'Sửa tìm kiếm này', 'この検索を編集', '编辑此搜索', '編輯此搜尋')}
                 >
-                  <Ionicons
+                  <Glyph
                     name="arrow-up"
                     size={17}
                     color={colors.textTertiary}
@@ -667,7 +668,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                       ? (
                         <View style={s.metaRow}>
                           {area
-                            ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                            ? <Glyph name="location-outline" size={13} color={colors.textTertiary} />
                             : null}
                           <Text style={s.cardMeta} numberOfLines={1}>{meta}</Text>
                         </View>
@@ -707,7 +708,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                           : null}
                       </View>
                     )
-                    : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
+                    : <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />}
                   {list
                     ? <ListToggle {...inList(pl)!} testID={`search-${item.kind}-${pl.slug}-in-list`} />
                     : null}
@@ -772,7 +773,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                     {item.count} {t(item.count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+                <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
               </Card>
             </PressableScale>
           );
@@ -875,7 +876,7 @@ function NoMatches({ term, where }: { term: string; where?: string | null }) {
   return (
     <View style={s.noneBox}>
       <View style={s.noneMark}>
-        <Ionicons name="search" size={30} color={colors.textTertiary} />
+        <Glyph name="search" size={30} color={colors.textTertiary} />
         {/* The question mark is the whole difference between "we are
             looking" and "we looked". A magnifier alone is what a screen
             shows while it is still searching. */}
@@ -968,7 +969,7 @@ function ForkChip({ icon, label, onPress }: {
   return (
     <PressableScale onPress={onPress} haptic="selection" hitSlop={CHIP_SLOP} accessibilityRole="button">
       <View style={s.forkChip}>
-        <Ionicons name={icon} size={15} color={colors.accent} />
+        <Glyph name={icon} size={15} color={colors.accent} />
         <Text style={s.forkChipText} numberOfLines={1}>{label}</Text>
       </View>
     </PressableScale>

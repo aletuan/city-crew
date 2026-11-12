@@ -87,6 +87,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import {
   AmbientWarmth, Card, GradientCta, IconSubtitle, RoundIconButton, Screen, fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
@@ -132,7 +133,7 @@ import { colors, font, radius, space, type } from '../theme';
 function Fact({ icon, text }: { icon: string; text: string }) {
   return (
     <View style={s.chip}>
-      <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={15} color={colors.accent} />
+      <Glyph name={icon as keyof typeof Ionicons.glyphMap} size={15} color={colors.accent} />
       <Text style={s.chipText}>{text}</Text>
     </View>
   );
@@ -534,7 +535,7 @@ export default function PlanEditScreen({ navigation, route }: {
             told to drag drags at once and scrolls. */}
         {current.length > 0 && (
         <View style={s.hint}>
-          <Ionicons name="move-outline" size={15} color={colors.textTertiary} />
+          <Glyph name="move-outline" size={15} color={colors.textTertiary} />
           <Text style={s.hintText}>
             {canArrange
               ? t('Hold a stop to move it. Nudge its time with − and +.', 'Giữ một điểm để kéo đổi chỗ. Chỉnh giờ bằng − và +.', 'スポットを長押しして動かす。時刻は − と + で調整。', '长按地点即可移动。用 − 和 + 微调时间。', '長按地點即可移動。用 − 和 + 微調時間。')
