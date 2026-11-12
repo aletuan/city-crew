@@ -431,7 +431,7 @@ describe('VisitedScreen', () => {
       .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
     expect(fills).toEqual([]);
     let hung = false;
-    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-14px';
+    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-18px';
     expect(hung).toBe(true);
   });
 });

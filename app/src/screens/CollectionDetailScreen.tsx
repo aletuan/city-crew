@@ -11,7 +11,7 @@ import PlaceTile from '../components/PlaceTile';
 import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, Card, Empty, GradientCta, INK_GAP_END, PressableScale, RoundIconButton, Screen,
   fireHaptic, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
@@ -1332,8 +1332,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      row is here its `owner_id` settles whose it is. */
   const headerRight = col ? (
     <View style={s.headerRight}>
-      <View ref={btn} collapsable={false}>
+      {/* The ⋯ alone, with no disc, and hung past the right margin by the
+          glyph's own empty edge so its ink ends where the cards do (owner,
+          12 Nov 2026) — as the chevron opposite does on the left. The hang
+          is on this wrapper rather than the button so the guide's ring,
+          drawn inside it, moves with what it rings. */}
+      <View ref={btn} collapsable={false} style={{ marginRight: -INK_GAP_END['ellipsis-horizontal'] }}>
         <RoundIconButton
+          bare
           icon="ellipsis-horizontal"
           onPress={openMenu}
           // "Tùy chọn khác" and not "Thêm" (owner, 22 Oct 2026): heard
@@ -1682,6 +1688,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       title={title}
       onBack={() => navigation.goBack()}
       backTestID="collection-back"
+      backBare
       right={headerRight}
     >
       <AmbientWarmth />

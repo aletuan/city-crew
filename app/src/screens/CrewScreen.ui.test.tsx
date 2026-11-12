@@ -171,9 +171,9 @@ describe('the frame', () => {
     }
   });
 
-  // Bare, the empty half of each 44pt box left the glyphs 15pt and 10pt
-  // inside the margin the list's card stands on (owner's phone, 12 Nov
-  // 2026), so each box hangs outward by that much.
+  // Bare, the empty half of each 44pt box left the glyphs inside the
+  // margin the list's card stands on (owner's phone, 12 Nov 2026), so each
+  // box hangs outward by its glyph's empty edge (`BACK_HANG`, `INK_GAP_END`).
   it('hangs both bare controls past the margin, so their ink meets it', () => {
     render(<CrewScreen navigation={nav()} />);
     const margins = (el: HTMLElement | null) => {
@@ -184,8 +184,8 @@ describe('the frame', () => {
       }
       return out.join(' ');
     };
-    expect(margins(screen.getByRole('button', { name: 'Back' }))).toContain('-14px|');
-    expect(margins(screen.getByTestId('crew-add'))).toContain('|-10px');
+    expect(margins(screen.getByRole('button', { name: 'Back' }))).toContain('-18px|');
+    expect(margins(screen.getByTestId('crew-add'))).toContain('|-12px');
   });
 
   it('asks the server again on focus, unless the launch fetch is still in flight', () => {

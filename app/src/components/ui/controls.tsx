@@ -746,14 +746,28 @@ export function SelectTick({ on }: { on: boolean }) {
  * chevron's ink stands on the margin the content below it starts at.
  *
  * With the disc, the disc's edge was on the margin and that was the line.
- * Without it the 44pt box is invisible, and the 22pt glyph centred in it
- * left the ink 11pt in plus the chevron's own 3pt of side bearing: on the
- * owner's phone (12 Nov 2026) the friends screen's chevron stood at 36pt
- * while the list's card and the tab's envelope below it stood at 21–22,
- * 15pt out of line. The target keeps its 44pt; it only moves outward, and
- * its edge stays 8pt clear of the screen's.
+ * Without it the 44pt box is invisible, and the glyph centred in it left
+ * the ink inside the line: on the owner's phone (12 Nov 2026) the friends
+ * screen's chevron stood well in from the list's card and the tab's
+ * envelope below it. Measured from the icon font itself, rasterised at
+ * 22pt: the chevron's ink starts 6.75pt into its 22pt advance, so 11 +
+ * 6.75 = 17.8pt in from the box's edge — and the owner's screenshot (a
+ * 440pt phone at 2.1px a point) has it 18.5 in, the difference being the
+ * edge's antialiasing. The target keeps its 44pt; it only moves outward,
+ * and its edge stays 4pt clear of the screen's.
+ *
+ * The first cut was 14, from the same screenshot read at a 393pt phone's
+ * scale; the phone is 440, which left the chevron 4pt short.
  */
-export const BACK_HANG = 14;
+export const BACK_HANG = 18;
+
+/**
+ * The same, for the glyphs a bare control wears at the header's right
+ * end: how far each one's ink stops short of its 44pt box's right edge,
+ * from the icon font rasterised at 21pt (12 Nov 2026). Hung by this much,
+ * the ink ends on the margin the content's right edge does.
+ */
+export const INK_GAP_END = { 'person-add-outline': 12, 'ellipsis-horizontal': 13 } as const;
 
 /** In-page back control: the round glass button wearing a chevron —
  *  or, `bare`, the chevron alone, hung to the margin (`BACK_HANG`). */

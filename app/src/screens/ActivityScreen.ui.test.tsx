@@ -136,7 +136,7 @@ describe('the frame', () => {
     // Hung past the margin, so the chevron's ink, not its empty box,
     // stands on the line the cards below start at (`BACK_HANG`).
     let hung = false;
-    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-14px';
+    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-18px';
     expect(hung).toBe(true);
   });
 
