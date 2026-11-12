@@ -219,6 +219,7 @@ vi.mock('../lib/data', async (actual) => ({
 }));
 
 import ExploreScreen from './ExploreScreen';
+import { FILTER_PAD_BOTTOM } from './explore/styles';
 
 const photo = (uri: string) => ({ photo_uri: uri, is_cover: true, is_hidden: false, sort_order: 0, attribution_name: null });
 
@@ -334,7 +335,7 @@ const sectionHeader = (): HTMLElement => {
   // Up from the filter control, which only the section header draws, to
   // the element carrying the row's own bottom padding.
   let el: HTMLElement | null = screen.getByTestId('explore-filter');
-  while (el && window.getComputedStyle(el).paddingBottom !== '10px') el = el.parentElement;
+  while (el && window.getComputedStyle(el).paddingBottom !== `${FILTER_PAD_BOTTOM}px`) el = el.parentElement;
   if (!el) throw new Error('no pinned chips row in the tree');
   return el;
 };
@@ -2082,6 +2083,22 @@ describe('the status bar over the photograph', () => {
     scrollTo(1500);
     scrollTo(2000);
     expect(spies.setStatusBarStyle.mock.calls.length).toBe(after);
+  });
+});
+
+// The heading and its category row read as one cluster (owner, 12 Nov
+// 2026): 8 less under the heading than the app's 16, and 14 rather than
+// 10 under the row, before the first card.
+describe('the Places heading and its row', () => {
+  it('sits the row nearer its heading and further from the first card', () => {
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    const head = screen.getByText('Places').parentElement as HTMLElement;
+    const bar = head.parentElement as HTMLElement;
+    expect(getComputedStyle(head).marginBottom).toBe('8px');
+    expect(getComputedStyle(bar).paddingBottom).toBe('14px');
+    // The pin is still placed by the bar's top, which did not move.
+    expect(getComputedStyle(bar).paddingTop).toBe('10px');
   });
 });
 

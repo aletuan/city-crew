@@ -23,6 +23,32 @@ import { colors, display, font, onPhoto, radius, space, type } from '../../theme
  */
 export const FILTER_PAD = 10;
 
+/**
+ * Under the category row, before the first card: 14, where it was
+ * `FILTER_PAD`'s 10 (owner, 12 Nov 2026). On the owner's 20:48
+ * screenshot the "All" underline stood 9pt off the first photograph
+ * while the heading stood 33pt off the row it heads, so the row read as
+ * the top of the list rather than as the heading's. Paired with
+ * `PLACES_HEAD_GAP`, which takes 8 from above the row; together they
+ * make it 25 above and 13 below, and the bar 4pt shorter. Its own name
+ * because `FILTER_PAD` also places the pin (`pinAt`), which this must
+ * not move.
+ */
+export const FILTER_PAD_BOTTOM = 14;
+
+/**
+ * The Places heading's gap to its category row: `headingToContent` less
+ * 8 (owner, 12 Nov 2026). The 16 is the app's gap under every heading,
+ * and it is right as a box — but this heading's row is 36pt tall for the
+ * filter button, about 5 more than the 22pt word's own line, and each
+ * category item adds 7 of padding above its word. So the 16 drew as 33pt
+ * of ink, baseline to the row's capitals, where "From the community"
+ * stands about 20 off its shelf. 8 brings it to 25 — as near that as the
+ * button's box and the items' tap height allow without trimming either.
+ * Measured on the owner's 20:48 screenshot (923px for a 393pt screen).
+ */
+export const PLACES_HEAD_GAP = space.headingToContent - 8;
+
 export const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   // Full-bleed photography wears no hairline: a translucent border over
@@ -108,8 +134,9 @@ export const s = StyleSheet.create({
   // 430pt screen the thumb has to cross the whole row to reach the sort
   // for the list directly beneath it. Left-aligned, the pair reads as one
   // phrase: the heading, and what you do to it.
-  // The gap to the chips is the app's own: `headingToContent`, the same
-  // 16 that sits under every other heading in it.
+  // The gap to the chips was the app's own `headingToContent`, the 16
+  // under every other heading; it is 8 less now, for the reason at
+  // `PLACES_HEAD_GAP`.
   //
   // It briefly had none, and that was a leftover rather than a choice.
   // While the block still pinned itself, this row was given a fixed
@@ -121,7 +148,7 @@ export const s = StyleSheet.create({
   placesHead: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page,
-    marginBottom: space.headingToContent,
+    marginBottom: PLACES_HEAD_GAP,
   },
   placesTitle: { color: colors.text, ...type.section },
   // The glyph alone, with no disc (owner, 24 Oct 2026). The box keeps
@@ -201,7 +228,7 @@ export const s = StyleSheet.create({
   // pin. It scrolls off like anything else, and the copy that takes over
   // is the one that has to clear the clock.
   filterBar: {
-    paddingBottom: FILTER_PAD,
+    paddingBottom: FILTER_PAD_BOTTOM,
   },
   // And that copy: over the screen rather than in the list, so nothing
   // it does can move a row or eat a tap meant for one. Opaque, because
