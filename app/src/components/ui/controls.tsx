@@ -176,7 +176,9 @@ export function Toggle(props: React.ComponentProps<typeof Switch>) {
       // Coffee and rose on Rose like every other chosen thing. Here so
       // that the second switch (Profile's tips, 17 Oct 2026) could not
       // come out in different colours from the first.
-      trackColor={{ false: colors.borderGlass, true: colors.accentFaint }}
+      // (`switchOn` is that accent let down on the two neutral looks,
+      // where it read as a dark block — see the token.)
+      trackColor={{ false: colors.borderGlass, true: colors.switchOn }}
       thumbColor={colors.text}
       {...props}
       style={[{ alignSelf: 'center' }, props.style]}
