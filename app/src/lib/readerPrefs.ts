@@ -18,7 +18,10 @@
 
 /** Grid or cards on a collection — see `CollectionDetailScreen`. */
 export const COLLECTION_VIEW_KEY = 'citycrew.collection.view';
-/** Whether the grid notice has been closed — see `CollectionDetailScreen`. */
+/** Whether the grid notice had been closed. The notice is gone (owner,
+ *  12 Nov 2026, see `CollectionDetailScreen`'s view menu) and nothing
+ *  reads this; it stays listed so that deleting an account still clears
+ *  what phones already hold under it. */
 export const GRID_NOTICE_KEY = 'citycrew.collection.gridNotice.v2';
 
 /** Every value kept per reader, for clearing when the account is deleted. */

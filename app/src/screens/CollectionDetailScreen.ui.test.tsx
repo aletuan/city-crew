@@ -34,7 +34,7 @@
 
 import React from 'react';
 import {
-  AccessibilityInfo, Alert, Animated, Dimensions, FlatList, LayoutAnimation, PanResponder, type PanResponderCallbacks,
+  AccessibilityInfo, Alert, Dimensions, FlatList, LayoutAnimation, PanResponder, type PanResponderCallbacks,
   StyleSheet, type StyleProp, type TextStyle,
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -60,9 +60,6 @@ const spies = vi.hoisted(() => ({
   canReport: vi.fn((_t: { kind: string; id: string; ownerId?: string | null }) => true),
   profileLookup: vi.fn((_h: string | null) => ({ data: null as null | { id?: string; full_name?: string; avatar_url: string }, loading: false })),
   blockUser: vi.fn(async (_id: string) => {}),
-  // The grid notice on the account: open there, unless a test says not.
-  noticeClosed: vi.fn(async (_id: string) => false),
-  closeNotice: vi.fn(async (_id: string) => {}),
 }));
 
 const state = vi.hoisted(() => ({
@@ -131,8 +128,6 @@ vi.mock('../lib/data', async (orig) => ({
   setCollectionPublic: spies.setCollectionPublic,
   useProfileByHandle: spies.profileLookup,
   blockUser: spies.blockUser,
-  fetchGridNoticeClosed: spies.noticeClosed,
-  closeGridNotice: spies.closeNotice,
 }));
 vi.mock('../components/reportFlow', () => ({
   useReport: () => ({ report: spies.report, canReport: spies.canReport, node: null }),
@@ -345,8 +340,6 @@ beforeEach(() => {
   spies.setCollectionPublic.mockImplementation(async () => {});
   spies.canReport.mockImplementation(() => true);
   spies.blockUser.mockImplementation(async () => {});
-  spies.noticeClosed.mockImplementation(async () => false);
-  spies.closeNotice.mockImplementation(async () => {});
   spies.profileLookup.mockImplementation(() => ({ data: null, loading: false }));
   state.uid = 'me';
   state.ducked = false;
@@ -2422,12 +2415,11 @@ describe('the actions and the dock', () => {
 describe('the grid', () => {
   // Kept per reader: the default reader is 'me'.
   const VIEW = 'citycrew.collection.view:me';
-  const NOTICE = 'citycrew.collection.gridNotice.v2:me';
-  beforeEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
-  afterEach(async () => { await AsyncStorage.removeItem(VIEW); await AsyncStorage.removeItem(NOTICE); });
+  beforeEach(async () => { await AsyncStorage.removeItem(VIEW); });
+  afterEach(async () => { await AsyncStorage.removeItem(VIEW); });
   const toGrid = () => { openMenu(); fireEvent.click(menuRow('Grid')); endModalFade(); };
   const tiles = () => [0, 1, 2].map((i) => screen.getByTestId(`collection-tile-${i}`).textContent);
-  /** Both reads in: the view and whether the notice has been had. */
+  /** The view's stored read in. */
   const reads = () => act(async () => {});
 
   // The owner's grid gives its first cell to Add place (owner's mockup,
@@ -2675,55 +2667,25 @@ describe('the grid', () => {
   });
 
   // The grid as the default (owner, 22 Oct 2026), for a reader who has
-  // chosen no view; and the notice that says so to everybody on the grid,
-  // until they close it themselves.
+  // chosen no view.
   describe('as the default', () => {
     beforeEach(() => { views.fallback = null; });
-    const banner = () => screen.queryByTestId('collection-grid-notice');
-    const ring = () => screen.queryByTestId('collection-more-ring');
 
     // Kept per reader, not per phone (owner, 22 Oct 2026): a second account
-    // on the owner's phone opened on the first one's cards and was told
-    // nothing.
+    // on the owner's phone opened on the first one's cards.
     describe('per reader', () => {
       const PHONE_VIEW = 'citycrew.collection.view';
-      const PHONE_NOTICE = 'citycrew.collection.gridNotice.v2';
       afterEach(async () => {
-        for (const k of [PHONE_VIEW, PHONE_NOTICE, 'citycrew.collection.view:u2', 'citycrew.collection.gridNotice.v2:u2']) {
-          await AsyncStorage.removeItem(k);
-        }
+        for (const k of [PHONE_VIEW, 'citycrew.collection.view:u2']) await AsyncStorage.removeItem(k);
       });
 
-      it('tells a second reader on the same phone, whatever the first chose and closed', async () => {
+      it('opens a second reader on the same phone on the grid, whatever the first chose', async () => {
         await AsyncStorage.setItem(VIEW, 'list');
-        await AsyncStorage.setItem(NOTICE, 'seen');
         await AsyncStorage.setItem(PHONE_VIEW, 'list');
-        await AsyncStorage.setItem(PHONE_NOTICE, 'seen');
         state.uid = 'u2';
         show();
         await reads();
         expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
-        expect(banner()).toBeTruthy();
-        fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
-        expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.collection.gridNotice.v2:u2', 'seen');
-      });
-
-      // One × on any phone is enough on every phone (owner, 22 Oct 2026).
-      it('says nothing on a phone that has not closed it, once the account says it was', async () => {
-        spies.noticeClosed.mockImplementation(async () => true);
-        show();
-        await reads();
-        expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
-        expect(banner()).toBeNull();
-        expect(spies.noticeClosed).toHaveBeenCalledWith('me');
-      });
-
-      it('keeps the × on the account as well as the phone', async () => {
-        show();
-        await reads();
-        fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
-        expect(spies.closeNotice).toHaveBeenCalledWith('me');
-        expect(AsyncStorage.setItem).toHaveBeenCalledWith(NOTICE, 'seen');
       });
 
       it('keeps the phone’s own choice for nobody signed in', async () => {
@@ -2732,16 +2694,6 @@ describe('the grid', () => {
         show();
         await reads();
         expect(screen.queryByTestId('collection-tile-0')).toBeNull();
-        expect(banner()).toBeNull();
-      });
-
-      // Before the launch knows who is reading, a read would be the wrong
-      // person's: the notice waits rather than flash up and go.
-      it('says nothing while it is not yet known who is reading', async () => {
-        state.uid = undefined as unknown as null;
-        show();
-        await reads();
-        expect(banner()).toBeNull();
       });
     });
 
@@ -2752,186 +2704,31 @@ describe('the grid', () => {
       expect(screen.queryByText('card:Pho 10')).toBeNull();
     });
 
-    it('keeps the cards for a reader who chose them, and tells them nothing', async () => {
+    it('keeps the cards for a reader who chose them', async () => {
       await AsyncStorage.setItem(VIEW, 'list');
       show();
       await reads();
       expect(screen.getByText('card:Pho 10')).toBeTruthy();
-      expect(banner()).toBeNull();
-      expect(ring()).toBeNull();
     });
 
-    // Everybody on the grid, the owner's own phone included, which chose
-    // the grid the morning it shipped and was told nothing under the first
-    // rule.
-    it('tells a reader who chose the grid themselves too', async () => {
-      await AsyncStorage.setItem(VIEW, 'grid');
+    // The grid notice is gone (owner, 12 Nov 2026): no banner under the
+    // card and no ring round ⋯, on a reader who never closed it either.
+    it('says nothing about being a grid, and rings nothing', async () => {
       show();
       await reads();
       expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
-      expect(banner()).toBeTruthy();
-      expect(ring()).toBeTruthy();
+      expect(screen.queryByText('Now in grid view')).toBeNull();
+      expect(screen.queryByTestId('collection-more-ring')).toBeNull();
+      expect(screen.getByTestId('collection-intro').nextElementSibling).toBeNull();
     });
 
-    // About the grid, so not on the cards; and back on the grid until it
-    // is closed.
-    it('leaves the cards alone, and is back on the grid until closed', async () => {
-      show();
-      await reads();
-      openMenu();
-      fireEvent.click(menuRow('List'));
-      endModalFade();
-      expect(screen.getByText('card:Pho 10')).toBeTruthy();
-      expect(banner()).toBeNull();
-      expect(ring()).toBeNull();
-      openMenu();
-      fireEvent.click(menuRow('Grid'));
-      endModalFade();
-      expect(banner()).toBeTruthy();
-    });
-
-    // Not before both reads are in: until then a reader who chose the
-    // cards looks like one the grid is a default for.
-    it('says so once the reads are in, under the card, and rings the ⋯ button as the guide does', async () => {
-      show();
-      expect(banner()).toBeNull();
-      await reads();
-      expect(banner()!.textContent).toContain('Now in grid view');
-      // The ⋯ is the button's glyph on its round ground, in the line, and
-      // the line is said with the button's own name.
-      const chip = screen.getByTestId('collection-grid-notice-more');
-      expect(chip.querySelector('[data-icon="ellipsis-horizontal"]')).toBeTruthy();
-      const line = chip.parentElement!;
-      // One line, no full stop (owner, 22 Oct 2026).
-      expect(line.textContent).toBe('Switch to list in the  menu');
-      expect(line.textContent).not.toContain('⋯');
-      expect(line.getAttribute('aria-label')).toBe('Switch to list in the More menu');
-      expect(chip.compareDocumentPosition(line.lastChild!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      // Between the card and the tiles.
-      const intro = screen.getByTestId('collection-intro');
-      expect(intro.compareDocumentPosition(banner()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(banner()!.compareDocumentPosition(screen.getByTestId('collection-tile-0')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      // The guide's ring and pulse, 4 clear of the 44pt button.
-      const r = ring()!;
-      expect([r.style.left, r.style.top, r.style.width, r.style.height]).toEqual(['-4px', '-4px', '52px', '52px']);
-      expect(screen.getByTestId('collection-more-ring-pulse')).toBeTruthy();
-      // Transient: gone once its pulses are done (owner, 22 Oct 2026).
-      // Animations land at once here, so "done" is now.
-      expect(getComputedStyle(r).opacity).toBe('0');
-    });
-
-    // A reader who has had it, whose answer is still being read when the
-    // view's read lands, does not see it flash up meanwhile.
-    it('waits for the answer to whether the reader has had it', async () => {
-      await AsyncStorage.setItem(NOTICE, 'seen');
-      const getItem = AsyncStorage.getItem.bind(AsyncStorage);
-      vi.spyOn(AsyncStorage, 'getItem').mockImplementation((key: string) => (
-        key === NOTICE ? new Promise(() => {}) : getItem(key)
-      ) as never);
-      show();
-      await reads();
-      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
-      expect(banner()).toBeNull();
-      vi.mocked(AsyncStorage.getItem).mockRestore();
-    });
-
-    // Nor, while the view's own read is out, a reader who chose the cards
-    // and is being shown the grid by default for a moment.
-    it('waits for the answer to which view the reader chose', async () => {
-      await AsyncStorage.setItem(VIEW, 'list');
-      const getItem = AsyncStorage.getItem.bind(AsyncStorage);
-      vi.spyOn(AsyncStorage, 'getItem').mockImplementation((key: string) => (
-        key === VIEW ? new Promise(() => {}) : getItem(key)
-      ) as never);
-      show();
-      await reads();
-      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
-      expect(banner()).toBeNull();
-      vi.mocked(AsyncStorage.getItem).mockRestore();
-    });
-
-    it('goes for good with its ×', async () => {
-      const view = show();
-      await reads();
-      fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
-      expect(banner()).toBeNull();
-      expect(ring()).toBeNull();
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(NOTICE, 'seen');
-      cleanup();
-      void view;
-      show();
-      await reads();
-      expect(screen.getByTestId('collection-tile-0')).toBeTruthy();
-      expect(banner()).toBeNull();
-    });
-
-    // Back on the screen with the notice still open, the ring pulses its
-    // three again; once closed, there is nothing to pulse.
-    it('pulses the ⋯ ring again each time the screen comes back into view', async () => {
-      const loop = vi.spyOn(Animated, 'loop');
-      const pulses = () => loop.mock.calls.filter(([, cfg]) => cfg?.iterations === 3).length;
-      show();
-      await reads();
-      await waitFor(() => expect(pulses()).toBeGreaterThan(0));
-      const before = pulses();
-      act(() => focusListeners.forEach((cb) => cb()));
-      await waitFor(() => expect(pulses()).toBe(before + 1));
-      fireEvent.click(screen.getByTestId('collection-grid-notice-close'));
-      act(() => focusListeners.forEach((cb) => cb()));
-      await reads();
-      expect(pulses()).toBe(before + 1);
-      loop.mockRestore();
-    });
-
-    // Opening the menu it points to is not closing it: only its ×.
-    it('stays when the ⋯ menu is opened', async () => {
-      show();
-      await reads();
-      openMenu();
-      endModalFade();
-      expect(banner()).toBeTruthy();
-      expect(ring()).toBeTruthy();
-      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(NOTICE, 'seen');
-    });
-
-    // A phone the first rule marked as told, by a menu opened, is told again.
-    it('takes no notice of the first rule’s mark', async () => {
-      await AsyncStorage.setItem('citycrew.collection.gridNotice', 'seen');
-      show();
-      await reads();
-      expect(banner()).toBeTruthy();
-      await AsyncStorage.removeItem('citycrew.collection.gridNotice');
-    });
-
-    it('stays while the reader only looks, until they answer it', async () => {
-      show();
-      await reads();
-      cleanup();
-      show();
-      await reads();
-      expect(banner()).toBeTruthy();
-      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(NOTICE, 'seen');
-    });
-
-    // The owner's words, 22 Oct 2026, then shortened to one line the same
-    // day: "Đổi về danh sách", no full stop.
-    it('says it in the reader’s language', async () => {
+    // The way back is the ⋯ menu, named as it was: "Tùy chọn khác", not
+    // "Thêm", which heard alone is "add".
+    it('leaves the way back in the ⋯ menu, under the name it had', async () => {
       state.lang = 'vi';
       show();
       await reads();
-      expect(banner()!.textContent).toContain('Bộ sưu tập hiển thị dạng lưới');
-      const line = screen.getByTestId('collection-grid-notice-more').parentElement!;
-      expect(line.textContent).toBe('Đổi về danh sách trong menu ');
-      expect(line.getAttribute('aria-label')).toBe('Đổi về danh sách trong menu Tùy chọn khác');
-      // And the button is called the same, not "Thêm", which heard alone is "add".
       expect(screen.getByRole('button', { name: 'Tùy chọn khác' })).toBeTruthy();
-    });
-
-    it('says nothing over a list with no places', async () => {
-      state.mine = [collection({}, [])];
-      show();
-      await reads();
-      expect(banner()).toBeNull();
     });
   });
 });
