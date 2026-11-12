@@ -12,7 +12,7 @@ import PlaceTile from '../components/PlaceTile';
 import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, Card, Empty, GradientCta, INK_GAP_END, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, CHIP_H, CHIP_SLOP, Card, Empty, GradientCta, INK_GAP_END, PressableScale, RoundIconButton, Screen,
   fireHaptic, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
@@ -1038,6 +1038,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      is not private any more. The chevron is what says the word opens
      something; without it the row reads as a label.
 
+     A pill (owner, 12 Nov 2026, from a reference): the glass fill and
+     hairline a kind pill wears, so the word reads as a thing to press
+     rather than a line of the card's text, and neutral, because the
+     state is a setting and not news. The word stays: the reference drew
+     the pill with the glyph alone, and a third state (a list shared with
+     chosen friends) is coming whose glyph nobody could guess. VoiceOver
+     hears the word either way.
+
      Both states wear one grey (owner, 12 Nov 2026). Public was the
      app's green, semibold, as "the state worth checking". It read as
      the loudest thing on the card after the title, for a setting. The
@@ -1057,7 +1065,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       contentStyle={s.visibility}
       scaleTo={0.94}
       haptic="selection"
-      hitSlop={{ top: 14, bottom: 14, left: 12, right: 8 }}
+      // A chip on the button scale: 32 drawn, 44 to the thumb.
+      hitSlop={CHIP_SLOP}
       onPress={() => setWhoSees(true)}
       accessibilityRole="button"
       accessibilityHint={t(
@@ -1160,10 +1169,19 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </PressableScale>
   ) : null;
 
-  /* The card's foot: who can see it, how many places, and the heart.
-     Under a hairline, the facts at the start and the heart at the end —
-     the end of the row is where a thumb finds a gesture. Drawn on every
-     list, yours included: the count is the one line every list has.
+  /* The card's foot: the heart, then who can see it or how many places.
+     Under a hairline, all of it from the start of the row.
+
+     The heart leads (owner, 12 Nov 2026). It sat at the end, "where a
+     thumb finds a gesture", but the apps this reads beside — Instagram,
+     Threads, X — put the like first in the row, and first it stands in
+     one place whether the list is yours or somebody else's. Grouped from
+     the start rather than spread across three columns: only a public
+     list has a heart (likes are public-only), and a private list's pill
+     would otherwise float in a middle column with nothing to its left.
+
+     Drawn on every list, yours included: the count is the one line every
+     list has.
 
      The count is the pin and the figure, never the word (owner, 31 Oct
      and 2 Nov 2026): the pin says what is counted, so "19 places" said
@@ -1183,6 +1201,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
   const cardFoot = col ? (
     <View style={s.cardFoot} testID="collection-stats">
+      {heart}
       <View style={s.footCount}>
         {visibility ?? (
           <>
@@ -1191,7 +1210,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           </>
         )}
       </View>
-      {heart}
     </View>
   ) : null;
 
@@ -2018,17 +2036,26 @@ const s = StyleSheet.create({
   // `Screen` answers better: two lines at 26pt hold far more of a name
   // than one line at 20 ever did.
   // The glyph, the word and the chevron, as one press. The 5 the header
-  // line it came from used, so the three still read as one phrase.
-  visibility: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // line it came from used, so the three still read as one phrase. The
+  // pill is `KindPill`'s glass fill and pill radius, with the hairline
+  // its chosen state draws as the outline the owner asked for, and
+  // `CHIP_H` tall with `Chip`'s 14 of side padding: a pressable chip
+  // stands on the button scale.
+  visibility: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    height: CHIP_H, paddingHorizontal: 14,
+    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.borderGlass,
+  },
   // A question, so it is the sheet's whole header: the rows under it are
   // the answers, and the title VoiceOver hears first. The size and face
   // Visited's sheet titles use.
   sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold, paddingHorizontal: 4 },
   meta: { color: colors.textTertiary, ...type.meta },
-  // The heart and its tally, one fact. At the end of the card's foot now:
-  // in the header it had to sit beside the count, or it read as a second
-  // header control slipped a line under ⋯ — inside the card there is no
-  // control above it to be mistaken for.
+  // The heart and its tally, one fact, first in the card's foot (see
+  // `cardFoot`). In the header it had to sit beside the count, or it read
+  // as a second header control slipped a line under ⋯ — inside the card
+  // there is no control above it to be mistaken for.
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Public or Private, in one grey — see `visibility`.
   visibilityWord: { color: colors.textSecondary, ...type.meta },
@@ -2068,9 +2095,10 @@ const s = StyleSheet.create({
   // should not open a sheet about a person.
   curator: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%' },
   curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
-  // A hairline, then the count and the heart at either end.
+  // A hairline, then the heart and the facts from the start. 16 between
+  // them, three times the 5 inside one, so two facts read as two.
   cardFoot: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', gap: 16,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
