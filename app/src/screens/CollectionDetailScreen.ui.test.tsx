@@ -39,11 +39,11 @@ import {
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, cleanup, fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, fontSizeOf, render, screen, textStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
-import { colors, space } from '../theme';
+import { colors, font, space } from '../theme';
 
 const spies = vi.hoisted(() => ({
   goTo: vi.fn(),
@@ -722,6 +722,31 @@ describe('publishing', () => {
     foot = screen.getByTestId('collection-stats');
     expect(foot.querySelector('[data-icon="globe-outline"]')).toBeTruthy();
     expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeNull();
+  });
+
+  // One grey for both states (owner, 12 Nov 2026): Public was the app's
+  // green and semibold, the loudest thing on the card after the title.
+  it('wears one grey whether the list is public or private', () => {
+    const worn = (is_public: boolean) => {
+      state.mine = [collection({ is_public })];
+      show();
+      const control = screen.getByTestId('collection-visibility');
+      const word = within(control).getByText(is_public ? 'Public' : 'Private');
+      const glyph = control.querySelector(`[data-icon="${is_public ? 'globe-outline' : 'lock-closed-outline'}"]`);
+      const out = {
+        glyph: glyph?.getAttribute('data-color'),
+        word: getComputedStyle(word).color,
+        weight: textStyleOf(word)?.fontWeight,
+      };
+      cleanup();
+      return out;
+    };
+    const [priv, pub] = [worn(false), worn(true)];
+    expect(pub).toEqual(priv);
+    expect(pub.glyph).toBe(String(colors.textSecondary));
+    const n = parseInt(String(colors.textSecondary).slice(1), 16);
+    expect(pub.word).toBe(`rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`);
+    expect(pub.weight).toBe(font.regular);
   });
 
   it('makes a list public, reloads both catalogs, and says so with no Undo', async () => {

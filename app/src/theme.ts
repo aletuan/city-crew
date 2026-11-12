@@ -109,8 +109,11 @@ export const loadedLook: Look = readLook(storeOf(() => Settings));
 const SIDES = LOOKS[loadedLook];
 /** One token, as a plain value where the look's two sides agree and as a
  *  `dyn` pair where they do not. */
-const pick = (k: Exclude<keyof Palette, 'gradAI'>): Color =>
+const pick = (k: Exclude<keyof Palette, 'gradAI' | 'switchOn'>): Color =>
   (SIDES.light[k] === SIDES.dark[k] ? SIDES.light[k] : dyn(SIDES.light[k], SIDES.dark[k]));
+
+/** A palette's switch track: its own where it has one, else `accentFaint`. */
+export const switchOnOf = (p: Palette): string => p.switchOn ?? p.accentFaint;
 
 /**
  * The page colour as plain hex, for the rare style that must resolve the
@@ -291,6 +294,36 @@ export const colors = {
   /** The accent whispered — a mark that should register as warmth, not as
    *  a second thing to read (the rating star). */
   accentFaint: pick('accentFaint'),
+  /** A switch's track when on (`Toggle`).
+   *
+   *  ── why not `accentFaint`, on two looks (owner, 12 Nov 2026) ──
+   *
+   *  The track was `accentFaint`, the accent at 0.62–0.72. On a coloured
+   *  accent that reads as "on": coral, rose or teal at 3.0–3.4:1 on the
+   *  card. Slate and Amber have a neutral accent, near-black, and there
+   *  the same alpha reads as a dark block: 4.16:1 on Slate's white card
+   *  and 5.68 on Amber's straw. The owner, looking at Profile under
+   *  Slate, found it too heavy — the darkest, largest mass on a card of
+   *  hairline icons. iOS's own green is 2.22:1 on white.
+   *
+   *  So those two take their accent at 0.45 instead, measured on the card:
+   *
+   *  | look  | was 0.72 | now 0.45 | on vs. off track |
+   *  |-------|----------|----------|------------------|
+   *  | Slate | 4.16     | 2.24     | 1.71             |
+   *  | Amber | 5.68     | 2.68     | 1.96             |
+   *
+   *  The on/off figure stays near iOS's own (green on its gray, 1.83), and
+   *  the thumb's side says the state as well.
+   *
+   *  Rejected: lowering `accentFaint` itself. It is also the bookmark on
+   *  an empty Collections and Ideas, which is a mark meant to show, and
+   *  the coloured looks' switches were never the complaint. Rejected too:
+   *  0.45 on every look — the owner chose to change only the two
+   *  neutral looks, which are the two that stand out above. */
+  switchOn: switchOnOf(SIDES.light) === switchOnOf(SIDES.dark)
+    ? switchOnOf(SIDES.light)
+    : dyn(switchOnOf(SIDES.light), switchOnOf(SIDES.dark)),
   /** Ambient city-light warmth for background glows — the accent diffused,
    *  so the ground and the accent belong to one light. Plain strings: they
    *  feed a gradient, and the light theme does without the glow entirely

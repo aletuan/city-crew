@@ -45,6 +45,9 @@ export type Palette = {
   accentSoft: string;
   accentLine: string;
   accentFaint: string;
+  /** A switch's track when on, where `accentFaint` is too much of it.
+   *  Absent, the track is `accentFaint` (theme.ts, `colors.switchOn`). */
+  switchOn?: string;
   emberGlow: string;
   emberGlowFade: string;
   sun: string;
@@ -383,6 +386,8 @@ const SLATE: Palette = {
   accentSoft: 'rgba(66,74,88,0.08)',
   accentLine: 'rgba(66,74,88,0.26)',
   accentFaint: 'rgba(66,74,88,0.72)',
+  // The switch at 0.45, not 0.72 — see `colors.switchOn`.
+  switchOn: 'rgba(66,74,88,0.45)',
   emberGlow: 'rgba(66,74,88,0.10)',
   emberGlowFade: 'rgba(66,74,88,0.04)',
   sun: '#B07C10',
@@ -1107,6 +1112,8 @@ const AMBER: Palette = {
   accentSoft: 'rgba(25,24,32,0.10)',
   accentLine: 'rgba(25,24,32,0.32)',
   accentFaint: 'rgba(25,24,32,0.72)',
+  // The switch at 0.45, not 0.72 — see `colors.switchOn`.
+  switchOn: 'rgba(25,24,32,0.45)',
   emberGlow: 'rgba(25,24,32,0.10)',
   emberGlowFade: 'rgba(25,24,32,0.03)',
   sun: '#7A4E00',

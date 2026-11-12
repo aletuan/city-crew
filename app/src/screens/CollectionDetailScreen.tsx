@@ -1035,10 +1035,18 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
      The padlock the list already uses for the same fact, so a private
      collection looks the same wherever you meet it — and a globe once it
-     is not private any more. Published reads in colour, because it is the
-     state worth checking; Private stays grey, the resting state, which
-     does not need announcing. The chevron is what says the word opens
+     is not private any more. The chevron is what says the word opens
      something; without it the row reads as a label.
+
+     Both states wear one grey (owner, 12 Nov 2026). Public was the
+     app's green, semibold, as "the state worth checking". It read as
+     the loudest thing on the card after the title, for a setting. The
+     green also says "fine" everywhere else ("open now", a success
+     banner), and Public is a choice, not a success. It was the same
+     green on every look, Slate's two tones included. The globe and the
+     padlock already say which state it is. The grey is `textSecondary`,
+     one step above the heart's tally beside it, because this word is a
+     control and the tally is not.
 
      Tapping opens a choice rather than flipping the switch: a word that
      changes who can see your list on one touch is a word nobody would
@@ -1063,9 +1071,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <Glyph
         name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
         size={15}
-        color={isPublic ? colors.ok : colors.textTertiary}
+        color={colors.textSecondary}
       />
-      <Text style={isPublic ? s.metaPublic : s.meta}>
+      <Text style={s.visibilityWord}>
         {isPublic ? t('Public', 'Công khai', '公開', '公开', '公開') : t('Private', 'Riêng tư', '非公開', '私密', '私密')}
       </Text>
       <Glyph name="chevron-down" size={13} color={colors.textTertiary} />
@@ -2022,10 +2030,8 @@ const s = StyleSheet.create({
   // header control slipped a line under ⋯ — inside the card there is no
   // control above it to be mistaken for.
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  // The one word on the line that is not grey. `ok` is the app's green and
-  // measures 4.35:1 on paper, which small text needs; the padlock beside
-  // it stays tertiary because a resting state does not need a colour.
-  metaPublic: { color: colors.ok, ...type.meta, fontWeight: font.semibold },
+  // Public or Private, in one grey — see `visibility`.
+  visibilityWord: { color: colors.textSecondary, ...type.meta },
 
   banner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

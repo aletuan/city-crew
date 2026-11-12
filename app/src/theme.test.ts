@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { LOOK_DEFS, type Pinned } from './lib/look';
-import { colors, coverScrim, LOOKS, mosaicScrim, PALETTES } from './theme';
+import { colors, coverScrim, LOOKS, mosaicScrim, PALETTES, switchOnOf, type Palette } from './theme';
 
 /** `rgba(r,g,b,a)` → the three channels and the alpha. */
 function rgba(value: unknown): { rgb: [number, number, number]; alpha: number } {
@@ -233,5 +233,43 @@ describe('mosaicScrim', () => {
 
   it('is one ink throughout, the onPhoto dark', () => {
     for (const s of [...body, ...tail]) expect(s.rgb).toEqual([10, 11, 10]);
+  });
+});
+
+// A switch's track when on (owner, 12 Nov 2026: "the left of the switch is
+// too dark", under Slate). Measured on the card the Profile settings sit
+// on, which is where every switch in the app is drawn.
+describe('switchOn', () => {
+  /** The card, flattened onto the page where it is a veil. */
+  const card = (p: Palette): [number, number, number] =>
+    p.surfaceCard.startsWith('#') ? hex(p.surfaceCard) : over(rgba(p.surfaceCard), hex(p.bg));
+  const on = (p: Palette) => over(rgba(switchOnOf(p)), card(p));
+  const off = (p: Palette) => over(rgba(p.borderGlass), card(p));
+
+  // iOS's own green is 2.22 on white; 0.72 of a near-black accent was
+  // 4.16 (Slate) and 5.68 (Amber). The ceiling is what fails if either
+  // goes back to `accentFaint`.
+  it('is about the weight of the platform switch on the two neutral looks', () => {
+    for (const name of ['slate', 'amber'] as const) {
+      const p = PALETTES[name];
+      expect(contrast(on(p), card(p)), name).toBeGreaterThanOrEqual(2);
+      expect(contrast(on(p), card(p)), name).toBeLessThan(3);
+    }
+  });
+
+  // Lighter must not mean unreadable: on still differs from off on every
+  // look. The lowest today is Coffee, 1.49, which the owner has not
+  // flagged; iOS's own on/off is 1.83.
+  it('stays apart from the off track on every look', () => {
+    for (const [name, p] of NAMED) {
+      expect(contrast(on(p), off(p)), name).toBeGreaterThanOrEqual(1.4);
+    }
+  });
+
+  it('is the accent at accentFaint on every look that does not set one', () => {
+    expect(switchOnOf(PALETTES.coffee)).toBe(PALETTES.coffee.accentFaint);
+    expect(switchOnOf(PALETTES.slate)).not.toBe(PALETTES.slate.accentFaint);
+    expect(colors.switchOn).toBe(PALETTES.charcoal.accentFaint);
+    expect(NAMED.filter(([, p]) => p.switchOn).map(([n]) => n).sort()).toEqual(['amber', 'slate']);
   });
 });
