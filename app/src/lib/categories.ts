@@ -53,8 +53,9 @@ export type CategoryStyle = {
    * Hue is identical to `color`, which is what makes this the same colour
    * rather than a second one. Solved in that order and no other: exact
    * hue first, then saturation at or above 55%, then the lightest
-   * remaining step whose glyph still clears 4.5:1 — save `cafes`, taken
-   * darker to stand off `eats` (see above `STYLES`). Never against a fixed
+   * remaining step whose glyph still clears 4.5:1 — save `cafes` and
+   * `nightlife`, taken darker to stand off `eats` and `focus` (see above
+   * `STYLES`). Never against a fixed
    * lightness — blue and green carry more luminance at the same HSL step
    * and would hand `nature` a 2.32:1 glyph. `views` lands at 6.63 because
    * the lighter candidates on its line miss the hue by a fifth of a
@@ -107,6 +108,31 @@ export type Category = typeof CATEGORY_ORDER[number];
 // rule under `pin` gives: the lightest step on its line, #A36A2F, was 0.5
 // from the eats pin. Coffee is the kind the catalog holds most of, and
 // a darker brown is still coffee.
+//
+// ── the three purples, pulled apart (owner, 12 Nov 2026) ──
+//
+// Nightlife, focus and fun sit at 263°, 238° and 293°, at one pastel
+// lightness. Measured the same way, they were the closest kinds in the
+// table: nightlife–focus 1.6 apart, focus–fun 1.7, nightlife–fun 2.6, and
+// the nightlife and focus pins 1.8. Their hues stay where they are, since
+// they were solved against the company chips in `trip.ts`. They are
+// pulled apart in lightness and saturation, searched over every step that
+// keeps a dot between 2.1 and 4.1:1 on white (the range the other dots
+// already span) and at 3.2 or more on navy, the darkest page a dot sits
+// on. Nightlife goes deepest because it is the night; focus goes lighter,
+// a periwinkle; fun sits between, an orchid:
+//
+//              nightlife          focus             fun        nearest, any vision
+//   was dot    #A98CD9            #989AD7           #C88BD0          1.6
+//   now dot    #996CE5            #A0A2EE           #AD74B4          8.9
+//   was pin    #8E54EE            #6468E2           #B93FC9          1.8
+//   now pin    #5C10DA            (kept)            (kept)           5.9
+//
+// The search's best minimum was 9.8, with fun the darkest of the three;
+// 8.9 with nightlife the darkest was taken instead. Only the nightlife pin
+// moves: the rule's lightest step put the three pins at one luminance. It
+// goes to the darkness the cafés pin already has, 8.3:1 for its glyph,
+// the one other exception to the rule.
 const STYLES = {
   cafes: {
     en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', zh: '咖啡馆', hant: '咖啡館', icon: 'cafe-outline', color: '#A6733F',
@@ -139,8 +165,8 @@ const STYLES = {
     terms: ['market', 'shop', 'store', 'mall', 'souvenir', 'chợ', 'cửa hàng', 'mua sắm', '市場', '市场', '购物', '購物'],
   },
   nightlife: {
-    en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', zh: '夜生活', hant: '夜生活', icon: 'wine-outline', color: '#A98CD9',
-    pin: '#8E54EE',
+    en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', zh: '夜生活', hant: '夜生活', icon: 'wine-outline', color: '#996CE5',
+    pin: '#5C10DA',
     terms: ['bar', 'pub', 'club', 'beer', 'cocktail', 'drinks', 'quán bar', 'bia', 'nhậu', 'về đêm', 'バー', '酒吧'],
   },
   // The two 2026-08 additions, and why their hues are what they are.
@@ -158,12 +184,12 @@ const STYLES = {
   // reel, for `fun`: a cinema is what the catalog holds today, but the key
   // has to be as true for bowling or a show as for a screen.
   focus: {
-    en: 'Focus', vi: 'Học tập', ja: '作業', zh: '学习办公', hant: '學習辦公', icon: 'book-outline', color: '#989AD7',
+    en: 'Focus', vi: 'Học tập', ja: '作業', zh: '学习办公', hant: '學習辦公', icon: 'book-outline', color: '#A0A2EE',
     pin: '#6468E2',
     terms: ['work', 'study', 'laptop', 'wifi', 'coworking', 'quiet', 'làm việc', 'học bài', 'học tập', 'ngồi lâu', '作業', '勉強', '自习', '办公', '自習', '辦公'],
   },
   fun: {
-    en: 'Fun', vi: 'Giải trí', ja: 'エンタメ', zh: '娱乐', hant: '娛樂', icon: 'ticket-outline', color: '#C88BD0',
+    en: 'Fun', vi: 'Giải trí', ja: 'エンタメ', zh: '娱乐', hant: '娛樂', icon: 'ticket-outline', color: '#AD74B4',
     pin: '#B93FC9',
     terms: ['cinema', 'movie', 'film', 'karaoke', 'bowling', 'arcade', 'show', 'rạp phim', 'rạp', 'phim', 'xem phim', 'giải trí', '映画館', '映画', '电影院', '电影', '電影院', '電影'],
   },
