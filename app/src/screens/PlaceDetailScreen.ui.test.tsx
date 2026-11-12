@@ -5,9 +5,8 @@
 // and how many people it rests on, what kind of place it is and what it
 // costs, whether it is open *right now* on Hanoi's clock, and that each row
 // of the info card goes where it says — Google Maps for the address, the
-// dialler for the phone, the browser for the website. The floating discs
-// go back, share a sentence with the map link in it, and hand the place to
-// the save sheet, and become a bar with the name once the photo has gone. Loading and not-found each get their own face.
+// dialler for the phone, the browser for the website. The bar at the top
+// goes back and hands the place to the save sheet. Loading and not-found each get their own face.
 //
 // The catalog, the one-off fetch, the save flow, the taste log and the
 // photo-credit flag are mocked at the screen's own imports. The pure
@@ -17,14 +16,13 @@
 // behaviour under test.
 
 import React from 'react';
-import { Alert, Linking, Share, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { isShielded } from '../lib/share';
+import { Alert, Linking, Share, StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
-import { colors } from '../theme';
+import { colors, radius, space } from '../theme';
 import { CATEGORIES } from '../lib/categories';
 import { clockOf } from '../lib/format';
 
@@ -275,10 +273,6 @@ const swipeTo = (page: number) => {
   const carousel = propsWhere((p) => p.horizontal === true && typeof p.onMomentumScrollEnd === 'function');
   act(() => { carousel.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: page * WIDTH } } }); });
 };
-const scrollPage = (y: number) => {
-  const page = propsWhere((p) => p.scrollEventThrottle === 16 && typeof p.onScroll === 'function');
-  act(() => { page.onScroll({ nativeEvent: { contentOffset: { y } } }); });
-};
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -422,15 +416,15 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
   // level up. Asserting the shared parent is what distinguishes a line
   // below the title from a box next to it, and the shared parent is the
   // whole point: it is what gives the name the full width of the card.
-  it('puts the rating in the title column, below the name, not beside it', () => {
+  // Since 12 Nov 2026 the name is the bar's, so the column under the
+  // photograph opens with the score; the score's line still spans it.
+  it('puts the rating in the page’s column, under the name in the bar', () => {
     show();
     const name = screen.getByTestId('detail-name');
     const rating = screen.getByTestId('detail-rating');
-    // The rating shares its line with check-in now, and that line is the
-    // one that sits in the name's column.
     const line = screen.getByTestId('detail-meta');
     expect(line.contains(rating)).toBe(true);
-    expect(line.parentElement).toBe(name.parentElement);
+    expect(line.parentElement!.contains(name)).toBe(false);
     expect(name.compareDocumentPosition(rating) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -554,8 +548,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(getComputedStyle(row).flexDirection).toBe('row');
     expect(getComputedStyle(row).alignItems).toBe('center');
     expect(getComputedStyle(row.firstElementChild!).flexGrow).toBe('1');
-    expect(screen.getByTestId('detail-name').parentElement!.contains(pill)).toBe(true);
-    expect(screen.getByTestId('detail-name').nextElementSibling).not.toBe(pill);
+    expect(screen.getByTestId('detail-name').parentElement!.contains(pill)).toBe(false);
   });
 
   // A place with no score still has a visit to record: the line stands
@@ -1025,52 +1018,90 @@ describe('PlaceDetailScreen — hero', () => {
   });
 });
 
-describe('PlaceDetailScreen — floating controls', () => {
-  // 44, and no slop needed (owner, 4 Nov 2026): these tried the card's
-  // 36 for a day and were too small to hit on the phone. Explore's 0.55
-  // ground and its rim, the three in one row, share 8 from the bookmark.
-  it('draws back, share and bookmark as 44pt discs, each its own target', () => {
-    show();
-    const flat = (v: unknown) => StyleSheet.flatten(v as StyleProp<ViewStyle>) ?? {};
-    const targets = ['Back', 'Share', 'Save to a collection'].map((label) =>
-      propsWhere((p) => p.accessibilityLabel === label && 'contentStyle' in p));
-    // Back's and the bookmark's discs are layers inside their target, so
-    // each can fade while the target stays; share's is its face.
-    const faces = [
-      flat(propsWhere((p) => p.testID === 'detail-back-disc').style),
-      flat(targets[1].contentStyle),
-      flat(propsWhere((p) => p.testID === 'detail-save-disc').style),
-    ];
-    for (const face of faces) {
-      expect([face.width, face.height, face.borderRadius]).toEqual([44, 44, 22]);
-      expect(face.backgroundColor).toBe('rgba(10,11,10,0.55)');
-      expect(face.borderWidth).toBeGreaterThan(0);
-    }
-    for (const d of targets) {
-      expect([flat(d.contentStyle).width, flat(d.contentStyle).height]).toEqual([44, 44]);
-      expect(d.hitSlop).toBeUndefined();
-    }
-    const back = flat(targets[0].style);
-    const share = flat(propsWhere((p) => p.testID === 'detail-share-slot').style);
-    const save = flat(targets[2].style);
-    expect(new Set([back.top, share.top, save.top]).size).toBe(1);
-    expect(back.top).toBe(8);
-    expect((share.right as number) - (save.right as number)).toBe(44 + 8);
-    expect(back.left).toBe(save.right);
-    // A white glyph for the photograph and an ink one for the paper.
-    const size = (icon: string) => [...document.querySelectorAll(`[data-icon="${icon}"]`)].map((g) => g.getAttribute('data-size'));
-    expect([size('chevron-back'), size('share-outline'), size('bookmark-outline')]).toEqual([['22', '22'], ['20'], ['20', '20']]);
+// The owner's mock-up (12 Nov 2026): a bar on the paper with back, the
+// name and the bookmark, both controls bare, over the photograph as a card.
+describe('PlaceDetailScreen — the bar', () => {
+  const flat = (v: unknown) => StyleSheet.flatten(v as StyleProp<ViewStyle>) ?? {};
+
+  it('holds back, the name and the bookmark in one row, in that order', () => {
+    show(place({ place_photos: [photo('a.jpg', { is_cover: true })] }));
+    const back = screen.getByTestId('detail-back');
+    const name = screen.getByTestId('detail-name');
+    const save = screen.getByTestId('detail-save');
+    const row = name.parentElement!;
+    expect(row.contains(back) && row.contains(save)).toBe(true);
+    expect(getComputedStyle(row).flexDirection).toBe('row');
+    expect(back.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(name.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // On the paper, not on the photograph: the card comes after the bar.
+    const img = document.querySelector('img[src="a.jpg"]')!;
+    expect(img).toBeTruthy();
+    expect(row.contains(img)).toBe(false);
+    expect(row.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  // UX-07: these two were English literals, read as "Back" and "Share"
-  // in the middle of a Vietnamese screen.
-  it('names Back and Share in the reader\'s language', () => {
+  it('draws both controls bare and hangs them to the margins', () => {
+    show();
+    const back = propsWhere((p) => p.accessibilityLabel === 'Back' && 'contentStyle' in p);
+    const save = propsWhere((p) => p.accessibilityLabel === 'Save to a collection' && 'contentStyle' in p);
+    for (const c of [back, save]) {
+      const face = flat(c.contentStyle);
+      expect([face.width, face.height]).toEqual([44, 44]);
+      expect(face.backgroundColor ?? 'transparent').toBe('transparent');
+      expect(c.hitSlop).toBeUndefined();
+    }
+    expect(flat(back.style).marginLeft).toBe(-18);
+    expect(flat(save.style).marginRight).toBe(-16);
+    const size = (icon: string) => document.querySelector(`[data-icon="${icon}"]`)!.getAttribute('data-size');
+    expect([size('chevron-back'), size('bookmark-outline')]).toEqual(['22', '20']);
+  });
+
+  it('centres the brand on one line, shrinking a little before it cuts', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Old Quarter' }));
+    const name = screen.getByTestId('detail-name');
+    expect(name.textContent).toBe('Cộng Cà Phê');
+    const props = propsWhere((p) => p.testID === 'detail-name');
+    const text = flat(props.style) as TextStyle;
+    expect(text.textAlign).toBe('center');
+    expect(text.fontSize).toBe(19);
+    expect(props.numberOfLines).toBe(1);
+    expect(props.adjustsFontSizeToFit).toBe(true);
+    expect(props.minimumFontScale).toBe(0.85);
+    expect(props.accessibilityRole).toBe('header');
+  });
+
+  // The mock-up's card: 400 x 252 on a 440pt phone, 5:8, inside the
+  // page's margins and rounded all round; its marks 12 in from its edge.
+  it('draws the photographs as a card inside the margins, at 5:8', () => {
+    show(place({ place_photos: [photo('a.jpg', { is_cover: true }), photo('b.jpg', { sort_order: 1 })] }));
+    const strip = propsWhere((p) => typeof p.countRight === 'number' && typeof p.renderPage === 'function');
+    const w = WIDTH - 2 * space.page;
+    expect(strip.width).toBe(w);
+    expect(strip.height).toBe(Math.round(w * 5 / 8));
+    expect(strip.countRight).toBe(12);
+    const wrap = flat(propsWhere((p) => {
+      const st = flat(p.style);
+      return st.overflow === 'hidden' && st.height === Math.round(w * 5 / 8);
+    }).style);
+    expect(wrap.marginHorizontal).toBe(space.page);
+    expect(wrap.borderRadius).toBe(radius.card);
+  });
+
+  // The mock-up has no share, and the owner asked for the mock-up.
+  it('offers no share', () => {
+    show();
+    expect(screen.queryByRole('button', { name: 'Share' })).toBeNull();
+    expect(document.querySelector('[data-icon="share-outline"]')).toBeNull();
+    expect(shareSpy).not.toHaveBeenCalled();
+  });
+
+  // UX-07: an English literal, read as "Back" in the middle of a
+  // Vietnamese screen.
+  it('names Back in the reader\'s language', () => {
     state.lang = 'vi';
     show();
     expect(screen.getByTestId('detail-back')).toBe(screen.getByRole('button', { name: 'Quay lại' }));
-    expect(screen.getByRole('button', { name: 'Chia sẻ' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Share' })).toBeNull();
   });
 
   it('goes back', () => {
@@ -1089,53 +1120,15 @@ describe('PlaceDetailScreen — floating controls', () => {
     expect(spies.save).toHaveBeenCalledWith(p);
   });
 
-  it('says a saved place is saved, and still opens the sheet to change lists', () => {
+  it('says a saved place is saved, in the accent, and still opens the sheet to change lists', () => {
     state.saved = ['cong-caphe'];
     show();
     const btn = screen.getByRole('button', { name: 'Saved — change collections' });
     expect(a11yState('Saved — change collections')).toEqual({ selected: true });
-    expect(document.querySelector('[data-icon="bookmark"]')).toBeTruthy();
+    const glyph = document.querySelector('[data-icon="bookmark"]')!;
+    expect(glyph.getAttribute('data-color')).toBe(String(colors.accent));
     fireEvent.click(btn);
     expect(spies.save).toHaveBeenCalledTimes(1);
-  });
-
-  it('shares the name, address and the Google Maps link', () => {
-    show();
-    fireEvent.click(screen.getByLabelText('Share'));
-    expect(shareSpy).toHaveBeenCalledWith({
-      message: 'Cộng Cà Phê - Old Quarter — 152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam\n'
-        + `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
-    });
-  });
-
-  // Through `lib/share`, whose shield takes the tap that closes the
-  // system sheet above its top edge, where this screen's buttons are.
-  it('shares behind the shield', () => {
-    let close!: () => void;
-    shareSpy.mockImplementationOnce(() => new Promise((res) => { close = () => res({ action: 'dismissedAction', activityType: undefined }); }));
-    show();
-    fireEvent.click(screen.getByLabelText('Share'));
-    expect(isShielded()).toBe(true);
-    close();
-  });
-
-  it('announces Share as a button', () => {
-    show();
-    expect(screen.getByRole('button', { name: 'Share' })).toBeTruthy();
-  });
-
-  it('shares the name alone, with no dangling dash, for a place with no address', () => {
-    show(place({ address: null, lat: null, lng: null }));
-    fireEvent.click(screen.getByLabelText('Share'));
-    expect(shareSpy.mock.calls[0][0]).toEqual({ message: 'Cộng Cà Phê - Old Quarter' });
-  });
-
-  it('shares without a link for a place with no coordinates', () => {
-    show(place({ lat: null, lng: null }));
-    fireEvent.click(screen.getByLabelText('Share'));
-    expect(shareSpy.mock.calls[0][0]).toEqual({
-      message: 'Cộng Cà Phê - Old Quarter — 152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam',
-    });
   });
 });
 
@@ -1685,93 +1678,12 @@ describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
   });
 });
 
-// The owner's mock-up (12 Nov 2026) put the name in a bar at the top with
-// bare controls. Over the photograph the discs stay (47% of covers left a
-// bare white chevron under 3:1); once the photograph has gone, a paper bar
-// comes in under the controls with the name in it. On this 400pt window
-// with no inset the hero is 340 tall, the clock turns at 296, and the bar
-// comes in across the 44 before that.
-describe('PlaceDetailScreen — the name bar', () => {
-  const opacity = (id: string) => Number(getComputedStyle(screen.getByTestId(id)).opacity || '1');
-  const shift = (id: string) => getComputedStyle(screen.getByTestId(id).parentElement!).transform;
-
-  it('is not there over the photograph, and the name is only under it', () => {
+// The clock sits on the bar's paper now, never on a photograph, so the
+// screen leaves its ink to the scheme as every other pushed screen does.
+describe('PlaceDetailScreen — status bar', () => {
+  it('leaves the clock to the scheme', () => {
     show();
-    expect(opacity('detail-bar')).toBe(0);
-    expect(screen.queryByTestId('detail-bar-name')).toBeNull();
-    expect(propsWhere((p) => p.testID === 'detail-bar').pointerEvents).toBe('none');
-    scrollPage(252);
-    expect(opacity('detail-bar')).toBe(0);
-    expect(screen.queryByTestId('detail-bar-name')).toBeNull();
-  });
-
-  it('comes in with the scroll across the 44pt before the clock turns', () => {
-    show();
-    scrollPage(274);
-    expect(opacity('detail-bar')).toBeCloseTo(0.5, 2);
-    expect(opacity('detail-back-disc')).toBeCloseTo(0.5, 2);
-    // The name comes with the bar, not after it.
-    expect(screen.getByTestId('detail-bar-name')).toBeTruthy();
-    scrollPage(296);
-    expect(opacity('detail-bar')).toBe(1);
-    expect(opacity('detail-back-disc')).toBe(0);
-    expect(opacity('detail-save-disc')).toBe(0);
-    expect(opacity('detail-share-slot')).toBe(0);
-    scrollPage(0);
-    expect(opacity('detail-bar')).toBe(0);
-    expect(opacity('detail-back-disc')).toBe(1);
-    expect(screen.queryByTestId('detail-bar-name')).toBeNull();
-  });
-
-  it('names the place on one line, the brand without its branch', () => {
-    show(place({ name_en: 'Cộng Cà Phê - Old Quarter' }));
-    scrollPage(5000);
-    const name = screen.getByTestId('detail-bar-name');
-    expect(name.textContent).toBe('Cộng Cà Phê');
-    expect(propsWhere((p) => p.testID === 'detail-bar-name').numberOfLines).toBe(1);
-    expect(propsWhere((p) => p.testID === 'detail-bar').pointerEvents).toBe('auto');
-  });
-
-  it('moves back and the bookmark out to the margins, and lets share go', () => {
-    show();
-    expect(shift('detail-back-disc')).toBe('translateX(0px)');
-    scrollPage(5000);
-    expect(shift('detail-back-disc')).toBe('translateX(-18px)');
-    expect(shift('detail-save-disc')).toBe('translateX(16px)');
-    const slot = propsWhere((p) => p.testID === 'detail-share-slot');
-    expect(slot.pointerEvents).toBe('none');
-    expect(slot.importantForAccessibility).toBe('no-hide-descendants');
-  });
-
-  it('still goes back and still saves from the bar', () => {
-    const p = place();
-    const n = show(p);
-    scrollPage(5000);
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-    expect(n.goBack).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Save to a collection' }));
-    expect(spies.save).toHaveBeenCalledWith(p);
-  });
-});
-
-describe('PlaceDetailScreen — status bar over the photo', () => {
-  it('paints the clock light over the hero, and hands it back once scrolled past', () => {
-    show();
-    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true);
-    scrollPage(5000);
-    // The scheme is light, so the screen's own ink is dark.
-    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true);
-    spies.setStatusBarStyle.mockClear();
-    scrollPage(6000);
-    // Still past the hero: nothing to repaint.
     expect(spies.setStatusBarStyle).not.toHaveBeenCalled();
-    scrollPage(0);
-    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true);
-  });
-
-  it('does not claim the bar for a place that is not there', () => {
-    show(null, nav(), 'ghost');
-    expect(spies.setStatusBarStyle).not.toHaveBeenCalledWith('light', true);
   });
 });
 
@@ -2051,14 +1963,15 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
   });
 
   // "City Crew pick": `is_featured` chose Explore's hero and was said
-  // nowhere else. Over the name since 14 Oct 2026, as an eyebrow and not
-  // a filled pill: "chosen" is a claim about the place, not about the
-  // paragraph, and it must survive a featured place with no paragraph.
-  it('marks a featured place as City Crew’s pick over the name, and others not', () => {
+  // nowhere else. Over the name from 14 Oct 2026, over the score since the
+  // name went into the bar, as an eyebrow and not a filled pill: "chosen"
+  // is a claim about the place, not about the paragraph, and it must
+  // survive a featured place with no paragraph.
+  it('marks a featured place as City Crew’s pick over the score, and others not', () => {
     show(place({ desc_en: 'Brunch and counter food under the arches.', is_featured: true }));
     const pick = screen.getByTestId('detail-pick');
     expect(pick.textContent).toBe('City Crew pick');
-    expect(order('detail-pick')).toBeLessThan(order('detail-name'));
+    expect(order('detail-pick')).toBeLessThan(order('detail-meta'));
     expect(screen.getByTestId('detail-why').contains(pick)).toBe(false);
     expect(pick.querySelector('[data-icon="ribbon-outline"]')).toBeTruthy();
     expect(getComputedStyle(pick).backgroundColor).toBe('rgba(0, 0, 0, 0)');

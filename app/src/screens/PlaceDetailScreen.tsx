@@ -1,22 +1,32 @@
-// Place detail — hero carousel with a page count, back/share/save that
-// stand still and become a name bar once the photograph has gone, the
-// score with check-in beside it, the place's kinds as the card's pills, and one
-// grouped card of Address / Hours / Call / Website rows, the weekly table
-// folded behind the open-now line.
+// Place detail — a bar with the way back, the place's name and its
+// bookmark; under it the photographs as a rounded card with a page count;
+// the score with check-in beside it, the place's kinds as the card's pills,
+// and one grouped card of Address / Hours / Call / Website rows, the weekly
+// table folded behind the open-now line.
 //
-// The hero is full-bleed: edge to edge, and up under the status bar, with
-// only its bottom corners rounded. It was a 12pt-inset rounded card, which
-// read as a picture *placed on* the page rather than as the place's own
-// front door — the same argument Explore's hero settled, and the two
-// screens now open the same way. What that costs is spelled out where it
-// is paid: the safe area (the screen no longer insets its top, the hero
-// swallows it), the ink under the clock (`useOwnedStatusBar`), and the
-// two scrims that keep white glyphs readable over an unknown photograph.
+// ── the owner's shape (12 Nov 2026) ──
+//
+// The hero was full-bleed, up under the clock, with back, share and the
+// bookmark floating on it in dark discs and the name in 26pt under it.
+// The owner sent a mock-up of this screen and chose it over that, "simpler":
+// a plain bar on the paper — the chevron bare at the left, the name centred
+// on one line, the bookmark bare at the right — and the photograph as a
+// card under the bar. A bar on paper needs no discs, no scrim and no
+// light ink under the clock, which is three things this screen no longer
+// has to manage. What it costs is written where it is paid: a long name is
+// cut to one line (see `s.barName`), and share is not on the screen.
+//
+// A day earlier the same screen tried a name bar that came in only once
+// the photograph had scrolled away, the photograph staying full-bleed with
+// its discs. Measured, it was defensible — 41–47% of covers leave a bare
+// white glyph on the photo under 3:1, and 18% of names do not fit one
+// centred line — but the owner saw it on the phone and called it not
+// pretty. On paper neither number applies to the glyphs: they are ink.
 
 import { useTourAnchor } from '../components/SignupTour';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Linking, Pressable, ScrollView, Share, StyleSheet,
+  ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet,
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -50,10 +60,9 @@ import { localized, localizedLang } from '../lib/localized';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
 import { useIsSaved, useSaveActions } from '../lib/save';
-import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
-import { colors, display, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, BACK_HANG, Card, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { colors, display, font, radius, space, type } from '../theme';
+import { AmbientWarmth, BackButton, Card, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import { KindPills } from '../components/KindPill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
@@ -130,18 +139,23 @@ function InfoRow({ icon, label, first, onPress, trailing, hug, children }: {
 const HISTORY_ROWS = 5;
 const HISTORY_ROW = 48;
 
-/** The scroll, in points, across which the name bar comes in — the
- *  height of the row it fills; see `bar` in the screen. */
-const BAR_RAMP = 44;
-
 /**
- * How far the bookmark moves out on paper, so its ink ends on the right
- * margin as back's starts on the left one (`BACK_HANG`). From the icon
+ * How far the bookmark's box hangs past the right margin, so its ink ends
+ * on the margin as back's starts on the left one (`BACK_HANG`). From the icon
  * font rasterised at the glyph's 20pt (12 Nov 2026): `bookmark` and
  * `bookmark-outline` both leave 3.75pt of their 20pt advance clear on
  * each side, so centred in a 44pt box the ink stops 15.75 short of it.
  */
 const SAVE_HANG = 16;
+
+/**
+ * The photograph card's height for its width, from the owner's mock-up:
+ * a 400 x 252 card on a 440pt phone, 1.59 to 1. 5:8 is that ratio, and
+ * a little shorter than the 4:3.4 the inset card had before the hero went
+ * full-bleed — the bar above it now holds the name the photo used to sit
+ * over, so the card does not have to carry the top of the screen.
+ */
+const HERO_RATIO = 5 / 8;
 
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
@@ -223,48 +237,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
 
-  // Light ink for as long as a photograph is what sits under the clock,
-  // and null — the scheme's own — the rest of the time: while this screen
-  // is still resolving, and again once the page has scrolled up past the
-  // hero, where the ground under the clock is paper and white ink would
-  // be white on cream. A place reached from another city arrives a beat
-  // late, which is the render that has to re-ask.
-  const pastHeroRef = useRef(false);
-  const heroEndRef = useRef(0);
-  const applyBar = useOwnedStatusBar(() => (place && !pastHeroRef.current ? 'light' : null));
-  useEffect(applyBar, [!!place, applyBar]);
-  // Built once and holding its first closure, so the threshold it compares
-  // against is read through a ref — the same arrangement, and the same
-  // reason, as Explore's.
-  //
-  // A second line, `BAR_RAMP` earlier, is where the name bar starts to
-  // come in (see `bar` below). Kept as state, and set once per crossing,
-  // never per frame: it is the only rate the bar's name, its targets and
-  // what VoiceOver is told change at. The name is not in the bar at all
-  // before then, so the page holds one copy of it while one is shown.
-  const barInRef = useRef(false);
-  const [barIn, setBarIn] = useState(false);
-  const onScroll = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
-    const y = e.nativeEvent.contentOffset.y;
-    const inBar = y > heroEndRef.current - BAR_RAMP;
-    if (inBar !== barInRef.current) {
-      barInRef.current = inBar;
-      setBarIn(inBar);
-    }
-    const past = y > heroEndRef.current;
-    if (past === pastHeroRef.current) return;
-    pastHeroRef.current = past;
-    applyBar();
-  }).current;
-  // The scroll itself, for the bar's fade, which follows the finger rather
-  // than a timer — as Explore's hero row does. Built once, for the reason
-  // Explore's is: a new event handed to the list on every render is one
-  // the list detaches and attaches again.
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [onScrollEvent] = useState(() => Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    { useNativeDriver: true, listener: onScroll },
-  ));
 
   // Opening a place is the one signal the app has to observe for itself:
   // everything else the reader tells us out loud. Noted once per visit and
@@ -293,25 +265,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // The pin's category first, so the page leads where the card led.
   const kindOrder = kindsInOrder(place);
   const priceShown = showPrice && (place.price_display || place.price_vnd != null);
-  // Full width, and tall enough that what shows *below* the status bar is
-  // still the 4:3.4 frame the inset card had — the inset's worth of
-  // picture behind the clock is added, not taken out of the composition.
-  const heroW = width;
-  const heroH = Math.round(width * (3.4 / 4)) + insets.top;
-  // Past once the photo's last 44pt are leaving — the moment the picture
-  // stops being what is under the clock.
-  heroEndRef.current = heroH - insets.top - 44;
-  // How far the name bar is in, 0 to 1: across the 44pt of scroll that
-  // end where the clock turns dark, so the bar is whole the moment the
-  // ink under the clock asks for paper. Shorter than 44 and the bar
-  // snaps in like a cut; longer and it starts while the photograph still
-  // fills the top, a band of paper laid over a picture.
-  const bar = scrollY.interpolate({
-    inputRange: [heroEndRef.current - BAR_RAMP, heroEndRef.current],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const onPhotoOnly = bar.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+  // The page's width less its two margins, at the mock-up's ratio.
+  const heroW = width - space.page * 2;
+  const heroH = Math.round(heroW * HERO_RATIO);
   // Through `lib/maps` rather than spelled out here, now that the saved
   // trip links out too. It also fixes a narrower bug than it looks: the
   // old test was `place.lat && place.lng`, and a place sitting exactly on
@@ -457,16 +413,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // the one action this card exists for must not vanish with it.
   const showsMap = place.lat != null && place.lng != null && !!mapsUrl && canDrawMap;
 
-  // The dash only joins two things: a place with no address shares its
-  // name alone, not a name trailing off into punctuation.
-  //
-  // Through `lib/share`: the tap that closes the system sheet above its
-  // top edge would otherwise land on this screen's buttons underneath.
-  const share = () => {
-    void shareSafely({
-      message: `${fullName}${place.address ? ` — ${place.address}` : ''}${mapsUrl ? `\n${mapsUrl}` : ''}`,
-    }, Share.share);
-  };
   // A row that goes somewhere can fail to get there — a phone that cannot
   // dial, a URL no app claims — and `openURL` says so only by rejecting.
   // Unheard, the tap just did nothing; the reader is told instead.
@@ -485,29 +431,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした', '无法打开地图', '無法開啟地圖'),
   );
 
-  // What lies over the hero whether or not it has photographs: the two
-  // scrims. Laid between the pages and the marks by `PhotoCarousel`, so
-  // the marks stay on top of the scrim they were sized against; laid over
-  // the grey fallback the same way when there is nothing to page. The
-  // three controls used to be here too, and scrolled away with the
-  // picture; they stand still over the page now — see `controls`.
+  // What lies over the hero whether or not it has photographs: the scrim.
+  // Laid between the pages and the marks by `PhotoCarousel`, so the marks
+  // stay on top of the scrim they were sized against; laid over the grey
+  // fallback the same way when there is nothing to page.
   const heroOverlays = (
     <>
-            {/* Two scrims, and neither is a wash over the picture.
-                The top one exists for the clock and for nothing else: it is
-                strongest at the very top edge and gone within the status
-                bar's own height plus a little, so on most photographs you
-                cannot point at where it ends. It does almost nothing for the
-                controls, which is why they keep their discs over a photo.
-                The bottom one is the older job — the page count, the kinds
-                and the credit sit on it — and it now also gives the rounded
-                corners something to end in rather than a hard cut. */}
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(10,11,10,0.36)', 'rgba(10,11,10,0.10)', 'transparent']}
-              locations={[0, 0.45, 1]}
-              style={[s.heroScrimTop, { height: insets.top + 78 }]}
-            />
+            {/* One scrim, for the page count, the kinds and the credit that
+                sit on the bottom edge. The top one went with the controls:
+                nothing rides the top of this photograph any more. */}
             <LinearGradient
               pointerEvents="none"
               colors={['transparent', 'rgba(10,11,10,0.34)']}
@@ -521,102 +453,26 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     </>
   );
 
-  // ── the controls, and the bar they become (owner, 12 Nov 2026) ──
+  // ── the bar ──
   //
-  // The owner sent a mock-up of this screen with the name in a bar at the
-  // top, back at its left and the bookmark at its right, both without a
-  // disc. Taken in part, and the part not taken was measured:
-  //
-  // - Over the photograph the controls keep their discs. On 300 of the
-  //   catalog's covers drawn at a 440pt phone's frame, a bare white glyph
-  //   where the back, share and bookmark stand falls under 3:1 against
-  //   the brightest tenth of what is behind it on 47%, 46% and 41% of
-  //   them, and under 2:1 on 28%, 34% and 27%: pale walls, sky, a lit
-  //   sign. The top scrim is down to 0.06 by the glyph's row, and even a
-  //   flat 0.5 dark layer there left 21–27% under 3:1. A disc is what
-  //   makes a white glyph legible on a picture nobody chose for it.
-  // - The name does not move into a bar on arrival. 255 of the 1,407
-  //   live names (18%) are longer than the 28 characters a centred line
-  //   between two controls holds on that phone; the longest is 73. A
-  //   name cut short is the one thing on this page that must not be, so
-  //   on arrival it stays under the photograph at full width, as it was.
-  //
-  // What was taken is the bar, for when the photograph has gone: the
-  // three controls stand still over the page rather than scrolling off
-  // with the picture — which left nothing to tap back with from the
-  // moment the hero moved — and across the last 44pt of the hero a paper
-  // bar fades in under them with the name at its centre, on one line,
-  // where cutting it costs nothing because it was read in full a moment
-  // earlier. As the bar arrives each disc fades out and its glyph turns
-  // from white to ink and moves out to the margin, so on paper back and
-  // the bookmark are bare, as on the other pushed screens. Share leaves:
-  // the bar is back, the name and the bookmark, as the mock-up had it,
-  // and the name keeps the width share would take from it.
-  //
-  // A white glyph and an ink one laid over each other and cross-faded,
-  // rather than one glyph whose colour is swapped at a line: the swap
-  // would happen at a frame, mid-fade, on whatever ground the fade had
-  // reached.
-  const discStyle = [StyleSheet.absoluteFill, s.fab, { opacity: onPhotoOnly }];
-  const glyphs = (name: keyof typeof Ionicons.glyphMap, size: number, onPic: React.ComponentProps<typeof Ionicons>['color'], onPaper: React.ComponentProps<typeof Ionicons>['color']) => (
-    <>
-      <Animated.View style={[s.glyph, { opacity: onPhotoOnly }]}>
-        <Ionicons name={name} size={size} color={onPic} />
-      </Animated.View>
-      <Animated.View style={[s.glyph, { opacity: bar }]}>
-        <Ionicons name={name} size={size} color={onPaper} />
-      </Animated.View>
-    </>
-  );
-  const top = insets.top + 8;
-  const controls = (
-    <>
-      <Animated.View
-        pointerEvents={barIn ? 'auto' : 'none'}
-        style={[s.bar, { height: top + 44 + 8, opacity: bar }]}
-        testID="detail-bar"
+  // On the paper, so the glyphs are the page's ink and need no disc —
+  // the bare control the other pushed screens wear, each hung past the
+  // margin so its ink, not its empty box, stands on it: back by
+  // `BACK_HANG`, the bookmark by `SAVE_HANG`. The name between them is
+  // centred on the screen, which the two hangs keep within a point.
+  const header = (
+    <View style={[s.bar, { paddingTop: insets.top + 6 }]}>
+      <BackButton onPress={() => navigation.goBack()} bare testID="detail-back" />
+      <Text
+        style={s.barName}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={BAR_NAME_MIN_SCALE}
+        accessibilityRole="header"
+        testID="detail-name"
       >
-        {/* Only once the bar is coming: until then the name under the
-            photograph is the one on screen, and the one VoiceOver reads. */}
-        {barIn ? (
-          <View style={[s.barName, { top }]}>
-            <Text style={s.barNameText} numberOfLines={1} accessibilityRole="header" testID="detail-bar-name">
-              {name.title}
-            </Text>
-          </View>
-        ) : null}
-      </Animated.View>
-
-      <PressableScale
-        onPress={() => navigation.goBack()} scaleTo={0.9}
-        style={[s.fabSlot, { left: space.page, top }]} contentStyle={s.fabBox}
-        // In the reader's language, like every other control: these
-        // two were English literals, and VoiceOver read "Back" and
-        // "Share" in the middle of a Vietnamese screen (UX-07).
-        accessibilityLabel={t('Back', 'Quay lại', '戻る', '返回', '返回')}
-        accessibilityRole="button"
-        testID="detail-back"
-      >
-        <Animated.View style={[s.glyphRow, { transform: [{ translateX: bar.interpolate({ inputRange: [0, 1], outputRange: [0, -BACK_HANG] }) }] }]}>
-          <Animated.View style={discStyle} testID="detail-back-disc" />
-          {glyphs('chevron-back', 22, onPhoto.text, colors.text)}
-        </Animated.View>
-      </PressableScale>
-      <Animated.View
-        style={[s.fabSlot, { right: space.page + 52, top, opacity: onPhotoOnly }]}
-        pointerEvents={barIn ? 'none' : 'auto'}
-        accessibilityElementsHidden={barIn}
-        importantForAccessibility={barIn ? 'no-hide-descendants' : 'auto'}
-        testID="detail-share-slot"
-      >
-        <PressableScale
-          onPress={share} scaleTo={0.9}
-          contentStyle={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
-          accessibilityRole="button"
-        >
-          <Ionicons name="share-outline" size={20} color={onPhoto.text} />
-        </PressableScale>
-      </Animated.View>
+        {name.title}
+      </Text>
       {/* The same control as the bookmark on the card that got you
           here — same glyph, same sheet, same rows underneath. It was a
           heart wired to component state: it filled in, it meant
@@ -624,7 +480,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
       <PressableScale
         anchorRef={saveAnchor}
         onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-        style={[s.fabSlot, { right: space.page, top }]} contentStyle={s.fabBox}
+        style={s.saveHang} contentStyle={s.barControl}
         accessibilityRole="button"
         accessibilityState={{ selected: saved }}
         // Two ids for the two states, so a smoke flow can wait on the
@@ -634,16 +490,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
           : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
       >
-        <Animated.View style={[s.glyphRow, { transform: [{ translateX: bar.interpolate({ inputRange: [0, 1], outputRange: [0, SAVE_HANG] }) }] }]}>
-          <Animated.View style={discStyle} testID="detail-save-disc" />
-          {glyphs(
-            saved ? 'bookmark' : 'bookmark-outline', 20,
-            saved ? onPhoto.accent : onPhoto.text,
-            saved ? colors.accent : colors.text,
-          )}
-        </Animated.View>
+        <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.accent : colors.text} />
       </PressableScale>
-    </>
+    </View>
   );
 
   // ── check-in ──
@@ -725,24 +574,21 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
 
   return (
-    // No top safe area: the photograph is what belongs against the top of
-    // the glass, and insetting the screen is exactly what put a beige band
-    // above it. The bottom is cleared by `tabClearance`, as before.
+    // The bar takes the top inset itself, so it can sit on the paper
+    // right under the clock; the bottom is cleared by `tabClearance`.
     <View style={s.screen}>
-      <AmbientWarmth style={{ top: heroH - 60, height: 620 }} />
-      <Animated.ScrollView
+      <AmbientWarmth style={{ top: heroH, height: 620 }} />
+      {header}
+      <ScrollView
         testID={`detail-place-${place.slug}`}
         contentContainerStyle={{ paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
-        onScroll={onScrollEvent}
-        scrollEventThrottle={16}
       >
         {/* ── hero carousel ──
             `PhotoCarousel`'s paging, given the screen's width and the
             height this screen decides, remounted when the desk changes the
             cover under it so the strip starts again at the new first page.
-            The marks sit at the page margin because this picture runs to
-            the screen's edge; the credit moves to the middle, see `attr`. */}
+            The marks sit `MARK_INSET` in from the card's edge, see `attr`. */}
         <View style={[s.heroWrap, { height: heroH }]}>
           {photos.length > 0 ? (
             <PhotoCarousel
@@ -752,7 +598,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               width={heroW}
               height={heroH}
               scrollKey={pageKey}
-              countRight={space.page}
+              countRight={MARK_INSET}
               countBottom={15}
               attrStyle={s.attr}
               attributionOf={(ph) => ph.attribution_name}
@@ -786,8 +632,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
         </View>
 
         <View style={s.body}>
-          {/* ── the name, then what it scored ──
-              One column, not two. The rating used to sit in a badge beside
+          {/* ── what it scored ──
+              The name is the bar's now (owner, 12 Nov 2026); what follows
+              the photograph is the score. One column, not two, from when
+              the name stood here. The rating used to sit in a badge beside
               the title, which cost the name 109pt of the 386 it could have
               had and made it wrap far more often than it needed to: 32% of
               places on a 393pt phone, against 7% at full width. Measured
@@ -796,7 +644,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               The rating loses nothing by moving. A score and a count are
               one short line of text; a badge was a box drawn around them,
               and the box was the part that was expensive. */}
-          {/* ── "City Crew pick", over the name ──
+          {/* ── "City Crew pick", the first line under the photograph ──
+              Over the name until the name moved into the bar; it stays the
+              first thing read on the page, for the reasons below.
               `is_featured` chose Explore's hero and was said nowhere else;
               since 12 Oct 2026 it is said here, and since 14 Oct it is said
               over the name rather than at the right of the Highlights
@@ -819,7 +669,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ', 'City Crew 精选', 'City Crew 精選')}</Text>
             </View>
           ) : null}
-          <Text style={s.name} testID="detail-name">{name.title}</Text>
+          {/* What `splitName` took off the name — a branch, a tagline —
+              under the photograph rather than in the bar: the bar holds the
+              brand on one line, and a chain's branch is the part a reader
+              would lose first to the cut. */}
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
           {showsNeighborhood ? (
             <View style={s.locRow}>
@@ -1519,9 +1372,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           )}
 
         </View>
-      </Animated.ScrollView>
-      {/* Over the page, under the sheets: still while the page moves. */}
-      {controls}
+      </ScrollView>
       {/* The worn pill's sheet: the history of visits here, newest
           first, each in the reader's own date format with its own undo
           on the right, and "again" below when the rules allow it. The
@@ -1651,79 +1502,53 @@ const ADDRESS_LINES = 2;
  *  44, the height the same chips have on Search and Places. */
 const FACT_HEIGHT = 44;
 
+/** How far in from the photograph card's edge the page count and the
+ *  credit sit. The page margin it used was for a picture running to the
+ *  screen's edge; inside a card, 12 is the inset the card's own corners
+ *  (`radius.card`) leave room for. */
+const MARK_INSET = 12;
+
+/**
+ * How far a long name may shrink before it is cut: to 0.85 of the bar's
+ * 19, about 16 — the size of the text in the cards below. Smaller and the
+ * place's own name would read as the smallest words on its page. At 19 the
+ * bar holds about 31 characters on a 440pt phone, and at 16 about 37;
+ * 90% of the catalog's names are 35 or shorter, before `splitName` takes
+ * the branch off.
+ */
+const BAR_NAME_MIN_SCALE = 0.85;
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
-  // Bottom corners only. The top three edges are the screen's own now, and
-  // a radius there would draw the card outline this stopped being; the
-  // bottom pair is what tells the eye the picture has ended and the page
-  // has begun.
-  //
-  // `radius.card`, the same number Explore's hero rounds to. This briefly
-  // shipped at 30, on the argument that a full-width edge wants a wider
-  // curve than a card — which may be true, but Explore's hero is just as
-  // full-width, and two screens doing one thing at two radii is the
-  // inconsistency you see rather than the softness you don't. If the
-  // curve is ever revisited it moves for both, from the token.
+  // The bar: back, the name, the bookmark, on the page's own paper. 6 over
+  // the row, as `Screen`'s inline header has it; 12 under, the gap the
+  // mock-up leaves between the bar and the photograph.
+  bar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: space.page, paddingBottom: 12,
+  },
+  // 19, the display face's bold: the size at which the mock-up's own name,
+  // "Lazyly Coffee & Quiet Eatery", sets at the width it has there (258pt
+  // in this face against the mock's 255).
+  barName: {
+    flex: 1, textAlign: 'center', color: colors.text,
+    fontSize: 19, fontFamily: display.bold, letterSpacing: 0.2,
+  },
+  barControl: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  saveHang: { marginRight: -SAVE_HANG },
+
+  // A card under the bar, inside the page's margins, rounded all round at
+  // `radius.card` — the photograph as the mock-up drew it.
   heroWrap: {
-    borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card,
+    marginHorizontal: space.page, borderRadius: radius.card,
     overflow: 'hidden', backgroundColor: colors.surfaceGlass,
   },
   // Height comes from the call site — it is the safe-area inset plus the
   // frame, and only the screen knows the inset.
   hero: { backgroundColor: colors.surfaceGlass },
   heroFallback: { alignItems: 'center', justifyContent: 'center' },
-  heroScrimTop: { position: 'absolute', left: 0, right: 0, top: 0 },
   heroScrimBottom: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 116 },
-  fabSlot: { position: 'absolute' },
-  // Everything this screen floats on a photograph is made of one material:
-  // `rgba(10,11,10, …)` with an `onPhoto.line` hairline — the ground the
-  // search disc on Explore, the bookmark and rating on a place card, and
-  // the avatar's busy state are all made of.
-  //
-  // These were `rgba(10,8,13, …)` and bare. Ten-eight-thirteen is black
-  // pulled towards violet where the app's is pulled towards green, which
-  // nobody can name at a glance and everybody can see when the two sit a
-  // screen apart; the missing hairline is what let a disc dissolve into a
-  // dark photograph. The alphas are each sibling's own: a 44pt disc is
-  // Explore's 0.55, a labelled pill is the rating pill's 0.58, and the
-  // dot track stays lightest because it holds no type.
-  //
-  // ── stays 44 (owner, 4 Nov 2026) ──
-  // These went to the card's 36 (`photoDisc`, 44 to the thumb with a 4pt
-  // slop) and came back the same day: on the phone the target felt too
-  // small to hit. The card's disc can be 36 because it sits on a tile
-  // the reader is scanning; these are the screen's way back and its two
-  // actions, on a photograph the reader is looking at, not past.
-  fab: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
-  // The target of a control whose disc fades: 44pt, no fill of its own —
-  // the disc is a layer inside it, so the disc can go while the target
-  // stays where the thumb learned it.
-  fabBox: { width: 44, height: 44 },
-  glyphRow: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
-  glyph: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
-  // The paper the controls stand on once the photograph has gone, with
-  // the hairline every pinned edge in the app draws where content passes
-  // under it.
-  bar: {
-    position: 'absolute', left: 0, right: 0, top: 0,
-    backgroundColor: colors.bg,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
-  },
-  // Between the two 44pt controls and 8 clear of each, the same on both
-  // sides so the name is centred on the screen and not in what is left.
-  barName: {
-    position: 'absolute', left: space.page + 52, right: space.page + 52,
-    height: 44, justifyContent: 'center',
-  },
-  // The name's own face, a size down: 18, the card title's size, because
-  // the line is a 44pt row and the 26 under the photograph would not sit
-  // in it.
-  barNameText: { color: colors.text, fontSize: 18, fontFamily: display.bold, letterSpacing: 0.2, textAlign: 'center' },
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
   // Above the page count, right-aligned to it: the line its old seat's note
@@ -1736,18 +1561,18 @@ const s = StyleSheet.create({
   // today, by the owner's decision; the seat is kept so switching it on
   // moves nothing.
   attr: {
-    position: 'absolute', right: space.page, bottom: 15 + PAGE_COUNT_H + 6, maxWidth: '50%', textAlign: 'right',
+    position: 'absolute', right: MARK_INSET, bottom: 15 + PAGE_COUNT_H + 6, maxWidth: '50%', textAlign: 'right',
     fontSize: 9, color: '#fff', opacity: 0.55,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
 
-  body: { paddingHorizontal: space.page, paddingTop: 18 },
-  // 26, not the 28 this was: the display face runs wider than the system
-  // one, and place names are long enough to wrap without help.
-  name: { color: colors.text, ...type.titleDetail },
+  // 4, so the score's line (8 down) starts 12 under the photograph, the
+  // gap the mock-up leaves there.
+  body: { paddingHorizontal: space.page, paddingTop: 4 },
   // Body face, not display: the qualifier is a fact about the title, not
-  // a second title, and the change of face is what says so.
-  subtitle: { color: colors.textSecondary, ...type.body, marginTop: 4 },
+  // a second title, and the change of face is what says so. 8 down, 12
+  // under the photograph, as the score's line would be without it.
+  subtitle: { color: colors.textSecondary, ...type.body, marginTop: 8 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   loc: { color: colors.textTertiary, ...type.meta },
 
@@ -1859,7 +1684,7 @@ const s = StyleSheet.create({
   // An eyebrow: 6 above the name, which is the gap a kicker keeps from
   // its headline at this size. Spaced caps at 12 — the label's own size
   // from the heading row — so it reads as a mark, not a second title.
-  pick: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  pick: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, marginBottom: 6 },
   pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.8, textTransform: 'uppercase' },
 
   // The credit's line: 4 more than the body's 2-pt gap, so 6 between the
