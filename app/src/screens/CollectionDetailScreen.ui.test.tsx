@@ -724,6 +724,38 @@ describe('publishing', () => {
     expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeNull();
   });
 
+  // On your own public list the heart leads too, and the pill follows it
+  // — the same place for the heart whoever is looking.
+  it('puts the heart before the visibility pill on your own public list', () => {
+    state.mine = [collection({ is_public: true })];
+    show();
+    const foot = screen.getByTestId('collection-stats');
+    expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
+      .toEqual(['heart-outline', 'globe-outline', 'chevron-down']);
+  });
+
+  // A pill (owner, 12 Nov 2026): the kind pill's glass fill and hairline,
+  // neutral, with the word kept in it.
+  it('draws the visibility as a neutral pill that keeps its word', () => {
+    state.mine = [collection({ is_public: true })];
+    show();
+    const control = screen.getByTestId('collection-visibility');
+    const pill = control.firstElementChild as HTMLElement;
+    const css = getComputedStyle(pill);
+    const n = (c: unknown) => {
+      const v = String(c);
+      if (v.startsWith('#')) {
+        const x = parseInt(v.slice(1), 16);
+        return `rgb(${x >> 16}, ${(x >> 8) & 255}, ${x & 255})`;
+      }
+      return v.replace(/,(?=\S)/g, ', ');
+    };
+    expect(css.backgroundColor).toBe(n(colors.surfaceGlass));
+    expect(css.borderTopColor).toBe(n(colors.borderGlass));
+    expect(css.borderTopWidth).toBe('1px');
+    expect(control.textContent).toBe('Public');
+  });
+
   // One grey for both states (owner, 12 Nov 2026): Public was the app's
   // green and semibold, the loudest thing on the card after the title.
   it('wears one grey whether the list is public or private', () => {
@@ -2089,11 +2121,16 @@ describe('the introduction card', () => {
   });
   const sheetRow = (name: string | RegExp) => screen.queryByRole('button', { name });
 
-  it('keeps the heart in the foot, beside nothing but the count', () => {
+  // The heart leads the foot (owner, 12 Nov 2026), as a like leads the
+  // row on Instagram or Threads, and the count follows it.
+  it('keeps the heart in the foot, first, beside nothing but the count', () => {
     show();
     const foot = screen.getByTestId('collection-stats');
-    expect(foot.querySelector('[data-icon="heart-outline"]')).toBeTruthy();
-    expect(foot.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
+      .toEqual(['heart-outline', 'location-outline']);
+    // In that order on screen too, from the start of the row.
+    expect(getComputedStyle(foot).flexDirection).toBe('row');
+    expect(getComputedStyle(foot).justifyContent).not.toBe('space-between');
   });
 
   it('leaves a visitor\u2019s header with the title alone', () => {
