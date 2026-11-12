@@ -7,7 +7,7 @@
 // of the info card goes where it says — Google Maps for the address, the
 // dialler for the phone, the browser for the website. The floating discs
 // go back, share a sentence with the map link in it, and hand the place to
-// the save sheet. Loading and not-found each get their own face.
+// the save sheet, and become a bar with the name once the photo has gone. Loading and not-found each get their own face.
 //
 // The catalog, the one-off fetch, the save flow, the taste log and the
 // photo-credit flag are mocked at the screen's own imports. The pure
@@ -1032,22 +1032,34 @@ describe('PlaceDetailScreen — floating controls', () => {
   it('draws back, share and bookmark as 44pt discs, each its own target', () => {
     show();
     const flat = (v: unknown) => StyleSheet.flatten(v as StyleProp<ViewStyle>) ?? {};
-    const discs = ['Back', 'Share', 'Save to a collection'].map((label) =>
+    const targets = ['Back', 'Share', 'Save to a collection'].map((label) =>
       propsWhere((p) => p.accessibilityLabel === label && 'contentStyle' in p));
-    for (const d of discs) {
-      const face = flat(d.contentStyle);
+    // Back's and the bookmark's discs are layers inside their target, so
+    // each can fade while the target stays; share's is its face.
+    const faces = [
+      flat(propsWhere((p) => p.testID === 'detail-back-disc').style),
+      flat(targets[1].contentStyle),
+      flat(propsWhere((p) => p.testID === 'detail-save-disc').style),
+    ];
+    for (const face of faces) {
       expect([face.width, face.height, face.borderRadius]).toEqual([44, 44, 22]);
       expect(face.backgroundColor).toBe('rgba(10,11,10,0.55)');
       expect(face.borderWidth).toBeGreaterThan(0);
+    }
+    for (const d of targets) {
+      expect([flat(d.contentStyle).width, flat(d.contentStyle).height]).toEqual([44, 44]);
       expect(d.hitSlop).toBeUndefined();
     }
-    const [back, share, save] = discs.map((d) => flat(d.style));
+    const back = flat(targets[0].style);
+    const share = flat(propsWhere((p) => p.testID === 'detail-share-slot').style);
+    const save = flat(targets[2].style);
     expect(new Set([back.top, share.top, save.top]).size).toBe(1);
     expect(back.top).toBe(8);
     expect((share.right as number) - (save.right as number)).toBe(44 + 8);
     expect(back.left).toBe(save.right);
-    const size = (icon: string) => document.querySelector(`[data-icon="${icon}"]`)!.getAttribute('data-size');
-    expect([size('chevron-back'), size('share-outline'), size('bookmark-outline')]).toEqual(['22', '20', '20']);
+    // A white glyph for the photograph and an ink one for the paper.
+    const size = (icon: string) => [...document.querySelectorAll(`[data-icon="${icon}"]`)].map((g) => g.getAttribute('data-size'));
+    expect([size('chevron-back'), size('share-outline'), size('bookmark-outline')]).toEqual([['22', '22'], ['20'], ['20', '20']]);
   });
 
   // UX-07: these two were English literals, read as "Back" and "Share"
@@ -1670,6 +1682,75 @@ describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
     expect(screen.getByText('Closed')).toBeTruthy();
     fireEvent.click(hoursButton());
     expect(screen.queryByText('Mon–Sat')).toBeNull();
+  });
+});
+
+// The owner's mock-up (12 Nov 2026) put the name in a bar at the top with
+// bare controls. Over the photograph the discs stay (47% of covers left a
+// bare white chevron under 3:1); once the photograph has gone, a paper bar
+// comes in under the controls with the name in it. On this 400pt window
+// with no inset the hero is 340 tall, the clock turns at 296, and the bar
+// comes in across the 44 before that.
+describe('PlaceDetailScreen — the name bar', () => {
+  const opacity = (id: string) => Number(getComputedStyle(screen.getByTestId(id)).opacity || '1');
+  const shift = (id: string) => getComputedStyle(screen.getByTestId(id).parentElement!).transform;
+
+  it('is not there over the photograph, and the name is only under it', () => {
+    show();
+    expect(opacity('detail-bar')).toBe(0);
+    expect(screen.queryByTestId('detail-bar-name')).toBeNull();
+    expect(propsWhere((p) => p.testID === 'detail-bar').pointerEvents).toBe('none');
+    scrollPage(252);
+    expect(opacity('detail-bar')).toBe(0);
+    expect(screen.queryByTestId('detail-bar-name')).toBeNull();
+  });
+
+  it('comes in with the scroll across the 44pt before the clock turns', () => {
+    show();
+    scrollPage(274);
+    expect(opacity('detail-bar')).toBeCloseTo(0.5, 2);
+    expect(opacity('detail-back-disc')).toBeCloseTo(0.5, 2);
+    // The name comes with the bar, not after it.
+    expect(screen.getByTestId('detail-bar-name')).toBeTruthy();
+    scrollPage(296);
+    expect(opacity('detail-bar')).toBe(1);
+    expect(opacity('detail-back-disc')).toBe(0);
+    expect(opacity('detail-save-disc')).toBe(0);
+    expect(opacity('detail-share-slot')).toBe(0);
+    scrollPage(0);
+    expect(opacity('detail-bar')).toBe(0);
+    expect(opacity('detail-back-disc')).toBe(1);
+    expect(screen.queryByTestId('detail-bar-name')).toBeNull();
+  });
+
+  it('names the place on one line, the brand without its branch', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Old Quarter' }));
+    scrollPage(5000);
+    const name = screen.getByTestId('detail-bar-name');
+    expect(name.textContent).toBe('Cộng Cà Phê');
+    expect(propsWhere((p) => p.testID === 'detail-bar-name').numberOfLines).toBe(1);
+    expect(propsWhere((p) => p.testID === 'detail-bar').pointerEvents).toBe('auto');
+  });
+
+  it('moves back and the bookmark out to the margins, and lets share go', () => {
+    show();
+    expect(shift('detail-back-disc')).toBe('translateX(0px)');
+    scrollPage(5000);
+    expect(shift('detail-back-disc')).toBe('translateX(-18px)');
+    expect(shift('detail-save-disc')).toBe('translateX(16px)');
+    const slot = propsWhere((p) => p.testID === 'detail-share-slot');
+    expect(slot.pointerEvents).toBe('none');
+    expect(slot.importantForAccessibility).toBe('no-hide-descendants');
+  });
+
+  it('still goes back and still saves from the bar', () => {
+    const p = place();
+    const n = show(p);
+    scrollPage(5000);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(n.goBack).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Save to a collection' }));
+    expect(spies.save).toHaveBeenCalledWith(p);
   });
 });
 

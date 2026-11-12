@@ -1,4 +1,5 @@
-// Place detail — hero carousel with a page count, floating share/save, the
+// Place detail — hero carousel with a page count, back/share/save that
+// stand still and become a name bar once the photograph has gone, the
 // score with check-in beside it, the place's kinds as the card's pills, and one
 // grouped card of Address / Hours / Call / Website rows, the weekly table
 // folded behind the open-now line.
@@ -15,7 +16,7 @@
 import { useTourAnchor } from '../components/SignupTour';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, StyleSheet,
+  ActivityIndicator, Alert, Animated, Linking, Pressable, ScrollView, Share, StyleSheet,
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -52,7 +53,7 @@ import { useIsSaved, useSaveActions } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Card, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, BACK_HANG, Card, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import { KindPills } from '../components/KindPill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
@@ -128,6 +129,19 @@ function InfoRow({ icon, label, first, onPress, trailing, hug, children }: {
  *  sheet that must still leave the pill's row visible behind it. */
 const HISTORY_ROWS = 5;
 const HISTORY_ROW = 48;
+
+/** The scroll, in points, across which the name bar comes in — the
+ *  height of the row it fills; see `bar` in the screen. */
+const BAR_RAMP = 44;
+
+/**
+ * How far the bookmark moves out on paper, so its ink ends on the right
+ * margin as back's starts on the left one (`BACK_HANG`). From the icon
+ * font rasterised at the glyph's 20pt (12 Nov 2026): `bookmark` and
+ * `bookmark-outline` both leave 3.75pt of their 20pt advance clear on
+ * each side, so centred in a 44pt box the ink stops 15.75 short of it.
+ */
+const SAVE_HANG = 16;
 
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
@@ -222,12 +236,35 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // Built once and holding its first closure, so the threshold it compares
   // against is read through a ref — the same arrangement, and the same
   // reason, as Explore's.
+  //
+  // A second line, `BAR_RAMP` earlier, is where the name bar starts to
+  // come in (see `bar` below). Kept as state, and set once per crossing,
+  // never per frame: it is the only rate the bar's name, its targets and
+  // what VoiceOver is told change at. The name is not in the bar at all
+  // before then, so the page holds one copy of it while one is shown.
+  const barInRef = useRef(false);
+  const [barIn, setBarIn] = useState(false);
   const onScroll = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
-    const past = e.nativeEvent.contentOffset.y > heroEndRef.current;
+    const y = e.nativeEvent.contentOffset.y;
+    const inBar = y > heroEndRef.current - BAR_RAMP;
+    if (inBar !== barInRef.current) {
+      barInRef.current = inBar;
+      setBarIn(inBar);
+    }
+    const past = y > heroEndRef.current;
     if (past === pastHeroRef.current) return;
     pastHeroRef.current = past;
     applyBar();
   }).current;
+  // The scroll itself, for the bar's fade, which follows the finger rather
+  // than a timer — as Explore's hero row does. Built once, for the reason
+  // Explore's is: a new event handed to the list on every render is one
+  // the list detaches and attaches again.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [onScrollEvent] = useState(() => Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: true, listener: onScroll },
+  ));
 
   // Opening a place is the one signal the app has to observe for itself:
   // everything else the reader tells us out loud. Noted once per visit and
@@ -264,6 +301,17 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // Past once the photo's last 44pt are leaving — the moment the picture
   // stops being what is under the clock.
   heroEndRef.current = heroH - insets.top - 44;
+  // How far the name bar is in, 0 to 1: across the 44pt of scroll that
+  // end where the clock turns dark, so the bar is whole the moment the
+  // ink under the clock asks for paper. Shorter than 44 and the bar
+  // snaps in like a cut; longer and it starts while the photograph still
+  // fills the top, a band of paper laid over a picture.
+  const bar = scrollY.interpolate({
+    inputRange: [heroEndRef.current - BAR_RAMP, heroEndRef.current],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const onPhotoOnly = bar.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
   // Through `lib/maps` rather than spelled out here, now that the saved
   // trip links out too. It also fixes a narrower bug than it looks: the
   // old test was `place.lat && place.lng`, and a place sitting exactly on
@@ -438,17 +486,19 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   );
 
   // What lies over the hero whether or not it has photographs: the two
-  // scrims, the three floating buttons, the counter. Laid between the
-  // pages and the marks by `PhotoCarousel`, so the marks stay on top of
-  // the scrim they were sized against; laid over the grey fallback the
-  // same way when there is nothing to page.
+  // scrims. Laid between the pages and the marks by `PhotoCarousel`, so
+  // the marks stay on top of the scrim they were sized against; laid over
+  // the grey fallback the same way when there is nothing to page. The
+  // three controls used to be here too, and scrolled away with the
+  // picture; they stand still over the page now — see `controls`.
   const heroOverlays = (
     <>
             {/* Two scrims, and neither is a wash over the picture.
-                The top one exists for the clock and the three discs and for
-                nothing else: it is strongest at the very top edge and gone
-                within the status bar's own height plus a little, so on most
-                photographs you cannot point at where it ends.
+                The top one exists for the clock and for nothing else: it is
+                strongest at the very top edge and gone within the status
+                bar's own height plus a little, so on most photographs you
+                cannot point at where it ends. It does almost nothing for the
+                controls, which is why they keep their discs over a photo.
                 The bottom one is the older job — the page count, the kinds
                 and the credit sit on it — and it now also gives the rounded
                 corners something to end in rather than a hard cut. */}
@@ -464,49 +514,135 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               style={s.heroScrimBottom}
             />
 
-            <PressableScale
-              onPress={() => navigation.goBack()} scaleTo={0.9}
-              style={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} contentStyle={s.fab}
-              // In the reader's language, like every other control: these
-              // two were English literals, and VoiceOver read "Back" and
-              // "Share" in the middle of a Vietnamese screen (UX-07).
-              accessibilityLabel={t('Back', 'Quay lại', '戻る', '返回', '返回')}
-              accessibilityRole="button"
-              testID="detail-back"
-            >
-              <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
-            </PressableScale>
-            <PressableScale
-              onPress={share} scaleTo={0.9}
-              style={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} contentStyle={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
-              accessibilityRole="button"
-            >
-              <Ionicons name="share-outline" size={20} color={onPhoto.text} />
-            </PressableScale>
-            {/* The same control as the bookmark on the card that got you
-                here — same glyph, same sheet, same rows underneath. It was a
-                heart wired to component state: it filled in, it meant
-                nothing, and it forgot on the way back. */}
-            <PressableScale
-              anchorRef={saveAnchor}
-              onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-              style={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} contentStyle={s.fab}
-              accessibilityRole="button"
-              accessibilityState={{ selected: saved }}
-              // Two ids for the two states, so a smoke flow can wait on the
-              // save having landed without reading a trilingual label.
-              testID={saved ? 'detail-saved' : 'detail-save'}
-              accessibilityLabel={saved
-                ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
-                : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
-            >
-              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
-            </PressableScale>
-
             {/* Where the reader is in the photographs is `PageCount`'s
                 "2 / 4" at the bottom right, drawn by the carousel — see
                 that file for why a count and not dots. Not read aloud:
                 each photograph is "Photo n of m" by itself. */}
+    </>
+  );
+
+  // ── the controls, and the bar they become (owner, 12 Nov 2026) ──
+  //
+  // The owner sent a mock-up of this screen with the name in a bar at the
+  // top, back at its left and the bookmark at its right, both without a
+  // disc. Taken in part, and the part not taken was measured:
+  //
+  // - Over the photograph the controls keep their discs. On 300 of the
+  //   catalog's covers drawn at a 440pt phone's frame, a bare white glyph
+  //   where the back, share and bookmark stand falls under 3:1 against
+  //   the brightest tenth of what is behind it on 47%, 46% and 41% of
+  //   them, and under 2:1 on 28%, 34% and 27%: pale walls, sky, a lit
+  //   sign. The top scrim is down to 0.06 by the glyph's row, and even a
+  //   flat 0.5 dark layer there left 21–27% under 3:1. A disc is what
+  //   makes a white glyph legible on a picture nobody chose for it.
+  // - The name does not move into a bar on arrival. 255 of the 1,407
+  //   live names (18%) are longer than the 28 characters a centred line
+  //   between two controls holds on that phone; the longest is 73. A
+  //   name cut short is the one thing on this page that must not be, so
+  //   on arrival it stays under the photograph at full width, as it was.
+  //
+  // What was taken is the bar, for when the photograph has gone: the
+  // three controls stand still over the page rather than scrolling off
+  // with the picture — which left nothing to tap back with from the
+  // moment the hero moved — and across the last 44pt of the hero a paper
+  // bar fades in under them with the name at its centre, on one line,
+  // where cutting it costs nothing because it was read in full a moment
+  // earlier. As the bar arrives each disc fades out and its glyph turns
+  // from white to ink and moves out to the margin, so on paper back and
+  // the bookmark are bare, as on the other pushed screens. Share leaves:
+  // the bar is back, the name and the bookmark, as the mock-up had it,
+  // and the name keeps the width share would take from it.
+  //
+  // A white glyph and an ink one laid over each other and cross-faded,
+  // rather than one glyph whose colour is swapped at a line: the swap
+  // would happen at a frame, mid-fade, on whatever ground the fade had
+  // reached.
+  const discStyle = [StyleSheet.absoluteFill, s.fab, { opacity: onPhotoOnly }];
+  const glyphs = (name: keyof typeof Ionicons.glyphMap, size: number, onPic: React.ComponentProps<typeof Ionicons>['color'], onPaper: React.ComponentProps<typeof Ionicons>['color']) => (
+    <>
+      <Animated.View style={[s.glyph, { opacity: onPhotoOnly }]}>
+        <Ionicons name={name} size={size} color={onPic} />
+      </Animated.View>
+      <Animated.View style={[s.glyph, { opacity: bar }]}>
+        <Ionicons name={name} size={size} color={onPaper} />
+      </Animated.View>
+    </>
+  );
+  const top = insets.top + 8;
+  const controls = (
+    <>
+      <Animated.View
+        pointerEvents={barIn ? 'auto' : 'none'}
+        style={[s.bar, { height: top + 44 + 8, opacity: bar }]}
+        testID="detail-bar"
+      >
+        {/* Only once the bar is coming: until then the name under the
+            photograph is the one on screen, and the one VoiceOver reads. */}
+        {barIn ? (
+          <View style={[s.barName, { top }]}>
+            <Text style={s.barNameText} numberOfLines={1} accessibilityRole="header" testID="detail-bar-name">
+              {name.title}
+            </Text>
+          </View>
+        ) : null}
+      </Animated.View>
+
+      <PressableScale
+        onPress={() => navigation.goBack()} scaleTo={0.9}
+        style={[s.fabSlot, { left: space.page, top }]} contentStyle={s.fabBox}
+        // In the reader's language, like every other control: these
+        // two were English literals, and VoiceOver read "Back" and
+        // "Share" in the middle of a Vietnamese screen (UX-07).
+        accessibilityLabel={t('Back', 'Quay lại', '戻る', '返回', '返回')}
+        accessibilityRole="button"
+        testID="detail-back"
+      >
+        <Animated.View style={[s.glyphRow, { transform: [{ translateX: bar.interpolate({ inputRange: [0, 1], outputRange: [0, -BACK_HANG] }) }] }]}>
+          <Animated.View style={discStyle} testID="detail-back-disc" />
+          {glyphs('chevron-back', 22, onPhoto.text, colors.text)}
+        </Animated.View>
+      </PressableScale>
+      <Animated.View
+        style={[s.fabSlot, { right: space.page + 52, top, opacity: onPhotoOnly }]}
+        pointerEvents={barIn ? 'none' : 'auto'}
+        accessibilityElementsHidden={barIn}
+        importantForAccessibility={barIn ? 'no-hide-descendants' : 'auto'}
+        testID="detail-share-slot"
+      >
+        <PressableScale
+          onPress={share} scaleTo={0.9}
+          contentStyle={s.fab} accessibilityLabel={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
+          accessibilityRole="button"
+        >
+          <Ionicons name="share-outline" size={20} color={onPhoto.text} />
+        </PressableScale>
+      </Animated.View>
+      {/* The same control as the bookmark on the card that got you
+          here — same glyph, same sheet, same rows underneath. It was a
+          heart wired to component state: it filled in, it meant
+          nothing, and it forgot on the way back. */}
+      <PressableScale
+        anchorRef={saveAnchor}
+        onPress={() => save(place)} scaleTo={0.9} haptic="selection"
+        style={[s.fabSlot, { right: space.page, top }]} contentStyle={s.fabBox}
+        accessibilityRole="button"
+        accessibilityState={{ selected: saved }}
+        // Two ids for the two states, so a smoke flow can wait on the
+        // save having landed without reading a trilingual label.
+        testID={saved ? 'detail-saved' : 'detail-save'}
+        accessibilityLabel={saved
+          ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
+          : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
+      >
+        <Animated.View style={[s.glyphRow, { transform: [{ translateX: bar.interpolate({ inputRange: [0, 1], outputRange: [0, SAVE_HANG] }) }] }]}>
+          <Animated.View style={discStyle} testID="detail-save-disc" />
+          {glyphs(
+            saved ? 'bookmark' : 'bookmark-outline', 20,
+            saved ? onPhoto.accent : onPhoto.text,
+            saved ? colors.accent : colors.text,
+          )}
+        </Animated.View>
+      </PressableScale>
     </>
   );
 
@@ -594,11 +730,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     // above it. The bottom is cleared by `tabClearance`, as before.
     <View style={s.screen}>
       <AmbientWarmth style={{ top: heroH - 60, height: 620 }} />
-      <ScrollView
+      <Animated.ScrollView
         testID={`detail-place-${place.slug}`}
         contentContainerStyle={{ paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
-        onScroll={onScroll}
+        onScroll={onScrollEvent}
         scrollEventThrottle={16}
       >
         {/* ── hero carousel ──
@@ -1383,7 +1519,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           )}
 
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      {/* Over the page, under the sheets: still while the page moves. */}
+      {controls}
       {/* The worn pill's sheet: the history of visits here, newest
           first, each in the reader's own date format with its own undo
           on the right, and "again" below when the rules allow it. The
@@ -1562,6 +1700,30 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
+  // The target of a control whose disc fades: 44pt, no fill of its own —
+  // the disc is a layer inside it, so the disc can go while the target
+  // stays where the thumb learned it.
+  fabBox: { width: 44, height: 44 },
+  glyphRow: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+  glyph: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+  // The paper the controls stand on once the photograph has gone, with
+  // the hairline every pinned edge in the app draws where content passes
+  // under it.
+  bar: {
+    position: 'absolute', left: 0, right: 0, top: 0,
+    backgroundColor: colors.bg,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
+  },
+  // Between the two 44pt controls and 8 clear of each, the same on both
+  // sides so the name is centred on the screen and not in what is left.
+  barName: {
+    position: 'absolute', left: space.page + 52, right: space.page + 52,
+    height: 44, justifyContent: 'center',
+  },
+  // The name's own face, a size down: 18, the card title's size, because
+  // the line is a 44pt row and the 26 under the photograph would not sit
+  // in it.
+  barNameText: { color: colors.text, fontSize: 18, fontFamily: display.bold, letterSpacing: 0.2, textAlign: 'center' },
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
   // Above the page count, right-aligned to it: the line its old seat's note
