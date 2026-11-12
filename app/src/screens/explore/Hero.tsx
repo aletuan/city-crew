@@ -35,6 +35,11 @@ export function heroPlace(places: Place[], pinnedSlug?: string | null): Place | 
   );
 }
 
+/** The dateline and search's distance under the status bar, at rest. */
+const TOP_GAP = 6;
+/** That row's height: the search disc, the taller of its two (`heroSearch`). */
+const ROW_H = 44;
+
 export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   place: Place | undefined;
   /** Decided by the screen, not here: the screen needs the same number
@@ -125,6 +130,21 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
       extrapolate: 'clamp',
     })
     : 1;
+  // The dateline and search, by the same rule as the words, and first:
+  // they sit `TOP_GAP` under the clock, so they reach it after 6pt of
+  // scroll, long before the words do. #1291 faded the words and left
+  // these, and the owner's next screenshot (12 Nov 2026, 07:59) had the
+  // dateline pill under the time and search under the battery, about
+  // 37pt down. The rule's 24pt lead-in would start the fade before the
+  // page has moved at all, so it starts at rest; it ends where 60% of
+  // the row (the 44pt search disc, the taller of the two) has gone under
+  // the clock, 32pt down. Search is not lost with it: past the hero the
+  // scroll nudge in the tab bar's dock offers it.
+  const topOpacity = scrollY.interpolate({
+    inputRange: [Math.max(0, TOP_GAP - 24), TOP_GAP + ROW_H * 0.6],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
   const parallax = scrollY.interpolate({
     inputRange: [0, heroH], outputRange: [0, Math.round(heroH * 0.08)], extrapolate: 'clamp',
@@ -160,7 +180,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           moves when the temperature arrives, nothing is missing when it
           does not — and the search control. Both carry their own dark
           glass, because the top of this picture can be any sky. */}
-      <View style={[s.heroTop, { top: insets.top + 6 }]}>
+      <Animated.View style={[s.heroTop, { top: insets.top + TOP_GAP, opacity: topOpacity }]} testID="explore-hero-top">
         <View style={s.heroDate}>
           <Text style={s.heroDateText}>{dayline(lang, new Date(), city?.tz ?? DEFAULT_TZ)}</Text>
           {sky ? (
@@ -181,7 +201,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
         >
           <Ionicons name="search-outline" size={22} color={onPhoto.text} />
         </PressableScale>
-      </View>
+      </Animated.View>
       <Animated.View
         style={[s.heroContent, { opacity: wordsOpacity }]}
         testID="explore-hero-words"

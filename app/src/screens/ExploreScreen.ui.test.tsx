@@ -2054,6 +2054,25 @@ describe('the status bar over the photograph', () => {
     expect(opacity()).toBe(0);
   });
 
+  // The dateline and search sit 6pt under the clock, so they go first:
+  // from rest until 60% of the 44pt row is under it (owner's screenshot,
+  // 12 Nov 2026, 07:59 — the pill under the time at ~37pt down).
+  it('fades the dateline and search from the first point of scroll', () => {
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    const opacity = () => Number(getComputedStyle(screen.getByTestId('explore-hero-top')).opacity || '1');
+    expect(opacity()).toBe(1);
+    // 6 + 26.4 = 32.4: halfway is 16.2.
+    scrollTo(16.2);
+    expect(opacity()).toBeCloseTo(0.5, 2);
+    scrollTo(32.4);
+    expect(opacity()).toBe(0);
+    scrollTo(0);
+    expect(opacity()).toBe(1);
+    // Search is still inside it, and still opens search.
+    expect(screen.getByTestId('explore-hero-top').contains(screen.getByTestId('explore-search'))).toBe(true);
+  });
+
   it('repaints once per crossing, not on every scroll frame', () => {
     state.scheme = 'light';
     state.places.data = [place('a')];
