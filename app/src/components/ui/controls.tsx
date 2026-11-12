@@ -549,7 +549,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   );
 }
 
-export function RoundIconButton({ icon, onPress, label, size = 21, color, bare, testID }: {
+export function RoundIconButton({ icon, onPress, label, size = 21, color, bare, style, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   label?: string;
@@ -583,12 +583,17 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color, bare, 
    * ground is what keeps a white glyph legible on a pale picture.
    */
   bare?: boolean;
+  /** The outer box: where a bare control hangs its target past the
+   *  margin so the glyph's ink, not the empty box, meets it — see
+   *  `BACK_HANG`. */
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
   return (
     <PressableScale
       onPress={onPress}
       scaleTo={0.92}
+      style={style}
       contentStyle={bare ? [s.backBtn, s.backBtnBare] : s.backBtn}
       testID={testID}
       accessibilityRole="button"
@@ -736,8 +741,22 @@ export function SelectTick({ on }: { on: boolean }) {
   );
 }
 
+/**
+ * How far a bare chevron's box hangs past the page margin, so the
+ * chevron's ink stands on the margin the content below it starts at.
+ *
+ * With the disc, the disc's edge was on the margin and that was the line.
+ * Without it the 44pt box is invisible, and the 22pt glyph centred in it
+ * left the ink 11pt in plus the chevron's own 3pt of side bearing: on the
+ * owner's phone (12 Nov 2026) the friends screen's chevron stood at 36pt
+ * while the list's card and the tab's envelope below it stood at 21–22,
+ * 15pt out of line. The target keeps its 44pt; it only moves outward, and
+ * its edge stays 8pt clear of the screen's.
+ */
+export const BACK_HANG = 14;
+
 /** In-page back control: the round glass button wearing a chevron —
- *  or, `bare`, the chevron alone (see `RoundIconButton`). */
+ *  or, `bare`, the chevron alone, hung to the margin (`BACK_HANG`). */
 export function BackButton({ onPress, bare, testID }: { onPress: () => void; bare?: boolean; testID?: string }) {
   const { t } = useI18n();
   return (
@@ -745,6 +764,7 @@ export function BackButton({ onPress, bare, testID }: { onPress: () => void; bar
       icon="chevron-back"
       size={22}
       bare={bare}
+      style={bare ? s.backHang : undefined}
       onPress={onPress}
       label={t('Back', 'Quay lại', '戻る', '返回', '返回')}
       testID={testID}
@@ -879,4 +899,5 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   backBtnBare: { backgroundColor: 'transparent' },
+  backHang: { marginLeft: -BACK_HANG },
 });

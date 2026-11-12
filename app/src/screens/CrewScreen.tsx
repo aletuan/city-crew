@@ -526,6 +526,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       right={(
         <RoundIconButton
           bare
+          // Hung 10pt past the right margin, so the glyph's ink ends where
+          // the list's card does: bare, the empty half of the 44pt box
+          // left it 10pt short (361 against the card's 372 on the owner's
+          // phone, 12 Nov 2026). The chevron opposite does the same on
+          // the left (`BACK_HANG`).
+          style={{ marginRight: -10 }}
           icon="person-add-outline"
           label={t('Add a friend', 'Thêm bạn', '友達を追加', '添加好友', '新增好友')}
           testID="crew-add"

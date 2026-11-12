@@ -171,6 +171,23 @@ describe('the frame', () => {
     }
   });
 
+  // Bare, the empty half of each 44pt box left the glyphs 15pt and 10pt
+  // inside the margin the list's card stands on (owner's phone, 12 Nov
+  // 2026), so each box hangs outward by that much.
+  it('hangs both bare controls past the margin, so their ink meets it', () => {
+    render(<CrewScreen navigation={nav()} />);
+    const margins = (el: HTMLElement | null) => {
+      const out: string[] = [];
+      for (let n = el; n && out.length < 6; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        out.push(`${cs.marginLeft}|${cs.marginRight}`);
+      }
+      return out.join(' ');
+    };
+    expect(margins(screen.getByRole('button', { name: 'Back' }))).toContain('-14px|');
+    expect(margins(screen.getByTestId('crew-add'))).toContain('|-10px');
+  });
+
   it('asks the server again on focus, unless the launch fetch is still in flight', () => {
     const { unmount } = render(<CrewScreen navigation={nav()} />);
     expect(crew.ships.reload).toHaveBeenCalledTimes(1);

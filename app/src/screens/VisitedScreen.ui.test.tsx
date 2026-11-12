@@ -420,4 +420,18 @@ describe('VisitedScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(raw.goBack).toHaveBeenCalled();
   });
+
+  // The chevron alone, hung so its ink meets the margin the search box
+  // and the cards stand on (owner, 12 Nov 2026).
+  it('draws its way back bare, hung to the margin', () => {
+    show();
+    const back = screen.getByRole('button', { name: 'Back' });
+    const fills = [back, ...back.querySelectorAll('*')]
+      .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+      .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+    expect(fills).toEqual([]);
+    let hung = false;
+    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-14px';
+    expect(hung).toBe(true);
+  });
 });

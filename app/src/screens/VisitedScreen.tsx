@@ -214,6 +214,10 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
       title={t('Check-ins', 'Địa điểm check-in', 'チェックインした場所', '打卡', '打卡')}
       subtitle={visits.loaded && visits.data.length > 0 ? summaryLine : undefined}
       onBack={() => navigation.goBack()}
+      // The chevron alone, hung to the margin the search box and the
+      // month cards stand on (owner, 12 Nov 2026), as on the friends
+      // screen and Activity.
+      backBare
     >
       <ScrollView
         // 6 on top, not the page's 22: the header already ends 14 under
