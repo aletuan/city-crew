@@ -727,26 +727,18 @@ describe('publishing', () => {
       .toEqual(['heart-outline', 'globe-outline', 'chevron-down']);
   });
 
-  // A pill (owner, 12 Nov 2026): the kind pill's glass fill and hairline,
-  // neutral, with the word kept in it.
-  it('draws the visibility as a neutral pill that keeps its word', () => {
+  // Bare (owner, 12 Nov 2026): it wore a pill for a day; now no fill and
+  // no outline, the glyph, the word and the chevron alone.
+  it('draws the visibility bare, keeping its word and its chevron', () => {
     state.mine = [collection({ is_public: true })];
     show();
     const control = screen.getByTestId('collection-visibility');
-    const pill = control.firstElementChild as HTMLElement;
-    const css = getComputedStyle(pill);
-    const n = (c: unknown) => {
-      const v = String(c);
-      if (v.startsWith('#')) {
-        const x = parseInt(v.slice(1), 16);
-        return `rgb(${x >> 16}, ${(x >> 8) & 255}, ${x & 255})`;
-      }
-      return v.replace(/,(?=\S)/g, ', ');
-    };
-    expect(css.backgroundColor).toBe(n(colors.surfaceGlass));
-    expect(css.borderTopColor).toBe(n(colors.borderGlass));
-    expect(css.borderTopWidth).toBe('1px');
+    const face = viewStyleOf(control.firstElementChild as HTMLElement);
+    expect(face.backgroundColor).toBeUndefined();
+    expect(face.borderWidth ?? 0).toBe(0);
+    expect(face.borderRadius).toBeUndefined();
     expect(control.textContent).toBe('Public');
+    expect(control.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
   });
 
   // One grey for both states (owner, 12 Nov 2026): Public was the app's
