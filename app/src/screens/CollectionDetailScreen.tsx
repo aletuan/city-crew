@@ -2095,14 +2095,30 @@ const s = StyleSheet.create({
   // should not open a sheet about a person.
   curator: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%' },
   curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
-  // A hairline, then the heart and the facts from the start. 16 between
-  // them, three times the 5 inside one, so two facts read as two.
+  // A hairline, then the heart and the facts from the start.
+  //
+  // ── the spacing, measured in ink (owner, 12 Nov 2026) ──
+  // Read off a 2x render of a visitor's foot, glyph ink to glyph ink, not
+  // off these numbers: each glyph's box has side bearings of its own.
+  //
+  // |                     | ♡ → 2 | 2 → 📍 | 📍 → 17 |
+  // |---------------------|-------|--------|---------|
+  // | was (gap 16, pin 6) | 6.5   | 20     | 9.5     |
+  // | now (gap 20, pin 3) | 6.5   | 24     | 6.5     |
+  //
+  // The pin's box is wider round its ink than the heart's, so at the
+  // same gap its count stood 3pt further off. "2 · 📍 · 17" read as four
+  // things evenly spaced, not two pairs: 20 between the pairs was only
+  // twice the 9.5 inside one. Now each glyph sits 6.5 from its count and
+  // the pairs 24 apart, nearly four times that.
   cardFoot: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 20,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
-  footCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // 3, not the heart's 4: the pin's bearings make up the rest — see
+  // `cardFoot`.
+  footCount: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   // Justified (owner, 3 Nov 2026), the owner's call over the case put
   // against it: a 318pt column holds some 44 characters, iOS does not
   // hyphenate Vietnamese, and the up-to-25pt each ragged line stopped
