@@ -48,7 +48,7 @@ import { addDays, clampDay, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
-import { planTitle, planWhen } from '../lib/planHeading';
+import { planSub, planTitle } from '../lib/planHeading';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useMyLists } from '../lib/save';
@@ -171,18 +171,18 @@ export default function PlanOptionsScreen({ navigation, route }: {
     [plans, lang],
   );
 
-  // The heading reads the request back: what, where, with whom — and,
-  // under it, when. See `planTitle` for what it replaced and why.
+  // What and when as the heading, with whom and where under it. See
+  // `lib/planHeading` for what it replaced and why.
   const cityName = city ? t(city.short_en, city.short_vi, city.short_ja ?? city.short_en) : null;
-  const title = planTitle({
-    company: p.company, categories: p.categories, when: p.when === 'day' ? 'day' : 'evening',
+  const ask = {
+    company: p.company, categories: p.categories, when: p.when === 'day' ? 'day' as const : 'evening' as const,
     where: p.where, whereKind: p.whereKind, district: p.district, city: cityName,
-  }, lang, t);
+  };
   const today = todayISO();
-  const when = planWhen(
-    day, today, addDays(today, 1), p.when === 'day' ? 'day' : 'evening',
-    dateline(lang, fromISO(day) ?? new Date()), t,
-  );
+  const title = planTitle(ask, {
+    day, today, tomorrow: addDays(today, 1), dateline: dateline(lang, fromISO(day) ?? new Date()),
+  }, lang, t);
+  const sub = planSub(ask, t);
 
   /**
    * Regenerate asks the screen before this one, rather than doing the work
@@ -253,15 +253,15 @@ export default function PlanOptionsScreen({ navigation, route }: {
 
   return (
     <Screen
-      // What, where and with whom, read back from the wizard's answers
-      // (owner, 12 Nov 2026: "Ăn tối ở … cùng …"), and when under it. It
-      // was "Your evening, three ways" over "Distances checked · each
-      // card a different angle" and a third line with the date and the
-      // place: a count of the cards on screen, a sentence about the
-      // machine, and the request split across two lines. See
+      // What and when ("Cà phê tối nay"), and with whom · where under it
+      // ("Cùng người ấy · gần bạn") — the owner's choice of three shapes
+      // (12 Nov 2026). It was "Your evening, three ways" over "Distances
+      // checked · each card a different angle" and a third line with the
+      // date and the place, and then, for a day, the whole request as one
+      // sentence, which read badly in the commonest case. See
       // `lib/planHeading`.
       title={title}
-      subtitle={when}
+      subtitle={sub ?? undefined}
       onBack={() => navigation.goBack()}
       // The chevron alone, hung to the margin the plan cards stand on
       // (owner, 12 Nov 2026), as on the friends, Activity, check-in,

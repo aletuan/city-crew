@@ -23,7 +23,7 @@ export type PlanAsk = {
   where: string | null;
   /** Which kind of start `where` names — a district, a place a pin was
    *  set on, a bare pin, the reader's own position, or the city — so the
-   *  options heading can say it in a sentence ("ở Tây Hồ", "gần bạn")
+   *  options heading's second line can say it ("Tây Hồ", "gần bạn")
    *  without parsing the words. Optional: a plan reached without the
    *  wizard reads what it can from `district` and `where`. */
   whereKind?: WhereKind;
