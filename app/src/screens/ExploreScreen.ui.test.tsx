@@ -13,6 +13,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Dimensions } from 'react-native';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { switchOrDoor } from '../components/ExploreFilterSheet';
 import { pinImage } from '../components/mapPins';
@@ -1991,6 +1992,66 @@ describe('the status bar over the photograph', () => {
     expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true);
     scrollTo(0);
     expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true);
+  });
+
+  // The page's ground under the clock (owner's screenshot, 12 Nov 2026):
+  // clear over the photograph, opaque by the moment the clock turns dark,
+  // so dark ink never sits on a picture. The insets are zero here, so the
+  // clock turns 44pt before the hero's foot, and the ground fades in over
+  // the 44pt before that.
+  it('lays the page under the clock as the ink turns dark, and not before', () => {
+    state.scheme = 'light';
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    const heroH = Math.min(500, Math.max(330, Math.round(Dimensions.get('window').height * 0.48)));
+    const turn = heroH - 44;
+    const veil = () => Number(getComputedStyle(screen.getByTestId('explore-status-veil')).opacity);
+    expect(veil()).toBe(0);
+    // The page's own ground, the pinned row's colour, so the two meet clean.
+    const hex = String(colors.bg).match(/^#(\w\w)(\w\w)(\w\w)$/)!.slice(1).map((h) => parseInt(h, 16));
+    expect(getComputedStyle(screen.getByTestId('explore-status-veil')).backgroundColor)
+      .toBe(`rgb(${hex.join(', ')})`);
+    scrollTo(turn - 44);
+    expect(veil()).toBe(0);
+    scrollTo(turn - 22);
+    expect(veil()).toBeCloseTo(0.5, 2);
+    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true);
+    scrollTo(turn + 1);
+    expect(veil()).toBe(1);
+    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true);
+  });
+
+  it('draws no ground under the clock on the map, whose bar has its own', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByTestId('explore-status-veil')).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map' })); });
+    expect(screen.queryByTestId('explore-status-veil')).toBeNull();
+  });
+
+  // The hero's words fade before they reach the clock: from 24pt short
+  // of it until 60% of the block has gone under. Nothing fades before the
+  // block is measured.
+  it('fades the hero’s words as they reach the clock, once it knows where they are', () => {
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    const words = () => screen.getByTestId('explore-hero-words');
+    const opacity = () => Number(getComputedStyle(words()).opacity || '1');
+    scrollTo(250);
+    expect(opacity()).toBe(1);
+    scrollTo(0);
+    type Fiber = { return: Fiber | null; memoizedProps: Record<string, unknown> };
+    const key = Object.keys(words()).find((k) => k.startsWith('__reactFiber'))!;
+    let f = (words() as unknown as Record<string, Fiber>)[key];
+    while (f && !(f.memoizedProps.testID === 'explore-hero-words' && typeof f.memoizedProps.onLayout === 'function')) f = f.return!;
+    act(() => { (f.memoizedProps.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 200, height: 150 } } }); });
+    // 200 − 24 = 176 to 200 + 90 = 290.
+    scrollTo(176);
+    expect(opacity()).toBe(1);
+    scrollTo(233);
+    expect(opacity()).toBeCloseTo(0.5, 2);
+    scrollTo(290);
+    expect(opacity()).toBe(0);
   });
 
   it('repaints once per crossing, not on every scroll frame', () => {

@@ -105,6 +105,26 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
       setBalanced({ for: title, text: null });
     }
   };
+  // Where the words sit in the hero, measured: the fade below is keyed
+  // to when they reach the clock, and that depends on how many lines the
+  // headline and the sub-line take in this language on this phone.
+  const [words, setWords] = useState<{ y: number; h: number } | null>(null);
+  // The words fade as they reach the clock, so the city, the headline
+  // and the Explore button never share its strip (owner's screenshot,
+  // 12 Nov 2026: "Tiếng chuông Trấn Vũ…" and the button under 20:48).
+  // From 24pt before the top line meets the status bar to the point where
+  // 60% of the block has gone under it — at the screenshot's position,
+  // the button just below the time, they are gone. The photograph stays;
+  // the ground under the clock takes it from there (`veilOpacity`).
+  // Until the block is measured nothing fades: words that vanish because
+  // a layout has not arrived are worse than words that overlap the clock.
+  const wordsOpacity = words
+    ? scrollY.interpolate({
+      inputRange: [words.y - insets.top - 24, words.y - insets.top + words.h * 0.6],
+      outputRange: [1, 0],
+      extrapolate: 'clamp',
+    })
+    : 1;
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
   const parallax = scrollY.interpolate({
     inputRange: [0, heroH], outputRange: [0, Math.round(heroH * 0.08)], extrapolate: 'clamp',
@@ -162,7 +182,14 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           <Ionicons name="search-outline" size={22} color={onPhoto.text} />
         </PressableScale>
       </View>
-      <View style={s.heroContent}>
+      <Animated.View
+        style={[s.heroContent, { opacity: wordsOpacity }]}
+        testID="explore-hero-words"
+        onLayout={(e) => {
+          const { y, height } = e.nativeEvent.layout;
+          setWords((w) => (w && w.y === y && w.h === height ? w : { y, h: height }));
+        }}
+      >
         {/* The city, named at the headline's shoulder, and tappable. The
             city is the biggest mode this app has, and until now changing
             it lived three taps away behind Profile → Preferences; the
@@ -229,7 +256,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
             <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
           </LinearGradient>
         </PressableScale>
-      </View>
+      </Animated.View>
       <CitySwitcherModal visible={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </View>
   );
