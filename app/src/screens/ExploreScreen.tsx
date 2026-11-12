@@ -272,6 +272,21 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // Past once the photo's last 44pt are leaving — the moment the dark
   // ground stops being what is under the clock.
   heroEndRef.current = heroH - insets.top - 44;
+  // The page's own ground under the clock, from the moment the clock
+  // turns to dark ink. Until 12 Nov 2026 the clock's strip stayed clear
+  // until the Places row pinned, and everything between scrolled under
+  // the time: the hero's headline and its Explore button in light ink
+  // first (owner's screenshot, 20:48), then the whole collection shelf
+  // in dark ink over dark covers, which is where the time could not be
+  // read at all. Faded in over the same last 44pt of photograph the ink
+  // already turns on, so it is opaque at the crossing and dark ink never
+  // sits on the picture; the pinned row's ground is the same colour, so
+  // the two meet without a seam.
+  const veilOpacity = scrollY.interpolate({
+    inputRange: [heroEndRef.current - 44, heroEndRef.current],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
   // Map mode has no hero under the clock — the floating bar's own ground
   // is `colors.bg`, the page's, not the hero's dark scrim — so it wants
   // the scheme's own ink exactly the way past-the-hero already does.
@@ -831,6 +846,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           under the clock. Rendered rather than hidden, so it takes no
           touches and costs no layout while the reader is at the top. */}
       {pinned && !mapMode ? bar(true) : null}
+      {mapMode ? null : (
+        <Animated.View
+          pointerEvents="none"
+          testID="explore-status-veil"
+          style={[s.statusVeil, { height: insets.top, opacity: veilOpacity }]}
+        />
+      )}
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {holding && (

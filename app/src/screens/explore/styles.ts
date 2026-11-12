@@ -211,6 +211,14 @@ export const s = StyleSheet.create({
     zIndex: 20,
     backgroundColor: colors.bg,
   },
+  // The ground under the clock before the Places row pins — see
+  // `veilOpacity`. Under that row, never over it: pinned, the row already
+  // is this colour at this height.
+  statusVeil: {
+    position: 'absolute', left: 0, right: 0, top: 0,
+    zIndex: 19,
+    backgroundColor: colors.bg,
+  },
   // Drawn only at the bottom, and only a hairline: it is where the header
   // block ends and the list begins, which is the one edge that has
   // anything to say. A full border would box the row in like a control.
