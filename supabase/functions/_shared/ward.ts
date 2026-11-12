@@ -43,6 +43,12 @@ const foldLite = (s: string) => s
  *   the address never had a ward segment and the tier before the city
  *   is street. ("Phường 7" and "District 1" stay: their digit is not
  *   leading.)
+ * - a candidate that is the country — Google sometimes writes it where
+ *   the ward belongs: "9 P. Phan Phù Tiên, Việt Nam, Hà Nội 100000,
+ *   Vietnam" filed Wasabi.hanoi under an area called "Việt Nam" (found
+ *   12 Nov 2026, when the plan heading named it). Only the country at
+ *   the end was dropped; the same name one tier earlier was read as the
+ *   ward. No ward is better than a country standing in for one.
  *
  * The bare name is stored as it appears — "Bến Thành", "An Khánh",
  * "Sài Gòn". Google writes the merged wards without their Phường prefix
@@ -54,7 +60,7 @@ export function wardFromAddress(address: string | null | undefined): string | nu
   if (parts.length && COUNTRY.has(foldLite(parts[parts.length - 1]))) parts.pop();
   if (parts.length < 3) return null;
   const ward = parts[parts.length - 2];
-  if (/^\d/.test(ward)) return null;
+  if (/^\d/.test(ward) || COUNTRY.has(foldLite(ward))) return null;
   return ward;
 }
 
