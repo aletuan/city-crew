@@ -64,7 +64,7 @@ export function KindPill({ kind, more = 0, chosen = false, off = false, bare = f
       {more > 0 ? (
         <>
           {bare ? null : <View style={s.sep} />}
-          <Text style={s.more}>{`+${more}`}</Text>
+          <Text style={[s.more, bare && s.moreBare]}>{`+${more}`}</Text>
         </>
       ) : null}
     </View>
@@ -208,5 +208,16 @@ const s = StyleSheet.create({
   // light ground, and the count then read as part of the label.
   sep: { width: 1, height: 13, backgroundColor: colors.borderGlassSoft },
   more: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
+  // Bare, the count steps down to the district's grey (owner, 12 Nov
+  // 2026). With the fill gone the word took `textSecondary`, which is
+  // what the count already wore, so "Cà phê" and "+1" became one ink at
+  // one size and weight, 6pt apart (6.4pt ink to ink on the owner's
+  // 20:48 screenshot) — the same gap as dot to word, so the count read
+  // as part of the name. In the pill the word is `colors.text` and the
+  // count was already the lighter of the two; this restores that step on
+  // the card. Colour only: 13pt medium keeps the figure legible, and the
+  // grey is the one the district beside it is read in at 15 (4.9:1 on
+  // paper, 6:1 on charcoal).
+  moreBare: { color: colors.textTertiary },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });
