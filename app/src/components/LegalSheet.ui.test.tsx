@@ -27,7 +27,7 @@ describe('the document itself', () => {
   it('draws the words, not a link to them', async () => {
     open();
     expect(await screen.findByText('Điều khoản sử dụng')).toBeTruthy();
-    expect(screen.getByText('Hiệu lực từ 29/08/2026')).toBeTruthy();
+    expect(screen.getByText('Hiệu lực từ 13/11/2026')).toBeTruthy();
     // A heading and a bullet from deep inside the document: proof the
     // blocks are rendered rather than a summary of them.
     expect(screen.getByText('Báo cáo và chặn')).toBeTruthy();

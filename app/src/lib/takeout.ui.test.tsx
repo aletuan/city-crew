@@ -35,6 +35,16 @@ const reads = vi.hoisted(() => ({
   fetchMySubmittedPlaces: vi.fn(async () => []),
   fetchMyHistory: vi.fn(async () => []),
   fetchMyCheckins: vi.fn(async () => [{ id: 'k1', place_slug: 'cong', city_id: 'hanoi', at: '2026-09-20T03:00:00Z' }]),
+  // One list of mine shared with a friend the crew read does not name
+  // (`s1`), one of a friend's shared with me (`s2` owns it), and one whose
+  // list is gone from the read.
+  fetchMyShares: vi.fn(async () => ({
+    mine: [{ created_at: '2026-11-12T00:00:00Z', user_id: 's1', collections: { slug: 'mine', owner_id: 'me' } }],
+    withMe: [
+      { created_at: '2026-11-12T01:00:00Z', user_id: 'me', collections: { slug: 'theirs', owner_id: 's2' } },
+      { created_at: '2026-11-12T02:00:00Z', user_id: 'me', collections: null },
+    ],
+  })),
   fetchProfilesById: vi.fn(async (ids: string[]) => Object.fromEntries(ids.map((id) => [id, {
     id, handle: `${id}_handle`, full_name: `Private Name ${id}`, avatar_url: `https://faces/${id}.jpg`,
   }]))),
@@ -65,6 +75,7 @@ vi.mock('./data/export', () => ({
   fetchMyLikedCollections: reads.fetchMyLikedCollections,
   fetchMySubmittedPlaces: reads.fetchMySubmittedPlaces,
   fetchMyHistory: reads.fetchMyHistory,
+  fetchMyShares: reads.fetchMyShares,
 }));
 vi.mock('expo-file-system', () => {
   class File {
@@ -143,7 +154,19 @@ describe('useTakeout', () => {
       mount();
       await run();
       expect(reads.fetchProfilesById).toHaveBeenCalledOnce();
-      expect([...(reads.fetchProfilesById.mock.calls[0][0] as string[])].sort()).toEqual(['b1', 'f1', 'f2']);
+      expect([...(reads.fetchProfilesById.mock.calls[0][0] as string[])].sort()).toEqual(['b1', 'f1', 'f2', 's1', 's2']);
+    });
+
+    // The other end of a share is asked for by name too, so a share is
+    // never dropped from the file for want of a handle.
+    it('carries the lists shared either way, the other end as a handle', async () => {
+      mount();
+      await run();
+      expect(reads.fetchMyShares).toHaveBeenCalledWith('me');
+      expect(JSON.parse(world.written[0].body).shared).toEqual({
+        by_you: [{ collection_slug: 'mine', friend_handle: 's1_handle', shared_at: '2026-11-12T00:00:00.000Z' }],
+        with_you: [{ collection_slug: 'theirs', owner_handle: 's2_handle', shared_at: '2026-11-12T01:00:00.000Z' }],
+      });
     });
 
     // Rule 5: the other people in somebody's export are handles. Their

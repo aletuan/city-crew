@@ -248,6 +248,32 @@ export type Database = {
           },
         ]
       }
+      collection_shares: {
+        Row: {
+          collection_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_shares_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_places: {
         Row: {
           collection_id: string
@@ -1257,6 +1283,7 @@ export type Database = {
           reason: string
         }[]
       }
+      friends_with: { Args: { other: string }; Returns: boolean }
       guide_may_manage: { Args: { photo: string }; Returns: boolean }
       guide_set_cover: { Args: { photo: string }; Returns: undefined }
       guide_set_hidden: {
@@ -1303,6 +1330,7 @@ export type Database = {
       own_collection_places_today: { Args: never; Returns: number }
       own_photos_on_place: { Args: { target: string }; Returns: number }
       own_place_photos_today: { Args: never; Returns: number }
+      owns_collection: { Args: { cid: string }; Returns: boolean }
       random_handle: { Args: never; Returns: string }
       popular_themes: { Args: never; Returns: { theme: string }[] }
       reorder_collection: {
@@ -1325,6 +1353,7 @@ export type Database = {
           title: string
         }[]
       }
+      shared_with_me: { Args: { cid: string }; Returns: boolean }
       strip_profile_metadata: { Args: { meta: Json }; Returns: Json }
       suggested_friends: {
         Args: never
@@ -1342,6 +1371,7 @@ export type Database = {
         }[]
       }
       trip_invite_count: { Args: { t: string }; Returns: number }
+      unshare_pair: { Args: { a: string; b: string }; Returns: undefined }
     }
     Enums: {
       collection_visibility: "public" | "private" | "shared"

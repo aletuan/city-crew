@@ -1,4 +1,4 @@
-// The two reads an account export needs and nothing else in the app does.
+// The reads an account export needs and nothing else in the app does.
 //
 // Everything else it takes — profile, collections, likes, trips,
 // preferences, friendships, blocks — already has a function somewhere in
@@ -73,6 +73,47 @@ export async function fetchMyLikedCollections(ownerId: string): Promise<LikedCol
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as LikedCollectionRow[];
+}
+
+/** A share this account is on, either end (12 Nov 2026): a private list
+ *  of yours shared with a friend, or a friend's list shared with you.
+ *  The other person is an id here; the export reduces it to a handle. */
+export type ShareRow = {
+  created_at: string;
+  user_id: string;
+  collections: { slug: string; owner_id: string | null } | null;
+};
+
+/**
+ * Both sides of `collection_shares` this account is on: the shares on its
+ * own lists, and the shares naming it.
+ *
+ * Two reads, each scoped in the query as well as by RLS — the same
+ * belt-and-braces as the reads above. The policy lets both ends see a
+ * share; a query that says which end it means cannot be quietly widened.
+ * The first scopes through the list (`!inner`, so a share whose list is
+ * not this account's is not returned at all, rather than returned with
+ * its list missing).
+ */
+export async function fetchMyShares(ownerId: string): Promise<{ mine: ShareRow[]; withMe: ShareRow[] }> {
+  const [mine, withMe] = await Promise.all([
+    supabase
+      .from('collection_shares')
+      .select('created_at, user_id, collections!inner(slug, owner_id)')
+      .eq('collections.owner_id', ownerId)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('collection_shares')
+      .select('created_at, user_id, collections(slug, owner_id)')
+      .eq('user_id', ownerId)
+      .order('created_at', { ascending: true }),
+  ]);
+  if (mine.error) throw new Error(mine.error.message);
+  if (withMe.error) throw new Error(withMe.error.message);
+  return {
+    mine: (mine.data ?? []) as unknown as ShareRow[],
+    withMe: (withMe.data ?? []) as unknown as ShareRow[],
+  };
 }
 
 export async function fetchMyHistory(ownerId: string): Promise<HistoryEventRow[]> {

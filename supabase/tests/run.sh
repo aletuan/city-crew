@@ -587,3 +587,13 @@ run "$DB" -f "$HERE/ninhbinh_centre_test.sql"
 # applies the migration itself, after everything that creates the table.
 echo "→ unchosen theme follows slate"
 run "$DB" -f "$HERE/unchosen_theme_follows_slate_test.sql"
+
+# A list shared with chosen friends (12 Nov 2026): a share table, a read
+# policy on lists and their places for the friend named, and triggers that
+# end a share with the friendship or a block. Reads friendships, blocks,
+# collections and places, all in place by now.
+echo "→ collection shares"
+for f in "$ROOT"/supabase/migrations/*_collection_shares.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/collection_shares_test.sql"
