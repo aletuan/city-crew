@@ -179,6 +179,20 @@ describe('the header', () => {
     expect(navigation.navigate).not.toHaveBeenCalled();
   });
 
+  // The chevron alone, hung so its ink meets the margin the plan cards
+  // stand on (owner, 12 Nov 2026).
+  it('draws its way back bare, hung to the margin', () => {
+    renderScreen();
+    const back = screen.getByRole('button', { name: 'Back' });
+    const fills = [back, ...back.querySelectorAll('*')]
+      .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+      .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+    expect(fills).toEqual([]);
+    let hung = false;
+    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-18px';
+    expect(hung).toBe(true);
+  });
+
   it('calls a day planned from the wizard a day', () => {
     renderScreen({ when: 'day' });
     expect(screen.getByText('Your day, three ways')).toBeTruthy();
