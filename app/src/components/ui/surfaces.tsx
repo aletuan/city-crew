@@ -123,8 +123,13 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backBare, backTestID, titleScrolls }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backBare, backTestID, titleScrolls, titleIsName }: {
   title: string;
+  /** The title is the name of the thing the page is about — a trip —
+   *  rather than the screen's own name, and takes `type.titleName`. Its
+   *  first line is still centred on the back control. Compact header
+   *  only. */
+  titleIsName?: boolean;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
    *  screen with both is a screen with three headings.
@@ -194,8 +199,8 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
       {onBack ? (
         <View style={s.headerInline}>
           <BackButton onPress={onBack} bare={backBare} testID={backTestID} />
-          <View style={s.headerText}>
-            <Text style={s.titleInline} numberOfLines={2}>{title}</Text>
+          <View style={[s.headerText, titleIsName && s.headerTextName]}>
+            <Text style={titleIsName ? s.titleName : s.titleInline} numberOfLines={2}>{title}</Text>
             {/* The falsy guard comes first and stays: a caller computing
                 its line can hand over an empty string, and `typeof ''` is
                 still 'string' — which would draw a blank line the height
@@ -526,7 +531,13 @@ const s = StyleSheet.create({
   // control without pinning either to the other's height — the same trick
   // `authUi`'s header uses, at this type size.
   headerText: { flex: 1, gap: 2, paddingTop: 5 },
+  // The same centring at 20: the display face's line box is 1.276 of its
+  // size (ascent 984 + descent 292 per 1000), so a first line's middle
+  // sits on the 44pt control's at 22 − 25.5 / 2 = 9.2 down. At 26 the
+  // same sum gives 5.4, the 5 above.
+  headerTextName: { paddingTop: 9 },
   titleInline: { color: colors.text, ...type.titleDetail },
+  titleName: { color: colors.text, ...type.titleName },
   subtitle: { color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
   iconSubtitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { color: colors.text, ...type.title },

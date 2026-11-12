@@ -301,6 +301,7 @@ export default function TripDetailScreen({ navigation, route }: {
   return (
     <Screen
       title={trip.title}
+      titleIsName
       subtitle={(
         <IconSubtitle
           icon="calendar-outline"

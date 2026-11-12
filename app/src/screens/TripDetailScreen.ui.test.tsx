@@ -14,7 +14,7 @@
 // props — who owns the trip, whose invites, whether inviting is allowed.
 
 import React from 'react';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
@@ -139,6 +139,17 @@ vi.mock('../components/InviteSheet', async () => {
 });
 
 import TripDetailScreen from './TripDetailScreen';
+
+/** The size a Text was given, off its props: jsdom resolves
+ *  react-native-web's font classes to its own default size. */
+const fontSizeOf = (el: HTMLElement) => {
+  const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
+  type Fiber = { memoizedProps?: { style?: unknown }; return?: Fiber };
+  let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
+  const size = (x: Fiber) => (StyleSheet.flatten(x.memoizedProps?.style as StyleProp<TextStyle>) ?? {}).fontSize;
+  while (f && size(f) == null) f = f.return;
+  return f && size(f);
+};
 
 // `onLayout` rides react-native-web's one ResizeObserver, which jsdom does
 // not have, so nothing measured ever lands. This one answers the moment a
@@ -284,7 +295,8 @@ describe('the way back', () => {
 describe('the itinerary', () => {
   it('prints the title, the date and the hours from first arrival to last departure', () => {
     show();
-    expect(screen.getByText('Old Quarter crawl')).toBeTruthy();
+    // A trip's title is a thing's name, a level under a screen's own.
+    expect(fontSizeOf(screen.getByText('Old Quarter crawl'))).toBe(20);
     // 12:00 arrival plus a 30-minute dwell at the last stop.
     expect(screen.getByText('Sat, 12 Sep · 09:00–12:30')).toBeTruthy();
   });
