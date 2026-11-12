@@ -38,6 +38,18 @@ describe('KindPill', () => {
     expect(screen.getByTestId('q').textContent).toBe('Cafés');
   });
 
+  // On the card the word is the secondary ink, so the count steps down to
+  // the tertiary one, the district's; in the pill it keeps the secondary,
+  // already lighter than the pill's full-strength word.
+  it('draws the count a step lighter than the word, bare or in the pill', () => {
+    const ink = (el: Element) => getComputedStyle(el as HTMLElement).color;
+    render(<KindPill kind="cafes" more={1} bare testID="b" />);
+    expect(ink(screen.getByText('Cafés'))).toBe(rgb(colors.textSecondary as string));
+    expect(ink(screen.getByText('+1'))).toBe(rgb(colors.textTertiary as string));
+    render(<KindPill kind="cafes" more={1} testID="p" />);
+    expect(ink(screen.getAllByText('+1')[1])).toBe(rgb(colors.textSecondary as string));
+  });
+
   it('gives a key the table has not learned its word and no dot', () => {
     render(<KindPill kind="street_food" testID="p" />);
     const pill = screen.getByTestId('p');
