@@ -125,6 +125,21 @@ describe('the frame', () => {
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });
 
+  // The chevron alone, with no glass disc (owner, 12 Nov 2026).
+  it('draws its way back bare', async () => {
+    await renderScreen();
+    const back = screen.getByRole('button', { name: 'Back' });
+    const fills = [back, ...back.querySelectorAll('*')]
+      .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+      .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+    expect(fills).toEqual([]);
+    // Hung past the margin, so the chevron's ink, not its empty box,
+    // stands on the line the cards below start at (`BACK_HANG`).
+    let hung = false;
+    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-18px';
+    expect(hung).toBe(true);
+  });
+
   it('asks for two weeks of applause, and for the reader\'s own lists', async () => {
     await renderScreen();
     expect(data.fetchApplause).toHaveBeenCalledWith(

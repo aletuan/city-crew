@@ -223,7 +223,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <AuthScreen>
-      <AuthHeader onBack={() => navigation.goBack()} title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')} />
+      {/* The chevron without its disc (owner, 12 Nov 2026), the second
+          screen after the friends one to try it. */}
+      <AuthHeader backBare onBack={() => navigation.goBack()} title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')} />
 
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />

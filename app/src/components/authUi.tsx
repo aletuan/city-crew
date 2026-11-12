@@ -130,13 +130,16 @@ export type HeaderAction = {
   testID?: string;
 };
 
-export function AuthHeader({ onBack, title, action }: {
+export function AuthHeader({ onBack, title, action, backBare }: {
   onBack: () => void; title: string; action?: HeaderAction;
+  /** The way back as the chevron alone, with no disc — see
+   *  `RoundIconButton`'s `bare`. Per screen, while the owner tries it. */
+  backBare?: boolean;
 }) {
   const lit = action && !action.disabled;
   return (
     <View style={s.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} bare={backBare} />
       <Text style={s.title}>{title}</Text>
       {action ? (
         <PressableScale

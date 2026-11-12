@@ -412,6 +412,33 @@ describe('before the list is there', () => {
   });
 });
 
+// Both header controls as their glyphs alone, hung past the margins so
+// the ink meets the line the cards stand on (owner, 12 Nov 2026).
+describe('the header controls', () => {
+  const fills = (el: HTMLElement) => [el, ...el.querySelectorAll('*')]
+    .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+    .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+  const margins = (el: HTMLElement) => {
+    const out: string[] = [];
+    for (let n: HTMLElement | null = el; n && out.length < 6; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      out.push(`${cs.marginLeft}|${cs.marginRight}`);
+    }
+    return out.join(' ');
+  };
+
+  it('draws the way back and the ⋯ bare, each hung to its margin', () => {
+    state.mine = [collection()];
+    show();
+    const back = screen.getByRole('button', { name: 'Back' });
+    const more = screen.getByRole('button', { name: 'More' });
+    expect(fills(back)).toEqual([]);
+    expect(fills(more)).toEqual([]);
+    expect(margins(back)).toContain('-18px|');
+    expect(margins(more)).toContain('|-13px');
+  });
+});
+
 describe('your own list', () => {
   it('prints the title, description, places in sort order, and Private at the card\u2019s foot', () => {
     state.mine = [collection({
