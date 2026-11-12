@@ -270,6 +270,10 @@ export default function PlanOptionsScreen({ navigation, route }: {
         '已核对距离 · 每张卡片一种思路', '已核對距離 · 每張卡片一種思路',
       )}
       onBack={() => navigation.goBack()}
+      // The chevron alone, hung to the margin the plan cards stand on
+      // (owner, 12 Nov 2026), as on the friends, Activity, check-in,
+      // collection and trip screens.
+      backBare
     >
       <AmbientWarmth />
       <ScrollView

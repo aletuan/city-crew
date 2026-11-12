@@ -254,6 +254,33 @@ describe('before the trip is there', () => {
   });
 });
 
+// The chevron alone, hung so its ink meets the margin the crew and the
+// stops stand on (owner, 12 Nov 2026) — on the trip and on the frame that
+// stands in for it while it loads.
+describe('the way back', () => {
+  const bareAndHung = () => {
+    const back = screen.getByRole('button', { name: 'Back' });
+    const fills = [back, ...back.querySelectorAll('*')]
+      .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+      .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+    let hung = false;
+    for (let n: HTMLElement | null = back; n && !hung; n = n.parentElement) hung = getComputedStyle(n).marginLeft === '-18px';
+    return fills.length === 0 && hung;
+  };
+
+  it('is bare and on the margin on the trip', () => {
+    show();
+    expect(bareAndHung()).toBe(true);
+  });
+
+  it('is bare and on the margin while the trip loads', () => {
+    state.loaded = false;
+    state.trips = [];
+    show();
+    expect(bareAndHung()).toBe(true);
+  });
+});
+
 describe('the itinerary', () => {
   it('prints the title, the date and the hours from first arrival to last departure', () => {
     show();
