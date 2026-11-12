@@ -246,6 +246,31 @@ describe('cafés and eats', () => {
   });
 });
 
+// The three purples (owner, 12 Nov 2026): nightlife, focus and fun sat
+// 1.6–2.6 apart at one lightness. Their hues stay; nightlife goes deepest,
+// focus lightest, fun between — see the note above `STYLES`. Nightlife and
+// fun are apart by hue (30°) rather than by lightness, so the lightness
+// holds are on focus, the one that sat between them.
+describe('the three purples', () => {
+  it('step from the night down to focus, on the page', () => {
+    const l = (k: keyof typeof CATEGORIES) => contrast(CATEGORIES[k].color, WHITE);
+    expect(l('nightlife')).toBeGreaterThan(l('fun'));
+    expect(l('fun')).toBeGreaterThan(l('focus'));
+    expect(contrast(CATEGORIES.nightlife.color, CATEGORIES.focus.color)).toBeGreaterThanOrEqual(1.5);
+    expect(contrast(CATEGORIES.fun.color, CATEGORIES.focus.color)).toBeGreaterThanOrEqual(1.45);
+  });
+
+  it('keep the night’s pin apart from focus’s on the map', () => {
+    expect(contrast(CATEGORIES.nightlife.pin, CATEGORIES.focus.pin)).toBeGreaterThanOrEqual(1.8);
+  });
+
+  it('stay on their own hues', () => {
+    expect(hue(CATEGORIES.nightlife.color)).toBeCloseTo(262.3, 0);
+    expect(hue(CATEGORIES.focus.color)).toBeCloseTo(238.5, 0);
+    expect(hue(CATEGORIES.fun.color)).toBeCloseTo(293.4, 0);
+  });
+});
+
 describe('the map pin palette', () => {
   it('gives every category in the filter row a fill', () => {
     for (const key of CATEGORY_ORDER) {
