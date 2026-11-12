@@ -1904,15 +1904,16 @@ describe('the chips', () => {
     expect(on('nightlife')).toBe(true);
     expect(cards()).toEqual(['card:Cafe Giang']);
     expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 of 4 places');
-    // Lit as Explore's chips are, and only while chosen: the glass a step
-    // heavier, its border drawn in the glass's own line — not an accent
-    // ring — and the word in the accent.
+    // No pill (owner, 12 Nov 2026): the dot and the word, and the chosen
+    // one says so as Explore's filter row does — the accent rule under the
+    // word, drawn clear on the rest so nothing moves — on no fill at all.
     const lit = getComputedStyle(pillOf('nightlife'));
     const unlit = getComputedStyle(pillOf('eats'));
-    expect(lit.borderTopColor).not.toBe(unlit.borderTopColor);
-    expect(lit.backgroundColor).not.toBe(unlit.backgroundColor);
-    expect(lit.borderTopColor).toBe(rgba(String(colors.borderGlass)));
-    expect(lit.borderTopColor).not.toBe(rgba(String(colors.accent)));
+    expect(lit.borderBottomColor).toBe(rgba(String(colors.accent)));
+    expect(unlit.borderBottomColor).toBe('rgba(0, 0, 0, 0)');
+    expect(lit.borderBottomWidth).toBe('2px');
+    expect(unlit.borderBottomWidth).toBe('2px');
+    for (const st of [lit, unlit]) expect(st.backgroundColor).toBe('rgba(0, 0, 0, 0)');
     // One kind at a time (owner, 24 Oct 2026): a second chip moves to its
     // kind rather than widening.
     fireEvent.click(chip('heritage'));

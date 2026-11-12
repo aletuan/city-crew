@@ -544,6 +544,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         kinds={kinds}
         chosen={chosen}
         onPick={filters ? pick : undefined}
+        bare
         testID="collection-kinds"
       />
       {narrowed ? (
