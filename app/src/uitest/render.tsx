@@ -23,15 +23,21 @@ export * from '@testing-library/react';
 afterEach(cleanup);
 
 /**
- * The font size a Text was given, read off the props of the nearest
- * element that set one: jsdom resolves react-native-web's font classes to
- * its own default, so the computed style says 14 whatever was asked for.
+ * The text style a Text was given, flattened, read off the props of the
+ * nearest element that set a font size: jsdom resolves react-native-web's
+ * font classes to its own default, so the computed style says 14 and 400
+ * whatever was asked for.
  */
-export function fontSizeOf(el: HTMLElement): number | undefined {
+export function textStyleOf(el: HTMLElement): TextStyle | undefined {
   const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
   type Fiber = { memoizedProps?: { style?: unknown }; return?: Fiber };
-  const size = (x: Fiber) => (StyleSheet.flatten(x.memoizedProps?.style as StyleProp<TextStyle>) ?? {}).fontSize;
+  const style = (x: Fiber) => StyleSheet.flatten(x.memoizedProps?.style as StyleProp<TextStyle>) ?? {};
   let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
-  while (f && size(f) == null) f = f.return;
-  return f && size(f);
+  while (f && style(f).fontSize == null) f = f.return;
+  return f && style(f);
+}
+
+/** The font size a Text was given — see `textStyleOf`. */
+export function fontSizeOf(el: HTMLElement): number | undefined {
+  return textStyleOf(el)?.fontSize;
 }
