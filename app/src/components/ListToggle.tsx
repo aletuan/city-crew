@@ -15,7 +15,7 @@
 
 import React from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useI18n } from '../lib/i18n';
 import { colors, onPhoto } from '../theme';
 import { photoDisc, PressableScale } from './ui';
@@ -48,7 +48,7 @@ export default function ListToggle({ on, title, onPress, overPhoto, style, testI
       style={style}
       contentStyle={[overPhoto ? s.photo : s.row, on && s.on]}
     >
-      <Ionicons
+      <Glyph
         name={on ? 'checkmark' : 'add'}
         size={20}
         color={on ? colors.accentInk : overPhoto ? onPhoto.text : colors.accent}

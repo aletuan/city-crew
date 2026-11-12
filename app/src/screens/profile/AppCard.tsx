@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../../components/ui/glyph';
 import { Card, fireHaptic } from '../../components/ui';
 import LegalSheet from '../../components/LegalSheet';
 import AboutSheet from '../../components/AboutSheet';
@@ -86,7 +86,7 @@ export function Tagline() {
           `accessibilityElementsHidden` because it says nothing the
           quote under it does not; a screen reader should reach the
           words, not "paw". */}
-      <Ionicons
+      <Glyph
         name="paw"
         size={18}
         color={colors.accent}

@@ -71,7 +71,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -240,7 +240,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
               testID="photo-sheet-close"
             >
-              <Ionicons name="close" size={PHOTO_GLYPH + 1} color={onPhoto.text} />
+              <Glyph name="close" size={PHOTO_GLYPH + 1} color={onPhoto.text} />
             </PressableScale>
             <View style={s.count} pointerEvents="none">
               <Text style={s.countText}>{count}</Text>
@@ -254,7 +254,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               accessibilityLabel={t('Full screen', 'Toàn màn hình', '全画面', '全屏', '全螢幕')}
               testID="photo-sheet-full"
             >
-              <Ionicons name="expand" size={PHOTO_GLYPH} color={onPhoto.text} />
+              <Glyph name="expand" size={PHOTO_GLYPH} color={onPhoto.text} />
             </PressableScale>
           </View>
 
@@ -262,11 +262,11 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
             <View style={[s.name, scored && s.nameHeld]} testID="photo-sheet-name">
               {p.kind ? (
                 <View style={s.kind} testID="photo-sheet-kind">
-                  <Ionicons name={kindIcon(p.kind)} size={20} color={colors.text} />
+                  <Glyph name={kindIcon(p.kind)} size={20} color={colors.text} />
                   <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
                   {p.is_cover && (
                     <View accessibilityLabel={t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面')} testID="photo-sheet-cover">
-                      <Ionicons name="star" size={16} color={colors.okInk} />
+                      <Glyph name="star" size={16} color={colors.okInk} />
                     </View>
                   )}
                 </View>

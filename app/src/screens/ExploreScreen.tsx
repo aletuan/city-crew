@@ -14,7 +14,7 @@ import { Animated, Platform, SectionList, Text, useWindowDimensions, View } from
 import { useScrollToTop, type ParamListBase } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import * as Location from 'expo-location';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
@@ -777,7 +777,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               bright one on a pale ground is a 3:1 glyph. Same accent,
               adjusted for ink — the app's own rule, not a second
               colour. */}
-          <Ionicons
+          <Glyph
             name="options-outline"
             size={19}
             color={filterCount > 0 ? colors.accent : colors.textSecondary}
@@ -809,7 +809,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               : t('Map', 'Bản đồ', '地図', '地图', '地圖')}
             testID={floating ? 'explore-view-pinned' : 'explore-view'}
           >
-            <Ionicons
+            <Glyph
               name={mapMode ? 'close' : 'map-outline'}
               size={15}
               color={colors.textSecondary}
@@ -986,7 +986,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     hitSlop={4}
                     contentStyle={[s.mapCell, appliedFilters.status !== 'any' && s.mapCellOn]}
                   >
-                    <Ionicons
+                    <Glyph
                       name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
                       size={19}
                       color={appliedFilters.status !== 'any' ? colors.accent : colors.textSecondary}
@@ -1002,7 +1002,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     hitSlop={4}
                     contentStyle={[s.mapCell, appliedFilters.savedOnly && s.mapCellOn]}
                   >
-                    <Ionicons
+                    <Glyph
                       name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
                       size={19}
                       color={appliedFilters.savedOnly ? colors.accent : colors.textSecondary}
@@ -1024,7 +1024,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                         hitSlop={4}
                         contentStyle={[s.mapCell, appliedFilters.visitedOnly && s.mapCellOn]}
                       >
-                        <Ionicons
+                        <Glyph
                           name={appliedFilters.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
                           size={19}
                           color={appliedFilters.visitedOnly ? colors.accent : colors.textSecondary}

@@ -4,6 +4,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../../components/ui/glyph';
 import { CountBadge, PressableScale, Toggle } from '../../components/ui';
 import { colors } from '../../theme';
 import { GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './styles';
@@ -39,7 +40,7 @@ export function RowGlyph({ name, line }: {
   const lift = line == null ? undefined : { height: GLYPH_BOX, marginTop: (line - GLYPH_BOX) / 2 };
   return (
     <View style={[s.rowGlyph, lift]} testID="row-glyph">
-      <Ionicons name={name} size={ROW_GLYPH} color={colors.textTertiary} />
+      <Glyph name={name} size={ROW_GLYPH} color={colors.textTertiary} />
     </View>
   );
 }
@@ -67,7 +68,7 @@ export function FeatureRow({ icon, title, sub, onPress, last, count }: {
         <Text style={s.featureSub}>{sub}</Text>
       </View>
       <CountBadge n={count ?? 0} style={s.rowEnd} />
-      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
+      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );
 }
@@ -171,7 +172,7 @@ export function SettingRow({ icon, label, value, onPress, last, testID }: {
       {value === undefined
         ? <View style={{ flex: 1 }} />
         : <Text style={s.settingValue} numberOfLines={1}>{value}</Text>}
-      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
     </PressableScale>
   );
 }

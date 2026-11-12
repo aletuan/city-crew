@@ -51,7 +51,6 @@ vi.mock('./SignupTour', async (orig) => {
 
 import { PALETTES, PILL_FADE } from '../theme';
 import FloatingTabBar from './FloatingTabBar';
-import PlacesGlyph from './PlacesGlyph';
 import { TabBarDuckProvider, useTabBarDuck } from './tabBarDuck';
 
 const NAMES = ['Ideas', 'Explore', 'Trips', 'Collections', 'Profile'];
@@ -84,18 +83,10 @@ const mount = (props: BottomTabBarProps) => render(
 );
 /** By the tab's caption, with or without the waiting count a dot adds to the spoken name. */
 const tab = (name: string) => screen.getByRole('tab', { name: new RegExp(`^${name}(,|$)`) });
-/** The solid pin's outline, read off a selected glyph rendered alone, so
- *  the bar's tests can tell the two variants apart without knowing the path. */
-const PIN_SOLID = (() => {
-  const { container, unmount } = render(<PlacesGlyph size={22} color="#000" solid />);
-  const d = container.querySelector('[data-testid="places-pin"]')!.getAttribute('d')!;
-  unmount();
-  return d;
-})();
 /** The waiting dots over a tab: they ride above the pill, in a layer of
  *  their own, so they are found by name rather than inside the tab. */
 const dotsIn = (name: string) => document.querySelectorAll(`[data-testid="dot-${name.toLowerCase()}"]`).length;
-/** The one pill, its ground, and the window of solid glyphs it carries. */
+/** The one pill, its ground, and the window of pill-ink glyphs it carries. */
 const pill = () => screen.getByTestId('tab-pill');
 const ground = () => pill().firstElementChild as HTMLElement;
 const solids = () => screen.getByTestId('tab-pill-glyphs');
@@ -121,19 +112,17 @@ describe('the five tabs', () => {
     mount(propsFor(1).props);
     expect(screen.getAllByRole('tab').map((el) => el.getAttribute('aria-label'))).toEqual(NAMES);
     expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual(['', '', '', '', '']);
-    // Every tab draws its idle glyph; the solid ones are drawn once, in
-    // the pill's window, so whichever cell the pill is over shows solid.
-    // (`accessibilityState.selected` is set too, but react-native-web
-    // drops it on the floor — see `Chip`.)
-    expect(tab('Ideas').querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('compass-outline');
-    expect(tab('Profile').querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('person-outline');
-    // The Places tab (route `Explore`) draws no font glyph: its mark is
-    // `PlacesGlyph`, an outline in the tab and solid in the window.
-    expect(tab('Explore').querySelector('[data-icon]')).toBeNull();
-    expect(tab('Explore').querySelector('[data-testid="places-pin"]')?.getAttribute('d')).not.toBe(PIN_SOLID);
-    expect([...solids().querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon')))
-      .toEqual(['compass', 'calendar', 'bookmark', 'person']);
-    expect(solids().querySelector('[data-testid="places-pin"]')?.getAttribute('d')).toBe(PIN_SOLID);
+    // Every tab draws its idle glyph; the pill's copies are drawn once, in
+    // its window. (`accessibilityState.selected` is set too, but
+    // react-native-web drops it on the floor — see `Chip`.)
+    //
+    // The five are one family, Lucide's lines (owner, 12 Nov 2026), and
+    // the pill's copies are the same outlines, not solids: the pill says
+    // which tab, and the reference the owner chose keeps the line there.
+    const marks = ['compass-outline', 'places', 'calendar-outline', 'bookmark-outline', 'person-outline'];
+    expect(NAMES.map((n) => tab(n).querySelector('[data-icon]')?.getAttribute('data-icon'))).toEqual(marks);
+    expect([...solids().querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'))).toEqual(marks);
+    for (const g of document.querySelectorAll('[data-icon]')) expect(g.getAttribute('data-family')).toBe('lucide');
   });
 
   // The pill stands over the selected cell, and its window looks back at
@@ -202,13 +191,13 @@ describe('the five tabs', () => {
     const ink = (name: string) => tab(name).querySelector('[data-icon]')!.getAttribute('data-color');
     const solid = (i: number) => solids().querySelectorAll('[data-icon]')[i].getAttribute('data-color');
     const { unmount } = mount(propsFor(2).props);
-    expect(solid(1)).toBe(PALETTES.charcoal.pillInk);       // Trips, near-black on solid coral
+    expect(solid(2)).toBe(PALETTES.charcoal.pillInk);       // Trips, near-black on solid coral
     expect(ink('Ideas')).toBe(PALETTES.charcoal.text);      // full-strength paper, never a mid grey
     unmount();
 
     theme.scheme = 'light';
     mount(propsFor(2).props);
-    expect(solid(1)).toBe(PALETTES.paper.pillInk);          // 5.16:1 on pale coral
+    expect(solid(2)).toBe(PALETTES.paper.pillInk);          // 5.16:1 on pale coral
     expect(ink('Ideas')).toBe(PALETTES.paper.text);
   });
 
@@ -245,17 +234,17 @@ describe('the five tabs', () => {
     expect(PILL_FADE).toBeGreaterThan(0);
   });
 
-  // Drawn at 25, not 22: at 22 the ink came out a few points smaller than
-  // Threads' in a pill of the same size. Both kinds of glyph, the
-  // Ionicons four and the drawn pin.
-  it('draws every glyph at the one size', () => {
+  // The reference's line and lightness at a size near Threads' (owner,
+  // 12 Nov 2026): a 22pt box, a 1.2 line on Lucide's 24 grid — lighter
+  // than the 1.5 every other glyph in the app wears.
+  it('draws every glyph at the one size, in the bar’s lighter line', () => {
     mount(propsFor(0).props);
-    for (const name of ['Ideas', 'Trips', 'Collections', 'Profile']) {
-      expect(tab(name).querySelector('[data-icon]')!.getAttribute('data-size')).toBe('25');
+    const all = [...document.querySelectorAll('[data-icon]')];
+    expect(all).toHaveLength(10);
+    for (const g of all) {
+      expect(g.getAttribute('data-size')).toBe('22');
+      expect(g.getAttribute('data-stroke')).toBe('1.2');
     }
-    expect(tab('Explore').querySelector('[data-stub="Svg"]')!.getAttribute('width')).toBe('25');
-    for (const g of solids().querySelectorAll('[data-icon]')) expect(g.getAttribute('data-size')).toBe('25');
-    expect(solids().querySelector('[data-stub="Svg"]')!.getAttribute('width')).toBe('25');
   });
 
   // As far from the rim at the sides as above and below: the first and

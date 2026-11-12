@@ -69,6 +69,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, gradAI, space } from '../theme';
@@ -300,7 +301,7 @@ function Row({ icon, title, body }: {
   return (
     <View style={s.row}>
       <View style={s.mark}>
-        <Ionicons name={icon} size={20} color={colors.accent} />
+        <Glyph name={icon} size={20} color={colors.accent} />
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.rowTitle}>{title}</Text>

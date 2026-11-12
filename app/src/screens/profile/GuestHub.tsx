@@ -1,7 +1,7 @@
 // Profile for a guest: what an account unlocks, and the way in.
 
 import { Pressable, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../../components/ui/glyph';
 import { Card, fireHaptic } from '../../components/ui';
 import { PrimaryButton } from '../../components/authUi';
 import { useI18n } from '../../lib/i18n';
@@ -19,7 +19,7 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
     <>
       <View style={s.heroRow}>
         <View style={s.avatarBig}>
-          <Ionicons name="person-outline" size={40} color={colors.accent} />
+          <Glyph name="person-outline" size={40} color={colors.accent} />
         </View>
         <View style={{ flex: 1, gap: 6 }}>
           {/* A promise, not a status. "You're browsing as a guest" was a
@@ -70,7 +70,7 @@ export function GuestHub({ navigation }: { navigation: Nav }) {
         }}
       >
         <Text style={s.guestLinkText}>{t('Create a new account', 'Tạo tài khoản mới', '新しいアカウントを作成', '创建新账号', '建立新帳號')}</Text>
-        <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
+        <Glyph name="chevron-forward" size={15} color={colors.textSecondary} />
       </Pressable>
 
       {/* Headed like the member view's sections, and the same headings

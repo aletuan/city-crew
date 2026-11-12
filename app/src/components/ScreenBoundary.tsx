@@ -33,7 +33,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import * as Updates from 'expo-updates';
 import { BackButton, GradientCta, SECONDARY_CONTROL_H, useTabBarClearance } from './ui';
 import { I18nProvider, useI18n } from '../lib/i18n';
@@ -66,7 +66,7 @@ function Message({ title, body, children }: {
   return (
     <View style={s.message}>
       <View style={s.mark}>
-        <Ionicons name="alert-circle-outline" size={30} color={colors.accent} />
+        <Glyph name="alert-circle-outline" size={30} color={colors.accent} />
       </View>
       <Text style={s.title} accessibilityRole="header">{title}</Text>
       <Text style={s.body}>{body}</Text>

@@ -30,6 +30,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { AuthHeader, AuthScreen, DangerButton, FormError, Lede, useFailText } from '../components/authUi';
 import { Avatar, Card, PressableScale } from '../components/ui';
 import { useAuthActions, useProfile, useSession } from '../lib/auth';
@@ -192,7 +193,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
             of red things on the screen is now one, the button. */}
         <View style={[s.block, s.divider]}>
           <View style={s.blockHead}>
-            <Ionicons name="close-circle-outline" size={17} color={colors.textTertiary} />
+            <Glyph name="close-circle-outline" size={17} color={colors.textTertiary} />
             <Text style={s.label}>{t('Will be deleted', 'Sẽ bị xoá', '削除されるもの', '将被删除', '將被刪除')}</Text>
           </View>
           {gone.map(([icon, line]) => (
@@ -201,7 +202,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
                   narrow phone in Vietnamese, and a glyph centred against
                   two lines sits in the gap between them rather than
                   beside the first word. */}
-              <Ionicons name={icon} size={17} color={colors.textTertiary} />
+              <Glyph name={icon} size={17} color={colors.textTertiary} />
               <Text style={s.value}>{line}</Text>
             </View>
           ))}
@@ -213,7 +214,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
             burning the library. */}
         <View style={s.block}>
           <View style={s.blockHead}>
-            <Ionicons name="checkmark-circle-outline" size={17} color={colors.textTertiary} />
+            <Glyph name="checkmark-circle-outline" size={17} color={colors.textTertiary} />
             {/* The pair, as a pair in each language. Vietnamese has two
                 passives and picks between them by whether what happened
                 was wanted — `bị` for the bad, `được` for the good — so
@@ -260,7 +261,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
               than centred on title-plus-sub, which is the convention
               Profile and the detail screen settled on the same day. */}
           <View style={s.glyph} testID="row-glyph">
-            <Ionicons name="download-outline" size={19} color={colors.textTertiary} />
+            <Glyph name="download-outline" size={19} color={colors.textTertiary} />
           </View>
           <View style={s.words}>
             <Text style={s.actionTitle}>{t('Download your data', 'Tải dữ liệu của bạn', 'データをダウンロード', '下载你的数据', '下載你的資料')}</Text>
@@ -273,7 +274,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
           </View>
           {takeout.busy
             ? <ActivityIndicator color={colors.textTertiary} style={s.rowEnd} />
-            : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />}
+            : <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />}
         </PressableScale>
       </Card>
       {takeout.error ? <FormError>{failText(takeout.error)}</FormError> : null}

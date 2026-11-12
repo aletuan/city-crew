@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { crewOf, headcount, type InviteRow } from '../lib/invites';
@@ -151,7 +151,7 @@ export default function TripCrew({
 
         {canInvite ? (
           <PressableScale onPress={onInvite} accessibilityRole="button" hitSlop={CHIP_SLOP} contentStyle={s.ghost} testID="trip-invite">
-            <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
+            <Glyph name="person-add-outline" size={14} color={colors.textSecondary} />
             <Text style={s.ghostText}>{t('Invite', 'Mời', '招待', '邀请', '邀請')}</Text>
           </PressableScale>
         ) : null}

@@ -30,14 +30,13 @@
 // appearing in the same frame. Now it is one view over the row that
 // springs to the new cell, stretched toward it and lifted on the way, the
 // way Threads' does — the measurements are in "the pill's travel" below.
-// The solid glyphs live in a window inside it, so a glyph is solid
-// exactly where the pill covers it, half and half mid-flight.
+// The pill-ink glyphs live in a window inside it, so a glyph takes the
+// pill's ink exactly where the pill covers it, half and half mid-flight.
 
 import { useTourAnchor } from './SignupTour';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
@@ -49,9 +48,8 @@ import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
 import { badgeSolidHex, bgHex, colors, pillGround, pillInk, radius, textHex } from '../theme';
-import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useReducedMotion, useTabBarFrame, useTabBarLift } from './ui';
+import { GlassMaterial, Glyph, PressableScale, TAB_BAR_HEIGHT, useReducedMotion, useTabBarFrame, useTabBarLift, type GlyphName } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
-import PlacesGlyph from './PlacesGlyph';
 
 /**
  * The ink on the selected pill — not `colors.badgeInk`, and measured.
@@ -83,30 +81,40 @@ import PlacesGlyph from './PlacesGlyph';
 const inkOf = (focused: boolean, light: boolean) =>
   (focused ? pillInk[light ? 'light' : 'dark'] : textHex[light ? 'light' : 'dark']);
 
-// [inactive, active]. Thin monochrome glyphs when idle; the selected tab
-// takes the solid variant, reversed out of the pill.
+// ── the five marks (owner, 12 Nov 2026) ──
 //
-// The first two moved with their captions (App.tsx, 2 Oct 2026). The
-// planning tab, now "Explore", takes the compass the catalog tab wore —
-// the glyph a reader already reads as "find out what to do". The catalog
-// tab, now "Places", is not in this table: its glyph is a pin standing on
-// a map, which Ionicons does not have, drawn in `PlacesGlyph`. The bulb
-// that used to mark "Ideas" went with the word.
+// One family of thin, even lines — Lucide's, through `Glyph` — chosen from
+// a reference over the Ionicons set this bar wore: a filled compass
+// needle, a solid calendar on the selected tab and a pin standing on a
+// many-lined folded map (`PlacesGlyph`, which went with it). The selected
+// tab keeps the outline and takes the pill's ink, as the reference does:
+// the pill already says "here", and a mark that turns solid in it said
+// it twice. Instagram and Apple's own tab bars fill the selected glyph;
+// they have no pill.
+//
+// The planning tab, "Explore", wears the compass — "find out what to do".
+// The catalog tab, "Places", the pin on the ground.
 /** The air between the pill and the island's rim — the same on every
  *  side, so the pill's round ends are concentric with the island's. */
 const PILL_INSET = 4;
 /** The pill's height: the island's, less the inset above and below. */
 const PILL_H = TAB_BAR_HEIGHT - PILL_INSET * 2;
 /**
- * The glyph's box, in points. Ionicons draws inside its box with margin,
- * so the ink is smaller than the number: measured on the owner's Pro Max
- * screenshot (2.15px a point), at 22 the five glyphs drew 18–20pt —
- * the compass 38px across, the person 40, the calendar and bookmark 43.
- * Threads' glyphs in the same screenshot pair draw 46–48px, about 22pt,
- * in a 53pt pill. At 25 ours draw about 21–23pt, the same ink in a pill
- * 3pt taller; the owner had found the air around them too wide.
+ * The glyph's box, in points, and its line on Lucide's 24 grid.
+ *
+ * From the reference (12 Nov 2026), read against its own pill so the
+ * scale cancels: its marks are 0.28 of the pill's height and their line
+ * 0.073 of the mark, against our Ionicons' 0.40 and 0.098 at 25. The
+ * owner took the line and the lightness and not the size: a 52pt pill at
+ * 0.28 is a 14pt mark, where Threads' tab marks measure 22 and Apple's
+ * sit in a 25pt box, and the owner had already once found these marks too
+ * small for the air around them. So a 22pt box — Lucide draws 20 of its
+ * 24 units, about 19pt of ink, the reference's proportion of pill to
+ * mark nearer ours than its own — and a 1.2 line, about 1.1pt, the
+ * reference's line for a mark that size.
  */
-const GLYPH = 25;
+const GLYPH = 22;
+const TAB_STROKE = 1.2;
 /** How much wider the pill runs per cell it travels, and the most it
  *  will: one cell over covers both glyphs, as Threads' does. */
 const STRETCH_PER_STEP = 0.28;
@@ -116,11 +124,12 @@ const STRETCH_MAX = 0.6;
  *  rides past the rim. */
 const LIFT_SCALE = 1.06;
 
-const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
-  Ideas: ['compass-outline', 'compass'],
-  Trips: ['calendar-outline', 'calendar'],
-  Collections: ['bookmark-outline', 'bookmark'],
-  Profile: ['person-outline', 'person'],
+const ICONS: Record<string, GlyphName> = {
+  Explore: 'places',
+  Ideas: 'compass-outline',
+  Trips: 'calendar-outline',
+  Collections: 'bookmark-outline',
+  Profile: 'person-outline',
 };
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -261,7 +270,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // pill leaves its cell stretched toward the next one, covering both
   // glyphs for four or five frames (~75ms); it travels lifted — larger,
   // past the bar's rim, paler, a clear glass rather than a grey — and the
-  // glyph turns solid exactly where the pill covers it, half one and half
+  // glyph changes exactly where the pill covers it, half one and half
   // the other mid-way; then it holds the rise a beat and settles, about
   // 300ms in all. The refraction through that glass is Liquid Glass and
   // native-only; everything else is here.
@@ -313,26 +322,27 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     outputRange: [1, 0, 1],
     extrapolate: 'clamp',
   });
-  /** A tab's mark, idle or solid. The solid ones live only in the pill's
-   *  window, so where the pill is, the glyph is solid. */
-  const glyph = (name: string, solid: boolean) => (name === 'Explore' ? (
-    <PlacesGlyph size={GLYPH} solid={solid} color={inkOf(solid, light)} testID={solid ? 'places-glyph-solid' : 'places-glyph'} />
-  ) : (
-    <Ionicons
-      name={ICONS[name][solid ? 1 : 0]}
+  /** A tab's mark, idle or on the pill. The pill's copies live only in its
+   *  window, so where the pill is, the mark wears the pill's ink. */
+  const glyph = (name: string, onPill: boolean) => (
+    <Glyph
+      name={ICONS[name]}
       size={GLYPH}
-      // Only on the glass: the solid glyph sits on an opaque pill, whose
-      // ground is known, so a halo there would be decoration on a
-      // problem that does not exist.
-      style={solid ? undefined : glassHalo(light)}
+      strokeWidth={TAB_STROKE}
       // Full strength when idle, where this used to be a mid grey. That
       // grey was the reason the glass had to stay nearly opaque: over an
       // unknown photograph the scrim averages towards mid-tone, and a
       // mid-tone glyph on it cannot contrast at any opacity. See
       // GlassMaterial for the measurements — the two changes are one.
-      color={inkOf(solid, light)}
+      //
+      // No halo: the Ionicons marks wore `glassHalo`, a text shadow, and
+      // a drawing has no text to shadow — as `PlacesGlyph` never had one.
+      // The glass's scrim carries the contrast; check it over a bright
+      // photograph before trusting this line.
+      color={inkOf(onPill, light)}
+      testID={`tab-glyph-${name}${onPill ? '-on' : ''}`}
     />
-  ));
+  );
 
   const slide = duck.anim.interpolate({
     inputRange: [0, 1],

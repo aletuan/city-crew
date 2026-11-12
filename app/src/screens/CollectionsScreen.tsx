@@ -10,7 +10,7 @@ import { Keyboard, type NativeScrollEvent, type NativeSyntheticEvent, SectionLis
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import {
   AmbientWarmth, Avatar, Card, CHIP_H, Empty, fireHaptic, GradientCta, PressableScale, Screen,
   ScreenTitle, Skeleton, TABS_ROW_GAP, UnderlineChoice, UnderlineTabs, useTabBarClearance,
@@ -169,7 +169,7 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
           on the two lines beside it. */}
       <LinearGradient {...gradAI} style={s.noticeChip}>
         <Text style={s.noticeChipText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
-        <Ionicons name="arrow-forward" size={15} color={colors.accentInk} />
+        <Glyph name="arrow-forward" size={15} color={colors.accentInk} />
       </LinearGradient>
     </PressableScale>
   );
@@ -191,7 +191,7 @@ function EmptyCover() {
       end={{ x: 1, y: 1 }}
       style={[s.thumbFill, s.thumbEmpty]}
     >
-      <Ionicons name="bookmark-outline" size={26} color={colors.accentFaint} />
+      <Glyph name="bookmark-outline" size={26} color={colors.accentFaint} />
     </LinearGradient>
   );
 }
@@ -212,7 +212,7 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
     <View style={s.firstWrap}>
       <View style={s.first}>
         <View style={s.firstIcon}>
-          <Ionicons name="bookmark" size={27} color={colors.accent} />
+          <Glyph name="bookmark" size={27} color={colors.accent} />
         </View>
         <Text style={s.firstTitle}>
           {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}
@@ -272,7 +272,7 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
     <View style={s.firstWrap}>
       <View style={s.first}>
         <View style={s.firstIcon}>
-          <Ionicons name="globe" size={27} color={colors.accent} />
+          <Glyph name="globe" size={27} color={colors.accent} />
         </View>
         <Text style={s.firstTitle}>
           {t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません', '还没有公开的清单', '還沒有公開的清單')}
@@ -851,7 +851,7 @@ export default function CollectionsScreen({ navigation, route }: {
       accessibilityHint={t('Go to another city', 'Đến thành phố khác', '別の都市へ移動', '前往其他城市', '前往其他城市')}
     >
       <Text style={pinnedCopy ? s.cityBarName : s.cityHeadName} numberOfLines={1}>{cityWord(city.id)}</Text>
-      <Ionicons name="chevron-down" size={pinnedCopy ? 16 : 18} color={colors.textSecondary} style={s.cityHeadChevron} />
+      <Glyph name="chevron-down" size={pinnedCopy ? 16 : 18} color={colors.textSecondary} style={s.cityHeadChevron} />
       <Text style={[s.cityHeadCount, pinnedCopy && s.cityBarCount]}>{listsWord(city.count, t)}</Text>
     </PressableScale>
   );
@@ -900,7 +900,7 @@ export default function CollectionsScreen({ navigation, route }: {
                   ? t('Mosaic view', 'Dạng Mosaic', 'モザイク表示', '拼贴视图', '拼貼檢視')
                   : t('Tile view', 'Dạng lưới', 'タイル表示', '卡片视图', '卡片檢視')}
               >
-                <Ionicons
+                <Glyph
                   name={v === 'mosaic' ? 'albums-outline' : 'grid-outline'}
                   size={14}
                   color={communityView === v ? colors.accent : colors.textTertiary}
@@ -1046,7 +1046,7 @@ export default function CollectionsScreen({ navigation, route }: {
                   accessibilityRole="button"
                   accessibilityLabel={term}
                 >
-                  <Ionicons name="search-outline" size={17} color={colors.textTertiary} />
+                  <Glyph name="search-outline" size={17} color={colors.textTertiary} />
                   <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
                 </PressableScale>
               ))}
@@ -1277,7 +1277,7 @@ export default function CollectionsScreen({ navigation, route }: {
                             Public or Private in the tile's name. */}
                         {item.own && !c.is_public ? (
                           <View style={s.gcardLock} testID="collection-tile-lock">
-                            <Ionicons name="lock-closed" size={12} color={colors.text} />
+                            <Glyph name="lock-closed" size={12} color={colors.text} />
                           </View>
                         ) : null}
                         <View style={s.gcardText}>
@@ -1349,7 +1349,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                 accessibilityLabel={placesOf(members)}
                                 testID="collection-tile-count"
                               >
-                                <Ionicons name="location-outline" size={13} color={onPhoto.textSecondary} />
+                                <Glyph name="location-outline" size={13} color={onPhoto.textSecondary} />
                                 <Text style={s.gcardMeta}>{members}</Text>
                               </View>
                             ))}
@@ -1376,7 +1376,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                   ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
                                   : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
                               >
-                                <Ionicons
+                                <Glyph
                                   name={my ? 'heart' : 'heart-outline'}
                                   size={15}
                                   color={my ? onPhoto.accent : onPhoto.text}

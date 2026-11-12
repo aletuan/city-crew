@@ -24,7 +24,7 @@ import {
   Animated, Linking, Modal, Pressable, ScrollView, StyleSheet, Text,
   useWindowDimensions, View,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DOCS, type Block, type Doc, type LegalId } from '../lib/legal';
 import { isDocLink, parseInline } from '../lib/legalmark';
@@ -156,7 +156,7 @@ export default function LegalSheet({ id, onClose }: {
             accessibilityRole="button"
             accessibilityLabel={close}
           >
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
+            <Glyph name="close" size={22} color={colors.textSecondary} />
           </PressableScale>
         </View>
 

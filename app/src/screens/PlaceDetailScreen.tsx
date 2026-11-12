@@ -35,6 +35,7 @@ import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
 import { reviewAfterCheckin } from '../lib/askReview';
@@ -120,7 +121,7 @@ function InfoRow({ icon, label, first, onPress, trailing, hug, children }: {
         accessibilityRole={tappable ? 'button' : undefined}
       >
         <View style={s.infoIconSlot}>
-          <Ionicons name={icon} size={19} color={colors.textTertiary} />
+          <Glyph name={icon} size={19} color={colors.textTertiary} />
         </View>
         <View style={[s.infoWords, hug && s.infoWordsHug]}>
           <Text style={s.infoLabel}>{label}</Text>
@@ -378,7 +379,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const creditLine = blurbFrom ? (
     <Text style={[s.credit, blurbHref ? s.creditLink : null]}>
       {blurbMark ? (
-        <Ionicons name={blurbMark} size={13} color={blurbHref ? colors.accent : colors.textTertiary} />
+        <Glyph name={blurbMark} size={13} color={blurbHref ? colors.accent : colors.textTertiary} />
       ) : null}
       {blurbMark ? ' ' : ''}
       {creditWords}
@@ -490,7 +491,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
           : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
       >
-        <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.accent : colors.text} />
+        <Glyph name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.accent : colors.text} />
       </PressableScale>
     </View>
   );
@@ -665,7 +666,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               Japanese, which has no case, so one style serves three. */}
           {place.is_featured ? (
             <View style={s.pick} testID="detail-pick">
-              <Ionicons name="ribbon-outline" size={13} color={colors.accent} />
+              <Glyph name="ribbon-outline" size={13} color={colors.accent} />
               <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ', 'City Crew 精选', 'City Crew 精選')}</Text>
             </View>
           ) : null}
@@ -676,7 +677,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
           {showsNeighborhood ? (
             <View style={s.locRow}>
-              <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+              <Glyph name="location-outline" size={15} color={colors.textTertiary} />
               <Text style={s.loc}>{neighborhood}</Text>
             </View>
           ) : null}
@@ -702,7 +703,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー', '条评价', '條評價')}`
                   : String(place.rating)}
               >
-                <Ionicons name="star" size={17} color={colors.accent} />
+                <Glyph name="star" size={17} color={colors.accent} />
                 <Text style={s.ratingValue}>{place.rating}</Text>
                 {reviews ? (
                   <>
@@ -733,7 +734,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <PricePill place={place} />
               ) : (
                 <View style={s.priceLine}>
-                  <Ionicons name="pricetag-outline" size={15} color={colors.textSecondary} />
+                  <Glyph name="pricetag-outline" size={15} color={colors.textSecondary} />
                   <PricePill place={place} />
                 </View>
               )
@@ -819,7 +820,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 contentStyle={[s.checkin, latestVisit && s.checkinOn]}
                 testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
               >
-                <Ionicons name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
+                <Glyph name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
                 {/* ── one width in both states ──
                     The pill was as wide as its word, and the two words
                     are not the same length: "Check-in" and "Đã qua" are
@@ -1112,7 +1113,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       contentStyle={s.go}
                       testID="detail-directions"
                     >
-                      <Ionicons name="navigate" size={18} color={colors.accent} />
+                      <Glyph name="navigate" size={18} color={colors.accent} />
                     </PressableScale>
                   ) : undefined}
                 >
@@ -1217,7 +1218,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     contentStyle={s.goDisc}
                     testID="detail-directions"
                   >
-                    <Ionicons name="navigate" size={18} color={colors.accent} />
+                    <Glyph name="navigate" size={18} color={colors.accent} />
                   </PressableScale>
                 </View>
               )}
@@ -1238,7 +1239,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     accessibilityState={{ expanded: hoursOpen }}
                   >
                     <View style={s.infoIconSlot}>
-                      <Ionicons name="time-outline" size={19} color={colors.textTertiary} />
+                      <Glyph name="time-outline" size={19} color={colors.textTertiary} />
                     </View>
                     <View style={s.infoWords}>
                       <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}</Text>
@@ -1277,7 +1278,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                         two heights — the raggedness this change is about,
                         moved to the other end of the row. */}
                     <View style={s.infoChevronSlot}>
-                      <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
+                      <Glyph name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
                     </View>
                   </Pressable>
                   {hoursOpen && (
@@ -1400,7 +1401,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   const d = new Date(v.at);
                   return (
                     <View key={v.id} style={[s.historyRow, i > 0 && s.historyDivider]} testID="checkin-visit">
-                      <Ionicons name="time-outline" size={17} color={colors.textTertiary} />
+                      <Glyph name="time-outline" size={17} color={colors.textTertiary} />
                       <Text style={s.historyText} numberOfLines={1}>
                         {dateline(lang, d)} · {clockOf(d.getHours() * 60 + d.getMinutes())}
                       </Text>
@@ -1414,7 +1415,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                         accessibilityRole="button"
                         accessibilityLabel={t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除', '删除这次打卡', '刪除這次打卡')}
                       >
-                        <Ionicons name="trash-outline" size={18} color={colors.bad} />
+                        <Glyph name="trash-outline" size={18} color={colors.bad} />
                       </PressableScale>
                     </View>
                   );

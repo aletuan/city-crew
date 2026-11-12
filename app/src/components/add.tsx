@@ -45,6 +45,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { PressableScale, SECONDARY_CONTROL_H } from './ui';
 import { useScheme } from '../lib/theme';
 import { colors, font, gradAI, radius, space, textTertiaryHex, type } from '../theme';
@@ -69,7 +70,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
     <View style={s.slotWrap}>
       <PressableScale onPress={onPress} accessibilityRole="button" contentStyle={s.slot} testID={testID}>
         <View style={s.slotIcon}>
-          <Ionicons name="add" size={26} color={colors.accent} />
+          <Glyph name="add" size={26} color={colors.accent} />
         </View>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={s.slotTitle} numberOfLines={1}>{title}</Text>
@@ -80,7 +81,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
             every other row-end chevron in the app — it was 18 beside the
             18pt title, which is the one size on the row the chevron does
             not need to match. */}
-        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+        <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
       </PressableScale>
     </View>
   );
@@ -152,7 +153,7 @@ export function AddCell({ label, onPress, size, count, testID }: {
   const said = count ? `${label}, ${count.said}` : label;
   const figure = count ? (
     <View style={s.cellCount} testID={testID ? `${testID}-count` : undefined}>
-      <Ionicons name="location-outline" size={size !== undefined ? 12 : 13} color={colors.textSecondary} />
+      <Glyph name="location-outline" size={size !== undefined ? 12 : 13} color={colors.textSecondary} />
       <Text style={s.cellCountText}>{count.n}</Text>
     </View>
   ) : null;
@@ -167,7 +168,7 @@ export function AddCell({ label, onPress, size, count, testID }: {
       >
         {figure ? <View style={s.cellTileCorner}>{figure}</View> : null}
         <View style={[s.cellDisc, { borderColor: textTertiaryHex[scheme] }]}>
-          <Ionicons name="add" size={24} color={colors.accent} />
+          <Glyph name="add" size={24} color={colors.accent} />
         </View>
         <Text style={s.cellTileText} numberOfLines={1}>{label}</Text>
       </PressableScale>
@@ -182,7 +183,7 @@ export function AddCell({ label, onPress, size, count, testID }: {
       contentStyle={s.cellRow}
       testID={testID}
     >
-      <Ionicons name="add" size={24} color={colors.text} />
+      <Glyph name="add" size={24} color={colors.text} />
       <Text style={s.cellRowText} numberOfLines={2}>{label}</Text>
       {figure ? <View style={{ marginLeft: 'auto' }}>{figure}</View> : null}
     </PressableScale>
@@ -297,7 +298,7 @@ export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibili
           when one replaces the other. */}
       {busy
         ? <View style={{ width: glyph, height: glyph, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="small" color={mark} /></View>
-        : <Ionicons name={icon} size={glyph} color={mark} />}
+        : <Glyph name={icon} size={glyph} color={mark} />}
       <Text style={[s.pillText, quiet && s.pillTextQuiet]}>{label}</Text>
     </>
   );

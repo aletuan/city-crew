@@ -3,7 +3,7 @@ import {
   type AccessibilityActionEvent, type AccessibilityActionInfo, type GestureResponderEvent, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { categoriesOf, pinCategory } from '../lib/categories';
 import { coverOf, fmtCount, isLive, Place } from '../lib/data';
 import { useCityList } from '../lib/city';
@@ -171,7 +171,7 @@ export default function PlaceCard({
             style={s.saveSlot}
             contentStyle={s.saveFab}
           >
-            <Ionicons
+            <Glyph
               name={saved ? 'bookmark' : 'bookmark-outline'}
               size={17}
               color={saved ? onPhoto.accent : onPhoto.text}
@@ -440,7 +440,7 @@ export default function PlaceCard({
               {(where || far || when) ? (
                 <View style={s.whereRow}>
                   {(where || far)
-                    ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                    ? <Glyph name="location-outline" size={13} color={colors.textTertiary} />
                     : null}
                   {where ? (
                     <Text style={s.where} numberOfLines={1} testID={testID ? `${testID}-district` : undefined}>

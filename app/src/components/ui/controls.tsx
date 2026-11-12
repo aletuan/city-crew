@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import { Animated, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Switch, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './glyph';
 import { useI18n } from '../../lib/i18n';
 import { moreToTheRight, peekGap, rowWidth, type PeekRow } from '../../lib/peek';
 import { useScheme } from '../../lib/theme';
@@ -137,7 +138,7 @@ export function Chip({ label, count, active, onPress, icon, testID }: {
       aria-selected={onPress ? !!active : undefined}
       testID={testID}
     >
-      {icon ? <Ionicons name={icon} size={15} color={active ? colors.accent : colors.textSecondary} /> : null}
+      {icon ? <Glyph name={icon} size={15} color={active ? colors.accent : colors.textSecondary} /> : null}
       <Text style={[s.chipText, active && s.chipTextOn]}>
         {label}
         {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
@@ -240,7 +241,7 @@ export function Tile({ label, icon, active, compact, onPress, testID }: {
       aria-selected={!!active}
       testID={testID}
     >
-      <Ionicons name={icon} size={compact ? 22 : 24} color={active ? colors.accent : colors.textSecondary} />
+      <Glyph name={icon} size={compact ? 22 : 24} color={active ? colors.accent : colors.textSecondary} />
       {/* Two lines allowed, and needed: "Nightlife" is "Về đêm" in one
           language and "ナイトライフ" in another, and a cell a third of
           the screen wide cannot hold the third on one line. Centred, so
@@ -350,7 +351,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
           >
-            <Ionicons name={icon} size={16} color={on ? colors.accent : colors.textTertiary} />
+            <Glyph name={icon} size={16} color={on ? colors.accent : colors.textTertiary} />
             <Text style={[s.tabText, on && s.tabTextOn]} numberOfLines={1}>
               {worded}
             </Text>
@@ -526,7 +527,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
               accessibilityRole="button"
               aria-selected={on}
             >
-              {icon ? <Ionicons name={icon} size={16} color={on ? colors.accent : colors.textSecondary} /> : null}
+              {icon ? <Glyph name={icon} size={16} color={on ? colors.accent : colors.textSecondary} /> : null}
               <Text style={[s.choiceText, on && s.tabTextOn]} numberOfLines={1}>
                 {label}
                 {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
@@ -599,7 +600,7 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color, bare, 
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Ionicons name={icon} size={size} color={color ?? colors.text} />
+      <Glyph name={icon} size={size} color={color ?? colors.text} />
     </PressableScale>
   );
 }
@@ -685,7 +686,7 @@ export function GradientCta({ icon, label, onPress, wide, quiet, busy, disabled,
         <Animated.View
           style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}
         >
-          <Ionicons name={glyph} size={20} color={quiet ? colors.accent : colors.accentInk} />
+          <Glyph name={glyph} size={20} color={quiet ? colors.accent : colors.accentInk} />
         </Animated.View>
       )}
       <Text style={[s.ctaText, quiet && s.ctaTextQuiet]}>{label}</Text>
@@ -736,7 +737,7 @@ export function SelectTick({ on }: { on: boolean }) {
   if (!on) return <View style={s.tick} />;
   return (
     <LinearGradient {...gradAI} style={[s.tick, s.tickOn]}>
-      <Ionicons name="checkmark" size={15} color={colors.accentInk} />
+      <Glyph name="checkmark" size={15} color={colors.accentInk} />
     </LinearGradient>
   );
 }

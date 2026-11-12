@@ -42,6 +42,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { Image } from 'expo-image';
 import { AddPill } from '../components/add';
 import {
@@ -112,7 +113,7 @@ function CompanyChip({ company }: { company: string | null }) {
   return (
     <View style={s.badge}>
       {c.icon ? (
-        <Ionicons name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={colors.accent} />
+        <Glyph name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={colors.accent} />
       ) : null}
       <Text style={s.badgeText}>{t(c.en, c.vi, c.ja, c.zh, c.hant)}</Text>
     </View>
@@ -181,7 +182,7 @@ function TripCard({ trip, past, onPress, testID }: {
             says "this is a date" at a glance, in a list where every card
             starts with a name. */}
         <View style={s.metaRow}>
-          <Ionicons name="calendar-outline" size={14} color={colors.accent} />
+          <Glyph name="calendar-outline" size={14} color={colors.accent} />
           <Text style={s.meta} numberOfLines={1}>
             {/* The day alone: not the hour, and not the city.
 
@@ -254,7 +255,7 @@ function TripCard({ trip, past, onPress, testID }: {
         <View style={s.foot}>
           <View style={s.open}>
             <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る', '查看计划', '檢視計畫')}</Text>
-            <Ionicons name="chevron-forward" size={15} color={colors.accent} />
+            <Glyph name="chevron-forward" size={15} color={colors.accent} />
           </View>
         </View>
       </View>
@@ -275,7 +276,7 @@ function FirstTrip({ onPress }: { onPress: () => void }) {
   return (
     <View style={s.first} testID="trips-empty">
       <View style={s.firstIcon}>
-        <Ionicons name="map" size={27} color={colors.accent} />
+        <Glyph name="map" size={27} color={colors.accent} />
       </View>
       <Text style={s.firstTitle}>
         {t('No trips yet', 'Chưa có chuyến đi nào', '旅程はまだありません', '还没有行程', '還沒有行程')}
@@ -403,7 +404,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
         <AmbientWarmth />
         <View style={s.first}>
           <View style={s.firstIcon}>
-            <Ionicons name="map" size={27} color={colors.accent} />
+            <Glyph name="map" size={27} color={colors.accent} />
           </View>
           <Text style={s.firstTitle}>
             {t('Where to next?', 'Đi đâu tiếp theo?', '次はどこへ？', '下一站去哪儿？', '下一站去哪裡？')}
@@ -560,7 +561,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               button: "New trip" is in the header, one glance up. */}
           {!!mine.length && !upcoming.length && (
             <View style={s.none} testID="trips-none-ahead">
-              <Ionicons name="calendar-outline" size={20} color={colors.accent} />
+              <Glyph name="calendar-outline" size={20} color={colors.accent} />
               <Text style={s.noneText}>
                 {t(
                   'No upcoming trips',

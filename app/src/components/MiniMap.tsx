@@ -39,7 +39,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { PressableScale } from './ui';
 import { colors, font, radius } from '../theme';
 import MapBoundary from './MapBoundary';
@@ -197,7 +197,7 @@ export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, i
         {onLocate ? (
           // 36 drawn, so as not to cover more map; the slop makes it 44.
           <PressableScale onPress={onLocate} scaleTo={0.9} contentStyle={s.locate} hitSlop={4} accessibilityRole="button">
-            <Ionicons name="navigate" size={17} color={colors.accent} />
+            <Glyph name="navigate" size={17} color={colors.accent} />
           </PressableScale>
         ) : null}
         {caption ? (

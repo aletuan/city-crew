@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { BackButton, CONTROL_H, fireHaptic, PressableScale, SECONDARY_CONTROL_H, useTabBarClearance } from './ui';
 import { useI18n } from '../lib/i18n';
 import { PASSWORD_MIN, passwordStrength } from '../lib/password';
@@ -157,7 +158,7 @@ export function AuthHeader({ onBack, title, action, backBare, compactTitle }: {
         >
           {action.busy
             ? <ActivityIndicator color={colors.accentInk} />
-            : <Ionicons name="checkmark" size={22} color={lit ? colors.accentInk : colors.textTertiary} />}
+            : <Glyph name="checkmark" size={22} color={lit ? colors.accentInk : colors.textTertiary} />}
         </PressableScale>
       ) : null}
     </View>
@@ -215,7 +216,7 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
             carry a message, which is why the sentence below exists — but
             two signals agreeing is what makes the field findable in a
             scroll. */}
-        {grouped ? null : <Ionicons name={icon} size={22} color={error ? colors.bad : colors.accent} />}
+        {grouped ? null : <Glyph name={icon} size={22} color={error ? colors.bad : colors.accent} />}
         <View style={{ flex: 1, gap: 2 }}>
           {/* Grouped, the label is the smaller half: there is no glyph to
               find the row by, so the label is what names it and the value
@@ -252,7 +253,7 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
               ? t('Show password', 'Hiện mật khẩu', 'パスワードを表示', '显示密码', '顯示密碼')
               : t('Hide password', 'Ẩn mật khẩu', 'パスワードを隠す', '隐藏密码', '隱藏密碼')}
           >
-            <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={21} color={colors.textTertiary} />
+            <Glyph name={hidden ? 'eye-outline' : 'eye-off-outline'} size={21} color={colors.textTertiary} />
           </Pressable>
         ) : null}
       </View>
@@ -354,7 +355,7 @@ export function PrimaryButton({ label, onPress, busy, arrow, disabled, testID }:
             ? (
               <View style={s.primaryRow}>
                 <Text style={s.primaryText}>{label}</Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.accentInk} />
+                <Glyph name="arrow-forward" size={20} color={colors.accentInk} />
               </View>
             )
             : <Text style={s.primaryText}>{label}</Text>}
@@ -405,7 +406,7 @@ export function DangerButton({ label, onPress, busy, testID }: {
           ? <ActivityIndicator color={colors.bad} />
           : (
             <>
-              <Ionicons name="trash-outline" size={19} color={colors.bad} />
+              <Glyph name="trash-outline" size={19} color={colors.bad} />
               <Text style={s.dangerText}>{label}</Text>
             </>
           )}
@@ -456,7 +457,7 @@ export function SwitchRow({ prompt, action, onPress, testID }: {
 export function FormError({ children }: { children: string }) {
   return (
     <View style={s.formError} accessibilityLiveRegion="polite" testID="auth-error">
-      <Ionicons name="alert-circle" size={20} color={colors.bad} />
+      <Glyph name="alert-circle" size={20} color={colors.bad} />
       <Text style={s.formErrorText}>{children}</Text>
     </View>
   );

@@ -18,6 +18,7 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, StyleSheet, Text,
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { AVATAR_PRESETS, presetOf, type AvatarPreset } from '../lib/avatars';
@@ -148,7 +149,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
           {showCamera && (
             <View style={s.badgeRing}>
               <View style={s.badge}>
-                <Ionicons name="camera" size={13} color={colors.badgeInk} />
+                <Glyph name="camera" size={13} color={colors.badgeInk} />
               </View>
             </View>
           )}
@@ -176,7 +177,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
               style={s.close}
               contentStyle={s.closeFace}
             >
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
+              <Glyph name="close" size={22} color={colors.textSecondary} />
             </PressableScale>
           </View>
           <View style={s.grid}>
@@ -196,7 +197,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
                   {on && (
                     <View style={s.tickRing}>
                       <View style={s.tick}>
-                        <Ionicons name="checkmark" size={13} color={colors.accentInk} />
+                        <Glyph name="checkmark" size={13} color={colors.accentInk} />
                       </View>
                     </View>
                   )}
@@ -243,7 +244,7 @@ function Source({ icon, label, a11y, onPress }: {
   return (
     <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y}
       style={{ flex: 1 }} contentStyle={s.source}>
-      <Ionicons name={icon} size={20} color={colors.accent} />
+      <Glyph name={icon} size={20} color={colors.accent} />
       <Text style={s.sourceText}>{label}</Text>
     </PressableScale>
   );

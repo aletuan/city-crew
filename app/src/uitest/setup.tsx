@@ -132,6 +132,32 @@ const icon = ({ name, color, size, style }: { name?: string; color?: string; siz
   React.createElement('span', { 'data-icon': name, 'data-color': color, 'data-size': size, style });
 vi.mock('@expo/vector-icons/Ionicons', () => ({ default: icon }));
 
+// The five marks `Glyph` draws from Lucide (see components/ui/glyph.tsx),
+// each mocked at its own deep path for the reason Ionicons is. A mark
+// answers to the Ionicons name the app asks for — a filled bookmark is
+// `bookmark`, the outline `bookmark-outline` — so a test reads one
+// vocabulary whichever set drew the glyph, and `data-family` says which
+// did. `data-stroke` carries the line weight, a figure the drawing is
+// given and the only thing that tells the tab bar's marks from the rest.
+const line = (outline: string, solid?: string) => ({
+  default: ({ color, size, fill, strokeWidth, style, testID }: {
+    color?: string; size?: number; fill?: string; strokeWidth?: number; style?: object; testID?: string;
+  }) => React.createElement('span', {
+    'data-icon': solid && fill && fill !== 'none' ? solid : outline,
+    'data-family': 'lucide',
+    'data-color': color,
+    'data-size': size,
+    'data-stroke': strokeWidth,
+    'data-testid': testID,
+    style,
+  }),
+});
+vi.mock('lucide-react-native/icons/bookmark', () => line('bookmark-outline', 'bookmark'));
+vi.mock('lucide-react-native/icons/calendar-days', () => line('calendar-outline'));
+vi.mock('lucide-react-native/icons/compass', () => line('compass-outline'));
+vi.mock('lucide-react-native/icons/map-pinned', () => line('places'));
+vi.mock('lucide-react-native/icons/user', () => line('person-outline'));
+
 // These must return promises, not undefined. `fireHaptic` calls
 // `.catch()` on what it gets back, so a stub that answered `undefined`
 // threw a TypeError *before* the press handler beside it ran — every tap in

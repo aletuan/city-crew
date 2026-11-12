@@ -25,7 +25,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { Image } from 'expo-image';
 import type { FriendProfile, Trip } from '../lib/data';
 import { fromISO } from '../lib/day';
@@ -129,12 +129,12 @@ export default function InviteCard({
               on, and it is the only meta glyph in the app that wears the
               accent. */}
           <View style={s.metaRow}>
-            <Ionicons name="calendar-outline" size={13} color={colors.accent} />
+            <Glyph name="calendar-outline" size={13} color={colors.accent} />
             <Text style={s.meta} numberOfLines={1}>{when}</Text>
           </View>
           {where ? (
             <View style={s.metaRow}>
-              <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+              <Glyph name="location-outline" size={13} color={colors.textTertiary} />
               <Text style={s.meta} numberOfLines={1}>{where}</Text>
             </View>
           ) : null}
@@ -149,7 +149,7 @@ export default function InviteCard({
           style={{ flex: 1 }}
           contentStyle={[s.yes, busy && s.busy]}
         >
-          <Ionicons name="checkmark" size={16} color={colors.accentInk} />
+          <Glyph name="checkmark" size={16} color={colors.accentInk} />
           <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する', '我参加', '我參加')}</Text>
         </PressableScale>
         <PressableScale
@@ -166,7 +166,7 @@ export default function InviteCard({
         <Text style={s.moreText}>
           {t('See the whole plan', 'Xem toàn bộ kế hoạch', '予定をすべて見る', '查看完整计划', '檢視完整計畫')}
         </Text>
-        <Ionicons name="chevron-forward" size={13} color={colors.accent} />
+        <Glyph name="chevron-forward" size={13} color={colors.accent} />
       </PressableScale>
     </View>
   );

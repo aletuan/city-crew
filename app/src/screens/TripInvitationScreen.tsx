@@ -23,7 +23,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import {
   AmbientWarmth, Avatar, Card, CONTROL_H, Empty, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
@@ -200,7 +200,7 @@ export default function TripInvitationScreen({ navigation, route }: {
                     very differently at 300m and at 4km. */}
                 {leg && i < stops.length - 1 ? (
                   <View style={s.leg}>
-                    <Ionicons name="walk-outline" size={13} color={colors.textTertiary} />
+                    <Glyph name="walk-outline" size={13} color={colors.textTertiary} />
                     <Text style={s.legText}>
                       {`${fmtDistance(leg.km)} · ≈ ${fmtMinutes(leg.minutes, lang)}`}
                     </Text>
@@ -223,7 +223,7 @@ export default function TripInvitationScreen({ navigation, route }: {
 
         {going != null ? (
           <Card style={s.who}>
-            <Ionicons name="people-outline" size={17} color={colors.textSecondary} />
+            <Glyph name="people-outline" size={17} color={colors.textSecondary} />
             <Text style={s.whoText}>
               {going === 1
                 ? t(
@@ -243,7 +243,7 @@ export default function TripInvitationScreen({ navigation, route }: {
         ) : null}
 
         <Card style={s.who}>
-          <Ionicons name="lock-closed-outline" size={17} color={colors.textTertiary} />
+          <Glyph name="lock-closed-outline" size={17} color={colors.textTertiary} />
           <Text style={s.noteText}>
             {t(
               `${from?.full_name ? `${from.full_name} keeps` : 'They keep'} the plan. Accepting puts it in your Trips and you get a reminder the evening before and on the day.`,
@@ -269,7 +269,7 @@ export default function TripInvitationScreen({ navigation, route }: {
                 style={{ flex: 1 }}
                 contentStyle={[s.yes, busy && s.busy]}
               >
-                <Ionicons name="checkmark" size={17} color={colors.accentInk} />
+                <Glyph name="checkmark" size={17} color={colors.accentInk} />
                 <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する', '我参加', '我參加')}</Text>
               </PressableScale>
               <PressableScale

@@ -3,7 +3,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../../components/ui/glyph';
 import { Card, CountBadge, fireHaptic, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import AvatarPicker from '../../components/AvatarPicker';
@@ -225,7 +225,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
                 onPress={() => Alert.alert(role.name, role.says)}
                 testID="role-badge"
               >
-                <Ionicons name={role.icon} size={13} color={role.color} />
+                <Glyph name={role.icon} size={13} color={role.color} />
               </PressableScale>
             </View>
           )}
@@ -392,7 +392,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
                   setTasteYs((ys) => (ys[i] === y ? ys : Object.assign([...ys], { [i]: y })));
                 }}
               >
-                <Ionicons name={CATEGORIES[k].icon} size={ROW_GLYPH} color={colors.textTertiary} />
+                <Glyph name={CATEGORIES[k].icon} size={ROW_GLYPH} color={colors.textTertiary} />
                 <Text style={s.aboutValue}>
                   {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja, CATEGORIES[k].zh, CATEGORIES[k].hant)}
                 </Text>
@@ -469,7 +469,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             </Text>
           </View>
           <CountBadge n={crew.friends.length} style={s.rowEnd} />
-          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
+          <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
         </PressableScale>
         {/* The door to Activity, re-hung. The feed's one entry used to be
             the "N requests waiting" banner on Crew, and when Crew grew a
@@ -578,7 +578,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
         onPress={() => navigation.navigate('DeleteAccount')}
         testID="profile-delete-account"
       >
-        <Ionicons name="trash-outline" size={15} color={colors.bad} />
+        <Glyph name="trash-outline" size={15} color={colors.bad} />
         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号', '刪除帳號')}</Text>
       </PressableScale>
     </>

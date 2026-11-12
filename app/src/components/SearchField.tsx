@@ -49,7 +49,7 @@
 
 import React from 'react';
 import { LayoutAnimation, StyleSheet, TextInput, type TextInputProps, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { colors, radius } from '../theme';
 import { PressableScale, useReducedMotion } from './ui';
 
@@ -90,7 +90,7 @@ export default function SearchField({
   const slide = () => { if (!still) LayoutAnimation.configureNext(SLIDE); };
   return (
     <View style={[s.field, cancel?.shown && s.fieldWithCancel]}>
-      <Ionicons name="search-outline" size={19} color={colors.textTertiary} />
+      <Glyph name="search-outline" size={19} color={colors.textTertiary} />
       <TextInput
         ref={inputRef}
         style={s.input}
@@ -120,7 +120,7 @@ export default function SearchField({
           accessibilityLabel={cancel.label}
           testID={testID.cancel}
         >
-          <Ionicons name="close" size={18} color={colors.accent} />
+          <Glyph name="close" size={18} color={colors.accent} />
         </PressableScale>
       ) : null}
     </View>

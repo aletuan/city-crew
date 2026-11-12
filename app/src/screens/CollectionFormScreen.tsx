@@ -20,7 +20,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
 import { KindToggles } from '../components/KindPill';
@@ -504,7 +504,7 @@ export default function CollectionFormScreen({ navigation, route }: {
                 </>
               ) : (
                 <>
-                  <Ionicons name="sparkles-outline" size={22} color={colors.textSecondary} />
+                  <Glyph name="sparkles-outline" size={22} color={colors.textSecondary} />
                   <Text style={s.autoText}>{t('Auto', 'Tự động', '自動', '自动', '自動')}</Text>
                 </>
               )}

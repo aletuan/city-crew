@@ -24,7 +24,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
@@ -191,7 +191,7 @@ export default function InviteSheet({
                     </Text>
                   ) : (
                     <View style={[s.tick, on && s.tickOn]}>
-                      {on ? <Ionicons name="checkmark" size={15} color={colors.accentInk} /> : null}
+                      {on ? <Glyph name="checkmark" size={15} color={colors.accentInk} /> : null}
                     </View>
                   )}
                 </PressableScale>
@@ -201,7 +201,7 @@ export default function InviteSheet({
         )}
 
         <View style={s.note}>
-          <Ionicons name="time-outline" size={15} color={colors.textTertiary} />
+          <Glyph name="time-outline" size={15} color={colors.textTertiary} />
           <Text style={s.noteText}>
             {left === 0
               ? t(

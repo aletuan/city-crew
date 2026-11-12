@@ -35,7 +35,7 @@
 
 import React from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { isFlagged, isLive, type Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, labelScaleCap, onPhoto, radius } from '../theme';
@@ -97,7 +97,7 @@ export default function ReviewBadge({ place, compact, overPhoto, testID }: {
         overPhoto && s.overPhoto,
       ]}
     >
-      <Ionicons name={again ? 'refresh' : 'time-outline'} size={compact ? 12 : 13} color={colors.warnInk} />
+      <Glyph name={again ? 'refresh' : 'time-outline'} size={compact ? 12 : 13} color={colors.warnInk} />
       <Text
         style={[s.text, compact && s.textCompact, { color: colors.warnInk }]}
         numberOfLines={1}

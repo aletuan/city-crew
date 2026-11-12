@@ -27,7 +27,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_INFO, type AppInfo, shortUpdateId, updateDate, versionLabel } from '../lib/appinfo';
 import { useI18n } from '../lib/i18n';
@@ -113,7 +113,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
             the documents beside it say (LegalSheet): glyph and word, in
             the quieter colour. */}
         <PressableScale onPress={onClose} haptic="selection" accessibilityRole="button" contentStyle={s.done}>
-          <Ionicons name="close" size={18} color={colors.textSecondary} />
+          <Glyph name="close" size={18} color={colors.textSecondary} />
           <Text style={s.doneText}>{close}</Text>
         </PressableScale>
       </Animated.View>

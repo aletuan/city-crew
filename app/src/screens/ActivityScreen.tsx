@@ -50,6 +50,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Glyph } from '../components/ui/glyph';
 import { AuthHeader, AuthScreen } from '../components/authUi';
 import { Avatar, Card, EmptyState, GradientCta, PressableScale } from '../components/ui';
 import { SettingRow } from './profile/rows';
@@ -279,7 +280,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     <View style={s.face} testID="row-face">
                       <Avatar url={who ? faces.data[who] : null} size={FACE} />
                       <View style={s.kind} testID="kind-badge">
-                        <Ionicons name={BADGE[item.kind]} size={11} color={colors.accent} />
+                        <Glyph name={BADGE[item.kind]} size={11} color={colors.accent} />
                       </View>
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
@@ -291,7 +292,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     {/* Only where there is somewhere to go: the same
                         condition as the role above, so what VoiceOver
                         hears and what the eye sees agree. */}
-                    {col ? <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} /> : null}
+                    {col ? <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} /> : null}
                   </PressableScale>
                 );
               })}
