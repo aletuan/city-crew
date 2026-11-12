@@ -44,10 +44,11 @@ import {
 import { DEFAULT_TZ } from '../lib/clock';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
-import { clampDay, fromISO, todayISO } from '../lib/day';
+import { addDays, clampDay, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
+import { planTitle, planWhen } from '../lib/planHeading';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useMyLists } from '../lib/save';
@@ -170,12 +171,18 @@ export default function PlanOptionsScreen({ navigation, route }: {
     [plans, lang],
   );
 
-  // Date first, place after, company nowhere — the order every trip
-  // subtitle keeps; who is going belongs to the plan, not its dateline.
-  const line = summaryLine([
-    dateline(lang, fromISO(day) ?? new Date()),
-    p.where,
-  ]);
+  // The heading reads the request back: what, where, with whom — and,
+  // under it, when. See `planTitle` for what it replaced and why.
+  const cityName = city ? t(city.short_en, city.short_vi, city.short_ja ?? city.short_en) : null;
+  const title = planTitle({
+    company: p.company, categories: p.categories, when: p.when === 'day' ? 'day' : 'evening',
+    where: p.where, whereKind: p.whereKind, district: p.district, city: cityName,
+  }, lang, t);
+  const today = todayISO();
+  const when = planWhen(
+    day, today, addDays(today, 1), p.when === 'day' ? 'day' : 'evening',
+    dateline(lang, fromISO(day) ?? new Date()), t,
+  );
 
   /**
    * Regenerate asks the screen before this one, rather than doing the work
@@ -246,29 +253,15 @@ export default function PlanOptionsScreen({ navigation, route }: {
 
   return (
     <Screen
-      // Which outing this is, not always an evening. The title was a fixed
-      // string, so a day planned from the wizard arrived under the heading
-      // "Your evening, three ways" above three plans starting at 09:00 —
-      // and the screen after it, which derives its name properly, called
-      // the same plan "A day out". Two screens, one plan, two answers.
-      //
-      // And how many ways, not always three: the heading said "three ways"
-      // above "Only one way…" and above the empty card, contradicting the
-      // line under it. The count comes from the set on screen.
-      title={heading(p.when === 'day', plans.length, t)}
-      // Moved out of the body and into the header, which is where the
-      // reference design puts it and where it costs no scroll: it is one
-      // quiet line about the screen, not a paragraph on it.
-      //
-      // It used to promise "shortest hops first", but the cards come in
-      // lens order and nothing sorts them by distance. What is true is
-      // that each card is a different weighting of the same answers.
-      subtitle={t(
-        'Distances checked · each card a different angle',
-        'Đã tính quãng đường · mỗi thẻ một hướng khác',
-        '距離を確認済み · プランごとに違う切り口',
-        '已核对距离 · 每张卡片一种思路', '已核對距離 · 每張卡片一種思路',
-      )}
+      // What, where and with whom, read back from the wizard's answers
+      // (owner, 12 Nov 2026: "Ăn tối ở … cùng …"), and when under it. It
+      // was "Your evening, three ways" over "Distances checked · each
+      // card a different angle" and a third line with the date and the
+      // place: a count of the cards on screen, a sentence about the
+      // machine, and the request split across two lines. See
+      // `lib/planHeading`.
+      title={title}
+      subtitle={when}
       onBack={() => navigation.goBack()}
       // The chevron alone, hung to the margin the plan cards stand on
       // (owner, 12 Nov 2026), as on the friends, Activity, check-in,
@@ -277,22 +270,12 @@ export default function PlanOptionsScreen({ navigation, route }: {
     >
       <AmbientWarmth />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
+        // 6 on top, as the check-in screen: the header ends 14 under the
+        // subtitle, and the date line that sat between them has gone up
+        // into it.
+        contentContainerStyle={{ paddingHorizontal: space.page, paddingTop: 6, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Named for what it is. The plans come out of a scoring function,
-            not a model, and calling that AI would be a claim the code does
-            not back.
-            Which is what the sparkle that used to sit here was doing. It
-            is the glyph every product in the world now uses to mean "a
-            model made this", so the line carried the exact claim the
-            comment above it refuses, in the one place a reader would
-            read it as a label. No glyph replaces it: the sketching
-            screen prints this same summary as plain text, and a subtitle
-            that needs a mark to be understood is a subtitle that has not
-            been written. */}
-        {!!line && <Text style={s.byline}>{line}</Text>}
-
         {plans.map((plan, i) => {
           // Resolved once, here, and handed to both the card and the
           // editor. The editor used to get `undefined` whenever the card
@@ -381,27 +364,6 @@ function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string, zh?: s
 }
 
 /**
- * The screen's heading, counting the plans it actually holds.
- *
- * Three keeps the phrasing it always had; fewer says so; none drops the
- * count rather than claim "zero ways" above the empty card.
- */
-function heading(
-  isDay: boolean, count: number, t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string,
-): string {
-  if (isDay) {
-    if (count === 0) return t('Your day', 'Ngày của bạn', 'あなたの一日', '你的一天', '你的一天');
-    if (count === 1) return t('Your day, one way', 'Ngày của bạn, một cách', 'あなたの一日、一案', '你的一天，一种方案', '你的一天，一種方案');
-    if (count === 2) return t('Your day, two ways', 'Ngày của bạn, hai cách', 'あなたの一日、二通り', '你的一天，两种方案', '你的一天，兩種方案');
-    return t('Your day, three ways', 'Ngày của bạn, ba cách', 'あなたの一日、三通り', '你的一天，三种方案', '你的一天，三種方案');
-  }
-  if (count === 0) return t('Your evening', 'Buổi tối của bạn', 'あなたの夜', '你的夜晚', '你的夜晚');
-  if (count === 1) return t('Your evening, one way', 'Buổi tối của bạn, một cách', 'あなたの夜、一案', '你的夜晚，一种方案', '你的夜晚，一種方案');
-  if (count === 2) return t('Your evening, two ways', 'Buổi tối của bạn, hai cách', 'あなたの夜、二通り', '你的夜晚，两种方案', '你的夜晚，兩種方案');
-  return t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り', '你的夜晚，三种方案', '你的夜晚，三種方案');
-}
-
-/**
  * How the list arrives.
  *
  * ── the screen's own fade comes first, and it used to eat this ──
@@ -481,7 +443,7 @@ function PlanCard({ plan, name, why, nth, onPress }: {
   // pointing at nothing.
   const pictured = hasPicture(places);
   // One district for the whole plan means the heading names it (or the
-  // model did, and the byline's city stands in) and the rows need not.
+  // model did) and the rows need not.
   const oneArea = sharedArea(places);
   // The same switch that hides the price on the place detail (#598): a
   // sum of prices nobody can see on the places is a figure nobody can
@@ -687,7 +649,6 @@ function PlanCard({ plan, name, why, nth, onPress }: {
 const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 
 const s = StyleSheet.create({
-  byline: { ...CAPTION, color: colors.textSecondary, marginBottom: space.headingToContent },
 
   cardWrap: { marginBottom: space.cardGap },
   // The picture runs to the card's edges, so the padding lives on the body

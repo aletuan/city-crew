@@ -762,6 +762,12 @@ export default function IdeasScreen({ navigation, route }: {
                   // start where the reader was standing arrived with no
                   // answer to "starting from where".
                   where: draft.district ?? (origin ? whereLabel : null),
+                  // Which of those the words are, for the options
+                  // heading's sentence (`planTitle`): the same order
+                  // `whereLabel` decides them in.
+                  whereKind: draft.district ? 'district'
+                    : draft.at ? (draft.atName ? 'place' : 'pin')
+                      : here ? 'near' : 'city',
                   district: draft.district,
                   // The coordinate behind that label. `where` is words and
                   // has always been words; sending it without these is how

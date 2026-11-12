@@ -168,12 +168,14 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); appFlags.reset(); });
 
 describe('the header', () => {
-  it('calls an evening an evening, and goes back from its back button', () => {
+  // The request read back, and when (owner, 12 Nov 2026): what, where,
+  // with whom — not a count of the cards, not a line about the machine.
+  it('reads the request back as its heading, says when under it, and goes back', () => {
     const navigation = renderScreen();
-    expect(screen.getByText('Your evening, three ways')).toBeTruthy();
-    // Cards come in lens order, so the subtitle no longer claims a sort.
-    expect(screen.getByText('Distances checked · each card a different angle')).toBeTruthy();
-    expect(screen.queryByText(/shortest hops/)).toBeNull();
+    expect(screen.getByText('Going out in Old Quarter with friends')).toBeTruthy();
+    expect(screen.getByText('Tonight')).toBeTruthy();
+    expect(screen.queryByText(/Distances checked/)).toBeNull();
+    expect(screen.queryByText(/three ways/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
     expect(navigation.navigate).not.toHaveBeenCalled();
@@ -193,36 +195,35 @@ describe('the header', () => {
     expect(hung).toBe(true);
   });
 
-  it('calls a day planned from the wizard a day', () => {
+  it('calls a day planned from the wizard today, not tonight', () => {
     renderScreen({ when: 'day' });
-    expect(screen.getByText('Your day, three ways')).toBeTruthy();
-    expect(screen.queryByText('Your evening, three ways')).toBeNull();
+    expect(screen.getByText('Today')).toBeTruthy();
+    expect(screen.queryByText('Tonight')).toBeNull();
   });
 
-  it('counts the ways it actually has, and drops the count when there are none', () => {
-    planTrips.mockImplementation(() => [MATCH]);
-    const { unmount } = render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />);
-    expect(screen.getByText('Your evening, one way')).toBeTruthy();
-    expect(screen.queryByText(/three ways/)).toBeNull();
-    unmount();
-
-    planTrips.mockImplementation(() => [MATCH, LOWKEY]);
-    const second = render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith({ when: 'day' })} />);
-    expect(screen.getByText('Your day, two ways')).toBeTruthy();
-    expect(screen.queryByText(/three ways/)).toBeNull();
-    second.unmount();
-
-    planTrips.mockImplementation(() => []);
-    renderScreen();
-    expect(screen.getByText('Your evening')).toBeTruthy();
-    expect(screen.queryByText(/ways?$/)).toBeNull();
+  it('says what one kind of place is, and where the wizard said it starts', () => {
+    renderScreen({ categories: ['eats'], company: 'couple', where: null, district: null, whereKind: 'near' });
+    expect(screen.getByText('Dinner near you for two')).toBeTruthy();
   });
 
-  it('puts the date first and the place after it, and never the company', () => {
+  // The cards are right there; a thin set says so under them.
+  it('never counts the cards in its heading', () => {
+    for (const set of [[MATCH], [MATCH, LOWKEY], []]) {
+      planTrips.mockImplementation(() => set);
+      const { unmount } = render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />);
+      expect(screen.getByText('Going out in Old Quarter with friends')).toBeTruthy();
+      expect(screen.queryByText(/ways?$|one way/)).toBeNull();
+      unmount();
+    }
+  });
+
+  // Further off than a word can say, the date and the half of it; the
+  // place and the company are the heading's, not this line's.
+  it('dates a day further off, with the half of it', () => {
     const date = addDays(todayISO(), 3);
     renderScreen({ date });
-    expect(screen.getByText(`${dateline('en', fromISO(date)!)} · Old Quarter`)).toBeTruthy();
-    expect(screen.queryByText(/friends/)).toBeNull();
+    expect(screen.getByText(`${dateline('en', fromISO(date)!)} · evening`)).toBeTruthy();
+    expect(screen.queryByText(/· Old Quarter/)).toBeNull();
     // And no sparkle beside it. That glyph is what every product now uses
     // for "a model made this", and these plans come out of a scoring
     // function — the line was carrying the one claim the screen's own
@@ -232,7 +233,7 @@ describe('the header', () => {
 
   it('dates a past or missing day as today', () => {
     renderScreen({ date: '2000-01-01', where: null });
-    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.getByText('Tonight')).toBeTruthy();
     expect(planTrips.mock.calls[0][0]).toMatchObject({ date: todayISO() });
   });
 });
@@ -485,28 +486,28 @@ describe('the cards', () => {
 });
 
 describe('fewer than three, and none', () => {
-  // The count is the heading's job and only the heading's. A second line
-  // under it — "Only 2 ways to do this with what is open here" — said the
-  // same number again to add a reason, and a reason nobody asked for
-  // reads as an apology for the catalog.
-  it('counts a thin set in the heading, and does not pad it', () => {
+  // Nobody counts the cards: the heading stopped (owner, 12 Nov 2026), and
+  // a line under it — "Only 2 ways to do this with what is open here" —
+  // said the number to add a reason nobody asked for, which read as an
+  // apology for the catalog.
+  it('draws a thin set as it is, and does not pad it', () => {
     planTrips.mockImplementation(() => [MATCH]);
     renderScreen();
-    expect(screen.getByText('Your evening, one way')).toBeTruthy();
+    expect(screen.queryByText(/one way/)).toBeNull();
     expect(badges()).toEqual(['Best match']);
     expect(screen.queryByText(/^Only /)).toBeNull();
   });
 
-  it('counts two ways as two, in the heading', () => {
+  it('draws two as two, and does not pad them', () => {
     planTrips.mockImplementation(() => [MATCH, LOWKEY]);
     renderScreen();
-    expect(screen.getByText('Your evening, two ways')).toBeTruthy();
+    expect(badges()).toHaveLength(2);
     expect(screen.queryByText(/^Only /)).toBeNull();
   });
 
   it('says three when there are three', () => {
     renderScreen();
-    expect(screen.getByText('Your evening, three ways')).toBeTruthy();
+    expect(badges()).toHaveLength(3);
     // Under cards, Regenerate is the way out: quiet, not the gradient.
     expect(regen().querySelector('[data-stub="LinearGradient"]')).toBeNull();
     // Its word in medium, as the header's quiet "New" (owner, 3 Nov 2026).

@@ -1,3 +1,4 @@
+import type { WhereKind } from './lib/planHeading';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNavigationContainerRef, type RouteProp } from '@react-navigation/native';
 import { returnTab, takeResume } from './lib/resume';
@@ -20,6 +21,12 @@ export type PlanAsk = {
    *  knows which of the three the reader chose, and the screens after it
    *  have no business re-deciding that. It is not a location. */
   where: string | null;
+  /** Which kind of start `where` names — a district, a place a pin was
+   *  set on, a bare pin, the reader's own position, or the city — so the
+   *  options heading can say it in a sentence ("ở Tây Hồ", "gần bạn")
+   *  without parsing the words. Optional: a plan reached without the
+   *  wizard reads what it can from `district` and `where`. */
+  whereKind?: WhereKind;
   district: string | null;
   /**
    * Where the day starts, when the reader dropped a pin.

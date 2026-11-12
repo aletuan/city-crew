@@ -255,6 +255,7 @@ describe('the button', () => {
       // No position to be had: the day starts at the city's centre, and
       // says so.
       where: 'Hanoi · City centre',
+      whereKind: 'city',
       district: null,
       atLat: 21.0285,
       atLng: 105.8542,
@@ -294,7 +295,7 @@ describe('the button', () => {
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation)).toMatchObject({
-      where: 'Hanoi · Near you', district: null, atLat: 21.03, atLng: 105.85,
+      where: 'Hanoi · Near you', whereKind: 'near', district: null, atLat: 21.03, atLng: 105.85,
     });
   });
 
@@ -595,7 +596,7 @@ describe('where the day starts', () => {
     tap('Friends');
     tap('Cafés');
     fireEvent.click(cta());
-    expect(sent(navigation)).toMatchObject({ where: 'Tây Hồ', district: 'Tây Hồ', atLat: undefined, atLng: undefined });
+    expect(sent(navigation)).toMatchObject({ where: 'Tây Hồ', whereKind: 'district', district: 'Tây Hồ', atLat: undefined, atLng: undefined });
   });
 
   it('takes a dropped pin, which wins over the reader’s own position', () => {
@@ -607,7 +608,7 @@ describe('where the day starts', () => {
     tap('Friends');
     tap('Cafés');
     fireEvent.click(cta());
-    expect(sent(navigation)).toMatchObject({ where: 'A pin you dropped', district: null, atLat: 21.04, atLng: 105.81 });
+    expect(sent(navigation)).toMatchObject({ where: 'A pin you dropped', whereKind: 'pin', district: null, atLat: 21.04, atLng: 105.81 });
   });
 
   it('prints the name a pin was given, and sends those words on', () => {
@@ -625,7 +626,7 @@ describe('where the day starts', () => {
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation)).toMatchObject({
-      where: "Pizza 4P's Hoàng Thành Tower", district: null, atLat: 21.04, atLng: 105.81,
+      where: "Pizza 4P's Hoàng Thành Tower", whereKind: 'place', district: null, atLat: 21.04, atLng: 105.81,
     });
   });
 });
