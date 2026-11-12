@@ -29,6 +29,7 @@ import { useSession } from '../../lib/auth';
 import { useSaveActions } from '../../lib/save';
 import { likesWorthShowing, rankByLikes } from '../../lib/likes';
 import { isNewList } from '../../lib/newest';
+import { shelfRatio } from '../../lib/shelfCard';
 import NewBadge from '../../components/NewBadge';
 import { useI18n } from '../../lib/i18n';
 import { colors, coverScrim, onPhoto, space } from '../../theme';
@@ -85,10 +86,11 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
   // nothing — a shelf that scrolls with no visible evidence that it
   // does. ~2.15 cards per viewport keeps a ~26pt sliver at every width,
   // and lands on the same 176×220 on the 430pt screens the fixed number
-  // was tuned against.
-  const { width: winW } = useWindowDimensions();
+  // was tuned against. Its height is 4:5 of that, except on a short phone,
+  // where it is square: see `shelfRatio`.
+  const { width: winW, height: winH } = useWindowDimensions();
   const cardW = Math.round((winW - space.page) / 2.15 - space.cardGap);
-  const cardH = Math.round(cardW * 1.25);
+  const cardH = Math.round(cardW * shelfRatio(winH));
 
   if (!holding && visible.length === 0) return null;
 
