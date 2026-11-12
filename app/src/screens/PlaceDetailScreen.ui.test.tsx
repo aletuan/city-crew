@@ -1063,10 +1063,10 @@ describe('PlaceDetailScreen — the bar', () => {
     const props = propsWhere((p) => p.testID === 'detail-name');
     const text = flat(props.style) as TextStyle;
     expect(text.textAlign).toBe('center');
-    expect(text.fontSize).toBe(19);
+    expect(text.fontSize).toBe(20);
     expect(props.numberOfLines).toBe(1);
     expect(props.adjustsFontSizeToFit).toBe(true);
-    expect(props.minimumFontScale).toBe(0.85);
+    expect(props.minimumFontScale).toBe(0.8);
     expect(props.accessibilityRole).toBe('header');
   });
 

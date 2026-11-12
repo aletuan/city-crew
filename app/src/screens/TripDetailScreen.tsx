@@ -125,6 +125,7 @@ export default function TripDetailScreen({ navigation, route }: {
         title={t('Trip', 'Chuyến đi', '旅程', '行程', '行程')}
         onBack={() => navigation.goBack()}
         backBare
+        compactTitle
       >
         <Empty text={trips.loaded
           ? t('That trip is no longer here.', 'Chuyến đi đó không còn nữa.', 'その旅程はもうありません。', '这个行程已不存在。', '這個行程已不存在。')
@@ -301,6 +302,7 @@ export default function TripDetailScreen({ navigation, route }: {
   return (
     <Screen
       title={trip.title}
+      compactTitle
       subtitle={(
         <IconSubtitle
           icon="calendar-outline"

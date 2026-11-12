@@ -1509,14 +1509,14 @@ const FACT_HEIGHT = 44;
 const MARK_INSET = 12;
 
 /**
- * How far a long name may shrink before it is cut: to 0.85 of the bar's
- * 19, about 16 — the size of the text in the cards below. Smaller and the
- * place's own name would read as the smallest words on its page. At 19 the
- * bar holds about 31 characters on a 440pt phone, and at 16 about 37;
- * 90% of the catalog's names are 35 or shorter, before `splitName` takes
- * the branch off.
+ * How far a long name may shrink before it is cut: to 0.8 of the bar's
+ * 20, which is 16 — the size of the text in the cards below. Smaller and
+ * the place's own name would read as the smallest words on its page. At
+ * 20 the bar holds about 30 characters on a 440pt phone, and at 16 about
+ * 37; 90% of the catalog's names are 35 or shorter, before `splitName`
+ * takes the branch off.
  */
-const BAR_NAME_MIN_SCALE = 0.85;
+const BAR_NAME_MIN_SCALE = 0.8;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -1528,13 +1528,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: space.page, paddingBottom: 12,
   },
-  // 19, the display face's bold: the size at which the mock-up's own name,
-  // "Lazyly Coffee & Quiet Eatery", sets at the width it has there (258pt
-  // in this face against the mock's 255).
-  barName: {
-    flex: 1, textAlign: 'center', color: colors.text,
-    fontSize: 19, fontFamily: display.bold, letterSpacing: 0.2,
-  },
+  // `type.titleCompact`, the one size of a page reached from another
+  // (owner, 12 Nov 2026). It shipped at 19,
+  // the size at which the mock-up's own name set at its width there; at
+  // 20 "Lazyly Coffee & Quiet Eatery" is 272pt of the bar's 326.
+  barName: { flex: 1, textAlign: 'center', color: colors.text, ...type.titleCompact },
   barControl: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   saveHang: { marginRight: -SAVE_HANG },
 

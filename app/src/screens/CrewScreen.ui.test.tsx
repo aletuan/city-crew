@@ -15,7 +15,7 @@ import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { font } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { FriendProfile, ListTitle } from '../lib/data';
 import type { FriendshipRow, Suggestion } from '../lib/friends';
@@ -148,6 +148,8 @@ describe('the frame', () => {
     const navigation = nav();
     render(<CrewScreen navigation={navigation} />);
     expect(screen.getByText('Your crew')).toBeTruthy();
+    // One size for a page reached from another (owner, 12 Nov 2026).
+    expect(fontSizeOf(screen.getByText('Your crew'))).toBe(20);
     // No motto under the title: a line there is for a fact about the
     // list, and this screen's one fact is on the Friends tab.
     expect(screen.queryByText('Plans get better together')).toBeNull();

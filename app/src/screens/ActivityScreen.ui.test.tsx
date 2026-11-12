@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '../uitest/render';
+import { act, fireEvent, fontSizeOf, render, screen } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { FriendProfile, MyActs } from '../lib/data';
@@ -121,6 +121,10 @@ describe('the frame', () => {
   it('names itself and goes back through the navigation prop', async () => {
     const navigation = await renderScreen();
     expect(screen.getByText('Activity')).toBeTruthy();
+    // One size for a page reached from another (owner, 12 Nov 2026).
+    expect(fontSizeOf(screen.getByText('Activity'))).toBe(20);
+    // 11 above it, so its middle stays on the 44pt control's.
+    expect(getComputedStyle(screen.getByText('Activity')).paddingTop).toBe('11px');
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });

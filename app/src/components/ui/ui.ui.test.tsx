@@ -8,7 +8,7 @@
 import React from 'react';
 import { Animated, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '../../uitest/render';
+import { act, cleanup, fireEvent, fontSizeOf, render, screen, within } from '../../uitest/render';
 
 vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -72,6 +72,21 @@ describe('Screen', () => {
     unmount();
     render(<Screen title="Trip" onBack={() => {}} backBare><Text>body</Text></Screen>);
     expect(fills(screen.getByRole('button', { name: 'Back' }))).toEqual([]);
+  });
+
+  // A screen's own name at 26, the name of a thing at 20 (owner, 12 Nov
+  // 2026), each first line centred on the 44pt control: 5 down at 26, 9
+  // at 20, from the display face's 1.276 line box.
+  it('sets a thing\'s name a level under a screen\'s, centred on the way back', () => {
+    const title = (name: string) => ({ fontSize: `${fontSizeOf(screen.getByText(name))}px` });
+    const { unmount } = render(<Screen title="Trips" onBack={() => {}}><Text>body</Text></Screen>);
+    expect(title('Trips').fontSize).toBe('26px');
+    expect(getComputedStyle(screen.getByText('Trips').parentElement!).paddingTop).toBe('5px');
+    unmount();
+    render(<Screen title="Sáng cà phê ở Huế cho hai người" compactTitle onBack={() => {}}><Text>body</Text></Screen>);
+    const name = screen.getByText('Sáng cà phê ở Huế cho hai người');
+    expect(title('Sáng cà phê ở Huế cho hai người').fontSize).toBe('20px');
+    expect(getComputedStyle(name.parentElement!).paddingTop).toBe('9px');
   });
 });
 

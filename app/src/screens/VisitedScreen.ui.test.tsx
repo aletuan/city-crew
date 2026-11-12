@@ -7,7 +7,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { cleanup, fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Checkin } from '../lib/checkin';
 import { VISIT_RECENTS_KEY } from '../lib/recents';
@@ -68,6 +68,8 @@ describe('VisitedScreen', () => {
     show();
     expect(data.asked).toHaveBeenCalled();
     expect(screen.getByText('Check-ins')).toBeTruthy();
+    // One size for a page reached from another (owner, 12 Nov 2026).
+    expect(fontSizeOf(screen.getByText('Check-ins'))).toBe(20);
   });
 
   it('spins before the first answer, and says so when there is nothing', () => {

@@ -513,6 +513,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       // line and the block alert say "bạn bè". The English keeps the
       // brand's word.
       title={t('Your crew', 'Kết nối bạn bè', 'あなたのクルー', '你的好友', '你的好友')}
+      compactTitle
       /* No subtitle. It held a count once, then the motto alone once
          the count moved to the Friends tab — and a motto under a title
          is marketing copy where navigation belongs (HIG). A line under
