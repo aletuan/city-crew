@@ -516,8 +516,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
          freshness. This screen's one fact is on the tab, so the slot
          stays empty rather than filled (8 Oct 2026). */
       onBack={() => navigation.goBack()}
+      // Both header controls without their glass discs (owner, 12 Nov
+      // 2026): the first screen to try it, before any other does.
+      backBare
       right={(
         <RoundIconButton
+          bare
           icon="person-add-outline"
           label={t('Add a friend', 'Thêm bạn', '友達を追加', '添加好友', '新增好友')}
           testID="crew-add"

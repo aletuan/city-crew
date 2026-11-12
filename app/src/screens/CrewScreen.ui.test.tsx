@@ -155,6 +155,22 @@ describe('the frame', () => {
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });
 
+  // Both header controls without their discs (owner, 12 Nov 2026): the
+  // glyph alone on the page, the 44pt target kept.
+  it('draws the way back and the add control bare, on 44pt targets', () => {
+    render(<CrewScreen navigation={nav()} />);
+    const fills = (el: HTMLElement) => [el, ...el.querySelectorAll('*')]
+      .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+      .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+    // The header's add control by its id: the empty list below has an
+    // "Add a friend" of its own.
+    for (const button of [screen.getByRole('button', { name: 'Back' }), screen.getByTestId('crew-add')]) {
+      expect(fills(button)).toEqual([]);
+      const box = [button, ...button.querySelectorAll('*')].find((n) => getComputedStyle(n as HTMLElement).width === '44px');
+      expect(box).toBeTruthy();
+    }
+  });
+
   it('asks the server again on focus, unless the launch fetch is still in flight', () => {
     const { unmount } = render(<CrewScreen navigation={nav()} />);
     expect(crew.ships.reload).toHaveBeenCalledTimes(1);
