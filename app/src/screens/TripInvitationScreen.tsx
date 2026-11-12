@@ -113,7 +113,7 @@ export default function TripInvitationScreen({ navigation, route }: {
 
   if (!trip) {
     return (
-      <Screen title={t('Invitation', 'Lời mời', '招待', '邀请', '邀請')} onBack={() => navigation.goBack()}>
+      <Screen compactTitle title={t('Invitation', 'Lời mời', '招待', '邀请', '邀請')} onBack={() => navigation.goBack()}>
         {/* `loaded` stays true after a failed fetch, so a failure has to
             be asked about first — or a dropped connection tells the
             invitee they were uninvited. */}
@@ -149,6 +149,7 @@ export default function TripInvitationScreen({ navigation, route }: {
 
   return (
     <Screen
+      compactTitle
       title={trip.title}
       eyebrow={t('INVITATION', 'LỜI MỜI', '招待', '邀请', '邀請')}
       onBack={() => navigation.goBack()}

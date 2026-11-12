@@ -352,7 +352,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   if ((catalogLoading || elsewhere.loading) && !place) {
     return (
-      <Screen title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')} onBack={() => navigation.goBack()}>
+      <Screen compactTitle title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')} onBack={() => navigation.goBack()}>
         <ActivityIndicator color={colors.accent} style={{ marginTop: 64 }} />
       </Screen>
     );
@@ -361,7 +361,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // alone — but a route can be typed, and this is what it says.
   if (!place || !mayKeep) {
     return (
-      <Screen title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')} onBack={() => navigation.goBack()}>
+      <Screen compactTitle title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')} onBack={() => navigation.goBack()}>
         <Empty text={t('This is not yours to keep.', 'Đây không phải gallery của bạn.', 'これはあなたのギャラリーではありません。', '你无权管理这个相册。', '你無權管理這個相簿。')} />
       </Screen>
     );
@@ -369,6 +369,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   return (
     <Screen
+      compactTitle
       title={t('Gallery', 'Gallery', 'ギャラリー', '相册', '相簿')}
       subtitle={name}
       onBack={() => navigation.goBack()}

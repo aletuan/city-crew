@@ -99,6 +99,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <Screen
+      compactTitle
       title={t('Add a place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
       onBack={() => navigation.goBack()}
     >
