@@ -124,6 +124,7 @@ export default function TripDetailScreen({ navigation, route }: {
       <Screen
         title={t('Trip', 'Chuyến đi', '旅程', '行程', '行程')}
         onBack={() => navigation.goBack()}
+        backBare
       >
         <Empty text={trips.loaded
           ? t('That trip is no longer here.', 'Chuyến đi đó không còn nữa.', 'その旅程はもうありません。', '这个行程已不存在。', '這個行程已不存在。')
@@ -310,6 +311,11 @@ export default function TripDetailScreen({ navigation, route }: {
         />
       )}
       onBack={() => navigation.goBack()}
+      // The chevron alone, hung to the margin the crew and the stops stand
+      // on (owner, 12 Nov 2026), as on the friends, Activity, check-in and
+      // collection screens. The missing-trip frame above wears it too, so
+      // the way back does not change shape while the trip loads.
+      backBare
     >
       <AmbientWarmth />
       <ScrollView
