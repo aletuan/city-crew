@@ -60,6 +60,19 @@ describe('Screen', () => {
     render(<Screen title="Trip" eyebrow={<Text testID="own">own line</Text>}><Text>body</Text></Screen>);
     expect(screen.getByTestId('own').textContent).toBe('own line');
   });
+
+  // The glass disc behind the way back, and the screen that opts out of
+  // it (owner, 12 Nov 2026) — one screen at a time, so the default stays.
+  it('draws the way back on glass, unless the screen asks for it bare', () => {
+    const fills = (el: HTMLElement) => [el, ...el.querySelectorAll('*')]
+      .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+      .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+    const { unmount } = render(<Screen title="Trip" onBack={() => {}}><Text>body</Text></Screen>);
+    expect(fills(screen.getByRole('button', { name: 'Back' }))).toContain(String(colors.surfaceGlass).replace(/,/g, ', '));
+    unmount();
+    render(<Screen title="Trip" onBack={() => {}} backBare><Text>body</Text></Screen>);
+    expect(fills(screen.getByRole('button', { name: 'Back' }))).toEqual([]);
+  });
 });
 
 // Explore's kinds, one at a time (owner, 24 Oct 2026): the word and the

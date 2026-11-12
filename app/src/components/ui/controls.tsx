@@ -549,7 +549,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   );
 }
 
-export function RoundIconButton({ icon, onPress, label, size = 21, color, testID }: {
+export function RoundIconButton({ icon, onPress, label, size = 21, color, bare, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   label?: string;
@@ -570,13 +570,26 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color, testID
    * theme is a `dyn()` — a value that resolves per theme, not a hex.
    */
   color?: Color;
+  /**
+   * The glyph alone, on the page, with no glass disc behind it (owner,
+   * 12 Nov 2026: "reduce the noise of blocks"). The 44pt box stays, so
+   * the target and the glyph's place do not move; only the fill goes.
+   * On the page's ground the disc is 5% ink and the glyph already reads
+   * at full contrast without it, so it was a shape and not a help.
+   *
+   * Opt-in, one screen at a time — the owner's call, so the app does not
+   * change everywhere at once: the friends screen first. A round control
+   * over a photograph is never bare; that one is `photoDisc`, whose
+   * ground is what keeps a white glyph legible on a pale picture.
+   */
+  bare?: boolean;
   testID?: string;
 }) {
   return (
     <PressableScale
       onPress={onPress}
       scaleTo={0.92}
-      contentStyle={s.backBtn}
+      contentStyle={bare ? [s.backBtn, s.backBtnBare] : s.backBtn}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -723,13 +736,15 @@ export function SelectTick({ on }: { on: boolean }) {
   );
 }
 
-/** In-page back control: the round glass button wearing a chevron. */
-export function BackButton({ onPress, testID }: { onPress: () => void; testID?: string }) {
+/** In-page back control: the round glass button wearing a chevron —
+ *  or, `bare`, the chevron alone (see `RoundIconButton`). */
+export function BackButton({ onPress, bare, testID }: { onPress: () => void; bare?: boolean; testID?: string }) {
   const { t } = useI18n();
   return (
     <RoundIconButton
       icon="chevron-back"
       size={22}
+      bare={bare}
       onPress={onPress}
       label={t('Back', 'Quay lại', '戻る', '返回', '返回')}
       testID={testID}
@@ -863,4 +878,5 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass,
   },
+  backBtnBare: { backgroundColor: 'transparent' },
 });

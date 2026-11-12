@@ -123,7 +123,7 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backTestID, titleScrolls }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backBare, backTestID, titleScrolls }: {
   title: string;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
@@ -175,6 +175,9 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
    * edge-swipe and no sign that it is there.
    */
   onBack?: () => void;
+  /** The way back as the chevron alone, with no disc — see
+   *  `RoundIconButton`'s `bare`. Per screen, while the owner tries it. */
+  backBare?: boolean;
   /** For the smoke flows, which select by id: a pushed screen's way back. */
   backTestID?: string;
   /**
@@ -190,7 +193,7 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
     <SafeAreaView style={s.screen} edges={['top']}>
       {onBack ? (
         <View style={s.headerInline}>
-          <BackButton onPress={onBack} testID={backTestID} />
+          <BackButton onPress={onBack} bare={backBare} testID={backTestID} />
           <View style={s.headerText}>
             <Text style={s.titleInline} numberOfLines={2}>{title}</Text>
             {/* The falsy guard comes first and stays: a caller computing
