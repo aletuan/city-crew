@@ -10,7 +10,7 @@
 // exists rather than every test importing the library itself, and one
 // reader jsdom cannot stand in for (`fontSizeOf`).
 
-import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
@@ -35,6 +35,26 @@ export function textStyleOf(el: HTMLElement): TextStyle | undefined {
   let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
   while (f && style(f).fontSize == null) f = f.return;
   return f && style(f);
+}
+
+/**
+ * The style a View was given, flattened: every style set by the
+ * components that render this one DOM element, merged, with the outermost
+ * component winning as `style` arrays do. Read off the fibers, because
+ * react-native-web writes layout keys such as `gap` as classes jsdom does
+ * not resolve, so the computed style has none of them. Stops at the next
+ * DOM element up, so an ancestor's style is never mistaken for this one's.
+ */
+export function viewStyleOf(el: Element): ViewStyle {
+  const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
+  type Fiber = { memoizedProps?: { style?: unknown }; return?: Fiber; stateNode?: unknown };
+  const layers: ViewStyle[] = [];
+  let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
+  while (f && (f.stateNode === el || !(f.stateNode instanceof Element))) {
+    layers.unshift(StyleSheet.flatten(f.memoizedProps?.style as StyleProp<ViewStyle>) ?? {});
+    f = f.return;
+  }
+  return Object.assign({}, ...layers.reverse());
 }
 
 /** The font size a Text was given — see `textStyleOf`. */

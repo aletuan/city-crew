@@ -39,7 +39,7 @@ import {
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, cleanup, fireEvent, fontSizeOf, render, screen, textStyleOf, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, fontSizeOf, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
@@ -2131,6 +2131,13 @@ describe('the introduction card', () => {
     // In that order on screen too, from the start of the row.
     expect(getComputedStyle(foot).flexDirection).toBe('row');
     expect(getComputedStyle(foot).justifyContent).not.toBe('space-between');
+    // The spacing measured in ink (owner, 12 Nov 2026): 6.5 from each
+    // glyph to its count, 24 between the pairs. Those are made of these
+    // gaps and the glyphs' own bearings; see `cardFoot`.
+    const gapOf = (el: Element | null | undefined) => viewStyleOf(el as Element)?.gap;
+    const heart = screen.getByRole('button', { name: 'Like' }).querySelector('[data-icon]')?.parentElement;
+    const count = foot.querySelector('[data-icon="location-outline"]')?.parentElement;
+    expect([gapOf(foot), gapOf(heart), gapOf(count)]).toEqual([20, 4, 3]);
   });
 
   it('leaves a visitor\u2019s header with the title alone', () => {
