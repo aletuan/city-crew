@@ -27,6 +27,14 @@ describe('wardFromAddress', () => {
     expect(wardFromAddress('12 Hàng Gai, Hoàn Kiếm, Hà Nội')).toBe('Hoàn Kiếm');
   });
 
+  // Google sometimes writes the country where the ward belongs; that
+  // filed Wasabi.hanoi under "Việt Nam" (12 Nov 2026).
+  it('does not take the country for a ward, however it is written', () => {
+    expect(wardFromAddress('9 P. Phan Phù Tiên, Việt Nam, Hà Nội 100000, Vietnam')).toBeNull();
+    expect(wardFromAddress('9 Phan Phu Tien, Viet Nam, Ha Noi, Vietnam')).toBeNull();
+    expect(wardFromAddress('9 Phan Phù Tiên, Vietnam, Hà Nội')).toBeNull();
+  });
+
   it('a numbered ward stays; a leading street number disqualifies', () => {
     // "Phường 7" has a digit but not first — a ward. A candidate that
     // *starts* with one is a street line, meaning the address never had
