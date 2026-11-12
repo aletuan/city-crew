@@ -417,6 +417,35 @@ export function nearestAreaKm(
 }
 
 /**
+ * The area to name a point by: the nearest one with enough places to be
+ * an area rather than a label on one row.
+ *
+ * For the plan heading's "gần Ba Đình" (owner, 12 Nov 2026), which said
+ * "gần bạn" until a plan read later from somewhere else named nowhere.
+ * `areasNear` alone named the wrong thing in the middle of the old
+ * quarter: of the 36 area names on Hanoi's approved places (12 Nov 2026),
+ * three are strays on a single row each — "Hoan Kiem" and "Tay Ho"
+ * without their marks, and "Việt Nam" — and a one-place area's centre is
+ * that place, so standing near it named "Hoan Kiem" beside the 112 places
+ * of "Hoàn Kiếm". Three places or more leaves out every stray and keeps
+ * every area the start sheet's chips actually show.
+ *
+ * Null with no point, or no area big enough to place.
+ */
+export function areaAround(
+  places: Place[],
+  at: { lat: number; lng: number } | null | undefined,
+): string | null {
+  if (!at) return null;
+  const sizes = groupAreas(places);
+  const hit = ranked(places, at).find((a) => Number.isFinite(a.km) && sizes.get(a.name)!.total >= AREA_MIN);
+  return hit?.name ?? null;
+}
+
+/** Places an area needs before a point is named by it — see `areaAround`. */
+export const AREA_MIN = 3;
+
+/**
  * Is there enough here to plan anything?
  *
  * Company and at least one category. Not the district — "near me" is a
