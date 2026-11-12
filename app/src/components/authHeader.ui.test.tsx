@@ -77,3 +77,19 @@ describe('the header action', () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 });
+
+// The way back on glass by default, the chevron alone where a screen asks
+// (owner, 12 Nov 2026: Activity) — one screen at a time.
+describe('the way back', () => {
+  const fills = (el: HTMLElement) => [el, ...el.querySelectorAll('*')]
+    .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
+    .filter((c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent');
+
+  it('wears the glass disc unless the screen asks for it bare', () => {
+    const { unmount } = render(<AuthHeader onBack={() => {}} title="Edit profile" />);
+    expect(fills(screen.getByRole('button', { name: 'Back' })).length).toBeGreaterThan(0);
+    unmount();
+    render(<AuthHeader onBack={() => {}} title="Activity" backBare />);
+    expect(fills(screen.getByRole('button', { name: 'Back' }))).toEqual([]);
+  });
+});
