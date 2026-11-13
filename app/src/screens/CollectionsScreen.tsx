@@ -30,7 +30,7 @@ import {
 import ActionSheet from '../components/ActionSheet';
 import { CityRow } from '../components/CityRow';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
-import { Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf } from '../lib/data';
+import { Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf, useSharedWithMe } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
@@ -56,10 +56,17 @@ type ListRow = ShelfRow<Collection> | MosaicRow<Collection>;
 // switch, and a phone that remembered 'row' falls back to Mosaic here.
 const COMMUNITY_VIEWS = oneOf('tile', 'mosaic');
 
-/** A section of the list: yours or the community's, with its rows. The
- *  rows are named here, not only by the list: React Native 0.88 types a
- *  section handed back to a render prop as possibly the extra fields alone. */
-type Section = { own: boolean; data: ListRow[]; city?: { id: string | null; count: number } };
+/** A section of the list: yours, the lists friends shared with you, or
+ *  the community's, with its rows. The rows are named here, not only by
+ *  the list: React Native 0.88 types a section handed back to a render
+ *  prop as possibly the extra fields alone. */
+type Section = {
+  own: boolean;
+  data: ListRow[];
+  city?: { id: string | null; count: number };
+  /** The lists friends shared with you, and how many. */
+  shared?: { count: number };
+};
 
 /** Under the open box and its kinds: the gap the tabs leave, so the
  *  shelf starts the same distance under whichever row is last. */
@@ -330,6 +337,9 @@ export default function CollectionsScreen({ navigation, route }: {
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
   const mine = useMyLists();
+  // Friends' lists shared with the reader (12 Nov 2026), drawn on Yours
+  // under their own heading, after the reader's own — see `sections`.
+  const shared = useSharedWithMe(session?.user?.id);
   const { askToSignIn } = useSaveActions();
   // One heart on every public list, yours included (owner, 17 Oct 2026):
   // a curator may like their own list, and the shelves rank by everyone's
@@ -407,11 +417,15 @@ export default function CollectionsScreen({ navigation, route }: {
   // right after creating the session's first list elsewhere as it can be
   // an ordinary visit, and there is no way to tell those apart from here.
   // See TripsScreen for the full argument; the fix that came from it.
+  //
+  // The lists shared with you as well: a friend shares one from their
+  // phone, and coming back to the tab is when you would look for it.
   useFocusEffect(useCallback(() => {
     mine.reload();
-  // `mine.reload` is stable; `mine` is a new object on every load.
+    shared.reload();
+  // The reloads are stable; each `Fetch` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mine.reload]));
+  }, [mine.reload, shared.reload]));
 
   const me = session?.user?.id;
   // Read once a render: a list that turns eight days old while the tab is
@@ -457,14 +471,16 @@ export default function CollectionsScreen({ navigation, route }: {
   // the Avatar drawing its placeholder circle — the seat is always
   // there, which is what keeps a bare @handle reading as a signature
   // rather than a stray tag.
+  // The friends behind the lists shared with you are asked in the same
+  // batch: their tiles wear the same byline.
   const [faces, setFaces] = useState<Record<string, FriendProfile>>({});
   useEffect(() => {
-    const ids = [...new Set(cols.data.map((c) => c.owner_id).filter(Boolean))] as string[];
+    const ids = [...new Set([...cols.data, ...shared.data].map((c) => c.owner_id).filter(Boolean))] as string[];
     if (!ids.length) return;
     fetchProfilesById(ids).then((more) => setFaces((prev) => ({ ...prev, ...more }))).catch(() => {});
-  // `cols.data` is a new array every load; `loadedAt` is the honest tick.
+  // Each `data` is a new array every load; `loadedAt` is the honest tick.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cols.loadedAt]);
+  }, [cols.loadedAt, shared.loadedAt]);
 
   // The same wiring as the Explore shelf: signed out, the tap is the
   // sign-in invitation; signed in, the provider owns the write and the
@@ -505,13 +521,18 @@ export default function CollectionsScreen({ navigation, route }: {
   // An empty library greets with the community shelf instead of an empty
   // room — decided once per visit, the first time the answer lands, and
   // never re-decided under the reader's thumb (the Crew screen's rule).
+  //
+  // A library is not empty while a friend has shared a list with you: it
+  // is on Yours (see `sections`), and greeting a reader whose friend just
+  // shared one with Community would hide the one thing they came for. So
+  // the greeting waits for both answers.
   const greeted = useRef(false);
   useEffect(() => {
-    if (greeted.current || !session || !mine.loaded || route.params?.tab) return;
+    if (greeted.current || !session || !mine.loaded || !shared.loaded || route.params?.tab) return;
     greeted.current = true;
-    if (mine.data.length === 0) setTab('community');
+    if (mine.data.length === 0 && shared.data.length === 0) setTab('community');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mine.loaded]);
+  }, [mine.loaded, shared.loaded]);
   // A list started from Community lands on Yours, where it now is: the
   // form goes back to whichever tab sent it, and on Community the new
   // list is invisible until it is made public. Keyed on the count, not on
@@ -660,12 +681,19 @@ export default function CollectionsScreen({ navigation, route }: {
     c,
     members: membersOf(c, places).map((p): SiftMember => ({ ...p, city_name: cityName(p.city_id) })),
   }), [places, cityName]);
+  // Yours is your own lists and then the ones shared with you, sifted as
+  // one shelf so a search and a kind reach both, and split again into
+  // their two sections (`sections`). Kept whole, an empty shared list
+  // included, where Community drops its empty ones: a list somebody gave
+  // you is not a dead end at the desk, and one missing would read as a
+  // share that never arrived.
   const shelf = useMemo(
-    () => (onYours ? mine.data : community).map(pairOf),
+    () => (onYours ? [...mine.data, ...shared.data] : community).map(pairOf),
     // `community` is derived from `cols.data`, `me` and `places`, all listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onYours, mine.data, cols.data, me, places, pairOf],
+    [onYours, mine.data, shared.data, cols.data, me, places, pairOf],
   );
+  const sharedSlugs = useMemo(() => new Set(shared.data.map((c) => c.slug)), [shared.data]);
   // The kinds a shelf can offer: only what its lists actually hold, so no
   // kind leads to an empty shelf.
   const kindChoices = useMemo(() => collectionKinds(shelf), [shelf]);
@@ -739,12 +767,29 @@ export default function CollectionsScreen({ navigation, route }: {
   })), [onYours, communityView, asked, sifted, places, rankLikes, here?.id]);
   // Memoised: a new array here makes the list reset what it has reported
   // in view and report it again — see the freeze noted at `onSeen`.
-  const sections: Section[] = useMemo(() => (onYours
-    ? (mineReady ? [{ own: true, data: pairUp(sifted, true) }] : [])
-    : groups?.length
+  //
+  // ── shared with you (12 Nov 2026) ──
+  //
+  // On Yours, after your own lists and under a heading of its own: a list
+  // a friend shared is one you keep coming back to, which is what Yours
+  // is for, but it is not yours — no padlock, no count, a byline instead
+  // — and mixed in among your own it would read as one you made. After
+  // yours, not before: your own are what the tab opens for. Not on
+  // Community, which answers "what does everyone see"; a shared list is
+  // private, and everyone does not. The heading only when something is
+  // in the section, so a reader nobody has shared with sees the tab as
+  // it was.
+  const sections: Section[] = useMemo(() => {
+    if (onYours) {
+      if (!mineReady) return [];
+      const lent = sifted.filter((c) => sharedSlugs.has(c.slug));
+      const own: Section = { own: true, data: pairUp(sifted.filter((c) => !sharedSlugs.has(c.slug)), true) };
+      return lent.length ? [own, { own: false, shared: { count: lent.length }, data: pairUp(lent, false) }] : [own];
+    }
+    return groups?.length
       ? groups.map((g) => ({ own: false, data: g.rows, city: { id: g.city, count: g.count } }))
-      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : pairUp(sifted, false) }]
-  ), [onYours, mineReady, sifted, groups, communityView]);
+      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : pairUp(sifted, false) }];
+  }, [onYours, mineReady, sifted, sharedSlugs, groups, communityView]);
   const atCity = atKey == null ? null : sections.find((x) => x.city && (x.city.id ?? '') === atKey)?.city ?? null;
 
   // ── the city you are in, pinned, and a way to the others (owner,
@@ -854,6 +899,19 @@ export default function CollectionsScreen({ navigation, route }: {
       <Glyph name="chevron-down" size={pinnedCopy ? 16 : 18} color={colors.textSecondary} style={s.cityHeadChevron} />
       <Text style={[s.cityHeadCount, pinnedCopy && s.cityBarCount]}>{listsWord(city.count, t)}</Text>
     </PressableScale>
+  );
+
+  // The heading over the lists friends shared with you (see `sections`):
+  // a city block's heading in size and place, so Yours reads as one shelf
+  // in two parts, but no ▾ — there is nowhere to jump to — and so not a
+  // button. The count is lists, as a city's is.
+  const sharedHead = (count: number) => (
+    <View style={s.cityHead} testID="collections-shared-head">
+      <Text style={s.cityHeadName} numberOfLines={1} accessibilityRole="header">
+        {t('Shared with you', 'Được chia sẻ với bạn', 'あなたと共有', '与你共享', '與你共享')}
+      </Text>
+      <Text style={s.cityHeadCount}>{listsWord(count, t)}</Text>
+    </View>
   );
 
   // Not while the panel is up: the box it would focus is already open.
@@ -1205,7 +1263,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 <GuestNotice navigation={navigation} />
               </>
             )}
-            renderItem={({ item }) => {
+            renderItem={({ item, section }) => {
               if (item.kind === 'mosaic') {
                 const width = winW - space.page * 2;
                 return (
@@ -1238,11 +1296,15 @@ export default function CollectionsScreen({ navigation, route }: {
                         key={c.slug}
                         contentStyle={[s.gcard, { width: gcardW, height: gcardH }]}
                         onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
-                        testID={item.own ? undefined : `collection-card-${item.at + j}`}
+                        testID={item.own ? undefined : `${section.shared ? 'collection-shared' : 'collection-card'}-${item.at + j}`}
                         accessibilityRole="button"
+                        // A shared tile says whose it is, as the heading
+                        // above it says it is not yours: the face is not
+                        // read out, and the handle is the one fact that
+                        // tells two friends' lists apart.
                         accessibilityLabel={item.own
                           ? `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}, ${visibilityOf(c)}`
-                          : `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}`}
+                          : `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}${section.shared && c.curator_handle ? `, ${atHandle(c.curator_handle)}` : ''}`}
                       >
                         {uri
                           ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
@@ -1396,7 +1458,7 @@ export default function CollectionsScreen({ navigation, route }: {
               );
             }}
             stickySectionHeadersEnabled={false}
-            renderSectionHeader={({ section }) => (!section.city ? null : section === sections[0]
+            renderSectionHeader={({ section }) => (section.shared ? sharedHead(section.shared.count) : !section.city ? null : section === sections[0]
               ? <View style={s.firstGap} testID="collections-first-gap" />
               : cityHead(section.city, false))}
             onViewableItemsChanged={onSeen}
@@ -1416,7 +1478,11 @@ export default function CollectionsScreen({ navigation, route }: {
               // first collection" under a search that found nothing would
               // be answering a question nobody asked.
               if (asked) {
-                if (section.data.length > 0) return null;
+                // Once, and only when nothing anywhere matched: on Yours
+                // the lists shared with you are a second section, and a
+                // miss among your own above a hit among theirs is not
+                // "nothing here".
+                if (sections.some((x) => x.data.length > 0)) return null;
                 return q
                   ? <Empty text={t(`Nothing here matches "${q}".`, `Không có gì khớp với "${q}".`, `「${q}」に一致するものはありません。`, `没有与“${q}”匹配的内容。`, `沒有與「${q}」相符的內容。`)} />
                   : <Empty text={t('No collections match that choice.', 'Không có bộ sưu tập nào khớp lựa chọn đó.', 'その条件に合うコレクションはありません。', '没有符合条件的合集。', '沒有符合條件的合集。')} />;
@@ -1442,7 +1508,7 @@ export default function CollectionsScreen({ navigation, route }: {
             // its places from it, so a place the desk approved since the
             // last load stayed missing from every list holding it until
             // the catalog happened to revalidate on its own.
-            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); placesReload(); }}
+            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); }}
             refreshing={pulling}
           />
         )}

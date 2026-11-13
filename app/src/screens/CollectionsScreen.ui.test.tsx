@@ -41,6 +41,7 @@ const state = vi.hoisted(() => ({
     error: null as string | null, loadedAt: 1 as number | null,
   },
   mine: { data: [] as unknown[], loaded: true, loading: false },
+  shared: { data: [] as unknown[], loaded: true, loading: false, loadedAt: 1 as number | null },
   likes: {} as Record<string, number>,
   myLikes: [] as string[],
   // How many times the screen has rendered: the catalog hook runs once a
@@ -50,6 +51,8 @@ const state = vi.hoisted(() => ({
 const spies = vi.hoisted(() => ({
   colsReload: vi.fn(),
   mineReload: vi.fn(),
+  sharedReload: vi.fn(),
+  sharedFor: vi.fn((_id: string | null | undefined) => {}),
   placesReload: vi.fn(),
   askToSignIn: vi.fn(),
   toggleLike: vi.fn(async () => {}),
@@ -94,6 +97,10 @@ vi.mock('../lib/save', () => {
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<typeof import('../lib/data')>()),
   fetchProfilesById: spies.fetchProfilesById,
+  useSharedWithMe: (id: string | null | undefined) => {
+    spies.sharedFor(id);
+    return { ...state.shared, reload: spies.sharedReload };
+  },
 }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined, useTabBarDucked: () => state.ducked }));
 // The dock's settle gate is the dock's own business (DockSlot's tests);
@@ -173,6 +180,7 @@ beforeEach(async () => {
   state.placesLoading = false;
   state.cols = { data: [], loaded: true, loading: false, error: null, loadedAt: 1 };
   state.mine = { data: [], loaded: true, loading: false };
+  state.shared = { data: [], loaded: true, loading: false, loadedAt: 1 };
   state.likes = {};
   state.myLikes = [];
 });
@@ -746,9 +754,11 @@ describe('CollectionsScreen — signed in', () => {
     spies.mineReload.mockClear();
     spies.colsReload.mockClear();
     spies.placesReload.mockClear();
+    spies.sharedReload.mockClear();
     act(() => { listProps().onRefresh(); });
     expect(spies.colsReload).toHaveBeenCalledTimes(1);
     expect(spies.mineReload).toHaveBeenCalledTimes(1);
+    expect(spies.sharedReload).toHaveBeenCalledTimes(1);
     expect(spies.placesReload).toHaveBeenCalledTimes(1);
     // Nothing is loading, so the spinner disarms as soon as it is armed.
     expect(listProps().refreshing).toBe(false);
@@ -1956,5 +1966,141 @@ describe('Mosaic scrims follow the caption', () => {
       const handle = within(sc).getByText(/^@curator\d+$/).textContent!;
       expect(inkOf(handle)).toBe(onPhoto.text);
     }
+  });
+});
+
+// A friend's list shared with you (12 Nov 2026): on Yours, after your own
+// and under its own heading, with the friend's byline; never on Community,
+// which is what everyone sees.
+describe('CollectionsScreen — shared with you', () => {
+  /** Lan's private list, as `fetchSharedWithMe` names it. */
+  const lent = (slug: string, members: string[], over: Partial<Collection> = {}) => col(slug, members, {
+    is_public: false, owner_id: 'lan-id', curator_handle: 'lan', ...over,
+  });
+  const box = () => { openBox(); return screen.getByPlaceholderText('Name, place, city, user') as HTMLInputElement; };
+  const type = (v: string) => fireEvent.change(box(), { target: { value: v } });
+
+  beforeEach(() => {
+    state.uid = 'u1';
+    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', is_public: false, title_en: 'My cafés' })];
+    state.shared.data = [lent('lans', ['b'], { title_en: 'Lan’s noodles' })];
+  });
+
+  it('asks for the lists shared with the reader, as the reader', () => {
+    show();
+    expect(spies.sharedFor).toHaveBeenCalledWith('u1');
+  });
+
+  it('draws them after your own, under their heading and count', () => {
+    show();
+    const head = screen.getByTestId('collections-shared-head');
+    expect(within(head).getByRole('heading').textContent).toBe('Shared with you');
+    expect(head.textContent).toBe('Shared with you1 collection');
+    const mineTile = screen.getByText('My cafés');
+    const theirs = screen.getByText('Lan’s noodles');
+    // Document order: your own, then the heading, then the friend's.
+    expect(mineTile.compareDocumentPosition(head) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(head.compareDocumentPosition(theirs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('counts every list in the section', () => {
+    state.shared.data = [lent('one', ['a']), lent('two', ['b']), lent('three', [])];
+    show();
+    expect(screen.getByTestId('collections-shared-head').textContent).toBe('Shared with you3 collections');
+  });
+
+  it('wears the friend’s byline and face, and no padlock, count or heart', async () => {
+    spies.fetchProfilesById.mockImplementation(async () => ({ 'lan-id': { avatar_url: 'https://face/lan.jpg' } }));
+    show();
+    await act(async () => {});
+    const tile = screen.getByTestId('collection-shared-0');
+    expect(within(tile).getByText('@lan')).toBeTruthy();
+    expect(spies.fetchProfilesById).toHaveBeenCalledWith(['lan-id']);
+    await waitFor(() => expect(tile.querySelector('img[src="https://face/lan.jpg"]')).toBeTruthy());
+    expect(within(tile).queryByTestId('collection-tile-lock')).toBeNull();
+    expect(within(tile).queryByTestId('collection-tile-count')).toBeNull();
+    expect(within(tile).queryByRole('button', { name: /like this collection/i })).toBeNull();
+    // Your own private tile keeps its padlock: one on the shelf.
+    expect(screen.getAllByTestId('collection-tile-lock')).toHaveLength(1);
+  });
+
+  it('says whose list it is in the tile’s spoken name, and opens it', () => {
+    const { navigation } = show();
+    const tile = screen.getByTestId('collection-shared-0');
+    expect(tile.getAttribute('aria-label')).toBe('Lan’s noodles, @lan');
+    fireEvent.click(tile);
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'lans' });
+  });
+
+  it('names nobody where the owner has no handle to name', () => {
+    state.shared.data = [lent('lans', ['b'], { title_en: 'Lan’s noodles', curator_handle: null })];
+    show();
+    expect(screen.getByTestId('collection-shared-0').getAttribute('aria-label')).toBe('Lan’s noodles');
+  });
+
+  it('keeps an empty shared list on the shelf', () => {
+    state.shared.data = [lent('soon', [], { title_en: 'Coming soon' })];
+    show();
+    expect(screen.getByText('Coming soon')).toBeTruthy();
+  });
+
+  it('draws no heading when nothing is shared', () => {
+    state.shared.data = [];
+    show();
+    expect(screen.getByText('My cafés')).toBeTruthy();
+    expect(screen.queryByTestId('collections-shared-head')).toBeNull();
+  });
+
+  it('keeps them off Community', () => {
+    state.cols.data = [col('public1', ['a'], { title_en: 'Everyone’s' })];
+    show({ tab: 'community' });
+    expect(screen.getByText('Everyone’s')).toBeTruthy();
+    expect(screen.queryByText('Lan’s noodles')).toBeNull();
+    expect(screen.queryByTestId('collections-shared-head')).toBeNull();
+  });
+
+  it('greets a reader with no lists of their own on Yours when one is shared with them', () => {
+    state.mine.data = [];
+    state.cols.data = [col('public1', ['a'], { title_en: 'Everyone’s' })];
+    show();
+    expect(screen.getByText('Lan’s noodles')).toBeTruthy();
+    expect(screen.queryByText('Everyone’s')).toBeNull();
+    // Their own half still offers the first list.
+    expect(screen.getByText('No collections yet')).toBeTruthy();
+  });
+
+  it('waits for the shared lists before greeting, then greets an empty library with Community', () => {
+    state.mine.data = [];
+    state.shared = { data: [], loaded: false, loading: true, loadedAt: null };
+    state.cols.data = [col('public1', ['a'], { title_en: 'Everyone’s' })];
+    const navigation = nav();
+    const view = render(<CollectionsScreen navigation={navigation} route={{}} />);
+    expect(screen.queryByText('Everyone’s')).toBeNull();
+    state.shared = { data: [], loaded: true, loading: false, loadedAt: 2 };
+    view.rerender(<CollectionsScreen navigation={navigation} route={{}} />);
+    expect(screen.getByText('Everyone’s')).toBeTruthy();
+  });
+
+  it('reloads them when the tab comes back into view', () => {
+    show();
+    expect(spies.sharedReload).toHaveBeenCalled();
+  });
+
+  it('finds a shared list by its words, with no "nothing matches" over it', () => {
+    show();
+    type('noodles');
+    expect(screen.getByText('Lan’s noodles')).toBeTruthy();
+    expect(screen.queryByText('My cafés')).toBeNull();
+    expect(screen.queryByText(/Nothing here matches/)).toBeNull();
+    // And by the friend's handle.
+    type('@lan');
+    expect(screen.getByText('Lan’s noodles')).toBeTruthy();
+  });
+
+  it('says once that nothing matched, when nothing on either half did', () => {
+    show();
+    type('zzz');
+    expect(screen.getAllByText('Nothing here matches "zzz".')).toHaveLength(1);
+    expect(screen.queryByTestId('collections-shared-head')).toBeNull();
   });
 });

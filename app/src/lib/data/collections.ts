@@ -12,6 +12,7 @@ import type { Collection, Place } from '../types';
 import type { KindChoice } from '../collectionKinds';
 import { slugify } from '../place';
 import { oneCover, PLACE_COLS } from './places';
+import { fetchProfilesById } from './people';
 
 /**
  * A public list and everything in it.
@@ -170,6 +171,62 @@ export async function fetchMyCollections(ownerId: string): Promise<Collection[]>
     .order('created_at', { ascending: false }), MEMBER_PHOTOS);
   if (error) throw new Error(error.message);
   return withMembers(data);
+}
+
+/**
+ * Every friend's list shared with this reader (12 Nov 2026), with its
+ * places inside it, newest share first — the order the share table's
+ * index was built for (`collection_shares_user`).
+ *
+ * The same columns and the same embed as your own (`MY_COLLECTION_COLS`),
+ * because the screens draw a shared list exactly as they draw one of
+ * yours: whole place rows, so it opens in any city. What the embed gets
+ * is the policy's, not the owner's: published and approved places only,
+ * so a place still waiting on the desk stays the owner's alone.
+ *
+ * Scoped in the query as well as by RLS, the export's belt-and-braces
+ * (`fetchMyShares`): `!inner` through the share, and the share's reader
+ * named. RLS lets the owner see the shares on their lists too, so without
+ * the filter an owner would be handed their own lists back as "shared
+ * with me". No filter on the owner beside it: a share naming yourself is
+ * refused at insert (`owners share with friends`), so every row this
+ * returns is somebody else's.
+ *
+ * ── whose it is ──
+ *
+ * A private list has no byline: `stamp_curator` nulls `curator_handle`
+ * on every row that is not public, and that stays right for everyone but
+ * the friend it was shared with, who is reading a list somebody gave
+ * them and needs to know who. So the handle is filled here from the
+ * owner's profile — today's handle, which is what the stamp would write
+ * if the list were published now — the way Activity names the owners of
+ * private lists (`fetchMyActs`). Only where the row has none: a list
+ * that is public and shared keeps the stamp everyone else sees. A second
+ * round trip, made only when something is shared; there is no foreign
+ * key from a list to a profile for PostgREST to embed through.
+ */
+export async function fetchSharedWithMe(userId: string): Promise<Collection[]> {
+  const { data, error } = await oneCover(supabase
+    .from('collections')
+    .select(`${MY_COLLECTION_COLS}, collection_shares!inner(created_at)`)
+    .eq('collection_shares.user_id', userId), MEMBER_PHOTOS);
+  if (error) throw new Error(error.message);
+  type Shared = EmbeddedRow & { collection_shares: { created_at: string }[] };
+  // One share a row: the filter leaves only the reader's, and `!inner`
+  // leaves no row without it. Sorted here rather than in the query, where
+  // an order on the embed would order the embed and not the lists.
+  const rows = ((data ?? []) as unknown as Shared[])
+    .map(({ collection_shares: [share], ...row }) => ({ row, at: Date.parse(share.created_at) }))
+    .sort((a, b) => b.at - a.at)
+    .map((r) => r.row);
+  // Every shared list has an owner: only an owner can share one. Nothing
+  // shared asks nothing: `fetchProfilesById` makes no request for no ids.
+  const ownerOf = (r: EmbeddedRow) => r.owner_id as string;
+  const owners = await fetchProfilesById([...new Set(rows.map(ownerOf))]);
+  return withMembers(rows.map((r) => ({
+    ...r,
+    curator_handle: r.curator_handle ?? owners[ownerOf(r)]?.handle ?? null,
+  })));
 }
 
 /** Two readings of one count. `shown` is every like, the number a heart

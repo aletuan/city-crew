@@ -54,6 +54,8 @@ const spies = vi.hoisted(() => ({
   askToSignIn: vi.fn(),
   mineReload: vi.fn(),
   colsReload: vi.fn(),
+  sharedReload: vi.fn(),
+  sharedFor: vi.fn((_id: string | null | undefined) => {}),
   placesReload: vi.fn(),
   note: vi.fn(),
   report: vi.fn(),
@@ -68,6 +70,8 @@ const state = vi.hoisted(() => ({
   profile: { handle: 'andy', avatar_url: '' } as { handle: string; avatar_url: string },
   mine: [] as unknown[],
   cols: [] as unknown[],
+  shared: [] as unknown[],
+  sharedLoading: false,
   places: [] as unknown[],
   colsLoading: false,
   mineLoading: false,
@@ -128,6 +132,10 @@ vi.mock('../lib/data', async (orig) => ({
   setCollectionPublic: spies.setCollectionPublic,
   useProfileByHandle: spies.profileLookup,
   blockUser: spies.blockUser,
+  useSharedWithMe: (id: string | null | undefined) => {
+    spies.sharedFor(id);
+    return { data: state.shared, loading: state.sharedLoading, reload: spies.sharedReload };
+  },
 }));
 vi.mock('../components/reportFlow', () => ({
   useReport: () => ({ report: spies.report, canReport: spies.canReport, node: null }),
@@ -346,6 +354,8 @@ beforeEach(() => {
   state.profile = { handle: 'andy', avatar_url: '' };
   state.mine = [collection()];
   state.cols = [];
+  state.shared = [];
+  state.sharedLoading = false;
   state.places = [PHO, CAFE, MUSEUM];
   state.colsLoading = false;
   state.mineLoading = false;
@@ -1838,6 +1848,126 @@ describe('Plan a trip', () => {
   });
 });
 
+// A friend's list shared with you (12 Nov 2026): private, so in neither
+// the public catalog nor yours, and read-only by the owner's call — no
+// heart, no copy, no Report (moderation never reaches a private list) and
+// no Share (its sentence is about a switch only the owner has).
+describe('a friend’s list, shared with you', () => {
+  /** Lan's private list, as `fetchSharedWithMe` names it. */
+  const lent = (over: Partial<Collection> = {}, members?: Place[]) => collection({
+    owner_id: 'lan-id', is_public: false, curator_handle: 'lan', ...over,
+  }, members);
+
+  beforeEach(() => {
+    state.mine = [];
+    state.shared = [lent()];
+  });
+
+  it('opens from the lists shared with the reader, asked for as the reader', () => {
+    show();
+    expect(screen.getByText('Old Quarter eats')).toBeTruthy();
+    expect(screen.getByText('card:Pho 10')).toBeTruthy();
+    expect(spies.sharedFor).toHaveBeenCalledWith('me');
+    expect(screen.queryByText('Collection not found.')).toBeNull();
+  });
+
+  it('holds a spinner, not "not found", while the shared lists load', () => {
+    state.shared = [];
+    state.sharedLoading = true;
+    show();
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(screen.queryByText('Collection not found.')).toBeNull();
+  });
+
+  it('credits the friend whose list it is, and draws no heart and no foot', () => {
+    show();
+    expect(screen.getByTestId('collection-curator').textContent).toBe('@lan');
+    expect(screen.queryByRole('button', { name: 'Like' })).toBeNull();
+    expect(screen.queryByTestId('collection-stats')).toBeNull();
+    // Nor the owner's word for who can see it.
+    expect(screen.queryByTestId('collection-visibility')).toBeNull();
+  });
+
+  it('offers no copy in the card’s corner', () => {
+    show();
+    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save a copy' })).toBeNull();
+  });
+
+  it('keeps the menu to planning and the two views: no copy, Share or Report', () => {
+    show();
+    openMenu();
+    const labels = [...document.querySelectorAll('[aria-modal] [role="button"]')]
+      .map((b) => b.textContent).filter(Boolean);
+    expect(labels).toEqual(['Plan a trip', 'Grid', 'List']);
+    expect(screen.queryByText('Save a copy')).toBeNull();
+    expect(screen.queryByTestId('collection-menu-share')).toBeNull();
+    expect(screen.queryByText('Report this list')).toBeNull();
+  });
+
+  it('heads the menu with the views when there is nothing to plan from', () => {
+    state.shared = [lent({}, [])];
+    show();
+    openMenu();
+    expect(screen.getByText('View').closest('[aria-modal]')).toBeTruthy();
+    // The views' heading leads, with no rule above it.
+    const heading = screen.getByRole('heading', { name: 'View' });
+    expect(viewStyleOf(heading)?.borderTopWidth ?? 0).toBe(0);
+  });
+
+  it('offers the friend’s block in the curator sheet, and no report', () => {
+    spies.profileLookup.mockImplementation(() => ({ data: { id: 'lan-id', full_name: 'Lan', avatar_url: '' }, loading: false }));
+    show();
+    fireEvent.click(screen.getByTestId('collection-curator'));
+    expect(screen.queryByRole('button', { name: /Block @lan/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Report this list/ })).toBeNull();
+  });
+
+  it('offers no copy in the dock either', () => {
+    vi.useFakeTimers();
+    try {
+      state.ducked = true;
+      show();
+      act(() => {
+        const p = propsWhere((q) => q.testID === 'collection-intro');
+        (p.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 8, height: 300 } } });
+      });
+      act(() => {
+        const p = propsWhere((q) => typeof q.onScroll === 'function' && 'ListHeaderComponent' in q);
+        (p.onScroll as (e: unknown) => void)({ nativeEvent: {
+          contentOffset: { x: 0, y: 400 }, contentSize: { width: 390, height: 2000 }, layoutMeasurement: { width: 390, height: 844 },
+        } });
+      });
+      act(() => { vi.advanceTimersByTime(400); });
+      expect(screen.getByTestId('collection-dock').textContent).toBe('Plan a tripUse it for a trip');
+      expect(screen.queryByTestId('collection-dock-copy')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Shared and public is simply public: the migration's own rule.
+  it('offers everything a public list offers once the friend publishes it', () => {
+    state.shared = [lent({ is_public: true })];
+    show();
+    expect(screen.getByTestId('collection-desc-copy')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
+    openMenu();
+    expect(menuRow('Save a copy')).toBeTruthy();
+    expect(screen.getByTestId('collection-menu-share')).toBeTruthy();
+    expect(menuRow('Report this list')).toBeTruthy();
+  });
+
+  it('is never the reader’s own list, even where both catalogs hold it', () => {
+    state.mine = [collection()];
+    state.shared = [lent()];
+    show();
+    // `mine` answers first: the owner's pencil, not the friend's byline.
+    expect(screen.getByTestId('collection-desc-edit')).toBeTruthy();
+    expect(screen.getByTestId('collection-curator').textContent).toBe('@andy');
+  });
+});
+
 // A visitor reads the description in the same card, with no pencil,
 // led by the curator rather than the note glyph; with no description the
 // card still carries the curator and the count (owner, 16 Oct 2026).
@@ -2804,9 +2934,11 @@ describe('pulling the list down', () => {
     spies.colsReload.mockClear();
     spies.mineReload.mockClear();
     spies.placesReload.mockClear();
+    spies.sharedReload.mockClear();
     act(() => { list().onRefresh(); });
     expect(spies.colsReload).toHaveBeenCalledTimes(1);
     expect(spies.mineReload).toHaveBeenCalledTimes(1);
+    expect(spies.sharedReload).toHaveBeenCalledTimes(1);
     expect(spies.placesReload).toHaveBeenCalledTimes(1);
     // Nothing is loading, so the spinner disarms as soon as it is armed.
     expect(list().refreshing).toBe(false);

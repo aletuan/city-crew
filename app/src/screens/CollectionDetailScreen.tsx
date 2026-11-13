@@ -26,7 +26,7 @@ import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/ca
 import { likesWorthShowing } from '../lib/likes';
 import {
   blockUser, deleteCollection, membersOf, reorderCollection,
-  setCollectionPublic, unseenMembers, unseenSentence, useProfileByHandle,
+  setCollectionPublic, unseenMembers, unseenSentence, useProfileByHandle, useSharedWithMe,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
@@ -380,6 +380,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // your own is now in both, and `find` takes the first — `mine`, which
   // is the fuller row.
   const mine = useMyLists();
+  // And a friend's list shared with you (12 Nov 2026): private, so in
+  // neither of the other two either. Its own fetch rather than the save
+  // provider's — see `useSharedWithMe`.
+  const shared = useSharedWithMe(uid ?? userId);
   const { askToSignIn } = useSaveActions();
   // Reporting, raised from the overflow menu — see components/reportFlow.
   const { report, canReport, node: reportSheet } = useReport();
@@ -390,19 +394,23 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // not on the slug everything user-facing uses — and a list that is
   // public, since a private one has no shelf to be ordered on.
   const { likes, myLikes, toggleLike } = useLikes();
+  // Shared before public: a list that is both is the same row either way,
+  // and the shared copy names its owner (`fetchSharedWithMe`).
   const col = useMemo(
-    () => [...mine.data, ...cols.data].find((c) => c.slug === route.params.slug),
-    [mine.data, cols.data, route.params.slug],
+    () => [...mine.data, ...shared.data, ...cols.data].find((c) => c.slug === route.params.slug),
+    [mine.data, shared.data, cols.data, route.params.slug],
   );
   const members = useMemo(() => (col ? membersOf(col, places) : []), [col, places]);
   const note = useNoteEvent();
-  const loading = cols.loading || mine.loading || placesLoading;
+  const loading = cols.loading || mine.loading || shared.loading || placesLoading;
   // Pull to reload (owner, 23 Oct 2026). Until then this screen reloaded
   // only after a write of its own, so a place the desk approved, or a
   // change made to the list on another phone, waited for a trip back to
-  // the Collections tab and a pull there. All three catalogs, because the
-  // screen is drawn from all three: the list from `mine` or `cols`, a
-  // community list's places from `places`.
+  // the Collections tab and a pull there. Every catalog, because the
+  // screen is drawn from all of them: the list from `mine`, `shared` or
+  // `cols`, a community list's places from `places`. A pull is also how a
+  // friend's list that was unshared since goes: it leaves `shared`, and
+  // the screen says the list is not found.
   //
   // The spinner belongs to the pull, as on Collections and Explore: armed
   // by the gesture, disarmed when the fetches settle, and never lit by a
@@ -411,9 +419,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   useEffect(() => {
     if (pulling && !loading) setPulling(false);
   }, [pulling, loading]);
-  const pull = () => { setPulling(true); cols.reload(); mine.reload(); placesReload(); };
+  const pull = () => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); };
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
+  /*
+   * A friend's list, shared with you and not public (12 Nov 2026).
+   *
+   * Read off the row rather than off which query found it: every list
+   * this screen can hold that is neither yours nor public came through a
+   * share — the public query has only public rows and `mine` only yours —
+   * so the two facts are the whole test. A list that is public and also
+   * shared is simply public (the migration's own words), and offers what
+   * any public list offers.
+   *
+   * What it changes is what the screen offers, by the owner's call the
+   * day sharing shipped: you may read it and plan from it, and that is
+   * all. No heart (likes are public-only — `heart` already asks
+   * `isPublic`). No "Save a copy", in any of its three doors (`canCopy`):
+   * the list was lent to you to read, and the app does not offer to make
+   * it yours. No Report: moderation never reaches a private list
+   * (`legal.ts`, "nothing there can reach a private collection"), so the
+   * row would send the desk something it has promised not to read. And
+   * no Share: its sentence tells the owner where the switch to publish
+   * is, which a friend does not have, and who sees the list is the
+   * owner's to decide.
+   */
+  const sharedToMe = !!col && !owned && !isPublic;
   /**
    * The curator's face, for a list somebody else made.
    *
@@ -982,6 +1013,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * the copy takes the original's stamp, not the tab's.
    */
   const copyCityId = col?.city_id || city?.id;
+  // Where the copy's three doors open: with a city to file it under, and
+  // never on a list lent to you (`sharedToMe`).
+  const canCopy = !!copyCityId && !sharedToMe;
   const copyRef = useRef<() => void>(() => {});
   const copy = () => {
     if (!col) return;
@@ -1055,8 +1089,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      row so the way to the switch is the word that names the state —
      tap "Private" to choose who sees it.
 
-     The owner's alone. A visitor only ever meets a public list, and a
-     word telling them so would be a fact about nothing they can change.
+     The owner's alone. A visitor meets a public list or one a friend
+     shared with them, and a word telling them which would be a fact
+     about nothing they can change.
 
      The padlock the list already uses for the same fact, so a private
      collection looks the same wherever you meet it — and a globe once it
@@ -1282,7 +1317,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     );
   };
   const curatorActions: PersonAction[] = [];
-  if (col && curatorTag && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id })) {
+  // Never on a shared list: see `sharedToMe`.
+  if (col && curatorTag && !sharedToMe && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id })) {
     curatorActions.push({
       key: 'report',
       icon: 'flag-outline',
@@ -1438,7 +1474,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      the catalog already has into the list, and "Tạo mới" beside "Lên kế
      hoạch" would read as "a new plan".
 
-     A list with no city has no copy to offer (see the ⋯ menu), so a
+     A list with no city has no copy to offer (see the ⋯ menu), and a
+     friend's list shared with you offers none (`sharedToMe`), so a
      visitor's dock there is the sentence alone. */
   const plan = () => {
     if (!col) return;
@@ -1620,7 +1657,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 style={s.descGlyph}
               />
             </PressableScale>
-          ) : copyCityId ? (
+          ) : canCopy ? (
             // Somebody else's list: the corner the pencil holds on yours
             // holds what you can do with theirs (owner, 27 Oct 2026). The
             // same `copy` the menu row and the dock pill call, and the
@@ -1863,7 +1900,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                reason to want this list was to make it yours: reorder it,
                cut the two you have been to, add the four you know. It
                copies, and the row says so before the tap rather than
-               after it. */
+               after it.
+
+               A friend's list shared with you keeps only the reading half:
+               Plan a trip and the two views. See `sharedToMe`. */
             <>
               {/* What a reader does with a list once read, so it leads. */}
               {canPlan && (
@@ -1878,7 +1918,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               {/* Only with a city to file the copy under. Without one the
                   row could only close the menu and do nothing, and a row
                   that does nothing is worse than a row that is not there. */}
-              {!!copyCityId && (
+              {canCopy && (
                 <MenuRow
                   icon="duplicate-outline"
                   label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
@@ -1886,18 +1926,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   first={!canPlan}
                 />
               )}
-              {viewRows(!copyCityId && !canPlan)}
-              <MenuRow
-                icon="share-outline"
-                label={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
-                onPress={() => act(share)}
-              />
+              {viewRows(!canCopy && !canPlan)}
+              {!sharedToMe && (
+                <MenuRow
+                  icon="share-outline"
+                  label={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
+                  onPress={() => act(share)}
+                  testID="collection-menu-share"
+                />
+              )}
               {/* The third thing you can do about somebody else's list,
                   and the one the store asks for: say something is wrong
                   with it. Last, and marked, because it is the row that
                   is about a person rather than about the list — and
                   never on your own, which is yours to delete. */}
-              {col && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id }) && (
+              {col && !sharedToMe && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id }) && (
                 <MenuRow
                   icon="flag-outline"
                   label={t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告', '举报这个清单', '舉報這個清單')}
@@ -1932,7 +1975,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             onPress={addPlace}
             testID="collection-dock-add"
           />
-        ) : copyCityId ? (
+        ) : canCopy ? (
           <AddPill
             icon="duplicate-outline"
             label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
