@@ -85,6 +85,15 @@ export type Applause = {
   liked_at: string;
   liker_handle: string | null;
   liker_name: string | null;
+  /** The liker's account id and face, from their profile (13 Nov 2026,
+   *  `20261113150000_activity_rows_carry_face`): what a list's activity
+   *  page keys its friend button on and draws the row's face with, so it
+   *  needs no second read. Null with the rest when the profile is gone;
+   *  `avatar_url` is '' for a face the desk cleared. Optional because an
+   *  app update can reach a phone before the migration reaches the live
+   *  project, and the function then answers the four columns it had. */
+  liker_id?: string | null;
+  liker_avatar_url?: string | null;
 };
 
 /** A copy saved of one of the reader's lists, as `copies_of_mine` returns
@@ -96,6 +105,10 @@ export type Copy = {
   copied_at: string;
   copier_handle: string | null;
   copier_name: string | null;
+  /** The copier's id and face, as `Applause`'s liker's — and optional for
+   *  the same reason. */
+  copier_id?: string | null;
+  copier_avatar_url?: string | null;
 };
 
 /** Something the reader did to somebody else's list — a like given, or a

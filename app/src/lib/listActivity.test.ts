@@ -13,8 +13,8 @@ describe('actsOn', () => {
       [like('c1', '2026-11-10T10:00:00Z'), like('c2', '2026-11-12T10:00:00Z')],
       [copy('c2', '2026-11-11T10:00:00Z'), copy('c1', '2026-11-09T10:00:00Z')]);
     expect(acts).toEqual([
-      { kind: 'like', at: '2026-11-10T10:00:00Z', handle: 'lan', name: 'Lan' },
-      { kind: 'copy', at: '2026-11-09T10:00:00Z', handle: 'minh', name: 'Minh' },
+      { kind: 'like', at: '2026-11-10T10:00:00Z', handle: 'lan', name: 'Lan', id: null, avatar: null },
+      { kind: 'copy', at: '2026-11-09T10:00:00Z', handle: 'minh', name: 'Minh', id: null, avatar: null },
     ]);
   });
 
@@ -55,8 +55,37 @@ describe('actsOn', () => {
 
   it('carries a gone profile through as nulls, for the screen’s "Someone"', () => {
     expect(actsOn('c1', [like('c1', '2026-11-10T10:00:00Z', null, null)], [])).toEqual([
-      { kind: 'like', at: '2026-11-10T10:00:00Z', handle: null, name: null },
+      { kind: 'like', at: '2026-11-10T10:00:00Z', handle: null, name: null, id: null, avatar: null },
     ]);
+  });
+
+  // The id and the face ride the row (20261113150000), each from its own
+  // column: a like's from the liker's, a copy's from the copier's.
+  it('carries each actor’s id and face from their own kind’s columns', () => {
+    const acts = actsOn('c1',
+      [{ ...like('c1', '2026-11-10T10:00:00Z', 'lan'), liker_id: 'u-lan', liker_avatar_url: 'https://faces/lan.jpg' }],
+      [{ ...copy('c1', '2026-11-11T10:00:00Z', 'minh'), copier_id: 'u-minh', copier_avatar_url: 'https://faces/minh.jpg' }]);
+    expect(acts.map((a) => [a.handle, a.id, a.avatar])).toEqual([
+      ['minh', 'u-minh', 'https://faces/minh.jpg'],
+      ['lan', 'u-lan', 'https://faces/lan.jpg'],
+    ]);
+  });
+
+  // A face the desk cleared is an empty string in the column: no face,
+  // the blank disc, not an <img> with no address.
+  it('reads an empty face as none, on both kinds', () => {
+    const acts = actsOn('c1',
+      [{ ...like('c1', '2026-11-10T10:00:00Z'), liker_id: 'u1', liker_avatar_url: '' }],
+      [{ ...copy('c1', '2026-11-11T10:00:00Z'), copier_id: 'u2', copier_avatar_url: '' }]);
+    expect(acts.map((a) => [a.id, a.avatar])).toEqual([['u2', null], ['u1', null]]);
+  });
+
+  // A gone profile, as the migration answers it: both columns null.
+  it('reads null columns as no id and no face', () => {
+    const acts = actsOn('c1',
+      [{ ...like('c1', '2026-11-10T10:00:00Z', null, null), liker_id: null, liker_avatar_url: null }],
+      [{ ...copy('c1', '2026-11-11T10:00:00Z', null, null), copier_id: null, copier_avatar_url: null }]);
+    expect(acts.map((a) => [a.id, a.avatar])).toEqual([[null, null], [null, null]]);
   });
 
   it('is empty for a list nobody acted on', () => {

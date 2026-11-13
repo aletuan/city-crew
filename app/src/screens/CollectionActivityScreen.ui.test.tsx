@@ -8,13 +8,20 @@
 // the kind), and the four states — loading, empty (yours, whatever it is
 // now, or not yours), failed with Try again — and that a row is not a
 // control. A list that is not public is asked about like any other.
-// `actsOn`, `listAgeOf` and `ageWord` run for real; only the I/O seams
-// and the providers are stood in.
+// `actsOn`, `listAgeOf` and `ageWord` run for real, and so does the kept,
+// shared answer the page reads (`useListActivityQuery`, `useSharedFetch`):
+// only the two RPC wrappers under it and the providers are stood in. So
+// the page opening on a kept answer without a spinner, and its faces
+// coming off the rows with no second read, are tested through the code
+// that does them.
 
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, cleanup, fireEvent, fontSizeOf, render, screen, textStyleOf, viewStyleOf, within } from '../uitest/render';
+import { cacheKey } from '../lib/data/cache';
+import { forgetSharedFetches } from '../lib/data/fetch';
 import type { Nav, RootRoute } from '../nav';
 import type { Applause, Copy } from '../lib/friends';
 import type { Collection } from '../lib/types';
@@ -28,13 +35,15 @@ const HOUR = 60 * MIN;
 const data = vi.hoisted(() => ({
   fetchApplause: vi.fn(async (_since: string): Promise<Applause[]> => []),
   fetchCopies: vi.fn(async (_since: string): Promise<Copy[]> => []),
-  avatars: {} as Record<string, string>,
-  avatarsAsked: vi.fn((_handles: string[]) => {}),
+  fetchCuratorAvatars: vi.fn(async (_handles: string[]): Promise<Record<string, string>> => ({})),
 }));
-vi.mock('../lib/data', () => ({
+// The module the hooks read the RPCs from, not the barrel: `hooks.ts`
+// imports them from here, so a stand-in on the barrel would miss them.
+vi.mock('../lib/data/people', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
   fetchApplause: data.fetchApplause,
   fetchCopies: data.fetchCopies,
-  useCuratorAvatarsQuery: (handles: string[]) => { data.avatarsAsked(handles); return { data: data.avatars }; },
+  fetchCuratorAvatars: data.fetchCuratorAvatars,
 }));
 
 const state = vi.hoisted(() => ({
@@ -71,10 +80,10 @@ const list = (over: Partial<Collection> = {}): Collection => ({
   ...over,
 } as Collection);
 
-const like = (liked_at: string, liker_handle: string | null, liker_name: string | null = null, collection_id = 'c1'): Applause =>
-  ({ collection_id, liked_at, liker_handle, liker_name });
-const copy = (copied_at: string, copier_handle: string | null, copier_name: string | null = null, collection_id = 'c1'): Copy =>
-  ({ collection_id, copied_at, copier_handle, copier_name });
+const like = (liked_at: string, liker_handle: string | null, liker_name: string | null = null, collection_id = 'c1', liker_avatar_url: string | null = null): Applause =>
+  ({ collection_id, liked_at, liker_handle, liker_name, liker_id: liker_handle && `id-${liker_handle}`, liker_avatar_url });
+const copy = (copied_at: string, copier_handle: string | null, copier_name: string | null = null, collection_id = 'c1', copier_avatar_url: string | null = null): Copy =>
+  ({ collection_id, copied_at, copier_handle, copier_name, copier_id: copier_handle && `id-${copier_handle}`, copier_avatar_url });
 
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 const show = async (slug = 'old-quarter') => {
@@ -106,13 +115,17 @@ const linesOf = (el: HTMLElement): number | undefined => {
   return f?.memoizedProps?.numberOfLines;
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
   vi.clearAllMocks();
   data.fetchApplause.mockImplementation(async () => []);
   data.fetchCopies.mockImplementation(async () => []);
-  data.avatars = {};
+  // The kept answer outlives a render, in memory and on the phone: each
+  // test starts with neither, unless it makes one.
+  forgetSharedFetches();
+  await AsyncStorage.removeItem(cacheKey('likesonmine', 'all', 'me'));
+  await AsyncStorage.removeItem(cacheKey('copiesofmine', 'all', 'me'));
   state.me = 'me';
   state.profile = { handle: 'andy', avatar_url: 'https://faces/andy.jpg' };
   state.mine = [list()];
@@ -318,25 +331,36 @@ describe('the rows', () => {
     expect(row.textContent).not.toContain('@');
   });
 
-  it('wears each face from the one batched ask, and the blank disc without one', async () => {
-    data.avatars = { lan: 'https://faces/lan.jpg' };
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan'), like(ago(9 * MIN), 'nobody')]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(7 * MIN), null)]);
+  // One round trip (13 Nov 2026): the face rides the row, so there is
+  // no second read by handle — not the batched one the page used to
+  // make, not any other.
+  it('wears each face off its own row, with no second read, and the blank disc without one', async () => {
+    data.fetchApplause.mockImplementation(async () => [
+      like(ago(5 * MIN), 'lan', null, 'c1', 'https://faces/lan.jpg'),
+      like(ago(9 * MIN), 'cleared', null, 'c1', ''),
+    ]);
+    data.fetchCopies.mockImplementation(async () => [
+      copy(ago(6 * MIN), 'minh', null, 'c1', 'https://faces/minh.jpg'),
+      copy(ago(7 * MIN), null),
+    ]);
     await show();
-    expect(data.avatarsAsked).toHaveBeenLastCalledWith(['lan', '', 'nobody']);
     const rows = screen.getAllByTestId('activity-row');
-    expect(rows[0].querySelector('img')!.getAttribute('src')).toBe('https://faces/lan.jpg');
-    expect(rows[1].querySelector('img')).toBeNull();
-    expect(rows[2].querySelector('img')).toBeNull();
+    expect(rows.map((r) => r.querySelector('img')?.getAttribute('src') ?? null)).toEqual([
+      'https://faces/lan.jpg', 'https://faces/minh.jpg', null, null,
+    ]);
+    expect(data.fetchCuratorAvatars).not.toHaveBeenCalled();
   });
 
-  // The faces come back keyed by the folded handle (`fetchCuratorAvatars`
-  // normalises), so the row folds its own before it looks.
-  it('finds the face whatever the handle’s case', async () => {
-    data.avatars = { lan: 'https://faces/lan.jpg' };
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'Lan')]);
+  // The face is the row's, not one looked up by the handle: two rows by
+  // one handle with two faces (a picture changed between two acts is
+  // the same person; the server answers each row's own join) each wear
+  // their own.
+  it('takes the face from the row even where two rows share a handle', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', null, 'c1', 'https://faces/new.jpg')]);
+    data.fetchCopies.mockImplementation(async () => [copy(ago(9 * MIN), 'Lan', null, 'c1', 'https://faces/old.jpg')]);
     await show();
-    expect(screen.getByTestId('activity-row').querySelector('img')!.getAttribute('src')).toBe('https://faces/lan.jpg');
+    expect(screen.getAllByTestId('activity-row').map((r) => r.querySelector('img')!.getAttribute('src')))
+      .toEqual(['https://faces/new.jpg', 'https://faces/old.jpg']);
   });
 
   it('draws a 40pt face', async () => {
@@ -453,6 +477,37 @@ describe('the states', () => {
     expect(rowLines()).toEqual([['lan 5m']]);
   });
 
+  // While Try again is out, the page turns: the failure has cleared,
+  // and nothing has come back yet to say whether there is anything.
+  it('turns while Try again asks, rather than saying there is nothing', async () => {
+    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    await show();
+    expect(screen.getByTestId('activity-failed')).toBeTruthy();
+    let answer!: (rows: Applause[]) => void;
+    data.fetchApplause.mockImplementation(() => new Promise((r) => { answer = r; }));
+    data.fetchCopies.mockImplementation(async () => []);
+    fireEvent.click(screen.getByTestId('activity-retry'));
+    await flush();
+    expect(screen.getByTestId('activity-loading')).toBeTruthy();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+    await act(async () => { answer([]); });
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+  });
+
+  // A kept answer that was empty is an answer: opened again, the page
+  // says so at once and draws no spinner while it asks behind it.
+  it('draws a kept empty answer as empty, without a spinner, while it refreshes', async () => {
+    await show();
+    cleanup();
+    data.fetchApplause.mockImplementation(() => new Promise(() => {}));
+    data.fetchCopies.mockImplementation(() => new Promise(() => {}));
+    await show();
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+    expect(screen.queryByTestId('activity-loading')).toBeNull();
+  });
+
   // A retry that succeeds with nothing is an empty list, not the old
   // failure left standing.
   it('forgets the failure once Try again comes back with nothing', async () => {
@@ -475,6 +530,56 @@ describe('the states', () => {
     data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
     await show();
     expect(screen.getByTestId('activity-failed')).toBeTruthy();
+  });
+
+  // Opened again, the page draws what it was last told on its first
+  // render — no spinner, no empty frame — and asks again behind it.
+  it('opens on the kept answer without a spinner, and refreshes it behind', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
+    await show();
+    cleanup();
+    let answer!: (rows: Applause[]) => void;
+    data.fetchApplause.mockImplementation(() => new Promise((r) => { answer = r; }));
+    render(
+      <CollectionActivityScreen
+        navigation={{ goBack: vi.fn(), navigate: vi.fn() } as unknown as Nav}
+        route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionActivity'>}
+      />,
+    );
+    // The first render, before any promise has had a turn.
+    expect(screen.queryByTestId('activity-loading')).toBeNull();
+    expect(document.querySelector('[role="progressbar"]')).toBeNull();
+    expect(rowLines()).toEqual([['Lan Phạm', '@lan · 5m']]);
+    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    await act(async () => { answer([like(ago(1 * MIN), 'an', 'An Lê'), like(ago(5 * MIN), 'lan', 'Lan Phạm')]); });
+    expect(rowLines()).toEqual([['An Lê', '@an · 1m'], ['Lan Phạm', '@lan · 5m']]);
+  });
+
+  // A refresh that fails behind kept rows keeps them, and says nothing:
+  // the failure state is for a page with nothing to show.
+  it('keeps the kept rows when the refresh behind them fails', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    await show();
+    cleanup();
+    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    await show();
+    expect(rowLines()).toEqual([['lan 5m']]);
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+  });
+
+  // Reopened after one half failed and the other came back: the kept
+  // half's rows stand while the failed one is asked again, rather than
+  // being taken away for a spinner.
+  it('keeps one half’s kept rows on screen while the failed half is asked again', async () => {
+    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopies.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
+    await show();
+    cleanup();
+    data.fetchApplause.mockImplementation(() => new Promise(() => {}));
+    await show();
+    expect(rowLines()).toEqual([['minh 5m']]);
+    expect(screen.queryByTestId('activity-loading')).toBeNull();
   });
 
   it('shows what came back when only one half failed', async () => {

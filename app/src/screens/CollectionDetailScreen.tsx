@@ -26,7 +26,8 @@ import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/ca
 import { likesWorthShowing } from '../lib/likes';
 import {
   blockUser, deleteCollection, isNotShareable, membersOf, reorderCollection, setCollectionPublic, setShares,
-  unseenMembers, unseenSentence, useMyListShares, useProfileByHandle, useSharedWithMe, type Collection,
+  unseenMembers, unseenSentence, useMyListShares, usePrefetchListActivity, useProfileByHandle, useSharedWithMe,
+  type Collection,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
@@ -420,6 +421,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   }, [pulling, loading]);
   const pull = () => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); listShares.reload(); };
   const owned = !!col?.owner_id && col.owner_id === uid;
+  // The owner's activity, asked for here so that "View activity ›" opens
+  // on it rather than on a spinner (owner, 13 Nov 2026): the round trip
+  // starts with this page instead of with the tap, and the activity page
+  // draws the kept answer on its first render — see the header of
+  // `CollectionActivityScreen`. Your own list only, the one place the
+  // link is drawn; and nothing drawn here from it, so its landing does
+  // not re-render this page (`prefetchShared`). Not asked again within
+  // two minutes of the last answer (`lib/stale`), so a list opened over
+  // and over while it is edited costs one ask, not one per visit.
+  usePrefetchListActivity(owned ? uid : null);
   const isPublic = !!col?.is_public;
   /*
    * A friend's list, shared with you and not public (12 Nov 2026).
