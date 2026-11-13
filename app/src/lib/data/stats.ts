@@ -1,3 +1,4 @@
+import type { StatsRow } from '../listStats';
 import { supabase } from '../supabase';
 
 // ── a list's statistics ──
@@ -19,4 +20,17 @@ import { supabase } from '../supabase';
 export async function recordCollectionView(collectionId: string): Promise<void> {
   const { error } = await supabase.rpc('record_collection_view', { cid: collectionId });
   if (error) throw new Error(error.message);
+}
+
+/**
+ * A list's eight figures, as `collection_stats` answers them: one row
+ * for the list's owner, none for anybody else — `lib/listStats.statsOf`
+ * reads the difference. Rows rather than the row, because that is the
+ * shape a set-returning function comes back in and the shape the kept
+ * answer is stored in (`useCollectionStatsQuery`).
+ */
+export async function fetchCollectionStats(collectionId: string): Promise<StatsRow[]> {
+  const { data, error } = await supabase.rpc('collection_stats', { cid: collectionId });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as StatsRow[];
 }

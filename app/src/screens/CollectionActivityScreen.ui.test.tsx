@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, cleanup, fireEvent, fontSizeOf, render, screen, textStyleOf, viewStyleOf, within } from '../uitest/render';
 import { cacheKey } from '../lib/data/cache';
-import { forgetSharedFetches, prefetchShared } from '../lib/data/fetch';
+import { forgetSharedFetches } from '../lib/data/fetch';
 import type { Nav, RootRoute } from '../nav';
 import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
@@ -47,6 +47,7 @@ const data = vi.hoisted(() => ({
   fetchCuratorAvatars: vi.fn(async (_handles: string[]): Promise<Record<string, string>> => ({})),
   sendFriendRequest: vi.fn(async (_me: string, _other: string): Promise<void> => {}),
   acceptFriendRequest: vi.fn(async (_requester: string, _me: string): Promise<void> => {}),
+  fetchCollectionStats: vi.fn(async (_id: string): Promise<unknown[]> => []),
 }));
 // The module the hooks read the RPCs from, not the barrel: `hooks.ts`
 // imports them from here, so a stand-in on the barrel would miss them.
@@ -57,6 +58,12 @@ vi.mock('../lib/data/people', async (orig) => ({
   fetchCuratorAvatars: data.fetchCuratorAvatars,
   sendFriendRequest: data.sendFriendRequest,
   acceptFriendRequest: data.acceptFriendRequest,
+}));
+
+// The statistics the page asks ahead for, from the module the hook reads.
+vi.mock('../lib/data/stats', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchCollectionStats: data.fetchCollectionStats,
 }));
 
 // The crew the app already holds: the edges and the blocks the friend
@@ -624,7 +631,7 @@ describe('the states', () => {
   });
 });
 
-// ── commit B (owner, 13 Nov 2026): the counts, the card, the buttons ──
+// ── the way to the statistics, the people's card, the friend button (owner, 13 Nov 2026) ──
 
 /** The `hitSlop` a pressable was given, read off its props. */
 const slopOf = (el: HTMLElement): unknown => {
@@ -637,166 +644,81 @@ const slopOf = (el: HTMLElement): unknown => {
 const edge = (requester: string, addressee: string, status: 'pending' | 'accepted' = 'pending'): FriendshipRow =>
   ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z' });
 
-describe('the two counts', () => {
-  const stat = (k: 'like' | 'copy') => screen.getByTestId(`activity-stat-${k}`);
-  const handles = () => rowLines().map((r) => r[0].split(' ')[0]);
-  const someActs = () => {
-    data.fetchApplause.mockImplementation(async () => [
-      like(ago(1 * MIN), 'a'), like(ago(3 * MIN), 'b'), like(ago(5 * MIN), 'c'),
-    ]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'd'), copy(ago(4 * MIN), 'e')]);
-  };
+// One row between the list and the people, "Statistics ›", where the two
+// counts and their filter stood (owner, 13 Nov 2026): it opens the list's
+// figures, which this page asks for as it opens.
+describe('the way to the statistics', () => {
+  const link = () => screen.getByTestId('activity-stats-link');
 
-  it('counts each kind from the same acts as the list, likes first, between the card and the people', async () => {
-    someActs();
-    data.fetchApplause.mockImplementation(async () => [
-      like(ago(1 * MIN), 'a'), like(ago(3 * MIN), 'b'), like(ago(5 * MIN), 'c'), like(ago(6 * MIN), 'x', null, 'c2'),
-    ]);
-    await show();
-    // Another list's like is not counted, as it is not listed.
-    expect(stat('like').textContent).toBe('Likes3');
-    expect(stat('copy').textContent).toBe('Copies2');
-    const stats = screen.getByTestId('activity-stats');
-    expect([...stats.children]).toEqual([stat('like'), stat('copy')]);
+  it('stands between the list’s card and the people, and opens the list’s statistics', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a')]);
+    const navigation = await show();
     const card = screen.getByTestId('activity-list');
     const people = screen.getByTestId('activity-people');
-    // In the page's order: the list's card, the counts, the people.
-    expect(card.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(stats.compareDocumentPosition(people) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.compareDocumentPosition(link()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link().compareDocumentPosition(people) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Statistics' }));
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionStats', { slug: 'old-quarter' });
   });
 
-  it('leads each with its glyph and ends it with the count and a chevron', async () => {
-    someActs();
+  it('leads with the bar chart, ends with a chevron, and says it in Vietnamese', async () => {
     await show();
-    const icons = (k: 'like' | 'copy') => [...stat(k).querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
-    expect(icons('like')).toEqual(['heart-outline', 'chevron-forward']);
-    expect(icons('copy')).toEqual(['duplicate-outline', 'chevron-forward']);
-    expect(screen.getByTestId('activity-stat-like-count').textContent).toBe('3');
-    // The count after the word: the word takes the row's spare width.
-    expect(textStyleOf(within(stat('like')).getByText('Likes'))?.flex).toBe(1);
-  });
-
-  it('says them in Vietnamese, in the words the app already uses', async () => {
+    const icons = [...link().querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
+    expect(icons).toEqual(['stats-chart-outline', 'chevron-forward']);
+    expect(link().textContent).toBe('Statistics');
+    expect(textStyleOf(within(link()).getByText('Statistics'))?.flex).toBe(1);
+    cleanup();
     state.lang = 'vi';
-    someActs();
     await show();
-    expect(stat('like').textContent).toBe('Lượt thích3');
-    expect(stat('copy').textContent).toBe('Bản sao2');
+    expect(link().textContent).toBe('Thống kê');
   });
 
-  it('narrows the people to a kind with a tap, and widens them again with the second', async () => {
-    someActs();
+  // Opens and trips have no people to list, so an empty Activity is not
+  // an empty Statistics page.
+  it('is there while nobody has liked or copied the list, right under the list, above the empty state', async () => {
     await show();
-    expect(handles()).toEqual(['a', 'd', 'b', 'e', 'c']);
-    expect(stat('like').getAttribute('aria-selected')).toBe('false');
-
-    fireEvent.click(stat('like'));
-    expect(handles()).toEqual(['a', 'b', 'c']);
-    expect(stat('like').getAttribute('aria-selected')).toBe('true');
-    expect(stat('copy').getAttribute('aria-selected')).toBe('false');
-    // Still a count, not a page: nothing was opened.
-    expect(screen.getByTestId('activity-list')).toBeTruthy();
-
-    fireEvent.click(stat('like'));
-    expect(handles()).toEqual(['a', 'd', 'b', 'e', 'c']);
-    expect(stat('like').getAttribute('aria-selected')).toBe('false');
+    const empty = screen.getByTestId('activity-empty');
+    expect(link().compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('goes from one kind straight to the other', async () => {
-    someActs();
-    await show();
-    fireEvent.click(stat('like'));
-    fireEvent.click(stat('copy'));
-    expect(handles()).toEqual(['d', 'e']);
-    expect(stat('copy').getAttribute('aria-selected')).toBe('true');
-    expect(stat('like').getAttribute('aria-selected')).toBe('false');
-  });
-
-  it('draws the chosen one on the glass with its glyph filled in the accent', async () => {
-    someActs();
-    await show();
-    // The tint is on the scaled face, `contentStyle`, read from the
-    // committed tree as CollectionsScreen's test reads its own: a DOM
-    // node's fiber can be the stale half of the pair after an update.
-    const ground = (k: 'like' | 'copy') => {
-      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-      const stack: Fiber[] = [host[Object.keys(host).find((x) => x.startsWith('__reactContainer'))!].stateNode.current];
-      while (stack.length) {
-        const f = stack.pop()!;
-        const p = f.memoizedProps;
-        if (p && typeof p === 'object' && p.testID === `activity-stat-${k}` && 'contentStyle' in p) {
-          return (StyleSheet.flatten(p.contentStyle as never) as { backgroundColor?: unknown }).backgroundColor;
-        }
-        if (f.sibling) stack.push(f.sibling);
-        if (f.child) stack.push(f.child);
-      }
-      throw new Error(`no face for ${k}`);
-    };
-    expect(ground('like')).toBeUndefined();
-    fireEvent.click(stat('like'));
-    expect(ground('like')).toBe(colors.surfaceGlass);
-    expect(ground('copy')).toBeUndefined();
-    const glyph = stat('like').querySelector('[data-icon]')!;
-    expect([glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')]).toEqual(['heart', String(colors.accent)]);
-    fireEvent.click(stat('copy'));
-    expect(stat('copy').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('duplicate');
-    expect(stat('like').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('heart-outline');
-  });
-
-  it('reads each as a button with its count', async () => {
-    someActs();
-    await show();
-    expect(screen.getByRole('button', { name: 'Likes, 3' })).toBe(stat('like'));
-    expect(screen.getByRole('button', { name: 'Copies, 2' })).toBe(stat('copy'));
-  });
-
-  // A kind with none still says 0, as a line: no press, no chevron.
-  it('shows a kind at 0 as a figure, not a control', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(2 * MIN), 'b')]);
-    await show();
-    expect(stat('copy').textContent).toBe('Copies0');
-    expect(stat('copy').getAttribute('role')).toBeNull();
-    expect(stat('copy').getAttribute('aria-label')).toBe('Copies, 0');
-    expect([...stat('copy').querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'))).toEqual(['duplicate-outline']);
-    fireEvent.click(stat('copy'));
-    expect(handles()).toEqual(['a', 'b']);
-    // The other row is a control as ever.
-    expect(stat('like').getAttribute('role')).toBe('button');
-  });
-
-  // The answer is shared, so another reader can refresh it under this
-  // page — here the collection page's ask, past its two minutes. When
-  // that takes the chosen kind to none, the list widens to all rather
-  // than standing empty behind a row that can no longer be tapped.
-  it('widens to all when a refresh takes the chosen kind to none', async () => {
-    someActs();
-    await show();
-    fireEvent.click(stat('copy'));
-    expect(handles()).toEqual(['d', 'e']);
-    vi.setSystemTime(new Date(NOW.getTime() + 3 * MIN));
-    await act(async () => {
-      prefetchShared(cacheKey('copiesofmine', 'all', 'me'), async () => [] as Copy[], [] as Copy[]);
-    });
-    expect(stat('copy').textContent).toBe('Copies0');
-    expect(handles()).toEqual(['a', 'b', 'c']);
-    expect(stat('like').getAttribute('aria-selected')).toBe('false');
-  });
-
-  it('is not drawn while there is nothing', async () => {
-    await show();
-    expect(screen.getByTestId('activity-empty')).toBeTruthy();
-    expect(screen.queryByTestId('activity-stats')).toBeNull();
-    expect(screen.queryByTestId('activity-people')).toBeNull();
-  });
-
-  it('is not drawn while the acts are on their way', async () => {
+  it('is there while the acts are on their way', async () => {
     data.fetchApplause.mockImplementation(() => new Promise(() => {}));
-    data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'd')]);
     await show();
     expect(screen.getByTestId('activity-loading')).toBeTruthy();
+    expect(link()).toBeTruthy();
+  });
+
+  it('is not there for a list that is not yours, or one with no id', async () => {
+    await show('somebody-elses');
+    expect(screen.queryByTestId('activity-stats-link')).toBeNull();
+    cleanup();
+    state.mine = [list({ id: undefined })];
+    await show();
+    expect(screen.queryByTestId('activity-stats-link')).toBeNull();
+  });
+
+  it('asks for the figures as the page opens, for this list and its owner', async () => {
+    await show();
+    expect(data.fetchCollectionStats).toHaveBeenCalledExactlyOnceWith('c1');
+    cleanup();
+    data.fetchCollectionStats.mockClear();
+    forgetSharedFetches();
+    state.me = null;
+    await show();
+    expect(data.fetchCollectionStats).not.toHaveBeenCalled();
+  });
+
+  // No count and no filter any more: every act, always, and nothing on
+  // the page narrows them.
+  it('lists everyone, likes and copies together, with nothing to narrow them', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(3 * MIN), 'b')]);
+    data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'd')]);
+    await show();
+    expect(rowLines().map((r) => r[0].split(' ')[0])).toEqual(['a', 'd', 'b']);
     expect(screen.queryByTestId('activity-stats')).toBeNull();
-    expect(screen.queryByTestId('activity-people')).toBeNull();
+    expect(screen.queryByTestId('activity-stat-like')).toBeNull();
+    expect(screen.queryByTestId('activity-stat-copy')).toBeNull();
+    expect(screen.queryAllByRole('button').map((b) => b.textContent)).not.toContain('Likes');
   });
 });
 
@@ -811,7 +733,8 @@ describe('the people, in a card', () => {
     expect(viewStyleOf(people)).toMatchObject({
       borderRadius: radius.card, backgroundColor: colors.surfaceCard, borderWidth: 1, marginBottom: 14,
     });
-    expect(viewStyleOf(screen.getByTestId('activity-stats'))).toMatchObject({ borderRadius: radius.card, marginBottom: 14 });
+    // The statistics row's card, the same card at the same gap.
+    expect(viewStyleOf(screen.getByTestId('activity-stats-link').parentElement!)).toMatchObject({ borderRadius: radius.card, marginBottom: 14 });
   });
 
   it('pads each row as Crew’s are', async () => {
