@@ -114,7 +114,7 @@ describe('MoreText', () => {
     const word = (label: string) => flat(propsWhere((p) => p.children === label).style);
     const chevron = (name: string) => propsWhere((p) => p.name === name);
     for (const [label, name] of [['Read more', 'chevron-down'], ['Show less', 'chevron-up']] as const) {
-      expect(word(label)).toMatchObject({ color: colors.textSecondary, ...type.meta });
+      expect(word(label)).toMatchObject({ color: colors.textTertiary, ...type.meta });
       expect(chevron(name)).toMatchObject({ size: 13, color: colors.textTertiary });
       const row = flat(propsWhere((p) => {
         const st = flat(p.style);

@@ -967,8 +967,8 @@ describe('publishing', () => {
     };
     const [priv, pub] = [worn(false), worn(true)];
     expect(pub).toEqual(priv);
-    expect(pub.glyph).toBe(String(colors.textSecondary));
-    const n = parseInt(String(colors.textSecondary).slice(1), 16);
+    expect(pub.glyph).toBe(String(colors.textTertiary));
+    const n = parseInt(String(colors.textTertiary).slice(1), 16);
     expect(pub.word).toBe(`rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`);
     expect(pub.weight).toBe(font.regular);
   });
@@ -1123,7 +1123,7 @@ describe('sharing with friends', () => {
       expect([...control.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
         .toEqual(['people-outline', 'chevron-down']);
       // The same grey as the other two.
-      expect(control.querySelector('[data-icon="people-outline"]')?.getAttribute('data-color')).toBe(String(colors.textSecondary));
+      expect(control.querySelector('[data-icon="people-outline"]')?.getAttribute('data-color')).toBe(String(colors.textTertiary));
     });
 
     it('asks for your own lists\' shares as you, and for nobody\'s on somebody else\'s', () => {
@@ -3124,9 +3124,9 @@ describe('the way to the list’s activity', () => {
     state.mine = [collection()];
     show();
     const word = within(link()!).getByText('View activity');
-    expect(textStyleOf(word)).toMatchObject({ fontSize: 15, color: colors.textSecondary });
+    expect(textStyleOf(word)).toMatchObject({ fontSize: 15, color: colors.textTertiary });
     const glyph = link()!.querySelector('[data-icon]')!;
-    expect([glyph.getAttribute('data-size'), glyph.getAttribute('data-color')]).toEqual(['15', String(colors.textSecondary)]);
+    expect([glyph.getAttribute('data-size'), glyph.getAttribute('data-color')]).toEqual(['15', String(colors.textTertiary)]);
   });
 
   // The ink, not the box, at the card's padding: the chevron's own
@@ -3258,7 +3258,7 @@ describe('the head of the card', () => {
     const word = within(screen.getByTestId('collection-visibility')).getByText('Private');
     expect(fontSizeOf(age)).toBe(15);
     expect(getComputedStyle(age).color).toBe(getComputedStyle(word).color);
-    const n = parseInt(String(colors.textSecondary).slice(1), 16);
+    const n = parseInt(String(colors.textTertiary).slice(1), 16);
     expect(getComputedStyle(age).color).toBe(`rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`);
   });
 
@@ -3299,7 +3299,7 @@ describe('the head of the card', () => {
     expect(meta().textContent).toBe('12 Nov·Shared with you');
     const mark = screen.getByTestId('collection-shared');
     expect([...mark.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['people-outline']);
-    expect(mark.querySelector('[data-icon]')?.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    expect(mark.querySelector('[data-icon]')?.getAttribute('data-color')).toBe(String(colors.textTertiary));
     expect(mark.getAttribute('role')).not.toBe('button');
     expect(mark.closest('[role="button"]')).toBeNull();
     cleanup();

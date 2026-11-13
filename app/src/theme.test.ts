@@ -101,6 +101,18 @@ describe('text on its grounds', () => {
     // measured there (see its note).
     expect(contrast(hex(p.soon), hex(p.bgElevated)), 'soon on bgElevated').toBeGreaterThanOrEqual(4.5);
   });
+  // The third ground, and the one most text sits on: a Card draws
+  // `surfaceCard`, a veil over the page on the dark looks, not
+  // `bgElevated` (13 Nov 2026). Unmeasured until the collection card's age
+  // and "Read more" moved to the third step, which then stood at 4.10 on
+  // Navy, 4.46 on Coffee and 4.50 on Royal, as every tertiary word on a
+  // card there already did.
+  it.each(NAMED)('keeps every text step at 4.5:1 or better on a card on %s', (_, p) => {
+    const card = p.surfaceCard.startsWith('#') ? hex(p.surfaceCard) : over(rgba(p.surfaceCard), hex(p.bg));
+    for (const s of ['text', 'textSecondary', 'textTertiary', 'ink', 'accent', 'shutInk', 'soon'] as const) {
+      expect(contrast(hex(p[s]), card), `${s} on the card`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
   // Lifting the third step must not collapse it into the second. Paper is
   // left out, and knowingly: its two steps are 1.31:1 apart and have been
   // since the light theme shipped — they were never lifted, so never at

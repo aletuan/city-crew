@@ -1239,10 +1239,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      green also says "fine" everywhere else ("open now", a success
      banner), and Public is a choice, not a success. It was the same
      green on every look, Slate's two tones included. The globe and the
-     padlock already say which state it is. The grey is `textSecondary`,
-     one step above the heart's tally, because this word is a control and
-     the tally is not — and the grey of the list's age beside it, which
-     is the same line.
+     padlock already say which state it is. The grey is `textTertiary`,
+     the list's age beside it on the same line, and the step the
+     chevron was already in (owner, 13 Nov 2026). It was `textSecondary`,
+     one step above the heart's tally, on the reasoning that a control
+     outranks a count; on the card that put the age, the control and
+     "Read more" in the description's own ink (`descText`), so the lines
+     about the list read as loud as the list. On Teal that is 9.35:1 on
+     the card for the description and 5.65 for these now. The control is still told from the tally by its chevron and
+     its place, not by its ink.
 
      Tapping opens a choice rather than flipping the switch: a word that
      changes who can see your list on one touch is a word nobody would
@@ -1265,7 +1270,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       )}
       testID="collection-visibility"
     >
-      <Glyph name={SEEN_GLYPH[seen]} size={15} color={colors.textSecondary} />
+      <Glyph name={SEEN_GLYPH[seen]} size={15} color={colors.textTertiary} />
       <Text style={s.visibilityWord}>{seenWord}</Text>
       <Glyph name="chevron-down" size={13} color={colors.textTertiary} />
     </PressableScale>
@@ -1476,7 +1481,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       testID="collection-activity-link"
     >
       <Text style={s.activityLinkText}>{t('View activity', 'Xem hoạt động', 'アクティビティを見る', '查看动态', '檢視動態')}</Text>
-      <Glyph name="chevron-forward" size={ACTIVITY_CHEVRON} color={colors.textSecondary} />
+      <Glyph name="chevron-forward" size={ACTIVITY_CHEVRON} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
   const activity = (
@@ -1630,7 +1635,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const sharedWord = t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你分享', '與你分享');
   const sharedMark = sharedToMe ? (
     <View style={s.visibility} testID="collection-shared">
-      <Glyph name={SEEN_GLYPH.friends} size={15} color={colors.textSecondary} />
+      <Glyph name={SEEN_GLYPH.friends} size={15} color={colors.textTertiary} />
       <Text style={s.visibilityWord}>{sharedWord}</Text>
     </View>
   ) : null;
@@ -2316,12 +2321,12 @@ const s = StyleSheet.create({
   // there is no control above it to be mistaken for.
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Public or Private, in one grey — see `visibility`.
-  visibilityWord: { color: colors.textSecondary, ...type.meta, lineHeight: BYLINE_LINE },
+  visibilityWord: { color: colors.textTertiary, ...type.meta, lineHeight: BYLINE_LINE },
   // The list's age, then who sees it, under the handle. 6 round the
   // "·", the gap the card's other "a · b" line keeps (`filterCount`).
   byline: { flexDirection: 'row', alignItems: 'center', gap: 6, height: BYLINE_LINE },
   // The meta size and grey, as the word after it: one line, one ink.
-  bylineText: { color: colors.textSecondary, ...type.meta, lineHeight: BYLINE_LINE },
+  bylineText: { color: colors.textTertiary, ...type.meta, lineHeight: BYLINE_LINE },
 
   // Full width at the foot of the list, in the page's margins, with the
   // room the dashed slot it replaced kept above it.
@@ -2437,7 +2442,7 @@ const s = StyleSheet.create({
   // bearing (`CHEVRON_GAP_END`, the same each side) that is 6.7 of air
   // from the word to the ink, the 6.5 the heart keeps to its tally.
   activityLink: { flexDirection: 'row', alignItems: 'center', gap: 2, height: CHIP_H },
-  activityLinkText: { color: colors.textSecondary, ...type.meta },
+  activityLinkText: { color: colors.textTertiary, ...type.meta },
   // Justified (owner, 3 Nov 2026), the owner's call over the case put
   // against it: a 318pt column holds some 44 characters, iOS does not
   // hyphenate Vietnamese, and the up-to-25pt each ragged line stopped

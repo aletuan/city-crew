@@ -14,11 +14,18 @@
 // last word, so it stood wherever the text happened to end.
 //
 // Now it is drawn as the card's other word-and-chevron, the visibility
-// control at its foot: `textSecondary`, the meta size, regular, with the
-// chevron in `textTertiary`. One kind of control, one look. Lighter than
-// `textSecondary` would fall under the 4.5:1 a 15pt word needs. And it
-// sits in one place, open or closed, so the reader closes it where they
-// opened it.
+// control in the line under the handle: `textTertiary`, the meta size,
+// regular, the chevron in the same step. One kind of control, one look.
+// And it sits in one place, open or closed, so the reader closes it
+// where they opened it.
+//
+// `textTertiary` since 13 Nov 2026 (owner: "lighter"); it was
+// `textSecondary`, the very ink of the paragraph it opens. The note
+// here said a lighter grey would fall under the 4.5:1 a 15pt word needs.
+// Measured on the card, on every look, it was true of three — Navy
+// 4.10, Coffee 4.46, Royal 4.50 — and of every tertiary word already on
+// a card there, so those three were lifted (palettes.ts) and the card
+// joined the grounds `theme.test` measures text on.
 //
 // Four lines and not five: the link's own row takes about the height the
 // fifth gave up (32 for 24), so the card is about as tall closed as it was.
@@ -134,7 +141,7 @@ const s = StyleSheet.create({
   // its chevron 5 apart. Close under the paragraph, so it reads as the
   // paragraph's and not as the next thing on the card.
   link: { flexDirection: 'row', alignItems: 'center', gap: 5, height: CHIP_H },
-  word: { color: colors.textSecondary, ...type.meta },
+  word: { color: colors.textTertiary, ...type.meta },
   // The word is the target, not the card's width: `alignSelf` keeps the
   // press from running across a row nobody would aim at.
   lessHit: { alignSelf: 'flex-start' },
