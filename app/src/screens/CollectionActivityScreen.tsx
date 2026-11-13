@@ -326,9 +326,11 @@ const s = StyleSheet.create({
   // The words' own size and line, bold: the first line of the same text,
   // not a heading over it.
   title: { color: colors.text, ...type.body, fontWeight: font.bold, lineHeight: 24 },
-  // The page's description, ragged here: the justified setting is that
-  // page's alone, by the owner's call there.
-  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
+  // The page's description, set as the page sets it: justified, both
+  // edges (owner, 3 Nov 2026, and again 13 Nov for this card). It was
+  // ragged here at first, as a summary's; the owner wanted the one text
+  // to look the same in both places.
+  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'justify' },
   spinner: { marginTop: 20 },
   // Centred: a face beside two lines wants its middle on theirs.
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
