@@ -2311,6 +2311,47 @@ describe('the introduction card', () => {
   // A list of somebody else's no one may like — shared with you, once
   // sharing has screens — has nothing for the foot to say, and draws none,
   // hairline and all (owner, 13 Nov 2026).
+  // The words run across the card (owner, 13 Nov 2026): out of the
+  // face's row, where the pencil's column held them 48pt short of the
+  // right edge against 16 on the left.
+  it('runs the words across the card, under the face and the corner\u2019s action', () => {
+    show();
+    const words = screen.getByTestId('collection-desc-text');
+    const corner = screen.getByTestId('collection-desc-copy');
+    let topRow: HTMLElement | null = corner;
+    while (topRow && viewStyleOf(topRow).flexDirection !== 'row') topRow = topRow.parentElement;
+    expect(topRow).toBeTruthy();
+    // The face's row holds the handle and the copy, and not the words.
+    expect(topRow!.contains(screen.getByTestId('collection-curator'))).toBe(true);
+    expect(topRow!.contains(words)).toBe(false);
+    // The words are the card's own child, as the kinds' row is.
+    expect(words.parentElement).toBe(topRow!.parentElement);
+  });
+
+  // With nothing for the face's row to hold — a list lent to you whose
+  // owner has no handle to show — the row is not drawn, so the words open
+  // the card rather than sitting under an empty row and its 14.
+  it('draws no face row when it would hold nothing', () => {
+    state.cols = [theirs({ is_public: false, curator_handle: null })];
+    show();
+    const words = screen.getByTestId('collection-desc-text');
+    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
+    expect(screen.queryByTestId('collection-curator')).toBeNull();
+    expect(words.parentElement!.firstElementChild).toBe(words);
+  });
+
+  // One rhythm of about 20, measured in ink: 20 above the face, 16 from
+  // the hairline to the heart (with its glyph's air, 20.5), and the card's
+  // 14 between blocks. See `descCard`.
+  it('keeps the card\u2019s rhythm', () => {
+    show();
+    const foot = screen.getByTestId('collection-stats');
+    expect(viewStyleOf(foot).paddingTop).toBe(16);
+    const card = foot.parentElement!;
+    expect(viewStyleOf(card).paddingTop).toBe(20);
+    expect(viewStyleOf(card).gap).toBe(14);
+  });
+
   it('draws no foot on a visitor\u2019s list with no heart', () => {
     state.cols = [theirs({ is_public: false })];
     show();
