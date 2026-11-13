@@ -241,10 +241,12 @@ describe('the rows', () => {
       copy(ago(3 * MIN), 'other', 'Other', 'c9'),
     ]);
     await show();
+    // The name on top, the handle under it with its `@` and the age —
+    // Crew's arrangement, so one person reads the same on both screens.
     expect(rowLines()).toEqual([
-      ['lan 5m', 'Lan Phạm'],
-      ['lan 30m', 'Lan Phạm'],
-      ['minh 2h', 'Minh Trần'],
+      ['Lan Phạm', '@lan · 5m'],
+      ['Lan Phạm', '@lan · 30m'],
+      ['Minh Trần', '@minh · 2h'],
     ]);
     const kinds = screen.getAllByTestId(/^activity-badge-/).map((b) => b.getAttribute('data-testid'));
     expect(kinds).toEqual(['activity-badge-like', 'activity-badge-copy', 'activity-badge-like']);
@@ -279,13 +281,24 @@ describe('the rows', () => {
     expect(rowLines()).toEqual([['Someone 5m']]);
   });
 
-  it('sets the handle in semibold and the age and the name in grey', async () => {
+  it('sets the name in semibold, and the handle and age under it in grey', async () => {
     data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
     await show();
     const row = screen.getByTestId('activity-row');
+    expect(textStyleOf(within(row).getByText('Lan Phạm'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
+    expect(textStyleOf(within(row).getByText('@lan · 5m'))?.color).toBe(colors.textSecondary);
+  });
+
+  // No name: the handle is the name, bare, with the age beside it — as
+  // the collection card's head draws a handle alone.
+  it('draws a handle with no name bare, on one line with its age', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', null)]);
+    await show();
+    expect(rowLines()).toEqual([['lan 5m']]);
+    const row = screen.getByTestId('activity-row');
     expect(textStyleOf(within(row).getByText('lan'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
     expect(textStyleOf(within(row).getByText('5m'))?.color).toBe(colors.textTertiary);
-    expect(textStyleOf(within(row).getByText('Lan Phạm'))?.color).toBe(colors.textSecondary);
+    expect(row.textContent).not.toContain('@');
   });
 
   it('wears each face from the one batched ask, and the blank disc without one', async () => {
@@ -369,7 +382,7 @@ describe('the rows', () => {
     await show();
     const rows = screen.getAllByTestId('activity-row');
     expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual([
-      'lan, Lan Phạm, Liked, 5m',
+      'Lan Phạm, @lan, Liked, 5m',
       'Someone, Saved a copy, 9m',
     ]);
     // No Follow, no Add friend, nothing to press in the list but Back.
