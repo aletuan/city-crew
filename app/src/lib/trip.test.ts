@@ -410,36 +410,67 @@ describe('seedMembers', () => {
 });
 
 // Which lists a trip remembers it started from (owner, 13 Nov 2026):
-// the ones `seedMembers` resolves, by id, once each.
+// the ones `seedMembers` resolves, by id, once each — and of those, the
+// ones with a place among the stops saved.
 describe('sourceIdsOf', () => {
-  const list = (slug: string, id?: string): Collection =>
-    ({ slug, id, title_en: slug, title_vi: slug, title_ja: null, collection_places: [] } as unknown as Collection);
+  // Every list holds `kept` unless told otherwise, so the cases below
+  // that are about choosing are not also about stops.
+  const list = (slug: string, id?: string, has: (string | null)[] = ['kept']): Collection =>
+    ({
+      slug, id, title_en: slug, title_vi: slug, title_ja: null,
+      collection_places: has.map((s, i) => ({ sort_order: i, places: s ? { slug: s } : null })),
+    } as unknown as Collection);
+  const STOPS = ['kept'];
 
   it('names nothing until a list is chosen', () => {
-    expect(sourceIdsOf(undefined, [list('x', 'c-x')])).toEqual([]);
-    expect(sourceIdsOf(null, [list('x', 'c-x')])).toEqual([]);
-    expect(sourceIdsOf([], [list('x', 'c-x')])).toEqual([]);
+    expect(sourceIdsOf(undefined, [list('x', 'c-x')], STOPS)).toEqual([]);
+    expect(sourceIdsOf(null, [list('x', 'c-x')], STOPS)).toEqual([]);
+    expect(sourceIdsOf([], [list('x', 'c-x')], STOPS)).toEqual([]);
   });
 
   it('names the chosen lists by id, in the order the shelves hold them', () => {
     const lists = [list('own', 'c-own'), list('skip', 'c-skip'), list('pub', 'c-pub')];
-    expect(sourceIdsOf(['pub', 'own'], lists)).toEqual(['c-own', 'c-pub']);
+    expect(sourceIdsOf(['pub', 'own'], lists, STOPS)).toEqual(['c-own', 'c-pub']);
   });
 
   // Your own published list is on both shelves: one list, one trip for it.
   it('names a list on both shelves once', () => {
-    expect(sourceIdsOf(['own'], [list('own', 'c-own'), list('own', 'c-own')])).toEqual(['c-own']);
+    expect(sourceIdsOf(['own'], [list('own', 'c-own'), list('own', 'c-own')], STOPS)).toEqual(['c-own']);
   });
 
   // A chosen slug that no shelf still holds was not built from.
   it('leaves out a chosen list no shelf holds', () => {
-    expect(sourceIdsOf(['gone', 'own'], [list('own', 'c-own')])).toEqual(['c-own']);
+    expect(sourceIdsOf(['gone', 'own'], [list('own', 'c-own')], STOPS)).toEqual(['c-own']);
+  });
+
+  // A ticked list none of whose places made the day gave the trip
+  // nothing (owner, 13 Nov 2026): seven ticked, five stops from three.
+  it('names only the chosen lists with a place among the stops', () => {
+    const lists = [list('gave', 'c-gave', ['a', 'b']), list('none', 'c-none', ['x']), list('also', 'c-also', ['b'])];
+    expect(sourceIdsOf(['gave', 'none', 'also'], lists, ['b', 'q'])).toEqual(['c-gave', 'c-also']);
+    expect(sourceIdsOf(['gave', 'none'], lists, [])).toEqual([]);
+  });
+
+  // A place gone from the catalog leaves its row with no place; it is
+  // nobody's stop, and does not make a list count.
+  it('reads past a member whose place is gone', () => {
+    expect(sourceIdsOf(['l'], [list('l', 'c-l', [null, 'kept'])], STOPS)).toEqual(['c-l']);
+    expect(sourceIdsOf(['l'], [list('l', 'c-l', [null])], STOPS)).toEqual([]);
+  });
+
+  // A list that carries its members (`membersOf`'s first answer) is read
+  // by them, not by its rows.
+  it('reads a list by its members when it carries them', () => {
+    const own = { ...list('own', 'c-own', []), members: [{ slug: 'kept' }] } as unknown as Collection;
+    expect(sourceIdsOf(['own'], [own], STOPS)).toEqual(['c-own']);
+    const off = { ...list('off', 'c-off', ['kept']), members: [{ slug: 'elsewhere' }] } as unknown as Collection;
+    expect(sourceIdsOf(['off'], [off], STOPS)).toEqual([]);
   });
 
   // A launch-cache row without its id is skipped rather than looked up;
   // and the shelf after it holding the same slug is still the same list.
   it('skips a row that carries no id, and does not read the slug again further on', () => {
-    expect(sourceIdsOf(['old', 'own'], [list('old'), list('old', 'c-old'), list('own', 'c-own')])).toEqual(['c-own']);
+    expect(sourceIdsOf(['old', 'own'], [list('old'), list('old', 'c-old'), list('own', 'c-own')], STOPS)).toEqual(['c-own']);
   });
 });
 
