@@ -45,6 +45,7 @@ const world = vi.hoisted(() => ({
   userId: undefined as string | null | undefined,
   askedAs: [] as (string | null | undefined)[],
   likesFor: [] as (string | null | undefined)[],
+  countsFor: [] as (string | null | undefined)[],
   likeCounts: null as unknown as F,
   myLikes: null as unknown as F,
   // One object per test, as `useFetch` holds its data in state: a fresh
@@ -96,7 +97,7 @@ vi.mock('./data', async (orig) => ({
   // — which is how the avatars bug below passed this file unseen. The
   // real query hands back the same data until it loads again.
   useCategoryTermsQuery: () => world.terms,
-  useLikeCountsQuery: () => world.likeCounts,
+  useLikeCountsQuery: (me: string | null | undefined) => { world.countsFor.push(me); return world.likeCounts; },
   useMyLikesQuery: (me: string | null | undefined) => { world.likesFor.push(me); return world.myLikes; },
   likeCollection: writes.like,
   unlikeCollection: writes.unlike,
@@ -119,6 +120,7 @@ beforeEach(() => {
   world.userId = undefined;
   world.askedAs = [];
   world.likesFor = [];
+  world.countsFor = [];
   world.elsewhere = fetch();
   world.elsewhereLists = fetch();
   world.cityAsked = [];
@@ -160,6 +162,20 @@ describe('who the catalog is asked for', () => {
     mount();
     expect(world.askedAs.at(-1)).toBe('u1');
     expect(world.likesFor.at(-1)).toBe('u1');
+  });
+
+  // The like counts are a question per reader since 13 Nov 2026: your own
+  // lists and the ones shared with you are counted for you alone.
+  it('the like counts as the same reader, signed in or out', () => {
+    world.me = 'u2';
+    world.userId = 'u1';
+    mount();
+    expect(world.countsFor.at(-1)).toBe('u2');
+    cleanup();
+    world.me = null;
+    world.userId = null;
+    mount();
+    expect(world.countsFor.at(-1)).toBeNull();
   });
 
   it('nobody yet — not a guest — while neither is known', () => {

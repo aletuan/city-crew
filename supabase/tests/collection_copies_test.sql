@@ -43,6 +43,9 @@ begin
 end $$;
 
 -- ── a private original says nothing, even to its owner ──
+-- The rule as 20261007120000 wrote it. 20261113120000 tells the owner
+-- about copies of their list whatever it is now; this bench applies it
+-- later, and `likes_kept_off_public_test.sql` holds the new rule.
 do $$
 declare n int;
 begin

@@ -634,7 +634,10 @@ describe('fetchLikeCounts', () => {
     const [rpc, table] = fake().log;
     expect(rpc).toMatchObject({ op: 'rpc', fn: 'collection_like_counts' });
     expect(table).toMatchObject({ table: 'collections' });
-    expect(table.filters).toEqual([['is_public', true]]);
+    // Every list the reader can see, not only public ones (13 Nov 2026):
+    // the function counts your own and your shared lists too, and a
+    // public-only lookup could not name them.
+    expect(table.filters).toEqual([]);
   });
 
   // A server still on the old function returns no `others`. The total is

@@ -5,8 +5,9 @@
 // here is what the page asks for (the epoch, so all time), which rows it
 // keeps (this list's, one per act), how each row reads (the handle, the
 // card head's compact age with "now" for "New", the name, the badge for
-// the kind), and the four states — loading, empty (private, public, not
-// yours), failed with Try again — and that a row is not a control.
+// the kind), and the four states — loading, empty (yours, whatever it is
+// now, or not yours), failed with Try again — and that a row is not a
+// control. A list that is not public is asked about like any other.
 // `actsOn`, `listAgeOf` and `ageWord` run for real; only the I/O seams
 // and the providers are stood in.
 
@@ -190,15 +191,31 @@ describe('what it asks for', () => {
     expect(data.fetchCopies).toHaveBeenCalledExactlyOnceWith('1970-01-01T00:00:00.000Z');
   });
 
-  it('asks nothing for a private list, and says only a public one can be liked or copied', async () => {
+  // A list gone private keeps what it gathered while public (owner, 13
+  // Nov 2026): the two functions answer its owner whatever it is now, so
+  // the page asks, and lists, as it does for a public one.
+  it('asks for a list that is not public, and lists what it gathered', async () => {
+    state.mine = [list({ is_public: false })];
+    data.fetchApplause.mockImplementation(async () => [like(ago(2 * HOUR), 'minh', 'Minh Trần')]);
+    data.fetchCopies.mockImplementation(async () => [copy(ago(30 * MIN), 'lan', 'Lan Phạm')]);
+    await show();
+    expect(data.fetchApplause).toHaveBeenCalledExactlyOnceWith('1970-01-01T00:00:00.000Z');
+    expect(data.fetchCopies).toHaveBeenCalledExactlyOnceWith('1970-01-01T00:00:00.000Z');
+    expect(rowLines()).toEqual([['Lan Phạm', '@lan · 30m'], ['Minh Trần', '@minh · 2h']]);
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.queryByText(/Only a public collection/)).toBeNull();
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+  });
+
+  // And one that never gathered anything is the ordinary nothing-yet,
+  // not a different kind of nothing.
+  it('gives a list that is not public and has no acts the ordinary empty state', async () => {
     state.mine = [list({ is_public: false })];
     await show();
-    expect(data.fetchApplause).not.toHaveBeenCalled();
-    expect(data.fetchCopies).not.toHaveBeenCalled();
-    const empty = screen.getByTestId('activity-private');
-    expect(empty.textContent).toContain('No likes or copies yet');
-    expect(empty.textContent).toContain('Only a public collection can be liked or copied');
-    // The card still says which list this is.
+    expect(data.fetchApplause).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('activity-empty').textContent)
+      .toBe('No likes or copies yetWhen someone likes or copies this collection, you will see it here.');
+    expect(screen.queryByTestId('activity-private')).toBeNull();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
   });
 
