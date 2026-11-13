@@ -182,7 +182,13 @@ const CHARCOAL: Palette = {
 
 /** "Nâu cafe" (#861): coffee brown #271910 under cream, from the owner's
  *  two-tone reference. The cream #C7AA9A is the secondary type and the
- *  hairline, never the page. Its own look now, pinned dark. */
+ *  hairline, never the page. Its own look now, pinned dark.
+ *
+ *  The third step is #AA8E7D since 13 Nov 2026, from #A88B7A: 4.46 on a
+ *  card (the `surfaceCard` veil over the page, which is what a Card
+ *  draws), under the 4.5 a 15pt word needs; 4.62 now, 1.40 under the
+ *  cream. Measured when the collection card's age and "Read more" moved
+ *  to this step. */
 const COFFEE: Palette = {
   bg: '#271910',
   bgElevated: '#33231A',
@@ -194,7 +200,7 @@ const COFFEE: Palette = {
   borderGlassSoft: 'rgba(199,170,154,0.16)',
   text: '#F3E9E2',
   textSecondary: '#C7AA9A',
-  textTertiary: '#A88B7A',
+  textTertiary: '#AA8E7D',
   accent: '#FF6F5B',
   accentFill: '#FF6F5B',
   badge: '#FF6F5B',
@@ -423,6 +429,10 @@ const SLATE: Palette = {
  * gold under the navy (8.88), the tab pill the same gold under #1B2340
  * (10.49). The steps are #D2D0B8 and #ABAA96 (8.37 and 5.55 on the page,
  * 4.76 for the third on a card, 1.51 apart).
+ *
+ * The third step is #ACAB97 since 13 Nov 2026, from #ABAA96: on the
+ * `surfaceCard` veil a Card actually draws it was 4.499, a thousandth
+ * under the 4.5 a 15pt word needs; 4.57 now, 1.49 under the cream.
  */
 const MIDNIGHT: Palette = {
   bg: '#252F52',
@@ -435,7 +445,7 @@ const MIDNIGHT: Palette = {
   borderGlassSoft: 'rgba(249,248,226,0.14)',
   text: '#F9F8E2',
   textSecondary: '#D2D0B8',
-  textTertiary: '#ABAA96',
+  textTertiary: '#ACAB97',
   accent: '#F2D27A',
   accentFill: '#F2D27A',
   badge: '#F2D27A',
@@ -479,7 +489,16 @@ const MIDNIGHT: Palette = {
  * coffee brown's cream is (7.01 on the page). Type is the beige lifted to
  * #F2ECE6 (12.33), the third step #A39486 (4.91, 4.53 on a card, 1.43
  * under the beige) — the card is held to #1B3240, a lift the third step
- * can still read on. The accent is the beige's own warm side, caramel
+ * can still read on.
+ *
+ * Remeasured 13 Nov 2026: a Card does not draw `bgElevated` but the
+ * `surfaceCard` veil over the page, #213947 flattened, and there the
+ * third step was 4.10 — under 4.5 for every tertiary word on a card.
+ * Both grey steps came up together to keep their distance: the
+ * secondary to #CBBDB0 (the beige a touch lighter; the hairline keeps
+ * the reference beige itself) and the third to #AB9E91, 4.61 on the
+ * card and 1.43 under the secondary. The figures above are the first
+ * measure, kept as the reason the card is no lighter. The accent is the beige's own warm side, caramel
  * #E6A979 (7.10, 6.54 on a card), so it reads apart from the beige type
  * beside it; a button is caramel under the navy, the pill caramel under
  * #10222D (8.00).
@@ -494,8 +513,8 @@ const NAVY: Palette = {
   borderGlass: 'rgba(194,178,163,0.24)',
   borderGlassSoft: 'rgba(194,178,163,0.16)',
   text: '#F2ECE6',
-  textSecondary: '#C2B2A3',
-  textTertiary: '#A39486',
+  textSecondary: '#CBBDB0',
+  textTertiary: '#AB9E91',
   accent: '#E6A979',
   accentFill: '#E6A979',
   badge: '#E6A979',
@@ -782,7 +801,10 @@ const HONEY: Palette = {
  * type is an off-white and two blue-greys (9.2, 8.1 and 5.3 on the
  * page; 4.76 for the faintest on a card, 1.51 apart) — the tertiary was
  * a step darker and sat at 4.16 on the card, so it came up and the
- * secondary with it to keep the step. Midnight is the muted cousin;
+ * secondary with it to keep the step. Measured on `bgElevated`; on the
+ * `surfaceCard` veil a Card actually draws it was 4.50 to the hundredth
+ * (13 Nov 2026), so the third step came up once more, #AEBFDB to
+ * #B1C1DC: 4.60, 1.48 under the secondary. Midnight is the muted cousin;
  * this is the flag's own blue and yellow, and the sheet shows both.
  */
 const ROYAL: Palette = {
@@ -796,7 +818,7 @@ const ROYAL: Palette = {
   borderGlassSoft: 'rgba(226,232,243,0.14)',
   text: '#F7F6EE',
   textSecondary: '#E2E8F3',
-  textTertiary: '#AEBFDB',
+  textTertiary: '#B1C1DC',
   accent: '#F9BF02',
   accentFill: '#F9BF02',
   badge: '#F9BF02',
