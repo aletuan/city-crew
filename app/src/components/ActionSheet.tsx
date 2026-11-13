@@ -61,8 +61,10 @@ export type SheetAction = {
    *  row; the full title is still what VoiceOver says. */
   short?: string;
   /** What it will actually do, in a sentence. The half an alert menu
-   *  cannot carry, and the half that tells two red rows apart. */
-  desc: string;
+   *  cannot carry, and the half that tells two red rows apart. Left out
+   *  where the title already says it: the collection page's ⋯ is a menu
+   *  of plain acts and wears its names alone (owner, 13 Nov 2026). */
+  desc?: string;
   /** Draws the row in the warning colour. Cosmetic only — whether a
    *  choice asks again is the caller's business, and the callers that
    *  do ask raise their dialog from inside `onPress`, once this sheet
@@ -79,6 +81,11 @@ export type SheetAction = {
    *  Public or Private). A tick at the row's end, and said as selected,
    *  so the reader sees where they are before choosing where to go. */
   selected?: boolean;
+  /** In place of `sheet-action-<key>`, for a row that kept its name when
+   *  its menu became this sheet: the collection page's ⋯ rows are found
+   *  by the names they wore in the popover (13 Nov 2026), and the
+   *  simulator flows tap them by those names. */
+  testID?: string;
   onPress: () => void;
 };
 
@@ -126,9 +133,11 @@ export default function ActionSheet({ visible, header, actions, children, onClos
  *
  * It took a `titlesOnly` for the photo sheet, whose picture made each
  * row's sentence redundant (16 Oct 2026); the photo sheet docks its
- * actions in a `SheetStrip` now (17 Oct), and every sheet left keeps its
- * sentences — the menus about a person, where two red rows had to be
- * told apart.
+ * actions in a `SheetStrip` now (17 Oct), and the sheets about a person
+ * keep their sentences, where two red rows have to be told apart. A row
+ * with no `desc` is its title alone (the collection page's ⋯, 13 Nov
+ * 2026): 14 + the 19pt title + 14 is still 47pt, past the 44 a target
+ * needs.
  */
 export function SheetRows({ actions, onClose }: {
   actions: SheetAction[];
@@ -143,7 +152,7 @@ export function SheetRows({ actions, onClose }: {
       {actions.map((a, i) => (
         <PressableScale
           key={a.key}
-          testID={`sheet-action-${a.key}`}
+          testID={a.testID ?? `sheet-action-${a.key}`}
           contentStyle={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff]}
           scaleTo={a.disabled ? 1 : 0.985}
           // The sheet goes first, always. A dialog raised over a sheet
@@ -171,7 +180,7 @@ export function SheetRows({ actions, onClose }: {
           </View>
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={[s.rowTitle, a.destructive && s.rowTitleBad]}>{a.title}</Text>
-            <Text style={s.rowDesc}>{a.desc}</Text>
+            {a.desc ? <Text style={s.rowDesc}>{a.desc}</Text> : null}
           </View>
           {a.selected && (
             <View style={s.glyph} testID="sheet-selected">

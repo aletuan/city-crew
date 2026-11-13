@@ -45,6 +45,7 @@ import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
 import { colors, font, space } from '../theme';
+import { CHIP_H, CHIP_SLOP } from '../components/ui';
 
 const spies = vi.hoisted(() => ({
   goTo: vi.fn(),
@@ -320,11 +321,35 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
   throw new Error('nothing matched');
 };
 /**
- * A row in the overflow menu, by its label. The modal portals to the end of
- * the document, so when a label also appears on the page (the owner's
- * "Add place" footer, until 15 Oct 2026) the menu's copy is the last one.
+ * The ⋯'s sheet (13 Nov 2026; an anchored popover until then): its rows,
+ * each named `collection-menu-*` and labelled with its title, in the order
+ * drawn. Read through the open modal, so a label that is also on the page
+ * — "Add place" is the grid's first cell too — is never mistaken for one.
  */
-const menuRow = (label: string) => screen.getAllByText(label).at(-1)!;
+const menuRows = () => [...document.querySelectorAll<HTMLElement>('[aria-modal] [data-testid^="collection-menu-"]')];
+/** The sheet's row titles, in order. */
+const menuTitles = () => menuRows().map((r) => r.getAttribute('aria-label'));
+/** A row of the sheet, by its title; a test fails here if it is not there. */
+const menuRow = (title: string) => {
+  const row = menuRows().find((r) => r.getAttribute('aria-label') === title);
+  if (!row) throw new Error(`no "${title}" in the sheet: ${menuTitles().join(', ')}`);
+  return row;
+};
+/**
+ * Press a row of the sheet. A row runs its act 220ms after the sheet
+ * starts to close (`SheetRows`), so the clock is wound past it — a fake
+ * one for the press alone, if the test is on the real one.
+ */
+const pick = (title: string) => {
+  const real = !vi.isFakeTimers();
+  if (real) vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    fireEvent.click(menuRow(title));
+    act(() => { vi.advanceTimersByTime(220); });
+  } finally {
+    if (real) vi.useRealTimers();
+  }
+};
 
 /**
  * Finish the menu's fade. jsdom runs no CSS animations, so react-native-web's
@@ -462,8 +487,9 @@ describe('before the list is there', () => {
   });
 });
 
-// Both header controls as their glyphs alone, hung past the margins so
-// the ink meets the line the cards stand on (owner, 12 Nov 2026).
+// The way back as its glyph alone, hung past the margin so the ink meets
+// the line the cards stand on (owner, 12 Nov 2026) — and since 13 Nov the
+// header's only control: the ⋯ is the card's (see "the ⋯ in the card").
 describe('the header controls', () => {
   const fills = (el: HTMLElement) => [el, ...el.querySelectorAll('*')]
     .map((n) => getComputedStyle(n as HTMLElement).backgroundColor)
@@ -477,15 +503,120 @@ describe('the header controls', () => {
     return out.join(' ');
   };
 
-  it('draws the way back and the ⋯ bare, each hung to its margin', () => {
+  it('draws the way back bare, hung to its margin', () => {
     state.mine = [collection()];
     show();
     const back = screen.getByRole('button', { name: 'Back' });
-    const more = screen.getByRole('button', { name: 'More' });
     expect(fills(back)).toEqual([]);
-    expect(fills(more)).toEqual([]);
     expect(margins(back)).toContain('-18px|');
-    expect(margins(more)).toContain('|-13px');
+  });
+
+  it('keeps the way back and the title alone, mine or somebody else\u2019s', () => {
+    for (const set of [() => { state.mine = [collection()]; }, () => { state.mine = []; state.cols = [theirs()]; }]) {
+      set();
+      show();
+      const header = screen.getByTestId('collection-back').parentElement!;
+      // The chevron, then the title's column, and nothing after them.
+      expect(header.children).toHaveLength(2);
+      expect(header.lastElementChild!.textContent).toBe('Old Quarter eats');
+      expect(header.querySelectorAll('[role="button"]')).toHaveLength(1);
+      expect(header.contains(screen.getByTestId('collection-more'))).toBe(false);
+      cleanup();
+    }
+  });
+});
+
+// The ⋯ in the card's top right, where the pencil and the copy were
+// (owner, 13 Nov 2026): on the button scale, its ink on the card's
+// padding, on every list there is.
+describe('the ⋯ in the card', () => {
+  const card = () => screen.getByTestId(/^collection-desc(-empty)?$/);
+  /** The flex row an element stands in. */
+  const rowOf = (el: HTMLElement) => {
+    let n: HTMLElement | null = el.parentElement;
+    while (n && viewStyleOf(n).flexDirection !== 'row') n = n.parentElement;
+    return n!;
+  };
+
+  it('stands at the end of the face’s row, on yours and on somebody else’s', () => {
+    for (const set of [() => { state.mine = [collection()]; }, () => { state.mine = []; state.cols = [theirs()]; }]) {
+      set();
+      show();
+      const more = screen.getByTestId('collection-more');
+      expect(card().contains(more)).toBe(true);
+      const row = rowOf(more);
+      expect(row.contains(screen.getByTestId('collection-curator'))).toBe(true);
+      expect(row.lastElementChild).toBe(more);
+      // The face's row is the card's first.
+      expect(card().firstElementChild).toBe(row);
+      cleanup();
+    }
+  });
+
+  it('keeps its name, in either language', () => {
+    show();
+    expect(screen.getByTestId('collection-more').getAttribute('aria-label')).toBe('More');
+    cleanup();
+    state.lang = 'vi';
+    show();
+    expect(screen.getByTestId('collection-more').getAttribute('aria-label')).toBe('Tùy chọn khác');
+  });
+
+  it('is drawn `CHIP_H` tall, made 44 by `CHIP_SLOP`, 44 across, with no fill', () => {
+    show();
+    const more = screen.getByTestId('collection-more');
+    const box = more.firstElementChild as HTMLElement;
+    expect([viewStyleOf(box).width, viewStyleOf(box).height]).toEqual([44, CHIP_H]);
+    expect(propsWhere((p) => p.testID === 'collection-more').hitSlop).toEqual(CHIP_SLOP);
+    expect(getComputedStyle(box).backgroundColor).toMatch(/^(rgba\(0, 0, 0, 0\)|transparent|)$/);
+    const glyph = more.querySelector('[data-icon="ellipsis-horizontal"]');
+    expect(glyph?.getAttribute('data-color')).toBe(String(colors.textSecondary));
+  });
+
+  // The header's measure of the ⋯'s ink, 13 at 21pt in a 44 box, and
+  // the 2 a 32pt box spills each way over the 28pt face's row.
+  it('hangs its ink to the card’s padding, and centres on the face', () => {
+    show();
+    const more = getComputedStyle(screen.getByTestId('collection-more'));
+    expect([more.marginRight, more.marginTop, more.marginBottom]).toEqual(['-13px', '-2px', '-2px']);
+  });
+
+  // The sheet the rest of the app's ⋯s open, headed with the list's name
+  // as Visited's is with the visit's — not a popover hung off the button.
+  it('opens the sheet, headed with the list’s name', () => {
+    show();
+    expect(document.querySelector('[aria-modal]')).toBeNull();
+    openMenu();
+    const title = screen.getByRole('heading', { name: 'Old Quarter eats' });
+    expect(title.closest('[aria-modal]')).toBeTruthy();
+    // The grabber, then the name: `ActionSheet`'s chrome.
+    expect(title.previousElementSibling?.children).toHaveLength(0);
+    expect(menuRows().length).toBeGreaterThan(0);
+    // Each row is its name alone, with no sentence under it (owner,
+    // 13 Nov 2026): a menu of acts, whose names say what they do.
+    for (const row of menuRows()) {
+      expect(row.textContent).toBe(row.getAttribute('aria-label'));
+      // One line of text, not a title over an empty sentence.
+      expect(row.querySelectorAll('[dir="auto"]')).toHaveLength(1);
+      expect(row.getAttribute('aria-describedby') ?? row.getAttribute('aria-description')).toBeNull();
+    }
+    expect(menuRow('Edit collection').textContent).toBe('Edit collection');
+  });
+
+  // Nothing else in the corner: the pencil and the copy are rows of the
+  // sheet now, and the corner is the ⋯'s alone.
+  it('takes the pencil’s place on yours and the copy’s on somebody else’s', () => {
+    show();
+    expect(screen.queryByTestId('collection-desc-edit')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
+    expect(card().querySelector('[data-icon="create-outline"]')).toBeNull();
+    cleanup();
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save a copy' })).toBeNull();
+    expect(card().querySelector('[data-icon="duplicate-outline"]')).toBeNull();
   });
 });
 
@@ -604,12 +735,15 @@ describe('your own list', () => {
     expect(screen.queryByTestId('collection-add-cell')).toBeNull();
   });
 
-  it('offers the owner the full menu and nothing meant for visitors', () => {
+  it('offers the owner the full menu, in its order, and nothing meant for visitors', () => {
     show();
     openMenu();
-    for (const label of ['Add place', 'Edit collection', 'Share', 'Delete collection']) {
-      expect(menuRow(label)).toBeTruthy();
-    }
+    expect(menuTitles()).toEqual([
+      'Add place', 'Plan a trip', 'Grid', 'List', 'Edit collection', 'Share', 'Delete collection',
+    ]);
+    // Delete alone in the warning red.
+    const red = menuRows().filter((r) => r.querySelector(`[data-color="${String(colors.bad)}"]`));
+    expect(red.map((r) => r.getAttribute('aria-label'))).toEqual(['Delete collection']);
     // The order is changed on the list itself now, by holding a card.
     expect(screen.queryByText('Reorder places')).toBeNull();
     expect(screen.queryByText('Save a copy')).toBeNull();
@@ -631,7 +765,7 @@ describe('your own list', () => {
   it('Add place in the menu closes the menu and opens Search for this list', async () => {
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Add place'));
+    pick('Add place');
     expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
     // The menu closed behind the action. jsdom runs no CSS animations, so
     // the fade-out's end is signalled by hand; a menu still `visible` would
@@ -640,21 +774,18 @@ describe('your own list', () => {
     await waitFor(() => expect(screen.queryByText('Edit collection')).toBeNull());
   });
 
-  // The description sits in a card on the theme's own surface, with the
-  // owner's pencil on it (owner, 15 Oct 2026).
-  it('draws the description in a card, and the owner’s pencil opens the form', () => {
-    const { raw } = show();
+  // The description sits in a card on the theme's own surface (owner, 15
+  // Oct 2026), led by your face; its corner is the ⋯ since 13 Nov, and
+  // the pencil that was there is the sheet's Edit collection.
+  it('draws the description in a card, led by your face, with the ⋯ and no pencil', () => {
+    show();
     const card = screen.getByTestId('collection-desc');
     expect(card.textContent).toContain('Where we eat.');
     expect(getComputedStyle(card).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    // Your face leads (owner, 16 Oct 2026); the pencil stays, the menu's own framed one.
     expect(screen.getByTestId('collection-curator').textContent).toBe('@andy');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
-    expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
-      slug: 'old-quarter', title: 'Old Quarter eats', desc: 'Where we eat.',
-    });
+    expect(card.contains(screen.getByTestId('collection-more'))).toBe(true);
+    expect(card.querySelector('[data-icon="create-outline"]')).toBeNull();
   });
 
   // A long note stops at four lines with "Read more" under them (owner,
@@ -675,9 +806,9 @@ describe('your own list', () => {
     expect(StyleSheet.flatten(desc.style as StyleProp<TextStyle>)?.textAlign).toBe('justify');
   });
 
-  // The line and the pencil are the press, not the whole card: the
-  // chips under the line are the list's filter (see "the chips").
-  it('invites the owner to write one when there is none, the line and the pencil the press', () => {
+  // The line is the press, not the whole card: the chips under the line
+  // are the list's filter (see "the chips").
+  it('invites the owner to write one when there is none, the line the press', () => {
     state.mine = [collection({ desc_en: null })];
     const { raw } = show();
     expect(screen.queryByTestId('collection-desc')).toBeNull();
@@ -689,9 +820,10 @@ describe('your own list', () => {
     const add = screen.getByTestId('collection-desc-add');
     expect(add.querySelector('[data-icon="add"]')?.getAttribute('data-color')).toBe(String(colors.accent));
     expect(screen.queryByText(/Add a few words/)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Edit description' }).querySelector('[data-icon="create-outline"]')).toBeTruthy();
-    // Your own list keeps the pencil; the copy icon is for somebody else's.
-    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
+    // The invitation, with the pencil gone, is the card's one way to the
+    // form; the ⋯ beside the face is the other, through the sheet.
+    expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
+    expect(card.contains(screen.getByTestId('collection-more'))).toBe(true);
     expect(card.getAttribute('role')).not.toBe('button');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       slug: 'old-quarter', title: 'Old Quarter eats', desc: '',
@@ -701,7 +833,7 @@ describe('your own list', () => {
   it('Edit hands the form the slug, title and description', () => {
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Edit collection'));
+    pick('Edit collection');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       slug: 'old-quarter', title: 'Old Quarter eats', desc: 'Where we eat.',
     });
@@ -710,7 +842,7 @@ describe('your own list', () => {
   it('Share explains that this private list can be made public, and links are coming', () => {
     show();
     openMenu();
-    fireEvent.click(menuRow('Share'));
+    pick('Share');
     expect(alert).toHaveBeenCalledWith(
       'Sharing is coming',
       'This list is private. Tap Private at the foot of its card to make it public — share links are on the way.',
@@ -720,7 +852,8 @@ describe('your own list', () => {
   it('closes the menu from a backdrop VoiceOver can name', async () => {
     show();
     openMenu();
-    fireEvent.click(button('Close menu'));
+    expect(menuRow('Edit collection')).toBeTruthy();
+    fireEvent.click(screen.getAllByLabelText('Close').at(-1)!);
     endModalFade();
     await waitFor(() => expect(screen.queryByText('Edit collection')).toBeNull());
   });
@@ -1014,7 +1147,7 @@ describe('sharing with friends', () => {
       state.shares = [share('lan')];
       show();
       openMenu();
-      fireEvent.click(menuRow('Share'));
+      pick('Share');
       expect(alert).toHaveBeenCalledWith(
         'Sharing is coming',
         'This list is private. Tap Friends at the foot of its card to make it public — share links are on the way.',
@@ -1796,7 +1929,7 @@ describe('deleting', () => {
   it('asks first, naming the list, and Cancel does nothing', () => {
     show();
     openMenu();
-    fireEvent.click(menuRow('Delete collection'));
+    pick('Delete collection');
     expect(alert.mock.calls.at(-1)![0]).toBe('Delete this collection?');
     expect(alert.mock.calls.at(-1)![1]).toBe('"Old Quarter eats" will be gone for good.');
     pressInAlert('Cancel');
@@ -1806,7 +1939,7 @@ describe('deleting', () => {
   it('deletes, un-saves every member in the taste profile, and leaves', async () => {
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Delete collection'));
+    pick('Delete collection');
     pressInAlert('Delete');
     expect(spies.deleteCollection).toHaveBeenCalledWith('old-quarter');
     await waitFor(() => expect(raw.goBack).toHaveBeenCalled());
@@ -1820,7 +1953,7 @@ describe('deleting', () => {
     spies.deleteCollection.mockRejectedValueOnce(new Error('denied'));
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Delete collection'));
+    pick('Delete collection');
     pressInAlert('Delete');
     await waitFor(() => expect(alert).toHaveBeenLastCalledWith('Could not delete', 'denied'));
     expect(spies.note).not.toHaveBeenCalled();
@@ -1857,9 +1990,11 @@ describe("somebody else's list", () => {
   it('offers Save a copy, Share and Report — never Edit, Reorder, Publish or Delete', () => {
     show();
     openMenu();
-    expect(menuRow('Save a copy')).toBeTruthy();
-    expect(menuRow('Share')).toBeTruthy();
-    expect(menuRow('Report this list')).toBeTruthy();
+    expect(menuTitles()).toEqual(['Plan a trip', 'Save a copy', 'Grid', 'List', 'Share', 'Report this list']);
+    expect(menuRow('Report this list').textContent).toBe('Report this list');
+    // Report alone in the warning red: the row about a person.
+    const red = menuRows().filter((r) => r.querySelector(`[data-color="${String(colors.bad)}"]`));
+    expect(red.map((r) => r.getAttribute('aria-label'))).toEqual(['Report this list']);
     for (const label of ['Edit collection', 'Reorder places', 'Make public', 'Make private', 'Delete collection', 'Add place']) {
       expect(screen.queryByText(label)).toBeNull();
     }
@@ -1876,7 +2011,7 @@ describe("somebody else's list", () => {
   it('reports the list with its id, owner and title', () => {
     show();
     openMenu();
-    fireEvent.click(menuRow('Report this list'));
+    pick('Report this list');
     expect(spies.report).toHaveBeenCalledWith({
       kind: 'collection', id: 'c1', ownerId: 'curator', name: 'Old Quarter eats',
     });
@@ -1885,7 +2020,7 @@ describe("somebody else's list", () => {
   it('Share on a public list says there is no link yet', () => {
     show();
     openMenu();
-    fireEvent.click(menuRow('Share'));
+    pick('Share');
     expect(alert).toHaveBeenCalledWith(
       'Sharing is coming',
       'This list is public, but there is no link to send yet. Sharing one is on the way.',
@@ -1895,7 +2030,10 @@ describe("somebody else's list", () => {
   it('Save a copy opens the form with the source, its description untouched and the order', () => {
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Save a copy'));
+    // The promise, on the row, before the tap.
+    expect(menuRow('Save a copy').textContent).toBe('Save a copy');
+    expect(menuRow('Save a copy').querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
+    pick('Save a copy');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       copyFrom: {
         sourceId: 'c1',
@@ -1911,26 +2049,12 @@ describe("somebody else's list", () => {
     });
   });
 
-  // The pencil's corner on somebody else's list: the same copy the menu
-  // row makes, one tap from the words that made the reader want it.
-  it('puts Save a copy where the owner’s pencil sits, and it copies the same', () => {
-    const { raw } = show();
-    expect(screen.queryByTestId('collection-desc-edit')).toBeNull();
-    const icon = screen.getByTestId('collection-desc-copy');
-    expect(icon.getAttribute('aria-label')).toBe('Save a copy');
-    expect(icon.querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
-    fireEvent.click(icon);
-    expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
-      copyFrom: expect.objectContaining({ sourceId: 'c1', cityId: 'hanoi', placeSlugs: ['pho', 'cafe', 'museum'] }),
-    });
-  });
-
   it('falls back to the city on screen, and omits an absent description', () => {
     state.cols = [theirs({ city_id: null, desc_en: null, curator_handle: null })];
     state.city = { id: 'saigon' };
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Save a copy'));
+    pick('Save a copy');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       copyFrom: expect.objectContaining({ cityId: 'saigon', desc: '' }),
     });
@@ -1941,10 +2065,9 @@ describe("somebody else's list", () => {
     state.city = null;
     const { raw } = show();
     openMenu();
-    // A row that could only close the menu is not offered, nor the icon.
+    // A row that could only close the menu is not offered.
+    expect(menuTitles()).toEqual(['Plan a trip', 'Grid', 'List', 'Share', 'Report this list']);
     expect(screen.queryByText('Save a copy')).toBeNull();
-    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
-    expect(menuRow('Share')).toBeTruthy();
     expect(raw.navigate).not.toHaveBeenCalled();
   });
 
@@ -2038,15 +2161,8 @@ describe('signed out', () => {
   it('Save a copy opens the sign-in sheet instead of the form', () => {
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Save a copy'));
+    pick('Save a copy');
     // The sheet names what was reached for: a copy, not a place.
-    expect(spies.askToSignIn).toHaveBeenCalledWith('copy', expect.any(Function));
-    expect(raw.navigate).not.toHaveBeenCalled();
-  });
-
-  it('the card’s copy icon asks for sign-in the same way', () => {
-    const { raw } = show();
-    fireEvent.click(screen.getByTestId('collection-desc-copy'));
     expect(spies.askToSignIn).toHaveBeenCalledWith('copy', expect.any(Function));
     expect(raw.navigate).not.toHaveBeenCalled();
   });
@@ -2059,7 +2175,7 @@ describe('signed out', () => {
     const route = { params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>;
     const { rerender } = render(<CollectionDetailScreen navigation={navigation.n} route={route} />);
     openMenu();
-    fireEvent.click(menuRow('Save a copy'));
+    pick('Save a copy');
     const resume = spies.askToSignIn.mock.calls.at(-1)![1] as () => void;
     state.uid = 'u2';
     rerender(<CollectionDetailScreen navigation={navigation.n} route={route} />);
@@ -2099,13 +2215,14 @@ describe('Plan a trip', () => {
     openMenu();
     const row = screen.getByTestId('collection-menu-plan');
     expect(row.querySelector('[data-icon="paw-outline"]')).toBeTruthy();
-    const labels = [...document.querySelectorAll('[aria-modal] [role="button"]')].map((b) => b.textContent);
-    expect(labels.indexOf('Plan a trip')).toBe(labels.indexOf('Add place') + 1);
-    fireEvent.click(row);
+    // The dock's own sentence for the same act.
+    expect(row.textContent).toBe('Plan a trip');
+    expect(menuTitles().slice(0, 2)).toEqual(['Add place', 'Plan a trip']);
+    pick('Plan a trip');
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', { screen: 'IdeasHome', params: { from: 'old-quarter', at: expect.any(Number) } });
     const first = spies.goTo.mock.calls[0][1].params.at;
     openMenu();
-    fireEvent.click(screen.getByTestId('collection-menu-plan'));
+    pick('Plan a trip');
     expect(spies.goTo.mock.calls[1][1].params.at).toBeGreaterThanOrEqual(first);
   });
 
@@ -2122,8 +2239,7 @@ describe('Plan a trip', () => {
     state.cols = [theirs()];
     show();
     openMenu();
-    const labels = [...document.querySelectorAll('[aria-modal] [role="button"]')].map((b) => b.textContent);
-    expect(labels.filter(Boolean).slice(0, 2)).toEqual(['Plan a trip', 'Save a copy']);
+    expect(menuTitles().slice(0, 2)).toEqual(['Plan a trip', 'Save a copy']);
   });
 
   it('is not in a visitor’s menu for an empty list', () => {
@@ -2176,31 +2292,34 @@ describe('a friend’s list, shared with you', () => {
     expect(screen.queryByTestId('collection-visibility')).toBeNull();
   });
 
-  it('offers no copy in the card’s corner', () => {
+  it('gives the card’s corner the ⋯ alone, and no copy', () => {
     show();
-    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
+    const card = screen.getByTestId('collection-desc');
+    expect(card.contains(screen.getByTestId('collection-more'))).toBe(true);
+    expect(card.querySelectorAll('[role="button"]')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Save a copy' })).toBeNull();
   });
 
   it('keeps the menu to planning and the two views: no copy, Share or Report', () => {
     show();
     openMenu();
-    const labels = [...document.querySelectorAll('[aria-modal] [role="button"]')]
-      .map((b) => b.textContent).filter(Boolean);
-    expect(labels).toEqual(['Plan a trip', 'Grid', 'List']);
+    expect(menuTitles()).toEqual(['Plan a trip', 'Grid', 'List']);
     expect(screen.queryByText('Save a copy')).toBeNull();
     expect(screen.queryByTestId('collection-menu-share')).toBeNull();
     expect(screen.queryByText('Report this list')).toBeNull();
   });
 
+  // The card of acts above the views has nothing in it, and is not drawn:
+  // the sheet goes from the list's name straight to the views'.
   it('heads the menu with the views when there is nothing to plan from', () => {
     state.shared = [lent({}, [])];
     show();
     openMenu();
-    expect(screen.getByText('View').closest('[aria-modal]')).toBeTruthy();
-    // The views' heading leads, with no rule above it.
+    expect(menuTitles()).toEqual(['Grid', 'List']);
     const heading = screen.getByRole('heading', { name: 'View' });
-    expect(viewStyleOf(heading)?.borderTopWidth ?? 0).toBe(0);
+    expect(heading.closest('[aria-modal]')).toBeTruthy();
+    const title = screen.getByRole('heading', { name: 'Old Quarter eats' });
+    expect(title.nextElementSibling).toBe(heading);
   });
 
   it('offers the friend’s block in the curator sheet, and no report', () => {
@@ -2238,21 +2357,20 @@ describe('a friend’s list, shared with you', () => {
   it('offers everything a public list offers once the friend publishes it', () => {
     state.shared = [lent({ is_public: true })];
     show();
-    expect(screen.getByTestId('collection-desc-copy')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
     openMenu();
-    expect(menuRow('Save a copy')).toBeTruthy();
+    expect(menuTitles()).toEqual(['Plan a trip', 'Save a copy', 'Grid', 'List', 'Share', 'Report this list']);
     expect(screen.getByTestId('collection-menu-share')).toBeTruthy();
-    expect(menuRow('Report this list')).toBeTruthy();
   });
 
   it('is never the reader’s own list, even where both catalogs hold it', () => {
     state.mine = [collection()];
     state.shared = [lent()];
     show();
-    // `mine` answers first: the owner's pencil, not the friend's byline.
-    expect(screen.getByTestId('collection-desc-edit')).toBeTruthy();
+    // `mine` answers first: the owner's sheet, not the friend's byline.
     expect(screen.getByTestId('collection-curator').textContent).toBe('@andy');
+    openMenu();
+    expect(menuRow('Edit collection')).toBeTruthy();
   });
 });
 
@@ -2372,13 +2490,13 @@ describe('the chips', () => {
     expect(viewStyleOf(kindsColumn).flex).toBe(1);
     expect(viewStyleOf(screen.getByTestId('collection-kinds')).flexWrap).toBe('wrap');
     expect(viewStyleOf(count).flexShrink).toBe(0);
-    // Across the card, not inside the words' column beside the pencil: the
-    // row the pencil stands in does not hold the count.
+    // Across the card, not in the face's row beside the ⋯: the row the ⋯
+    // stands in does not hold the count.
     expect(screen.getByTestId('collection-desc').contains(line)).toBe(true);
-    let pencilRow: HTMLElement | null = screen.getByTestId('collection-desc-edit');
-    while (pencilRow && viewStyleOf(pencilRow).flexDirection !== 'row') pencilRow = pencilRow.parentElement;
-    expect(pencilRow).toBeTruthy();
-    expect(pencilRow!.contains(count)).toBe(false);
+    let moreRow: HTMLElement | null = screen.getByTestId('collection-more');
+    while (moreRow && viewStyleOf(moreRow).flexDirection !== 'row') moreRow = moreRow.parentElement;
+    expect(moreRow).toBeTruthy();
+    expect(moreRow!.contains(count)).toBe(false);
     expect(count.textContent).toBe('4');
     expect(count.querySelector('[data-icon="location-outline"]')).toBeTruthy();
     // A filter row's box, so its first line and the count are one height.
@@ -2521,8 +2639,8 @@ describe('the chips', () => {
     expect(screen.queryByTestId('collection-filter-count')).toBeNull();
   });
 
-  // The owner with no words yet: the line and the pencil open the form;
-  // the chips under the line filter, not open it.
+  // The owner with no words yet: the line opens the form; the chips under
+  // the line filter, not open it.
   it('rides under the owner’s invitation, which no longer takes the chips’ taps', () => {
     eatery();
     const { raw } = (() => { state.mine = [collection({ desc_en: null }, four)]; return show(); })();
@@ -2534,8 +2652,6 @@ describe('the chips', () => {
     expect(cards()).toHaveLength(3);
     fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
     expect(raw.navigate).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
-    expect(raw.navigate).toHaveBeenCalledTimes(2);
   });
 
   // A visitor's list with chips and no words still gets the card, but no
@@ -2558,7 +2674,7 @@ describe('the chips', () => {
     state.cols = [theirs({ kinds_hidden: ['eats'] }, four)];
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Save a copy'));
+    pick('Save a copy');
     endModalFade();
     return waitFor(() => expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', expect.objectContaining({
       copyFrom: expect.objectContaining({ kinds: { hidden: ['eats'] } }),
@@ -2605,27 +2721,29 @@ describe('the introduction card', () => {
   it('runs the words across the card, under the face and the corner\u2019s action', () => {
     show();
     const words = screen.getByTestId('collection-desc-text');
-    const corner = screen.getByTestId('collection-desc-copy');
+    const corner = screen.getByTestId('collection-more');
     let topRow: HTMLElement | null = corner;
     while (topRow && viewStyleOf(topRow).flexDirection !== 'row') topRow = topRow.parentElement;
     expect(topRow).toBeTruthy();
-    // The face's row holds the handle and the copy, and not the words.
+    // The face's row holds the handle and the ⋯, and not the words.
     expect(topRow!.contains(screen.getByTestId('collection-curator'))).toBe(true);
     expect(topRow!.contains(words)).toBe(false);
     // The words are the card's own child, as the kinds' row is.
     expect(words.parentElement).toBe(topRow!.parentElement);
   });
 
-  // With nothing for the face's row to hold — a list lent to you whose
-  // owner has no handle to show — the row is not drawn, so the words open
-  // the card rather than sitting under an empty row and its 14.
-  it('draws no face row when it would hold nothing', () => {
+  // A list lent to you whose owner has no handle to show: the face's row
+  // used to be skipped, holding nothing; it holds the ⋯ now, so it is
+  // drawn on every card there is, and the words come under it.
+  it('draws the face row for the ⋯ alone where there is no face', () => {
     state.cols = [theirs({ is_public: false, curator_handle: null })];
     show();
     const words = screen.getByTestId('collection-desc-text');
-    expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
     expect(screen.queryByTestId('collection-curator')).toBeNull();
-    expect(words.parentElement!.firstElementChild).toBe(words);
+    const row = words.parentElement!.firstElementChild as HTMLElement;
+    expect(row).not.toBe(words);
+    expect(row.contains(screen.getByTestId('collection-more'))).toBe(true);
+    expect(row.nextElementSibling).toBe(words);
   });
 
   // One rhythm of about 20, measured in ink: 20 above the face, 16 from
@@ -2931,7 +3049,7 @@ describe('the grid', () => {
   const VIEW = 'citycrew.collection.view:me';
   beforeEach(async () => { await AsyncStorage.removeItem(VIEW); });
   afterEach(async () => { await AsyncStorage.removeItem(VIEW); });
-  const toGrid = () => { openMenu(); fireEvent.click(menuRow('Grid')); endModalFade(); };
+  const toGrid = () => { openMenu(); pick('Grid'); endModalFade(); };
   const tiles = () => [0, 1, 2].map((i) => screen.getByTestId(`collection-tile-${i}`).textContent);
   /** The view's stored read in. */
   const reads = () => act(async () => {});
@@ -2973,7 +3091,7 @@ describe('the grid', () => {
   it('names the two views under one heading in the menu, ticking the one in force', async () => {
     show();
     openMenu();
-    expect(menuRow('View')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'View' }).closest('[aria-modal]')).toBeTruthy();
     const grid = screen.getByTestId('collection-menu-grid');
     const list = screen.getByTestId('collection-menu-list');
     expect(list.getAttribute('aria-selected')).toBe('true');
@@ -3000,7 +3118,7 @@ describe('the grid', () => {
     expect(tick('collection-menu-grid')).toBeTruthy();
     expect(tick('collection-menu-list')).toBeNull();
     expect(screen.getByTestId('collection-menu-grid').getAttribute('aria-selected')).toBe('true');
-    fireEvent.click(menuRow('List'));
+    pick('List');
     expect(screen.getByText('card:Pho 10')).toBeTruthy();
     expect(screen.queryByTestId('collection-tile-0')).toBeNull();
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(VIEW, 'list');
@@ -3162,22 +3280,27 @@ describe('the grid', () => {
     state.cols = [theirs({ city_id: null } as Partial<Collection>, [])];
     show();
     openMenu();
-    const rule = (el: Element) => parseFloat(getComputedStyle(el).borderTopWidth) || 0;
-    // The heading leads, with no rule above it; its first row hangs from
-    // it with none either; every row after that has one.
-    expect(rule(menuRow('View'))).toBe(0);
-    const rows = [...document.querySelectorAll('[aria-modal] [role="button"]')].filter((b) => b.textContent);
-    expect(rows.map((r) => r.textContent).slice(0, 3)).toEqual(['Grid', 'List', 'Share']);
-    expect(rule(rows[0])).toBe(0);
-    expect(rule(rows[1])).toBeGreaterThan(0);
-    expect(rule(rows[2])).toBeGreaterThan(0);
+    expect(menuTitles()).toEqual(['Grid', 'List', 'Share', 'Report this list']);
+    // Straight from the list's name to the views': no empty card above.
+    const heading = screen.getByRole('heading', { name: 'View' });
+    expect(screen.getByRole('heading', { name: 'Old Quarter eats' }).nextElementSibling).toBe(heading);
   });
 
-  // Below the owner's other rows, the heading takes a rule like any row.
-  it('rules the heading off from the rows above it in the owner’s menu', () => {
+  // A card of their own, under their name, between the acts above and
+  // below them: a tick among verbs would read as one more thing done.
+  it('puts the views in a card of their own, under their name, between the acts', () => {
     show();
     openMenu();
-    expect(parseFloat(getComputedStyle(menuRow('View')).borderTopWidth)).toBeGreaterThan(0);
+    const cardOf = (title: string) => menuRow(title).parentElement!;
+    const views = cardOf('Grid');
+    expect(cardOf('List')).toBe(views);
+    expect([...views.children].map((r) => r.getAttribute('aria-label'))).toEqual(['Grid', 'List']);
+    const heading = screen.getByRole('heading', { name: 'View' });
+    expect(heading.previousElementSibling).toBe(cardOf('Add place'));
+    expect(heading.nextElementSibling).toBe(views);
+    expect(views.nextElementSibling).toBe(cardOf('Edit collection'));
+    expect(cardOf('Plan a trip')).toBe(cardOf('Add place'));
+    expect(cardOf('Delete collection')).toBe(cardOf('Edit collection'));
   });
 
   // The grid as the default (owner, 22 Oct 2026), for a reader who has
