@@ -105,11 +105,12 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * tile the one cell in the grid that is not a place, and with it no
  * dashed edge: the tint says "not a place" already.
  *
- * And it now carries the list's count, laid out as the photo tiles beside
- * it are: the figure with its pin in the top-left corner, where a tile's
- * status sits, the plus in the middle, the word along the bottom where a
- * tile's name is. On your own list that is the count's one place; the
- * card above no longer repeats it. The row keeps it too, at its end.
+ * It is laid out as the photo tiles beside it are: the plus in the
+ * middle, the word along the bottom where a tile's name is. It carried
+ * the list's count in its top corner from 2 Nov, where a tile's status
+ * sits; on 13 Nov the count moved to the card, at the end of the kinds'
+ * row, for the owner and a visitor alike (owner's call), and the tile
+ * went back to saying one thing.
  *
  * The plus stands in a dashed 44pt ring, the button scale's middle step,
  * and is the accent's colour (owner, 2 Nov 2026). It was a solid disc in
@@ -121,7 +122,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * highest, over the 3:1 a control's outline needs; the plus in the accent
  * is 4.14 at its lowest (Paper) — both worked out in add.ui.test.tsx,
  * against every look. The dash is the row's own 1pt. The whole tile is
- * still one control, named by its word and its count.
+ * still one control, named by its word.
  *
  * From the same round (a mock with a "COLLECTION" kicker, a zero-padded
  * "04" and "Add a new place"), the ring and the accent plus were taken
@@ -140,33 +141,23 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * stays over the 44 a control needs. The tile is the grid's tile, so the
  * cell it takes is a cell like the rest.
  */
-export function AddCell({ label, onPress, size, count, testID }: {
+export function AddCell({ label, onPress, size, testID }: {
   label: string;
   onPress: () => void;
   /** The grid's tile side; without it, a row across the list. */
   size?: number;
-  /** The list's place count, and how it is said: "4" and "4 places". */
-  count?: { n: number; said: string };
   testID?: string;
 }) {
   const { scheme } = useScheme();
-  const said = count ? `${label}, ${count.said}` : label;
-  const figure = count ? (
-    <View style={s.cellCount} testID={testID ? `${testID}-count` : undefined}>
-      <Glyph name="location-outline" size={size !== undefined ? 12 : 13} color={colors.textSecondary} />
-      <Text style={s.cellCountText}>{count.n}</Text>
-    </View>
-  ) : null;
   if (size !== undefined) {
     return (
       <PressableScale
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={said}
+        accessibilityLabel={label}
         contentStyle={[s.cellTile, { width: size, height: size }]}
         testID={testID}
       >
-        {figure ? <View style={s.cellTileCorner}>{figure}</View> : null}
         <View style={[s.cellDisc, { borderColor: textTertiaryHex[scheme] }]}>
           <Glyph name="add" size={24} color={colors.accent} />
         </View>
@@ -178,14 +169,13 @@ export function AddCell({ label, onPress, size, count, testID }: {
     <PressableScale
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={said}
+      accessibilityLabel={label}
       style={s.cellRowWrap}
       contentStyle={s.cellRow}
       testID={testID}
     >
       <Glyph name="add" size={24} color={colors.text} />
       <Text style={s.cellRowText} numberOfLines={2}>{label}</Text>
-      {figure ? <View style={{ marginLeft: 'auto' }}>{figure}</View> : null}
     </PressableScale>
   );
 }
@@ -359,15 +349,12 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderStyle: 'dashed', marginTop: -6,
   },
-  // Where a photo tile puts its status and its name (`PlaceTile`): 8 in,
-  // 7 from the top, 6 from the foot, the name's 12pt semibold.
-  cellTileCorner: { position: 'absolute', left: 8, top: 7 },
+  // Where a photo tile puts its name (`PlaceTile`): 8 in, 6 from the
+  // foot, the name's 12pt semibold.
   cellTileText: {
     position: 'absolute', left: 8, right: 8, bottom: 6,
     color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: font.semibold,
   },
-  cellCount: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  cellCountText: { color: colors.textSecondary, fontSize: 12, lineHeight: 16, fontWeight: font.semibold },
 
   // `SECONDARY_CONTROL_H`, so a pill and a round button in the same header
   // slot are the same height, and the dock's pill is the header's. There
