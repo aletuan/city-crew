@@ -16,7 +16,7 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces } from './export';
+import { fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources } from './export';
 import { PAGE_ROWS } from './pages';
 
 beforeEach(() => fake().reset());
@@ -110,6 +110,31 @@ describe('fetchMyShares', () => {
     fake().reset();
     fake().replies({ data: [] }, { error: { message: 'theirs refused' } });
     await expect(fetchMyShares('u-1')).rejects.toThrow('theirs refused');
+  });
+});
+
+describe('fetchMyTripSources', () => {
+  it('asks for the sources of this account’s own trips only, scoped in the query', async () => {
+    fake().replies({ data: [{ trip_id: 't1', collections: { slug: 'cafes' }, trips: { owner_id: 'u-1' } }] });
+    const rows = await fetchMyTripSources('u-1');
+    expect(fake().log[0]).toMatchObject({
+      table: 'trip_collections', op: 'select', filters: [['trips.owner_id', 'u-1']],
+    });
+    // Inner, so a joined trip's sources are not returned at all.
+    expect(fake().log[0].payload).toContain('trips!inner(owner_id)');
+    expect(fake().log[0].payload).toContain('collections(slug)');
+    // The join that scoped the read does not travel on.
+    expect(rows).toEqual([{ trip_id: 't1', collections: { slug: 'cafes' } }]);
+  });
+
+  it('answers with an empty list rather than null', async () => {
+    fake().replies({ data: null });
+    expect(await fetchMyTripSources('u-1')).toEqual([]);
+  });
+
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'refused' } });
+    await expect(fetchMyTripSources('u-1')).rejects.toThrow('refused');
   });
 });
 

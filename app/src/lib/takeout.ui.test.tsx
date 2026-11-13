@@ -25,7 +25,10 @@ const world = vi.hoisted(() => ({
 const reads = vi.hoisted(() => ({
   fetchMyCollections: vi.fn(async () => []),
   fetchMyLikedCollections: vi.fn(async () => []),
-  fetchMyTrips: vi.fn(async () => []),
+  fetchMyTrips: vi.fn(async () => [{
+    id: 't1', owner_id: 'me', city_id: 'hanoi', title: 'Friday', company: null, categories: [], district: null,
+    day: '2026-09-01', when_part: 'evening', generated_by: null, created_at: '2026-06-06T00:00:00Z', trip_stops: [],
+  }]),
   fetchPreferences: vi.fn(async () => ({ categories: [], budget_vnd: null, history_on: false })),
   fetchFriendships: vi.fn(async () => [
     { requester: 'me', addressee: 'f1', status: 'accepted', created_at: '2026-09-01T00:00:00Z' },
@@ -45,6 +48,7 @@ const reads = vi.hoisted(() => ({
       { created_at: '2026-11-12T02:00:00Z', user_id: 'me', collections: null },
     ],
   })),
+  fetchMyTripSources: vi.fn(async () => [{ trip_id: 't1', collections: { slug: 'cafes' } }]),
   fetchProfilesById: vi.fn(async (ids: string[]) => Object.fromEntries(ids.map((id) => [id, {
     id, handle: `${id}_handle`, full_name: `Private Name ${id}`, avatar_url: `https://faces/${id}.jpg`,
   }]))),
@@ -76,6 +80,7 @@ vi.mock('./data/export', () => ({
   fetchMySubmittedPlaces: reads.fetchMySubmittedPlaces,
   fetchMyHistory: reads.fetchMyHistory,
   fetchMyShares: reads.fetchMyShares,
+  fetchMyTripSources: reads.fetchMyTripSources,
 }));
 vi.mock('expo-file-system', () => {
   class File {
@@ -155,6 +160,14 @@ describe('useTakeout', () => {
       await run();
       expect(reads.fetchProfilesById).toHaveBeenCalledOnce();
       expect([...(reads.fetchProfilesById.mock.calls[0][0] as string[])].sort()).toEqual(['b1', 'f1', 'f2', 's1', 's2']);
+    });
+
+    it('carries the lists each of the reader’s trips was started from', async () => {
+      mount();
+      await run();
+      expect(reads.fetchMyTripSources).toHaveBeenCalledWith('me');
+      expect(JSON.parse(world.written[0].body).trips.map((t: { from_collections: string[] }) => t.from_collections))
+        .toEqual([['cafes']]);
     });
 
     // The other end of a share is asked for by name too, so a share is

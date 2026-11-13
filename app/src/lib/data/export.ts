@@ -116,6 +116,36 @@ export async function fetchMyShares(ownerId: string): Promise<{ mine: ShareRow[]
   };
 }
 
+/** A list one of this account's trips was started from (13 Nov 2026,
+ *  `trip_collections`). The app never reads these back — they exist to be
+ *  counted on the list's Statistics page — so, like the two reads above,
+ *  this one is the export's alone. The policy (`legal.ts`) says a trip
+ *  remembers the lists it started from; an export that left them out
+ *  would be the one place that promise was not kept. */
+export type TripSourceRow = {
+  trip_id: string;
+  collections: { slug: string } | null;
+};
+
+/**
+ * The source lists of this account's own trips.
+ *
+ * Scoped through the trip (`!inner`, filtered on its owner) as well as by
+ * RLS, which already lets only a trip's owner read its sources: a joined
+ * trip's sources are the planner's record, not this reader's. A list
+ * that is gone, or has since gone private to somebody else, comes back
+ * with `collections` null, and the export drops it rather than print an id.
+ */
+export async function fetchMyTripSources(ownerId: string): Promise<TripSourceRow[]> {
+  const { data, error } = await supabase
+    .from('trip_collections')
+    .select('trip_id, collections(slug), trips!inner(owner_id)')
+    .eq('trips.owner_id', ownerId);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as (TripSourceRow & { trips: unknown })[])
+    .map(({ trip_id, collections }) => ({ trip_id, collections }));
+}
+
 export async function fetchMyHistory(ownerId: string): Promise<HistoryEventRow[]> {
   // Every page (`lib/data/pages`): one reader had 1,991 events by 22 Oct
   // 2026, and a single read handed the export the first thousand. `id`

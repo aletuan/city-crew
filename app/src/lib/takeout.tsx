@@ -25,7 +25,7 @@ import {
   fetchFriendships, fetchMyBlocks, fetchMyCheckins, fetchMyCollections, fetchMyTrips,
   fetchPreferences, fetchProfilesById,
 } from './data';
-import { fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces } from './data/export';
+import { fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources } from './data/export';
 import { buildExport, exportFilename, exportLang } from './export';
 
 // ── why these two are required inside the function ──
@@ -84,7 +84,7 @@ export function useTakeout() {
       const { File, Paths, Sharing } = await nativeIO();
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing_unavailable');
 
-      const [collections, likes, trips, preferences, friendships, blocked, submitted, history, checkins, shares] =
+      const [collections, likes, trips, preferences, friendships, blocked, submitted, history, checkins, shares, tripSources] =
         await Promise.all([
           fetchMyCollections(uid),
           fetchMyLikedCollections(uid),
@@ -96,6 +96,7 @@ export function useTakeout() {
           fetchMyHistory(uid),
           fetchMyCheckins(uid),
           fetchMyShares(uid),
+          fetchMyTripSources(uid),
         ]);
 
       // Already keyed by id, and the export wants only the handle out of
@@ -123,7 +124,7 @@ export function useTakeout() {
           email: email ?? null,
           created_at: (session?.user as { created_at?: string } | undefined)?.created_at ?? null,
         },
-        profile, preferences, collections, likes, trips,
+        profile, preferences, collections, likes, trips, tripSources,
         friendships, shares, blocked, handles, submitted, history, checkins,
       }, now, exportLang(lang));
 
