@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Applause, Copy } from './friends';
-import { actsOn } from './listActivity';
+import { actsOn, type ListAct, ofKind, shownKind, tallyOf, toggledKind } from './listActivity';
 
 const like = (collection_id: string, liked_at: string, liker_handle: string | null = 'lan', liker_name: string | null = 'Lan'): Applause =>
   ({ collection_id, liked_at, liker_handle, liker_name });
@@ -90,5 +90,36 @@ describe('actsOn', () => {
 
   it('is empty for a list nobody acted on', () => {
     expect(actsOn('c9', [like('c1', '2026-11-10T10:00:00Z')], [copy('c1', '2026-11-10T10:00:00Z')])).toEqual([]);
+  });
+});
+
+const act = (kind: ListAct['kind'], handle: string): ListAct =>
+  ({ kind, at: '2026-11-10T10:00:00Z', handle, name: null, id: null, avatar: null });
+
+describe('the counts, and the list narrowed to one kind', () => {
+  const acts = [act('copy', 'a'), act('like', 'b'), act('like', 'c'), act('copy', 'd'), act('like', 'e')];
+
+  it('counts each kind', () => {
+    expect(tallyOf(acts)).toEqual({ like: 3, copy: 2 });
+    expect(tallyOf([])).toEqual({ like: 0, copy: 0 });
+  });
+
+  it('narrows to a kind in the order the acts came, and gives all for none', () => {
+    expect(ofKind(acts, 'like').map((a) => a.handle)).toEqual(['b', 'c', 'e']);
+    expect(ofKind(acts, 'copy').map((a) => a.handle)).toEqual(['a', 'd']);
+    expect(ofKind(acts, null)).toBe(acts);
+  });
+
+  it('chooses a kind with one tap and widens again with the second', () => {
+    expect(toggledKind(null, 'like')).toBe('like');
+    expect(toggledKind('like', 'like')).toBeNull();
+    // From one kind straight to the other.
+    expect(toggledKind('like', 'copy')).toBe('copy');
+  });
+
+  it('keeps the chosen kind while there is any of it, and all once there is none', () => {
+    expect(shownKind('copy', { like: 3, copy: 2 })).toBe('copy');
+    expect(shownKind('copy', { like: 3, copy: 0 })).toBeNull();
+    expect(shownKind(null, { like: 3, copy: 2 })).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agoOf, buildActivity, friendsMade, MIN_SUGGEST_CHARS, openSuggestions, reasonLine, REQUEST_DAILY_CAP,
+  agoOf, buildActivity, friendsMade, MIN_SUGGEST_CHARS, openSuggestions, quietReason, reasonLine, REQUEST_DAILY_CAP, rowButton,
   splitFriendships, standingWith, SUGGEST_LIMIT, suggestable, SUGGESTED_SHOWN, type Applause, type FriendshipRow,
   type Copy, type Suggestion,
 } from './friends';
@@ -261,5 +261,80 @@ describe('the caps', () => {
   it('mirror the policy and the field', () => {
     expect(REQUEST_DAILY_CAP).toBe(20);
     expect(MIN_SUGGEST_CHARS).toBe(2);
+  });
+});
+
+// The button on a liker's or a copier's row (owner, 13 Nov 2026).
+describe('rowButton', () => {
+  const ships = [
+    edge('me', 'friend', 'accepted'),
+    edge('asked', 'me', 'accepted'),
+    edge('me', 'waiting'),
+    edge('asker', 'me'),
+  ];
+
+  it('offers each state by what stands between you', () => {
+    expect(rowButton('stranger', 'me', ships, [])).toBe('add');
+    expect(rowButton('friend', 'me', ships, [])).toBe('friends');
+    // Friends whichever of you asked.
+    expect(rowButton('asked', 'me', ships, [])).toBe('friends');
+    expect(rowButton('waiting', 'me', ships, [])).toBe('requested');
+    expect(rowButton('asker', 'me', ships, [])).toBe('accept');
+  });
+
+  it('offers nothing with nobody behind the row, nobody reading, or the reader themselves', () => {
+    expect(rowButton(null, 'me', ships, [])).toBeNull();
+    expect(rowButton('stranger', null, ships, [])).toBeNull();
+    expect(rowButton('me', 'me', ships, [])).toBeNull();
+  });
+
+  // Blocked wins over every standing the edges could still show — a
+  // stale crew can hold an edge the block has since cut.
+  it('offers nothing to somebody you blocked, whatever the edges say', () => {
+    for (const other of ['stranger', 'friend', 'waiting', 'asker']) {
+      expect(rowButton(other, 'me', ships, [other])).toBeNull();
+    }
+    expect(rowButton('stranger', 'me', ships, ['someone-else'])).toBe('add');
+  });
+
+  it('shows a tap the crew has not caught up with', () => {
+    expect(rowButton('stranger', 'me', ships, [], { stranger: 'requested' })).toBe('requested');
+    expect(rowButton('asker', 'me', ships, [], { asker: 'friends' })).toBe('friends');
+    // Somebody else's pledge is not this row's.
+    expect(rowButton('stranger', 'me', ships, [], { other: 'requested' })).toBe('add');
+  });
+
+  // A pledge decides only over the standing it was made from: once the
+  // edges say something it did not cause, they win.
+  it('lets the edges overrule a pledge they did not come from', () => {
+    // A request pledged, and meanwhile they asked you: answer them.
+    expect(rowButton('asker', 'me', ships, [], { asker: 'requested' })).toBe('accept');
+    // An acceptance pledged, and the request is gone: ask again.
+    expect(rowButton('stranger', 'me', ships, [], { stranger: 'friends' })).toBe('add');
+    // A pledge over a friendship changes nothing.
+    expect(rowButton('friend', 'me', ships, [], { friend: 'requested' })).toBe('friends');
+    expect(rowButton('waiting', 'me', ships, [], { waiting: 'friends' })).toBe('requested');
+  });
+
+  it('offers nothing to a blocked person even with a pledge', () => {
+    expect(rowButton('stranger', 'me', ships, ['stranger'], { stranger: 'requested' })).toBeNull();
+  });
+});
+
+describe('quietReason', () => {
+  it('keeps a failure’s own words', () => {
+    expect(quietReason(new Error('Network request failed'))).toBe('Network request failed');
+  });
+
+  // The policy's refusal across a block, which must not say so.
+  it('says nothing of a refusal by row-level security, in any case', () => {
+    expect(quietReason(new Error('new row violates row-level security policy for table "friendships"'))).toBeUndefined();
+    expect(quietReason(new Error('Row-Level Security'))).toBeUndefined();
+  });
+
+  it('says nothing for a failure with no words, or that is not an Error', () => {
+    expect(quietReason(new Error(''))).toBeUndefined();
+    expect(quietReason('offline')).toBeUndefined();
+    expect(quietReason(undefined)).toBeUndefined();
   });
 });

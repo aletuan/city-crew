@@ -1,8 +1,9 @@
 // A list's activity — who liked it and who saved a copy of it, all time,
 // newest first (owner, 13 Nov 2026). Threads' "Post activity", for a
-// collection: the list itself in a small card at the top, then one row
-// per act. Opened from "View activity ›" at the end of the card's
-// activity row, which only the list's owner is shown.
+// collection: the list itself in a small card at the top, then the two
+// counts, then one row per act in a card of its own. Opened from "View
+// activity ›" at the end of the card's activity row, which only the
+// list's owner is shown.
 //
 // ── the two fetches, and what they promise ──
 //
@@ -85,16 +86,91 @@
 // state, no card, no fetch. A list you have just deleted, opened from a
 // stale screen, is the same.
 //
+// ── the two counts (owner, 13 Nov 2026) ──
+//
+// Threads draws "♡ Likes 75 ›" and "⟳ Reposts 12 ›" between the post and
+// the people; here they are "♡ Likes" and "⧉ Copies" — "Bản sao", the
+// word "Lưu bản sao" already uses — each with its count and a chevron at
+// the right end. Counted from the same acts the list is drawn from
+// (`tallyOf`), so a count and the rows under it cannot disagree.
+//
+// A tap narrows the list to that kind and a second tap widens it again
+// (`toggledKind`). It opens nothing: on Threads each row opens a page of
+// its own, and here that page would be this list with one kind left out
+// — a second screen for what a filter does in place. The chosen row is
+// drawn on the glass with its glyph filled, and says `aria-selected`.
+//
+// A kind at 0 still shows its 0, but as a line to read: no press, no
+// chevron, since a chevron promises somewhere to go and a filter to
+// nothing is an empty list. If a refresh takes the chosen kind to 0 —
+// the last like taken back — the list widens to all by itself
+// (`shownKind`), rather than standing empty behind a row that can no
+// longer be tapped to undo it. Neither count is drawn while there is
+// nothing at all: the empty state says that in words, and "Likes 0,
+// Copies 0" above it would say it twice.
+//
+// ── the people, in a card ──
+//
+// The rows sit in one card, as the Crew screen's friends do: the card,
+// the hairline between rows across the card's width, and Crew's row
+// padding and gap. The row's content is as it was — the face with the
+// kind on its corner, the name on top and "@handle · age" under it.
+//
+// A `ScrollView` and a `Card`, not the `FlatList` the page had: a card is
+// one View around its rows, and a FlatList's rows are cells it mounts
+// and unmounts on its own, which cannot sit inside one. Crew draws its
+// friends the same way. The cost is that every row mounts at once —
+// the RPCs' cap (above) bounds it, and an owner's one list is not
+// measured anywhere near it. Rejected: each cell drawing its own piece
+// of the card's edge (a top with its corners, sides, a bottom with its
+// corners) — four styles imitating `Card` rather than using it, and a
+// hairline that has to know which cell is last.
+//
 // ── what a row does ──
 //
-// Nothing, for now. The app has no page for a person — the collection
-// card's own curator head says so: "there is no public profile screen to
-// open" — and the one sheet about a person (`PersonSheet`) is a menu of
-// acts, each wired by the screen that opens it (block and report on a
-// list's curator, unfriend on a friend), not a profile. Opening it here
-// would put Block on every liker, which is a decision about the feature
-// and not this page's to make; Follow and Add friend were deferred by the
-// owner. So the row is inert, and VoiceOver reads it as one line.
+// The row itself, nothing. The app has no page for a person — the
+// collection card's own curator head says so: "there is no public
+// profile screen to open" — and the one sheet about a person
+// (`PersonSheet`) is a menu of acts, each wired by the screen that opens
+// it, not a profile. Opening it here would put Block on every liker,
+// which is a decision about the feature and not this page's to make.
+// VoiceOver reads who and what as one line, and the button beside it as
+// a control of its own: an accessible row would swallow it.
+//
+// At its right end, the friend button (owner, 13 Nov 2026), from the
+// crew the app already holds (`useCrew`) and the actor's id the row now
+// carries — `rowButton` decides:
+//
+//   - Friends: the quiet outline, "Friends". A state, not a control.
+//   - No relation: "Add friend", which sends the request at once, shows
+//     "Requested" before the server has answered, reads the crew again,
+//     and says so in an Alert if it failed (and goes back to "Add
+//     friend"). No confirmation, as Crew's suggestions have none: the ask
+//     is silent and withdrawable.
+//   - You asked: the outline "Requested", inert. Cancelling is Crew's,
+//     behind its sheet; a second way to do it here would be a second
+//     place to explain it.
+//   - They asked you: "Accept", which accepts as Crew's Accept does, with
+//     the same optimism and the same Alert.
+//   - Blocked, yourself, or nobody behind the row: no button.
+//
+// Crew's looks, value for value, for the states it has: its "Add"
+// suggestion pill (the glass, the person glyph) for Add friend — quiet,
+// because a page of likers is a page of these and the owner made Crew's
+// quiet for exactly that (26 Oct 2026); its Cancel / Unblock outline for
+// Friends and Requested; its Accept's gradient for Accept, the one that
+// answers somebody waiting. Each at `CHIP_H`, 44 to the thumb with
+// `CHIP_SLOP`. The styles are restated here, not imported: the button
+// scale's check reads a button's face from the file's own `s`, and a
+// style borrowed from another screen's sheet would be a button it
+// cannot see.
+//
+// The words: "Kết bạn", "Đã gửi" (Crew's "Sent"), "Bạn bè", and
+// "Đồng ý", Crew's own word for Accept (owner, 13 Nov 2026): one answer
+// to a friend request, one word for it, wherever the request is met.
+// Rejected: "Chấp nhận", which named the act on a row about a like that
+// carries no "… muốn kết bạn với bạn" above it. Two words for one button
+// read as two different things.
 //
 // ── states, as Activity has them ──
 //
@@ -108,20 +184,28 @@
 // still shows the rows, and a refresh that fails behind kept rows keeps
 // them.
 
-import React, { useMemo } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Glyph } from '../components/ui/glyph';
-import { Avatar, Card, EmptyState, GradientCta, Screen, useTabBarClearance } from '../components/ui';
+import {
+  Avatar, Card, CHIP_H, CHIP_SLOP, EmptyState, GradientCta, PressableScale, Screen, successHaptic, useTabBarClearance,
+} from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
-import { useListActivityQuery } from '../lib/data';
+import { useCrew } from '../lib/crew';
+import { acceptFriendRequest, sendFriendRequest, useListActivityQuery } from '../lib/data';
+import { type Pledged, quietReason, rowButton } from '../lib/friends';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { actsOn, type ListAct } from '../lib/listActivity';
+import {
+  type ActKind, actsOn, type ListAct, ofKind, shownKind, tallyOf, toggledKind,
+} from '../lib/listActivity';
+import { usePending } from '../lib/pending';
 import { ageWord, listAgeOf } from '../lib/listAge';
 import { useMyLists } from '../lib/save';
 import { useScheme } from '../lib/theme';
-import { bgHex, colors, font, space, type } from '../theme';
+import { bgHex, colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 export default function CollectionActivityScreen({ navigation, route }: {
@@ -165,6 +249,38 @@ export default function CollectionActivityScreen({ navigation, route }: {
     : asking(likes) || asking(copies);
   // Either half failing; said only when nothing is there to show.
   const failed = !!likes.error || !!copies.error;
+
+  // The counts, and the kind the list is narrowed to — see the header.
+  const tally = useMemo(() => tallyOf(acts), [acts]);
+  const [chosen, setChosen] = useState<ActKind | null>(null);
+  const kind = shownKind(chosen, tally);
+  const shown = ofKind(acts, kind);
+
+  // The friend buttons — see the header. `pledged` is each tap until the
+  // crew is read again; `run` keeps one write per person in flight.
+  //
+  // No dimmed, disabled button while a write is out, as Crew has: the
+  // pledge takes the button away for the length of the write — Add
+  // friend becomes the inert "Requested", Accept the inert "Friends" —
+  // so there is nothing left to dim, and `run` refuses a second write
+  // for the same person all the same.
+  const crew = useCrew();
+  const [pledged, setPledged] = useState<Record<string, Pledged>>({});
+  const { run } = usePending();
+  const unpledge = (id: string) => setPledged(({ [id]: _gone, ...rest }) => rest);
+  const ask = (id: string, as: Pledged, write: () => Promise<void>, title: string) => {
+    setPledged((p) => ({ ...p, [id]: as }));
+    run(
+      id,
+      write,
+      () => { successHaptic(); crew.ships.reload(); },
+      (e) => { unpledge(id); Alert.alert(title, quietReason(e)); },
+    );
+  };
+  const addFriend = (id: string) => ask(id, 'requested', () => sendFriendRequest(me!, id),
+    t('Could not send the request', 'Không gửi được lời mời', 'リクエストを送れませんでした', '无法发送请求', '無法傳送請求'));
+  const acceptFriend = (id: string) => ask(id, 'friends', () => acceptFriendRequest(id, me!),
+    t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした', '无法接受请求', '無法接受請求'));
 
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -212,7 +328,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
   ) : null;
 
   const someone = t('Someone', 'Ai đó', '誰か', '有人', '有人');
-  const row = ({ item, index }: { item: ListAct; index: number }) => {
+  const row = (item: ListAct, index: number) => {
     /* Who, as every row of people in the app names them (owner, 13 Nov
        2026): the real name on top in the strong ink, the handle under it
        with its `@` — Crew's rows, and X's. With both on show the `@` is
@@ -233,45 +349,142 @@ export default function CollectionActivityScreen({ navigation, route }: {
       : t('Saved a copy', 'Đã lưu bản sao', 'コピーを保存', '保存了副本', '儲存了副本');
     return (
       <View
-        style={s.row}
-        accessible
-        // What the badge says by its shape is said in words, since
-        // VoiceOver cannot see the heart.
-        accessibilityLabel={[top, under, did, when].filter(Boolean).join(', ')}
+        key={`${item.kind}-${item.at}-${item.handle ?? ''}-${index}`}
+        style={[s.row, index > 0 && s.rowDivider]}
         testID="activity-row"
       >
-        {/* Who, and what they did on the face's corner — Activity's
-            arrangement, at Threads' sizes. */}
-        <View style={s.face}>
-          {/* The face off the row itself — see the header. */}
-          <Avatar url={item.avatar} size={ROW_FACE} />
-          <View style={[s.badge, ring, item.kind === 'like' ? s.badgeLike : s.badgeCopy]} testID={`activity-badge-${item.kind}`}>
-            <Glyph
-              name={item.kind === 'like' ? 'heart' : 'duplicate'}
-              size={BADGE_GLYPH}
-              color={item.kind === 'like' ? LIKE_INK : colors.accentInk}
-            />
+        <View
+          style={s.who}
+          accessible
+          // What the badge says by its shape is said in words, since
+          // VoiceOver cannot see the heart.
+          accessibilityLabel={[top, under, did, when].filter(Boolean).join(', ')}
+          testID="activity-who"
+        >
+          {/* Who, and what they did on the face's corner — Activity's
+              arrangement, at Threads' sizes. */}
+          <View style={s.face}>
+            {/* The face off the row itself — see the header. */}
+            <Avatar url={item.avatar} size={ROW_FACE} />
+            <View style={[s.badge, ring, item.kind === 'like' ? s.badgeLike : s.badgeCopy]} testID={`activity-badge-${item.kind}`}>
+              <Glyph
+                name={item.kind === 'like' ? 'heart' : 'duplicate'}
+                size={BADGE_GLYPH}
+                color={item.kind === 'like' ? LIKE_INK : colors.accentInk}
+              />
+            </View>
+          </View>
+          <View style={s.lines}>
+            {/* The age rides the second line when there is one, after the
+                handle as Crew's count does; alone, it follows the name. */}
+            {under ? (
+              <>
+                <Text style={s.handle} numberOfLines={1}>{top}</Text>
+                <Text style={s.name} numberOfLines={1}>{`${under} · ${when}`}</Text>
+              </>
+            ) : (
+              <View style={s.lineOne}>
+                <Text style={s.handle} numberOfLines={1}>{top}</Text>
+                <Text style={s.when}>{when}</Text>
+              </View>
+            )}
           </View>
         </View>
-        {/* The hairline is the text column's, not the row's, so it starts
-            where the words do and the faces stand clear of it — Threads'
-            inset separator. */}
-        <View style={[s.lines, index > 0 && s.divider]}>
-          {/* The age rides the second line when there is one, after the
-              handle as Crew's count does; alone, it follows the name. */}
-          {under ? (
-            <>
-              <Text style={s.handle} numberOfLines={1}>{top}</Text>
-              <Text style={s.name} numberOfLines={1}>{`${under} · ${when}`}</Text>
-            </>
-          ) : (
-            <View style={s.lineOne}>
-              <Text style={s.handle} numberOfLines={1}>{top}</Text>
-              <Text style={s.when}>{when}</Text>
-            </View>
-          )}
-        </View>
+        {friendButton(item.id)}
       </View>
+    );
+  };
+
+  /** The button at a row's right end, or none — see the header. */
+  const friendButton = (id: string | null) => {
+    const state = rowButton(id, me, crew.ships.data, crew.blocks.data, pledged);
+    if (!state || !id) return null;
+    if (state === 'add') {
+      return (
+        <PressableScale
+          onPress={() => addFriend(id)}
+          hitSlop={CHIP_SLOP}
+          scaleTo={0.94}
+          accessibilityRole="button"
+          testID="activity-add"
+        >
+          <View style={s.addBtn}>
+            <Glyph name="person-add-outline" size={15} color={colors.accent} />
+            <Text style={s.addText}>{t('Add friend', 'Kết bạn', '友達に追加', '加好友', '加好友')}</Text>
+          </View>
+        </PressableScale>
+      );
+    }
+    if (state === 'accept') {
+      return (
+        <PressableScale
+          onPress={() => acceptFriend(id)}
+          hitSlop={CHIP_SLOP}
+          scaleTo={0.94}
+          accessibilityRole="button"
+          testID="activity-accept"
+        >
+          <LinearGradient {...gradAI} style={s.acceptBtn}>
+            <Glyph name="checkmark" size={15} color={colors.accentInk} />
+            <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受', '接受')}</Text>
+          </LinearGradient>
+        </PressableScale>
+      );
+    }
+    // A state, not a control: drawn as Crew's quiet outline, read as words.
+    return (
+      <View style={s.quietBtn} testID={`activity-${state}`}>
+        <Text style={s.quietText}>
+          {state === 'friends'
+            ? t('Friends', 'Bạn bè', '友だち', '好友', '好友')
+            : t('Requested', 'Đã gửi', '送信済み', '已发送', '已傳送')}
+        </Text>
+      </View>
+    );
+  };
+
+  /** One of the two counts — see the header. */
+  const stat = (k: ActKind, index: number) => {
+    const n = tally[k];
+    const on = kind === k;
+    const label = k === 'like'
+      ? t('Likes', 'Lượt thích', 'いいね', '点赞', '按讚')
+      : t('Copies', 'Bản sao', 'コピー', '副本', '副本');
+    const glyph = k === 'like' ? (on ? 'heart' : 'heart-outline') : (on ? 'duplicate' : 'duplicate-outline');
+    const face = (
+      <>
+        <Glyph name={glyph} size={STAT_GLYPH} color={on ? colors.accent : colors.text} />
+        <Text style={s.statLabel}>{label}</Text>
+        <Text style={s.statCount} testID={`activity-stat-${k}-count`}>{n}</Text>
+        {n > 0 ? <Glyph name="chevron-forward" size={STAT_CHEVRON} color={colors.textTertiary} /> : null}
+      </>
+    );
+    if (n === 0) {
+      return (
+        <View
+          key={k}
+          style={[s.stat, index > 0 && s.rowDivider]}
+          accessible
+          accessibilityLabel={`${label}, 0`}
+          testID={`activity-stat-${k}`}
+        >
+          {face}
+        </View>
+      );
+    }
+    return (
+      <PressableScale
+        key={k}
+        onPress={() => setChosen((c) => toggledKind(c, k))}
+        haptic="selection"
+        contentStyle={[s.stat, index > 0 && s.rowDivider, on && s.statOn]}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}, ${n}`}
+        aria-selected={on}
+        testID={`activity-stat-${k}`}
+      >
+        {face}
+      </PressableScale>
     );
   };
 
@@ -302,6 +515,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
     <EmptyState icon="heart" title={emptyTitle} body={waitBody(t)} testID="activity-empty" />
   );
 
+  const drawn = !loading && acts.length > 0;
   return (
     <Screen
       title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}
@@ -310,16 +524,17 @@ export default function CollectionActivityScreen({ navigation, route }: {
       backBare
       compactTitle
     >
-      <FlatList
-        data={loading ? [] : acts}
-        renderItem={row}
-        keyExtractor={(a, i) => `${a.kind}-${a.at}-${a.handle ?? ''}-${i}`}
-        ListHeaderComponent={<>{card}{state}</>}
+      <ScrollView
         onScroll={duckScroll}
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
-      />
+      >
+        {card}
+        {state}
+        {drawn ? <Card style={s.group} testID="activity-stats">{(['like', 'copy'] as const).map(stat)}</Card> : null}
+        {drawn ? <Card style={s.group} testID="activity-people">{shown.map(row)}</Card> : null}
+      </ScrollView>
     </Screen>
   );
 }
@@ -344,6 +559,13 @@ const HEAD_LINE = HEAD_FACE / 2;
  *  written there — Facebook and X draw 40 — and the two lines here stand
  *  about its height. */
 const ROW_FACE = 40;
+/** A count's glyph: 17, what Crew's Accept sets beside its 15pt word —
+ *  the app's one glyph that leads a 15pt label on a row of its own. The
+ *  collection page's heart is 15, but it stands beside a figure, not a
+ *  word, and is a control in a row of controls. */
+const STAT_GLYPH = 17;
+/** A count's chevron: 15, as "View activity ›" draws it beside its words. */
+const STAT_CHEVRON = 15;
 /** The badge's glyph: Activity's 11, a mark rather than an icon to tap. */
 const BADGE_GLYPH = 11;
 /** The badge's ring of page: 2, enough to cut the disc off the face it
@@ -388,8 +610,32 @@ const s = StyleSheet.create({
   // to look the same in both places.
   desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'justify' },
   spinner: { marginTop: 20 },
-  // Centred: a face beside two lines wants its middle on theirs.
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // The counts' card and the people's: the page's gap under each.
+  group: { marginBottom: space.cardGap },
+  // A count: Crew's row padding, glyph and word at the left, the figure
+  // and the chevron pushed to the right by the word's `flex`.
+  stat: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: space.cardPadding, paddingVertical: 13,
+  },
+  // The chosen count: on the glass, as a chosen chip is, with its glyph
+  // filled in the accent.
+  statOn: { backgroundColor: colors.surfaceGlass },
+  statLabel: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flex: 1 },
+  statCount: { color: colors.textSecondary, fontSize: 15, fontVariant: ['tabular-nums'] },
+  // Crew's row inside its card, value for value: 14 between the face,
+  // the words and the button, the card's padding at either end, 13 above
+  // and below. Centred: a face beside two lines wants its middle on
+  // theirs.
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: space.cardPadding, paddingVertical: 13,
+  },
+  // Crew's hairline, across the card's width.
+  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  // The face and the words, which VoiceOver reads as one line; it gives
+  // the button its width and takes the rest.
+  who: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
   face: { width: ROW_FACE, height: ROW_FACE },
   // Activity's 20pt badge on its face's corner, hung a hair past it so it
   // reads as pinned on, with a ring of the page instead of a hairline.
@@ -402,13 +648,31 @@ const s = StyleSheet.create({
   // The accent as a surface, and what sits on it: `accentFill` and
   // `accentInk`, 6.79:1.
   badgeCopy: { backgroundColor: colors.accentFill },
-  // 12 above and below, inside the column, so the hairline at its top is
-  // the row's edge where the words are.
-  lines: { flex: 1, paddingVertical: 12, gap: 2 },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  lines: { flex: 1, gap: 2 },
   lineOne: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   // The handle gives when it is long; the age never does.
   handle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
   when: { color: colors.textTertiary, ...type.meta, flexShrink: 0 },
   name: { color: colors.textSecondary, ...type.meta },
+
+  // ── the friend button, in Crew's looks ──
+  // Crew's "Add" suggestion pill.
+  addBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6,
+    backgroundColor: colors.surfaceGlass,
+  },
+  addText: { color: colors.text, fontSize: 14, fontWeight: font.medium },
+  // Crew's Accept, at the chip's height rather than its request card's.
+  acceptBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6,
+  },
+  acceptText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
+  // Crew's quiet outline: Cancel, Unblock — here Friends and Requested.
+  quietBtn: {
+    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
+    minHeight: CHIP_H, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 6,
+  },
+  quietText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
 });

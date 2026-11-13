@@ -74,6 +74,71 @@ export function standingWith(rows: readonly FriendshipRow[], me: string, other: 
   return 'none';
 }
 
+// ── the button on a person's row ──
+
+/** What a row about somebody offers, by what stands between you: ask
+ *  them, wait on them, answer them, or nothing to do. */
+export type RowButton = 'add' | 'requested' | 'accept' | 'friends';
+
+/** What a tap on a row's button has just claimed, before the crew has
+ *  been read again to confirm it: a request sent, or one accepted. */
+export type Pledged = 'requested' | 'friends';
+
+const BUTTON_OF: Record<Exclude<Standing, 'yourself'>, RowButton> = {
+  none: 'add', asked: 'requested', asks_you: 'accept', friends: 'friends',
+};
+
+/**
+ * The button a list's activity page puts on a liker's or a copier's row
+ * (owner, 13 Nov 2026) — `standingWith`'s answer, as a control.
+ *
+ * None at all for a row with nobody behind it (no id: a gone profile, or
+ * a function from before ids rode the rows), for the reader themselves,
+ * and for anybody the reader has blocked — a button there would offer
+ * the one thing the block was for refusing. The other direction, a
+ * person who has blocked the reader, cannot be known here and must not
+ * be: the request is refused by the policy, and the failure is worded so
+ * as not to say why (`quietReason`).
+ *
+ * `pledged` is the tap the crew has not caught up with yet. It decides
+ * only while the edges still say what they said before the tap — no
+ * relation for a request, their request for an acceptance — so the
+ * moment the crew is read again the edges speak for themselves, and a
+ * pledge can never stand over something the edges say that it did not
+ * cause: a friendship made elsewhere, a request of theirs that arrived.
+ */
+export function rowButton(
+  other: string | null,
+  me: string | null,
+  ships: readonly FriendshipRow[],
+  blocked: readonly string[],
+  pledged: Readonly<Record<string, Pledged>> = {},
+): RowButton | null {
+  if (!other || !me || blocked.includes(other)) return null;
+  const standing = standingWith(ships, me, other);
+  if (standing === 'yourself') return null;
+  const shown = BUTTON_OF[standing];
+  if (shown === 'add' && pledged[other] === 'requested') return 'requested';
+  if (shown === 'accept' && pledged[other] === 'friends') return 'friends';
+  return shown;
+}
+
+/**
+ * The reason to show under a friend request that failed, or none.
+ *
+ * The insert policy refuses a request across a block, and for a reader
+ * under the daily cap that is the one way it refuses — so a refusal by
+ * row-level security, said in its own words, would tell the reader they
+ * are blocked. A block must not announce itself (the Crew screen words
+ * its own send the same way), so that refusal gets the title alone. Any
+ * other failure keeps its words: a dropped connection is worth saying.
+ */
+export function quietReason(error: unknown): string | undefined {
+  const message = error instanceof Error ? error.message : '';
+  if (!message || /row-level security/i.test(message)) return undefined;
+  return message;
+}
+
 // ── the activity feed ──
 
 /** A like on one of the reader's lists, as `likes_on_mine` returns it.

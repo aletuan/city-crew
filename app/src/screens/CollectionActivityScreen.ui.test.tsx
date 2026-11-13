@@ -21,21 +21,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, cleanup, fireEvent, fontSizeOf, render, screen, textStyleOf, viewStyleOf, within } from '../uitest/render';
 import { cacheKey } from '../lib/data/cache';
-import { forgetSharedFetches } from '../lib/data/fetch';
+import { forgetSharedFetches, prefetchShared } from '../lib/data/fetch';
 import type { Nav, RootRoute } from '../nav';
-import type { Applause, Copy } from '../lib/friends';
+import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
-import { bgHex, colors, font } from '../theme';
+import { CHIP_H, CHIP_SLOP } from '../components/ui';
+import { bgHex, colors, font, radius } from '../theme';
 
 const NOW = new Date(2026, 10, 13, 12, 0, 0);
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 
+// `Alert` from react-native-web is a silent no-op, so a failed request's
+// Alert is caught at the import the screen uses — as Crew's tests do.
+const alert = vi.hoisted(() => vi.fn<(title: string, body?: string) => void>());
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  Alert: { alert },
+}));
+
 const data = vi.hoisted(() => ({
   fetchApplause: vi.fn(async (_since: string): Promise<Applause[]> => []),
   fetchCopies: vi.fn(async (_since: string): Promise<Copy[]> => []),
   fetchCuratorAvatars: vi.fn(async (_handles: string[]): Promise<Record<string, string>> => ({})),
+  sendFriendRequest: vi.fn(async (_me: string, _other: string): Promise<void> => {}),
+  acceptFriendRequest: vi.fn(async (_requester: string, _me: string): Promise<void> => {}),
 }));
 // The module the hooks read the RPCs from, not the barrel: `hooks.ts`
 // imports them from here, so a stand-in on the barrel would miss them.
@@ -44,7 +55,17 @@ vi.mock('../lib/data/people', async (orig) => ({
   fetchApplause: data.fetchApplause,
   fetchCopies: data.fetchCopies,
   fetchCuratorAvatars: data.fetchCuratorAvatars,
+  sendFriendRequest: data.sendFriendRequest,
+  acceptFriendRequest: data.acceptFriendRequest,
 }));
+
+// The crew the app already holds: the edges and the blocks the friend
+// button reads, and the reload a request ends with.
+const crew = vi.hoisted(() => ({
+  ships: { data: [] as FriendshipRow[], reload: vi.fn() },
+  blocks: { data: [] as string[] },
+}));
+vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 
 const state = vi.hoisted(() => ({
   me: 'me' as string | null,
@@ -98,9 +119,12 @@ const show = async (slug = 'old-quarter') => {
   return navigation;
 };
 
+/** A row's who: the face and the words, which VoiceOver reads as one. */
+const whoOf = (r: HTMLElement) => within(r).getByTestId('activity-who');
+
 /** Each row's two lines, as read: line one's words, then line two's. */
 const rowLines = () => screen.getAllByTestId('activity-row').map((r) => {
-  const lines = r.lastElementChild as HTMLElement;
+  const lines = whoOf(r).lastElementChild as HTMLElement;
   return [...lines.children].map((c) => [...c.querySelectorAll('div,span')].length
     ? [...c.children].map((w) => w.textContent).join(' ')
     : c.textContent);
@@ -132,6 +156,10 @@ beforeEach(async () => {
   state.mineLoading = false;
   state.lang = 'en';
   state.scheme = 'dark';
+  crew.ships.data = [];
+  crew.blocks.data = [];
+  data.sendFriendRequest.mockImplementation(async () => {});
+  data.acceptFriendRequest.mockImplementation(async () => {});
 });
 afterEach(() => { vi.useRealTimers(); });
 
@@ -366,7 +394,7 @@ describe('the rows', () => {
   it('draws a 40pt face', async () => {
     data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
-    const face = screen.getByTestId('activity-row').firstElementChild as HTMLElement;
+    const face = whoOf(screen.getByTestId('activity-row')).firstElementChild as HTMLElement;
     expect([viewStyleOf(face).width, viewStyleOf(face).height]).toEqual([40, 40]);
   });
 
@@ -387,7 +415,7 @@ describe('the rows', () => {
     for (const b of [liked, copied]) {
       expect(viewStyleOf(b)).toMatchObject({ position: 'absolute', right: -3, bottom: -3, width: 20, borderWidth: 2 });
       // Pinned on the face itself, not beside it.
-      expect(b.parentElement).toBe(b.closest('[data-testid="activity-row"]')!.firstElementChild);
+      expect(b.parentElement).toBe(b.closest('[data-testid="activity-who"]')!.firstElementChild);
     }
   });
 
@@ -404,17 +432,18 @@ describe('the rows', () => {
     expect(viewStyleOf(screen.getByTestId('activity-badge-like')).borderColor).toBe(bgHex.light);
   });
 
-  it('draws a hairline between rows, from the text column, none above the first', async () => {
+  // Crew's hairline (owner, 13 Nov 2026): across the row inside the
+  // card, none above the first — the rows of a card, not a list's inset.
+  it('draws Crew’s hairline between rows, across the row, none above the first', async () => {
     data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'a'), like(ago(9 * MIN), 'b')]);
     await show();
     const [first, second] = screen.getAllByTestId('activity-row');
-    const lines = (r: HTMLElement) => r.lastElementChild as HTMLElement;
-    expect(viewStyleOf(lines(first)).borderTopWidth ?? 0).toBe(0);
-    expect(viewStyleOf(lines(second))).toMatchObject({
+    expect(viewStyleOf(first).borderTopWidth ?? 0).toBe(0);
+    expect(viewStyleOf(second)).toMatchObject({
       borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
     });
-    // The row itself carries none, so the face stands clear of it.
-    expect(viewStyleOf(second).borderTopWidth ?? 0).toBe(0);
+    // And not again on the words: one line between two rows.
+    expect(viewStyleOf(whoOf(second).lastElementChild as HTMLElement).borderTopWidth ?? 0).toBe(0);
   });
 
   it('is a line to read, not a control, and says in words what the badge shows', async () => {
@@ -422,12 +451,16 @@ describe('the rows', () => {
     data.fetchCopies.mockImplementation(async () => [copy(ago(9 * MIN), null)]);
     await show();
     const rows = screen.getAllByTestId('activity-row');
-    expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual([
+    expect(rows.map((r) => whoOf(r).getAttribute('aria-label'))).toEqual([
       'Lan Phạm, @lan, Liked, 5m',
       'Someone, Saved a copy, 9m',
     ]);
-    // No Follow, no Add friend, nothing to press in the list but Back.
-    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Back']);
+    // The row is not a button; the one control in it is its friend
+    // button, beside the words and not around them.
+    for (const r of rows) expect(r.getAttribute('role')).toBeNull();
+    expect(within(rows[0]).getAllByRole('button').map((b) => b.textContent)).toEqual(['Add friend']);
+    expect(within(whoOf(rows[0])).queryAllByRole('button')).toEqual([]);
+    expect(within(rows[1]).queryAllByRole('button')).toEqual([]);
   });
 });
 
@@ -588,5 +621,404 @@ describe('the states', () => {
     await show();
     expect(screen.queryByTestId('activity-failed')).toBeNull();
     expect(rowLines()).toEqual([['minh 5m']]);
+  });
+});
+
+// ── commit B (owner, 13 Nov 2026): the counts, the card, the buttons ──
+
+/** The `hitSlop` a pressable was given, read off its props. */
+const slopOf = (el: HTMLElement): unknown => {
+  const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'))!;
+  type Fiber = { memoizedProps?: { hitSlop?: unknown }; return?: Fiber };
+  let f: Fiber | undefined = (el as unknown as Record<string, Fiber>)[key];
+  while (f && f.memoizedProps?.hitSlop === undefined) f = f.return;
+  return f?.memoizedProps?.hitSlop;
+};
+const edge = (requester: string, addressee: string, status: 'pending' | 'accepted' = 'pending'): FriendshipRow =>
+  ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z' });
+
+describe('the two counts', () => {
+  const stat = (k: 'like' | 'copy') => screen.getByTestId(`activity-stat-${k}`);
+  const handles = () => rowLines().map((r) => r[0].split(' ')[0]);
+  const someActs = () => {
+    data.fetchApplause.mockImplementation(async () => [
+      like(ago(1 * MIN), 'a'), like(ago(3 * MIN), 'b'), like(ago(5 * MIN), 'c'),
+    ]);
+    data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'd'), copy(ago(4 * MIN), 'e')]);
+  };
+
+  it('counts each kind from the same acts as the list, likes first, between the card and the people', async () => {
+    someActs();
+    data.fetchApplause.mockImplementation(async () => [
+      like(ago(1 * MIN), 'a'), like(ago(3 * MIN), 'b'), like(ago(5 * MIN), 'c'), like(ago(6 * MIN), 'x', null, 'c2'),
+    ]);
+    await show();
+    // Another list's like is not counted, as it is not listed.
+    expect(stat('like').textContent).toBe('Likes3');
+    expect(stat('copy').textContent).toBe('Copies2');
+    const stats = screen.getByTestId('activity-stats');
+    expect([...stats.children]).toEqual([stat('like'), stat('copy')]);
+    const card = screen.getByTestId('activity-list');
+    const people = screen.getByTestId('activity-people');
+    // In the page's order: the list's card, the counts, the people.
+    expect(card.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(stats.compareDocumentPosition(people) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('leads each with its glyph and ends it with the count and a chevron', async () => {
+    someActs();
+    await show();
+    const icons = (k: 'like' | 'copy') => [...stat(k).querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
+    expect(icons('like')).toEqual(['heart-outline', 'chevron-forward']);
+    expect(icons('copy')).toEqual(['duplicate-outline', 'chevron-forward']);
+    expect(screen.getByTestId('activity-stat-like-count').textContent).toBe('3');
+    // The count after the word: the word takes the row's spare width.
+    expect(textStyleOf(within(stat('like')).getByText('Likes'))?.flex).toBe(1);
+  });
+
+  it('says them in Vietnamese, in the words the app already uses', async () => {
+    state.lang = 'vi';
+    someActs();
+    await show();
+    expect(stat('like').textContent).toBe('Lượt thích3');
+    expect(stat('copy').textContent).toBe('Bản sao2');
+  });
+
+  it('narrows the people to a kind with a tap, and widens them again with the second', async () => {
+    someActs();
+    await show();
+    expect(handles()).toEqual(['a', 'd', 'b', 'e', 'c']);
+    expect(stat('like').getAttribute('aria-selected')).toBe('false');
+
+    fireEvent.click(stat('like'));
+    expect(handles()).toEqual(['a', 'b', 'c']);
+    expect(stat('like').getAttribute('aria-selected')).toBe('true');
+    expect(stat('copy').getAttribute('aria-selected')).toBe('false');
+    // Still a count, not a page: nothing was opened.
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+
+    fireEvent.click(stat('like'));
+    expect(handles()).toEqual(['a', 'd', 'b', 'e', 'c']);
+    expect(stat('like').getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('goes from one kind straight to the other', async () => {
+    someActs();
+    await show();
+    fireEvent.click(stat('like'));
+    fireEvent.click(stat('copy'));
+    expect(handles()).toEqual(['d', 'e']);
+    expect(stat('copy').getAttribute('aria-selected')).toBe('true');
+    expect(stat('like').getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('draws the chosen one on the glass with its glyph filled in the accent', async () => {
+    someActs();
+    await show();
+    // The tint is on the scaled face, `contentStyle`, read from the
+    // committed tree as CollectionsScreen's test reads its own: a DOM
+    // node's fiber can be the stale half of the pair after an update.
+    const ground = (k: 'like' | 'copy') => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const stack: Fiber[] = [host[Object.keys(host).find((x) => x.startsWith('__reactContainer'))!].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && typeof p === 'object' && p.testID === `activity-stat-${k}` && 'contentStyle' in p) {
+          return (StyleSheet.flatten(p.contentStyle as never) as { backgroundColor?: unknown }).backgroundColor;
+        }
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error(`no face for ${k}`);
+    };
+    expect(ground('like')).toBeUndefined();
+    fireEvent.click(stat('like'));
+    expect(ground('like')).toBe(colors.surfaceGlass);
+    expect(ground('copy')).toBeUndefined();
+    const glyph = stat('like').querySelector('[data-icon]')!;
+    expect([glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')]).toEqual(['heart', String(colors.accent)]);
+    fireEvent.click(stat('copy'));
+    expect(stat('copy').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('duplicate');
+    expect(stat('like').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('heart-outline');
+  });
+
+  it('reads each as a button with its count', async () => {
+    someActs();
+    await show();
+    expect(screen.getByRole('button', { name: 'Likes, 3' })).toBe(stat('like'));
+    expect(screen.getByRole('button', { name: 'Copies, 2' })).toBe(stat('copy'));
+  });
+
+  // A kind with none still says 0, as a line: no press, no chevron.
+  it('shows a kind at 0 as a figure, not a control', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(2 * MIN), 'b')]);
+    await show();
+    expect(stat('copy').textContent).toBe('Copies0');
+    expect(stat('copy').getAttribute('role')).toBeNull();
+    expect(stat('copy').getAttribute('aria-label')).toBe('Copies, 0');
+    expect([...stat('copy').querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'))).toEqual(['duplicate-outline']);
+    fireEvent.click(stat('copy'));
+    expect(handles()).toEqual(['a', 'b']);
+    // The other row is a control as ever.
+    expect(stat('like').getAttribute('role')).toBe('button');
+  });
+
+  // The answer is shared, so another reader can refresh it under this
+  // page — here the collection page's ask, past its two minutes. When
+  // that takes the chosen kind to none, the list widens to all rather
+  // than standing empty behind a row that can no longer be tapped.
+  it('widens to all when a refresh takes the chosen kind to none', async () => {
+    someActs();
+    await show();
+    fireEvent.click(stat('copy'));
+    expect(handles()).toEqual(['d', 'e']);
+    vi.setSystemTime(new Date(NOW.getTime() + 3 * MIN));
+    await act(async () => {
+      prefetchShared(cacheKey('copiesofmine', 'all', 'me'), async () => [] as Copy[], [] as Copy[]);
+    });
+    expect(stat('copy').textContent).toBe('Copies0');
+    expect(handles()).toEqual(['a', 'b', 'c']);
+    expect(stat('like').getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('is not drawn while there is nothing', async () => {
+    await show();
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+    expect(screen.queryByTestId('activity-stats')).toBeNull();
+    expect(screen.queryByTestId('activity-people')).toBeNull();
+  });
+
+  it('is not drawn while the acts are on their way', async () => {
+    data.fetchApplause.mockImplementation(() => new Promise(() => {}));
+    data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'd')]);
+    await show();
+    expect(screen.getByTestId('activity-loading')).toBeTruthy();
+    expect(screen.queryByTestId('activity-stats')).toBeNull();
+    expect(screen.queryByTestId('activity-people')).toBeNull();
+  });
+});
+
+describe('the people, in a card', () => {
+  it('puts every row in one card, as Crew’s friends are, at the page’s gap', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(2 * MIN), 'b')]);
+    data.fetchCopies.mockImplementation(async () => [copy(ago(3 * MIN), 'c')]);
+    await show();
+    const people = screen.getByTestId('activity-people');
+    expect([...people.children]).toEqual(screen.getAllByTestId('activity-row'));
+    // `Card` itself: its radius, its ground and its rim.
+    expect(viewStyleOf(people)).toMatchObject({
+      borderRadius: radius.card, backgroundColor: colors.surfaceCard, borderWidth: 1, marginBottom: 14,
+    });
+    expect(viewStyleOf(screen.getByTestId('activity-stats'))).toMatchObject({ borderRadius: radius.card, marginBottom: 14 });
+  });
+
+  it('pads each row as Crew’s are', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a')]);
+    await show();
+    expect(viewStyleOf(screen.getByTestId('activity-row'))).toMatchObject({
+      flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 13,
+    });
+  });
+});
+
+describe('the friend button', () => {
+  const rowOf = (handle: string) => screen.getAllByTestId('activity-row')
+    .find((r) => rowLines()[screen.getAllByTestId('activity-row').indexOf(r)][0].startsWith(handle))!;
+  const buttonOf = (handle: string) => {
+    const r = rowOf(handle);
+    return (r.lastElementChild === whoOf(r) ? null : r.lastElementChild) as HTMLElement | null;
+  };
+
+  it('offers each state by what stands between you, at the row’s right end', async () => {
+    crew.ships.data = [
+      edge('me', 'id-friend', 'accepted'),
+      edge('me', 'id-waiting'),
+      edge('id-asker', 'me'),
+    ];
+    data.fetchApplause.mockImplementation(async () => [
+      like(ago(1 * MIN), 'friend'), like(ago(2 * MIN), 'waiting'), like(ago(3 * MIN), 'asker'), like(ago(4 * MIN), 'stranger'),
+    ]);
+    await show();
+    expect(buttonOf('friend')!.textContent).toBe('Friends');
+    expect(buttonOf('waiting')!.textContent).toBe('Requested');
+    expect(buttonOf('asker')!.textContent).toBe('Accept');
+    expect(buttonOf('stranger')!.textContent).toBe('Add friend');
+    // Friends and Requested are states to read; the other two are controls.
+    expect(buttonOf('friend')!.getAttribute('role')).toBeNull();
+    expect(buttonOf('waiting')!.getAttribute('role')).toBeNull();
+    expect(buttonOf('asker')!.getAttribute('role')).toBe('button');
+    expect(buttonOf('stranger')!.getAttribute('role')).toBe('button');
+  });
+
+  it('says them in Vietnamese', async () => {
+    state.lang = 'vi';
+    crew.ships.data = [edge('me', 'id-friend', 'accepted'), edge('me', 'id-waiting'), edge('id-asker', 'me')];
+    data.fetchApplause.mockImplementation(async () => [
+      like(ago(1 * MIN), 'friend'), like(ago(2 * MIN), 'waiting'), like(ago(3 * MIN), 'asker'), like(ago(4 * MIN), 'stranger'),
+    ]);
+    await show();
+    expect(['friend', 'waiting', 'asker', 'stranger'].map((h) => buttonOf(h)!.textContent))
+      .toEqual(['Bạn bè', 'Đã gửi', 'Đồng ý', 'Kết bạn']);
+  });
+
+  it('wears Crew’s looks: the quiet outline, the glass pill, the gradient — each at the chip’s height', async () => {
+    crew.ships.data = [edge('me', 'id-friend', 'accepted'), edge('me', 'id-waiting'), edge('id-asker', 'me')];
+    data.fetchApplause.mockImplementation(async () => [
+      like(ago(1 * MIN), 'friend'), like(ago(2 * MIN), 'waiting'), like(ago(3 * MIN), 'asker'), like(ago(4 * MIN), 'stranger'),
+    ]);
+    await show();
+    for (const h of ['friend', 'waiting']) {
+      expect(viewStyleOf(buttonOf(h)!)).toMatchObject({
+        borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill, minHeight: CHIP_H,
+      });
+      expect(textStyleOf(within(buttonOf(h)!).getByText(/./))?.color).toBe(colors.textSecondary);
+    }
+    const add = buttonOf('stranger')!.firstElementChild!.firstElementChild as HTMLElement;
+    expect(viewStyleOf(add)).toMatchObject({ backgroundColor: colors.surfaceGlass, borderRadius: radius.pill, minHeight: CHIP_H });
+    expect(add.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('person-add-outline');
+    const accept = buttonOf('asker')!;
+    expect(accept.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
+    expect(viewStyleOf(accept.querySelector('[data-stub="LinearGradient"]') as HTMLElement).minHeight).toBe(CHIP_H);
+    expect(textStyleOf(within(accept).getByText('Accept'))?.color).toBe(colors.accentInk);
+    // 44 to the thumb, the chip's slop.
+    expect(slopOf(buttonOf('stranger')!)).toEqual(CHIP_SLOP);
+    expect(slopOf(accept)).toEqual(CHIP_SLOP);
+  });
+
+  it('offers nothing to somebody you blocked, to yourself, or to a row with nobody behind it', async () => {
+    crew.blocks.data = ['id-blocked'];
+    data.fetchApplause.mockImplementation(async () => [
+      like(ago(1 * MIN), 'blocked'),
+      { ...like(ago(2 * MIN), 'andy'), liker_id: 'me' },
+      like(ago(3 * MIN), null),
+      // A function from before the ids rode the rows: no id at all.
+      { collection_id: 'c1', liked_at: ago(4 * MIN), liker_handle: 'old', liker_name: null },
+    ]);
+    await show();
+    for (const r of screen.getAllByTestId('activity-row')) expect(r.lastElementChild).toBe(whoOf(r));
+  });
+
+  describe('Add friend', () => {
+    const only = () => {
+      data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'lan', 'Lan Phạm')]);
+    };
+
+    it('sends the request as you, says Requested at once, and reads the crew again', async () => {
+      only();
+      let done!: () => void;
+      data.sendFriendRequest.mockImplementation(() => new Promise<void>((r) => { done = r; }));
+      await show();
+      fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Add friend' }));
+      expect(data.sendFriendRequest).toHaveBeenCalledExactlyOnceWith('me', 'id-lan');
+      // Before the server has answered.
+      expect(buttonOf('Lan')!.textContent).toBe('Requested');
+      expect(buttonOf('Lan')!.getAttribute('role')).toBeNull();
+      expect(crew.ships.reload).not.toHaveBeenCalled();
+      await act(async () => { done(); });
+      expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+      expect(buttonOf('Lan')!.textContent).toBe('Requested');
+      expect(alert).not.toHaveBeenCalled();
+    });
+
+    it('goes back to Add friend and says so when the request fails', async () => {
+      only();
+      data.sendFriendRequest.mockImplementation(async () => { throw new Error('Network request failed'); });
+      await show();
+      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Add friend' })); });
+      expect(alert).toHaveBeenCalledExactlyOnceWith('Could not send the request', 'Network request failed');
+      expect(buttonOf('Lan')!.textContent).toBe('Add friend');
+      expect(crew.ships.reload).not.toHaveBeenCalled();
+    });
+
+    // A refusal across a block must not say that it was one.
+    it('does not say why when the policy refused it', async () => {
+      only();
+      data.sendFriendRequest.mockImplementation(async () => {
+        throw new Error('new row violates row-level security policy for table "friendships"');
+      });
+      await show();
+      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Add friend' })); });
+      expect(alert).toHaveBeenCalledExactlyOnceWith('Could not send the request', undefined);
+    });
+
+    it('says it failed in Vietnamese', async () => {
+      state.lang = 'vi';
+      only();
+      data.sendFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
+      await show();
+      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Kết bạn' })); });
+      expect(alert).toHaveBeenCalledExactlyOnceWith('Không gửi được lời mời', 'offline');
+    });
+
+    // Two rows by one person — a like and a copy — are one person: a tap
+    // on either says Requested on both, and sends once.
+    it('answers for the person on every row of theirs', async () => {
+      only();
+      data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'lan', 'Lan Phạm')]);
+      data.sendFriendRequest.mockImplementation(() => new Promise<void>(() => {}));
+      await show();
+      const rows = screen.getAllByTestId('activity-row');
+      fireEvent.click(within(rows[0]).getByRole('button', { name: 'Add friend' }));
+      expect(rows.map((r) => (r.lastElementChild as HTMLElement).textContent)).toEqual(['Requested', 'Requested']);
+      expect(data.sendFriendRequest).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Accept', () => {
+    const asked = () => {
+      crew.ships.data = [edge('id-lan', 'me')];
+      data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'lan', 'Lan Phạm')]);
+    };
+
+    it('accepts their request, says Friends at once, and reads the crew again', async () => {
+      asked();
+      let done!: () => void;
+      data.acceptFriendRequest.mockImplementation(() => new Promise<void>((r) => { done = r; }));
+      await show();
+      fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Accept' }));
+      expect(data.acceptFriendRequest).toHaveBeenCalledExactlyOnceWith('id-lan', 'me');
+      expect(data.sendFriendRequest).not.toHaveBeenCalled();
+      expect(buttonOf('Lan')!.textContent).toBe('Friends');
+      await act(async () => { done(); });
+      expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('goes back to Accept and says so when it fails', async () => {
+      asked();
+      data.acceptFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
+      await show();
+      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Accept' })); });
+      expect(alert).toHaveBeenCalledExactlyOnceWith('Could not accept the request', 'offline');
+      expect(buttonOf('Lan')!.textContent).toBe('Accept');
+    });
+
+    it('says it failed in Vietnamese', async () => {
+      state.lang = 'vi';
+      asked();
+      data.acceptFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
+      await show();
+      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Đồng ý' })); });
+      expect(alert).toHaveBeenCalledExactlyOnceWith('Không chấp nhận được lời mời', 'offline');
+    });
+  });
+
+  // One write per person in flight: the tap takes the button away until
+  // the write has answered, so there is no second tap to send; a failure
+  // gives the button back.
+  it('leaves nothing to tap twice while the first is out', async () => {
+    crew.ships.data = [edge('id-lan', 'me')];
+    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'lan')]);
+    let fail!: (e: Error) => void;
+    data.acceptFriendRequest.mockImplementation(() => new Promise<void>((_r, j) => { fail = j; }));
+    await show();
+    const accept = within(rowOf('lan')).getByRole('button', { name: 'Accept' });
+    fireEvent.click(accept);
+    // Friends now, and nothing to tap.
+    expect(within(rowOf('lan')).queryByRole('button')).toBeNull();
+    await act(async () => { fail(new Error('offline')); });
+    expect(within(rowOf('lan')).getByRole('button', { name: 'Accept' })).toBeTruthy();
+    expect(data.acceptFriendRequest).toHaveBeenCalledTimes(1);
   });
 });
