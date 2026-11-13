@@ -43,6 +43,8 @@ import { readerKey, COLLECTION_VIEW_KEY } from '../lib/readerPrefs';
 import { oneOf, useStored } from '../lib/stored';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
+import { listAgeOf } from '../lib/listAge';
+import { numericDate, numericDateWithYear } from '../lib/format';
 import { colors, display, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
@@ -83,7 +85,7 @@ function OwnEmpty({ onAdd }: { onAdd: () => void }) {
  *  again, or shared with this many people — see `said`. */
 type Said = 'public' | 'private' | { shared: number };
 
-/** The glyph at the card's foot and on the sheet's row, for each of the
+/** The glyph under your handle and on the sheet's row, for each of the
  *  three answers — see `visibility`. */
 const SEEN_GLYPH: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
   public: 'globe-outline',
@@ -141,8 +143,35 @@ const GRID_GAP = 8;
 const ADD_CELL = '+add' as const;
 
 /** The face at the head of the card, yours or the curator's — see
- *  `curatorRow`. The ⋯ beside it is centred on it (`s.moreHang`). */
-const FACE = 28;
+ *  `curatorRow`. The ⋯ beside it is centred on it (`s.moreHang`).
+ *
+ *  40, up from 28 (owner, 13 Nov 2026), when the head became a post's:
+ *  a face with two lines beside it, the handle and how old the list is.
+ *  The size the apps this reads beside give that head — Facebook and X
+ *  draw 40, Threads 36, Instagram 32 — and the height of the two lines
+ *  (`BYLINE_LINE` twice), so the face and the words beside it are one
+ *  block, neither overhanging the other. */
+const FACE = 40;
+
+/** Each of the two lines beside the face: half of it, so the handle and
+ *  the line under it stand exactly the face's height. A 15pt line in the
+ *  system face is 17.9 by its own metrics (SF Pro's ascender and
+ *  descender come to 1.19 em), so 20 adds about a point above and below
+ *  each, and nothing is clipped. */
+const BYLINE_LINE = FACE / 2;
+
+/** What the line under the handle adds above and below the who-can-see
+ *  control to make Apple's 44 for the thumb. The control cannot be drawn
+ *  `CHIP_H` tall there: 32 in a 20pt line would make the two lines 52,
+ *  taller than the face, and push the words down 12. So it is drawn the
+ *  line's 20 and reaches the button scale's 44 (`SECONDARY_CONTROL_H`)
+ *  with 12 each way, as `CHIP_SLOP` reaches it from 32 with 6. Upward that
+ *  reaches into the handle's line, which on your own list is never a
+ *  button; downward, into the 14 between the head and the words. */
+const BYLINE_SLOP = {
+  top: (SECONDARY_CONTROL_H - BYLINE_LINE) / 2,
+  bottom: (SECONDARY_CONTROL_H - BYLINE_LINE) / 2,
+};
 
 /** Which card is in the finger, for the cell that holds it; -1 for none. */
 const LiftedCard = createContext(-1);
@@ -335,7 +364,7 @@ const StillTile = memo(function StillTile({ place, index, size, onOpen }: {
 });
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   // `userId` keys what the phone keeps per reader (`readerKey`), and is
   // known a storage read into the launch where the session can be a
   // round trip away.
@@ -417,8 +446,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const sharedToMe = !!col && !owned && !isPublic;
   /*
    * Who your list is shared with (13 Nov 2026), and so which of three
-   * words its foot says — `lib/shares.visibilityOf`: Public, Friends (not
-   * public, shared with somebody) or Private.
+   * words the line under your handle says — `lib/shares.visibilityOf`:
+   * Public, Friends (not public, shared with somebody) or Private.
    *
    * Read for every list you own at once, the read the Collections tab's
    * tiles make too (`useMyListShares`), and remembered between launches,
@@ -569,7 +598,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      a second line under the first, never under the count. One place for
      the figure, for the owner and a visitor alike: it had been the foot's
      on somebody else's list and the "Add place" cell's corner on yours,
-     and the foot is now the heart and who can see it, nothing else.
+     and the foot is now the activity row, the heart and nothing else
+     (`activity`).
 
      The list's whole count, whatever a chip has narrowed it to: the grid
      shows what the chip kept, and the line under the row says "4 of 11"
@@ -701,9 +731,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * banner looked busy with it). An alert asking "are you sure" before a
    * reversible act is a toll on everyone who meant it. The Undo was the
    * way back while the switch was one tap in the ⋯ menu, where a slip
-   * was easy; it is two deliberate taps now — the word at the card's
-   * foot, then the answer in the sheet — and the way back is the same
-   * two taps on the same word, which stays on screen.
+   * was easy; it is two deliberate taps now — the word under your handle
+   * at the card's head, then the answer in the sheet — and the way back
+   * is the same two taps on the same word, which stays on screen.
    *
    * Both catalogs are reloaded because the row moves between them: it
    * leaves nothing in `mine`, which returns everything you own either
@@ -719,7 +749,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    *
    * - Public keeps the shares. The migration's rule: a list that is
    *   public and shared is simply public, and its shares wait, applying
-   *   again if it goes private. The foot says Public.
+   *   again if it goes private. The card says Public.
    * - Friends on a public list makes it private as well — a shared list
    *   is a private list with a guest list — and the picker's subtitle
    *   says so before the press (`saveShares`).
@@ -816,12 +846,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   };
 
   /* A change that landed: a success tick under the thumb, and the
-     sentence to VoiceOver. Nothing drawn — the word at the card's foot
+     sentence to VoiceOver. Nothing drawn — the word under your handle
      has already changed, and it is the record (owner, 13 Nov 2026).
 
      Rejected, and removed that day: a banner above the card for three
      seconds ("Bộ sưu tập này đã riêng tư trở lại"). It said again what
-     the foot's word said and kept saying, and it sat in the flow, so it
+     the card's word said and kept saying, and it sat in the flow, so it
      pushed the card and the grid down by its height and margin (11 +
      a 20pt line + 11, then 12: about 54pt; 51 on the owner's screenshot)
      and pulled them back up three seconds later — two moves of the whole
@@ -831,7 +861,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      answer either: it would hide part of the list to report on it.
 
      The sentence stays for VoiceOver because a reader who cannot see the
-     foot's word change would otherwise hear nothing at all —
+     card's word change would otherwise hear nothing at all —
      `accessibilityLiveRegion` is Android's alone. Failures still alert:
      those are what the reader cannot see for themselves. */
   const saidText = (which: Said) => which === 'public'
@@ -1028,14 +1058,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         'このコレクションは公開中ですが、送れるリンクはまだありません。共有機能は近日公開予定です。',
         '这个清单已公开，但还没有可发送的链接。分享功能即将推出。', '這個清單已公開，但還沒有可傳送的連結。分享功能即將推出。',
       )
-      // The word the foot says, Private or Friends: a list shared with
+      // The word the card says, Private or Friends: a list shared with
       // friends is private too, and the sentence points at the control
-      // by what it reads.
+      // by what it reads, and where — at the card's head, under your
+      // handle, since 13 Nov 2026; "at the foot" until then.
       : t(
-        `This list is private. Tap ${seenWord} at the foot of its card to make it public — share links are on the way.`,
-        `Bộ sưu tập này đang riêng tư. Bấm ${seenWord} ở cuối thẻ giới thiệu để công khai — liên kết chia sẻ sẽ sớm có.`,
-        `このコレクションは非公開です。紹介カードの下の「${seenWord}」から公開できます。共有リンクは近日公開予定です。`,
-        `这个清单是私密的。点按卡片底部的“${seenWord}”即可公开 — 分享链接即将推出。`, `這個清單是私密的。點按卡片底部的「${seenWord}」即可公開 — 分享連結即將推出。`,
+        `This list is private. Tap ${seenWord} at the top of its card to make it public — share links are on the way.`,
+        `Bộ sưu tập này đang riêng tư. Bấm ${seenWord} ở đầu thẻ giới thiệu để công khai — liên kết chia sẻ sẽ sớm có.`,
+        `このコレクションは非公開です。紹介カードの上の「${seenWord}」から公開できます。共有リンクは近日公開予定です。`,
+        `这个清单是私密的。点按卡片顶部的“${seenWord}”即可公开 — 分享链接即将推出。`, `這個清單是私密的。點按卡片頂部的「${seenWord}」即可公開 — 分享連結即將推出。`,
       ),
   );
 
@@ -1147,14 +1178,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     ],
   );
 
-  /* Who can see this list — at the foot of the card now, and the place
-     to change it (owner, 16 Oct 2026). It sat under the title as a
-     line of its own and was changed from the ⋯ menu, which split one
-     fact across two places: the header said what it was, a menu row
-     said how to make it the other thing. The header lost it so the
-     title stands alone the way a visitor's does, and the menu lost its
-     row so the way to the switch is the word that names the state —
-     tap "Private" to choose who sees it.
+  /* Who can see this list, and the place to change it (owner, 16 Oct
+     2026). It sat under the title as a line of its own and was changed
+     from the ⋯ menu, which split one fact across two places: the header
+     said what it was, a menu row said how to make it the other thing.
+     The header lost it so the title stands alone the way a visitor's
+     does, and the menu lost its row so the way to the switch is the word
+     that names the state — tap "Private" to choose who sees it.
+
+     ── under your handle (owner, 13 Nov 2026) ──
+     From 16 Oct it stood at the card's foot, after the heart. It is on
+     the line under your handle now, after the list's age — "2h · 🔒
+     Private ⌄" — where a post says who sees it: beside who wrote it and
+     when, not under what it says. The same control, the same sheet;
+     only its height changed, the line's 20 drawn and the rest of 44 in
+     slop (`BYLINE_SLOP`).
 
      The owner's alone. A visitor meets a public list or one a friend
      shared with them, and a word telling them which would be a fact
@@ -1183,8 +1221,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      banner), and Public is a choice, not a success. It was the same
      green on every look, Slate's two tones included. The globe and the
      padlock already say which state it is. The grey is `textSecondary`,
-     one step above the heart's tally beside it, because this word is a
-     control and the tally is not.
+     one step above the heart's tally, because this word is a control and
+     the tally is not — and the grey of the list's age beside it, which
+     is the same line.
 
      Tapping opens a choice rather than flipping the switch: a word that
      changes who can see your list on one touch is a word nobody would
@@ -1195,8 +1234,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       contentStyle={s.visibility}
       scaleTo={0.94}
       haptic="selection"
-      // A chip on the button scale: 32 drawn, 44 to the thumb.
-      hitSlop={CHIP_SLOP}
+      // On the button scale: the byline's 20 drawn, 44 to the thumb.
+      hitSlop={BYLINE_SLOP}
       onPress={() => setWhoSees(true)}
       accessibilityRole="button"
       accessibilityHint={t(
@@ -1215,7 +1254,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   /* The three answers, each with what it means where the reader will meet
      it. Choosing Public or Private is doing: the sheet closes and the
-     word at the card's foot changes, so there is no confirmation here
+     word under your handle changes, so there is no confirmation here
      either (see `publish`). The answer already true carries the tick,
      and choosing it again changes nothing — a write that re-saves the
      same boolean would tick under the thumb and tell VoiceOver about a
@@ -1319,35 +1358,38 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </PressableScale>
   ) : null;
 
-  /* The card's foot: the heart, and who can see it. Under a hairline,
-     from the start of the row.
+  /* ── the activity row (owner, 13 Nov 2026) ──
+     The card's last row, under a hairline: reserved for the list's
+     activity, which the owner builds next. Today it holds the heart.
+
+     Kept even when it is empty — a private list, or one lent to you,
+     has no heart — and always `CHIP_H` tall: the row is the activity's
+     place, and a card that grew by a row when a list went public, or
+     when the activity arrived, would move the grid under it.
+
+     It was the card's foot until this day: the heart and who can see it,
+     the count before that. The count went to the kinds' row and who can
+     see it to the line under your handle (`visibility`) the same day, so
+     what is left is the one fact about how the list is doing.
 
      The heart leads (owner, 12 Nov 2026). It sat at the end, "where a
      thumb finds a gesture", but the apps this reads beside — Instagram,
      Threads, X — put the like first in the row, and first it stands in
-     one place whether the list is yours or somebody else's. Grouped from
-     the start rather than spread across three columns: only a public
-     list has a heart (likes are public-only), and a private list's pill
-     would otherwise float in a middle column with nothing to its left.
-
-     The count left the foot on 13 Nov (owner) for the end of the kinds'
-     row — see `kindRow`. So a foot with nothing to say is not drawn, and
-     neither is its hairline: somebody else's list with no heart (shared
-     with you, which no one may like) ends at its kinds. */
-  const cardFoot = col && (heart || visibility) ? (
-    <View style={s.cardFoot} testID="collection-stats">
-      {heart}
-      {visibility}
+     one place whether the list is yours or somebody else's. */
+  const activity = (
+    <View style={s.activity} testID="collection-activity">
+      <View style={s.activityRow}>{heart}</View>
     </View>
-  ) : null;
+  );
 
   /* ── the curator, at the head of the card (owner, 16 Oct 2026) ──
      The face and the handle lead the card on somebody else's list, where
      the note glyph used to: the glyph said "a note", the face says whose,
-     which is the question the glyph was standing in for. 28pt, beside a
-     handle in the card's own ink — larger than the 18pt it wore in the
-     header, because it is the card's subject now rather than a mark in a
-     line of meta.
+     which is the question the glyph was standing in for. Beside a handle
+     in the card's own ink — larger than the 18pt it wore in the header,
+     because it is the card's subject now rather than a mark in a line of
+     meta. 28pt until 13 Nov 2026, 40 since, with a second line under the
+     handle (`byline`).
 
      The face appears only where there is a person: `holdForFace` keeps
      the slot while the lookup is out and drops it once an editorial
@@ -1450,12 +1492,58 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      glyph comes back only for a profile with no handle yet. */
   const ownTag = owned && profile?.handle ? atHandle(profile.handle) : '';
   const faceTag = owned ? ownTag : curatorTag;
+
+  /* ── the line under the handle (owner, 13 Nov 2026) ──
+     A post's second line: how old the list is, and who sees it.
+
+     - Your own list: its age, then who can see it — the control, with
+       its sheet (`visibility`).
+     - Somebody else's public list: its age alone. Not "Public": anyone
+       who can see it already knows it is.
+     - A friend's list lent to you (`sharedToMe`): its age, then two heads
+       and "Shared with you". Not a control: who sees it is the owner's.
+
+     The age only on a list with an owner. The editorial lists all wear
+     one `created_at` — the instant the column was added with a default,
+     not a date anybody chose (`fetchCollections`) — so every one of them
+     would say the same day, and say it falsely. With no age and nothing
+     after it, the line is not drawn, and the handle stands alone.
+
+     Read at render, not ticking: a list opened at "New" says so until the
+     screen draws again, as a post's header does until it is scrolled
+     back to. */
+  const madeAt = col?.owner_id ? col.created_at : null;
+  const age = madeAt ? listAgeOf(madeAt, new Date()) : null;
+  const ageWord = !age ? ''
+    : age.unit === 'new' ? t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立')
+      : age.unit === 'date' ? (age.withYear ? numericDateWithYear(lang, age.at) : numericDate(lang, age.at))
+        : age.unit === 'minutes' ? t(`${age.n}m`, `${age.n}p`, `${age.n}分`, `${age.n}分钟`, `${age.n}分鐘`)
+          : t(`${age.n}h`, `${age.n}h`, `${age.n}時間`, `${age.n}小时`, `${age.n}小時`);
+  const sharedWord = t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你分享', '與你分享');
+  const sharedMark = sharedToMe ? (
+    <View style={s.visibility} testID="collection-shared">
+      <Glyph name={SEEN_GLYPH.friends} size={15} color={colors.textSecondary} />
+      <Text style={s.visibilityWord}>{sharedWord}</Text>
+    </View>
+  ) : null;
+  const seenOnLine = visibility ?? sharedMark;
+  const byline = ageWord || seenOnLine ? (
+    <View style={s.byline} testID="collection-meta">
+      {ageWord ? <Text style={s.bylineText}>{ageWord}</Text> : null}
+      {ageWord && seenOnLine ? <Text style={s.bylineText}>·</Text> : null}
+      {seenOnLine}
+    </View>
+  ) : null;
+
   const curatorFace = (
     <>
       {owned
         ? <Avatar url={profile?.avatar_url || null} size={FACE} />
         : holdForFace ? <Avatar url={curatorAvatar} size={FACE} /> : null}
-      <Text style={s.curatorTag} numberOfLines={1}>{faceTag}</Text>
+      <View style={s.curatorLines}>
+        <Text style={s.curatorTag} numberOfLines={1} testID="collection-handle">{faceTag}</Text>
+        {byline}
+      </View>
     </>
   );
   const curatorRow = faceTag ? (
@@ -1466,7 +1554,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         scaleTo={0.97}
         haptic="selection"
         accessibilityRole="button"
-        accessibilityLabel={curatorTag}
+        // The whole head is the press, both lines with the face, as a
+        // post's is — so VoiceOver hears both lines too, not the handle
+        // alone. A visitor's line holds no control to be swallowed.
+        accessibilityLabel={[curatorTag, ageWord, sharedMark ? sharedWord : ''].filter(Boolean).join(', ')}
         testID="collection-curator"
       >
         {curatorFace}
@@ -1474,7 +1565,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     ) : (
       <View style={s.curator} testID="collection-curator">{curatorFace}</View>
     )
-  ) : null;
+  // No handle to lead with — your own, before you choose one, or a lent
+  // list whose owner has none: the line under it stands alone.
+  ) : byline;
 
   /* ── the ⋯, at the card's top right (owner, 13 Nov 2026) ──
      It stood in the header's right-hand slot until this day, and this
@@ -1628,11 +1721,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       ── the face, the foot (owner, 16 Oct 2026) ──
       On somebody else's list the curator's face and handle now lead
       the card where the note glyph was (see `curatorRow`), and every
-      card ends in a foot with the place count and the heart (see
-      `cardFoot`), both moved down from the header. So the card is
-      drawn on every list, a visitor's included: it always has at
-      least the count to say. Your own list leads with your own face
-      (see `ownTag`); the note glyph returns only without a handle.
+      card ends in a foot with the place count and the heart, both
+      moved down from the header. So the card is drawn on every list, a
+      visitor's included. Your own list leads with your own face (see
+      `ownTag`); the note glyph returns only without a handle. Since
+      13 Nov 2026 the count is at the end of the kinds' row, and the
+      foot is the activity row (`activity`), drawn on every card.
 
       An owner's list with no description still invites one: the line
       opens the form.
@@ -1700,7 +1794,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               name="document-text-outline"
               size={20}
               color={desc ? colors.textSecondary : colors.textTertiary}
-              style={s.descGlyph}
             />
           ) : null}
           <View style={s.descBody}>
@@ -1743,7 +1836,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           </PressableScale>
         ) : null}
         {kindRow}
-        {cardFoot}
+        {activity}
       </Card>
     </View>
   ) : null;
@@ -1785,7 +1878,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      ── yours ──
      Add place, Plan a trip; the views; Edit collection, Share, Delete.
      No publish row: who can see the list is changed where it is said,
-     at the foot of the card — see `visibility`.
+     under your handle at the card's head — see `visibility`.
 
      ── somebody else's ──
      The things you can do to a thing you do not own: plan from it,
@@ -2072,6 +2165,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   );
 }
 
+/** The heart's tally, which set the foot's height before the activity
+ *  row had one: 15pt in the system face, 17.9 by its metrics, so 18. */
+const TALLY_LINE = 18;
+/** How much lower the heart stands in the `CHIP_H` activity row than it
+ *  did in the foot, and how much higher off the card's bottom: 7. */
+const ROW_AIR = (CHIP_H - TALLY_LINE) / 2;
+
 const s = StyleSheet.create({
   // No `screen`, no `header`, no `title`. This screen drew its own header
   // and it drifted: a 20pt title where every other pushed screen has 26,
@@ -2085,21 +2185,27 @@ const s = StyleSheet.create({
   // than one line at 20 ever did.
   // The glyph, the word and the chevron, as one press, on nothing: see
   // `visibility` above. The 5 the header line it came from used, so the
-  // three still read as one phrase. Still `CHIP_H` tall, with no fill to
-  // show it, so `CHIP_SLOP` keeps making the 44pt target.
-  visibility: { flexDirection: 'row', alignItems: 'center', gap: 5, height: CHIP_H },
+  // three still read as one phrase. The byline's height, not `CHIP_H`
+  // (13 Nov 2026): it stands in that line now, and `BYLINE_SLOP` makes
+  // the 44pt target. "Shared with you" wears the same box, unpressed.
+  visibility: { flexDirection: 'row', alignItems: 'center', gap: 5, height: BYLINE_LINE },
   // A question, so it is the sheet's whole header: the rows under it are
   // the answers, and the title VoiceOver hears first. The size and face
   // Visited's sheet titles use.
   sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold, paddingHorizontal: 4 },
   meta: { color: colors.textTertiary, ...type.meta },
-  // The heart and its tally, one fact, first in the card's foot (see
-  // `cardFoot`). In the header it had to sit beside the count, or it read
+  // The heart and its tally, one fact, first in the activity row (see
+  // `activity`). In the header it had to sit beside the count, or it read
   // as a second header control slipped a line under ⋯ — inside the card
   // there is no control above it to be mistaken for.
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Public or Private, in one grey — see `visibility`.
-  visibilityWord: { color: colors.textSecondary, ...type.meta },
+  visibilityWord: { color: colors.textSecondary, ...type.meta, lineHeight: BYLINE_LINE },
+  // The list's age, then who sees it, under the handle. 6 round the
+  // "·", the gap the card's other "a · b" line keeps (`filterCount`).
+  byline: { flexDirection: 'row', alignItems: 'center', gap: 6, height: BYLINE_LINE },
+  // The meta size and grey, as the word after it: one line, one ink.
+  bylineText: { color: colors.textSecondary, ...type.meta, lineHeight: BYLINE_LINE },
 
   // Full width at the foot of the list, in the page's margins, with the
   // room the dashed slot it replaced kept above it.
@@ -2114,7 +2220,7 @@ const s = StyleSheet.create({
   // word's size — so the figure is a kind's equal in weight and quieter
   // in ink: it counts, it does not name. 3 between pin and figure, not a
   // kind's 6 between dot and word: the pin's own bearings make up the
-  // rest (measured in ink, see `cardFoot`).
+  // rest (measured in ink, see `activityRow`).
   placeCount: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
   placeCountText: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   // `KindPill`'s rule, clear: 4 above and below and a 2pt border, so a
@@ -2128,40 +2234,71 @@ const s = StyleSheet.create({
   // the inset. The ⋯ hangs at the top right, on the face's row.
   descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
   // ── the card's rhythm, measured in ink (owner, 13 Nov 2026) ──
-  // Read off a 2x render of a visitor's card, ink to ink:
+  // Read off a 2x render of a visitor's card, ink to ink, before and
+  // after the morning's change. The last column is the afternoon's — the
+  // 40pt face with two lines, the foot become the activity row — and is
+  // that render's figures carried through the change, worked out rather
+  // than read off a new render: re-read it on a device.
   //
-  // |                       | before | now  |
-  // |-----------------------|--------|------|
-  // | card's top → face     | 16     | 20   |
-  // | face → words          | 15–18  | 17–20 (accents, letters) |
-  // | words → kinds         | 20.5   | 20.5 |
-  // | kinds → hairline      | 21     | 21   |
-  // | hairline → heart      | 16.5   | 20.5 |
-  // | heart → card's foot   | 20     | 20   |
-  // | words' left / right   | 16 / 48 | 16 / 16 |
+  // |                        | before  | morning | afternoon |
+  // |------------------------|---------|---------|-----------|
+  // | card's top → face      | 16      | 20      | 20        |
+  // | face → words           | 15–18   | 17–20 (accents, letters) | 17–20 |
+  // | words → kinds          | 20.5    | 20.5    | 20.5      |
+  // | kinds → hairline       | 21      | 21      | 21        |
+  // | hairline → heart       | 16.5    | 20.5    | 20.5      |
+  // | heart → card's bottom  | 20      | 20      | 20        |
+  // | words' left / right    | 16 / 48 | 16 / 16 | 16 / 16   |
   //
-  // So one rhythm of about 20 from the card's top to its foot: the words
+  // So one rhythm of about 20 from the card's top to its bottom: the words
   // came out of the face's row (the 12 of `descBody` became this 14),
   // the foot's top went from 12 to 16, and the top from 16 to 20, since
-  // the face is a solid 28pt disc whose ink fills its box while the
-  // heart, at the foot, carries a few points of its glyph's own air. The
-  // sides stay 16: the words now run to the card's own edges.
-  descCard: { gap: 14, padding: space.cardPadding, paddingTop: space.cardPadding + 4 },
-  // The face and the handle with the ⋯ at the end of its row; the words
-  // go under it, across the card (owner, 13 Nov 2026).
-  descTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  // the face is a solid disc whose ink fills its box while the heart, at
+  // the bottom, carries a few points of its glyph's own air. The sides
+  // stay 16: the words now run to the card's own edges.
+  //
+  // The afternoon keeps every figure. The face is still a solid disc, and
+  // the head row is still the face's height — the two lines beside it
+  // are `BYLINE_LINE` twice and the ⋯ is centred inside it — so the top
+  // and the 14 under the head stand. The activity row is `CHIP_H` where
+  // the foot was the tally's line (`TALLY_LINE`), so the heart sits
+  // `ROW_AIR` lower in it and `ROW_AIR` higher off the bottom: both
+  // paddings round it give that back, 16 − 7 = 9, and the heart's ink
+  // keeps its 20.5 and its 20.
+  descCard: {
+    gap: 14, padding: space.cardPadding, paddingTop: space.cardPadding + 4,
+    paddingBottom: space.cardPadding - ROW_AIR,
+  },
+  // The face and its two lines, with the ⋯ at the end of the row; the
+  // words go under it, across the card (owner, 13 Nov 2026). Centred, so
+  // a head with no face — an editorial handle, or your own list's note
+  // glyph — stands its one line on the ⋯'s middle rather than the top.
+  descTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   descBody: { flex: 1 },
   // The face and the handle. `alignSelf` keeps the press to the row's own
   // width rather than the card's: a tap on empty space beside a handle
   // should not open a sheet about a person.
   curator: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%' },
-  curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
-  // A hairline, then the heart and who can see it, from the start.
+  // The handle over the line under it (`byline`), the column the face's
+  // height, and the handle the part that gives when it is long.
+  curatorLines: { flexShrink: 1 },
+  curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: BYLINE_LINE, flexShrink: 1 },
+  // A hairline, then the activity row (`activity`).
+  activity: {
+    // 9, not the foot's 16 (owner, 13 Nov 2026): the row is `CHIP_H` now,
+    // the heart centred in it, so 16 − `ROW_AIR` keeps its ink 20.5 under
+    // the hairline — see `descCard`.
+    paddingTop: space.cardPadding - ROW_AIR,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+  },
+  // The heart today, the list's activity next, from the start of the row.
+  // One height whatever it holds, so the card does not grow when it does.
   //
   // ── the spacing, measured in ink (owner, 12 Nov 2026) ──
   // Measured while the count was still in the foot; it moved to the kinds'
-  // row the next day, taking its 3 with it (`placeCount`), and the 20 now
-  // stands between the heart and the visibility.
+  // row the next day, taking its 3 with it (`placeCount`), and so did who
+  // can see the list, to the line under the handle. The 20 between pairs
+  // stays for whatever the row holds next to the heart.
   // Read off a 2x render of a visitor's foot, glyph ink to glyph ink, not
   // off these numbers: each glyph's box has side bearings of its own.
   //
@@ -2175,14 +2312,7 @@ const s = StyleSheet.create({
   // things evenly spaced, not two pairs: 20 between the pairs was only
   // twice the 9.5 inside one. Now each glyph sits 6.5 from its count and
   // the pairs 24 apart, nearly four times that.
-  cardFoot: {
-    flexDirection: 'row', alignItems: 'center', gap: 20,
-    // 16, not 12 (owner, 13 Nov 2026): the hairline sat 16.5 above the
-    // heart's ink and 21 under the kinds', and the heart 20 above the
-    // card's edge — one rhythm of about 20 now, see `descCard`.
-    paddingTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
+  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 20, height: CHIP_H },
   // Justified (owner, 3 Nov 2026), the owner's call over the case put
   // against it: a 318pt column holds some 44 characters, iOS does not
   // hyphenate Vietnamese, and the up-to-25pt each ragged line stopped
@@ -2194,9 +2324,6 @@ const s = StyleSheet.create({
   // `alignSelf` keeps the press to the words, as the curator row's does.
   descAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24 },
   descAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  // A 20pt glyph on the middle of the face's row, where the ⋯ beside it
-  // is centred: it stands in for the face when there is no handle.
-  descGlyph: { marginTop: (FACE - 20) / 2 },
   // The ⋯'s box: the header's 44pt width, so the header's measure of the
   // glyph's ink (`INK_GAP_END`, a 21pt ⋯ centred in 44) still holds, and
   // `CHIP_H` tall, an action inside a row; `CHIP_SLOP` makes 44 of that
@@ -2204,10 +2331,12 @@ const s = StyleSheet.create({
   // 32 across, and its ink a fresh number nobody had measured.
   more: { width: SECONDARY_CONTROL_H, height: CHIP_H, alignItems: 'center', justifyContent: 'center' },
   // Hung past the card's padding by the glyph's empty edge, so the ink
-  // ends where the words under it do, as the pencil's did. And 2 into the
-  // air above and below: 32 drawn on the face's 28pt row, centred on the
-  // face, without making the row 4 taller and moving the face off the 20
-  // the card's top was measured to (`descCard`).
+  // ends where the words under it do, as the pencil's did. And 4 of air
+  // above and below: 32 drawn on the face's 40pt row, centred on the
+  // face, and the row the face's height even where there is no face —
+  // an editorial handle's, or a lent list's with no handle — so every
+  // card's head is one height and the words start at one place. On the
+  // 28pt face this was 2 into the air instead, for the same reason.
   moreHang: { marginRight: -INK_GAP_END['ellipsis-horizontal'], marginVertical: (FACE - CHIP_H) / 2 },
 
   // The responder that carries a lifted card: the list's whole height.

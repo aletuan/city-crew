@@ -37,8 +37,11 @@ import { fetchProfilesById } from './people';
  * truncating by city.
  */
 // `id`, `created_at` and `sort_order` ride along for the shelf's ordering
-// and for liking — see `lib/likes.ts`. None of them reach a screen as
-// something to show; `slug` is still the key everything user-facing uses.
+// and for liking — see `lib/likes.ts`. `slug` is still the key everything
+// user-facing uses. `created_at` is also shown since 13 Nov 2026, as a
+// list's age under its owner's handle — on owned lists only, because on
+// the editorial rows it is the instant the column arrived (see the
+// ordering below).
 //
 // `is_public` is selected rather than inferred, and that is a bug fixed
 // rather than a preference. The public query filters on it and used not
@@ -157,8 +160,11 @@ function withMembers(data: unknown): Collection[] {
  * only difference left is which rows it asks for, and that your own show
  * whether they are published or not.
  */
+// `created_at` for the list's age on its card (13 Nov 2026,
+// `CollectionDetailScreen`'s byline): every row here has an owner, so the
+// stamp is when somebody made it.
 const MY_COLLECTION_COLS =
-  `id, slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, kinds_hidden, kinds_added, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
+  `id, slug, created_at, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, kinds_hidden, kinds_added, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
 
 export async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
   // One photograph a member, as the public lists carry (`fetchCollections`).
