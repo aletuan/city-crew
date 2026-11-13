@@ -68,7 +68,7 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import { fetchApplause, fetchCopies, useCuratorAvatarsQuery } from '../lib/data';
 import type { Applause, Copy } from '../lib/friends';
-import { normalizeHandle } from '../lib/handle';
+import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { actsOn, type ListAct } from '../lib/listActivity';
 import { ageWord, listAgeOf } from '../lib/listAge';
@@ -167,10 +167,20 @@ export default function CollectionActivityScreen({ navigation, route }: {
 
   const someone = t('Someone', 'Ai đó', '誰か', '有人', '有人');
   const row = ({ item, index }: { item: ListAct; index: number }) => {
-    // Bare, as the collection page's head draws a handle beside a face
-    // (owner, 13 Nov 2026): the name is the handle, and Threads' activity
-    // list sets it with no `@`.
-    const who = item.handle ? normalizeHandle(item.handle) : someone;
+    /* Who, as every row of people in the app names them (owner, 13 Nov
+       2026): the real name on top in the strong ink, the handle under it
+       with its `@` — Crew's rows, and X's. With both on show the `@` is
+       what tells the second line from the first. With no name the handle
+       is the name, alone and bare, as the collection card's head draws it.
+
+       Rejected the same day, after it shipped: Threads' order, the handle
+       on top and bare and the name under it. One list of people drew
+       "hado / Ha Do" while Crew drew "Ha Do / @hado" — the same person
+       in two arrangements, a screen apart. Crew's is the one kept: this
+       is an app about friends, known by their names first. */
+    const handle = item.handle ? normalizeHandle(item.handle) : '';
+    const top = item.name || handle || someone;
+    const under = item.name && handle ? atHandle(handle) : '';
     const when = ageOf(item.at);
     const did = item.kind === 'like'
       ? t('Liked', 'Đã thích', 'いいね', '点赞', '按讚')
@@ -181,7 +191,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
         accessible
         // What the badge says by its shape is said in words, since
         // VoiceOver cannot see the heart.
-        accessibilityLabel={[who, item.name, did, when].filter(Boolean).join(', ')}
+        accessibilityLabel={[top, under, did, when].filter(Boolean).join(', ')}
         testID="activity-row"
       >
         {/* Who, and what they did on the face's corner — Activity's
@@ -200,11 +210,19 @@ export default function CollectionActivityScreen({ navigation, route }: {
             where the words do and the faces stand clear of it — Threads'
             inset separator. */}
         <View style={[s.lines, index > 0 && s.divider]}>
-          <View style={s.lineOne}>
-            <Text style={s.handle} numberOfLines={1}>{who}</Text>
-            <Text style={s.when}>{when}</Text>
-          </View>
-          {item.name ? <Text style={s.name} numberOfLines={1}>{item.name}</Text> : null}
+          {/* The age rides the second line when there is one, after the
+              handle as Crew's count does; alone, it follows the name. */}
+          {under ? (
+            <>
+              <Text style={s.handle} numberOfLines={1}>{top}</Text>
+              <Text style={s.name} numberOfLines={1}>{`${under} · ${when}`}</Text>
+            </>
+          ) : (
+            <View style={s.lineOne}>
+              <Text style={s.handle} numberOfLines={1}>{top}</Text>
+              <Text style={s.when}>{when}</Text>
+            </View>
+          )}
         </View>
       </View>
     );
