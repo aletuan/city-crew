@@ -787,7 +787,7 @@ describe('your own list', () => {
     const card = screen.getByTestId('collection-desc');
     expect(card.textContent).toContain('Where we eat.');
     expect(getComputedStyle(card).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(screen.getByTestId('collection-handle').textContent).toBe('@andy');
+    expect(screen.getByTestId('collection-handle').textContent).toBe('andy');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(card.contains(screen.getByTestId('collection-more'))).toBe(true);
     expect(card.querySelector('[data-icon="create-outline"]')).toBeNull();
@@ -819,7 +819,7 @@ describe('your own list', () => {
     expect(screen.queryByTestId('collection-desc')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
     const card = screen.getByTestId('collection-desc-empty');
-    expect(card.textContent).toMatch(/^@andyPrivateAdd a description/);
+    expect(card.textContent).toMatch(/^andyPrivateAdd a description/);
     // An action, not a sentence that could pass for the description: a
     // plus and the words, in the accent (18 Oct 2026).
     const add = screen.getByTestId('collection-desc-add');
@@ -1978,7 +1978,7 @@ describe("somebody else's list", () => {
   it('credits the curator, hides owner-only marks and says "No places" when empty', () => {
     state.cols = [theirs({}, [])];
     show();
-    expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
+    expect(screen.getByTestId('collection-curator').textContent).toBe('hanoicrew');
     // No places, no count: the line below says so in words.
     expect(screen.queryByTestId('collection-count')).toBeNull();
     expect(screen.getByTestId('collection-desc').querySelector('[data-icon="location-outline"]')).toBeNull();
@@ -2293,7 +2293,7 @@ describe('a friend’s list, shared with you', () => {
 
   it('credits the friend whose list it is, says it is shared with you, and draws no heart', () => {
     show();
-    expect(screen.getByTestId('collection-handle').textContent).toBe('@lan');
+    expect(screen.getByTestId('collection-handle').textContent).toBe('lan');
     expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
     expect(screen.queryByRole('button', { name: 'Like' })).toBeNull();
     // The activity row stands, empty.
@@ -2378,7 +2378,7 @@ describe('a friend’s list, shared with you', () => {
     state.shared = [lent()];
     show();
     // `mine` answers first: the owner's sheet, not the friend's byline.
-    expect(screen.getByTestId('collection-handle').textContent).toBe('@andy');
+    expect(screen.getByTestId('collection-handle').textContent).toBe('andy');
     expect(screen.queryByTestId('collection-shared')).toBeNull();
     openMenu();
     expect(menuRow('Edit collection')).toBeTruthy();
@@ -2396,7 +2396,7 @@ describe('the description, for a visitor', () => {
     expect(screen.getByTestId('collection-desc').textContent).toContain('Where we eat.');
     // The face says whose words, so the note glyph gives way to it.
     expect(screen.getByTestId('collection-desc').querySelector('[data-icon="document-text-outline"]')).toBeNull();
-    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrewWhere we eat\./);
+    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^hanoicrewWhere we eat\./);
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
 
@@ -2404,7 +2404,7 @@ describe('the description, for a visitor', () => {
     state.mine = [];
     state.cols = [theirs({ desc_en: null })];
     show();
-    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^@hanoicrew/);
+    expect(screen.getByTestId('collection-desc').textContent).toMatch(/^hanoicrew/);
     expect(screen.getByLabelText('3 places')).toBeTruthy();
     expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
     expect(screen.queryByText('Add a description')).toBeNull();
@@ -2673,7 +2673,7 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('@hanoicrewEatsCafésCultureNightlife4');
+    expect(card.textContent).toBe('hanoicrewEatsCafésCultureNightlife4');
     expect(screen.getByLabelText('4 places')).toBeTruthy();
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
@@ -2791,7 +2791,7 @@ describe('the introduction card', () => {
   it('leaves a visitor\u2019s header with the title alone', () => {
     show();
     expect(screen.queryByText(/·/)).toBeNull();
-    expect(screen.getAllByText('@hanoicrew')).toHaveLength(1);
+    expect(screen.getAllByText('hanoicrew')).toHaveLength(1);
   });
 
   it('offers only the report for an editorial handle with nobody behind it', () => {
@@ -2871,7 +2871,7 @@ describe('the introduction card', () => {
     state.mine = [collection({ curator_handle: '@old-handle' })];
     show();
     const row = screen.getByTestId('collection-curator');
-    expect(row.textContent).toBe('@andyPrivate');
+    expect(row.textContent).toBe('andyPrivate');
     expect(row.getAttribute('role')).not.toBe('button');
     expect(row.querySelector('img[src="https://img/me.jpg"]')).toBeTruthy();
     const card = screen.getByTestId('collection-desc');
@@ -2879,7 +2879,7 @@ describe('the introduction card', () => {
     expect(screen.getByTestId('collection-activity')).toBeTruthy();
     // Still nobody looked up, and still no credit in the header.
     expect(spies.profileLookup).toHaveBeenCalledWith(null);
-    expect(screen.getAllByText('@andy')).toHaveLength(1);
+    expect(screen.getAllByText('andy')).toHaveLength(1);
   });
 
   it('draws a face slot for your own list with no photo, and the note glyph only with no handle', () => {
@@ -3089,7 +3089,7 @@ describe('the head of the card', () => {
     const press = screen.getByTestId('collection-curator');
     expect(press.getAttribute('role')).toBe('button');
     expect(press.contains(meta())).toBe(true);
-    expect(press.getAttribute('aria-label')).toBe('@hanoicrew, 5m');
+    expect(press.getAttribute('aria-label')).toBe('hanoicrew, 5m');
   });
 
   it('says the age and "Shared with you", with two heads and no control, on a friend’s list', () => {
@@ -3108,7 +3108,7 @@ describe('the head of the card', () => {
     spies.profileLookup.mockImplementation(() => ({ data: { id: 'lan-id', full_name: 'Lan', avatar_url: '' }, loading: false }));
     show();
     expect(screen.getByTestId('collection-shared').closest('[role="button"]')).toBe(screen.getByTestId('collection-curator'));
-    expect(screen.getByTestId('collection-curator').getAttribute('aria-label')).toBe('@lan, 12 Nov, Shared with you');
+    expect(screen.getByTestId('collection-curator').getAttribute('aria-label')).toBe('lan, 12 Nov, Shared with you');
   });
 
   it('says it in the reader’s language', () => {
@@ -3126,8 +3126,8 @@ describe('the head of the card', () => {
     state.cols = [theirs({ owner_id: null, created_at: ago(400 * 24 * HOUR) })];
     show();
     expect(screen.queryByTestId('collection-meta')).toBeNull();
-    expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
-    expect(screen.getByTestId('collection-curator').getAttribute('aria-label')).toBe('@hanoicrew');
+    expect(screen.getByTestId('collection-curator').textContent).toBe('hanoicrew');
+    expect(screen.getByTestId('collection-curator').getAttribute('aria-label')).toBe('hanoicrew');
   });
 
   it('keeps who can see it on a list of yours with no age', () => {

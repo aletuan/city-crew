@@ -68,7 +68,7 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import { fetchApplause, fetchCopies, useCuratorAvatarsQuery } from '../lib/data';
 import type { Applause, Copy } from '../lib/friends';
-import { atHandle, normalizeHandle } from '../lib/handle';
+import { normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { actsOn, type ListAct } from '../lib/listActivity';
 import { ageWord, listAgeOf } from '../lib/listAge';
@@ -149,7 +149,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
         <Avatar url={profile?.avatar_url || null} size={HEAD_FACE} />
         <View style={s.headLines}>
           {profile?.handle
-            ? <Text style={s.headHandle} numberOfLines={1}>{atHandle(profile.handle)}</Text>
+            ? <Text style={s.headHandle} numberOfLines={1}>{normalizeHandle(profile.handle)}</Text>
             : null}
           {age
             ? <Text style={s.headAge}>{ageWord(age, lang, t, t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立'))}</Text>
@@ -167,7 +167,10 @@ export default function CollectionActivityScreen({ navigation, route }: {
 
   const someone = t('Someone', 'Ai đó', '誰か', '有人', '有人');
   const row = ({ item, index }: { item: ListAct; index: number }) => {
-    const who = item.handle ? atHandle(item.handle) : someone;
+    // Bare, as the collection page's head draws a handle beside a face
+    // (owner, 13 Nov 2026): the name is the handle, and Threads' activity
+    // list sets it with no `@`.
+    const who = item.handle ? normalizeHandle(item.handle) : someone;
     const when = ageOf(item.at);
     const did = item.kind === 'like'
       ? t('Liked', 'Đã thích', 'いいね', '点赞', '按讚')

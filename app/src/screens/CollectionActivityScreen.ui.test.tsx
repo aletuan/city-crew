@@ -142,13 +142,15 @@ describe('the list, in a card', () => {
     const card = screen.getByTestId('activity-list');
     expect(card.querySelector('img')!.getAttribute('src')).toBe('https://faces/andy.jpg');
     // Your handle from the profile, not the row's stale stamp.
-    expect(within(card).getByText('@andy')).toBeTruthy();
-    expect(within(card).queryByText('@stale')).toBeNull();
+    expect(within(card).getByText('andy')).toBeTruthy();
+    // Beside a face the handle is the name, bare (owner, 13 Nov 2026).
+    expect(card.textContent).not.toContain('@');
+    expect(within(card).queryByText('stale')).toBeNull();
     expect(within(card).getByText('3h')).toBeTruthy();
     expect(screen.getByTestId('activity-list-title').textContent).toBe('Old Quarter eats');
     expect(screen.getByTestId('activity-list-desc').textContent).toBe('Where we eat when friends visit.');
     // The head first, then the words: in that order in the card.
-    expect(card.textContent).toBe('@andy3hOld Quarter eatsWhere we eat when friends visit.');
+    expect(card.textContent).toBe('andy3hOld Quarter eatsWhere we eat when friends visit.');
   });
 
   it('sets the title in bold and cuts the words at three lines', async () => {
@@ -240,9 +242,9 @@ describe('the rows', () => {
     ]);
     await show();
     expect(rowLines()).toEqual([
-      ['@lan 5m', 'Lan Phạm'],
-      ['@lan 30m', 'Lan Phạm'],
-      ['@minh 2h', 'Minh Trần'],
+      ['lan 5m', 'Lan Phạm'],
+      ['lan 30m', 'Lan Phạm'],
+      ['minh 2h', 'Minh Trần'],
     ]);
     const kinds = screen.getAllByTestId(/^activity-badge-/).map((b) => b.getAttribute('data-testid'));
     expect(kinds).toEqual(['activity-badge-like', 'activity-badge-copy', 'activity-badge-like']);
@@ -255,7 +257,7 @@ describe('the rows', () => {
       like(new Date(2025, 10, 12, 9).toISOString(), 'c'),
     ]);
     await show();
-    expect(rowLines().map((r) => r[0])).toEqual(['@a now', '@b 12 Nov', '@c 12 Nov 2025']);
+    expect(rowLines().map((r) => r[0])).toEqual(['a now', 'b 12 Nov', 'c 12 Nov 2025']);
   });
 
   it('dates it in Vietnamese as the owner wrote it: Vừa xong, 5p, 12/11, 12/11/25', async () => {
@@ -268,7 +270,7 @@ describe('the rows', () => {
       like(new Date(2025, 10, 12, 9).toISOString(), 'e'),
     ]);
     await show();
-    expect(rowLines().map((r) => r[0])).toEqual(['@a Vừa xong', '@b 5p', '@c 3h', '@d 12/11', '@e 12/11/25']);
+    expect(rowLines().map((r) => r[0])).toEqual(['a Vừa xong', 'b 5p', 'c 3h', 'd 12/11', 'e 12/11/25']);
   });
 
   it('calls a person whose profile is gone Someone, with no second line', async () => {
@@ -281,7 +283,7 @@ describe('the rows', () => {
     data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
     await show();
     const row = screen.getByTestId('activity-row');
-    expect(textStyleOf(within(row).getByText('@lan'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
+    expect(textStyleOf(within(row).getByText('lan'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
     expect(textStyleOf(within(row).getByText('5m'))?.color).toBe(colors.textTertiary);
     expect(textStyleOf(within(row).getByText('Lan Phạm'))?.color).toBe(colors.textSecondary);
   });
@@ -367,7 +369,7 @@ describe('the rows', () => {
     await show();
     const rows = screen.getAllByTestId('activity-row');
     expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual([
-      '@lan, Lan Phạm, Liked, 5m',
+      'lan, Lan Phạm, Liked, 5m',
       'Someone, Saved a copy, 9m',
     ]);
     // No Follow, no Add friend, nothing to press in the list but Back.
@@ -418,7 +420,7 @@ describe('the states', () => {
     expect(data.fetchApplause).toHaveBeenCalledTimes(2);
     expect(data.fetchCopies).toHaveBeenCalledTimes(2);
     expect(screen.queryByTestId('activity-failed')).toBeNull();
-    expect(rowLines()).toEqual([['@lan 5m']]);
+    expect(rowLines()).toEqual([['lan 5m']]);
   });
 
   // A retry that succeeds with nothing is an empty list, not the old
@@ -450,6 +452,6 @@ describe('the states', () => {
     data.fetchCopies.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
     await show();
     expect(screen.queryByTestId('activity-failed')).toBeNull();
-    expect(rowLines()).toEqual([['@minh 5m']]);
+    expect(rowLines()).toEqual([['minh 5m']]);
   });
 });

@@ -1531,6 +1531,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      glyph comes back only for a profile with no handle yet. */
   const ownTag = owned && profile?.handle ? atHandle(profile.handle) : '';
   const faceTag = owned ? ownTag : curatorTag;
+  /* The handle as the head draws it: bare, no `@` (owner, 13 Nov 2026),
+     as Threads and Instagram set the name beside a face. The `@` stays
+     where the handle stands inside a sentence ("Block @lan?") or under
+     a real name (the curator sheet), where it says "this is a handle";
+     beside the face it is the name, and the sign was one more glyph
+     before it. Sentences keep `curatorTag`. */
+  const faceName = normalizeHandle(faceTag);
 
   /* ── the line under the handle (owner, 13 Nov 2026) ──
      A post's second line: how old the list is, and who sees it.
@@ -1578,7 +1585,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         ? <Avatar url={profile?.avatar_url || null} size={FACE} />
         : holdForFace ? <Avatar url={curatorAvatar} size={FACE} /> : null}
       <View style={s.curatorLines}>
-        <Text style={s.curatorTag} numberOfLines={1} testID="collection-handle">{faceTag}</Text>
+        <Text style={s.curatorTag} numberOfLines={1} testID="collection-handle">{faceName}</Text>
         {byline}
       </View>
     </>
@@ -1594,7 +1601,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // The whole head is the press, both lines with the face, as a
         // post's is — so VoiceOver hears both lines too, not the handle
         // alone. A visitor's line holds no control to be swallowed.
-        accessibilityLabel={[curatorTag, ageText, sharedMark ? sharedWord : ''].filter(Boolean).join(', ')}
+        accessibilityLabel={[faceName, ageText, sharedMark ? sharedWord : ''].filter(Boolean).join(', ')}
         testID="collection-curator"
       >
         {curatorFace}
