@@ -203,9 +203,12 @@ describe('the app’s own pair', () => {
    * The one that matters, and the one the assertion above cannot make.
    *
    * `lib/legal` promises a reader, in the policy they can open, that the
-   * App Store build "sends no diagnostics or usage analytics of any
-   * kind". For a day these two constants were hand-flipped to `true` to
-   * get numbers off a production build, and it did.
+   * App Store build "sends no diagnostics". For a day these two constants
+   * were hand-flipped to `true` to get numbers off a production build,
+   * and it did. (The sentence once went on "or usage analytics of any
+   * kind"; since 13 Nov 2026 the policy names the two counts the app does
+   * keep — a list's opens and the trips started from it — and this test
+   * holds what was always its point, the diagnostics.)
    *
    * Asserting `true` under the file's non-production mock proves
    * nothing: a hand-flipped literal passes it too. So this one loads the
@@ -227,6 +230,16 @@ describe('the app’s own pair', () => {
       vi.doUnmock('./channel');
       vi.resetModules();
     }
+  });
+
+  // And the policy still makes the promise the test above keeps, in both
+  // of its languages: the words and the constants change together or not
+  // at all.
+  it('is the build the policy says is silent', async () => {
+    const { PRIVACY } = await import('./legal');
+    const bullets = PRIVACY.blocks.flatMap((b) => (b.k === 'ul' ? [...b.en, ...b.vi] : []));
+    expect(bullets.some((b) => b.includes('The App Store build sends no diagnostics.'))).toBe(true);
+    expect(bullets.some((b) => b.includes('Bản phát hành trên App Store không gửi dữ liệu chẩn đoán nào.'))).toBe(true);
   });
 
   it('records through the singleton and files the row into deck_traces', async () => {

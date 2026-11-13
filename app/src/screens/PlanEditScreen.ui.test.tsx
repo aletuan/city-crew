@@ -688,6 +688,32 @@ describe('the swipe back', () => {
 });
 
 describe('saving', () => {
+  // The trip remembers the lists it started from, by id, so each list's
+  // owner can count it (owner, 13 Nov 2026): the ones the plan's pins
+  // came from, off both shelves, and none a plan started from no list.
+  it('names the lists the plan was started from', async () => {
+    mine.current = [
+      { slug: 'weekend', id: 'c-weekend', members: [PINNED] },
+      { slug: 'other', id: 'c-other', members: [ROOF] },
+    ];
+    NO_COLS.data = [{ slug: 'shelf', id: 'c-shelf', members: [] }];
+    try {
+      const navigation = renderScreen({ from: ['shelf', 'weekend'] });
+      save();
+      await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+      expect(payload().fromCollections).toEqual(['c-weekend', 'c-shelf']);
+    } finally {
+      NO_COLS.data = [];
+    }
+  });
+
+  it('names none for a plan that started from no list', async () => {
+    const navigation = renderScreen();
+    save();
+    await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+    expect(payload().fromCollections).toEqual([]);
+  });
+
   it('saves the plan on screen and leaves the flow for Trips', async () => {
     const navigation = renderScreen();
     save();

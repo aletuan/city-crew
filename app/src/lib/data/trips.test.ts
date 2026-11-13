@@ -140,6 +140,74 @@ describe('saveTrip', () => {
   });
 });
 
+// Which lists the trip started from (owner, 13 Nov 2026): one row each,
+// after the stops, and never a reason to undo the trip — see `saveTrip`.
+describe('saveTrip, and the lists it started from', () => {
+  const input = {
+    ownerId: 'u-1', cityId: 'hanoi', title: 'From two lists',
+    company: null, categories: [], district: null,
+    day: '2026-11-14', when: 'day' as const,
+    stops: [{ placeSlug: 'cong-caphe', arriveMin: 540, dwellMin: 60 }],
+  };
+
+  it('names each list beside the trip, after its stops', async () => {
+    fake().replies(
+      { data: { id: 't-1' } },
+      { data: [{ id: 'p-1', slug: 'cong-caphe' }] },
+      { error: null },
+      { error: null },
+    );
+    expect(await saveTrip({ ...input, fromCollections: ['c-1', 'c-2'] })).toBe('t-1');
+    const [, , stops, sources] = fake().log;
+    expect(stops).toMatchObject({ table: 'trip_stops', op: 'insert' });
+    expect(sources).toMatchObject({ table: 'trip_collections', op: 'insert' });
+    expect(sources.payload).toEqual([
+      { trip_id: 't-1', collection_id: 'c-1' },
+      { trip_id: 't-1', collection_id: 'c-2' },
+    ]);
+    expect(fake().log).toHaveLength(4);
+  });
+
+  it('names them for a trip with no stops too', async () => {
+    fake().replies({ data: { id: 't-1' } }, { error: null });
+    await saveTrip({ ...input, stops: [], fromCollections: ['c-1'] });
+    expect(fake().log.map((q) => q.table)).toEqual(['trips', 'trip_collections']);
+  });
+
+  it('asks nothing more for a plan that started from no list', async () => {
+    const once = [{ data: { id: 't-1' } }, { data: [{ id: 'p-1', slug: 'cong-caphe' }] }, { error: null }];
+    fake().replies(...once, ...once);
+    await saveTrip(input);
+    await saveTrip({ ...input, fromCollections: [] });
+    expect(fake().log).toHaveLength(6);
+    expect(fake().log.map((q) => q.table)).not.toContain('trip_collections');
+  });
+
+  // A list made private between the ticking and the saving is turned away
+  // by the policy. The trip stands, and the reader hears nothing of it.
+  it('keeps the trip, and says nothing, when a source is refused', async () => {
+    fake().replies(
+      { data: { id: 't-1' } },
+      { data: [{ id: 'p-1', slug: 'cong-caphe' }] },
+      { error: null },
+      { error: { message: 'new row violates row-level security policy for table "trip_collections"' } },
+    );
+    expect(await saveTrip({ ...input, fromCollections: ['c-1'] })).toBe('t-1');
+    expect(fake().log.some((q) => q.table === 'trips' && q.op === 'delete')).toBe(false);
+  });
+
+  it('does not name a source for a trip whose stops were refused', async () => {
+    fake().replies(
+      { data: { id: 't-1' } },
+      { data: [{ id: 'p-1', slug: 'cong-caphe' }] },
+      { error: { message: 'stops refused' } },
+      { error: null },
+    );
+    await expect(saveTrip({ ...input, fromCollections: ['c-1'] })).rejects.toThrow('stops refused');
+    expect(fake().log.map((q) => q.table)).not.toContain('trip_collections');
+  });
+});
+
 describe('fetchMyTrips', () => {
   it('reads the trips this caller can open, newest day first', async () => {
     fake().replies({ data: [{ id: 't-1', trip_stops: [] }] });

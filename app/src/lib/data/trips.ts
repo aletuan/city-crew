@@ -113,6 +113,11 @@ export type SaveTripInput = {
   /** In order. `placeSlug` rather than an id: the app keys on slug
    *  everywhere and the join is one hop, the same trade `idsFor` makes. */
   stops: { placeSlug: string; arriveMin: number; dwellMin: number; why?: string | null; whyLang?: string | null }[];
+  /** The lists the plan was started from, by id (`lib/trip.sourceIdsOf`):
+   *  written beside the trip so each list's owner can count the trips it
+   *  started — see `sources` below. Absent or empty for a plan that
+   *  started from no list. */
+  fromCollections?: string[];
 };
 
 /**
@@ -124,6 +129,22 @@ export type SaveTripInput = {
  * reader can retry, and without a transaction this is the only way to say
  * so. RLS makes the cleanup safe: the delete can only reach a row this
  * user owns anyway.
+ *
+ * Then, when the plan started from lists, one more: which ones
+ * (`trip_collections`, `20261113160000_collection_stats`). After the
+ * stops and outside the rollback, deliberately. The trip is the reader's
+ * and is whole by then; the source is a number on somebody's statistics
+ * page. A refusal there — a list made private between the ticking and the
+ * saving, which the policy rightly turns away — undoes nothing and says
+ * nothing: the trip is saved and the list counts one trip fewer. That
+ * is an exception to this directory's rule that a refused write throws,
+ * and the reason is the one `useCountView` gives for a view: a figure the
+ * reader did not ask for is not a failure to put in front of them.
+ *
+ * Rejected: writing the sources in the same round trip as the stops.
+ * Two inserts into two tables cannot share one PostgREST request, and an
+ * RPC that did both would be a second way to save a trip, beside this
+ * one, for the sake of a figure.
  */
 export async function saveTrip(input: SaveTripInput): Promise<string> {
   const { data, error } = await supabase
@@ -150,9 +171,14 @@ export async function saveTrip(input: SaveTripInput): Promise<string> {
   if (error) throw new Error(error.message);
   const tripId = (data as { id: string }).id;
 
-  if (!input.stops.length) return tripId;
+  if (input.stops.length) await saveStops(tripId, input.stops);
+  await saveSources(tripId, input.fromCollections ?? []);
+  return tripId;
+}
 
-  const slugs = input.stops.map((s) => s.placeSlug);
+/** The stops of a trip just made — see `saveTrip`. */
+async function saveStops(tripId: string, input: SaveTripInput['stops']): Promise<void> {
+  const slugs = input.map((s) => s.placeSlug);
   const { data: rows, error: lookupError } = await supabase
     .from('places')
     .select('id, slug')
@@ -163,7 +189,7 @@ export async function saveTrip(input: SaveTripInput): Promise<string> {
   }
 
   const idBySlug = new Map((rows as { id: string; slug: string }[]).map((r) => [r.slug, r.id]));
-  const stops = input.stops
+  const stops = input
     .map((s, i) => ({
       trip_id: tripId,
       place_id: idBySlug.get(s.placeSlug),
@@ -184,7 +210,15 @@ export async function saveTrip(input: SaveTripInput): Promise<string> {
     await supabase.from('trips').delete().eq('id', tripId);
     throw new Error(stopsError.message);
   }
-  return tripId;
+}
+
+/** The lists a trip just made started from — see `saveTrip` for why a
+ *  refusal is dropped here. */
+async function saveSources(tripId: string, collectionIds: string[]): Promise<void> {
+  if (!collectionIds.length) return;
+  await supabase
+    .from('trip_collections')
+    .insert(collectionIds.map((id) => ({ trip_id: tripId, collection_id: id })));
 }
 
 /** Remove one of the user's own trips. Its stops go with it — the foreign

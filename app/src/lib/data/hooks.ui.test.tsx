@@ -32,6 +32,10 @@ const q = vi.hoisted(() => ({
   fetchApplause: vi.fn(),
   fetchCopies: vi.fn(),
 }));
+// The count, as a plain function rather than a `vi.fn`: a spy attaches
+// its own handler to every promise it returns, to record how it settled,
+// and so would quietly catch the refusal the hook is meant to catch.
+const views = vi.hoisted(() => ({ counted: [] as string[], refuse: false }));
 vi.mock('../city', () => {
   const m = { useCity: () => ({ city: { id: 'hcmc' } }) };
   const all = () => (m as { useCity: () => object }).useCity();
@@ -52,9 +56,15 @@ vi.mock('./people', () => ({
   fetchCuratorAvatars: vi.fn(), profileByHandle: vi.fn(), fetchApplause: q.fetchApplause, fetchCopies: q.fetchCopies,
 }));
 vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
+vi.mock('./stats', () => ({
+  recordCollectionView: (id: string) => {
+    views.counted.push(id);
+    return views.refuse ? Promise.reject(new Error('offline')) : Promise.resolve();
+  },
+}));
 
 import {
-  type ListActivityQuery, useLikeCountsQuery, useListActivityQuery, useMyCollections, usePrefetchListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+  type ListActivityQuery, useCountView, useLikeCountsQuery, useListActivityQuery, useMyCollections, usePrefetchListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
 } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
@@ -451,5 +461,67 @@ describe('the owner’s activity, kept and shared', () => {
       expect(q.fetchApplause).toHaveBeenCalledTimes(1);
       expect(q.fetchCopies).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+// One open of a list's page, one count (owner, 13 Nov 2026): per mount,
+// once the list's id is known, and never a word to the reader if the
+// count fails.
+describe('an open of a list, counted', () => {
+  beforeEach(() => { views.counted = []; views.refuse = false; });
+  function Page({ id, tick }: { id: string | null | undefined; tick?: number }) {
+    useCountView(id);
+    void tick;
+    return null;
+  }
+
+  it('counts the list once for the mount, whatever re-renders after', async () => {
+    const view = render(<Page id="c1" tick={0} />);
+    view.rerender(<Page id="c1" tick={1} />);
+    view.rerender(<Page id="c1" tick={2} />);
+    await act(async () => {});
+    expect(views.counted).toEqual(['c1']);
+  });
+
+  it('waits for the id, and counts when it arrives', async () => {
+    const view = render(<Page id={undefined} />);
+    view.rerender(<Page id={null} />);
+    await act(async () => {});
+    expect(views.counted).toEqual([]);
+    view.rerender(<Page id="c1" />);
+    await act(async () => {});
+    expect(views.counted).toEqual(['c1']);
+  });
+
+  it('counts another list opened on the same page, and a new mount again', async () => {
+    const view = render(<Page id="c1" />);
+    view.rerender(<Page id="c2" />);
+    view.unmount();
+    render(<Page id="c2" />);
+    await act(async () => {});
+    expect(views.counted).toEqual(['c1', 'c2', 'c2']);
+  });
+
+  // React's development build runs a mount's effects twice; the open is
+  // still one open.
+  it('counts once under React’s double effect', async () => {
+    render(<React.StrictMode><Page id="c1" /></React.StrictMode>);
+    await act(async () => {});
+    expect(views.counted).toEqual(['c1']);
+  });
+
+  it('says nothing when the count is refused', async () => {
+    views.refuse = true;
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      render(<Page id="c1" />);
+      await act(async () => {});
+      await new Promise((r) => setTimeout(r, 10));
+      expect(views.counted).toEqual(['c1']);
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
   });
 });

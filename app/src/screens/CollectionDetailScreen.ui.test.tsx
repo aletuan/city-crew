@@ -70,6 +70,7 @@ const spies = vi.hoisted(() => ({
   sharesFor: vi.fn((_id: string | null | undefined) => {}),
   shipsReload: vi.fn(),
   prefetchActivity: vi.fn((_owner: string | null | undefined) => {}),
+  countView: vi.fn(async (_id: string) => {}),
 }));
 
 const state = vi.hoisted(() => ({
@@ -157,6 +158,9 @@ vi.mock('../lib/data', async (orig) => ({
     return { data: state.shared, loading: state.sharedLoading, reload: spies.sharedReload };
   },
 }));
+// The count itself, under the real `useCountView`: what is under test
+// here is when this page counts an open, not how the call is made.
+vi.mock('../lib/data/stats', () => ({ recordCollectionView: spies.countView }));
 vi.mock('../lib/crew', () => ({
   useCrew: () => ({
     ships: { data: state.ships, reload: spies.shipsReload },
@@ -3859,6 +3863,64 @@ describe('the grid', () => {
       await reads();
       expect(screen.getByRole('button', { name: 'Tùy chọn khác' })).toBeTruthy();
     });
+  });
+});
+
+// Every open of the page counts one view for the list's statistics
+// (owner, 13 Nov 2026): the owner's own, anybody's, a guest's. Once per
+// mount — a pull is not an open — and only for a list there is.
+describe('an open, counted', () => {
+  const list = () => propsWhere((q) => 'onRefresh' in q && 'renderItem' in q) as { onRefresh: () => void };
+
+  it('counts the owner’s own open of their list', () => {
+    state.mine = [collection()];
+    show();
+    expect(spies.countView).toHaveBeenCalledExactlyOnceWith('c1');
+  });
+
+  it('counts a reader’s open of somebody else’s list, and a guest’s', () => {
+    state.mine = [];
+    state.cols = [theirs({ id: 'c9' })];
+    show();
+    expect(spies.countView).toHaveBeenCalledExactlyOnceWith('c9');
+    cleanup();
+    spies.countView.mockClear();
+    state.uid = null;
+    show();
+    expect(spies.countView).toHaveBeenCalledExactlyOnceWith('c9');
+  });
+
+  it('counts a friend’s open of a list shared with them', () => {
+    state.mine = [];
+    state.shared = [collection({ id: 'c7', owner_id: 'lan', is_public: false })];
+    show();
+    expect(spies.countView).toHaveBeenCalledExactlyOnceWith('c7');
+  });
+
+  it('does not count again on a pull, and counts nothing for a list not found', () => {
+    show();
+    act(() => { list().onRefresh(); });
+    expect(spies.countView).toHaveBeenCalledTimes(1);
+    cleanup();
+    spies.countView.mockClear();
+    show('gone');
+    expect(spies.countView).not.toHaveBeenCalled();
+  });
+
+  // A list arriving a render after the mount — the catalog still loading
+  // — is counted when it lands, not lost.
+  it('counts a list that arrives after the page opened', () => {
+    state.mine = [];
+    state.colsLoading = true;
+    const { n } = nav();
+    const page = () => <CollectionDetailScreen navigation={n} route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>} />;
+    const view = render(page());
+    expect(spies.countView).not.toHaveBeenCalled();
+    state.colsLoading = false;
+    state.cols = [theirs({ id: 'c9' })];
+    view.rerender(page());
+    view.rerender(page());
+    expect(spies.countView).toHaveBeenCalledExactlyOnceWith('c9');
   });
 });
 

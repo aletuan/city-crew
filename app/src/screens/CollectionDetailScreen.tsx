@@ -26,7 +26,7 @@ import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/ca
 import { likesWorthShowing } from '../lib/likes';
 import {
   blockUser, deleteCollection, isNotShareable, membersOf, reorderCollection, setCollectionPublic, setShares,
-  unseenMembers, unseenSentence, useMyListShares, usePrefetchListActivity, useProfileByHandle, useSharedWithMe,
+  unseenMembers, unseenSentence, useCountView, useMyListShares, usePrefetchListActivity, useProfileByHandle, useSharedWithMe,
   type Collection,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
@@ -401,6 +401,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     [mine.data, shared.data, cols.data, route.params.slug],
   );
   const members = useMemo(() => (col ? membersOf(col, places) : []), [col, places]);
+  // This open, counted for the list's statistics (owner, 13 Nov 2026):
+  // anybody's, the owner's own and a guest's included, once for this
+  // mount and not again on a pull or on the way back from a place — see
+  // `useCountView`. The server keeps a number per list per day and
+  // nothing about who (`legal.ts` says so), and nothing is said here if
+  // the count does not land.
+  useCountView(col?.id ?? null);
   const note = useNoteEvent();
   const loading = cols.loading || mine.loading || shared.loading || placesLoading;
   // Pull to reload (owner, 23 Oct 2026). Until then this screen reloaded
