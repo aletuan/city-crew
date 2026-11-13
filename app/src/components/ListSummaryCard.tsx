@@ -70,7 +70,9 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headLines: { flexShrink: 1 },
   headHandle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: HEAD_LINE },
-  headAge: { color: colors.textSecondary, ...type.meta, lineHeight: HEAD_LINE },
+  // The age under the handle in the third step, as the collection page's
+  // own line under the handle is (13 Nov 2026).
+  headAge: { color: colors.textTertiary, ...type.meta, lineHeight: HEAD_LINE },
   // The title and the words as one block, 4 apart (`space.nameToMeta`, a
   // name and the line that qualifies it).
   words: { gap: space.nameToMeta },

@@ -157,8 +157,12 @@
 // suggestion pill (the glass, the person glyph) for Add friend — quiet,
 // because a page of likers is a page of these and the owner made Crew's
 // quiet for exactly that (26 Oct 2026); its Cancel / Unblock outline for
-// Friends and Requested; its Accept's gradient for Accept, the one that
-// answers somebody waiting. Each at `CHIP_H`, 44 to the thumb with
+// Friends and Requested — the outline, with its word a step quieter
+// than Crew's (`textTertiary`, 13 Nov 2026): Crew's outline is a press
+// (Cancel, Unblock), these two are states nobody can press, and on a
+// page of friends four of five rows wore one, as loud as the names.
+// Its Accept's gradient for Accept, the one that answers somebody
+// waiting. Each at `CHIP_H`, 44 to the thumb with
 // `CHIP_SLOP`. The styles are restated here, not imported: the button
 // scale's check reads a button's face from the file's own `s`, and a
 // style borrowed from another screen's sheet would be a button it
@@ -560,7 +564,11 @@ const s = StyleSheet.create({
   // The handle gives when it is long; the age never does.
   handle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
   when: { color: colors.textTertiary, ...type.meta, flexShrink: 0 },
-  name: { color: colors.textSecondary, ...type.meta },
+  // The handle and age under a name: the third step, as `when` beside a
+  // handle alone, and as Crew's handle under a name (13 Nov 2026). It was
+  // the second, so the same line was two greys by whether a name stood
+  // above it.
+  name: { color: colors.textTertiary, ...type.meta },
 
   // ── the friend button, in Crew's looks ──
   // Crew's "Add" suggestion pill.
@@ -581,5 +589,5 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
     minHeight: CHIP_H, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 6,
   },
-  quietText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
+  quietText: { color: colors.textTertiary, fontSize: 14, fontWeight: font.semibold },
 });

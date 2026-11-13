@@ -213,6 +213,13 @@ describe('the list, in a card', () => {
     expect(screen.queryByText(/Read more/)).toBeNull();
   });
 
+  // The line under the handle, a step under the handle and the words, as
+  // the collection page's own line under the handle is.
+  it('sets the age in the third grey', async () => {
+    await show();
+    expect(textStyleOf(within(screen.getByTestId('activity-list')).getByText('3h'))?.color).toBe(colors.textTertiary);
+  });
+
   it('says a list made a moment ago is New, as the card head does', async () => {
     state.mine = [list({ created_at: ago(10_000) })];
     await show();
@@ -351,7 +358,7 @@ describe('the rows', () => {
     await show();
     const row = screen.getByTestId('activity-row');
     expect(textStyleOf(within(row).getByText('Lan Phạm'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
-    expect(textStyleOf(within(row).getByText('@lan · 5m'))?.color).toBe(colors.textSecondary);
+    expect(textStyleOf(within(row).getByText('@lan · 5m'))?.color).toBe(colors.textTertiary);
   });
 
   // No name: the handle is the name, bare, with the age beside it — as
@@ -796,7 +803,7 @@ describe('the friend button', () => {
       expect(viewStyleOf(buttonOf(h)!)).toMatchObject({
         borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill, minHeight: CHIP_H,
       });
-      expect(textStyleOf(within(buttonOf(h)!).getByText(/./))?.color).toBe(colors.textSecondary);
+      expect(textStyleOf(within(buttonOf(h)!).getByText(/./))?.color).toBe(colors.textTertiary);
     }
     const add = buttonOf('stranger')!.firstElementChild!.firstElementChild as HTMLElement;
     expect(viewStyleOf(add)).toMatchObject({ backgroundColor: colors.surfaceGlass, borderRadius: radius.pill, minHeight: CHIP_H });

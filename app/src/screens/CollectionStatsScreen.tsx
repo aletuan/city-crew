@@ -23,10 +23,12 @@
 // it on Vietnam's calendar. The line under each figure says "7 days" and
 // nothing finer: the difference is the hours of today already past.
 //
-// The line under the grid says which figures include the owner, because
-// the owner's own opens are the first a new list has, and a reader who
-// sees "Views 3" on a list nobody else has found should not have to
-// guess whose they were.
+// No line under the grid (owner, 13 Nov 2026). There was one, saying
+// views and trips include the owner's own and likes and copies do not,
+// on the reasoning that a new list's first opens are its owner's and
+// "Views 3" should not leave anyone guessing whose. The owner took it
+// off: four figures and a footnote about how two of them are counted is
+// the footnote read every visit to explain a rule learned once.
 //
 // ── the asking ──
 //
@@ -169,20 +171,10 @@ export default function CollectionStatsScreen({ navigation, route }: {
   ) : stats === null || nothingCounted(stats) ? (
     nothing
   ) : (
-    <>
-      <View style={s.grid} testID="stats-grid">
-        <View style={s.gridRow}>{tile('views', stats.views)}{tile('likes', stats.likes)}</View>
-        <View style={s.gridRow}>{tile('copies', stats.copies)}{tile('trips', stats.trips)}</View>
-      </View>
-      <Text style={s.note} testID="stats-note">
-        {t(
-          'Views and trips include your own. Likes and copies do not, as on Activity.',
-          'Lượt xem và chuyến đi có tính của bạn. Lượt thích và bản sao thì không, như ở trang Hoạt động.',
-          '閲覧と旅程にはあなた自身の分も含まれます。いいねとコピーは、アクティビティと同じく含まれません。',
-          '浏览和行程包括你自己的。点赞和副本不包括，与动态页相同。', '瀏覽和行程包括你自己的。按讚和副本不包括，與動態頁相同。',
-        )}
-      </Text>
-    </>
+    <View style={s.grid} testID="stats-grid">
+      <View style={s.gridRow}>{tile('views', stats.views)}{tile('likes', stats.likes)}</View>
+      <View style={s.gridRow}>{tile('copies', stats.copies)}{tile('trips', stats.trips)}</View>
+    </View>
   );
 
   return (
@@ -234,5 +226,4 @@ const s = StyleSheet.create({
   total: { color: colors.text, fontSize: type.title.fontSize, fontFamily: display.bold, fontVariant: ['tabular-nums'] },
   // The caption size the trip screens set their small lines at (13).
   week: { color: colors.textSecondary, fontSize: 13, fontVariant: ['tabular-nums'] },
-  note: { color: colors.textTertiary, ...type.meta, marginTop: space.cardGap },
 });

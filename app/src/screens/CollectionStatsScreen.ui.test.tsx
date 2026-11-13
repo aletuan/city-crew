@@ -197,10 +197,11 @@ describe('the tiles', () => {
     expect(screen.getByTestId('stats-views-figure').getAttribute('aria-label')).toBe('Views, 1,284, Last 7 days: 37');
   });
 
-  it('says which figures include your own', async () => {
+  // No footnote under the grid (owner, 13 Nov 2026).
+  it('draws nothing under the four figures', async () => {
     await show();
-    expect(screen.getByTestId('stats-note').textContent)
-      .toBe('Views and trips include your own. Likes and copies do not, as on Activity.');
+    expect(screen.queryByTestId('stats-note')).toBeNull();
+    expect(screen.queryByText(/include your own/)).toBeNull();
   });
 
   it('is not a control', async () => {
