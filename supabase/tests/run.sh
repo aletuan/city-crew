@@ -597,3 +597,16 @@ for f in "$ROOT"/supabase/migrations/*_collection_shares.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/collection_shares_test.sql"
+
+# Likes kept when a list goes private (13 Nov 2026): the count to the
+# owner and to a friend the list is shared with, the names and the copies
+# to the owner, and the like button still public-only. Right after the
+# shares block, because the count asks `shared_with_me`, which that block
+# makes; and after the safety block, whose `likes_on_mine` and
+# `copies_of_mine` this replaces. Its filename names what it does, not a
+# table, so it is listed rather than caught by an earlier glob.
+echo "→ likes kept off public"
+for f in "$ROOT"/supabase/migrations/*_likes_kept_off_public.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/likes_kept_off_public_test.sql"

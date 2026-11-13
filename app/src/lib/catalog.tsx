@@ -150,9 +150,11 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     ),
   );
   const deskTerms = useCategoryTermsQuery();
-  // Counts are public and need no reader; the set of your own likes is
-  // empty until there is one, which is the honest answer signed out.
-  const likeCounts = useLikeCountsQuery();
+  // Counts are asked again for each reader: public lists are counted for
+  // everybody, your own and the ones shared with you for you alone
+  // (`fetchLikeCounts`). The set of your own likes is empty until there
+  // is a reader, which is the honest answer signed out.
+  const likeCounts = useLikeCountsQuery(meId);
   const myLikes = useMyLikesQuery(meId);
 
   // ── coming back to the app ──

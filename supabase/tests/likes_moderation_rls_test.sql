@@ -91,7 +91,11 @@ begin
 end $$;
 
 -- Taken private, the list stops being counted in public — the count
--- must not keep advertising a list nobody can open.
+-- must not keep advertising a list nobody can open. Asked as nobody in
+-- particular and as the curator's feed, as these migrations had it;
+-- 20261113120000, applied later on this bench, gives the owner and the
+-- friends it is shared with the count and the owner the feed again
+-- (`likes_kept_off_public_test.sql`).
 update public.collections set is_public = false where id = 'd3000000-0000-0000-0000-0000000000c1';
 do $$
 declare counted int; applause int;

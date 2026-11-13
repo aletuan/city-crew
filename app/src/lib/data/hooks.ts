@@ -77,8 +77,16 @@ export const useCategoryTermsQuery = () => {
 // the shelf the same object twice rather than a new one each time.
 const NO_TALLY: LikeTally = { shown: {}, ranked: {} };
 
-export const useLikeCountsQuery = () => {
-  const fetcher = useCallback(() => fetchLikeCounts(), []);
+// Asked again when the reader changes (13 Nov 2026). The counts were the
+// same for everybody until then and fetched once for the app's life; now
+// your own lists and the ones shared with you are counted for you alone
+// (`fetchLikeCounts`), so a launch that fetched them signed out, before
+// the session landed, would keep a private list's heart blank until a
+// tap refetched. `meId` is the fetcher's identity, not its argument: the
+// function reads the caller from the session.
+export const useLikeCountsQuery = (meId?: string | null) => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fetcher = useCallback(() => fetchLikeCounts(), [meId]);
   return useFetch(fetcher, NO_TALLY);
 };
 

@@ -181,7 +181,9 @@ begin
   assert n = 2, format('the count moved to %s after a refused duplicate', n);
 
   -- A private list has no shelf to be ordered on and its count is nobody's
-  -- business.
+  -- business — nobody's but its owner's and the friends it is shared
+  -- with since 20261113120000, which this bench applies later; asked
+  -- here as nobody in particular, it is still no row.
   select count(*) into n from public.collection_like_counts() where collection_id = priv;
   assert n = 0, 'collection_like_counts leaked a private list';
 

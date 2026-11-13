@@ -390,7 +390,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // Liking needs three things and refuses without any of them: an account
   // to attribute the like to, the row's id — the likes table keys on it,
   // not on the slug everything user-facing uses — and a list that is
-  // public, since a private one has no shelf to be ordered on.
+  // public, since a private one has no shelf to be ordered on. A list no
+  // longer public still shows the likes it kept, as a figure (`keptHeart`).
   const { likes, myLikes, toggleLike } = useLikes();
   // Shared before public: a list that is both is the same row either way,
   // and the shared copy names its owner (`fetchSharedWithMe`).
@@ -432,8 +433,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    *
    * What it changes is what the screen offers, by the owner's call the
    * day sharing shipped: you may read it and plan from it, and that is
-   * all. No heart (likes are public-only — `heart` already asks
-   * `isPublic`). No "Save a copy", at either of its doors (`canCopy`):
+   * all. No heart to press (likes are public-only — `heart` already
+   * asks `isPublic`), though the likes it kept from being public show,
+   * read-only (`keptHeart`). No "Save a copy", at either of its doors (`canCopy`):
    * the list was lent to you to read, and the app does not offer to make
    * it yours. No Report: moderation never reaches a private list
    * (`legal.ts`, "nothing there can reach a private collection"), so the
@@ -1357,12 +1359,55 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </PressableScale>
   ) : null;
 
+  /* ── the likes a list kept (owner, 13 Nov 2026) ──
+     A list that gathered likes while public and then went to Friends or
+     Private kept every row in `collection_likes`, and lost them from
+     view: the heart above asks `isPublic`, and so did the count. The
+     count is now returned for your own lists and for the lists shared
+     with you, whatever they are now (`20261113120000_likes_kept_off_
+     public.sql`), and this is where it shows.
+
+     Read-only: the same outline in the same grey and the figure beside
+     it, so the row looks as it did, but a View, not a button. A new like
+     on a list that is not public is refused by the insert policy, so a
+     press here would be a control that does nothing — and a filled heart
+     would claim a state the reader cannot change. The outline whoever is
+     looking, the owner who once liked it included, for the same reason.
+
+     Gated on the count alone, not on who is reading: the server returns
+     a non-public list's count only to its owner and to the friends it is
+     shared with, so a list with no count here is one the reader may not
+     count, or one with no likes, and either way the slot stays empty, as
+     it was. No `col.id` either: the figure is read by slug and nothing is
+     written.
+
+     VoiceOver reads the figure as a sentence, with no role — there is
+     nothing to press. */
+  const keptLikes = col && !isPublic ? likes[col.slug] : undefined;
+  const keptHeart = keptLikes && likesWorthShowing(keptLikes) ? (
+    <View
+      style={s.like}
+      accessible
+      accessibilityLabel={t(
+        keptLikes === 1 ? '1 like' : `${keptLikes} likes`,
+        `${keptLikes} lượt thích`,
+        `${keptLikes}件のいいね`,
+        `${keptLikes} 个赞`, `${keptLikes} 個讚`,
+      )}
+      testID="collection-likes-kept"
+    >
+      <Glyph name="heart-outline" size={15} color={colors.textTertiary} />
+      <Text style={s.meta}>{keptLikes}</Text>
+    </View>
+  ) : null;
+
   /* ── the activity row (owner, 13 Nov 2026) ──
      The card's last row, under a hairline: the heart, and on your own
      list the way to who liked and copied it (`activityLink`).
 
      Kept even when it is empty — a private list, or one lent to you,
-     has no heart — and always `CHIP_H` tall: the row is the activity's
+     has no heart, and holds only the likes it kept (`keptHeart`) when
+     it has any — and always `CHIP_H` tall: the row is the activity's
      place, and a card that grew by a row when a list went public, or
      when the activity arrived, would move the grid under it.
 
@@ -1383,10 +1428,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      `copies_of_mine` answer only the owner, so a visitor's page would be
      empty by construction.
 
-     On a private list too. Its page says why nothing is there — only a
-     public list can be liked or copied — which is the one thing an owner
-     wondering where the likes are needs to hear, and the row keeps one
-     look whatever the list's state.
+     On a private list too, and since 13 Nov 2026 its page lists the
+     likes and copies the list gathered while it was public — the two
+     functions answer the owner whatever the list is now — which is the
+     one thing an owner wondering where the likes went needs to see. The
+     row keeps one look whatever the list's state.
 
      The link is the target, not the row. The heart is in the same row,
      and a row-wide press would turn a thumb that just missed the heart
@@ -1417,7 +1463,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   ) : null;
   const activity = (
     <View style={s.activity} testID="collection-activity">
-      <View style={s.activityRow}>{heart}{activityLink}</View>
+      <View style={s.activityRow}>{heart ?? keptHeart}{activityLink}</View>
     </View>
   );
 

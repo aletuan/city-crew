@@ -241,7 +241,12 @@ export async function fetchSharedWithMe(userId: string): Promise<Collection[]> {
 export type LikeTally = { shown: Record<string, number>; ranked: Record<string, number> };
 
 /**
- * How many people liked each public collection, keyed by slug.
+ * How many people liked each collection the reader may count, keyed by
+ * slug: every public list, and since 13 Nov 2026 the reader's own lists
+ * and the lists shared with them, whatever they are now — the likes a
+ * list gathered while public outlive its going private (see
+ * `20261113120000_likes_kept_off_public.sql`). Which lists those are is
+ * the function's to say, not this one's.
  *
  * Through `collection_like_counts()` rather than a select on the likes
  * table, and that is the privacy boundary rather than a convenience: the
@@ -270,7 +275,16 @@ export type LikeTally = { shown: Record<string, number>; ranked: Record<string, 
 export async function fetchLikeCounts(): Promise<LikeTally> {
   const [counts, ids] = await Promise.all([
     supabase.rpc('collection_like_counts'),
-    supabase.from('collections').select('id, slug').eq('is_public', true),
+    // Every list RLS lets the reader see, not only public ones: the slug
+    // lookup only names what the function counted, and a filter here to
+    // public lists dropped the counts it now keeps for the owner and the
+    // friends a list is shared with. RLS gives exactly those three
+    // (public, `owners read their collections`, `friends read lists
+    // shared with them`), plus every list to an editor, whose extra rows
+    // name nothing the function returned. Rejected: matching the
+    // function's rule here with `.or(...)` — a second copy of the rule,
+    // and the shared half is not a column on the row.
+    supabase.from('collections').select('id, slug'),
   ]);
   if (counts.error) throw new Error(counts.error.message);
   if (ids.error) throw new Error(ids.error.message);

@@ -8,16 +8,22 @@
 //
 // The rows come from the RPCs Activity reads, `likes_on_mine` and
 // `copies_of_mine` (`lib/data/people`), asked from the epoch. Read in the
-// migrations as they stand (`20260823180000_blocks.sql` holds the last
-// `likes_on_mine`, `20261007120000_collection_copies.sql` the only
-// `copies_of_mine`), each takes any `since`: it is a plain
+// migrations as they stand (`20261113120000_likes_kept_off_public.sql`
+// holds the last of each), each takes any `since`: it is a plain
 // `created_at >= since`, so 1970 is all time. Neither has a `limit`. What
 // they do leave out is what this page should too: a like or copy by the
-// owner themselves, one by somebody the owner has blocked, and every row
-// on a list that is not public — so a list made private again shows
-// nothing here even though its likes are still counted. A like taken back
-// or a copy deleted is a row gone, as on Activity: the page holds what
-// still stands.
+// owner themselves, and one by somebody the owner has blocked. A like
+// taken back or a copy deleted is a row gone, as on Activity: the page
+// holds what still stands.
+//
+// A list that is not public now is asked about like any other (owner,
+// 13 Nov 2026). Until that day both functions answered for public lists
+// alone, so a list made private again showed nothing here while its
+// likes were still in the table, and the page said "Only a public
+// collection can be liked or copied" instead. The functions now answer
+// the owner whatever the list is now, and the page lists what it
+// gathered while it was public. A list that never gathered anything
+// gets the ordinary empty state: it is not a different kind of nothing.
 //
 // The one cap that can apply is not in the repo: PostgREST's "Max rows"
 // on the live project, which cuts a set-returning RPC as it cuts a table
@@ -55,9 +61,8 @@
 // ── states, as Activity has them ──
 //
 // Loading is the accent spinner under the card. Nothing to show is a
-// state with a heading, and its sentence depends on why: a private list
-// cannot be liked or copied at all, a public one has simply not been
-// yet. A failure that leaves nothing to show says so, with Try again;
+// state with a heading and one sentence, whatever the list is now —
+// public, Friends or Private. A failure that leaves nothing to show says so, with Try again;
 // one of the two failing while the other has rows still shows the rows.
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -90,9 +95,9 @@ export default function CollectionActivityScreen({ navigation, route }: {
   const me = session?.user?.id ?? null;
   const mine = useMyLists();
   const col = mine.data.find((c) => c.slug === route.params.slug) ?? null;
-  // Only a public list has anything to fetch: both RPCs answer for public
-  // lists alone (see the header), so a private one is asked nothing.
-  const listId = col?.is_public && col.id ? col.id : null;
+  // Any list of yours with an id has something to ask about, public or
+  // not (see the header). A row from the launch cache may have none.
+  const listId = col?.id ?? null;
 
   const [likes, setLikes] = useState<Applause[] | null>(null);
   const [copies, setCopies] = useState<Copy[] | null>(null);
@@ -231,22 +236,10 @@ export default function CollectionActivityScreen({ navigation, route }: {
   const emptyTitle = t('No likes or copies yet', 'Chưa có lượt thích hay bản sao nào', 'まだいいねやコピーはありません', '还没有点赞或复制', '還沒有按讚或複製');
   const state = !col && mine.loading ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} />
-  ) : !col || (!listId && col.is_public) ? (
+  ) : !listId ? (
     // Not yours, gone, or a row from the launch cache with no id to ask
     // about: nothing to show, said as nothing yet rather than as a fault.
     <EmptyState icon="heart" title={emptyTitle} body={waitBody(t)} testID="activity-empty" />
-  ) : !listId ? (
-    <EmptyState
-      icon="lock-closed"
-      title={emptyTitle}
-      body={t(
-        'Only a public collection can be liked or copied — this one is private.',
-        'Chỉ bộ sưu tập công khai mới được thích hay sao chép — bộ này đang để riêng tư.',
-        'いいねやコピーができるのは公開コレクションだけです — このコレクションは非公開です。',
-        '只有公开的合集才能被点赞或复制 — 这个合集是私密的。', '只有公開的合集才能被按讚或複製 — 這個合集是私密的。',
-      )}
-      testID="activity-private"
-    />
   ) : loading ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} testID="activity-loading" />
   ) : acts.length > 0 ? null : failed ? (
@@ -291,7 +284,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
 
 type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
 
-/** A public list nobody has acted on yet: Activity's sentence, for one list. */
+/** A list nobody has acted on yet: Activity's sentence, for one list. */
 const waitBody = (t: T) => t(
   'When someone likes or copies this collection, you will see it here.',
   'Khi có người thích hay sao chép bộ sưu tập này, bạn sẽ thấy ở đây.',

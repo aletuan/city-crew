@@ -28,6 +28,7 @@ const q = vi.hoisted(() => ({
   fetchMyLikes: vi.fn(),
   fetchPreferences: vi.fn(),
   fetchMyListShares: vi.fn(),
+  fetchLikeCounts: vi.fn(),
 }));
 vi.mock('../city', () => {
   const m = { useCity: () => ({ city: { id: 'hcmc' } }) };
@@ -39,7 +40,7 @@ vi.mock('./places', () => ({
 }));
 vi.mock('./collections', () => ({
   fetchMyCollections: q.fetchMyCollections, fetchMyLikes: q.fetchMyLikes, fetchSharedWithMe: q.fetchSharedWithMe,
-  fetchCollections: vi.fn(), fetchLikeCounts: vi.fn(),
+  fetchCollections: vi.fn(), fetchLikeCounts: q.fetchLikeCounts,
 }));
 vi.mock('./preferences', async () => ({
   fetchPreferences: q.fetchPreferences,
@@ -49,7 +50,7 @@ vi.mock('./people', () => ({ fetchCuratorAvatars: vi.fn(), profileByHandle: vi.f
 vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
 
 import {
-  useMyCollections, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+  useLikeCountsQuery, useMyCollections, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
 } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
@@ -251,5 +252,33 @@ describe('preferences, which are one row rather than a list', () => {
     render(<Probe name="prefs" use={() => useMyPreferences('u1')} />);
     await waitFor(() => expect(seen.prefs.fromCache).toBe(true));
     expect(seen.prefs.data).toEqual({ categories: [], budget_vnd: null, history_on: true });
+  });
+});
+
+// The like counts (13 Nov 2026): your own lists and the ones shared with
+// you are counted for you alone, so the counts are a question per reader.
+// Fetched once for the app's life, a launch that asked before the session
+// landed kept a private list's kept likes blank until a tap refetched.
+describe('the like counts, per reader', () => {
+  function Counts({ me }: { me: string | null | undefined }) {
+    const f = useLikeCountsQuery(me);
+    useEffect(() => { seen.counts = f as Fetch<unknown>; });
+    return null;
+  }
+  const tally = (n: number) => ({ shown: { mine: n }, ranked: { mine: n } });
+
+  it('asks again when the reader changes, and not on a render that changes nothing', async () => {
+    q.fetchLikeCounts.mockResolvedValueOnce(tally(0)).mockResolvedValueOnce(tally(3)).mockResolvedValueOnce(tally(0));
+    const view = render(<Counts me={null} />);
+    await waitFor(() => expect(seen.counts.data).toEqual(tally(0)));
+    view.rerender(<Counts me="u1" />);
+    await waitFor(() => expect(seen.counts.data).toEqual(tally(3)));
+    view.rerender(<Counts me="u1" />);
+    await act(async () => {});
+    expect(q.fetchLikeCounts).toHaveBeenCalledTimes(2);
+    // Signed out again: asked again, and the reader's count goes with them.
+    view.rerender(<Counts me={null} />);
+    await waitFor(() => expect(seen.counts.data).toEqual(tally(0)));
+    expect(q.fetchLikeCounts).toHaveBeenCalledTimes(3);
   });
 });

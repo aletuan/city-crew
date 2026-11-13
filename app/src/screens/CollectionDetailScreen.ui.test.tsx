@@ -2904,6 +2904,162 @@ describe('the introduction card', () => {
 // the foot. Somebody else's public list says its age alone; a friend's
 // lent to you says its age and "Shared with you"; an editorial list, with
 // no owner and so no true age, says nothing, and the line is not drawn.
+// The likes a list kept (owner, 13 Nov 2026). A list that gathered
+// likes while public and went to Friends or Private keeps them; the server
+// counts them for its owner and the friends it is shared with, and the
+// card shows that count as a figure in the heart's place — the same
+// outline, the same grey, no button, since a like there would be refused.
+describe('the likes a list kept', () => {
+  const kept = () => screen.queryByTestId('collection-likes-kept');
+  /** How a row lays out its glyph and figure. The press's scale adds a
+   *  transform to the public heart's box that a figure has no use for. */
+  const layoutOf = (el: HTMLElement) => {
+    const st = viewStyleOf(el);
+    return { flexDirection: st?.flexDirection, alignItems: st?.alignItems, gap: st?.gap };
+  };
+  /** What a public list's heart is drawn with, read off a public list. */
+  const publicHeart = () => {
+    cleanup();
+    state.mine = [collection({ is_public: true })];
+    show();
+    const h = button('Like');
+    const glyph = h.querySelector('[data-icon]')!;
+    return {
+      inner: layoutOf(glyph.parentElement as HTMLElement),
+      glyph: [glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')],
+      count: textStyleOf(within(h).getByText('12')),
+    };
+  };
+
+  /** The figure, as a reader meets it: where it sits, what it says, and
+   *  that it is not a control. */
+  const expectKept = (n: number, label: string) => {
+    const el = kept()!;
+    expect(el).toBeTruthy();
+    expect(el.textContent).toBe(String(n));
+    expect(el.getAttribute('aria-label')).toBe(label);
+    // No role, and nothing inside it that is one.
+    expect(el.getAttribute('role')).toBeNull();
+    expect(el.querySelector('[role="button"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^(Like|Unlike)$/ })).toBeNull();
+    // First in the activity row, where the public heart stands.
+    const row = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
+    expect(row.firstElementChild).toBe(el);
+    // The outline, in the tertiary grey, whatever the reader once did.
+    const glyph = el.querySelector('[data-icon]')!;
+    expect(glyph.getAttribute('data-icon')).toBe('heart-outline');
+    expect(glyph.getAttribute('data-color')).toBe(String(colors.textTertiary));
+    // A press does nothing.
+    fireEvent.click(el);
+    fireEvent.click(glyph);
+    expect(spies.toggleLike).not.toHaveBeenCalled();
+    expect(spies.askToSignIn).not.toHaveBeenCalled();
+  };
+
+  it('shows the owner the likes a Private list kept, read-only', () => {
+    state.mine = [collection({ is_public: false })];
+    state.likes = { 'old-quarter': 12 };
+    show();
+    expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
+    expectKept(12, '12 likes');
+    // And the way to who they were, after it.
+    const row = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
+    expect(row.lastElementChild).toBe(screen.getByTestId('collection-activity-link'));
+  });
+
+  it('shows the owner the likes a Friends list kept, read-only', () => {
+    state.mine = [collection({ is_public: false })];
+    state.shares = [{ collection_id: 'c1', user_id: 'lan', created_at: '2026-11-13T10:00:00Z' }];
+    state.likes = { 'old-quarter': 12 };
+    show();
+    expect(screen.getByTestId('collection-visibility').textContent).toBe('Friends');
+    expectKept(12, '12 likes');
+  });
+
+  it('shows a friend the likes the list lent to them kept, the number and nothing else', () => {
+    state.mine = [];
+    state.shared = [collection({ owner_id: 'lan-id', is_public: false, curator_handle: 'lan' })];
+    state.myLikes = ['c1'];
+    state.likes = { 'old-quarter': 12 };
+    show();
+    expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
+    expectKept(12, '12 likes');
+    // Not the owner's way to who liked it.
+    expect(screen.queryByTestId('collection-activity-link')).toBeNull();
+    expect(screen.getByTestId('collection-activity').textContent).toBe('12');
+  });
+
+  it('says one like in the singular, and in Vietnamese', () => {
+    state.mine = [collection({ is_public: false })];
+    state.likes = { 'old-quarter': 1 };
+    show();
+    expect(kept()!.getAttribute('aria-label')).toBe('1 like');
+    cleanup();
+    state.lang = 'vi';
+    state.likes = { 'old-quarter': 12 };
+    show();
+    expect(kept()!.getAttribute('aria-label')).toBe('12 lượt thích');
+  });
+
+  it('is drawn as the public heart is: the same glyph, gap and figure', () => {
+    state.mine = [collection({ is_public: false })];
+    state.likes = { 'old-quarter': 12 };
+    show();
+    const el = kept()!;
+    const glyph = el.querySelector('[data-icon]')!;
+    const mine = {
+      inner: layoutOf(glyph.parentElement as HTMLElement),
+      glyph: [glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')],
+      count: textStyleOf(within(el).getByText('12')),
+    };
+    expect(mine.inner).toEqual({ flexDirection: 'row', alignItems: 'center', gap: 4 });
+    expect(mine.count?.color).toBe(colors.textTertiary);
+    expect(mine).toEqual(publicHeart());
+  });
+
+  it('shows nothing in the slot at no likes, to the owner or to a friend', () => {
+    for (const likes of [{}, { 'old-quarter': 0 }] as Record<string, number>[]) {
+      cleanup();
+      state.mine = [collection({ is_public: false })];
+      state.shared = [];
+      state.likes = likes;
+      show();
+      expect(kept()).toBeNull();
+      expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
+      cleanup();
+      state.mine = [];
+      state.shared = [collection({ owner_id: 'lan-id', is_public: false, curator_handle: 'lan' })];
+      show();
+      expect(kept()).toBeNull();
+      expect(screen.getByTestId('collection-activity').textContent).toBe('');
+    }
+  });
+
+  it('leaves a public list its live heart, and no figure beside it', () => {
+    state.mine = [collection({ is_public: true })];
+    state.likes = { 'old-quarter': 12 };
+    show();
+    expect(kept()).toBeNull();
+    const heart = button('Like');
+    expect(within(heart).getByText('12')).toBeTruthy();
+    fireEvent.click(heart);
+    expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'c1', slug: 'old-quarter' });
+    cleanup();
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    expect(kept()).toBeNull();
+    expect(within(button('Like')).getByText('12')).toBeTruthy();
+    // A public list from the launch cache with no id has no heart, as
+    // before, and is not given the figure in its place.
+    cleanup();
+    state.cols = [theirs({ id: undefined } as Partial<Collection>)];
+    show();
+    expect(kept()).toBeNull();
+    expect(screen.getByTestId('collection-activity').textContent).toBe('');
+  });
+});
+
 // "View activity ›" (owner, 13 Nov 2026): at the activity row's right
 // end, for the list's owner alone, opening who liked and copied it.
 describe('the way to the list’s activity', () => {
