@@ -25,7 +25,7 @@ import {
   fetchFriendships, fetchMyBlocks, fetchMyCheckins, fetchMyCollections, fetchMyTrips,
   fetchPreferences, fetchProfilesById,
 } from './data';
-import { fetchMyHistory, fetchMyLikedCollections, fetchMySubmittedPlaces } from './data/export';
+import { fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces } from './data/export';
 import { buildExport, exportFilename, exportLang } from './export';
 
 // ── why these two are required inside the function ──
@@ -84,7 +84,7 @@ export function useTakeout() {
       const { File, Paths, Sharing } = await nativeIO();
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing_unavailable');
 
-      const [collections, likes, trips, preferences, friendships, blocked, submitted, history, checkins] =
+      const [collections, likes, trips, preferences, friendships, blocked, submitted, history, checkins, shares] =
         await Promise.all([
           fetchMyCollections(uid),
           fetchMyLikedCollections(uid),
@@ -95,12 +95,20 @@ export function useTakeout() {
           fetchMySubmittedPlaces(uid),
           fetchMyHistory(uid),
           fetchMyCheckins(uid),
+          fetchMyShares(uid),
         ]);
 
       // Already keyed by id, and the export wants only the handle out of
       // each — rule 5 again: the name and the avatar this returns are the
       // other person's, and they do not travel.
-      const people = await fetchProfilesById(othersIn(friendships, blocked, uid));
+      // The other ends of the shares are friends, so already in the crew;
+      // asked for anyway, so a share is never dropped for want of a name.
+      const sharers = [
+        ...shares.mine.map((r) => r.user_id),
+        ...shares.withMe.map((r) => r.collections?.owner_id).filter((o): o is string => !!o),
+      ];
+      const people = await fetchProfilesById([...new Set([...othersIn(friendships, blocked, uid), ...sharers])]
+        .filter((id) => id !== uid));
       const handles: Record<string, string> = {};
       for (const [id, p] of Object.entries(people)) handles[id] = p.handle;
 
@@ -116,7 +124,7 @@ export function useTakeout() {
           created_at: (session?.user as { created_at?: string } | undefined)?.created_at ?? null,
         },
         profile, preferences, collections, likes, trips,
-        friendships, blocked, handles, submitted, history, checkins,
+        friendships, shares, blocked, handles, submitted, history, checkins,
       }, now, exportLang(lang));
 
       // The cache directory, not documents: this is a copy the reader is

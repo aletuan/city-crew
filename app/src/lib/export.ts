@@ -50,9 +50,11 @@ import type { Trip } from './data/trips';
 import type { Checkin } from './checkin';
 import type { Preferences } from './data/preferences';
 import type { FriendshipRow } from './friends';
-import type { HistoryEventRow, LikedCollectionRow, SubmittedPlaceRow } from './data/export';
+import type { HistoryEventRow, LikedCollectionRow, ShareRow, SubmittedPlaceRow } from './data/export';
 
-export const EXPORT_FORMAT_VERSION = 1;
+// 2 since 12 Nov 2026: `shared`, the lists shared between this account
+// and its friends, either way.
+export const EXPORT_FORMAT_VERSION = 2;
 
 /** The profile columns `lib/auth` reads. Declared here rather than
  *  imported because `auth.tsx` pulls in React, and this file is held to
@@ -78,6 +80,8 @@ export type ExportInput = {
    *  three and the export has to say which is which. */
   trips: Trip[];
   friendships: FriendshipRow[];
+  /** Both ends of `collection_shares`, from `fetchMyShares`. */
+  shares: { mine: ShareRow[]; withMe: ShareRow[] };
   /** Account ids, from `fetchMyBlocks`. */
   blocked: string[];
   /** Account id → public handle, for rule 5. An id with no handle here is
@@ -116,6 +120,11 @@ export type ExportBundle = {
   crew: {
     friends: { handle: string; status: string; since: string }[];
     blocked: { handle: string }[];
+  };
+  /** Private lists shared between this account and its friends. */
+  shared: {
+    by_you: { collection_slug: string; friend_handle: string; shared_at: string }[];
+    with_you: { collection_slug: string; owner_handle: string; shared_at: string }[];
   };
   history: { place_slug: string | null; event: string; city_id: string | null; at: string }[];
   /** Where and when, and nothing else — that is all a check-in is yet. */
@@ -287,6 +296,26 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       blocked: input.blocked
         .map((id) => ({ handle: input.handles[id] ?? '' }))
         .filter((b) => b.handle !== ''),
+    },
+
+    // Rules 5 and 6: who you shared a list with is a relationship you
+    // made, so it is yours to take; the friend travels as a handle, and a
+    // share whose friend or list cannot be named is dropped like an edge.
+    shared: {
+      by_you: input.shares.mine
+        .map((r) => ({
+          collection_slug: r.collections?.slug ?? '',
+          friend_handle: input.handles[r.user_id] ?? '',
+          shared_at: isoUtc(r.created_at) ?? '',
+        }))
+        .filter((r) => r.collection_slug !== '' && r.friend_handle !== ''),
+      with_you: input.shares.withMe
+        .map((r) => ({
+          collection_slug: r.collections?.slug ?? '',
+          owner_handle: input.handles[r.collections?.owner_id ?? ''] ?? '',
+          shared_at: isoUtc(r.created_at) ?? '',
+        }))
+        .filter((r) => r.collection_slug !== '' && r.owner_handle !== ''),
     },
 
     history: input.history.map((h) => ({

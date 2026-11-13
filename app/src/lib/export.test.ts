@@ -25,7 +25,7 @@ const bare = (over: Partial<ExportInput> = {}): ExportInput => ({
   account: { id: 'me', email: 'me@example.com', created_at: '2026-01-01T00:00:00Z' },
   profile: { handle: 'dang', full_name: 'Tran Hai Dang', location: '', bio: '', interests: '', avatar_url: 'https://x/y.jpg' },
   preferences: { categories: ['cafes'], budget_vnd: null, history_on: true },
-  collections: [], likes: [], trips: [], friendships: [], blocked: [],
+  collections: [], likes: [], trips: [], friendships: [], shares: { mine: [], withMe: [] }, blocked: [],
   handles: {}, submitted: [], history: [], checkins: [],
   ...over,
 });
@@ -239,6 +239,60 @@ describe('crew', () => {
     const odd = [{ requester: 'me', addressee: 'them', status: 'pending' as const, created_at: 'nonsense' }];
     const out = buildExport(bare({ friendships: odd, handles: { them: 'thu' } }), NOW, 'en');
     expect(out.crew.friends[0].since).toBe('');
+  });
+});
+
+// Lists shared between this account and its friends (12 Nov 2026): a
+// relationship the account made, so it travels — the friend as a handle,
+// like the crew, and a share nobody can be named for dropped like an edge.
+describe('shared', () => {
+  const share = (user_id: string, slug: string | null, owner_id: string | null) => ({
+    created_at: '2026-11-12T16:00:00+07:00', user_id,
+    collections: slug ? { slug, owner_id } : null,
+  });
+
+  it('names the friend a list of yours is shared with, and the owner of one shared with you', () => {
+    const out = buildExport(bare({
+      shares: { mine: [share('f1', 'my-list', 'me')], withMe: [share('me', 'their-list', 'f2')] },
+      handles: { f1: 'minh', f2: 'ha' },
+    }), NOW, 'en').shared;
+    expect(out.by_you).toEqual([{ collection_slug: 'my-list', friend_handle: 'minh', shared_at: '2026-11-12T09:00:00.000Z' }]);
+    expect(out.with_you).toEqual([{ collection_slug: 'their-list', owner_handle: 'ha', shared_at: '2026-11-12T09:00:00.000Z' }]);
+  });
+
+  it('drops a share whose other end, or whose list, cannot be named', () => {
+    const out = buildExport(bare({
+      shares: {
+        mine: [share('nobody', 'my-list', 'me'), share('f1', null, null)],
+        withMe: [share('me', 'their-list', 'nobody'), share('me', null, null)],
+      },
+      handles: { f1: 'minh' },
+    }), NOW, 'en').shared;
+    expect(out).toEqual({ by_you: [], with_you: [] });
+  });
+
+  // As a like's time is: a time the database never holds unreadable,
+  // written empty rather than as a parser's opinion if it ever were.
+  it('writes an unreadable time as empty, and keeps the share', () => {
+    const bad = (user_id: string, slug: string, owner_id: string) => ({ ...share(user_id, slug, owner_id), created_at: 'not a date' });
+    const out = buildExport(bare({
+      shares: { mine: [bad('f1', 'my-list', 'me')], withMe: [bad('me', 'their-list', 'f2')] },
+      handles: { f1: 'minh', f2: 'ha' },
+    }), NOW, 'en').shared;
+    expect(out.by_you[0].shared_at).toBe('');
+    expect(out.with_you[0].shared_at).toBe('');
+  });
+
+  it('carries no account id', () => {
+    const out = buildExport(bare({
+      shares: { mine: [share('f1', 'my-list', 'me')], withMe: [share('me', 'their-list', 'f2')] },
+      handles: { f1: 'minh', f2: 'ha' },
+    }), NOW, 'en').shared;
+    expect(JSON.stringify(out)).not.toMatch(/"(me|f1|f2)"/);
+  });
+
+  it('is in format 2', () => {
+    expect(EXPORT_FORMAT_VERSION).toBe(2);
   });
 });
 

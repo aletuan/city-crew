@@ -16,7 +16,7 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { fetchMyHistory, fetchMyLikedCollections, fetchMySubmittedPlaces } from './export';
+import { fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces } from './export';
 import { PAGE_ROWS } from './pages';
 
 beforeEach(() => fake().reset());
@@ -74,6 +74,42 @@ describe('fetchMyLikedCollections', () => {
   it('throws what the server said', async () => {
     fake().replies({ error: { message: 'nope' } });
     await expect(fetchMyLikedCollections('u-1')).rejects.toThrow('nope');
+  });
+});
+
+describe('fetchMyShares', () => {
+  it('asks for the shares on this account’s lists, and the shares naming it, each scoped in the query', async () => {
+    fake().replies(
+      { data: [{ created_at: '2026-11-12T00:00:00Z', user_id: 'friend', collections: { slug: 'mine', owner_id: 'u-1' } }] },
+      { data: [{ created_at: '2026-11-12T01:00:00Z', user_id: 'u-1', collections: { slug: 'theirs', owner_id: 'friend' } }] },
+    );
+    const { mine, withMe } = await fetchMyShares('u-1');
+
+    expect(fake().log[0]).toMatchObject({
+      table: 'collection_shares', op: 'select', filters: [['collections.owner_id', 'u-1']],
+      order: ['created_at', { ascending: true }],
+    });
+    // Inner, so a share on somebody else's list is not returned at all.
+    expect(fake().log[0].payload).toContain('collections!inner(slug, owner_id)');
+    expect(fake().log[1]).toMatchObject({
+      table: 'collection_shares', op: 'select', filters: [['user_id', 'u-1']],
+      order: ['created_at', { ascending: true }],
+    });
+    expect(mine[0].collections?.slug).toBe('mine');
+    expect(withMe[0].collections?.slug).toBe('theirs');
+  });
+
+  it('answers with empty lists rather than null', async () => {
+    fake().replies({ data: null }, { data: null });
+    expect(await fetchMyShares('u-1')).toEqual({ mine: [], withMe: [] });
+  });
+
+  it('throws what the server said, on either read', async () => {
+    fake().replies({ error: { message: 'mine refused' } }, { data: [] });
+    await expect(fetchMyShares('u-1')).rejects.toThrow('mine refused');
+    fake().reset();
+    fake().replies({ data: [] }, { error: { message: 'theirs refused' } });
+    await expect(fetchMyShares('u-1')).rejects.toThrow('theirs refused');
   });
 });
 
