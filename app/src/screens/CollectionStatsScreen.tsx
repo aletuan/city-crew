@@ -39,6 +39,17 @@
 // while nothing at all is known, a failure with nothing to show said with
 // Try again, kept figures kept through a failed refresh.
 //
+// ── a pull (owner, 13 Nov 2026) ──
+//
+// Pulling the page down asks for the four figures again, as the list's
+// Activity page and the collection page reload on a pull: a figure that
+// moved while the page stood open — somebody's like, somebody's open —
+// waited for Back and a second visit. The figures stay drawn through it: a refresh of a kept answer
+// is not "nothing known", so the rule above draws no spinner of its own,
+// and the tiles change in place when the answer lands. One that fails
+// keeps them, as any failed refresh does. The pull asks nothing that the
+// collection page's open would count: only that page records a view.
+//
 // ── only the owner ──
 //
 // The list is looked up among your own (`useMyLists`), as on the Activity
@@ -72,8 +83,8 @@
 // than wrapping or being cut. Grouped by the reader's language
 // (`groupDigits`), never compacted: it is the curator's own number.
 
-import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Glyph, type GlyphName } from '../components/ui/glyph';
 import { Card, EmptyState, GradientCta, Screen, useTabBarClearance } from '../components/ui';
 import ListSummaryCard from '../components/ListSummaryCard';
@@ -103,6 +114,16 @@ export default function CollectionStatsScreen({ navigation, route }: {
   // Asking, and nothing known: no kept answer and no fresh one, or Try
   // again out after a failure that left nothing — the Activity page's rule.
   const loading = !q.loaded || (q.loading && q.loadedAt === null);
+  // The pull's spinner is the pull's, as on the collection page: armed by
+  // the gesture, disarmed when the fetch settles, and never lit by the
+  // ask every open makes behind kept figures. A pull while that ask is
+  // still out joins it (`useSharedFetch` sends one request per key), so
+  // the spinner waits for the answer already coming.
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !q.loading) setPulling(false);
+  }, [pulling, q.loading]);
+  const pull = () => { setPulling(true); q.reload(); };
 
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -190,6 +211,7 @@ export default function CollectionStatsScreen({ navigation, route }: {
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
       >
         {col ? <ListSummaryCard col={col} testID="stats-list" /> : null}
         {body}

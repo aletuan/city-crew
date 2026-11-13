@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView,
   StyleSheet, Text, TextInput, TextInputProps, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +20,24 @@ import { PASSWORD_MIN, passwordStrength } from '../lib/password';
 import { sentenceCase, type AuthFail } from '../lib/authfail';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
-export function AuthScreen({ children }: { children: React.ReactNode }) {
+/**
+ * The page the form screens sit in: the safe area, the keyboard's room,
+ * and one scroll.
+ *
+ * `onRefresh` and `refreshing`, a list's own two names for a pull to
+ * reload, hang a `RefreshControl` on that scroll — Activity's (13 Nov
+ * 2026), the one screen in this frame that shows something a pull can
+ * bring news of. Without `onRefresh` there is no control at all, so a
+ * form cannot be pulled into a spinner that reloads nothing; every other
+ * caller passes neither and is drawn as it was. The control's own
+ * spinner, untinted, as Explore's, Collections' and the collection
+ * page's lists draw it.
+ */
+export function AuthScreen({ children, onRefresh, refreshing = false }: {
+  children: React.ReactNode;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+}) {
   const tabClearance = useTabBarClearance();
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -29,6 +46,7 @@ export function AuthScreen({ children }: { children: React.ReactNode }) {
           contentContainerStyle={{ padding: space.page, paddingBottom: tabClearance, gap: space.cardGap }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
         >
           {children}
         </ScrollView>

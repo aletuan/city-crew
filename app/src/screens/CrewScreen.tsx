@@ -24,7 +24,7 @@
 // lives in lib/friends, under the gate.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Glyph } from '../components/ui/glyph';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -113,13 +113,25 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   // visits, and every action taken since is applied by `openSuggestions`
   // rather than by asking the server again. So a tapped row disappears
   // at the speed of the tap.
+  //
+  // A pull asks once more, and that answer is trusted the same way.
+  // `suggesting` counts the asks out, for the pull's spinner to wait on
+  // and for a pull to join rather than double. Counted as the ask is
+  // made, in the pull's own handler: counted in an effect after it, the
+  // spinner's disarm — which runs in the same pass — would see nothing
+  // out and put the spinner away before it was ever drawn.
   const [suggested, setSuggested] = useState<Suggestion[]>([]);
-  useEffect(() => {
+  const [suggesting, setSuggesting] = useState(0);
+  const askSuggestions = useCallback(() => {
     if (!me) { setSuggested([]); return; }
+    setSuggesting((n) => n + 1);
     // Introductions are an extra: a failure shows none, which is how
-    // the screen reads for anybody with no overlap yet.
-    fetchSuggestedFriends().then(setSuggested).catch(() => {});
+    // the screen reads for anybody with no overlap yet — or, on a pull,
+    // keeps the ones already shown.
+    fetchSuggestedFriends().then(setSuggested).catch(() => {})
+      .finally(() => setSuggesting((n) => n - 1));
   }, [me]);
+  useEffect(askSuggestions, [askSuggestions]);
   useEffect(() => {
     const ids = suggested.map((sg) => sg.other);
     if (!ids.length) return;
@@ -476,6 +488,13 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   // own words, "Add a friend", opening the same field on Requests — on
   // both tabs, since it is one act, and not while the field is open.
   const shipsFailed = !!ships.error && ships.data.length === 0;
+  // The spinner in place of a tab's empty state: only while the edges
+  // have never been answered — the launch before the provider's first
+  // fetch, or Try again after a failure that kept nothing. A reload of an
+  // answer already held, empty or not, keeps the page as drawn: every
+  // focus reloads (above), and so does a pull (below), and the empty
+  // state used to swap for a spinner and back on each.
+  const shipsAsking = ships.loading && ships.loadedAt === null;
   const openAdd = () => {
     setTab('requests');
     setAdding(true);
@@ -500,6 +519,41 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       <GradientCta icon="refresh" label={t('Try again', 'Thử lại', '再試行', '重试', '重試')} onPress={() => ships.reload()} testID="crew-retry" />
     </EmptyState>
   );
+
+  // ── a pull (owner, 13 Nov 2026) ──
+  //
+  // Pulling the list down asks again for everything the two tabs draw
+  // from: the edges (`ships` — friends, requests in and out), the blocks,
+  // and the introductions. A suggestion's faces and list names follow the
+  // suggestions. The crew's faces and shared-taste counts follow the
+  // edges, but only when the edges changed (`lib/crew`, the fingerprint
+  // #353 needed), so a pull that brings the same edges back asks neither
+  // again. Left so: a face or a count that moved with no edge moving is
+  // not what a pull here is for, and asking them on every pull would
+  // undo that fix for the one gesture made most often on an unchanged
+  // list. What is drawn stays drawn: a reload behind a held answer draws
+  // no spinner of its own (`shipsAsking`), and the rows change in place
+  // when the answers land.
+  //
+  // Not twice: the focus reload above can still be out when the reader
+  // pulls, and a second `reload` would start the edges over and drop the
+  // answer already on its way (`usePersistedFetch`), the double fetch
+  // #353 was about. So a fetch already in flight is left alone, and the
+  // spinner waits for it as for one of its own. The spinner belongs to the pull, as on the
+  // collection page: armed by the gesture, disarmed when what it waits on
+  // settles, and never lit by the focus reload or the provider's
+  // return-to-app refresh.
+  const reloading = ships.loading || blocks.loading || suggesting > 0;
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !reloading) setPulling(false);
+  }, [pulling, reloading]);
+  const pull = () => {
+    setPulling(true);
+    if (!ships.loading) ships.reload();
+    if (!blocks.loading) blocks.reload();
+    if (suggesting === 0) askSuggestions();
+  };
 
   return (
     <Screen
@@ -571,6 +625,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
       >
         {tab === 'requests' ? (
           <>
@@ -768,7 +823,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
               </>
             )}
 
-            {nothingWaiting && (ships.loading ? (
+            {nothingWaiting && (shipsAsking ? (
               <ActivityIndicator color={colors.accent} style={{ marginTop: 28 }} />
             ) : shipsFailed ? failedState : (
               <EmptyState
@@ -830,7 +885,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                   );
                 })}
               </Card>
-            ) : ships.loading ? (
+            ) : shipsAsking ? (
               <ActivityIndicator color={colors.accent} style={{ marginTop: 28 }} />
             ) : shipsFailed ? failedState : (
               <EmptyState

@@ -10,6 +10,7 @@
 // `friendsMade` and `agoOf` run for real; only the I/O seams are mocked.
 
 import React from 'react';
+import { RefreshControl } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, fontSizeOf, render, screen } from '../uitest/render';
 import type { Nav } from '../nav';
@@ -581,5 +582,263 @@ describe('a friendship that began', () => {
     await renderScreen();
     expect(screen.queryByText(/chi/)).toBeNull();
     expect(screen.queryByText(/em/)).toBeNull();
+  });
+});
+
+// ── a pull (owner, 13 Nov 2026) ──
+//
+// Try again starts from nothing; a pull keeps what is drawn and swaps the
+// answers in together, a failed half keeping its rows. The gesture has no
+// jsdom counterpart, so the pull is the RefreshControl's `onRefresh`,
+// read off the committed tree, and the spinner its `refreshing` — as the
+// collection page's test reads them. Found by its type: `AuthScreen`,
+// above it, carries the same two names.
+describe('pulling the timeline down', () => {
+  const list = (): { onRefresh: () => void; refreshing: boolean } => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; type: unknown; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const fb = stack.pop()!;
+      if (fb.type === RefreshControl) return fb.memoizedProps as { onRefresh: () => void; refreshing: boolean };
+      if (fb.sibling) stack.push(fb.sibling);
+      if (fb.child) stack.push(fb.child);
+    }
+    throw new Error('no RefreshControl');
+  };
+  const pull = () => act(() => { list().onRefresh(); });
+  /** A promise the test answers, or refuses, when it chooses. */
+  const deferred = <T,>() => {
+    let ok: (v: T) => void = () => {};
+    let no: (e: Error) => void = () => {};
+    const promise = new Promise<T>((a, b) => { ok = a; no = b; });
+    return { promise, ok: (v: T) => act(async () => { ok(v); }), no: () => act(async () => { no(new Error('offline')); }) };
+  };
+  const NO: MyActs = { likes: [], copies: [], lists: [] };
+  const HOUR = 3600000;
+  const DAY = 86400000;
+  const lines = () => screen.queryAllByText(/liked “|saved a copy of “|friend/).map((n) => n.textContent);
+
+  beforeEach(() => {
+    catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
+  });
+
+  it('asks the three halves again over two weeks opened now, and the crew', async () => {
+    await renderScreen();
+    vi.setSystemTime(new Date(NOW.getTime() + HOUR));
+    crew.ships.reload.mockClear();
+    pull();
+    await flush();
+    const since = new Date(NOW.getTime() + HOUR - 14 * DAY).toISOString();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(data.fetchApplause).toHaveBeenLastCalledWith(since);
+    expect(data.fetchCopies).toHaveBeenLastCalledWith(since);
+    expect(data.fetchMyActs).toHaveBeenLastCalledWith(ME, since);
+    expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the rows drawn while it asks, and swaps the answers in together when all three are in', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => [like('c1', '2026-09-11T09:00:00Z', 'anh')]);
+    await renderScreen();
+    expect(lines()).toEqual(['@anh liked “Pho walk”']);
+    const likes = deferred<Applause[]>();
+    const copies = deferred<Copy[]>();
+    const mine = deferred<MyActs>();
+    data.fetchApplause.mockImplementationOnce(() => likes.promise);
+    data.fetchCopies.mockImplementationOnce(() => copies.promise);
+    data.fetchMyActs.mockImplementationOnce(() => mine.promise);
+    pull();
+    expect(list().refreshing).toBe(true);
+    // Not the spinner in place of the timeline: the rows it had.
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(lines()).toEqual(['@anh liked “Pho walk”']);
+    await likes.ok([like('c1', '2026-09-11T10:00:00Z', 'bao')]);
+    // One half in is not the change: it waits for the other two.
+    expect(lines()).toEqual(['@anh liked “Pho walk”']);
+    expect(list().refreshing).toBe(true);
+    await copies.ok([]);
+    await mine.ok(NO);
+    expect(lines()).toEqual(['@bao liked “Pho walk”']);
+    expect(list().refreshing).toBe(false);
+  });
+
+  it('keeps the rows of a half that fails, and takes the halves that answered', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => [like('c1', '2026-09-11T09:00:00Z', 'anh')]);
+    await renderScreen();
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    data.fetchCopies.mockImplementationOnce(async () => [
+      { collection_id: 'c1', copied_at: '2026-09-11T10:00:00Z', copier_handle: 'bao', copier_name: null },
+    ]);
+    pull();
+    await flush();
+    expect(lines()).toEqual(['@bao saved a copy of “Pho walk”', '@anh liked “Pho walk”']);
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+    expect(list().refreshing).toBe(false);
+  });
+
+  it('keeps the copies through a pull that fails to read them, and takes the likes that answered', async () => {
+    data.fetchCopies.mockImplementationOnce(async () => [
+      { collection_id: 'c1', copied_at: '2026-09-11T10:00:00Z', copier_handle: 'bao', copier_name: null },
+    ]);
+    await renderScreen();
+    data.fetchCopies.mockImplementationOnce(async () => { throw new Error('offline'); });
+    data.fetchApplause.mockImplementationOnce(async () => [like('c1', '2026-09-11T09:00:00Z', 'anh')]);
+    pull();
+    await flush();
+    expect(lines()).toEqual(['@bao saved a copy of “Pho walk”', '@anh liked “Pho walk”']);
+  });
+
+  it('keeps your own acts through a pull that fails to read them', async () => {
+    data.fetchMyActs.mockImplementationOnce(async () => ({
+      likes: [{ collection_id: 'c9', at: '2026-09-11T10:00:00Z', owner_handle: 'bao' }],
+      copies: [], lists: [col('c9', 'pho-tour', 'Phở tour')],
+    }));
+    await renderScreen();
+    expect(screen.getByText('You liked @bao’s “Phở tour”')).toBeTruthy();
+    data.fetchMyActs.mockImplementationOnce(async () => { throw new Error('offline'); });
+    pull();
+    await flush();
+    expect(screen.getByText('You liked @bao’s “Phở tour”')).toBeTruthy();
+  });
+
+  it('leaves the empty state standing when a pull fails over it: an answer stands', async () => {
+    await renderScreen();
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    data.fetchCopies.mockImplementationOnce(async () => { throw new Error('offline'); });
+    data.fetchMyActs.mockImplementationOnce(async () => { throw new Error('offline'); });
+    pull();
+    await flush();
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+  });
+
+  it('leaves a failed page failed when the pull fails too, and clears it when the pull answers', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    await renderScreen();
+    expect(screen.getByTestId('activity-failed')).toBeTruthy();
+    // The likes fail again; the copies and your own acts answer, which
+    // is not the half that failed.
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    pull();
+    await flush();
+    expect(screen.getByTestId('activity-failed')).toBeTruthy();
+    // All three answer this time: the failure is forgotten.
+    pull();
+    await flush();
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+  });
+
+  // The two weeks open at the pull's own now, and `since` moves with the
+  // answers, not before them: the friendships are cut where the fetches
+  // were.
+  it('moves the window with the answers, and cuts what a failed half kept at the new one', async () => {
+    const edgeOfWindow = new Date(NOW.getTime() - 14 * DAY + 30 * 60000).toISOString();
+    crew.ships.data = [{ requester: ME, addressee: 'u-c', status: 'accepted', created_at: '2026-08-01', responded_at: edgeOfWindow }];
+    crew.people = { 'u-c': person('u-c', 'chi') };
+    data.fetchApplause.mockImplementationOnce(async () => [like('c1', edgeOfWindow, 'anh')]);
+    await renderScreen();
+    expect(lines()).toEqual(['@chi accepted your friend request', '@anh liked “Pho walk”']);
+    vi.setSystemTime(new Date(NOW.getTime() + HOUR));
+    const likes = deferred<Applause[]>();
+    data.fetchApplause.mockImplementationOnce(() => likes.promise);
+    pull();
+    await flush();
+    // Still out: the page is the old answer, cut where it was asked.
+    expect(lines()).toEqual(['@chi accepted your friend request', '@anh liked “Pho walk”']);
+    await likes.no();
+    expect(lines()).toEqual([]);
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+  });
+
+  // Try again opens the two weeks at its own now too, as it always has.
+  it('moves the window on Try again', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    await renderScreen();
+    vi.setSystemTime(new Date(NOW.getTime() + HOUR));
+    fireEvent.click(screen.getByTestId('activity-retry'));
+    await flush();
+    const since = new Date(NOW.getTime() + HOUR - 14 * DAY).toISOString();
+    expect(data.fetchApplause).toHaveBeenLastCalledWith(since);
+  });
+
+  // And `since` with it, which is where the friendships are cut: one the
+  // window has moved past by the time Try again answers is not drawn.
+  it('cuts the friendships at the window Try again opened', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    await renderScreen();
+    vi.setSystemTime(new Date(NOW.getTime() + HOUR));
+    const passed = new Date(NOW.getTime() - 14 * DAY + 30 * 60000).toISOString();
+    crew.ships.data = [{ requester: ME, addressee: 'u-c', status: 'accepted', created_at: '2026-08-01', responded_at: passed }];
+    crew.people = { 'u-c': person('u-c', 'chi') };
+    fireEvent.click(screen.getByTestId('activity-retry'));
+    await flush();
+    expect(lines()).toEqual([]);
+    expect(screen.getByTestId('activity-empty')).toBeTruthy();
+  });
+
+  // The spinner is the pull's: the crew's own refresh does not light it,
+  // and a pull made while it is out waits for it rather than starting it
+  // over.
+  it('is not lit by a crew refresh nobody pulled for, and waits for one already out', async () => {
+    crew.ships.loading = true;
+    const { rerender } = render(<ActivityScreen navigation={nav()} />);
+    await flush();
+    expect(list().refreshing).toBe(false);
+    pull();
+    await flush();
+    expect(crew.ships.reload).not.toHaveBeenCalled();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(list().refreshing).toBe(true);
+    crew.ships.loading = false;
+    rerender(<ActivityScreen navigation={nav()} />);
+    expect(list().refreshing).toBe(false);
+  });
+
+  it('sends nothing of its own while the first load is out, and spins until it lands', async () => {
+    const likes = deferred<Applause[]>();
+    data.fetchApplause.mockImplementationOnce(() => likes.promise);
+    await renderScreen();
+    pull();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(1);
+    expect(list().refreshing).toBe(true);
+    await likes.ok([]);
+    expect(list().refreshing).toBe(false);
+  });
+
+  it('asks once for two pulls made while the first is out', async () => {
+    await renderScreen();
+    data.fetchApplause.mockImplementationOnce(() => new Promise(() => {}));
+    pull();
+    pull();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks nothing for a guest', async () => {
+    auth.me = null;
+    await renderScreen();
+    pull();
+    await flush();
+    expect(data.fetchApplause).not.toHaveBeenCalled();
+    expect(list().refreshing).toBe(false);
+  });
+
+  // Try again, or a change of reader, while a pull is out: the newer ask
+  // owns the page, and the pull's answers are dropped when they land.
+  it('drops a pull’s answers that land after Try again', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    await renderScreen();
+    const likes = deferred<Applause[]>();
+    data.fetchApplause.mockImplementationOnce(() => likes.promise);
+    pull();
+    data.fetchApplause.mockImplementationOnce(async () => [like('c1', '2026-09-11T09:00:00Z', 'anh')]);
+    fireEvent.click(screen.getByTestId('activity-retry'));
+    await flush();
+    expect(lines()).toEqual(['@anh liked “Pho walk”']);
+    await likes.ok([like('c1', '2026-09-11T10:00:00Z', 'bao')]);
+    expect(lines()).toEqual(['@anh liked “Pho walk”']);
+    expect(list().refreshing).toBe(false);
   });
 });

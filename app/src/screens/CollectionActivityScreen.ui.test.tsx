@@ -69,7 +69,7 @@ vi.mock('../lib/data/stats', async (orig) => ({
 // The crew the app already holds: the edges and the blocks the friend
 // button reads, and the reload a request ends with.
 const crew = vi.hoisted(() => ({
-  ships: { data: [] as FriendshipRow[], reload: vi.fn() },
+  ships: { data: [] as FriendshipRow[], loading: false, reload: vi.fn() },
   blocks: { data: [] as string[] },
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
@@ -164,6 +164,7 @@ beforeEach(async () => {
   state.lang = 'en';
   state.scheme = 'dark';
   crew.ships.data = [];
+  crew.ships.loading = false;
   crew.blocks.data = [];
   data.sendFriendRequest.mockImplementation(async () => {});
   data.acceptFriendRequest.mockImplementation(async () => {});
@@ -950,5 +951,143 @@ describe('the friend button', () => {
     await act(async () => { fail(new Error('offline')); });
     expect(within(rowOf('lan')).getByRole('button', { name: 'Accept' })).toBeTruthy();
     expect(data.acceptFriendRequest).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── a pull (owner, 13 Nov 2026) ──
+//
+// Both halves again, and the crew the friend buttons read. The gesture
+// has no jsdom counterpart, so the pull is the RefreshControl's
+// `onRefresh`, read off the committed tree, and the spinner its
+// `refreshing` — as the collection page's test reads them.
+describe('pulling the page down', () => {
+  const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const fb = stack.pop()!;
+      const p = fb.memoizedProps;
+      if (p && typeof p === 'object' && pick(p)) return p;
+      if (fb.sibling) stack.push(fb.sibling);
+      if (fb.child) stack.push(fb.child);
+    }
+    throw new Error('nothing matched');
+  };
+  const page = () => propsWhere((p) => 'onRefresh' in p && 'refreshing' in p) as { onRefresh: () => void; refreshing: boolean };
+  const pull = () => act(() => { page().onRefresh(); });
+  const screenEl = () => (
+    <CollectionActivityScreen
+      navigation={{ goBack: vi.fn(), navigate: vi.fn() } as unknown as Nav}
+      route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionActivity'>}
+    />
+  );
+  /** An ask the test answers when it chooses. */
+  const held = <T,>(fn: { mockImplementationOnce: (f: () => Promise<T>) => unknown }) => {
+    let ok: (v: T) => void = () => {};
+    fn.mockImplementationOnce(() => new Promise<T>((r) => { ok = r; }));
+    return (v: T) => act(async () => { ok(v); });
+  };
+
+  it('asks both halves again, and the crew', async () => {
+    await show();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(1);
+    pull();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(data.fetchCopies).toHaveBeenCalledTimes(2);
+    expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the rows drawn while it asks, and spins until both halves are in', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
+    await show();
+    const likes = held<Applause[]>(data.fetchApplause);
+    const copies = held<Copy[]>(data.fetchCopies);
+    pull();
+    expect(page().refreshing).toBe(true);
+    expect(rowLines()).toEqual([['Lan Phạm', '@lan · 5m']]);
+    expect(screen.queryByTestId('activity-loading')).toBeNull();
+    await likes([like(ago(1 * MIN), 'an', 'An Lê'), like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
+    expect(page().refreshing).toBe(true);
+    await copies([]);
+    expect(page().refreshing).toBe(false);
+    expect(rowLines()).toEqual([['An Lê', '@an · 1m'], ['Lan Phạm', '@lan · 5m']]);
+  });
+
+  // Either half still out keeps it lit, whichever lands first.
+  it('spins while the likes are still out after the copies are in', async () => {
+    await show();
+    const likes = held<Applause[]>(data.fetchApplause);
+    const copies = held<Copy[]>(data.fetchCopies);
+    pull();
+    await copies([]);
+    expect(page().refreshing).toBe(true);
+    await likes([]);
+    expect(page().refreshing).toBe(false);
+  });
+
+  it('keeps the rows when the pull fails', async () => {
+    data.fetchApplause.mockImplementationOnce(async () => [like(ago(5 * MIN), 'lan')]);
+    await show();
+    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
+    data.fetchCopies.mockImplementationOnce(async () => { throw new Error('offline'); });
+    pull();
+    await flush();
+    expect(page().refreshing).toBe(false);
+    expect(rowLines()).toEqual([['lan 5m']]);
+    expect(screen.queryByTestId('activity-failed')).toBeNull();
+  });
+
+  // A "Requested" the other person has accepted since: the crew read
+  // again says Friends, and the spinner stays until it has.
+  it('spins until the crew it asked for is in, and the button says what the crew now says', async () => {
+    crew.ships.data = [edge('me', 'id-lan')];
+    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    const { rerender } = render(screenEl());
+    await flush();
+    expect(screen.getByTestId('activity-requested')).toBeTruthy();
+    // What the provider does on a reload: the edges are out again.
+    crew.ships.reload.mockImplementationOnce(() => { crew.ships.loading = true; });
+    pull();
+    await flush();
+    expect(page().refreshing).toBe(true);
+    crew.ships.data = [edge('me', 'id-lan', 'accepted')];
+    crew.ships.loading = false;
+    rerender(screenEl());
+    expect(page().refreshing).toBe(false);
+    expect(screen.getByTestId('activity-friends')).toBeTruthy();
+  });
+
+  // The spinner is the pull's: the ask every open makes behind a kept
+  // answer does not light it, and a pull while it is out joins it.
+  it('is not lit by the refresh behind a kept answer, and joins it rather than asking again', async () => {
+    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    await show();
+    cleanup();
+    const likes = held<Applause[]>(data.fetchApplause);
+    render(screenEl());
+    expect(rowLines()).toEqual([['lan 5m']]);
+    await flush();
+    expect(page().refreshing).toBe(false);
+    pull();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(page().refreshing).toBe(true);
+    await likes([like(ago(5 * MIN), 'lan')]);
+    expect(page().refreshing).toBe(false);
+  });
+
+  it('leaves a crew refresh already out to land, and waits for it', async () => {
+    crew.ships.loading = true;
+    const { rerender } = render(screenEl());
+    await flush();
+    expect(page().refreshing).toBe(false);
+    pull();
+    await flush();
+    expect(crew.ships.reload).not.toHaveBeenCalled();
+    expect(page().refreshing).toBe(true);
+    crew.ships.loading = false;
+    rerender(screenEl());
+    expect(page().refreshing).toBe(false);
   });
 });

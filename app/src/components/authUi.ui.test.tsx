@@ -13,6 +13,7 @@
 // and an entry nobody has copied yet is precisely the shape of the bug.
 
 import React from 'react';
+import { RefreshControl } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
@@ -34,7 +35,7 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 
-import { FieldRow, FormError, useFailSentences, useFailText } from './authUi';
+import { AuthScreen, FieldRow, FormError, useFailSentences, useFailText } from './authUi';
 
 /** Every sentence in the table, as a phone set to `at` would read them. */
 function sentences(at: Lang): Record<string, string> {
@@ -166,5 +167,48 @@ describe('a caller\'s TextInput props', () => {
     expect(field.type).toBe('password');
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
     expect(field.type).toBe('text');
+  });
+});
+
+// A pull to reload, offered by Activity alone (13 Nov 2026). The forms
+// pass nothing, and a form that could be pulled into a spinner that
+// reloads nothing would be a gesture lying about what it does.
+describe('the frame\'s pull to reload', () => {
+  /** Every committed RefreshControl's props — by its type, so the
+   *  frame's own props, which carry the same two names, are not taken for
+   *  the control they ask for. */
+  const pulls = (): Record<string, unknown>[] => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; type: unknown; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    const out: Record<string, unknown>[] = [];
+    while (stack.length) {
+      const fb = stack.pop()!;
+      const p = fb.memoizedProps;
+      if (fb.type === RefreshControl && p) out.push(p);
+      if (fb.sibling) stack.push(fb.sibling);
+      if (fb.child) stack.push(fb.child);
+    }
+    return out;
+  };
+
+  it('is not there unless the screen offers one', () => {
+    render(<AuthScreen><FormError>x</FormError></AuthScreen>);
+    expect(pulls()).toEqual([]);
+  });
+
+  it('hangs the screen\'s own reload and spinner on the scroll when it does', () => {
+    const reload = vi.fn();
+    render(<AuthScreen onRefresh={reload} refreshing><FormError>x</FormError></AuthScreen>);
+    const [p] = pulls();
+    expect(p.refreshing).toBe(true);
+    (p.onRefresh as () => void)();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('is at rest until told otherwise', () => {
+    render(<AuthScreen onRefresh={() => {}}><FormError>x</FormError></AuthScreen>);
+    expect(pulls()[0].refreshing).toBe(false);
   });
 });
