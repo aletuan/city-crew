@@ -148,6 +148,25 @@ export function numericDate(lang: string, now: Date): string {
   return `${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
+/**
+ * `numericDate` with the year: `12/11/25`, `12 Nov 2025`, `2025/11/12`,
+ * `2025年11月12日` — for a day in an earlier year than the reader's
+ * (owner, 13 Nov 2026; first for a list's age, see `lib/listAge`).
+ *
+ * The same padding and order as `numericDate`, the year where each
+ * language writes it: after the day in Vietnamese and English, before the
+ * month in Japanese and Chinese, which write a date largest unit first.
+ * Vietnamese takes two digits, as a date written by hand there does, so
+ * the line grows by three characters rather than five.
+ */
+export function numericDateWithYear(lang: string, at: Date): string {
+  const y = at.getFullYear();
+  if (lang === 'vi') return `${numericDate(lang, at)}/${String(y % 100).padStart(2, '0')}`;
+  if (lang === 'ja') return `${y}/${numericDate(lang, at)}`;
+  if (lang === 'zh' || lang === 'zh-Hant') return `${y}年${numericDate(lang, at)}`;
+  return `${numericDate(lang, at)} ${y}`;
+}
+
 
 /**
  * A count of minutes, spelled: "75 min" / "75 phút" / "75分".

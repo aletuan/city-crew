@@ -3,8 +3,9 @@
 // One collection, opened. What is pinned here is who is allowed to do what
 // to it, and that every control does what its label says:
 //
-// - the owner's list says Private or Public at the foot of its card, and
-//   that word opens the sheet that changes it; an overflow menu with Add /
+// - the owner's list says Private, Friends or Public under the handle at
+//   the head of its card, after the list's age, and that word opens the
+//   sheet that changes it; an overflow menu with Add /
 //   Plan a trip / Edit / Share / Delete, and Add and Plan in the dock once
 //   the card has scrolled away;
 // - somebody else's list credits its curator, offers a heart that likes or
@@ -574,11 +575,13 @@ describe('the ⋯ in the card', () => {
   });
 
   // The header's measure of the ⋯'s ink, 13 at 21pt in a 44 box, and
-  // the 2 a 32pt box spills each way over the 28pt face's row.
+  // the 4 a 32pt box leaves each way on the 40pt face's row, which keeps
+  // a faceless head the face's height too.
   it('hangs its ink to the card’s padding, and centres on the face', () => {
     show();
     const more = getComputedStyle(screen.getByTestId('collection-more'));
-    expect([more.marginRight, more.marginTop, more.marginBottom]).toEqual(['-13px', '-2px', '-2px']);
+    expect([more.marginRight, more.marginTop, more.marginBottom]).toEqual(['-13px', '4px', '4px']);
+    expect(getComputedStyle(rowOf(screen.getByTestId('collection-more'))).alignItems).toBe('center');
   });
 
   // The sheet the rest of the app's ⋯s open, headed with the list's name
@@ -636,10 +639,11 @@ describe('your own list', () => {
     expect(screen.getByText('Where we eat.')).toBeTruthy();
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
-    // In the foot — not under the title any more. The count is at the
-    // end of the kinds' row (owner, 13 Nov 2026), so the foot is who can
-    // see it and nothing else.
-    expect(screen.getByTestId('collection-stats').textContent).toBe('Private');
+    // Under the handle — not under the title, and not at the foot any
+    // more (owner, 13 Nov 2026). The count is at the end of the kinds'
+    // row, and the activity row under them holds nothing on a private list.
+    expect(screen.getByTestId('collection-meta').textContent).toBe('Private');
+    expect(screen.getByTestId('collection-activity').textContent).toBe('');
     expect(screen.getByTestId('collection-count').textContent).toBe('3');
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
@@ -727,7 +731,7 @@ describe('your own list', () => {
     expect(screen.queryByRole('button', { name: 'Plan a trip' })).toBeNull();
     // No cell, and so no count: the card is the whole answer.
     expect(screen.queryByTestId('collection-add-cell')).toBeNull();
-    expect(screen.getByTestId('collection-stats').querySelector('[data-icon="location-outline"]')).toBeNull();
+    expect(screen.getByTestId('collection-desc').querySelector('[data-icon="location-outline"]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Find places' }).querySelector('[data-icon="search"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Find places'));
     expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
@@ -782,7 +786,7 @@ describe('your own list', () => {
     const card = screen.getByTestId('collection-desc');
     expect(card.textContent).toContain('Where we eat.');
     expect(getComputedStyle(card).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(screen.getByTestId('collection-curator').textContent).toBe('@andy');
+    expect(screen.getByTestId('collection-handle').textContent).toBe('@andy');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(card.contains(screen.getByTestId('collection-more'))).toBe(true);
     expect(card.querySelector('[data-icon="create-outline"]')).toBeNull();
@@ -814,7 +818,7 @@ describe('your own list', () => {
     expect(screen.queryByTestId('collection-desc')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
     const card = screen.getByTestId('collection-desc-empty');
-    expect(card.textContent).toMatch(/^@andyAdd a description/);
+    expect(card.textContent).toMatch(/^@andyPrivateAdd a description/);
     // An action, not a sentence that could pass for the description: a
     // plus and the words, in the accent (18 Oct 2026).
     const add = screen.getByTestId('collection-desc-add');
@@ -845,7 +849,7 @@ describe('your own list', () => {
     pick('Share');
     expect(alert).toHaveBeenCalledWith(
       'Sharing is coming',
-      'This list is private. Tap Private at the foot of its card to make it public — share links are on the way.',
+      'This list is private. Tap Private at the top of its card to make it public — share links are on the way.',
     );
   });
 
@@ -893,31 +897,33 @@ describe('publishing', () => {
     }
   });
 
-  // On your own the foot is the visibility alone (owner, 2 Nov 2026): the
-  // count moved into the Add place cell's corner.
-  it('draws the padlock or the globe as the foot\u2019s glyph, with a chevron and no count', () => {
+  // The padlock or the globe, and the chevron, on the line under the
+  // handle (owner, 13 Nov 2026), and nothing else there on a list with no
+  // age to tell.
+  it('draws the padlock or the globe under the handle, with a chevron and no count', () => {
     show();
-    let foot = screen.getByTestId('collection-stats');
-    expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
-    expect(foot.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
-    expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
+    let line = screen.getByTestId('collection-meta');
+    expect([...line.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
       .toEqual(['lock-closed-outline', 'chevron-down']);
     cleanup();
     state.mine = [collection({ is_public: true })];
     show();
-    foot = screen.getByTestId('collection-stats');
-    expect(foot.querySelector('[data-icon="globe-outline"]')).toBeTruthy();
-    expect(foot.querySelector('[data-icon="lock-closed-outline"]')).toBeNull();
+    line = screen.getByTestId('collection-meta');
+    expect([...line.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
+      .toEqual(['globe-outline', 'chevron-down']);
   });
 
-  // On your own public list the heart leads too, and the pill follows it
-  // — the same place for the heart whoever is looking.
-  it('puts the heart before the visibility pill on your own public list', () => {
+  // On your own public list the heart stays in the activity row, where
+  // it is on everybody's — the same place whoever is looking — and who
+  // can see the list is the head's.
+  it('keeps the heart in the activity row and the visibility at the head on your own public list', () => {
     state.mine = [collection({ is_public: true })];
     show();
-    const foot = screen.getByTestId('collection-stats');
-    expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
-      .toEqual(['heart-outline', 'globe-outline', 'chevron-down']);
+    const row = screen.getByTestId('collection-activity');
+    expect([...row.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['heart-outline']);
+    expect(row.contains(screen.getByRole('button', { name: 'Like' }))).toBe(true);
+    expect(row.contains(screen.getByTestId('collection-visibility'))).toBe(false);
+    expect(screen.getByTestId('collection-meta').contains(screen.getByTestId('collection-visibility'))).toBe(true);
   });
 
   // Bare (owner, 12 Nov 2026): it wore a pill for a day; now no fill and
@@ -1100,7 +1106,7 @@ describe('sharing with friends', () => {
     return order;
   };
 
-  describe('the word at the foot', () => {
+  describe('the word under the handle', () => {
     it('says Friends, with two heads, for a private list shared with somebody', () => {
       state.shares = [share('lan')];
       show();
@@ -1143,14 +1149,14 @@ describe('sharing with friends', () => {
       expect(screen.getByTestId('collection-visibility').textContent).toBe('Bạn bè');
     });
 
-    it('points Share\'s sentence at the word the foot says', () => {
+    it('points Share\'s sentence at the word the card says', () => {
       state.shares = [share('lan')];
       show();
       openMenu();
       pick('Share');
       expect(alert).toHaveBeenCalledWith(
         'Sharing is coming',
-        'This list is private. Tap Friends at the foot of its card to make it public — share links are on the way.',
+        'This list is private. Tap Friends at the top of its card to make it public — share links are on the way.',
       );
     });
   });
@@ -1973,7 +1979,7 @@ describe("somebody else's list", () => {
     expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
     // No places, no count: the line below says so in words.
     expect(screen.queryByTestId('collection-count')).toBeNull();
-    expect(screen.getByTestId('collection-stats').querySelector('[data-icon="location-outline"]')).toBeNull();
+    expect(screen.getByTestId('collection-desc').querySelector('[data-icon="location-outline"]')).toBeNull();
     expect(screen.getByText('No places in this collection yet.')).toBeTruthy();
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
     expect(screen.queryByText('Public')).toBeNull();
@@ -2283,11 +2289,13 @@ describe('a friend’s list, shared with you', () => {
     expect(screen.queryByText('Collection not found.')).toBeNull();
   });
 
-  it('credits the friend whose list it is, and draws no heart and no foot', () => {
+  it('credits the friend whose list it is, says it is shared with you, and draws no heart', () => {
     show();
-    expect(screen.getByTestId('collection-curator').textContent).toBe('@lan');
+    expect(screen.getByTestId('collection-handle').textContent).toBe('@lan');
+    expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
     expect(screen.queryByRole('button', { name: 'Like' })).toBeNull();
-    expect(screen.queryByTestId('collection-stats')).toBeNull();
+    // The activity row stands, empty.
+    expect(screen.getByTestId('collection-activity').textContent).toBe('');
     // Nor the owner's word for who can see it.
     expect(screen.queryByTestId('collection-visibility')).toBeNull();
   });
@@ -2368,7 +2376,8 @@ describe('a friend’s list, shared with you', () => {
     state.shared = [lent()];
     show();
     // `mine` answers first: the owner's sheet, not the friend's byline.
-    expect(screen.getByTestId('collection-curator').textContent).toBe('@andy');
+    expect(screen.getByTestId('collection-handle').textContent).toBe('@andy');
+    expect(screen.queryByTestId('collection-shared')).toBeNull();
     openMenu();
     expect(menuRow('Edit collection')).toBeTruthy();
   });
@@ -2683,8 +2692,8 @@ describe('the chips', () => {
 });
 
 // The card's head and foot (owner, 16 Oct 2026): the curator leads a
-// visitor's card, the count and the heart end every card, and the handle
-// opens a sheet to report the list or block the person behind it.
+// visitor's card, the activity row with the heart ends every card, and the
+// handle opens a sheet to report the list or block the person behind it.
 describe('the introduction card', () => {
   beforeEach(() => {
     state.mine = [];
@@ -2692,12 +2701,12 @@ describe('the introduction card', () => {
   });
   const sheetRow = (name: string | RegExp) => screen.queryByRole('button', { name });
 
-  // The heart leads the foot (owner, 12 Nov 2026), as a like leads the
-  // row on Instagram or Threads; the count left the foot for the kinds'
-  // row on 13 Nov.
-  it('keeps the heart in the foot, first, and nothing else on a visitor\u2019s', () => {
+  // The heart leads the activity row (owner, 12 Nov 2026), as a like
+  // leads the row on Instagram or Threads; the count left it for the
+  // kinds' row on 13 Nov, and who can see the list for the head.
+  it('keeps the heart in the activity row, first, and nothing else on a visitor\u2019s', () => {
     show();
-    const foot = screen.getByTestId('collection-stats');
+    const foot = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
     expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
       .toEqual(['heart-outline']);
     // In that order on screen too, from the start of the row.
@@ -2705,16 +2714,13 @@ describe('the introduction card', () => {
     expect(getComputedStyle(foot).justifyContent).not.toBe('space-between');
     // The spacing measured in ink (owner, 12 Nov 2026): 6.5 from each
     // glyph to its count, 24 between the pairs. Those are made of these
-    // gaps and the glyphs' own bearings; see `cardFoot`.
+    // gaps and the glyphs' own bearings; see `activityRow`.
     const gapOf = (el: Element | null | undefined) => viewStyleOf(el as Element)?.gap;
     const heart = screen.getByRole('button', { name: 'Like' }).querySelector('[data-icon]')?.parentElement;
     const count = screen.getByTestId('collection-count');
     expect([gapOf(foot), gapOf(heart), gapOf(count)]).toEqual([20, 4, 3]);
   });
 
-  // A list of somebody else's no one may like — shared with you, once
-  // sharing has screens — has nothing for the foot to say, and draws none,
-  // hairline and all (owner, 13 Nov 2026).
   // The words run across the card (owner, 13 Nov 2026): out of the
   // face's row, where the pencil's column held them 48pt short of the
   // right edge against 16 on the left.
@@ -2735,7 +2741,9 @@ describe('the introduction card', () => {
   // A list lent to you whose owner has no handle to show: the face's row
   // used to be skipped, holding nothing; it holds the ⋯ now, so it is
   // drawn on every card there is, and the words come under it.
-  it('draws the face row for the ⋯ alone where there is no face', () => {
+  // Since 13 Nov 2026 it holds the line that would be under the handle,
+  // too: "Shared with you" stands alone.
+  it('draws the face row for the ⋯ and the line alone where there is no face', () => {
     state.cols = [theirs({ is_public: false, curator_handle: null })];
     show();
     const words = screen.getByTestId('collection-desc-text');
@@ -2743,25 +2751,38 @@ describe('the introduction card', () => {
     const row = words.parentElement!.firstElementChild as HTMLElement;
     expect(row).not.toBe(words);
     expect(row.contains(screen.getByTestId('collection-more'))).toBe(true);
+    expect(row.contains(screen.getByTestId('collection-meta'))).toBe(true);
+    expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
     expect(row.nextElementSibling).toBe(words);
   });
 
-  // One rhythm of about 20, measured in ink: 20 above the face, 16 from
-  // the hairline to the heart (with its glyph's air, 20.5), and the card's
-  // 14 between blocks. See `descCard`.
+  // One rhythm of about 20, measured in ink: 20 above the face, 20.5 from
+  // the hairline to the heart, 20 from the heart to the card's bottom, and
+  // the card's 14 between blocks. The activity row is `CHIP_H` with the
+  // heart centred, 7 lower than in the 18pt foot it was, so the hairline's
+  // padding and the card's bottom are 16 − 7. See `descCard`.
   it('keeps the card\u2019s rhythm', () => {
     show();
-    const foot = screen.getByTestId('collection-stats');
-    expect(viewStyleOf(foot).paddingTop).toBe(16);
-    const card = foot.parentElement!;
+    const activity = screen.getByTestId('collection-activity');
+    const card = activity.parentElement!;
+    expect(card.lastElementChild).toBe(activity);
     expect(viewStyleOf(card).paddingTop).toBe(20);
     expect(viewStyleOf(card).gap).toBe(14);
+    expect(viewStyleOf(card).paddingBottom).toBe(9);
+    expect(viewStyleOf(activity).paddingTop).toBe(9);
+    expect(viewStyleOf(activity).borderTopWidth).toBe(StyleSheet.hairlineWidth);
+    expect(viewStyleOf(activity.firstElementChild as HTMLElement).height).toBe(CHIP_H);
   });
 
-  it('draws no foot on a visitor\u2019s list with no heart', () => {
+  // Reserved for the list's activity (owner, 13 Nov 2026): drawn on every
+  // card, the same height with or without the heart in it.
+  it('draws the activity row, one height, with no heart in it', () => {
     state.cols = [theirs({ is_public: false })];
     show();
-    expect(screen.queryByTestId('collection-stats')).toBeNull();
+    const activity = screen.getByTestId('collection-activity');
+    expect(activity.textContent).toBe('');
+    expect(activity.querySelector('[role="button"]')).toBeNull();
+    expect(viewStyleOf(activity.firstElementChild as HTMLElement).height).toBe(CHIP_H);
     expect(screen.getByTestId('collection-count')).toBeTruthy();
   });
 
@@ -2848,12 +2869,12 @@ describe('the introduction card', () => {
     state.mine = [collection({ curator_handle: '@old-handle' })];
     show();
     const row = screen.getByTestId('collection-curator');
-    expect(row.textContent).toBe('@andy');
+    expect(row.textContent).toBe('@andyPrivate');
     expect(row.getAttribute('role')).not.toBe('button');
     expect(row.querySelector('img[src="https://img/me.jpg"]')).toBeTruthy();
     const card = screen.getByTestId('collection-desc');
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
-    expect(screen.getByTestId('collection-stats')).toBeTruthy();
+    expect(screen.getByTestId('collection-activity')).toBeTruthy();
     // Still nobody looked up, and still no credit in the header.
     expect(spies.profileLookup).toHaveBeenCalledWith(null);
     expect(screen.getAllByText('@andy')).toHaveLength(1);
@@ -2869,6 +2890,174 @@ describe('the introduction card', () => {
     show();
     expect(screen.queryByTestId('collection-curator')).toBeNull();
     expect(screen.getByTestId('collection-desc').querySelector('[data-icon="document-text-outline"]')).toBeTruthy();
+    // And who can see it, still: the line stands beside the glyph.
+    expect(screen.getByTestId('collection-meta').contains(screen.getByTestId('collection-visibility'))).toBe(true);
+  });
+});
+
+// ── the head, as a post's (owner, 13 Nov 2026) ──
+//
+// A 40pt face, and two lines beside it: the handle, and under it how old
+// the list is and — on your own — who can see it, the control that was at
+// the foot. Somebody else's public list says its age alone; a friend's
+// lent to you says its age and "Shared with you"; an editorial list, with
+// no owner and so no true age, says nothing, and the line is not drawn.
+describe('the head of the card', () => {
+  // Noon on the phone's own calendar, so the ages hold in either zone the
+  // suite runs in.
+  const NOW = new Date(2026, 10, 13, 12);
+  const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => { vi.useRealTimers(); });
+  const meta = () => screen.getByTestId('collection-meta');
+
+  it('draws the face 40pt, the size Facebook and X give a post’s', () => {
+    show();
+    expect(propsWhere((p) => 'url' in p && 'size' in p).size).toBe(40);
+    // The blank face, a disc of that size with the person in it.
+    const disc = screen.getByTestId('collection-curator').querySelector('[data-icon="person-outline"]')!.parentElement!;
+    expect([viewStyleOf(disc).width, viewStyleOf(disc).height]).toEqual([40, 40]);
+  });
+
+  it('stands the two lines the face’s height, beside it', () => {
+    state.mine = [collection({ created_at: ago(2 * HOUR) })];
+    show();
+    const handle = screen.getByTestId('collection-handle');
+    const lines = handle.parentElement!;
+    expect([...lines.children]).toEqual([handle, meta()]);
+    expect(textStyleOf(handle)?.lineHeight).toBe(20);
+    expect(viewStyleOf(meta()).height).toBe(20);
+    expect(viewStyleOf(meta()).flexDirection).toBe('row');
+  });
+
+  it('says your list’s age, then who can see it, on your own', () => {
+    state.mine = [collection({ created_at: ago(2 * HOUR) })];
+    show();
+    expect(meta().textContent).toBe('2h·Private');
+    const order = [...meta().children].map((c) => c.getAttribute('data-testid') ?? c.textContent);
+    expect(order).toEqual(['2h', '·', 'collection-visibility']);
+    expect(screen.getByTestId('collection-curator').contains(meta())).toBe(true);
+  });
+
+  it('gives the age the meta size and the visibility’s grey', () => {
+    state.mine = [collection({ created_at: ago(2 * HOUR) })];
+    show();
+    const age = within(meta()).getByText('2h');
+    const word = within(screen.getByTestId('collection-visibility')).getByText('Private');
+    expect(fontSizeOf(age)).toBe(15);
+    expect(getComputedStyle(age).color).toBe(getComputedStyle(word).color);
+    const n = parseInt(String(colors.textSecondary).slice(1), 16);
+    expect(getComputedStyle(age).color).toBe(`rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`);
+  });
+
+  // The control as it was at the foot, on the byline's scale: 20 drawn, the
+  // line's height, and 12 above and below to make the 44 of the button
+  // scale — `CHIP_H` would have made the two lines 52, past the face.
+  it('keeps the visibility a 44pt target in a 20pt line, and it still opens the sheet', () => {
+    state.mine = [collection({ created_at: ago(2 * HOUR) })];
+    show();
+    const control = screen.getByTestId('collection-visibility');
+    expect(viewStyleOf(control.firstElementChild as HTMLElement).height).toBe(20);
+    const slop = propsWhere((p) => p.testID === 'collection-visibility').hitSlop as { top: number; bottom: number };
+    expect(slop).toEqual({ top: 12, bottom: 12 });
+    expect(20 + slop.top + slop.bottom).toBe(CHIP_H + CHIP_SLOP.top + CHIP_SLOP.bottom);
+    fireEvent.click(control);
+    expect(screen.getByText('Who can see your list?')).toBeTruthy();
+    expect(screen.getByTestId('sheet-action-private').getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('says only the age on somebody else’s public list — not "Public"', () => {
+    state.mine = [];
+    state.cols = [theirs({ created_at: ago(5 * MIN) })];
+    show();
+    expect(meta().textContent).toBe('5m');
+    expect(screen.queryByText('Public')).toBeNull();
+    expect(screen.queryByTestId('collection-visibility')).toBeNull();
+    // Both lines are the press, and VoiceOver hears both.
+    const press = screen.getByTestId('collection-curator');
+    expect(press.getAttribute('role')).toBe('button');
+    expect(press.contains(meta())).toBe(true);
+    expect(press.getAttribute('aria-label')).toBe('@hanoicrew, 5m');
+  });
+
+  it('says the age and "Shared with you", with two heads and no control, on a friend’s list', () => {
+    state.mine = [];
+    state.shared = [collection({ owner_id: 'lan-id', curator_handle: 'lan', created_at: new Date(2026, 10, 12, 9).toISOString() })];
+    show();
+    expect(meta().textContent).toBe('12 Nov·Shared with you');
+    const mark = screen.getByTestId('collection-shared');
+    expect([...mark.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['people-outline']);
+    expect(mark.querySelector('[data-icon]')?.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    expect(mark.getAttribute('role')).not.toBe('button');
+    expect(mark.closest('[role="button"]')).toBeNull();
+    cleanup();
+    // Where a person stands behind the handle the head is the press to
+    // block them, and VoiceOver hears the whole of it.
+    spies.profileLookup.mockImplementation(() => ({ data: { id: 'lan-id', full_name: 'Lan', avatar_url: '' }, loading: false }));
+    show();
+    expect(screen.getByTestId('collection-shared').closest('[role="button"]')).toBe(screen.getByTestId('collection-curator'));
+    expect(screen.getByTestId('collection-curator').getAttribute('aria-label')).toBe('@lan, 12 Nov, Shared with you');
+  });
+
+  it('says it in the reader’s language', () => {
+    state.lang = 'vi';
+    state.mine = [];
+    state.shared = [collection({ owner_id: 'lan-id', curator_handle: 'lan', created_at: ago(5 * MIN) })];
+    show();
+    expect(meta().textContent).toBe('5p·Chia sẻ với bạn');
+  });
+
+  // The editorial lists share one `created_at`, the instant the column was
+  // added: no owner, no age, and with nothing else to say no line at all.
+  it('draws no line on a list with no owner, whatever its stamp', () => {
+    state.mine = [];
+    state.cols = [theirs({ owner_id: null, created_at: ago(400 * 24 * HOUR) })];
+    show();
+    expect(screen.queryByTestId('collection-meta')).toBeNull();
+    expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
+    expect(screen.getByTestId('collection-curator').getAttribute('aria-label')).toBe('@hanoicrew');
+  });
+
+  it('keeps who can see it on a list of yours with no age', () => {
+    state.mine = [collection({ created_at: null })];
+    show();
+    expect(meta().textContent).toBe('Private');
+    expect(within(meta()).queryByText('·')).toBeNull();
+  });
+
+  // The owner's table, as the line prints it.
+  it('says New, then minutes, then hours, then the date, then the date with its year', () => {
+    const line = (created_at: string, lang: 'en' | 'vi' | 'ja' = 'en') => {
+      state.lang = lang;
+      state.mine = [];
+      state.cols = [theirs({ created_at })];
+      show();
+      const out = meta().textContent;
+      cleanup();
+      return out;
+    };
+    expect(line(ago(59_000))).toBe('New');
+    expect(line(ago(59_000), 'vi')).toBe('Mới tạo');
+    expect(line(ago(59_000), 'ja')).toBe('作成したばかり');
+    // A phone a little behind the one that made it: still New.
+    expect(line(new Date(NOW.getTime() + 3 * MIN).toISOString())).toBe('New');
+    expect(line(ago(60_000))).toBe('1m');
+    expect(line(ago(59 * MIN), 'ja')).toBe('59分');
+    expect(line(ago(60 * MIN))).toBe('1h');
+    expect(line(ago(3 * HOUR), 'vi')).toBe('3h');
+    expect(line(ago(3 * HOUR), 'ja')).toBe('3時間');
+    expect(line(ago(24 * HOUR))).toBe('12 Nov');
+    expect(line(ago(24 * HOUR), 'vi')).toBe('12/11');
+    expect(line(ago(24 * HOUR), 'ja')).toBe('11/12');
+    const lastYear = new Date(2025, 10, 12, 9).toISOString();
+    expect(line(lastYear)).toBe('12 Nov 2025');
+    expect(line(lastYear, 'vi')).toBe('12/11/25');
+    expect(line(lastYear, 'ja')).toBe('2025/11/12');
   });
 });
 

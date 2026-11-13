@@ -493,6 +493,20 @@ describe('fetchMyCollections', () => {
     expect(cols).not.toContain('is_public');
   });
 
+  // The list's own stamp, not a member's: the card prints it as the
+  // list's age (13 Nov 2026). Read off the columns before the first embed.
+  it('asks for when each list was made, and a list lent to you carries it too', async () => {
+    fake().replies({ data: [] });
+    await fetchMyCollections('u1');
+    fake().replies({ data: [] });
+    await fetchSharedWithMe('u1');
+    const reads = fake().log.filter((l) => l.table === 'collections');
+    expect(reads).toHaveLength(2);
+    for (const q of reads) {
+      expect(String(q.payload).split('(')[0].split(',').map((c) => c.trim())).toContain('created_at');
+    }
+  });
+
   it('throws when the read failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
     await expect(fetchMyCollections('u1')).rejects.toThrow('timeout');

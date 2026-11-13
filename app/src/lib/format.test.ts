@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, fmtDuration, fmtMinutes, groupHours, numericDate, numericDateWithYear, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -770,6 +770,25 @@ describe('numericDate', () => {
     expect(numericDate('en', jan)).toBe('4 Jan');
     expect(numericDate('ja', fri)).toBe('9/25');
     expect(numericDate('ja', jan)).toBe('1/4');
+  });
+});
+
+// A day in an earlier year (owner, 13 Nov 2026): `numericDate` and the
+// year, where each language writes it, padded as `numericDate` pads.
+describe('numericDateWithYear', () => {
+  const nov = new Date(2025, 10, 12, 12);
+  const jan = new Date(2009, 0, 4, 12);
+  it('puts the year after the day in Vietnamese, as two digits, and in English', () => {
+    expect(numericDateWithYear('vi', nov)).toBe('12/11/25');
+    expect(numericDateWithYear('vi', jan)).toBe('04/01/09');
+    expect(numericDateWithYear('en', nov)).toBe('12 Nov 2025');
+    expect(numericDateWithYear('en', jan)).toBe('4 Jan 2009');
+  });
+  it('puts it first in Japanese and Chinese', () => {
+    expect(numericDateWithYear('ja', nov)).toBe('2025/11/12');
+    expect(numericDateWithYear('ja', jan)).toBe('2009/1/4');
+    expect(numericDateWithYear('zh', nov)).toBe('2025年11月12日');
+    expect(numericDateWithYear('zh-Hant', jan)).toBe('2009年1月4日');
   });
 });
 
