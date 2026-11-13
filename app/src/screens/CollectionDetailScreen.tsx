@@ -533,15 +533,52 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const narrowed = chosen.length > 0;
   const pick = (k: string) => setPicked((p) => (p.includes(k) ? [] : [k]));
   const kept = narrowed ? narrowTo(members, chosen).length : members.length;
-  const kindRow = kinds.length > 0 ? (
+  /* ── the count, at the end of the kinds' row (owner, 13 Nov 2026) ──
+     How many places, beside what kinds they are: the two say what is in
+     the list, so they share a row, the count fixed at its right edge and
+     the kinds wrapping in the column to its left — a fourth kind goes to
+     a second line under the first, never under the count. One place for
+     the figure, for the owner and a visitor alike: it had been the foot's
+     on somebody else's list and the "Add place" cell's corner on yours,
+     and the foot is now the heart and who can see it, nothing else.
+
+     The list's whole count, whatever a chip has narrowed it to: the grid
+     shows what the chip kept, and the line under the row says "4 of 11"
+     while one is chosen. Its box is a pill's box — the same rule, clear,
+     when the kinds are a filter — so the figure sits on the first line's
+     baseline by construction rather than by a guessed offset.
+
+     Its pin and figure, never the word (owner, 31 Oct 2026); a screen
+     reader hears the word. On a list with no places there is no count:
+     "Nothing here yet" is the card's whole answer. */
+  const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
+  const placeCount = members.length > 0 ? (
+    <View
+      style={[s.placeCount, filters && s.placeCountRule]}
+      accessible
+      accessibilityLabel={`${members.length} ${placesWord}`}
+      testID="collection-count"
+    >
+      <Glyph name="location-outline" size={13} color={colors.textTertiary} />
+      <Text style={s.placeCountText}>{members.length}</Text>
+    </View>
+  ) : null;
+  const kindRow = kinds.length > 0 || placeCount ? (
     <View style={s.kindsBlock}>
-      <KindPills
-        kinds={kinds}
-        chosen={chosen}
-        onPick={filters ? pick : undefined}
-        bare
-        testID="collection-kinds"
-      />
+      <View style={s.kindsLine}>
+        <View style={s.kindsLeft}>
+          {kinds.length > 0 ? (
+            <KindPills
+              kinds={kinds}
+              chosen={chosen}
+              onPick={filters ? pick : undefined}
+              bare
+              testID="collection-kinds"
+            />
+          ) : null}
+        </View>
+        {placeCount}
+      </View>
       {narrowed ? (
         <View style={s.filterCount}>
           <Text style={s.filterCountText} testID="collection-filter-count">
@@ -1159,8 +1196,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </PressableScale>
   ) : null;
 
-  /* The card's foot: the heart, then who can see it or how many places.
-     Under a hairline, all of it from the start of the row.
+  /* The card's foot: the heart, and who can see it. Under a hairline,
+     from the start of the row.
 
      The heart leads (owner, 12 Nov 2026). It sat at the end, "where a
      thumb finds a gesture", but the apps this reads beside — Instagram,
@@ -1170,36 +1207,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      list has a heart (likes are public-only), and a private list's pill
      would otherwise float in a middle column with nothing to its left.
 
-     Drawn on every list, yours included: the count is the one line every
-     list has.
-
-     The count is the pin and the figure, never the word (owner, 31 Oct
-     and 2 Nov 2026): the pin says what is counted, so "19 places" said
-     it twice. On your own the visibility leads and the pin follows after
-     a dot — it was left off there once, for fear that two glyphs on one
-     line of facts read as two controls, and the bare "Public · 19" that
-     would have left was the reason it came back: only the globe has a
-     chevron, and only the globe answers a tap. A screen reader hears the
-     word either way: it cannot see the pin.
-
-     On your own it is gone again (owner, 2 Nov 2026), and for a better
-     reason: the "Add place" cell under the card now carries the count in
-     its corner, the photo tiles' layout, so the foot would say it twice.
-     Your foot is who can see it, and the heart. An empty list of yours
-     has no cell, and no count anywhere: "Nothing here yet" is the
-     card's whole answer. */
-  const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
-  const cardFoot = col ? (
+     The count left the foot on 13 Nov (owner) for the end of the kinds'
+     row — see `kindRow`. So a foot with nothing to say is not drawn, and
+     neither is its hairline: somebody else's list with no heart (shared
+     with you, which no one may like) ends at its kinds. */
+  const cardFoot = col && (heart || visibility) ? (
     <View style={s.cardFoot} testID="collection-stats">
       {heart}
-      <View style={s.footCount}>
-        {visibility ?? (
-          <>
-            <Glyph name="location-outline" size={15} color={colors.textTertiary} />
-            <Text style={s.meta} accessibilityLabel={`${members.length} ${placesWord}`}>{members.length}</Text>
-          </>
-        )}
-      </View>
+      {visibility}
     </View>
   ) : null;
 
@@ -1527,14 +1542,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      offers of one act read as two acts. While a filter narrows the list
      it stays: the place you add is added whatever is shown. It goes
      where the ⋯ menu's row and the dock's pill go, `addPlace`. */
-  // The list's count rides the cell (owner, 2 Nov 2026): on your own list
-  // it is the cell's corner and not the card's foot.
+  // The list's count rode the cell from 2 Nov; since 13 Nov it is on the
+  // card, at the end of the kinds' row — see `kindRow`.
   const addCell = (size?: number) => (
     <AddCell
       label={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
       onPress={addPlace}
       size={size}
-      count={{ n: members.length, said: `${members.length} ${placesWord}` }}
       testID="collection-add-cell"
     />
   );
@@ -1588,7 +1602,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加', '添加简介', '新增簡介')}</Text>
               </PressableScale>
             ) : null}
-            {kindRow}
           </View>
           {owned ? (
             <PressableScale
@@ -1631,6 +1644,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             </PressableScale>
           ) : null}
         </View>
+        {/* Across the card, not in the words' column: the count is
+            fixed to the card's own right edge, under the pencil. */}
+        {kindRow}
         {cardFoot}
       </Card>
     </View>
@@ -1995,6 +2011,21 @@ const s = StyleSheet.create({
   // room the dashed slot it replaced kept above it.
   // The chips and, while something is chosen, the count line under them.
   kindsBlock: { gap: 10 },
+  // The kinds in a column that wraps, the count fixed to its right; 16
+  // between them, under the 18 between two kinds, so the count reads as
+  // the row's end rather than one more kind.
+  kindsLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  kindsLeft: { flex: 1 },
+  // A bare kind's box — 13pt medium in the tertiary grey, the pin at the
+  // word's size — so the figure is a kind's equal in weight and quieter
+  // in ink: it counts, it does not name. 3 between pin and figure, not a
+  // kind's 6 between dot and word: the pin's own bearings make up the
+  // rest (measured in ink, see `cardFoot`).
+  placeCount: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  placeCountText: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
+  // `KindPill`'s rule, clear: 4 above and below and a 2pt border, so a
+  // filter row's first line and the count are one height.
+  placeCountRule: { paddingVertical: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   filterCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   filterCountText: { color: colors.textTertiary, fontSize: 13 },
   filterClear: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
@@ -2012,9 +2043,12 @@ const s = StyleSheet.create({
   // should not open a sheet about a person.
   curator: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%' },
   curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
-  // A hairline, then the heart and the facts from the start.
+  // A hairline, then the heart and who can see it, from the start.
   //
   // ── the spacing, measured in ink (owner, 12 Nov 2026) ──
+  // Measured while the count was still in the foot; it moved to the kinds'
+  // row the next day, taking its 3 with it (`placeCount`), and the 20 now
+  // stands between the heart and the visibility.
   // Read off a 2x render of a visitor's foot, glyph ink to glyph ink, not
   // off these numbers: each glyph's box has side bearings of its own.
   //
@@ -2033,9 +2067,6 @@ const s = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
-  // 3, not the heart's 4: the pin's bearings make up the rest — see
-  // `cardFoot`.
-  footCount: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   // Justified (owner, 3 Nov 2026), the owner's call over the case put
   // against it: a 318pt column holds some 44 characters, iOS does not
   // hyphenate Vietnamese, and the up-to-25pt each ragged line stopped

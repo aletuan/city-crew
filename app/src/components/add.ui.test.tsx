@@ -48,18 +48,15 @@ describe('AddCell', () => {
     expect(document.querySelector('[data-icon="add"]')).toBeTruthy();
   });
 
-  // Laid out as a photo tile (owner, 2 Nov 2026): the count and its pin
-  // in the top corner, the plus in a dashed 44pt ring, the word along the
-  // foot; no drawing, and no dashes on the tile's own edge. The row keeps its dashes and puts the count
-  // at its end. Both say the count with the word.
-  it('carries the count in the tile\u2019s corner and at the row\u2019s end, and says both', () => {
-    const count = { n: 4, said: '4 places' };
-    const { rerender } = render(<AddCell label="Add place" size={110} count={count} onPress={() => {}} testID="cell" />);
+  // Laid out as a photo tile (owner, 2 Nov 2026): the plus in a dashed
+  // 44pt ring, the word along the foot; no drawing, and no dashes on the
+  // tile's own edge. The row keeps its dashes. The count it carried in its
+  // corner moved to the card on 13 Nov (owner): neither says it now.
+  it('lays the tile out as a photo tile, and says only its word', () => {
+    const { rerender } = render(<AddCell label="Add place" size={110} onPress={() => {}} testID="cell" />);
     const face = () => screen.getByTestId('cell').firstElementChild as HTMLElement;
-    expect(screen.getByTestId('cell').getAttribute('aria-label')).toBe('Add place, 4 places');
-    const corner = screen.getByTestId('cell-count');
-    expect(corner.textContent).toBe('4');
-    expect(corner.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(screen.getByTestId('cell').getAttribute('aria-label')).toBe('Add place');
+    expect(document.querySelector('[data-icon="location-outline"]')).toBeNull();
     expect(document.querySelector('[data-stub="Svg"]')).toBeNull();
     expect(getComputedStyle(face()).borderTopStyle).not.toBe('dashed');
     // The word along the foot, as a tile's name sits.
@@ -77,12 +74,10 @@ describe('AddCell', () => {
     expect(getComputedStyle(ring).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     const ink = (c: string) => { const d = document.createElement('div'); d.style.color = c; return d.style.color; };
     expect(ring.style.borderTopColor).toBe(ink(textTertiaryHex.light));
-    rerender(<AddCell label="Add place" count={count} onPress={() => {}} testID="cell" />);
+    rerender(<AddCell label="Add place" onPress={() => {}} testID="cell" />);
     expect(getComputedStyle(face()).borderTopStyle).toBe('dashed');
-    expect(screen.getByTestId('cell-count').textContent).toBe('4');
-    rerender(<AddCell label="Add place" size={110} onPress={() => {}} testID="cell" />);
-    expect(screen.queryByTestId('cell-count')).toBeNull();
     expect(screen.getByTestId('cell').getAttribute('aria-label')).toBe('Add place');
+    expect(document.querySelector('[data-icon="location-outline"]')).toBeNull();
   });
 
   // The word sits on the accent's tint over the page, in the body's ink —

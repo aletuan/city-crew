@@ -448,11 +448,11 @@ describe('your own list', () => {
     expect(screen.getByText('Where we eat.')).toBeTruthy();
     const cards = screen.getAllByText(/^card:/).map((e) => e.textContent);
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
-    // In the foot, before the count — not under the title any more.
-    // On your own the count is the Add place cell's (owner, 2 Nov 2026),
-    // so the foot is who can see it and nothing else.
+    // In the foot — not under the title any more. The count is at the
+    // end of the kinds' row (owner, 13 Nov 2026), so the foot is who can
+    // see it and nothing else.
     expect(screen.getByTestId('collection-stats').textContent).toBe('Private');
-    expect(screen.getByTestId('collection-add-cell-count').textContent).toBe('3');
+    expect(screen.getByTestId('collection-count').textContent).toBe('3');
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
     // No self-credit and no heart on your own list.
@@ -470,7 +470,8 @@ describe('your own list', () => {
     state.mine = [collection({ is_public: true }, [PHO])];
     show();
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Public');
-    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Add place, 1 place');
+    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Add place');
+    expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('1 place');
     expect(screen.queryByText(/Private/)).toBeNull();
   });
 
@@ -510,9 +511,10 @@ describe('your own list', () => {
     const { parent, raw } = show();
     expect(screen.queryByText('From search or your bookmarks')).toBeNull();
     const add = screen.getByTestId('collection-add-cell');
-    // The word, then the count it carries in its corner.
-    expect(add.getAttribute('aria-label')).toBe('Add place, 3 places');
-    expect(screen.getByTestId('collection-add-cell-count').querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    // The word alone: the count it carried in its corner is on the card
+    // now (owner, 13 Nov 2026).
+    expect(add.getAttribute('aria-label')).toBe('Add place');
+    expect(add.querySelector('[data-icon="location-outline"]')).toBeNull();
     expect(add.querySelector('[data-icon="add"]')).toBeTruthy();
     const follows = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect(follows(screen.getByTestId('collection-intro'), add)).toBe(true);
@@ -525,7 +527,8 @@ describe('your own list', () => {
   it('says Add place in the reader’s language', () => {
     state.lang = 'vi';
     show();
-    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Thêm địa điểm, 3 địa điểm');
+    expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Thêm địa điểm');
+    expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('3 địa điểm');
   });
 
   it('greets an empty list with one invitation to find places for it, and no footer', () => {
@@ -1537,11 +1540,9 @@ describe("somebody else's list", () => {
     state.cols = [theirs({}, [])];
     show();
     expect(screen.getByTestId('collection-curator').textContent).toBe('@hanoicrew');
-    // Beside the pin, the figure alone; the word is still what is heard.
-    const stats = screen.getByTestId('collection-stats');
-    expect(stats.querySelector('[data-icon="location-outline"]')).toBeTruthy();
-    expect(stats.textContent).toBe('0');
-    expect(screen.getByLabelText('0 places')).toBeTruthy();
+    // No places, no count: the line below says so in words.
+    expect(screen.queryByTestId('collection-count')).toBeNull();
+    expect(screen.getByTestId('collection-stats').querySelector('[data-icon="location-outline"]')).toBeNull();
     expect(screen.getByText('No places in this collection yet.')).toBeTruthy();
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
     expect(screen.queryByText('Public')).toBeNull();
@@ -1935,6 +1936,57 @@ describe('the chips', () => {
     expect(screen.queryByTestId('collection-kinds')).toBeNull();
   });
 
+  // The count at the end of the kinds' row (owner, 13 Nov 2026): fixed to
+  // the right, the kinds wrapping in the column to its left, and the
+  // list's whole count whatever a chip has narrowed it to.
+  it('fixes the count to the right of the kinds, which wrap in their own column', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    const count = screen.getByTestId('collection-count');
+    const line = count.parentElement!;
+    const kindsColumn = screen.getByTestId('collection-kinds').parentElement!;
+    // One row: the kinds' column, then the count, and nothing after it.
+    expect([...line.children]).toEqual([kindsColumn, count]);
+    expect(viewStyleOf(line).flexDirection).toBe('row');
+    expect(viewStyleOf(line).alignItems).toBe('flex-start');
+    // The column takes the rest and the kinds wrap inside it; the count keeps its width.
+    expect(viewStyleOf(kindsColumn).flex).toBe(1);
+    expect(viewStyleOf(screen.getByTestId('collection-kinds')).flexWrap).toBe('wrap');
+    expect(viewStyleOf(count).flexShrink).toBe(0);
+    // Across the card, not inside the words' column beside the pencil: the
+    // row the pencil stands in does not hold the count.
+    expect(screen.getByTestId('collection-desc').contains(line)).toBe(true);
+    let pencilRow: HTMLElement | null = screen.getByTestId('collection-desc-edit');
+    while (pencilRow && viewStyleOf(pencilRow).flexDirection !== 'row') pencilRow = pencilRow.parentElement;
+    expect(pencilRow).toBeTruthy();
+    expect(pencilRow!.contains(count)).toBe(false);
+    expect(count.textContent).toBe('4');
+    expect(count.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    // A filter row's box, so its first line and the count are one height.
+    expect(viewStyleOf(count).paddingVertical).toBe(4);
+    expect(viewStyleOf(count).borderBottomWidth).toBe(2);
+  });
+
+  it('keeps the list\u2019s whole count while a chip narrows it', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    fireEvent.click(chip('heritage'));
+    expect(screen.getByTestId('collection-filter-count').textContent).toBe('1 of 4 places');
+    expect(screen.getByTestId('collection-count').textContent).toBe('4');
+  });
+
+  it('draws the count alone where the places carry no kind', () => {
+    state.places = [place('plain', 'Plain')];
+    state.mine = [collection({}, [place('plain', 'Plain')])];
+    show();
+    expect(screen.queryByTestId('collection-kinds')).toBeNull();
+    expect(screen.getByTestId('collection-count').textContent).toBe('1');
+    // No filter, so no rule to match.
+    expect(viewStyleOf(screen.getByTestId('collection-count')).paddingVertical).toBeUndefined();
+  });
+
   it('narrows to one chosen kind, says how many, and clears in one tap', () => {
     eatery();
     state.mine = [collection({}, four)];
@@ -2107,12 +2159,13 @@ describe('the introduction card', () => {
   const sheetRow = (name: string | RegExp) => screen.queryByRole('button', { name });
 
   // The heart leads the foot (owner, 12 Nov 2026), as a like leads the
-  // row on Instagram or Threads, and the count follows it.
-  it('keeps the heart in the foot, first, beside nothing but the count', () => {
+  // row on Instagram or Threads; the count left the foot for the kinds'
+  // row on 13 Nov.
+  it('keeps the heart in the foot, first, and nothing else on a visitor\u2019s', () => {
     show();
     const foot = screen.getByTestId('collection-stats');
     expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
-      .toEqual(['heart-outline', 'location-outline']);
+      .toEqual(['heart-outline']);
     // In that order on screen too, from the start of the row.
     expect(getComputedStyle(foot).flexDirection).toBe('row');
     expect(getComputedStyle(foot).justifyContent).not.toBe('space-between');
@@ -2121,8 +2174,18 @@ describe('the introduction card', () => {
     // gaps and the glyphs' own bearings; see `cardFoot`.
     const gapOf = (el: Element | null | undefined) => viewStyleOf(el as Element)?.gap;
     const heart = screen.getByRole('button', { name: 'Like' }).querySelector('[data-icon]')?.parentElement;
-    const count = foot.querySelector('[data-icon="location-outline"]')?.parentElement;
+    const count = screen.getByTestId('collection-count');
     expect([gapOf(foot), gapOf(heart), gapOf(count)]).toEqual([20, 4, 3]);
+  });
+
+  // A list of somebody else's no one may like — shared with you, once
+  // sharing has screens — has nothing for the foot to say, and draws none,
+  // hairline and all (owner, 13 Nov 2026).
+  it('draws no foot on a visitor\u2019s list with no heart', () => {
+    state.cols = [theirs({ is_public: false })];
+    show();
+    expect(screen.queryByTestId('collection-stats')).toBeNull();
+    expect(screen.getByTestId('collection-count')).toBeTruthy();
   });
 
   it('leaves a visitor\u2019s header with the title alone', () => {
