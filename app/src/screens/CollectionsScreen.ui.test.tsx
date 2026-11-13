@@ -425,8 +425,9 @@ describe('CollectionsScreen — signed in', () => {
     // wears a padlock in its top corner, the public one nothing — the only
     // globe left is the Community tab's own.
     expect(screen.getAllByTestId('collection-tile-lock')).toHaveLength(1);
-    expect(icons('lock-closed')).toBe(1);
-    expect(icons('lock-closed-outline')).toBe(0);
+    // In outline, as the list's own page draws it (13 Nov 2026).
+    expect(icons('lock-closed-outline')).toBe(1);
+    expect(icons('lock-closed')).toBe(0);
     expect(icons('globe-outline')).toBe(1);
     // Signed in, the guest card is gone.
     expect(screen.queryByText('Start a collection')).toBeNull();
@@ -483,7 +484,7 @@ describe('CollectionsScreen — signed in', () => {
     expect([st.position, st.top, st.right, st.width, st.height, st.borderTopLeftRadius])
       .toEqual(['absolute', '10px', '10px', '24px', '24px', '12px']);
     expect(st.backgroundColor).toBe(String(colors.surfaceCard).replace(/,(?=\S)/g, ', '));
-    expect(lock.querySelector('[data-icon="lock-closed"]')!.getAttribute('data-size')).toBe('12');
+    expect(lock.querySelector('[data-icon="lock-closed-outline"]')!.getAttribute('data-size')).toBe('13');
     expect(screen.getByRole('button', { name: 'List shut, Private' }).contains(lock)).toBe(true);
     const open = screen.getByRole('button', { name: 'List open, Public' });
     expect(open.querySelector('[data-testid="collection-tile-lock"]')).toBeNull();
@@ -814,7 +815,7 @@ describe('CollectionsScreen — one shape a tab', () => {
     expect(spies.mySharesFor).toHaveBeenCalledWith('u1');
     const lent = screen.getByRole('button', { name: 'List lent, Friends' });
     const mark = within(lent).getByTestId('collection-tile-shared');
-    expect(mark.querySelector('[data-icon="people"]')!.getAttribute('data-size')).toBe('12');
+    expect(mark.querySelector('[data-icon="people-outline"]')!.getAttribute('data-size')).toBe('13');
     expect(within(lent).queryByTestId('collection-tile-lock')).toBeNull();
     // The padlock's own disc, so the two are one kind of mark.
     expect(getComputedStyle(mark).width).toBe('24px');

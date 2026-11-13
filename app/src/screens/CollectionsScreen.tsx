@@ -1363,16 +1363,27 @@ export default function CollectionsScreen({ navigation, route }: {
                             not "only me" either, and a padlock on a list
                             three friends are reading would be the tile
                             saying the opposite of the list's own page.
-                            Filled, as the padlock is, to be one family
-                            of marks; the outline is the page's control. */}
+
+                            Both in outline, at 13 in the 24 disc (owner,
+                            13 Nov 2026): the glyphs the list's own page
+                            draws for the same two states, at its foot and
+                            in its sheet, and the line the tab bar and the
+                            place pin are drawn in. They were filled at
+                            12 until then. A filled padlock is a solid
+                            black block on a photograph, the loudest thing
+                            on the tile after its title, and filled at 12
+                            the two heads ran into one blob. The outline's
+                            stroke is 32/512 of its size: 0.75pt at 12,
+                            0.81 at 13, so the point gained gives back
+                            some of the weight the fill took away. */}
                         {item.own && !c.is_public ? (
                           seenFor(c) === 'friends' ? (
                             <View style={s.gcardLock} testID="collection-tile-shared">
-                              <Glyph name="people" size={12} color={colors.text} />
+                              <Glyph name="people-outline" size={13} color={colors.text} />
                             </View>
                           ) : (
                             <View style={s.gcardLock} testID="collection-tile-lock">
-                              <Glyph name="lock-closed" size={12} color={colors.text} />
+                              <Glyph name="lock-closed-outline" size={13} color={colors.text} />
                             </View>
                           )
                         ) : null}
