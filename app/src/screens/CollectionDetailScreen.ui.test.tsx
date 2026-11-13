@@ -2521,6 +2521,24 @@ describe('the chips', () => {
     expect(viewStyleOf(count).borderBottomWidth).toBe(2);
   });
 
+  // A faint upright rule between the kinds and the count (owner, 13 Nov
+  // 2026): inside the count's box, before the pin, so it sits on the
+  // count's line; 12 from the kinds, 12 to the pin.
+  it('stands a faint rule between the kinds and the count', () => {
+    eatery();
+    state.mine = [collection({}, four)];
+    show();
+    const count = screen.getByTestId('collection-count');
+    const rule = screen.getByTestId('collection-count-rule');
+    expect(count.firstElementChild).toBe(rule);
+    expect(viewStyleOf(rule)).toMatchObject({
+      width: StyleSheet.hairlineWidth, height: 14, backgroundColor: colors.borderGlass, marginRight: 9,
+    });
+    expect(viewStyleOf(count).gap).toBe(3);
+    expect(viewStyleOf(count.parentElement!).gap).toBe(12);
+    expect(count.textContent).toBe('4');
+  });
+
   it('keeps the list\u2019s whole count while a chip narrows it', () => {
     eatery();
     state.mine = [collection({}, four)];
@@ -2536,6 +2554,8 @@ describe('the chips', () => {
     show();
     expect(screen.queryByTestId('collection-kinds')).toBeNull();
     expect(screen.getByTestId('collection-count').textContent).toBe('1');
+    // Nothing beside it to be told apart from, so no rule.
+    expect(screen.queryByTestId('collection-count-rule')).toBeNull();
     // No filter, so no rule to match.
     expect(viewStyleOf(screen.getByTestId('collection-count')).paddingVertical).toBeUndefined();
   });

@@ -628,7 +628,19 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
      Its pin and figure, never the word (owner, 31 Oct 2026); a screen
      reader hears the word. On a list with no places there is no count:
-     "Nothing here yet" is the card's whole answer. */
+     "Nothing here yet" is the card's whole answer.
+
+     A faint upright hairline before the pin, while there are kinds
+     beside it (owner, 13 Nov 2026). The kinds say what is in the list
+     and, with two or more, are a filter; the figure counts and is not
+     pressed. Air alone left the figure reading as one more kind once the
+     kinds reached across the row. The rule is a place card's own
+     separator ("4.5 ★ | $$ | 1.2 km"), not the "·" this card uses to
+     join two of a kind ("12/11 · Private", "4 of 11 · Clear"), which
+     would have made the count one more item of the kinds. Inside the
+     count's own box, so it centres on the count's line — the kinds'
+     first — however many lines the kinds wrap to; and not drawn when
+     the count stands alone, with nothing to be told apart from. */
   const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
   const placeCount = members.length > 0 ? (
     <View
@@ -637,6 +649,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       accessibilityLabel={`${members.length} ${placesWord}`}
       testID="collection-count"
     >
+      {kinds.length > 0 ? <View style={s.countRule} testID="collection-count-rule" /> : null}
       <Glyph name="location-outline" size={13} color={colors.textTertiary} />
       <Text style={s.placeCountText}>{members.length}</Text>
     </View>
@@ -2332,10 +2345,12 @@ const s = StyleSheet.create({
   // room the dashed slot it replaced kept above it.
   // The chips and, while something is chosen, the count line under them.
   kindsBlock: { gap: 10 },
-  // The kinds in a column that wraps, the count fixed to its right; 16
-  // between them, under the 18 between two kinds, so the count reads as
-  // the row's end rather than one more kind.
-  kindsLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  // The kinds in a column that wraps, the count fixed to its right. 12
+  // from the last kind to the rule and 12 from the rule to the pin (its
+  // 9 and the count's own 3): the rule midway, and each side under the
+  // 18 between two kinds, so the rule and the count read as the row's
+  // end rather than one more kind. It was 16 with no rule.
+  kindsLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   kindsLeft: { flex: 1 },
   // A bare kind's box — 13pt medium in the tertiary grey, the pin at the
   // word's size — so the figure is a kind's equal in weight and quieter
@@ -2344,6 +2359,12 @@ const s = StyleSheet.create({
   // rest (measured in ink, see `activityRow`).
   placeCount: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
   placeCountText: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
+  // The rule before the count: the thinnest line the screen draws, in the
+  // card's hairline ink but the firmer of the two (`borderGlass`, not the
+  // `borderGlassSoft` the hairline across the card uses) — a third of a
+  // point upright and 14 tall reads as nothing in the softer one. 14:
+  // the 13pt figure's line, no taller than the words it stands between.
+  countRule: { width: StyleSheet.hairlineWidth, height: 14, backgroundColor: colors.borderGlass, marginRight: 9 },
   // `KindPill`'s rule, clear: 4 above and below and a 2pt border, so a
   // filter row's first line and the count are one height.
   placeCountRule: { paddingVertical: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
