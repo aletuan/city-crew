@@ -186,9 +186,21 @@
 // so, with Try again; one of the two failing while the other has rows
 // still shows the rows, and a refresh that fails behind kept rows keeps
 // them.
+//
+// ── a pull (owner, 13 Nov 2026) ──
+//
+// Pulling the page down asks both halves again and reads the crew again
+// (`crew.ships`). The crew is the friend buttons' half of the page: a
+// "Requested" the other person has accepted since went on saying
+// "Requested" here until the provider next asked on its own — a return
+// to the app after two minutes away (`lib/crew`), or a visit to Crew. The
+// rows stay on the page through it, by the rule above (a refresh behind
+// a kept answer draws no spinner), and change in place when the answers
+// land; one that fails keeps them. The spinner is the pull's alone — see
+// `pulling` — and stays lit until all three have settled.
 
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Glyph } from '../components/ui/glyph';
 import {
@@ -280,6 +292,25 @@ export default function CollectionActivityScreen({ navigation, route }: {
     t('Could not send the request', 'Không gửi được lời mời', 'リクエストを送れませんでした', '无法发送请求', '無法傳送請求'));
   const acceptFriend = (id: string) => ask(id, 'friends', () => acceptFriendRequest(id, me!),
     t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした', '无法接受请求', '無法接受請求'));
+
+  // The pull — see the header. The spinner belongs to the pull, as on the
+  // collection page: armed by the gesture, disarmed when what it asked
+  // for settles, and never lit by the ask every open makes behind a kept
+  // answer, nor by the crew's own return-to-app refresh. A half already
+  // in flight is joined, not asked twice (`useSharedFetch`); the crew's
+  // fetch is not so careful — a reload starts over and drops the answer
+  // on its way — so one already out is left to land, and the spinner
+  // waits for it as for its own.
+  const busy = likes.loading || copies.loading || crew.ships.loading;
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !busy) setPulling(false);
+  }, [pulling, busy]);
+  const pull = () => {
+    setPulling(true);
+    activity.reload();
+    if (!crew.ships.loading) crew.ships.reload();
+  };
 
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -473,6 +504,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
       >
         {card}
         {statsLink}

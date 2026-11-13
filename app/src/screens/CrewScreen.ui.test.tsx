@@ -15,7 +15,7 @@ import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { font } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
+import { act, fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { FriendProfile, ListTitle } from '../lib/data';
 import type { FriendshipRow, Suggestion } from '../lib/friends';
@@ -53,7 +53,7 @@ vi.mock('../lib/data', () => data);
 
 const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], loading: false, error: null as string | null, loadedAt: 1 as number | null, reload: vi.fn() },
-  blocks: { data: [] as string[], error: null as string | null, reload: vi.fn() },
+  blocks: { data: [] as string[], loading: false, error: null as string | null, reload: vi.fn() },
   people: {} as Record<string, FriendProfile>,
   mutual: {} as Record<string, number>,
   absorb: vi.fn(),
@@ -138,6 +138,7 @@ beforeEach(() => {
   crew.ships.error = null;
   crew.ships.loadedAt = 1;
   crew.blocks.data = [];
+  crew.blocks.loading = false;
   crew.blocks.error = null;
   crew.people = {};
   crew.mutual = {};
@@ -484,14 +485,28 @@ describe('empty and loading', () => {
     expect(screen.queryByText('Blocked')).toBeNull();
   });
 
-  it('shows a spinner, not the empty sentence, while loading', () => {
+  it('shows a spinner, not the empty sentence, while the edges have never been answered', () => {
     crew.ships.loading = true;
+    crew.ships.loadedAt = null;
     render(<CrewScreen navigation={nav()} />);
     expect(screen.queryByTestId('crew-friends-empty')).toBeNull();
     expect(screen.getByRole('progressbar')).toBeTruthy();
     fireEvent.click(tab(/Requests/));
     expect(screen.queryByTestId('crew-requests-empty')).toBeNull();
     expect(screen.getByRole('progressbar')).toBeTruthy();
+  });
+
+  // Every focus reloads, and so does a pull: an answer already held,
+  // empty, stays drawn through the reload rather than turning into the
+  // spinner and back (13 Nov 2026).
+  it('keeps an empty answer it holds drawn while it asks again', () => {
+    crew.ships.loading = true;
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByTestId('crew-friends-empty')).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    fireEvent.click(tab(/Requests/));
+    expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
   it('says nothing is waiting on an empty Requests tab', () => {
@@ -889,5 +904,132 @@ describe('a write that fails says so', () => {
     fireEvent.click(tab(/Requests/));
     fireEvent.click(await screen.findByRole('button', { name: /Add$/ }));
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not send the request', 'offline'));
+  });
+});
+
+// ── a pull (owner, 13 Nov 2026) ──
+//
+// The list's own gesture has no jsdom counterpart, so the pull is the
+// RefreshControl's `onRefresh`, read off the committed tree, and the
+// spinner its `refreshing` — as the collection page's test reads them.
+describe('pulling the list down', () => {
+  const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const fb = stack.pop()!;
+      const p = fb.memoizedProps;
+      if (p && typeof p === 'object' && pick(p)) return p;
+      if (fb.sibling) stack.push(fb.sibling);
+      if (fb.child) stack.push(fb.child);
+    }
+    throw new Error('nothing matched');
+  };
+  const list = () => propsWhere((p) => 'onRefresh' in p && 'refreshing' in p) as { onRefresh: () => void; refreshing: boolean };
+  const pull = () => act(() => { list().onRefresh(); });
+  /** An introductions ask that waits to be answered. */
+  const held = () => {
+    let answer: (v: Suggestion[]) => void = () => {};
+    data.fetchSuggestedFriends.mockImplementationOnce(() => new Promise((ok) => { answer = ok; }));
+    return (v: Suggestion[]) => act(async () => { answer(v); });
+  };
+  const settle = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+  it('asks again for the edges, the blocks and the introductions', async () => {
+    render(<CrewScreen navigation={nav()} />);
+    await settle();
+    crew.ships.reload.mockClear();
+    expect(data.fetchSuggestedFriends).toHaveBeenCalledTimes(1);
+    pull();
+    expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+    expect(crew.blocks.reload).toHaveBeenCalledTimes(1);
+    expect(data.fetchSuggestedFriends).toHaveBeenCalledTimes(2);
+  });
+
+  it('spins until the introductions it asked for are answered, and puts the new ones up', async () => {
+    data.fetchSuggestedFriends.mockImplementationOnce(async () => [sug('a')]);
+    crew.people = { a: person('a', 'anh', 'Anh'), b: person('b', 'bao', 'Bao') };
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    await settle();
+    expect(screen.getByText('Anh')).toBeTruthy();
+    const answer = held();
+    pull();
+    expect(list().refreshing).toBe(true);
+    // The old introductions stay up while the new ones are asked for.
+    expect(screen.getByText('Anh')).toBeTruthy();
+    await answer([sug('b')]);
+    expect(list().refreshing).toBe(false);
+    expect(screen.queryByText('Anh')).toBeNull();
+    expect(screen.getByText('Bao')).toBeTruthy();
+  });
+
+  it('keeps the introductions it has when asking again fails', async () => {
+    data.fetchSuggestedFriends.mockImplementationOnce(async () => [sug('a')]);
+    crew.people = { a: person('a', 'anh', 'Anh') };
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    await settle();
+    data.fetchSuggestedFriends.mockImplementationOnce(async () => { throw new Error('offline'); });
+    pull();
+    await settle();
+    expect(list().refreshing).toBe(false);
+    expect(screen.getByText('Anh')).toBeTruthy();
+  });
+
+  it('spins while the edges it asked for are out, with the friends still drawn', async () => {
+    crew.ships.data = [edge(ME, 'a', 'accepted')];
+    crew.people = { a: person('a', 'anh', 'Anh') };
+    const { rerender } = render(<CrewScreen navigation={nav()} />);
+    await settle();
+    // What the provider does on a reload: the edges are out again.
+    crew.ships.reload.mockImplementationOnce(() => { crew.ships.loading = true; });
+    pull();
+    expect(list().refreshing).toBe(true);
+    expect(screen.getByTestId('crew-friend-0')).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    // The introductions are in; the edges still are not.
+    await settle();
+    expect(list().refreshing).toBe(true);
+    crew.ships.loading = false;
+    rerender(<CrewScreen navigation={nav()} />);
+    expect(list().refreshing).toBe(false);
+  });
+
+  it('spins while the blocks it asked for are out', async () => {
+    const { rerender } = render(<CrewScreen navigation={nav()} />);
+    await settle();
+    crew.blocks.reload.mockImplementationOnce(() => { crew.blocks.loading = true; });
+    pull();
+    await settle();
+    expect(list().refreshing).toBe(true);
+    crew.blocks.loading = false;
+    rerender(<CrewScreen navigation={nav()} />);
+    expect(list().refreshing).toBe(false);
+  });
+
+  // The spinner is the pull's: the focus reload and the provider's own
+  // refresh do not light it, and a pull made while one is out waits for
+  // it rather than starting it over.
+  it('is not lit by a reload nobody pulled for, and joins one already out', async () => {
+    crew.ships.loading = true;
+    crew.blocks.loading = true;
+    const answer = held();
+    const { rerender } = render(<CrewScreen navigation={nav()} />);
+    expect(list().refreshing).toBe(false);
+    pull();
+    expect(crew.ships.reload).not.toHaveBeenCalled();
+    expect(crew.blocks.reload).not.toHaveBeenCalled();
+    expect(data.fetchSuggestedFriends).toHaveBeenCalledTimes(1);
+    expect(list().refreshing).toBe(true);
+    await answer([]);
+    crew.ships.loading = false;
+    rerender(<CrewScreen navigation={nav()} />);
+    expect(list().refreshing).toBe(true);
+    crew.blocks.loading = false;
+    rerender(<CrewScreen navigation={nav()} />);
+    expect(list().refreshing).toBe(false);
   });
 });

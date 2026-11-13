@@ -12,7 +12,7 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, fireEvent, render, screen, textStyleOf, viewStyleOf, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, within } from '../uitest/render';
 import { cacheKey } from '../lib/data/cache';
 import { forgetSharedFetches, prefetchShared } from '../lib/data/fetch';
 import type { StatsRow } from '../lib/listStats';
@@ -290,5 +290,76 @@ describe('the states', () => {
     await show();
     expect(screen.queryByTestId('stats-failed')).toBeNull();
     expect(total('views')).toBe('9');
+  });
+});
+
+// ── a pull (owner, 13 Nov 2026) ──
+//
+// The four figures again, drawn throughout. The gesture has no jsdom
+// counterpart, so the pull is the RefreshControl's `onRefresh`, read off
+// the committed tree, and the spinner its `refreshing` — as the
+// collection page's test reads them.
+describe('pulling the page down', () => {
+  const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const fb = stack.pop()!;
+      const p = fb.memoizedProps;
+      if (p && typeof p === 'object' && pick(p)) return p;
+      if (fb.sibling) stack.push(fb.sibling);
+      if (fb.child) stack.push(fb.child);
+    }
+    throw new Error('nothing matched');
+  };
+  const page = () => propsWhere((p) => 'onRefresh' in p && 'refreshing' in p) as { onRefresh: () => void; refreshing: boolean };
+  const pull = () => act(() => { page().onRefresh(); });
+  /** An ask the test answers when it chooses. */
+  const held = () => {
+    let ok: (v: StatsRow[]) => void = () => {};
+    data.fetchCollectionStats.mockImplementationOnce(() => new Promise((r) => { ok = r; }));
+    return (v: StatsRow[]) => act(async () => { ok(v); });
+  };
+
+  it('asks for the figures again, keeps them drawn while it does, and spins until they are in', async () => {
+    await show();
+    expect(total('views')).toBe('1,284');
+    const answer = held();
+    pull();
+    expect(data.fetchCollectionStats).toHaveBeenCalledTimes(2);
+    expect(page().refreshing).toBe(true);
+    expect(total('views')).toBe('1,284');
+    expect(screen.queryByTestId('stats-loading')).toBeNull();
+    await answer([row({ views_total: 1285 })]);
+    expect(page().refreshing).toBe(false);
+    expect(total('views')).toBe('1,285');
+  });
+
+  it('keeps the figures when the pull fails', async () => {
+    await show();
+    data.fetchCollectionStats.mockImplementationOnce(async () => { throw new Error('offline'); });
+    pull();
+    await flush();
+    expect(page().refreshing).toBe(false);
+    expect(total('views')).toBe('1,284');
+    expect(screen.queryByTestId('stats-failed')).toBeNull();
+  });
+
+  // The spinner is the pull's: the ask every open makes behind kept
+  // figures does not light it, and a pull while it is out joins it.
+  it('is not lit by the refresh behind kept figures, and joins it rather than asking again', async () => {
+    await show();
+    cleanup();
+    const answer = held();
+    await show();
+    expect(total('views')).toBe('1,284');
+    expect(page().refreshing).toBe(false);
+    pull();
+    expect(data.fetchCollectionStats).toHaveBeenCalledTimes(2);
+    expect(page().refreshing).toBe(true);
+    await answer([row()]);
+    expect(page().refreshing).toBe(false);
   });
 });

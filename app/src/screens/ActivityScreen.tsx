@@ -46,8 +46,52 @@
 // rest of the app ("You could try"), in the Profile stack's own rows.
 // A failure that leaves nothing to show says so, with Try again; one
 // half failing while the other has news still shows the news.
+//
+// ── a pull (owner, 13 Nov 2026) ──
+//
+// The timeline used to move only on Try again, and Try again starts from
+// nothing: it empties the three halves, so the whole page turns into the
+// spinner while they are asked. That is right for a page that failed,
+// which has nothing to keep; for a page showing rows it would trade them
+// for a spinner, so a pull is a different ask:
+//
+//   - Nothing is emptied. The rows on the page stay, and the three
+//     answers are swapped in together once all three have settled — one
+//     change, not three, so a row never lands above one that arrives a
+//     beat later (the list's Activity page waits for both its halves for
+//     the same reason).
+//   - A half that fails keeps the rows it had. A timeline that was
+//     showing is never blanked by a pull, and a pull that fails over the
+//     empty state leaves the empty state: an answer, even "nothing",
+//     stands until a newer one replaces it.
+//   - Failure is kept per half (`broken`) and means "this half's last
+//     word was a failure, with nothing before it to keep". A first load
+//     or Try again that fails sets it; a pull that fails leaves it as it
+//     was (so a page that failed still says so, and one that had
+//     answered still does not), and a pull that answers clears it. The
+//     failed state is still said only when nothing at all is there to
+//     show.
+//   - The crew is read again too (`crew.ships`): the friendships that
+//     began are this timeline's third source.
+//   - A pull while the first load or Try again is still out sends nothing
+//     of its own: those answers are as fresh, and the spinner waits for
+//     them. Try again, or a change of reader, while a pull is out drops
+//     the pull's answers whole when they land — the newer ask owns the
+//     page.
+//
+// The window moves with the pull: each ask, a first load, Try again or a
+// pull, opens the two weeks at its own now (`windowStart`), and `since`
+// takes the new instant in the same change that swaps the answers in —
+// not when the pull starts — because the friendships are cut at `since`
+// on the page and must be cut at the instant the three fetches were. A
+// half kept through a failed pull was asked under an older window, so
+// the timeline is cut at `since` as well: what that half kept from
+// before the new window opened leaves with the rest. Rejected: keeping
+// the window where the page first opened. The page is "the last two
+// weeks", and a phone left on it across a day would come to show
+// fifteen.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph } from '../components/ui/glyph';
@@ -68,10 +112,8 @@ import { useI18n } from '../lib/i18n';
 import { colors, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-/** How far back the applause reaches. Two weeks: long enough that a
- *  weekly reader misses nothing, short enough that the screen is news
- *  rather than an archive. */
-
+/** One of the three fetches the timeline is built from. */
+type Half = 'applause' | 'copies' | 'acts';
 
 export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
@@ -86,30 +128,44 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const [acts, setActs] = useState<MyActs | null>(null);
   // Friendships come with the crew, already loaded for Profile.
   const crew = useCrew();
-  // Either half failing. It is only said when nothing came back at all —
-  // see the header.
-  const [failed, setFailed] = useState(false);
-  // Bumped by Try again, to run the fetches once more.
+  // The halves whose last word was a failure with nothing to keep — see
+  // the header. Said only when nothing came back at all.
+  const [broken, setBroken] = useState<readonly Half[]>([]);
+  const failed = broken.length > 0;
+  // Bumped by Try again, to run the fetches once more, over two weeks
+  // opened at that moment.
   const [attempt, setAttempt] = useState(0);
-  // Where the two weeks open, fixed per load so the friendships, read from
-  // the crew, are cut at the same instant as the three fetches.
+  // Where the two weeks open for what is on the page, so the friendships,
+  // read from the crew, are cut at the same instant as the three fetches
+  // were asked — set by whichever ask the rows came from (see the header).
   const [since, setSince] = useState(() => windowStart(new Date()));
+  // Which ask owns the page: bumped by the first load and Try again, and
+  // read by a pull's answers before they touch anything.
+  const owner = useRef(0);
   useEffect(() => {
+    owner.current += 1;
     if (!me) { setApplause([]); setCopies([]); setActs(NO_ACTS); return; }
+    const from = windowStart(new Date());
+    setSince(from);
     setApplause(null);
     setCopies(null);
     setActs(null);
-    setFailed(false);
+    setBroken([]);
+    const fail = (half: Half) => setBroken((b) => [...b, half]);
     // Each half on its own: the feed shows what it could get, and a
     // dropped likes call does not take the copies with it.
-    fetchApplause(since).then(setApplause).catch(() => { setFailed(true); setApplause([]); });
+    fetchApplause(from).then(setApplause).catch(() => { fail('applause'); setApplause([]); });
     // The same window: a copy is news for as long as a like is.
-    fetchCopies(since).then(setCopies).catch(() => { setFailed(true); setCopies([]); });
-    fetchMyActs(me, since).then(setActs).catch(() => { setFailed(true); setActs(NO_ACTS); });
-  }, [me, attempt, since]);
+    fetchCopies(from).then(setCopies).catch(() => { fail('copies'); setCopies([]); });
+    fetchMyActs(me, from).then(setActs).catch(() => { fail('acts'); setActs(NO_ACTS); });
+  }, [me, attempt]);
 
   const earlier = useMemo<ActivityItem[]>(
-    () => buildActivity(applause ?? [], copies ?? [], acts ?? NO_ACTS, me ? friendsMade(crew.ships.data, me, since) : []),
+    // Cut at `since`, which a fresh answer already is: what this does is
+    // take out of a half kept through a failed pull the rows the window
+    // has moved past — see the header.
+    () => buildActivity(applause ?? [], copies ?? [], acts ?? NO_ACTS, me ? friendsMade(crew.ships.data, me, since) : [])
+      .filter((it) => it.at >= since),
     [applause, copies, acts, crew.ships.data, me, since],
   );
 
@@ -149,6 +205,38 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // Only the three fetches the timeline is built from; the crew's
   // friendships join it when they land.
   const loading = applause === null || copies === null || acts === null;
+
+  // The pull — see the header. The spinner belongs to the pull, as on the
+  // collection page: armed by the gesture, disarmed when what it waits on
+  // settles — its own three fetches, the crew, or a first load already
+  // out — and never lit by the crew's own return-to-app refresh. The
+  // crew's fetch starts over on a reload and drops the answer on its way,
+  // so one already out is left to land rather than asked again.
+  const [pulling, setPulling] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const busy = asking || loading || crew.ships.loading;
+  useEffect(() => {
+    if (pulling && !busy) setPulling(false);
+  }, [pulling, busy]);
+  const pull = () => {
+    setPulling(true);
+    if (!crew.ships.loading) crew.ships.reload();
+    if (!me || loading || asking) return;
+    setAsking(true);
+    const mine = owner.current;
+    const from = windowStart(new Date());
+    void Promise.allSettled([fetchApplause(from), fetchCopies(from), fetchMyActs(me, from)])
+      .then(([a, c, m]) => {
+        setAsking(false);
+        if (owner.current !== mine) return;
+        setSince(from);
+        if (a.status === 'fulfilled') setApplause(a.value);
+        if (c.status === 'fulfilled') setCopies(c.value);
+        if (m.status === 'fulfilled') setActs(m.value);
+        const got: Record<Half, PromiseSettledResult<unknown>> = { applause: a, copies: c, acts: m };
+        setBroken((b) => b.filter((h) => got[h].status === 'rejected'));
+      });
+  };
 
   // The other tabs, which this screen's stack does not hold. A tab's own
   // first screen needs no `initial: false`; the form, which is not
@@ -223,7 +311,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   );
 
   return (
-    <AuthScreen>
+    <AuthScreen onRefresh={pull} refreshing={pulling}>
       {/* The chevron without its disc (owner, 12 Nov 2026), the second
           screen after the friends one to try it. */}
       <AuthHeader backBare compactTitle onBack={() => navigation.goBack()} title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')} />
@@ -240,7 +328,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           <GradientCta
             icon="refresh"
             label={t('Try again', 'Thử lại', '再試行', '重试', '重試')}
-            onPress={() => { setSince(windowStart(new Date())); setAttempt((n) => n + 1); }}
+            onPress={() => setAttempt((n) => n + 1)}
             testID="activity-retry"
           />
         </EmptyState>
