@@ -121,7 +121,7 @@ import { useMyLists, useSaveActions } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
 import { summaryLine } from '../lib/sketch';
 import { useFlag } from '../lib/useFlag';
-import { COMPANY, draftFrom, seedMembers, type TripDraft } from '../lib/trip';
+import { COMPANY, draftFrom, seedMembers, sourceIdsOf, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, radius, space, type } from '../theme';
@@ -402,6 +402,10 @@ export default function PlanEditScreen({ navigation, route }: {
         day,
         when: p.when,
         generatedBy: live.fromModel ? 'rules+llm' : 'rules',
+        // The lists this plan started from, resolved off the same shelves
+        // its pins were (`pinned` above), so the trip remembers exactly
+        // the lists it was built from and each one's owner can count it.
+        fromCollections: sourceIdsOf(p.from, [...mine.data, ...cols.data]),
         stops: current.map((s) => ({
           placeSlug: s.place.slug,
           arriveMin: s.arriveMin,

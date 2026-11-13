@@ -1,7 +1,7 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areaAround, areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, seedMembers, startPoint, toggle } from './trip';
+import { areaAround, areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, seedMembers, sourceIdsOf, startPoint, toggle } from './trip';
 import type { Collection, Place } from './types';
 
 const at = (neighborhood_en: string | null): Place => ({
@@ -406,6 +406,40 @@ describe('seedMembers', () => {
   it('pins a list on both shelves once, and a place in two lists twice', () => {
     const lists = [list('own', [a, b]), list('own', [a, b]), list('pub', [b])];
     expect(seedMembers(['own', 'pub'], lists, [])).toEqual([a, b, b]);
+  });
+});
+
+// Which lists a trip remembers it started from (owner, 13 Nov 2026):
+// the ones `seedMembers` resolves, by id, once each.
+describe('sourceIdsOf', () => {
+  const list = (slug: string, id?: string): Collection =>
+    ({ slug, id, title_en: slug, title_vi: slug, title_ja: null, collection_places: [] } as unknown as Collection);
+
+  it('names nothing until a list is chosen', () => {
+    expect(sourceIdsOf(undefined, [list('x', 'c-x')])).toEqual([]);
+    expect(sourceIdsOf(null, [list('x', 'c-x')])).toEqual([]);
+    expect(sourceIdsOf([], [list('x', 'c-x')])).toEqual([]);
+  });
+
+  it('names the chosen lists by id, in the order the shelves hold them', () => {
+    const lists = [list('own', 'c-own'), list('skip', 'c-skip'), list('pub', 'c-pub')];
+    expect(sourceIdsOf(['pub', 'own'], lists)).toEqual(['c-own', 'c-pub']);
+  });
+
+  // Your own published list is on both shelves: one list, one trip for it.
+  it('names a list on both shelves once', () => {
+    expect(sourceIdsOf(['own'], [list('own', 'c-own'), list('own', 'c-own')])).toEqual(['c-own']);
+  });
+
+  // A chosen slug that no shelf still holds was not built from.
+  it('leaves out a chosen list no shelf holds', () => {
+    expect(sourceIdsOf(['gone', 'own'], [list('own', 'c-own')])).toEqual(['c-own']);
+  });
+
+  // A launch-cache row without its id is skipped rather than looked up;
+  // and the shelf after it holding the same slug is still the same list.
+  it('skips a row that carries no id, and does not read the slug again further on', () => {
+    expect(sourceIdsOf(['old', 'own'], [list('old'), list('old', 'c-old'), list('own', 'c-own')])).toEqual(['c-own']);
   });
 });
 

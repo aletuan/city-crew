@@ -7,7 +7,7 @@
 // own: a wrapper that grew a decision would be a decision no test can
 // reach.
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useCurrentCity } from '../city';
 import type { Applause, Copy } from '../friends';
 import { normalizeHandle } from '../handle';
@@ -21,6 +21,7 @@ import {
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchApplause, fetchCopies, fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
 import { fetchMyListShares } from './shares';
+import { recordCollectionView } from './stats';
 import type { ShareRow } from '../shares';
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
@@ -316,6 +317,35 @@ export const usePrefetchListActivity = (ownerId: string | null | undefined): voi
     prefetchShared(likesKey, allLikes, NO_LIKES);
     prefetchShared(copiesKey, allCopies, NO_COPIES);
   }, [ownerId]);
+};
+
+// ── one open of a list, counted ──
+//
+// The collection page counts itself opened (`recordCollectionView`), once
+// per mount: a pull to refresh is not an open, nor is a render, nor a
+// way back to a page that never left the stack — the native stack keeps
+// a screen mounted under the one pushed over it, so coming back from a
+// place to its list is the same visit. A second tap on the list from the
+// shelf mounts it anew and counts again, as the owner asked (13 Nov 2026:
+// "every open"). The id rather than the slug, and only once it is known:
+// the row can arrive a render after the mount (a list read from the
+// catalog as it loads), and the open is counted then, not lost.
+//
+// The ref holds the id already counted, so a page whose list changes
+// under it — a new `slug` param on the same mounted screen — counts the
+// new list, and the same list on a re-render does not count twice. React's
+// dev-only double effect keeps the ref across its replay, so a
+// development build counts one too.
+//
+// Fire and forget: nothing waits on it and nothing is said if it fails.
+// A count the reader never asked for cannot be a reason for an Alert.
+export const useCountView = (collectionId: string | null | undefined): void => {
+  const counted = useRef<string | null>(null);
+  useEffect(() => {
+    if (!collectionId || counted.current === collectionId) return;
+    counted.current = collectionId;
+    recordCollectionView(collectionId).catch(() => {});
+  }, [collectionId]);
 };
 
 export const useCuratorAvatarsQuery = (handles: string[]) => {

@@ -128,6 +128,38 @@ export function seedMembers(
 }
 
 /**
+ * The ids of the chosen lists, for the trip to remember where it started
+ * (`saveTrip`, `trip_collections`) — so each list's owner can see how
+ * many trips it started, and never whose (owner, 13 Nov 2026).
+ *
+ * The lists `seedMembers` resolves, by the same rule: a slug the reader
+ * chose, read off whichever shelf has it first, once. A list on both
+ * shelves is one list and one trip for it. A chosen slug no shelf holds
+ * any more is a list the plan was not built from, and is not named.
+ *
+ * A row without its id is skipped — one hydrated from a launch cache
+ * written before `Collection.id` rode the rows. The cost is one trip not
+ * counted for that list, on a save made in the moments before the
+ * catalog's refresh lands; the alternative was a slug lookup on every
+ * save for a figure only its curator reads.
+ */
+export function sourceIdsOf(
+  from: readonly string[] | null | undefined,
+  lists: readonly Collection[],
+): string[] {
+  if (!from?.length) return [];
+  const wanted = new Set(from);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const c of lists) {
+    if (!wanted.has(c.slug) || seen.has(c.slug)) continue;
+    seen.add(c.slug);
+    if (c.id) out.push(c.id);
+  }
+  return out;
+}
+
+/**
  * The wizard's answers as they travel between screens.
  *
  * Declared structurally rather than imported from `nav.ts`, which is what

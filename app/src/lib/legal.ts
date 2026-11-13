@@ -197,12 +197,12 @@ export const PRIVACY: Doc = {
     { k: 'ul',
       en: [
         '**We do not keep your location.** What the app does with it, and who else sees it, is set out under “Your location and the map” below.',
-        '**No advertising, no trackers, no third-party analytics.** The App Store build sends no diagnostics or usage analytics of any kind.',
+        '**No advertising, no trackers, no third-party analytics.** The App Store build sends no diagnostics. What the app does count is set out here in full. Each time a collection is opened, one is added to that list’s count for the day — a number and nothing else, never who opened it, whether you are signed in or not. And a trip you save from collections remembers which ones, so each list’s author can see how many trips their list started, never whose. Both numbers are shown only to the list’s author.',
         '**No device identifiers.** We do not collect advertising IDs or fingerprint your device.',
       ],
       vi: [
         '**Chúng tôi không lưu vị trí của bạn.** App dùng vị trí vào việc gì, và ai khác nhìn thấy nó, được nêu ở mục “Vị trí của bạn và bản đồ” bên dưới.',
-        '**Không quảng cáo, không tracker, không analytics bên thứ ba.** Bản phát hành trên App Store không gửi bất kỳ dữ liệu chẩn đoán hay thống kê sử dụng nào.',
+        '**Không quảng cáo, không tracker, không analytics bên thứ ba.** Bản phát hành trên App Store không gửi dữ liệu chẩn đoán nào. Những gì app có đếm được nêu đủ ở đây. Mỗi lần một bộ sưu tập được mở, số lượt mở trong ngày của bộ sưu tập đó tăng thêm một — chỉ là một con số, không bao giờ ghi ai đã mở, dù bạn có đăng nhập hay không. Và chuyến đi bạn lưu từ các bộ sưu tập sẽ ghi nhớ đó là những bộ sưu tập nào, để người tạo mỗi bộ sưu tập thấy nó đã mở đầu bao nhiêu chuyến đi, không bao giờ thấy của ai. Cả hai con số chỉ hiện cho người tạo bộ sưu tập.',
         '**Không định danh thiết bị.** Chúng tôi không thu thập advertising ID hay nhận dạng thiết bị của bạn.',
       ] },
     { k: 'h2',

@@ -274,6 +274,32 @@ export type Database = {
           },
         ]
       }
+      collection_views: {
+        Row: {
+          collection_id: string
+          day: string
+          views: number
+        }
+        Insert: {
+          collection_id: string
+          day: string
+          views: number
+        }
+        Update: {
+          collection_id?: string
+          day?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_views_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_places: {
         Row: {
           collection_id: string
@@ -1142,6 +1168,36 @@ export type Database = {
           },
         ]
       }
+      trip_collections: {
+        Row: {
+          collection_id: string
+          trip_id: string
+        }
+        Insert: {
+          collection_id: string
+          trip_id: string
+        }
+        Update: {
+          collection_id?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_collections_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_collections_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_stops: {
         Row: {
           arrive_min: number | null
@@ -1265,6 +1321,19 @@ export type Database = {
           others: number
         }[]
       }
+      collection_stats: {
+        Args: { cid: string }
+        Returns: {
+          copies_7d: number
+          copies_total: number
+          likes_7d: number
+          likes_total: number
+          trips_7d: number
+          trips_total: number
+          views_7d: number
+          views_total: number
+        }[]
+      }
       copies_of_mine: {
         Args: { since: string }
         Returns: {
@@ -1337,6 +1406,7 @@ export type Database = {
       owns_collection: { Args: { cid: string }; Returns: boolean }
       random_handle: { Args: never; Returns: string }
       popular_themes: { Args: never; Returns: { theme: string }[] }
+      record_collection_view: { Args: { cid: string }; Returns: undefined }
       reorder_collection: {
         Args: { collection_slug: string; place_slugs: string[] }
         Returns: undefined

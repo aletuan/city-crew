@@ -621,3 +621,14 @@ for f in "$ROOT"/supabase/migrations/*_activity_rows_carry_face.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/activity_rows_carry_face_test.sql"
+
+# A list's statistics (13 Nov 2026): a per-day open counter no client can
+# read, the lists a trip started from, and one function that counts all
+# four figures for the list's owner — likes and copies with the feeds'
+# own exclusions, so it runs after the block that last made those feeds,
+# and it reads trips, shares, friendships and blocks, all in place by now.
+echo "→ collection stats"
+for f in "$ROOT"/supabase/migrations/*_collection_stats.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/collection_stats_test.sql"
