@@ -25,7 +25,7 @@ const bare = (over: Partial<ExportInput> = {}): ExportInput => ({
   account: { id: 'me', email: 'me@example.com', created_at: '2026-01-01T00:00:00Z' },
   profile: { handle: 'dang', full_name: 'Tran Hai Dang', location: '', bio: '', interests: '', avatar_url: 'https://x/y.jpg' },
   preferences: { categories: ['cafes'], budget_vnd: null, history_on: true },
-  collections: [], likes: [], trips: [], friendships: [], shares: { mine: [], withMe: [] }, blocked: [],
+  collections: [], likes: [], trips: [], tripSources: [], friendships: [], shares: { mine: [], withMe: [] }, blocked: [],
   handles: {}, submitted: [], history: [], checkins: [],
   ...over,
 });
@@ -188,6 +188,28 @@ describe('trips', () => {
     expect(out.stops[0]).toEqual({ place_slug: null, name: null, arrive_min: null, dwell_min: null });
   });
 
+  // The policy says a trip remembers the lists it started from; the file
+  // says which, by slug, sorted, and only for the trip they belong to.
+  it('names the lists each trip was started from', () => {
+    const out = buildExport(bare({
+      trips: [trip({}), trip({ id: 't2' })],
+      tripSources: [
+        { trip_id: 't1', collections: { slug: 'pho' } },
+        { trip_id: 't1', collections: { slug: 'cafes' } },
+        { trip_id: 't2', collections: { slug: 'bars' } },
+      ],
+    }), NOW, 'en').trips;
+    expect(out.map((t) => t.from_collections)).toEqual([['cafes', 'pho'], ['bars']]);
+  });
+
+  it('drops a source list that is gone, and says nothing for a trip with none', () => {
+    const out = buildExport(bare({
+      trips: [trip({}), trip({ id: 't2' })],
+      tripSources: [{ trip_id: 't1', collections: null }],
+    }), NOW, 'en').trips;
+    expect(out.map((t) => t.from_collections)).toEqual([[], []]);
+  });
+
   // Rule 6. A friendship is a symmetric fact this account created; who
   // else was on a trip is their participation, and it does not travel.
   it('lists no other members', () => {
@@ -291,8 +313,8 @@ describe('shared', () => {
     expect(JSON.stringify(out)).not.toMatch(/"(me|f1|f2)"/);
   });
 
-  it('is in format 2', () => {
-    expect(EXPORT_FORMAT_VERSION).toBe(2);
+  it('is in format 3', () => {
+    expect(EXPORT_FORMAT_VERSION).toBe(3);
   });
 });
 

@@ -50,11 +50,12 @@ import type { Trip } from './data/trips';
 import type { Checkin } from './checkin';
 import type { Preferences } from './data/preferences';
 import type { FriendshipRow } from './friends';
-import type { HistoryEventRow, LikedCollectionRow, ShareRow, SubmittedPlaceRow } from './data/export';
+import type { HistoryEventRow, LikedCollectionRow, ShareRow, SubmittedPlaceRow, TripSourceRow } from './data/export';
 
 // 2 since 12 Nov 2026: `shared`, the lists shared between this account
-// and its friends, either way.
-export const EXPORT_FORMAT_VERSION = 2;
+// and its friends, either way. 3 since 13 Nov 2026: `from_collections`
+// on each trip, the lists it was started from.
+export const EXPORT_FORMAT_VERSION = 3;
 
 /** The profile columns `lib/auth` reads. Declared here rather than
  *  imported because `auth.tsx` pulls in React, and this file is held to
@@ -79,6 +80,9 @@ export type ExportInput = {
    *  Partitioned here on `owner_id`, because that read answers with all
    *  three and the export has to say which is which. */
   trips: Trip[];
+  /** The lists this account's own trips were started from, from
+   *  `fetchMyTripSources`. */
+  tripSources: TripSourceRow[];
   friendships: FriendshipRow[];
   /** Both ends of `collection_shares`, from `fetchMyShares`. */
   shares: { mine: ShareRow[]; withMe: ShareRow[] };
@@ -115,6 +119,9 @@ export type ExportBundle = {
   trips: {
     id: string; title: string; day: string | null; when_part: string;
     role: 'owner' | 'member'; created_at: string | null;
+    /** Slugs of the lists the trip was started from, sorted; empty on a
+     *  trip made before 13 Nov 2026, or not started from a list. */
+    from_collections: string[];
     stops: { place_slug: string | null; name: string | null; arrive_min: number | null; dwell_min: number | null }[];
   }[];
   crew: {
@@ -271,6 +278,12 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       when_part: tr.when_part,
       role: tr.owner_id === me ? ('owner' as const) : ('member' as const),
       created_at: isoUtc(tr.created_at),
+      // Only ever on the reader's own trips: the read is scoped to them.
+      // Sorted, so the same trip exports the same array every time.
+      from_collections: input.tripSources
+        .filter((r) => r.trip_id === tr.id && r.collections)
+        .map((r) => r.collections!.slug)
+        .sort(),
       stops: [...tr.trip_stops]
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((s) => ({
