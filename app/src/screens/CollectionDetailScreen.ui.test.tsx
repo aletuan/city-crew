@@ -657,15 +657,15 @@ describe('your own list', () => {
     });
   });
 
-  // A long note stops at five lines with "… Read more" on the fifth
-  // (owner, 3 Nov 2026): it had filled the screen the places are for.
+  // A long note stops at four lines with "Read more" under them (owner,
+  // 3 and 13 Nov 2026): it had filled the screen the places are for.
   // `MoreText` has its own tests; this pins that the card draws with it.
-  it('draws the description through the five-line "Read more"', () => {
+  it('draws the description through the four-line "Read more"', () => {
     show();
     const desc = propsWhere((p) => p.testID === 'collection-desc-text' && !('text' in p)) as
       { onTextLayout: (e: unknown) => void };
-    act(() => desc.onTextLayout({ nativeEvent: { lines: Array.from({ length: 6 }, () => ({ text: 'Where ', width: 60 })) } }));
-    expect(screen.getByTestId('collection-desc-text').textContent!.endsWith('… Read more')).toBe(true);
+    act(() => desc.onTextLayout({ nativeEvent: { lines: Array.from({ length: 5 }, () => ({ text: 'Where ', width: 60 })) } }));
+    expect(screen.getByTestId('collection-desc-text-more').textContent).toBe('Where we eat.Read more');
   });
 
   // Justified, both edges (owner, 3 Nov 2026); the description only.

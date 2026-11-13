@@ -1791,9 +1791,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             description's column stopped at the pencil's, 48pt short of
             the right edge against 16 on the left (owner, 13 Nov 2026). */}
         {desc ? (
-          // Five lines, then "… Đọc thêm" (owner, 3 Nov 2026): a long
-          // note had filled the screen the places are for. See
-          // `MoreText`.
+          // Four lines, then "Đọc thêm ⌄" on its own (owner, 3 and
+          // 13 Nov 2026): a long note had filled the screen the places
+          // are for. See `MoreText`.
           <MoreText text={desc} style={s.descText} testID="collection-desc-text" />
         ) : owned ? (
           // The invitation: the line and the pencil open the form.
