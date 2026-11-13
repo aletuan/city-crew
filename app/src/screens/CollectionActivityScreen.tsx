@@ -166,10 +166,11 @@
 // cannot see.
 //
 // The words: "Kết bạn", "Đã gửi" (Crew's "Sent"), "Bạn bè", and
-// "Chấp nhận" — not Crew's "Đồng ý". There it answers the sentence above
-// it, "… muốn kết bạn với bạn"; here it stands alone on a row about a
-// like, and has to name what it does. Crew's own failure line already
-// says "Không chấp nhận được lời mời".
+// "Đồng ý", Crew's own word for Accept (owner, 13 Nov 2026): one answer
+// to a friend request, one word for it, wherever the request is met.
+// Rejected: "Chấp nhận", which named the act on a row about a like that
+// carries no "… muốn kết bạn với bạn" above it. Two words for one button
+// read as two different things.
 //
 // ── states, as Activity has them ──
 //
@@ -425,7 +426,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
         >
           <LinearGradient {...gradAI} style={s.acceptBtn}>
             <Glyph name="checkmark" size={15} color={colors.accentInk} />
-            <Text style={s.acceptText}>{t('Accept', 'Chấp nhận', '承認', '接受', '接受')}</Text>
+            <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受', '接受')}</Text>
           </LinearGradient>
         </PressableScale>
       );

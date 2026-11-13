@@ -860,7 +860,7 @@ describe('the friend button', () => {
     ]);
     await show();
     expect(['friend', 'waiting', 'asker', 'stranger'].map((h) => buttonOf(h)!.textContent))
-      .toEqual(['Bạn bè', 'Đã gửi', 'Chấp nhận', 'Kết bạn']);
+      .toEqual(['Bạn bè', 'Đã gửi', 'Đồng ý', 'Kết bạn']);
   });
 
   it('wears Crew’s looks: the quiet outline, the glass pill, the gradient — each at the chip’s height', async () => {
@@ -999,7 +999,7 @@ describe('the friend button', () => {
       asked();
       data.acceptFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
       await show();
-      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Chấp nhận' })); });
+      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Đồng ý' })); });
       expect(alert).toHaveBeenCalledExactlyOnceWith('Không chấp nhận được lời mời', 'offline');
     });
   });
