@@ -155,6 +155,8 @@ describe('the list, in a card', () => {
     await show();
     expect(textStyleOf(screen.getByTestId('activity-list-title'))?.fontWeight).toBe(font.bold);
     expect(linesOf(screen.getByTestId('activity-list-desc'))).toBe(3);
+    // Justified, as the collection page sets the same words.
+    expect(textStyleOf(screen.getByTestId('activity-list-desc'))?.textAlign).toBe('justify');
     expect(linesOf(screen.getByTestId('activity-list-title'))).toBeUndefined();
     // A summary: no "Read more".
     expect(screen.queryByText(/Read more/)).toBeNull();
