@@ -69,6 +69,7 @@ const spies = vi.hoisted(() => ({
   sharesReload: vi.fn(),
   sharesFor: vi.fn((_id: string | null | undefined) => {}),
   shipsReload: vi.fn(),
+  prefetchActivity: vi.fn((_owner: string | null | undefined) => {}),
 }));
 
 const state = vi.hoisted(() => ({
@@ -144,6 +145,7 @@ vi.mock('../lib/data', async (orig) => ({
   reorderCollection: spies.reorderCollection,
   setCollectionPublic: spies.setCollectionPublic,
   useProfileByHandle: spies.profileLookup,
+  usePrefetchListActivity: spies.prefetchActivity,
   blockUser: spies.blockUser,
   setShares: spies.setShares,
   useMyListShares: (id: string | null | undefined) => {
@@ -3162,6 +3164,44 @@ describe('the way to the list’s activity', () => {
     show();
     expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
     expect(link()).toBeNull();
+  });
+
+  // What the link opens is asked for when the page opens, not when the
+  // link is pressed (owner, 13 Nov 2026), so the activity page draws it
+  // at once. For the owner, on their own list — the one place the link
+  // is — and for nobody else: the functions answer the owner alone, and
+  // a visitor's ask would be a request for nothing.
+  it('asks ahead for the owner’s activity on their own list, public or private', () => {
+    state.mine = [collection({ is_public: true })];
+    show();
+    expect(spies.prefetchActivity).toHaveBeenLastCalledWith('me');
+    expect(spies.prefetchActivity.mock.calls.every(([o]) => o === 'me')).toBe(true);
+    cleanup();
+    spies.prefetchActivity.mockClear();
+    state.mine = [collection({ is_public: false })];
+    show();
+    expect(spies.prefetchActivity).toHaveBeenLastCalledWith('me');
+  });
+
+  it('asks nothing ahead on a list that is not yours, or signed out', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    expect(spies.prefetchActivity).toHaveBeenCalled();
+    expect(spies.prefetchActivity.mock.calls.every(([o]) => o === null)).toBe(true);
+    cleanup();
+    spies.prefetchActivity.mockClear();
+    state.cols = [];
+    state.shared = [collection({ owner_id: 'lan', is_public: false })];
+    show();
+    expect(spies.prefetchActivity.mock.calls.every(([o]) => o === null)).toBe(true);
+    cleanup();
+    spies.prefetchActivity.mockClear();
+    state.uid = null;
+    state.shared = [];
+    state.cols = [collection({ is_public: true })];
+    show();
+    expect(spies.prefetchActivity.mock.calls.every(([o]) => o === null)).toBe(true);
   });
 });
 

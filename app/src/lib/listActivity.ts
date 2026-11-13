@@ -34,15 +34,30 @@
 // newest first to the microsecond (`order by created_at desc` in both
 // functions) — kept because `Array.prototype.sort` is stable, so the same
 // answer lays out the same way on every load.
+//
+// ── who, in full ──
+//
+// Each row carries the actor's account id and face as the functions
+// return them (`20261113150000_activity_rows_carry_face`): the face is
+// drawn from the row rather than from a second read by handle, and the id
+// is what the row's friend button asks about. An empty `avatar_url` — a
+// face the desk cleared — is no face, the same blank disc as a profile
+// that is gone; and a function from before that migration, which sends
+// neither column, reads as no id and no face rather than as `undefined`.
 import type { Applause, Copy } from './friends';
 
-/** One thing somebody did with the list: who, and when. `handle` and
- *  `name` are null when their profile is gone — the screen's "Someone". */
+/** One thing somebody did with the list: who, and when. `handle`,
+ *  `name`, `id` and `avatar` are null when their profile is gone — the
+ *  screen's "Someone". */
 export type ListAct = {
   kind: 'like' | 'copy';
   at: string;
   handle: string | null;
   name: string | null;
+  /** Their account id — see the header. */
+  id: string | null;
+  /** Their face's address, or null for none — see the header. */
+  avatar: string | null;
 };
 
 /** At one instant, which kind goes first — see the header. */
@@ -52,10 +67,16 @@ export function actsOn(collectionId: string, likes: readonly Applause[], copies:
   const acts: ListAct[] = [
     ...likes
       .filter((l) => l.collection_id === collectionId)
-      .map((l): ListAct => ({ kind: 'like', at: l.liked_at, handle: l.liker_handle, name: l.liker_name })),
+      .map((l): ListAct => ({
+        kind: 'like', at: l.liked_at, handle: l.liker_handle, name: l.liker_name,
+        id: l.liker_id ?? null, avatar: l.liker_avatar_url || null,
+      })),
     ...copies
       .filter((c) => c.collection_id === collectionId)
-      .map((c): ListAct => ({ kind: 'copy', at: c.copied_at, handle: c.copier_handle, name: c.copier_name })),
+      .map((c): ListAct => ({
+        kind: 'copy', at: c.copied_at, handle: c.copier_handle, name: c.copier_name,
+        id: c.copier_id ?? null, avatar: c.copier_avatar_url || null,
+      })),
   ];
   return acts.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || FIRST[a.kind] - FIRST[b.kind]);
 }

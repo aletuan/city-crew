@@ -7,9 +7,10 @@
 // ── the two fetches, and what they promise ──
 //
 // The rows come from the RPCs Activity reads, `likes_on_mine` and
-// `copies_of_mine` (`lib/data/people`), asked from the epoch. Read in the
-// migrations as they stand (`20261113120000_likes_kept_off_public.sql`
-// holds the last of each), each takes any `since`: it is a plain
+// `copies_of_mine` (`lib/data/people`), asked from the epoch through
+// `useListActivityQuery`. Read in the migrations as they stand
+// (`20261113150000_activity_rows_carry_face.sql` holds the last of each),
+// each takes any `since`: it is a plain
 // `created_at >= since`, so 1970 is all time. Neither has a `limit`. What
 // they do leave out is what this page should too: a like or copy by the
 // owner themselves, and one by somebody the owner has blocked. A like
@@ -33,10 +34,47 @@
 // not touch it.
 //
 // Rejected: a per-list RPC that took the collection's id. It would cut
-// the answer to this list on the server and sidestep the cap, but it is
-// a migration, and this change ships no migration; the two that exist
+// the answer to this list on the server and sidestep the cap, at the
+// cost of a migration and of one answer per list; the two that exist
 // answer the question, at the cost of reading the owner's other lists'
-// acts to throw them away. Worth it if an owner ever nears the cap.
+// acts to throw them away. Worth it if an owner ever nears the cap. The
+// all-lists answer also earns its keep now: it is one cached answer for
+// every list's page, which is what lets the collection page ask before
+// the reader has said which list (below).
+//
+// ── the wait, and where it went (owner, 13 Nov 2026) ──
+//
+// The page opened on a spinner that stood visibly long. Read off the code
+// as it was, the waterfall was:
+//
+//   tap → mount → the two RPCs, side by side → the faces (`profiles` by
+//   handle, `useCuratorAvatarsQuery`), which could not be asked until the
+//   rows said whose
+//
+// — two round trips one after the other, the first not starting until
+// the screen had mounted, and both paid again on every open: nothing was
+// kept. Not timed on a device; the shape is what the code did.
+//
+// Now:
+//
+//   - The faces ride the rows. Each row carries the actor's `avatar_url`
+//     and id from the same join that gave its handle
+//     (`20261113150000_activity_rows_carry_face`), so the second round
+//     trip is gone: one round trip, the two RPCs side by side.
+//   - That one round trip starts on the collection page, when the owner
+//     opens their own list (`usePrefetchListActivity` there), not on the
+//     tap. By the time "View activity" is pressed it has usually landed.
+//   - The answer is kept (`useSharedFetch`): in memory for the app's
+//     life, so this page's first render draws it; and on the phone, so
+//     the first open after a launch draws the last launch's. Every open
+//     still asks again behind what it shows, and a tap made while the
+//     collection page's ask is in flight waits for that one rather than
+//     sending another.
+//
+// So the spinner is drawn only when nothing at all is known — a first
+// ever open, on a phone with no cache, faster than the prefetch. How long
+// the one round trip takes was not measured either; what changed is how
+// many there are and when they start.
 //
 // ── only the owner ──
 //
@@ -60,19 +98,23 @@
 //
 // ── states, as Activity has them ──
 //
-// Loading is the accent spinner under the card. Nothing to show is a
-// state with a heading and one sentence, whatever the list is now —
-// public, Friends or Private. A failure that leaves nothing to show says so, with Try again;
-// one of the two failing while the other has rows still shows the rows.
+// Loading is the accent spinner under the card, and only while either
+// half has nothing at all to show — neither a kept answer nor a fresh
+// one. A refresh behind a kept answer draws no spinner: the rows are
+// there, and they change in place if the answer did. Nothing to show is
+// a state with a heading and one sentence, whatever the list is now —
+// public, Friends or Private. A failure that leaves nothing to show says
+// so, with Try again; one of the two failing while the other has rows
+// still shows the rows, and a refresh that fails behind kept rows keeps
+// them.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { Glyph } from '../components/ui/glyph';
 import { Avatar, Card, EmptyState, GradientCta, Screen, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
-import { fetchApplause, fetchCopies, useCuratorAvatarsQuery } from '../lib/data';
-import type { Applause, Copy } from '../lib/friends';
+import { useListActivityQuery } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { actsOn, type ListAct } from '../lib/listActivity';
@@ -81,9 +123,6 @@ import { useMyLists } from '../lib/save';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, font, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
-
-/** All time: the RPCs read `created_at >= since`, so the epoch is every row. */
-const EVER = new Date(0).toISOString();
 
 export default function CollectionActivityScreen({ navigation, route }: {
   navigation: Nav;
@@ -99,31 +138,33 @@ export default function CollectionActivityScreen({ navigation, route }: {
   // not (see the header). A row from the launch cache may have none.
   const listId = col?.id ?? null;
 
-  const [likes, setLikes] = useState<Applause[] | null>(null);
-  const [copies, setCopies] = useState<Copy[] | null>(null);
-  // Either half failing; said only when nothing came back — see the header.
-  const [failed, setFailed] = useState(false);
-  // Bumped by Try again, to run both once more.
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    setFailed(false);
-    if (!me || !listId) { setLikes([]); setCopies([]); return; }
-    setLikes(null);
-    setCopies(null);
-    // Each on its own, as on Activity: a dropped likes call does not take
-    // the copies with it.
-    fetchApplause(EVER).then(setLikes).catch(() => { setFailed(true); setLikes([]); });
-    fetchCopies(EVER).then(setCopies).catch(() => { setFailed(true); setCopies([]); });
-  }, [me, listId, attempt]);
-
+  // The owner's answer, kept and shared — see the header. Nobody to ask
+  // about without a list of yours with an id: no fetch, and the empty
+  // state.
+  const activity = useListActivityQuery(me && listId ? me : null);
+  const { likes, copies } = activity;
   const acts = useMemo(
-    () => (listId ? actsOn(listId, likes ?? [], copies ?? []) : []),
-    [listId, likes, copies],
+    () => (listId ? actsOn(listId, likes.data, copies.data) : []),
+    [listId, likes.data, copies.data],
   );
-  // One batched ask for every face on the page, as Activity's; a handle
-  // with no face, or an act with no handle, gets the blank disc.
-  const faces = useCuratorAvatarsQuery(acts.map((a) => a.handle ?? ''));
-  const loading = likes === null || copies === null;
+  // Both halves or neither, as before: the copies that came first wait
+  // for the likes, so a row never lands above one that arrives a beat
+  // later. `loaded` is true from a kept answer as from a fresh one.
+  //
+  // And with nothing on the page, a half that has never had an answer
+  // (`loadedAt` null: it failed, and nothing was kept) turns while it is
+  // asked again. That is Try again: the failure clears as the retry goes
+  // out, and without this the page would say "No likes or copies yet"
+  // until the answer came — a claim, made while the question was still
+  // open. A kept answer, even an empty one, is an answer: it is drawn,
+  // and its refresh draws no spinner.
+  const asking = (f: Pick<typeof likes, 'loaded' | 'loading' | 'loadedAt'>) =>
+    !f.loaded || (f.loading && f.loadedAt === null);
+  const loading = acts.length > 0
+    ? !likes.loaded || !copies.loaded
+    : asking(likes) || asking(copies);
+  // Either half failing; said only when nothing is there to show.
+  const failed = !!likes.error || !!copies.error;
 
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -202,7 +243,8 @@ export default function CollectionActivityScreen({ navigation, route }: {
         {/* Who, and what they did on the face's corner — Activity's
             arrangement, at Threads' sizes. */}
         <View style={s.face}>
-          <Avatar url={item.handle ? faces.data[normalizeHandle(item.handle)] : null} size={ROW_FACE} />
+          {/* The face off the row itself — see the header. */}
+          <Avatar url={item.avatar} size={ROW_FACE} />
           <View style={[s.badge, ring, item.kind === 'like' ? s.badgeLike : s.badgeCopy]} testID={`activity-badge-${item.kind}`}>
             <Glyph
               name={item.kind === 'like' ? 'heart' : 'duplicate'}
@@ -252,7 +294,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
       <GradientCta
         icon="refresh"
         label={t('Try again', 'Thử lại', '再試行', '重试', '重試')}
-        onPress={() => setAttempt((n) => n + 1)}
+        onPress={activity.reload}
         testID="activity-retry"
       />
     </EmptyState>

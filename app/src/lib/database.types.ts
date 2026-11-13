@@ -1270,7 +1270,9 @@ export type Database = {
         Returns: {
           collection_id: string
           copied_at: string
+          copier_avatar_url: string
           copier_handle: string
+          copier_id: string
           copier_name: string
         }[]
       }
@@ -1301,7 +1303,9 @@ export type Database = {
         Returns: {
           collection_id: string
           liked_at: string
+          liker_avatar_url: string
           liker_handle: string
+          liker_id: string
           liker_name: string
         }[]
       }

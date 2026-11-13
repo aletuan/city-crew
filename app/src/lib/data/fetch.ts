@@ -6,9 +6,10 @@
 // half — see `index.ts` for the whole arrangement.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { shouldRefresh } from '../stale';
 import { startupTrace } from '../trace';
-import { cacheKind, fitsCache, packCache, unpackCache } from './cache';
+import { CACHE_CATALOG, cacheKind, fitsCache, packCache, unpackCache } from './cache';
 
 export type Fetch<T> = {
   loading: boolean;
@@ -176,4 +177,153 @@ export function usePersistedFetch<T>(
   }, [key]);
 
   return { ...state, reload: load };
+}
+
+// ── one answer, shared by every screen that asks ──
+//
+// `usePersistedFetch` holds its answer in the component that asked: two
+// screens asking the same question hold two copies, and the second one
+// starts from nothing — skeletons, a request, a wait — however recently
+// the first was answered. Its launch cache does not close that gap: the
+// read back from the phone is a promise, so even a hit lands a render
+// after the mount, and the mount has already drawn the spinner.
+//
+// A list's activity (13 Nov 2026) is that case exactly. The collection
+// page asks so that the activity page, one tap on, can open with the
+// answer drawn; that needs the answer to outlive the page that asked and
+// to be read synchronously by the next one. So this keeps one entry per
+// key for the life of the app, which every hook on that key reads
+// (`useSyncExternalStore`) and any of them refreshes:
+//
+//   - The first render of a second reader draws what the entry holds.
+//     Stale-while-revalidate across screens as well as across launches.
+//   - One request per key at a time. A reader that mounts, or a prefetch
+//     that fires, while one is in flight joins it rather than sending a
+//     second — so a tap that beats the prefetch's answer waits for that
+//     answer, not for a fresh one behind it.
+//   - Written to the phone after a successful fetch, under the same
+//     envelope and size rule as `usePersistedFetch`, and read back once
+//     per key per launch — shown only while nothing fresher has landed.
+//     The `CACHE_CATALOG` switch turns the read-back off, not the write,
+//     as it does there.
+//   - A failed refresh keeps the last answer and says why (`error`), as
+//     `usePersistedFetch` does; `loadedAt` stays where it was.
+//
+// What it does not do is `usePersistedFetch`'s generation dance: a key
+// is its own entry here, so an answer can only ever land under the
+// question it was asked for, and with one request per key in flight
+// there is no older answer on the same key to drop.
+//
+// Rejected: a provider above the navigators, the way `crew.tsx` and
+// `catalog.tsx` hold one copy. They exist because several screens draw
+// from the copy at once and must change together; this one has a single
+// reader and a prefetcher, and a provider would re-render every consumer
+// of its context each time the owner's activity landed — the collection
+// page among them, for an answer it never draws.
+
+type Entry = {
+  state: Omit<Fetch<unknown>, 'reload'>;
+  inFlight: boolean;
+  listeners: Set<() => void>;
+};
+
+const entries = new Map<string, Entry>();
+
+function entryFor(key: string, empty: unknown): Entry {
+  const found = entries.get(key);
+  if (found) return found;
+  const e: Entry = {
+    state: { loading: true, loaded: false, error: null, data: empty, loadedAt: null, fromCache: false },
+    inFlight: false,
+    listeners: new Set(),
+  };
+  entries.set(key, e);
+  // Once per key per launch: the entry is the memory from here on.
+  if (CACHE_CATALOG) {
+    AsyncStorage.getItem(key)
+      .then((raw) => {
+        const hit = unpackCache<unknown>(raw, Date.now());
+        if (!hit || e.state.loadedAt !== null) return;
+        publish(e, { ...e.state, loaded: true, data: hit.data, loadedAt: hit.at, fromCache: true });
+      })
+      .catch(() => { startupTrace.mark(`cache:${cacheKind(key)}:unreadable`); });
+  }
+  return e;
+}
+
+function publish(e: Entry, state: Entry['state']) {
+  e.state = state;
+  for (const l of e.listeners) l();
+}
+
+function load(key: string, fetcher: () => Promise<unknown>, empty: unknown) {
+  const e = entryFor(key, empty);
+  if (e.inFlight) return;
+  e.inFlight = true;
+  publish(e, { ...e.state, loading: true, error: null });
+  fetcher()
+    .then((data) => {
+      e.inFlight = false;
+      publish(e, { loading: false, loaded: true, error: null, data, loadedAt: Date.now(), fromCache: false });
+      const blob = packCache(data, Date.now());
+      if (fitsCache(blob)) AsyncStorage.setItem(key, blob).catch(() => {});
+      else AsyncStorage.removeItem(key).catch(() => {});
+    })
+    .catch((err: Error) => {
+      e.inFlight = false;
+      publish(e, { ...e.state, loading: false, loaded: true, error: err.message });
+    });
+}
+
+/**
+ * Ask ahead for a screen that has not opened yet, without drawing the
+ * answer here — and so without re-rendering the asker when it lands.
+ * Skipped while the entry is younger than `lib/stale`'s two minutes: the
+ * reader that opens next refreshes it anyway, and an asker opened over
+ * and over (a list being edited, back and forth) should not cost a
+ * request on every visit.
+ */
+export function prefetchShared<T>(key: string, fetcher: () => Promise<T>, empty: T): void {
+  const e = entryFor(key, empty);
+  if (!shouldRefresh(e.state.loadedAt, Date.now())) return;
+  load(key, fetcher, empty);
+}
+
+/**
+ * The shared answer to `key`, refreshed on every mount — see above.
+ * `null` asks nothing and answers `empty`, settled, so a caller with
+ * nobody to ask about can still call it unconditionally. `empty` should
+ * be one value for the life of the caller (a module constant), as the
+ * other hooks here ask.
+ */
+export function useSharedFetch<T>(key: string | null, fetcher: () => Promise<T>, empty: T): Fetch<T> {
+  const idle = useMemo<Omit<Fetch<T>, 'reload'>>(
+    () => ({ loading: false, loaded: true, error: null, data: empty, loadedAt: null, fromCache: false }),
+    [empty],
+  );
+  const subscribe = useCallback((onChange: () => void) => {
+    if (!key) return () => {};
+    const e = entryFor(key, empty);
+    e.listeners.add(onChange);
+    return () => { e.listeners.delete(onChange); };
+  }, [key, empty]);
+  const state = useSyncExternalStore(
+    subscribe,
+    () => (key ? entryFor(key, empty).state as Omit<Fetch<T>, 'reload'> : idle),
+  );
+  // The latest fetcher, for a reload fired from a render that closed over
+  // an older one; the key, not the function, is the question.
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+  const reload = useCallback(() => {
+    if (key) load(key, fetcherRef.current, empty);
+  }, [key, empty]);
+  useEffect(reload, [reload]);
+  return { ...state, reload };
+}
+
+/** For tests: the entries live as long as the module, which in a test
+ *  file is every test in it. */
+export function forgetSharedFetches(): void {
+  entries.clear();
 }

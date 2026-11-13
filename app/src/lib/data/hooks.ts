@@ -7,18 +7,19 @@
 // own: a wrapper that grew a decision would be a decision no test can
 // reach.
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useCurrentCity } from '../city';
+import type { Applause, Copy } from '../friends';
 import { normalizeHandle } from '../handle';
 import type { Collection, Place, PlacePhoto } from '../types';
 import { CACHE_CATALOG, cacheKey } from './cache';
-import { type Fetch, useFetch, usePersistedFetch } from './fetch';
+import { type Fetch, prefetchShared, useFetch, usePersistedFetch, useSharedFetch } from './fetch';
 import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlacePhotos, fetchPlaces } from './places';
 import {
   fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes, fetchSharedWithMe, type LikeTally,
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
-import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
+import { fetchApplause, fetchCopies, fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
 import { fetchMyListShares } from './shares';
 import type { ShareRow } from '../shares';
 
@@ -260,6 +261,62 @@ export const useMyPreferences = (ownerId: string | null | undefined): Fetch<Pref
 // Friendships and blocks have no hook here: they are fetched once for
 // the whole app by `lib/crew`, which persists them the way the catalog
 // queries persist themselves.
+
+// ── the owner's activity: every like and copy, all time ──
+//
+// What a list's activity page draws (`CollectionActivityScreen`), asked
+// once for all the owner's lists — the two functions answer for every
+// list the caller owns, and `lib/listActivity.actsOn` narrows to one —
+// so one answer serves every list's page, and the collection page can
+// ask before the reader has said which (`usePrefetchListActivity`).
+//
+// All time: both functions read `created_at >= since`, so the epoch is
+// every row. Two shared entries, not one: the page shows one half when
+// the other fails, as it always has, and each half keeps its own last
+// answer through a failed refresh. One key per owner — the reader is the
+// question — under `cacheKey`, beside `mine`; the rows' shape is
+// `Applause` and `Copy`, so a column added to them is a `CACHE_VERSION`
+// bump (`lib/data/cache`).
+//
+// Not `useActivityCount`'s or Activity's question: those ask two weeks,
+// a different answer, and keep their own reads.
+const EVER = new Date(0).toISOString();
+const NO_LIKES: Applause[] = [];
+const NO_COPIES: Copy[] = [];
+const allLikes = () => fetchApplause(EVER);
+const allCopies = () => fetchCopies(EVER);
+const activityKey = (half: 'likesonmine' | 'copiesofmine', ownerId: string | null | undefined) =>
+  (ownerId ? cacheKey(half, 'all', ownerId) : null);
+
+export type ListActivityQuery = {
+  likes: Fetch<Applause[]>;
+  copies: Fetch<Copy[]>;
+  /** Both halves again — Try again. */
+  reload: () => void;
+};
+
+/** The owner's likes and copies, shared and stale-while-revalidate (see
+ *  `useSharedFetch`); null asks nothing. */
+export const useListActivityQuery = (ownerId: string | null | undefined): ListActivityQuery => {
+  const likes = useSharedFetch(activityKey('likesonmine', ownerId), allLikes, NO_LIKES);
+  const copies = useSharedFetch(activityKey('copiesofmine', ownerId), allCopies, NO_COPIES);
+  const { reload: likesAgain } = likes;
+  const { reload: copiesAgain } = copies;
+  const reload = useCallback(() => { likesAgain(); copiesAgain(); }, [likesAgain, copiesAgain]);
+  return { likes, copies, reload };
+};
+
+/** The same two asks, from a screen that does not draw them — see
+ *  `prefetchShared`. Null asks nothing. */
+export const usePrefetchListActivity = (ownerId: string | null | undefined): void => {
+  useEffect(() => {
+    const likesKey = activityKey('likesonmine', ownerId);
+    const copiesKey = activityKey('copiesofmine', ownerId);
+    if (!likesKey || !copiesKey) return;
+    prefetchShared(likesKey, allLikes, NO_LIKES);
+    prefetchShared(copiesKey, allCopies, NO_COPIES);
+  }, [ownerId]);
+};
 
 export const useCuratorAvatarsQuery = (handles: string[]) => {
   // Keyed on the handles themselves, not on the array: `useFetch` reruns

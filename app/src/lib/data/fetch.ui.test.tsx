@@ -12,11 +12,11 @@
 // switch hydrates from that key's own cache, exactly like a launch).
 
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '../../uitest/render';
 import { CACHE_MAX_CHARS, packCache } from './cache';
-import { usePersistedFetch } from './fetch';
+import { forgetSharedFetches, prefetchShared, usePersistedFetch, useSharedFetch } from './fetch';
 import { startupTrace } from '../trace';
 
 function Probe({ k, fetcher }: { k: string | null; fetcher: () => Promise<string[]> }) {
@@ -196,5 +196,223 @@ describe('usePersistedFetch keeps an oversize answer off the phone', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+// ── one answer for every screen that asks (13 Nov 2026) ──
+//
+// `useSharedFetch` exists for the collection page to ask so that the
+// activity page can open on the answer. What each test pins is one of
+// the promises in its comment: the second reader draws the kept answer
+// on its very first render, a mount while a request is out joins it, a
+// refresh keeps the answer on screen and replaces it in place, a failed
+// one keeps it and says why, the launch cache fills an empty entry and
+// never overwrites a fresh one, and `null` asks nothing.
+describe('useSharedFetch', () => {
+  const NONE: string[] = [];
+  /** Every render's `data` and `loaded`, so a test can say what the very
+   *  first one drew — not only where it settled. */
+  function Shared({ k, fetcher, frames }: { k: string | null; fetcher: () => Promise<string[]>; frames?: string[] }) {
+    const q = useSharedFetch(k, fetcher, NONE);
+    frames?.push(`${q.data.join(',')}|${q.loaded}|${q.loading}`);
+    return (
+      <div>
+        <span data-testid="data">{q.data.join(',')}</span>
+        <span data-testid="loaded">{String(q.loaded)}</span>
+        <span data-testid="loading">{String(q.loading)}</span>
+        <span data-testid="error">{q.error ?? ''}</span>
+        <span data-testid="fromCache">{String(q.fromCache)}</span>
+        <button onClick={q.reload}>again</button>
+      </div>
+    );
+  }
+
+  beforeEach(() => { forgetSharedFetches(); });
+
+  it('draws the first reader’s answer on the second reader’s first render', async () => {
+    const first = render(<Shared k="shared-a" fetcher={async () => ['lan']} />);
+    await waitFor(() => expect(read('data')).toBe('lan'));
+    first.unmount();
+
+    const frames: string[] = [];
+    const again = deferred<string[]>();
+    render(<Shared k="shared-a" fetcher={() => again.promise} frames={frames} />);
+    // Not a spinner first and the rows a beat later: the rows, at once,
+    // settled — with a refresh out behind them.
+    expect(frames[0]).toBe('lan|true|false');
+    expect(read('loading')).toBe('true');
+    await act(async () => { again.resolve(['lan', 'minh']); });
+    expect(read('data')).toBe('lan,minh');
+    expect(read('loading')).toBe('false');
+  });
+
+  it('joins a request already out rather than sending a second', async () => {
+    const out = deferred<string[]>();
+    const fetcher = vi.fn(() => out.promise);
+    render(<><Shared k="shared-b" fetcher={fetcher} /><Shared k="shared-b" fetcher={fetcher} /></>);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await act(async () => { out.resolve(['lan']); });
+    expect(screen.getAllByTestId('data').map((d) => d.textContent)).toEqual(['lan', 'lan']);
+  });
+
+  it('keeps its answer through a failed refresh, and says why', async () => {
+    let call = 0;
+    const fetcher = () => (call++ === 0 ? Promise.resolve(['lan']) : Promise.reject(new Error('offline')));
+    render(<Shared k="shared-c" fetcher={fetcher} />);
+    await waitFor(() => expect(read('data')).toBe('lan'));
+    await act(async () => { screen.getByText('again').click(); });
+    expect(read('data')).toBe('lan');
+    expect(read('error')).toBe('offline');
+    // And the next success forgets the failure.
+    call = 0;
+    await act(async () => { screen.getByText('again').click(); });
+    expect(read('error')).toBe('');
+  });
+
+  // As `usePersistedFetch` does: asking again is not still failing. The
+  // page reads "failed" and "asking" apart (Try again turns, it does not
+  // keep saying it failed), so the error goes as the request goes out.
+  it('clears the failure the moment it asks again, before the answer', async () => {
+    const again = deferred<string[]>();
+    let call = 0;
+    const fetcher = () => (call++ === 0 ? Promise.reject(new Error('offline')) : again.promise);
+    render(<Shared k="shared-c2" fetcher={fetcher} />);
+    await waitFor(() => expect(read('error')).toBe('offline'));
+    act(() => { screen.getByText('again').click(); });
+    expect(read('error')).toBe('');
+    expect(read('loading')).toBe('true');
+    await act(async () => { again.resolve(['lan']); });
+    expect(read('data')).toBe('lan');
+  });
+
+  it('settles a first failure as loaded, with nothing and the reason', async () => {
+    render(<Shared k="shared-d" fetcher={() => Promise.reject(new Error('offline'))} />);
+    await waitFor(() => expect(read('error')).toBe('offline'));
+    expect(read('loaded')).toBe('true');
+    expect(read('loading')).toBe('false');
+    expect(read('data')).toBe('');
+  });
+
+  it('writes a fresh answer to the phone under its key', async () => {
+    render(<Shared k="shared-e" fetcher={async () => ['lan']} />);
+    await waitFor(() => expect(read('data')).toBe('lan'));
+    const blob = await AsyncStorage.getItem('shared-e');
+    expect(JSON.parse(blob!).data).toEqual(['lan']);
+  });
+
+  it('opens a launch on the phone’s answer, then lets the network replace it', async () => {
+    await AsyncStorage.setItem('shared-f', packCache(['kept'], Date.now()));
+    const fresh = deferred<string[]>();
+    render(<Shared k="shared-f" fetcher={() => fresh.promise} />);
+    await waitFor(() => expect(read('data')).toBe('kept'));
+    expect(read('fromCache')).toBe('true');
+    expect(read('loaded')).toBe('true');
+    await act(async () => { fresh.resolve(['fresh']); });
+    expect(read('data')).toBe('fresh');
+    expect(read('fromCache')).toBe('false');
+  });
+
+  it('never lets a slow read of the phone overwrite the network', async () => {
+    await AsyncStorage.setItem('shared-g', packCache(['kept'], Date.now()));
+    const disk = deferred<string | null>();
+    const get = vi.spyOn(AsyncStorage, 'getItem').mockImplementationOnce(() => disk.promise);
+    try {
+      render(<Shared k="shared-g" fetcher={async () => ['fresh']} />);
+      await waitFor(() => expect(read('data')).toBe('fresh'));
+      await act(async () => { disk.resolve(packCache(['kept'], Date.now())); });
+      expect(read('data')).toBe('fresh');
+      expect(read('fromCache')).toBe('false');
+    } finally {
+      get.mockRestore();
+    }
+  });
+
+  it('does not write an answer too long to read back, and removes the old one', async () => {
+    await AsyncStorage.setItem('shared-h', packCache(['old'], Date.now()));
+    render(<Shared k="shared-h" fetcher={async () => ['x'.repeat(CACHE_MAX_CHARS)]} />);
+    await waitFor(() => expect(read('data').length).toBe(CACHE_MAX_CHARS));
+    await waitFor(async () => expect(await AsyncStorage.getItem('shared-h')).toBeNull());
+  });
+
+  it('asks nothing for no key, and answers the empty value, settled', async () => {
+    const fetcher = vi.fn(async () => ['lan']);
+    render(<Shared k={null} fetcher={fetcher} />);
+    await act(async () => { screen.getByText('again').click(); });
+    expect(fetcher).not.toHaveBeenCalled();
+    expect([read('data'), read('loaded'), read('loading')]).toEqual(['', 'true', 'false']);
+  });
+
+  it('marks a read of the phone that fails, and goes on to the network', async () => {
+    const spy = vi.spyOn(startupTrace, 'mark');
+    const get = vi.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('Row too big to fit into CursorWindow'));
+    try {
+      render(<Shared k="citycrew.cache.sharedprobe.all.u1" fetcher={async () => ['fresh']} />);
+      await waitFor(() => expect(read('data')).toBe('fresh'));
+      expect(spy).toHaveBeenCalledWith('cache:sharedprobe:unreadable');
+    } finally {
+      get.mockRestore();
+      spy.mockRestore();
+    }
+  });
+
+  it('keeps two keys apart', async () => {
+    render(<><Shared k="shared-i" fetcher={async () => ['one']} /><Shared k="shared-j" fetcher={async () => ['two']} /></>);
+    await waitFor(() => expect(screen.getAllByTestId('data').map((d) => d.textContent)).toEqual(['one', 'two']));
+  });
+});
+
+describe('prefetchShared', () => {
+  const NONE: string[] = [];
+  beforeEach(() => { forgetSharedFetches(); });
+
+  it('asks without a reader, and the reader that mounts after draws the answer at once', async () => {
+    const fetcher = vi.fn(async () => ['lan']);
+    await act(async () => { prefetchShared('pre-a', fetcher, NONE); });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const frames: string[] = [];
+    function Reader() {
+      const q = useSharedFetch('pre-a', fetcher, NONE);
+      frames.push(q.data.join(','));
+      return null;
+    }
+    render(<Reader />);
+    expect(frames[0]).toBe('lan');
+  });
+
+  it('is joined by a reader that mounts while it is still out', async () => {
+    const out = deferred<string[]>();
+    const fetcher = vi.fn(() => out.promise);
+    prefetchShared('pre-b', fetcher, NONE);
+    function Reader() {
+      const q = useSharedFetch('pre-b', fetcher, NONE);
+      return <span data-testid="data">{q.data.join(',')}</span>;
+    }
+    render(<Reader />);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await act(async () => { out.resolve(['lan']); });
+    expect(read('data')).toBe('lan');
+  });
+
+  it('does not ask again within two minutes of an answer, and does after', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const fetcher = vi.fn(async () => ['lan']);
+      await act(async () => { prefetchShared('pre-c', fetcher, NONE); });
+      vi.setSystemTime(Date.now() + 2 * 60 * 1000 - 1);
+      prefetchShared('pre-c', fetcher, NONE);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      vi.setSystemTime(Date.now() + 1);
+      prefetchShared('pre-c', fetcher, NONE);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('asks again after a failure, which is no answer to be fresh about', async () => {
+    const fetcher = vi.fn(() => Promise.reject(new Error('offline')));
+    await act(async () => { prefetchShared('pre-d', fetcher, NONE); });
+    await act(async () => { prefetchShared('pre-d', fetcher, NONE); });
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });

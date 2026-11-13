@@ -610,3 +610,14 @@ for f in "$ROOT"/supabase/migrations/*_likes_kept_off_public.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/likes_kept_off_public_test.sql"
+
+# An activity row carries the actor's id and face (13 Nov 2026): the two
+# feeds above, dropped and made again with two more columns each. Right
+# after the block that last replaced them, whose test has already read
+# them in their old shape; its filename names what it does, so it is
+# listed rather than caught by an earlier glob.
+echo "→ activity rows carry face"
+for f in "$ROOT"/supabase/migrations/*_activity_rows_carry_face.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/activity_rows_carry_face_test.sql"
