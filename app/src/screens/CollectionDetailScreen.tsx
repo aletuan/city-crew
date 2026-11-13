@@ -1,6 +1,6 @@
 import React, { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  type AccessibilityActionEvent, AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, LayoutAnimation, Modal,
+  type AccessibilityActionEvent, AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle,
 } from 'react-native';
@@ -13,7 +13,7 @@ import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
 import {
   AmbientWarmth, Avatar, CHIP_H, CHIP_SLOP, Card, Empty, GradientCta, INK_GAP_END, PressableScale, RoundIconButton, Screen,
-  fireHaptic, useReducedMotion, useTabBarClearance,
+  fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
@@ -113,19 +113,8 @@ function MenuRow({ icon, label, onPress, danger, first, checked, testID }: {
   );
 }
 
-/**
- * How long the visibility banner stays. The longer sentence is seven
- * words ("Bộ sưu tập này giờ đã công khai"), about two seconds at an
- * adult's silent reading pace of roughly 240 words a minute, and a
- * second more for the eye to arrive at it after the sheet has closed.
- * Not longer: the word at the card's foot already says the same thing
- * and stays.
- */
-const BANNER_MS = 3000;
-
-/** What the banner says: published, private again, or shared with this
- *  many people (13 Nov 2026). A new object for each share, so a second
- *  share in a row re-arms the clock as a new message. */
+/** What a change of who-sees-it says to VoiceOver: published, private
+ *  again, or shared with this many people — see `said`. */
 type Said = 'public' | 'private' | { shared: number };
 
 /** The glyph at the card's foot and on the sheet's row, for each of the
@@ -135,12 +124,6 @@ const SEEN_GLYPH: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
   friends: 'people-outline',
   private: 'lock-closed-outline',
 };
-
-/** The banner's arrival and departure: 250ms, eased both ways, fading as
- *  the row opens or closes so the list below moves rather than jumps.
- *  The search field's slide is 200 for a smaller move; this one carries
- *  the whole list 60pt. */
-const BANNER_EASE = LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity);
 
 /**
  * How long after the last move the order is written.
@@ -768,8 +751,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * way back while the switch was one tap in the ⋯ menu, where a slip
    * was easy; it is two deliberate taps now — the word at the card's
    * foot, then the answer in the sheet — and the way back is the same
-   * two taps on the same word, which stays on screen after the banner
-   * has gone.
+   * two taps on the same word, which stays on screen.
    *
    * Both catalogs are reloaded because the row moves between them: it
    * leaves nothing in `mine`, which returns everything you own either
@@ -794,7 +776,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    *   would make it Friends the moment it stopped being public — the
    *   answer they did not choose.
    */
-  const [banner, setBanner] = useState<null | Said>(null);
   const [publishing, setPublishing] = useState(false);
   // No check for places under review here: a list goes public with them
   // in, and they stay out of everyone else's sight until they are live
@@ -807,7 +788,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       .then(() => {
         mine.reload();
         cols.reload();
-        showBanner('public');
+        said('public');
       })
       .catch((e: Error) => Alert.alert(
         t('Could not publish', 'Không công khai được', '公開できませんでした', '无法公开', '無法公開'),
@@ -833,7 +814,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       .then(() => {
         listShares.reload();
         if (wasPublic) { mine.reload(); cols.reload(); }
-        showBanner('private');
+        said('private');
       })
       .catch((e: Error) => Alert.alert(cannotMakePrivate(), e.message))
       .finally(() => setPublishing(false));
@@ -863,7 +844,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         listShares.reload();
         if (unpublish) { mine.reload(); cols.reload(); }
         setPicking(false);
-        showBanner(n > 0 ? { shared: n } : 'private');
+        said(n > 0 ? { shared: n } : 'private');
       })
       .catch((e: Error) => {
         if (isNotShareable(e)) ships.reload();
@@ -882,21 +863,26 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       .finally(() => setPublishing(false));
   };
 
-  /* The banner says it once and goes. It stood until dismissed while it
-     held the only Undo; with no Undo in it, a message that stays is a
-     message about something already done, still taking a row at the top
-     of the list. The word at the card's foot is the lasting record.
+  /* A change that landed: a success tick under the thumb, and the
+     sentence to VoiceOver. Nothing drawn — the word at the card's foot
+     has already changed, and it is the record (owner, 13 Nov 2026).
 
-     VoiceOver hears the sentence, since it cannot see a banner arrive —
-     `accessibilityLiveRegion` is Android's alone.
+     Rejected, and removed that day: a banner above the card for three
+     seconds ("Bộ sưu tập này đã riêng tư trở lại"). It said again what
+     the foot's word said and kept saying, and it sat in the flow, so it
+     pushed the card and the grid down by its height and margin (11 +
+     a 20pt line + 11, then 12: about 54pt; 51 on the owner's screenshot)
+     and pulled them back up three seconds later — two moves of the whole
+     page for news the reader had just made. It earned its row while it
+     held the only Undo; the Undo went on 17 Oct, and the way back is the
+     same word, which stays. A toast floating over the list was not the
+     answer either: it would hide part of the list to report on it.
 
-     It opens and closes as a layout animation rather than a jump: it
-     sits in the flow above the card, and a 60pt row vanishing in one
-     frame pulls the whole list up under the reader's eye. Not under
-     Reduce Motion, which asks for exactly that jump instead. */
-  const still = useReducedMotion();
-  const ease = () => { if (!still) LayoutAnimation.configureNext(BANNER_EASE); };
-  const bannerText = (which: Said) => which === 'public'
+     The sentence stays for VoiceOver because a reader who cannot see the
+     foot's word change would otherwise hear nothing at all —
+     `accessibilityLiveRegion` is Android's alone. Failures still alert:
+     those are what the reader cannot see for themselves. */
+  const saidText = (which: Said) => which === 'public'
     ? t('This collection is now public', 'Bộ sưu tập này giờ đã công khai', 'このコレクションは公開されました', '这个合集已公开', '這個合集已公開')
     : which === 'private'
       ? t('This collection is private again', 'Bộ sưu tập này đã riêng tư trở lại', 'このコレクションは非公開に戻りました', '这个合集已改回私密', '這個合集已改回私密')
@@ -906,19 +892,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         `${which.shared}人と共有しました`,
         `已与 ${which.shared} 人分享`, `已與 ${which.shared} 人分享`,
       );
-  const showBanner = (which: Said) => {
-    ease();
-    setBanner(which);
-    AccessibilityInfo.announceForAccessibility(bannerText(which));
+  const said = (which: Said) => {
+    successHaptic();
+    AccessibilityInfo.announceForAccessibility(saidText(which));
   };
-  const hideBanner = () => { ease(); setBanner(null); };
-  useEffect(() => {
-    if (!banner) return;
-    const timer = setTimeout(hideBanner, BANNER_MS);
-    return () => clearTimeout(timer);
-    // Re-armed by a new message, not by a new render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [banner]);
 
   /**
    * Putting the list in order.
@@ -1285,11 +1262,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   /* The three answers, each with what it means where the reader will meet
      it. Choosing Public or Private is doing: the sheet closes and the
-     banner says what happened, so there is no confirmation here either
-     (see `publish`). The answer already true carries the tick, and
-     choosing it again changes nothing — a write that re-saves the same
-     boolean would raise a banner announcing a change that did not
-     happen.
+     word at the card's foot changes, so there is no confirmation here
+     either (see `publish`). The answer already true carries the tick,
+     and choosing it again changes nothing — a write that re-saves the
+     same boolean would tick under the thumb and tell VoiceOver about a
+     change that did not happen (`said`).
 
      Friends is not a toggle: it opens the picker in this sheet's place
      (`ShareSheet`), because choosing Friends is choosing which. It opens
@@ -1860,29 +1837,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       right={headerRight}
     >
       <AmbientWarmth />
-      {/* What just happened, for three seconds — see `showBanner`. Above
-          the description rather than floating over the list: it is about
-          the collection as a whole, and a toast that covers the first
-          place card would be reporting on the list by hiding part of it.
-
-          A tap puts it away sooner: the row is the acknowledgement, so
-          tapping it is how you say you have read it. */}
-      {banner && (
-        <Pressable
-          style={[s.banner, banner === 'private' && s.bannerQuiet]}
-          onPress={hideBanner}
-          accessibilityRole="button"
-          accessibilityHint={t('Dismisses this message', 'Ẩn thông báo này', 'このメッセージを閉じます', '关闭这条消息', '關閉這條訊息')}
-          testID="collection-banner"
-        >
-          <Glyph
-            name={banner === 'public' ? 'checkmark-circle' : banner === 'private' ? 'lock-closed' : 'people'}
-            size={19}
-            color={banner === 'private' ? colors.textSecondary : colors.ok}
-          />
-          <Text style={s.bannerText} numberOfLines={3}>{bannerText(banner)}</Text>
-        </Pressable>
-      )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。', '找不到这个合集。', '找不到這個合集。')} />}
       {/* On the grid a cell of the list is a row of tiles, so it is the
@@ -2213,20 +2167,6 @@ const s = StyleSheet.create({
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Public or Private, in one grey — see `visibility`.
   visibilityWord: { color: colors.textSecondary, ...type.meta },
-
-  banner: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: space.page, marginBottom: 12,
-    paddingVertical: 11, paddingHorizontal: 14,
-    borderRadius: radius.input,
-    // A wash of the same green rather than a filled bar: the message is
-    // good news about a small thing, and a solid green rail across the top
-    // of the screen would announce it like an error.
-    backgroundColor: colors.okSoft,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
-  },
-  bannerQuiet: { backgroundColor: colors.surfaceGlass },
-  bannerText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
 
   // Full width at the foot of the list, in the page's margins, with the
   // room the dashed slot it replaced kept above it.

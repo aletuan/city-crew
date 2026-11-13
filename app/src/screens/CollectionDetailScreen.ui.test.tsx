@@ -34,11 +34,12 @@
 
 import React from 'react';
 import {
-  AccessibilityInfo, Alert, Dimensions, FlatList, LayoutAnimation, PanResponder, type PanResponderCallbacks,
+  AccessibilityInfo, Alert, Dimensions, FlatList, PanResponder, type PanResponderCallbacks,
   StyleSheet, type StyleProp, type TextStyle,
 } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { act, cleanup, fireEvent, fontSizeOf, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
@@ -363,8 +364,26 @@ const pressInAlert = (label: string) => {
   buttons.find((b) => b.text === label)!.onPress?.();
 };
 
+/**
+ * A change of who sees the list landed, and said so the way the screen
+ * says it (`said`): a success tick under the thumb and the sentence to
+ * VoiceOver — and nothing drawn, because the word at the card's foot is
+ * the record. The sentence on screen was a banner until 13 Nov 2026.
+ */
+const said = async (sentence: string) => {
+  await waitFor(() => expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(sentence));
+  expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
+  expect(screen.queryByText(sentence)).toBeNull();
+};
+/** A change that failed claims nothing: no tick, nothing to VoiceOver. */
+const saidNothing = () => {
+  expect(Haptics.notificationAsync).not.toHaveBeenCalled();
+  expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
   alert.mockImplementation(() => {});
   spies.deleteCollection.mockImplementation(async () => {});
   spies.reorderCollection.mockImplementation(async () => {});
@@ -808,91 +827,19 @@ describe('publishing', () => {
   });
 
   it('makes a list public, reloads both catalogs, and says so with no Undo', async () => {
-    const announce = vi.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    spies.setCollectionPublic.mockImplementation(async (_slug: string, next: boolean) => {
+      state.mine = [collection({ is_public: next })];
+    });
     show();
     chooseVisibility('public');
     expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true);
-    expect(await screen.findByText('This collection is now public')).toBeTruthy();
+    await said('This collection is now public');
     expect(spies.mineReload).toHaveBeenCalled();
     expect(spies.colsReload).toHaveBeenCalled();
     // The way back is the word at the card's foot, not a button here.
     expect(screen.queryByText('Undo')).toBeNull();
-    // VoiceOver cannot see a banner arrive, so it is told.
-    expect(announce).toHaveBeenCalledWith('This collection is now public');
-    announce.mockRestore();
-  });
-
-  it('puts the banner away by itself after three seconds', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    try {
-      show();
-      pickVisibility('public');
-      await act(async () => {});
-      expect(screen.getByTestId('collection-banner')).toBeTruthy();
-      act(() => { vi.advanceTimersByTime(2999); });
-      expect(screen.getByTestId('collection-banner')).toBeTruthy();
-      act(() => { vi.advanceTimersByTime(1); });
-      expect(screen.queryByTestId('collection-banner')).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('runs no clock on a visit with nothing to say', () => {
-    const ease = vi.spyOn(LayoutAnimation, 'configureNext').mockImplementation(() => {});
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    try {
-      show();
-      act(() => { vi.advanceTimersByTime(3000); });
-      expect(ease).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-      ease.mockRestore();
-    }
-  });
-
-  it('gives a new message its own three seconds', async () => {
-    // The write lands, so the list the screen reads back has changed and
-    // the sheet's other answer is the live one.
-    spies.setCollectionPublic.mockImplementation(async (_slug: string, next: boolean) => {
-      state.mine = [collection({ is_public: next })];
-    });
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    try {
-      show();
-      pickVisibility('public');
-      await act(async () => {});
-      act(() => { vi.advanceTimersByTime(2000); });
-      // Changed back before the first message had gone.
-      pickVisibility('private');
-      await act(async () => {});
-      expect(screen.getByText('This collection is private again')).toBeTruthy();
-      act(() => { vi.advanceTimersByTime(2500); });
-      expect(screen.getByText('This collection is private again')).toBeTruthy();
-      act(() => { vi.advanceTimersByTime(500); });
-      expect(screen.queryByTestId('collection-banner')).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('eases the banner in and out, but not under Reduce Motion', async () => {
-    const ease = vi.spyOn(LayoutAnimation, 'configureNext').mockImplementation(() => {});
-    show();
-    chooseVisibility('public');
-    fireEvent.click(await screen.findByTestId('collection-banner'));
-    // Once to open the row, once to close it.
-    expect(ease).toHaveBeenCalledTimes(2);
-    cleanup();
-    ease.mockClear();
-    const reduce = vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
-    show();
-    await act(async () => {});
-    chooseVisibility('public');
-    fireEvent.click(await screen.findByTestId('collection-banner'));
-    expect(ease).not.toHaveBeenCalled();
-    reduce.mockRestore();
-    ease.mockRestore();
+    // And that word is the record: it says Public now.
+    await waitFor(() => expect(screen.getByTestId('collection-visibility').textContent).toBe('Public'));
   });
 
   it('makes a public list private again', async () => {
@@ -901,17 +848,9 @@ describe('publishing', () => {
     chooseVisibility('private');
     // After the shares (none here), so a beat later than the press.
     await waitFor(() => expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false));
-    expect(await screen.findByText('This collection is private again')).toBeTruthy();
+    await said('This collection is private again');
     expect(spies.mineReload).toHaveBeenCalled();
     expect(spies.colsReload).toHaveBeenCalled();
-  });
-
-  it('dismisses the banner when it is tapped', async () => {
-    show();
-    chooseVisibility('public');
-    const banner = await screen.findByText('This collection is now public');
-    fireEvent.click(banner);
-    expect(screen.queryByText('This collection is now public')).toBeNull();
   });
 
   // Public with them in (owner, 23 Oct 2026): the list goes out, and the
@@ -936,7 +875,7 @@ describe('publishing', () => {
     expect(row.getAttribute('aria-disabled')).not.toBe('true');
     chooseVisibility('public');
     expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true);
-    expect(await screen.findByText('This collection is now public')).toBeTruthy();
+    await said('This collection is now public');
     // And says it again once public: the owner showing it to a friend is
     // told what the friend will not see.
     fireEvent.click(screen.getByTestId('collection-visibility'));
@@ -959,13 +898,13 @@ describe('publishing', () => {
     expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
   });
 
-  it('says so when the write fails, and shows no banner', async () => {
+  it('says so when the write fails, and claims no success', async () => {
     spies.setCollectionPublic.mockRejectedValueOnce(new Error('offline'));
     show();
     chooseVisibility('public');
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not publish', 'offline'));
     expect(spies.mineReload).not.toHaveBeenCalled();
-    expect(screen.queryByText('This collection is now public')).toBeNull();
+    saidNothing();
   });
 
   it('names the other direction when making private fails', async () => {
@@ -1143,7 +1082,6 @@ describe('sharing with friends', () => {
   describe('sharing', () => {
     it('shares a private list, says with how many, and closes', async () => {
       const order = writes();
-      const announce = vi.spyOn(AccessibilityInfo, 'announceForAccessibility');
       state.shares = [share('minh')];
       show();
       openPicker();
@@ -1151,21 +1089,16 @@ describe('sharing with friends', () => {
       tick('Hà My');
       fireEvent.click(screen.getByText('Share with 3 people'));
       expect(spies.setShares).toHaveBeenCalledWith('c1', ['lan', 'ha'], []);
-      expect(await screen.findByText('Shared with 3 people')).toBeTruthy();
-      expect(announce).toHaveBeenCalledWith('Shared with 3 people');
+      await said('Shared with 3 people');
       // The list was private already: the flag is not written, and the
       // catalogs — which hold no shares — are not read again.
       expect(order).toEqual(['shares +lan,ha -']);
       expect(spies.sharesReload).toHaveBeenCalled();
       expect(spies.mineReload).not.toHaveBeenCalled();
       expect(spies.colsReload).not.toHaveBeenCalled();
-      // In the good-news green, with the two heads.
-      const banner = screen.getByTestId('collection-banner');
-      expect(banner.querySelector('[data-icon="people"]')?.getAttribute('data-color')).toBe(String(colors.ok));
       // Closed: its button is gone with it.
       endModalFade();
       expect(screen.queryByTestId('share-save')).toBeNull();
-      announce.mockRestore();
     });
 
     it('says one person in the singular', async () => {
@@ -1173,7 +1106,7 @@ describe('sharing with friends', () => {
       openPicker();
       tick('Hà My');
       fireEvent.click(screen.getByText('Share with 1 person'));
-      expect(await screen.findByText('Shared with 1 person')).toBeTruthy();
+      await said('Shared with 1 person');
     });
 
     it('makes a public list private after the shares land, and reloads both catalogs', async () => {
@@ -1184,7 +1117,7 @@ describe('sharing with friends', () => {
       expect(screen.getByText(/Sharing makes this list private/)).toBeTruthy();
       tick('Lan Phương');
       fireEvent.click(screen.getByText('Share with 1 person'));
-      expect(await screen.findByText('Shared with 1 person')).toBeTruthy();
+      await said('Shared with 1 person');
       expect(order).toEqual(['shares +lan -', 'public false']);
       expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false);
       expect(spies.mineReload).toHaveBeenCalled();
@@ -1199,7 +1132,7 @@ describe('sharing with friends', () => {
       tick('Lan Phương');
       tick('Hà My');
       fireEvent.click(screen.getByText('Keep private'));
-      expect(await screen.findByText('This collection is private again')).toBeTruthy();
+      await said('This collection is private again');
       expect(order).toEqual(['shares + -lan,ha']);
     });
 
@@ -1217,7 +1150,7 @@ describe('sharing with friends', () => {
         'Someone you ticked is no longer in your crew, so nothing was shared. Try again without them.',
       ));
       expect(spies.shipsReload).toHaveBeenCalled();
-      expect(screen.queryByTestId('collection-banner')).toBeNull();
+      saidNothing();
       expect(ticks()).toEqual(['Lan Phương:true', 'Minh Anh:false', 'Hà My:false']);
       expect(spies.setCollectionPublic).not.toHaveBeenCalled();
     });
@@ -1260,7 +1193,7 @@ describe('sharing with friends', () => {
       state.shares = [share('lan'), share('minh')];
       show();
       chooseVisibility('private');
-      expect(await screen.findByText('This collection is private again')).toBeTruthy();
+      await said('This collection is private again');
       expect(order).toEqual(['shares + -lan,minh']);
       expect(spies.sharesReload).toHaveBeenCalled();
       expect(spies.mineReload).not.toHaveBeenCalled();
@@ -1274,7 +1207,7 @@ describe('sharing with friends', () => {
       state.shares = [share('lan')];
       show();
       chooseVisibility('private');
-      expect(await screen.findByText('This collection is private again')).toBeTruthy();
+      await said('This collection is private again');
       expect(order).toEqual(['shares + -lan', 'public false']);
     });
 
@@ -1286,6 +1219,7 @@ describe('sharing with friends', () => {
       chooseVisibility('private');
       await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not make private', 'nope'));
       expect(spies.setCollectionPublic).not.toHaveBeenCalled();
+      saidNothing();
     });
 
     // The migration's rule: a public list's shares wait.
@@ -1293,7 +1227,7 @@ describe('sharing with friends', () => {
       state.shares = [share('lan')];
       show();
       chooseVisibility('public');
-      expect(await screen.findByText('This collection is now public')).toBeTruthy();
+      await said('This collection is now public');
       expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true);
       expect(spies.setShares).not.toHaveBeenCalled();
     });
