@@ -1,10 +1,9 @@
 import React, { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  type AccessibilityActionEvent, AccessibilityInfo, ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal,
+  type AccessibilityActionEvent, AccessibilityInfo, ActivityIndicator, Alert, Animated, FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph } from '../components/ui/glyph';
 import PlaceCard from '../components/PlaceCard';
@@ -12,7 +11,8 @@ import PlaceTile from '../components/PlaceTile';
 import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, CHIP_H, CHIP_SLOP, Card, Empty, GradientCta, INK_GAP_END, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Avatar, CHIP_H, CHIP_SLOP, Card, Empty, GradientCta, INK_GAP_END, PressableScale, Screen,
+  SECONDARY_CONTROL_H,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { LIFT_AFTER_MS, useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
@@ -37,7 +37,7 @@ import { useCurrentCity } from '../lib/city';
 import { applyDraft, moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
-import ActionSheet, { type SheetAction } from '../components/ActionSheet';
+import ActionSheet, { SheetRows, type SheetAction } from '../components/ActionSheet';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { readerKey, COLLECTION_VIEW_KEY } from '../lib/readerPrefs';
 import { oneOf, useStored } from '../lib/stored';
@@ -76,40 +76,6 @@ function OwnEmpty({ onAdd }: { onAdd: () => void }) {
         />
       </View>
     </View>
-  );
-}
-
-/**
- * A line in the overflow menu.
- *
- * Glyphs are neutral and only the destructive one is red. The sheet this
- * replaces tinted every glyph with `accent`, which on paper is `#C4402C`
- * against `bad`'s `#C2564A` — 1.15:1 apart, indistinguishable. Five red
- * rows meant Delete was not marked at all. Neutral against `bad` is
- * 4.11:1, so the red says something again.
- */
-function MenuRow({ icon, label, onPress, danger, first, checked, testID }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-  first?: boolean;
-  /** For a row that is one of a choice: ticked when it is the one in force. */
-  checked?: boolean;
-  testID?: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      testID={testID}
-      accessibilityRole="button"
-      aria-selected={checked}
-      style={({ pressed }) => [s.menuRow, !first && s.menuDivider, pressed && s.menuRowOn]}
-    >
-      <Glyph name={icon} size={21} color={danger ? colors.bad : colors.text} />
-      <Text style={[s.menuText, danger && { color: colors.bad }]} numberOfLines={1}>{label}</Text>
-      {checked && <Glyph name="checkmark" size={20} color={colors.accent} style={s.menuCheck} />}
-    </Pressable>
   );
 }
 
@@ -173,6 +139,10 @@ const GRID_GAP = 8;
 /** The grid's first cell on your own list, which holds "Add place" rather
  *  than a place. Not a slug: slugs never carry a "+". */
 const ADD_CELL = '+add' as const;
+
+/** The face at the head of the card, yours or the curator's — see
+ *  `curatorRow`. The ⋯ beside it is centred on it (`s.moreHang`). */
+const FACE = 28;
 
 /** Which card is in the finger, for the cell that holds it; -1 for none. */
 const LiftedCard = createContext(-1);
@@ -435,7 +405,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * What it changes is what the screen offers, by the owner's call the
    * day sharing shipped: you may read it and plan from it, and that is
    * all. No heart (likes are public-only — `heart` already asks
-   * `isPublic`). No "Save a copy", in any of its three doors (`canCopy`):
+   * `isPublic`). No "Save a copy", at either of its doors (`canCopy`):
    * the list was lent to you to read, and the app does not offer to make
    * it yours. No Report: moderation never reaches a private list
    * (`legal.ts`, "nothing there can reach a private collection"), so the
@@ -661,27 +631,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       ) : null}
     </View>
   ) : null;
-  const insets = useSafeAreaInsets();
+  // Whether the ⋯'s sheet is up — see `menuSheet`.
   const [menu, setMenu] = useState(false);
-  // Where the popover hangs from. Measured off the button rather than
-  // computed from paddings, because the header's height moves with the
-  // title and the meta line and a menu that floats away from its control
-  // stops looking like that control's menu.
-  const btn = useRef<React.ComponentRef<typeof View>>(null);
-  const [anchor, setAnchor] = useState({ top: insets.top + 58, right: space.page });
-  const openMenu = () => {
-    // Opened first and positioned second: if the measure never calls back
-    // the menu still appears, at the estimate above rather than not at all.
-    setMenu(true);
-    btn.current?.measureInWindow((x, y, w, h) => {
-      if (!w) return;
-      setAnchor({ top: y + h + 6, right: Dimensions.get('window').width - (x + w) });
-    });
-  };
-  // Every action leaves this screen or opens an alert over it, and a menu
-  // still standing behind either is the sort of thing you come back to and
-  // have to dismiss twice.
-  const act = (run: () => void) => { setMenu(false); run(); };
   const [view, pickView] = useStored<'list' | 'grid'>(
     readerKey(COLLECTION_VIEW_KEY, userId), 'grid', LIST_OR_GRID,
   );
@@ -694,6 +645,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * "List view" while in the grid — which said nothing about where you
    * were.
    *
+   * In the sheet since 13 Nov 2026 they are a card of their own under
+   * the name, between the acts above and below them: a tick among verbs
+   * would read as one more thing done, and `SheetAction.selected` is for
+   * a choice between states, which these two are and the rest are not.
+   *
    * ── the grid notice, removed (owner, 12 Nov 2026) ──
    * From 22 Oct a banner under the card said lists now open as a grid
    * and pointed here, with a ring pulsing round ⋯, until the reader
@@ -705,28 +661,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * `preferences.grid_notice_closed_at` stays in the table: dropping it
    * is a live migration that would change nothing a reader sees.
    */
-  const viewRows = (first = false) => (
-    <>
-      <Text style={[s.menuSection, !first && s.menuDivider]} accessibilityRole="header">
-        {t('View', 'Chế độ xem', '表示', '视图', '檢視')}
-      </Text>
-      <MenuRow
-        icon="grid-outline"
-        label={t('Grid', 'Dạng lưới', 'グリッド', '网格', '網格')}
-        onPress={() => act(() => pickView('grid'))}
-        checked={grid}
-        first
-        testID="collection-menu-grid"
-      />
-      <MenuRow
-        icon="list-outline"
-        label={t('List', 'Dạng danh sách', 'リスト', '列表', '列表')}
-        onPress={() => act(() => pickView('list'))}
-        checked={!grid}
-        testID="collection-menu-list"
-      />
-    </>
-  );
+  const viewRows: SheetAction[] = [
+    {
+      key: 'grid',
+      icon: 'grid-outline',
+      title: t('Grid', 'Dạng lưới', 'グリッド', '网格', '網格'),
+      selected: grid,
+      onPress: () => pickView('grid'),
+      testID: 'collection-menu-grid',
+    },
+    {
+      key: 'list',
+      icon: 'list-outline',
+      title: t('List', 'Dạng danh sách', 'リスト', '列表', '列表'),
+      selected: !grid,
+      onPress: () => pickView('list'),
+      testID: 'collection-menu-list',
+    },
+  ];
 
   // Search, opened for this list (owner, 23 Oct 2026). It used to be the
   // Explore tab, where saving a place offered this list by name: a trip
@@ -1127,8 +1079,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * the copy takes the original's stamp, not the tab's.
    */
   const copyCityId = col?.city_id || city?.id;
-  // Where the copy's three doors open: with a city to file it under, and
-  // never on a list lent to you (`sharedToMe`).
+  // Where the copy's two doors open — the ⋯'s sheet and the dock's pill
+  // (the card's corner was a third until 13 Nov 2026): with a city to
+  // file it under, and never on a list lent to you (`sharedToMe`).
   const canCopy = !!copyCityId && !sharedToMe;
   const copyRef = useRef<() => void>(() => {});
   const copy = () => {
@@ -1451,10 +1404,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       ],
     );
   };
-  const curatorActions: PersonAction[] = [];
-  // Never on a shared list: see `sharedToMe`.
-  if (col && curatorTag && !sharedToMe && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id })) {
-    curatorActions.push({
+  /* Report, in two sheets — the curator's and the ⋯'s — as one row, so
+     the two say the same words about the same act. Never on a shared
+     list: see `sharedToMe`. */
+  const reportRow: SheetAction | null = col && !sharedToMe
+    && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id })
+    ? {
       key: 'report',
       icon: 'flag-outline',
       title: t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告', '举报这个清单', '舉報這個清單'),
@@ -1465,8 +1420,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         '告诉编辑团队这里有问题。', '告訴編輯團隊這裡有問題。',
       ),
       onPress: () => report({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id, name: title }),
-    });
-  }
+    }
+    : null;
+  const curatorActions: PersonAction[] = [];
+  if (curatorTag && reportRow) curatorActions.push(reportRow);
   if (col && curatorTag && uid && col.owner_id && curatorIsPerson) {
     curatorActions.push({
       key: 'block',
@@ -1496,8 +1453,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const curatorFace = (
     <>
       {owned
-        ? <Avatar url={profile?.avatar_url || null} size={28} />
-        : holdForFace ? <Avatar url={curatorAvatar} size={28} /> : null}
+        ? <Avatar url={profile?.avatar_url || null} size={FACE} />
+        : holdForFace ? <Avatar url={curatorAvatar} size={FACE} /> : null}
       <Text style={s.curatorTag} numberOfLines={1}>{faceTag}</Text>
     </>
   );
@@ -1519,41 +1476,48 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     )
   ) : null;
 
-  /* The header's right-hand slot.
+  /* ── the ⋯, at the card's top right (owner, 13 Nov 2026) ──
+     It stood in the header's right-hand slot until this day, and this
+     corner held the pencil on your own list and "Save a copy" on
+     somebody else's. The ⋯ has both corners now, and the header keeps the
+     way back and the title alone: what can be done with the list sits on
+     the card that introduces it, and the two shortcuts it replaces are
+     rows in its sheet — Edit collection and Save a copy — so nothing went
+     out of reach, it went one tap further.
 
-     ⋯, and everybody gets it, not only the owner: what the
-     menu offers branches, but "there is more you can do with this list"
-     is true on both sides of that line, and a header whose right-hand
-     side is empty for half its visitors reads as a screen that forgot
-     something. `collapsable={false}` keeps the wrapper a real native
-     view, which is what `measureInWindow` needs to have something to
-     measure.
+     Everybody gets it, not only the owner: what the sheet offers
+     branches, but "there is more you can do with this list" is true on
+     both sides of that line, and a card whose corner is empty for half
+     its visitors reads as one that forgot something.
 
-     But only once there is a list. A missing one has nothing to copy or
-     share, and while your own lists are still loading there is no row to
-     read `owner_id` off yet — `owned` is false by default, so the owner was
-     briefly offered the visitor's "Save a copy" of their own list. Once the
-     row is here its `owner_id` settles whose it is. */
-  const headerRight = col ? (
-    <View style={s.headerRight}>
-      {/* The ⋯ alone, with no disc, and hung past the right margin by the
-          glyph's own empty edge so its ink ends where the cards do (owner,
-          12 Nov 2026) — as the chevron opposite does on the left. The hang
-          is on this wrapper rather than the button so the guide's ring,
-          drawn inside it, moves with what it rings. */}
-      <View ref={btn} collapsable={false} style={{ marginRight: -INK_GAP_END['ellipsis-horizontal'] }}>
-        <RoundIconButton
-          bare
-          icon="ellipsis-horizontal"
-          onPress={openMenu}
-          // "Tùy chọn khác" and not "Thêm" (owner, 22 Oct 2026): heard
-          // alone, "Thêm" is "add", and this screen has an Add place too.
-          label={t('More', 'Tùy chọn khác', 'その他', '更多', '更多')}
-          testID="collection-more"
-        />
-      </View>
-    </View>
-  ) : null;
+     Only once there is a list, which is also the only time there is a
+     card. While your own lists are still loading there is no row to read
+     `owner_id` off yet — `owned` is false by default, so the owner was
+     briefly offered the visitor's "Save a copy" of their own list. Once
+     the row is here its `owner_id` settles whose it is.
+
+     The pencil's ink, not its box, ended at the card's padding, level
+     with the end of the words under it; the ⋯ does the same by the
+     header's own measure (`INK_GAP_END`), which holds unchanged because
+     the box keeps the header's 44pt width — see `s.more`. */
+  const more = (
+    <PressableScale
+      onPress={() => setMenu(true)}
+      scaleTo={0.92}
+      // `CHIP_H` drawn, 44 to the thumb: the slop above and below, the
+      // box's own width across.
+      hitSlop={CHIP_SLOP}
+      style={s.moreHang}
+      contentStyle={s.more}
+      accessibilityRole="button"
+      // "Tùy chọn khác" and not "Thêm" (owner, 22 Oct 2026): heard
+      // alone, "Thêm" is "add", and this screen has an Add place too.
+      accessibilityLabel={t('More', 'Tùy chọn khác', 'その他', '更多', '更多')}
+      testID="collection-more"
+    >
+      <Glyph name="ellipsis-horizontal" size={21} color={colors.textSecondary} />
+    </PressableScale>
+  );
 
   /* ── the list's two actions: the dock, and the menu ──
      (owner, 16 Oct 2026). Planning a trip from the list is what a reader
@@ -1644,24 +1608,22 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       own. Not the accent as a surface: that is for state the reader
       just made (`theme.ts`), and a description is not one.
 
-      The pencil is the owner's, and opens the same form the menu's
-      "Edit collection" does. Two doors to one action, which is what
-      took the "Add place" slot away the same day — but this one sits
-      on the text it changes, so it reads as "change this", not as a
-      second general button. 44pt to the thumb.
+      ── the corner (owner, 13 Nov 2026) ──
+      From 15 Oct the owner's corner held a pencil that opened the same
+      form as the menu's "Edit collection", and from 27 Oct a visitor's
+      held "Save a copy" — each a second door to a row of the menu, on
+      the card it was about. The ⋯ has the corner now (`more`), and the
+      rows are the one door to each: a pencil or a copy beside the ⋯
+      would have been two controls in one corner for acts the ⋯ already
+      holds.
 
-      ── the two glyphs (owner, 15 Oct 2026) ──
-      The pencil was Ionicons' `pencil`, a single thin diagonal that
-      read at 17pt on a pale card as a stroke rather than a control.
-      It is `create-outline` now — the framed pencil the ⋯ menu's own
-      "Edit collection" row wears, so one action has one glyph and the
-      reader already knows it from the menu. And a note glyph leads
-      the card: on somebody else's list nothing said whose words these
-      were, and the card could read as the app's own copy. The page
-      with lines says "a note", which is the one fact it adds. Both at
-      20pt in `textSecondary`, the card's one secondary ink, each
-      centred on the first line (24 tall, so 2 down); the text column
-      gives up their 32pt, which a two-line note can spare.
+      ── the note glyph (owner, 15 Oct 2026) ──
+      On somebody else's list nothing said whose words these were, and
+      the card could read as the app's own copy. The page with lines
+      says "a note", which is the one fact it adds. 20pt in
+      `textSecondary`, the card's one secondary ink. The curator's face
+      took its place on 16 Oct; it stays only on your own list with no
+      handle yet.
 
       ── the face, the foot (owner, 16 Oct 2026) ──
       On somebody else's list the curator's face and handle now lead
@@ -1673,18 +1635,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       (see `ownTag`); the note glyph returns only without a handle.
 
       An owner's list with no description still invites one: the line
-      and the pencil open the form.
-
-      On somebody else's list the pencil's corner holds "Save a copy"
-      (owner, 27 Oct 2026): the one thing a visitor does to a list they
-      like, at the place the owner's own change-this sits.
+      opens the form.
 
       Checked on the text `t` picks, not on a hand-listed pair of
       columns: that left a Japanese-only description never drawn.
 
       ── the chips (owner, 15 Oct 2026) ──
       Under the words, in the same card, because they answer the same
-      question — what is this list — and one pencil edits both. They
+      question — what is this list — and one form edits both. They
       are every kind the places carry, most places first, less what
       the owner hid (`lib/collectionKinds`), drawn as `KindPill` — the
       pill a place's card and page wear, a dot in the category's
@@ -1730,7 +1688,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         style={s.descCard}
         testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}
       >
-        {owned || canCopy || curatorRow ? (
+        {/* The face's row, drawn whenever the card is: the ⋯ is always
+            in it. It was skipped when it held nothing — a list lent to
+            you whose owner had no handle — so the words opened the card
+            rather than sitting under an empty row and its 14. */}
         <View style={s.descTop}>
           {/* The note glyph, only on your own list and only when there
               is no handle to lead with: it says "your words go here". */}
@@ -1745,48 +1706,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           <View style={s.descBody}>
             {curatorRow}
           </View>
-          {owned ? (
-            <PressableScale
-              onPress={edit}
-              scaleTo={0.85}
-              haptic="selection"
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Edit description', 'Sửa mô tả', '説明を編集', '编辑简介', '編輯簡介')}
-              testID="collection-desc-edit"
-            >
-              <Glyph
-                name="create-outline"
-                size={20}
-                color={desc ? colors.textSecondary : colors.textTertiary}
-                style={s.descGlyph}
-              />
-            </PressableScale>
-          ) : canCopy ? (
-            // Somebody else's list: the corner the pencil holds on yours
-            // holds what you can do with theirs (owner, 27 Oct 2026). The
-            // same `copy` the menu row and the dock pill call, and the
-            // same glyph, so one action keeps one look; only where a city
-            // gives the copy somewhere to go, as both of those do.
-            <PressableScale
-              onPress={copy}
-              scaleTo={0.85}
-              haptic="selection"
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
-              testID="collection-desc-copy"
-            >
-              <Glyph
-                name="duplicate-outline"
-                size={20}
-                color={colors.textSecondary}
-                style={s.descGlyph}
-              />
-            </PressableScale>
-          ) : null}
+          {more}
         </View>
-        ) : null}
         {/* Across the card too, the words as well as the kinds: the
             description's column stopped at the pencil's, 48pt short of
             the right edge against 16 on the left (owner, 13 Nov 2026). */}
@@ -1796,7 +1717,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           // are for. See `MoreText`.
           <MoreText text={desc} style={s.descText} testID="collection-desc-text" />
         ) : owned ? (
-          // The invitation: the line and the pencil open the form.
+          // The invitation: the line opens the form.
           // Not the whole card, since the chips under the line are
           // a filter and a tap meant for one would open the form.
           //
@@ -1827,6 +1748,139 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </View>
   ) : null;
 
+  /* ── the ⋯'s sheet (owner, 13 Nov 2026) ──
+     The sheet the other ⋯s in the app open — `ActionSheet`, as
+     who-can-see-it beside it, Visited's ⋯ and the curator's face do — so
+     that every pop-up in the app rises from the bottom the same way and
+     is closed the same way: the backdrop, the grabber, or a row. That is
+     the owner's reason, and the whole of it.
+
+     Rejected, and removed that day: the popover it was. A `Modal` hung
+     under the header's ⋯ from a measure of the button, with a lighter
+     scrim and a shadow, on the argument that a menu anchored to its
+     control is visibly that control's menu. It was the one menu in the
+     app that did not rise from the bottom, so a reader met two shapes of
+     menu and two ways out of them. What the anchor said — this is the
+     list's menu — the sheet's header says in words, and the sheet needs
+     no measure of anything.
+
+     The header is the list's name, the way Visited's ⋯ heads its sheet
+     with the visit's: the thing the menu is about, above the rows
+     (`ActionSheet`). The rows are their names alone (owner, 13 Nov 2026):
+     this is a menu of acts, and "Edit collection" or "Delete collection"
+     says what it does. Rejected the same day, before it shipped: a
+     sentence under every row, as the sheets that are choices wear them
+     ("Only you can see it" under Private). Here they repeated the names —
+     "Its name, description and categories" under Edit — and made the
+     sheet twice as tall to read for nothing. Report keeps its sentence
+     in the curator's sheet, where it stands beside Block; here it is the
+     one red row among plain ones, and its name is enough.
+
+     The rows are the popover's, in its order and on its conditions, in
+     three cards: what you do with the list, the two views under their
+     name (`viewRows`), and the rest. A card with nothing in it is not
+     drawn (`SheetRows`), which is how a list lent to you, with nothing
+     to plan from, opens on the views.
+
+     ── yours ──
+     Add place, Plan a trip; the views; Edit collection, Share, Delete.
+     No publish row: who can see the list is changed where it is said,
+     at the foot of the card — see `visibility`.
+
+     ── somebody else's ──
+     The things you can do to a thing you do not own: plan from it,
+     take it, pass it on, say something is wrong with it. No Edit, no
+     Delete, no publish switch — not because they are kept from you but
+     because they are not yours to press, and a menu listing what the
+     database will refuse lies twice.
+
+     "Save a copy" and not "Follow", and the wording is the promise.
+     Following would leave the curator in charge of what you see — they
+     drop a place, you lose it — and the reason to want this list was to
+     make it yours: reorder it, cut the two you have been to, add the
+     four you know. It copies, and the row's name says so before the
+     tap rather than after it. Only with a city to file the copy under (`canCopy`):
+     without one the row could only close the sheet and do nothing.
+
+     Report last and in red, because it is the row that is about a
+     person rather than about the list — and never on your own, which is
+     yours to delete.
+
+     A friend's list shared with you keeps only the reading half: Plan a
+     trip and the two views. See `sharedToMe`. */
+  const planRow: SheetAction | null = canPlan ? {
+    key: 'plan',
+    icon: 'paw-outline',
+    title: t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程'),
+    onPress: plan,
+    testID: 'collection-menu-plan',
+  } : null;
+  const shareRow: SheetAction = {
+    key: 'share',
+    icon: 'share-outline',
+    title: t('Share', 'Chia sẻ', '共有', '分享', '分享'),
+    onPress: share,
+    testID: 'collection-menu-share',
+  };
+  const present = (rows: (SheetAction | null | false)[]) => rows.filter((r): r is SheetAction => !!r);
+  const [actsBefore, actsAfter]: SheetAction[][] = owned
+    ? [
+      present([
+        {
+          key: 'add',
+          icon: 'add-circle-outline',
+          title: t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點'),
+          onPress: addPlace,
+          testID: 'collection-menu-add',
+        },
+        planRow,
+      ]),
+      [
+        {
+          key: 'edit',
+          icon: 'create-outline',
+          title: t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集', '编辑合集', '編輯合集'),
+          onPress: edit,
+          testID: 'collection-menu-edit',
+        },
+        shareRow,
+        {
+          key: 'delete',
+          icon: 'trash-outline',
+          title: t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除', '删除合集', '刪除合集'),
+          destructive: true,
+          onPress: remove,
+          testID: 'collection-menu-delete',
+        },
+      ],
+    ]
+    : [
+      present([
+        planRow,
+        canCopy && {
+          key: 'copy',
+          icon: 'duplicate-outline',
+          title: t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本'),
+          onPress: copy,
+          testID: 'collection-menu-copy',
+        },
+      ]),
+      present([
+        !sharedToMe && shareRow,
+        reportRow && { ...reportRow, desc: undefined, destructive: true, testID: 'collection-menu-report' },
+      ]),
+    ];
+  const menuSheet = (
+    <>
+      <SheetRows actions={actsBefore} onClose={() => setMenu(false)} />
+      <Text style={s.menuSection} accessibilityRole="header">
+        {t('View', 'Chế độ xem', '表示', '视图', '檢視')}
+      </Text>
+      <SheetRows actions={viewRows} onClose={() => setMenu(false)} />
+      <SheetRows actions={actsAfter} onClose={() => setMenu(false)} />
+    </>
+  );
+
   return (
     <Screen
       title={title}
@@ -1834,7 +1888,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       backTestID="collection-back"
       backBare
       compactTitle
-      right={headerRight}
     >
       <AmbientWarmth />
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
@@ -1943,135 +1996,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         </View>
       </LiftedCard.Provider>
 
-      {/* Anchored under the control that opened it, which is the whole
-          argument for a popover over a sheet: the menu is visibly this
-          button's menu. No Cancel row — tapping anywhere off the card is
-          the way out, and a menu that hangs off its own control does not
-          need to explain that. */}
-      <Modal
+      <ActionSheet
         visible={menu}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setMenu(false)}
+        onClose={() => setMenu(false)}
+        header={
+          <Text style={s.sheetTitle} numberOfLines={2} accessibilityRole="header">{title}</Text>
+        }
       >
-        <Pressable
-          style={s.scrim}
-          onPress={() => setMenu(false)}
-          // The way out under VoiceOver, which has no "anywhere off the
-          // card" to tap: the backdrop has to be a control it can name.
-          accessibilityRole="button"
-          accessibilityLabel={t('Close menu', 'Đóng menu', 'メニューを閉じる', '关闭菜单', '關閉選單')}
-        />
-        <View style={[s.menu, { top: anchor.top, right: anchor.right }]}>
-          {owned ? (
-            <>
-              <MenuRow
-                icon="add-circle-outline"
-                label={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
-                onPress={() => act(addPlace)}
-                first
-              />
-              {canPlan && (
-                <MenuRow
-                  icon="paw-outline"
-                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
-                  onPress={() => act(plan)}
-                  testID="collection-menu-plan"
-                />
-              )}
-              {viewRows()}
-              <MenuRow
-                icon="create-outline"
-                label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集', '编辑合集', '編輯合集')}
-                onPress={() => act(edit)}
-                testID="collection-menu-edit"
-              />
-              <MenuRow
-                icon="share-outline"
-                label={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
-                onPress={() => act(share)}
-              />
-              {/* No publish row: who can see the list is changed where it
-                  is said, at the foot of the card — see `visibility`. */}
-              <MenuRow
-                icon="trash-outline"
-                label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除', '删除合集', '刪除合集')}
-                onPress={() => act(remove)}
-                danger
-                testID="collection-menu-delete"
-              />
-            </>
-          ) : (
-            /* Somebody else's list, so the menu is the two things you can
-               do to a thing you do not own: take it, or pass it on. No
-               Edit, no Delete, no publish switch — not because they are
-               kept from you but because they are not yours to press, and
-               a menu listing what the database will refuse lies twice.
-
-               "Save a copy" and not "Follow", and the wording is the
-               promise. Following would leave the curator in charge of
-               what you see — they drop a place, you lose it — and the
-               reason to want this list was to make it yours: reorder it,
-               cut the two you have been to, add the four you know. It
-               copies, and the row says so before the tap rather than
-               after it.
-
-               A friend's list shared with you keeps only the reading half:
-               Plan a trip and the two views. See `sharedToMe`. */
-            <>
-              {/* What a reader does with a list once read, so it leads. */}
-              {canPlan && (
-                <MenuRow
-                  icon="paw-outline"
-                  label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
-                  onPress={() => act(plan)}
-                  first
-                  testID="collection-menu-plan"
-                />
-              )}
-              {/* Only with a city to file the copy under. Without one the
-                  row could only close the menu and do nothing, and a row
-                  that does nothing is worse than a row that is not there. */}
-              {canCopy && (
-                <MenuRow
-                  icon="duplicate-outline"
-                  label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
-                  onPress={() => act(copy)}
-                  first={!canPlan}
-                />
-              )}
-              {viewRows(!canCopy && !canPlan)}
-              {!sharedToMe && (
-                <MenuRow
-                  icon="share-outline"
-                  label={t('Share', 'Chia sẻ', '共有', '分享', '分享')}
-                  onPress={() => act(share)}
-                  testID="collection-menu-share"
-                />
-              )}
-              {/* The third thing you can do about somebody else's list,
-                  and the one the store asks for: say something is wrong
-                  with it. Last, and marked, because it is the row that
-                  is about a person rather than about the list — and
-                  never on your own, which is yours to delete. */}
-              {col && !sharedToMe && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id }) && (
-                <MenuRow
-                  icon="flag-outline"
-                  label={t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告', '举报这个清单', '舉報這個清單')}
-                  danger
-                  onPress={() => act(() => report({
-                    kind: 'collection',
-                    id: col.id ?? '',
-                    ownerId: col.owner_id,
-                    name: title,
-                  }))}
-                />
-              )}
-            </>
-          )}
-        </View>
-      </Modal>
+        {menuSheet}
+      </ActionSheet>
       <DockSlot visible={dock} onPress={plan} accessibilityRole="button" testID="collection-dock">
         <DockOffer
           icon="paw"
@@ -2192,8 +2125,7 @@ const s = StyleSheet.create({
   filterClear: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
   // The page's margins outside, the card's padding inside; the text keeps
   // the body size and line height it had bare, so nothing reflows but
-  // the inset. The pencil hangs at the top right, level with the first
-  // line, and the text takes the rest of the row.
+  // the inset. The ⋯ hangs at the top right, on the face's row.
   descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
   // ── the card's rhythm, measured in ink (owner, 13 Nov 2026) ──
   // Read off a 2x render of a visitor's card, ink to ink:
@@ -2215,8 +2147,8 @@ const s = StyleSheet.create({
   // heart, at the foot, carries a few points of its glyph's own air. The
   // sides stay 16: the words now run to the card's own edges.
   descCard: { gap: 14, padding: space.cardPadding, paddingTop: space.cardPadding + 4 },
-  // The face and the handle with the pencil (or the copy) at the end of
-  // its row; the words go under it, across the card (owner, 13 Nov 2026).
+  // The face and the handle with the ⋯ at the end of its row; the words
+  // go under it, across the card (owner, 13 Nov 2026).
   descTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   descBody: { flex: 1 },
   // The face and the handle. `alignSelf` keeps the press to the row's own
@@ -2262,46 +2194,34 @@ const s = StyleSheet.create({
   // `alignSelf` keeps the press to the words, as the curator row's does.
   descAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24 },
   descAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  // A 20pt glyph centred on a 24pt first line.
-  descGlyph: { marginTop: 2 },
+  // A 20pt glyph on the middle of the face's row, where the ⋯ beside it
+  // is centred: it stands in for the face when there is no handle.
+  descGlyph: { marginTop: (FACE - 20) / 2 },
+  // The ⋯'s box: the header's 44pt width, so the header's measure of the
+  // glyph's ink (`INK_GAP_END`, a 21pt ⋯ centred in 44) still holds, and
+  // `CHIP_H` tall, an action inside a row; `CHIP_SLOP` makes 44 of that
+  // for the thumb. A 32pt-wide box would have been the same 44 tall but
+  // 32 across, and its ink a fresh number nobody had measured.
+  more: { width: SECONDARY_CONTROL_H, height: CHIP_H, alignItems: 'center', justifyContent: 'center' },
+  // Hung past the card's padding by the glyph's empty edge, so the ink
+  // ends where the words under it do, as the pencil's did. And 2 into the
+  // air above and below: 32 drawn on the face's 28pt row, centred on the
+  // face, without making the row 4 taller and moving the face off the 20
+  // the card's top was measured to (`descCard`).
+  moreHang: { marginRight: -INK_GAP_END['ellipsis-horizontal'], marginVertical: (FACE - CHIP_H) / 2 },
 
-  // A text button, not a pill: it sits where the overflow control was and
-  // the header already has one round shape in it on the other side.
   // The responder that carries a lifted card: the list's whole height.
   dragArea: { flex: 1 },
-  // The status beside ⋯ and the button, on one line.
-  headerRight: { flexDirection: 'row', alignItems: 'center' },
   // Lifted: above its neighbours, with the shadow of something held off
   // the page. `zIndex` for iOS and the web, `elevation` for Android.
   arrangeCellLifted: { zIndex: 10, elevation: 6 },
   gridRow: { paddingHorizontal: space.page, gap: GRID_GAP, marginBottom: GRID_GAP },
 
-  // Lighter than the sheet's scrim was. A popover keeps its context —
-  // you can still read the row you are acting on — where a sheet takes
-  // the screen and has to dim what it covers.
-  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.22)' },
-  menu: {
-    position: 'absolute', minWidth: 232, maxWidth: 300,
-    backgroundColor: colors.bgElevated, borderRadius: 16, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
-    // The one shadow in the app. Depth everywhere else comes from the
-    // ground and hairlines, but this layer genuinely floats above the
-    // page and a hairline alone does not say so.
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
-  },
-  menuRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 18 },
-  menuRowOn: { backgroundColor: colors.surfaceGlass },
-  menuDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  menuText: { color: colors.text, fontSize: 17, lineHeight: 22, fontWeight: font.medium },
-  // The tick sits at the row's far end, past the label.
-  menuCheck: { marginLeft: 'auto' },
-  // A choice's name over its rows: smaller and quieter than a row, so it
-  // reads as a heading and not as one more thing to press.
-  menuSection: {
-    color: colors.textSecondary, fontSize: 13, fontWeight: font.medium,
-    paddingHorizontal: 18, paddingTop: 12, paddingBottom: 2,
-  },
+  // The views' name over their card in the ⋯'s sheet: quieter than a
+  // row's title, so it reads as a heading and not as one more thing to
+  // press; inset as the sheet's title is, and spaced by the sheet's own
+  // gap like everything else in it.
+  menuSection: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium, paddingHorizontal: 4 },
   emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
   empty: {
     alignItems: 'center', gap: 14,
