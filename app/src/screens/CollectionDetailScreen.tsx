@@ -43,8 +43,7 @@ import { readerKey, COLLECTION_VIEW_KEY } from '../lib/readerPrefs';
 import { oneOf, useStored } from '../lib/stored';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
-import { listAgeOf } from '../lib/listAge';
-import { numericDate, numericDateWithYear } from '../lib/format';
+import { ageWord, listAgeOf } from '../lib/listAge';
 import { colors, display, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
@@ -598,8 +597,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      a second line under the first, never under the count. One place for
      the figure, for the owner and a visitor alike: it had been the foot's
      on somebody else's list and the "Add place" cell's corner on yours,
-     and the foot is now the activity row, the heart and nothing else
-     (`activity`).
+     and the foot is now the activity row, the heart and, on your own
+     list, the way to its activity (`activity`).
 
      The list's whole count, whatever a chip has narrowed it to: the grid
      shows what the chip kept, and the line under the row says "4 of 11"
@@ -1359,8 +1358,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   ) : null;
 
   /* ── the activity row (owner, 13 Nov 2026) ──
-     The card's last row, under a hairline: reserved for the list's
-     activity, which the owner builds next. Today it holds the heart.
+     The card's last row, under a hairline: the heart, and on your own
+     list the way to who liked and copied it (`activityLink`).
 
      Kept even when it is empty — a private list, or one lent to you,
      has no heart — and always `CHIP_H` tall: the row is the activity's
@@ -1376,9 +1375,49 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      thumb finds a gesture", but the apps this reads beside — Instagram,
      Threads, X — put the like first in the row, and first it stands in
      one place whether the list is yours or somebody else's. */
+  /* ── "View activity ›" (owner, 13 Nov 2026) ──
+     At the row's right end, on your own list only: who liked it and who
+     saved a copy, on a page of its own (`CollectionActivity`). Threads
+     draws its "View activity" the same way and to the author alone, and
+     here it is the author alone for a harder reason: `likes_on_mine` and
+     `copies_of_mine` answer only the owner, so a visitor's page would be
+     empty by construction.
+
+     On a private list too. Its page says why nothing is there — only a
+     public list can be liked or copied — which is the one thing an owner
+     wondering where the likes are needs to hear, and the row keeps one
+     look whatever the list's state.
+
+     The link is the target, not the row. The heart is in the same row,
+     and a row-wide press would turn a thumb that just missed the heart
+     into a trip to another screen; and a row that is a button with a
+     button inside is one VoiceOver element, which swallows the heart.
+     A visitor's row has nothing to open, so it would also be a row that
+     is a control on one side of the line and not the other.
+
+     The meta size in the byline's grey, as Threads sets it: a way in, not
+     a call to act, so not the accent a tier-4 link wears (`docs/
+     architecture.md`, "Bốn cấp nút") — beside the heart's coral when the
+     list is liked, a second coral would read as a second state. `CHIP_H`
+     drawn, the row's own height, and 44 to the thumb with `CHIP_SLOP`. */
+  const activityLink = owned && col ? (
+    <PressableScale
+      onPress={() => navigation.navigate('CollectionActivity', { slug: col.slug })}
+      haptic="selection"
+      hitSlop={CHIP_SLOP}
+      style={s.activityLinkHang}
+      contentStyle={s.activityLink}
+      accessibilityRole="button"
+      accessibilityLabel={t('View activity', 'Xem hoạt động', 'アクティビティを見る', '查看动态', '檢視動態')}
+      testID="collection-activity-link"
+    >
+      <Text style={s.activityLinkText}>{t('View activity', 'Xem hoạt động', 'アクティビティを見る', '查看动态', '檢視動態')}</Text>
+      <Glyph name="chevron-forward" size={ACTIVITY_CHEVRON} color={colors.textSecondary} />
+    </PressableScale>
+  ) : null;
   const activity = (
     <View style={s.activity} testID="collection-activity">
-      <View style={s.activityRow}>{heart}</View>
+      <View style={s.activityRow}>{heart}{activityLink}</View>
     </View>
   );
 
@@ -1514,11 +1553,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      back to. */
   const madeAt = col?.owner_id ? col.created_at : null;
   const age = madeAt ? listAgeOf(madeAt, new Date()) : null;
-  const ageWord = !age ? ''
-    : age.unit === 'new' ? t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立')
-      : age.unit === 'date' ? (age.withYear ? numericDateWithYear(lang, age.at) : numericDate(lang, age.at))
-        : age.unit === 'minutes' ? t(`${age.n}m`, `${age.n}p`, `${age.n}分`, `${age.n}分钟`, `${age.n}分鐘`)
-          : t(`${age.n}h`, `${age.n}h`, `${age.n}時間`, `${age.n}小时`, `${age.n}小時`);
+  // The rest of the words are `ageWord`'s, which the list's activity page
+  // reads too, so a list's "3h" and a like's cannot be spelled apart.
+  const ageText = age ? ageWord(age, lang, t, t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立')) : '';
   const sharedWord = t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你分享', '與你分享');
   const sharedMark = sharedToMe ? (
     <View style={s.visibility} testID="collection-shared">
@@ -1527,10 +1564,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </View>
   ) : null;
   const seenOnLine = visibility ?? sharedMark;
-  const byline = ageWord || seenOnLine ? (
+  const byline = ageText || seenOnLine ? (
     <View style={s.byline} testID="collection-meta">
-      {ageWord ? <Text style={s.bylineText}>{ageWord}</Text> : null}
-      {ageWord && seenOnLine ? <Text style={s.bylineText}>·</Text> : null}
+      {ageText ? <Text style={s.bylineText}>{ageText}</Text> : null}
+      {ageText && seenOnLine ? <Text style={s.bylineText}>·</Text> : null}
       {seenOnLine}
     </View>
   ) : null;
@@ -1557,7 +1594,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // The whole head is the press, both lines with the face, as a
         // post's is — so VoiceOver hears both lines too, not the handle
         // alone. A visitor's line holds no control to be swallowed.
-        accessibilityLabel={[curatorTag, ageWord, sharedMark ? sharedWord : ''].filter(Boolean).join(', ')}
+        accessibilityLabel={[curatorTag, ageText, sharedMark ? sharedWord : ''].filter(Boolean).join(', ')}
         testID="collection-curator"
       >
         {curatorFace}
@@ -2171,6 +2208,14 @@ const TALLY_LINE = 18;
 /** How much lower the heart stands in the `CHIP_H` activity row than it
  *  did in the foot, and how much higher off the card's bottom: 7. */
 const ROW_AIR = (CHIP_H - TALLY_LINE) / 2;
+/** "View activity ›"'s chevron, at the words' 15. */
+const ACTIVITY_CHEVRON = 15;
+/** How far the chevron's ink stops short of its box's right edge, read
+ *  off the icon font itself (13 Nov 2026): Ionicons' `chevron-forward`
+ *  is drawn from 159 to 352 of a 512 advance, so 160/512 = 0.312 of the
+ *  size is empty after the ink — 4.7 at 15. The same measure gives the
+ *  back chevron's 6.75 at 22 (`BACK_HANG`), its mirror image. */
+const CHEVRON_GAP_END = ACTIVITY_CHEVRON * (160 / 512);
 
 const s = StyleSheet.create({
   // No `screen`, no `header`, no `title`. This screen drew its own header
@@ -2291,7 +2336,7 @@ const s = StyleSheet.create({
     paddingTop: space.cardPadding - ROW_AIR,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
-  // The heart today, the list's activity next, from the start of the row.
+  // The heart from the start of the row, "View activity ›" at its end.
   // One height whatever it holds, so the card does not grow when it does.
   //
   // ── the spacing, measured in ink (owner, 12 Nov 2026) ──
@@ -2313,6 +2358,15 @@ const s = StyleSheet.create({
   // twice the 9.5 inside one. Now each glyph sits 6.5 from its count and
   // the pairs 24 apart, nearly four times that.
   activityRow: { flexDirection: 'row', alignItems: 'center', gap: 20, height: CHIP_H },
+  // To the row's end whether a heart is before it or not, and hung past
+  // the card's padding by the chevron's empty edge (`CHEVRON_GAP_END`),
+  // so the ink ends where the words above it do, as the ⋯'s does.
+  activityLinkHang: { marginLeft: 'auto', marginRight: -CHEVRON_GAP_END },
+  // 2 between the word and the chevron's box: with the glyph's own 4.7 of
+  // bearing (`CHEVRON_GAP_END`, the same each side) that is 6.7 of air
+  // from the word to the ink, the 6.5 the heart keeps to its tally.
+  activityLink: { flexDirection: 'row', alignItems: 'center', gap: 2, height: CHIP_H },
+  activityLinkText: { color: colors.textSecondary, ...type.meta },
   // Justified (owner, 3 Nov 2026), the owner's call over the case put
   // against it: a 318pt column holds some 44 characters, iOS does not
   // hyphenate Vietnamese, and the up-to-25pt each ragged line stopped

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listAgeOf } from './listAge';
+import { ageWord, listAgeOf } from './listAge';
 
 // Every instant here is built on the phone's own calendar (`new Date(y, m,
 // d, h, min, s)`), so each boundary holds in Hồ Chí Minh City and under
@@ -48,5 +48,33 @@ describe('listAgeOf', () => {
     const jan2 = at(2026, 0, 2, 12);
     expect(ageAt(at(2026, 0, 1, 3), jan2)).toMatchObject({ unit: 'date', withYear: false });
     expect(ageAt(at(2025, 11, 31, 22), jan2)).toMatchObject({ unit: 'date', withYear: true });
+  });
+});
+
+describe('ageWord', () => {
+  // The five-language `t`, so each argument can be seen to be the one
+  // picked: English, Vietnamese, Japanese, Simplified, Traditional.
+  const tIn = (lang: number) => (...words: (string | undefined)[]) => words[lang] ?? '';
+  const made = at(2026, 10, 12, 9);
+
+  it('says the caller’s word for under a minute, whatever the language', () => {
+    expect(ageWord({ unit: 'new' }, 'en', tIn(0), 'now')).toBe('now');
+    expect(ageWord({ unit: 'new' }, 'vi', tIn(1), 'Vừa xong')).toBe('Vừa xong');
+  });
+
+  it('spells minutes as the card head does: 5m, 5p, 5分', () => {
+    const five = { unit: 'minutes' as const, n: 5 };
+    expect([0, 1, 2, 3, 4].map((l) => ageWord(five, 'en', tIn(l), 'x'))).toEqual(['5m', '5p', '5分', '5分钟', '5分鐘']);
+  });
+
+  it('spells hours as the card head does: 3h, 3h, 3時間', () => {
+    const three = { unit: 'hours' as const, n: 3 };
+    expect([0, 1, 2, 3, 4].map((l) => ageWord(three, 'en', tIn(l), 'x'))).toEqual(['3h', '3h', '3時間', '3小时', '3小時']);
+  });
+
+  it('gives the date without its year this year and with it from an earlier one', () => {
+    expect(ageWord({ unit: 'date', at: made, withYear: false }, 'vi', tIn(1), 'x')).toBe('12/11');
+    expect(ageWord({ unit: 'date', at: at(2025, 10, 12), withYear: true }, 'vi', tIn(1), 'x')).toBe('12/11/25');
+    expect(ageWord({ unit: 'date', at: made, withYear: false }, 'en', tIn(0), 'x')).toBe('12 Nov');
   });
 });

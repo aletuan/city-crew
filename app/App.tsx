@@ -47,6 +47,7 @@ import GalleryScreen from './src/screens/GalleryScreen';
 import CollectionsScreen from './src/screens/CollectionsScreen';
 import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
+import CollectionActivityScreen from './src/screens/CollectionActivityScreen';
 import IdeasScreen from './src/screens/IdeasScreen';
 import SketchingScreen from './src/screens/SketchingScreen';
 import PlanOptionsScreen from './src/screens/PlanOptionsScreen';
@@ -148,6 +149,10 @@ function ExploreStack() {
           Explore shelf shows public lists — but "should never" is not a
           thing to leave a crash behind. */}
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
+      {/* And its activity page, by the same rule: the link is drawn on
+          your own list only, and your own public list is on this shelf
+          too. */}
+      <Stack.Screen name="CollectionActivity" component={CollectionActivityScreen} />
     </Stack.Navigator>
   );
 }
@@ -158,6 +163,8 @@ function CollectionsStack() {
       <Stack.Screen name="CollectionsHome" component={CollectionsScreen} />
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+      {/* Who liked and copied a list of yours: its card's "View activity". */}
+      <Stack.Screen name="CollectionActivity" component={CollectionActivityScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       {/* Opened from a list to add places to it, and back is the list. */}
@@ -191,6 +198,7 @@ function ProfileStack() {
           brings its form and its place screen with it. */}
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
+      <Stack.Screen name="CollectionActivity" component={CollectionActivityScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       <Stack.Screen name="Search" component={SearchScreen} />

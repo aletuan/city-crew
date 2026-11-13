@@ -27,6 +27,17 @@
 // printed on every date they see. A list made at 03:00 on 1 January in
 // Hà Nội is 20:00 on 31 December in UTC: read in UTC, a list made this
 // year would wear last year's number.
+//
+// ── a second reader: an act's age (owner, 13 Nov 2026) ──
+//
+// A list's activity page (`CollectionActivityScreen`) dates each like and
+// copy by the same table, as Threads dates a post and the acts on it
+// alike. It fits unchanged, so it is this function rather than a sibling:
+// an act is placed the way a list is, 5m, 3h, then the date. Only the
+// first word differs — a list that has just been made is "New", a like
+// that has just been given is "now" — so `ageWord` spells the rest for
+// both and takes that word from its caller.
+import { numericDate, numericDateWithYear } from './format';
 import { agoOf } from './friends';
 
 export type ListAge =
@@ -42,4 +53,16 @@ export function listAgeOf(iso: string, now: Date): ListAge {
   if (ago.unit === 'minutes' || ago.unit === 'hours') return { unit: ago.unit, n: ago.n };
   const at = new Date(iso);
   return { unit: 'date', at, withYear: at.getFullYear() !== now.getFullYear() };
+}
+
+type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
+
+/** The age as the card head prints it: `first` for under a minute — what
+ *  "new" is called depends on what is dated, see the header — then 5m /
+ *  5p, 3h, and the date, with its year when it is from an earlier one. */
+export function ageWord(age: ListAge, lang: string, t: T, first: string): string {
+  if (age.unit === 'new') return first;
+  if (age.unit === 'date') return age.withYear ? numericDateWithYear(lang, age.at) : numericDate(lang, age.at);
+  if (age.unit === 'minutes') return t(`${age.n}m`, `${age.n}p`, `${age.n}分`, `${age.n}分钟`, `${age.n}分鐘`);
+  return t(`${age.n}h`, `${age.n}h`, `${age.n}時間`, `${age.n}小时`, `${age.n}小時`);
 }
