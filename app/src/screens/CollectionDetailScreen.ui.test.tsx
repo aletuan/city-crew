@@ -62,6 +62,10 @@ const spies = vi.hoisted(() => ({
   canReport: vi.fn((_t: { kind: string; id: string; ownerId?: string | null }) => true),
   profileLookup: vi.fn((_h: string | null) => ({ data: null as null | { id?: string; full_name?: string; avatar_url: string }, loading: false })),
   blockUser: vi.fn(async (_id: string) => {}),
+  setShares: vi.fn(async (_id: string, _add: readonly string[], _remove: readonly string[]) => {}),
+  sharesReload: vi.fn(),
+  sharesFor: vi.fn((_id: string | null | undefined) => {}),
+  shipsReload: vi.fn(),
 }));
 
 const state = vi.hoisted(() => ({
@@ -81,6 +85,12 @@ const state = vi.hoisted(() => ({
   cachedAvatar: null as string | null,
   city: { id: 'hanoi' } as { id: string } | null,
   lang: 'en' as 'en' | 'vi' | 'ja',
+  // The owner's share rows (`useMyListShares`), and the crew the picker
+  // lists — accepted friends of 'me', their faces, and the blocked.
+  shares: [] as { collection_id: string; user_id: string; created_at: string }[],
+  ships: [] as { requester: string; addressee: string; status: string; created_at: string }[],
+  blocks: [] as string[],
+  people: {} as Record<string, { id: string; handle: string; full_name: string; avatar_url: string }>,
 }));
 
 vi.mock('../lib/auth', () => {
@@ -132,10 +142,23 @@ vi.mock('../lib/data', async (orig) => ({
   setCollectionPublic: spies.setCollectionPublic,
   useProfileByHandle: spies.profileLookup,
   blockUser: spies.blockUser,
+  setShares: spies.setShares,
+  useMyListShares: (id: string | null | undefined) => {
+    spies.sharesFor(id);
+    return { data: state.shares, loading: false, reload: spies.sharesReload };
+  },
   useSharedWithMe: (id: string | null | undefined) => {
     spies.sharedFor(id);
     return { data: state.shared, loading: state.sharedLoading, reload: spies.sharedReload };
   },
+}));
+vi.mock('../lib/crew', () => ({
+  useCrew: () => ({
+    ships: { data: state.ships, reload: spies.shipsReload },
+    blocks: { data: state.blocks },
+    people: state.people,
+    mutual: {},
+  }),
 }));
 vi.mock('../components/reportFlow', () => ({
   useReport: () => ({ report: spies.report, canReport: spies.canReport, node: null }),
@@ -319,7 +342,7 @@ const endModalFade = () => {
  * sheet, and a row is pressed. The row runs its choice 220ms after the
  * sheet starts to close (see `SheetRows`), so the clock is wound past it.
  */
-const chooseVisibility = (key: 'public' | 'private') => {
+const chooseVisibility = (key: 'public' | 'private' | 'friends') => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   try {
     pickVisibility(key);
@@ -328,7 +351,7 @@ const chooseVisibility = (key: 'public' | 'private') => {
   }
 };
 /** The same, for a test already on the fake clock. */
-const pickVisibility = (key: 'public' | 'private') => {
+const pickVisibility = (key: 'public' | 'private' | 'friends') => {
   fireEvent.click(screen.getByTestId('collection-visibility'));
   fireEvent.click(screen.getByTestId(`sheet-action-${key}`));
   act(() => { vi.advanceTimersByTime(220); });
@@ -348,6 +371,7 @@ beforeEach(() => {
   spies.setCollectionPublic.mockImplementation(async () => {});
   spies.canReport.mockImplementation(() => true);
   spies.blockUser.mockImplementation(async () => {});
+  spies.setShares.mockImplementation(async () => {});
   spies.profileLookup.mockImplementation(() => ({ data: null, loading: false }));
   state.uid = 'me';
   state.ducked = false;
@@ -365,6 +389,10 @@ beforeEach(() => {
   state.cachedAvatar = null;
   state.city = { id: 'hanoi' };
   state.lang = 'en';
+  state.shares = [];
+  state.ships = [];
+  state.blocks = [];
+  state.people = {};
   views.fallback = 'list';
 });
 
@@ -683,7 +711,7 @@ describe('publishing', () => {
   it('asks who can see the list, says what each answer means, and ticks the one given', () => {
     show();
     fireEvent.click(screen.getByTestId('collection-visibility'));
-    expect(screen.getByText('Who can see this list?')).toBeTruthy();
+    expect(screen.getByText('Who can see your list?')).toBeTruthy();
     const pub = screen.getByTestId('sheet-action-public');
     const priv = screen.getByTestId('sheet-action-private');
     expect(pub.textContent).toBe('PublicShown in Explore and in search');
@@ -871,8 +899,11 @@ describe('publishing', () => {
     state.mine = [collection({ is_public: true })];
     show();
     chooseVisibility('private');
-    expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false);
+    // After the shares (none here), so a beat later than the press.
+    await waitFor(() => expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false));
     expect(await screen.findByText('This collection is private again')).toBeTruthy();
+    expect(spies.mineReload).toHaveBeenCalled();
+    expect(spies.colsReload).toHaveBeenCalled();
   });
 
   it('dismisses the banner when it is tapped', async () => {
@@ -943,6 +974,329 @@ describe('publishing', () => {
     show();
     chooseVisibility('private');
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not make private', 'nope'));
+  });
+});
+
+// ── shared with chosen friends (13 Nov 2026) ──
+//
+// The third answer to "who can see this list". What is pinned is the
+// table at the head of `lib/shares` as the owner meets it — the word at
+// the foot, the row that names who has the list — and what each answer
+// writes to the column it is not named after: Friends on a public list
+// unpublishes it after the shares land, Public keeps the shares, Private
+// takes them all off before it unpublishes. The order is part of the
+// promise (nobody sees the list in between who should not), so the tests
+// that are about it record it.
+describe('sharing with friends', () => {
+  /** A share made `n` minutes into the morning: the order they were
+   *  made is the order the sheet names them. */
+  const share = (user_id: string, n = 0, collection_id = 'c1') =>
+    ({ collection_id, user_id, created_at: `2026-11-13T10:${String(n).padStart(2, '0')}:00Z` });
+  const friend = (id: string, full_name: string, handle = id) => ({ id, handle, full_name, avatar_url: '' });
+  const ship = (addressee: string, created_at: string) => ({ requester: 'me', addressee, status: 'accepted', created_at });
+
+  beforeEach(() => {
+    // The crew newest first: Lan, then Minh, then Hà.
+    state.ships = [ship('ha', '2026-11-01T00:00:00Z'), ship('lan', '2026-11-03T00:00:00Z'), ship('minh', '2026-11-02T00:00:00Z')];
+    state.people = {
+      lan: friend('lan', 'Lan Phương'), minh: friend('minh', 'Minh Anh'), ha: friend('ha', 'Hà My'),
+    };
+  });
+
+  /** Friends, on the sheet the foot opens: the picker comes up 220ms
+   *  after the first sheet starts to close, in its place. */
+  const openPicker = () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      pickVisibility('friends');
+    } finally {
+      vi.useRealTimers();
+    }
+  };
+  /** Tap a friend in the picker — by its row, since the sheet behind it
+   *  can be naming the same friend. */
+  const tick = (name: string) => fireEvent.click(
+    [...document.querySelectorAll('[data-testid^="share-friend-"]')].find((el) => el.textContent?.startsWith(name))!,
+  );
+  const ticks = () => [...document.querySelectorAll('[data-testid^="share-friend-"]')]
+    .map((el) => `${el.textContent?.split('@')[0]}:${el.getAttribute('aria-checked')}`);
+  /** Writes in the order they were sent. */
+  const writes = () => {
+    const order: string[] = [];
+    spies.setShares.mockImplementation(async (_id, add, remove) => { order.push(`shares +${add.join(',')} -${remove.join(',')}`); });
+    spies.setCollectionPublic.mockImplementation(async (_slug, next) => { order.push(`public ${next}`); });
+    return order;
+  };
+
+  describe('the word at the foot', () => {
+    it('says Friends, with two heads, for a private list shared with somebody', () => {
+      state.shares = [share('lan')];
+      show();
+      const control = screen.getByTestId('collection-visibility');
+      expect(control.textContent).toBe('Friends');
+      expect([...control.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
+        .toEqual(['people-outline', 'chevron-down']);
+      // The same grey as the other two.
+      expect(control.querySelector('[data-icon="people-outline"]')?.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    });
+
+    it('asks for your own lists\' shares as you, and for nobody\'s on somebody else\'s', () => {
+      show();
+      expect(spies.sharesFor).toHaveBeenLastCalledWith('me');
+      cleanup();
+      spies.sharesFor.mockClear();
+      state.mine = [];
+      state.cols = [theirs()];
+      show();
+      expect(spies.sharesFor).toHaveBeenLastCalledWith(null);
+    });
+
+    it('says Public for a public list, whoever it is shared with', () => {
+      state.mine = [collection({ is_public: true })];
+      state.shares = [share('lan')];
+      show();
+      expect(screen.getByTestId('collection-visibility').textContent).toBe('Public');
+    });
+
+    it('says Private when the shares are on another of your lists', () => {
+      state.shares = [share('lan', 0, 'c2')];
+      show();
+      expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
+    });
+
+    it('says it in Vietnamese', () => {
+      state.lang = 'vi';
+      state.shares = [share('lan')];
+      show();
+      expect(screen.getByTestId('collection-visibility').textContent).toBe('Bạn bè');
+    });
+
+    it('points Share\'s sentence at the word the foot says', () => {
+      state.shares = [share('lan')];
+      show();
+      openMenu();
+      fireEvent.click(menuRow('Share'));
+      expect(alert).toHaveBeenCalledWith(
+        'Sharing is coming',
+        'This list is private. Tap Friends at the foot of its card to make it public — share links are on the way.',
+      );
+    });
+  });
+
+  describe('the sheet', () => {
+    it('puts Friends between Public and Private, and says what it means while nobody has it', () => {
+      show();
+      fireEvent.click(screen.getByTestId('collection-visibility'));
+      const keys = [...document.querySelectorAll('[data-testid^="sheet-action-"]')].map((el) => el.getAttribute('data-testid'));
+      expect(keys).toEqual(['sheet-action-public', 'sheet-action-friends', 'sheet-action-private']);
+      const row = screen.getByTestId('sheet-action-friends');
+      expect(row.textContent).toBe('FriendsOnly the friends you choose');
+      expect(row.querySelector('[data-icon="people-outline"]')).toBeTruthy();
+      expect(row.getAttribute('aria-selected')).not.toBe('true');
+      expect(screen.getByTestId('sheet-action-private').getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('names who has it, ticks Friends, and moves the tick off Private', () => {
+      state.shares = [share('minh', 2), share('lan', 1)];
+      show();
+      fireEvent.click(screen.getByTestId('collection-visibility'));
+      const row = screen.getByTestId('sheet-action-friends');
+      // In the order they were shared with: Lan first.
+      expect(row.textContent).toBe('FriendsLan Phương and Minh Anh');
+      expect(row.getAttribute('aria-selected')).toBe('true');
+      expect(screen.getByTestId('sheet-action-private').getAttribute('aria-selected')).not.toBe('true');
+      expect(screen.getByTestId('sheet-action-public').getAttribute('aria-selected')).not.toBe('true');
+    });
+
+    it('names two and counts the rest, by handle or as Someone where there is no name', () => {
+      state.people = { ...state.people, vy: friend('vy', '', 'vyvy') };
+      state.shares = [share('lan', 2), share('vy', 1), share('ha', 3), share('x1', 4), share('x2', 5)];
+      show();
+      fireEvent.click(screen.getByTestId('collection-visibility'));
+      expect(screen.getByTestId('sheet-action-friends').textContent).toBe('Friends@vyvy, Lan Phương and 3 others');
+      cleanup();
+      state.shares = [share('nobody')];
+      show();
+      fireEvent.click(screen.getByTestId('collection-visibility'));
+      expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsSomeone');
+    });
+
+    it('opens the picker in its place, the crew in its order and who has it ticked', () => {
+      state.shares = [share('minh')];
+      show();
+      openPicker();
+      expect(screen.getByText('Share with friends')).toBeTruthy();
+      expect(ticks()).toEqual(['Lan Phương:false', 'Minh Anh:true', 'Hà My:false']);
+      // Chosen while already true, it still opens: Friends is a who, not
+      // a toggle.
+      expect(spies.setShares).not.toHaveBeenCalled();
+    });
+
+    it('leaves out of the picker a friend you have blocked', () => {
+      state.blocks = ['minh'];
+      show();
+      openPicker();
+      expect(ticks()).toEqual(['Lan Phương:false', 'Hà My:false']);
+    });
+  });
+
+  describe('sharing', () => {
+    it('shares a private list, says with how many, and closes', async () => {
+      const order = writes();
+      const announce = vi.spyOn(AccessibilityInfo, 'announceForAccessibility');
+      state.shares = [share('minh')];
+      show();
+      openPicker();
+      tick('Lan Phương');
+      tick('Hà My');
+      fireEvent.click(screen.getByText('Share with 3 people'));
+      expect(spies.setShares).toHaveBeenCalledWith('c1', ['lan', 'ha'], []);
+      expect(await screen.findByText('Shared with 3 people')).toBeTruthy();
+      expect(announce).toHaveBeenCalledWith('Shared with 3 people');
+      // The list was private already: the flag is not written, and the
+      // catalogs — which hold no shares — are not read again.
+      expect(order).toEqual(['shares +lan,ha -']);
+      expect(spies.sharesReload).toHaveBeenCalled();
+      expect(spies.mineReload).not.toHaveBeenCalled();
+      expect(spies.colsReload).not.toHaveBeenCalled();
+      // In the good-news green, with the two heads.
+      const banner = screen.getByTestId('collection-banner');
+      expect(banner.querySelector('[data-icon="people"]')?.getAttribute('data-color')).toBe(String(colors.ok));
+      // Closed: its button is gone with it.
+      endModalFade();
+      expect(screen.queryByTestId('share-save')).toBeNull();
+      announce.mockRestore();
+    });
+
+    it('says one person in the singular', async () => {
+      show();
+      openPicker();
+      tick('Hà My');
+      fireEvent.click(screen.getByText('Share with 1 person'));
+      expect(await screen.findByText('Shared with 1 person')).toBeTruthy();
+    });
+
+    it('makes a public list private after the shares land, and reloads both catalogs', async () => {
+      const order = writes();
+      state.mine = [collection({ is_public: true })];
+      show();
+      openPicker();
+      expect(screen.getByText(/Sharing makes this list private/)).toBeTruthy();
+      tick('Lan Phương');
+      fireEvent.click(screen.getByText('Share with 1 person'));
+      expect(await screen.findByText('Shared with 1 person')).toBeTruthy();
+      expect(order).toEqual(['shares +lan -', 'public false']);
+      expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', false);
+      expect(spies.mineReload).toHaveBeenCalled();
+      expect(spies.colsReload).toHaveBeenCalled();
+    });
+
+    it('takes everyone off with Keep private, and says the list is private again', async () => {
+      const order = writes();
+      state.shares = [share('lan'), share('ha')];
+      show();
+      openPicker();
+      tick('Lan Phương');
+      tick('Hà My');
+      fireEvent.click(screen.getByText('Keep private'));
+      expect(await screen.findByText('This collection is private again')).toBeTruthy();
+      expect(order).toEqual(['shares + -lan,ha']);
+    });
+
+    // The crew moved on their phone: nothing was written, so the sheet
+    // keeps its ticks, the crew is read again, and the alert says why.
+    it('says so in words when a friend is refused, reads the crew again, and stays open', async () => {
+      const { NOT_SHAREABLE } = await import('../lib/data/shares');
+      spies.setShares.mockRejectedValueOnce(new Error(NOT_SHAREABLE));
+      show();
+      openPicker();
+      tick('Lan Phương');
+      fireEvent.click(screen.getByText('Share with 1 person'));
+      await waitFor(() => expect(alert).toHaveBeenCalledWith(
+        'Could not share',
+        'Someone you ticked is no longer in your crew, so nothing was shared. Try again without them.',
+      ));
+      expect(spies.shipsReload).toHaveBeenCalled();
+      expect(screen.queryByTestId('collection-banner')).toBeNull();
+      expect(ticks()).toEqual(['Lan Phương:true', 'Minh Anh:false', 'Hà My:false']);
+      expect(spies.setCollectionPublic).not.toHaveBeenCalled();
+    });
+
+    it('relays any other failure as it was said, and reads no crew', async () => {
+      spies.setShares.mockRejectedValueOnce(new Error('offline'));
+      state.shares = [share('lan')];
+      show();
+      openPicker();
+      tick('Lan Phương');
+      fireEvent.click(screen.getByText('Keep private'));
+      await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not make private', 'offline'));
+      expect(spies.shipsReload).not.toHaveBeenCalled();
+    });
+
+    it('shows a reader with no crew the way to it', () => {
+      state.ships = [];
+      show();
+      openPicker();
+      expect(screen.getByText(/Nobody in your crew yet/)).toBeTruthy();
+      fireEvent.click(screen.getByText('Find friends'));
+      expect(spies.goTo).toHaveBeenCalledWith('Profile', { screen: 'Crew', initial: false });
+      endModalFade();
+      expect(screen.queryByTestId('share-save')).toBeNull();
+    });
+
+    it('closes through Not now and writes nothing', () => {
+      show();
+      openPicker();
+      fireEvent.click(screen.getAllByText('Not now').at(-1)!);
+      endModalFade();
+      expect(screen.queryByTestId('share-save')).toBeNull();
+      expect(spies.setShares).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the other two answers', () => {
+    it('takes every share off with Private, and writes no flag on a list already private', async () => {
+      const order = writes();
+      state.shares = [share('lan'), share('minh')];
+      show();
+      chooseVisibility('private');
+      expect(await screen.findByText('This collection is private again')).toBeTruthy();
+      expect(order).toEqual(['shares + -lan,minh']);
+      expect(spies.sharesReload).toHaveBeenCalled();
+      expect(spies.mineReload).not.toHaveBeenCalled();
+    });
+
+    // Leaving the waiting shares would make it Friends the moment it
+    // stopped being public — not the answer chosen.
+    it('takes the waiting shares off a public list before it goes private', async () => {
+      const order = writes();
+      state.mine = [collection({ is_public: true })];
+      state.shares = [share('lan')];
+      show();
+      chooseVisibility('private');
+      expect(await screen.findByText('This collection is private again')).toBeTruthy();
+      expect(order).toEqual(['shares + -lan', 'public false']);
+    });
+
+    it('says so when taking the shares off fails, and writes no flag', async () => {
+      spies.setShares.mockRejectedValueOnce(new Error('nope'));
+      state.mine = [collection({ is_public: true })];
+      state.shares = [share('lan')];
+      show();
+      chooseVisibility('private');
+      await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not make private', 'nope'));
+      expect(spies.setCollectionPublic).not.toHaveBeenCalled();
+    });
+
+    // The migration's rule: a public list's shares wait.
+    it('publishes a shared list and keeps its shares', async () => {
+      state.shares = [share('lan')];
+      show();
+      chooseVisibility('public');
+      expect(await screen.findByText('This collection is now public')).toBeTruthy();
+      expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true);
+      expect(spies.setShares).not.toHaveBeenCalled();
+    });
   });
 });
 

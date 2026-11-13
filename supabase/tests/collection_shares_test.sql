@@ -152,6 +152,22 @@ begin
   assert lists = 0, 'a guest reads a shared list';
 end $$;
 
+-- The app's write, as it makes it: one insert that skips a friend already
+-- on the list (`setShares`, an upsert with ignoreDuplicates). It needs no
+-- update policy, and the table has none.
+do $$
+declare shares int;
+begin
+  set local role rls_client;
+  set local test.uid = 'd4000000-0000-0000-0000-00000000000a';
+  insert into public.collection_shares (collection_id, user_id)
+  values ('d4000000-0000-0000-0000-0000000000c1', 'd4000000-0000-0000-0000-00000000000b')
+  on conflict (collection_id, user_id) do nothing;
+  reset role;
+  select count(*) into shares from public.collection_shares;
+  assert shares = 1, format('sharing again with a friend already on the list left %s shares', shares);
+end $$;
+
 -- ── the friend takes themselves off ──
 do $$
 declare left_ int;

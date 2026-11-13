@@ -42,6 +42,8 @@ const state = vi.hoisted(() => ({
   },
   mine: { data: [] as unknown[], loaded: true, loading: false },
   shared: { data: [] as unknown[], loaded: true, loading: false, loadedAt: 1 as number | null },
+  // The share rows on the reader's own lists (`useMyListShares`).
+  myShares: [] as { collection_id: string; user_id: string; created_at: string }[],
   likes: {} as Record<string, number>,
   myLikes: [] as string[],
   // How many times the screen has rendered: the catalog hook runs once a
@@ -53,6 +55,8 @@ const spies = vi.hoisted(() => ({
   mineReload: vi.fn(),
   sharedReload: vi.fn(),
   sharedFor: vi.fn((_id: string | null | undefined) => {}),
+  mySharesFor: vi.fn((_id: string | null | undefined) => {}),
+  mySharesReload: vi.fn(),
   placesReload: vi.fn(),
   askToSignIn: vi.fn(),
   toggleLike: vi.fn(async () => {}),
@@ -100,6 +104,10 @@ vi.mock('../lib/data', async (orig) => ({
   useSharedWithMe: (id: string | null | undefined) => {
     spies.sharedFor(id);
     return { ...state.shared, reload: spies.sharedReload };
+  },
+  useMyListShares: (id: string | null | undefined) => {
+    spies.mySharesFor(id);
+    return { data: state.myShares, loaded: true, loading: false, reload: spies.mySharesReload };
   },
 }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined, useTabBarDucked: () => state.ducked }));
@@ -181,6 +189,7 @@ beforeEach(async () => {
   state.cols = { data: [], loaded: true, loading: false, error: null, loadedAt: 1 };
   state.mine = { data: [], loaded: true, loading: false };
   state.shared = { data: [], loaded: true, loading: false, loadedAt: 1 };
+  state.myShares = [];
   state.likes = {};
   state.myLikes = [];
 });
@@ -755,7 +764,9 @@ describe('CollectionsScreen — signed in', () => {
     spies.colsReload.mockClear();
     spies.placesReload.mockClear();
     spies.sharedReload.mockClear();
+    spies.mySharesReload.mockClear();
     act(() => { listProps().onRefresh(); });
+    expect(spies.mySharesReload).toHaveBeenCalledTimes(1);
     expect(spies.colsReload).toHaveBeenCalledTimes(1);
     expect(spies.mineReload).toHaveBeenCalledTimes(1);
     expect(spies.sharedReload).toHaveBeenCalledTimes(1);
@@ -783,6 +794,38 @@ describe('CollectionsScreen — one shape a tab', () => {
     show();
     expect(screen.getByRole('button', { name: 'List mine1, Private' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'List mine2, Public' })).toBeTruthy();
+  });
+
+  // Shared with friends (13 Nov 2026): two heads in the padlock's disc,
+  // and Friends in the spoken name — the word the list's own page says.
+  // A public list's shares wait, so it stays unmarked and Public.
+  it('marks a private list shared with friends with two heads, and says Friends', () => {
+    const at = '2026-11-13T10:00:00Z';
+    state.mine.data = [
+      col('lent', ['a'], { is_public: false, owner_id: 'u1' }),
+      col('shut', ['a'], { is_public: false, owner_id: 'u1' }),
+      col('open', ['a'], { is_public: true, owner_id: 'u1' }),
+    ];
+    state.myShares = [
+      { collection_id: 'id-lent', user_id: 'lan', created_at: at },
+      { collection_id: 'id-open', user_id: 'lan', created_at: at },
+    ];
+    show();
+    expect(spies.mySharesFor).toHaveBeenCalledWith('u1');
+    const lent = screen.getByRole('button', { name: 'List lent, Friends' });
+    const mark = within(lent).getByTestId('collection-tile-shared');
+    expect(mark.querySelector('[data-icon="people"]')!.getAttribute('data-size')).toBe('12');
+    expect(within(lent).queryByTestId('collection-tile-lock')).toBeNull();
+    // The padlock's own disc, so the two are one kind of mark.
+    expect(getComputedStyle(mark).width).toBe('24px');
+    expect(within(screen.getByRole('button', { name: 'List shut, Private' })).getByTestId('collection-tile-lock')).toBeTruthy();
+    const open = screen.getByRole('button', { name: 'List open, Public' });
+    expect(open.querySelector('[data-testid^="collection-tile-"][data-testid$="shared"]')).toBeNull();
+  });
+
+  it('reads the shares on your lists again when the tab comes back into view', () => {
+    show();
+    expect(spies.mySharesReload).toHaveBeenCalled();
   });
 
   it('draws Yours as tiles with no switch, whatever a phone remembered', async () => {

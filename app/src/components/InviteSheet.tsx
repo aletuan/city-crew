@@ -21,18 +21,21 @@
 // invitation is ticked and locked: withdrawing only reaches unanswered
 // rows (see the delete policy), and a checkbox that springs back is worse
 // than one that does not move.
+//
+// ── the sheet is `FriendPicker` ──
+//
+// Since 13 Nov 2026 the sheet itself — the rows, the ticks, the button and
+// "Not now" — is `FriendPicker`, shared with the list's `ShareSheet`. What
+// stays here is everything that makes it the trip's: the seats, the
+// answered rows, the shared-saves count, and what the button says.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Glyph } from './ui/glyph';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import {
   candidates, companySeats, diffSelection, roomLeft, seatsFull, togglePick, type InviteRow,
 } from '../lib/invites';
-import { colors, display, font, space } from '../theme';
-import { Avatar, GradientCta, PressableScale } from './ui';
+import FriendPicker from './FriendPicker';
 
 export default function InviteSheet({
   open, company, friendIds, people, mutual, invites, sending, onClose, onSend,
@@ -54,8 +57,6 @@ export default function InviteSheet({
   onSend: (invite: string[], withdraw: string[]) => void;
 }) {
   const { t } = useI18n();
-  const insets = useSafeAreaInsets();
-  const rise = useRef(new Animated.Value(1)).current;
 
   const rows = useMemo(() => candidates(friendIds, invites), [friendIds, invites]);
 
@@ -65,11 +66,6 @@ export default function InviteSheet({
   useEffect(() => {
     if (open) setPicked(new Set(rows.filter((r) => r.invited).map((r) => r.id)));
   }, [open, rows]);
-
-  useEffect(() => {
-    if (!open) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [open, rise]);
 
   const { invite, withdraw } = diffSelection(rows, picked);
   const left = roomLeft(invites);
@@ -89,11 +85,6 @@ export default function InviteSheet({
   const full = seatsFull(rows, picked, seats);
   const seatsHeld = seats != null && rows.filter((r) => r.locked && r.seated).length >= seats;
 
-  const toggle = (id: string, locked: boolean) => {
-    if (locked) return;
-    setPicked((s) => togglePick(rows, s, id, seats));
-  };
-
   const label = sending
     ? t('Sending…', 'Đang gửi…', '送信中…', '发送中…', '傳送中…')
     : invite.length
@@ -112,181 +103,86 @@ export default function InviteSheet({
         )
         : t('Send invites', 'Gửi lời mời', '招待を送る', '发送邀请', '傳送邀請');
 
+  const note = left === 0
+    ? t(
+      'This trip is full — twenty is the most one evening can hold.',
+      'Chuyến này đã đầy — một buổi tối tối đa hai mươi người.',
+      'この旅程は満員です — 一晩は最大20人までです。',
+      '这个行程已满 — 一个晚上最多 20 人。', '這個行程已滿 — 一個晚上最多 20 人。',
+    )
+    : seatsHeld
+      ? t(
+        'A couple’s evening is complete — your guest has answered.',
+        'Buổi tối hai người đã đủ — người đi cùng đã trả lời.',
+        'ふたりの夜はそろいました — 相手はもう回答しています。',
+        '两人的夜晚已凑齐 — 对方已经回复。', '兩人的夜晚已湊齊 — 對方已經回覆。',
+      )
+      : full
+        ? t(
+          'A couple’s evening seats one guest — untick to choose someone else.',
+          'Buổi tối hai người chỉ mời một người — bỏ chọn để đổi người khác.',
+          'ふたりの夜は1人だけ — 変えるにはチェックを外してください。',
+          '两人的夜晚只能邀请一位 — 取消勾选可换人。', '兩人的夜晚只能邀請一位 — 取消勾選可換人。',
+        )
+        : t(
+          'They see the plan once they accept. Times and stops stay yours to edit.',
+          'Họ thấy kế hoạch sau khi đồng ý. Giờ giấc và các điểm dừng vẫn do bạn sửa.',
+          '承諾すると予定が見えます。時刻とスポットはあなたが編集します。',
+          '对方接受后即可看到计划。时间和地点仍由你编辑。', '對方接受後即可看到計畫。時間和地點仍由你編輯。',
+        );
+
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        style={[
-          s.sheet,
-          {
-            paddingBottom: insets.bottom + 16,
-            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }],
-          },
-        ]}
-      >
-        <View style={s.grabber} />
-        <Text style={s.title}>{t('Who’s coming?', 'Ai sẽ đi cùng?', '誰と行く？', '谁一起来？', '誰一起來？')}</Text>
-        <Text style={s.subtitle}>
-          {company === 'couple'
-            ? t('A couple’s evening — pick who joins.', 'Buổi tối hai người — chọn người đi cùng.', 'ふたりの夜 — 誰を誘う？', '两人的夜晚 — 选择同行的人。', '兩人的夜晚 — 選擇同行的人。')
-            : company === 'family'
-              ? t('A family day — pick who joins.', 'Ngày của gia đình — chọn người đi cùng.', '家族の日 — 誰を誘う？', '家庭日 — 选择同行的人。', '家庭日 — 選擇同行的人。')
-              : t('A friends day — pick who joins.', 'Ngày với bạn bè — chọn người đi cùng.', '友だちとの日 — 誰を誘う？', '朋友聚会日 — 选择同行的人。', '朋友聚會日 — 選擇同行的人。')}
-        </Text>
-
-        {friendIds.length === 0 ? (
-          // Not an error, and not a dead end phrased as one: the reader has
-          // simply not added anybody yet, and the Crew screen is where that
-          // happens.
-          <Text style={s.none}>
-            {t(
-              'Nobody in your crew yet. Add a friend first, then you can invite them.',
-              'Chưa có ai trong nhóm. Thêm bạn trước rồi mới mời được.',
-              'まだ仲間がいません。先に友だちを追加してください。',
-              '你还没有好友。先添加好友，然后就可以邀请了。', '你還沒有好友。先新增好友，然後就可以邀請了。',
-            )}
-          </Text>
-        ) : (
-          <ScrollView style={s.list} contentContainerStyle={{ paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
-            {rows.map((r, row) => {
-              const p = people[r.id];
-              const on = picked.has(r.id);
-              // Greyed once the seats are spoken for: an unticked row on a
-              // full sheet cannot be picked, and it says so by standing
-              // down rather than by a checkbox that ignores the tap.
-              const benched = full && !on && !r.locked;
-              const n = mutual[r.id] ?? 0;
-              return (
-                <PressableScale
-                  key={r.id}
-                  onPress={() => toggle(r.id, r.locked || benched)}
-                  haptic={r.locked || benched ? 'none' : 'selection'}
-                  accessibilityRole="checkbox"
-                  testID={`invite-friend-${row}`}
-                  accessibilityState={{ checked: on, disabled: r.locked || benched }}
-                  style={{ alignSelf: 'stretch' }}
-                  contentStyle={[s.row, (r.locked || benched) && s.rowLocked]}
-                >
-                  <Avatar url={p?.avatar_url} size={44} />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.name} numberOfLines={1}>
-                      {p?.full_name || p?.handle || t('Someone', 'Ai đó', '誰か', '某人', '某人')}
-                    </Text>
-                    <Text style={s.meta} numberOfLines={1}>
-                      {p?.handle ? `@${p.handle}` : ''}
-                      {n > 0 ? ` · ${t(
-                        `${n} mutual save${n === 1 ? '' : 's'}`,
-                        `${n} nơi cùng lưu`,
-                        `共通の保存 ${n}`,
-                        `${n} 个共同收藏`, `${n} 個共同收藏`,
-                      )}` : ''}
-                    </Text>
-                  </View>
-                  {/* A locked row wears the answer instead of a checkbox —
-                      a tick that cannot be untapped should not look like
-                      one that can. */}
-                  {r.locked ? (
-                    <Text style={s.locked}>
-                      {t('Answered', 'Đã trả lời', '回答済み', '已回复', '已回覆')}
-                    </Text>
-                  ) : (
-                    <View style={[s.tick, on && s.tickOn]}>
-                      {on ? <Glyph name="checkmark" size={15} color={colors.accentInk} /> : null}
-                    </View>
-                  )}
-                </PressableScale>
-              );
-            })}
-          </ScrollView>
-        )}
-
-        <View style={s.note}>
-          <Glyph name="time-outline" size={15} color={colors.textTertiary} />
-          <Text style={s.noteText}>
-            {left === 0
-              ? t(
-                'This trip is full — twenty is the most one evening can hold.',
-                'Chuyến này đã đầy — một buổi tối tối đa hai mươi người.',
-                'この旅程は満員です — 一晩は最大20人までです。',
-                '这个行程已满 — 一个晚上最多 20 人。', '這個行程已滿 — 一個晚上最多 20 人。',
-              )
-              : seatsHeld
-                ? t(
-                  'A couple’s evening is complete — your guest has answered.',
-                  'Buổi tối hai người đã đủ — người đi cùng đã trả lời.',
-                  'ふたりの夜はそろいました — 相手はもう回答しています。',
-                  '两人的夜晚已凑齐 — 对方已经回复。', '兩人的夜晚已湊齊 — 對方已經回覆。',
-                )
-                : full
-                  ? t(
-                    'A couple’s evening seats one guest — untick to choose someone else.',
-                    'Buổi tối hai người chỉ mời một người — bỏ chọn để đổi người khác.',
-                    'ふたりの夜は1人だけ — 変えるにはチェックを外してください。',
-                    '两人的夜晚只能邀请一位 — 取消勾选可换人。', '兩人的夜晚只能邀請一位 — 取消勾選可換人。',
-                  )
-                  : t(
-                    'They see the plan once they accept. Times and stops stay yours to edit.',
-                    'Họ thấy kế hoạch sau khi đồng ý. Giờ giấc và các điểm dừng vẫn do bạn sửa.',
-                    '承諾すると予定が見えます。時刻とスポットはあなたが編集します。',
-                    '对方接受后即可看到计划。时间和地点仍由你编辑。', '對方接受後即可看到計畫。時間和地點仍由你編輯。',
-                  )}
-          </Text>
-        </View>
-
-        <GradientCta
-          icon="paper-plane-outline"
-          wide
-          label={label}
-          testID="invite-send"
-          disabled={sending || !moved}
-          onPress={() => { if (!sending && moved) onSend(invite, withdraw); }}
-        />
-
-        <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.later}>
-          <Text style={s.laterText}>{t('Not now', 'Để sau', 'あとで', '暂不', '暫不')}</Text>
-        </PressableScale>
-      </Animated.View>
-    </Modal>
+    <FriendPicker
+      open={open}
+      title={t('Who’s coming?', 'Ai sẽ đi cùng?', '誰と行く？', '谁一起来？', '誰一起來？')}
+      subtitle={company === 'couple'
+        ? t('A couple’s evening — pick who joins.', 'Buổi tối hai người — chọn người đi cùng.', 'ふたりの夜 — 誰を誘う？', '两人的夜晚 — 选择同行的人。', '兩人的夜晚 — 選擇同行的人。')
+        : company === 'family'
+          ? t('A family day — pick who joins.', 'Ngày của gia đình — chọn người đi cùng.', '家族の日 — 誰を誘う？', '家庭日 — 选择同行的人。', '家庭日 — 選擇同行的人。')
+          : t('A friends day — pick who joins.', 'Ngày với bạn bè — chọn người đi cùng.', '友だちとの日 — 誰を誘う？', '朋友聚会日 — 选择同行的人。', '朋友聚會日 — 選擇同行的人。')}
+      // Greyed once the seats are spoken for: an unticked row on a full
+      // sheet cannot be picked, and it says so by standing down rather
+      // than by a checkbox that ignores the tap. A locked row wears the
+      // answer instead of a checkbox.
+      rows={rows.map((r) => {
+        const on = picked.has(r.id);
+        const benched = full && !on && !r.locked;
+        return {
+          id: r.id,
+          on,
+          off: r.locked || benched,
+          badge: r.locked ? t('Answered', 'Đã trả lời', '回答済み', '已回复', '已回覆') : undefined,
+        };
+      })}
+      people={people}
+      extra={(id) => {
+        const n = mutual[id] ?? 0;
+        return n > 0 ? ` · ${t(
+          `${n} mutual save${n === 1 ? '' : 's'}`,
+          `${n} nơi cùng lưu`,
+          `共通の保存 ${n}`,
+          `${n} 个共同收藏`, `${n} 個共同收藏`,
+        )}` : '';
+      }}
+      // The Crew screen is where that happens — and no link to it from
+      // here: a link out of a sheet mid-plan is a way to lose the plan.
+      none={t(
+        'Nobody in your crew yet. Add a friend first, then you can invite them.',
+        'Chưa có ai trong nhóm. Thêm bạn trước rồi mới mời được.',
+        'まだ仲間がいません。先に友だちを追加してください。',
+        '你还没有好友。先添加好友，然后就可以邀请了。', '你還沒有好友。先新增好友，然後就可以邀請了。',
+      )}
+      note={{ icon: 'time-outline', text: note }}
+      cta={{
+        icon: 'paper-plane-outline',
+        label,
+        testID: 'invite-send',
+        disabled: sending || !moved,
+        onPress: () => onSend(invite, withdraw),
+      }}
+      rowTestID={(i) => `invite-friend-${i}`}
+      onToggle={(id) => setPicked((cur) => togglePick(rows, cur, id, seats))}
+      onClose={onClose}
+    />
   );
 }
-
-const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  grabber: {
-    width: 38, height: 4, borderRadius: 2, alignSelf: 'center',
-    backgroundColor: colors.textTertiary, marginBottom: 14,
-  },
-  title: { color: colors.text, fontSize: 22, fontFamily: display.bold },
-  subtitle: { color: colors.textTertiary, fontSize: 14, marginTop: 3, marginBottom: 10 },
-  none: { color: colors.textTertiary, fontSize: 15, lineHeight: 21, paddingVertical: 18 },
-
-  list: { maxHeight: 300 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  rowLocked: { opacity: 0.62 },
-  name: { color: colors.text, fontSize: 16, fontWeight: font.medium },
-  meta: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
-  tick: {
-    width: 26, height: 26, borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: colors.borderGlass,
-  },
-  tickOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
-  locked: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
-
-  note: {
-    flexDirection: 'row', gap: 9, alignItems: 'flex-start',
-    backgroundColor: colors.surfaceGlass,
-    borderRadius: 14, padding: 13, marginTop: 10, marginBottom: 12,
-  },
-  noteText: { flex: 1, color: colors.textTertiary, fontSize: 13, lineHeight: 19 },
-
-  later: { paddingVertical: 14, marginTop: 2, alignSelf: 'center' },
-  laterText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
-});
