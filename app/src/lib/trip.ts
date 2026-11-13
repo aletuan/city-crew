@@ -137,6 +137,16 @@ export function seedMembers(
  * shelves is one list and one trip for it. A chosen slug no shelf holds
  * any more is a list the plan was not built from, and is not named.
  *
+ * And only a list with a place among the stops being saved (owner,
+ * 13 Nov 2026). Ticking a list offers its places to the planner; the
+ * planner keeps a handful, and a list none of whose places made the day
+ * gave that trip nothing. Counting every ticked list counted the tick,
+ * so seven lists ticked and five stops kept, from three of them, said
+ * seven lists started a trip. A place on two ticked lists counts for
+ * both: each offered it. Membership is read as `membersOf` reads it —
+ * the list's `members` when it carries them, its `collection_places`
+ * by slug otherwise — but by slug alone, so it needs no catalog.
+ *
  * A row without its id is skipped — one hydrated from a launch cache
  * written before `Collection.id` rode the rows. The cost is one trip not
  * counted for that list, on a save made in the moments before the
@@ -146,15 +156,20 @@ export function seedMembers(
 export function sourceIdsOf(
   from: readonly string[] | null | undefined,
   lists: readonly Collection[],
+  stopSlugs: readonly string[],
 ): string[] {
   if (!from?.length) return [];
   const wanted = new Set(from);
+  const kept = new Set(stopSlugs);
   const seen = new Set<string>();
   const out: string[] = [];
   for (const c of lists) {
     if (!wanted.has(c.slug) || seen.has(c.slug)) continue;
     seen.add(c.slug);
-    if (c.id) out.push(c.id);
+    const slugs = c.members
+      ? c.members.map((p) => p.slug)
+      : c.collection_places.flatMap((cp) => (cp.places ? [cp.places.slug] : []));
+    if (c.id && slugs.some((s) => kept.has(s))) out.push(c.id);
   }
   return out;
 }

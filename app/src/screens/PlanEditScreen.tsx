@@ -403,9 +403,10 @@ export default function PlanEditScreen({ navigation, route }: {
         when: p.when,
         generatedBy: live.fromModel ? 'rules+llm' : 'rules',
         // The lists this plan started from, resolved off the same shelves
-        // its pins were (`pinned` above), so the trip remembers exactly
-        // the lists it was built from and each one's owner can count it.
-        fromCollections: sourceIdsOf(p.from, [...mine.data, ...cols.data]),
+        // its pins were (`pinned` above), and of those only the ones with
+        // a place among the stops saved, so each owner counts a trip their
+        // list gave something to.
+        fromCollections: sourceIdsOf(p.from, [...mine.data, ...cols.data], current.map((s) => s.place.slug)),
         stops: current.map((s) => ({
           placeSlug: s.place.slug,
           arriveMin: s.arriveMin,
