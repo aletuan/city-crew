@@ -1595,6 +1595,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         style={s.descCard}
         testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}
       >
+        {owned || canCopy || curatorRow ? (
         <View style={s.descTop}>
           {/* The note glyph, only on your own list and only when there
               is no handle to lead with: it says "your words go here". */}
@@ -1608,37 +1609,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           ) : null}
           <View style={s.descBody}>
             {curatorRow}
-            {desc ? (
-              // Five lines, then "… Đọc thêm" (owner, 3 Nov 2026): a long
-              // note had filled the screen the places are for. See
-              // `MoreText`.
-              <MoreText text={desc} style={s.descText} testID="collection-desc-text" />
-            ) : owned ? (
-              // The invitation: the line and the pencil open the form.
-              // Not the whole card, since the chips under the line are
-              // a filter and a tap meant for one would open the form.
-              //
-              // Drawn as an action, not as words. It was a sentence in
-              // the description's own face one grey lighter — "Thêm vài
-              // dòng về bộ sưu tập này." — and the owner read it as the
-              // description (18 Oct 2026): on the sand ground the two
-              // greys are a shade apart, and a sentence about the list
-              // reads as one. Now a plus and two words in the accent,
-              // the colour this app gives the things a tap changes,
-              // at the caption's size: it is a control in the place
-              // the words will go, not the words.
-              <PressableScale
-                onPress={edit}
-                scaleTo={0.96}
-                haptic="selection"
-                accessibilityRole="button"
-                contentStyle={s.descAdd}
-                testID="collection-desc-add"
-              >
-                <Glyph name="add" size={17} color={colors.accent} />
-                <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加', '添加简介', '新增簡介')}</Text>
-              </PressableScale>
-            ) : null}
           </View>
           {owned ? (
             <PressableScale
@@ -1681,8 +1651,41 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             </PressableScale>
           ) : null}
         </View>
-        {/* Across the card, not in the words' column: the count is
-            fixed to the card's own right edge, under the pencil. */}
+        ) : null}
+        {/* Across the card too, the words as well as the kinds: the
+            description's column stopped at the pencil's, 48pt short of
+            the right edge against 16 on the left (owner, 13 Nov 2026). */}
+        {desc ? (
+          // Five lines, then "… Đọc thêm" (owner, 3 Nov 2026): a long
+          // note had filled the screen the places are for. See
+          // `MoreText`.
+          <MoreText text={desc} style={s.descText} testID="collection-desc-text" />
+        ) : owned ? (
+          // The invitation: the line and the pencil open the form.
+          // Not the whole card, since the chips under the line are
+          // a filter and a tap meant for one would open the form.
+          //
+          // Drawn as an action, not as words. It was a sentence in
+          // the description's own face one grey lighter — "Thêm vài
+          // dòng về bộ sưu tập này." — and the owner read it as the
+          // description (18 Oct 2026): on the sand ground the two
+          // greys are a shade apart, and a sentence about the list
+          // reads as one. Now a plus and two words in the accent,
+          // the colour this app gives the things a tap changes,
+          // at the caption's size: it is a control in the place
+          // the words will go, not the words.
+          <PressableScale
+            onPress={edit}
+            scaleTo={0.96}
+            haptic="selection"
+            accessibilityRole="button"
+            contentStyle={s.descAdd}
+            testID="collection-desc-add"
+          >
+            <Glyph name="add" size={17} color={colors.accent} />
+            <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加', '添加简介', '新增簡介')}</Text>
+          </PressableScale>
+        ) : null}
         {kindRow}
         {cardFoot}
       </Card>
@@ -2077,10 +2080,30 @@ const s = StyleSheet.create({
   // the inset. The pencil hangs at the top right, level with the first
   // line, and the text takes the rest of the row.
   descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
-  descCard: { gap: 14, padding: space.cardPadding },
-  // The glyph, the words and the pencil, on one row above the foot.
+  // ── the card's rhythm, measured in ink (owner, 13 Nov 2026) ──
+  // Read off a 2x render of a visitor's card, ink to ink:
+  //
+  // |                       | before | now  |
+  // |-----------------------|--------|------|
+  // | card's top → face     | 16     | 20   |
+  // | face → words          | 15–18  | 17–20 (accents, letters) |
+  // | words → kinds         | 20.5   | 20.5 |
+  // | kinds → hairline      | 21     | 21   |
+  // | hairline → heart      | 16.5   | 20.5 |
+  // | heart → card's foot   | 20     | 20   |
+  // | words' left / right   | 16 / 48 | 16 / 16 |
+  //
+  // So one rhythm of about 20 from the card's top to its foot: the words
+  // came out of the face's row (the 12 of `descBody` became this 14),
+  // the foot's top went from 12 to 16, and the top from 16 to 20, since
+  // the face is a solid 28pt disc whose ink fills its box while the
+  // heart, at the foot, carries a few points of its glyph's own air. The
+  // sides stay 16: the words now run to the card's own edges.
+  descCard: { gap: 14, padding: space.cardPadding, paddingTop: space.cardPadding + 4 },
+  // The face and the handle with the pencil (or the copy) at the end of
+  // its row; the words go under it, across the card (owner, 13 Nov 2026).
   descTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  descBody: { flex: 1, gap: 12 },
+  descBody: { flex: 1 },
   // The face and the handle. `alignSelf` keeps the press to the row's own
   // width rather than the card's: a tap on empty space beside a handle
   // should not open a sheet about a person.
@@ -2107,7 +2130,10 @@ const s = StyleSheet.create({
   // the pairs 24 apart, nearly four times that.
   cardFoot: {
     flexDirection: 'row', alignItems: 'center', gap: 20,
-    paddingTop: 12,
+    // 16, not 12 (owner, 13 Nov 2026): the hairline sat 16.5 above the
+    // heart's ink and 21 under the kinds', and the heart 20 above the
+    // card's edge — one rhythm of about 20 now, see `descCard`.
+    paddingTop: 16,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
   // Justified (owner, 3 Nov 2026), the owner's call over the case put
