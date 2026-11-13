@@ -36,7 +36,6 @@ const NOT_BUTTONS: Record<string, string> = {
   'components/ReviewBadge.tsx pill': 'a label on a card; the card is the button',
   'components/ThemeSwitcher.tsx word': 'the "Popular" / "New" flag on a look card',
   'components/ui/controls.tsx tile': 'a grid tile, sized by its cell',
-  'screens/CollectionDetailScreen.tsx banner': 'a full-width banner; the banner is a row, not a button',
 };
 
 const walk = (dir: string): string[] =>
