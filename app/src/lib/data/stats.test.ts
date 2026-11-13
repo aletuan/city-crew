@@ -14,7 +14,7 @@ vi.mock('../supabase', async () => {
 });
 
 import { PRIVACY } from '../legal';
-import { recordCollectionView } from './stats';
+import { fetchCollectionStats, recordCollectionView } from './stats';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -31,6 +31,29 @@ describe('recordCollectionView', () => {
   it('throws when the count was refused', async () => {
     fake().replies({ error: { message: 'permission denied for function record_collection_view' } });
     await expect(recordCollectionView('c-1')).rejects.toThrow('permission denied');
+  });
+});
+
+describe('fetchCollectionStats', () => {
+  const row = {
+    views_total: 9, views_7d: 2, likes_total: 1, likes_7d: 1, copies_total: 0, copies_7d: 0, trips_total: 3, trips_7d: 0,
+  };
+
+  it('asks the function for the list by its id, and hands back its rows', async () => {
+    fake().replies({ data: [row] });
+    expect(await fetchCollectionStats('c-1')).toEqual([row]);
+    expect(fake().log).toEqual([{ fn: 'collection_stats', op: 'rpc', payload: { cid: 'c-1' }, filters: [] }]);
+  });
+
+  // No row is an answer — not the owner's — and arrives as an empty list.
+  it('answers empty rather than null for a list that is not yours', async () => {
+    fake().replies({ data: null });
+    expect(await fetchCollectionStats('c-1')).toEqual([]);
+  });
+
+  it('throws when the read failed', async () => {
+    fake().replies({ error: { message: 'timeout' } });
+    await expect(fetchCollectionStats('c-1')).rejects.toThrow('timeout');
   });
 });
 

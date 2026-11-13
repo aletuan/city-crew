@@ -31,6 +31,7 @@ const q = vi.hoisted(() => ({
   fetchLikeCounts: vi.fn(),
   fetchApplause: vi.fn(),
   fetchCopies: vi.fn(),
+  fetchCollectionStats: vi.fn(),
 }));
 // The count, as a plain function rather than a `vi.fn`: a spy attaches
 // its own handler to every promise it returns, to record how it settled,
@@ -57,6 +58,7 @@ vi.mock('./people', () => ({
 }));
 vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
 vi.mock('./stats', () => ({
+  fetchCollectionStats: q.fetchCollectionStats,
   recordCollectionView: (id: string) => {
     views.counted.push(id);
     return views.refuse ? Promise.reject(new Error('offline')) : Promise.resolve();
@@ -64,7 +66,7 @@ vi.mock('./stats', () => ({
 }));
 
 import {
-  type ListActivityQuery, useCountView, useLikeCountsQuery, useListActivityQuery, useMyCollections, usePrefetchListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, usePrefetchCollectionStats, useListActivityQuery, useMyCollections, usePrefetchListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
 } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
@@ -523,5 +525,61 @@ describe('an open of a list, counted', () => {
     } finally {
       process.off('unhandledRejection', unhandled);
     }
+  });
+});
+
+// A list's figures, for its owner (owner, 13 Nov 2026): kept and shared
+// like the activity, asked ahead by the Activity page, one entry per list
+// and owner.
+describe('a list’s statistics, kept and shared', () => {
+  const row = (views: number) => ({
+    views_total: views, views_7d: 1, likes_total: 0, likes_7d: 0, copies_total: 0, copies_7d: 0, trips_total: 0, trips_7d: 0,
+  });
+  const got: { frames: string[] } = { frames: [] };
+  function Stats({ owner, list }: { owner: string | null; list: string | null }) {
+    const f = useCollectionStatsQuery(owner, list);
+    got.frames.push(`${f.data.map((r) => r.views_total).join(',')}|${f.loaded}`);
+    return null;
+  }
+  function Ahead({ owner, list }: { owner: string | null; list: string | null }) {
+    usePrefetchCollectionStats(owner, list);
+    return null;
+  }
+
+  beforeEach(async () => {
+    forgetSharedFetches();
+    got.frames = [];
+    for (const l of ['c1', 'c2']) await AsyncStorage.removeItem(cacheKey('liststats', l, 'u1'));
+  });
+
+  it('asks for the list by its id and keeps the answer under the list and the owner', async () => {
+    q.fetchCollectionStats.mockResolvedValue([row(7)]);
+    render(<Stats owner="u1" list="c1" />);
+    await waitFor(() => expect(got.frames.at(-1)).toBe('7|true'));
+    expect(q.fetchCollectionStats).toHaveBeenCalledExactlyOnceWith('c1');
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(cacheKey('liststats', 'c1', 'u1'), expect.any(String)));
+  });
+
+  it('asks nothing without an owner or a list', async () => {
+    render(<><Stats owner={null} list="c1" /><Stats owner="u1" list={null} /><Ahead owner={null} list="c1" /><Ahead owner="u1" list={null} /></>);
+    await act(async () => {});
+    expect(q.fetchCollectionStats).not.toHaveBeenCalled();
+  });
+
+  it('keeps one list’s answer apart from another’s', async () => {
+    q.fetchCollectionStats.mockImplementation(async (id: string) => [row(id === 'c1' ? 1 : 2)]);
+    render(<><Stats owner="u1" list="c1" /><Stats owner="u1" list="c2" /></>);
+    await waitFor(() => expect(got.frames.filter((f) => f.endsWith('|true')).map((f) => f[0])).toEqual(expect.arrayContaining(['1', '2'])));
+    expect(q.fetchCollectionStats.mock.calls.map(([id]) => id).sort()).toEqual(['c1', 'c2']);
+  });
+
+  it('opens on what the Activity page asked ahead, drawn on the first render', async () => {
+    q.fetchCollectionStats.mockResolvedValue([row(5)]);
+    const ahead = render(<Ahead owner="u1" list="c1" />);
+    await act(async () => {});
+    expect(q.fetchCollectionStats).toHaveBeenCalledExactlyOnceWith('c1');
+    ahead.unmount();
+    render(<Stats owner="u1" list="c1" />);
+    expect(got.frames[0]).toBe('5|true');
   });
 });

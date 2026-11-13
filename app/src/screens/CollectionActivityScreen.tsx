@@ -1,7 +1,7 @@
 // A list's activity — who liked it and who saved a copy of it, all time,
 // newest first (owner, 13 Nov 2026). Threads' "Post activity", for a
-// collection: the list itself in a small card at the top, then the two
-// counts, then one row per act in a card of its own. Opened from "View
+// collection: the list itself in a small card at the top, then the way
+// to its statistics, then one row per act in a card of its own. Opened from "View
 // activity ›" at the end of the card's activity row, which only the
 // list's owner is shown.
 //
@@ -86,28 +86,27 @@
 // state, no card, no fetch. A list you have just deleted, opened from a
 // stale screen, is the same.
 //
-// ── the two counts (owner, 13 Nov 2026) ──
+// ── the way to the statistics (owner, 13 Nov 2026) ──
 //
-// Threads draws "♡ Likes 75 ›" and "⟳ Reposts 12 ›" between the post and
-// the people; here they are "♡ Likes" and "⧉ Copies" — "Bản sao", the
-// word "Lưu bản sao" already uses — each with its count and a chevron at
-// the right end. Counted from the same acts the list is drawn from
-// (`tallyOf`), so a count and the rows under it cannot disagree.
+// One row between the list's card and the people: "Statistics ›"
+// ("Thống kê ›"), with the bar-chart glyph, opening the list's own page
+// of figures (`CollectionStatsScreen`): opens, likes, copies and trips,
+// all time and the last seven days. It is drawn for any list of yours
+// with an id, whatever the people below say — a list nobody has liked
+// can still have been opened and planned from, so "nothing here" on this
+// page is not "nothing there". The figures are asked for as this page
+// opens (`usePrefetchCollectionStats`), so the tap lands on them.
 //
-// A tap narrows the list to that kind and a second tap widens it again
-// (`toggledKind`). It opens nothing: on Threads each row opens a page of
-// its own, and here that page would be this list with one kind left out
-// — a second screen for what a filter does in place. The chosen row is
-// drawn on the glass with its glyph filled, and says `aria-selected`.
-//
-// A kind at 0 still shows its 0, but as a line to read: no press, no
-// chevron, since a chevron promises somewhere to go and a filter to
-// nothing is an empty list. If a refresh takes the chosen kind to 0 —
-// the last like taken back — the list widens to all by itself
-// (`shownKind`), rather than standing empty behind a row that can no
-// longer be tapped to undo it. Neither count is drawn while there is
-// nothing at all: the empty state says that in words, and "Likes 0,
-// Copies 0" above it would say it twice.
+// It replaced, the same day, the two counts that stood here — "♡ Likes
+// N ›" and "⧉ Copies N ›", Threads' pair — and the filter they worked:
+// a tap narrowed the people to one kind, a second widened them again.
+// The counts are on the Statistics page now, beside the two figures
+// this page could never show (opens and trips have no people to list),
+// and counted by the same rules (`collection_stats` leaves out what the
+// feeds leave out), so the two pages agree. The filter went with them:
+// without the counts it had nothing to stand on, and the badge on each
+// face already says which kind a row is. The people are always all of
+// them, newest first.
 //
 // ── the people, in a card ──
 //
@@ -191,16 +190,17 @@ import { Glyph } from '../components/ui/glyph';
 import {
   Avatar, Card, CHIP_H, CHIP_SLOP, EmptyState, GradientCta, PressableScale, Screen, successHaptic, useTabBarClearance,
 } from '../components/ui';
+import ListSummaryCard from '../components/ListSummaryCard';
 import { useDuckOnScroll } from '../components/tabBarDuck';
-import { useProfile, useSession } from '../lib/auth';
+import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
-import { acceptFriendRequest, sendFriendRequest, useListActivityQuery } from '../lib/data';
+import {
+  acceptFriendRequest, sendFriendRequest, useListActivityQuery, usePrefetchCollectionStats,
+} from '../lib/data';
 import { type Pledged, quietReason, rowButton } from '../lib/friends';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import {
-  type ActKind, actsOn, type ListAct, ofKind, shownKind, tallyOf, toggledKind,
-} from '../lib/listActivity';
+import { actsOn, type ListAct } from '../lib/listActivity';
 import { usePending } from '../lib/pending';
 import { ageWord, listAgeOf } from '../lib/listAge';
 import { useMyLists } from '../lib/save';
@@ -214,7 +214,6 @@ export default function CollectionActivityScreen({ navigation, route }: {
 }) {
   const { t, lang } = useI18n();
   const { session } = useSession();
-  const { profile } = useProfile();
   const me = session?.user?.id ?? null;
   const mine = useMyLists();
   const col = mine.data.find((c) => c.slug === route.params.slug) ?? null;
@@ -226,6 +225,8 @@ export default function CollectionActivityScreen({ navigation, route }: {
   // about without a list of yours with an id: no fetch, and the empty
   // state.
   const activity = useListActivityQuery(me && listId ? me : null);
+  // The figures "Statistics ›" opens, asked for now — see the header.
+  usePrefetchCollectionStats(me && listId ? me : null, listId);
   const { likes, copies } = activity;
   const acts = useMemo(
     () => (listId ? actsOn(listId, likes.data, copies.data) : []),
@@ -249,12 +250,6 @@ export default function CollectionActivityScreen({ navigation, route }: {
     : asking(likes) || asking(copies);
   // Either half failing; said only when nothing is there to show.
   const failed = !!likes.error || !!copies.error;
-
-  // The counts, and the kind the list is narrowed to — see the header.
-  const tally = useMemo(() => tallyOf(acts), [acts]);
-  const [chosen, setChosen] = useState<ActKind | null>(null);
-  const kind = shownKind(chosen, tally);
-  const shown = ofKind(acts, kind);
 
   // The friend buttons — see the header. `pledged` is each tap until the
   // crew is read again; `run` keeps one write per person in flight.
@@ -295,35 +290,25 @@ export default function CollectionActivityScreen({ navigation, route }: {
   const ageOf = (iso: string) =>
     ageWord(listAgeOf(iso, new Date()), lang, t, t('now', 'Vừa xong', 'たった今', '刚刚', '剛剛'));
 
-  /* ── the list, in a card ──
-     The collection page's card, smaller: the face and the two lines
-     beside it as its head draws them (40, `BYLINE_LINE` each), then the
-     title and the words. Three lines of them and no "Read more": it is a
-     reminder of which list this is, and the whole of it is one Back away.
-     The handle is yours from the profile, as the page's head takes it,
-     not the `curator_handle` stamped on the row. */
-  const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
-  const desc = col ? t(col.desc_en, col.desc_vi, col.desc_ja) : '';
-  const age = col?.created_at ? listAgeOf(col.created_at, new Date()) : null;
-  const card = col ? (
-    <Card style={s.card} testID="activity-list">
-      <View style={s.head}>
-        <Avatar url={profile?.avatar_url || null} size={HEAD_FACE} />
-        <View style={s.headLines}>
-          {profile?.handle
-            ? <Text style={s.headHandle} numberOfLines={1}>{normalizeHandle(profile.handle)}</Text>
-            : null}
-          {age
-            ? <Text style={s.headAge}>{ageWord(age, lang, t, t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立'))}</Text>
-            : null}
-        </View>
-      </View>
-      <View style={s.words}>
-        <Text style={s.title} testID="activity-list-title">{title}</Text>
-        {desc
-          ? <Text style={s.desc} numberOfLines={3} testID="activity-list-desc">{desc}</Text>
-          : null}
-      </View>
+  // The list, in a small card — `ListSummaryCard`.
+  const card = col ? <ListSummaryCard col={col} testID="activity-list" /> : null;
+
+  // The way to the statistics — see the header. Yours with an id only:
+  // the figures are the owner's, and a launch-cache row has nothing to
+  // ask about.
+  const statsLink = listId ? (
+    <Card style={s.group}>
+      <PressableScale
+        onPress={() => navigation.navigate('CollectionStats', { slug: route.params.slug })}
+        haptic="selection"
+        contentStyle={s.link}
+        accessibilityRole="button"
+        testID="activity-stats-link"
+      >
+        <Glyph name="stats-chart-outline" size={LINK_GLYPH} color={colors.text} />
+        <Text style={s.linkLabel}>{t('Statistics', 'Thống kê', '統計', '统计', '統計')}</Text>
+        <Glyph name="chevron-forward" size={LINK_CHEVRON} color={colors.textTertiary} />
+      </PressableScale>
     </Card>
   ) : null;
 
@@ -443,51 +428,6 @@ export default function CollectionActivityScreen({ navigation, route }: {
     );
   };
 
-  /** One of the two counts — see the header. */
-  const stat = (k: ActKind, index: number) => {
-    const n = tally[k];
-    const on = kind === k;
-    const label = k === 'like'
-      ? t('Likes', 'Lượt thích', 'いいね', '点赞', '按讚')
-      : t('Copies', 'Bản sao', 'コピー', '副本', '副本');
-    const glyph = k === 'like' ? (on ? 'heart' : 'heart-outline') : (on ? 'duplicate' : 'duplicate-outline');
-    const face = (
-      <>
-        <Glyph name={glyph} size={STAT_GLYPH} color={on ? colors.accent : colors.text} />
-        <Text style={s.statLabel}>{label}</Text>
-        <Text style={s.statCount} testID={`activity-stat-${k}-count`}>{n}</Text>
-        {n > 0 ? <Glyph name="chevron-forward" size={STAT_CHEVRON} color={colors.textTertiary} /> : null}
-      </>
-    );
-    if (n === 0) {
-      return (
-        <View
-          key={k}
-          style={[s.stat, index > 0 && s.rowDivider]}
-          accessible
-          accessibilityLabel={`${label}, 0`}
-          testID={`activity-stat-${k}`}
-        >
-          {face}
-        </View>
-      );
-    }
-    return (
-      <PressableScale
-        key={k}
-        onPress={() => setChosen((c) => toggledKind(c, k))}
-        haptic="selection"
-        contentStyle={[s.stat, index > 0 && s.rowDivider, on && s.statOn]}
-        accessibilityRole="button"
-        accessibilityLabel={`${label}, ${n}`}
-        aria-selected={on}
-        testID={`activity-stat-${k}`}
-      >
-        {face}
-      </PressableScale>
-    );
-  };
-
   const emptyTitle = t('No likes or copies yet', 'Chưa có lượt thích hay bản sao nào', 'まだいいねやコピーはありません', '还没有点赞或复制', '還沒有按讚或複製');
   const state = !col && mine.loading ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} />
@@ -531,9 +471,9 @@ export default function CollectionActivityScreen({ navigation, route }: {
         showsVerticalScrollIndicator={false}
       >
         {card}
+        {statsLink}
         {state}
-        {drawn ? <Card style={s.group} testID="activity-stats">{(['like', 'copy'] as const).map(stat)}</Card> : null}
-        {drawn ? <Card style={s.group} testID="activity-people">{shown.map(row)}</Card> : null}
+        {drawn ? <Card style={s.group} testID="activity-people">{acts.map(row)}</Card> : null}
       </ScrollView>
     </Screen>
   );
@@ -549,23 +489,17 @@ const waitBody = (t: T) => t(
   '有人点赞或复制这个合集时，会显示在这里。', '有人按讚或複製這個合集時，會顯示在這裡。',
 );
 
-/** The card head's face: the collection page's 40 (`FACE` there), so the
- *  two lines beside it stand its height as they do on the page. */
-const HEAD_FACE = 40;
-/** Each of the head's two lines — half the face, as on the page. */
-const HEAD_LINE = HEAD_FACE / 2;
 /** A row's face: 40 (owner, 13 Nov 2026), the size the collection
  *  card's head gives a face with two lines beside it, for the reason
  *  written there — Facebook and X draw 40 — and the two lines here stand
  *  about its height. */
 const ROW_FACE = 40;
-/** A count's glyph: 17, what Crew's Accept sets beside its 15pt word —
- *  the app's one glyph that leads a 15pt label on a row of its own. The
- *  collection page's heart is 15, but it stands beside a figure, not a
- *  word, and is a control in a row of controls. */
-const STAT_GLYPH = 17;
-/** A count's chevron: 15, as "View activity ›" draws it beside its words. */
-const STAT_CHEVRON = 15;
+/** The statistics row's glyph: 17, what Crew's Accept sets beside its
+ *  15pt word — the app's one glyph that leads a 15pt label on a row of
+ *  its own. The two counts this row replaced led with it too. */
+const LINK_GLYPH = 17;
+/** Its chevron: 15, as "View activity ›" draws it beside its words. */
+const LINK_CHEVRON = 15;
 /** The badge's glyph: Activity's 11, a mark rather than an icon to tap. */
 const BADGE_GLYPH = 11;
 /** The badge's ring of page: 2, enough to cut the disc off the face it
@@ -585,44 +519,17 @@ const LIKE_INK = '#FFFFFF';
 
 const s = StyleSheet.create({
   content: { paddingHorizontal: space.page },
-  // The collection page's card rhythm (`descCard` there): 20 above the
-  // face, whose disc is solid ink to its edge, and 14 between the head and
-  // the words. 16 below, not the page's 9: that 9 gave back the heart
-  // row's air, and this card ends on a line of text, whose 24pt line
-  // already carries about 4 under the ink — 20 in all, the page's figure.
-  card: {
-    gap: 14, padding: space.cardPadding, paddingTop: space.cardPadding + 4,
-    marginBottom: space.cardGap,
-  },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headLines: { flexShrink: 1 },
-  headHandle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: HEAD_LINE },
-  headAge: { color: colors.textSecondary, ...type.meta, lineHeight: HEAD_LINE },
-  // The title and the words as one block, 4 apart (`space.nameToMeta`, a
-  // name and the line that qualifies it).
-  words: { gap: space.nameToMeta },
-  // The words' own size and line, bold: the first line of the same text,
-  // not a heading over it.
-  title: { color: colors.text, ...type.body, fontWeight: font.bold, lineHeight: 24 },
-  // The page's description, set as the page sets it: justified, both
-  // edges (owner, 3 Nov 2026, and again 13 Nov for this card). It was
-  // ragged here at first, as a summary's; the owner wanted the one text
-  // to look the same in both places.
-  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'justify' },
   spinner: { marginTop: 20 },
-  // The counts' card and the people's: the page's gap under each.
+  // The statistics row's card and the people's: the page's gap under each.
   group: { marginBottom: space.cardGap },
-  // A count: Crew's row padding, glyph and word at the left, the figure
-  // and the chevron pushed to the right by the word's `flex`.
-  stat: {
+  // The statistics row: Crew's row padding, glyph and word at the left,
+  // the chevron pushed to the right by the word's `flex` — the counts'
+  // row it replaced, value for value.
+  link: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
-  // The chosen count: on the glass, as a chosen chip is, with its glyph
-  // filled in the accent.
-  statOn: { backgroundColor: colors.surfaceGlass },
-  statLabel: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flex: 1 },
-  statCount: { color: colors.textSecondary, fontSize: 15, fontVariant: ['tabular-nums'] },
+  linkLabel: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flex: 1 },
   // Crew's row inside its card, value for value: 14 between the face,
   // the words and the button, the card's padding at either end, 13 above
   // and below. Centred: a face beside two lines wants its middle on

@@ -119,6 +119,10 @@ export type RootStackParamList = {
    *  "View activity ›". By slug, like the page it opens from: the row is
    *  already in memory among your own lists, so only the key travels. */
   CollectionActivity: { slug: string };
+  /** One of your lists' figures — opens, likes, copies, trips, all time
+   *  and the last seven days — from its Activity page's "Statistics ›".
+   *  By slug, for the reason `CollectionActivity` is. */
+  CollectionStats: { slug: string };
   /** `from` is a collection the planner should start from, ticked on
    *  arrival — the detail screen's "Plan a trip". `at` is the moment of
    *  the tap, so a repeat tap on the same list is a new param. */

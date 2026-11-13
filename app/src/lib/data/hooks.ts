@@ -21,7 +21,8 @@ import {
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchApplause, fetchCopies, fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
 import { fetchMyListShares } from './shares';
-import { recordCollectionView } from './stats';
+import { fetchCollectionStats, recordCollectionView } from './stats';
+import type { StatsRow } from '../listStats';
 import type { ShareRow } from '../shares';
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
@@ -317,6 +318,45 @@ export const usePrefetchListActivity = (ownerId: string | null | undefined): voi
     prefetchShared(likesKey, allLikes, NO_LIKES);
     prefetchShared(copiesKey, allCopies, NO_COPIES);
   }, [ownerId]);
+};
+
+// ── a list's statistics, for its owner ──
+//
+// What the Statistics page draws (`CollectionStatsScreen`), kept and
+// shared as the owner's activity is (`useSharedFetch`): the Activity page
+// asks ahead (`usePrefetchCollectionStats`), so the tap on "Statistics ›"
+// opens on the answer, and every open asks again behind it. One entry
+// per list and per owner — the list is the question and the reader is
+// part of it — under `cacheKey`, with the list's id where the others put
+// a city. The row's shape is `StatsRow`, so a column added to it is a
+// `CACHE_VERSION` bump (`lib/data/cache`).
+const NO_STATS: StatsRow[] = [];
+const statsKey = (ownerId: string | null | undefined, collectionId: string | null | undefined) =>
+  (ownerId && collectionId ? cacheKey('liststats', collectionId, ownerId) : null);
+
+/** One list's figures, shared and stale-while-revalidate; nobody or no
+ *  list asks nothing. */
+export const useCollectionStatsQuery = (
+  ownerId: string | null | undefined,
+  collectionId: string | null | undefined,
+): Fetch<StatsRow[]> => {
+  const fetcher = useCallback(
+    () => fetchCollectionStats(collectionId as string),
+    [collectionId],
+  );
+  return useSharedFetch(statsKey(ownerId, collectionId), fetcher, NO_STATS);
+};
+
+/** The same ask, from the Activity page — see `prefetchShared`. */
+export const usePrefetchCollectionStats = (
+  ownerId: string | null | undefined,
+  collectionId: string | null | undefined,
+): void => {
+  useEffect(() => {
+    const key = statsKey(ownerId, collectionId);
+    if (!key) return;
+    prefetchShared(key, () => fetchCollectionStats(collectionId as string), NO_STATS);
+  }, [ownerId, collectionId]);
 };
 
 // ── one open of a list, counted ──
