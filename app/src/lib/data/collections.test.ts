@@ -18,7 +18,7 @@ vi.mock('../supabase', async () => {
 
 import {
   addPlaceToCollection, copyCollection, createCollection, deleteCollection, fetchCollections,
-  fetchLikeCounts, fetchMyCollections, fetchMyLikes, likeCollection, removePlaceFromCollection,
+  fetchLikeCounts, fetchMyCollections, fetchMyLikes, fetchSharedWithMe, likeCollection, removePlaceFromCollection,
   reorderCollection, setCollectionPublic, unlikeCollection, updateCollection,
 } from './collections';
 
@@ -496,6 +496,109 @@ describe('fetchMyCollections', () => {
   it('throws when the read failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
     await expect(fetchMyCollections('u1')).rejects.toThrow('timeout');
+  });
+});
+
+describe('fetchSharedWithMe', () => {
+  /** A friend's private list, as the share embed returns it. */
+  const sharedRow = (slug: string, owner: string, at: string, over: object = {}) => ({
+    ...embedded(slug, []), is_public: false, owner_id: owner, curator_handle: null,
+    collection_shares: [{ created_at: at }], ...over,
+  });
+
+  // The reader's own share, named in the query: RLS shows an owner the
+  // shares on their own lists too, and without the filter they would come
+  // back to their owner as "shared with you".
+  it('reads only the lists shared with this reader, through the share', async () => {
+    fake().replies({ data: [] });
+    await fetchSharedWithMe('u1');
+    const [q] = fake().log;
+    expect(q.table).toBe('collections');
+    expect(String(q.payload)).toContain('collection_shares!inner(created_at)');
+    // And nothing else: not public-only (a shared list is private), and
+    // not one city (a list is not bound to the city it was made in).
+    expect(onLists(q.filters)).toEqual([['collection_shares.user_id', 'u1']]);
+  });
+
+  it('carries one photograph a member, as your own lists do', async () => {
+    fake().replies({ data: [] });
+    await fetchSharedWithMe('u1');
+    const [q] = fake().log;
+    expect(onMembers(q.filters)).toEqual(ONE_COVER.filters);
+    expect(onMembers(q.orders)).toEqual(ONE_COVER.orders);
+    expect(q.embedLimits).toEqual(ONE_COVER.embedLimits);
+  });
+
+  it('asks for nobody’s profile when nothing is shared', async () => {
+    fake().replies({ data: null });
+    expect(await fetchSharedWithMe('u1')).toEqual([]);
+    expect(fake().log).toHaveLength(1);
+  });
+
+  it('puts the newest share first, whatever order the lists come back in', async () => {
+    fake().replies(
+      { data: [
+        sharedRow('old', 'f1', '2026-11-01T08:00:00+00:00'),
+        sharedRow('new', 'f2', '2026-11-12T08:00:00+00:00'),
+        sharedRow('mid', 'f1', '2026-11-05T08:00:00+00:00'),
+      ] },
+      { data: [] },
+    );
+    expect((await fetchSharedWithMe('u1')).map((c) => c.slug)).toEqual(['new', 'mid', 'old']);
+  });
+
+  // A private list has no byline (`stamp_curator`), and the friend it was
+  // shared with is the one reader who needs to know whose it is.
+  it('names each owner by today’s handle, asking once per owner', async () => {
+    fake().replies(
+      { data: [
+        sharedRow('a', 'f1', '2026-11-03T00:00:00Z'),
+        sharedRow('b', 'f1', '2026-11-02T00:00:00Z'),
+        sharedRow('c', 'f2', '2026-11-01T00:00:00Z'),
+      ] },
+      { data: [
+        { id: 'f1', handle: 'lan', full_name: 'Lan', avatar_url: '' },
+        { id: 'f2', handle: 'minh', full_name: 'Minh', avatar_url: '' },
+      ] },
+    );
+    const lists = await fetchSharedWithMe('u1');
+    expect(lists.map((c) => c.curator_handle)).toEqual(['lan', 'lan', 'minh']);
+    const profiles = fake().log[1];
+    expect(profiles.table).toBe('profiles');
+    expect(profiles.filters).toEqual([['id', ['f1', 'f2']]]);
+  });
+
+  it('keeps the byline of a list that is public as well as shared, and none for an owner with no profile', async () => {
+    fake().replies(
+      { data: [
+        sharedRow('public-too', 'f1', '2026-11-03T00:00:00Z', { is_public: true, curator_handle: 'stamped' }),
+        sharedRow('nobody', 'f2', '2026-11-02T00:00:00Z'),
+      ] },
+      { data: [{ id: 'f1', handle: 'renamed', full_name: '', avatar_url: '' }] },
+    );
+    expect((await fetchSharedWithMe('u1')).map((c) => c.curator_handle)).toEqual(['stamped', null]);
+  });
+
+  it('hands back members in order and no share rows', async () => {
+    fake().replies(
+      { data: [sharedRow('x', 'f1', '2026-11-03T00:00:00Z', {
+        collection_places: [
+          { sort_order: 1, places: { slug: 'second' } },
+          { sort_order: 0, places: { slug: 'first' } },
+        ],
+      })] },
+      { data: [] },
+    );
+    const [list] = await fetchSharedWithMe('u1');
+    expect(list.members?.map((p) => p.slug)).toEqual(['first', 'second']);
+    expect(list).not.toHaveProperty('collection_shares');
+  });
+
+  it('throws when either read failed', async () => {
+    fake().replies({ error: { message: 'timeout' } });
+    await expect(fetchSharedWithMe('u1')).rejects.toThrow('timeout');
+    fake().replies({ data: [sharedRow('x', 'f1', '2026-11-03T00:00:00Z')] }, { error: { message: 'profiles down' } });
+    await expect(fetchSharedWithMe('u1')).rejects.toThrow('profiles down');
   });
 });
 

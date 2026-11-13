@@ -24,6 +24,7 @@ import type { Fetch } from './fetch';
 const q = vi.hoisted(() => ({
   fetchPlaces: vi.fn(),
   fetchMyCollections: vi.fn(),
+  fetchSharedWithMe: vi.fn(),
   fetchMyLikes: vi.fn(),
   fetchPreferences: vi.fn(),
 }));
@@ -36,7 +37,7 @@ vi.mock('./places', () => ({
   fetchPlaces: q.fetchPlaces, fetchCategoryTerms: vi.fn(), fetchPlaceBySlug: vi.fn(),
 }));
 vi.mock('./collections', () => ({
-  fetchMyCollections: q.fetchMyCollections, fetchMyLikes: q.fetchMyLikes,
+  fetchMyCollections: q.fetchMyCollections, fetchMyLikes: q.fetchMyLikes, fetchSharedWithMe: q.fetchSharedWithMe,
   fetchCollections: vi.fn(), fetchLikeCounts: vi.fn(),
 }));
 vi.mock('./preferences', async () => ({
@@ -45,7 +46,7 @@ vi.mock('./preferences', async () => ({
 }));
 vi.mock('./people', () => ({ fetchCuratorAvatars: vi.fn(), profileByHandle: vi.fn() }));
 
-import { useMyCollections, useMyLikesQuery, useMyPreferences, usePlacesQuery } from './hooks';
+import { useMyCollections, useMyLikesQuery, useMyPreferences, usePlacesQuery, useSharedWithMe } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
 function held<T>() {
@@ -69,7 +70,7 @@ const list = (slug: string) => ({ slug, collection_places: [] });
 beforeEach(async () => {
   for (const f of Object.values(q)) f.mockReset();
   for (const k of Object.keys(seen)) delete seen[k];
-  for (const kind of ['places', 'mine', 'likes', 'prefs']) {
+  for (const kind of ['places', 'mine', 'shared', 'likes', 'prefs']) {
     for (const who of [null, 'u1', 'u2']) {
       await AsyncStorage.removeItem(cacheKey(kind, kind === 'places' ? 'hcmc' : 'all', who));
     }
@@ -136,6 +137,22 @@ describe('the reader’s own answers, remembered per account', () => {
     expect(await AsyncStorage.getItem(cacheKey('mine', 'all', 'u1'))).toContain('near-work');
   });
 
+  // Under a key of their own, beside `mine`: one account's lists and the
+  // lists friends gave it are two answers, and one must never be read as
+  // the other.
+  it('opens with the lists shared with them from the last launch, under their own key', async () => {
+    await AsyncStorage.setItem(cacheKey('shared', 'all', 'u1'), packCache([list('from-lan')], Date.now()));
+    await AsyncStorage.setItem(cacheKey('mine', 'all', 'u1'), packCache([list('my-own')], Date.now()));
+    const net = held<unknown[]>();
+    q.fetchSharedWithMe.mockReturnValue(net.promise);
+    render(<Probe name="shared" use={() => useSharedWithMe('u1')} />);
+    await waitFor(() => expect(seen.shared.data).toEqual([list('from-lan')]));
+    expect(q.fetchSharedWithMe).toHaveBeenCalledWith('u1');
+    await act(async () => { net.answer([list('from-minh')]); });
+    expect(seen.shared.data).toEqual([list('from-minh')]);
+    expect(await AsyncStorage.getItem(cacheKey('shared', 'all', 'u1'))).toContain('from-minh');
+  });
+
   it('opens with their likes from the last launch', async () => {
     await AsyncStorage.setItem(cacheKey('likes', 'all', 'u1'), packCache(['c-1', 'c-2'], Date.now()));
     q.fetchMyLikes.mockReturnValue(held().promise);
@@ -166,8 +183,12 @@ describe('the reader’s own answers, remembered per account', () => {
       <Probe name="mine" use={() => useMyCollections(null)} />
       <Probe name="likes" use={() => useMyLikesQuery(null)} />
       <Probe name="prefs" use={() => useMyPreferences(null)} />
+      <Probe name="shared" use={() => useSharedWithMe(null)} />
     </>);
     await waitFor(() => expect(seen.prefs?.loaded).toBe(true));
+    await waitFor(() => expect(seen.shared?.loaded).toBe(true));
+    expect(seen.shared.data).toEqual([]);
+    expect(q.fetchSharedWithMe).not.toHaveBeenCalled();
     expect(seen.mine.data).toEqual([]);
     expect(seen.likes.data).toEqual([]);
     expect(seen.prefs.data).toEqual({ categories: [], budget_vnd: null, history_on: true });

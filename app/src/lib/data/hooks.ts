@@ -15,7 +15,7 @@ import { CACHE_CATALOG, cacheKey } from './cache';
 import { type Fetch, useFetch, usePersistedFetch } from './fetch';
 import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlacePhotos, fetchPlaces } from './places';
 import {
-  fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes, type LikeTally,
+  fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes, fetchSharedWithMe, type LikeTally,
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
@@ -176,6 +176,25 @@ export const useMyCollections = (ownerId: string | null | undefined) => {
     [ownerId],
   );
   return usePersistedFetch(mineKey('mine', ownerId), fetcher, [] as Collection[]);
+};
+
+/**
+ * The lists friends have shared with this reader — `fetchSharedWithMe`.
+ * Cached under its own key, beside `mine`, for the reason `mine` is: the
+ * tab draws them on the same first paint as the reader's own lists.
+ *
+ * Each screen that draws them holds its own copy (Collections and a
+ * list's page), where your own lists have one (`SaveProvider`). That
+ * single copy exists because the save sheet writes to your lists and
+ * must see every one; nothing writes to a shared list from this side, so
+ * a second copy can only be a reload behind, and both screens reload it.
+ */
+export const useSharedWithMe = (userId: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (userId ? fetchSharedWithMe(userId) : Promise.resolve([] as Collection[])),
+    [userId],
+  );
+  return usePersistedFetch(mineKey('shared', userId), fetcher, [] as Collection[]);
 };
 
 // Check-ins have no hook here — `lib/checkins` fetches them once for the
