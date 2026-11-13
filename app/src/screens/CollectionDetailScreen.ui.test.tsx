@@ -641,9 +641,10 @@ describe('your own list', () => {
     expect(cards).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
     // Under the handle — not under the title, and not at the foot any
     // more (owner, 13 Nov 2026). The count is at the end of the kinds'
-    // row, and the activity row under them holds nothing on a private list.
+    // row, and the activity row under them holds no heart on a private
+    // list — only the way to its activity, which is yours to open.
     expect(screen.getByTestId('collection-meta').textContent).toBe('Private');
-    expect(screen.getByTestId('collection-activity').textContent).toBe('');
+    expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
     expect(screen.getByTestId('collection-count').textContent).toBe('3');
     expect(screen.getByTestId('collection-visibility').textContent).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
@@ -920,7 +921,8 @@ describe('publishing', () => {
     state.mine = [collection({ is_public: true })];
     show();
     const row = screen.getByTestId('collection-activity');
-    expect([...row.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['heart-outline']);
+    expect([...row.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
+      .toEqual(['heart-outline', 'chevron-forward']);
     expect(row.contains(screen.getByRole('button', { name: 'Like' }))).toBe(true);
     expect(row.contains(screen.getByTestId('collection-visibility'))).toBe(false);
     expect(screen.getByTestId('collection-meta').contains(screen.getByTestId('collection-visibility'))).toBe(true);
@@ -2902,6 +2904,111 @@ describe('the introduction card', () => {
 // the foot. Somebody else's public list says its age alone; a friend's
 // lent to you says its age and "Shared with you"; an editorial list, with
 // no owner and so no true age, says nothing, and the line is not drawn.
+// "View activity ›" (owner, 13 Nov 2026): at the activity row's right
+// end, for the list's owner alone, opening who liked and copied it.
+describe('the way to the list’s activity', () => {
+  const link = () => screen.queryByTestId('collection-activity-link');
+
+  it('is drawn on your own list, public or private, at the row’s end after the heart', () => {
+    state.mine = [collection({ is_public: true })];
+    show();
+    const row = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
+    expect(row.lastElementChild).toBe(link());
+    expect(row.firstElementChild).toBe(screen.getByRole('button', { name: 'Like' }));
+    // Pushed to the end whatever stands before it.
+    expect(viewStyleOf(link()!).marginLeft).toBe('auto');
+    cleanup();
+    state.mine = [collection({ is_public: false })];
+    show();
+    expect(link()).toBeTruthy();
+  });
+
+  it('says View activity with a chevron, and in Vietnamese', () => {
+    state.mine = [collection()];
+    show();
+    expect(link()!.textContent).toBe('View activity');
+    expect(link()!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('chevron-forward');
+    expect(button('View activity')).toBe(link());
+    cleanup();
+    state.lang = 'vi';
+    show();
+    expect(link()!.textContent).toBe('Xem hoạt động');
+    expect(link()!.getAttribute('aria-label')).toBe('Xem hoạt động');
+  });
+
+  it('opens the list’s activity, by its slug', () => {
+    state.mine = [collection()];
+    const { raw } = show();
+    fireEvent.click(link()!);
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('CollectionActivity', { slug: 'old-quarter' });
+  });
+
+  // The link is the target and the heart keeps its own: a tap on one is
+  // never the other.
+  it('leaves the heart its own press', () => {
+    state.mine = [collection({ is_public: true })];
+    const { raw } = show();
+    fireEvent.click(button('Like'));
+    expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'c1', slug: 'old-quarter' });
+    expect(raw.navigate).not.toHaveBeenCalled();
+    fireEvent.click(link()!);
+    expect(spies.toggleLike).toHaveBeenCalledTimes(1);
+    // The row itself is not a button around the two.
+    expect(screen.getByTestId('collection-activity').getAttribute('role')).toBeNull();
+    expect((screen.getByTestId('collection-activity').firstElementChild as HTMLElement).getAttribute('role')).toBeNull();
+  });
+
+  it('is in the meta size and the byline’s grey, glyph and word alike', () => {
+    state.mine = [collection()];
+    show();
+    const word = within(link()!).getByText('View activity');
+    expect(textStyleOf(word)).toMatchObject({ fontSize: 15, color: colors.textSecondary });
+    const glyph = link()!.querySelector('[data-icon]')!;
+    expect([glyph.getAttribute('data-size'), glyph.getAttribute('data-color')]).toEqual(['15', String(colors.textSecondary)]);
+  });
+
+  // The ink, not the box, at the card's padding: the chevron's own
+  // empty edge is 160 of its 512 (Ionicons, read off the font).
+  it('hangs the chevron’s ink to the card’s padding', () => {
+    state.mine = [collection()];
+    show();
+    expect(viewStyleOf(link()!).marginRight).toBeCloseTo(-15 * 160 / 512, 5);
+  });
+
+  it('is `CHIP_H` drawn and 44 to the thumb, keeping the row its height', () => {
+    state.mine = [collection({ is_public: true })];
+    show();
+    const face = link()!.firstElementChild as HTMLElement;
+    expect(viewStyleOf(face).height).toBe(CHIP_H);
+    expect(propsWhere((p) => p.testID === 'collection-activity-link').hitSlop).toEqual(CHIP_SLOP);
+    expect(viewStyleOf(screen.getByTestId('collection-activity').firstElementChild as HTMLElement).height).toBe(CHIP_H);
+  });
+
+  it('is not drawn on somebody else’s list', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
+    expect(link()).toBeNull();
+    expect(screen.queryByText('View activity')).toBeNull();
+  });
+
+  it('is not drawn on a friend’s list lent to you, nor signed out', () => {
+    state.mine = [];
+    state.shared = [collection({ owner_id: 'lan', is_public: false })];
+    show();
+    expect(screen.getByText('Old Quarter eats')).toBeTruthy();
+    expect(link()).toBeNull();
+    cleanup();
+    state.uid = null;
+    state.shared = [];
+    state.cols = [collection({ is_public: true })];
+    show();
+    expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
+    expect(link()).toBeNull();
+  });
+});
+
 describe('the head of the card', () => {
   // Noon on the phone's own calendar, so the ages hold in either zone the
   // suite runs in.

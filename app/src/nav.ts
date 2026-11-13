@@ -115,6 +115,10 @@ export type RootStackParamList = {
    *  Google in place now rather than sending anyone here. */
   AddPlace: undefined;
   CollectionDetail: { slug: string };
+  /** Who liked and who copied one of your lists, all time — the card's
+   *  "View activity ›". By slug, like the page it opens from: the row is
+   *  already in memory among your own lists, so only the key travels. */
+  CollectionActivity: { slug: string };
   /** `from` is a collection the planner should start from, ticked on
    *  arrival — the detail screen's "Plan a trip". `at` is the moment of
    *  the tap, so a repeat tap on the same list is a new param. */
