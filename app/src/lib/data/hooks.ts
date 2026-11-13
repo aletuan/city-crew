@@ -19,6 +19,8 @@ import {
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
+import { fetchMyListShares } from './shares';
+import type { ShareRow } from '../shares';
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
 // collection members against the in-memory places list, so a mismatched
@@ -195,6 +197,28 @@ export const useSharedWithMe = (userId: string | null | undefined) => {
     [userId],
   );
   return usePersistedFetch(mineKey('shared', userId), fetcher, [] as Collection[]);
+};
+
+/**
+ * Who each of the owner's lists is shared with — `fetchMyListShares`, as
+ * rows; `lib/shares.sharesByList` files them by list.
+ *
+ * Remembered between launches beside `mine`, for the reason `mine` is:
+ * the tab's tiles and a list's page both draw a list's word from it on
+ * the first paint, and an answer a round trip late would draw every
+ * shared list as Private first and Friends a moment after — a lock that
+ * opens under the reader's eye on a list they have shared.
+ *
+ * One copy a screen, as `useSharedWithMe` has it: a list's page writes
+ * the shares and reloads its own copy, and the tab reloads its copy when
+ * it is focused again.
+ */
+export const useMyListShares = (ownerId: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (ownerId ? fetchMyListShares(ownerId) : Promise.resolve([] as ShareRow[])),
+    [ownerId],
+  );
+  return usePersistedFetch(mineKey('shares', ownerId), fetcher, [] as ShareRow[]);
 };
 
 // Check-ins have no hook here — `lib/checkins` fetches them once for the

@@ -25,9 +25,13 @@ import { collectionKinds, narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  blockUser, deleteCollection, membersOf, reorderCollection,
-  setCollectionPublic, unseenMembers, unseenSentence, useProfileByHandle, useSharedWithMe,
+  blockUser, deleteCollection, isNotShareable, membersOf, reorderCollection, setCollectionPublic, setShares,
+  unseenMembers, unseenSentence, useMyListShares, useProfileByHandle, useSharedWithMe, type Collection,
 } from '../lib/data';
+import { useCrew } from '../lib/crew';
+import { splitFriendships } from '../lib/friends';
+import { namesBriefly, sharesByList, type Visibility, visibilityOf } from '../lib/shares';
+import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
 import { applyDraft, moveItem, sameOrder } from '../lib/order';
@@ -118,6 +122,19 @@ function MenuRow({ icon, label, onPress, danger, first, checked, testID }: {
  * and stays.
  */
 const BANNER_MS = 3000;
+
+/** What the banner says: published, private again, or shared with this
+ *  many people (13 Nov 2026). A new object for each share, so a second
+ *  share in a row re-arms the clock as a new message. */
+type Said = 'public' | 'private' | { shared: number };
+
+/** The glyph at the card's foot and on the sheet's row, for each of the
+ *  three answers — see `visibility`. */
+const SEEN_GLYPH: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
+  public: 'globe-outline',
+  friends: 'people-outline',
+  private: 'lock-closed-outline',
+};
 
 /** The banner's arrival and departure: 250ms, eased both ways, fading as
  *  the row opens or closes so the list below moves rather than jumps.
@@ -419,7 +436,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   useEffect(() => {
     if (pulling && !loading) setPulling(false);
   }, [pulling, loading]);
-  const pull = () => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); };
+  const pull = () => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); listShares.reload(); };
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
   /*
@@ -445,6 +462,34 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * owner's to decide.
    */
   const sharedToMe = !!col && !owned && !isPublic;
+  /*
+   * Who your list is shared with (13 Nov 2026), and so which of three
+   * words its foot says — `lib/shares.visibilityOf`: Public, Friends (not
+   * public, shared with somebody) or Private.
+   *
+   * Read for every list you own at once, the read the Collections tab's
+   * tiles make too (`useMyListShares`), and remembered between launches,
+   * so a shared list opens saying Friends rather than Private-then-Friends.
+   * Somebody else's list asks nothing: who it is shared with is its
+   * owner's business, and the policy would show you only your own row.
+   *
+   * The crew is the picker's: accepted friends in the crew's own order,
+   * and the faces that name them on the sheet's Friends row.
+   */
+  const listShares = useMyListShares(owned ? uid : null);
+  const sharedWith = useMemo(
+    () => (col?.id ? sharesByList(listShares.data)[col.id] ?? [] : []),
+    [listShares.data, col?.id],
+  );
+  const seen = visibilityOf(isPublic, sharedWith.length);
+  const seenWords: Record<Visibility, string> = {
+    public: t('Public', 'Công khai', '公開', '公开', '公開'),
+    friends: t('Friends', 'Bạn bè', '友だち', '好友', '好友'),
+    private: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
+  };
+  const seenWord = seenWords[seen];
+  const { ships, blocks, people } = useCrew();
+  const friendIds = useMemo(() => (uid ? splitFriendships(ships.data, uid).friends : []), [ships.data, uid]);
   /**
    * The curator's face, for a list somebody else made.
    *
@@ -730,28 +775,110 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * leaves nothing in `mine`, which returns everything you own either
    * way, but it enters and leaves the public query, and that query is
    * what the other section is drawn from.
+   *
+   * ── three answers, and what each does to the other two ──
+   *
+   * Since 13 Nov 2026 a list can also be shared with chosen friends, and
+   * the three answers are written to two places — `is_public` and the
+   * share rows — so each says what it does to the column it is not named
+   * after (owner's calls, the same day):
+   *
+   * - Public keeps the shares. The migration's rule: a list that is
+   *   public and shared is simply public, and its shares wait, applying
+   *   again if it goes private. The foot says Public.
+   * - Friends on a public list makes it private as well — a shared list
+   *   is a private list with a guest list — and the picker's subtitle
+   *   says so before the press (`saveShares`).
+   * - Private takes every share off, the waiting ones behind a public
+   *   list included. It is the owner's "only me", and leaving the shares
+   *   would make it Friends the moment it stopped being public — the
+   *   answer they did not choose.
    */
-  const [banner, setBanner] = useState<null | 'public' | 'private'>(null);
+  const [banner, setBanner] = useState<null | Said>(null);
   const [publishing, setPublishing] = useState(false);
   // No check for places under review here: a list goes public with them
   // in, and they stay out of everyone else's sight until they are live
   // (`*_lists_stay_public_around_unlive_places.sql`). The Public row says
   // how many (see `whoSeesRows`).
-  const setPublic = (next: boolean) => {
+  const publish = () => {
     if (!col || publishing) return;
     setPublishing(true);
-    setCollectionPublic(col.slug, next)
+    setCollectionPublic(col.slug, true)
       .then(() => {
         mine.reload();
         cols.reload();
-        showBanner(next ? 'public' : 'private');
+        showBanner('public');
       })
       .catch((e: Error) => Alert.alert(
-        next
-          ? t('Could not publish', 'Không công khai được', '公開できませんでした', '无法公开', '無法公開')
-          : t('Could not make private', 'Không chuyển riêng tư được', '非公開にできませんでした', '无法设为私密', '無法設為私密'),
+        t('Could not publish', 'Không công khai được', '公開できませんでした', '无法公开', '無法公開'),
         e.message,
       ))
+      .finally(() => setPublishing(false));
+  };
+  const cannotMakePrivate = () => t('Could not make private', 'Không chuyển riêng tư được', '非公開にできませんでした', '无法设为私密', '無法設為私密');
+  /* Only you: the shares off first, then the flag. In that order so that
+     no moment in between shows the list to more people than before —
+     the other order would, for a public list with shares waiting, hand
+     it to those friends the instant it went private. `setShares` asks
+     nothing when there is nobody to take off.
+
+     The id is there whenever there is a share to take off: the shares
+     are filed by it (`sharedWith`). */
+  const makePrivate = () => {
+    if (!col || publishing) return;
+    const wasPublic = isPublic;
+    setPublishing(true);
+    setShares(col.id as string, [], sharedWith)
+      .then(() => (wasPublic ? setCollectionPublic(col.slug, false) : undefined))
+      .then(() => {
+        listShares.reload();
+        if (wasPublic) { mine.reload(); cols.reload(); }
+        showBanner('private');
+      })
+      .catch((e: Error) => Alert.alert(cannotMakePrivate(), e.message))
+      .finally(() => setPublishing(false));
+  };
+  /* The picker's press: share with the ticked, take it from the
+     unticked, and — for a public list being shared — make it private,
+     after the shares, for the reason `setShares` gives. Nobody ticked is
+     the picker's Keep private, which only a list that is not public
+     offers (`shareCta`), so it never unpublishes.
+
+     The catalogs reload only when the flag moved: shares are not in
+     them, and the public query is the heaviest read the app makes.
+
+     A refusal of a friend is the crew having moved on their phone — an
+     unfriend or a block since the crew was read. Nothing was written
+     (the insert fails whole, and the removal comes after it), so the
+     sheet stays open with its ticks, the crew is read again so the name
+     goes, and the alert says why rather than relaying a policy. */
+  const [picking, setPicking] = useState(false);
+  const saveShares = (list: Collection, add: string[], remove: string[]) => {
+    const n = sharedWith.length + add.length - remove.length;
+    const unpublish = n > 0 && isPublic;
+    setPublishing(true);
+    setShares(list.id as string, add, remove)
+      .then(() => (unpublish ? setCollectionPublic(list.slug, false) : undefined))
+      .then(() => {
+        listShares.reload();
+        if (unpublish) { mine.reload(); cols.reload(); }
+        setPicking(false);
+        showBanner(n > 0 ? { shared: n } : 'private');
+      })
+      .catch((e: Error) => {
+        if (isNotShareable(e)) ships.reload();
+        Alert.alert(
+          n > 0 ? t('Could not share', 'Không chia sẻ được', '共有できませんでした', '无法分享', '無法分享') : cannotMakePrivate(),
+          isNotShareable(e)
+            ? t(
+              'Someone you ticked is no longer in your crew, so nothing was shared. Try again without them.',
+              'Có người bạn chọn không còn trong nhóm, nên chưa chia sẻ gì cả. Hãy thử lại không có họ.',
+              '選んだ人の中に、もう仲間ではない人がいるため共有されませんでした。その人を外してもう一度お試しください。',
+              '你勾选的人中有人已不在你的好友里，所以没有分享。请去掉对方后再试一次。', '你勾選的人中有人已不在你的好友裡，所以沒有分享。請去掉對方後再試一次。',
+            )
+            : e.message,
+        );
+      })
       .finally(() => setPublishing(false));
   };
 
@@ -769,10 +896,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      Reduce Motion, which asks for exactly that jump instead. */
   const still = useReducedMotion();
   const ease = () => { if (!still) LayoutAnimation.configureNext(BANNER_EASE); };
-  const bannerText = (which: 'public' | 'private') => which === 'public'
+  const bannerText = (which: Said) => which === 'public'
     ? t('This collection is now public', 'Bộ sưu tập này giờ đã công khai', 'このコレクションは公開されました', '这个合集已公开', '這個合集已公開')
-    : t('This collection is private again', 'Bộ sưu tập này đã riêng tư trở lại', 'このコレクションは非公開に戻りました', '这个合集已改回私密', '這個合集已改回私密');
-  const showBanner = (which: 'public' | 'private') => {
+    : which === 'private'
+      ? t('This collection is private again', 'Bộ sưu tập này đã riêng tư trở lại', 'このコレクションは非公開に戻りました', '这个合集已改回私密', '這個合集已改回私密')
+      : t(
+        `Shared with ${which.shared} ${which.shared === 1 ? 'person' : 'people'}`,
+        `Đã chia sẻ với ${which.shared} người`,
+        `${which.shared}人と共有しました`,
+        `已与 ${which.shared} 人分享`, `已與 ${which.shared} 人分享`,
+      );
+  const showBanner = (which: Said) => {
     ease();
     setBanner(which);
     AccessibilityInfo.announceForAccessibility(bannerText(which));
@@ -965,11 +1099,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         'このコレクションは公開中ですが、送れるリンクはまだありません。共有機能は近日公開予定です。',
         '这个清单已公开，但还没有可发送的链接。分享功能即将推出。', '這個清單已公開，但還沒有可傳送的連結。分享功能即將推出。',
       )
+      // The word the foot says, Private or Friends: a list shared with
+      // friends is private too, and the sentence points at the control
+      // by what it reads.
       : t(
-        'This list is private. Tap Private at the foot of its card to make it public — share links are on the way.',
-        'Bộ sưu tập này đang riêng tư. Bấm Riêng tư ở cuối thẻ giới thiệu để công khai — liên kết chia sẻ sẽ sớm có.',
-        'このコレクションは非公開です。紹介カードの下の「非公開」から公開できます。共有リンクは近日公開予定です。',
-        '这个清单是私密的。点按卡片底部的“私密”即可公开 — 分享链接即将推出。', '這個清單是私密的。點按卡片底部的「私密」即可公開 — 分享連結即將推出。',
+        `This list is private. Tap ${seenWord} at the foot of its card to make it public — share links are on the way.`,
+        `Bộ sưu tập này đang riêng tư. Bấm ${seenWord} ở cuối thẻ giới thiệu để công khai — liên kết chia sẻ sẽ sớm có.`,
+        `このコレクションは非公開です。紹介カードの下の「${seenWord}」から公開できます。共有リンクは近日公開予定です。`,
+        `这个清单是私密的。点按卡片底部的“${seenWord}”即可公开 — 分享链接即将推出。`, `這個清單是私密的。點按卡片底部的「${seenWord}」即可公開 — 分享連結即將推出。`,
       ),
   );
 
@@ -1104,11 +1241,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      the owner took it off again: the kinds above it had just lost their
      pills, and one boxed word under a row of bare ones read as the odd
      one out. The chevron is what says it opens something. The word
-     stays: the reference drew the glyph alone, and a third state (a
-     list shared with chosen friends) is coming whose glyph nobody could
-     guess. VoiceOver hears the word either way.
+     stays: the reference drew the glyph alone, and the third state is
+     here now — Friends, a list shared with chosen friends (13 Nov 2026)
+     — whose two heads (`people-outline`) nobody could read as "shared
+     with some friends" unaided. VoiceOver hears the word either way.
 
-     Both states wear one grey (owner, 12 Nov 2026). Public was the
+     Every state wears one grey (owner, 12 Nov 2026). Public was the
      app's green, semibold, as "the state worth checking". It read as
      the loudest thing on the card after the title, for a setting. The
      green also says "fine" everywhere else ("open now", a success
@@ -1139,25 +1277,27 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       )}
       testID="collection-visibility"
     >
-      <Glyph
-        name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
-        size={15}
-        color={colors.textSecondary}
-      />
-      <Text style={s.visibilityWord}>
-        {isPublic ? t('Public', 'Công khai', '公開', '公开', '公開') : t('Private', 'Riêng tư', '非公開', '私密', '私密')}
-      </Text>
+      <Glyph name={SEEN_GLYPH[seen]} size={15} color={colors.textSecondary} />
+      <Text style={s.visibilityWord}>{seenWord}</Text>
       <Glyph name="chevron-down" size={13} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
 
-  /* The two answers, each with what it means where the reader will meet
-     it. Choosing is doing: the sheet closes and the banner says what
-     happened and holds the Undo, as the menu row's did, so there is no
-     confirmation here either (see `setPublic`). The answer already true
-     carries the tick, and choosing it again changes nothing — a write
-     that re-saves the same boolean would raise a banner announcing a
-     change that did not happen.
+  /* The three answers, each with what it means where the reader will meet
+     it. Choosing Public or Private is doing: the sheet closes and the
+     banner says what happened, so there is no confirmation here either
+     (see `publish`). The answer already true carries the tick, and
+     choosing it again changes nothing — a write that re-saves the same
+     boolean would raise a banner announcing a change that did not
+     happen.
+
+     Friends is not a toggle: it opens the picker in this sheet's place
+     (`ShareSheet`), because choosing Friends is choosing which. It opens
+     it ticked or not — the tick here says only that the list is shared
+     now — and the picker's own button is the press that writes. Its
+     sentence names who has the list (`namesBriefly`), since this row is
+     where an owner looks to check, and says what the answer means while
+     nobody has it yet.
 
      No Cancel row. No other sheet in the app has one: the backdrop and
      the grabber are the way out, and the backdrop is a control VoiceOver
@@ -1169,7 +1309,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      a place is missing. Until 23 Oct 2026 the row was dimmed instead and
      the list could not go public at all — and one already public went
      private, unannounced, the moment it gained such a place. */
-  const choose = (next: boolean) => () => { if (next !== isPublic) setPublic(next); };
+  const choose = (next: 'public' | 'private') => () => {
+    if (next === seen) return;
+    if (next === 'public') publish();
+    else makePrivate();
+  };
+  const nameOf = (id: string) => {
+    const p = people[id];
+    return p?.full_name || (p?.handle ? `@${p.handle}` : t('Someone', 'Ai đó', '誰か', '某人', '某人'));
+  };
   const whoSeesRows: SheetAction[] = [
     {
       key: 'public',
@@ -1178,16 +1326,26 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       desc: someUnseen
         ? unseenSentence(unseen, t)
         : t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます', '会显示在探索和搜索中', '會顯示在探索和搜尋中'),
-      selected: isPublic,
-      onPress: choose(true),
+      selected: seen === 'public',
+      onPress: choose('public'),
+    },
+    {
+      key: 'friends',
+      icon: SEEN_GLYPH.friends,
+      title: seenWords.friends,
+      desc: sharedWith.length
+        ? namesBriefly(sharedWith.map(nameOf), t)
+        : t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友だちだけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見'),
+      selected: seen === 'friends',
+      onPress: () => setPicking(true),
     },
     {
       key: 'private',
       icon: 'lock-closed-outline',
       title: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
       desc: t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます', '仅你可见', '僅你可見'),
-      selected: !isPublic,
-      onPress: choose(false),
+      selected: seen === 'private',
+      onPress: choose('private'),
     },
   ];
 
@@ -1718,9 +1876,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           testID="collection-banner"
         >
           <Glyph
-            name={banner === 'public' ? 'checkmark-circle' : 'lock-closed'}
+            name={banner === 'public' ? 'checkmark-circle' : banner === 'private' ? 'lock-closed' : 'people'}
             size={19}
-            color={banner === 'public' ? colors.ok : colors.textSecondary}
+            color={banner === 'private' ? colors.textSecondary : colors.ok}
           />
           <Text style={s.bannerText} numberOfLines={3}>{bannerText(banner)}</Text>
         </Pressable>
@@ -1996,13 +2154,30 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         actions={curatorActions}
         onClose={() => setAboutCurator(false)}
       />
+      {col && owned ? (
+        <ShareSheet
+          open={picking}
+          isPublic={isPublic}
+          friendIds={friendIds}
+          blocked={blocks.data}
+          people={people}
+          shared={sharedWith}
+          sending={publishing}
+          onClose={() => setPicking(false)}
+          onSave={(add, remove) => saveShares(col, add, remove)}
+          // The Crew screen is in the Profile tab's stack, so the jump is
+          // across tabs; `initial: false` keeps Profile's home beneath it
+          // (see `goTo`).
+          onCrew={() => { setPicking(false); goTo('Profile', { screen: 'Crew', initial: false }); }}
+        />
+      ) : null}
       <ActionSheet
         visible={whoSees}
         onClose={() => setWhoSees(false)}
         actions={whoSeesRows}
         header={
           <Text style={s.sheetTitle} accessibilityRole="header">
-            {t('Who can see this list?', 'Ai có thể xem bộ sưu tập này?', 'このリストを見られるのは？', '谁可以看到这个清单？', '誰可以看到這個清單？')}
+            {t('Who can see your list?', 'Những ai xem được bộ sưu tập của bạn?', 'あなたのリストを見られるのは？', '谁能看到你的清单？', '誰能看到你的清單？')}
           </Text>
         }
       />

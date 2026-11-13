@@ -145,6 +145,9 @@ describe('an answered invitation', () => {
     fireEvent.click(screen.getByText('Lan Phương'));
     expect(screen.getByText('Send invites')).toBeTruthy();
     expect(onSend).not.toHaveBeenCalled();
+    // Still ticked, as said to assistive tech — not quietly cleared under
+    // a badge that hides the tick.
+    expect(screen.getByTestId('invite-friend-0').getAttribute('aria-checked')).toBe('true');
   });
 });
 

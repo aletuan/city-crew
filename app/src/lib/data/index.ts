@@ -41,4 +41,5 @@ export * from './guide';
 export * from './gallery';
 export * from './checkins';
 export * from './invites';
+export * from './shares';
 export * from './hooks';

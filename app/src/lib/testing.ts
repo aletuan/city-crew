@@ -80,6 +80,11 @@ export type Asked = {
    *  write, so a target that drifted from the table's key is a guide
    *  whose every save fails (`photo_scores`, keyed per scorer). */
   onConflict?: string;
+  /** `ignoreDuplicates` on an upsert: ON CONFLICT DO NOTHING rather than
+   *  DO UPDATE. The difference is a policy the table may not have — a
+   *  table with no update policy refuses the second kind outright — so a
+   *  test of a write into one wants to see which was asked. */
+  ignoreDuplicates?: boolean;
   /** The row cap, when one was asked for. A suggestion list that quietly
    *  stopped capping itself is a dropdown that grows without limit. */
   limit?: number;
@@ -121,9 +126,10 @@ export function fakeSupabase() {
       // Recorded as an insert carrying a flag rather than as its own verb:
       // what a test wants to assert about an upsert is the row, and every
       // existing assertion for a write already reads `op: 'insert'`.
-      upsert: (row: unknown, opts?: { onConflict?: string }) => {
+      upsert: (row: unknown, opts?: { onConflict?: string; ignoreDuplicates?: boolean }) => {
         asked.op = 'insert'; asked.payload = row; asked.upsert = true;
         if (opts?.onConflict) asked.onConflict = opts.onConflict;
+        if (opts?.ignoreDuplicates) asked.ignoreDuplicates = true;
         return b;
       },
       delete: () => { asked.op = 'delete'; return b; },

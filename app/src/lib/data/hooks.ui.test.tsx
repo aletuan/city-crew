@@ -27,6 +27,7 @@ const q = vi.hoisted(() => ({
   fetchSharedWithMe: vi.fn(),
   fetchMyLikes: vi.fn(),
   fetchPreferences: vi.fn(),
+  fetchMyListShares: vi.fn(),
 }));
 vi.mock('../city', () => {
   const m = { useCity: () => ({ city: { id: 'hcmc' } }) };
@@ -45,8 +46,11 @@ vi.mock('./preferences', async () => ({
   NO_PREFERENCES: { categories: [], budget_vnd: null, history_on: true },
 }));
 vi.mock('./people', () => ({ fetchCuratorAvatars: vi.fn(), profileByHandle: vi.fn() }));
+vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
 
-import { useMyCollections, useMyLikesQuery, useMyPreferences, usePlacesQuery, useSharedWithMe } from './hooks';
+import {
+  useMyCollections, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+} from './hooks';
 
 /** A request the test answers when it chooses — or never. */
 function held<T>() {
@@ -153,6 +157,21 @@ describe('the reader’s own answers, remembered per account', () => {
     expect(await AsyncStorage.getItem(cacheKey('shared', 'all', 'u1'))).toContain('from-minh');
   });
 
+  // The owner's shares, under a key of their own: a shared list drawn as
+  // Private for a round trip and Friends after it is a lock opening on a
+  // list the owner already shared.
+  it('opens with the shares on their lists from the last launch, under their own key', async () => {
+    const row = (user_id: string) => ({ collection_id: 'c1', user_id, created_at: 'x' });
+    await AsyncStorage.setItem(cacheKey('shares', 'all', 'u1'), packCache([row('lan')], Date.now()));
+    const net = held<unknown[]>();
+    q.fetchMyListShares.mockReturnValue(net.promise);
+    render(<Probe name="shares" use={() => useMyListShares('u1')} />);
+    await waitFor(() => expect(seen.shares.data).toEqual([row('lan')]));
+    expect(q.fetchMyListShares).toHaveBeenCalledWith('u1');
+    await act(async () => { net.answer([row('minh')]); });
+    expect(seen.shares.data).toEqual([row('minh')]);
+  });
+
   it('opens with their likes from the last launch', async () => {
     await AsyncStorage.setItem(cacheKey('likes', 'all', 'u1'), packCache(['c-1', 'c-2'], Date.now()));
     q.fetchMyLikes.mockReturnValue(held().promise);
@@ -184,11 +203,15 @@ describe('the reader’s own answers, remembered per account', () => {
       <Probe name="likes" use={() => useMyLikesQuery(null)} />
       <Probe name="prefs" use={() => useMyPreferences(null)} />
       <Probe name="shared" use={() => useSharedWithMe(null)} />
+      <Probe name="shares" use={() => useMyListShares(null)} />
     </>);
     await waitFor(() => expect(seen.prefs?.loaded).toBe(true));
     await waitFor(() => expect(seen.shared?.loaded).toBe(true));
     expect(seen.shared.data).toEqual([]);
     expect(q.fetchSharedWithMe).not.toHaveBeenCalled();
+    await waitFor(() => expect(seen.shares?.loaded).toBe(true));
+    expect(seen.shares.data).toEqual([]);
+    expect(q.fetchMyListShares).not.toHaveBeenCalled();
     expect(seen.mine.data).toEqual([]);
     expect(seen.likes.data).toEqual([]);
     expect(seen.prefs.data).toEqual({ categories: [], budget_vnd: null, history_on: true });

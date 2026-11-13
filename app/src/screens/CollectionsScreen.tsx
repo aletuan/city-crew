@@ -30,7 +30,10 @@ import {
 import ActionSheet from '../components/ActionSheet';
 import { CityRow } from '../components/CityRow';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
-import { Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf, useSharedWithMe } from '../lib/data';
+import {
+  Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf, useMyListShares, useSharedWithMe,
+} from '../lib/data';
+import { sharesByList, visibilityOf as seenOf } from '../lib/shares';
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
@@ -340,6 +343,11 @@ export default function CollectionsScreen({ navigation, route }: {
   // Friends' lists shared with the reader (12 Nov 2026), drawn on Yours
   // under their own heading, after the reader's own — see `sections`.
   const shared = useSharedWithMe(session?.user?.id);
+  // And who each list of yours is shared with (13 Nov 2026), for the one
+  // mark a shared tile wears: one read for all your lists, the read a
+  // list's page makes too (`useMyListShares`), filed by list here.
+  const myShares = useMyListShares(session?.user?.id);
+  const sharesOf = useMemo(() => sharesByList(myShares.data), [myShares.data]);
   const { askToSignIn } = useSaveActions();
   // One heart on every public list, yours included (owner, 17 Oct 2026):
   // a curator may like their own list, and the shelves rank by everyone's
@@ -420,12 +428,17 @@ export default function CollectionsScreen({ navigation, route }: {
   //
   // The lists shared with you as well: a friend shares one from their
   // phone, and coming back to the tab is when you would look for it.
+  //
+  // And who your lists are shared with: a page of one of them is where
+  // that changes, and coming back here from it is when the tile should
+  // say so.
   useFocusEffect(useCallback(() => {
     mine.reload();
     shared.reload();
+    myShares.reload();
   // The reloads are stable; each `Fetch` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mine.reload, shared.reload]));
+  }, [mine.reload, shared.reload, myShares.reload]));
 
   const me = session?.user?.id;
   // Read once a render: a list that turns eight days old while the tab is
@@ -728,11 +741,17 @@ export default function CollectionsScreen({ navigation, route }: {
   );
   const wordsCount = useMemo(() => siftCollections(shelf, { query: words, city: cityAsked, kind: null }).length, [shelf, words, cityAsked]);
   const placesOf = (n: number) => placesCount(n, t);
-  // Who can see a list of yours, in words, for VoiceOver: on screen the
-  // globe or the lock says it, and a glyph is not read out.
-  const visibilityOf = (c: { is_public?: boolean | null }) => (c.is_public
-    ? t('Public', 'Công khai', '公開', '公开', '公開')
-    : t('Private', 'Riêng tư', '非公開', '私密', '私密'));
+  // Who can see a list of yours: Public, Friends or Private
+  // (`lib/shares.visibilityOf`), from its flag and its shares.
+  const seenFor = (c: { id?: string; is_public?: boolean | null }) =>
+    seenOf(!!c.is_public, sharesOf[c.id ?? '']?.length ?? 0);
+  // The same, in words, for VoiceOver: on screen the mark says it, and a
+  // glyph is not read out.
+  const visibilityOf = (c: { id?: string; is_public?: boolean | null }) => ({
+    public: t('Public', 'Công khai', '公開', '公开', '公開'),
+    friends: t('Friends', 'Bạn bè', '友だち', '好友', '好友'),
+    private: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
+  })[seenFor(c)];
   const reasonFor = (slug: string) => shelfReason(hitBy.get(slug), chosen, t);
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
@@ -1336,11 +1355,26 @@ export default function CollectionsScreen({ navigation, route }: {
                             marks on a photograph are one kind of thing:
                             a bare glyph under the scrim's 0.22 top was
                             lost on a white sky. VoiceOver still hears
-                            Public or Private in the tile's name. */}
+                            Public or Private in the tile's name.
+
+                            A private list shared with friends wears two
+                            heads in the same disc instead (13 Nov 2026):
+                            still the exception — it is not public — but
+                            not "only me" either, and a padlock on a list
+                            three friends are reading would be the tile
+                            saying the opposite of the list's own page.
+                            Filled, as the padlock is, to be one family
+                            of marks; the outline is the page's control. */}
                         {item.own && !c.is_public ? (
-                          <View style={s.gcardLock} testID="collection-tile-lock">
-                            <Glyph name="lock-closed" size={12} color={colors.text} />
-                          </View>
+                          seenFor(c) === 'friends' ? (
+                            <View style={s.gcardLock} testID="collection-tile-shared">
+                              <Glyph name="people" size={12} color={colors.text} />
+                            </View>
+                          ) : (
+                            <View style={s.gcardLock} testID="collection-tile-lock">
+                              <Glyph name="lock-closed" size={12} color={colors.text} />
+                            </View>
+                          )
                         ) : null}
                         <View style={s.gcardText}>
                           <Text style={s.gcardTitle} numberOfLines={1}>
@@ -1508,7 +1542,7 @@ export default function CollectionsScreen({ navigation, route }: {
             // its places from it, so a place the desk approved since the
             // last load stayed missing from every list holding it until
             // the catalog happened to revalidate on its own.
-            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); }}
+            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); myShares.reload(); }}
             refreshing={pulling}
           />
         )}
