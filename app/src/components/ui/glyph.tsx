@@ -19,6 +19,19 @@
 // a trip card is the calendar on the tab. Every other glyph is Ionicons,
 // unchanged, and this component is a passthrough for it.
 //
+// ── the star (owner, 14 Nov 2026) ──
+//
+// A sixth mark since: the star, outline and solid. Ionicons' star ends
+// its five arms in points and its five notches in corners; the owner's
+// reference was Lucide's, whose round joins soften both, the family the
+// tab bar was chosen for. Routed by name like the five, so every star in
+// the app changes at once — a place's rating, a stop's, a plan option's,
+// the cover mark on a photo, the guide's role, the sort by rating, and
+// Midnight's mark on the look sheet — and none is left pointed beside a
+// round one. Solid, a rating's star is the outline filled with its own
+// ink, as the saved bookmark is: the solid star here is a fact (a score,
+// a cover chosen), not a dot of decoration, so it keeps its fill.
+//
 // ── the line ──
 //
 // `LINE_STROKE`, 1.5 on Lucide's 24 grid, is Ionicons' own weight: its
@@ -43,6 +56,7 @@ import Bookmark from 'lucide-react-native/icons/bookmark';
 import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import Compass from 'lucide-react-native/icons/compass';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
+import Star from 'lucide-react-native/icons/star';
 import User from 'lucide-react-native/icons/user';
 
 type IonName = keyof typeof Ionicons.glyphMap;
@@ -66,6 +80,8 @@ const LINE: Partial<Record<GlyphName, [LucideIcon, boolean]>> = {
   'bookmark-outline': [Bookmark, false],
   person: [User, false],
   'person-outline': [User, false],
+  star: [Star, true],
+  'star-outline': [Star, false],
 };
 
 /** True when `name` is drawn from the line set rather than Ionicons. */
