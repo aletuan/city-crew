@@ -132,7 +132,7 @@ const icon = ({ name, color, size, style }: { name?: string; color?: string; siz
   React.createElement('span', { 'data-icon': name, 'data-color': color, 'data-size': size, style });
 vi.mock('@expo/vector-icons/Ionicons', () => ({ default: icon }));
 
-// The five marks `Glyph` draws from Lucide (see components/ui/glyph.tsx),
+// The marks `Glyph` draws from Lucide (see components/ui/glyph.tsx),
 // each mocked at its own deep path for the reason Ionicons is. A mark
 // answers to the Ionicons name the app asks for — a filled bookmark is
 // `bookmark`, the outline `bookmark-outline` — so a test reads one
@@ -157,6 +157,7 @@ vi.mock('lucide-react-native/icons/calendar-days', () => line('calendar-outline'
 vi.mock('lucide-react-native/icons/compass', () => line('compass-outline'));
 vi.mock('lucide-react-native/icons/map-pinned', () => line('places'));
 vi.mock('lucide-react-native/icons/user', () => line('person-outline'));
+vi.mock('lucide-react-native/icons/star', () => line('star-outline', 'star'));
 
 // These must return promises, not undefined. `fireHaptic` calls
 // `.catch()` on what it gets back, so a stub that answered `undefined`

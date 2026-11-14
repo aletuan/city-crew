@@ -450,6 +450,18 @@ describe('Glyph', () => {
     }
   });
 
+  // The star from the line set too (owner, 14 Nov 2026): round joins at
+  // its points, solid filled with its own ink, the outline left open.
+  it('draws the star from the line set, filled when solid and open when outlined', () => {
+    const { unmount } = render(<Glyph name="star" size={17} color="#c00" />);
+    expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family'), drawn().getAttribute('data-stroke')])
+      .toEqual(['star', 'lucide', String(LINE_STROKE)]);
+    unmount();
+    render(<Glyph name="star-outline" size={17} color="#c00" />);
+    expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual(['star-outline', 'lucide']);
+    expect([isLineGlyph('star'), isLineGlyph('star-outline'), isLineGlyph('star-half')]).toEqual([true, true, false]);
+  });
+
   it('passes every other name, and none, to Ionicons as it was', () => {
     const { unmount } = render(<Glyph name="chevron-back" size={22} color="#000" strokeWidth={9} />);
     expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual(['chevron-back', null]);
