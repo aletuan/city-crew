@@ -102,20 +102,34 @@ const CARD_STOPS = 3;
 const ROW_H = 30;
 const ROW_GAP = 6;
 
-/** The wizard's answer, worn as a badge, its glyph in the badge's own
- *  accent ink. It wore the companion's fixed hue until 3 Nov 2026, when
- *  the planner's choosers went to one ink (see `Tile`): a blue figure or
- *  a pink heart here would be the one place that answer still wore it. */
+/** The wizard's answer — who the day is with — as the date beside it is
+ *  set: its glyph in the third grey and its word in the date's own caption
+ *  and grey, on nothing (owner, 13 Nov 2026). It was a badge until then,
+ *  accent fill, accent rule, accent semibold: on a card whose title is the
+ *  point, the loudest thing after it, for a fact nobody presses. The
+ *  stops' ward column already stands at this right edge in grey, so the
+ *  answer now reads as one more line of that column.
+ *
+ *  The answer's own word and glyph, kept: "Hai người" is the couple, and
+ *  its heart is what says so. Rejected with it, from a proposal that read
+ *  the label as a headcount: "2 người", which "Bạn bè" and "Gia đình"
+ *  have no figure for and two friends would also be; and the bare word,
+ *  which loses the heart. Rejected as well: the answer after the date as
+ *  "date · answer", two glyphs on one line and a "·" left at the start
+ *  of a wrapped one under large type.
+ *
+ *  The glyph wore the companion's fixed hue until 3 Nov 2026, then the
+ *  badge's accent; one ink across the planner's answers either way. */
 function CompanyChip({ company }: { company: string | null }) {
   const { t } = useI18n();
   const c = COMPANY.find((x) => x.key === company);
   if (!c) return null;
   return (
-    <View style={s.badge}>
+    <View style={s.company} testID="trip-company">
       {c.icon ? (
-        <Glyph name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={colors.accent} />
+        <Glyph name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={colors.textTertiary} />
       ) : null}
-      <Text style={s.badgeText}>{t(c.en, c.vi, c.ja, c.zh, c.hant)}</Text>
+      <Text style={s.companyText}>{t(c.en, c.vi, c.ja, c.zh, c.hant)}</Text>
     </View>
   );
 }
@@ -682,12 +696,9 @@ const s = StyleSheet.create({
   pad: { padding: space.cardPadding },
   title: { color: colors.text, ...type.cardTitle },
 
-  badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 11, paddingVertical: 6, borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
-  },
-  badgeText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
+  // The badge's glyph-to-word 5, kept; no box around them.
+  company: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  companyText: { ...CAPTION, color: colors.textSecondary },
 
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 6, rowGap: 6, marginTop: 8 },
   meta: { ...CAPTION, color: colors.textSecondary, flexShrink: 1, marginRight: 'auto' },
