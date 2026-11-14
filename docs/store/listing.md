@@ -926,6 +926,52 @@ thay hẳn bởi #1284), #1285 (dữ liệu, server), phần CI của #1288, doc
 • 新規インストールはスレートのテーマで始まります。
 ```
 
+## Release notes v1.0.16 (What's New)
+
+Viết từ các PR merge sau tag v1.0.15: #1290 → #1349. 1.0.15 đã được duyệt nên
+train của nó đã đóng; app.json nâng lên 1.0.16 ở PR này. Không có native mới:
+expo 58.0.25 và expo-location 58.0.22 là bản vá; `lucide-react-native` vẽ qua
+`react-native-svg` đã có trong binary. `runtimeVersion` vẫn là exposdk:58.0.0,
+nên mọi thay đổi dưới đây đã tới máy 1.0.x qua EAS Update — bản này đưa bản vá
+Expo lên binary và để người cài mới có ngay code mới. Năm migration
+(collection_shares, likes_kept_off_public, activity_rows_carry_face,
+collection_stats, collection_use_counts) đã có trên production trước khi
+nộp. Không nhắc ở đây: chỉnh khoảng cách, cỡ chữ, màu (#1291–#1312,
+#1316–#1344 phần giao diện), docs, test.
+
+### EN
+
+```
+• Share a private collection with chosen friends. "Who can see your list?" now has Public, Friends and Private. Lists friends share with you appear under "Shared with you".
+• See who liked and copied your collection, with Statistics: views, likes, copies and trips, all time and for the last 7 days.
+• Likes stay on a collection when it goes private.
+• A plan started from a collection now uses places from that collection.
+• Community collections are ordered by more than likes: how often they are used, how complete they are, and how new.
+• New icons, a simpler place page, and pull to refresh on more screens.
+```
+
+### VI
+
+```
+• Chia sẻ bộ sưu tập riêng tư với những bạn bè bạn chọn. "Những ai xem được bộ sưu tập của bạn?" giờ có Công khai, Bạn bè và Riêng tư. Bộ sưu tập bạn bè chia sẻ nằm ở mục "Được chia sẻ với bạn".
+• Xem ai đã thích và sao chép bộ sưu tập của bạn, kèm Thống kê: lượt xem, lượt thích, bản sao và chuyến đi, tổng cộng và trong 7 ngày qua.
+• Lượt thích được giữ lại khi bộ sưu tập chuyển sang riêng tư.
+• Kế hoạch bắt đầu từ một bộ sưu tập giờ lấy địa điểm từ chính bộ sưu tập đó.
+• Bộ sưu tập cộng đồng được xếp không chỉ theo lượt thích, mà còn theo mức được dùng, độ đầy đủ và độ mới.
+• Biểu tượng mới, trang địa điểm gọn hơn, và kéo xuống để tải lại ở nhiều màn hình hơn.
+```
+
+### JA
+
+```
+• 非公開のコレクションを、選んだ友だちと共有できます。「あなたのリストを見られるのは？」に公開・友だち・非公開の3つを用意しました。友だちから共有されたリストは「あなたと共有」に表示されます。
+• コレクションに「いいね」やコピーをした人を確認できます。統計では閲覧数・いいね・コピー・旅程を、累計と過去7日間で表示します。
+• コレクションを非公開にしても「いいね」は残ります。
+• コレクションから始めたプランは、そのコレクションのスポットを使います。
+• 「みんなの」のコレクションは、いいねの数だけでなく、使われた回数・内容の充実度・新しさでも並びます。
+• 新しいアイコン、すっきりしたスポットページ、より多くの画面で引っ張って更新。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
