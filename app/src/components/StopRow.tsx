@@ -51,7 +51,7 @@ import { RailColumn } from './rail';
 import { PressableScale } from './ui';
 
 export default function StopRow({
-  time, here = false, first, last, land, name, gone, meta, why, whyLang, whyLines, nameLines, leg,
+  time, here = false, first, last, land, name, gone, source, meta, why, whyLang, whyLines, nameLines, leg,
   onPress, pressLabel, style, timeTestID,
 }: {
   /** The arrival, already formatted; null prints a dash. Left out, the
@@ -70,6 +70,19 @@ export default function StopRow({
   name: string | null;
   /** What to print in a delisted stop's place. */
   gone?: string;
+  /**
+   * Where the stop came from, on a plan built from a collection the
+   * reader chose (owner, 14 Nov 2026): the collection itself, or the
+   * catalog, added to fill a stop the collection had nothing for. Left
+   * out, the row says nothing, which is every plan with no collection
+   * behind it.
+   *
+   * Words and not only a colour: the reader ticked a list and then saw
+   * three cards with nothing to say whether the list had been heard. The
+   * collection's line takes the accent; the catalog's is the quiet one,
+   * since it is the exception being owned up to, not the point.
+   */
+  source?: { label: string; own: boolean } | null;
   meta?: string | null;
   /** The model's sentence, and the language it was written in when known. */
   why?: string | null;
@@ -90,6 +103,9 @@ export default function StopRow({
         ? (
           <>
             <Text style={[s.name, here && s.nameHere]} numberOfLines={nameLines}>{name}</Text>
+            {!!source && (
+              <Text style={[s.source, source.own && s.sourceOwn]} numberOfLines={1} testID="stop-source">{source.label}</Text>
+            )}
             {!!meta && <Text style={s.meta} numberOfLines={1}>{meta}</Text>}
           </>
         )
@@ -147,6 +163,8 @@ const s = StyleSheet.create({
   name: { ...type.body, color: colors.text, fontWeight: font.semibold },
   nameHere: { fontWeight: font.bold },
   meta: { ...CAPTION, color: colors.textTertiary },
+  source: { ...CAPTION, color: colors.textTertiary },
+  sourceOwn: { color: colors.accent, fontWeight: font.semibold },
   gone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },
   // A step down from the name and up from the meta line, because it is
   // the row's only claim about why this place rather than another.

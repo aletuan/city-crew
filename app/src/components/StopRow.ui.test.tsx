@@ -44,6 +44,29 @@ describe('StopRow', () => {
     expect(screen.queryByText(/≈/)).toBeNull();
   });
 
+  // On a plan built from a collection the reader chose (owner, 14 Nov
+  // 2026): each stop says whether it is the collection's or was added.
+  it('says where the stop came from, under its name and above the meta line, and only when told', () => {
+    const { unmount } = row({ source: { own: true, label: 'From your collection' } });
+    const line = screen.getByTestId('stop-source');
+    expect(line.textContent).toBe('From your collection');
+    const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(after(screen.getByText('Hosier Lane'), line)).toBe(true);
+    expect(after(line, screen.getByText('Melbourne City · 75 min'))).toBe(true);
+    unmount();
+    row();
+    expect(screen.queryByTestId('stop-source')).toBeNull();
+  });
+
+  it('sets the collection’s own line apart from the one that owns up to an addition', () => {
+    const { unmount } = row({ source: { own: true, label: 'From your collection' } });
+    const own = cls(screen.getByTestId('stop-source'));
+    unmount();
+    row({ source: { own: false, label: 'Added for you' } });
+    expect(screen.getByTestId('stop-source').textContent).toBe('Added for you');
+    expect(cls(screen.getByTestId('stop-source'))).not.toBe(own);
+  });
+
   it('marks the stop the picture is on: the hour in the accent, the name heavier', () => {
     const quiet = row();
     const [time0, name0] = [cls(screen.getByText('18:00')), cls(screen.getByText('Hosier Lane'))];

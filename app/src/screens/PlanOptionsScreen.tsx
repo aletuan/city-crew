@@ -256,6 +256,26 @@ export default function PlanOptionsScreen({ navigation, route }: {
       '你合集中的部分地点未能放进这个计划。', '你合集中的部分地點未能放進這個計畫。',
     );
 
+  // Which stops are the reader's own, for the line each row wears when a
+  // collection was chosen (owner, 14 Nov 2026) — see `StopRow`'s `source`.
+  // By membership, not by how the planner came to pick it: a place from
+  // the collection is from the collection whichever way it got on a card.
+  const listed = useMemo(() => new Set(pinned.map((x) => x.slug)), [pinned]);
+  // And the sentence for the one case the rows cannot say: a collection
+  // was chosen, every place in it passed the gates, and still none is on
+  // a card. Under the cards, once, as the line above is. That line stands
+  // in for this one when it has something to say: a place that did not
+  // fit is the reason, and one reason is enough.
+  const noneLine = listed.size > 0 && plans.length > 0 && !droppedLine
+    && !plans.some((pl) => pl.stops.some((st) => listed.has(st.place.slug)))
+    ? t(
+      'Nothing from your collections fitted this plan.',
+      'Chưa chỗ nào trong bộ sưu tập của bạn hợp với plan này.',
+      'コレクションからは今回のプランに入るスポットがありませんでした。',
+      '你合集中没有地点适合这个计划。', '你合集中沒有地點適合這個計畫。',
+    )
+    : null;
+
   return (
     <Screen
       compactTitle
@@ -295,6 +315,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
               plan={plan}
               name={name}
               why={told?.why ?? null}
+              listed={listed}
               nth={i}
               // The card's own name rides along, so the editor's header
               // matches the card that was tapped even if the cache has let
@@ -320,6 +341,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
         )}
 
         {!!droppedLine && <Text style={s.dropped}>{droppedLine}</Text>}
+        {!!noneLine && <Text style={s.dropped} testID="plans-none-from-list">{noneLine}</Text>}
 
         <View style={s.regen}>
           {/* Quiet (owner, 26 Oct 2026): the way out, under cards whose
@@ -427,8 +449,11 @@ const CARD_STEP_MS = 60;
 
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
-function PlanCard({ plan, name, why, nth, onPress }: {
+function PlanCard({ plan, name, why, listed, nth, onPress }: {
   plan: TripPlan; name: string; onPress: () => void;
+  /** The slugs of the collections the reader chose to build from; empty
+   *  when they chose none, and then no row says where it came from. */
+  listed: ReadonlySet<string>;
   /** The model's sentence per stop, by slug, when it has written them. */
   why: ReadonlyMap<string, string> | null;
   /** Which card down the list this is — the start marks settle in order. */
@@ -598,6 +623,9 @@ function PlanCard({ plan, name, why, nth, onPress }: {
                   // One line: on the one screen where the names *are* the
                   // choice, a wrapped name pushes the next option down.
                   nameLines={1}
+                  source={listed.size === 0 ? null : listed.has(st.place.slug)
+                    ? { own: true, label: t('From your collection', 'Từ bộ sưu tập', 'コレクションから', '来自合集', '來自合集') }
+                    : { own: false, label: t('Added for you', 'Gợi ý thêm', 'おすすめを追加', '为你补充', '為你補充') }}
                   // The district under the name, as the editor and the saved
                   // trip print it, and only when the plan leaves one: a plan
                   // in a single district says it in its heading. The line
