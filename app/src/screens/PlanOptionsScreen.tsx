@@ -47,12 +47,10 @@ import { useCurrentCity } from '../lib/city';
 import { addDays, clampDay, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import { fmtDistance } from '../lib/geo';
 import { planSub, planTitle } from '../lib/planHeading';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useMyLists } from '../lib/save';
-import { summaryLine } from '../lib/sketch';
 import { sharedArea } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
 import StopRow from '../components/StopRow';
@@ -496,7 +494,6 @@ function PlanCard({ plan, name, why, listed, nth, onPress }: {
   // across two cards.
   const best = !!badge.star;
   const total = plan.costVnd.food + plan.costVnd.activity + plan.costVnd.transport;
-  const km = plan.legs.reduce((n, l) => n + (l?.km ?? 0), 0);
   // The cards rise into place in order, which is the one thing worth
   // taking from the reference video: a list that assembles reads as a
   // list that was *made*, where three cards appearing at once reads as a
@@ -653,14 +650,19 @@ function PlanCard({ plan, name, why, listed, nth, onPress }: {
               {/* No stop count: the rows above are the stops, two or three
                   of them, and a reader counts two rows faster than they
                   read "2 stops". No length either, with the hours (see
-                  the row above). The distance is what the rows do not
-                  say; the price waits on its switch. */}
-              <Text style={s.summary}>
-                {summaryLine([
-                  km > 0 ? fmtDistance(km) : null,
-                  showPrice && total > 0 ? `~${money(total)}` : null,
-                ])}
-              </Text>
+                  the row above).
+
+                  No distance (owner, 14 Nov 2026). It was the sum of the
+                  legs, on the ground that "the distance is what the rows
+                  do not say" — but each row prints its own leg, and on a
+                  card of two stops the foot's "1.8 km" was the one leg's
+                  "1.8 km" again, an inch lower, with nothing to say it
+                  was a total. On three stops it was a different figure
+                  from either leg, and read as a third distance to
+                  somewhere. The price is all that is left here, and it
+                  waits on its switch; with it off, the foot is the way
+                  in alone. */}
+              {showPrice && total > 0 && <Text style={s.summary}>{`~${money(total)}`}</Text>}
               {/* The way in, said. The card was a button only VoiceOver
                   could hear: a border, a picture and a list, and nothing
                   that looked pressable. The footnote that used to say
@@ -722,7 +724,8 @@ const s = StyleSheet.create({
   summary: { ...CAPTION, color: colors.textSecondary, flexShrink: 1 },
   // The accent, as the info card's rows use it for the value that goes
   // somewhere: the one colour on the card that means "press".
-  open: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  // To the right edge whether or not a price stands to its left.
+  open: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
   openText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
   dropped: { ...CAPTION, color: colors.textTertiary, marginTop: 2, marginBottom: 6 },
 

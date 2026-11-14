@@ -23,7 +23,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { Animated, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { font } from '../theme';
 import { appFlags } from '../lib/flags';
-import { act, fireEvent, render, screen, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, within } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import { narratableOf, type Narration } from '../lib/assist';
@@ -392,24 +392,40 @@ describe('the cards', () => {
   // No stop count: the rows are the stops. The spend shows only once the
   // price switch is on (#598); these two turn it on to pin the arithmetic.
   // No length either (owner, 24 Oct 2026), with the hours.
-  it('summarises distance and per-person spend, in thousands or millions', () => {
+  it('prints the per-person spend at the foot, in thousands or millions', () => {
     appFlags.set('place_price', true);
     renderScreen();
-    expect(screen.getByText('350 m · ~250k ₫')).toBeTruthy();
+    expect(screen.getByText('~250k ₫')).toBeTruthy();
     // 900k + 200k + 30k.
-    expect(screen.getByText('4.2 km · ~1.1M ₫')).toBeTruthy();
+    expect(screen.getByText('~1.1M ₫')).toBeTruthy();
+    // The third card has nothing priced: no sum, not a sum of nothing.
+    expect(screen.getAllByText(/₫/)).toHaveLength(2);
     // No legs and nothing priced: distance and spend are left out, not
     // zero — and the plan's length, ~1.5h, is not printed at all.
     expect(screen.queryByText(/~[\d.]+h/)).toBeNull();
   });
 
-  // The default: the price has no home (#598), so the footer says the
-  // distance and keeps the sum to itself.
+  // The default: the price has no home (#598), so the foot keeps the sum
+  // to itself — and it is the way in alone.
   it('keeps the spend off the footer while the price switch is off', () => {
     renderScreen();
-    expect(screen.getByText('350 m')).toBeTruthy();
     expect(screen.queryByText(/₫/)).toBeNull();
     expect(screen.queryByText(/\d stops? ·/)).toBeNull();
+  });
+
+  // The foot printed the legs' sum (owner, 14 Nov 2026): on a card of two
+  // stops, the one leg's distance a second time; on three, a figure that
+  // was neither leg's. Each row still prints its own leg.
+  it('prints no distance at the foot, with or without a price beside it', () => {
+    const total = () => screen.queryAllByText(/^(350 m|4\.2 km)( · ~.+)?$/);
+    renderScreen();
+    expect(screen.getByText('350 m · ≈ 5 min')).toBeTruthy();
+    expect(screen.getByText('4.2 km · ≈ 18 min')).toBeTruthy();
+    expect(total()).toEqual([]);
+    cleanup();
+    appFlags.set('place_price', true);
+    renderScreen();
+    expect(total()).toEqual([]);
   });
 
   it('prints a round million without a decimal', () => {
