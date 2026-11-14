@@ -55,10 +55,10 @@ thành phố), như `lib/popular.ts` làm với địa điểm.
 
 | Tín hiệu | Trọng số | Cách tính |
 |---|---|---|
-| Lượt thích | **0,30** | `ln(1+L) / ln(1+L_max)`. `L` không tính lượt của chủ list. Thang log để lượt thứ 12 không nặng bằng lượt đầu. |
+| Lượt thích | **0,25** | `ln(1+L) / ln(1+L_max)`. `L` không tính lượt của chủ list. Thang log để lượt thứ 12 không nặng bằng lượt đầu. |
 | Được dùng | **0,25** | `ln(1+U) / ln(1+max(U_max, 5))`. `U` = số người khác chủ list đã dựng chuyến đi từ list + số người khác đã sao chép nó. Đếm người, không đếm lượt: một người dựng năm chuyến đi từ một list là một người. Một người vừa dựng chuyến đi vừa sao chép thì được đếm cho cả hai việc. Sàn 5: xem "Sàn của được dùng" bên dưới. |
 | Nội dung | **0,20** | Một nửa là `min(n, 8) / 8` (`n` = số địa điểm đã xuất bản). Một nửa là điểm đánh giá trung bình của các địa điểm, mỗi điểm kéo về trung bình catalog bằng `bayesRating` (prior 10), đọc trên thang tuyệt đối: bằng trung bình catalog thì được một nửa, cao hơn hai độ lệch chuẩn (2 × 0,2) thì được trọn, thấp hơn hai thì bằng 0. Xem "Thang của điểm đánh giá". |
-| Mới tạo | **0,15** | 1 trong 7 ngày đầu (khớp `NEW_LIST_DAYS`, nhãn "Mới"), giảm tuyến tính về 0 ở ngày 21. List dưới 3 địa điểm: 0. |
+| Mới tạo | **0,20** | 1 trong 7 ngày đầu (khớp `NEW_LIST_DAYS`, nhãn "Mới"), giảm tuyến tính về 0 ở ngày 21. List dưới 3 địa điểm: 0. |
 | Lượt xem | **0,10** | Tỉ lệ thích trên lượt xem, chia cho tỉ lệ cao nhất trong tập, và chỉ với list có từ 20 lượt xem; dưới 20 thì bằng 0. Lượt thích ở đây chỉ tính từ 13/11/2026, ngày bắt đầu đếm lượt xem. Xem "Tỉ lệ thích trên lượt xem". |
 
 **Sàn của "được dùng"** (chủ app đồng ý, 14/11/2026). `U_max` hôm nay là
@@ -73,6 +73,21 @@ Trong lần tính đầu, một list 1 địa điểm, tạo hôm trước, lên
 14 dù đã bị phạt 0,85: điểm "mới" trọn vẹn bù lại gần hết. "Mới" là để một
 list hay chưa ai kịp thích không bị chôn, không phải để một list chưa
 xong được đưa lên.
+
+**Lượt thích 0,25 và mới 0,20** (chủ app chọn, 14/11/2026). Đề xuất ban
+đầu là 0,30 và 0,15. Chạy trên dữ liệu thật, mức đó đặt "Hẹn hò ở Hà Nội"
+(tạo hôm ấy, 23 địa điểm, có mô tả, chưa có lượt thích) ở hạng 20 trong 22:
+điểm "mới" trọn vẹn không bù nổi khoảng cách với list có 9–11 lượt thích.
+Ba mức đã chạy trên cùng dữ liệu:
+
+| Thích / Mới | "Hẹn hò" (0 thích) | "Vang Hà Nội mùa đông" (2 thích, 3 ngày) | List mới trong top 5 Hà Nội |
+|---|---|---|---|
+| 0,30 / 0,15 | hạng 20 | hạng 5 | 1 |
+| **0,25 / 0,20** | hạng 12 | hạng 2 | 2 |
+| 0,20 / 0,25 | hạng 5 | hạng 1 | 4 |
+
+Mức thứ ba không được chọn vì kệ sẽ thành danh sách các list của tuần,
+bất kể chúng thế nào.
 
 **Thang của điểm đánh giá.** Bản nháp đầu chuẩn hoá min–max trong tập,
 như `lib/popular.ts` làm với địa điểm. Test đầu tiên viết cho hàm đã bắt
@@ -114,7 +129,7 @@ số hạng này, và thứ tự của họ là điểm nền.
 ### 5. Công thức
 
 ```
-điểm = phạt × (0,30·thích + 0,25·dùng + 0,20·nội dung + 0,15·mới + 0,10·xem + 0,10·sở thích)
+điểm = phạt × (0,25·thích + 0,25·dùng + 0,20·nội dung + 0,20·mới + 0,10·xem + 0,10·sở thích)
 ```
 
 Hoà điểm thì giữ các khoá cũ của `rankByLikes`: `created_at` giảm dần,
@@ -164,24 +179,28 @@ tự trước 14/11: lượt thích rồi mới nhất.
 
 | Hạng mới | Hạng cũ | List | Điểm | Thích | Dùng | Địa điểm | Ngày tạo |
 |---|---|---|---|---|---|---|---|
-| 1 | 12 | Góc học bài Sài Gòn | 0,649 | 2 | 4 | 23 | 28/10 |
-| 2 | 2 | Saigon Pizza Night | 0,590 | 8 | 1 | 7 | 18/9 |
-| 3 | 4 | Thao Dien Must Visit | 0,564 | 6 | 1 | 11 | 17/10 |
-| 4 | 1 | [HCM][CAFE] BEEN TO (của A, không mô tả) | 0,542 | 12 | 1 | 85 | 17/9 |
-| 5 | 13 | Sài Gòn mùa Noel | 0,466 | 1 | 0 | 11 | 7/11 |
-| 11 | 10 | [FOOD TOUR] VINHOMES GRAND PARK (1 địa điểm) | 0,370 | 2 | 1 | 1 | 13/11 |
+| 1 | 12 | Góc học bài Sài Gòn | 0,641 | 2 | 4 | 23 | 28/10 |
+| 2 | 2 | Saigon Pizza Night | 0,547 | 8 | 1 | 7 | 18/9 |
+| 3 | 4 | Thao Dien Must Visit | 0,526 | 6 | 1 | 11 | 17/10 |
+| 4 | 13 | Sài Gòn mùa Noel | 0,502 | 1 | 0 | 11 | 7/11 |
+| 5 | 1 | [HCM][CAFE] BEEN TO (của A, không mô tả) | 0,499 | 12 | 1 | 85 | 17/9 |
+| 12 | 10 | [FOOD TOUR] VINHOMES GRAND PARK (1 địa điểm) | 0,352 | 2 | 1 | 1 | 13/11 |
 
 **Người xem B, Hà Nội** (22 list; B giữ 22 list công khai trên cả nước):
 
 | Hạng mới | Hạng cũ | List | Điểm | Thích | Dùng | Địa điểm | Ngày tạo |
 |---|---|---|---|---|---|---|---|
-| 1 | 10 | The Way to Hanoi Coffee (của B) | 0,621 | 5 | 2 | 16 | 18/10 |
-| 2 | 1 | Cà phê Hà Nội | 0,561 | 11 | 0 | 12 | 27/8 |
-| 3 | 6 | Work-date space | 0,520 | 9 | 0 | 17 | 27/8 |
-| 4 | 3 | Đồ Nhật ở Hà Nội | 0,520 | 10 | 0 | 9 | 16/8 |
-| 5 | 15 | Vang Hà Nội mùa đông | 0,519 | 2 | 0 | 13 | 11/11 |
-| 9 | 18 | Tản Mạn Tây Hồ | 0,474 | 1 | 0 | 7 | 14/11 |
-| 20 | 22 | Hẹn hò ở Hà Nội | 0,376 | 0 | 0 | 23 | 14/11 |
+| 1 | 10 | The Way to Hanoi Coffee (của B) | 0,585 | 5 | 2 | 16 | 18/10 |
+| 2 | 15 | Vang Hà Nội mùa đông | 0,547 | 2 | 0 | 13 | 11/11 |
+| 3 | 1 | Cà phê Hà Nội | 0,511 | 11 | 0 | 12 | 27/8 |
+| 4 | 18 | Tản Mạn Tây Hồ | 0,510 | 1 | 0 | 7 | 14/11 |
+| 5 | 6 | Work-date space | 0,474 | 9 | 0 | 17 | 27/8 |
+| 12 | 22 | Hẹn hò ở Hà Nội | 0,426 | 0 | 0 | 23 | 14/11 |
+
+Thứ tự không phải lúc nào cũng giảm dần theo điểm: ở Hà Nội, "Hà Nội đón
+Noel" (0,447) đứng hạng 7, trước "Hồ Gươm lên đèn" (0,470), vì hai hạng
+ngay trên đều là list của cùng tác giả với list sau. Đó là việc giãn tác
+giả ở mục 6.
 
 Lần tính đầu, trước khi có code, làm bằng SQL với bản nháp công thức
 (min–max cho điểm đánh giá, chưa có sàn 5, chưa có `preferred`): hạng 1 của
@@ -189,25 +208,18 @@ cả hai người cũng là hai list này, và list 1 địa điểm của A đ�
 
 ## Điều phép tính thử cho thấy, chưa quyết
 
-Ba điều đã quyết: sàn của "được dùng" và điểm "mới" của list dưới 3
-địa điểm (mục 3), và list của chính người xem (mục 7). Còn lại, sau lần
-tính bằng code:
+Bốn điều đã quyết: sàn của "được dùng", điểm "mới" của list dưới 3 địa
+điểm và hai trọng số thích/mới (mục 3), và list của chính người xem (mục
+7). Còn lại, sau lần tính bằng code:
 
-1. **List mới chưa ai thích vẫn bị chôn.** "Hẹn hò ở Hà Nội": tạo hôm
-   nay, 23 địa điểm, có mô tả, 0 lượt thích, đứng hạng 20 trong 22. Điểm
-   "mới" trọn vẹn (0,15) không bù nổi khoảng cách với list có 9–11 lượt
-   thích (0,28–0,30). Một lượt thích đầu tiên đáng 0,08 và đưa list mới
-   khác lên hạng 9; hai lượt đưa lên hạng 5. Nếu muốn list mới được thấy
-   trước khi có lượt thích đầu tiên thì phải tăng trọng số "mới", lấy từ
-   lượt thích.
-2. **Sở thích chênh nhau ít.** Với hai người xem trên, `affinity` trung
+1. **Sở thích chênh nhau ít.** Với hai người xem trên, `affinity` trung
    bình của các list chạy từ 0,50 đến 1,00, tức chênh nhau nhiều nhất 0,05
    điểm. Người chưa chọn thể loại nào trong hồ sơ thì trần là 0,6.
-3. **Tín hiệu lượt xem đang bằng 0 với mọi list**: list được xem nhiều nhất
+2. **Tín hiệu lượt xem đang bằng 0 với mọi list**: list được xem nhiều nhất
    mới có 9 lượt, dưới ngưỡng 20.
-4. **Các trọng số là phán đoán** từ bảng số đo, chưa kiểm chứng bằng hành
+3. **Các trọng số là phán đoán** từ bảng số đo, chưa kiểm chứng bằng hành
    vi. Đo lại bảng số đo trước khi chỉnh bất kỳ trọng số nào.
-5. **List trải nhiều thành phố** được xếp ở mỗi thành phố theo các địa điểm
+4. **List trải nhiều thành phố** được xếp ở mỗi thành phố theo các địa điểm
    mà catalog ở đó giữ, như thẻ của nó ở đó đếm. Chưa đo xem có bao nhiêu
    list như vậy.
 

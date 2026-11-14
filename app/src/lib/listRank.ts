@@ -41,9 +41,17 @@ import { bayesRating } from './popular';
  * The owner's judgement from the measurements, not a fit to behaviour:
  * there is no behaviour yet to fit to. See the document's "Các trọng số
  * là phán đoán".
+ *
+ * Likes and new were 0.30 and 0.15 as first proposed. Run on the live
+ * lists, that put a full, described list made that day, with no like
+ * yet, twentieth of twenty-two in Hanoi: new did not cover the gap to a
+ * list with nine likes. At 0.25 and 0.20 it stands twelfth, and the top
+ * five hold two new lists (owner, 14 Nov 2026). At 0.20 and 0.25, also
+ * tried, four of the top five were new: the shelf would have been the
+ * week's lists, whatever they were.
  */
 export const LIST_WEIGHTS = {
-  likes: 0.3, used: 0.25, content: 0.2, fresh: 0.15, views: 0.1, taste: 0.1,
+  likes: 0.25, used: 0.25, content: 0.2, fresh: 0.2, views: 0.1, taste: 0.1,
 } as const;
 
 /** A list with no description, or fewer than `THIN_BELOW` places, keeps
@@ -152,8 +160,8 @@ export type RankInputs<T> = {
 /**
  * Each list's score, in the order the lists came in.
  *
- *     score = penalty × (0.30·likes + 0.25·used + 0.20·content
- *                        + 0.15·fresh + 0.10·views + 0.10·taste)
+ *     score = penalty × (0.25·likes + 0.25·used + 0.20·content
+ *                        + 0.20·fresh + 0.10·views + 0.10·taste)
  *
  *   likes    ln(1+L) / ln(1+Lmax), L leaving the owner's own like out.
  *            Log, so the twelfth like is not worth the first.

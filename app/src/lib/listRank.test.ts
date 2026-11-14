@@ -35,7 +35,7 @@ describe('the weights', () => {
   // The figures `docs/collection-ranking.md` gives, pinned: every other
   // test here reads them by name, and would pass on any numbers.
   it('are the document’s', () => {
-    expect(LIST_WEIGHTS).toEqual({ likes: 0.3, used: 0.25, content: 0.2, fresh: 0.15, views: 0.1, taste: 0.1 });
+    expect(LIST_WEIGHTS).toEqual({ likes: 0.25, used: 0.25, content: 0.2, fresh: 0.2, views: 0.1, taste: 0.1 });
     expect({ THIN_PENALTY, THIN_BELOW, FULL_AT, USED_FLOOR, FRESH_GONE_DAYS, VIEWS_FROM, AUTHOR_RUN, LIST_RATING_SD })
       .toEqual({ THIN_PENALTY: 0.85, THIN_BELOW: 3, FULL_AT: 8, USED_FLOOR: 5, FRESH_GONE_DAYS: 21, VIEWS_FROM: 20, AUTHOR_RUN: 2, LIST_RATING_SD: 0.2 });
   });
@@ -192,8 +192,8 @@ describe('rankLists', () => {
   });
 
   it('lets a new list nobody has liked yet stand above an old one somebody has', () => {
-    // The cold start the freshness term is for: 0.15 against one like of
-    // twelve, 0.30 × ln2/ln13.
+    // The cold start the freshness term is for: 0.20 against one like of
+    // twelve, 0.25 × ln2/ln13.
     expect(order([list('old', { created_at: daysAgo(80) }), list('new', { created_at: daysAgo(2) }), list('top')],
       { likes: { old: 1, top: 12 } })).toEqual(['top', 'new', 'old']);
   });
