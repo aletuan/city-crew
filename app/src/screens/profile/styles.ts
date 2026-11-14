@@ -149,9 +149,18 @@ export const s = StyleSheet.create({
   // No `flexShrink` on either any more: on their own lines neither is
   // competing for width with the other, and each wraps or truncates
   // against the column instead.
+  // 20 since 14 Nov 2026 (owner), from 23. The tab's own title, "Profile"
+  // at 30 in the display face, stands just above it, so the name is the
+  // page's second heading, not a rival first: the social apps that set a
+  // name near 24 (Threads, Facebook) have no title over it, and X sets it
+  // near 20 — figures from memory, not measured. A four-word Vietnamese
+  // name ("Nguyễn Thị Phương Thảo") is also likelier to stay on one line
+  // beside the avatar at 20; not yet looked at on a device. The system
+  // face, not the display one: two lines in the display face, 30 and 20,
+  // would read as two titles. The line keeps the 1.22 it had (28 at 23).
   accountName: {
-    color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2,
-    lineHeight: 28,
+    color: colors.text, fontSize: 20, fontWeight: font.bold, letterSpacing: 0.2,
+    lineHeight: 25,
   },
   handle: { color: colors.textTertiary, ...type.meta },
   // The shared line's own box; the runs inside carry their colours.

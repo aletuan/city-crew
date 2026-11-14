@@ -22,7 +22,7 @@ import type { Pref } from '../lib/look';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommonActions, StackRouter } from '@react-navigation/routers';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, waitFor, within } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
 import { colors } from '../theme';
 import { useScrollToTop } from '@react-navigation/native';
@@ -359,6 +359,14 @@ describe('account identity', () => {
     // Runs of one Text: the same parent, reading "@leminh · Coffee first."
     expect(handle.parentElement).toBe(bio.parentElement);
     expect(handle.parentElement!.textContent).toBe('@leminh · Coffee first.');
+  });
+
+  // The page's second heading (owner, 14 Nov 2026): under "Profile" at
+  // 30, the name at 20, in the system face's bold.
+  it('sets the name at 20, a step under the tab\'s title', () => {
+    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
+    draw();
+    expect(textStyleOf(screen.getByText('Le Minh'))).toMatchObject({ fontSize: 20, lineHeight: 25 });
   });
 
   it('draws no dot when only one of the two is there', () => {
