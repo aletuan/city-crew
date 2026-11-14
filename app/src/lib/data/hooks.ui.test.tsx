@@ -32,6 +32,7 @@ const q = vi.hoisted(() => ({
   fetchApplause: vi.fn(),
   fetchCopies: vi.fn(),
   fetchCollectionStats: vi.fn(),
+  fetchListUse: vi.fn(),
 }));
 // The count, as a plain function rather than a `vi.fn`: a spy attaches
 // its own handler to every promise it returns, to record how it settled,
@@ -59,6 +60,7 @@ vi.mock('./people', () => ({
 vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
 vi.mock('./stats', () => ({
   fetchCollectionStats: q.fetchCollectionStats,
+  fetchListUse: q.fetchListUse,
   recordCollectionView: (id: string) => {
     views.counted.push(id);
     return views.refuse ? Promise.reject(new Error('offline')) : Promise.resolve();
@@ -66,7 +68,7 @@ vi.mock('./stats', () => ({
 }));
 
 import {
-  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, usePrefetchCollectionStats, useListActivityQuery, useMyCollections, usePrefetchListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, useListUseQuery, usePrefetchCollectionStats, useListActivityQuery, useMyCollections, usePrefetchListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
 } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
@@ -581,5 +583,37 @@ describe('a list’s statistics, kept and shared', () => {
     ahead.unmount();
     render(<Stats owner="u1" list="c1" />);
     expect(got.frames[0]).toBe('5|true');
+  });
+});
+
+// What a public shelf is ranked by, beside its likes (`lib/listRank`):
+// one answer for the device, whoever is reading.
+describe('how the public lists were used', () => {
+  const row = (slug: string, uses: number) => ({ slug, uses, views: 0, liked: 0 });
+  const got: { frames: string[] } = { frames: [] };
+  function Use() {
+    const f = useListUseQuery();
+    got.frames.push(`${f.data.map((r) => `${r.slug}:${r.uses}`).join(',')}|${f.loaded}`);
+    return null;
+  }
+
+  beforeEach(async () => {
+    forgetSharedFetches();
+    got.frames = [];
+    await AsyncStorage.removeItem(cacheKey('listuse', 'all'));
+  });
+
+  it('asks once for every screen that ranks, and keeps the answer for the next launch', async () => {
+    q.fetchListUse.mockResolvedValue([row('a', 2)]);
+    render(<><Use /><Use /><Use /></>);
+    await waitFor(() => expect(got.frames.at(-1)).toBe('a:2|true'));
+    expect(q.fetchListUse).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(cacheKey('listuse', 'all'), expect.any(String)));
+  });
+
+  it('is empty, and settled, on a server that cannot answer', async () => {
+    q.fetchListUse.mockRejectedValue(new Error('Could not find the function public.collection_use_counts'));
+    render(<Use />);
+    await waitFor(() => expect(got.frames.at(-1)).toBe('|true'));
   });
 });

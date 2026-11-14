@@ -59,8 +59,20 @@ describe('leadingCity', () => {
 describe('mosaicGroups', () => {
   type L = { slug: string; city: string | null; kind: string | null };
   const l = (slug: string, city: string | null, kind: string | null = 'cafes'): L => ({ slug, city, kind });
+  // The caller's ranking, stood in for by the simplest one: most liked
+  // first, arrival order on a tie. What `rank` really is, is
+  // `lib/listRank`'s to test.
+  const asked: string[][] = [];
   const group = (lists: L[], likes: Record<string, number> = {}, home?: string | null) =>
-    mosaicGroups(lists, { cityOf: c => c.city, kindOf: c => c.kind, likes, home });
+    mosaicGroups(lists, {
+      cityOf: c => c.city,
+      kindOf: c => c.kind,
+      rank: (block) => {
+        asked.push(block.map(c => c.slug));
+        return [...block].sort((a, b) => (likes[b.slug] ?? 0) - (likes[a.slug] ?? 0));
+      },
+      home,
+    });
   const slugs = (g: ReturnType<typeof group>[number]) => g.rows.flatMap(r => r.items.map(e => e.c.slug));
 
   it('is one block a city, the reader’s own first, then the biggest, then everything small last', () => {
@@ -98,7 +110,13 @@ describe('mosaicGroups', () => {
     expect(group(three.slice(0, 2)).map(g => g.city)).toEqual([null]);
   });
 
-  it('gives the wide card to the most-liked list, and keeps arrival order on a tie', () => {
+  it('asks for a ranking once a block, with that block’s lists and no others', () => {
+    asked.length = 0;
+    group([l('h1', 'hue'), l('n1', 'hanoi'), l('h2', 'hue'), l('n2', 'hanoi'), l('h3', 'hue'), l('n3', 'hanoi'), l('x', null)]);
+    expect(asked).toEqual([['h1', 'h2', 'h3'], ['n1', 'n2', 'n3'], ['x']]);
+  });
+
+  it('gives the wide card to the list ranked first, and keeps the ranking’s order after it', () => {
     const lists = [l('a', 'hue'), l('b', 'hue'), l('c', 'hue'), l('d', 'hue')];
     expect(slugs(group(lists, { c: 2, d: 1 })[0])).toEqual(['c', 'd', 'a', 'b']);
     expect(slugs(group(lists)[0])).toEqual(['a', 'b', 'c', 'd']);

@@ -21,7 +21,7 @@ import {
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchApplause, fetchCopies, fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
 import { fetchMyListShares } from './shares';
-import { fetchCollectionStats, recordCollectionView } from './stats';
+import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
 import type { StatsRow } from '../listStats';
 import type { ShareRow } from '../shares';
 
@@ -426,3 +426,17 @@ export const useProfileByHandle = (handle: string | null) => {
   return useFetch(fetcher, null as FriendProfile | null);
 };
 
+
+// ── how the public lists were used ──
+//
+// What `lib/listRank` reads for two of its terms. One entry for the
+// device (`useSharedFetch`), under no reader's name: the answer is the
+// same for everybody, and the Explore shelf, the Ideas screen and the
+// Collections tab all rank by it, so three screens ask once. Kept
+// between launches, so a shelf opens in the order it had and not in the
+// order of a server that has not answered yet. A failure leaves it empty
+// or as it was, and the shelf is ranked without it.
+const NO_USE: ListUseRow[] = [];
+
+export const useListUseQuery = (): Fetch<ListUseRow[]> =>
+  useSharedFetch(cacheKey('listuse', 'all'), fetchListUse, NO_USE);

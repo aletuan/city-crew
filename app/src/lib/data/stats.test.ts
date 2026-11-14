@@ -14,7 +14,7 @@ vi.mock('../supabase', async () => {
 });
 
 import { PRIVACY } from '../legal';
-import { fetchCollectionStats, recordCollectionView } from './stats';
+import { fetchCollectionStats, fetchListUse, recordCollectionView } from './stats';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -57,6 +57,28 @@ describe('fetchCollectionStats', () => {
   });
 });
 
+describe('fetchListUse', () => {
+  const row = { slug: 'ca-phe-ha-noi', uses: 2, views: 31, liked: 4 };
+
+  it('asks the function, with nothing to tell it, and hands back its rows', async () => {
+    fake().replies({ data: [row] });
+    expect(await fetchListUse()).toEqual([row]);
+    expect(fake().log).toEqual([{ fn: 'collection_use_counts', op: 'rpc', payload: undefined, filters: [] }]);
+  });
+
+  it('answers empty rather than null when no list has been used', async () => {
+    fake().replies({ data: null });
+    expect(await fetchListUse()).toEqual([]);
+  });
+
+  // A server without the migration answers like this, and the hook's
+  // empty answer is what the shelf is then ranked on.
+  it('throws when the server cannot answer', async () => {
+    fake().replies({ error: { message: 'Could not find the function public.collection_use_counts' } });
+    await expect(fetchListUse()).rejects.toThrow('Could not find the function');
+  });
+});
+
 // `legal.ts` is binding, and this is the code its sentence is about: the
 // policy says, in both of its languages, that opens are counted as a
 // number per list per day and never who, and that a list's author sees
@@ -74,5 +96,13 @@ describe('the privacy policy', () => {
   it('says a trip remembers its lists, and that their author sees how many, never whose', () => {
     says('a trip you save from collections remembers which ones, so each list’s author can see how many trips their list started, never whose');
     says('chuyến đi bạn lưu từ các bộ sưu tập sẽ ghi nhớ đó là những bộ sưu tập nào, để người tạo mỗi bộ sưu tập thấy nó đã mở đầu bao nhiêu chuyến đi, không bao giờ thấy của ai');
+  });
+
+  // Since 14 Nov 2026 the totals also order the public shelves
+  // (`fetchListUse`, `lib/listRank`), which is a second use of them and
+  // so a second sentence.
+  it('says the totals order the public collections, and that it is never who', () => {
+    says('The app also orders public collections by these totals, and by how many people liked a list or saved a copy of it — numbers only, never who');
+    says('App cũng xếp thứ tự các bộ sưu tập công khai theo những tổng số này, và theo số người đã thích hoặc lưu bản sao của một bộ sưu tập — chỉ là con số, không bao giờ là ai');
   });
 });

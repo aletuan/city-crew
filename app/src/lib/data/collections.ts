@@ -255,7 +255,7 @@ export type LikeTally = { shown: Record<string, number>; ranked: Record<string, 
  * learn a list has forty likes; nobody may learn who the forty are. See
  * the migration.
  *
- * Returned by slug because that is what every screen and `rankByLikes`
+ * Returned by slug because that is what every screen and `lib/listRank`
  * key on; the function speaks in ids, so this is where the two meet.
  *
  * Twice over since 17 Oct 2026, when a curator could like their own list
@@ -267,8 +267,8 @@ export type LikeTally = { shown: Record<string, number>; ranked: Record<string, 
  *
  * A failure on either side throws. The hook's empty tally is the
  * fallback (`useLikeCountsQuery`): before a first answer every count
- * reads as zero, `rankByLikes` falls back to the order the shelf had
- * before likes existed, and no heart shows a tally — the state the
+ * reads as zero, the shelf is ranked on everything but likes
+ * (`lib/listRank`), and no heart shows a tally — the state the
  * feature ships in anyway. After one, a failed refresh keeps the tallies
  * it had, where an empty answer used to wipe every heart's number.
  */

@@ -1334,6 +1334,15 @@ export type Database = {
           views_total: number
         }[]
       }
+      collection_use_counts: {
+        Args: never
+        Returns: {
+          liked: number
+          slug: string
+          uses: number
+          views: number
+        }[]
+      }
       copies_of_mine: {
         Args: { since: string }
         Returns: {

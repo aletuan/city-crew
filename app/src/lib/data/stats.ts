@@ -1,3 +1,4 @@
+import type { ListUse } from '../listRank';
 import type { StatsRow } from '../listStats';
 import { supabase } from '../supabase';
 
@@ -33,4 +34,26 @@ export async function fetchCollectionStats(collectionId: string): Promise<StatsR
   const { data, error } = await supabase.rpc('collection_stats', { cid: collectionId });
   if (error) throw new Error(error.message);
   return (data ?? []) as StatsRow[];
+}
+
+/** One public list's use, as `collection_use_counts` answers it. */
+export type ListUseRow = { slug: string } & ListUse;
+
+/**
+ * What other people did with each public list: how many of them started
+ * a trip from it or saved a copy, how often it was opened, and the likes
+ * it has had since opens were counted. Totals and no names, for every
+ * reader the same, a guest included — the order of a public shelf is not
+ * a private fact (`20261114100000_collection_use_counts.sql`, and
+ * `lib/listRank` for what it is ranked into).
+ *
+ * Throws on a failure, and that includes a server that does not have
+ * the function yet. The hook's empty answer is the fallback
+ * (`useListUseQuery`): with no row for any list, the two terms these
+ * figures feed are nothing and the shelf is ranked on the rest.
+ */
+export async function fetchListUse(): Promise<ListUseRow[]> {
+  const { data, error } = await supabase.rpc('collection_use_counts');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ListUseRow[];
 }

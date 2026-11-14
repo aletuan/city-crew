@@ -632,3 +632,12 @@ for f in "$ROOT"/supabase/migrations/*_collection_stats.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/collection_stats_test.sql"
+
+# How the public lists were used (14 Nov 2026): one function answering
+# three totals per public list to every reader, for the order a shelf is
+# shown in. After the statistics block, whose two tables it counts.
+echo "→ collection use counts"
+for f in "$ROOT"/supabase/migrations/*_collection_use_counts.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/collection_use_counts_test.sql"
