@@ -581,9 +581,11 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color, bare, 
    * at full contrast without it, so it was a shape and not a help.
    *
    * Opt-in, one screen at a time — the owner's call, so the app does not
-   * change everywhere at once: the friends screen first. A round control
-   * over a photograph is never bare; that one is `photoDisc`, whose
-   * ground is what keeps a white glyph legible on a pale picture.
+   * change everywhere at once: the friends screen first. Every back
+   * control on the page's ground wears it since 14 Nov 2026 (owner),
+   * the forms, the sign-in flow and the error page with the rest. A round
+   * control over a photograph is never bare; that one is `photoDisc`,
+   * whose ground is what keeps a white glyph legible on a pale picture.
    */
   bare?: boolean;
   /** The outer box: where a bare control hangs its target past the

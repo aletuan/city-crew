@@ -183,25 +183,26 @@ describe('AddPill', () => {
     expect(pill().minHeight).toBe(SECONDARY_CONTROL_H);
     expect(SECONDARY_CONTROL_H).toBe(44);
     rerender(<AddPill label="Add" onPress={() => {}} quiet />);
-    expect(glass().minHeight).toBe(44);
+    expect(bare().minHeight).toBe(44);
   });
 
-  // The header's weight (owner, 26 Oct 2026): the round buttons' glass,
-  // the body's ink, the plus in the accent — and no gradient at all.
-  const glass = () => StyleSheet.flatten(propsWhere((p) => {
+  // The header's weight (owner, 26 Oct 2026), bare since 14 Nov 2026: no
+  // ground and no gradient, the word and the plus in the accent.
+  const bare = () => StyleSheet.flatten(propsWhere((p) => {
     const st = StyleSheet.flatten(p.style as StyleProp<ViewStyle>);
-    return !!st && st.backgroundColor === colors.surfaceGlass;
+    return !!st && st.minHeight === 44 && st.paddingLeft === 12;
   }).style as StyleProp<ViewStyle>) ?? {};
 
-  it('is glass, not the gradient, when quiet — at the same height and size', () => {
+  it('is bare, not glass and not the gradient, when quiet — at the same height and size', () => {
     const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
     expect(word().color).toBe(colors.accentInk);
     expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-color')).toBe(colors.accentInk);
     rerender(<AddPill label="Add" onPress={() => {}} quiet />);
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
-    expect(glass().minHeight).toBe(44);
-    expect(word().color).toBe(colors.text);
+    expect(bare().minHeight).toBe(44);
+    expect(bare().backgroundColor).toBeUndefined();
+    expect(word().color).toBe(colors.accent);
     expect(word().fontSize).toBe(16);
     const plus = document.querySelector('[data-icon="add"]')!;
     expect(plus.getAttribute('data-color')).toBe(colors.accent);
@@ -224,14 +225,26 @@ describe('AddPill', () => {
     expect([pill().paddingLeft, pill().paddingRight]).toEqual([14, 18]);
     rerender(<AddPill label="Add" onPress={() => {}} quiet />);
     expect(word().fontWeight).toBe(font.medium);
-    expect([glass().paddingLeft, glass().paddingRight, glass().minHeight]).toEqual([12, 16, 44]);
+    expect([bare().paddingLeft, bare().paddingRight, bare().minHeight]).toEqual([12, 16, 44]);
   });
 
-  // Every look's own glass, ink and accent — the pill has no colour of its
-  // own, so it changes with the look chosen in Profile. Worked out on the
-  // glass over each look's page: the word owes 4.5:1 at 16pt medium, the
-  // plus 3:1 as a glyph.
-  it('keeps the quiet word and plus readable on its glass, in every look', () => {
+  // With no ground, the box's right padding is given back past the margin
+  // so the word's end meets the content's right edge, as the bare chevron
+  // hangs at the other end. Only the quiet pill: a filled one's edge is
+  // its own line.
+  it('hangs the quiet pill by its right padding, and only the quiet one', () => {
+    const { rerender } = render(<AddPill label="Add" onPress={() => {}} quiet />);
+    const hung = () => propsWhere((p) => 'onPress' in p && 'accessibilityRole' in p);
+    expect(StyleSheet.flatten(hung().style as StyleProp<ViewStyle>)?.marginRight).toBe(-16);
+    rerender(<AddPill label="Add" onPress={() => {}} />);
+    expect(StyleSheet.flatten(hung().style as StyleProp<ViewStyle>)?.marginRight).toBeUndefined();
+  });
+
+  // Every look's own page and accent — the pill has no colour of its own,
+  // so it changes with the look chosen in Profile. Worked out on each
+  // look's page, which is what it now stands on: the word owes 4.5:1 at
+  // 16pt medium, and the plus is the same ink.
+  it('keeps the quiet word and plus readable on the page, in every look', () => {
     const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
     const rgba = (h: string): number[] => h.startsWith('#')
       ? [...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), 1]
@@ -240,14 +253,13 @@ describe('AddPill', () => {
     const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
     const ratio = (a: number[], b: number[]) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
     for (const [name, p] of Object.entries(PALETTES)) {
-      const ground = over(rgba(p.surfaceGlass), rgba(p.bg));
-      expect([name, 'word', ratio(rgba(p.text), ground) >= 4.5]).toEqual([name, 'word', true]);
-      expect([name, 'plus', ratio(rgba(p.accent), ground) >= 3]).toEqual([name, 'plus', true]);
+      const ground = over([0, 0, 0, 0], rgba(p.bg));
+      expect([name, 'word', ratio(rgba(p.accent), ground) >= 4.5]).toEqual([name, 'word', true]);
     }
     // And it draws those tokens, not a colour of its own.
     render(<AddPill label="Add" onPress={() => {}} quiet />);
-    expect(glass().backgroundColor).toBe(colors.surfaceGlass);
-    expect(word().color).toBe(colors.text);
+    expect(bare().backgroundColor).toBeUndefined();
+    expect(word().color).toBe(colors.accent);
   });
 
   it('draws the 16pt word and the 18pt plus', () => {

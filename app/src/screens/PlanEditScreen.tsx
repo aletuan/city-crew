@@ -464,7 +464,7 @@ export default function PlanEditScreen({ navigation, route }: {
 
   if (!picked) {
     return (
-      <Screen compactTitle title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')} onBack={() => navigation.goBack()}>
+      <Screen compactTitle title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')} onBack={() => navigation.goBack()} backBare>
         <Card style={s.card}><Text style={s.body}>
           {t('That plan is no longer available.', 'Phương án đó không còn nữa.', 'そのプランはもう利用できません。', '这个计划已不可用。', '這個計畫已不可用。')}
         </Text></Card>
@@ -478,6 +478,7 @@ export default function PlanEditScreen({ navigation, route }: {
       title={title}
       subtitle={line ? <IconSubtitle icon="calendar-outline" text={line} /> : undefined}
       onBack={() => navigation.goBack()}
+      backBare
       /**
        * Share goes here rather than beside Save, and the reference design
        * shows it in both places — which is the thing this app just spent a

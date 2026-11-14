@@ -361,6 +361,7 @@ export default function CollectionFormScreen({ navigation, route }: {
           something to submit — see `changed`. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
+        backBare
         title={copyFrom
           ? t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')
           : editing

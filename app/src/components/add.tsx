@@ -255,11 +255,25 @@ export function AddCell({ label, onPress, size, testID }: {
  * ink on paper already, a fainter one loses the pill's edge on the page,
  * and it would stop being the ground of the round buttons in the same
  * row. The filled pill in the docks keeps its semibold and its 14/18.
+ *
+ * On nothing, since 14 Nov 2026 (owner): the glass came off with the
+ * round buttons' discs, which this ground was kept to match — the way
+ * back is now a bare chevron on every page-ground screen, and a glass
+ * pill at the other end of the same row was the one block left in it.
+ * Bare, the word goes to the accent with its plus, as a link-weight
+ * action wears it (the accent is 4.5 or better on the page on every
+ * look, `theme.test`); in the body's ink with no ground it read as the
+ * header's second title. The 44pt box stays, hung past the margin by its
+ * right padding so the word's end, not an empty box, meets the line the
+ * content's right edge stands on — the bare chevron's `BACK_HANG`, at the
+ * other end. Three headers wear it: Trips, Collections, a gallery.
+ * Rejected with it, from the same proposal's other option: keeping the
+ * glass here alone, a ground no other header control had any more.
  */
 export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibilityLabel, testID }: {
   label: string;
   onPress: () => void;
-  /** The header's weight: glass, not the gradient. See "how loud". */
+  /** The header's weight: the bare word, not the gradient. See "how loud". */
   quiet?: boolean;
   /** The glyph before the word. A plus everywhere it adds; the collection
    *  dock's visitor pill copies, and wears the ⋯ menu's copy glyph so one
@@ -303,6 +317,7 @@ export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibili
       aria-disabled={busy}
       aria-busy={busy}
       testID={testID}
+      style={quiet ? s.pillQuietHang : undefined}
     >
       {quiet
         ? <View style={face}>{inside}</View>
@@ -372,6 +387,8 @@ const s = StyleSheet.create({
   // carries a spinner saying so.
   pillBusy: { opacity: 0.7 },
   pillText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
-  pillQuiet: { backgroundColor: colors.surfaceGlass, paddingLeft: 12, paddingRight: 16 },
-  pillTextQuiet: { color: colors.text, fontWeight: font.medium },
+  pillQuiet: { paddingLeft: 12, paddingRight: 16 },
+  // The box's right padding, given back past the margin: see "how loud".
+  pillQuietHang: { marginRight: -16 },
+  pillTextQuiet: { color: colors.accent, fontWeight: font.medium },
 });

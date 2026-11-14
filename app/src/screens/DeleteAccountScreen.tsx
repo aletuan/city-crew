@@ -132,6 +132,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
     <AuthScreen>
       <AuthHeader
         onBack={() => navigation.goBack()}
+        backBare
         title={t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号', '刪除帳號')}
       />
       <Lede>{t(

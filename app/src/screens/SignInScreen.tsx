@@ -55,6 +55,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
     <AuthScreen>
       <AuthHeader
         onBack={() => navigation.goBack()}
+        backBare
         title={t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}
       />
       {/* Neutral on purpose. "Glad to see you again" greeted a returning

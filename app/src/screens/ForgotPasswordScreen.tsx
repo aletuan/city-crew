@@ -100,6 +100,7 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
       <AuthScreen>
         <AuthHeader
           onBack={() => setStep('email')}
+          backBare
           title={t('Set a new password', 'Đặt mật khẩu mới', '新しいパスワードを設定', '设置新密码', '設定新密碼')}
         />
         <Lede>{t(
@@ -169,6 +170,7 @@ export default function ForgotPasswordScreen({ navigation, route }: { navigation
     <AuthScreen>
       <AuthHeader
         onBack={() => navigation.goBack()}
+        backBare
         title={t('Forgot password', 'Quên mật khẩu', 'パスワードをお忘れの方', '忘记密码', '忘記密碼')}
       />
       <Lede>{t(
