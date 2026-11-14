@@ -26,7 +26,7 @@ import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
@@ -103,7 +103,7 @@ vi.mock('../components/InviteCard', async () => {
 });
 
 import TripsScreen from './TripsScreen';
-import { colors } from '../theme';
+import { colors, font } from '../theme';
 
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 
@@ -310,7 +310,7 @@ describe('the card', () => {
     expect(screen.getByText('19:00')).toBeTruthy();
     expect(screen.getByText('Pho 10')).toBeTruthy();
     expect(screen.getByText('Ba Dinh')).toBeTruthy();
-    // The badge the wizard's answer wears.
+    // The wizard's answer, beside the date.
     expect(screen.getByText('Friends')).toBeTruthy();
     expect(screen.getByText('View plan')).toBeTruthy();
   });
@@ -365,13 +365,19 @@ describe('the card', () => {
     expect(row.textContent).toBe(`${dateline('en', fromISO(SOON)!)}Friends`);
   });
 
-  // The badge's glyph is the badge's own accent ink, not the companion's
-  // old hue (owner, 3 Nov 2026), as the planner's chooser now draws it.
-  it('inks the company glyph in the badge\'s accent', () => {
-    show([trip({ company: 'friends' })]);
-    const badge = screen.getByText('Friends').parentElement!;
-    const glyph = badge.querySelector('[data-icon="people-outline"]')!;
-    expect(glyph.getAttribute('data-color')).toBe(String(colors.accent));
+  // The answer as the date is set, not a badge (owner, 13 Nov 2026): the
+  // glyph in the third grey, the word in the date's caption and grey, and
+  // no fill, rule or weight around them.
+  it('sets the company as the date is set, with no badge round it', () => {
+    show([trip({ company: 'couple' })]);
+    const company = screen.getByTestId('trip-company');
+    // The couple's heart is what says "Hai người" is the couple.
+    const glyph = company.querySelector('[data-icon="heart-outline"]')!;
+    expect(glyph.getAttribute('data-color')).toBe(String(colors.textTertiary));
+    expect(textStyleOf(screen.getByText('Couple'))).toMatchObject({ fontSize: 13, fontWeight: font.regular, color: colors.textSecondary });
+    const box = viewStyleOf(company);
+    expect([box.backgroundColor, box.borderWidth, box.paddingHorizontal, box.paddingVertical]).toEqual([undefined, undefined, undefined, undefined]);
+    expect(box.gap).toBe(5);
   });
 
   it('has no cover and no badge when there is no picture and no company', () => {
