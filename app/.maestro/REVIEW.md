@@ -232,3 +232,22 @@ Kiểm tra âm phải có mốc dương: trước `assertNotVisible` Edit/Delete
 **509 unit/UI tests liên quan PASS** trên 10 file test (fixture/cleanup, oracle RLS, testID, AuthSheet, SaveSheet, StopCard, Collections, PlanEdit, PlaceDetail). ESLint, TypeScript, `maestro check-syntax` cho cả ba flow, `bash -n` và diff whitespace check đều PASS. Typecheck trong worktree cài dependency đúng lockfile hiện chạy được; lỗi `opencc-js/cn2t` được ghi ở các lượt cũ không còn tái hiện trong môi trường này.
 
 Config hiện có 21 flow. Chưa chạy lại toàn bộ suite sau đợt bổ sung này; các số PASS ở trên chỉ áp dụng cho phạm vi được nêu.
+
+## Chạy lại main sau merge — 28/10/2026
+
+Commit kiểm tra: `124a89af66461a0bb6fb05a7378517d53afb54e4`, iPhone 17 Pro / iOS 26.5 / Expo Go SDK 58. Lượt toàn suite: `20261028-172847`.
+
+**11-collection-crud: selector tên collection rỗng cũng phải tính nhãn gộp.** Flow fail sau Create ở `scrollUntilVisible(text: "Maestro CRUD")`, không phải Create thất bại. Screenshot `11-collection-crud/screenshots/step-065-scrollUntilVisible-Maestro_CRUD.png` thấy collection mới; hierarchy cùng step có `accessibilityText: "Maestro CRUD, Private"`. Source `CollectionsScreen.tsx` đặt accessibilityLabel gồm title + visibility cho card sở hữu ở Grid. Flow đã xử lý suffix ở đoạn collection có place, nhưng chưa xử lý đoạn ngay sau tạo/đổi tên.
+
+Bài học: một bản sửa selector phải rà cả trạng thái empty/populated và layout List/Grid, vì layout được ghi nhớ giữa các lượt. Không tăng timeout cho chuỗi không khớp. Ưu tiên testID theo ID collection; nếu dùng tên fixture, match trọn nhãn với suffix có giới hạn và vẫn xác nhận đúng collection. Chưa sửa test/app trong lượt audit này; kết quả kiểm chứng bổ sung sẽ ghi riêng sau khi có bằng chứng.
+
+## 14/11/2026 · main cafd3218 · iPhone 17 Pro, iOS 26.5
+
+Suite `20261114-211304`: **19/22 đạt**, JUnit 4630,893 giây. Cùng code/test khi retry; chỉ đổi cổng Metro cho toàn lượt để tránh checkout khác trên 8081.
+
+- **02-place-detail:** step 020 chờ `place-card-0` trước khi mở detail. Hierarchy có “You’re offline. Showing what was saved.”, không có card đầu. Hai lượt chạy riêng `20261114-223110` (30s) và `20261114-231032` (31,5s) đều đạt; chưa xác định nguyên nhân phía mạng/backend. Khi báo lỗi, ghi cả trạng thái tải danh sách, không quy lỗi cho màn hình chưa mở.
+- **11-collection-crud:** step 065 thấy nhãn card `Maestro CRUD, New, Private` sau Create, trong khi flow tìm nguyên chuỗi `Maestro CRUD`. Đây là biến thể mới của lỗi nhãn gộp tháng 10. Ưu tiên định danh card ổn định; không tăng timeout. Rename, thêm/bỏ place và Delete chưa được kiểm trong lượt này. Đã dọn và xác nhận không còn đúng collection rỗng do lượt này tạo.
+- **17-unfriend:** step 039 đã ở Profile có dữ liệu tài khoản, helper đòi tab Explore được chọn. Lỗi trước thao tác unfriend. Retry `20261114-223203` đạt và khôi phục friendship; chưa xác định tại sao đích điều hướng khác nhau. Theo dõi auth return và tab thực sự chọn trước khi thay assertion.
+- 07 signup/delete, 16 invite/delete/leave, 18/20 guest resume, 19 privacy và 21 tab responsive đều đạt. Runner xác nhận cleanup, không còn credential ledger hoặc lock. Không sửa source hay test để làm lượt này đạt.
+
+**Kiểm chứng bản sửa 11 (14/11):** Matcher card mới khớp đúng tên fixture và phần metadata bắt đầu bằng dấu phẩy; cleanup chỉ khớp hai tên fixture, không xóa collection chỉ vì trùng tiền tố. Maestro check-syntax OK. Hai lượt riêng liên tiếp `20261114-224647` và `20261114-225010` đều PASS đến bước xác nhận xóa trên Yours. Không thay code app.
