@@ -37,15 +37,15 @@ env:
 - runFlow:
     when:
       visible:
-        text: "Maestro CRUD.*"
+        text: "^Maestro CRUD( 2)?(,.*)?$"
     commands:
       - repeat:
           while:
             visible:
-              text: "Maestro CRUD.*"
+              text: "^Maestro CRUD( 2)?(,.*)?$"
           commands:
             - tapOn:
-                text: "Maestro CRUD.*"
+                text: "^Maestro CRUD( 2)?(,.*)?$"
             - extendedWaitUntil:
                 visible:
                   id: "collection-more"
@@ -92,14 +92,14 @@ env:
     commands:
       - tapOn:
           id: "collection-submit"
-# The form goes back to the list, where the new one is at the top.
+# Match the whole fixture title; iOS can append metadata such as ", New, Private".
 - scrollUntilVisible:
     element:
-      text: "Maestro CRUD"
+      text: "^Maestro CRUD(,.*)?$"
     direction: UP
     timeout: 15000
 - tapOn:
-    text: "Maestro CRUD"
+    text: "^Maestro CRUD(,.*)?$"
 
 # Rename, from the collection's own menu. The form comes back filled in.
 - extendedWaitUntil:
@@ -233,4 +233,4 @@ env:
 # And delete the list itself: back on Yours, and gone from it.
 - runFlow: common/delete-open-collection.yaml
 - assertNotVisible:
-    text: "Maestro CRUD.*"
+    text: "^Maestro CRUD( 2)?(,.*)?$"
