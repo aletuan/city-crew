@@ -553,14 +553,19 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               all behind it, it sat directly above "Been there · 55"
               (UX-10, 17 Oct 2026). With nothing ahead it says so, which
               is also the line that makes "New trip" above it the obvious
-              next move. */}
+              next move.
+
+              "Your journeys", owner's words (14 Nov 2026), after "Your
+              next plans, in order." lost its last clause the same day: the
+              order is visible, and "next plans" said again what the
+              "Upcoming" heading under it says. No full stop, as given. */}
           {!!mine.length && !!upcoming.length && (
             <Text style={s.lede}>
               {t(
-                'Your next plans.',
-                'Những kế hoạch sắp tới của bạn.',
-                'これからの予定。',
-                '你接下来的计划。', '你接下來的計畫。',
+                'Your journeys',
+                'Những hành trình của bạn',
+                'あなたの旅',
+                '你的旅程', '你的旅程',
               )}
             </Text>
           )}
