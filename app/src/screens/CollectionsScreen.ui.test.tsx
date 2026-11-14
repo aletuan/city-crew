@@ -366,7 +366,7 @@ describe('CollectionsScreen — as a guest', () => {
     spies.fetchProfilesById.mockImplementation(async () => ({ o1: { avatar_url: 'https://face/o1.jpg' } }));
     show();
     await act(async () => {});
-    expect(screen.getByText('@minh')).toBeTruthy();
+    expect(screen.getByText('minh')).toBeTruthy();
     // One batched lookup, each owner once.
     expect(spies.fetchProfilesById).toHaveBeenCalledWith(['o1']);
     await waitFor(() => expect(document.querySelector('img[src="https://face/o1.jpg"]')).toBeTruthy());
@@ -627,7 +627,7 @@ describe('CollectionsScreen — signed in', () => {
     await act(async () => {});
     expect(screen.getByText('List theirs')).toBeTruthy();
     expect(screen.getByText('List mine1')).toBeTruthy();
-    expect(screen.getByText('@me')).toBeTruthy();
+    expect(screen.getByText('me')).toBeTruthy();
     // Two heart controls, yours and theirs: a curator may like their own.
     expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(2);
     expect(screen.getByText('2')).toBeTruthy();
@@ -1270,8 +1270,8 @@ describe('the New badge', () => {
     show({ tab: 'community' });
     await act(async () => {});
     expect(screen.getAllByTestId('new-badge')).toHaveLength(3);
-    expect(screen.getByRole('button', { name: 'List new3, New, @c3' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'List old, @c0' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List new3, New, c3' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List old, c0' })).toBeTruthy();
     // Caption on top: the badge heads the caption, before the title.
     const top = screen.getByTestId('collection-mosaic-scrim-new3');
     const badge = within(top).getByTestId('new-badge');
@@ -1470,11 +1470,30 @@ describe('CollectionsScreen — Mosaic', () => {
     expect(screen.getAllByTestId('collection-mosaic-row-stack')).toHaveLength(2);
     expect(screen.getAllByTestId('collection-mosaic-row-pair')).toHaveLength(2);
     expect(screen.getAllByTestId(/^collection-card-/).map(c => c.getAttribute('aria-label')))
-      .toEqual(Array.from({ length: 12 }, (_, i) => `List mosaic-${i}, @curator${i}`));
+      .toEqual(Array.from({ length: 12 }, (_, i) => `List mosaic-${i}, curator${i}`));
     expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
     expect(screen.queryByTestId('collection-tile-count')).toBeNull();
     fireEvent.click(screen.getByTestId('collection-card-3'));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'mosaic-3' });
+  });
+
+  // The Mosaic's byline as the tile's (owner, 14 Nov 2026): the handle
+  // bare and a face beside it, the face the owner's own once it is known.
+  it('signs each card with a face and the bare handle, no @', async () => {
+    state.cols.data = [col('signed', ['a'], { curator_handle: '@Lan', owner_id: 'o1' })];
+    spies.fetchProfilesById.mockImplementation(async () => ({ o1: { avatar_url: 'https://face/o1.jpg' } }));
+    show({ tab: 'community' });
+    await act(async () => {});
+    const by = screen.getByTestId('collection-mosaic-by-signed');
+    expect(by.textContent).toBe('lan');
+    await waitFor(() => expect(by.querySelector('img[src="https://face/o1.jpg"]')).toBeTruthy());
+    expect(screen.getByTestId('collection-card-0').getAttribute('aria-label')).toBe('List signed, lan');
+  });
+
+  it('draws no byline, and no face, on a card nobody signed', () => {
+    state.cols.data = [col('unsigned', ['a'])];
+    show({ tab: 'community' });
+    expect(screen.queryByTestId('collection-mosaic-by-unsigned')).toBeNull();
   });
 
   it('keeps each caption with its collection while searching changes its position and card size', () => {
@@ -1962,7 +1981,7 @@ describe('Mosaic scrims follow the caption', () => {
       // The caption is the scrim: its words are inside it, on the photo.
       expect(scrim!.parentElement).toBe(photo);
       expect(within(scrim!).getByText(`A very long collection title ${slug}`)).toBeTruthy();
-      expect(within(scrim!).getByText(`@curator${slug.replace('mosaic-', '')}`)).toBeTruthy();
+      expect(within(scrim!).getByText(`curator${slug.replace('mosaic-', '')}`)).toBeTruthy();
       // Two gradients, both inside it: the body under the words, the tail past them.
       expect(scrim!.querySelectorAll('[data-stub="LinearGradient"]')).toHaveLength(2);
       const body = propsOf(`collection-mosaic-body-${slug}`);
@@ -2007,7 +2026,7 @@ describe('Mosaic scrims follow the caption', () => {
     expect(inkOf(desc)).toBe(onPhoto.text);
     // And the byline on every on-photo caption, in the same full white.
     for (const sc of scrims) {
-      const handle = within(sc).getByText(/^@curator\d+$/).textContent!;
+      const handle = within(sc).getByText(/^curator\d+$/).textContent!;
       expect(inkOf(handle)).toBe(onPhoto.text);
     }
   });
@@ -2058,7 +2077,7 @@ describe('CollectionsScreen — shared with you', () => {
     show();
     await act(async () => {});
     const tile = screen.getByTestId('collection-shared-0');
-    expect(within(tile).getByText('@lan')).toBeTruthy();
+    expect(within(tile).getByText('lan')).toBeTruthy();
     expect(spies.fetchProfilesById).toHaveBeenCalledWith(['lan-id']);
     await waitFor(() => expect(tile.querySelector('img[src="https://face/lan.jpg"]')).toBeTruthy());
     expect(within(tile).queryByTestId('collection-tile-lock')).toBeNull();
@@ -2071,7 +2090,7 @@ describe('CollectionsScreen — shared with you', () => {
   it('says whose list it is in the tile’s spoken name, and opens it', () => {
     const { navigation } = show();
     const tile = screen.getByTestId('collection-shared-0');
-    expect(tile.getAttribute('aria-label')).toBe('Lan’s noodles, @lan');
+    expect(tile.getAttribute('aria-label')).toBe('Lan’s noodles, lan');
     fireEvent.click(tile);
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'lans' });
   });
