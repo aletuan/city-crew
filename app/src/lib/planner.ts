@@ -120,8 +120,9 @@ export type PlanOptions = {
   startMin?: number | null;
   /** Varies the draw. Same seed, same three plans. */
   seed?: number;
-  /** Places from the collections the reader chose to build from. Hard
-   *  priority, but still subject to the three gates. */
+  /** Places from the collections the reader chose to build from. First
+   *  call on every stop they suit, but still subject to the gates — see
+   *  `buildPlan` for what "suit" is. */
   pinned?: readonly Place[];
   /** Slugs already shown, left out so Regenerate moves rather than
    *  relying on luck. Left out of a slot only while something else fits
@@ -850,11 +851,56 @@ function buildPlan(
   // fill goes unfilled, which is already what a slot nothing fits does.
   const takenBrands = new Set<string>();
   const out: Place[] = [];
-  // A collection that could fill every slot would make all three plans the
-  // same plan in three orders, so it may claim all but one. The reader
-  // still sees what they saved; the cards stay three real choices.
-  const pinnedBudget = Math.max(0, slots.length - 1);
-  let pinnedUsed = 0;
+
+  // ── what a chosen collection is owed (owner, 14 Nov 2026) ──
+  //
+  // A reader who ticks a list under "Start from what you love" is saying
+  // "take me to these". So a place from it has first call on every stop it
+  // suits, and three things decide "suits".
+  //
+  // It was "all but one stop": a collection that could fill every slot
+  // would make three plans one plan in three orders, so it could claim
+  // `slots.length - 1`. That rule was older than `slotsFor`'s (13 Oct),
+  // which gives a plan one stop per kind asked for, and the two met badly.
+  // Ask for dinner alone, tick a list of seven pizza places, and the
+  // budget was 1 − 1 = 0: the list was never looked at, and nothing said
+  // so, because every place in it had passed the gates. The owner found
+  // it on a phone, three cards and no pizza. Run on 27 real Saigon places
+  // the same day, the old rule also gave:
+  //   - dinner, coffee and a bar from that list: pizza, then pizza, then
+  //     something else. The budget filled the first two stops from the
+  //     list whatever kind each stop wanted;
+  //   - a list of two places: one card. Every card took the same two, and
+  //     the second and third were dropped as copies of the first.
+  //
+  // Now:
+  //   1. No budget. A list that can fill every stop fills every stop;
+  //      what keeps the cards apart is the second rule, not a held-back
+  //      slot.
+  //   2. A place from the list goes on one card of a set. The next card
+  //      takes the ones not yet shown (`used`), so a one-stop evening
+  //      from seven pizza places is three different pizza places.
+  //   3. When the reader asked for more than one kind, a place from the
+  //      list is taken only if it brings a kind the plan still lacks.
+  //      Each stop answers one kind, the first one asked for that it has
+  //      and the plan does not: a café that is also a bar answers
+  //      "coffee" and leaves "a bar" open for the next stop.
+  //
+  // Accepted with the third: from a list that is all one kind, a plan of
+  // three kinds takes one place where it used to take two. The list is
+  // used where it fits, not as often as possible.
+  //
+  // Rejected: every stop from the list, or no plan. The section is
+  // "Start from what you love", and a list of four cafés cannot make an
+  // evening of dinner, coffee and a bar; the reader would be told to go
+  // and tick more lists. A stop the list has nothing for is filled from
+  // the catalog, and the options screen says which stops those are.
+  // Rejected too: mending only the one-stop plan (budget of 1 when there
+  // is one slot). It leaves the two pizzas in a row and the single card
+  // from a small list, which are the same rule failing elsewhere.
+  const kinds = draft.categories;
+  const answered = new Set<string>();
+  const answers = (p: Place) => kinds.find((k) => !answered.has(k) && categoriesOf(p).includes(k));
 
   // A budget nobody stated, and a budget of zero, are both "no share to
   // divide" — zero would make every priced place infinitely over.
@@ -874,7 +920,9 @@ function buildPlan(
   // Per slot, and only while something else fits: a slot that only an
   // avoided place can fill takes it, which is how a one-place category
   // still answers. Pinned places are the reader's own picks and are not
-  // left out; they keep the charge.
+  // left out by a Regenerate; they keep the charge. Within one set they
+  // are left out of the cards after the one that showed them — rule 2
+  // above.
   const avoided = new Set(opts.avoid ?? []);
 
   for (let i = 0; i < slots.length; i++) {
@@ -887,13 +935,12 @@ function buildPlan(
       return brand === '' || !takenBrands.has(brand);
     };
 
-    let chosen: Place | null = null;
-    if (pinnedUsed < pinnedBudget) {
-      const cands = pinnedOk.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, out, origin, opts, used, usedBrands, share) }));
-      chosen = draw(cands, rnd);
-      if (chosen) pinnedUsed++;
-    }
+    let chosen = draw(
+      pinnedOk
+        .filter((p) => fits(p) && !used.has(p.slug) && (kinds.length < 2 || answers(p) !== undefined))
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, out, origin, opts, used, usedBrands, share) })),
+      rnd,
+    );
     if (!chosen) {
       const open = pool.filter(fits);
       const fresh = open.filter((p) => !avoided.has(p.slug));
@@ -904,6 +951,8 @@ function buildPlan(
 
     if (!chosen) continue;
     taken.add(chosen.slug);
+    const kind = answers(chosen);
+    if (kind) answered.add(kind);
     const chosenBrand = brandKey(chosen.name_en);
     if (chosenBrand !== '') takenBrands.add(chosenBrand);
     out.push(chosen);
@@ -1005,10 +1054,21 @@ export function planTrips(
   const plans: TripPlan[] = [];
   const used = new Set<string>();
   const usedBrands = new Set<string>();
+  const fromList = new Set(pinnedOk.map((p) => p.slug));
+  const holdsOne = (slugs: readonly string[]) => slugs.some((s) => fromList.has(s));
 
   for (const lens of LENSES) {
     const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, usedBrands, rnd, start, origin);
     if (!picked.length) continue;
+
+    // A list goes on as many cards as it has places for, and no further
+    // (owner, 14 Nov 2026). Once a card has shown the list, a later card
+    // with nothing from it is not a way through the list: it is the
+    // catalog's answer, under a heading that says the reader's own. Two
+    // cards that are the list beat three where one is not. A set whose
+    // first card holds nothing from the list keeps every card: the list
+    // could not be used at all, and the screen says that instead.
+    if (!holdsOne(picked.map((p) => p.slug)) && plans.some((prev) => holdsOne(prev.stops.map((s) => s.place.slug)))) continue;
 
     // Two plans sharing all but one stop are one plan shown twice. Dropping
     // the duplicate is what makes a thin catalog return two cards instead

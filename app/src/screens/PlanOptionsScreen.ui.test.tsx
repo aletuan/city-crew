@@ -618,6 +618,54 @@ describe('pinned places that did not make it', () => {
   });
 });
 
+// A reader who ticked a collection is told, stop by stop, whether it was
+// heard (owner, 14 Nov 2026): the collection's own places say so, and a
+// place added to fill a stop owns up to it.
+describe('where each stop came from', () => {
+  const sources = () => screen.queryAllByTestId('stop-source').map((el) => el.textContent);
+
+  it('says nothing on a plan built from no collection', () => {
+    renderScreen();
+    expect(sources()).toEqual([]);
+    expect(screen.queryByTestId('plans-none-from-list')).toBeNull();
+  });
+
+  it('marks the collection’s places and the ones added, on every card', () => {
+    mine.current = [{ slug: 'weekend', members: [CAFE, LAKE] }];
+    renderScreen({ from: ['weekend'] });
+    // MATCH is the café and a dinner; ICONIC holds neither of the list's;
+    // LOWKEY is the lake alone.
+    expect(sources()).toEqual([
+      'From your collection', 'Added for you',
+      'Added for you', 'Added for you',
+      'From your collection',
+    ]);
+    expect(screen.queryByTestId('plans-none-from-list')).toBeNull();
+  });
+
+  it('says so, once, when a collection was chosen and none of it is on a card', () => {
+    mine.current = [{ slug: 'weekend', members: [PINNED] }];
+    renderScreen({ from: ['weekend'] });
+    expect(screen.getByTestId('plans-none-from-list').textContent).toBe('Nothing from your collections fitted this plan.');
+    expect(sources().every((x) => x === 'Added for you')).toBe(true);
+  });
+
+  it('leaves that to the line about what did not fit, when there is one', () => {
+    mine.current = [{ slug: 'weekend', members: [PINNED] }];
+    planTrips.mockImplementation(() => [{ ...MATCH, pinnedDropped: [{ slug: 'pinned', reason: 'slot' }] }]);
+    renderScreen({ from: ['weekend'] });
+    expect(screen.getByText('Some places from your collections did not fit this plan.')).toBeTruthy();
+    expect(screen.queryByTestId('plans-none-from-list')).toBeNull();
+  });
+
+  it('has nothing to say about a collection when there is no card at all', () => {
+    mine.current = [{ slug: 'weekend', members: [PINNED] }];
+    planTrips.mockImplementation(() => []);
+    renderScreen({ from: ['weekend'] });
+    expect(screen.queryByTestId('plans-none-from-list')).toBeNull();
+  });
+});
+
 describe('narration prefetch', () => {
   it('asks once per card, with the answers and the language, while the reader compares', () => {
     renderScreen();

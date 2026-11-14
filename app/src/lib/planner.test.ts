@@ -500,15 +500,88 @@ describe('planTrips with a collection to build from', () => {
     expect(plans[0].stops.map((s) => s.place.slug)).toContain('my-bar');
   });
 
-  it('leaves at least one stop for the lenses to differ over', () => {
-    // A collection big enough to fill every slot would make three plans
-    // one plan in three orders.
-    const big = many('eats', 6).map((p) => ({ ...p, slug: `mine-${p.slug}` }));
-    const plans = planTrips({ ...EVENING, categories: ['eats'] }, CATALOG, 'hanoi', { seed: 1, pinned: big });
+  // ── what a chosen list is owed (owner, 14 Nov 2026) ──
+  //
+  // It was "all but one stop", and a plan of one stop — dinner, and
+  // nothing else asked for — took nothing from the list at all.
+  const mine = (cat: string | string[], count: number, tag = 'mine') =>
+    Array.from({ length: count }, (_, i) => place({
+      slug: `${tag}-${i}`, categories: [cat].flat(), rating: 3.2, rating_count: 9,
+    }));
+  const fromList = (plan: { stops: { place: Place }[] }) =>
+    plan.stops.filter((s) => s.place.slug.startsWith('mine')).map((s) => s.place.slug);
+
+  it('takes a one-stop plan’s stop from the list, a different place on each card', () => {
+    const plans = planTrips({ ...EVENING, categories: ['eats'] }, CATALOG, 'hanoi', { seed: 1, pinned: mine('eats', 6) });
+    expect(plans).toHaveLength(3);
+    for (const plan of plans) expect(fromList(plan)).toHaveLength(1);
+    expect(new Set(plans.flatMap(fromList)).size).toBe(3);
+  });
+
+  it('fills every stop from a list that holds every kind asked for', () => {
+    const pinned = [...mine('eats', 2, 'mine-e'), ...mine('nightlife', 2, 'mine-n'), ...mine('views', 2, 'mine-v')];
+    const plans = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1, pinned });
+    // Six places, three to a card: two cards, each all from the list, and
+    // no place on both.
+    expect(plans.map((p) => fromList(p).length)).toEqual([3, 3]);
+    expect(new Set(plans.flatMap(fromList)).size).toBe(6);
+  });
+
+  it('takes one place of a kind from the list when more than one kind was asked for', () => {
+    // A list of nothing but places to eat, and an evening of dinner and a
+    // bar: one of them, not two dinners.
+    const plans = planTrips({ ...EVENING, categories: ['eats', 'nightlife'] }, CATALOG, 'hanoi',
+      { seed: 1, pinned: mine('eats', 6) });
+    expect(plans.length).toBeGreaterThan(0);
     for (const plan of plans) {
-      const mine = plan.stops.filter((s) => s.place.slug.startsWith('mine-')).length;
-      expect(mine).toBeLessThanOrEqual(plan.stops.length - 1);
+      expect(plan.stops).toHaveLength(2);
+      expect(fromList(plan)).toHaveLength(1);
     }
+  });
+
+  it('lets a place of two kinds answer one of them, and leaves the other open', () => {
+    // Two cafés that are also bars: the first answers "coffee", so the
+    // second is still wanted, for "a bar". Two that are only cafés: the
+    // second has nothing left to answer.
+    const ask = { ...EVENING, categories: ['cafes', 'nightlife'] };
+    const both = planTrips(ask, CATALOG, 'hanoi', { seed: 1, pinned: mine(['cafes', 'nightlife'], 2) });
+    expect(fromList(both[0])).toHaveLength(2);
+    const cafes = planTrips(ask, CATALOG, 'hanoi', { seed: 1, pinned: mine('cafes', 2) });
+    expect(fromList(cafes[0])).toHaveLength(1);
+  });
+
+  it('shows fewer cards rather than a card with nothing from the list on it', () => {
+    const one = planTrips({ ...EVENING, categories: ['eats'] }, CATALOG, 'hanoi', { seed: 1, pinned: mine('eats', 1) });
+    expect(one.map(fromList)).toEqual([['mine-0']]);
+    const two = planTrips({ ...EVENING, categories: ['eats'] }, CATALOG, 'hanoi', { seed: 1, pinned: mine('eats', 2) });
+    expect(two.map((p) => fromList(p).length)).toEqual([1, 1]);
+  });
+
+  it('puts a place from the list on one card of a set, and no other', () => {
+    // Two places to eat in the list and an evening of three kinds: two
+    // cards, one of the two on each. A third card could only show one of
+    // them again, and a repeat penalty alone let it: with three stops,
+    // one stop in common is not a copy.
+    const plans = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1, pinned: mine('eats', 2) });
+    expect(plans.map(fromList)).toHaveLength(2);
+    expect(plans.flatMap(fromList).sort()).toEqual(['mine-0', 'mine-1']);
+  });
+
+  it('keeps every card when the list could not go on the first one', () => {
+    // A café from the list that opens after the plan starts, and a
+    // catalog where only cafés are open at the start: the first stop is
+    // a café from the catalog, which answers "coffee", so the list's café
+    // has nothing left to answer. No card holds it, and no card is
+    // dropped for that — the list was not shown and then abandoned.
+    const late = place({ slug: 'mine-late', categories: ['cafes'], opening_hours: week('7:00 PM – 11:00 PM') });
+    const catalog = [
+      ...many('cafes'),
+      ...many('eats').map((p) => ({ ...p, opening_hours: week('7:00 PM – 11:00 PM') })),
+    ];
+    const plans = planTrips({ ...EVENING, categories: ['cafes', 'eats'] }, catalog, 'hanoi', { seed: 1, pinned: [late] });
+    expect(plans.length).toBeGreaterThan(1);
+    for (const plan of plans) expect(fromList(plan)).toEqual([]);
+    expect(plans[0].pinnedDropped).toEqual([]);
   });
 
   it('says why a saved place could not be used', () => {
