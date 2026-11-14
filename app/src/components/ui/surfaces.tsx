@@ -530,7 +530,15 @@ const s = StyleSheet.create({
   // `paddingTop` optically centres the title's first line against the 44pt
   // control without pinning either to the other's height — the same trick
   // `authUi`'s header uses, at this type size.
-  headerText: { flex: 1, gap: 2, paddingTop: 5 },
+  //
+  // `gap` is what stands between the title and its subtitle, and it was 2:
+  // on a trip's page the date's diacritics ("Thứ 7") came within about 5pt
+  // of the title's descenders, measured on the owner's screenshot (14 Nov
+  // 2026), and the two lines read as crowded. 4 at the owner's choice, of
+  // 4, 6 and 8 offered: 6 would have matched the tab root's eyebrow gap,
+  // and was passed over as more air than a line that belongs to its title
+  // wants.
+  headerText: { flex: 1, gap: 4, paddingTop: 5 },
   // The same centring at 20: the display face's line box is 1.276 of its
   // size (ascent 984 + descent 292 per 1000), so a first line's middle
   // sits on the 44pt control's at 22 − 25.5 / 2 = 9.2 down. At 26 the
