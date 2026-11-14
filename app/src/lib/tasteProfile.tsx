@@ -18,13 +18,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from './auth';
 import { useCollections, useLikes, usePlaces } from './catalog';
 import { useCurrentCity } from './city';
-import { fetchPassedOver, logPlaceEvent, useMyPreferences, type EventKind } from './data';
+import { fetchPassedOver, logPlaceEvent, useListUseQuery, useMyPreferences, type EventKind } from './data';
+import { listFacts, listUseBySlug, meanRating, rankLists } from './listRank';
 import { membersOf } from './place';
+import { RATING_MEAN } from './rank';
 import { CATEGORIES } from './categories';
 import { cleanTaste } from './tastepick';
 import { useMyLists } from './save';
 import { tasteFrom } from './taste';
 import type { Taste } from './planner';
+import type { Collection } from './types';
 
 /**
  * How far back "opened and walked away from" is allowed to reach.
@@ -232,6 +235,49 @@ export function useBrowseTaste(): Taste | null {
     if (!uid) return null;
     return tasteFrom({ preferred, saved, suggested, liked });
   }, [uid, preferred, saved, suggested, liked]);
+}
+
+/**
+ * The order a shelf of public lists is shown in, for this reader.
+ *
+ * The arithmetic is `lib/listRank`'s and the argument for it is
+ * `docs/collection-ranking.md`. This is the plumbing: the likes and the
+ * catalog from their providers, how the lists were used from the server,
+ * and the reader's browsing taste — the same one Explore orders its
+ * places by, stated categories included.
+ *
+ * A function and not a ranked shelf, because each caller ranks a shelf
+ * of its own: Explore the lists that touch the city, Ideas those without
+ * the reader's own, the Collections tab one city block at a time. Every
+ * signal is measured within the lists handed over, so what is handed
+ * over is part of the answer.
+ *
+ * Its identity changes only when something it reads does. The
+ * Collections tab builds its rows from the result, and a new function
+ * each render rebuilt them each render (see the freeze noted at `onSeen`
+ * there).
+ *
+ * The places a list is read by are the ones the catalog on screen holds,
+ * which is one city's: a list that spans two cities is ranked in each on
+ * its places there, as its card there counts them.
+ */
+export function useListRank(): (lists: readonly Collection[]) => Collection[] {
+  const { data: places } = usePlaces();
+  const { rankLikes } = useLikes();
+  const taste = useBrowseTaste();
+  const used = useListUseQuery();
+  const use = useMemo(() => listUseBySlug(used.data), [used.data]);
+  const mean = useMemo(() => meanRating(places, RATING_MEAN), [places]);
+  return useCallback(
+    (lists: readonly Collection[]) => rankLists(lists, {
+      factsOf: (c) => listFacts(c, membersOf(c, places), taste),
+      likes: rankLikes,
+      use,
+      mean,
+      now: Date.now(),
+    }),
+    [places, rankLikes, taste, use, mean],
+  );
 }
 
 /**

@@ -36,9 +36,9 @@ import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories'
 import { cityShort } from '../lib/cityName';
 import { type City, useCity, useMyPosition } from '../lib/city';
 import { useSession } from '../lib/auth';
-import { useCollections, useLikes, usePlaces } from '../lib/catalog';
+import { useCollections, usePlaces } from '../lib/catalog';
+import { useListRank } from '../lib/tasteProfile';
 import { type Collection, coverUriOf, membersOf, type Place } from '../lib/data';
-import { rankByLikes } from '../lib/likes';
 import { clockOf, dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { type Lang, useI18n } from '../lib/i18n';
@@ -93,7 +93,7 @@ function inCity(c: Collection, places: Place[], cityId: string | null | undefine
  * How many of the community's lists a reader with none of their own sees
  * before the tap. Three rows are about 200pt — one card that still leaves
  * the Plan button on the first screen of an iPhone 15 — and the three
- * most liked are the city's answer to "what is there"; the rest is a
+ * ranked first are the city's answer to "what is there"; the rest is a
  * longer list of the same kind, not a different offer.
  */
 const COMMUNITY_FIRST = 3;
@@ -126,7 +126,7 @@ export default function IdeasScreen({ navigation, route }: {
   const { askToSignIn } = useSaveActions();
   const cols = useCollections();
   // The ranking figure, which leaves out a curator's like of their own list.
-  const { rankLikes } = useLikes();
+  const rank = useListRank();
   const uid = useSession().session?.user?.id;
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -220,8 +220,8 @@ export default function IdeasScreen({ navigation, route }: {
    * old version had nothing for: a guest, who owns no list, and an
    * account whose lists are all in another city. Both used to see no
    * section at all. They see the city's own lists now, ranked as
-   * Explore's shelf ranks them (`rankByLikes`), the three most liked
-   * first and the rest a tap away. A reader with lists of their own here
+   * Explore's shelf ranks them (`useListRank`), the first three shown
+   * and the rest a tap away. A reader with lists of their own here
    * sees those, and the community's behind the same tap: their own are
    * what they came for, and this screen is short on purpose. Your own
    * published list is on both shelves under one slug and is shown once,
@@ -235,10 +235,12 @@ export default function IdeasScreen({ navigation, route }: {
     [mine.data, places, city?.id],
   );
   const community = useMemo(
-    () => rankByLikes(cols.data.filter((c) => !(uid && c.owner_id === uid)), rankLikes)
-      .map((c) => inCity(c, places, city?.id))
-      .filter((x) => x.members.length > 0),
-    [cols.data, rankLikes, uid, places, city?.id],
+    // Narrowed to the city first and ranked after: every signal is
+    // measured among the lists handed over, and a list from another city
+    // is not one this shelf will show.
+    () => rank(cols.data.filter((c) => !(uid && c.owner_id === uid) && inCity(c, places, city?.id).members.length > 0))
+      .map((c) => inCity(c, places, city?.id)),
+    [cols.data, rank, uid, places, city?.id],
   );
   /** Whether the community's lists are open — all of them, or the ones
    *  past the first three. Not remembered between visits: the screen

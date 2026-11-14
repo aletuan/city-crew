@@ -87,6 +87,20 @@ vi.mock('../lib/city', () => {
   const all = () => (m as { useCity: () => object }).useCity();
   return { ...m, useCurrentCity: all, useCityList: all };
 });
+// The order of a public shelf is `lib/listRank`'s, tested there, and
+// reaches a screen through `useListRank`. Stood in for here by the
+// simplest ranking — most liked first, the order handed over on a tie —
+// so what is under test is that the screen shows what the ranking
+// returns, for the lists it handed it. One function for the life of the
+// file: the screens memoise on its identity.
+const ranking = vi.hoisted(() => ({ asked: [] as string[][] }));
+vi.mock('../lib/tasteProfile', () => {
+  const rank = (lists: readonly { slug: string }[]) => {
+    ranking.asked.push(lists.map((c) => c.slug));
+    return [...lists].sort((a, b) => (state.likes[b.slug] ?? 0) - (state.likes[a.slug] ?? 0));
+  };
+  return { useListRank: () => rank };
+});
 vi.mock('../lib/catalog', () => ({
   useCollections: () => { state.renders += 1; return { ...state.cols, reload: spies.colsReload }; },
   useLikes: () => ({ likes: state.likes, rankLikes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
@@ -1536,6 +1550,31 @@ describe('CollectionsScreen — Mosaic', () => {
     show({ tab: 'community' });
     await screen.findByTestId('collection-mosaic-row-feature');
     expect(screen.getByRole('button', { name: 'Mosaic view' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  // The grid has no city blocks: at rest it is one shelf, ranked as one
+  // (owner, 14 Nov 2026). A search is a question, and its answer keeps
+  // the order the sift gives it.
+  it('ranks the Community grid at rest as one shelf, and leaves an answer in the sift’s order', () => {
+    state.places = [place('a', 'hanoi'), place('b', 'danang')];
+    state.cols.data = [
+      col('plain', ['a'], { title_en: 'Plain list' }), col('liked', ['b'], { title_en: 'Liked list' }),
+      col('third', ['a'], { title_en: 'Third list' }),
+    ];
+    state.likes = { liked: 3 };
+    state.uid = 'u1';
+    show({ tab: 'community' });
+    fireEvent.click(screen.getByRole('button', { name: 'Tile view' }));
+    const order = () => ['Plain list', 'Liked list', 'Third list']
+      .filter((t) => screen.queryByText(t))
+      .sort((x, y) => (screen.getByText(x).compareDocumentPosition(screen.getByText(y)) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+    expect(order()).toEqual(['Liked list', 'Plain list', 'Third list']);
+    expect(ranking.asked.at(-1)).toEqual(['plain', 'liked', 'third']);
+    ranking.asked.length = 0;
+    openBox();
+    fireEvent.change(screen.getByTestId('collections-input'), { target: { value: 'list' } });
+    expect(order()).toEqual(['Plain list', 'Liked list', 'Third list']);
+    expect(ranking.asked).toEqual([]);
   });
 
   it('renders chosen and missing photos, optional authors and a feature description', () => {

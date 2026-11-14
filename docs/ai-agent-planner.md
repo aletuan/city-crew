@@ -729,7 +729,9 @@ Một cuốn cẩm nang để chỗ tầm thường vượt mặt chỗ hay ch�
 đã thôi làm cẩm nang.
 
 **Khám phá chưa được cá nhân hoá.** Kệ *From the community* xếp theo `rankByLikes`
-— bình chọn của **cả cộng đồng**, không phải gu của người đang xem — và danh sách
+— bình chọn của **cả cộng đồng**, không phải gu của người đang xem (đến 14/11/2026;
+từ đó kệ xếp theo `lib/listRank`, có một số hạng cho gu người xem, xem
+`docs/collection-ranking.md`) — và danh sách
 địa điểm bên dưới là thứ tự catalog, lọc theo chip thể loại nếu có. Đây là khoảng
 trống đã biết, không phải một quyết định.
 

@@ -70,6 +70,21 @@ vi.mock('../lib/city', () => {
   const all = () => (m as { useCity: () => object }).useCity();
   return { ...m, useCurrentCity: all, useCityList: all };
 });
+// The order of a public shelf is `lib/listRank`'s, tested there, and
+// reaches a screen through `useListRank`. Stood in for here by the
+// simplest ranking — most liked first, the order handed over on a tie —
+// so what is under test is that the screen shows what the ranking
+// returns, for the lists it handed it. One function for the life of the
+// file: the screens memoise on its identity.
+const ranking = vi.hoisted(() => ({ asked: [] as string[][] }));
+vi.mock('../lib/tasteProfile', () => {
+  const rank = (lists: readonly { slug: string }[]) => {
+    ranking.asked.push(lists.map((c) => c.slug));
+    const likes = state.rankLikes ?? state.likes;
+    return [...lists].sort((a, b) => (likes[b.slug] ?? 0) - (likes[a.slug] ?? 0));
+  };
+  return { useListRank: () => rank };
+});
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ data: state.places }),
   useCollections: () => ({ data: state.cols }),
@@ -881,6 +896,22 @@ describe('start from what you love', () => {
     renderScreen();
     fireEvent.click(more()!);
     expect(names()).toEqual(['Phở run', 'Quiet corners', 'Loud nights']);
+  });
+
+  // Narrowed before it is ranked: the reader's own published list is under
+  // Yours, a list from another city is not this shelf's, and neither
+  // should be something the lists that are shown get measured against.
+  it('hands the ranking the community’s lists in this city, without the reader’s own', () => {
+    state.uid = 'me';
+    state.mine = [coll('pho', 'Phở run')];
+    state.cols = [
+      coll('quiet', 'Quiet corners'), coll('minepub', 'My public one', { owner_id: 'me' } as Partial<Coll>),
+      coll('saigon', 'Saigon only'), coll('loud', 'Loud nights'),
+    ];
+    state.members = { pho: [here()], minepub: [here()], quiet: [here()], loud: [here()], saigon: [away()] };
+    ranking.asked.length = 0;
+    renderScreen();
+    expect(ranking.asked.at(-1)).toEqual(['quiet', 'loud']);
   });
 
   // A guest owns nothing, and an account whose lists are all elsewhere

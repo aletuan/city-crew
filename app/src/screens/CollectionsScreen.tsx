@@ -36,6 +36,7 @@ import {
 import { sharesByList, visibilityOf as seenOf } from '../lib/shares';
 import { normalizeHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
+import { useListRank } from '../lib/tasteProfile';
 import { likesWorthShowing } from '../lib/likes';
 import { isNewList } from '../lib/newest';
 import { leadingCity, mosaicCaption, mosaicGroups, mosaicRows, type MosaicEntry, type MosaicRow } from '../lib/collectionMosaic';
@@ -350,11 +351,15 @@ export default function CollectionsScreen({ navigation, route }: {
   const sharesOf = useMemo(() => sharesByList(myShares.data), [myShares.data]);
   const { askToSignIn } = useSaveActions();
   // One heart on every public list, yours included (owner, 17 Oct 2026):
-  // a curator may like their own list, and the shelves rank by everyone's
-  // likes but theirs (`rankLikes`, read where a shelf is sorted). It is
-  // the control the Explore shelf taps, backed by the same provider, one
-  // copy of the truth.
-  const { likes, rankLikes, myLikes, toggleLike } = useLikes();
+  // a curator may like their own list, and the shelves rank on everyone's
+  // likes but theirs (`rankLikes`, read by `useListRank`). It is the
+  // control the Explore shelf taps, backed by the same provider, one copy
+  // of the truth.
+  const { likes, myLikes, toggleLike } = useLikes();
+  // The order of a Community shelf at rest (owner, 14 Nov 2026;
+  // `docs/collection-ranking.md`). Yours keeps its own order, and an
+  // asked shelf keeps the answer's.
+  const rank = useListRank();
   const { data: places, loading: placesLoading, loaded: placesLoaded, reload: placesReload } = usePlaces();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -758,8 +763,10 @@ export default function CollectionsScreen({ navigation, route }: {
   // and hiding the list for that made a visit look like a double load.
   const mineReady = mine.loaded;
   // The shelf, as the sift ordered it — the catalog's own order, newest
-  // first, when nothing is asked (it said "by likes" here, and never was);
-  // lists found by their own words first and then by hits when it is.
+  // first, when nothing is asked; lists found by their own words first
+  // and then by hits when it is. Community at rest is not shown in this
+  // order: the Mosaic ranks each city's block (`groups`) and the grid is
+  // ranked whole (`sections`).
   // Memoised with `hits`: the city blocks and the sections are built from
   // it, and a new array every render rebuilt them every render — see the
   // freeze noted at `onSeen`.
@@ -782,9 +789,9 @@ export default function CollectionsScreen({ navigation, route }: {
   const groups = useMemo(() => (onYours || communityView !== 'mosaic' || asked ? null : mosaicGroups(sifted, {
     cityOf: (c) => leadingCity(membersOf(c, places).map((p) => p.city_id), c.city_id),
     kindOf: (c) => listKinds(membersOf(c, places), { hidden: c.kinds_hidden ?? [] })[0] ?? null,
-    likes: rankLikes,
+    rank,
     home: here?.id,
-  })), [onYours, communityView, asked, sifted, places, rankLikes, here?.id]);
+  })), [onYours, communityView, asked, sifted, places, rank, here?.id]);
   // Memoised: a new array here makes the list reset what it has reported
   // in view and report it again — see the freeze noted at `onSeen`.
   //
@@ -808,8 +815,11 @@ export default function CollectionsScreen({ navigation, route }: {
     }
     return groups?.length
       ? groups.map((g) => ({ own: false, data: g.rows, city: { id: g.city, count: g.count } }))
-      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : pairUp(sifted, false) }];
-  }, [onYours, mineReady, sifted, sharedSlugs, groups, communityView]);
+      // The grid has no city blocks, so at rest it is one shelf and is
+      // ranked as one, every city's lists measured against each other.
+      // It was the catalog's order, newest first.
+      : [{ own: false, data: communityView === 'mosaic' ? mosaicRows(sifted) : pairUp(asked ? sifted : rank(sifted), false) }];
+  }, [onYours, mineReady, sifted, sharedSlugs, groups, communityView, asked, rank]);
   const atCity = atKey == null ? null : sections.find((x) => x.city && (x.city.id ?? '') === atKey)?.city ?? null;
 
   // ── the city you are in, pinned, and a way to the others (owner,

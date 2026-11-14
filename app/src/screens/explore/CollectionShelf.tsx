@@ -27,7 +27,8 @@ import { Collection, coverUriOf, membersOf, touchesCity } from '../../lib/data';
 import { useCollections, useLikes, usePlaces } from '../../lib/catalog';
 import { useSession } from '../../lib/auth';
 import { useSaveActions } from '../../lib/save';
-import { likesWorthShowing, rankByLikes } from '../../lib/likes';
+import { likesWorthShowing } from '../../lib/likes';
+import { useListRank } from '../../lib/tasteProfile';
 import { isNewList } from '../../lib/newest';
 import { shelfRatio } from '../../lib/shelfCard';
 import NewBadge from '../../components/NewBadge';
@@ -40,7 +41,8 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCurrentCity();
   const cols = useCollections();
-  const { likes, rankLikes, myLikes, toggleLike } = useLikes();
+  const { likes, myLikes, toggleLike } = useLikes();
+  const rank = useListRank();
   const { session } = useSession();
   const uid = session?.user?.id;
   const { askToSignIn } = useSaveActions();
@@ -67,15 +69,14 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
   // Only collections with at least one visible member in this city — an
   // empty collection is a dead end for a browsing guest, and one whose
   // places are all somewhere else is a shelf entry for a different trip.
-  // Most liked first, and the shelf's old order underneath it — see
-  // `rankByLikes`. While every count is zero, which is the state this
-  // ships in, the result is byte-for-byte the shelf that was here before.
-  // By everybody's likes but the owner's own — `rankLikes`; the heart on
-  // each card still prints the whole count.
-  const visible = rankByLikes(
-    cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id)),
-    rankLikes,
-  );
+  // In the order `lib/listRank` gives the lists of this city (owner, 14
+  // Nov 2026; `docs/collection-ranking.md`): likes, how the list was
+  // used, what it holds, how new it is, and what this reader leans
+  // towards. It was most liked first and then newest. The city is the
+  // filter and stays here, before the ranking, so every signal is
+  // measured among this city's lists. The heart on each card still
+  // prints the whole count, the owner's own like included.
+  const visible = rank(cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id)));
 
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places));
   const now = Date.now();
@@ -209,7 +210,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                         wore a dimmed, inert heart, because the database
                         refused a curator's like; it takes it now, as
                         every other social app does, and keeps the vote
-                        out of the order instead — the shelf sorts by
+                        out of the order instead — the shelf is ranked on
                         `rankLikes`, which leaves the owner's like out.
                         The collection's own screen and the Collections
                         grid draw the same heart by the same rule. */}

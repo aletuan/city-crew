@@ -162,7 +162,21 @@ vi.mock('expo-location', () => ({
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, setScheme: () => {}, ready: true }),
 }));
-vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => state.taste }));
+// The order of a public shelf is `lib/listRank`'s, tested there, and
+// reaches a screen through `useListRank`. Stood in for here by the
+// simplest ranking — most liked first, the order handed over on a tie —
+// so what is under test is that the screen shows what the ranking
+// returns, for the lists it handed it. One function for the life of the
+// file: the screens memoise on its identity.
+const ranking = vi.hoisted(() => ({ asked: [] as string[][] }));
+vi.mock('../lib/tasteProfile', () => {
+  const rank = (lists: readonly { slug: string }[]) => {
+    ranking.asked.push(lists.map((c) => c.slug));
+    const likes = state.rankLikes ?? state.likes;
+    return [...lists].sort((a, b) => (likes[b.slug] ?? 0) - (likes[a.slug] ?? 0));
+  };
+  return { useBrowseTaste: () => state.taste, useListRank: () => rank };
+});
 vi.mock('../lib/checkins', () => ({
   useMyCheckins: () => ({ data: state.checkins, loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: () => {} }),
 }));
@@ -1956,6 +1970,20 @@ describe('the community shelf', () => {
     const selfish = screen.getByText('List selfish');
     expect(liked.compareDocumentPosition(selfish) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(shelfCard('List selfish').textContent).toContain('3');
+  });
+
+  // The city is the filter and comes before the ranking: every signal in
+  // it is measured among the lists it is handed.
+  it('hands the ranking this city’s lists and no others, and shows them in its order', () => {
+    state.places.data = [place('p1')];
+    state.cols.data = [collection('first', ['p1']), collection('elsewhere', ['not-here']), collection('second', ['p1'])];
+    state.rankLikes = { second: 5 };
+    ranking.asked.length = 0;
+    render(<ExploreScreen navigation={nav()} />);
+    expect(ranking.asked.at(-1)).toEqual(['first', 'second']);
+    const first = screen.getByText('List first');
+    expect(screen.getByText('List second').compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText('List elsewhere')).toBeNull();
   });
 
   it('still offers the heart on somebody else’s list', () => {

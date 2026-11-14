@@ -100,10 +100,18 @@ export function leadingCity(places: readonly (string | null | undefined)[], stam
  *
  * Blocks: the reader's own city first — the lists they can use tonight —
  * then the rest by how many lists they hold, then "elsewhere". Inside a
- * block, the most-liked list takes the wide card, and the rest follow in
- * runs of the same leading kind, so the cafés of a city sit together; a
- * run is placed by the likes of its best list. Ties keep the order the
- * lists arrived in, which is the catalog's, newest first.
+ * block, the list `rank` puts first takes the wide card, and the rest
+ * follow in runs of the same leading kind, so the cafés of a city sit
+ * together; a run is placed by its best-ranked list.
+ *
+ * `rank` is the caller's, and is asked once per block with that block's
+ * lists (`useListRank`; it was most liked first until 14 Nov 2026, see
+ * `docs/collection-ranking.md`). Per block and not once for the shelf:
+ * every signal in it is measured among the lists it is handed, and a
+ * city's lists are compared with each other. The runs come after it, so
+ * its spreading of one author's lists holds for the wide card and the
+ * head of each run and not inside a run: sitting the cafés together was
+ * asked for first, and wins.
  *
  * Only for the shelf at rest. A search or a chip asks a question, and its
  * answer keeps the order `siftCollections` gives it.
@@ -111,7 +119,7 @@ export function leadingCity(places: readonly (string | null | undefined)[], stam
 export function mosaicGroups<C extends { slug: string }>(collections: readonly C[], o: {
   cityOf: (c: C) => string | null;
   kindOf: (c: C) => string | null;
-  likes: Readonly<Record<string, number>>;
+  rank: (lists: readonly C[]) => C[];
   home?: string | null;
   minCity?: number;
 }): MosaicGroup<C>[] {
@@ -139,10 +147,8 @@ export function mosaicGroups<C extends { slug: string }>(collections: readonly C
   elsewhere.sort((a, b) => collections.indexOf(a) - collections.indexOf(b));
   if (elsewhere.length) blocks.push([null, elsewhere]);
 
-  const liked = (c: C) => o.likes[c.slug] ?? 0;
   const arrange = (lists: C[]): C[] => {
-    const ranked = [...lists].sort((a, b) => liked(b) - liked(a));
-    const [lead, ...rest] = ranked;
+    const [lead, ...rest] = o.rank(lists);
     const runs = new Map<string | null, C[]>();
     for (const c of rest) {
       const kind = o.kindOf(c);
