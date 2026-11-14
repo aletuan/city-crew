@@ -91,7 +91,7 @@ function ScreenFallback({ navigation, retry }: { navigation: Nav; retry: () => v
     <View style={[s.page, { paddingTop: insets.top, paddingBottom: clearance }]}>
       {pushed && (
         <View style={s.top}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} bare />
         </View>
       )}
       <Message

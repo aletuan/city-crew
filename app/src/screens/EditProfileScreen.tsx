@@ -255,6 +255,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           uses, and a form that cannot pass it keeps its button. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
+        backBare
         title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}
         action={{
           label: t('Save changes', 'Lưu thay đổi', '変更を保存', '保存更改', '儲存更改'),

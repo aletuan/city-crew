@@ -318,6 +318,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             it instead of finding out after the code fails to arrive. */}
         <AuthHeader
           onBack={() => setStep('form')}
+          backBare
           title={t('What are you into?', 'Bạn thích gì?', '好みを教えてください', '你喜欢什么？', '你喜歡什麼？')}
         />
         <Lede>{t(
@@ -389,6 +390,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         <StepDots step={3} total={3} />
         <AuthHeader
           onBack={() => setStep('form')}
+          backBare
           title={t('Check your email', 'Kiểm tra email', 'メールをご確認ください', '请查收邮件', '請查看電子郵件')}
         />
         <Lede>{t(
@@ -504,6 +506,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       <StepDots step={1} total={dotTotal} />
       <AuthHeader
         onBack={() => navigation.goBack()}
+        backBare
         title={t('Sign up', 'Đăng ký', '新規登録', '注册', '註冊')}
       />
       <Lede>{t(
