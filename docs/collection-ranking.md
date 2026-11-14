@@ -102,6 +102,15 @@ Sau khi xếp: không quá 2 list liên tiếp của cùng một tác giả; lis
 lùi xuống sau list kế tiếp của người khác. 54 list thuộc về 14 tác giả, và
 một tác giả đang giữ 22 list.
 
+### 7. List của chính người xem: xếp như mọi list khác
+
+Chủ app quyết, 14/11/2026: giữ như công thức, không phân biệt list của ai.
+Phép tính thử cho thấy cái giá: B giữ 22 trong 54 list công khai và thấy
+list của chính mình đứng đầu ở Hà Nội. Hai lựa chọn kia đã đưa ra và không
+được chọn: loại hẳn list của người xem (Ý tưởng vẫn làm vậy với ba gợi ý
+của nó, và giữ nguyên), hoặc giữ nhưng không cho dẫn đầu. Nếu loại, B thấy
+"Cà phê Hà Nội" trước, giống hôm nay; A vẫn thấy "Góc học bài Sài Gòn".
+
 ## Tính thử trên dữ liệu thật (14/11/2026)
 
 Hai tài khoản thật, mỗi tài khoản ở thành phố họ hoạt động nhiều nhất. Tính
@@ -136,21 +145,16 @@ người vẫn là hai list này (0,635 và 0,701), và hạng 5 của A là lis
 
 ## Điều phép tính thử cho thấy, chưa quyết
 
-Hai điều đã quyết nằm ở mục 3: sàn của "được dùng" và điểm "mới" của
-list dưới 3 địa điểm. Còn lại:
+Ba điều đã quyết: sàn của "được dùng" và điểm "mới" của list dưới 3
+địa điểm (mục 3), và list của chính người xem (mục 7). Còn lại:
 
-1. **List của chính người xem.** B thấy list của mình đứng đầu. Ý tưởng đã
-   bỏ list của người xem; kệ Explore thì cố ý giữ ("a public list is part
-   of the community, yours included"). Cần chủ app quyết: giữ, bỏ, hay chỉ
-   không cho dẫn đầu. Nếu bỏ, B thấy "Cà phê Hà Nội" trước, giống hôm nay;
-   A vẫn thấy "Góc học bài Sài Gòn".
-2. **Sở thích yếu hơn con số 0,10.** Không gì truyền `preferred` vào
+1. **Sở thích yếu hơn con số 0,10.** Không gì truyền `preferred` vào
    `tasteFrom` hôm nay, nên `affinity` cao nhất là 0,6. Trên cả tập nó chạy
    từ 0,19 đến 0,60 với A và từ 0,22 đến 0,59 với B, tức chênh nhau nhiều
    nhất 0,04 điểm.
-3. **Tín hiệu lượt xem đang bằng 0 với mọi list**: list được xem nhiều nhất
+2. **Tín hiệu lượt xem đang bằng 0 với mọi list**: list được xem nhiều nhất
    mới có 9 lượt, dưới ngưỡng 20.
-4. **Các trọng số là phán đoán** từ bảng số đo, chưa kiểm chứng bằng hành
+3. **Các trọng số là phán đoán** từ bảng số đo, chưa kiểm chứng bằng hành
    vi. Đo lại bảng số đo trước khi chỉnh bất kỳ trọng số nào.
 
 ## Các bước
