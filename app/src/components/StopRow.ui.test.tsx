@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '../uitest/render';
+import { fireEvent, render, screen, textStyleOf } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 
 const state = vi.hoisted(() => ({ lang: 'en' as Exclude<Lang, 'zh' | 'zh-Hant'> }));
@@ -73,6 +73,19 @@ describe('StopRow', () => {
     const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
     expect(getComputedStyle(words).color).toBe(rgb(String(colors.accent)));
     expect(getComputedStyle(words.parentElement!).color).not.toBe(rgb(String(colors.accent)));
+  });
+
+  // The sentence, in Vietnamese, with room for its marks (owner, 14 Nov
+  // 2026): 20 to the line where 18 left about 3pt clear, and 4 more above
+  // it than the name and the district keep between themselves.
+  it('gives the sentence 20 to the line, and stands it apart from the facts above it', () => {
+    row({ why: 'Đến giờ này, chén chè nóng hoặc mát là cách ngọt ngào.' });
+    const why = textStyleOf(screen.getByTestId('stop-why'))!;
+    expect(why.fontSize).toBe(13);
+    expect(why.lineHeight).toBe(20);
+    expect(why.marginTop).toBe(4);
+    // The district keeps to the name: nothing of its own above it.
+    expect(textStyleOf(screen.getByText('Melbourne City · 75 min'))!.marginTop).toBeUndefined();
   });
 
   it('marks the stop the picture is on: the hour in the accent, the name heavier', () => {

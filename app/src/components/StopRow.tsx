@@ -177,7 +177,19 @@ const s = StyleSheet.create({
   gone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },
   // A step down from the name and up from the meta line, because it is
   // the row's only claim about why this place rather than another.
-  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18 },
+  //
+  // 20 to the line, and 4 more above it than `lines` gives (owner, 14 Nov
+  // 2026: "the words are rather close together"). Measured on their
+  // screenshot of an options card, at 18 to the line: about 3pt clear
+  // between the sentence's two lines, a descender on one (g, y, ạ) all but
+  // meeting a stacked mark on the next (ầ, ằ, ế). Eighteen over thirteen
+  // is 1.38, which Latin text stands and Vietnamese does not. And the
+  // name, the district and the sentence stood 4 apart each, so nothing
+  // said where the facts about a place ended and the reason for it began:
+  // the name and the district stay a pair at 4, and the sentence stands
+  // 8 under them. Both screens that draw this row, the options card and
+  // the saved trip, since the sentence is the same type on both.
+  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 20, marginTop: 4 },
   whyLang: { color: colors.textTertiary, fontWeight: font.semibold },
   leg: { marginTop: 8 },
 });
