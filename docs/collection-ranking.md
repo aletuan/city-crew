@@ -56,10 +56,23 @@ thành phố), như `lib/popular.ts` làm với địa điểm.
 | Tín hiệu | Trọng số | Cách tính |
 |---|---|---|
 | Lượt thích | **0,30** | `ln(1+L) / ln(1+L_max)`. `L` không tính lượt của chủ list. Thang log để lượt thứ 12 không nặng bằng lượt đầu. |
-| Được dùng | **0,25** | `ln(1+U) / ln(1+U_max)`. `U` = số người khác chủ list đã dựng chuyến đi từ list + số người khác đã sao chép nó. |
+| Được dùng | **0,25** | `ln(1+U) / ln(1+max(U_max, 5))`. `U` = số người khác chủ list đã dựng chuyến đi từ list + số người khác đã sao chép nó. Sàn 5: xem "Sàn của được dùng" bên dưới. |
 | Nội dung | **0,20** | Một nửa là `min(n, 8) / 8` (`n` = số địa điểm đã xuất bản). Một nửa là điểm đánh giá trung bình của các địa điểm, mỗi điểm kéo về trung bình catalog bằng `bayesRating` (prior 10), rồi chuẩn hoá min–max trong tập. |
-| Mới tạo | **0,15** | 1 trong 7 ngày đầu (khớp `NEW_LIST_DAYS`, nhãn "Mới"), giảm tuyến tính về 0 ở ngày 21. |
+| Mới tạo | **0,15** | 1 trong 7 ngày đầu (khớp `NEW_LIST_DAYS`, nhãn "Mới"), giảm tuyến tính về 0 ở ngày 21. List dưới 3 địa điểm: 0. |
 | Lượt xem | **0,10** | Tỉ lệ `L / lượt xem`, trần 1, và chỉ khi list có từ 20 lượt xem. Dưới 20 thì bằng 0. |
+
+**Sàn của "được dùng"** (chủ app đồng ý, 14/11/2026). `U_max` hôm nay là
+2 ở Hà Nội và 4 ở TP.HCM. Chuẩn hoá theo đúng `U_max` thì một lượt dùng
+đáng 0,16 điểm ở Hà Nội và 0,11 ở TP.HCM, trong khi hạng 1 và hạng 4 ở
+TP.HCM chỉ cách nhau 0,13: một người dựng một chuyến đi là đảo được cả
+đầu bảng. Với sàn 5, một lượt dùng đáng 0,10 điểm ở mọi thành phố cho đến
+khi có list được dùng quá 5 lần.
+
+**List dưới 3 địa điểm không có điểm "mới"** (chủ app đồng ý, 14/11/2026).
+Trong lần tính đầu, một list 1 địa điểm, tạo hôm trước, lên hạng 5 trong
+14 dù đã bị phạt 0,85: điểm "mới" trọn vẹn bù lại gần hết. "Mới" là để một
+list hay chưa ai kịp thích không bị chôn, không phải để một list chưa
+xong được đưa lên.
 
 Lượt xem không vào dạng số thô vì nó đếm cả tác giả và mở lặp lại: xếp
 theo số thô là thưởng cho người tự mở list của mình. Dạng tỉ lệ thì ngược
@@ -100,42 +113,44 @@ của app vì code chưa có.
 
 | Hạng mới | Hạng cũ | List | Điểm | Thích | Dùng | Địa điểm | Tuổi (ngày) |
 |---|---|---|---|---|---|---|---|
-| 1 | 12 | Góc học bài Sài Gòn | 0,635 | 2 | 4 | 23 | 17 |
-| 2 | 2 | Saigon Pizza Night | 0,559 | 8 | 1 | 7 | 57 |
-| 3 | 4 | Thao Dien Must Visit | 0,529 | 6 | 1 | 11 | 28 |
-| 4 | 1 | [HCM][CAFE] BEEN TO (của A, không mô tả) | 0,509 | 12 | 1 | 85 | 57 |
-| 5 | 10 | [FOOD TOUR] VINHOMES GRAND PARK (1 địa điểm) | 0,475 | 2 | 1 | 1 | 1 |
+| 1 | 12 | Góc học bài Sài Gòn | 0,610 | 2 | 4 | 23 | 17 |
+| 2 | 2 | Saigon Pizza Night | 0,548 | 8 | 1 | 7 | 57 |
+| 3 | 4 | Thao Dien Must Visit | 0,518 | 6 | 1 | 11 | 28 |
+| 4 | 1 | [HCM][CAFE] BEEN TO (của A, không mô tả) | 0,500 | 12 | 1 | 85 | 57 |
+| 5 | 7 | Evening in Tân Định | 0,421 | 5 | 0 | 8 | 57 |
 
 **Người xem B, Hà Nội** (22 list; B giữ 22 list công khai trên cả nước):
 
 | Hạng mới | Hạng cũ | List | Điểm | Thích | Dùng | Địa điểm | Tuổi (ngày) |
 |---|---|---|---|---|---|---|---|
-| 1 | 10 | The Way to Hanoi Coffee (của B) | 0,701 | 5 | 2 | 16 | 27 |
+| 1 | 10 | The Way to Hanoi Coffee (của B) | 0,604 | 5 | 2 | 16 | 27 |
 | 2 | 1 | Cà phê Hà Nội | 0,543 | 11 | 0 | 12 | 79 |
 | 3 | 3 | Đồ Nhật ở Hà Nội | 0,541 | 10 | 0 | 9 | 90 |
 | 4 | 15 | Vang Hà Nội mùa đông | 0,528 | 2 | 0 | 13 | 3 |
 | 5 | 2 | Hồ Gươm lên đèn | 0,511 | 10 | 0 | 10 | 89 |
 
+Hai bảng trên là lần tính thứ hai, sau khi thêm sàn 5 và bỏ điểm "mới" của
+list dưới 3 địa điểm. Lần đầu, không có hai điều đó, hạng 1 của cả hai
+người vẫn là hai list này (0,635 và 0,701), và hạng 5 của A là list 1 địa
+điểm nói ở trên.
+
 ## Điều phép tính thử cho thấy, chưa quyết
+
+Hai điều đã quyết nằm ở mục 3: sàn của "được dùng" và điểm "mới" của
+list dưới 3 địa điểm. Còn lại:
 
 1. **List của chính người xem.** B thấy list của mình đứng đầu. Ý tưởng đã
    bỏ list của người xem; kệ Explore thì cố ý giữ ("a public list is part
    of the community, yours included"). Cần chủ app quyết: giữ, bỏ, hay chỉ
-   không cho dẫn đầu. Nếu bỏ, B thấy "Cà phê Hà Nội" trước, giống hôm nay.
-2. **"Được dùng" quá nhạy khi còn thưa.** `U_max` là 2 ở Hà Nội và 4 ở
-   TP.HCM, nên một lượt dùng đã đáng 0,16 điểm ở Hà Nội và 0,11 ở TP.HCM;
-   ở TP.HCM, hạng 1 và hạng 4 cách nhau 0,13. Hướng sửa: chuẩn hoá theo
-   `max(U_max, 5)`. Tính lại với sàn 5 thì hạng 1 của cả hai người không
-   đổi (0,61 và 0,60).
-3. **List 1 địa điểm vẫn lên hạng 5** nhờ điểm "mới" trọn vẹn, dù đã bị
-   phạt. Hướng sửa: list dưới 3 địa điểm không nhận điểm "mới".
-4. **Sở thích yếu hơn con số 0,10.** Không gì truyền `preferred` vào
-   `tasteFrom` hôm nay, nên `affinity` cao nhất là 0,6; ở bảy hạng đầu của
-   hai bảng trên nó chạy từ 0,22 đến 0,60, tức chênh nhau nhiều nhất 0,04
-   điểm.
-5. **Tín hiệu lượt xem đang bằng 0 với mọi list**: list được xem nhiều nhất
+   không cho dẫn đầu. Nếu bỏ, B thấy "Cà phê Hà Nội" trước, giống hôm nay;
+   A vẫn thấy "Góc học bài Sài Gòn".
+2. **Sở thích yếu hơn con số 0,10.** Không gì truyền `preferred` vào
+   `tasteFrom` hôm nay, nên `affinity` cao nhất là 0,6. Trên cả tập nó chạy
+   từ 0,19 đến 0,60 với A và từ 0,22 đến 0,59 với B, tức chênh nhau nhiều
+   nhất 0,04 điểm.
+3. **Tín hiệu lượt xem đang bằng 0 với mọi list**: list được xem nhiều nhất
    mới có 9 lượt, dưới ngưỡng 20.
-6. **Các trọng số là phán đoán** từ bảng số đo, chưa kiểm chứng bằng hành
+4. **Các trọng số là phán đoán** từ bảng số đo, chưa kiểm chứng bằng hành
    vi. Đo lại bảng số đo trước khi chỉnh bất kỳ trọng số nào.
 
 ## Các bước
