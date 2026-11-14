@@ -34,7 +34,7 @@ import {
   Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf, useMyListShares, useSharedWithMe,
 } from '../lib/data';
 import { sharesByList, visibilityOf as seenOf } from '../lib/shares';
-import { atHandle } from '../lib/handle';
+import { normalizeHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import { isNewList } from '../lib/newest';
@@ -482,8 +482,9 @@ export default function CollectionsScreen({ navigation, route }: {
   // The faces behind the community tiles, fetched once per catalog load
   // through the same batched lookup the Crew screen uses. A miss leaves
   // the Avatar drawing its placeholder circle — the seat is always
-  // there, which is what keeps a bare @handle reading as a signature
-  // rather than a stray tag.
+  // there, which is what keeps a bare handle reading as a signature
+  // rather than a stray word. The Mosaic's cards wear it too since
+  // 14 Nov 2026, when the `@` came off both.
   // The friends behind the lists shared with you are asked in the same
   // batch: their tiles wear the same byline.
   const [faces, setFaces] = useState<Record<string, FriendProfile>>({});
@@ -1139,7 +1140,10 @@ export default function CollectionsScreen({ navigation, route }: {
     const below = caption === 'below';
     const uri = coverFor(c);
     const title = t(c.title_en, c.title_vi, c.title_ja);
-    const author = c.curator_handle ? atHandle(c.curator_handle) : '';
+    // Bare, beside a face (owner, 14 Nov 2026), as the collection page's
+    // head and the activity rows have it: the `@` stays where a handle
+    // stands in a sentence or under a real name, and a byline is neither.
+    const author = c.curator_handle ? normalizeHandle(c.curator_handle) : '';
     const blurb = featured && !below ? t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() : '';
     // "New" on the Mosaic as on a tile. Mosaic has been Community's own
     // view since #1257 and never drew the mark, so a list made this week
@@ -1161,7 +1165,17 @@ export default function CollectionsScreen({ navigation, route }: {
           numberOfLines={2}
         >{title}</Text>
         {blurb ? <Text style={[s.mosaicBlurb, s.mosaicInkShadow]} numberOfLines={2}>{blurb}</Text> : null}
-        {author ? <Text style={[s.mosaicAuthor, below ? s.mosaicAuthorBelow : s.mosaicInkShadow]} numberOfLines={1}>{author}</Text> : null}
+        {/* Who made it, said with a face, as the tiles say it (owner,
+            14 Nov 2026): with the `@` gone, the face is what tells a name
+            from one more word of the title. 16, not the tiles' 18: the
+            words beside it are 12, not 13, and the face stays a little
+            taller than their line. */}
+        {author ? (
+          <View style={s.mosaicBy} testID={`collection-mosaic-by-${c.slug}`}>
+            <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={16} />
+            <Text style={[s.mosaicAuthor, below ? s.mosaicAuthorBelow : s.mosaicInkShadow]} numberOfLines={1}>{author}</Text>
+          </View>
+        ) : null}
       </View>
     );
     return (
@@ -1323,7 +1337,7 @@ export default function CollectionsScreen({ navigation, route }: {
                         // tells two friends' lists apart.
                         accessibilityLabel={item.own
                           ? `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}, ${visibilityOf(c)}`
-                          : `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}${section.shared && c.curator_handle ? `, ${atHandle(c.curator_handle)}` : ''}`}
+                          : `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}${section.shared && c.curator_handle ? `, ${normalizeHandle(c.curator_handle)}` : ''}`}
                       >
                         {uri
                           ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
@@ -1415,7 +1429,7 @@ export default function CollectionsScreen({ navigation, route }: {
                               <>
                                 <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
                                 <Text style={s.gcardBy} numberOfLines={1}>
-                                  {atHandle(c.curator_handle)}
+                                  {normalizeHandle(c.curator_handle)}
                                 </Text>
                               </>
                             ) : null}
@@ -1698,7 +1712,9 @@ const s = StyleSheet.create({
   // Full white on a photograph, not the 82% secondary ink: at 82% a 12–13pt
   // line over a white picture needs 0.65 of dark, at full white 0.58, and
   // `mosaicScrim` holds 0.60 behind every line. Size carries the order.
-  mosaicAuthor: { color: onPhoto.text, fontSize: 12, lineHeight: 16 },
+  mosaicAuthor: { color: onPhoto.text, fontSize: 12, lineHeight: 16, flexShrink: 1 },
+  // The face and the name, as the tile's foot sets them, 6 apart.
+  mosaicBy: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   mosaicAuthorBelow: { color: colors.textSecondary },
   mosaicBlurb: { color: onPhoto.text, fontSize: 13, lineHeight: 18 },
   gcardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 19 },
