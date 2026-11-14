@@ -619,8 +619,9 @@ describe('pinned places that did not make it', () => {
 });
 
 // A reader who ticked a collection is told, stop by stop, whether it was
-// heard (owner, 14 Nov 2026): the collection's own places say so, and a
-// place added to fill a stop owns up to it.
+// heard (owner, 14 Nov 2026): the collection's own places say so. A place
+// added to fill a stop says nothing; it said "Added for you" for an
+// afternoon, on two rows of three.
 describe('where each stop came from', () => {
   const sources = () => screen.queryAllByTestId('stop-source').map((el) => el.textContent);
 
@@ -630,16 +631,17 @@ describe('where each stop came from', () => {
     expect(screen.queryByTestId('plans-none-from-list')).toBeNull();
   });
 
-  it('marks the collection’s places and the ones added, on every card', () => {
+  it('marks the collection’s places, and no others, on every card', () => {
     mine.current = [{ slug: 'weekend', members: [CAFE, LAKE] }];
     renderScreen({ from: ['weekend'] });
     // MATCH is the café and a dinner; ICONIC holds neither of the list's;
-    // LOWKEY is the lake alone.
-    expect(sources()).toEqual([
-      'From your collection', 'Added for you',
-      'Added for you', 'Added for you',
-      'From your collection',
-    ]);
+    // LOWKEY is the lake alone. Two rows of five say so.
+    expect(sources()).toEqual(['From your collection', 'From your collection']);
+    const rowOf = (name: string) => screen.getByText(name).parentElement!.textContent;
+    expect(rowOf('Cộng Café')).toContain('From your collection');
+    expect(rowOf('West Lake Walk')).toContain('From your collection');
+    expect(rowOf('Bún Chả Hương Liên')).not.toContain('From your collection');
+    expect(screen.queryByText('Added for you')).toBeNull();
     expect(screen.queryByTestId('plans-none-from-list')).toBeNull();
   });
 
@@ -647,7 +649,7 @@ describe('where each stop came from', () => {
     mine.current = [{ slug: 'weekend', members: [PINNED] }];
     renderScreen({ from: ['weekend'] });
     expect(screen.getByTestId('plans-none-from-list').textContent).toBe('Nothing from your collections fitted this plan.');
-    expect(sources().every((x) => x === 'Added for you')).toBe(true);
+    expect(sources()).toEqual([]);
   });
 
   it('leaves that to the line about what did not fit, when there is one', () => {

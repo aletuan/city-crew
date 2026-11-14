@@ -256,8 +256,9 @@ export default function PlanOptionsScreen({ navigation, route }: {
       '你合集中的部分地点未能放进这个计划。', '你合集中的部分地點未能放進這個計畫。',
     );
 
-  // Which stops are the reader's own, for the line each row wears when a
-  // collection was chosen (owner, 14 Nov 2026) — see `StopRow`'s `source`.
+  // Which stops are the reader's own, for the words a row of theirs wears
+  // when a collection was chosen (owner, 14 Nov 2026) — see `StopRow`'s
+  // `source`.
   // By membership, not by how the planner came to pick it: a place from
   // the collection is from the collection whichever way it got on a card.
   const listed = useMemo(() => new Set(pinned.map((x) => x.slug)), [pinned]);
@@ -452,7 +453,7 @@ const CARD_STEP_MS = 60;
 function PlanCard({ plan, name, why, listed, nth, onPress }: {
   plan: TripPlan; name: string; onPress: () => void;
   /** The slugs of the collections the reader chose to build from; empty
-   *  when they chose none, and then no row says where it came from. */
+   *  when they chose none, and then no row says it is from one. */
   listed: ReadonlySet<string>;
   /** The model's sentence per stop, by slug, when it has written them. */
   why: ReadonlyMap<string, string> | null;
@@ -623,9 +624,11 @@ function PlanCard({ plan, name, why, listed, nth, onPress }: {
                   // One line: on the one screen where the names *are* the
                   // choice, a wrapped name pushes the next option down.
                   nameLines={1}
-                  source={listed.size === 0 ? null : listed.has(st.place.slug)
-                    ? { own: true, label: t('From your collection', 'Từ bộ sưu tập', 'コレクションから', '来自合集', '來自合集') }
-                    : { own: false, label: t('Added for you', 'Gợi ý thêm', 'おすすめを追加', '为你补充', '為你補充') }}
+                  // Only the collection's own stops say so; a stop the
+                  // catalog filled says nothing — see `StopRow`'s `source`.
+                  source={listed.has(st.place.slug)
+                    ? t('From your collection', 'Từ bộ sưu tập', 'コレクションから', '来自合集', '來自合集')
+                    : null}
                   // The district under the name, as the editor and the saved
                   // trip print it, and only when the plan leaves one: a plan
                   // in a single district says it in its heading. The line

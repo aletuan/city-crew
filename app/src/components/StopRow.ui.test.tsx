@@ -19,6 +19,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: state.lang, setLang: () => {}, t: (en: string, vi: string, ja: string) => ({ en, vi, ja }[state.lang]) }),
 }));
 
+import { colors } from '../theme';
 import StopRow from './StopRow';
 
 const LEG = { km: 0.8, minutes: 13, mode: 'walk' as const };
@@ -45,26 +46,33 @@ describe('StopRow', () => {
   });
 
   // On a plan built from a collection the reader chose (owner, 14 Nov
-  // 2026): each stop says whether it is the collection's or was added.
-  it('says where the stop came from, under its name and above the meta line, and only when told', () => {
-    const { unmount } = row({ source: { own: true, label: 'From your collection' } });
-    const line = screen.getByTestId('stop-source');
-    expect(line.textContent).toBe('From your collection');
-    const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(after(screen.getByText('Hosier Lane'), line)).toBe(true);
-    expect(after(line, screen.getByText('Melbourne City · 75 min'))).toBe(true);
+  // 2026): a stop from the collection says so, on the line the district
+  // is already on, so the row is no taller for it.
+  it('says a stop is from the collection on the meta line, after the district', () => {
+    row({ source: 'From your collection' });
+    const words = screen.getByTestId('stop-source');
+    expect(words.textContent).toBe('From your collection');
+    // One line, the district first: the words sit inside the meta text.
+    expect(words.parentElement!.textContent).toBe('Melbourne City · 75 min · From your collection');
+    expect(screen.getByText('Hosier Lane').compareDocumentPosition(words) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('prints the words alone when there is no district to print, and nothing for any other stop', () => {
+    const { unmount } = row({ meta: null, source: 'From your collection' });
+    const words = screen.getByTestId('stop-source');
+    expect(words.parentElement!.textContent).toBe('From your collection');
     unmount();
     row();
     expect(screen.queryByTestId('stop-source')).toBeNull();
+    expect(screen.getByText('Melbourne City · 75 min')).toBeTruthy();
   });
 
-  it('sets the collection’s own line apart from the one that owns up to an addition', () => {
-    const { unmount } = row({ source: { own: true, label: 'From your collection' } });
-    const own = cls(screen.getByTestId('stop-source'));
-    unmount();
-    row({ source: { own: false, label: 'Added for you' } });
-    expect(screen.getByTestId('stop-source').textContent).toBe('Added for you');
-    expect(cls(screen.getByTestId('stop-source'))).not.toBe(own);
+  it('sets the words in the accent, apart from the district they follow', () => {
+    row({ source: 'From your collection' });
+    const words = screen.getByTestId('stop-source');
+    const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+    expect(getComputedStyle(words).color).toBe(rgb(String(colors.accent)));
+    expect(getComputedStyle(words.parentElement!).color).not.toBe(rgb(String(colors.accent)));
   });
 
   it('marks the stop the picture is on: the hour in the accent, the name heavier', () => {

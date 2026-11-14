@@ -71,18 +71,25 @@ export default function StopRow({
   /** What to print in a delisted stop's place. */
   gone?: string;
   /**
-   * Where the stop came from, on a plan built from a collection the
-   * reader chose (owner, 14 Nov 2026): the collection itself, or the
-   * catalog, added to fill a stop the collection had nothing for. Left
-   * out, the row says nothing, which is every plan with no collection
-   * behind it.
+   * That the stop is from a collection the reader chose to build from,
+   * in words (owner, 14 Nov 2026): they ticked a list and then saw three
+   * cards with nothing to say whether the list had been heard. Left out
+   * for every other stop.
    *
-   * Words and not only a colour: the reader ticked a list and then saw
-   * three cards with nothing to say whether the list had been heard. The
-   * collection's line takes the accent; the catalog's is the quiet one,
-   * since it is the exception being owned up to, not the point.
+   * On the meta line, after the district, in the accent — "Sài Gòn · Từ
+   * bộ sưu tập" — and alone on it when there is no district to print.
+   *
+   * It first stood on a line of its own between the name and the
+   * district, and every stop wore one: the collection's, or "Added for
+   * you" on a stop the catalog filled. On a phone that was a fifth line
+   * to each row, and on a card where the list gave one stop of three,
+   * the exception was said twice and the point once. The owner chose
+   * this of four (the same day): the collection's stops alone, on a line
+   * the row already had. Passed over: a bookmark beside the name, which
+   * a new reader has to guess at and a long name crowds; and one line
+   * for the whole card, which cannot say which stop.
    */
-  source?: { label: string; own: boolean } | null;
+  source?: string | null;
   meta?: string | null;
   /** The model's sentence, and the language it was written in when known. */
   why?: string | null;
@@ -103,10 +110,13 @@ export default function StopRow({
         ? (
           <>
             <Text style={[s.name, here && s.nameHere]} numberOfLines={nameLines}>{name}</Text>
-            {!!source && (
-              <Text style={[s.source, source.own && s.sourceOwn]} numberOfLines={1} testID="stop-source">{source.label}</Text>
+            {(!!meta || !!source) && (
+              <Text style={s.meta} numberOfLines={1}>
+                {meta}
+                {!!meta && !!source && ' · '}
+                {!!source && <Text style={s.source} testID="stop-source">{source}</Text>}
+              </Text>
             )}
-            {!!meta && <Text style={s.meta} numberOfLines={1}>{meta}</Text>}
           </>
         )
         : <Text style={s.gone}>{gone}</Text>}
@@ -163,8 +173,7 @@ const s = StyleSheet.create({
   name: { ...type.body, color: colors.text, fontWeight: font.semibold },
   nameHere: { fontWeight: font.bold },
   meta: { ...CAPTION, color: colors.textTertiary },
-  source: { ...CAPTION, color: colors.textTertiary },
-  sourceOwn: { color: colors.accent, fontWeight: font.semibold },
+  source: { color: colors.accent, fontWeight: font.semibold },
   gone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },
   // A step down from the name and up from the meta line, because it is
   // the row's only claim about why this place rather than another.
