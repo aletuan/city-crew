@@ -263,7 +263,7 @@ describe('the two halves', () => {
     expect(sections()).toEqual(['Upcoming · 2', 'Past · 2']);
     const titles = ['Soon', 'Far ahead', 'Last week', 'Long ago'].map((s) => text().indexOf(s));
     expect([...titles].sort((a, b) => a - b)).toEqual(titles);
-    expect(screen.getByText('Your next plans, in order.')).toBeTruthy();
+    expect(screen.getByText('Your next plans.')).toBeTruthy();
   });
 
   // UX-10: the lede said "your next plans" over a list that was all
@@ -276,13 +276,13 @@ describe('the two halves', () => {
     const none = screen.getByTestId('trips-none-ahead');
     expect(none.textContent).toBe('No upcoming trips');
     expect(none.querySelector('[data-icon="calendar-outline"]')).toBeTruthy();
-    expect(screen.queryByText('Your next plans, in order.')).toBeNull();
+    expect(screen.queryByText('Your next plans.')).toBeNull();
   });
 
   it('keeps the next-plans line when only upcoming trips exist', () => {
     show([trip({ day: SOON })]);
     expect(sections()).toEqual(['Upcoming · 1']);
-    expect(screen.getByText('Your next plans, in order.')).toBeTruthy();
+    expect(screen.getByText('Your next plans.')).toBeTruthy();
     expect(screen.queryByTestId('trips-none-ahead')).toBeNull();
   });
 

@@ -557,10 +557,10 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           {!!mine.length && !!upcoming.length && (
             <Text style={s.lede}>
               {t(
-                'Your next plans, in order.',
-                'Những kế hoạch sắp tới của bạn, theo thứ tự.',
-                'これからの予定を順番に。',
-                '你接下来的计划，按顺序排列。', '你接下來的計畫，按順序排列。',
+                'Your next plans.',
+                'Những kế hoạch sắp tới của bạn.',
+                'これからの予定。',
+                '你接下来的计划。', '你接下來的計畫。',
               )}
             </Text>
           )}

@@ -88,6 +88,15 @@ describe('Screen', () => {
     expect(title('Sáng cà phê ở Huế cho hai người').fontSize).toBe('20px');
     expect(getComputedStyle(name.parentElement!).paddingTop).toBe('9px');
   });
+
+  // The subtitle stands 4 under the title, not 2 (owner, 14 Nov 2026): at
+  // 2 a date's diacritics came within about 5pt of the title's descenders.
+  it('stands the subtitle 4 under the title', () => {
+    render(<Screen title="Trip" subtitle="Thứ 7, 14/11" onBack={() => {}}><Text>body</Text></Screen>);
+    const column = screen.getByText('Trip').parentElement!;
+    expect(column).toBe(screen.getByText('Thứ 7, 14/11').parentElement);
+    expect(getComputedStyle(column).rowGap || getComputedStyle(column).gap).toBe('4px');
+  });
 });
 
 // Explore's kinds, one at a time (owner, 24 Oct 2026): the word and the
