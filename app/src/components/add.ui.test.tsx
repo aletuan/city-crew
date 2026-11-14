@@ -31,6 +31,24 @@ describe('AddSlot', () => {
   });
 });
 
+// A style as it was committed, for what jsdom cannot report: the gradient
+// is a stub there, and react-native-web's atomic font classes do not
+// resolve to the size they name.
+const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && pick(p)) return p;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error('no matching element in the committed tree');
+};
+
 // A plus and a word, the plus the owner's mockup chose (22 Oct 2026). The
 // tile has since gained a little map (owner, 1 Nov 2026); the row has not.
 describe('AddCell', () => {
@@ -48,20 +66,25 @@ describe('AddCell', () => {
     expect(document.querySelector('[data-icon="add"]')).toBeTruthy();
   });
 
-  // Laid out as a photo tile (owner, 2 Nov 2026): the plus in a dashed
-  // 44pt ring, the word along the foot; no drawing, and no dashes on the
-  // tile's own edge. The row keeps its dashes. The count it carried in its
-  // corner moved to the card on 13 Nov (owner): neither says it now.
-  it('lays the tile out as a photo tile, and says only its word', () => {
+  // The plus in a dashed 44pt ring, alone in the middle of the tile
+  // (owner, 14 Nov 2026; it was a photo tile's anatomy from 2 Nov, the
+  // word along the foot): no word drawn, no drawing, and no dashes on the
+  // tile's own edge. The row keeps its dashes and its word. The count the
+  // tile carried in its corner moved to the card on 13 Nov (owner).
+  it('draws the tile as the ring alone in its middle, and keeps the word for whoever hears it', () => {
     const { rerender } = render(<AddCell label="Add place" size={110} onPress={() => {}} testID="cell" />);
     const face = () => screen.getByTestId('cell').firstElementChild as HTMLElement;
     expect(screen.getByTestId('cell').getAttribute('aria-label')).toBe('Add place');
     expect(document.querySelector('[data-icon="location-outline"]')).toBeNull();
     expect(document.querySelector('[data-stub="Svg"]')).toBeNull();
     expect(getComputedStyle(face()).borderTopStyle).not.toBe('dashed');
-    // The word along the foot, as a tile's name sits.
-    const word = screen.getByText('Add place');
-    expect([getComputedStyle(word).position, getComputedStyle(word).bottom]).toEqual(['absolute', '6px']);
+    // Nothing in the tile but the ring, centred both ways with nothing
+    // lifting it off the middle: the word is said, not shown.
+    expect(screen.queryByText('Add place')).toBeNull();
+    expect(face().textContent).toBe('');
+    expect(face().childElementCount).toBe(1);
+    const tile = getComputedStyle(face());
+    expect([tile.alignItems, tile.justifyContent]).toEqual(['center', 'center']);
     // The plus, in the accent, inside the button scale's 44pt ring: dashed,
     // unfilled, and in the tertiary ink for the app's own scheme.
     const plus = document.querySelector('[data-icon="add"]')!;
@@ -72,32 +95,17 @@ describe('AddCell', () => {
     expect(getComputedStyle(ring).borderTopStyle).toBe('dashed');
     expect(getComputedStyle(ring).borderTopWidth).toBe('1px');
     expect(getComputedStyle(ring).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(ring).marginTop).toBe('0px');
     const ink = (c: string) => { const d = document.createElement('div'); d.style.color = c; return d.style.color; };
     expect(ring.style.borderTopColor).toBe(ink(textTertiaryHex.light));
     rerender(<AddCell label="Add place" onPress={() => {}} testID="cell" />);
     expect(getComputedStyle(face()).borderTopStyle).toBe('dashed');
     expect(screen.getByTestId('cell').getAttribute('aria-label')).toBe('Add place');
+    // The row shows its word: a row of one plus says nothing.
+    expect(screen.getByText('Add place')).toBeTruthy();
     expect(document.querySelector('[data-icon="location-outline"]')).toBeNull();
   });
 
-  // The word sits on the accent's tint over the page, in the body's ink —
-  // read off the word as drawn, then worked out against every look's tint.
-  it('keeps its word at 4.5:1 or better on the tile, in every look', () => {
-    render(<AddCell label="Add place" size={110} onPress={() => {}} />);
-    const drawn = getComputedStyle(screen.getByText('Add place')).color;
-    const probe = document.createElement('div');
-    probe.style.color = String(colors.text);
-    expect(drawn).toBe(probe.style.color);
-    const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
-    const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-    const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-    for (const [name, p] of Object.entries(PALETTES)) {
-      const [, r, g, b, a] = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(p.accentSoft)!.map(Number);
-      const ground = hex(p.bg).map((c, i) => c * (1 - a) + [r, g, b][i] * a);
-      const [hi, lo] = [lum(hex(p.text)), lum(ground)].sort((x, y) => y - x);
-      expect([name, (hi + 0.05) / (lo + 0.05) >= 4.5]).toEqual([name, true]);
-    }
-  });
   // The ring is picked by the app's scheme, not the phone's: on a phone in
   // Dark under the app's Light, a `dyn` ring would draw the dark side's ink.
   it('rings the plus in the tertiary ink of the app\u2019s own scheme', () => {
@@ -158,23 +166,7 @@ describe('AddPill', () => {
   // size: the 14pt word and 16pt plus of the old `compact` made the dock's
   // "Add" a different button from Gallery's.
   //
-  // Read off the committed props: the gradient is a stub under jsdom, so
-  // its style never reaches the DOM, and react-native-web's atomic font
-  // classes do not resolve to the size they name there.
-  const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
-    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
-    const stack: Fiber[] = [host[key].stateNode.current];
-    while (stack.length) {
-      const f = stack.pop()!;
-      const p = f.memoizedProps;
-      if (p && typeof p === 'object' && pick(p)) return p;
-      if (f.sibling) stack.push(f.sibling);
-      if (f.child) stack.push(f.child);
-    }
-    throw new Error('no matching element in the committed tree');
-  };
+  // Read off the committed props — see `propsWhere`.
   const pill = () => StyleSheet.flatten(propsWhere((p) => 'colors' in p).style as StyleProp<ViewStyle>) ?? {};
   const word = () => StyleSheet.flatten(propsWhere((p) => p.children === 'Add' && 'style' in p).style as StyleProp<TextStyle>) ?? {};
 
