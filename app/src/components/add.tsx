@@ -27,9 +27,9 @@
 //
 //   AddCell — the space for one more in a list of your own, the shape of
 //     the thing it adds: a tile among tiles, a row the cards' width above
-//     the cards. Dashed like the slot, for the same reason, but a word and
-//     a plus and nothing else, since the list around it already says what
-//     goes there.
+//     the cards. Dashed like the slot, for the same reason, but a plus
+//     and at most a word — the row's; the tile is the plus alone — since
+//     the list around it already says what goes there.
 //
 // There was a fourth, AddIconButton — the same action as a bare circle,
 // one per row in a list. Search was its only caller, and Search now
@@ -105,12 +105,53 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * tile the one cell in the grid that is not a place, and with it no
  * dashed edge: the tint says "not a place" already.
  *
- * It is laid out as the photo tiles beside it are: the plus in the
+ * It was laid out as the photo tiles beside it are: the plus in the
  * middle, the word along the bottom where a tile's name is. It carried
  * the list's count in its top corner from 2 Nov, where a tile's status
  * sits; on 13 Nov the count moved to the card, at the end of the kinds'
  * row, for the owner and a visitor alike (owner's call), and the tile
  * went back to saying one thing.
+ *
+ * ── the ring alone, in the middle (owner, 14 Nov 2026) ──
+ *
+ * The photo tile's anatomy put the two halves of one control on two
+ * axes. On the 111pt tile of a 393pt phone the ring stood on the tile's
+ * centre, 55.5, and the word began 8 in from the left as a name does:
+ * "Thêm địa điểm" is about 85 wide (measured in Inter, which sets within
+ * a point or two of the system face at 12), so its middle fell near
+ * 50.5, five to the left of the ring's. Too little to read as a word set
+ * left, too much to read as one set centre. And the ring ended 14.5
+ * above the word's line, so the two read as a mark and a caption, not as
+ * one button.
+ *
+ * The owner's answer, once the ways of aligning the two were drawn side
+ * by side, was to take the word off: the tile is the ring, in the middle
+ * of the tint, and nothing else. The word was the third naming of one
+ * act. The tile is never drawn on an empty list (`OwnEmpty` makes the
+ * offer there, in a sentence), so wherever it stands there is a place in
+ * the cell beside it to say what a plus in this grid adds; the dock's
+ * pill says "+ Địa điểm" and the ⋯ menu's row says it in full. It also
+ * ends the question of the word fitting: 85 of the 95 a 393pt phone's
+ * tile leaves inside its 8s, and of the 89 a 375pt phone's does.
+ *
+ * What it costs: in a grid of photographs a bare plus can be read as
+ * "add a photo", and someone handed a copy of a list meets the tile
+ * before adding anything themselves. A tap that guessed wrong opens the
+ * search for a place and loses nothing. The word is still the tile's
+ * name to a screen reader, which hears the tile with no grid around it
+ * (`accessibilityLabel`), and the list's row keeps it in sight: a row of
+ * one plus says nothing at all.
+ *
+ * Weighed in the same round, and not taken:
+ *   - the word centred but left at the foot. One axis, and the row's
+ *     shared line of names kept, but the 14.5 stays, and with it the
+ *     mark-and-caption reading.
+ *   - the ring and the word as one column in the middle, 8 apart, the
+ *     word in medium and the secondary ink. Chosen first, then passed
+ *     over for no word: it fixed the alignment of a word the tile did
+ *     not need.
+ *   - a grey typed in for the word, #6F706A. On the tint it is 4.00:1 on
+ *     Duck and 1.60 on Chocolate, a look whose page is dark.
  *
  * The plus stands in a dashed 44pt ring, the button scale's middle step,
  * and is the accent's colour (owner, 2 Nov 2026). It was a solid disc in
@@ -122,7 +163,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * highest, over the 3:1 a control's outline needs; the plus in the accent
  * is 4.14 at its lowest (Paper) — both worked out in add.ui.test.tsx,
  * against every look. The dash is the row's own 1pt. The whole tile is
- * still one control, named by its word.
+ * still one control, named by its word to whoever hears it, not sees it.
  *
  * From the same round (a mock with a "COLLECTION" kicker, a zero-padded
  * "04" and "Add a new place"), the ring and the accent plus were taken
@@ -133,8 +174,9 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * Not `AddSlot`. That one ends a list, where the reader arrives with
  * nothing on screen to say what the row is for, so it takes a second line
  * and a circle to say it. This one leads a list of the very things it
- * adds, under a card that says whose list it is: the word is enough, and
- * a subtitle there would be the row explaining itself.
+ * adds, under a card that says whose list it is: the word is enough on
+ * the row, the plus on the tile, and a subtitle there would be either one
+ * explaining itself.
  *
  * The row is the cards' width and 48pt tall: the mockup's row measures
  * about 46, and 12 above and below a 24pt plus is the nearest figure that
@@ -144,7 +186,8 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
 export function AddCell({ label, onPress, size, testID }: {
   label: string;
   onPress: () => void;
-  /** The grid's tile side; without it, a row across the list. */
+  /** The grid's tile side; without it, a row across the list. The tile
+   *  draws no word: `label` is its name to a screen reader only. */
   size?: number;
   testID?: string;
 }) {
@@ -161,7 +204,6 @@ export function AddCell({ label, onPress, size, testID }: {
         <View style={[s.cellDisc, { borderColor: textTertiaryHex[scheme] }]}>
           <Glyph name="add" size={24} color={colors.accent} />
         </View>
-        <Text style={s.cellTileText} numberOfLines={1}>{label}</Text>
       </PressableScale>
     );
   }
@@ -355,6 +397,8 @@ const s = StyleSheet.create({
   cellRowText: { color: colors.textSecondary, fontSize: 16, lineHeight: 22 },
   // The tile's own radius (`PlaceTile`), so the cell reads as one of them,
   // on the accent's tint: the one cell in the grid that is not a place.
+  // The ring alone, in the middle of the tile — see "the ring alone, in
+  // the middle" on `AddCell`.
   cellTile: {
     alignItems: 'center', justifyContent: 'center',
     borderRadius: radius.input, overflow: 'hidden', backgroundColor: colors.accentSoft,
@@ -362,13 +406,7 @@ const s = StyleSheet.create({
   cellDisc: {
     width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, borderRadius: SECONDARY_CONTROL_H / 2,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderStyle: 'dashed', marginTop: -6,
-  },
-  // Where a photo tile puts its name (`PlaceTile`): 8 in, 6 from the
-  // foot, the name's 12pt semibold.
-  cellTileText: {
-    position: 'absolute', left: 8, right: 8, bottom: 6,
-    color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: font.semibold,
+    borderWidth: 1, borderStyle: 'dashed',
   },
 
   // `SECONDARY_CONTROL_H`, so a pill and a round button in the same header
