@@ -657,7 +657,9 @@ describe('the states', () => {
     data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
     data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
     await show();
-    expect(screen.getByTestId('activity-failed').textContent).toContain("Couldn't load your activity");
+    expect(screen.getByTestId('activity-failed').textContent).toContain("Couldn't load activity");
+    // Not "your": a reader who is not the owner sees this too.
+    expect(screen.getByTestId('activity-failed').textContent).not.toContain('your activity');
     expect(screen.queryByTestId('activity-empty')).toBeNull();
     data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     data.fetchCopies.mockImplementation(async () => []);
