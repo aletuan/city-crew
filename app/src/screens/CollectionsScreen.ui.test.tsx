@@ -20,11 +20,11 @@ import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
 import { StyleSheet } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
-import { colors, coverScrim, mosaicScrim, onPhoto, space } from '../theme';
+import { colors, coverScrim, font, mosaicScrim, onPhoto, space } from '../theme';
 import { TABS_ROW_GAP } from '../components/ui';
 
 const state = vi.hoisted(() => ({
@@ -1827,6 +1827,47 @@ describe('the Community Mosaic, one block a city', () => {
     // And from the bar, the sheet marks the block you are in.
     fireEvent.click(screen.getByTestId('collections-city-bar'));
     expect(screen.getByTestId('collections-jump-hanoi').getAttribute('aria-selected')).toBe('true');
+  });
+
+  // One heading, drawn in two places (owner, 15 Nov 2026): the name was 22
+  // in the list and 18 pinned, the count beside the name in one and at the
+  // far edge in the other, and scrolling showed both a moment apart.
+  it('draws a city’s name and count the same in the list as pinned under the tabs', () => {
+    seed();
+    show({ tab: 'community' });
+    type Layout = { __reactLayoutHandler: (e: unknown) => void };
+    act(() => {
+      (screen.getByTestId('collections-tabs') as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 44 } } });
+    });
+    const props = listProps() as unknown as {
+      sections: unknown[];
+      onScroll: (e: unknown) => void;
+      onViewableItemsChanged: (i: { viewableItems: { index: number | null; section: unknown }[] }) => void;
+    };
+    act(() => props.onScroll({ nativeEvent: {
+      contentOffset: { x: 0, y: 900 }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+    } }));
+    act(() => props.onViewableItemsChanged({ viewableItems: [
+      { index: 1, section: props.sections[0] }, { index: null, section: props.sections[1] },
+    ] }));
+    // The name, its ▾, and the count, as each heading draws them.
+    const drawn = (id: string) => {
+      const head = screen.getByTestId(id);
+      const [name, count] = [...head.querySelectorAll('[dir="auto"]')] as HTMLElement[];
+      const n = textStyleOf(name)!; const c = textStyleOf(count)!;
+      return {
+        name: [n.fontSize, n.fontWeight, n.letterSpacing],
+        count: [c.fontSize, c.fontWeight, c.marginLeft],
+        chevron: head.querySelector('[data-icon="chevron-down"]')!.getAttribute('data-size'),
+        align: viewStyleOf(name.parentElement!).alignItems,
+      };
+    };
+    const pinned = drawn('collections-city-bar');
+    expect(drawn('collection-mosaic-city-hcmc')).toEqual(pinned);
+    // And the measure itself, so the two cannot drift together either: the
+    // card-title step, the count at the row's far edge.
+    expect(pinned.name[0]).toBe(18);
+    expect(pinned.count).toEqual([13, font.medium, 'auto']);
   });
 
   // The freeze it shipped with (6 Nov 2026), on the path that froze: the

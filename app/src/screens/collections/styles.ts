@@ -34,14 +34,20 @@ export const s = StyleSheet.create({
   // The community grid. Sized in the component — the width is the
   // screen's business — and dressed in the Explore shelf card's clothes:
   // photo, three-stop scrim, light ink.
-  // A city's name over its block: the section size, so it reads as a
-  // heading over cards and not as one more card's caption; the count
-  // beside it in the quiet step.
+  // A city's name over its block, and the count at the row's far edge.
+  //
+  // One size with the bar pinned under the tabs (owner, 15 Nov 2026). The
+  // name here was the section size, 22, with the count beside it at 15,
+  // and the pinned copy a step smaller, 18 and 13, with its count at the
+  // far edge: scrolling, the same city's name was two sizes a moment
+  // apart and its count in two places, and the owner read it on the phone
+  // as an inconsistency, not as a hierarchy. The pinned row's is the one
+  // kept — it is the one that has to stay under the tabs.
   // Above it, the row gap already left by the block before plus the
   // page's title gap; below, the theme's heading-to-content step, so the
   // name sits closer to the cards it heads than to the ones it follows.
   cityHead: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: space.page, paddingTop: space.titleToContent, paddingBottom: space.headingToContent,
   },
   // The first block has no heading at rest (owner, 7 Nov 2026): the city
@@ -52,15 +58,14 @@ export const s = StyleSheet.create({
   // "Hà Nội" had floated 43pt under the box). Later blocks keep their
   // headings: those are where one city ends.
   firstGap: { height: space.titleToContent - SEARCH_ROW_GAP },
-  cityHeadName: { ...type.section, color: colors.text, flexShrink: 1 },
+  cityHeadName: { ...type.cardTitle, color: colors.text, flexShrink: 1 },
   // The ▾ says the name opens something: the list of cities to jump to.
   cityHeadChevron: { alignSelf: 'center', marginLeft: -4 },
   // "16 collections", not "16": a bare number beside a city's name read
   // as anything — a rank, a district (owner, 6 Nov 2026).
-  cityHeadCount: { fontSize: 15, fontWeight: font.medium, color: colors.textTertiary },
-  // The same heading, pinned under the tabs: a step smaller so the row it
-  // rides under stays the bigger thing, the count pushed to the far edge
-  // as the reference drew it.
+  cityHeadCount: { marginLeft: 'auto', fontSize: 13, fontWeight: font.medium, color: colors.textTertiary },
+  // The same heading, pinned under the tabs: the same name and the same
+  // count, in a row of its own measure.
   //
   // Close under the tabs (owner, 7 Nov 2026): it sat ~29pt below their
   // underline — the tabs' own 14, a hairline, then the name centred in a
@@ -74,8 +79,6 @@ export const s = StyleSheet.create({
   },
   // A guest's pinned row is the bar alone, at the top of the screen.
   cityBarAlone: { paddingTop: 12 },
-  cityBarName: { ...type.cardTitle, color: colors.text, flexShrink: 1 },
-  cityBarCount: { marginLeft: 'auto', fontSize: 13 },
   jumpTitle: { color: colors.text, ...type.cardTitle },
   gridRow: {
     flexDirection: 'row', gap: space.cardGap,
