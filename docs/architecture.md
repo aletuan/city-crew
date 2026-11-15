@@ -224,6 +224,13 @@ Ghi ra để không ai tưởng là có chủ ý:
   `CollectionsScreen` còn ~1.760 dòng, `CollectionDetailScreen` ~1.690,
   `SearchScreen` ~810. Sàn coverage giữ chúng đúng, nhưng không giữ
   chúng dễ đọc.
+  Ngày 15/11/2026 `CollectionDetailScreen` (đã lên 2.521 dòng) được tách
+  bước đầu ra `screens/collectionDetail/`: các ô của danh sách
+  (`cells.tsx`), trạng thái trống (`OwnEmpty.tsx`), stylesheet
+  (`styles.ts`) và hai hook `useReorderDraft`, `useKindFilter` — còn
+  1.898 dòng, và hàm chính vẫn giữ phần JSX của thẻ giới thiệu, menu và
+  ai-xem-được. Hook của một màn mang đuôi `.tsx`: `.ts` trong
+  `screens/*/` nằm ngoài `include` của coverage.
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.

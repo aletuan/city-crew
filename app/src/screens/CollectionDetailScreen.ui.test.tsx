@@ -1489,6 +1489,17 @@ describe('reordering', () => {
     expect(card('pho').onLongPress).toBeUndefined();
   });
 
+  // The card that cannot be held is a card of its own (`StillCard`), and
+  // nothing had tapped it: opening a place was only ever tried on your
+  // own list, through the card that drags.
+  it('still opens a place for a visitor, from the card that cannot be held', () => {
+    state.mine = [];
+    state.cols = [collection({ owner_id: 'curator', is_public: true })];
+    const { raw } = show();
+    fireEvent.click(screen.getByText('card:Cafe Giang'));
+    expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
+  });
+
   // The list's responder must never meet an ordinary scroll or tap: it
   // wants the touch only once a card is up.
   it('claims the touch only while a card is lifted, and then never gives it back', () => {
@@ -3646,6 +3657,17 @@ describe('the grid', () => {
     state.cols = [theirs()];
     show();
     await waitFor(() => expect(screen.getByTestId('collection-tile-0')).toBeTruthy());
+  });
+
+  // And the tile that cannot be held (`StillTile`), for the same reason.
+  it('opens a place from a tile on somebody else’s list', async () => {
+    await AsyncStorage.setItem(VIEW, 'grid');
+    state.mine = [];
+    state.cols = [theirs()];
+    const { raw } = show();
+    await waitFor(() => expect(screen.getByTestId('collection-tile-1')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('collection-tile-1'));
+    expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
   it('opens a place from its tile', () => {
