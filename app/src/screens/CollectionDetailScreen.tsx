@@ -23,7 +23,7 @@ import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/ca
 import { likesWorthShowing } from '../lib/likes';
 import {
   blockUser, deleteCollection, isNotShareable, membersOf, setCollectionPublic, setShares,
-  unseenMembers, unseenSentence, useCountView, useMyListShares, usePrefetchListActivity, useProfileByHandle, useSharedWithMe,
+  unseenMembers, unseenSentence, useCountView, useMyListShares, usePrefetchOwnListActivity, useProfileByHandle, useSharedWithMe,
   type Collection,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
@@ -167,12 +167,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // on it rather than on a spinner (owner, 13 Nov 2026): the round trip
   // starts with this page instead of with the tap, and the activity page
   // draws the kept answer on its first render — see the header of
-  // `CollectionActivityScreen`. Your own list only, the one place the
-  // link is drawn; and nothing drawn here from it, so its landing does
+  // `CollectionActivityScreen`. Your own list only, which the hook
+  // decides (`usePrefetchOwnListActivity`); and nothing drawn here from
+  // it, so its landing does
   // not re-render this page (`prefetchShared`). Not asked again within
   // two minutes of the last answer (`lib/stale`), so a list opened over
   // and over while it is edited costs one ask, not one per visit.
-  usePrefetchListActivity(owned ? uid : null);
+  usePrefetchOwnListActivity(uid, col);
   const isPublic = !!col?.is_public;
   /*
    * A friend's list, shared with you and not public (12 Nov 2026).

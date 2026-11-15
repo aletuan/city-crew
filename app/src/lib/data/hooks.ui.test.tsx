@@ -29,8 +29,8 @@ const q = vi.hoisted(() => ({
   fetchPreferences: vi.fn(),
   fetchMyListShares: vi.fn(),
   fetchLikeCounts: vi.fn(),
-  fetchApplause: vi.fn(),
-  fetchCopies: vi.fn(),
+  fetchLikesOnList: vi.fn(),
+  fetchCopiesOfList: vi.fn(),
   fetchCollectionStats: vi.fn(),
   fetchListUse: vi.fn(),
 }));
@@ -55,7 +55,7 @@ vi.mock('./preferences', async () => ({
   NO_PREFERENCES: { categories: [], budget_vnd: null, history_on: true },
 }));
 vi.mock('./people', () => ({
-  fetchCuratorAvatars: vi.fn(), profileByHandle: vi.fn(), fetchApplause: q.fetchApplause, fetchCopies: q.fetchCopies,
+  fetchCuratorAvatars: vi.fn(), profileByHandle: vi.fn(), fetchLikesOnList: q.fetchLikesOnList, fetchCopiesOfList: q.fetchCopiesOfList,
 }));
 vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
 vi.mock('./stats', () => ({
@@ -68,7 +68,7 @@ vi.mock('./stats', () => ({
 }));
 
 import {
-  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, useListUseQuery, usePrefetchCollectionStats, useListActivityQuery, useMyCollections, usePrefetchListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, useListUseQuery, usePrefetchCollectionStats, useListActivityOfQuery, useMyCollections, usePrefetchOwnListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
 } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
@@ -301,13 +301,14 @@ describe('the like counts, per reader', () => {
   });
 });
 
-// The owner's activity (13 Nov 2026): every like and copy on their lists,
-// all time, asked once and kept for every list's activity page — and
-// asked ahead from the collection page, so the tap opens on the answer.
+// One list's activity (13 Nov 2026; one question for owner and reader
+// since 15 Nov): every like and copy on the list, asked by its id and
+// kept for its activity page — and asked ahead from the collection page
+// for its owner, so the tap opens on the answer.
 // `useSharedFetch`'s own rules are `fetch.ui.test`'s; these pin what this
 // hook asks, under which keys, and that its two halves stay apart.
-describe('the owner’s activity, kept and shared', () => {
-  const EPOCH = '1970-01-01T00:00:00.000Z';
+describe('a list’s activity, kept and shared', () => {
+  const LIST = 'c1';
   const likeRow = (h: string) => ({ collection_id: 'c1', liked_at: '2026-11-13T10:00:00Z', liker_handle: h, liker_name: null });
   const copyRow = (h: string) => ({ collection_id: 'c1', copied_at: '2026-11-13T09:00:00Z', copier_handle: h, copier_name: null });
   const got: { q?: ListActivityQuery; frames: string[] } = { frames: [] };
@@ -319,11 +320,13 @@ describe('the owner’s activity, kept and shared', () => {
     got.frames.push(`${a.likes.data.map((l) => l.liker_handle).join(',')}/${a.copies.data.map((c) => c.copier_handle).join(',')}|${a.likes.loaded && a.copies.loaded}`);
   };
   function Activity({ owner }: { owner: string | null }) {
-    record(useListActivityQuery(owner));
+    record(useListActivityOfQuery(owner, LIST));
     return null;
   }
-  function Prefetch({ owner }: { owner: string | null }) {
-    usePrefetchListActivity(owner);
+  /** The list as the collection page holds it; `u1`'s unless said. */
+  type Held = { id?: string; owner_id?: string | null } | null;
+  function Prefetch({ owner, list = { id: LIST, owner_id: 'u1' } }: { owner: string | null; list?: Held }) {
+    usePrefetchOwnListActivity(owner, list);
     return null;
   }
 
@@ -332,29 +335,29 @@ describe('the owner’s activity, kept and shared', () => {
     got.q = undefined;
     got.frames = [];
     for (const who of ['u1', 'u2']) {
-      await AsyncStorage.removeItem(cacheKey('likesonmine', 'all', who));
-      await AsyncStorage.removeItem(cacheKey('copiesofmine', 'all', who));
+      await AsyncStorage.removeItem(cacheKey('likesonlist', 'c1', who));
+      await AsyncStorage.removeItem(cacheKey('copiesoflist', 'c1', who));
     }
   });
 
-  it('asks both functions from the epoch, once each, and keeps each answer under the owner', async () => {
-    q.fetchApplause.mockResolvedValue([likeRow('lan')]);
-    q.fetchCopies.mockResolvedValue([copyRow('minh')]);
+  it('asks both functions for the list, once each, and keeps each answer under the list and the asker', async () => {
+    q.fetchLikesOnList.mockResolvedValue([likeRow('lan')]);
+    q.fetchCopiesOfList.mockResolvedValue([copyRow('minh')]);
     render(<Activity owner="u1" />);
     await waitFor(() => expect(got.q!.likes.data).toEqual([likeRow('lan')]));
     await waitFor(() => expect(got.q!.copies.data).toEqual([copyRow('minh')]));
-    expect(q.fetchApplause).toHaveBeenCalledExactlyOnceWith(EPOCH);
-    expect(q.fetchCopies).toHaveBeenCalledExactlyOnceWith(EPOCH);
+    expect(q.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith(LIST);
+    expect(q.fetchCopiesOfList).toHaveBeenCalledExactlyOnceWith(LIST);
     await waitFor(async () => {
-      expect(JSON.parse((await AsyncStorage.getItem(cacheKey('likesonmine', 'all', 'u1')))!).data).toEqual([likeRow('lan')]);
-      expect(JSON.parse((await AsyncStorage.getItem(cacheKey('copiesofmine', 'all', 'u1')))!).data).toEqual([copyRow('minh')]);
+      expect(JSON.parse((await AsyncStorage.getItem(cacheKey('likesonlist', 'c1', 'u1')))!).data).toEqual([likeRow('lan')]);
+      expect(JSON.parse((await AsyncStorage.getItem(cacheKey('copiesoflist', 'c1', 'u1')))!).data).toEqual([copyRow('minh')]);
     });
   });
 
   it('on a miss, settles only once both halves have answered', async () => {
     const likes = held<unknown[]>();
-    q.fetchApplause.mockReturnValue(likes.promise);
-    q.fetchCopies.mockResolvedValue([copyRow('minh')]);
+    q.fetchLikesOnList.mockReturnValue(likes.promise);
+    q.fetchCopiesOfList.mockResolvedValue([copyRow('minh')]);
     render(<Activity owner="u1" />);
     await waitFor(() => expect(got.q!.copies.loaded).toBe(true));
     expect(got.q!.likes.loaded).toBe(false);
@@ -363,39 +366,39 @@ describe('the owner’s activity, kept and shared', () => {
   });
 
   it('on a hit, draws the kept answer on the first render and refreshes it behind', async () => {
-    q.fetchApplause.mockResolvedValueOnce([likeRow('lan')]);
-    q.fetchCopies.mockResolvedValueOnce([copyRow('minh')]);
+    q.fetchLikesOnList.mockResolvedValueOnce([likeRow('lan')]);
+    q.fetchCopiesOfList.mockResolvedValueOnce([copyRow('minh')]);
     const first = render(<Activity owner="u1" />);
     await waitFor(() => expect(got.frames.at(-1)).toBe('lan/minh|true'));
     first.unmount();
     got.frames = [];
 
     const likes = held<unknown[]>();
-    q.fetchApplause.mockReturnValueOnce(likes.promise);
-    q.fetchCopies.mockResolvedValueOnce([copyRow('minh')]);
+    q.fetchLikesOnList.mockReturnValueOnce(likes.promise);
+    q.fetchCopiesOfList.mockResolvedValueOnce([copyRow('minh')]);
     render(<Activity owner="u1" />);
     expect(got.frames[0]).toBe('lan/minh|true');
     // The refresh is out, behind the rows.
     expect(got.q!.likes.loading).toBe(true);
     await act(async () => { likes.answer([likeRow('lan'), likeRow('an')]); });
     expect(got.frames.at(-1)).toBe('lan,an/minh|true');
-    expect(q.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(q.fetchLikesOnList).toHaveBeenCalledTimes(2);
   });
 
   it('opens a launch on the phone’s answer for this owner, and never another owner’s', async () => {
-    await AsyncStorage.setItem(cacheKey('likesonmine', 'all', 'u2'), packCache([likeRow('theirs')], Date.now()));
-    await AsyncStorage.setItem(cacheKey('likesonmine', 'all', 'u1'), packCache([likeRow('kept')], Date.now()));
-    await AsyncStorage.setItem(cacheKey('copiesofmine', 'all', 'u1'), packCache([], Date.now()));
-    q.fetchApplause.mockReturnValue(new Promise(() => {}));
-    q.fetchCopies.mockReturnValue(new Promise(() => {}));
+    await AsyncStorage.setItem(cacheKey('likesonlist', 'c1', 'u2'), packCache([likeRow('theirs')], Date.now()));
+    await AsyncStorage.setItem(cacheKey('likesonlist', 'c1', 'u1'), packCache([likeRow('kept')], Date.now()));
+    await AsyncStorage.setItem(cacheKey('copiesoflist', 'c1', 'u1'), packCache([], Date.now()));
+    q.fetchLikesOnList.mockReturnValue(new Promise(() => {}));
+    q.fetchCopiesOfList.mockReturnValue(new Promise(() => {}));
     render(<Activity owner="u1" />);
     await waitFor(() => expect(got.frames.at(-1)).toBe('kept/|true'));
     expect(got.q!.likes.fromCache).toBe(true);
   });
 
   it('keeps one half when the other fails, and says which failed', async () => {
-    q.fetchApplause.mockRejectedValue(new Error('offline'));
-    q.fetchCopies.mockResolvedValue([copyRow('minh')]);
+    q.fetchLikesOnList.mockRejectedValue(new Error('offline'));
+    q.fetchCopiesOfList.mockResolvedValue([copyRow('minh')]);
     render(<Activity owner="u1" />);
     await waitFor(() => expect(got.q!.likes.error).toBe('offline'));
     await waitFor(() => expect(got.q!.copies.data).toEqual([copyRow('minh')]));
@@ -403,26 +406,26 @@ describe('the owner’s activity, kept and shared', () => {
   });
 
   it('asks both halves again on reload', async () => {
-    q.fetchApplause.mockResolvedValue([]);
-    q.fetchCopies.mockResolvedValue([]);
+    q.fetchLikesOnList.mockResolvedValue([]);
+    q.fetchCopiesOfList.mockResolvedValue([]);
     render(<Activity owner="u1" />);
     await waitFor(() => expect(got.frames.at(-1)).toBe('/|true'));
     await act(async () => { got.q!.reload(); });
-    expect(q.fetchApplause).toHaveBeenCalledTimes(2);
-    expect(q.fetchCopies).toHaveBeenCalledTimes(2);
+    expect(q.fetchLikesOnList).toHaveBeenCalledTimes(2);
+    expect(q.fetchCopiesOfList).toHaveBeenCalledTimes(2);
   });
 
   it('asks nothing with no owner', async () => {
     render(<Activity owner={null} />);
     await act(async () => {});
-    expect(q.fetchApplause).not.toHaveBeenCalled();
-    expect(q.fetchCopies).not.toHaveBeenCalled();
+    expect(q.fetchLikesOnList).not.toHaveBeenCalled();
+    expect(q.fetchCopiesOfList).not.toHaveBeenCalled();
     expect(got.frames.at(-1)).toBe('/|true');
   });
 
   it('keeps each owner’s answer apart', async () => {
-    q.fetchApplause.mockResolvedValueOnce([likeRow('ones')]).mockResolvedValueOnce([likeRow('twos')]);
-    q.fetchCopies.mockResolvedValue([]);
+    q.fetchLikesOnList.mockResolvedValueOnce([likeRow('ones')]).mockResolvedValueOnce([likeRow('twos')]);
+    q.fetchCopiesOfList.mockResolvedValue([]);
     const view = render(<Activity owner="u1" />);
     await waitFor(() => expect(got.frames.at(-1)).toBe('ones/|true'));
     view.rerender(<Activity owner="u2" />);
@@ -431,12 +434,12 @@ describe('the owner’s activity, kept and shared', () => {
 
   describe('asked ahead', () => {
     it('asks both from the epoch for the owner, and the page that opens after draws them at once', async () => {
-      q.fetchApplause.mockResolvedValue([likeRow('lan')]);
-      q.fetchCopies.mockResolvedValue([copyRow('minh')]);
+      q.fetchLikesOnList.mockResolvedValue([likeRow('lan')]);
+      q.fetchCopiesOfList.mockResolvedValue([copyRow('minh')]);
       const page = render(<Prefetch owner="u1" />);
       await act(async () => {});
-      expect(q.fetchApplause).toHaveBeenCalledExactlyOnceWith(EPOCH);
-      expect(q.fetchCopies).toHaveBeenCalledExactlyOnceWith(EPOCH);
+      expect(q.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith(LIST);
+      expect(q.fetchCopiesOfList).toHaveBeenCalledExactlyOnceWith(LIST);
       page.unmount();
       render(<Activity owner="u1" />);
       expect(got.frames[0]).toBe('lan/minh|true');
@@ -445,25 +448,40 @@ describe('the owner’s activity, kept and shared', () => {
     it('is joined by the page when the tap beats the answer', async () => {
       const likes = held<unknown[]>();
       const copies = held<unknown[]>();
-      q.fetchApplause.mockReturnValue(likes.promise);
-      q.fetchCopies.mockReturnValue(copies.promise);
+      q.fetchLikesOnList.mockReturnValue(likes.promise);
+      q.fetchCopiesOfList.mockReturnValue(copies.promise);
       render(<><Prefetch owner="u1" /><Activity owner="u1" /></>);
-      expect(q.fetchApplause).toHaveBeenCalledTimes(1);
-      expect(q.fetchCopies).toHaveBeenCalledTimes(1);
+      expect(q.fetchLikesOnList).toHaveBeenCalledTimes(1);
+      expect(q.fetchCopiesOfList).toHaveBeenCalledTimes(1);
       await act(async () => { likes.answer([likeRow('lan')]); copies.answer([]); });
       expect(got.frames.at(-1)).toBe('lan/|true');
     });
 
     it('asks nothing for nobody, and asks when the owner becomes known', async () => {
-      q.fetchApplause.mockResolvedValue([]);
-      q.fetchCopies.mockResolvedValue([]);
+      q.fetchLikesOnList.mockResolvedValue([]);
+      q.fetchCopiesOfList.mockResolvedValue([]);
       const view = render(<Prefetch owner={null} />);
       await act(async () => {});
-      expect(q.fetchApplause).not.toHaveBeenCalled();
+      expect(q.fetchLikesOnList).not.toHaveBeenCalled();
       view.rerender(<Prefetch owner="u1" />);
       await act(async () => {});
-      expect(q.fetchApplause).toHaveBeenCalledTimes(1);
-      expect(q.fetchCopies).toHaveBeenCalledTimes(1);
+      expect(q.fetchLikesOnList).toHaveBeenCalledTimes(1);
+      expect(q.fetchCopiesOfList).toHaveBeenCalledTimes(1);
+    });
+
+    // The owner alone (15 Nov 2026): a reader's would be one ask per list
+    // opened, for a page most never open. Somebody else's list, a list
+    // not found, and one from the launch cache with no id ask nothing.
+    it('asks nothing ahead for a list that is not the asker’s, is not there, or has no id', async () => {
+      q.fetchLikesOnList.mockResolvedValue([]);
+      q.fetchCopiesOfList.mockResolvedValue([]);
+      for (const list of [{ id: LIST, owner_id: 'u2' }, { id: LIST, owner_id: null }, null, { owner_id: 'u1' }] as Held[]) {
+        const view = render(<Prefetch owner="u1" list={list} />);
+        await act(async () => {});
+        view.unmount();
+      }
+      expect(q.fetchLikesOnList).not.toHaveBeenCalled();
+      expect(q.fetchCopiesOfList).not.toHaveBeenCalled();
     });
   });
 });

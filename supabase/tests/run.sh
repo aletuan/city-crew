@@ -647,7 +647,10 @@ run "$DB" -f "$HERE/collection_use_counts_test.sql"
 # the statistics block, whose function it replaces, and the shares, whose
 # `shared_with_me` it asks.
 echo "→ list activity for readers"
-for f in "$ROOT"/supabase/migrations/*_list_activity_for_readers.sql; do
+# And the migration after it, the same day: the owner's own like counted
+# (`own_like_counted`), which replaces two of its functions in place.
+for f in "$ROOT"/supabase/migrations/*_list_activity_for_readers.sql \
+         "$ROOT"/supabase/migrations/*_own_like_counted.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/list_activity_for_readers_test.sql"

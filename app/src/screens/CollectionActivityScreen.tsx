@@ -2,46 +2,41 @@
 // newest first (owner, 13 Nov 2026). Threads' "Post activity", for a
 // collection: the list itself in a small card at the top, then the way
 // to its statistics, then one row per act in a card of its own. Opened from "View
-// activity ›" at the end of the card's activity row, which only the
-// list's owner is shown.
+// activity ›" at the end of the card's activity row, which any signed-in
+// reader is shown (15 Nov 2026).
 //
 // ── the two fetches, and what they promise ──
 //
-// The rows come from the RPCs Activity reads, `likes_on_mine` and
-// `copies_of_mine` (`lib/data/people`), asked from the epoch through
-// `useListActivityQuery`. Read in the migrations as they stand
-// (`20261113150000_activity_rows_carry_face.sql` holds the last of each),
-// each takes any `since`: it is a plain
-// `created_at >= since`, so 1970 is all time. Neither has a `limit`. What
-// they do leave out is what this page should too: a like or copy by the
-// owner themselves, and one by somebody the owner has blocked. A like
-// taken back or a copy deleted is a row gone, as on Activity: the page
-// holds what still stands.
+// The rows come from `likes_on_list` and `copies_of_list`
+// (`lib/data/people`, `20261115090000_list_activity_for_readers.sql` and
+// `20261115220000_own_like_counted.sql`), asked for the one list through
+// `useListActivityOfQuery`, by its owner and by any reader of it. All
+// time, and neither has a `limit`. What they leave out: a copy by the
+// owner themselves, an act by somebody the owner has blocked, and one by
+// somebody the reader and they have a block between. A like taken back
+// or a copy deleted is a row gone, as on Activity: the page holds what
+// still stands.
 //
-// A list that is not public now is asked about like any other (owner,
-// 13 Nov 2026). Until that day both functions answered for public lists
-// alone, so a list made private again showed nothing here while its
-// likes were still in the table, and the page said "Only a public
-// collection can be liked or copied" instead. The functions now answer
-// the owner whatever the list is now, and the page lists what it
-// gathered while it was public. A list that never gathered anything
-// gets the ordinary empty state: it is not a different kind of nothing.
+// The owner's own like is a row (owner, 15 Nov 2026). It was left out
+// until then, as Activity leaves it out, and the card in front of this
+// page counted it: ♥ 3 on the card, two names here. The number on the
+// card is the number of hearts on the page now — but for the blocks
+// above, which the card's count does not read.
+//
+// Until that day the owner's rows came from the RPCs Activity reads,
+// `likes_on_mine` and `copies_of_mine` from the epoch: one kept answer
+// for every list the owner has, narrowed here. A per-list RPC was the
+// alternative written down as rejected, for costing a migration and one
+// answer per list; the readers' page (15 Nov) paid for the migration,
+// and the owner's own like is what the all-lists answer could not give
+// without telling Activity about it too. `actsOn` still narrows by the
+// list's id: a no-op on these rows, kept because a kept answer under the
+// wrong key should draw nothing rather than another list's people.
 //
 // The one cap that can apply is not in the repo: PostgREST's "Max rows"
-// on the live project, which cuts a set-returning RPC as it cuts a table
-// read (1,000 by default on Supabase). Both RPCs answer for every list
-// the owner has, so the cap would bite on the owner's total, newest
-// kept, oldest gone. Not measured on the live project — this change does
-// not touch it.
-//
-// Rejected: a per-list RPC that took the collection's id. It would cut
-// the answer to this list on the server and sidestep the cap, at the
-// cost of a migration and of one answer per list; the two that exist
-// answer the question, at the cost of reading the owner's other lists'
-// acts to throw them away. Worth it if an owner ever nears the cap. The
-// all-lists answer also earns its keep now: it is one cached answer for
-// every list's page, which is what lets the collection page ask before
-// the reader has said which list (below).
+// on the live project (1,000 by default on Supabase), now on one list's
+// rows rather than on all of an owner's. Not measured on the live
+// project.
 //
 // ── the wait, and where it went (owner, 13 Nov 2026) ──
 //
@@ -63,8 +58,9 @@
 //     (`20261113150000_activity_rows_carry_face`), so the second round
 //     trip is gone: one round trip, the two RPCs side by side.
 //   - That one round trip starts on the collection page, when the owner
-//     opens their own list (`usePrefetchListActivity` there), not on the
-//     tap. By the time "View activity" is pressed it has usually landed.
+//     opens their own list (`usePrefetchListActivityOf` there), not on
+//     the tap. By the time "View activity" is pressed it has usually
+//     landed. A reader's starts with the tap.
 //   - The answer is kept (`useSharedFetch`): in memory for the app's
 //     life, so this page's first render draws it; and on the phone, so
 //     the first open after a launch draws the last launch's. Every open
@@ -77,14 +73,13 @@
 // the one round trip takes was not measured either; what changed is how
 // many there are and when they start.
 //
-// ── only the owner ──
+// ── whoever can open the list ──
 //
-// The list is looked up among your own (`useMyLists`), and nowhere else.
-// Somebody else's list is never there, and the RPCs would answer nothing
-// for it anyway — they name the owner's likes to the owner alone — so a
-// list that is not yours reads as a list with nothing on it: the empty
-// state, no card, no fetch. A list you have just deleted, opened from a
-// stale screen, is the same.
+// The list is looked up where its own page finds it (`useReadableList`):
+// the reader's own, one lent to them, or the public shelf. Until 15 Nov
+// 2026 it was looked up among your own alone. A list found nowhere — one
+// you have just deleted, opened from a stale screen — reads as a list
+// with nothing on it: the empty state, no card, no fetch.
 //
 // ── the way to the statistics (owner, 13 Nov 2026) ──
 //
@@ -210,7 +205,7 @@ import ListSummaryCard from '../components/ListSummaryCard';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useCrew } from '../lib/crew';
 import {
-  acceptFriendRequest, sendFriendRequest, useListActivityOfQuery, useListActivityQuery, usePrefetchCollectionStats,
+  acceptFriendRequest, sendFriendRequest, useListActivityOfQuery, usePrefetchCollectionStats,
 } from '../lib/data';
 import { type Pledged, quietReason, rowButton } from '../lib/friends';
 import { atHandle, normalizeHandle } from '../lib/handle';
@@ -236,16 +231,12 @@ export default function CollectionActivityScreen({ navigation, route }: {
   // not (see the header). A row from the launch cache may have none.
   const listId = col?.id ?? null;
 
-  // The owner's answer, kept and shared — see the header. Nobody to ask
-  // about without a list of yours with an id: no fetch, and the empty
-  // state.
-  // The owner's answer is the one kept for all their lists and asked ahead
-  // from the collection page; a reader's is asked for this list alone
-  // (`useListActivityOfQuery`). The rows are the same shape, and the same
-  // rows but for a block between the reader and whoever acted.
-  const mineAll = useListActivityQuery(me && listId && owned ? me : null);
-  const thisList = useListActivityOfQuery(owned ? null : me, listId);
-  const activity = owned ? mineAll : thisList;
+  // The list's answer, kept and shared — see the header. One question for
+  // the owner and for a reader (15 Nov 2026, `useListActivityOfQuery`):
+  // the same rows but for a block between the reader and whoever acted.
+  // Nobody to ask about without a list with an id: no fetch, and the
+  // empty state.
+  const activity = useListActivityOfQuery(me, listId);
   // The figures "Statistics ›" opens, asked for now — see the header.
   usePrefetchCollectionStats(me && listId ? me : null, listId);
   const { likes, copies } = activity;
