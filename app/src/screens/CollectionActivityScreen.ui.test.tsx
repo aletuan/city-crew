@@ -44,6 +44,8 @@ vi.mock('react-native', async (orig) => ({
 const data = vi.hoisted(() => ({
   fetchApplause: vi.fn(async (_since: string): Promise<Applause[]> => []),
   fetchCopies: vi.fn(async (_since: string): Promise<Copy[]> => []),
+  fetchLikesOnList: vi.fn(async (_id: string): Promise<Applause[]> => []),
+  fetchCopiesOfList: vi.fn(async (_id: string): Promise<Copy[]> => []),
   fetchCuratorAvatars: vi.fn(async (_handles: string[]): Promise<Record<string, string>> => ({})),
   sendFriendRequest: vi.fn(async (_me: string, _other: string): Promise<void> => {}),
   acceptFriendRequest: vi.fn(async (_requester: string, _me: string): Promise<void> => {}),
@@ -55,6 +57,8 @@ vi.mock('../lib/data/people', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchApplause: data.fetchApplause,
   fetchCopies: data.fetchCopies,
+  fetchLikesOnList: data.fetchLikesOnList,
+  fetchCopiesOfList: data.fetchCopiesOfList,
   fetchCuratorAvatars: data.fetchCuratorAvatars,
   sendFriendRequest: data.sendFriendRequest,
   acceptFriendRequest: data.acceptFriendRequest,
@@ -78,6 +82,8 @@ const state = vi.hoisted(() => ({
   me: 'me' as string | null,
   profile: { handle: 'andy', avatar_url: 'https://faces/andy.jpg' } as { handle: string; avatar_url: string } | null,
   mine: [] as unknown[],
+  cols: [] as unknown[],
+  shared: [] as unknown[],
   mineLoading: false,
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
@@ -88,6 +94,16 @@ vi.mock('../lib/auth', () => {
 });
 vi.mock('../lib/save', () => ({
   useMyLists: () => ({ data: state.mine, loading: state.mineLoading, reload: () => {} }),
+}));
+// The two other places a list can be found since 15 Nov 2026, when the
+// page opened to whoever can read the list: the public shelf, and the
+// lists lent to the reader.
+vi.mock('../lib/catalog', () => ({
+  useCollections: () => ({ data: state.cols, loading: false, reload: () => {} }),
+}));
+vi.mock('../lib/data', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useSharedWithMe: () => ({ data: state.shared, loading: false, reload: () => {} }),
 }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: state.scheme }) }));
 vi.mock('../lib/i18n', () => ({
@@ -160,9 +176,13 @@ beforeEach(async () => {
   state.me = 'me';
   state.profile = { handle: 'andy', avatar_url: 'https://faces/andy.jpg' };
   state.mine = [list()];
+  state.cols = [];
+  state.shared = [];
   state.mineLoading = false;
   state.lang = 'en';
   state.scheme = 'dark';
+  data.fetchLikesOnList.mockImplementation(async () => []);
+  data.fetchCopiesOfList.mockImplementation(async () => []);
   crew.ships.data = [];
   crew.ships.loading = false;
   crew.blocks.data = [];
@@ -275,15 +295,75 @@ describe('what it asks for', () => {
     expect(screen.getByTestId('activity-list')).toBeTruthy();
   });
 
-  // Only the owner: a list that is not among yours is not looked for
-  // anywhere else, and the page reads as empty — no card, no fetch.
-  it('shows nothing useful for a list that is not yours', async () => {
+  // A list the reader holds nowhere — not theirs, not lent to them, not on
+  // the public shelf — reads as empty: no card, no fetch.
+  it('shows nothing useful for a list the reader cannot open', async () => {
     await show('somebody-elses');
     expect(data.fetchApplause).not.toHaveBeenCalled();
     expect(data.fetchCopies).not.toHaveBeenCalled();
+    expect(data.fetchLikesOnList).not.toHaveBeenCalled();
+    expect(data.fetchCopiesOfList).not.toHaveBeenCalled();
     expect(screen.queryByTestId('activity-list')).toBeNull();
     expect(screen.getByTestId('activity-empty').textContent)
       .toBe('No likes or copies yetWhen someone likes or copies this collection, you will see it here.');
+  });
+
+  // ── a reader who is not the owner (owner, 15 Nov 2026) ──
+  //
+  // The page was the owner's alone. Whoever can open the list opens it
+  // now, and is told what the owner is told: asked of the one list
+  // (`likes_on_list`, `copies_of_list`), not of the reader's own lists.
+  it('draws somebody else’s public list for a reader, asked for by that list’s id', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', title_en: 'Their list' })];
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(2 * HOUR), 'hado', 'Ha Do', 'c9')]);
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(HOUR), 'lan', null, 'c9')]);
+    await show('theirs');
+    expect(data.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith('c9');
+    expect(data.fetchCopiesOfList).toHaveBeenCalledExactlyOnceWith('c9');
+    // Not the owner's question, which answers for the reader's own lists.
+    expect(data.fetchApplause).not.toHaveBeenCalled();
+    expect(data.fetchCopies).not.toHaveBeenCalled();
+    expect(within(screen.getByTestId('activity-list')).getByText('Their list')).toBeTruthy();
+    expect(screen.getAllByTestId('activity-row')).toHaveLength(2);
+    expect(screen.getByTestId('activity-badge-like')).toBeTruthy();
+    expect(screen.getByTestId('activity-badge-copy')).toBeTruthy();
+    // And the figures behind it, asked ahead as for the owner.
+    expect(screen.getByTestId('activity-stats-link')).toBeTruthy();
+    expect(data.fetchCollectionStats).toHaveBeenCalledExactlyOnceWith('c9');
+  });
+
+  it('draws a friend’s list lent to the reader the same way', async () => {
+    state.mine = [];
+    state.shared = [list({ id: 'c7', slug: 'lent', owner_id: 'lan-id', is_public: false })];
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(HOUR), 'hado', null, 'c7')]);
+    await show('lent');
+    expect(data.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith('c7');
+    expect(screen.getAllByTestId('activity-row')).toHaveLength(1);
+  });
+
+  // The reader's own like is a like, and is on the page; it has no
+  // friend button, as nobody befriends themselves.
+  it('lists the reader’s own like with no button on it', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator' })];
+    data.fetchLikesOnList.mockImplementation(async () => [
+      { ...like(ago(HOUR), 'andy', 'Andy', 'c9'), liker_id: 'me' },
+      like(ago(2 * HOUR), 'hado', null, 'c9'),
+    ]);
+    await show('theirs');
+    const [mine, theirs] = screen.getAllByTestId('activity-row');
+    expect(within(mine).queryByRole('button')).toBeNull();
+    expect(within(theirs).getByTestId('activity-add')).toBeTruthy();
+  });
+
+  // The owner's page is asked the owner's way still: one answer for all
+  // their lists, the one the collection page asked ahead for.
+  it('asks the owner’s own question on the owner’s own list', async () => {
+    await show();
+    expect(data.fetchApplause).toHaveBeenCalledTimes(1);
+    expect(data.fetchLikesOnList).not.toHaveBeenCalled();
+    expect(data.fetchCopiesOfList).not.toHaveBeenCalled();
   });
 
   it('asks nothing for a list from the launch cache with no id', async () => {

@@ -19,7 +19,9 @@ import {
   fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes, fetchSharedWithMe, type LikeTally,
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
-import { fetchApplause, fetchCopies, fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
+import {
+  fetchApplause, fetchCopies, fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, type FriendProfile, profileByHandle,
+} from './people';
 import { fetchMyListShares } from './shares';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
 import type { StatsRow } from '../listStats';
@@ -320,7 +322,37 @@ export const usePrefetchListActivity = (ownerId: string | null | undefined): voi
   }, [ownerId]);
 };
 
-// ── a list's statistics, for its owner ──
+// ── somebody else's list's activity, for a reader of it ──
+//
+// The same page, opened by a reader who is not the owner (owner, 15 Nov
+// 2026): `likes_on_list` and `copies_of_list` answer for the one list,
+// where the owner's two answer for all of theirs. Kept and shared the
+// same way, one entry per list and per reader — the reader is part of
+// the question, since a block between them and a liker takes a row out.
+// Not asked ahead from the collection page as the owner's is: that ask
+// is one for every list an owner has, and this would be one per list
+// opened, for a page most readers will not open.
+const readerKey = (
+  half: 'likesonlist' | 'copiesoflist', readerId: string | null | undefined, collectionId: string | null | undefined,
+) => (readerId && collectionId ? cacheKey(half, collectionId, readerId) : null);
+
+/** One list's likes and copies as a reader of it is told them; nobody or
+ *  no list asks nothing. */
+export const useListActivityOfQuery = (
+  readerId: string | null | undefined,
+  collectionId: string | null | undefined,
+): ListActivityQuery => {
+  const askLikes = useCallback(() => fetchLikesOnList(collectionId as string), [collectionId]);
+  const askCopies = useCallback(() => fetchCopiesOfList(collectionId as string), [collectionId]);
+  const likes = useSharedFetch(readerKey('likesonlist', readerId, collectionId), askLikes, NO_LIKES);
+  const copies = useSharedFetch(readerKey('copiesoflist', readerId, collectionId), askCopies, NO_COPIES);
+  const { reload: likesAgain } = likes;
+  const { reload: copiesAgain } = copies;
+  const reload = useCallback(() => { likesAgain(); copiesAgain(); }, [likesAgain, copiesAgain]);
+  return { likes, copies, reload };
+};
+
+// ── a list's statistics, for whoever reads it ──
 //
 // What the Statistics page draws (`CollectionStatsScreen`), kept and
 // shared as the owner's activity is (`useSharedFetch`): the Activity page
