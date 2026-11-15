@@ -37,6 +37,7 @@
 const expo = require('eslint-config-expo/flat');
 const prettier = require('eslint-config-prettier');
 const { IMPURE } = require('./impure');
+const { CEILING, OVERSIZE } = require('./oversize');
 
 module.exports = [
   {
@@ -168,6 +169,26 @@ module.exports = [
       // are. Carries `ui` again because this block replaces the rule for
       // the files it names rather than adding to it.
       { files: ['src/lib/*.ts'], ignores: IMPURE, rules: restrict(ui, renderer, client) },
+    ];
+  })(),
+
+  // ── how large a function may be ──
+  //
+  // A ceiling for every function the app ships, and for the files already
+  // over it the size they stood at, which they may not pass: the numbers
+  // and the reasoning are `oversize.js`. Not the tests: a `describe` is
+  // one function a thousand lines long by design.
+  //
+  // One block per file because flat config replaces a rule rather than
+  // merging it, so each names both measures.
+  ...(() => {
+    const size = ({ lines = CEILING.lines, complexity = CEILING.complexity } = {}) => ({
+      'max-lines-per-function': ['error', { max: lines, skipComments: true, skipBlankLines: true }],
+      complexity: ['error', complexity],
+    });
+    return [
+      { files: ['src/**/*.{ts,tsx}', 'App.tsx'], ignores: ['**/*.test.*'], rules: size() },
+      ...Object.entries(OVERSIZE).map(([file, at]) => ({ files: [file], rules: size(at) })),
     ];
   })(),
 
