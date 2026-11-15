@@ -42,7 +42,7 @@ import { agoOf } from './friends';
 
 export type ListAge =
   | { unit: 'new' }
-  | { unit: 'minutes' | 'hours'; n: number }
+  | { unit: 'minutes' | 'hours' | 'days'; n: number }
   | { unit: 'date'; at: Date; withYear: boolean };
 
 export function listAgeOf(iso: string, now: Date): ListAge {
@@ -55,14 +55,43 @@ export function listAgeOf(iso: string, now: Date): ListAge {
   return { unit: 'date', at, withYear: at.getFullYear() !== now.getFullYear() };
 }
 
+// ── an act's age counts a week of days first (owner, 15 Nov 2026) ──
+//
+// Until that day an act was dated by the list's table unchanged: 20h,
+// then "14/11". The owner asked for the days — "3 days" is shorter than a
+// date and needs no calendar — and the question was where they stop. At a
+// week, where Activity's own rows stop (`ActivityScreen`, 7), and where
+// the convention the other apps keep stops: Close's guide writes "7d ago"
+// and then "Oct 21"; Instagram goes on counting weeks and is the example
+// people give of a number nobody can place ("137 weeks ago"). So 1 to 7
+// days, then the date. Rejected: the owner's own example, "20 days" —
+// one character shorter than "26/10" and the reader subtracts to learn
+// which day.
+//
+// A list's own age keeps "no n days", above: the card's "04/11" places
+// the list. So this is a second function, and `listAgeOf` never answers
+// in days.
+/** The last day an act is counted in days; `ActivityScreen`'s number. */
+export const ACT_DAYS = 7;
+
+export function actAgeOf(iso: string, now: Date): ListAge {
+  const ago = agoOf(iso, now.getTime());
+  if (ago.unit === 'days' && ago.n <= ACT_DAYS) return { unit: 'days', n: ago.n };
+  return listAgeOf(iso, now);
+}
+
 type T = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
 
 /** The age as the card head prints it: `first` for under a minute — what
  *  "new" is called depends on what is dated, see the header — then 5m /
- *  5p, 3h, and the date, with its year when it is from an earlier one. */
+ *  5p, 3h, for an act 3d / 3 ngày, and the date, with its year when it is
+ *  from an earlier one. */
 export function ageWord(age: ListAge, lang: string, t: T, first: string): string {
   if (age.unit === 'new') return first;
   if (age.unit === 'date') return age.withYear ? numericDateWithYear(lang, age.at) : numericDate(lang, age.at);
   if (age.unit === 'minutes') return t(`${age.n}m`, `${age.n}p`, `${age.n}分`, `${age.n}分钟`, `${age.n}分鐘`);
+  // "3 ngày", spelled: Vietnamese has no one-letter day that reads as one
+  // ("3n" is nothing), where "p" and "h" are what people write.
+  if (age.unit === 'days') return t(`${age.n}d`, `${age.n} ngày`, `${age.n}日`, `${age.n}天`, `${age.n}天`);
   return t(`${age.n}h`, `${age.n}h`, `${age.n}時間`, `${age.n}小时`, `${age.n}小時`);
 }

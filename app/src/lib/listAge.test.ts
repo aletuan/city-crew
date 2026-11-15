@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageWord, listAgeOf } from './listAge';
+import { ACT_DAYS, actAgeOf, ageWord, listAgeOf } from './listAge';
 
 // Every instant here is built on the phone's own calendar (`new Date(y, m,
 // d, h, min, s)`), so each boundary holds in Hồ Chí Minh City and under
@@ -51,6 +51,38 @@ describe('listAgeOf', () => {
   });
 });
 
+// An act on a list — a like, a copy — counts a week of days between the
+// hours and the date (owner, 15 Nov 2026). A list's own age never does.
+describe('actAgeOf', () => {
+  const now = at(2026, 10, 15, 12);
+  const H = 60 * 60 * 1000;
+  const before = (ms: number) => new Date(now.getTime() - ms).toISOString();
+
+  it('is the list’s table under a day: new, minutes, hours', () => {
+    expect(actAgeOf(before(20_000), now)).toEqual({ unit: 'new' });
+    expect(actAgeOf(before(5 * 60_000), now)).toEqual({ unit: 'minutes', n: 5 });
+    expect(actAgeOf(before(23 * H), now)).toEqual({ unit: 'hours', n: 23 });
+  });
+
+  it('counts days from the 24th hour through the seventh day', () => {
+    expect(actAgeOf(before(24 * H), now)).toEqual({ unit: 'days', n: 1 });
+    expect(actAgeOf(before(47 * H), now)).toEqual({ unit: 'days', n: 1 });
+    expect(actAgeOf(before(48 * H), now)).toEqual({ unit: 'days', n: 2 });
+    expect(ACT_DAYS).toBe(7);
+    expect(actAgeOf(before(8 * 24 * H - 1), now)).toEqual({ unit: 'days', n: 7 });
+  });
+
+  it('gives the date from the eighth day, with its year from an earlier one', () => {
+    expect(actAgeOf(before(8 * 24 * H), now)).toEqual({ unit: 'date', at: new Date(before(8 * 24 * H)), withYear: false });
+    const lastYear = at(2025, 10, 12, 9);
+    expect(actAgeOf(lastYear.toISOString(), now)).toEqual({ unit: 'date', at: lastYear, withYear: true });
+  });
+
+  it('leaves a list’s own age without days', () => {
+    expect(listAgeOf(before(3 * 24 * H), now).unit).toBe('date');
+  });
+});
+
 describe('ageWord', () => {
   // The five-language `t`, so each argument can be seen to be the one
   // picked: English, Vietnamese, Japanese, Simplified, Traditional.
@@ -70,6 +102,12 @@ describe('ageWord', () => {
   it('spells hours as the card head does: 3h, 3h, 3時間', () => {
     const three = { unit: 'hours' as const, n: 3 };
     expect([0, 1, 2, 3, 4].map((l) => ageWord(three, 'en', tIn(l), 'x'))).toEqual(['3h', '3h', '3時間', '3小时', '3小時']);
+  });
+
+  // Spelled in Vietnamese: "3n" is nothing, where "p" and "h" are written.
+  it('spells days: 3d, 3 ngày, 3日, 3天', () => {
+    const three = { unit: 'days' as const, n: 3 };
+    expect([0, 1, 2, 3, 4].map((l) => ageWord(three, 'en', tIn(l), 'x'))).toEqual(['3d', '3 ngày', '3日', '3天', '3天']);
   });
 
   it('gives the date without its year this year and with it from an earlier one', () => {

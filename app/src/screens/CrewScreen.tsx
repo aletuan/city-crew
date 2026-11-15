@@ -741,15 +741,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     return (
                       <View key={r.addressee} style={[s.row, i > 0 && s.rowDivider]} testID={`crew-sent-${i}`}>
                         <Face p={p} />
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
-                          {/* The handle alone. "waiting on their answer"
-                              sat beside it on every row, saying again what
-                              the "Sent" heading above already says (owner,
-                              26 Oct 2026). The sheet behind Cancel keeps
-                              it: there is no heading there to say it. */}
-                          {p ? <Text style={s.meta} numberOfLines={1}>{atHandle(p.handle)}</Text> : null}
-                        </View>
+                        {/* Who, and nothing after it. "waiting on their
+                            answer" sat on every row, saying again what the
+                            "Sent" heading above already says (owner, 26
+                            Oct 2026). The sheet behind Cancel keeps it:
+                            there is no heading there to say it. */}
+                        <Who p={p} />
                         <PressableScale contentStyle={s.quietBtn} hitSlop={CHIP_SLOP} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
                           <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す', '取消', '取消')}</Text>
                         </PressableScale>
@@ -861,13 +858,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                       testID={`crew-friend-${i}`}
                     >
                       <Face p={p} />
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
-                        <Text style={s.meta} numberOfLines={1}>
-                          {p ? atHandle(p.handle) : ''}
-                          {mutual[id] ? ` · ${savesLine(mutual[id])}` : ''}
-                        </Text>
-                      </View>
+                      <Who p={p} extra={savesLine(mutual[id])} />
                       {/* The visible door to Unfriend and Block. The
                           long-press stays, but a gesture with no mark on
                           the screen is a feature only its author knows
@@ -916,10 +907,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     return (
                       <View key={id} style={[s.row, i > 0 && s.rowDivider]}>
                         <Face p={p} />
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
-                          <Text style={s.meta} numberOfLines={1}>{p ? atHandle(p.handle) : ''}</Text>
-                        </View>
+                        <Who p={p} />
                         <PressableScale
                           contentStyle={s.quietBtn}
                           hitSlop={CHIP_SLOP}
@@ -981,7 +969,39 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   );
 }
 
+/**
+ * Who a row is about, handle first (owner, 15 Nov 2026): the handle on
+ * top, bare and in the strong ink, and the real name under it, quieter —
+ * with whatever the row adds after the name (a friend's mutual saves).
+ *
+ * Until that day it was the name on top and "@handle" under it, and a
+ * list's activity page was made to match (13 Nov). The owner turned both
+ * together: a handle is what a person is added by here, what a list is
+ * signed with, and the one thing every account has — 'full_name' is
+ * optional, so a column of names was a column of names and handles
+ * mixed. No `@`: the first line of a row of people is the handle.
+ *
+ * The three lists only — friends, sent, blocked. The request card says a
+ * sentence ("Lan wants to join your crew"), the type-ahead puts both on
+ * one line, and the sheets are headed by a name: none is a row of this
+ * shape, and they are as they were.
+ *
+ * Outside the screen's function: it reads nothing of the screen's, and
+ * the function is over its ceiling already (`oversize.js`).
+ */
+function Who({ p, extra = '' }: { p?: FriendProfile; extra?: string }) {
+  const handle = p ? normalizeHandle(p.handle) : '';
+  const under = [handle && p?.full_name, extra].filter(Boolean).join(' · ');
+  return (
+    <View style={s.who}>
+      <Text style={s.name} numberOfLines={1} testID="crew-who-handle">{handle || p?.full_name || '…'}</Text>
+      {under ? <Text style={s.meta} numberOfLines={1} testID="crew-who-name">{under}</Text> : null}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  who: { flex: 1, gap: 2 },
   addCard: { padding: space.cardPadding, gap: 12 },
   typeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   typeName: { color: colors.text, fontSize: 15, fontWeight: font.medium, flexShrink: 1 },
