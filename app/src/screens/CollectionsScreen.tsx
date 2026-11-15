@@ -12,15 +12,25 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Glyph } from '../components/ui/glyph';
 import {
-  AmbientWarmth, Avatar, Card, CHIP_H, Empty, fireHaptic, GradientCta, PressableScale, Screen,
-  ScreenTitle, Skeleton, TABS_ROW_GAP, UnderlineChoice, UnderlineTabs, useTabBarClearance,
+  AmbientWarmth,
+  Avatar,
+  Card,
+  Empty,
+  fireHaptic,
+  PressableScale,
+  Screen,
+  ScreenTitle,
+  Skeleton,
+  TABS_ROW_GAP,
+  UnderlineChoice,
+  UnderlineTabs,
+  useTabBarClearance,
 } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { AddPill } from '../components/add';
 import { createDuckTracker } from '../lib/duck';
-import { holdResume } from '../lib/resume';
 import { useSession } from '../lib/auth';
 import { useCityList, useCurrentCity } from '../lib/city';
 import { cityShortById } from '../lib/cityName';
@@ -49,8 +59,10 @@ import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { accentFade, colors, coverScrim, font, gradAI, mosaicScrim, onPhoto, radius, space, type } from '../theme';
+import { colors, coverScrim, mosaicScrim, onPhoto, space } from '../theme';
 import type { Nav } from '../nav';
+import { GuestNotice, EmptyCover, FirstCollection, CommunityEmpty } from './collections/empties';
+import { s } from './collections/styles';
 
 type ListRow = ShelfRow<Collection> | MosaicRow<Collection>;
 
@@ -71,10 +83,6 @@ type Section = {
   /** The lists friends shared with you, and how many. */
   shared?: { count: number };
 };
-
-/** Under the open box and its kinds: the gap the tabs leave, so the
- *  shelf starts the same distance under whichever row is last. */
-const SEARCH_ROW_GAP = TABS_ROW_GAP;
 
 /**
  * A row's key — and a section's, because the list asks for both.
@@ -101,224 +109,6 @@ const rowKey = (row: ListRow | Section): string => {
 type Seen = Parameters<NonNullable<SectionListProps<ListRow, Section>['onViewableItemsChanged']>>[0];
 
 const COMMUNITY_VIEW_KEY = 'citycrew.collections.community.view';
-// The card sells signing in, so it leads with what you get rather than with
-// what you are: "browsing as a guest" names a limitation and leaves the
-// reader to work out the offer for themselves.
-//
-// The whole card is the target and the chip inside it is drawn, not pressed —
-// a Pressable nested inside a Pressable gives one action two overlapping hit
-// areas and two stops in VoiceOver, for no gain.
-//
-// Sign-in lives in the Profile tab's stack, not this one, so the jump goes
-// through the tab navigator above us.
-//
-// ── one row, since 17 Oct 2026 ──
-//
-// It was a card of its own: a 40pt icon well beside a title and two lines
-// of body, the button on a third row under them — about 150pt, which put
-// the first row of lists at 380pt on a 430pt-wide phone. A guest's first
-// screen was half invitation and half shelf. The owner chose a compact
-// banner (the "after the first row" alternative was turned down: a card
-// inside the photo grid reads as an ad, needs its own rule for the list
-// view, a search and an empty shelf, and on a 667pt-tall phone falls
-// below the fold, where a guest may never see it).
-//
-// Words and button on one row now, and the icon well gone. Measured
-// before it went: with a 32pt well and the button, the text column on a
-// 375–393pt phone is about 140pt, and the title at this size needs 155.
-// The words say "collection", and the tab below is lit, so the glyph was
-// the one thing on the card saying nothing new. The text may still wrap
-// on the narrowest phones rather than end in an ellipsis: a cut-off
-// invitation is worse than a line taller one.
-//
-// The line under the title is about collections, not places (owner, same
-// day): "save and sort places" described the bookmark, and the card
-// beside a shelf of lists invites a list. It said so in full first —
-// "…bộ sưu tập riêng của bạn" — which repeated the title and took two
-// full lines on a 430pt phone; the owner, seeing it there, cut it to
-// the verbs. The title already names the thing they act on.
-function GuestNotice({ navigation }: { navigation: Nav }) {
-  const { t } = useI18n();
-  const { session } = useSession();
-  if (session) return null;
-  return (
-    <PressableScale
-      style={s.noticeWrap}
-      contentStyle={s.notice}
-      onPress={() => {
-        holdResume({
-          tab: 'Collections', kind: 'collection', at: Date.now(),
-          run: () => navigation.navigate('CollectionForm'),
-        });
-        navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false });
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={t(
-        'Sign in to build your own collections',
-        'Đăng nhập để tạo bộ sưu tập của riêng bạn',
-        'サインインして自分のコレクションを作る',
-        '登录后即可创建自己的合集', '登入後即可建立自己的合集',
-      )}
-    >
-      <View style={s.noticeCopy}>
-        <Text style={s.noticeTitle}>
-          {t('Start a collection', 'Tạo bộ sưu tập riêng', 'コレクションを作る', '创建合集', '建立合集')}
-        </Text>
-        <Text style={s.noticeBody}>
-          {t(
-            'Sign in to create and sort.',
-            'Đăng nhập để tạo và sắp xếp.',
-            'サインインして作成・整理。',
-            '登录后可创建和整理。', '登入後可建立和整理。',
-          )}
-        </Text>
-      </View>
-      {/* A rounded rectangle at chip scale, the sheet's primary button
-          scaled down. Sized to its label rather than stretched: the card is
-          already the target, so this names the action — it does not need to
-          be the loudest object on the screen. At the row's end now, centred
-          on the two lines beside it. */}
-      <LinearGradient {...gradAI} style={s.noticeChip}>
-        <Text style={s.noticeChipText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
-        <Glyph name="arrow-forward" size={15} color={colors.accentInk} />
-      </LinearGradient>
-    </PressableScale>
-  );
-}
-
-/**
- * The cover slot of a list that has nothing in it yet.
- *
- * A flat grey square reads as a photo that failed to load — the eye has
- * seen too many broken images to read it any other way. A warm tinted well
- * with the tab's own glyph reads as a slot waiting to be filled, which is
- * what it is.
- */
-function EmptyCover() {
-  return (
-    <LinearGradient
-      colors={[colors.accentSoft, accentFade]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[s.thumbFill, s.thumbEmpty]}
-    >
-      <Glyph name="bookmark-outline" size={26} color={colors.accentFaint} />
-    </LinearGradient>
-  );
-}
-
-/**
- * Signed in, nothing made yet. This is the one state with room to explain
- * what a collection is and why anyone would want one, so it takes the
- * whole card. The header's "New" pill stays above it (owner, 26 Oct
- * 2026): see the note on the pill.
- *
- * It mirrors the guest card one section up — same tinted well, same
- * gradient action — because they are the same argument aimed at two
- * states: sign in to make lists, and now make one.
- */
-function FirstCollection({ onPress }: { onPress: () => void }) {
-  const { t } = useI18n();
-  return (
-    <View style={s.firstWrap}>
-      <View style={s.first}>
-        <View style={s.firstIcon}>
-          <Glyph name="bookmark" size={27} color={colors.accent} />
-        </View>
-        <Text style={s.firstTitle}>
-          {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}
-        </Text>
-        {/* The owner's words (25 Oct 2026), with the app's own category
-            names in place of "cafe, ăn uống, cảnh vật hay địa điểm": it
-            says what a list is for — sharing, and planning a day from it,
-            both of which the app does — where it used to give occasions. */}
-        <Text style={s.firstBody}>
-          {t(
-            'Group the places you love into lists by theme — cafés, eats, views. Share them, or use one to plan a day worth having.',
-            'Nhóm địa điểm yêu thích thành bộ sưu tập theo chủ đề — cà phê, ăn uống, ngắm cảnh. Chia sẻ, hoặc dùng để lên kế hoạch cho một ngày ý nghĩa.',
-            'お気に入りのスポットをテーマ別にリストにまとめましょう — カフェ、食事、景色。シェアしたり、特別な一日のプランに使ったり。',
-            '把喜欢的地点按主题整理成清单 — 咖啡、美食、风景。分享出去，或用来规划有意义的一天。', '把喜歡的地點按主題整理成清單 — 咖啡、美食、風景。分享出去，或用來規劃有意義的一天。',
-          )}
-        </Text>
-        {/* A pill here, where the sheet's primary is a rounded rectangle:
-            that one runs the full width, where end caps as tall as the
-            button read as a lozenge. This one is sized to its label, which
-            is exactly where a pill belongs. */}
-        <GradientCta
-          icon="add"
-          label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集', '建立你的第一個合集')}
-          onPress={onPress}
-        />
-        {/* Private by default, said so that it does not contradict the
-            "share" above it: it read "Only you can see your lists." */}
-        <Text style={s.firstFoot}>
-          {t('Only you can see them until you choose to share.', 'Mặc định chỉ mình bạn thấy — chia sẻ khi bạn muốn.', '共有するまで、あなただけに表示されます。', '默认仅你可见 — 想分享时再分享。', '預設僅你可見 — 想分享時再分享。')}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-/**
- * The community shelf, before anybody has stocked it.
- *
- * It used to say "Nothing from the community yet." and stop there, which
- * is a dead end in the one place a dead end costs most: a city the desk
- * has just opened has no public lists at all, and the morning this was
- * written the owner read that honest emptiness as data loss. Emptiness
- * here is a state, not a fault, and the sentence that
- * says so can also hand the reader the way to end it — the same shape
- * `FirstCollection` uses one section up.
- *
- * It named the city while the shelf was scoped to one. The shelf shows
- * every city now, so empty means empty everywhere, and says so plainly.
- */
-function CommunityEmpty({ signedIn, onCreate, onExplore }: {
-  signedIn: boolean;
-  onCreate: () => void;
-  onExplore: () => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <View style={s.firstWrap}>
-      <View style={s.first}>
-        <View style={s.firstIcon}>
-          <Glyph name="globe" size={27} color={colors.accent} />
-        </View>
-        <Text style={s.firstTitle}>
-          {t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません', '还没有公开的清单', '還沒有公開的清單')}
-        </Text>
-        {/* True now that a curator's own public list is on this shelf; it
-            promised the same thing while the shelf filtered them out. */}
-        <Text style={s.firstBody}>
-          {t(
-            'Yours can be the first — make a list, set it to Public, and it shows up here for everyone.',
-            'Bộ sưu tập của bạn có thể là đầu tiên — tạo một bộ sưu tập và đặt Công khai, nó sẽ hiện ở đây cho mọi người.',
-            '最初の一つはあなたかも — リストを作って「公開」にすると、ここにみんなの目に並びます。',
-            '你的可以成为第一个 — 创建清单并设为公开，所有人都能在这里看到。', '你的可以成為第一個 — 建立清單並設為公開，所有人都能在這裡看到。',
-          )}
-        </Text>
-        {/* Signed out, "make a list" is not yet an offer this reader can
-            take, so the button points at the shelf that is already full. */}
-        {signedIn
-          ? (
-            <GradientCta
-              icon="add"
-              label={t('Create a collection', 'Tạo bộ sưu tập', 'コレクションを作る', '创建合集', '建立合集')}
-              onPress={onCreate}
-            />
-          )
-          : (
-            <GradientCta
-              icon="compass"
-              label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点', '探索地點')}
-              onPress={onExplore}
-            />
-          )}
-      </View>
-    </View>
-  );
-}
 
 /**
  * The last row of your own section: a slot rather than a thing.
@@ -1627,195 +1417,3 @@ export default function CollectionsScreen({ navigation, route }: {
     </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  // Margins stay on the Pressable; the card itself is what scales.
-  noticeWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
-  // One row: the words, then the chip at the end. 14 above and below the
-  // two lines, so the banner is about 72pt where the card was 150.
-  notice: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.card, paddingHorizontal: space.cardPadding, paddingVertical: 14,
-  },
-  noticeCopy: { flex: 1, gap: 2 },
-  // 16, a step under the card title's 18: the banner introduces the shelf
-  // rather than being an item on it, and at 18 it outranked the tiles.
-  noticeTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 21 },
-  // A step down again: the supporting line, read after the title.
-  noticeBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
-  noticeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    minHeight: CHIP_H, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14,
-  },
-  noticeChipText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
-
-  // The community grid. Sized in the component — the width is the
-  // screen's business — and dressed in the Explore shelf card's clothes:
-  // photo, three-stop scrim, light ink.
-  // A city's name over its block: the section size, so it reads as a
-  // heading over cards and not as one more card's caption; the count
-  // beside it in the quiet step.
-  // Above it, the row gap already left by the block before plus the
-  // page's title gap; below, the theme's heading-to-content step, so the
-  // name sits closer to the cards it heads than to the ones it follows.
-  cityHead: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 8,
-    paddingHorizontal: space.page, paddingTop: space.titleToContent, paddingBottom: space.headingToContent,
-  },
-  // The first block has no heading at rest (owner, 7 Nov 2026): the city
-  // is named once the list moves, by the bar under the pinned tabs. What
-  // stands in its slot is the gap — the 14 the row above leaves (the
-  // tabs, or the box once it is open) and this make `titleToContent`, the
-  // gap under a screen's head everywhere else (6 Nov: with the heading,
-  // "Hà Nội" had floated 43pt under the box). Later blocks keep their
-  // headings: those are where one city ends.
-  firstGap: { height: space.titleToContent - SEARCH_ROW_GAP },
-  cityHeadName: { ...type.section, color: colors.text, flexShrink: 1 },
-  // The ▾ says the name opens something: the list of cities to jump to.
-  cityHeadChevron: { alignSelf: 'center', marginLeft: -4 },
-  // "16 collections", not "16": a bare number beside a city's name read
-  // as anything — a rank, a district (owner, 6 Nov 2026).
-  cityHeadCount: { fontSize: 15, fontWeight: font.medium, color: colors.textTertiary },
-  // The same heading, pinned under the tabs: a step smaller so the row it
-  // rides under stays the bigger thing, the count pushed to the far edge
-  // as the reference drew it.
-  //
-  // Close under the tabs (owner, 7 Nov 2026): it sat ~29pt below their
-  // underline — the tabs' own 14, a hairline, then the name centred in a
-  // 44pt row. Now the tabs' 14 is the whole gap, the same the tabs leave
-  // above the search box at rest; the hairline went, the underline and
-  // the bar's ground part them already. The target stays past 44 through
-  // `hitSlop` (see `cityHead`).
-  cityBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: space.page, paddingBottom: 12,
-  },
-  // A guest's pinned row is the bar alone, at the top of the screen.
-  cityBarAlone: { paddingTop: 12 },
-  cityBarName: { ...type.cardTitle, color: colors.text, flexShrink: 1 },
-  cityBarCount: { marginLeft: 'auto', fontSize: 13 },
-  jumpTitle: { color: colors.text, ...type.cardTitle },
-  gridRow: {
-    flexDirection: 'row', gap: space.cardGap,
-    marginHorizontal: space.page, marginBottom: space.cardGap,
-  },
-  gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
-  gcardText: { padding: 12, gap: 2 },
-  mosaicCard: { gap: 0 },
-  mosaicPhoto: { flex: 1, borderRadius: radius.image, overflow: 'hidden' },
-  mosaicWords: { gap: 6, padding: 14 },
-  mosaicOverlay: { position: 'absolute', left: 0, right: 0 },
-  mosaicTail: { position: 'absolute', left: 0, right: 0, height: mosaicScrim.tailHeight },
-  mosaicTailBelow: { top: '100%' },
-  mosaicTailAbove: { bottom: '100%' },
-  mosaicWordsBottom: { position: 'absolute', bottom: 0 },
-  mosaicWordsTop: { position: 'absolute', top: 0 },
-  // In the caption's flow rather than pinned: the caption's own 14pt
-  // padding puts it in the corner, where the pinned badge would sit.
-  mosaicBadgeInline: { position: 'relative', top: 0, left: 0, alignSelf: 'flex-start' },
-  mosaicWordsBelow: { paddingHorizontal: 2, paddingTop: 11, paddingBottom: 0 },
-  mosaicWordsFeatured: { padding: 20 },
-  mosaicTitleFeatured: { ...type.titleDetail, color: onPhoto.text, lineHeight: 32 },
-  mosaicInkShadow: { textShadowColor: 'rgba(0,0,0,0.65)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
-  mosaicTitleBelow: { color: colors.text },
-  // Full white on a photograph, not the 82% secondary ink: at 82% a 12–13pt
-  // line over a white picture needs 0.65 of dark, at full white 0.58, and
-  // `mosaicScrim` holds 0.60 behind every line. Size carries the order.
-  mosaicAuthor: { color: onPhoto.text, fontSize: 12, lineHeight: 16, flexShrink: 1 },
-  // The face and the name, as the tile's foot sets them, 6 apart.
-  mosaicBy: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  mosaicAuthorBelow: { color: colors.textSecondary },
-  mosaicBlurb: { color: onPhoto.text, fontSize: 13, lineHeight: 18 },
-  gcardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 19 },
-  gcardBy: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.medium, flexShrink: 1 },
-  // As tall as the avatar on every tile (owner, 17 Oct 2026). A
-  // community tile leads with an 18pt face, your own with a 14pt glyph,
-  // and the shorter row sat the title 2–3pt lower on one tab than the
-  // other — the same list moved as you switched tabs.
-  gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, minHeight: 18 },
-  gcardMeta: { color: onPhoto.textSecondary, fontSize: 13 },
-  gcardLock: {
-    position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceCard,
-  },
-  gcardCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-
-  // The tile/list switch — two glyphs in a quiet glass capsule, the
-  // chosen one seated on a solid thumb. Small on purpose: it is a
-  // preference, not a destination.
-  viewToggle: {
-    flexDirection: 'row', gap: 2, padding: 3,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.pill,
-  },
-  viewBtn: {
-    width: 26, height: 22, borderRadius: 11,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  viewBtnOn: { backgroundColor: colors.surfaceCard },
-
-  // The visits screen's box and panel, to the point: the same row, the
-  // same Cancel inside the box, the same card of groups, so the two screens
-  // that let a reader narrow a list of their own do it with one grammar.
-  // The header's own subtitle type (`s.subtitle` in ui/surfaces.tsx), in the page's
-  // margins. The header ends 14 under the title; -6 brings this line to
-  // the 8 a subtitle sits under its title in that header.
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginHorizontal: space.page, marginBottom: SEARCH_ROW_GAP },
-  // The panel on the page's own ground, not in a card: its rows run to
-  // the screen's edge and fade into the page, which a card's ground —
-  // translucent in every dark look — would not match. The suggestions,
-  // words in a list rather than a row, keep the card.
-  panel: { marginBottom: 14, gap: space.headingToContent },
-  recents: { marginHorizontal: space.page, padding: space.cardPadding, gap: 10 },
-  group: { gap: 10 },
-  onPage: { marginHorizontal: space.page },
-  legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  legend: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
-  clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
-  // Under the box, where the panel was, with the box's own margins: the
-  // review board's folded filter (owner, 25 Oct 2026) — no chips, the
-  // glyph and the words, a hairline between them, a ✕ after each word.
-  // 36pt tall, Explore's filter button's box; the slop makes it 44.
-  // The kinds under the open box, its own gap below them.
-  kinds: { marginBottom: SEARCH_ROW_GAP },
-  // The pinned copy: over the shelf, opaque because the shelf runs under
-  // it, and a hairline at its foot — the edge between the switch and the
-  // lists, the one Explore's pinned row draws too.
-  pinned: {
-    position: 'absolute', left: 0, right: 0, top: 0, zIndex: 20,
-    backgroundColor: colors.bg,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
-  },
-  hiddenHeader: { opacity: 0 },
-  // The header's own subtitle type, drawn up under the title by the 6 the
-  // header's 14 below it has to spare, and 12 clear of the tabs.
-  scope: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, marginHorizontal: space.page, marginTop: -6, marginBottom: 12 },
-  // The empty Mosaic cover's well, filling the photograph's box.
-  thumbFill: { width: '100%', flex: 1 },
-  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
-
-  firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
-  first: {
-    alignItems: 'center', gap: 10,
-    paddingHorizontal: space.cardPadding + 6, paddingTop: 26, paddingBottom: 22,
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.card,
-  },
-  firstIcon: {
-    width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
-    marginBottom: 2,
-  },
-  firstTitle: { color: colors.text, ...type.headline },
-  firstBody: {
-    color: colors.textSecondary, fontSize: 15, lineHeight: 21,
-    textAlign: 'center', marginBottom: 6,
-  },
-  firstFoot: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
-
-});
