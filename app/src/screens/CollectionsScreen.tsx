@@ -715,9 +715,9 @@ export default function CollectionsScreen({ navigation, route }: {
       accessibilityLabel={`${cityWord(city.id)}, ${listsWord(city.count, t)}`}
       accessibilityHint={t('Go to another city', 'Đến thành phố khác', '別の都市へ移動', '前往其他城市', '前往其他城市')}
     >
-      <Text style={pinnedCopy ? s.cityBarName : s.cityHeadName} numberOfLines={1}>{cityWord(city.id)}</Text>
-      <Glyph name="chevron-down" size={pinnedCopy ? 16 : 18} color={colors.textSecondary} style={s.cityHeadChevron} />
-      <Text style={[s.cityHeadCount, pinnedCopy && s.cityBarCount]}>{listsWord(city.count, t)}</Text>
+      <Text style={s.cityHeadName} numberOfLines={1}>{cityWord(city.id)}</Text>
+      <Glyph name="chevron-down" size={16} color={colors.textSecondary} style={s.cityHeadChevron} />
+      <Text style={s.cityHeadCount}>{listsWord(city.count, t)}</Text>
     </PressableScale>
   );
 
