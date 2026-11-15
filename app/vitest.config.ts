@@ -138,6 +138,11 @@ import { IMPURE } from './impure';
 // `GalleryScreen` rose to 93.54 with its photo-scoring tests (15 Oct),
 // and the functions column went to the next-lowest: `PlaceDetailScreen`
 // and `TripsScreen`, both at 92.3.
+//
+// Both rose on 15 Nov 2026 — `PlaceDetailScreen` to 95.83 with a tap
+// outside its check-in sheet, `TripsScreen` to 100 with a tap on a past
+// trip — and the column went to `ExploreScreen`, at 92.85: the floor
+// stays 92.
 const SCREENS_FLOOR = { lines: 99, statements: 99, branches: 91, functions: 92 };
 
 // ── the components' floor ──

@@ -1730,6 +1730,22 @@ describe('reordering', () => {
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'museum', 'pho']);
   });
 
+  // The beat is counted from the last move, not the first. The test above
+  // passes either way — two timers inside one wait are still one write —
+  // and with `shuffle`'s clearTimeout taken out nothing failed.
+  it('waits its beat after the last move, not the first', async () => {
+    show();
+    down('pho');
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    up('museum');
+    // 800 ms since the first move, 400 since the last: nothing written yet.
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(spies.reorderCollection).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
+    expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'museum', 'pho']);
+  });
+
   it('names the actions in the reader\'s language', () => {
     state.lang = 'vi';
     show();

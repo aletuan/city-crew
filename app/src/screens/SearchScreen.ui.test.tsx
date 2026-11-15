@@ -422,6 +422,30 @@ describe('the zero-state', () => {
     expect(popular).not.toContain('Ba Dinh ·');
   });
 
+  // Every place in this file had no photograph, so the row had only ever
+  // been drawn with its blank square.
+  it('draws a place’s cover in its row, and a blank square where there is none', () => {
+    const photo = { photo_uri: 'https://img.example/cong.jpg', sort_order: 0, is_cover: true, is_hidden: false };
+    cat.places = [place({ ...cong, place_photos: [photo] } as Partial<Place>), museum];
+    mount();
+    const covers = [...document.querySelectorAll('img')].map((i) => i.getAttribute('src'));
+    expect(covers).toContain('https://img.example/cong.jpg');
+    // The place without a photograph adds no picture of its own.
+    expect(new Set(covers)).toEqual(new Set(['https://img.example/cong.jpg']));
+  });
+
+  // A score with nobody counted behind it stands alone, and a place with
+  // neither an area nor an hour worth saying has no second line at all.
+  it('shows a score without a count as the score alone, and no pin without an area', () => {
+    cat.places = [place({ slug: 'bare', name_en: 'Bare Bar', categories: ['nightlife'], rating: 4.2 })];
+    mount();
+    const popular = textAfter('Most popular');
+    expect(popular).toContain('Bare Bar');
+    expect(popular).toContain('4.2');
+    expect(popular).not.toContain('4.2(');
+    expect(document.querySelector('[data-icon="location-outline"]')).toBeNull();
+  });
+
   it('never recommends a pending place in any zero-state section', () => {
     mount();
     expect(screen.queryByText('Pending Bakery')).toBeNull();
@@ -558,6 +582,15 @@ describe('typing a query', () => {
     expect(screen.getByText('Coffee crawl')).toBeTruthy();
     expect(screen.getByText('2 places')).toBeTruthy();
     expect(screen.getByText('Coffee in Saigon')).toBeTruthy();
+  });
+
+  // A list's row wears the list's own cover; no list here had one.
+  it('draws a collection’s cover in its row', () => {
+    cat.cols = [{ ...crawl, cover: { photo_uri: 'https://img.example/crawl.jpg' } }, gallery];
+    mount();
+    type('coffee');
+    expect(screen.getByText('Coffee crawl')).toBeTruthy();
+    expect(document.querySelector('img[src="https://img.example/crawl.jpg"]')).toBeTruthy();
   });
 
   it('finds a collection by the names of the places inside it, singular count', () => {
