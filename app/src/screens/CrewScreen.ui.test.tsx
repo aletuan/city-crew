@@ -13,9 +13,9 @@
 
 import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
-import { font } from '../theme';
+import { colors, font } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
+import { act, fireEvent, fontSizeOf, render, screen, textStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { FriendProfile, ListTitle } from '../lib/data';
 import type { FriendshipRow, Suggestion } from '../lib/friends';
@@ -208,9 +208,16 @@ describe('which tab opens', () => {
     crew.people = { a: person('a', 'anh', 'Anh'), b: person('b', 'bao') };
     render(<CrewScreen navigation={nav()} />);
     expect(tab(/Your friends/).textContent).toContain('Your friends (2)');
-    expect(screen.getByText('Anh')).toBeTruthy();
-    // No full name: the handle stands in as the name.
-    expect(screen.getAllByText('@bao').length).toBeGreaterThan(0);
+    // Handle first (owner, 15 Nov 2026): the handle on top, bare, and the
+    // name under it; a person with no name is the handle alone.
+    const [anh, bao] = [screen.getByTestId('crew-friend-0'), screen.getByTestId('crew-friend-1')];
+    expect(within(anh).getByTestId('crew-who-handle').textContent).toBe('anh');
+    expect(within(anh).getByTestId('crew-who-name').textContent).toBe('Anh');
+    expect(textStyleOf(within(anh).getByTestId('crew-who-handle'))?.color).toBe(colors.text);
+    expect(textStyleOf(within(anh).getByTestId('crew-who-name'))?.color).toBe(colors.textTertiary);
+    expect(within(bao).getByTestId('crew-who-handle').textContent).toBe('bao');
+    expect(within(bao).queryByTestId('crew-who-name')).toBeNull();
+    expect(anh.textContent).not.toContain('@');
     expect(screen.queryByText('Pending')).toBeNull();
   });
 
@@ -355,10 +362,12 @@ describe('a request you sent', () => {
     crew.people = { o: person('o', 'oanh', 'Oanh') };
   });
 
-  it('is listed under Sent by its handle alone, and Cancel withdraws it through the sheet', async () => {
+  it('is listed under Sent by its handle and name alone, and Cancel withdraws it through the sheet', async () => {
     render(<CrewScreen navigation={nav()} />);
     expect(screen.getByText('Sent')).toBeTruthy();
-    expect(screen.getByText('@oanh')).toBeTruthy();
+    const sent = screen.getByTestId('crew-sent-0');
+    expect(within(sent).getByTestId('crew-who-handle').textContent).toBe('oanh');
+    expect(within(sent).getByTestId('crew-who-name').textContent).toBe('Oanh');
     // The heading says it is waiting; the row does not say it again.
     expect(screen.queryByText(/waiting on their answer/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -387,20 +396,30 @@ describe('your friends', () => {
 
   it('shows how many places you both save', () => {
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('@anh · 3 mutual saves')).toBeTruthy();
+    // After the name, on the second line.
+    expect(screen.getByTestId('crew-who-name').textContent).toBe('Anh · 3 mutual saves');
+  });
+
+  // With no name the count is the second line, alone — not "· 3".
+  it('puts the count alone under a handle with no name', () => {
+    crew.people = { a: person('a', 'anh') };
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByTestId('crew-who-handle').textContent).toBe('anh');
+    expect(screen.getByTestId('crew-who-name').textContent).toBe('3 mutual saves');
   });
 
   it('says “1 mutual save” in the singular', () => {
     crew.mutual = { a: 1 };
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('@anh · 1 mutual save')).toBeTruthy();
+    expect(screen.getByTestId('crew-who-name').textContent).toBe('Anh · 1 mutual save');
   });
 
   it('unfriends only after the confirmation, and Cancel there does nothing', async () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
-    // The sheet says who it is about: the same line appears a second time.
-    expect(await screen.findAllByText('@anh · 3 mutual saves')).toHaveLength(2);
+    // The sheet says who it is about, headed by the name as every sheet
+    // is: the handle with its `@`, and the count.
+    expect(await screen.findByText('@anh · 3 mutual saves')).toBeTruthy();
     await pickSheetAction('Unfriend');
     await waitFor(() => expect(alert).toHaveBeenCalled());
     const [title, body, buttons] = alert.mock.calls[0];
@@ -447,7 +466,8 @@ describe('the blocked list', () => {
     crew.people = { x: person('x', 'xuan', 'Xuan') };
     render(<CrewScreen navigation={nav()} />);
     expect(screen.getByText('Blocked')).toBeTruthy();
-    expect(screen.getByText('Xuan')).toBeTruthy();
+    expect(screen.getByTestId('crew-who-handle').textContent).toBe('xuan');
+    expect(screen.getByTestId('crew-who-name').textContent).toBe('Xuan');
     fireEvent.click(screen.getByRole('button', { name: 'Unblock' }));
     expect(alert.mock.calls[0][0]).toBe('Unblock @xuan?');
     expect(data.unblockUser).not.toHaveBeenCalled();

@@ -295,7 +295,7 @@ describe('what it asks for', () => {
     await show();
     expect(data.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith('c1');
     expect(data.fetchCopiesOfList).toHaveBeenCalledExactlyOnceWith('c1');
-    expect(rowLines()).toEqual([['Lan Phạm', '@lan · 30m'], ['Minh Trần', '@minh · 2h']]);
+    expect(rowLines()).toEqual([['lan 30m', 'Lan Phạm'], ['minh 2h', 'Minh Trần']]);
     expect(screen.queryByTestId('activity-empty')).toBeNull();
     expect(screen.queryByText(/Only a public collection/)).toBeNull();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
@@ -477,35 +477,41 @@ describe('the rows', () => {
     // The name on top, the handle under it with its `@` and the age —
     // Crew's arrangement, so one person reads the same on both screens.
     expect(rowLines()).toEqual([
-      ['Lan Phạm', '@lan · 5m'],
-      ['Lan Phạm', '@lan · 30m'],
-      ['Minh Trần', '@minh · 2h'],
+      ['lan 5m', 'Lan Phạm'],
+      ['lan 30m', 'Lan Phạm'],
+      ['minh 2h', 'Minh Trần'],
     ]);
     const kinds = screen.getAllByTestId(/^activity-badge-/).map((b) => b.getAttribute('data-testid'));
     expect(kinds).toEqual(['activity-badge-like', 'activity-badge-copy', 'activity-badge-like']);
   });
 
-  it('dates an act by the card head’s table, with "now" for under a minute', async () => {
+  // An act's age (owner, 15 Nov 2026): the card head's table with a week
+  // of days in it — 1d to 7d, then the date. Until then 26 hours ago was
+  // already "12 Nov".
+  it('dates an act now, then in days for a week, then by the date', async () => {
     data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(20_000), 'a'),
       like(ago(26 * HOUR), 'b'),
-      like(new Date(2025, 10, 12, 9).toISOString(), 'c'),
+      like(ago(7 * 24 * HOUR + HOUR), 'c'),
+      like(ago(8 * 24 * HOUR), 'd'),
+      like(new Date(2025, 10, 12, 9).toISOString(), 'e'),
     ]);
     await show();
-    expect(rowLines().map((r) => r[0])).toEqual(['a now', 'b 12 Nov', 'c 12 Nov 2025']);
+    expect(rowLines().map((r) => r[0])).toEqual(['a now', 'b 1d', 'c 7d', 'd 5 Nov', 'e 12 Nov 2025']);
   });
 
-  it('dates it in Vietnamese as the owner wrote it: Vừa xong, 5p, 12/11, 12/11/25', async () => {
+  it('dates it in Vietnamese as the owner wrote it: Vừa xong, 5p, 3h, 3 ngày, 05/11, 12/11/25', async () => {
     state.lang = 'vi';
     data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(20_000), 'a'),
       like(ago(5 * MIN), 'b'),
       like(ago(3 * HOUR), 'c'),
-      like(ago(26 * HOUR), 'd'),
+      like(ago(3 * 24 * HOUR), 'd'),
+      like(ago(8 * 24 * HOUR), 'f'),
       like(new Date(2025, 10, 12, 9).toISOString(), 'e'),
     ]);
     await show();
-    expect(rowLines().map((r) => r[0])).toEqual(['a Vừa xong', 'b 5p', 'c 3h', 'd 12/11', 'e 12/11/25']);
+    expect(rowLines().map((r) => r[0])).toEqual(['a Vừa xong', 'b 5p', 'c 3h', 'd 3 ngày', 'f 05/11', 'e 12/11/25']);
   });
 
   it('calls a person whose profile is gone Someone, with no second line', async () => {
@@ -514,12 +520,26 @@ describe('the rows', () => {
     expect(rowLines()).toEqual([['Someone 5m']]);
   });
 
-  it('sets the name in semibold, and the handle and age under it in grey', async () => {
+  // Handle first (owner, 15 Nov 2026): the handle bare and strong with
+  // the age beside it, the name under it and quiet. Crew's rows turned
+  // the same day — the mismatch between the two is what took this order
+  // back on 13 Nov.
+  it('sets the handle in semibold with the age beside it, and the name under it in grey', async () => {
     data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
     await show();
+    expect(rowLines()).toEqual([['lan 5m', 'Lan Phạm']]);
     const row = screen.getByTestId('activity-row');
-    expect(textStyleOf(within(row).getByText('Lan Phạm'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
-    expect(textStyleOf(within(row).getByText('@lan · 5m'))?.color).toBe(colors.textTertiary);
+    expect(textStyleOf(within(row).getByText('lan'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
+    expect(textStyleOf(within(row).getByText('5m'))?.color).toBe(colors.textTertiary);
+    expect(textStyleOf(within(row).getByText('Lan Phạm'))?.color).toBe(colors.textTertiary);
+    expect(row.textContent).not.toContain('@');
+  });
+
+  // A name with no handle behind it stands where the handle would, alone.
+  it('puts a name with no handle on the first line, and nothing under it', async () => {
+    data.fetchLikesOnList.mockImplementation(async () => [{ ...like(ago(5 * MIN), null, 'Lan Phạm') }]);
+    await show();
+    expect(rowLines()).toEqual([['Lan Phạm 5m']]);
   });
 
   // No name: the handle is the name, bare, with the age beside it — as
@@ -627,7 +647,7 @@ describe('the rows', () => {
     await show();
     const rows = screen.getAllByTestId('activity-row');
     expect(rows.map((r) => whoOf(r).getAttribute('aria-label'))).toEqual([
-      'Lan Phạm, @lan, Liked, 5m',
+      'lan, Lan Phạm, Liked, 5m',
       'Someone, Saved a copy, 9m',
     ]);
     // The row is not a button; the one control in it is its friend
@@ -759,10 +779,10 @@ describe('the states', () => {
     // The first render, before any promise has had a turn.
     expect(screen.queryByTestId('activity-loading')).toBeNull();
     expect(document.querySelector('[role="progressbar"]')).toBeNull();
-    expect(rowLines()).toEqual([['Lan Phạm', '@lan · 5m']]);
+    expect(rowLines()).toEqual([['lan 5m', 'Lan Phạm']]);
     expect(data.fetchLikesOnList).toHaveBeenCalledTimes(2);
     await act(async () => { answer([like(ago(1 * MIN), 'an', 'An Lê'), like(ago(5 * MIN), 'lan', 'Lan Phạm')]); });
-    expect(rowLines()).toEqual([['An Lê', '@an · 1m'], ['Lan Phạm', '@lan · 5m']]);
+    expect(rowLines()).toEqual([['an 1m', 'An Lê'], ['lan 5m', 'Lan Phạm']]);
   });
 
   // A refresh that fails behind kept rows keeps them, and says nothing:
@@ -1003,15 +1023,15 @@ describe('the friend button', () => {
       let done!: () => void;
       data.sendFriendRequest.mockImplementation(() => new Promise<void>((r) => { done = r; }));
       await show();
-      fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Add friend' }));
+      fireEvent.click(within(rowOf('lan')).getByRole('button', { name: 'Add friend' }));
       expect(data.sendFriendRequest).toHaveBeenCalledExactlyOnceWith('me', 'id-lan');
       // Before the server has answered.
-      expect(buttonOf('Lan')!.textContent).toBe('Requested');
-      expect(buttonOf('Lan')!.getAttribute('role')).toBeNull();
+      expect(buttonOf('lan')!.textContent).toBe('Requested');
+      expect(buttonOf('lan')!.getAttribute('role')).toBeNull();
       expect(crew.ships.reload).not.toHaveBeenCalled();
       await act(async () => { done(); });
       expect(crew.ships.reload).toHaveBeenCalledTimes(1);
-      expect(buttonOf('Lan')!.textContent).toBe('Requested');
+      expect(buttonOf('lan')!.textContent).toBe('Requested');
       expect(alert).not.toHaveBeenCalled();
     });
 
@@ -1019,9 +1039,9 @@ describe('the friend button', () => {
       only();
       data.sendFriendRequest.mockImplementation(async () => { throw new Error('Network request failed'); });
       await show();
-      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Add friend' })); });
+      await act(async () => { fireEvent.click(within(rowOf('lan')).getByRole('button', { name: 'Add friend' })); });
       expect(alert).toHaveBeenCalledExactlyOnceWith('Could not send the request', 'Network request failed');
-      expect(buttonOf('Lan')!.textContent).toBe('Add friend');
+      expect(buttonOf('lan')!.textContent).toBe('Add friend');
       expect(crew.ships.reload).not.toHaveBeenCalled();
     });
 
@@ -1032,7 +1052,7 @@ describe('the friend button', () => {
         throw new Error('new row violates row-level security policy for table "friendships"');
       });
       await show();
-      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Add friend' })); });
+      await act(async () => { fireEvent.click(within(rowOf('lan')).getByRole('button', { name: 'Add friend' })); });
       expect(alert).toHaveBeenCalledExactlyOnceWith('Could not send the request', undefined);
     });
 
@@ -1041,7 +1061,7 @@ describe('the friend button', () => {
       only();
       data.sendFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
       await show();
-      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Kết bạn' })); });
+      await act(async () => { fireEvent.click(within(rowOf('lan')).getByRole('button', { name: 'Kết bạn' })); });
       expect(alert).toHaveBeenCalledExactlyOnceWith('Không gửi được lời mời', 'offline');
     });
 
@@ -1070,10 +1090,10 @@ describe('the friend button', () => {
       let done!: () => void;
       data.acceptFriendRequest.mockImplementation(() => new Promise<void>((r) => { done = r; }));
       await show();
-      fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Accept' }));
+      fireEvent.click(within(rowOf('lan')).getByRole('button', { name: 'Accept' }));
       expect(data.acceptFriendRequest).toHaveBeenCalledExactlyOnceWith('id-lan', 'me');
       expect(data.sendFriendRequest).not.toHaveBeenCalled();
-      expect(buttonOf('Lan')!.textContent).toBe('Friends');
+      expect(buttonOf('lan')!.textContent).toBe('Friends');
       await act(async () => { done(); });
       expect(crew.ships.reload).toHaveBeenCalledTimes(1);
     });
@@ -1082,9 +1102,9 @@ describe('the friend button', () => {
       asked();
       data.acceptFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
       await show();
-      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Accept' })); });
+      await act(async () => { fireEvent.click(within(rowOf('lan')).getByRole('button', { name: 'Accept' })); });
       expect(alert).toHaveBeenCalledExactlyOnceWith('Could not accept the request', 'offline');
-      expect(buttonOf('Lan')!.textContent).toBe('Accept');
+      expect(buttonOf('lan')!.textContent).toBe('Accept');
     });
 
     it('says it failed in Vietnamese', async () => {
@@ -1092,7 +1112,7 @@ describe('the friend button', () => {
       asked();
       data.acceptFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
       await show();
-      await act(async () => { fireEvent.click(within(rowOf('Lan')).getByRole('button', { name: 'Đồng ý' })); });
+      await act(async () => { fireEvent.click(within(rowOf('lan')).getByRole('button', { name: 'Đồng ý' })); });
       expect(alert).toHaveBeenCalledExactlyOnceWith('Không chấp nhận được lời mời', 'offline');
     });
   });
@@ -1168,13 +1188,13 @@ describe('pulling the page down', () => {
     const copies = held<Copy[]>(data.fetchCopiesOfList);
     pull();
     expect(page().refreshing).toBe(true);
-    expect(rowLines()).toEqual([['Lan Phạm', '@lan · 5m']]);
+    expect(rowLines()).toEqual([['lan 5m', 'Lan Phạm']]);
     expect(screen.queryByTestId('activity-loading')).toBeNull();
     await likes([like(ago(1 * MIN), 'an', 'An Lê'), like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
     expect(page().refreshing).toBe(true);
     await copies([]);
     expect(page().refreshing).toBe(false);
-    expect(rowLines()).toEqual([['An Lê', '@an · 1m'], ['Lan Phạm', '@lan · 5m']]);
+    expect(rowLines()).toEqual([['an 1m', 'An Lê'], ['lan 5m', 'Lan Phạm']]);
   });
 
   // Either half still out keeps it lit, whichever lands first.

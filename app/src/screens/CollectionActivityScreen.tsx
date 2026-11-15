@@ -208,11 +208,11 @@ import {
   acceptFriendRequest, sendFriendRequest, useListActivityOfQuery, usePrefetchCollectionStats,
 } from '../lib/data';
 import { type Pledged, quietReason, rowButton } from '../lib/friends';
-import { atHandle, normalizeHandle } from '../lib/handle';
+import { normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { actsOn, type ListAct } from '../lib/listActivity';
 import { usePending } from '../lib/pending';
-import { ageWord, listAgeOf } from '../lib/listAge';
+import { actAgeOf, ageWord } from '../lib/listAge';
 import { useReadableList } from '../lib/readableList';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, font, gradAI, radius, space, type } from '../theme';
@@ -319,7 +319,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
   /** A like's or a copy's age, by the card head's table (`ageWord`), with
    *  Activity's "just now" where a list says "New" — see `lib/listAge`. */
   const ageOf = (iso: string) =>
-    ageWord(listAgeOf(iso, new Date()), lang, t, t('now', 'Vừa xong', 'たった今', '刚刚', '剛剛'));
+    ageWord(actAgeOf(iso, new Date()), lang, t, t('now', 'Vừa xong', 'たった今', '刚刚', '剛剛'));
 
   // The list, in a small card — `ListSummaryCard`.
   const card = col ? <ListSummaryCard col={col} owned={owned} testID="activity-list" /> : null;
@@ -345,20 +345,18 @@ export default function CollectionActivityScreen({ navigation, route }: {
 
   const someone = t('Someone', 'Ai đó', '誰か', '有人', '有人');
   const row = (item: ListAct, index: number) => {
-    /* Who, as every row of people in the app names them (owner, 13 Nov
-       2026): the real name on top in the strong ink, the handle under it
-       with its `@` — Crew's rows, and X's. With both on show the `@` is
-       what tells the second line from the first. With no name the handle
-       is the name, alone and bare, as the collection card's head draws it.
-
-       Rejected the same day, after it shipped: Threads' order, the handle
-       on top and bare and the name under it. One list of people drew
-       "hado / Ha Do" while Crew drew "Ha Do / @hado" — the same person
-       in two arrangements, a screen apart. Crew's is the one kept: this
-       is an app about friends, known by their names first. */
+    /* Who, handle first (owner, 15 Nov 2026): the handle on top, bare and
+       in the strong ink, with the age beside it; the real name under it,
+       quieter. Threads' order, and the app's — Crew's rows turned the
+       same day, so one person is not "hado / Ha Do" here and "Ha Do /
+       @hado" a screen away. That mismatch is what had this order taken
+       back on 13 Nov, the day it first shipped, with Crew's kept; the
+       owner chose it again and for both. No `@`: at the head of a row
+       the first line is the handle, and nothing needs telling apart.
+       With no handle the name stands there; with neither, "someone". */
     const handle = item.handle ? normalizeHandle(item.handle) : '';
-    const top = item.name || handle || someone;
-    const under = item.name && handle ? atHandle(handle) : '';
+    const top = handle || item.name || someone;
+    const under = handle && item.name ? item.name : '';
     const when = ageOf(item.at);
     const did = item.kind === 'like'
       ? t('Liked', 'Đã thích', 'いいね', '点赞', '按讚')
@@ -391,19 +389,13 @@ export default function CollectionActivityScreen({ navigation, route }: {
             </View>
           </View>
           <View style={s.lines}>
-            {/* The age rides the second line when there is one, after the
-                handle as Crew's count does; alone, it follows the name. */}
-            {under ? (
-              <>
-                <Text style={s.handle} numberOfLines={1}>{top}</Text>
-                <Text style={s.name} numberOfLines={1}>{`${under} · ${when}`}</Text>
-              </>
-            ) : (
-              <View style={s.lineOne}>
-                <Text style={s.handle} numberOfLines={1}>{top}</Text>
-                <Text style={s.when}>{when}</Text>
-              </View>
-            )}
+            {/* The age beside the handle, on its line, whether or not a
+                name stands under it. */}
+            <View style={s.lineOne}>
+              <Text style={s.handle} numberOfLines={1}>{top}</Text>
+              <Text style={s.when}>{when}</Text>
+            </View>
+            {under ? <Text style={s.name} numberOfLines={1}>{under}</Text> : null}
           </View>
         </View>
         {friendButton(item.id)}
@@ -595,10 +587,8 @@ const s = StyleSheet.create({
   // The handle gives when it is long; the age never does.
   handle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
   when: { color: colors.textTertiary, ...type.meta, flexShrink: 0 },
-  // The handle and age under a name: the third step, as `when` beside a
-  // handle alone, and as Crew's handle under a name (13 Nov 2026). It was
-  // the second, so the same line was two greys by whether a name stood
-  // above it.
+  // The name under a handle: the third step, as the age beside the
+  // handle, and as Crew's name under a handle (15 Nov 2026).
   name: { color: colors.textTertiary, ...type.meta },
 
   // ── the friend button, in Crew's looks ──
