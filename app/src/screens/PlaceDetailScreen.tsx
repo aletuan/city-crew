@@ -228,15 +228,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // dropped when it only repeats what the card already prints: the
   // neighbourhood line under it, or the address row further down.
   const neighborhood = localized(place, 'neighborhood', lang);
-  // The district line under the title is only for a place with no
-  // address row: the short address ends in the ward, so with one on the
-  // card the line said the same word a few lines up, and a bare district
-  // under a tagline reads as a second tagline. The subtitle is judged
-  // against the district either way — a branch named after its ward
+  // The district is not printed here. Until 15 Nov 2026 it was, as a line
+  // under the subtitle, for a place with no address row — and on that day
+  // every one of the catalog's 1,477 places had an address, so the line
+  // was drawn for none of them and would have been a third line in a head
+  // that is now centred and two lines at most (owner). The subtitle is
+  // still judged against the district — a branch named after its ward
   // ("CTQ Texas BBQ - Hà Đông") would otherwise repeat the word the
-  // address ends in, which is the same repetition the line was hidden
-  // to avoid.
-  const showsNeighborhood = !place.address;
+  // address ends in. The cost, written down: a place with no address
+  // whose branch is its district says where it is nowhere on the page.
   const fullName = localized(place, 'name', lang);
   const name = splitName(fullName);
   // `address`, not `place.address`: the test is against what the reader
@@ -587,7 +587,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               not a tinted fill, because the accent as a surface is for
               state (`theme.ts`) and a place being featured is not
               something the reader did. The uppercase is a no-op on the
-              Japanese, which has no case, so one style serves three. */}
+              Japanese, which has no case, so one style serves three.
+              Centred, with the subtitle under it (owner, 15 Nov 2026):
+              the two are said of the whole place, as the name in the bar
+              above them is, and the bar's name is centred. Rejected the
+              same day: both on one line with a dot between — two faces
+              and two cases on a line, and a long tagline breaks mid-way. */}
           {place.is_featured ? (
             <View style={s.pick} testID="detail-pick">
               <Glyph name="ribbon-outline" size={13} color={colors.accent} />
@@ -598,12 +603,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               under the photograph rather than in the bar: the bar holds the
               brand on one line, and a chain's branch is the part a reader
               would lose first to the cut. */}
-          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-          {showsNeighborhood ? (
-            <View style={s.locRow}>
-              <Glyph name="location-outline" size={15} color={colors.textTertiary} />
-              <Text style={s.loc}>{neighborhood}</Text>
-            </View>
+          {subtitle ? (
+            <Text
+              style={[s.subtitle, place.is_featured && s.subtitleUnderPick]}
+              testID="detail-subtitle"
+            >
+              {subtitle}
+            </Text>
           ) : null}
           {/* ── the score, and the one thing to do about it ──
               The rating at the left, check-in at the right: one line that

@@ -18,7 +18,7 @@
 import React from 'react';
 import { Alert, Linking, Share, StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
@@ -357,13 +357,37 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
   it('drops a subtitle that only repeats the neighbourhood', () => {
     show(place({ name_en: 'Cafe Slow - Hai Ba Trung', address: null }));
     expect(screen.getByTestId('detail-name').textContent).toBe('Cafe Slow');
-    // Printed once — as the location line — not twice.
-    expect(screen.getAllByText('Hai Ba Trung')).toHaveLength(1);
+    expect(screen.queryByTestId('detail-subtitle')).toBeNull();
   });
 
-  it('shows the neighbourhood line only when there is no address to show instead', () => {
+  // The district had a line of its own under the subtitle, for a place
+  // with no address, until 15 Nov 2026: all 1,477 places had an address
+  // that day, and the head is two centred lines at most.
+  it('prints no district line, with an address or without one', () => {
     show(place({ name_en: 'Plain' }));
     expect(screen.queryByText('Hai Ba Trung')).toBeNull();
+    cleanup();
+    show(place({ name_en: 'Plain', address: null }));
+    expect(screen.queryByText('Hai Ba Trung')).toBeNull();
+  });
+
+  // Centred under the photograph, as the name is in the bar (owner, 15
+  // Nov 2026): the pick mark, the subtitle, or the two as one head.
+  it('centres the pick mark and the subtitle, and closes the gap between them', () => {
+    show(place({ name_en: 'Jumarc - Korean Modern Bar Kitchen', is_featured: true }));
+    const pick = screen.getByTestId('detail-pick');
+    const sub = screen.getByTestId('detail-subtitle');
+    expect(viewStyleOf(pick)?.justifyContent).toBe('center');
+    expect(textStyleOf(sub)?.textAlign).toBe('center');
+    // The mark first, the subtitle under it, 4 apart: 6 below + (−2) above.
+    expect(pick.compareDocumentPosition(sub) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(viewStyleOf(pick)?.marginBottom).toBe(6);
+    expect(textStyleOf(sub)?.marginTop).toBe(-2);
+    cleanup();
+    // Alone, the subtitle keeps its 8 from the photograph.
+    show(place({ name_en: 'Jumarc - Korean Modern Bar Kitchen', is_featured: false }));
+    expect(textStyleOf(screen.getByTestId('detail-subtitle'))?.textAlign).toBe('center');
+    expect(textStyleOf(screen.getByTestId('detail-subtitle'))?.marginTop).toBe(8);
   });
 
   // ── the subtitle against the address ──
@@ -1585,8 +1609,6 @@ describe('PlaceDetailScreen — info card', () => {
     expect(screen.queryByText('Hours')).toBeNull();
     expect(screen.queryByText('Phone')).toBeNull();
     expect(screen.queryByText('Website')).toBeNull();
-    // With no address, the neighbourhood carries the location instead.
-    expect(screen.getByText('Hai Ba Trung')).toBeTruthy();
   });
 
   it('still shows a lone website row', () => {

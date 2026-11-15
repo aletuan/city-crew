@@ -160,9 +160,13 @@ export const s = StyleSheet.create({
   // Body face, not display: the qualifier is a fact about the title, not
   // a second title, and the change of face is what says so. 8 down, 12
   // under the photograph, as the score's line would be without it.
-  subtitle: { color: colors.textSecondary, ...type.body, marginTop: 8 },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
-  loc: { color: colors.textTertiary, ...type.meta },
+  // Centred, each line of it, under the centred name in the bar.
+  subtitle: { color: colors.textSecondary, ...type.body, marginTop: 8, textAlign: 'center' },
+  // Under the pick mark the two are one head, not two lines: 4 between
+  // them, where the mark's 6 below and this line's 8 above would leave
+  // 14 — wider than either keeps from the photograph (8), which reads as
+  // two separate things. The 4 is reasoned, not measured on a phone.
+  subtitleUnderPick: { marginTop: -2 },
 
   // ── the rating, as a line rather than a badge ──
   //
@@ -272,7 +276,7 @@ export const s = StyleSheet.create({
   // An eyebrow: 6 above the name, which is the gap a kicker keeps from
   // its headline at this size. Spaced caps at 12 — the label's own size
   // from the heading row — so it reads as a mark, not a second title.
-  pick: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, marginBottom: 6 },
+  pick: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8, marginBottom: 6 },
   pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.8, textTransform: 'uppercase' },
 
   // The credit's line: 4 more than the body's 2-pt gap, so 6 between the
