@@ -5,20 +5,24 @@
 // instant, no extra queries, and it matches without diacritics so
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
-import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Keyboard, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph } from '../components/ui/glyph';
-import PlaceCard from '../components/PlaceCard';
 import SearchField from '../components/SearchField';
 import { AddSlot } from '../components/add';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import ListToggle from '../components/ListToggle';
 import {
-  AmbientWarmth, Card, CHIP_H, CHIP_SLOP, Empty, PressableScale, Tile, TileGrid, UnderlineChoice,
+  AmbientWarmth,
+  Card,
+  Empty,
+  PressableScale,
+  Tile,
+  TileGrid,
+  UnderlineChoice,
   useTabBarClearance,
 } from '../components/ui';
 import { cityOfList, coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
@@ -46,40 +50,10 @@ import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import NewBadge from '../components/NewBadge';
-import { colors, font, onPhoto, radius, space, type } from '../theme';
+import { colors } from '../theme';
 import type { Nav, RootRoute } from '../nav';
-
-/**
- * A place among the results, drawn again only when something it shows has
- * moved.
- *
- * The screen redraws on every letter typed and every ⊕ tapped, and each
- * card used to be handed a fresh `onPress` and a fresh `inList` every
- * time, so every result drew again to show what it already showed (owner,
- * 30 Oct 2026). Its props here are values and two callbacks that outlive
- * renders; the press and the ⊕ are made in here.
- *
- * `on` is null when Search was not opened from a list: no ⊕ at all.
- */
-const SearchPlaceCard = memo(function SearchPlaceCard({ place, index, city, on, listTitle, open, toggle }: {
-  place: Place;
-  index: number;
-  city: string | null;
-  on: boolean | null;
-  listTitle: string;
-  open: (place: Place) => void;
-  toggle: (place: Place) => void;
-}) {
-  return (
-    <PlaceCard
-      place={place}
-      city={city}
-      testID={`search-result-${index}`}
-      inList={on === null ? undefined : { on, title: listTitle, onPress: () => toggle(place) }}
-      onPress={() => open(place)}
-    />
-  );
-});
+import { SearchPlaceCard, NoMatches, Fork } from './search/parts';
+import { s } from './search/styles';
 
 export default function SearchScreen({ navigation, route }: { navigation: Nav; route?: RootRoute<'Search'> }) {
   const { t, lang } = useI18n();
@@ -860,248 +834,3 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
     </SafeAreaView>
   );
 }
-
-/**
- * The end of a search that found nothing.
- *
- * It used to be one grey sentence, then a sentence with worked examples
- * baked into the copy. The examples have moved out of the prose and into
- * the `Fork` chips below, where they are tappable and derived from the
- * query itself — so the sentence here contracts to the one fact left to
- * state: the catalog has not got this, yet. "Yet" is load-bearing; the
- * row directly underneath offers to go and fetch it.
- */
-function NoMatches({ term, where }: { term: string; where?: string | null }) {
-  const { t } = useI18n();
-  return (
-    <View style={s.noneBox}>
-      <View style={s.noneMark}>
-        <Glyph name="search" size={30} color={colors.textTertiary} />
-        {/* The question mark is the whole difference between "we are
-            looking" and "we looked". A magnifier alone is what a screen
-            shows while it is still searching. */}
-        <View style={s.noneBadge}>
-          <Text style={s.noneBadgeText}>?</Text>
-        </View>
-      </View>
-      {/* Found in another city: said as "not here", with the chips above
-          for "there", rather than as "not anywhere". */}
-      <Text style={s.noneTitle}>
-        {where
-          ? t(`No matches for “${term}” in ${where}`, `Không có kết quả cho “${term}” ở ${where}`, `${where}に「${term}」の一致なし`, `${where}没有与“${term}”匹配的结果`, `${where}沒有與「${term}」相符的結果`)
-          : t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`, `没有与“${term}”匹配的结果`, `沒有與「${term}」相符的結果`)}
-      </Text>
-      <Text style={s.noneHint}>
-        {where
-          ? t('Other cities have it: choose one above.', 'Có ở thành phố khác: chọn ở trên.', '他の都市にあります。上で選んでください。', '其他城市有：请在上方选择。', '其他城市有：請在上方選擇。')
-          : t('Not in City Crew yet.', 'Chưa có trong City Crew.', 'City Crew にはまだありません。', 'City Crew 里还没有。', 'City Crew 裡還沒有。')}
-      </Text>
-    </View>
-  );
-}
-
-/**
- * The fork out of a dead end: what the failed query *did* contain.
- *
- * "Pizza 4P's Thảo Điền" finding nothing still told the app two true
- * things — a part of town and a kind of place — and each becomes a chip
- * that re-runs the search with just that part. Re-running rather than
- * navigating is the design: the box refills with the working query, so
- * the reader sees *why* the chip worked and learns the shape of a query
- * that succeeds. A jump to another screen would fix this search and
- * teach nothing.
- *
- * "Back to Places" is always last: the fork must never be a cul-de-sac,
- * and someone whose query held nothing recognisable still deserves a
- * door that is not the keyboard.
- */
-function Fork({ routes, onSearch, onBack, toList }: {
-  routes: ReturnType<typeof escapeRoutes>;
-  onSearch: (q: string) => void;
-  onBack: () => void;
-  /** Opened from a list, back is to the list, and says so. */
-  toList: boolean;
-}) {
-  const { t } = useI18n();
-  return (
-    <View style={s.forkBox}>
-      <Text style={s.forkLabel}>{t('OR TRY', 'HOẶC THỬ', 'または', '或者试试', '或者試試')}</Text>
-      <View style={s.forkRow}>
-        {routes.map((r) => {
-          if (r.kind === 'area') {
-            const name = t(r.en, r.vi, r.ja);
-            return (
-              <ForkChip
-                key={`a-${r.en}`}
-                icon="location-outline"
-                label={t(`Browse ${r.en}`, `Xem quanh ${r.vi}`, `${r.ja}を見る`, `浏览${r.en}`, `瀏覽${r.en}`)}
-                onPress={() => onSearch(name)}
-              />
-            );
-          }
-          const cat = CATEGORIES[r.key];
-          return (
-            <ForkChip
-              key={`c-${r.key}`}
-              icon={cat.icon}
-              label={t(`All ${cat.en}`, `Tất cả ${cat.vi}`, `${cat.ja}すべて`, `全部${cat.zh}`, `全部${cat.zh}`)}
-              onPress={() => onSearch(t(cat.en, cat.vi, cat.ja, cat.zh, cat.hant))}
-            />
-          );
-        })}
-        <ForkChip
-          icon={toList ? 'albums-outline' : 'compass-outline'}
-          label={toList
-            ? t('Back to the list', 'Về bộ sưu tập', 'コレクションに戻る', '返回合集', '返回合集')
-            : t('Back to Places', 'Về Địa điểm', 'スポットに戻る', '返回地点', '返回地點')}
-          onPress={onBack}
-        />
-      </View>
-    </View>
-  );
-}
-
-function ForkChip({ icon, label, onPress }: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <PressableScale onPress={onPress} haptic="selection" hitSlop={CHIP_SLOP} accessibilityRole="button">
-      <View style={s.forkChip}>
-        <Glyph name={icon} size={15} color={colors.accent} />
-        <Text style={s.forkChipText} numberOfLines={1}>{label}</Text>
-      </View>
-    </PressableScale>
-  );
-}
-
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
-  },
-  // The cities' row, under the box. `UnderlineChoice` brings the page's
-  // margins; this is the air between it and the list. It used to be a
-  // horizontal ScrollView of its own, the list's sibling in the screen's
-  // column, and grew by default (React Native's `baseHorizontal` is
-  // flexGrow 1): with a short list the two split the empty height, and
-  // "boat" set its one card a third of the screen below the chips. The
-  // row's ScrollView now sits inside this View, which does not grow.
-  citiesRow: { flexGrow: 0, paddingBottom: 12 },
-  // Under the box, on the page's margin, before the chips. The pill is
-  // `Chip`'s glass and padding (its chipOn), sized to its words
-  // and stopped at the margin, where a long name ends in "…".
-  addingToRow: { paddingHorizontal: space.page, paddingBottom: 12, flexDirection: 'row' },
-  addingTo: {
-    flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
-    paddingHorizontal: 14, paddingVertical: 8,
-  },
-  addingToText: { flexShrink: 1, color: colors.textSecondary, fontSize: 15 },
-  addingToTitle: { color: colors.text, fontWeight: font.semibold },
-  addingToCount: { flexShrink: 0, color: colors.textSecondary, fontSize: 15, marginLeft: -3 },
-
-  section: {
-    color: colors.text, ...type.section,
-    paddingHorizontal: space.page, marginTop: 10, marginBottom: space.headingToContent,
-  },
-
-  // ── the zero-state ──
-  // Small caps rather than the 22pt section face: these are shelf labels
-  // over a resting screen, not headings over results the reader asked
-  // for, and three of them at full section weight would shout over a
-  // page that is meant to feel idle.
-  eyebrowRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: space.page, marginTop: 18, marginBottom: 10,
-  },
-  eyebrow: {
-    color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
-    letterSpacing: 1.1, textTransform: 'uppercase',
-  },
-  clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  recentRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: space.page,
-  },
-  // The words' button takes the row's height, so the tap target is the
-  // same band it was when the whole row was one button.
-  recentHit: { flex: 1 },
-  recentMain: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
-  recentTerm: { flex: 1, color: colors.text, fontSize: 16 },
-  // 8 at the sides, not the page's 20: the cells have no ground, so what
-  // lines up with the page is the first word, centred in its cell — and
-  // the 24pt it gives back is what keeps "Thiên nhiên" on one line.
-  browseGrid: { paddingHorizontal: 8, marginBottom: 4 },
-  row: { marginHorizontal: space.page, marginBottom: space.cardGap },
-  card: {
-    flexDirection: 'row', alignItems: 'center', gap: space.cardPadding,
-    padding: space.cardPadding,
-  },
-  thumbBadge: { top: 4, left: 4 },
-  thumb: {
-    width: 64, height: 64, borderRadius: radius.image,
-    backgroundColor: colors.surfaceGlass,
-  },
-  cardTitle: { color: colors.text, ...type.cardTitle },
-  noneBox: { alignItems: 'center', paddingTop: 34, paddingHorizontal: space.page },
-  noneMark: {
-    width: 76, height: 76, borderRadius: 38,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlass,
-  },
-  // Sat on the rim rather than inside, so the magnifier stays a magnifier
-  // and the badge reads as a note about it.
-  noneBadge: {
-    position: 'absolute', right: -2, bottom: -2,
-    width: 26, height: 26, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.bgElevated,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
-  },
-  noneBadgeText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold, lineHeight: 18 },
-  noneTitle: {
-    color: colors.text, fontSize: 19, fontWeight: font.semibold,
-    textAlign: 'center', marginTop: 18,
-  },
-  noneHint: {
-    color: colors.textTertiary, fontSize: 15, lineHeight: 21,
-    textAlign: 'center', marginTop: 8, marginBottom: 4,
-  },
-
-  nothing: {
-    color: colors.textSecondary, ...type.meta, lineHeight: 22,
-    paddingHorizontal: space.page, paddingTop: 18, paddingBottom: 6, textAlign: 'center',
-  },
-  cardMeta: { color: colors.textTertiary, ...type.meta },
-  // The same 4pt the pin keeps from the district on PlaceCard.
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  // The right edge: a gold mark, the number, and its count a size down
-  // in the secondary colour, as PlaceCard sets them. Same gold the photo
-  // overlay uses, so a star means one thing everywhere.
-  rowRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rowStar: { color: onPhoto.star, fontSize: 13 },
-  rowRatingValue: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
-  rowRatingCount: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
-
-  // The fork wears the app's glass pills — the same face the vibe chips
-  // and the save button have — because it is an offer, not a result. The
-  // eyebrow label is the reference mockup's "OR TRY": small caps, quiet,
-  // clearly a heading over choices rather than a sentence.
-  forkBox: { paddingHorizontal: space.page, marginTop: 26 },
-  forkLabel: {
-    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
-    letterSpacing: 1.2, marginBottom: 10,
-  },
-  forkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  forkChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: colors.surfaceGlass, borderWidth: 1,
-    borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
-    paddingHorizontal: 14, minHeight: CHIP_H, paddingVertical: 6,
-  },
-  forkChipText: { color: colors.text, fontSize: 14, fontWeight: font.medium },
-});
