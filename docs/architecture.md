@@ -231,6 +231,12 @@ Ghi ra để không ai tưởng là có chủ ý:
   1.898 dòng, và hàm chính vẫn giữ phần JSX của thẻ giới thiệu, menu và
   ai-xem-được. Hook của một màn mang đuôi `.tsx`: `.ts` trong
   `screens/*/` nằm ngoài `include` của coverage.
+  Cùng ngày, phần đứng ngoài hàm chính của bốn màn nữa được chuyển ra
+  thư mục riêng, không sửa dòng nào: `screens/placeDetail/`,
+  `screens/collections/`, `screens/sketching/`, `screens/ideas/` (component
+  con và stylesheet). `SearchScreen` và `TripsScreen` chưa tách được: bỏ
+  phần đã phủ ra thì file cha tụt dưới sàn theo file (dòng 98,88 < 99;
+  hàm 90 < 92), nên cần thêm test trước.
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.
