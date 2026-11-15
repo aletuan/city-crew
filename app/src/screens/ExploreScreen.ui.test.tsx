@@ -19,6 +19,10 @@ import { switchOrDoor } from '../components/ExploreFilterSheet';
 import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
 import type { Collection, Place } from '../lib/data';
+import * as catalog from '../lib/catalog';
+import { cacheKey, packCache } from '../lib/data/cache';
+import { usePlacesQuery } from '../lib/data/hooks';
+import * as placesApi from '../lib/data/places';
 import type { Nav } from '../nav';
 import { colors, coverScrim } from '../theme';
 
@@ -734,6 +738,57 @@ describe('loading and failure', () => {
     expect(screen.getByText(/signing you back in/)).toBeTruthy();
     expect(screen.queryByText(/JWT/)).toBeNull();
     expect(screen.queryByTestId('explore-load-fail')).toBeNull();
+  });
+});
+
+describe('offline recovery on Explore', () => {
+  const key = cacheKey('places', 'hanoi', null);
+  const Places = React.createContext<ReturnType<typeof usePlacesQuery> | null>(null);
+
+  // Share one live query between Explore and its collection shelf, just as
+  // CatalogProvider does. Other catalog reads keep their screen fixtures.
+  function GuestExplore({ navigation }: { navigation: Nav }) {
+    const places = usePlacesQuery(null);
+    return <Places.Provider value={places}><ExploreScreen navigation={navigation} /></Places.Provider>;
+  }
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await AsyncStorage.removeItem(key);
+  });
+
+  it.each([
+    { launch: 'without cached places', cached: false },
+    { launch: 'with cached places', cached: true },
+  ])('recovers $launch and opens the refreshed place', async ({ cached }) => {
+    if (cached) await AsyncStorage.setItem(key, packCache([place('previous')], Date.now()));
+    vi.spyOn(catalog, 'usePlaces').mockImplementation(function useTestPlaces() {
+      return React.useContext(Places)!;
+    });
+    const fetchPlaces = vi.spyOn(placesApi, 'fetchPlaces')
+      .mockRejectedValueOnce(new Error('Network request failed'))
+      .mockResolvedValueOnce([place('recovered')]);
+    const navigation = nav();
+    render(<GuestExplore navigation={navigation} />);
+
+    const failure = await screen.findByTestId(cached ? 'explore-load-banner' : 'explore-load-fail');
+    expect(within(failure).getByText(/You’re offline/)).toBeTruthy();
+    if (cached) {
+      expect(cardNames()).toHaveLength(1);
+      expect(cardNames()[0]).toContain('Place previous');
+    } else {
+      expect(screen.queryByTestId('explore-list')).toBeNull();
+    }
+    expect(fetchPlaces).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(failure).getByRole('button', { name: 'Try again' }));
+
+    await waitFor(() => expect(screen.getByTestId('place-card-0').textContent).toContain('Place recovered'));
+    expect(cardNames()).toHaveLength(1);
+    expect(screen.queryByTestId('explore-load-banner')).toBeNull();
+    expect(screen.queryByTestId('explore-load-fail')).toBeNull();
+    expect(fetchPlaces).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByTestId('place-card-0'));
+    expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'recovered' });
   });
 });
 
