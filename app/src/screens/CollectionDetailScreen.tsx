@@ -1,31 +1,28 @@
-import React, { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  type AccessibilityActionEvent, AccessibilityInfo, ActivityIndicator, Alert, Animated, FlatList,
+  AccessibilityInfo, ActivityIndicator, Alert, FlatList,
   type NativeScrollEvent,
-  type NativeSyntheticEvent, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle,
+  type NativeSyntheticEvent, Pressable, Text, useWindowDimensions, View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph } from '../components/ui/glyph';
-import PlaceCard from '../components/PlaceCard';
-import PlaceTile from '../components/PlaceTile';
 import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
 import {
-  AmbientWarmth, Avatar, CHIP_H, CHIP_SLOP, Card, Empty, GradientCta, INK_GAP_END, PressableScale, Screen,
-  SECONDARY_CONTROL_H,
+  AmbientWarmth, Avatar, CHIP_SLOP, Card, Empty, PressableScale, Screen,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
-import { LIFT_AFTER_MS, useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
+import { useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { AddCell, AddPill } from '../components/add';
 import { useProfile, useSession } from '../lib/auth';
 import { categoriesOf } from '../lib/categories';
-import { collectionKinds, narrowTo } from '../lib/collectionKinds';
+import { narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  blockUser, deleteCollection, isNotShareable, membersOf, reorderCollection, setCollectionPublic, setShares,
+  blockUser, deleteCollection, isNotShareable, membersOf, setCollectionPublic, setShares,
   unseenMembers, unseenSentence, useCountView, useMyListShares, usePrefetchListActivity, useProfileByHandle, useSharedWithMe,
   type Collection,
 } from '../lib/data';
@@ -35,7 +32,6 @@ import { namesBriefly, sharesByList, type Visibility, visibilityOf } from '../li
 import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
-import { applyDraft, moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { SheetRows, type SheetAction } from '../components/ActionSheet';
@@ -45,41 +41,14 @@ import { oneOf, useStored } from '../lib/stored';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { ageWord, listAgeOf } from '../lib/listAge';
-import { colors, display, font, radius, space, type } from '../theme';
+import { colors, space } from '../theme';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
-
-/**
- * The empty state of a list you own.
- *
- * A public collection that is empty is a mistake at the desk; one of yours
- * is just new, and the screen should hand you the way forward instead of
- * reporting the absence twice.
- */
-function OwnEmpty({ onAdd }: { onAdd: () => void }) {
-  const { t } = useI18n();
-  return (
-    <View style={s.emptyWrap}>
-      <View style={s.empty}>
-        <View style={s.emptyIcon}>
-          <Glyph name="bookmark-outline" size={26} color={colors.accent} />
-        </View>
-        {/* One line. The second sentence was telling you to go looking,
-            which is what the button underneath already says — a card this
-            small should not say the same thing twice, once in prose and
-            once as a control. */}
-        <Text style={s.emptyBody}>
-          {t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。', '这里还没有内容。', '這裡還沒有內容。')}
-        </Text>
-        <GradientCta
-          icon="search"
-          label={t('Find places', 'Tìm địa điểm', 'スポットを探す', '查找地点', '查詢地點')}
-          onPress={onAdd}
-        />
-      </View>
-    </View>
-  );
-}
+import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
+import { OwnEmpty } from './collectionDetail/OwnEmpty';
+import { ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
+import { useKindFilter } from './collectionDetail/useKindFilter';
+import { useReorderDraft } from './collectionDetail/useReorderDraft';
 
 /** What a change of who-sees-it says to VoiceOver: published, private
  *  again, or shared with this many people — see `said`. */
@@ -92,16 +61,6 @@ const SEEN_GLYPH: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
   friends: 'people-outline',
   private: 'lock-closed-outline',
 };
-
-/**
- * How long after the last move the order is written.
- *
- * Long enough that a run of moves — three cards dropped one after another
- * — is one write rather than one per drop; short enough that the write
- * lands before the reader has looked up. Not measured: a chosen beat. Leaving the screen writes at once, so the value can only decide
- * how many writes there are, never whether one is lost.
- */
-const SAVE_AFTER_MS = 600;
 
 /**
  * A card's pitch before it has reported its size: a 16:10 photograph the
@@ -135,233 +94,9 @@ const LIST_OR_GRID = oneOf('list', 'grid');
 /** Tiles to a row. Three, the reference's and every photo app's: at 393pt
  *  a tile is 111pt, which still carries a name in 12pt across most of it. */
 const GRID_COLUMNS = 3;
-/** Between tiles, both ways. The reference's, measured off it: about a
- *  fourteenth of a tile. */
-const GRID_GAP = 8;
 /** The grid's first cell on your own list, which holds "Add place" rather
  *  than a place. Not a slug: slugs never carry a "+". */
 const ADD_CELL = '+add' as const;
-
-/** The face at the head of the card, yours or the curator's — see
- *  `curatorRow`. The ⋯ beside it is centred on it (`s.moreHang`).
- *
- *  40, up from 28 (owner, 13 Nov 2026), when the head became a post's:
- *  a face with two lines beside it, the handle and how old the list is.
- *  The size the apps this reads beside give that head — Facebook and X
- *  draw 40, Threads 36, Instagram 32 — and the height of the two lines
- *  (`BYLINE_LINE` twice), so the face and the words beside it are one
- *  block, neither overhanging the other. */
-const FACE = 40;
-
-/** Each of the two lines beside the face: half of it, so the handle and
- *  the line under it stand exactly the face's height. A 15pt line in the
- *  system face is 17.9 by its own metrics (SF Pro's ascender and
- *  descender come to 1.19 em), so 20 adds about a point above and below
- *  each, and nothing is clipped. */
-const BYLINE_LINE = FACE / 2;
-
-/** What the line under the handle adds above and below the who-can-see
- *  control to make Apple's 44 for the thumb. The control cannot be drawn
- *  `CHIP_H` tall there: 32 in a 20pt line would make the two lines 52,
- *  taller than the face, and push the words down 12. So it is drawn the
- *  line's 20 and reaches the button scale's 44 (`SECONDARY_CONTROL_H`)
- *  with 12 each way, as `CHIP_SLOP` reaches it from 32 with 6. Upward that
- *  reaches into the handle's line, which on your own list is never a
- *  button; downward, into the 14 between the head and the words. */
-const BYLINE_SLOP = {
-  top: (SECONDARY_CONTROL_H - BYLINE_LINE) / 2,
-  bottom: (SECONDARY_CONTROL_H - BYLINE_LINE) / 2,
-};
-
-/** Which card is in the finger, for the cell that holds it; -1 for none. */
-const LiftedCard = createContext(-1);
-
-/**
- * The list's cell, raised while its card is lifted.
- *
- * Each card sits in a cell of its own, and a zIndex on the card does not
- * reach past its cell to the siblings it has to pass over, so it is the
- * cell that goes up. Declared here and fed by context rather than written
- * inline on the list: an inline component is a new type every render, and
- * every lift and every slot passed is a render, so each one remounted
- * every card, the one in the finger with its gesture.
- */
-function LiftCell({ index, style, children, ...cell }: {
-  index: number;
-  style?: StyleProp<ViewStyle>;
-  children?: React.ReactNode;
-}) {
-  const lifted = useContext(LiftedCard);
-  return <View {...cell} style={[style, lifted === index && s.arrangeCellLifted]}>{children}</View>;
-}
-
-/**
- * A place in your own list: the same card as everywhere else, which can
- * also be held and dragged to a new position.
- *
- * ── on the list itself, not in a mode ──
- *
- * The order used to be set in a separate mode, reached through the menu,
- * that swapped the cards for numbered one-line rows. It worked, and
- * nobody found it. The list you want to put in order is the one in front
- * of you, so that is where the order is changed: hold a card and it
- * lifts; drag it and the cards it passes step aside into the room it
- * left; let go and it lands, and the new order saves itself.
- *
- * A tap still opens the place. The hold is what tells the two apart (see
- * `LIFT_AFTER_MS`): it is the card's own long press, so a press that
- * lifted never also opens the place, and a finger that moves before the
- * hold completes cancels it and scrolls instead.
- *
- * ── the lift is the card's, the drag is the list's ──
- *
- * The card only lifts. The drag after it belongs to a responder on the
- * list around the cards, and the hold, the drag and the drop — and why
- * they are built on the responder system rather than on gesture-handler
- * or reanimated — are `useListDrag`, which the plan editor shares.
- *
- * VoiceOver cannot drag, so the card offers "Move up" and "Move down" as
- * accessibility actions, and says so in its hint.
- */
-const DraggableCard = memo(function DraggableCard({
-  place, index, count, style, onOpen, onStep, onLift, onRelease, onPitch,
-}: {
-  place: Place;
-  index: number;
-  count: number;
-  /** What this card wears right now — raised and travelling, stepped
-   *  aside, or nothing — from `useListDrag`'s `styleOf`. */
-  style: ReturnType<ReturnType<typeof useListDrag>['styleOf']>;
-  onOpen: (slug: string) => void;
-  /** Move the place at `index` one step: -1 up, 1 down. */
-  onStep: (index: number, by: -1 | 1) => void;
-  /** The hold completed: `pageY` is where the finger is, which the drag
-   *  measures its travel from. */
-  onLift: (index: number, pageY: number) => void;
-  /** The card's button let go of the touch, by the finger coming up or by
-   *  the list taking the drag over. */
-  onRelease: () => void;
-  onPitch: (slug: string, pitch: number) => void;
-}) {
-  const { t } = useI18n();
-  const raised = useContext(LiftedCard) === index;
-  return (
-    <Animated.View
-      onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height)}
-      style={style}
-      testID={`drag-${place.slug}`}
-    >
-      <PlaceCard
-        place={place}
-        onPress={() => onOpen(place.slug)}
-        testID={`collection-place-${index}`}
-        raised={raised}
-        onLongPress={(e) => onLift(index, e.nativeEvent.pageY)}
-        delayLongPress={LIFT_AFTER_MS}
-        onPressOut={onRelease}
-        {...stepsFor(t, index, count, 'list', () => onStep(index, -1), () => onStep(index, 1))}
-      />
-    </Animated.View>
-  );
-});
-
-/**
- * What VoiceOver is offered in place of the drag, and told in the hint: a
- * step either way, only where there is somewhere to go. On the cards a
- * step is up or down. On the grid it is earlier or later, because the next
- * place in the order is beside a tile or, at a row's end, at the start of
- * the row below — "up" there would promise a move of three.
- */
-function stepsFor(
-  t: ReturnType<typeof useI18n>['t'], index: number, count: number, view: 'list' | 'grid',
-  onUp: () => void, onDown: () => void,
-) {
-  const grid = view === 'grid';
-  return {
-    accessibilityHint: t(
-      'Hold and drag to change the order.',
-      'Giữ rồi kéo để đổi thứ tự.',
-      '長押ししてドラッグすると並び順を変えられます。',
-      '长按并拖动即可调整顺序。', '長按並拖曳即可調整順序。',
-    ),
-    accessibilityActions: [
-      ...(index > 0 ? [{
-        name: 'moveUp',
-        label: grid
-          ? t('Move earlier', 'Đưa lên trước', '前へ移動', '前移', '前移')
-          : t('Move up', 'Chuyển lên', '上へ移動', '上移', '上移'),
-      }] : []),
-      ...(index < count - 1 ? [{
-        name: 'moveDown',
-        label: grid
-          ? t('Move later', 'Đưa ra sau', '後ろへ移動', '后移', '後移')
-          : t('Move down', 'Chuyển xuống', '下へ移動', '下移', '下移'),
-      }] : []),
-    ],
-    onAccessibilityAction: (e: AccessibilityActionEvent) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown()),
-  };
-}
-
-/**
- * A place in your own list as a tile of the grid, which can be held and
- * dragged as the card can. The same hold, the same responder on the list
- * around it, the same save: only the arithmetic of where it lands is the
- * grid's (see `useListDrag`). Every tile is one size, so unlike the card
- * it reports no pitch.
- */
-const DraggableTile = memo(function DraggableTile({
-  place, index, count, size, style, onOpen, onStep, onLift, onRelease,
-}: {
-  place: Place;
-  index: number;
-  count: number;
-  size: number;
-  style: ReturnType<ReturnType<typeof useListDrag>['styleOf']>;
-  onOpen: (slug: string) => void;
-  onStep: (index: number, by: -1 | 1) => void;
-  onLift: (index: number, pageY: number, pageX: number) => void;
-  onRelease: () => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <Animated.View style={style} testID={`drag-${place.slug}`}>
-      <PlaceTile
-        place={place}
-        size={size}
-        onPress={() => onOpen(place.slug)}
-        testID={`collection-tile-${index}`}
-        onLongPress={(e) => onLift(index, e.nativeEvent.pageY, e.nativeEvent.pageX)}
-        delayLongPress={LIFT_AFTER_MS}
-        onPressOut={onRelease}
-        {...stepsFor(t, index, count, 'grid', () => onStep(index, -1), () => onStep(index, 1))}
-      />
-    </Animated.View>
-  );
-});
-
-/**
- * A place in somebody else's list, or in yours while it cannot be
- * arranged: a card or a tile that only opens. Behind `memo` like the two
- * above, for the same reason — see "drawn again only when it moved".
- */
-const StillCard = memo(function StillCard({ place, index, chip, onOpen }: {
-  place: Place;
-  index: number;
-  chip: string | null | undefined;
-  onOpen: (slug: string) => void;
-}) {
-  return (
-    <PlaceCard place={place} onPress={() => onOpen(place.slug)} chip={chip} testID={`collection-place-${index}`} />
-  );
-});
-const StillTile = memo(function StillTile({ place, index, size, onOpen }: {
-  place: Place;
-  index: number;
-  size: number;
-  onOpen: (slug: string) => void;
-}) {
-  return <PlaceTile place={place} size={size} onPress={() => onOpen(place.slug)} testID={`collection-tile-${index}`} />;
-});
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t, lang } = useI18n();
@@ -573,43 +308,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
   const desc = col ? t(col.desc_en, col.desc_vi, col.desc_ja) : '';
-  // The list's chips: every kind its places carry, most places first,
-  // less what the owner hid (`lib/collectionKinds`).
-  const kinds = useMemo(
-    () => (col ? collectionKinds(members, { hidden: col.kinds_hidden }) : []),
-    [col, members],
-  );
-
-  // ── the chips are the filter (owner, 15 Oct 2026) ──
-  //
-  // A tap on a chip narrows the places to that kind; nothing chosen is the
-  // whole list — there is no "All" chip, by the owner's ruling, and the
-  // way back is the count line's "Clear" or the chip tapped off.
-  //
-  // One kind at a time (owner, 24 Oct 2026). Any number could be chosen
-  // until then, a place staying if it carried any of them; the owner took
-  // multiple choice out of every filter in the app the same day. Another
-  // chip moves to its kind rather than adding it.
-  //
-  // It was a second row of the filter row's glyph chips under the card
-  // for one build, and the owner saw the same kinds twice: in the card,
-  // and again under it, one chip apart. So the card's pills are the
-  // filter now, which is also why they carry every kind rather than the
-  // three that cleared a third of the list — a threshold there hid the
-  // nine bars among seventy-two cafés, the case a filter is for.
-  //
-  // Only with two kinds or more: on a list of one kind a filter has
-  // nothing to narrow, and a pill that does nothing should not be a
-  // button. Chosen keys a reload takes away are let go rather than kept
-  // as a filter nothing can match. Not kept across visits: a filter is a
-  // look at the list, and a list that opens narrowed reads as a list that
-  // lost places.
-  const [picked, setPicked] = useState<string[]>([]);
-  const filters = kinds.length > 1;
-  const chosen = filters ? picked.filter((k) => kinds.includes(k)) : [];
-  const narrowed = chosen.length > 0;
-  const pick = (k: string) => setPicked((p) => (p.includes(k) ? [] : [k]));
-  const kept = narrowed ? narrowTo(members, chosen).length : members.length;
+  // The list's chips and the one the reader has narrowed to: `useKindFilter`.
+  const { kinds, filters, chosen, narrowed, pick, kept, setPicked } = useKindFilter(col, members);
   /* ── the count, at the end of the kinds' row (owner, 13 Nov 2026) ──
      How many places, beside what kinds they are: the two say what is in
      the list, so they share a row, the count fixed at its right edge and
@@ -911,103 +611,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     AccessibilityInfo.announceForAccessibility(saidText(which));
   };
 
-  /**
-   * Putting the list in order.
-   *
-   * On the list itself, by holding a card (see `DraggableCard`). The old
-   * worry about controls on the cards, that tapping a place would be a
-   * thumb-width from moving it, does not apply to a hold: a tap still
-   * only ever opens the place.
-   *
-   * ── saved as it goes ──
-   *
-   * There is no Done. Every move is the reader's decision already, and a
-   * button to confirm it was a second decision about the first, one the
-   * back arrow skipped and so threw the order away without a word. So each
-   * move is written on its own, a beat after the last drop (`SAVE_AFTER_MS`)
-   * so that three drops are one write rather than three. Leaving the
-   * screen writes whatever is waiting at once.
-   *
-   * Nothing on screen says it worked: the order on screen is the result,
-   * and a failure puts the old order back and says so in an alert. The
-   * header used to carry "Saving…" then "Saved" beside the ⋯, and every
-   * drag shifted the title across to make room for it — a report on
-   * something the reader could already see, paid for by the one line that
-   * says which list this is (owner, 16 Oct 2026). VoiceOver, which cannot
-   * see the card land, is told instead.
-   *
-   * `draft` is the order on screen, as slugs — never places, because the
-   * catalog can reload underneath this screen and slugs are what the write
-   * takes anyway. It stays until the server's order has caught up with
-   * it, so the list does not flick back to the old order for the
-   * moment between the write landing and the reload.
-   *
-   * One write in flight at a time, always the latest order: a move made
-   * while a write is out is picked up when it returns. The whole sequence
-   * goes in one statement (`reorder_collection`), so a failure leaves the
-   * server's order as it was — and the screen goes back to it, and says so.
-   */
-  const [draft, setDraft] = useState<string[] | null>(null);
-  const [saveState, setSaveState] = useState<'idle' | 'waiting' | 'saving' | 'saved'>('idle');
-  const wanted = useRef<string[] | null>(null);
-  const writing = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const drafted = useMemo(() => applyDraft(members, draft), [members, draft]);
-  // The draft steps aside once the server agrees with it and nothing is
-  // left to write. Adjusted during render, React's pattern for state that
-  // follows props — see `usePersistedFetch`.
-  if (draft && (saveState === 'idle' || saveState === 'saved')
-    && sameOrder(drafted.map((p) => p.slug), members.map((p) => p.slug))) {
-    setDraft(null);
-  }
-
-  const flush = async () => {
-    if (!col || writing.current || !wanted.current) return;
-    writing.current = true;
-    setSaveState('saving');
-    try {
-      while (wanted.current) {
-        const order = wanted.current;
-        wanted.current = null;
-        await reorderCollection(col.slug, order);
-      }
-      setSaveState('saved');
-      AccessibilityInfo.announceForAccessibility(
-        t('Order saved', 'Đã lưu thứ tự', '並び順を保存しました', '顺序已保存', '順序已儲存'),
-      );
-      // Both catalogs: the row is in `mine` and, once published, in the
-      // public list too, and the order is read from whichever copy the
-      // screen that draws it happens to hold.
-      mine.reload();
-      cols.reload();
-    } catch (e) {
-      wanted.current = null;
-      setDraft(null);
-      setSaveState('idle');
-      Alert.alert(
-        t('Could not save the order', 'Không lưu được thứ tự', '並び順を保存できませんでした', '无法保存顺序', '無法儲存順序'),
-        (e as Error).message,
-      );
-    } finally {
-      writing.current = false;
-    }
-  };
-  // The latest `flush`, for the one caller that outlives a render: the
-  // unmount below, which must write a move made a moment before leaving.
-  const flushRef = useRef(flush);
-  useEffect(() => { flushRef.current = flush; });
-  useEffect(() => () => {
-    if (timer.current) { clearTimeout(timer.current); void flushRef.current(); }
-  }, []);
-
-  const shuffle = (from: number, to: number) => {
-    const next = moveItem(drafted.map((p) => p.slug), from, to);
-    setDraft(next);
-    wanted.current = next;
-    setSaveState('waiting');
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => { timer.current = null; void flush(); }, SAVE_AFTER_MS);
-  };
+  // Putting the list in order: the order on screen, the write a beat
+  // after the last move, and the move itself are `useReorderDraft`.
+  const { drafted, shuffle } = useReorderDraft({ col, members, mine, cols, t });
 
   // The places on screen: the whole list, or the kinds chosen on the
   // card (see "the chips are the filter").
@@ -2290,232 +1896,3 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </Screen>
   );
 }
-
-/** The heart's tally, which set the foot's height before the activity
- *  row had one: 15pt in the system face, 17.9 by its metrics, so 18. */
-const TALLY_LINE = 18;
-/** How much lower the heart stands in the `CHIP_H` activity row than it
- *  did in the foot, and how much higher off the card's bottom: 7. */
-const ROW_AIR = (CHIP_H - TALLY_LINE) / 2;
-/** "View activity ›"'s chevron, at the words' 15. */
-const ACTIVITY_CHEVRON = 15;
-/** How far the chevron's ink stops short of its box's right edge, read
- *  off the icon font itself (13 Nov 2026): Ionicons' `chevron-forward`
- *  is drawn from 159 to 352 of a 512 advance, so 160/512 = 0.312 of the
- *  size is empty after the ink — 4.7 at 15. The same measure gives the
- *  back chevron's 6.75 at 22 (`BACK_HANG`), its mirror image. */
-const CHEVRON_GAP_END = ACTIVITY_CHEVRON * (160 / 512);
-
-const s = StyleSheet.create({
-  // No `screen`, no `header`, no `title`. This screen drew its own header
-  // and it drifted: a 20pt title where every other pushed screen has 26,
-  // centred against a two-line stack where the shared one aligns to the
-  // first line, and its own paddings. `Screen` draws it now — the same
-  // component Crew, Trips, Ideas and six others already use, and the same
-  // shape `authUi` arrived at independently.
-  //
-  // The 20pt was a workaround for long collection names truncating, which
-  // `Screen` answers better: two lines at 26pt hold far more of a name
-  // than one line at 20 ever did.
-  // The glyph, the word and the chevron, as one press, on nothing: see
-  // `visibility` above. The 5 the header line it came from used, so the
-  // three still read as one phrase. The byline's height, not `CHIP_H`
-  // (13 Nov 2026): it stands in that line now, and `BYLINE_SLOP` makes
-  // the 44pt target. "Shared with you" wears the same box, unpressed.
-  visibility: { flexDirection: 'row', alignItems: 'center', gap: 5, height: BYLINE_LINE },
-  // A question, so it is the sheet's whole header: the rows under it are
-  // the answers, and the title VoiceOver hears first. The size and face
-  // Visited's sheet titles use.
-  sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold, paddingHorizontal: 4 },
-  meta: { color: colors.textTertiary, ...type.meta },
-  // The heart and its tally, one fact, first in the activity row (see
-  // `activity`). In the header it had to sit beside the count, or it read
-  // as a second header control slipped a line under ⋯ — inside the card
-  // there is no control above it to be mistaken for.
-  like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  // Public or Private, in one grey — see `visibility`.
-  visibilityWord: { color: colors.textTertiary, ...type.meta, lineHeight: BYLINE_LINE },
-  // The list's age, then who sees it, under the handle. 6 round the
-  // "·", the gap the card's other "a · b" line keeps (`filterCount`).
-  byline: { flexDirection: 'row', alignItems: 'center', gap: 6, height: BYLINE_LINE },
-  // The meta size and grey, as the word after it: one line, one ink.
-  bylineText: { color: colors.textTertiary, ...type.meta, lineHeight: BYLINE_LINE },
-
-  // Full width at the foot of the list, in the page's margins, with the
-  // room the dashed slot it replaced kept above it.
-  // The chips and, while something is chosen, the count line under them.
-  kindsBlock: { gap: 10 },
-  // The kinds in a column that wraps, the count fixed to its right. 12
-  // from the last kind to the rule and 12 from the rule to the pin (its
-  // 9 and the count's own 3): the rule midway, and each side under the
-  // 18 between two kinds, so the rule and the count read as the row's
-  // end rather than one more kind. It was 16 with no rule.
-  kindsLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  kindsLeft: { flex: 1 },
-  // A bare kind's box — 13pt medium in the tertiary grey, the pin at the
-  // word's size — so the figure is a kind's equal in weight and quieter
-  // in ink: it counts, it does not name. 3 between pin and figure, not a
-  // kind's 6 between dot and word: the pin's own bearings make up the
-  // rest (measured in ink, see `activityRow`).
-  placeCount: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
-  placeCountText: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
-  // The rule before the count: the thinnest line the screen draws, in the
-  // card's hairline ink but the firmer of the two (`borderGlass`, not the
-  // `borderGlassSoft` the hairline across the card uses) — a third of a
-  // point upright and 14 tall reads as nothing in the softer one. 14:
-  // the 13pt figure's line, no taller than the words it stands between.
-  countRule: { width: StyleSheet.hairlineWidth, height: 14, backgroundColor: colors.borderGlass, marginRight: 9 },
-  // `KindPill`'s rule, clear: 4 above and below and a 2pt border, so a
-  // filter row's first line and the count are one height.
-  placeCountRule: { paddingVertical: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  filterCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  filterCountText: { color: colors.textTertiary, fontSize: 13 },
-  filterClear: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
-  // The page's margins outside, the card's padding inside; the text keeps
-  // the body size and line height it had bare, so nothing reflows but
-  // the inset. The ⋯ hangs at the top right, on the face's row.
-  descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
-  // ── the card's rhythm, measured in ink (owner, 13 Nov 2026) ──
-  // Read off a 2x render of a visitor's card, ink to ink, before and
-  // after the morning's change. The last column is the afternoon's — the
-  // 40pt face with two lines, the foot become the activity row — and is
-  // that render's figures carried through the change, worked out rather
-  // than read off a new render: re-read it on a device.
-  //
-  // |                        | before  | morning | afternoon |
-  // |------------------------|---------|---------|-----------|
-  // | card's top → face      | 16      | 20      | 20        |
-  // | face → words           | 15–18   | 17–20 (accents, letters) | 17–20 |
-  // | words → kinds          | 20.5    | 20.5    | 20.5      |
-  // | kinds → hairline       | 21      | 21      | 21        |
-  // | hairline → heart       | 16.5    | 20.5    | 20.5      |
-  // | heart → card's bottom  | 20      | 20      | 20        |
-  // | words' left / right    | 16 / 48 | 16 / 16 | 16 / 16   |
-  //
-  // So one rhythm of about 20 from the card's top to its bottom: the words
-  // came out of the face's row (the 12 of `descBody` became this 14),
-  // the foot's top went from 12 to 16, and the top from 16 to 20, since
-  // the face is a solid disc whose ink fills its box while the heart, at
-  // the bottom, carries a few points of its glyph's own air. The sides
-  // stay 16: the words now run to the card's own edges.
-  //
-  // The afternoon keeps every figure. The face is still a solid disc, and
-  // the head row is still the face's height — the two lines beside it
-  // are `BYLINE_LINE` twice and the ⋯ is centred inside it — so the top
-  // and the 14 under the head stand. The activity row is `CHIP_H` where
-  // the foot was the tally's line (`TALLY_LINE`), so the heart sits
-  // `ROW_AIR` lower in it and `ROW_AIR` higher off the bottom: both
-  // paddings round it give that back, 16 − 7 = 9, and the heart's ink
-  // keeps its 20.5 and its 20.
-  descCard: {
-    gap: 14, padding: space.cardPadding, paddingTop: space.cardPadding + 4,
-    paddingBottom: space.cardPadding - ROW_AIR,
-  },
-  // The face and its two lines, with the ⋯ at the end of the row; the
-  // words go under it, across the card (owner, 13 Nov 2026). Centred, so
-  // a head with no face — an editorial handle, or your own list's note
-  // glyph — stands its one line on the ⋯'s middle rather than the top.
-  descTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  descBody: { flex: 1 },
-  // The face and the handle. `alignSelf` keeps the press to the row's own
-  // width rather than the card's: a tap on empty space beside a handle
-  // should not open a sheet about a person.
-  curator: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%' },
-  // The handle over the line under it (`byline`), the column the face's
-  // height, and the handle the part that gives when it is long.
-  curatorLines: { flexShrink: 1 },
-  curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: BYLINE_LINE, flexShrink: 1 },
-  // A hairline, then the activity row (`activity`).
-  activity: {
-    // 9, not the foot's 16 (owner, 13 Nov 2026): the row is `CHIP_H` now,
-    // the heart centred in it, so 16 − `ROW_AIR` keeps its ink 20.5 under
-    // the hairline — see `descCard`.
-    paddingTop: space.cardPadding - ROW_AIR,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  // The heart from the start of the row, "View activity ›" at its end.
-  // One height whatever it holds, so the card does not grow when it does.
-  //
-  // ── the spacing, measured in ink (owner, 12 Nov 2026) ──
-  // Measured while the count was still in the foot; it moved to the kinds'
-  // row the next day, taking its 3 with it (`placeCount`), and so did who
-  // can see the list, to the line under the handle. The 20 between pairs
-  // stays for whatever the row holds next to the heart.
-  // Read off a 2x render of a visitor's foot, glyph ink to glyph ink, not
-  // off these numbers: each glyph's box has side bearings of its own.
-  //
-  // |                     | ♡ → 2 | 2 → 📍 | 📍 → 17 |
-  // |---------------------|-------|--------|---------|
-  // | was (gap 16, pin 6) | 6.5   | 20     | 9.5     |
-  // | now (gap 20, pin 3) | 6.5   | 24     | 6.5     |
-  //
-  // The pin's box is wider round its ink than the heart's, so at the
-  // same gap its count stood 3pt further off. "2 · 📍 · 17" read as four
-  // things evenly spaced, not two pairs: 20 between the pairs was only
-  // twice the 9.5 inside one. Now each glyph sits 6.5 from its count and
-  // the pairs 24 apart, nearly four times that.
-  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 20, height: CHIP_H },
-  // To the row's end whether a heart is before it or not, and hung past
-  // the card's padding by the chevron's empty edge (`CHEVRON_GAP_END`),
-  // so the ink ends where the words above it do, as the ⋯'s does.
-  activityLinkHang: { marginLeft: 'auto', marginRight: -CHEVRON_GAP_END },
-  // 2 between the word and the chevron's box: with the glyph's own 4.7 of
-  // bearing (`CHEVRON_GAP_END`, the same each side) that is 6.7 of air
-  // from the word to the ink, the 6.5 the heart keeps to its tally.
-  activityLink: { flexDirection: 'row', alignItems: 'center', gap: 2, height: CHIP_H },
-  activityLinkText: { color: colors.textTertiary, ...type.meta },
-  // Justified (owner, 3 Nov 2026), the owner's call over the case put
-  // against it: a 318pt column holds some 44 characters, iOS does not
-  // hyphenate Vietnamese, and the up-to-25pt each ragged line stopped
-  // short now goes into its nine or so spaces — some open to near twice
-  // a space. The last line stays ragged, as justified text always ends,
-  // so "… Đọc thêm" and "Thu gọn" keep their own spacing. Here only: the
-  // place blurbs and every other paragraph stay set ragged-right.
-  descText: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'justify' },
-  // `alignSelf` keeps the press to the words, as the curator row's does.
-  descAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24 },
-  descAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  // The ⋯'s box: the header's 44pt width, so the header's measure of the
-  // glyph's ink (`INK_GAP_END`, a 21pt ⋯ centred in 44) still holds, and
-  // `CHIP_H` tall, an action inside a row; `CHIP_SLOP` makes 44 of that
-  // for the thumb. A 32pt-wide box would have been the same 44 tall but
-  // 32 across, and its ink a fresh number nobody had measured.
-  more: { width: SECONDARY_CONTROL_H, height: CHIP_H, alignItems: 'center', justifyContent: 'center' },
-  // Hung past the card's padding by the glyph's empty edge, so the ink
-  // ends where the words under it do, as the pencil's did. And 4 of air
-  // above and below: 32 drawn on the face's 40pt row, centred on the
-  // face, and the row the face's height even where there is no face —
-  // an editorial handle's, or a lent list's with no handle — so every
-  // card's head is one height and the words start at one place. On the
-  // 28pt face this was 2 into the air instead, for the same reason.
-  moreHang: { marginRight: -INK_GAP_END['ellipsis-horizontal'], marginVertical: (FACE - CHIP_H) / 2 },
-
-  // The responder that carries a lifted card: the list's whole height.
-  dragArea: { flex: 1 },
-  // Lifted: above its neighbours, with the shadow of something held off
-  // the page. `zIndex` for iOS and the web, `elevation` for Android.
-  arrangeCellLifted: { zIndex: 10, elevation: 6 },
-  gridRow: { paddingHorizontal: space.page, gap: GRID_GAP, marginBottom: GRID_GAP },
-
-  // The views' name over their card in the ⋯'s sheet: quieter than a
-  // row's title, so it reads as a heading and not as one more thing to
-  // press; inset as the sheet's title is, and spaced by the sheet's own
-  // gap like everything else in it.
-  menuSection: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium, paddingHorizontal: 4 },
-  emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
-  empty: {
-    alignItems: 'center', gap: 14,
-    paddingHorizontal: space.cardPadding + 6, paddingTop: 26, paddingBottom: 24,
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.card,
-  },
-  emptyIcon: {
-    width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
-  },
-  // 16, not 15: it is one short line now rather than a paragraph, and at
-  // the smaller size it read as a caption under the glyph.
-  emptyBody: {
-    color: colors.textSecondary, fontSize: 16, lineHeight: 22, textAlign: 'center',
-  },
-});
