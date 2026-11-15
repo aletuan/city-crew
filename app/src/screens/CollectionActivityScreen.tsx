@@ -478,9 +478,12 @@ export default function CollectionActivityScreen({ navigation, route }: {
   ) : loading ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} testID="activity-loading" />
   ) : acts.length > 0 ? null : failed ? (
+    // "Activity", not "your activity" as the Activity tab says of its own
+    // page (15 Nov 2026): a reader who is not the owner opens this one, and
+    // the English alone called the list's activity theirs.
     <EmptyState
       icon="cloud-offline"
-      title={t("Couldn't load your activity", 'Không tải được hoạt động', 'アクティビティを読み込めませんでした', '无法加载动态', '無法載入動態')}
+      title={t("Couldn't load activity", 'Không tải được hoạt động', 'アクティビティを読み込めませんでした', '无法加载动态', '無法載入動態')}
       body={t('Check your connection and try again.', 'Kiểm tra kết nối rồi thử lại.', '接続を確認して、もう一度お試しください。', '请检查网络连接后重试。', '請檢查網路連線後重試。')}
       testID="activity-failed"
     >
