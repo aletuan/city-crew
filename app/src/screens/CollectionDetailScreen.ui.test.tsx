@@ -2329,8 +2329,8 @@ describe('a friend’s list, shared with you', () => {
     expect(screen.getByTestId('collection-handle').textContent).toBe('lan');
     expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
     expect(screen.queryByRole('button', { name: 'Like' })).toBeNull();
-    // The activity row stands, empty.
-    expect(screen.getByTestId('collection-activity').textContent).toBe('');
+    // The activity row holds the way to the list's activity, and no heart.
+    expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
     // Nor the owner's word for who can see it.
     expect(screen.queryByTestId('collection-visibility')).toBeNull();
   });
@@ -2339,7 +2339,8 @@ describe('a friend’s list, shared with you', () => {
     show();
     const card = screen.getByTestId('collection-desc');
     expect(card.contains(screen.getByTestId('collection-more'))).toBe(true);
-    expect(card.querySelectorAll('[role="button"]')).toHaveLength(1);
+    // Two buttons on the card: the ⋯, and the way to the list's activity.
+    expect(card.querySelectorAll('[role="button"]')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Save a copy' })).toBeNull();
   });
 
@@ -2726,7 +2727,7 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('hanoicrewEatsCafésCultureNightlife4');
+    expect(card.textContent).toBe('hanoicrewEatsCafésCultureNightlife4View activity');
     expect(screen.getByLabelText('4 places')).toBeTruthy();
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
@@ -2759,11 +2760,11 @@ describe('the introduction card', () => {
   // The heart leads the activity row (owner, 12 Nov 2026), as a like
   // leads the row on Instagram or Threads; the count left it for the
   // kinds' row on 13 Nov, and who can see the list for the head.
-  it('keeps the heart in the activity row, first, and nothing else on a visitor\u2019s', () => {
+  it('keeps the heart in the activity row, first, and the way to the activity after it on a visitor\u2019s', () => {
     show();
     const foot = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
     expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
-      .toEqual(['heart-outline']);
+      .toEqual(['heart-outline', 'chevron-forward']);
     // In that order on screen too, from the start of the row.
     expect(getComputedStyle(foot).flexDirection).toBe('row');
     expect(getComputedStyle(foot).justifyContent).not.toBe('space-between');
@@ -2835,8 +2836,8 @@ describe('the introduction card', () => {
     state.cols = [theirs({ is_public: false })];
     show();
     const activity = screen.getByTestId('collection-activity');
-    expect(activity.textContent).toBe('');
-    expect(activity.querySelector('[role="button"]')).toBeNull();
+    expect(activity.textContent).toBe('View activity');
+    expect(activity.querySelectorAll('[role="button"]')).toHaveLength(1);
     expect(viewStyleOf(activity.firstElementChild as HTMLElement).height).toBe(CHIP_H);
     expect(screen.getByTestId('collection-count')).toBeTruthy();
   });
@@ -3037,9 +3038,9 @@ describe('the likes a list kept', () => {
     show();
     expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
     expectKept(12, '12 likes');
-    // Not the owner's way to who liked it.
-    expect(screen.queryByTestId('collection-activity-link')).toBeNull();
-    expect(screen.getByTestId('collection-activity').textContent).toBe('12');
+    // And the way to who liked it, a reader's as the owner's (15 Nov 2026).
+    expect(screen.getByTestId('collection-activity-link')).toBeTruthy();
+    expect(screen.getByTestId('collection-activity').textContent).toBe('12View activity');
   });
 
   it('says one like in the singular, and in Vietnamese', () => {
@@ -3084,7 +3085,7 @@ describe('the likes a list kept', () => {
       state.shared = [collection({ owner_id: 'lan-id', is_public: false, curator_handle: 'lan' })];
       show();
       expect(kept()).toBeNull();
-      expect(screen.getByTestId('collection-activity').textContent).toBe('');
+      expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
     }
   });
 
@@ -3109,7 +3110,7 @@ describe('the likes a list kept', () => {
     state.cols = [theirs({ id: undefined } as Partial<Collection>)];
     show();
     expect(kept()).toBeNull();
-    expect(screen.getByTestId('collection-activity').textContent).toBe('');
+    expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
   });
 });
 
@@ -3193,28 +3194,34 @@ describe('the way to the list’s activity', () => {
     expect(viewStyleOf(screen.getByTestId('collection-activity').firstElementChild as HTMLElement).height).toBe(CHIP_H);
   });
 
-  it('is not drawn on somebody else’s list', () => {
+  // A reader's too (owner, 15 Nov 2026): whoever is signed in and can
+  // open the list opens its activity, as on the app this row is taken
+  // from. It was the owner's alone until then.
+  it('is drawn on somebody else’s list, and opens that list’s activity', () => {
     state.mine = [];
     state.cols = [theirs()];
-    show();
+    const { raw } = show();
     expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
-    expect(link()).toBeNull();
-    expect(screen.queryByText('View activity')).toBeNull();
+    fireEvent.click(link()!);
+    expect(raw.navigate).toHaveBeenCalledWith('CollectionActivity', { slug: 'old-quarter' });
   });
 
-  it('is not drawn on a friend’s list lent to you, nor signed out', () => {
+  it('is drawn on a friend’s list lent to you, and not for a guest', () => {
     state.mine = [];
     state.shared = [collection({ owner_id: 'lan', is_public: false })];
     show();
     expect(screen.getByText('Old Quarter eats')).toBeTruthy();
-    expect(link()).toBeNull();
+    expect(link()).toBeTruthy();
     cleanup();
+    // Signed out: the page behind it is people with a friend button, and
+    // answers signed-in callers only.
     state.uid = null;
     state.shared = [];
     state.cols = [collection({ is_public: true })];
     show();
     expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
     expect(link()).toBeNull();
+    expect(screen.queryByText('View activity')).toBeNull();
   });
 
   // What the link opens is asked for when the page opens, not when the

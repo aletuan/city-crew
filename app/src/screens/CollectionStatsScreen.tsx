@@ -89,11 +89,10 @@ import { Glyph, type GlyphName } from '../components/ui/glyph';
 import { Card, EmptyState, GradientCta, Screen, useTabBarClearance } from '../components/ui';
 import ListSummaryCard from '../components/ListSummaryCard';
 import { useDuckOnScroll } from '../components/tabBarDuck';
-import { useSession } from '../lib/auth';
 import { useCollectionStatsQuery } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { type Figure, groupDigits, nothingCounted, type StatKind, statsOf } from '../lib/listStats';
-import { useMyLists } from '../lib/save';
+import { useReadableList } from '../lib/readableList';
 import { colors, display, font, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
@@ -102,10 +101,8 @@ export default function CollectionStatsScreen({ navigation, route }: {
   route: RootRoute<'CollectionStats'>;
 }) {
   const { t, lang } = useI18n();
-  const { session } = useSession();
-  const me = session?.user?.id ?? null;
-  const mine = useMyLists();
-  const col = mine.data.find((c) => c.slug === route.params.slug) ?? null;
+  // Whoever can open the list, as on the page before (owner, 15 Nov 2026).
+  const { col, me, loading: finding } = useReadableList(route.params.slug);
   const listId = col?.id ?? null;
 
   // Nobody or no list asks nothing (`useCollectionStatsQuery`).
@@ -168,7 +165,7 @@ export default function CollectionStatsScreen({ navigation, route }: {
     );
   };
 
-  const body = !col && mine.loading ? (
+  const body = finding ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} />
   ) : !listId ? (
     // Not yours, gone, or a launch-cache row with no id: nothing to ask.

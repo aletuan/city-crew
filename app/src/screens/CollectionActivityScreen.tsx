@@ -208,10 +208,9 @@ import {
 } from '../components/ui';
 import ListSummaryCard from '../components/ListSummaryCard';
 import { useDuckOnScroll } from '../components/tabBarDuck';
-import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import {
-  acceptFriendRequest, sendFriendRequest, useListActivityQuery, usePrefetchCollectionStats,
+  acceptFriendRequest, sendFriendRequest, useListActivityOfQuery, useListActivityQuery, usePrefetchCollectionStats,
 } from '../lib/data';
 import { type Pledged, quietReason, rowButton } from '../lib/friends';
 import { atHandle, normalizeHandle } from '../lib/handle';
@@ -219,7 +218,7 @@ import { useI18n } from '../lib/i18n';
 import { actsOn, type ListAct } from '../lib/listActivity';
 import { usePending } from '../lib/pending';
 import { ageWord, listAgeOf } from '../lib/listAge';
-import { useMyLists } from '../lib/save';
+import { useReadableList } from '../lib/readableList';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -229,10 +228,10 @@ export default function CollectionActivityScreen({ navigation, route }: {
   route: RootRoute<'CollectionActivity'>;
 }) {
   const { t, lang } = useI18n();
-  const { session } = useSession();
-  const me = session?.user?.id ?? null;
-  const mine = useMyLists();
-  const col = mine.data.find((c) => c.slug === route.params.slug) ?? null;
+  // The list, wherever the reader holds it: their own, one lent to them,
+  // or a public one — whoever can open the list opens this page (owner,
+  // 15 Nov 2026).
+  const { col, me, owned, loading: finding } = useReadableList(route.params.slug);
   // Any list of yours with an id has something to ask about, public or
   // not (see the header). A row from the launch cache may have none.
   const listId = col?.id ?? null;
@@ -240,7 +239,13 @@ export default function CollectionActivityScreen({ navigation, route }: {
   // The owner's answer, kept and shared — see the header. Nobody to ask
   // about without a list of yours with an id: no fetch, and the empty
   // state.
-  const activity = useListActivityQuery(me && listId ? me : null);
+  // The owner's answer is the one kept for all their lists and asked ahead
+  // from the collection page; a reader's is asked for this list alone
+  // (`useListActivityOfQuery`). The rows are the same shape, and the same
+  // rows but for a block between the reader and whoever acted.
+  const mineAll = useListActivityQuery(me && listId && owned ? me : null);
+  const thisList = useListActivityOfQuery(owned ? null : me, listId);
+  const activity = owned ? mineAll : thisList;
   // The figures "Statistics ›" opens, asked for now — see the header.
   usePrefetchCollectionStats(me && listId ? me : null, listId);
   const { likes, copies } = activity;
@@ -464,7 +469,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
   };
 
   const emptyTitle = t('No likes or copies yet', 'Chưa có lượt thích hay bản sao nào', 'まだいいねやコピーはありません', '还没有点赞或复制', '還沒有按讚或複製');
-  const state = !col && mine.loading ? (
+  const state = finding ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} />
   ) : !listId ? (
     // Not yours, gone, or a row from the launch cache with no id to ask

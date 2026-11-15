@@ -244,6 +244,28 @@ export async function fetchCopies(sinceISO: string): Promise<import('../friends'
   return (data ?? []) as import('../friends').Copy[];
 }
 
+/**
+ * Who liked one list, and who saved a copy of it, for whoever can read
+ * the list (owner, 15 Nov 2026) — `likes_on_list` and `copies_of_list`
+ * (`20261115090000_list_activity_for_readers`). The rows are `Applause`
+ * and `Copy`, the shapes the owner's two functions answer in, so a
+ * reader's page is drawn by the code that draws the owner's.
+ *
+ * A list the caller cannot open answers no rows, not an error. Both
+ * throw on failure, as their twins do.
+ */
+export async function fetchLikesOnList(collectionId: string): Promise<import('../friends').Applause[]> {
+  const { data, error } = await supabase.rpc('likes_on_list', { cid: collectionId });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('../friends').Applause[];
+}
+
+export async function fetchCopiesOfList(collectionId: string): Promise<import('../friends').Copy[]> {
+  const { data, error } = await supabase.rpc('copies_of_list', { cid: collectionId });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('../friends').Copy[];
+}
+
 /** A list somebody else made, as an Activity row needs it to name and
  *  open it. */
 export type ActList = { id: string; slug: string; title_en: string; title_vi: string; title_ja: string | null };

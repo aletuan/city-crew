@@ -1343,6 +1343,17 @@ export type Database = {
           views: number
         }[]
       }
+      copies_of_list: {
+        Args: { cid: string }
+        Returns: {
+          collection_id: string
+          copied_at: string
+          copier_avatar_url: string
+          copier_handle: string
+          copier_id: string
+          copier_name: string
+        }[]
+      }
       copies_of_mine: {
         Args: { since: string }
         Returns: {
@@ -1376,6 +1387,17 @@ export type Database = {
       is_local_guide:
         | { Args: never; Returns: boolean }
         | { Args: { p_city_id: string }; Returns: boolean }
+      likes_on_list: {
+        Args: { cid: string }
+        Returns: {
+          collection_id: string
+          liked_at: string
+          liker_avatar_url: string
+          liker_handle: string
+          liker_id: string
+          liker_name: string
+        }[]
+      }
       likes_on_mine: {
         Args: { since: string }
         Returns: {

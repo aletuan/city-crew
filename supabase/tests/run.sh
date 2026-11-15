@@ -641,3 +641,13 @@ for f in "$ROOT"/supabase/migrations/*_collection_use_counts.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/collection_use_counts_test.sql"
+
+# A list's activity for whoever can read the list (15 Nov 2026): who liked
+# it, who copied it, and its figures, to a reader as to the owner. After
+# the statistics block, whose function it replaces, and the shares, whose
+# `shared_with_me` it asks.
+echo "→ list activity for readers"
+for f in "$ROOT"/supabase/migrations/*_list_activity_for_readers.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/list_activity_for_readers_test.sql"

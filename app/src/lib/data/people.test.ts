@@ -18,7 +18,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  acceptFriendRequest, blockUser, dismissSuggestion, fetchApplause, fetchCopies, fetchCuratorAvatars, fetchFriendships, fetchMyActs,
+  acceptFriendRequest, blockUser, dismissSuggestion, fetchApplause, fetchCopies, fetchCopiesOfList, fetchCuratorAvatars, fetchFriendships, fetchLikesOnList, fetchMyActs,
   fetchListTitles, fetchMutualSaves, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
   removeFriendship, searchHandles, sendFriendRequest, submitReport, unblockUser,
 } from './people';
@@ -430,6 +430,31 @@ describe('fetchCopies', () => {
   it('answers empty when it returned nothing', async () => {
     fake().replies({ data: null });
     expect(await fetchCopies('2026-08-01T00:00:00Z')).toEqual([]);
+  });
+});
+
+// One list's likes and copies, for whoever can read the list (owner,
+// 15 Nov 2026): the reader's two functions, asked by the list's id.
+describe('fetchLikesOnList and fetchCopiesOfList', () => {
+  it('ask the reader’s functions for the one list', async () => {
+    fake().replies({ data: [{ collection_id: 'c-9', liker_handle: 'hado' }] }, { data: [{ collection_id: 'c-9', copier_handle: 'bao' }] });
+    expect(await fetchLikesOnList('c-9')).toHaveLength(1);
+    expect(await fetchCopiesOfList('c-9')).toHaveLength(1);
+    const [likes, copies] = fake().log;
+    expect(likes).toMatchObject({ op: 'rpc', fn: 'likes_on_list', payload: { cid: 'c-9' } });
+    expect(copies).toMatchObject({ op: 'rpc', fn: 'copies_of_list', payload: { cid: 'c-9' } });
+  });
+
+  it('throw when the call failed', async () => {
+    fake().replies({ error: { message: 'timeout' } }, { error: { message: 'refused' } });
+    await expect(fetchLikesOnList('c-9')).rejects.toThrow('timeout');
+    await expect(fetchCopiesOfList('c-9')).rejects.toThrow('refused');
+  });
+
+  it('answer empty for a list the caller cannot open', async () => {
+    fake().replies({ data: null }, { data: null });
+    expect(await fetchLikesOnList('c-9')).toEqual([]);
+    expect(await fetchCopiesOfList('c-9')).toEqual([]);
   });
 });
 

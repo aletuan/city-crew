@@ -32,6 +32,8 @@ vi.mock('../lib/data/stats', async (orig) => ({
 const state = vi.hoisted(() => ({
   me: 'me' as string | null,
   mine: [] as unknown[],
+  cols: [] as unknown[],
+  shared: [] as unknown[],
   mineLoading: false,
   lang: 'en' as 'en' | 'vi',
 }));
@@ -44,6 +46,16 @@ vi.mock('../lib/auth', () => {
 });
 vi.mock('../lib/save', () => ({
   useMyLists: () => ({ data: state.mine, loading: state.mineLoading, reload: () => {} }),
+}));
+// The two other places a list can be found since 15 Nov 2026, when the
+// page opened to whoever can read the list: the public shelf, and the
+// lists lent to the reader.
+vi.mock('../lib/catalog', () => ({
+  useCollections: () => ({ data: state.cols, loading: false, reload: () => {} }),
+}));
+vi.mock('../lib/data', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useSharedWithMe: () => ({ data: state.shared, loading: false, reload: () => {} }),
 }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({
@@ -92,6 +104,8 @@ beforeEach(async () => {
   await AsyncStorage.removeItem(cacheKey('liststats', 'c1', 'me'));
   state.me = 'me';
   state.mine = [list()];
+  state.cols = [];
+  state.shared = [];
   state.mineLoading = false;
   state.lang = 'en';
 });
@@ -125,11 +139,26 @@ describe('what it asks for', () => {
     expect(data.fetchCollectionStats).toHaveBeenCalledExactlyOnceWith('c1');
   });
 
-  it('asks nothing for a list that is not yours, and says nothing is counted', async () => {
+  it('asks nothing for a list the reader cannot open, and says nothing is counted', async () => {
     await show('somebody-elses');
     expect(data.fetchCollectionStats).not.toHaveBeenCalled();
     expect(screen.getByTestId('stats-empty')).toBeTruthy();
     expect(screen.queryByTestId('stats-list')).toBeNull();
+  });
+
+  // A reader's too (owner, 15 Nov 2026): the figures of a list that is
+  // somebody else's, public or lent, as its owner reads them.
+  it('asks for somebody else’s list for a reader of it, public or lent', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', title_en: 'Their list' })];
+    await show('theirs');
+    expect(data.fetchCollectionStats).toHaveBeenCalledExactlyOnceWith('c9');
+    expect(within(screen.getByTestId('stats-list')).getByText('Their list')).toBeTruthy();
+    cleanup();
+    state.cols = [];
+    state.shared = [list({ id: 'c7', slug: 'lent', owner_id: 'lan-id', is_public: false })];
+    await show('lent');
+    expect(data.fetchCollectionStats).toHaveBeenLastCalledWith('c7');
   });
 
   it('asks nothing for a list from the launch cache with no id', async () => {

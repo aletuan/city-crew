@@ -1063,12 +1063,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      Threads, X — put the like first in the row, and first it stands in
      one place whether the list is yours or somebody else's. */
   /* ── "View activity ›" (owner, 13 Nov 2026) ──
-     At the row's right end, on your own list only: who liked it and who
-     saved a copy, on a page of its own (`CollectionActivity`). Threads
-     draws its "View activity" the same way and to the author alone, and
-     here it is the author alone for a harder reason: `likes_on_mine` and
-     `copies_of_mine` answer only the owner, so a visitor's page would be
-     empty by construction.
+     At the row's right end: who liked the list and who saved a copy, on
+     a page of its own (`CollectionActivity`), with its figures behind it.
+
+     For whoever is signed in and can open the list (owner, 15 Nov 2026).
+     It was the author's alone, and this comment said why: "Threads draws
+     its 'View activity' the same way and to the author alone." It does
+     not. The owner sent a screenshot of the link on somebody else's post
+     and asked for the same here, all of it, as the author sees it. The
+     harder reason it gave has gone too: `likes_on_mine` and
+     `copies_of_mine` answer only the owner, and a reader's page now asks
+     `likes_on_list` and `copies_of_list`, which answer whoever can read
+     the list (`20261115090000_list_activity_for_readers`).
+
+     Not a guest: the page is people with a friend button on each row,
+     and the three functions behind it answer signed-in callers only.
 
      On a private list too, and since 13 Nov 2026 its page lists the
      likes and copies the list gathered while it was public — the two
@@ -1080,15 +1089,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      and a row-wide press would turn a thumb that just missed the heart
      into a trip to another screen; and a row that is a button with a
      button inside is one VoiceOver element, which swallows the heart.
-     A visitor's row has nothing to open, so it would also be a row that
-     is a control on one side of the line and not the other.
 
      The meta size in the byline's grey, as Threads sets it: a way in, not
      a call to act, so not the accent a tier-4 link wears (`docs/
      architecture.md`, "Bốn cấp nút") — beside the heart's coral when the
      list is liked, a second coral would read as a second state. `CHIP_H`
      drawn, the row's own height, and 44 to the thumb with `CHIP_SLOP`. */
-  const activityLink = owned && col ? (
+  const activityLink = uid && col ? (
     <PressableScale
       onPress={() => navigation.navigate('CollectionActivity', { slug: col.slug })}
       haptic="selection"
