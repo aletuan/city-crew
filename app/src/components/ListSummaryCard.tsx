@@ -4,9 +4,26 @@
 // The collection page's card, smaller: the face and the two lines beside
 // it as its head draws them (40, `BYLINE_LINE` each), then the title and
 // the words. Three lines of them and no "Read more": it is a reminder of
-// which list this is, and the whole of it is one Back away. The handle is
-// yours from the profile, as the page's head takes it, not the
-// `curator_handle` stamped on the row.
+// which list this is, and the whole of it is one Back away.
+//
+// ── whose face (15 Nov 2026) ──
+//
+// The list's author, as the page's head names them: for your own list,
+// you from the profile rather than the `curator_handle` stamped on the
+// row; for somebody else's, that stamp, and the face the shelf already
+// fetched for it (`useCuratorAvatar`), asked for by handle only on a cold
+// open. The same two sources, in the same order, as the collection page.
+//
+// Until that day the card read the profile alone, which was right while
+// only an owner could open the two pages. They opened to every reader on
+// 15 Nov and the card went on drawing the reader: a list by maydidaudo,
+// opened by trang, was headed "trang" over trang's face. No test said
+// otherwise because every reader's fixture gave the list no
+// `curator_handle` and never looked at the head.
+//
+// An editorial handle has no profile behind it, so its face is the empty
+// disc — the card keeps the slot rather than moving the two lines, since
+// unlike the page's head nothing here waits to be laid out once.
 //
 // Drawn on the Activity page alone until the Statistics page needed the
 // same reminder; moved here rather than copied, so the two pages about
@@ -16,25 +33,39 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar, Card } from './ui';
 import { useProfile } from '../lib/auth';
+import { useCuratorAvatar } from '../lib/catalog';
+import { useProfileByHandle } from '../lib/data';
 import { normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { ageWord, listAgeOf } from '../lib/listAge';
 import type { Collection } from '../lib/types';
 import { colors, font, space, type } from '../theme';
 
-export default function ListSummaryCard({ col, testID }: { col: Collection; testID: string }) {
+export default function ListSummaryCard({ col, owned, testID }: {
+  col: Collection;
+  /** Whether the list is the reader's own — see the header. */
+  owned: boolean;
+  testID: string;
+}) {
   const { t, lang } = useI18n();
   const { profile } = useProfile();
+  // Normalised before the lookup: editorial rows carry the `@` in the
+  // value and `profileByHandle` would find nothing (`lib/handle`).
+  const curator = !owned && col.curator_handle ? normalizeHandle(col.curator_handle) || null : null;
+  const cached = useCuratorAvatar(curator);
+  const lookup = useProfileByHandle(cached ? null : curator);
+  const handle = owned ? (profile?.handle ? normalizeHandle(profile.handle) : '') : curator ?? '';
+  const face = owned ? profile?.avatar_url || null : cached ?? (lookup.data?.avatar_url || null);
   const title = t(col.title_en, col.title_vi, col.title_ja);
   const desc = t(col.desc_en, col.desc_vi, col.desc_ja);
   const age = col.created_at ? listAgeOf(col.created_at, new Date()) : null;
   return (
     <Card style={s.card} testID={testID}>
       <View style={s.head}>
-        <Avatar url={profile?.avatar_url || null} size={HEAD_FACE} />
+        <Avatar url={face} size={HEAD_FACE} />
         <View style={s.headLines}>
-          {profile?.handle
-            ? <Text style={s.headHandle} numberOfLines={1}>{normalizeHandle(profile.handle)}</Text>
+          {handle
+            ? <Text style={s.headHandle} numberOfLines={1} testID={`${testID}-handle`}>{handle}</Text>
             : null}
           {age
             ? <Text style={s.headAge}>{ageWord(age, lang, t, t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立'))}</Text>

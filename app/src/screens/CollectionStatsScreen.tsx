@@ -102,7 +102,7 @@ export default function CollectionStatsScreen({ navigation, route }: {
 }) {
   const { t, lang } = useI18n();
   // Whoever can open the list, as on the page before (owner, 15 Nov 2026).
-  const { col, me, loading: finding } = useReadableList(route.params.slug);
+  const { col, me, owned, loading: finding } = useReadableList(route.params.slug);
   const listId = col?.id ?? null;
 
   // Nobody or no list asks nothing (`useCollectionStatsQuery`).
@@ -210,7 +210,7 @@ export default function CollectionStatsScreen({ navigation, route }: {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
       >
-        {col ? <ListSummaryCard col={col} testID="stats-list" /> : null}
+        {col ? <ListSummaryCard col={col} owned={owned} testID="stats-list" /> : null}
         {body}
       </ScrollView>
     </Screen>
