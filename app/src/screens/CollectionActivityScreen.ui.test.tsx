@@ -81,6 +81,9 @@ vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 const state = vi.hoisted(() => ({
   me: 'me' as string | null,
   profile: { handle: 'andy', avatar_url: 'https://faces/andy.jpg' } as { handle: string; avatar_url: string } | null,
+  faces: {} as Record<string, string>,
+  profiles: {} as Record<string, { avatar_url: string | null }>,
+  asked: [] as (string | null)[],
   mine: [] as unknown[],
   cols: [] as unknown[],
   shared: [] as unknown[],
@@ -100,10 +103,19 @@ vi.mock('../lib/save', () => ({
 // lists lent to the reader.
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.cols, loading: false, reload: () => {} }),
+  // The faces the shelf already holds, by handle — what the card reads
+  // first for a list that is not the reader's.
+  useCuratorAvatar: (h: string | null) => (h ? state.faces[h] ?? null : null),
 }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   useSharedWithMe: () => ({ data: state.shared, loading: false, reload: () => {} }),
+  // The cold lookup, by handle. Asked only with a handle the shelf had no
+  // face for; `asked` keeps what it was asked.
+  useProfileByHandle: (h: string | null) => {
+    state.asked.push(h);
+    return { data: h ? state.profiles[h] ?? null : null, loading: false, reload: () => {} };
+  },
 }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: state.scheme }) }));
 vi.mock('../lib/i18n', () => ({
@@ -175,6 +187,9 @@ beforeEach(async () => {
   await AsyncStorage.removeItem(cacheKey('copiesofmine', 'all', 'me'));
   state.me = 'me';
   state.profile = { handle: 'andy', avatar_url: 'https://faces/andy.jpg' };
+  state.faces = {};
+  state.profiles = {};
+  state.asked = [];
   state.mine = [list()];
   state.cols = [];
   state.shared = [];
@@ -313,6 +328,55 @@ describe('what it asks for', () => {
   // The page was the owner's alone. Whoever can open the list opens it
   // now, and is told what the owner is told: asked of the one list
   // (`likes_on_list`, `copies_of_list`), not of the reader's own lists.
+  // The card names the list's author, not whoever is reading (15 Nov
+  // 2026). It drew the reader for an afternoon: a list by maydidaudo,
+  // opened by trang, was headed "trang" over trang's face.
+  it('heads somebody else’s list with its author’s handle and face, not the reader’s', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', curator_handle: '@maydidaudo' })];
+    state.faces = { maydidaudo: 'https://faces/may.jpg' };
+    await show('theirs');
+    const card = screen.getByTestId('activity-list');
+    expect(screen.getByTestId('activity-list-handle').textContent).toBe('maydidaudo');
+    expect(card.querySelector('img')!.getAttribute('src')).toBe('https://faces/may.jpg');
+    expect(card.textContent).not.toContain('andy');
+    // The shelf had the face: nobody is asked for it again.
+    expect(state.asked.every((h) => h === null)).toBe(true);
+  });
+
+  it('asks for the author’s face by handle when the shelf holds none', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', curator_handle: '@maydidaudo' })];
+    state.profiles = { maydidaudo: { avatar_url: 'https://faces/cold.jpg' } };
+    await show('theirs');
+    expect(state.asked).toContain('maydidaudo');
+    expect(screen.getByTestId('activity-list').querySelector('img')!.getAttribute('src')).toBe('https://faces/cold.jpg');
+  });
+
+  it('draws no face and no name it does not have: an author with no profile, a list with no stamp', async () => {
+    state.mine = [];
+    // A handle nobody stands behind, as every editorial list's is.
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: null, curator_handle: '@hanoicrew' })];
+    await show('theirs');
+    expect(screen.getByTestId('activity-list-handle').textContent).toBe('hanoicrew');
+    expect(screen.getByTestId('activity-list').querySelector('img')).toBeNull();
+    cleanup();
+    // A profile with no photograph is the same empty disc.
+    state.profiles = { hanoicrew: { avatar_url: null } };
+    await show('theirs');
+    expect(screen.getByTestId('activity-list').querySelector('img')).toBeNull();
+    cleanup();
+    // No stamp, or one that is only the sign: no line, and not the reader's.
+    for (const stamp of [null, '@']) {
+      state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', curator_handle: stamp })];
+      await show('theirs');
+      expect(screen.queryByTestId('activity-list-handle')).toBeNull();
+      expect(screen.getByTestId('activity-list').textContent).not.toContain('andy');
+      expect(screen.getByTestId('activity-list').querySelector('img')).toBeNull();
+      cleanup();
+    }
+  });
+
   it('draws somebody else’s public list for a reader, asked for by that list’s id', async () => {
     state.mine = [];
     state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', title_en: 'Their list' })];

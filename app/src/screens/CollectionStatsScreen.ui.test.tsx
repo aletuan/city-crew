@@ -31,6 +31,9 @@ vi.mock('../lib/data/stats', async (orig) => ({
 
 const state = vi.hoisted(() => ({
   me: 'me' as string | null,
+  faces: {} as Record<string, string>,
+  profiles: {} as Record<string, { avatar_url: string | null }>,
+  asked: [] as (string | null)[],
   mine: [] as unknown[],
   cols: [] as unknown[],
   shared: [] as unknown[],
@@ -52,10 +55,19 @@ vi.mock('../lib/save', () => ({
 // lists lent to the reader.
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.cols, loading: false, reload: () => {} }),
+  // The faces the shelf already holds, by handle — what the card reads
+  // first for a list that is not the reader's.
+  useCuratorAvatar: (h: string | null) => (h ? state.faces[h] ?? null : null),
 }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   useSharedWithMe: () => ({ data: state.shared, loading: false, reload: () => {} }),
+  // The cold lookup, by handle. Asked only with a handle the shelf had no
+  // face for; `asked` keeps what it was asked.
+  useProfileByHandle: (h: string | null) => {
+    state.asked.push(h);
+    return { data: h ? state.profiles[h] ?? null : null, loading: false, reload: () => {} };
+  },
 }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({
@@ -148,6 +160,17 @@ describe('what it asks for', () => {
 
   // A reader's too (owner, 15 Nov 2026): the figures of a list that is
   // somebody else's, public or lent, as its owner reads them.
+  // The same card as Activity's, and the same author on it (15 Nov 2026).
+  it('heads somebody else’s list with its author, not the reader', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', curator_handle: '@maydidaudo' })];
+    state.faces = { maydidaudo: 'https://faces/may.jpg' };
+    await show('theirs');
+    expect(screen.getByTestId('stats-list-handle').textContent).toBe('maydidaudo');
+    expect(screen.getByTestId('stats-list').querySelector('img')!.getAttribute('src')).toBe('https://faces/may.jpg');
+    state.faces = {};
+  });
+
   it('asks for somebody else’s list for a reader of it, public or lent', async () => {
     state.mine = [];
     state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', title_en: 'Their list' })];
