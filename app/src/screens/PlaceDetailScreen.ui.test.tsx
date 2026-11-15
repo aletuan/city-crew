@@ -697,6 +697,22 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(spies.removeCheckin).not.toHaveBeenCalled();
   });
 
+  // Nothing had closed this sheet by tapping outside it; every test that
+  // opened it left through a row.
+  it('closes the options on a tap outside them, and checks nothing in or out', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k1', 60)];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checked-in'));
+    expect(await screen.findByText('Checked in here')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Close'));
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    await waitFor(() => expect(screen.queryByText('Checked in here')).toBeNull());
+    expect(spies.addCheckin).not.toHaveBeenCalled();
+    expect(spies.removeCheckin).not.toHaveBeenCalled();
+  });
+
   it('takes back the visit chosen, not the newest, and keeps the sheet open for the rest', async () => {
     state.checkin = true;
     state.uid = 'u1';
