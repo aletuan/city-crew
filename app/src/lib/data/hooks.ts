@@ -20,7 +20,7 @@ import {
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import {
-  fetchApplause, fetchCopies, fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, type FriendProfile, profileByHandle,
+  fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, type FriendProfile, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
@@ -266,31 +266,34 @@ export const useMyPreferences = (ownerId: string | null | undefined): Fetch<Pref
 // the whole app by `lib/crew`, which persists them the way the catalog
 // queries persist themselves.
 
-// ── the owner's activity: every like and copy, all time ──
+// ── one list's activity: every like and copy on it, all time ──
 //
-// What a list's activity page draws (`CollectionActivityScreen`), asked
-// once for all the owner's lists — the two functions answer for every
-// list the caller owns, and `lib/listActivity.actsOn` narrows to one —
-// so one answer serves every list's page, and the collection page can
-// ask before the reader has said which (`usePrefetchListActivity`).
+// What a list's activity page draws (`CollectionActivityScreen`), for its
+// owner and for any reader of it alike: `likes_on_list` and
+// `copies_of_list` answer for the one list. Two shared entries, not one:
+// the page shows one half when the other fails, as it always has, and
+// each half keeps its own last answer through a failed refresh. One entry
+// per list and per reader — the reader is part of the question, since a
+// block between them and a liker takes a row out — under `cacheKey`; the
+// rows' shape is `Applause` and `Copy`, so a column added to them is a
+// `CACHE_VERSION` bump (`lib/data/cache`).
 //
-// All time: both functions read `created_at >= since`, so the epoch is
-// every row. Two shared entries, not one: the page shows one half when
-// the other fails, as it always has, and each half keeps its own last
-// answer through a failed refresh. One key per owner — the reader is the
-// question — under `cacheKey`, beside `mine`; the rows' shape is
-// `Applause` and `Copy`, so a column added to them is a `CACHE_VERSION`
-// bump (`lib/data/cache`).
+// Until 15 Nov 2026 the owner had a question of their own —
+// `likes_on_mine` and `copies_of_mine` from the epoch, one answer for
+// every list they own, narrowed to one on the page — and the reader's
+// came second. The owner's left out the owner's own like, which is right
+// for Activity ("somebody liked your list" is not news about yourself)
+// and wrong here: the card said ♥ 3 and the page behind it named two
+// (owner). One question for everybody now, and the owner's own like is a
+// row in it. Rejected: adding the owner's like to `likes_on_mine` and
+// taking it out again in Activity and its badge — every phone still on
+// the older JavaScript would have told its owner they liked their own
+// list until its update landed.
 //
-// Not `useActivityCount`'s or Activity's question: those ask two weeks,
-// a different answer, and keep their own reads.
-const EVER = new Date(0).toISOString();
+// Not `useActivityCount`'s or Activity's question: those ask two weeks of
+// what others did, a different answer, and keep their own reads.
 const NO_LIKES: Applause[] = [];
 const NO_COPIES: Copy[] = [];
-const allLikes = () => fetchApplause(EVER);
-const allCopies = () => fetchCopies(EVER);
-const activityKey = (half: 'likesonmine' | 'copiesofmine', ownerId: string | null | undefined) =>
-  (ownerId ? cacheKey(half, 'all', ownerId) : null);
 
 export type ListActivityQuery = {
   likes: Fetch<Applause[]>;
@@ -299,39 +302,6 @@ export type ListActivityQuery = {
   reload: () => void;
 };
 
-/** The owner's likes and copies, shared and stale-while-revalidate (see
- *  `useSharedFetch`); null asks nothing. */
-export const useListActivityQuery = (ownerId: string | null | undefined): ListActivityQuery => {
-  const likes = useSharedFetch(activityKey('likesonmine', ownerId), allLikes, NO_LIKES);
-  const copies = useSharedFetch(activityKey('copiesofmine', ownerId), allCopies, NO_COPIES);
-  const { reload: likesAgain } = likes;
-  const { reload: copiesAgain } = copies;
-  const reload = useCallback(() => { likesAgain(); copiesAgain(); }, [likesAgain, copiesAgain]);
-  return { likes, copies, reload };
-};
-
-/** The same two asks, from a screen that does not draw them — see
- *  `prefetchShared`. Null asks nothing. */
-export const usePrefetchListActivity = (ownerId: string | null | undefined): void => {
-  useEffect(() => {
-    const likesKey = activityKey('likesonmine', ownerId);
-    const copiesKey = activityKey('copiesofmine', ownerId);
-    if (!likesKey || !copiesKey) return;
-    prefetchShared(likesKey, allLikes, NO_LIKES);
-    prefetchShared(copiesKey, allCopies, NO_COPIES);
-  }, [ownerId]);
-};
-
-// ── somebody else's list's activity, for a reader of it ──
-//
-// The same page, opened by a reader who is not the owner (owner, 15 Nov
-// 2026): `likes_on_list` and `copies_of_list` answer for the one list,
-// where the owner's two answer for all of theirs. Kept and shared the
-// same way, one entry per list and per reader — the reader is part of
-// the question, since a block between them and a liker takes a row out.
-// Not asked ahead from the collection page as the owner's is: that ask
-// is one for every list an owner has, and this would be one per list
-// opened, for a page most readers will not open.
 const readerKey = (
   half: 'likesonlist' | 'copiesoflist', readerId: string | null | undefined, collectionId: string | null | undefined,
 ) => (readerId && collectionId ? cacheKey(half, collectionId, readerId) : null);
@@ -350,6 +320,28 @@ export const useListActivityOfQuery = (
   const { reload: copiesAgain } = copies;
   const reload = useCallback(() => { likesAgain(); copiesAgain(); }, [likesAgain, copiesAgain]);
   return { likes, copies, reload };
+};
+
+/** The same two asks, from a screen that does not draw them — the
+ *  collection page, so "View activity ›" opens on the answer (see
+ *  `prefetchShared`). For the list's owner alone, and the rule is here
+ *  rather than at the call: the owner's old question was one ask for all
+ *  their lists, this is one per list of theirs opened, and for a reader
+ *  it would be one per list opened for a page most never open. Nobody,
+ *  no list, a list with no id yet, or somebody else's asks nothing. */
+export const usePrefetchOwnListActivity = (
+  readerId: string | null | undefined,
+  list: Pick<Collection, 'id' | 'owner_id'> | null | undefined,
+): void => {
+  const collectionId = list?.id;
+  const mine = !!readerId && list?.owner_id === readerId;
+  useEffect(() => {
+    const likesKey = readerKey('likesonlist', mine ? readerId : null, collectionId);
+    const copiesKey = readerKey('copiesoflist', mine ? readerId : null, collectionId);
+    if (!likesKey || !copiesKey) return;
+    prefetchShared(likesKey, () => fetchLikesOnList(collectionId as string), NO_LIKES);
+    prefetchShared(copiesKey, () => fetchCopiesOfList(collectionId as string), NO_COPIES);
+  }, [mine, readerId, collectionId]);
 };
 
 // ── a list's statistics, for whoever reads it ──

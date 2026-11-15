@@ -2,14 +2,14 @@
 //
 // One list's activity (owner, 13 Nov 2026): the list in a small card,
 // then every like and copy on it, all time, newest first. What is pinned
-// here is what the page asks for (the epoch, so all time), which rows it
+// here is what the page asks for (the one list, by its id), which rows it
 // keeps (this list's, one per act), how each row reads (the handle, the
 // card head's compact age with "now" for "New", the name, the badge for
 // the kind), and the four states — loading, empty (yours, whatever it is
 // now, or not yours), failed with Try again — and that a row is not a
 // control. A list that is not public is asked about like any other.
 // `actsOn`, `listAgeOf` and `ageWord` run for real, and so does the kept,
-// shared answer the page reads (`useListActivityQuery`, `useSharedFetch`):
+// shared answer the page reads (`useListActivityOfQuery`, `useSharedFetch`):
 // only the two RPC wrappers under it and the providers are stood in. So
 // the page opening on a kept answer without a spinner, and its faces
 // coming off the rows with no second read, are tested through the code
@@ -178,13 +178,13 @@ beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
   vi.clearAllMocks();
-  data.fetchApplause.mockImplementation(async () => []);
-  data.fetchCopies.mockImplementation(async () => []);
+  data.fetchLikesOnList.mockImplementation(async () => []);
+  data.fetchCopiesOfList.mockImplementation(async () => []);
   // The kept answer outlives a render, in memory and on the phone: each
   // test starts with neither, unless it makes one.
   forgetSharedFetches();
-  await AsyncStorage.removeItem(cacheKey('likesonmine', 'all', 'me'));
-  await AsyncStorage.removeItem(cacheKey('copiesofmine', 'all', 'me'));
+  await AsyncStorage.removeItem(cacheKey('likesonlist', 'c1', 'me'));
+  await AsyncStorage.removeItem(cacheKey('copiesoflist', 'c1', 'me'));
   state.me = 'me';
   state.profile = { handle: 'andy', avatar_url: 'https://faces/andy.jpg' };
   state.faces = {};
@@ -276,10 +276,13 @@ describe('the list, in a card', () => {
 });
 
 describe('what it asks for', () => {
-  it('asks both functions from the epoch, so it is all time', async () => {
+  // One list's question, by its id, and all time: neither function takes
+  // a `since` (15 Nov 2026; until then the owner's page asked Activity's
+  // two from the epoch, for every list they own).
+  it('asks both functions for this list, once each', async () => {
     await show();
-    expect(data.fetchApplause).toHaveBeenCalledExactlyOnceWith('1970-01-01T00:00:00.000Z');
-    expect(data.fetchCopies).toHaveBeenCalledExactlyOnceWith('1970-01-01T00:00:00.000Z');
+    expect(data.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith('c1');
+    expect(data.fetchCopiesOfList).toHaveBeenCalledExactlyOnceWith('c1');
   });
 
   // A list gone private keeps what it gathered while public (owner, 13
@@ -287,11 +290,11 @@ describe('what it asks for', () => {
   // the page asks, and lists, as it does for a public one.
   it('asks for a list that is not public, and lists what it gathered', async () => {
     state.mine = [list({ is_public: false })];
-    data.fetchApplause.mockImplementation(async () => [like(ago(2 * HOUR), 'minh', 'Minh Trần')]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(30 * MIN), 'lan', 'Lan Phạm')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(2 * HOUR), 'minh', 'Minh Trần')]);
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(30 * MIN), 'lan', 'Lan Phạm')]);
     await show();
-    expect(data.fetchApplause).toHaveBeenCalledExactlyOnceWith('1970-01-01T00:00:00.000Z');
-    expect(data.fetchCopies).toHaveBeenCalledExactlyOnceWith('1970-01-01T00:00:00.000Z');
+    expect(data.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith('c1');
+    expect(data.fetchCopiesOfList).toHaveBeenCalledExactlyOnceWith('c1');
     expect(rowLines()).toEqual([['Lan Phạm', '@lan · 30m'], ['Minh Trần', '@minh · 2h']]);
     expect(screen.queryByTestId('activity-empty')).toBeNull();
     expect(screen.queryByText(/Only a public collection/)).toBeNull();
@@ -303,7 +306,7 @@ describe('what it asks for', () => {
   it('gives a list that is not public and has no acts the ordinary empty state', async () => {
     state.mine = [list({ is_public: false })];
     await show();
-    expect(data.fetchApplause).toHaveBeenCalledOnce();
+    expect(data.fetchLikesOnList).toHaveBeenCalledOnce();
     expect(screen.getByTestId('activity-empty').textContent)
       .toBe('No likes or copies yetWhen someone likes or copies this collection, you will see it here.');
     expect(screen.queryByTestId('activity-private')).toBeNull();
@@ -314,8 +317,8 @@ describe('what it asks for', () => {
   // the public shelf — reads as empty: no card, no fetch.
   it('shows nothing useful for a list the reader cannot open', async () => {
     await show('somebody-elses');
-    expect(data.fetchApplause).not.toHaveBeenCalled();
-    expect(data.fetchCopies).not.toHaveBeenCalled();
+    expect(data.fetchLikesOnList).not.toHaveBeenCalled();
+    expect(data.fetchCopiesOfList).not.toHaveBeenCalled();
     expect(data.fetchLikesOnList).not.toHaveBeenCalled();
     expect(data.fetchCopiesOfList).not.toHaveBeenCalled();
     expect(screen.queryByTestId('activity-list')).toBeNull();
@@ -385,7 +388,7 @@ describe('what it asks for', () => {
     await show('theirs');
     expect(data.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith('c9');
     expect(data.fetchCopiesOfList).toHaveBeenCalledExactlyOnceWith('c9');
-    // Not the owner's question, which answers for the reader's own lists.
+    // Not Activity's question, which answers for the reader's own lists.
     expect(data.fetchApplause).not.toHaveBeenCalled();
     expect(data.fetchCopies).not.toHaveBeenCalled();
     expect(within(screen.getByTestId('activity-list')).getByText('Their list')).toBeTruthy();
@@ -421,19 +424,32 @@ describe('what it asks for', () => {
     expect(within(theirs).getByTestId('activity-add')).toBeTruthy();
   });
 
-  // The owner's page is asked the owner's way still: one answer for all
-  // their lists, the one the collection page asked ahead for.
-  it('asks the owner’s own question on the owner’s own list', async () => {
+  // The owner is asked the reader's way (owner, 15 Nov 2026): the list's
+  // own question, which names the owner's own like. Activity's — one
+  // answer for all their lists — leaves that like out, and the card in
+  // front of this page counts it: ♥ 3 there, two names here.
+  it('asks the owner the list’s question, not Activity’s, and names the owner’s own like', async () => {
+    data.fetchLikesOnList.mockImplementation(async () => [
+      { ...like(ago(HOUR), 'andy', 'Andy'), liker_id: 'me' },
+      like(ago(2 * HOUR), 'hado', 'Ha Do'),
+      like(ago(3 * HOUR), 'xitrum', 'Xì Trum'),
+    ]);
     await show();
-    expect(data.fetchApplause).toHaveBeenCalledTimes(1);
-    expect(data.fetchLikesOnList).not.toHaveBeenCalled();
-    expect(data.fetchCopiesOfList).not.toHaveBeenCalled();
+    expect(data.fetchLikesOnList).toHaveBeenCalledExactlyOnceWith('c1');
+    expect(data.fetchApplause).not.toHaveBeenCalled();
+    expect(data.fetchCopies).not.toHaveBeenCalled();
+    // Three hearts on the card, three rows here; the owner's has no
+    // friend button, as nobody befriends themselves.
+    const rows = screen.getAllByTestId('activity-row');
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('Andy');
+    expect(within(rows[0]).queryByRole('button')).toBeNull();
   });
 
   it('asks nothing for a list from the launch cache with no id', async () => {
     state.mine = [list({ id: undefined })];
     await show();
-    expect(data.fetchApplause).not.toHaveBeenCalled();
+    expect(data.fetchLikesOnList).not.toHaveBeenCalled();
     expect(screen.getByTestId('activity-empty')).toBeTruthy();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
   });
@@ -441,19 +457,19 @@ describe('what it asks for', () => {
   it('asks nothing signed out', async () => {
     state.me = null;
     await show();
-    expect(data.fetchApplause).not.toHaveBeenCalled();
+    expect(data.fetchLikesOnList).not.toHaveBeenCalled();
     expect(screen.getByTestId('activity-empty')).toBeTruthy();
   });
 });
 
 describe('the rows', () => {
   it('keeps this list’s likes and copies, newest first, one row per act', async () => {
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(5 * MIN), 'lan', 'Lan Phạm'),
       like(ago(1 * MIN), 'elsewhere', 'Not here', 'c2'),
       like(ago(2 * HOUR), 'minh', 'Minh Trần'),
     ]);
-    data.fetchCopies.mockImplementation(async () => [
+    data.fetchCopiesOfList.mockImplementation(async () => [
       copy(ago(30 * MIN), 'lan', 'Lan Phạm'),
       copy(ago(3 * MIN), 'other', 'Other', 'c9'),
     ]);
@@ -470,7 +486,7 @@ describe('the rows', () => {
   });
 
   it('dates an act by the card head’s table, with "now" for under a minute', async () => {
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(20_000), 'a'),
       like(ago(26 * HOUR), 'b'),
       like(new Date(2025, 10, 12, 9).toISOString(), 'c'),
@@ -481,7 +497,7 @@ describe('the rows', () => {
 
   it('dates it in Vietnamese as the owner wrote it: Vừa xong, 5p, 12/11, 12/11/25', async () => {
     state.lang = 'vi';
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(20_000), 'a'),
       like(ago(5 * MIN), 'b'),
       like(ago(3 * HOUR), 'c'),
@@ -493,13 +509,13 @@ describe('the rows', () => {
   });
 
   it('calls a person whose profile is gone Someone, with no second line', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), null, null)]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), null, null)]);
     await show();
     expect(rowLines()).toEqual([['Someone 5m']]);
   });
 
   it('sets the name in semibold, and the handle and age under it in grey', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
     await show();
     const row = screen.getByTestId('activity-row');
     expect(textStyleOf(within(row).getByText('Lan Phạm'))).toMatchObject({ fontWeight: font.semibold, color: colors.text });
@@ -509,7 +525,7 @@ describe('the rows', () => {
   // No name: the handle is the name, bare, with the age beside it — as
   // the collection card's head draws a handle alone.
   it('draws a handle with no name bare, on one line with its age', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', null)]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan', null)]);
     await show();
     expect(rowLines()).toEqual([['lan 5m']]);
     const row = screen.getByTestId('activity-row');
@@ -522,11 +538,11 @@ describe('the rows', () => {
   // no second read by handle — not the batched one the page used to
   // make, not any other.
   it('wears each face off its own row, with no second read, and the blank disc without one', async () => {
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(5 * MIN), 'lan', null, 'c1', 'https://faces/lan.jpg'),
       like(ago(9 * MIN), 'cleared', null, 'c1', ''),
     ]);
-    data.fetchCopies.mockImplementation(async () => [
+    data.fetchCopiesOfList.mockImplementation(async () => [
       copy(ago(6 * MIN), 'minh', null, 'c1', 'https://faces/minh.jpg'),
       copy(ago(7 * MIN), null),
     ]);
@@ -543,15 +559,15 @@ describe('the rows', () => {
   // the same person; the server answers each row's own join) each wear
   // their own.
   it('takes the face from the row even where two rows share a handle', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', null, 'c1', 'https://faces/new.jpg')]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(9 * MIN), 'Lan', null, 'c1', 'https://faces/old.jpg')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan', null, 'c1', 'https://faces/new.jpg')]);
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(9 * MIN), 'Lan', null, 'c1', 'https://faces/old.jpg')]);
     await show();
     expect(screen.getAllByTestId('activity-row').map((r) => r.querySelector('img')!.getAttribute('src')))
       .toEqual(['https://faces/new.jpg', 'https://faces/old.jpg']);
   });
 
   it('draws a 40pt face', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
     const face = whoOf(screen.getByTestId('activity-row')).firstElementChild as HTMLElement;
     expect([viewStyleOf(face).width, viewStyleOf(face).height]).toEqual([40, 40]);
@@ -560,8 +576,8 @@ describe('the rows', () => {
   // A red heart for a like, the copy mark on the accent for a copy, each
   // on the face's corner with a ring of the page around it.
   it('badges a like with a white heart on red and a copy with the copy mark on the accent', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(9 * MIN), 'minh')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(9 * MIN), 'minh')]);
     await show();
     const liked = screen.getByTestId('activity-badge-like');
     const copied = screen.getByTestId('activity-badge-copy');
@@ -579,14 +595,14 @@ describe('the rows', () => {
   });
 
   it('rings the badge in the page’s own ground, resolved for the look in force', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
     expect(viewStyleOf(screen.getByTestId('activity-badge-like')).borderColor).toBe(bgHex.dark);
   });
 
   it('rings it in paper’s ground on the light look', async () => {
     state.scheme = 'light';
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
     expect(viewStyleOf(screen.getByTestId('activity-badge-like')).borderColor).toBe(bgHex.light);
   });
@@ -594,7 +610,7 @@ describe('the rows', () => {
   // Crew's hairline (owner, 13 Nov 2026): across the row inside the
   // card, none above the first — the rows of a card, not a list's inset.
   it('draws Crew’s hairline between rows, across the row, none above the first', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'a'), like(ago(9 * MIN), 'b')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'a'), like(ago(9 * MIN), 'b')]);
     await show();
     const [first, second] = screen.getAllByTestId('activity-row');
     expect(viewStyleOf(first).borderTopWidth ?? 0).toBe(0);
@@ -606,8 +622,8 @@ describe('the rows', () => {
   });
 
   it('is a line to read, not a control, and says in words what the badge shows', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(9 * MIN), null)]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(9 * MIN), null)]);
     await show();
     const rows = screen.getAllByTestId('activity-row');
     expect(rows.map((r) => whoOf(r).getAttribute('aria-label'))).toEqual([
@@ -636,8 +652,8 @@ describe('the states', () => {
   // Both halves or neither: the copies that came first wait for the
   // likes, so a row never lands above one that arrives a beat later.
   it('turns under the card while the acts are on their way', async () => {
-    data.fetchApplause.mockImplementation(() => new Promise(() => {}));
-    data.fetchCopies.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
+    data.fetchLikesOnList.mockImplementation(() => new Promise(() => {}));
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
     await show();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
     expect(screen.getByTestId('activity-loading')).toBeTruthy();
@@ -646,7 +662,7 @@ describe('the states', () => {
   });
 
   it('says nobody yet on a public list nobody has acted on, with nothing to press', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(MIN), 'x', null, 'c2')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(MIN), 'x', null, 'c2')]);
     await show();
     const empty = screen.getByTestId('activity-empty');
     expect(empty.textContent).toBe('No likes or copies yetWhen someone likes or copies this collection, you will see it here.');
@@ -654,19 +670,19 @@ describe('the states', () => {
   });
 
   it('says it failed, with Try again, when both halves fail — and Try again asks again', async () => {
-    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
-    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchLikesOnList.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementation(async () => { throw new Error('offline'); });
     await show();
     expect(screen.getByTestId('activity-failed').textContent).toContain("Couldn't load activity");
     // Not "your": a reader who is not the owner sees this too.
     expect(screen.getByTestId('activity-failed').textContent).not.toContain('your activity');
     expect(screen.queryByTestId('activity-empty')).toBeNull();
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
-    data.fetchCopies.mockImplementation(async () => []);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchCopiesOfList.mockImplementation(async () => []);
     fireEvent.click(screen.getByTestId('activity-retry'));
     await flush();
-    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
-    expect(data.fetchCopies).toHaveBeenCalledTimes(2);
+    expect(data.fetchLikesOnList).toHaveBeenCalledTimes(2);
+    expect(data.fetchCopiesOfList).toHaveBeenCalledTimes(2);
     expect(screen.queryByTestId('activity-failed')).toBeNull();
     expect(rowLines()).toEqual([['lan 5m']]);
   });
@@ -674,13 +690,13 @@ describe('the states', () => {
   // While Try again is out, the page turns: the failure has cleared,
   // and nothing has come back yet to say whether there is anything.
   it('turns while Try again asks, rather than saying there is nothing', async () => {
-    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
-    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchLikesOnList.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementation(async () => { throw new Error('offline'); });
     await show();
     expect(screen.getByTestId('activity-failed')).toBeTruthy();
     let answer!: (rows: Applause[]) => void;
-    data.fetchApplause.mockImplementation(() => new Promise((r) => { answer = r; }));
-    data.fetchCopies.mockImplementation(async () => []);
+    data.fetchLikesOnList.mockImplementation(() => new Promise((r) => { answer = r; }));
+    data.fetchCopiesOfList.mockImplementation(async () => []);
     fireEvent.click(screen.getByTestId('activity-retry'));
     await flush();
     expect(screen.getByTestId('activity-loading')).toBeTruthy();
@@ -695,8 +711,8 @@ describe('the states', () => {
   it('draws a kept empty answer as empty, without a spinner, while it refreshes', async () => {
     await show();
     cleanup();
-    data.fetchApplause.mockImplementation(() => new Promise(() => {}));
-    data.fetchCopies.mockImplementation(() => new Promise(() => {}));
+    data.fetchLikesOnList.mockImplementation(() => new Promise(() => {}));
+    data.fetchCopiesOfList.mockImplementation(() => new Promise(() => {}));
     await show();
     expect(screen.getByTestId('activity-empty')).toBeTruthy();
     expect(screen.queryByTestId('activity-loading')).toBeNull();
@@ -705,10 +721,10 @@ describe('the states', () => {
   // A retry that succeeds with nothing is an empty list, not the old
   // failure left standing.
   it('forgets the failure once Try again comes back with nothing', async () => {
-    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchLikesOnList.mockImplementation(async () => { throw new Error('offline'); });
     await show();
     expect(screen.getByTestId('activity-failed')).toBeTruthy();
-    data.fetchApplause.mockImplementation(async () => []);
+    data.fetchLikesOnList.mockImplementation(async () => []);
     fireEvent.click(screen.getByTestId('activity-retry'));
     await flush();
     expect(screen.queryByTestId('activity-failed')).toBeNull();
@@ -716,12 +732,12 @@ describe('the states', () => {
   });
 
   it('says it failed when either half fails and the other has nothing', async () => {
-    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementation(async () => { throw new Error('offline'); });
     await show();
     expect(screen.getByTestId('activity-failed')).toBeTruthy();
     cleanup();
-    data.fetchCopies.mockImplementation(async () => []);
-    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementation(async () => []);
+    data.fetchLikesOnList.mockImplementation(async () => { throw new Error('offline'); });
     await show();
     expect(screen.getByTestId('activity-failed')).toBeTruthy();
   });
@@ -729,11 +745,11 @@ describe('the states', () => {
   // Opened again, the page draws what it was last told on its first
   // render — no spinner, no empty frame — and asks again behind it.
   it('opens on the kept answer without a spinner, and refreshes it behind', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
     await show();
     cleanup();
     let answer!: (rows: Applause[]) => void;
-    data.fetchApplause.mockImplementation(() => new Promise((r) => { answer = r; }));
+    data.fetchLikesOnList.mockImplementation(() => new Promise((r) => { answer = r; }));
     render(
       <CollectionActivityScreen
         navigation={{ goBack: vi.fn(), navigate: vi.fn() } as unknown as Nav}
@@ -744,7 +760,7 @@ describe('the states', () => {
     expect(screen.queryByTestId('activity-loading')).toBeNull();
     expect(document.querySelector('[role="progressbar"]')).toBeNull();
     expect(rowLines()).toEqual([['Lan Phạm', '@lan · 5m']]);
-    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(data.fetchLikesOnList).toHaveBeenCalledTimes(2);
     await act(async () => { answer([like(ago(1 * MIN), 'an', 'An Lê'), like(ago(5 * MIN), 'lan', 'Lan Phạm')]); });
     expect(rowLines()).toEqual([['An Lê', '@an · 1m'], ['Lan Phạm', '@lan · 5m']]);
   });
@@ -752,11 +768,11 @@ describe('the states', () => {
   // A refresh that fails behind kept rows keeps them, and says nothing:
   // the failure state is for a page with nothing to show.
   it('keeps the kept rows when the refresh behind them fails', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
     cleanup();
-    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
-    data.fetchCopies.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchLikesOnList.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementation(async () => { throw new Error('offline'); });
     await show();
     expect(rowLines()).toEqual([['lan 5m']]);
     expect(screen.queryByTestId('activity-failed')).toBeNull();
@@ -766,19 +782,19 @@ describe('the states', () => {
   // half's rows stand while the failed one is asked again, rather than
   // being taken away for a spinner.
   it('keeps one half’s kept rows on screen while the failed half is asked again', async () => {
-    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
-    data.fetchCopies.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
+    data.fetchLikesOnList.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
     await show();
     cleanup();
-    data.fetchApplause.mockImplementation(() => new Promise(() => {}));
+    data.fetchLikesOnList.mockImplementation(() => new Promise(() => {}));
     await show();
     expect(rowLines()).toEqual([['minh 5m']]);
     expect(screen.queryByTestId('activity-loading')).toBeNull();
   });
 
   it('shows what came back when only one half failed', async () => {
-    data.fetchApplause.mockImplementation(async () => { throw new Error('offline'); });
-    data.fetchCopies.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
+    data.fetchLikesOnList.mockImplementation(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(5 * MIN), 'minh')]);
     await show();
     expect(screen.queryByTestId('activity-failed')).toBeNull();
     expect(rowLines()).toEqual([['minh 5m']]);
@@ -805,7 +821,7 @@ describe('the way to the statistics', () => {
   const link = () => screen.getByTestId('activity-stats-link');
 
   it('stands between the list’s card and the people, and opens the list’s statistics', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'a')]);
     const navigation = await show();
     const card = screen.getByTestId('activity-list');
     const people = screen.getByTestId('activity-people');
@@ -836,7 +852,7 @@ describe('the way to the statistics', () => {
   });
 
   it('is there while the acts are on their way', async () => {
-    data.fetchApplause.mockImplementation(() => new Promise(() => {}));
+    data.fetchLikesOnList.mockImplementation(() => new Promise(() => {}));
     await show();
     expect(screen.getByTestId('activity-loading')).toBeTruthy();
     expect(link()).toBeTruthy();
@@ -865,8 +881,8 @@ describe('the way to the statistics', () => {
   // No count and no filter any more: every act, always, and nothing on
   // the page narrows them.
   it('lists everyone, likes and copies together, with nothing to narrow them', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(3 * MIN), 'b')]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'd')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(3 * MIN), 'b')]);
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(2 * MIN), 'd')]);
     await show();
     expect(rowLines().map((r) => r[0].split(' ')[0])).toEqual(['a', 'd', 'b']);
     expect(screen.queryByTestId('activity-stats')).toBeNull();
@@ -878,8 +894,8 @@ describe('the way to the statistics', () => {
 
 describe('the people, in a card', () => {
   it('puts every row in one card, as Crew’s friends are, at the page’s gap', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(2 * MIN), 'b')]);
-    data.fetchCopies.mockImplementation(async () => [copy(ago(3 * MIN), 'c')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'a'), like(ago(2 * MIN), 'b')]);
+    data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(3 * MIN), 'c')]);
     await show();
     const people = screen.getByTestId('activity-people');
     expect([...people.children]).toEqual(screen.getAllByTestId('activity-row'));
@@ -892,7 +908,7 @@ describe('the people, in a card', () => {
   });
 
   it('pads each row as Crew’s are', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'a')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'a')]);
     await show();
     expect(viewStyleOf(screen.getByTestId('activity-row'))).toMatchObject({
       flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 13,
@@ -914,7 +930,7 @@ describe('the friend button', () => {
       edge('me', 'id-waiting'),
       edge('id-asker', 'me'),
     ];
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(1 * MIN), 'friend'), like(ago(2 * MIN), 'waiting'), like(ago(3 * MIN), 'asker'), like(ago(4 * MIN), 'stranger'),
     ]);
     await show();
@@ -932,7 +948,7 @@ describe('the friend button', () => {
   it('says them in Vietnamese', async () => {
     state.lang = 'vi';
     crew.ships.data = [edge('me', 'id-friend', 'accepted'), edge('me', 'id-waiting'), edge('id-asker', 'me')];
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(1 * MIN), 'friend'), like(ago(2 * MIN), 'waiting'), like(ago(3 * MIN), 'asker'), like(ago(4 * MIN), 'stranger'),
     ]);
     await show();
@@ -942,7 +958,7 @@ describe('the friend button', () => {
 
   it('wears Crew’s looks: the quiet outline, the glass pill, the gradient — each at the chip’s height', async () => {
     crew.ships.data = [edge('me', 'id-friend', 'accepted'), edge('me', 'id-waiting'), edge('id-asker', 'me')];
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(1 * MIN), 'friend'), like(ago(2 * MIN), 'waiting'), like(ago(3 * MIN), 'asker'), like(ago(4 * MIN), 'stranger'),
     ]);
     await show();
@@ -966,7 +982,7 @@ describe('the friend button', () => {
 
   it('offers nothing to somebody you blocked, to yourself, or to a row with nobody behind it', async () => {
     crew.blocks.data = ['id-blocked'];
-    data.fetchApplause.mockImplementation(async () => [
+    data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(1 * MIN), 'blocked'),
       { ...like(ago(2 * MIN), 'andy'), liker_id: 'me' },
       like(ago(3 * MIN), null),
@@ -979,7 +995,7 @@ describe('the friend button', () => {
 
   describe('Add friend', () => {
     const only = () => {
-      data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'lan', 'Lan Phạm')]);
+      data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'lan', 'Lan Phạm')]);
     };
 
     it('sends the request as you, says Requested at once, and reads the crew again', async () => {
@@ -1033,7 +1049,7 @@ describe('the friend button', () => {
     // on either says Requested on both, and sends once.
     it('answers for the person on every row of theirs', async () => {
       only();
-      data.fetchCopies.mockImplementation(async () => [copy(ago(2 * MIN), 'lan', 'Lan Phạm')]);
+      data.fetchCopiesOfList.mockImplementation(async () => [copy(ago(2 * MIN), 'lan', 'Lan Phạm')]);
       data.sendFriendRequest.mockImplementation(() => new Promise<void>(() => {}));
       await show();
       const rows = screen.getAllByTestId('activity-row');
@@ -1046,7 +1062,7 @@ describe('the friend button', () => {
   describe('Accept', () => {
     const asked = () => {
       crew.ships.data = [edge('id-lan', 'me')];
-      data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'lan', 'Lan Phạm')]);
+      data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'lan', 'Lan Phạm')]);
     };
 
     it('accepts their request, says Friends at once, and reads the crew again', async () => {
@@ -1086,7 +1102,7 @@ describe('the friend button', () => {
   // gives the button back.
   it('leaves nothing to tap twice while the first is out', async () => {
     crew.ships.data = [edge('id-lan', 'me')];
-    data.fetchApplause.mockImplementation(async () => [like(ago(1 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'lan')]);
     let fail!: (e: Error) => void;
     data.acceptFriendRequest.mockImplementation(() => new Promise<void>((_r, j) => { fail = j; }));
     await show();
@@ -1138,18 +1154,18 @@ describe('pulling the page down', () => {
 
   it('asks both halves again, and the crew', async () => {
     await show();
-    expect(data.fetchApplause).toHaveBeenCalledTimes(1);
+    expect(data.fetchLikesOnList).toHaveBeenCalledTimes(1);
     pull();
-    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
-    expect(data.fetchCopies).toHaveBeenCalledTimes(2);
+    expect(data.fetchLikesOnList).toHaveBeenCalledTimes(2);
+    expect(data.fetchCopiesOfList).toHaveBeenCalledTimes(2);
     expect(crew.ships.reload).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the rows drawn while it asks, and spins until both halves are in', async () => {
-    data.fetchApplause.mockImplementationOnce(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
+    data.fetchLikesOnList.mockImplementationOnce(async () => [like(ago(5 * MIN), 'lan', 'Lan Phạm')]);
     await show();
-    const likes = held<Applause[]>(data.fetchApplause);
-    const copies = held<Copy[]>(data.fetchCopies);
+    const likes = held<Applause[]>(data.fetchLikesOnList);
+    const copies = held<Copy[]>(data.fetchCopiesOfList);
     pull();
     expect(page().refreshing).toBe(true);
     expect(rowLines()).toEqual([['Lan Phạm', '@lan · 5m']]);
@@ -1164,8 +1180,8 @@ describe('pulling the page down', () => {
   // Either half still out keeps it lit, whichever lands first.
   it('spins while the likes are still out after the copies are in', async () => {
     await show();
-    const likes = held<Applause[]>(data.fetchApplause);
-    const copies = held<Copy[]>(data.fetchCopies);
+    const likes = held<Applause[]>(data.fetchLikesOnList);
+    const copies = held<Copy[]>(data.fetchCopiesOfList);
     pull();
     await copies([]);
     expect(page().refreshing).toBe(true);
@@ -1174,10 +1190,10 @@ describe('pulling the page down', () => {
   });
 
   it('keeps the rows when the pull fails', async () => {
-    data.fetchApplause.mockImplementationOnce(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementationOnce(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
-    data.fetchApplause.mockImplementationOnce(async () => { throw new Error('offline'); });
-    data.fetchCopies.mockImplementationOnce(async () => { throw new Error('offline'); });
+    data.fetchLikesOnList.mockImplementationOnce(async () => { throw new Error('offline'); });
+    data.fetchCopiesOfList.mockImplementationOnce(async () => { throw new Error('offline'); });
     pull();
     await flush();
     expect(page().refreshing).toBe(false);
@@ -1189,7 +1205,7 @@ describe('pulling the page down', () => {
   // again says Friends, and the spinner stays until it has.
   it('spins until the crew it asked for is in, and the button says what the crew now says', async () => {
     crew.ships.data = [edge('me', 'id-lan')];
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     const { rerender } = render(screenEl());
     await flush();
     expect(screen.getByTestId('activity-requested')).toBeTruthy();
@@ -1208,16 +1224,16 @@ describe('pulling the page down', () => {
   // The spinner is the pull's: the ask every open makes behind a kept
   // answer does not light it, and a pull while it is out joins it.
   it('is not lit by the refresh behind a kept answer, and joins it rather than asking again', async () => {
-    data.fetchApplause.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
     cleanup();
-    const likes = held<Applause[]>(data.fetchApplause);
+    const likes = held<Applause[]>(data.fetchLikesOnList);
     render(screenEl());
     expect(rowLines()).toEqual([['lan 5m']]);
     await flush();
     expect(page().refreshing).toBe(false);
     pull();
-    expect(data.fetchApplause).toHaveBeenCalledTimes(2);
+    expect(data.fetchLikesOnList).toHaveBeenCalledTimes(2);
     expect(page().refreshing).toBe(true);
     await likes([like(ago(5 * MIN), 'lan')]);
     expect(page().refreshing).toBe(false);

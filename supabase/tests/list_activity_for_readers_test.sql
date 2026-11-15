@@ -70,7 +70,8 @@ insert into public.blocks (blocker, blocked) values
 insert into public.collection_shares (collection_id, user_id) values
  ('f7000000-0000-0000-0000-0000000000c2', 'f7000000-0000-0000-0000-00000000000e');
 
--- ── the owner: what `likes_on_mine` says for this list, row for row ──
+-- ── the owner: what `likes_on_mine` says for this list, and their own
+--    like with it (15 Nov 2026: the card counts it, so the page names it) ──
 do $$
 declare mine text; list text; cmine text; clist text;
 begin
@@ -85,8 +86,9 @@ begin
   select string_agg(copier_handle, ',' order by copier_handle) into clist
     from public.copies_of_list('f7000000-0000-0000-0000-0000000000c1');
   reset role;
-  assert list = 'rafan,ramuted,ramuter,rareader', format('the owner reads these likes: %s', list);
-  assert list = mine, format('the owner''s list (%s) is not likes_on_mine''s (%s)', list, mine);
+  assert list = 'racurator,rafan,ramuted,ramuter,rareader', format('the owner reads these likes: %s', list);
+  -- Activity's question still leaves the owner's own out.
+  assert mine = 'rafan,ramuted,ramuter,rareader', format('likes_on_mine reads: %s', mine);
   assert clist = 'rafan,rafriend,ramuted', format('the owner reads these copies: %s', clist);
   assert clist = cmine, format('the owner''s copies (%s) are not copies_of_mine''s (%s)', clist, cmine);
 end $$;
@@ -105,10 +107,10 @@ begin
   select liker_avatar_url, liker_id into face, id_
     from public.likes_on_list('f7000000-0000-0000-0000-0000000000c1') where liker_handle = 'rafan';
   reset role;
-  -- Not the outcast (the owner's block), not the curator's own, not
-  -- `ramuted` (the reader blocked them), not `ramuter` (they blocked the
-  -- reader). The reader's own like is a like, and is there.
-  assert likes = 'rafan,rareader', format('a reader reads these likes: %s', likes);
+  -- Not the outcast (the owner's block), not `ramuted` (the reader
+  -- blocked them), not `ramuter` (they blocked the reader). The reader's
+  -- own like is a like, and is there; so is the curator's own.
+  assert likes = 'racurator,rafan,rareader', format('a reader reads these likes: %s', likes);
   -- Not the fan's: it was made a second before the day a reader is told
   -- from, when the policy named the curator alone.
   assert copies = 'rafriend', format('a reader reads these copies: %s', copies);
@@ -147,9 +149,10 @@ end $$;
 
 -- ── the figures: one answer, whoever asks ──
 --
--- Four likes and three copies stand for the owner (the outcast's and the
--- owner's own left out). The reader is told the same four and three,
--- though their page of people lists two and one: a figure that moved with the
+-- Five likes and three copies stand for the owner (the outcast's left
+-- out of both, the owner's own copy left out, the owner's own like
+-- counted since 15 Nov 2026). The reader is told the same five and three,
+-- though their page of people lists three and one: a figure that moved with the
 -- asker would tell them a block exists.
 do $$
 declare o record; r record; f record;
@@ -159,13 +162,13 @@ begin
   select * into o from public.collection_stats('f7000000-0000-0000-0000-0000000000c1');
   set local test.uid = 'f7000000-0000-0000-0000-00000000000d';
   select * into r from public.collection_stats('f7000000-0000-0000-0000-0000000000c1');
-  -- And somebody who has liked nothing: with the caller's own like left
-  -- out in place of the owner's, the reader above still counts four (one
-  -- of theirs out, the owner's in) and only this asker shows the five.
+  -- And somebody who has liked nothing: were the caller's own like left
+  -- out, the owner and the reader above would each count four and only
+  -- this asker would show the five.
   set local test.uid = 'f7000000-0000-0000-0000-00000000000e';
   select * into f from public.collection_stats('f7000000-0000-0000-0000-0000000000c1');
   reset role;
-  assert o.likes_total = 4 and o.copies_total = 3, format('the owner''s figures: %s likes, %s copies', o.likes_total, o.copies_total);
+  assert o.likes_total = 5 and o.copies_total = 3, format('the owner''s figures: %s likes, %s copies', o.likes_total, o.copies_total);
   assert r = o, format('a reader''s figures %s are not the owner''s %s', r, o);
   assert f = o, format('another reader''s figures %s are not the owner''s %s', f, o);
 end $$;
