@@ -62,13 +62,13 @@
 // three rows that never grow are a setting, and a radio list is what a
 // setting looks like; the looks are a collection that does grow.
 //
-// What says where you are is a count, "11 colours · 2/3", on the heading
-// — not dots and not arrows. Dots were tried on every carousel and taken
-// off on 10 Oct for the reasons in `PageCount`: a count says the total,
-// is one size, and is read rather than counted. Arrows are the desktop's
-// affordance; on a phone the count already says there is a page after
-// this one, and a swipe is what a page is for. The owner's mockup had
-// both, and agreed to neither.
+// Nothing on the heading says where you are: no dots, no arrows, and
+// since 15 Nov 2026 no count. Dots were tried on every carousel and taken
+// off on 10 Oct for the reasons in `PageCount`; arrows are the desktop's
+// affordance. The count that replaced them, "19 colours · 4/5", the owner
+// took off on the phone as not needed: how many looks there are decides
+// nothing, and which page of five this is matters to nobody choosing a
+// colour. The next page's edge (below) is what says there is more.
 //
 // The worn look is the first card, so the sheet opens on the first page
 // with the tick on it — the one thing a settings sheet owes on arrival.
@@ -77,9 +77,9 @@
 // the grid (`orderLooks`, whose header in `lib/lookLabels` has why), and
 // the first page is always the right one.
 //
-// And the next page shows its edge. The count said there were three pages
-// and nothing said *swipe*: the owner's screenshot of the first cut had a
-// grid that looked complete, with "1/3" as its only hint. So a page is a
+// And the next page shows its edge. Nothing said *swipe*: the owner's
+// screenshot of the first cut had a grid that looked complete, with a
+// count, "1/3", as its only hint. So a page is a
 // sliver narrower than the sheet and the strip snaps by page rather than
 // paging by its own width — the Explore shelf's grammar (`snapToInterval`,
 // start-aligned, a ~26pt sliver of the next card at every width), which
@@ -334,10 +334,6 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   const palettes = order.map((id) => catalogue.find((o) => o.id === id)!);
   const pages: typeof palettes[] = [];
   for (let i = 0; i < palettes.length; i += PER_PAGE) pages.push(palettes.slice(i, i + PER_PAGE));
-  // The first page, where the worn look now always is; the count names it
-  // until a swipe lands somewhere else.
-  const [page, setPage] = useState(0);
-  useEffect(() => { if (visible) setPage(0); }, [visible]);
   const wordOn = (id: Pinned): 'popular' | 'new' | null =>
     popular.includes(id) ? 'popular' : unseen.includes(id) ? 'new' : null;
   // A card that changes the look restarts the app. The choice waits in
@@ -433,22 +429,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
         })}
         {palettes.length > 0 && (
           <>
-            <View style={s.sectionRow}>
-              <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー', '颜色', '顏色')}</Text>
-              {/* The count, and only with somewhere to swipe to — the
-                  rule `PageCount` keeps. Tabular digits so a swipe moves
-                  the page and not the dot. */}
-              {pages.length > 1 && (
-                <Text style={s.pageCount} testID="look-pages">
-                  {t(
-                    `${palettes.length} colours · ${page + 1}/${pages.length}`,
-                    `${palettes.length} bảng màu · ${page + 1}/${pages.length}`,
-                    `${palettes.length}色 · ${page + 1}/${pages.length}`,
-                    `${palettes.length} 种颜色 · ${page + 1}/${pages.length}`, `${palettes.length} 種顏色 · ${page + 1}/${pages.length}`,
-                  )}
-                </Text>
-              )}
-            </View>
+            <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー', '颜色', '顏色')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -461,13 +442,6 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
               snapToAlignment="start"
               decelerationRate="fast"
               contentContainerStyle={{ gap: PAGE_GAP, paddingRight: PEEK }}
-              // Clamped and rounded as the carousel's is: a momentum end
-              // reported past the last page cannot name a page that is
-              // not there.
-              onMomentumScrollEnd={(e) => setPage(Math.min(
-                pages.length - 1,
-                Math.max(0, Math.round(e.nativeEvent.contentOffset.x / stride)),
-              ))}
             >
               {pages.map((cards, i) => (
                 // A last page of three keeps its empty cell: the cards
@@ -563,14 +537,9 @@ const s = StyleSheet.create({
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginHorizontal: 4, marginVertical: 3,
   },
-  sectionRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   section: {
     color: colors.text, fontSize: 15, fontWeight: font.semibold,
     marginTop: 14, marginBottom: 10, paddingHorizontal: 4,
-  },
-  pageCount: {
-    color: colors.textTertiary, fontSize: 13, paddingHorizontal: 4,
-    fontVariant: ['tabular-nums'],
   },
   // One page of the strip: the grid of two, two rows deep, at the width
   // the strip snaps by.
