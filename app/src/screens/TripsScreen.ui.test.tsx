@@ -298,6 +298,20 @@ describe('the two halves', () => {
     fireEvent.click(screen.getByTestId('trip-upcoming-0'));
     expect(n.navigate).toHaveBeenCalledWith('TripDetail', { id: 't1' });
   });
+
+  // A trip already taken opens the same way; only an upcoming one had
+  // ever been tapped.
+  it('opens a past trip on its detail', () => {
+    const n = show([trip({ id: 'old', title: 'Last week', day: GONE })]);
+    fireEvent.click(screen.getByText('Last week'));
+    expect(n.navigate).toHaveBeenCalledWith('TripDetail', { id: 'old' });
+  });
+
+  // A day the app cannot read is printed as it was stored, not dropped.
+  it('prints a day it cannot read as it is written', () => {
+    show([trip({ day: 'sometime' })]);
+    expect(text()).toContain('sometime');
+  });
 });
 
 describe('the card', () => {
