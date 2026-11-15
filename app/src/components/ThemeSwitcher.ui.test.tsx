@@ -284,22 +284,22 @@ describe('the looks', () => {
       }
       throw new Error('no matching element in the committed tree');
     };
-    const strip = () => propsWhere((p) => !!p.horizontal && 'onMomentumScrollEnd' in p);
-    const swipe = (x: number) => act(() => { strip().onMomentumScrollEnd({ nativeEvent: { contentOffset: { x } } }); });
+    const strip = () => propsWhere((p) => !!p.horizontal && 'snapToInterval' in p);
     /** The strip's stride — a page and its gap, which is what it snaps by
      *  and reads the page off. The page's width is read off a page rather
      *  than assumed: the runner lays out at no width at all, and the
      *  strip floors it. */
     const pageW = () => StyleSheet.flatten(propsWhere((p) => p.testID === 'look-page-0').style).width as number;
-    const stride = () => strip().snapToInterval as number;
     const radiosIn = (page: number) => screen.getByTestId(`look-page-${page}`).querySelectorAll('[role="radio"]').length;
 
-    it('cuts the nineteen into pages of four, four, four, four and three, and counts them on the heading', () => {
+    it('cuts the nineteen into pages of four, four, four, four and three, and counts nothing on the heading', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       expect(screen.queryByTestId('look-page-5')).toBeNull();
       expect([radiosIn(0), radiosIn(1), radiosIn(2), radiosIn(3), radiosIn(4)]).toEqual([4, 4, 4, 4, 3]);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
-      // No dots, no arrows: the count and the sliver are the indicator.
+      // No dots, no arrows, and no count (owner, 15 Nov 2026): the heading
+      // is its word alone, and the sliver is the indicator.
+      expect(screen.queryByTestId('look-pages')).toBeNull();
+      expect(screen.getByText('Colours').parentElement!.textContent).not.toMatch(/\d/);
       expect(document.querySelector('[data-icon="chevron-forward"]')).toBeNull();
       expect(document.querySelector('[data-icon="chevron-back"]')).toBeNull();
     });
@@ -322,18 +322,6 @@ describe('the looks', () => {
       expect(content.paddingRight).toBe(26);
     });
 
-    it('reports the page a swipe landed on, rounded and clamped', () => {
-      render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      swipe(stride() * 2);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 3/5');
-      swipe(stride() * 0.6);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 2/5');
-      swipe(stride() * 9);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 5/5');
-      swipe(-40);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
-    });
-
     // The tick is the one thing a settings sheet owes on arrival, and
     // since 18 Oct 2026 the worn look is the first card: the sheet opens
     // on the first page with the tick on it.
@@ -341,21 +329,9 @@ describe('the looks', () => {
       state.pref = 'royal';
       state.look = 'royal';
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
       const first = screen.getByTestId('look-page-0').querySelector('[role="radio"]')!;
       expect(first.getAttribute('data-testid')).toBe('theme-royal');
       expect(first.querySelector('[data-icon="checkmark"]')).toBeTruthy();
-    });
-
-    // Closed on page three and opened again: the count starts over from
-    // the worn look's page, as the strip itself does on its remount.
-    it('starts the count over each time it opens', () => {
-      const { rerender } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      swipe(stride() * 2);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 3/5');
-      rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
-      rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(screen.getByTestId('look-pages').textContent).toBe('19 colours · 1/5');
     });
   });
 
