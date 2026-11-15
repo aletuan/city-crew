@@ -65,6 +65,7 @@ Chiều mũi tên chỉ đi xuống. Hai điểm hay bị hiểu nhầm:
 | `lib/` không import components hay screens | như trên | `npm run lint` |
 | `lib/*.ts` không import `react`, `react-native`, `./supabase` hay `@supabase/*`, trừ file có tên trong `IMPURE` | như trên; `IMPURE` ở `app/impure.js` | `npm run lint` |
 | `lib/*.ts` và `lib/data/*.ts` thuần, test được trong Node | coverage 100% từng file, `app/vitest.config.ts` | `npm run coverage` |
+| hàm không dài quá 150 dòng code, độ phức tạp không quá 25; file đã vượt thì không được vượt con số của chính nó | `max-lines-per-function`, `complexity`; trần và danh sách ở `app/oversize.js` | `npm run lint` |
 | màn nào cũng có cầu dao lỗi riêng | `ScreenBoundary.ui.test.tsx` đọc `App.tsx` | `npm test` |
 | taxonomy khớp ở app, dashboard và check constraint | `data/test/categories-sync.test.mjs` | job `data` |
 | policy RLS hỏi "bạn là ai" một lần mỗi truy vấn — viết `(select auth.uid())`, `(select is_editor())` — và không đọc lại chính bảng của nó | `supabase/tests/rls_ask_once_test.sql`; lượt chạy thứ hai của `run.sh` chạy lại mọi test RLS trên policy đã viết lại | job `migrations` |
@@ -238,6 +239,9 @@ Ghi ra để không ai tưởng là có chủ ý:
   phần đã phủ ra thì file cha tụt dưới sàn theo file. Sau khi có test cho
   các đường chưa ai đi (#1356), hai màn được tách cùng cách ra
   `screens/search/` và `screens/trips/` (1.107 → 836 và 779 → 389 dòng).
+  Từ 15/11/2026 kích thước hàm có trần: `app/oversize.js` ghi 34 file
+  đang vượt, mỗi file với con số của nó, và lint đỏ khi một con số bị
+  vượt. Tách bớt thì hạ con số trong cùng thay đổi.
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.

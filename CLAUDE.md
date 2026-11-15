@@ -54,6 +54,12 @@ and commit what it writes. `scripts/chinese.test.ts` fails until you do,
 and a Traditional word to change is changed in `scripts/hant.ts`, never
 in the call.
 
+**A function has a ceiling**: 150 lines of code and a complexity of 25
+(`app/oversize.js`). The 34 files already over it are listed there, each
+at the size it stood at, and lint is red the moment one grows. Bring a
+function down and lower its number in the same change; nothing lowers it
+for you.
+
 Run all five locally before pushing. One validated push beats three
 speculative ones, and a red PR costs a cycle of the reviewer's trust.
 
