@@ -33,6 +33,7 @@ const src = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
 const NOT_BUTTONS: Record<string, string> = {
   'components/CityRow.tsx newChip': 'the "New" flag beside a city\'s name; the row is the button',
+  'components/EngagementRing.tsx badge': 'the "Lv" badge on the avatar\'s ring, which says what it is when pressed — as the role disc on the same picture does, left alone by its fixed width; a badge 32 tall would cover the ring it sits on, and its reach is 44 by hitSlop',
   'components/ReviewBadge.tsx pill': 'a label on a card; the card is the button',
   'components/ThemeSwitcher.tsx word': 'the "Popular" / "New" flag on a look card',
   'components/ui/controls.tsx tile': 'a grid tile, sized by its cell',

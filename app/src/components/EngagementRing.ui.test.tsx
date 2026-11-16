@@ -17,7 +17,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '../uitest/render';
+import { fireEvent, render, screen } from '../uitest/render';
 import { ringTrack } from '../theme';
 import { visibleSweep } from '../lib/ring';
 
@@ -32,15 +32,33 @@ import EngagementRing from './EngagementRing';
 const paths = (root: HTMLElement) => root.querySelectorAll('[data-stub="Path"]');
 const track = (root: HTMLElement) => root.querySelector('[data-stub="Circle"]');
 
+const explain = vi.fn();
 const ring = (progress: number, level = 3) =>
   render(
-    <EngagementRing size={88} level={level} progress={progress}>
+    <EngagementRing size={88} level={level} progress={progress} onExplain={explain}>
       <Text>face</Text>
     </EngagementRing>,
   );
 
 describe('the engagement ring', () => {
-  beforeEach(() => { theme.scheme = 'dark'; });
+  beforeEach(() => { theme.scheme = 'dark'; explain.mockClear(); });
+
+  // The pill says what the level is, when pressed (owner, 16 Nov 2026):
+  // nothing in the app said what it counted.
+  it('makes the pill a press that asks for the explanation, and nothing else one', () => {
+    const { container } = ring(0.4, 15);
+    const pill = screen.getByTestId('level-badge');
+    expect(pill.textContent).toBe('Lv 15');
+    expect(pill.getAttribute('role')).toBe('button');
+    // Spelled for VoiceOver, which reads "Lv" as two letters.
+    expect(pill.getAttribute('aria-label')).toBe('Level 15');
+    // Pressing the picture or the ring is not pressing the pill.
+    fireEvent.click(screen.getByText('face'));
+    fireEvent.click(track(container)!);
+    expect(explain).not.toHaveBeenCalled();
+    fireEvent.click(pill);
+    expect(explain).toHaveBeenCalledOnce();
+  });
 
   it('wraps the avatar it is given and names the level on its corner', () => {
     ring(0.4, 7);
