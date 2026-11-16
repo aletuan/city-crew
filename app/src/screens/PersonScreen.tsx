@@ -54,6 +54,13 @@
 // read here: the lists on this page are public, and a block is a contact
 // policy, not a content filter — the policy's own words.
 //
+// ── the ⋯ (16 Nov 2026) ──
+//
+// Report, block, and taking a block back: `usePersonMenu`, where the
+// reasoning is. It came with the second door to this page — a press on
+// the author's face at the head of a list — whose sheet used to hold
+// the block.
+//
 // ── what was not measured ──
 //
 // Whether anybody presses a face. That is the question this step exists
@@ -65,6 +72,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { Image } from 'expo-image';
 import { Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { useFriendButtons } from '../components/FriendButton';
+import { usePersonMenu } from '../components/PersonMenu';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useSession } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
@@ -105,6 +113,8 @@ export default function PersonScreen({ navigation, route }: {
 
   const { friendButton, crew } = useFriendButtons(me, 'person');
   const mutual = person ? crew.mutual[person.id] ?? 0 : 0;
+  // Report, block, unblock — `usePersonMenu`.
+  const menu = usePersonMenu(me, person, crew);
 
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -226,6 +236,7 @@ export default function PersonScreen({ navigation, route }: {
       backTestID="person-back"
       backBare
       compactTitle
+      right={menu.button}
     >
       <ScrollView
         onScroll={duckScroll}
@@ -235,6 +246,7 @@ export default function PersonScreen({ navigation, route }: {
       >
         {page}
       </ScrollView>
+      {menu.node}
     </Screen>
   );
 }

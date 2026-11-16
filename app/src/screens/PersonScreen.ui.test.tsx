@@ -17,7 +17,8 @@ import type { FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
 import { bgHex, colors } from '../theme';
 
-const alert = vi.hoisted(() => vi.fn<(title: string, body?: string) => void>());
+type AlertButton = { text: string; onPress?: () => void };
+const alert = vi.hoisted(() => vi.fn<(title: string, body?: string, buttons?: AlertButton[]) => void>());
 vi.mock('react-native', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   Alert: { alert },
@@ -26,12 +27,18 @@ vi.mock('react-native', async (orig) => ({
 const data = vi.hoisted(() => ({
   sendFriendRequest: vi.fn(async (_me: string, _other: string): Promise<void> => {}),
   acceptFriendRequest: vi.fn(async (_requester: string, _me: string): Promise<void> => {}),
+  blockUser: vi.fn(async (_id: string): Promise<void> => {}),
+  unblockUser: vi.fn(async (_me: string, _id: string): Promise<void> => {}),
+  report: vi.fn((_target: unknown) => {}),
 }));
+// The report flow is its own component with its own tests; what matters
+// here is what this page hands it.
+vi.mock('../components/reportFlow', () => ({ useReport: () => ({ report: data.report, node: null }) }));
 
 type Who = { id: string; handle: string; full_name: string; avatar_url: string; bio?: string | null };
 const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], loading: false, reload: vi.fn() },
-  blocks: { data: [] as string[] },
+  blocks: { data: [] as string[], reload: vi.fn() },
   mutual: {} as Record<string, number>,
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
@@ -59,6 +66,8 @@ vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   sendFriendRequest: data.sendFriendRequest,
   acceptFriendRequest: data.acceptFriendRequest,
+  blockUser: data.blockUser,
+  unblockUser: data.unblockUser,
   useProfileByHandle: (h: string | null) => {
     state.asked.push(h);
     return { data: h ? state.people[h] ?? null : null, ...state.lookup };
@@ -107,7 +116,13 @@ beforeEach(() => {
   crew.ships.data = [];
   crew.ships.reload.mockClear();
   crew.blocks.data = [];
+  crew.blocks.reload.mockClear();
   crew.mutual = {};
+  data.blockUser.mockReset();
+  data.blockUser.mockImplementation(async () => {});
+  data.unblockUser.mockReset();
+  data.unblockUser.mockImplementation(async () => {});
+  data.report.mockClear();
   alert.mockClear();
   data.sendFriendRequest.mockClear();
   data.acceptFriendRequest.mockClear();
@@ -298,6 +313,132 @@ describe('the friend button', () => {
     expect(screen.queryByText('Add friend')).toBeNull();
     // The page itself is still theirs.
     expect(screen.getByTestId('person-handle').textContent).toBe('lan');
+  });
+});
+
+// The ⋯ in the header (16 Nov 2026): report the person, block them, or
+// take a block back. The block stood in a sheet on a list's page until
+// that day, behind the author's face — which opens this page now.
+describe('the ⋯', () => {
+  /** Press a row of the open sheet; the sheet closes, then the row acts. */
+  const pick = (testID: string) => {
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByTestId(testID));
+      vi.runAllTimers();
+    } finally {
+      vi.useRealTimers();
+    }
+  };
+  const pressInAlert = (text: string) => alert.mock.calls.at(-1)![2]!.find((b) => b.text === text)!.onPress!();
+  const open = () => fireEvent.click(screen.getByTestId('person-more'));
+
+  it('names who it is about and offers a report and a block', async () => {
+    await show();
+    expect(screen.queryByTestId('person-menu-block')).toBeNull();
+    open();
+    // The sheet is headed by the name, the handle under it with its `@`.
+    expect(screen.getAllByText('Lan Phạm').length).toBe(2);
+    expect(screen.getByText('@lan')).toBeTruthy();
+    expect(screen.getByTestId('person-menu-report')).toBeTruthy();
+    expect(screen.getByTestId('person-menu-block').textContent).toContain('Block @lan');
+    expect(screen.queryByTestId('person-menu-unblock')).toBeNull();
+  });
+
+  it('heads the sheet with the handle alone for somebody with no name', async () => {
+    state.people = { lan: { ...LAN, full_name: '', avatar_url: '' } };
+    await show();
+    open();
+    expect(screen.getAllByText('@lan')).toHaveLength(1);
+  });
+
+  it('hands the desk the person, not a list', async () => {
+    await show();
+    open();
+    pick('person-menu-report');
+    expect(data.report).toHaveBeenCalledExactlyOnceWith({
+      kind: 'profile', id: 'lan-id', name: 'Lan Phạm', avatarUrl: 'https://faces/lan.jpg',
+    });
+    cleanup();
+    data.report.mockClear();
+    state.people = { lan: { ...LAN, full_name: '', avatar_url: '' } };
+    await show();
+    open();
+    pick('person-menu-report');
+    expect(data.report).toHaveBeenCalledExactlyOnceWith({ kind: 'profile', id: 'lan-id', name: '@lan', avatarUrl: undefined });
+  });
+
+  it('blocks only after the confirmation, then reads the crew and the blocks again', async () => {
+    await show();
+    open();
+    pick('person-menu-block');
+    expect(alert.mock.calls.at(-1)![0]).toBe('Block @lan?');
+    expect(alert.mock.calls.at(-1)![2]!.map((b) => b.text)).toEqual(['Cancel', 'Block']);
+    expect(data.blockUser).not.toHaveBeenCalled();
+    await act(async () => { pressInAlert('Block'); });
+    expect(data.blockUser).toHaveBeenCalledExactlyOnceWith('lan-id');
+    // A block also ends a friendship, so both are read again.
+    expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+    expect(crew.blocks.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('says so when the block fails, and reads nothing again', async () => {
+    data.blockUser.mockImplementation(async () => { throw new Error('nope'); });
+    await show();
+    open();
+    pick('person-menu-block');
+    await act(async () => { pressInAlert('Block'); });
+    expect(alert.mock.calls.at(-1)![0]).toBe('Could not block');
+    expect(crew.blocks.reload).not.toHaveBeenCalled();
+  });
+
+  it('offers to take a block back in place of making one, as the reader', async () => {
+    crew.blocks.data = ['lan-id'];
+    await show();
+    open();
+    expect(screen.queryByTestId('person-menu-block')).toBeNull();
+    pick('person-menu-unblock');
+    expect(alert.mock.calls.at(-1)![0]).toBe('Unblock @lan?');
+    expect(data.unblockUser).not.toHaveBeenCalled();
+    await act(async () => { pressInAlert('Unblock'); });
+    expect(data.unblockUser).toHaveBeenCalledExactlyOnceWith('me-id', 'lan-id');
+    expect(crew.blocks.reload).toHaveBeenCalledTimes(1);
+    expect(data.blockUser).not.toHaveBeenCalled();
+  });
+
+  it('says so when taking it back fails', async () => {
+    crew.blocks.data = ['lan-id'];
+    data.unblockUser.mockImplementation(async () => { throw new Error('nope'); });
+    await show();
+    open();
+    pick('person-menu-unblock');
+    await act(async () => { pressInAlert('Unblock'); });
+    expect(alert.mock.calls.at(-1)![0]).toBe('Could not unblock');
+    expect(crew.blocks.reload).not.toHaveBeenCalled();
+  });
+
+  it('is not there on your own page, signed out, or with nobody to show', async () => {
+    state.people = { lan: { ...LAN, id: 'me-id' } };
+    await show();
+    expect(screen.queryByTestId('person-more')).toBeNull();
+    cleanup();
+    state.people = { lan: LAN };
+    state.me = null;
+    await show();
+    expect(screen.queryByTestId('person-more')).toBeNull();
+    cleanup();
+    state.me = 'me-id';
+    state.people = {};
+    await show('ghost');
+    expect(screen.queryByTestId('person-more')).toBeNull();
+  });
+
+  it('closes when dismissed', async () => {
+    await show();
+    open();
+    fireEvent.click(screen.getAllByLabelText('Close').at(-1)!);
+    await flush();
+    expect(screen.getByTestId('person-more')).toBeTruthy();
   });
 });
 

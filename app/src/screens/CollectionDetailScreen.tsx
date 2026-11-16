@@ -22,7 +22,7 @@ import { narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  blockUser, deleteCollection, isNotShareable, membersOf, setCollectionPublic, setShares,
+  deleteCollection, isNotShareable, membersOf, setCollectionPublic, setShares,
   unseenMembers, unseenSentence, useCountView, useMyListShares, usePrefetchOwnListActivity, useProfileByHandle, useSharedWithMe,
   type Collection,
 } from '../lib/data';
@@ -33,7 +33,6 @@ import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
 import { useReport } from '../components/reportFlow';
-import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import ActionSheet, { SheetRows, type SheetAction } from '../components/ActionSheet';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { readerKey, COLLECTION_VIEW_KEY } from '../lib/readerPrefs';
@@ -1130,60 +1129,22 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      the slot while the lookup is out and drops it once an editorial
      handle comes back with nobody behind it.
 
-     A tap opens the curator sheet: report this list, and — only where a
-     real account stands behind the handle — block them. Both already
-     existed (the ⋯ menu's report row, Crew's block); this is the door
-     beside the person they are about. No "View profile" and no follow:
-     there is no public profile screen to open, and the app's graph is
-     friendship, not following. Where neither action applies (signed
-     out, or an editorial list you cannot report) the row is not a
-     button — a press that opens an empty sheet is a dead control. */
-  const [aboutCurator, setAboutCurator] = useState(false);
+     A tap opens the author's page (owner, 16 Nov 2026) — `PersonScreen`
+     — where an account stands behind the handle. Until that day it
+     opened a sheet here with two rows, "Report this list" and "Block":
+     there was no page to open. The report is still a row in the ⋯ on
+     this card, where it always also was; the block is an act about a
+     person and went to their page's own ⋯ (`usePersonMenu`), with a
+     report of the person beside it. The cost: blocking a list's author
+     is two presses from here, where it was one.
+
+     An editorial handle has nobody behind it and no page, so its head is
+     not a button — a press that opens "Nobody here" is a dead control. */
   const curatorTag = !owned && col?.curator_handle ? atHandle(col.curator_handle) : '';
-  const curatorName = lookup.data?.full_name?.trim() || '';
   // A face or a profile row means an account; an editorial handle has
-  // neither (see `curatorHandle`). Blocking a handle with nobody behind
-  // it would block whoever seeded the row — the desk's own account.
+  // neither (see `curatorHandle`), and so no page to open.
   const curatorIsPerson = !!curatorAvatar || !!lookup.data;
-  const blockCurator = () => {
-    const target = col?.owner_id;
-    if (!target) return;
-    Alert.alert(
-      t(`Block ${curatorTag}?`, `Chặn ${curatorTag}?`, `${curatorTag} をブロックしますか？`, `屏蔽 ${curatorTag}？`, `遮蔽 ${curatorTag}？`),
-      t(
-        'They will not be told. You can undo this from Blocked.',
-        'Họ sẽ không được báo. Bạn có thể bỏ chặn trong mục Đã chặn.',
-        '相手に通知されません。ブロック中から解除できます。',
-        '对方不会收到通知。你可以在“已屏蔽”中撤销。', '對方不會收到通知。你可以在「已遮蔽」中取消。',
-      ),
-      [
-        { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
-        {
-          text: t('Block', 'Chặn', 'ブロック', '屏蔽', '遮蔽'),
-          style: 'destructive',
-          onPress: () => {
-            blockUser(target)
-              .then(() => Alert.alert(
-                t(`${curatorTag} is blocked`, `Đã chặn ${curatorTag}`, `${curatorTag} をブロックしました`, `已屏蔽 ${curatorTag}`, `已遮蔽 ${curatorTag}`),
-                t(
-                  'Their public lists stay on the shelf; they can no longer reach you.',
-                  'Bộ sưu tập công khai của họ vẫn hiện; họ không thể liên hệ bạn nữa.',
-                  '公開リストは表示されたままですが、相手からは連絡できなくなります。',
-                  '对方的公开清单仍会显示，但对方无法再联系你。', '對方的公開清單仍會顯示，但對方無法再聯絡你。',
-                ),
-              ))
-              .catch(() => Alert.alert(
-                t('Could not block', 'Không chặn được', 'ブロックできませんでした', '无法屏蔽', '無法遮蔽'),
-                t('Please try again later.', 'Vui lòng thử lại sau.', '後でもう一度お試しください。', '请稍后再试。', '請稍後再試。'),
-              ));
-          },
-        },
-      ],
-    );
-  };
-  /* Report, in two sheets — the curator's and the ⋯'s — as one row, so
-     the two say the same words about the same act. Never on a shared
-     list: see `sharedToMe`. */
+  /* Report, a row in the ⋯. Never on a shared list: see `sharedToMe`. */
   const reportRow: SheetAction | null = col && !sharedToMe
     && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id })
     ? {
@@ -1199,23 +1160,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       onPress: () => report({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id, name: title }),
     }
     : null;
-  const curatorActions: PersonAction[] = [];
-  if (curatorTag && reportRow) curatorActions.push(reportRow);
-  if (col && curatorTag && uid && col.owner_id && curatorIsPerson) {
-    curatorActions.push({
-      key: 'block',
-      icon: 'ban-outline',
-      title: t(`Block ${curatorTag}`, `Chặn ${curatorTag}`, `${curatorTag} をブロック`, `屏蔽 ${curatorTag}`, `遮蔽 ${curatorTag}`),
-      desc: t(
-        'They will not be told, and can no longer reach you.',
-        'Họ sẽ không được báo, và không thể liên hệ bạn nữa.',
-        '相手に通知されず、あなたに連絡できなくなります。',
-        '对方不会收到通知，也无法再联系你。', '對方不會收到通知，也無法再聯絡你。',
-      ),
-      destructive: true,
-      onPress: blockCurator,
-    });
-  }
   /* ── your own face, too (owner, 16 Oct 2026) ──
      Your own list leads with your face and handle as well, as the
      owner’s view in the review drew it: the card reads the same from
@@ -1287,10 +1231,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </>
   );
   const curatorRow = faceTag ? (
-    !owned && curatorActions.length > 0 ? (
+    !owned && curatorIsPerson ? (
       <PressableScale
         contentStyle={s.curator}
-        onPress={() => setAboutCurator(true)}
+        onPress={() => navigation.navigate('Person', { handle: normalizeHandle(curatorTag) })}
         scaleTo={0.97}
         haptic="selection"
         accessibilityRole="button"
@@ -1866,14 +1810,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         ) : null}
       </DockSlot>
       {reportSheet}
-      <PersonSheet
-        visible={aboutCurator}
-        name={curatorName || curatorTag}
-        meta={curatorName ? curatorTag : undefined}
-        avatarUrl={curatorAvatar ?? undefined}
-        actions={curatorActions}
-        onClose={() => setAboutCurator(false)}
-      />
       {col && owned ? (
         <ShareSheet
           open={picking}
