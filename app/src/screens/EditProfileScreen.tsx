@@ -300,7 +300,9 @@ export default function EditProfileScreen({ navigation, route }: { navigation: N
           uses, and a form that cannot pass it keeps its button. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
-        backBare
+        // A room off the Profile tab, at the size the others wear (owner,
+        // 16 Nov 2026) — see `type.titleCompact`.
+        backBare compactTitle
         title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}
         action={{
           label: t('Save changes', 'Lưu thay đổi', '変更を保存', '保存更改', '儲存更改'),

@@ -297,7 +297,10 @@ export default function CollectionFormScreen({ navigation, route }: {
           something to submit — see `changed`. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
-        backBare
+        // At 20, as the list's own page is (owner, 16 Nov 2026): the form
+        // opened from a page titled at 20 and stood a size over it at 26
+        // — see `type.titleCompact`, and `titles.test` for what holds it.
+        backBare compactTitle
         title={copyFrom
           ? t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')
           : editing
