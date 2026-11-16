@@ -84,6 +84,7 @@ vi.mock('../nav', async (orig) => ({
 }));
 
 import CollectionFormScreen from './CollectionFormScreen';
+import { colors } from '../theme';
 
 type BeforeRemove = (e: { preventDefault: () => void; data: { action: unknown } }) => void;
 /** A navigator that, like the real one, asks every `beforeRemove`
@@ -197,6 +198,16 @@ const SAM = withPhotos('sam', 'SÂM Saigon', ['s1', 's2', 's3']);
 
 describe('the cover picker', () => {
   const sel = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-selected');
+  /** The grid's tiles by name, in the order drawn. */
+  const tiles = () => [...document.querySelectorAll('[role="button"]')]
+    .map((b) => b.getAttribute('aria-label') ?? '')
+    .filter((l) => /^(Auto|Heim|SÂM Saigon)/.test(l));
+  /** The tiles wearing the tick. */
+  const ticked = () => screen.queryAllByTestId('cover-tick').map((m) => m.closest('[role="button"]')!.getAttribute('aria-label'));
+  const IN_ORDER = [
+    'Heim, photo 1 of 4', 'Heim, photo 2 of 4', 'Heim, photo 3 of 4', 'Heim, photo 4 of 4',
+    'SÂM Saigon, photo 1 of 3', 'SÂM Saigon, photo 2 of 3', 'SÂM Saigon, photo 3 of 3',
+  ];
 
   it('offers every photograph of every place', () => {
     // Seven photographs between two places, and all seven on offer: the
@@ -242,17 +253,41 @@ describe('the cover picker', () => {
     expect(screen.getByRole('button', { name: 'Solo' })).toBeTruthy();
   });
 
+  // No cover chosen: Auto leads, ringed and ticked, and the photographs
+  // follow in the list's own order.
   it('starts on Auto when no cover has been picked', () => {
     openRename([HEIM, SAM]);
+    expect(tiles()).toEqual(['Auto', ...IN_ORDER]);
     expect(sel('Auto')).toBe('true');
     expect(sel('Heim, photo 1 of 4')).toBe('false');
+    expect(ticked()).toEqual(['Auto']);
+    // The tick: a filled button's pair, the accent's fill under its ink,
+    // in the tile's corner.
+    const tick = screen.getByTestId('cover-tick');
+    const mark = tick.querySelector('[data-icon="checkmark"]')!;
+    expect([mark.getAttribute('data-size'), mark.getAttribute('data-color')]).toEqual(['14', String(colors.accentInk)]);
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = String(colors.accentFill);
+    const drawn = getComputedStyle(tick);
+    expect(drawn.backgroundColor).toBe(probe.style.backgroundColor);
+    expect([drawn.position, drawn.top, drawn.right, drawn.width, drawn.height]).toEqual(['absolute', '6px', '6px', '22px', '22px']);
   });
 
   it('rings the photograph that is the cover, not merely its place', () => {
     openRename([HEIM, SAM], photo('s2'));
     expect(sel('SÂM Saigon, photo 2 of 3')).toBe('true');
     expect(sel('SÂM Saigon, photo 1 of 3')).toBe('false');
-    expect(sel('Auto')).toBe('false');
+    expect(ticked()).toEqual(['SÂM Saigon, photo 2 of 3']);
+  });
+
+  // The owner opened a list of eleven places whose cover was deep in the
+  // grid and saw nothing ringed (16 Nov 2026). The cover the form opens
+  // with is the first tile, taken out of its place's run; and with a
+  // cover chosen there is no Auto to stand in front of it.
+  it('leads with the cover the list has, and offers no Auto beside it', () => {
+    openRename([HEIM, SAM], photo('s2'));
+    expect(tiles()).toEqual(['SÂM Saigon, photo 2 of 3', ...IN_ORDER.filter((l) => l !== 'SÂM Saigon, photo 2 of 3')]);
+    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
   });
 
   it("keeps a cover that is not the place's first photograph", () => {
@@ -262,15 +297,53 @@ describe('the cover picker', () => {
     openRename([HEIM, SAM], photo('h3'));
 
     expect(sel('Heim, photo 3 of 4')).toBe('true');
-    expect(sel('Auto')).toBe('false');
+    expect(tiles()[0]).toBe('Heim, photo 3 of 4');
   });
 
-  it('moves the ring when a tile is tapped', () => {
+  it('moves the ring and the tick when a tile is tapped', () => {
     openRename([HEIM, SAM]);
     fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 3 of 3' }));
 
     expect(sel('SÂM Saigon, photo 3 of 3')).toBe('true');
     expect(sel('Auto')).toBe('false');
+    expect(ticked()).toEqual(['SÂM Saigon, photo 3 of 3']);
+  });
+
+  // The order is the order the form opened in. A tile that jumped to the
+  // front when tapped would move every tile after it under the finger.
+  it('moves no tile when one is tapped, with Auto or with a cover leading', () => {
+    openRename([HEIM, SAM]);
+    fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 3 of 3' }));
+    // Auto was there when the form opened, so it stays: the way back.
+    expect(tiles()).toEqual(['Auto', ...IN_ORDER]);
+    fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
+    expect(ticked()).toEqual(['Auto']);
+
+    cleanup();
+    openRename([HEIM, SAM], photo('s2'));
+    const opened = tiles();
+    fireEvent.click(screen.getByRole('button', { name: 'Heim, photo 1 of 4' }));
+    expect(tiles()).toEqual(opened);
+    expect(ticked()).toEqual(['Heim, photo 1 of 4']);
+    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
+  });
+
+  // A cover with no tile to lead with — the rest of a place's photographs
+  // still on their way, or one hidden since — would leave a grid with no
+  // ring and no way to say "none of these". Auto stands first there,
+  // unringed; and gives its slot to the cover when the photographs land.
+  it('offers Auto, unringed, while the chosen photograph is not on offer', () => {
+    const coverOnly = (p: Place) => ({ ...p, place_photos: p.place_photos.slice(0, 1) });
+    openRename([coverOnly(HEIM), coverOnly(SAM)], photo('s2'));
+    expect(tiles()).toEqual(['Auto', 'Heim', 'SÂM Saigon']);
+    expect(sel('Auto')).toBe('false');
+    expect(ticked()).toEqual([]);
+
+    cleanup();
+    photos.data = { heim: HEIM.place_photos, sam: SAM.place_photos };
+    openRename([coverOnly(HEIM), coverOnly(SAM)], photo('s2'));
+    expect(tiles()[0]).toBe('SÂM Saigon, photo 2 of 3');
+    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
   });
 
   it('offers no picker at all for a brand-new list', () => {
@@ -456,13 +529,33 @@ describe('renaming a list', () => {
     expect(screen.queryByText('COVER')).toBeNull();
   });
 
-  it('returns to Auto when the reader picks it back', async () => {
-    openRename([HEIM, SAM], photo('h3'));
+  // A cover that names a photograph no tile holds — hidden by the desk
+  // since — leaves Auto on offer, and Auto is the way back from it.
+  it('returns to Auto from a cover that is not on offer', async () => {
+    openRename([HEIM, SAM], photo('hidden-since'));
+    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-selected')).toBe('false');
     fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
     fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar' } });
     save();
 
     await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({ coverPhotoId: null })));
+  });
+
+  // The chosen photograph's place was taken out of the list: the cover
+  // reads as none (`chosenCoverOf`), so the form opens on Auto, ringed,
+  // and a save writes that down rather than the id it was handed.
+  it('opens on Auto for a cover whose place has left the list, and saves it so', async () => {
+    openRename([HEIM, SAM], { ...photo('z9'), place: { slug: 'left-the-list' } });
+    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar' } });
+    save();
+    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({ coverPhotoId: null })));
+  });
+
+  it('keeps a cover whose place is still in the list', async () => {
+    openRename([HEIM, SAM], { ...photo('s2'), place: { slug: 'sam' } });
+    expect(screen.getByRole('button', { name: 'SÂM Saigon, photo 2 of 3' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
   });
 
   it('refreshes the shared list and goes back once saved', async () => {

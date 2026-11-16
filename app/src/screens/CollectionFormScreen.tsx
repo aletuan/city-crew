@@ -19,60 +19,30 @@
 // alternative is a second set that drifts from the first.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { Glyph } from '../components/ui/glyph';
-import { Image } from 'expo-image';
+import { Alert } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
-import { PressableScale, successHaptic } from '../components/ui';
+import { successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection, usePlacePhotos } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
-import { localized } from '../lib/localized';
-import { coverOf, membersOf, photosOf, withPhotos } from '../lib/place';
+import { chosenCoverOf, coverOf, membersOf, photosOf, withPhotos } from '../lib/place';
 import { useMyLists } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
-import { colors, font, radius, space } from '../theme';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
+import { CoverGrid } from './collectionForm/CoverGrid';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
-
-/**
- * The cover picker's shape: three tiles to a line.
- *
- * It was one horizontal row of 64pt thumbs, and two things were wrong
- * with that. The thumbs were too small to tell one dim bar interior from
- * another, and a row that scrolls sideways hides most of what it holds —
- * four and a half chips visible out of ten, with nothing saying there are
- * more. A grid fixed the second problem straight away.
- *
- * The first took two goes. Four to a line was chosen over three to save
- * a row, on the argument that height is what a form cannot spend: its
- * first field takes focus on open and the keyboard covers the lower
- * third while the reader types. The argument was sound and the result
- * was still too small — the owner looked at four on the phone and asked
- * for bigger, which is the only test this particular question has. This
- * catalog is mostly night photography, and 80pt of a dim bar interior is
- * not enough to tell it from the next dim bar interior.
- *
- * Three gives 112 a side against 82 on a 402pt phone: a third wider, and
- * near twice the area to judge a photograph by. The price is the extra
- * row it was meant to save, and the price is affordable because the
- * screen scrolls — the keyboard hides rows, it does not forbid them.
- */
-const COVER_COLS = 3;
-const COVER_GAP = 10;
 
 export default function CollectionFormScreen({ navigation, route }: {
   navigation: Nav;
   route: RootRoute<'CollectionForm'>;
 }) {
-  const { t, lang } = useI18n();
-  const { width } = useWindowDimensions();
+  const { t } = useI18n();
   const { session } = useSession();
   const { city } = useCurrentCity();
   const mine = useMyLists();
@@ -161,24 +131,11 @@ export default function CollectionFormScreen({ navigation, route }: {
   // with only the uri, and the ring has to sit on the real current cover
   // rather than drift to Auto until the refresh lands. No exception list
   // any more — every photograph a member holds is already on offer.
-  const current = col?.cover ?? null;
-  // Sized off the window rather than guessed: the page gives up
-  // `space.page` at each edge and `COVER_GAP` between each pair of
-  // tiles, and what is left divides by `COVER_COLS`. On a 402pt phone
-  // that is 112 a side; on the small phones it shrinks with the page
-  // instead of pushing a tile half off the screen.
-  // Floored, not rounded: the tiles plus their gaps have to come in
-  // under the line, and a fraction over sends the last to the next row.
-  // The leftover — under a point — sits at the end of each row.
   //
-  // Width and height stay on `contentStyle` rather than `style`, where
-  // `PressableScale`'s note sends a width. The note is about a width that
-  // has to survive its parent's layout; here the Pressable shrink-wraps
-  // the sized view inside it, which is what the 64pt thumbs did before.
-  const tile = Math.floor(
-    (width - space.page * 2 - COVER_GAP * (COVER_COLS - 1)) / COVER_COLS,
-  );
-
+  // A cover whose place has left the list is no cover (`chosenCoverOf`,
+  // 16 Nov 2026): the form opens on Auto, as the list's card already
+  // draws it, and a save writes that down.
+  const current = col ? chosenCoverOf(col) : null;
   const startCover = current
     ? current.id ?? choices.find((c) => c.ph.photo_uri === current.photo_uri)?.ph.id ?? null
     : null;
@@ -429,101 +386,15 @@ export default function CollectionFormScreen({ navigation, route }: {
       {/* `choices` is only ever non-empty when there are members to draw
           from — a rename or a copy; a brand-new list offers no picker. */}
       {choices.length > 0 ? (
-        <View style={s.coverBlock}>
-          <Text style={s.coverLabel}>{t('COVER', 'ẢNH BÌA', 'カバー写真', '封面', '封面')}</Text>
-          <View style={s.coverGrid}>
-            <PressableScale
-              onPress={() => setPick({ chosen: true, id: null })}
-              accessibilityRole="button"
-              accessibilityLabel={t('Auto', 'Tự động', '自動', '自动', '自動')}
-              accessibilityState={{ selected: coverId == null }}
-              // `aria-selected` beside it, because react-native-web drops
-              // `accessibilityState` — the same pairing `Chip` and `Tile`
-              // carry, and the note there is the one to read.
-              aria-selected={coverId == null}
-              contentStyle={[s.thumb, { width: tile, height: tile }, s.auto, coverId == null && s.thumbOn]}
-            >
-              {/* The chip wears the picture Auto would use, so "what is
-                  the cover right now" has a visible answer even before
-                  anything is picked. A first place with no photograph
-                  leaves the glass chip — nothing to preview. */}
-              {autoUri ? (
-                <>
-                  <Image source={{ uri: autoUri }} style={s.thumbImg} contentFit="cover" transition={120} />
-                  <View style={s.autoScrim}>
-                    <Text style={s.autoOnPhoto}>{t('Auto', 'Tự động', '自動', '自动', '自動')}</Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Glyph name="sparkles-outline" size={22} color={colors.textSecondary} />
-                  <Text style={s.autoText}>{t('Auto', 'Tự động', '自動', '自动', '自動')}</Text>
-                </>
-              )}
-            </PressableScale>
-            {choices.map(({ ph, place, n, of }) => (
-              <PressableScale
-                key={ph.id}
-                onPress={() => setPick({ chosen: true, id: ph.id })}
-                accessibilityRole="button"
-                // Named, and numbered where a place has more than one:
-                // four tiles all called "Heim" is a list a listener
-                // cannot move through.
-                accessibilityLabel={of > 1
-                  ? t(
-                    `${localized(place, 'name', lang)}, photo ${n} of ${of}`,
-                    `${localized(place, 'name', lang)}, ảnh ${n} trên ${of}`,
-                    `${localized(place, 'name', lang)}、写真${n}/${of}`,
-                    `${localized(place, 'name', lang)}，第 ${n} 张照片，共 ${of} 张`, `${localized(place, 'name', lang)}，第 ${n} 張照片，共 ${of} 張`,
-                  )
-                  : localized(place, 'name', lang)}
-                accessibilityState={{ selected: coverId === ph.id }}
-                aria-selected={coverId === ph.id}
-                contentStyle={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}
-              >
-                <Image source={{ uri: ph.photo_uri }} style={s.thumbImg} contentFit="cover" transition={120} />
-              </PressableScale>
-            ))}
-          </View>
-        </View>
+        <CoverGrid
+          choices={choices}
+          opened={startCover}
+          picked={coverId}
+          autoUri={autoUri}
+          onPick={(id) => setPick({ chosen: true, id })}
+        />
       ) : null}
     </AuthScreen>
   );
 }
 
-const s = StyleSheet.create({
-  coverBlock: { marginTop: space.cardGap },
-  coverLabel: {
-    color: colors.textTertiary, fontSize: 11, fontWeight: font.bold,
-    letterSpacing: 1.1, marginBottom: 8,
-  },
-  // The tiles size themselves off the window — see `tile` — so the grid
-  // only has to wrap them and space them. `gap` does both axes, which is
-  // what keeps the rows as far apart as the columns.
-  coverGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: COVER_GAP },
-  // 2pt of always-there border so the chosen ring changes colour, not
-  // layout — a tile that grows on selection makes the whole grid shuffle.
-  // The glass under the picture, not merely behind it: a tile whose
-  // photograph has not arrived used to be nothing at all — the page
-  // showing through a box with no ground of its own. Ten tiles loaded
-  // before anyone noticed; a whole list's photographs do not, and the
-  // grid read as holes punched in itself while they came in.
-  thumb: {
-    borderRadius: radius.image, borderWidth: 2, borderColor: 'transparent', overflow: 'hidden',
-    backgroundColor: colors.surfaceGlass,
-  },
-  thumbOn: { borderColor: colors.accentFill },
-  // Wrapped, all nine in view: a row that scrolls sideways hides most of
-  // what it holds (the cover grid's note says the same of its chips).
-  thumbImg: { width: '100%', height: '100%' },
-  auto: {
-    alignItems: 'center', justifyContent: 'center', gap: 3,
-    backgroundColor: colors.surfaceGlass,
-  },
-  autoText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
-  autoScrim: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(8,7,10,0.55)', paddingVertical: 3, alignItems: 'center',
-  },
-  autoOnPhoto: { color: '#F7F7F5', fontSize: 11, fontWeight: font.semibold },
-});
