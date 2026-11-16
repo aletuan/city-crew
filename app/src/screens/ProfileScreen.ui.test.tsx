@@ -22,7 +22,7 @@ import type { Pref } from '../lib/look';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommonActions, StackRouter } from '@react-navigation/routers';
-import { act, cleanup, fireEvent, render, screen, textStyleOf, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
 import { colors } from '../theme';
 import { useScrollToTop } from '@react-navigation/native';
@@ -613,10 +613,17 @@ describe('the role badge', () => {
     state.guide = true;
     draw();
     fireEvent.click(badge('Local Guide'));
-    expect(alert).toHaveBeenCalledWith(
-      'Local Guide',
-      'You can edit, and add photos to, places in your collections and places you imported.',
-    );
+    // In the sheet the level opens too (16 Nov 2026), not a system alert:
+    // the disc that was pressed, its name, then what it lets them do.
+    expect(alert).not.toHaveBeenCalled();
+    const head = screen.getByTestId('badge-sheet-head');
+    expect(head.textContent).toBe('Local Guide');
+    expect(head.querySelector('[data-icon="star"]')).toBeTruthy();
+    expect(screen.getByTestId('badge-sheet-body').textContent)
+      .toBe('You can edit, and add photos to, places in your collections and places you imported.');
+    // A role's sheet draws no level: no bar, no steps.
+    expect(screen.queryByTestId('level-bar')).toBeNull();
+    expect(screen.queryByTestId('level-steps')).toBeNull();
   });
 
   it('names an editor as Super User, and only that, even when also a guide', () => {
@@ -627,7 +634,10 @@ describe('the role badge', () => {
     const disc = badge('Super User');
     expect(disc.querySelector('[data-icon="medal"]')).toBeTruthy();
     fireEvent.click(disc);
-    expect(alert).toHaveBeenCalledWith('Super User', expect.stringMatching(/every place in the app/));
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Super User');
+    expect(screen.getByTestId('badge-sheet-head').querySelector('[data-icon="medal"]')).toBeTruthy();
+    expect(screen.getByTestId('badge-sheet-body').textContent).toMatch(/every place in the app/);
   });
 
   // Two roles, two colours: the disc's edge and glyph follow the role,
@@ -835,29 +845,73 @@ describe('the level ring', () => {
   // The pill says what the level is (owner, 16 Nov 2026), in the
   // reader's own numbers — the distinct places, not the lists' sizes
   // added up, and the count that left the row of numbers the same day.
-  it('says what the level is when the pill is pressed, with the reader’s own count', () => {
+  //
+  // In a sheet, drawn: the level, a bar, what the next one takes, the
+  // rule. It was a paragraph in a system alert for an hour.
+  it('opens a sheet that draws the level when the pill is pressed, with the reader’s own count', () => {
     const p = (slug: string) => ({ slug });
     state.mine = [
       { members: [p('a'), p('b'), p('c')] },
       { members: [p('a'), p('d'), p('e'), p('f')] },
     ];
     draw();
-    expect(alert).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('badge-sheet-head')).toBeNull();
     fireEvent.click(screen.getByTestId('ring-explain'));
-    expect(alert).toHaveBeenCalledExactlyOnceWith(
-      'Level 2',
-      'Every 5 places you save into a collection takes you up a level. You have saved 6 so far, and 4 more takes you to Level 3.',
-    );
+    expect(alert).not.toHaveBeenCalled();
+    // Six distinct places: level 2, one of its five.
+    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Level 2' + '1 / 5');
+    const body = screen.getByTestId('badge-sheet-body');
+    expect([...body.children].slice(1).map((c) => c.textContent)).toEqual([
+      'Save 4 more places to reach Level 3.',
+      'You have saved 6 places. Every 5 take you up a level.',
+    ]);
+  });
+
+  // The bar is the ring's fraction — one fifth here, as the ring's
+  // progress is — not the count over the next level's (6 of 10).
+  it('fills the bar as far as the ring is turned', () => {
+    const p = (slug: string) => ({ slug });
+    state.mine = [{ members: ['a', 'b', 'c', 'd', 'e', 'f'].map(p) }];
+    draw();
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    const bar = screen.getByTestId('level-bar');
+    expect(bar.getAttribute('role')).toBe('progressbar');
+    expect(bar.getAttribute('aria-label')).toBe('1 of 5 places toward the next level');
+    expect(viewStyleOf(screen.getByTestId('level-bar-fill')).width).toBe('20%');
+    expect(Number(screen.getByTestId('ring').getAttribute('data-progress'))).toBeCloseTo(0.2);
+    expect(bar.firstElementChild).toBe(screen.getByTestId('level-bar-fill'));
   });
 
   it('says it in Vietnamese', () => {
     state.lang = 'vi';
     draw();
     fireEvent.click(screen.getByTestId('ring-explain'));
-    expect(alert).toHaveBeenCalledExactlyOnceWith(
-      'Level 1',
-      'Cứ 5 địa điểm bạn lưu vào bộ sưu tập là lên một level. Bạn đã lưu 0 địa điểm, lưu thêm 5 địa điểm nữa để lên Level 2.',
-    );
+    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Level 1' + '0 / 5');
+    expect(screen.getByTestId('badge-sheet-body').textContent)
+      .toBe('Lưu thêm 5 địa điểm để đạt Level 2.' + 'Bạn đã lưu 0 địa điểm. Cứ 5 địa điểm là lên một level.');
+  });
+
+  // One sheet for the two badges: it is about whichever was pressed, and
+  // closes by its backdrop as every sheet in the app does.
+  it('is about the badge that was pressed, and closes by the backdrop', async () => {
+    // The backdrop, then the fade react-native-web runs before a closed
+    // Modal leaves the page.
+    const shut = async () => {
+      fireEvent.click(screen.getByLabelText('Close'));
+      document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+      await waitFor(() => expect(screen.queryByTestId('badge-sheet-head')).toBeNull());
+    };
+    state.guide = true;
+    draw();
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    expect(screen.getByTestId('badge-sheet-head').textContent).toContain('Level 1');
+    await shut();
+    fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
+    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Local Guide');
+    await shut();
+    // And the level again after a role: not left on the role.
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    expect(screen.getByTestId('badge-sheet-head').textContent).toContain('Level 1');
   });
 
   it('starts a new account at level 1', () => {
