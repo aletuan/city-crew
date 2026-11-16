@@ -27,6 +27,9 @@ export const GLYPH_BOX = 26;
 export const CAPTION_LINE = 15;
 
 export const TITLE_LINE = 19;
+/** The bio's line: the values' 21 and a point, for the one text on the
+ *  card that runs to several lines. `RowGlyph` lifts the quote to it. */
+export const BIO_LINE = 22;
 
 /** The About rows' glyph slot (`rowGlyph`) and the glyph in it: the
  *  column every glyph on the facts card and the interests stands on. */
@@ -196,8 +199,7 @@ export const s = StyleSheet.create({
   // The bio: the values' own type, so the paragraph and the answers under
   // it read as one card, with a line a point taller because it is the one
   // text here that runs to several.
-  bioRow: { paddingVertical: 14 },
-  bioText: { color: colors.text, fontSize: 16, fontWeight: font.regular, lineHeight: 22 },
+  bioText: { flex: 1, color: colors.text, fontSize: 16, fontWeight: font.regular, lineHeight: BIO_LINE },
   // The door shown in its place — see `BioRow`.
   bioAdd: { flex: 1, color: colors.accent, fontSize: 16, fontWeight: font.medium },
 

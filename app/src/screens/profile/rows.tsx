@@ -4,11 +4,11 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, type GlyphName } from '../../components/ui/glyph';
 import { CountBadge, PressableScale, Toggle } from '../../components/ui';
 import { useI18n } from '../../lib/i18n';
 import { colors } from '../../theme';
-import { GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './styles';
+import { BIO_LINE, GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './styles';
 
 /**
  * The glyph every row on this screen leads with: bare, 19pt, in the
@@ -33,7 +33,9 @@ import { GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './styles';
  * figures; the well is gone from the Profile stack.
  */
 export function RowGlyph({ name, line }: {
-  name: keyof typeof Ionicons.glyphMap;
+  /** Wider than the rows' own `icon`: the bio's quote is the line set's,
+   *  not Ionicons' (see `Glyph`). */
+  name: GlyphName;
   /** The height of the row's first line, when the glyph should sit level
    *  with it rather than with the row's middle — see `GLYPH_BOX`. */
   line?: number;
@@ -208,8 +210,16 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
  * A paragraph, not a label over a value like the rows under it: the
  * section's heading already says "About me", and a caption reading "Bio"
  * above the one sentence on the card that is plainly a bio would be the
- * heading said twice. No glyph either, so it takes the card's full
- * measure; at `BIO_MAX` that is about four lines, and it is never cut.
+ * heading said twice. It is never cut.
+ *
+ * It leads with a glyph, as every row of the card does (owner, 16 Nov
+ * 2026). For a day it had none, to give the paragraph the card's full
+ * measure — and on the phone it read as a line that had lost its row:
+ * the envelope and the calendar make a column down the card's left, and
+ * the bio started 58pt left of the words under it. The quote is the mark
+ * (see `Glyph` for the three it was chosen over), lifted to the first
+ * line like the others, so a bio of four lines hangs from it. The
+ * narrower measure costs a line at `BIO_MAX`: about five, not four.
  *
  * Empty, the row is a door instead: "Add a bio", which opens Edit profile
  * with the cursor already in the field. A new account has no bio — sign-up
@@ -218,6 +228,8 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
  * Edit profile without knowing what was behind it. It is drawn like the
  * rows that go somewhere (glyph, words, chevron) because it is one, and in
  * the accent because it is the one row on the card that asks for a tap.
+ * The same quote leads it, so the row does not change its mark the moment
+ * it is filled in.
  *
  * Only the account's owner ever sees the door: this card is on their own
  * profile and nowhere else.
@@ -226,7 +238,8 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
   const { t } = useI18n();
   if (bio) {
     return (
-      <View style={[s.bioRow, s.featureRowDivider]} testID="bio-row">
+      <View style={[s.twoLineRow, s.featureRowDivider]} testID="bio-row">
+        <RowGlyph name="quote" line={BIO_LINE} />
         <Text style={s.bioText} testID="profile-bio">{bio}</Text>
       </View>
     );
@@ -239,7 +252,7 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
       accessibilityRole="button"
       testID="bio-add"
     >
-      <RowGlyph name="chatbubble-ellipses-outline" />
+      <RowGlyph name="quote" />
       <Text style={s.bioAdd} numberOfLines={1}>
         {t('Add a bio', 'Thêm giới thiệu', '自己紹介を追加', '添加个人简介', '添加個人簡介')}
       </Text>

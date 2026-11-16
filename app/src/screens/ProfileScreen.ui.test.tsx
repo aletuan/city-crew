@@ -382,6 +382,9 @@ describe('account identity', () => {
     const bio = screen.getByTestId('profile-bio');
     expect(bio.textContent).toBe(long);
     const card = bio.closest('[data-testid="bio-row"]')!;
+    // On the card's glyph column like the facts under it: one mark, the quote.
+    expect(card.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
+    expect(card.querySelector('[data-testid="row-glyph"] [data-icon="quote"]')).toBeTruthy();
     const email = screen.getByTestId('profile-email');
     expect(card.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByTestId('bio-add')).toBeNull();
@@ -392,6 +395,8 @@ describe('account identity', () => {
     const { raw } = draw();
     expect(screen.queryByTestId('bio-row')).toBeNull();
     const add = screen.getByTestId('bio-add');
+    // The mark the filled row wears, so filling it in does not change it.
+    expect(add.querySelector('[data-testid="row-glyph"] [data-icon="quote"]')).toBeTruthy();
     const email = screen.getByTestId('profile-email');
     expect(add.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByText('Add a bio'));

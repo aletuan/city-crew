@@ -32,6 +32,15 @@
 // ink, as the saved bookmark is: the solid star here is a fact (a score,
 // a cover chosen), not a dot of decoration, so it keeps its fill.
 //
+// ── the quote (owner, 16 Nov 2026) ──
+//
+// A seventh, for the bio's row in About me. The owner chose it from four
+// of Lucide's: `user-round` says what the Profile tab already says,
+// `message-square-text` and `notebook-pen` say a message and a diary,
+// and a bio is neither — it is something the person said about
+// themselves, which is what quotation marks are for. Ionicons has no
+// quote at all, so it is a name of this component's own, as `places` is.
+//
 // ── the line ──
 //
 // `LINE_STROKE`, 1.5 on Lucide's 24 grid, is Ionicons' own weight: its
@@ -56,14 +65,16 @@ import Bookmark from 'lucide-react-native/icons/bookmark';
 import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import Compass from 'lucide-react-native/icons/compass';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
+import Quote from 'lucide-react-native/icons/quote';
 import Star from 'lucide-react-native/icons/star';
 import User from 'lucide-react-native/icons/user';
 
 type IonName = keyof typeof Ionicons.glyphMap;
 
-/** Any Ionicons name, and `places`: the pin on the ground, which the
- *  Places tab wears and Ionicons does not have. */
-export type GlyphName = IonName | 'places';
+/** Any Ionicons name, and the two Ionicons does not have: `places`, the
+ *  pin on the ground the Places tab wears, and `quote`, the pair of marks
+ *  that leads the bio on Profile. */
+export type GlyphName = IonName | 'places' | 'quote';
 
 /** Lucide's 24-grid stroke at Ionicons' weight: a sixteenth of the box. */
 export const LINE_STROKE = 1.5;
@@ -72,6 +83,7 @@ export const LINE_STROKE = 1.5;
  *  filled form. */
 const LINE: Partial<Record<GlyphName, [LucideIcon, boolean]>> = {
   places: [MapPinned, false],
+  quote: [Quote, false],
   compass: [Compass, false],
   'compass-outline': [Compass, false],
   calendar: [CalendarDays, false],

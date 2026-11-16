@@ -437,7 +437,7 @@ describe('Glyph', () => {
   const drawn = () => document.querySelector('[data-icon]')!;
 
   it('draws the five marks from the line set, at Ionicons’ weight', () => {
-    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places'] as const) {
+    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places', 'quote'] as const) {
       const { unmount } = render(<Glyph name={name} size={20} color="#123456" />);
       expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual([name, 'lucide']);
       expect([drawn().getAttribute('data-size'), drawn().getAttribute('data-color')]).toEqual(['20', '#123456']);
