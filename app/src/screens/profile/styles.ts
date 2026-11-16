@@ -68,13 +68,6 @@ export const s = StyleSheet.create({
     backgroundColor: colors.bg, borderRadius: 999, padding: 2.5,
     shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
   },
-  // 24pt: the level pill's height, so the two corners read as a pair.
-  roleDisc: {
-    width: 24, height: 24, borderRadius: 12, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  roleGuide: { borderColor: colors.ok, backgroundColor: colors.okSoft },
-  roleEditor: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
   avatarBig: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',

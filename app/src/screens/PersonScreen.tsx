@@ -77,6 +77,7 @@ import { Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, useTabBa
 import { useFriendButtons } from '../components/FriendButton';
 import InCommon from '../components/InCommon';
 import { usePersonMenu } from '../components/PersonMenu';
+import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useSession } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
@@ -164,6 +165,10 @@ export default function PersonScreen({ navigation, route }: {
       <View style={s.headRow}>
         <View style={[s.faceRing, ring]}>
           <Avatar url={person.avatar_url || null} size={FACE} />
+          {/* A local guide's star or an editor's medal, on the picture's
+              corner, with the sheet that says what it means —
+              `PersonRole` (owner, 16 Nov 2026). */}
+          <PersonRole me={me} personId={person.id} />
         </View>
         {friendButton(person.id)}
       </View>

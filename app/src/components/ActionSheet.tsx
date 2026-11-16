@@ -45,7 +45,7 @@ import { Glyph } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from './ui';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space } from '../theme';
+import { colors, display, font, radius, space } from '../theme';
 
 /** The title's stated line (16pt, the system face gives 19.1) and the
  *  glyph's box — Profile's `RowGlyph` numbers, so the two screens' glyphs
@@ -243,6 +243,35 @@ export function SheetStrip({ actions, onClose }: {
 export const sheetHeader = {
   flexDirection: 'row', alignItems: 'center', gap: 14,
   padding: space.cardPadding,
+  backgroundColor: colors.surfaceCard,
+  borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
+} as const;
+
+/** A sheet's header that is its title, on nothing — the header of the
+ *  sheets that are not about a person or a photograph: who can see a
+ *  list, Visited's ⋯, Version info. A row, so a mark can stand before
+ *  the title or a figure after it.
+ *
+ *  The level's and the roles' sheets wore `sheetHeader`'s card for an
+ *  afternoon (16 Nov 2026), over a second card with their words in it:
+ *  two framed boxes for one small note, and the owner found them heavy
+ *  on the phone. A card earns its frame where it holds a thing — a face,
+ *  a thumbnail — not a title. */
+export const sheetTitleRow = {
+  flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4,
+} as const;
+
+/** That title's words: the size and face the other sheets' titles wear
+ *  (`sheetTitle` on the collection page and Visited). */
+export const sheetTitleText = {
+  flex: 1, color: colors.text, fontSize: 18, fontFamily: display.semibold,
+} as const;
+
+/** The card a sheet's own body is drawn on, where it is words and not
+ *  rows (the level's and the roles' sheets, 16 Nov 2026): the rows'
+ *  card, with the header's padding. */
+export const sheetBody = {
+  gap: 12, padding: space.cardPadding,
   backgroundColor: colors.surfaceCard,
   borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
 } as const;

@@ -302,6 +302,27 @@ export async function fetchListsLikedInCommon(otherId: string): Promise<string[]
   return ((data ?? []) as { slug: string }[]).map((r) => r.slug);
 }
 
+/** The mark a person wears on their page: on the desk's list, a local
+ *  guide, or neither. */
+export type PersonRole = 'editor' | 'guide' | null;
+
+/**
+ * Which mark, if any, this person wears (`role_of`, 16 Nov 2026).
+ *
+ * The database's word and nothing else: which cities, who granted it and
+ * an editor's email stay there, and so does who is told — somebody
+ * signed in, and nobody across a block (`role_of_test.sql`).
+ *
+ * Only the two words it knows are a mark. Anything else — a word a later
+ * migration adds before this app knows how to draw it — is no mark,
+ * rather than a disc with nothing in it.
+ */
+export async function fetchRoleOf(personId: string): Promise<PersonRole> {
+  const { data, error } = await supabase.rpc('role_of', { person: personId });
+  if (error) throw new Error(error.message);
+  return data === 'editor' || data === 'guide' ? data : null;
+}
+
 /** A list somebody else made, as an Activity row needs it to name and
  *  open it. */
 export type ActList = { id: string; slug: string; title_en: string; title_vi: string; title_ja: string | null };

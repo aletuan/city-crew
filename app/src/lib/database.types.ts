@@ -1472,6 +1472,7 @@ export type Database = {
           title: string
         }[]
       }
+      role_of: { Args: { person: string }; Returns: string }
       shared_with_me: { Args: { cid: string }; Returns: boolean }
       strip_profile_metadata: { Args: { meta: Json }; Returns: Json }
       suggested_friends: {
