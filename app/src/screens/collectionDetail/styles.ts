@@ -27,6 +27,25 @@ export const FACE = 40;
  *  each, and nothing is clipped. */
 const BYLINE_LINE = FACE / 2;
 
+/** Air between the handle and the line under it (owner, 16 Nov 2026).
+ *
+ *  The two 20pt lines stood flush, and on the phone "18h · 🌐 Public"
+ *  sat against the handle: both lines are 15pt, the lower one carries a
+ *  15pt globe, and the point of leading each line keeps is all there was
+ *  between two inks of one size. 3 is the step that reads as two lines
+ *  rather than one block of text.
+ *
+ *  The column is 43 with it, 3 over the face. It gives them back as a
+ *  negative margin, half above and half below, so the row is still the
+ *  face's 40 and nothing under it in the card moves: the words overhang
+ *  the face by a point and a half each way, inside the leading the
+ *  lines already hold, which no eye finds.
+ *
+ *  Rejected: a 44 face with 22pt lines. It keeps "two lines are the
+ *  face" exactly and buys 2, not 3 — and makes every head in the app
+ *  larger to move two lines apart. */
+export const BYLINE_GAP = 3;
+
 /** What the line under the handle adds above and below the who-can-see
  *  control to make Apple's 44 for the thumb. The control cannot be drawn
  *  `CHIP_H` tall there: 32 in a 20pt line would make the two lines 52,
@@ -172,7 +191,8 @@ export const s = StyleSheet.create({
   curator: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%' },
   // The handle over the line under it (`byline`), the column the face's
   // height, and the handle the part that gives when it is long.
-  curatorLines: { flexShrink: 1 },
+  // `BYLINE_GAP` apart, and no taller in the row for it — see there.
+  curatorLines: { flexShrink: 1, gap: BYLINE_GAP, marginVertical: -BYLINE_GAP / 2 },
   curatorTag: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: BYLINE_LINE, flexShrink: 1 },
   // A hairline, then the activity row (`activity`).
   activity: {

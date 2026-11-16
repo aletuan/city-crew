@@ -3303,6 +3303,19 @@ describe('the head of the card', () => {
     expect(viewStyleOf(meta()).flexDirection).toBe('row');
   });
 
+  // Flush, the line under the handle sat against it on the phone (owner,
+  // 16 Nov 2026). 3 between them, given back above and below, so the two
+  // lines with their air still take the face's 40 in the row and the
+  // card under the head does not move.
+  it('keeps 3 of air between the two lines, and the head the face’s height', () => {
+    state.mine = [collection({ created_at: ago(2 * HOUR) })];
+    show();
+    const lines = viewStyleOf(screen.getByTestId('collection-handle').parentElement!);
+    expect(lines.gap).toBe(3);
+    expect(lines.marginVertical).toBe(-1.5);
+    expect(20 + Number(lines.gap) + 20 + 2 * Number(lines.marginVertical)).toBe(40);
+  });
+
   it('says your list’s age, then who can see it, on your own', () => {
     state.mine = [collection({ created_at: ago(2 * HOUR) })];
     show();
