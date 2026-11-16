@@ -2899,6 +2899,52 @@ describe('the introduction card', () => {
     expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'hanoicrew' });
   });
 
+  // Your own page, from your own list (owner, 16 Nov 2026). The head was
+  // no press on your own list for a morning after it became the way to a
+  // person's page: the owner, signed in as the author, pressed their own
+  // face and nothing happened.
+  it('opens your own page from your own face, and from your own handle', () => {
+    state.cols = [];
+    state.profile = { handle: 'andy', avatar_url: 'https://img/me.jpg' };
+    state.mine = [collection({ curator_handle: '@old-handle' })];
+    const { raw } = show();
+    const face = screen.getByTestId('collection-own-face');
+    expect(face.querySelector('img[src="https://img/me.jpg"]')).toBeTruthy();
+    expect(face.getAttribute('aria-label')).toBe('Your page');
+    fireEvent.click(face);
+    // By the handle the profile holds, not the stale stamp on the row.
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'andy' });
+    raw.navigate.mockClear();
+    fireEvent.click(screen.getByTestId('collection-handle'));
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'andy' });
+  });
+
+  // The line under your handle holds a control — who sees the list — so
+  // the head is not one press around it, as a visitor's is: the control
+  // is a button of its own, outside the face's press.
+  it('leaves the visibility control its own press, outside the face’s', () => {
+    state.cols = [];
+    state.profile = { handle: 'andy', avatar_url: 'https://img/me.jpg' };
+    state.mine = [collection({ is_public: true })];
+    const { raw } = show();
+    const control = screen.getByTestId('collection-visibility');
+    expect(screen.getByTestId('collection-own-face').contains(control)).toBe(false);
+    fireEvent.click(control);
+    expect(raw.navigate).not.toHaveBeenCalled();
+  });
+
+  // Somebody else's face is not your page's door, and neither is their handle.
+  it('has no door to your own page on somebody else’s list', () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    state.profile = { handle: 'andy', avatar_url: 'https://img/me.jpg' };
+    const { raw } = show();
+    expect(screen.queryByTestId('collection-own-face')).toBeNull();
+    fireEvent.click(screen.getByTestId('collection-handle'));
+    // An editorial handle, nobody behind it: the press goes nowhere at all.
+    expect(raw.navigate).not.toHaveBeenCalled();
+  });
+
   it('leads your own list with your own face and handle, from your profile, as no button', () => {
     state.cols = [];
     state.profile = { handle: 'andy', avatar_url: 'https://img/me.jpg' };
