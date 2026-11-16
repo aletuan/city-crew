@@ -210,7 +210,7 @@ export default function CollectionStatsScreen({ navigation, route }: {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
       >
-        {col ? <ListSummaryCard col={col} owned={owned} testID="stats-list" /> : null}
+        {col ? <ListSummaryCard col={col} owned={owned} onPerson={(handle) => navigation.navigate('Person', { handle })} testID="stats-list" /> : null}
         {body}
       </ScrollView>
     </Screen>

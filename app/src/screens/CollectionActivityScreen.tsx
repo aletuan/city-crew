@@ -296,7 +296,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
     ageWord(actAgeOf(iso, new Date()), lang, t, t('now', 'Vừa xong', 'たった今', '刚刚', '剛剛'));
 
   // The list, in a small card — `ListSummaryCard`.
-  const card = col ? <ListSummaryCard col={col} owned={owned} testID="activity-list" /> : null;
+  const card = col ? <ListSummaryCard col={col} owned={owned} onPerson={(handle) => navigation.navigate('Person', { handle })} testID="activity-list" /> : null;
 
   // The way to the statistics — see the header. Yours with an id only:
   // the figures are the owner's, and a launch-cache row has nothing to
