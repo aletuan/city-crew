@@ -59,7 +59,7 @@ const OVERSIZE = {
   'src/screens/GalleryScreen.tsx': { lines: 356, complexity: 46 },
   'src/screens/PlanEditScreen.tsx': { lines: 317 },
   'src/screens/profile/AccountProfile.tsx': { lines: 270, complexity: 28 },
-  'src/screens/CollectionFormScreen.tsx': { lines: 268, complexity: 40 },
+  'src/screens/CollectionFormScreen.tsx': { lines: 222, complexity: 37 },
   'src/screens/TripDetailScreen.tsx': { lines: 294, complexity: 34 },
   'src/components/ExploreFilterSheet.tsx': { lines: 280 },
   'src/screens/EditProfileScreen.tsx': { lines: 266, complexity: 27 },
