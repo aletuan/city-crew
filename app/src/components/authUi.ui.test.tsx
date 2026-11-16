@@ -173,6 +173,43 @@ describe('a caller\'s TextInput props', () => {
 // A pull to reload, offered by Activity alone (13 Nov 2026). The forms
 // pass nothing, and a form that could be pulled into a spinner that
 // reloads nothing would be a gesture lying about what it does.
+// The grouped row with no card round it (the collection form, 16 Nov
+// 2026): the small label over the value, and no padding of its own — the
+// page's margin and the screen's gap are its distances.
+describe('a grouped row laid on the page', () => {
+  const rowOf = (id: string) => screen.getByTestId(id).parentElement!.parentElement as HTMLElement;
+  const pad = (el: HTMLElement) => { const c = getComputedStyle(el); return [c.paddingLeft, c.paddingRight, c.paddingTop, c.paddingBottom]; };
+
+  it('has no glyph and no padding, where a card\'s row keeps the card\'s', () => {
+    lang = 'en';
+    render(<FieldRow grouped flush icon="bookmark-outline" label="Collection name" value="x" testID="flush" onChangeText={() => {}} />);
+    expect(document.querySelector('[data-icon="bookmark-outline"]')).toBeNull();
+    expect(pad(rowOf('flush'))).toEqual(['0px', '0px', '0px', '0px']);
+    expect(screen.getByText('Collection name')).toBeTruthy();
+
+    render(<FieldRow grouped icon="bookmark-outline" label="In a card" value="x" testID="carded" onChangeText={() => {}} />);
+    expect(pad(rowOf('carded'))).toEqual(['16px', '16px', '11px', '11px']);
+  });
+
+  it('starts its error on the same margin', () => {
+    lang = 'en';
+    render(<FieldRow grouped flush icon="at-outline" label="Name" value="x" error="Taken" onChangeText={() => {}} />);
+    expect(getComputedStyle(screen.getByText('Taken')).paddingLeft).toBe('0px');
+    render(<FieldRow grouped icon="at-outline" label="Name" value="x" error="Taken too" onChangeText={() => {}} />);
+    expect(getComputedStyle(screen.getByText('Taken too')).paddingLeft).toBe('16px');
+  });
+
+  // A boxed field has a border to pad away from: `flush` is the grouped
+  // row's, and means nothing without it.
+  it('leaves a boxed field its box', () => {
+    lang = 'en';
+    render(<FieldRow flush icon="mail-outline" label="Email" value="x" testID="boxed" error="Bad" onChangeText={() => {}} />);
+    expect(pad(rowOf('boxed')).slice(0, 2)).toEqual(['16px', '16px']);
+    expect(document.querySelector('[data-icon="mail-outline"]')).toBeTruthy();
+    expect(getComputedStyle(screen.getByText('Bad')).paddingLeft).toBe('16px');
+  });
+});
+
 describe('the frame\'s pull to reload', () => {
   /** Every committed RefreshControl's props — by its type, so the
    *  frame's own props, which carry the same two names, are not taken for

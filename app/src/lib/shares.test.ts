@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   diffShares, namesBriefly, shareCta, shareRows, sharesByList, visibilityOf, type ShareRow,
+  SEEN_GLYPH, seenGloss, seenName,
 } from './shares';
 
 // The language the caller asked for, by position: en, vi, ja, zh.
@@ -105,6 +106,29 @@ describe('shareCta', () => {
     expect(shareCta([], new Set(), false)).toEqual({ kind: 'none' });
     expect(shareCta(['lan'], new Set(), true)).toEqual({ kind: 'none' });
     expect(shareCta([], new Set(), true)).toEqual({ kind: 'none' });
+  });
+});
+
+// The three answers, as words: under your handle on the list's page, on
+// its sheet's rows, and in a line at the head of its form (16 Nov 2026).
+describe('the three answers, said', () => {
+  const vi = (_en: string, v: string) => v;
+
+  it('gives each its own glyph', () => {
+    expect(SEEN_GLYPH).toEqual({ public: 'globe-outline', friends: 'people-outline', private: 'lock-closed-outline' });
+  });
+
+  it('names each in one word, in the reader’s language', () => {
+    expect((['public', 'friends', 'private'] as const).map((k) => seenName(k, en))).toEqual(['Public', 'Friends', 'Private']);
+    expect((['public', 'friends', 'private'] as const).map((k) => seenName(k, vi))).toEqual(['Công khai', 'Bạn bè', 'Riêng tư']);
+  });
+
+  it('says what each means in the few words that fit beside its name', () => {
+    expect(seenGloss('public', en)).toBe('Everyone can see it');
+    expect(seenGloss('friends', en)).toBe('Only the friends you choose');
+    expect(seenGloss('private', en)).toBe('Only you can see it');
+    expect((['public', 'friends', 'private'] as const).map((k) => seenGloss(k, vi)))
+      .toEqual(['Mọi người có thể xem', 'Chỉ những bạn bè bạn chọn', 'Chỉ mình bạn thấy']);
   });
 });
 

@@ -37,6 +37,8 @@ const saved = vi.hoisted(() => ({ data: [] as unknown[] }));
 // The rest of the catalog's photographs, as `usePlacePhotos` answers, and
 // what it was asked for.
 const photos = vi.hoisted(() => ({ data: {} as Record<string, unknown[]>, asked: [] as (string[] | null)[] }));
+// The owner's shares, as `useMyListShares` answers, and whose it was asked for.
+const shares = vi.hoisted(() => ({ data: [] as unknown[], asked: [] as (string | null | undefined)[] }));
 
 vi.mock('../lib/auth', () => {
   const m = {
@@ -75,6 +77,7 @@ vi.mock('../lib/data', async (orig) => ({
   updateCollection,
   copyCollection,
   usePlacePhotos: (slugs: string[] | null) => { photos.asked.push(slugs); return { data: photos.data }; },
+  useMyListShares: (owner: string | null | undefined) => { shares.asked.push(owner); return { data: shares.data }; },
 }));
 // `goTo` reaches for the container ref, which no test mounts; the rest of
 // `nav` — `leaveAuth`, the types — stays real.
@@ -115,6 +118,8 @@ beforeEach(() => {
   listeners.clear();
   photos.data = {};
   photos.asked = [];
+  shares.data = [];
+  shares.asked = [];
   createCollection.mockClear();
   addPlaceToCollection.mockClear();
   updateCollection.mockClear();
@@ -388,9 +393,65 @@ describe('what stops a submit before it writes', () => {
     expect(screen.queryByText(/Private until you say so/)).toBeNull();
   });
 
-  it('says a new list is private until it is made public from its menu', () => {
+  // Who can see the list, in a line under the title (owner, 16 Nov 2026).
+  // It was a sentence: "Only you can see this list until you make it
+  // public from its menu", which the menu had stopped offering on 13 Nov.
+  it('says a new list is private, in a line with its glyph, and asks for nobody’s shares', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    expect(screen.getByText('Only you can see this list until you make it public from its menu.')).toBeTruthy();
+    const line = screen.getByTestId('collection-form-seen');
+    expect(line.textContent).toBe('Private · Only you can see it');
+    expect(line.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
+    expect(screen.queryByText(/until you make it public/)).toBeNull();
+    // Read, not pressed: who can see a list is changed on its page.
+    expect(line.getAttribute('role')).not.toBe('button');
+    expect(line.closest('[role="button"]')).toBeNull();
+    // A list not yet made has no shares to read.
+    expect(shares.asked.at(-1)).toBeNull();
+  });
+
+  // The fields on the page itself (owner, 16 Nov 2026): small labels, no
+  // glyph column, no boxes, a hairline over, between and under them.
+  it('lays the name and the description on the page, between hairlines, with no glyphs', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    expect(screen.getByText('Collection name')).toBeTruthy();
+    expect(screen.getByText('Description')).toBeTruthy();
+    for (const icon of ['bookmark-outline', 'text-outline']) expect(document.querySelector(`[data-icon="${icon}"]`)).toBeNull();
+    const rules = screen.getAllByTestId('collection-form-rule');
+    expect(rules).toHaveLength(3);
+    // In order down the page: who sees it, a rule, the name, a rule, the
+    // description, a rule.
+    const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const name = screen.getByPlaceholderText('Weekend coffee');
+    const words = screen.getByPlaceholderText('What ties these together?');
+    const order = [screen.getByTestId('collection-form-seen'), rules[0], name, rules[1], words, rules[2]];
+    order.slice(1).forEach((el, i) => expect([i, before(order[i], el)]).toEqual([i, true]));
+    // No box: the row has no padding of its own, and no border.
+    const row = name.parentElement!.parentElement as HTMLElement;
+    expect([getComputedStyle(row).paddingLeft, getComputedStyle(row).borderTopWidth]).toEqual(['0px', '0px']);
+  });
+
+  // A plain new list is told nothing more than who can see it.
+  it('adds no sentence to a plain new list', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    expect(screen.queryByText(/nothing is copied until/)).toBeNull();
+    expect(screen.queryByText(/goes in first/)).toBeNull();
+  });
+
+  // The one sentence each of the other two ways in still needs, about
+  // what Save will do, under the line that says the list will be private.
+  it('keeps the sentence a copy and a save-from-a-place need, under the line', () => {
+    catalog.data = [HEIM];
+    const { unmount } = render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: {
+      sourceId: 'c-src', title: 'Theirs', desc: '', cityId: 'hanoi', placeSlugs: ['heim'],
+    } })} />);
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Private · Only you can see it');
+    expect(screen.getByText('Make it yours before it saves — nothing is copied until you do.')).toBeTruthy();
+    expect(screen.queryByText(/goes in first/)).toBeNull();
+    unmount();
+    render(<CollectionFormScreen navigation={nav()} route={routeWith({ addPlaceSlug: 'heim' })} />);
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Private · Only you can see it');
+    expect(screen.getByText('Name it, and the place you just saved goes in first.')).toBeTruthy();
+    expect(screen.queryByText(/nothing is copied until/)).toBeNull();
   });
 
   // Unreachable in practice — the screen lives behind a control only
@@ -450,16 +511,63 @@ describe('renaming a list', () => {
 
   // The line under the title says what the list is now. It promised
   // "only you can see this one" on every rename, public lists included.
-  it('warns that a public list’s new words show to everyone, and keeps a private one private', () => {
-    catalog.data = [HEIM];
-    saved.data = [{ ...(listOf([HEIM]) as object), is_public: true }];
-    const { unmount } = render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar' })} />);
-    expect(screen.getByText('This list is public — its new name and description will show to everyone.')).toBeTruthy();
-    expect(screen.queryByText(/Only you can see/)).toBeNull();
-    unmount();
-    saved.data = [{ ...(listOf([HEIM]) as object), is_public: false }];
-    render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar' })} />);
-    expect(screen.getByText('Only you can see this list until you make it public from its menu.')).toBeTruthy();
+  // The list as it stands, in the page's own three answers. The sentence
+  // this replaces knew two: a list shared with chosen friends was told
+  // "Only you can see this list".
+  describe('who can see it, in a line', () => {
+    const seenAs = (over: object) => {
+      catalog.data = [HEIM];
+      saved.data = [{ ...(listOf([HEIM]) as object), ...over }];
+      render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar' })} />);
+      return screen.getByTestId('collection-form-seen');
+    };
+    const shared = (list: string) => [{ collection_id: list, user_id: 'friend-1', created_at: '2026-11-14T00:00:00Z' }];
+
+    it('says a public list is public, to everyone', () => {
+      const line = seenAs({ is_public: true });
+      expect(line.textContent).toBe('Public · Everyone can see it');
+      expect(line.querySelector('[data-icon="globe-outline"]')).toBeTruthy();
+      expect(screen.queryByText(/will show to everyone/)).toBeNull();
+      // The owner's shares, asked for by the owner's id.
+      expect(shares.asked.at(-1)).toBe('u1');
+    });
+
+    it('says a private list is private', () => {
+      const line = seenAs({ is_public: false });
+      expect(line.textContent).toBe('Private · Only you can see it');
+      expect(line.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
+    });
+
+    it('says a list shared with friends is the friends’', () => {
+      shares.data = shared('c1');
+      const line = seenAs({ is_public: false });
+      expect(line.textContent).toBe('Friends · Only the friends you choose');
+      expect(line.querySelector('[data-icon="people-outline"]')).toBeTruthy();
+    });
+
+    // Public wins over the shares, as on the page: the policies read it so.
+    it('says public of a public list that is also shared, and private of one whose shares are another list’s', () => {
+      shares.data = shared('c1');
+      expect(seenAs({ is_public: true }).textContent).toBe('Public · Everyone can see it');
+      cleanup();
+      shares.data = shared('some-other-list');
+      expect(seenAs({ is_public: false }).textContent).toBe('Private · Only you can see it');
+    });
+
+    it('speaks the reader’s language', () => {
+      lang.now = 'vi';
+      try {
+        expect(seenAs({ is_public: true }).textContent).toBe('Công khai · Mọi người có thể xem');
+      } finally {
+        lang.now = 'en';
+      }
+    });
+
+    it('adds no sentence to a rename', () => {
+      seenAs({ is_public: true });
+      expect(screen.queryByText(/nothing is copied until/)).toBeNull();
+      expect(screen.queryByText(/goes in first/)).toBeNull();
+    });
   });
 
   // Only the name stops a save, so the description's label says what it

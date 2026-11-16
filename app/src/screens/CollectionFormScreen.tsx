@@ -20,7 +20,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
@@ -34,6 +34,7 @@ import { useNoteEvent } from '../lib/tasteProfile';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
 import { CoverGrid } from './collectionForm/CoverGrid';
+import { FieldRule, SaveHint, SeenLine } from './collectionForm/formParts';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
@@ -322,41 +323,20 @@ export default function CollectionFormScreen({ navigation, route }: {
       />
       {/* Beside the Save that raised it, rather than under the cover grid. */}
       {error ? <FormError>{failText(error)}</FormError> : null}
-      <Lede>{copyFrom
-          ? t(
-            'Make it yours before it saves — nothing is copied until you do.',
-            'Sửa thoải mái trước khi lưu — chưa lưu thì chưa có bản sao nào cả.',
-            '保存する前に自由に編集できます — 保存するまでコピーは作られません。',
-            '保存前可以随意修改 — 保存后才会创建副本。', '儲存前可以隨意修改 — 儲存後才會建立副本。',
-          )
-          : addPlaceSlug
-            ? t(
-              'Name it, and the place you just saved goes in first.',
-              'Đặt tên, và địa điểm bạn vừa lưu sẽ vào đầu tiên.',
-              '名前をつければ、いま保存したスポットが最初に入ります。',
-              '起个名字，你刚保存的地点会排在第一个。', '起個名字，你剛儲存的地點會排在第一個。',
-            )
-            // Said of the list as it is. This line used to promise "only
-            // you can see this one" on every rename, public lists included,
-            // and a footnote under the button promised it again. A new
-            // list and a copy are always private (the insert policy
-            // refuses anything else), so only a rename can be public.
-            : col?.is_public
-              ? t(
-                'This list is public — its new name and description will show to everyone.',
-                'Bộ sưu tập này đang công khai — tên và mô tả mới sẽ hiện với mọi người.',
-                'このリストは公開中です — 新しい名前と説明はすべての人に表示されます。',
-                '这个清单已公开 — 新的名称和简介会对所有人显示。', '這個清單已公開 — 新的名稱和簡介會對所有人顯示。',
-              )
-              : t(
-                'Only you can see this list until you make it public from its menu.',
-                'Chỉ mình bạn thấy bộ sưu tập này cho đến khi bạn công khai nó trong menu của bộ sưu tập.',
-                'リストのメニューから公開するまで、このリストはあなただけに表示されます。',
-                '在清单菜单中设为公开之前，这个清单仅你可见。', '在清單選單中設為公開之前，這個清單僅你可見。',
-              )}</Lede>
+      {/* Who can see it, in a line (owner, 16 Nov 2026): `SeenLine`. A
+          list not yet made has no row to read, and is private. */}
+      <SeenLine col={col} uid={uid} />
+      <SaveHint kind={copyFrom ? 'copy' : addPlaceSlug ? 'place' : null} />
+      {/* The fields on the page itself, between hairlines, with no box and
+          no glyph (owner, 16 Nov 2026) — see `collectionForm/formParts`. */}
+      <FieldRule />
       <FieldRow
+        grouped
+        flush
         icon="bookmark-outline"
-        label={t('Name', 'Tên', '名前', '名称', '名稱')}
+        // "Collection name", not "Name": with the glyph gone the label is
+        // all that says what the line is, and it is the small half now.
+        label={t('Collection name', 'Tên bộ sưu tập', 'コレクション名', '合集名称', '合集名稱')}
         placeholder={t('Weekend coffee', 'Cà phê cuối tuần', '週末のコーヒー', '周末咖啡', '週末咖啡')}
         value={title}
         onChangeText={setTitle}
@@ -369,7 +349,10 @@ export default function CollectionFormScreen({ navigation, route }: {
           owner's request, 10 Oct 2026). The form already says it: only
           the name stops a save, and the placeholder below is a question
           that can go unanswered. */}
+      <FieldRule />
       <FieldRow
+        grouped
+        flush
         icon="text-outline"
         label={t('Description', 'Mô tả', '説明', '简介', '簡介')}
         placeholder={t('What ties these together?', 'Điều gì gắn kết những nơi này?', '共通点は何ですか？', '这些地点有什么共同点？', '這些地點有什麼共同點？')}
@@ -378,6 +361,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         multiline
         returnKeyType="done"
       />
+      <FieldRule />
       {/* No chips here (owner, 16 Nov 2026). The list's kinds were shown
           between the description and the cover from 15 Oct, each a toggle
           that hid it from the list's page; they are worked out from the

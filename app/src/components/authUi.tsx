@@ -201,7 +201,7 @@ export function Lede({ children }: { children: string }) {
  * the reader to work out which of five fields it is about — and the one
  * this was written for named a value three fields further up.
  */
-export function FieldRow({ icon, label, secure, strength, error, invalid, grouped, ...input }: {
+export function FieldRow({ icon, label, secure, strength, error, invalid, grouped, flush, ...input }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   secure?: boolean;
@@ -224,12 +224,25 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
    * found mid-scroll.
    */
   grouped?: boolean;
+  /**
+   * A grouped row laid straight on the page, with no card round it
+   * (the collection form, owner, 16 Nov 2026): the same small label over
+   * the value, and no padding of its own. Its words start on the page's
+   * own margin, under the screen's title; and what stands between it and
+   * the rule above or below is the gap the screen already keeps between
+   * one block and the next (`AuthScreen`, `space.cardGap`), so a field is
+   * as far from its rule as any block here is from its neighbour. The
+   * caller rules the hairlines, as it does for a card's rows.
+   *
+   * Only with `grouped`: a boxed field has a border to pad away from.
+   */
+  flush?: boolean;
 } & TextInputProps) {
   const { t } = useI18n();
   const [hidden, setHidden] = useState(true);
   return (
     <View>
-      <View style={[grouped ? s.fieldFlat : s.field, !grouped && (!!error || invalid) && s.fieldBad]}>
+      <View style={[grouped ? s.fieldFlat : s.field, grouped && flush && s.fieldFlush, !grouped && (!!error || invalid) && s.fieldBad]}>
         {/* The glyph turns with the border. Colour alone should never
             carry a message, which is why the sentence below exists — but
             two signals agreeing is what makes the field findable in a
@@ -277,7 +290,7 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
       </View>
       {strength ? <PasswordStrengthMeter password={input.value ?? ''} /> : null}
       {error ? (
-        <Text style={s.fieldError} accessibilityLiveRegion="polite">{error}</Text>
+        <Text style={[s.fieldError, grouped && flush && s.fieldErrorFlush]} accessibilityLiveRegion="polite">{error}</Text>
       ) : null}
     </View>
   );
@@ -753,6 +766,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingHorizontal: space.cardPadding, paddingVertical: 11,
   },
+  // The grouped row with no card to sit in — see `flush`.
+  fieldFlush: { paddingHorizontal: 0, paddingVertical: 0 },
+  fieldErrorFlush: { paddingHorizontal: 0 },
   fieldLabelSmall: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.3,
   },
