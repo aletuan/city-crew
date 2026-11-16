@@ -97,6 +97,9 @@ vi.mock('../lib/person', async (orig) => {
   const real = await orig<typeof import('../lib/person')>();
   return { ...real, get IN_COMMON_ON() { return state.inCommonOn; } };
 });
+// The tab bar's duck, which hears every scroll of the page.
+const duck = vi.hoisted(() => vi.fn());
+vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => duck }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: state.scheme }) }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({
@@ -416,6 +419,163 @@ describe('the cover', () => {
     state.shelf = [list('bare')];
     await show();
     expect(viewStyleOf(screen.getByTestId('person-cover-tint')).backgroundColor).toBe(colors.accentSoft);
+  });
+});
+
+// The props a component was last given, found by walking the fibers —
+// for the two handlers jsdom never calls: a row's layout, a page's scroll.
+const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const fb = stack.pop()!;
+    const p = fb.memoizedProps;
+    if (p && typeof p === 'object' && pick(p)) return p;
+    if (fb.sibling) stack.push(fb.sibling);
+    if (fb.child) stack.push(fb.child);
+  }
+  throw new Error('nothing matched');
+};
+/** The row of acts laid out with its foot at 300, and the page scrolled. */
+const layRow = () => act(() => {
+  (propsWhere((q) => q.testID === 'person-acts').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 250, height: 50 } } });
+});
+const scrollTo = (y: number) => act(() => {
+  (propsWhere((q) => typeof q.onScroll === 'function' && 'contentContainerStyle' in q).onScroll as (e: unknown) => void)({
+    nativeEvent: { contentOffset: { x: 0, y }, contentSize: { width: 390, height: 2000 }, layoutMeasurement: { width: 390, height: 844 } },
+  });
+});
+
+// What there is to do about a person, in a row of its own under the head
+// (owner, 16 Nov 2026). The friend button stood at the end of the name's
+// row and, at 44, cut a long name and its handle.
+describe('the row of acts', () => {
+  const edge = (requester: string, addressee: string, status: 'pending' | 'accepted'): FriendshipRow =>
+    ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z', responded_at: null }) as FriendshipRow;
+  const headRow = () => screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
+
+  it('holds the friend button and Message, under the head and over the bio', async () => {
+    await show();
+    const acts = screen.getByTestId('person-acts');
+    expect(viewStyleOf(acts).flexDirection).toBe('row');
+    // The friend button first, then Message.
+    expect(acts.contains(screen.getByTestId('person-add'))).toBe(true);
+    expect(acts.contains(screen.getByTestId('person-message'))).toBe(true);
+    expect(screen.getByTestId('person-add').compareDocumentPosition(screen.getByTestId('person-message')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Out of the name's row, which the name now has to itself.
+    expect(headRow().contains(screen.getByTestId('person-add'))).toBe(false);
+    expect(headRow().compareDocumentPosition(acts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(acts.compareDocumentPosition(screen.getByTestId('person-bio')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // Not built yet, and said so: dimmed, "Soon" beside the word, and no
+  // press at all — nothing pretends to answer one.
+  it('draws Message as not yet a button: dimmed, said to be coming, and no press', async () => {
+    const navigation = await show();
+    const message = screen.getByTestId('person-message');
+    expect(message.textContent).toBe('Message' + 'Soon');
+    const face = message.firstElementChild as HTMLElement;
+    expect(viewStyleOf(face)).toMatchObject({ opacity: 0.45, minHeight: 44, backgroundColor: colors.surfaceCard });
+    expect(message.getAttribute('aria-disabled')).toBe('true');
+    expect(message.getAttribute('aria-label')).toBe('Message, Soon');
+    fireEvent.click(message);
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(data.sendFriendRequest).not.toHaveBeenCalled();
+    cleanup();
+    state.lang = 'vi';
+    await show();
+    expect(screen.getByTestId('person-message').textContent).toBe('Nhắn tin' + 'Sắp có');
+  });
+
+  it('holds what already stands too, as the grey words', async () => {
+    crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
+    await show();
+    expect(screen.getByTestId('person-acts').contains(screen.getByTestId('person-friends'))).toBe(true);
+    expect(screen.getByTestId('person-message')).toBeTruthy();
+  });
+
+  // No friend button, no row: your own page, and nobody signed in.
+  it('is not drawn on your own page, nor signed out', async () => {
+    state.me = LAN.id;
+    await show();
+    expect(screen.queryByTestId('person-acts')).toBeNull();
+    expect(screen.queryByTestId('person-message')).toBeNull();
+    cleanup();
+    state.me = null;
+    await show();
+    expect(screen.queryByTestId('person-acts')).toBeNull();
+  });
+});
+
+// Three rows of collections down, Add friend is a scroll back up — so
+// once its row has gone under the header, the header offers it again,
+// small, beside the ⋯ (owner, 16 Nov 2026).
+describe('the friend button in the header', () => {
+  const edge = (requester: string, addressee: string, status: 'pending' | 'accepted'): FriendshipRow =>
+    ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z', responded_at: null }) as FriendshipRow;
+
+  it('is not there until the row has scrolled away, and goes when the row is back', async () => {
+    await show();
+    layRow();
+    expect(screen.queryByTestId('person-top-add')).toBeNull();
+    scrollTo(300);
+    // At the row's foot is not past it.
+    expect(screen.queryByTestId('person-top-add')).toBeNull();
+    scrollTo(301);
+    const top = screen.getByTestId('person-top-add');
+    expect(top.textContent).toBe('Add friend');
+    // The chip's 32, where the row's is 44.
+    expect(viewStyleOf(top.firstElementChild!.firstElementChild as HTMLElement).minHeight).toBe(32);
+    expect(viewStyleOf(screen.getByTestId('person-add').firstElementChild!.firstElementChild as HTMLElement).minHeight).toBe(44);
+    // Before the ⋯, in the header.
+    expect(top.compareDocumentPosition(screen.getByTestId('person-more')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    scrollTo(120);
+    expect(screen.queryByTestId('person-top-add')).toBeNull();
+  });
+
+  // Before the row is laid out there is no foot to be past.
+  it('waits for the row to be laid out', async () => {
+    await show();
+    scrollTo(900);
+    expect(screen.queryByTestId('person-top-add')).toBeNull();
+  });
+
+  it('sends the request, and then says nothing: a fact is not worth the header', async () => {
+    await show();
+    layRow();
+    scrollTo(500);
+    await act(async () => { fireEvent.click(screen.getByTestId('person-top-add')); });
+    expect(data.sendFriendRequest).toHaveBeenCalledExactlyOnceWith('me-id', 'lan-id');
+    // One pledge, both buttons: the row says Requested, the header nothing.
+    expect(screen.getByTestId('person-requested')).toBeTruthy();
+    expect(screen.queryByTestId('person-top-add')).toBeNull();
+    expect(screen.queryByTestId('person-top-requested')).toBeNull();
+  });
+
+  it('offers Accept there to somebody who asked, and nothing for a friend', async () => {
+    crew.ships.data = [edge('lan-id', 'me-id', 'pending')];
+    await show();
+    layRow();
+    scrollTo(500);
+    expect(screen.getByTestId('person-top-accept').textContent).toBe('Accept');
+    cleanup();
+    crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
+    await show();
+    layRow();
+    scrollTo(500);
+    expect(screen.queryByTestId('person-top-friends')).toBeNull();
+    expect(screen.queryByTestId('person-top-add')).toBeNull();
+  });
+
+  // The tab bar still ducks: every scroll is passed on to it.
+  it('still passes every scroll to the tab bar', async () => {
+    await show();
+    duck.mockClear();
+    scrollTo(40);
+    scrollTo(80);
+    expect(duck).toHaveBeenCalledTimes(2);
   });
 });
 

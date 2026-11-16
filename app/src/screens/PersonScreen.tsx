@@ -76,7 +76,10 @@
 //
 // The one a list's activity page draws (`useFriendButtons`), by the same
 // rule (`rowButton`): nothing for yourself or across a block, Add friend,
-// Accept, or the quiet word for what stands. A block is not otherwise
+// Accept, or the quiet word for what stands. In a row of its own under
+// the head, beside a Message that is not built yet (`Acts`), and again,
+// small, in the header once that row has scrolled away (`usePastRow`).
+// A block is not otherwise
 // read here: the lists on this page are public, and a block is a contact
 // policy, not a content filter — the policy's own words.
 //
@@ -93,10 +96,16 @@
 // to answer, and nothing in it counts the press: the production build
 // sends no usage analytics (`lib/legal`), so the answer will come from
 // asking people.
-import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
+  ScrollView, StyleSheet, Text, View,
+} from 'react-native';
 import { Image } from 'expo-image';
-import { Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import {
+  Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
+} from '../components/ui';
+import { Glyph } from '../components/ui/glyph';
 import { useFriendButtons } from '../components/FriendButton';
 import InCommon from '../components/InCommon';
 import { usePersonMenu } from '../components/PersonMenu';
@@ -147,8 +156,15 @@ export default function PersonScreen({ navigation, route }: {
   // Report, block, unblock — `usePersonMenu`.
   const menu = usePersonMenu(me, person, crew);
 
+  const personId = person?.id ?? null;
+  const friend = friendButton(personId);
+  // The same button, small, for the header once the row has scrolled
+  // away — a thing to do only (`actsOnly`): a fact is not worth the
+  // header's room.
+  const top = usePastRow(useDuckOnScroll());
+  const topFriend = top.past ? friendButton(personId, { size: 'row', prefix: 'person-top', actsOnly: true }) : null;
+
   const tabClearance = useTabBarClearance();
-  const duckScroll = useDuckOnScroll();
   // A ring is a border, and a dynamic colour on a border flattens against
   // the phone's appearance rather than the app's (`bgHex`).
   const { scheme } = useScheme();
@@ -203,8 +219,11 @@ export default function PersonScreen({ navigation, route }: {
             : null}
           <Text style={person.full_name ? s.handle : s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
         </View>
-        {friendButton(person.id)}
       </View>
+      {/* What there is to do about this person, in a row of its own —
+          `Acts`. Not on your own page, nor signed out: no friend button,
+          no row. */}
+      {friend ? <Acts friend={friend} onLayout={top.onRowLayout} /> : null}
       {person.bio ? <Text style={s.bio} testID="person-bio">{person.bio}</Text> : null}
       {/* What the two of you have in common — `InCommon`. It took the
           "mutual saves" this line counted, for a friend only, until 16
@@ -269,10 +288,10 @@ export default function PersonScreen({ navigation, route }: {
       backTestID="person-back"
       backBare
       compactTitle
-      right={menu.button}
+      right={<View style={s.topRight}>{topFriend}{menu.button}</View>}
     >
       <ScrollView
-        onScroll={duckScroll}
+        onScroll={top.onScroll}
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
@@ -281,6 +300,79 @@ export default function PersonScreen({ navigation, route }: {
       </ScrollView>
       {menu.node}
     </Screen>
+  );
+}
+
+/**
+ * Whether the row of acts has scrolled out from under the header.
+ *
+ * The page's one act is under the name, and a page of collections is
+ * long: three rows down, Add friend is a scroll back up. So once the row
+ * has gone the header offers it again, small, beside the ⋯ — where
+ * Instagram and Threads keep theirs — and takes it back when the row
+ * returns.
+ *
+ * The row's foot in the scroller's content, from its layout; past it
+ * when the offset is. State only on the crossing, not on every frame.
+ * The tab bar's duck still hears every scroll.
+ */
+function usePastRow(duck: ((e: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined) {
+  const [foot, setFoot] = useState<number | null>(null);
+  const [past, setPast] = useState(false);
+  return {
+    past,
+    onRowLayout: (e: LayoutChangeEvent) => setFoot(e.nativeEvent.layout.y + e.nativeEvent.layout.height),
+    onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      duck?.(e);
+      const now = foot !== null && e.nativeEvent.contentOffset.y > foot;
+      if (now !== past) setPast(now);
+    },
+  };
+}
+
+/**
+ * What there is to do about this person: the friend button, and Message.
+ *
+ * A row of its own under the name (owner, 16 Nov 2026). The friend
+ * button stood at the end of the name's row for an evening, and at 44 it
+ * took nearly half the width beside the picture: "Le Nguyen Ngoc Minh"
+ * shrank as far as it could and "@lenguyenngocminh" was cut. Under the
+ * head the name has the whole width and the buttons have theirs.
+ *
+ * Rejected for it: the button as an icon alone (four states become four
+ * glyphs, two of them ticks), and the button on the cover photograph
+ * (the grey words for "Requested" and "Friends" cannot be read on a
+ * photograph, and would need the pill they had just lost).
+ *
+ * Message is not built. It is drawn anyway, dimmed and said to be
+ * coming — the owner's choice over leaving the place empty — as
+ * `ActionSheet` draws a row that is not yet a thing to do: 0.45, the
+ * figure the app's dimmed controls share, "Soon" beside the word, and
+ * the press refused, so nothing pretends to answer one. When messages
+ * exist it becomes a button where it stands.
+ */
+function Acts({ friend, onLayout }: { friend: React.ReactNode; onLayout: (e: LayoutChangeEvent) => void }) {
+  const { t } = useI18n();
+  const message = t('Message', 'Nhắn tin', 'メッセージ', '发消息', '發訊息');
+  const soon = t('Soon', 'Sắp có', '近日公開', '即将推出', '即將推出');
+  return (
+    <View style={s.acts} onLayout={onLayout} testID="person-acts">
+      {friend}
+      <PressableScale
+        // `disabled` alone, as `ActionSheet`'s rows that are not yet a
+        // thing to do: the press is dropped and VoiceOver says dimmed.
+        disabled
+        scaleTo={1}
+        contentStyle={s.message}
+        accessibilityRole="button"
+        accessibilityLabel={`${message}, ${soon}`}
+        testID="person-message"
+      >
+        <Glyph name="chatbubble-outline" size={15} color={colors.accent} />
+        <Text style={s.messageText}>{message}</Text>
+        <Text style={s.messageSoon}>{soon}</Text>
+      </PressableScale>
+    </View>
   );
 }
 
@@ -318,10 +410,9 @@ const s = StyleSheet.create({
   tint: { backgroundColor: colors.accentSoft },
   coverCard: { borderRadius: radius.card, overflow: 'hidden' },
   coverPhoto: { width: '100%', height: COVER_H },
-  // The face half over the cover's lower edge, at the card's own inset;
-  // the button on the same row, level with the face's lower half.
-  // The picture, the name beside it, the friend button at the row's end.
-  // On the picture's foot: its upper half lies over the cover.
+  // The face half over the cover's lower edge, at the card's own inset,
+  // and the name beside it. On the picture's foot: its upper half lies
+  // over the cover.
   headRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 12,
     marginTop: -(FACE / 2), paddingHorizontal: space.cardPadding,
@@ -330,19 +421,34 @@ const s = StyleSheet.create({
   faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
   // The name over the handle, one column beside the picture: 28 and 20,
   // the 48 of the picture's half under the cover, so the two lines stand
-  // exactly on it and the 44pt friend button is level with them.
+  // exactly on it.
   //
   // A handle alone (nobody's name) stands in the middle of that 48.
   names: { flex: 1, minHeight: FACE / 2 + 4, justifyContent: 'center' },
   // The display face at 22, the size the page's own Profile heads its
-  // sections in. It takes the room the picture and the button leave —
-  // about 130pt beside "Add friend" on a 390pt phone, by arithmetic and
-  // not yet by a phone — so it shrinks to `TITLE_SHRINK` before it is
-  // cut.
+  // sections in. It has the row to itself beside the picture — about
+  // 240pt on a 390pt phone, by arithmetic — since the friend button left
+  // for a row of its own; it still shrinks to `TITLE_SHRINK` before it
+  // is cut, for the name that is longer than that.
   title: {
     color: colors.text, fontSize: 22, lineHeight: 28, fontFamily: display.bold,
     letterSpacing: 0.2,
   },
+  // The row of acts, under the head: the friend button's 44, 14 under
+  // the picture's foot.
+  acts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
+  // Add friend's dress (`FriendButton`), dimmed: a button that is not
+  // one yet.
+  message: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, opacity: 0.45,
+    minHeight: SECONDARY_CONTROL_H, borderRadius: radius.pill, paddingHorizontal: 16,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+  },
+  messageText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
+  messageSoon: { color: colors.textTertiary, fontSize: 13 },
+  // The header's end: the small friend button, when it is there, then
+  // the ⋯.
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // The handle, right under the name: an address, quieter.
   handle: { color: colors.textTertiary, ...type.meta, lineHeight: 20 },
   bio: { color: colors.textSecondary, ...type.body, lineHeight: 23, marginTop: 10 },

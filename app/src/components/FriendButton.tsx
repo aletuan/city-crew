@@ -84,13 +84,23 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
   const acceptFriend = (id: string) => ask(id, 'friends', () => acceptFriendRequest(id, me!),
     t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした', '无法接受请求', '無法接受請求'));
 
-  // On a page the buttons are 44 and need no slop to reach it.
-  const page = size === 'page';
-  const slop = page ? undefined : CHIP_SLOP;
-
-  const friendButton = (id: string | null) => {
+  /**
+   * The button for one person. `as` draws this one differently from the
+   * screen's others while sharing their pledges — a person's page draws
+   * the same person's button twice, large under their name and small in
+   * the header once that has scrolled away (`PersonScreen`):
+   *   - `size`, in place of the hook's;
+   *   - `prefix`, so the two are told apart in tests;
+   *   - `actsOnly`, for a place that has room for a thing to do and none
+   *     for a fact: Add friend or Accept, and nothing for what stands.
+   */
+  const friendButton = (id: string | null, as: { size?: 'row' | 'page'; prefix?: string; actsOnly?: boolean } = {}) => {
     const state = rowButton(id, me, crew.ships.data, crew.blocks.data, pledged);
     if (!state || !id) return null;
+    // On a page the buttons are 44 and need no slop to reach it.
+    const page = (as.size ?? size) === 'page';
+    const slop = page ? undefined : CHIP_SLOP;
+    const name = as.prefix ?? prefix;
     if (state === 'add') {
       return (
         <PressableScale
@@ -98,7 +108,7 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
           hitSlop={slop}
           scaleTo={0.94}
           accessibilityRole="button"
-          testID={`${prefix}-add`}
+          testID={`${name}-add`}
         >
           <View style={[s.addBtn, page && s.onPage]}>
             <Glyph name="person-add-outline" size={15} color={colors.accent} />
@@ -114,7 +124,7 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
           hitSlop={slop}
           scaleTo={0.94}
           accessibilityRole="button"
-          testID={`${prefix}-accept`}
+          testID={`${name}-accept`}
         >
           <LinearGradient {...gradAI} style={[s.acceptBtn, page && s.onPage]}>
             <Glyph name="checkmark" size={15} color={colors.accentInk} />
@@ -124,8 +134,9 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
       );
     }
     // A state, not a control: drawn as Crew's quiet outline, read as words.
+    if (as.actsOnly) return null;
     return (
-      <View style={[s.quiet, page && s.quietOnPage]} testID={`${prefix}-${state}`}>
+      <View style={[s.quiet, page && s.quietOnPage]} testID={`${name}-${state}`}>
         <Glyph name={state === 'friends' ? 'checkmark' : 'time-outline'} size={15} color={colors.textTertiary} />
         <Text style={s.quietText}>
           {state === 'friends'
