@@ -186,8 +186,13 @@ vi.mock('../components/AvatarPicker', () => ({
 // The ring's drawing is its own business; the numbers it is handed are
 // this screen's.
 vi.mock('../components/EngagementRing', () => ({
-  default: ({ level, progress, children }: { level: number; progress: number; children: React.ReactNode }) =>
-    <div data-testid="ring" data-level={level} data-progress={progress}>{children}</div>,
+  default: ({ level, progress, onExplain, children }: { level: number; progress: number; onExplain: () => void; children: React.ReactNode }) => (
+    <div data-testid="ring" data-level={level} data-progress={progress}>
+      {children}
+      {/* The pill, which the real ring makes a press. */}
+      <button type="button" data-testid="ring-explain" onClick={onExplain} />
+    </div>
+  ),
 }));
 
 import ProfileScreen from './ProfileScreen';
@@ -825,6 +830,34 @@ describe('the level ring', () => {
     const ring = screen.getByTestId('ring');
     expect(ring.getAttribute('data-level')).toBe('2');
     expect(Number(ring.getAttribute('data-progress'))).toBeCloseTo(0.2);
+  });
+
+  // The pill says what the level is (owner, 16 Nov 2026), in the
+  // reader's own numbers — the distinct places, not the lists' sizes
+  // added up, and the count that left the row of numbers the same day.
+  it('says what the level is when the pill is pressed, with the reader’s own count', () => {
+    const p = (slug: string) => ({ slug });
+    state.mine = [
+      { members: [p('a'), p('b'), p('c')] },
+      { members: [p('a'), p('d'), p('e'), p('f')] },
+    ];
+    draw();
+    expect(alert).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    expect(alert).toHaveBeenCalledExactlyOnceWith(
+      'Level 2',
+      'Every 5 places you save into a collection takes you up a level. You have saved 6 so far, and 4 more takes you to Level 3.',
+    );
+  });
+
+  it('says it in Vietnamese', () => {
+    state.lang = 'vi';
+    draw();
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    expect(alert).toHaveBeenCalledExactlyOnceWith(
+      'Level 1',
+      'Cứ 5 địa điểm bạn lưu vào bộ sưu tập là lên một level. Bạn đã lưu 0 địa điểm, lưu thêm 5 địa điểm nữa để lên Level 2.',
+    );
   });
 
   it('starts a new account at level 1', () => {

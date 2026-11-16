@@ -18,12 +18,19 @@
 // arc long enough to cross it. See `lib/ring.ts`.
 //
 // What feeds it is deliberately small. See `levelFromSaves`.
+//
+// The pill is a press that says what the level is (owner, 16 Nov 2026) —
+// as the role's disc on the opposite corner says what the role is. What
+// it says is the caller's (`onExplain`): the ring is handed a level, not
+// the count it came from.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { PressableScale } from './ui';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, font, gradAI, ringSweep, ringTrack } from '../theme';
+import { useI18n } from '../lib/i18n';
 import { sampleSweep, visibleSweep } from '../lib/ring';
 import { useScheme } from '../lib/theme';
 
@@ -31,14 +38,17 @@ import { useScheme } from '../lib/theme';
 // test runner can reach it without loading React Native.
 export { levelFromSaves, PER_LEVEL } from '../lib/level';
 
-export default function EngagementRing({ size, level, progress, children }: {
+export default function EngagementRing({ size, level, progress, onExplain, children }: {
   /** The avatar's diameter. The ring is drawn outside it. */
   size: number;
   level: number;
   /** 0–1 through the current level. */
   progress: number;
+  /** The pill, pressed: say what the level is. */
+  onExplain: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   // Read rather than resolved: see `ringTrack` for why this cannot be a
   // dynamic pair.
   const track = ringTrack[useScheme().scheme];
@@ -102,14 +112,33 @@ export default function EngagementRing({ size, level, progress, children }: {
           CGColor once and can come back stale after a theme change, which
           is what put a black ring on the camera badge. */}
       <View style={s.halo}>
-        <LinearGradient
-          colors={gradAI.colors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.badge}
+        <PressableScale
+          // The role disc's press, on the other corner (0.9 there).
+          scaleTo={0.9}
+          onPress={onExplain}
+          // The pill is 21 tall (15 of line, 3 above and below) and 44
+          // wide at two digits: 12 more above and below is the 44 a thumb
+          // is owed. The picture under it is a press too (it opens the
+          // picker); the reach takes the strip of it around the pill's
+          // own corner, and the pill, drawn later, is the one that
+          // answers there.
+          hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+          haptic="selection"
+          accessibilityRole="button"
+          // "Level", spelled: VoiceOver reads "Lv" as two letters.
+          accessibilityLabel={t(`Level ${level}`, `Level ${level}`, `レベル${level}`, `${level} 级`, `${level} 級`)}
+          accessibilityHint={t('Explains how levels work', 'Giải thích cách tính level', 'レベルの仕組みを説明します', '说明等级如何计算', '說明等級如何計算')}
+          testID="level-badge"
         >
-          <Text style={s.badgeText}>{`Lv ${level}`}</Text>
-        </LinearGradient>
+          <LinearGradient
+            colors={gradAI.colors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.badge}
+          >
+            <Text style={s.badgeText}>{`Lv ${level}`}</Text>
+          </LinearGradient>
+        </PressableScale>
       </View>
     </View>
   );

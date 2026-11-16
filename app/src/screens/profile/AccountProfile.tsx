@@ -8,7 +8,7 @@ import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import AvatarPicker from '../../components/AvatarPicker';
 import EngagementRing from '../../components/EngagementRing';
-import { levelFromSaves } from '../../lib/level';
+import { levelFromSaves, levelWords } from '../../lib/level';
 import { useAuthActions, useProfile, useSession } from '../../lib/auth';
 import { visitSummary } from '../../lib/checkin';
 import { useIsEditor, useIsGuideAnywhere } from '../../lib/useGuideGrant';
@@ -50,6 +50,15 @@ export function memberSinceLabel(d: Date, lang: Lang): string {
  * zeros — the same figures an empty account shows, and read as one
  * (UX-14, 17 Oct 2026). A zero here is now only ever an answer.
  */
+/** The "Lv" pill, pressed: what the level is, in the reader's own
+ *  numbers — `levelWords`. A system alert, as the role disc's is: two
+ *  badges on one picture explain themselves one way. Out here because
+ *  the screen's function is at its ceiling (`oversize.js`). */
+const sayLevel = (saved: number, t: Parameters<typeof levelWords>[1]) => {
+  const w = levelWords(saved, t);
+  Alert.alert(w.title, w.body);
+};
+
 export function StatTile({ n, label, onPress }: { n: number | null; label: string; onPress: () => void }) {
   const { t } = useI18n();
   return (
@@ -218,7 +227,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
             round-trip late moves nothing else on the page — which is
             what the pill's held room was for. */}
         <View style={s.avatarBox} testID="avatar-box">
-          <EngagementRing size={88} level={level} progress={progress}>
+          <EngagementRing size={88} level={level} progress={progress} onExplain={() => sayLevel(saved, t)}>
             <AvatarPicker showCamera={false} />
           </EngagementRing>
           {role && (
