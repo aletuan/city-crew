@@ -409,6 +409,23 @@ describe('in common', () => {
     expect(names('common-place')).toEqual(['Banh']);
   });
 
+  // Five of each at most (owner, 16 Nov 2026): the first pair it was
+  // tried on had thirty collections liked in common, a strip of thirty
+  // tiles above the collections the page is about.
+  it('shows the first five of each kind, in the order answered', async () => {
+    const many = Array.from({ length: 8 }, (_, i) => `l${i}`);
+    state.common = {
+      places: Array.from({ length: 7 }, (_, i) => ({ ...banh, slug: `p${i}`, name_en: `Place ${i}` })),
+      // One the shelf does not hold, among the first five answered: it
+      // does not use up a place in the row.
+      lists: ['gone', ...many],
+    };
+    state.shelf = many.map((slug) => list(slug, { owner_id: 'minh-id' }));
+    await show();
+    expect(names('common-place')).toEqual(['Place 0', 'Place 1', 'Place 2', 'Place 3', 'Place 4']);
+    expect(names('common-list')).toEqual(['List l0', 'List l1', 'List l2', 'List l3', 'List l4']);
+  });
+
   it('shows it to somebody who is not a friend, and asks nothing signed out or on your own page', async () => {
     state.common = { places: [banh], lists: [] };
     await show();

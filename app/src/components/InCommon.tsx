@@ -46,6 +46,23 @@ import { localized } from '../lib/localized';
 import { colors, font, space } from '../theme';
 import type { Nav } from '../nav';
 
+/**
+ * How many of each kind a row shows: five (owner, 16 Nov 2026).
+ *
+ * The database answers up to thirty, and the first pair it was tried on
+ * — the owner's account and a friend's — had thirty collections liked in
+ * common: a strip of thirty tiles across the middle of somebody's page,
+ * above the collections the page is about. The section is a glance at
+ * what you share, not a list of it. Five is the owner's number; at 116pt
+ * a tile, three are on a phone's screen and two more are a short pull.
+ *
+ * The first five as the database orders them: collections by the latest
+ * like of either of you, places by name. Cut here and not in the two
+ * functions, so that a "see all" later is a screen and not a migration.
+ * Nothing says there are more: the row does not claim to be the whole.
+ */
+export const IN_COMMON_SHOWN = 5;
+
 /** A tile: a photograph and two lines of name under it. Small — a row
  *  of them is a glance, and the page's own tiles are below. */
 const TILE_W = 116;
@@ -78,10 +95,11 @@ export default function InCommon({ me, otherId, navigation }: {
   const shelf = useCollections();
   const catalog = usePlaces();
 
-  const places = q.data.places;
+  const places = q.data.places.slice(0, IN_COMMON_SHOWN);
   const lists = q.data.lists
     .map((slug) => shelf.data.find((c) => c.slug === slug))
-    .filter((c): c is Collection => !!c);
+    .filter((c): c is Collection => !!c)
+    .slice(0, IN_COMMON_SHOWN);
   if (places.length === 0 && lists.length === 0) return null;
 
   return (
