@@ -2366,12 +2366,14 @@ describe('a friend’s list, shared with you', () => {
     expect(title.nextElementSibling).toBe(heading);
   });
 
-  it('offers the friend’s block in the curator sheet, and no report', () => {
+  // The friend's face opens the friend's page (16 Nov 2026); the block
+  // that used to be offered in a sheet here is on that page's ⋯.
+  it('opens the friend’s page from the head, by the friend’s handle', () => {
     spies.profileLookup.mockImplementation(() => ({ data: { id: 'lan-id', full_name: 'Lan', avatar_url: '' }, loading: false }));
-    show();
+    const { raw } = show();
     fireEvent.click(screen.getByTestId('collection-curator'));
-    expect(screen.queryByRole('button', { name: /Block @lan/ })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Report this list/ })).toBeNull();
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'lan' });
+    expect(screen.queryByRole('button', { name: /Block @lan/ })).toBeNull();
   });
 
   it('offers no copy in the dock either', () => {
@@ -2848,75 +2850,53 @@ describe('the introduction card', () => {
     expect(screen.getAllByText('hanoicrew')).toHaveLength(1);
   });
 
-  it('offers only the report for an editorial handle with nobody behind it', () => {
-    show();
-    fireEvent.click(screen.getByTestId('collection-curator'));
-    expect(sheetRow(/Report this list/)).toBeTruthy();
-    expect(sheetRow(/Block/)).toBeNull();
-  });
-
-  it('opens the report sheet for this list from the curator sheet', () => {
-    vi.useFakeTimers();
-    try {
-      show();
-      fireEvent.click(screen.getByTestId('collection-curator'));
-      fireEvent.click(sheetRow(/Report this list/)!);
-      vi.runAllTimers();
-      expect(spies.report).toHaveBeenCalledWith(expect.objectContaining({ kind: 'collection', ownerId: 'curator' }));
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('blocks the owner of the list once confirmed, where a person stands behind the handle', async () => {
+  // ── the head is the way to the author's page (owner, 16 Nov 2026) ──
+  // Until that day a press here opened a sheet with "Report this list"
+  // and "Block". The report is a row in the ⋯ (tested there); the block
+  // is on the author's own page (`PersonMenu`).
+  it('opens the author’s page from the head, where a person stands behind the handle', () => {
     spies.profileLookup.mockImplementation(() => ({ data: { id: 'curator', full_name: 'Thai Ba Son', avatar_url: '' }, loading: false }));
-    vi.useFakeTimers();
-    try {
-      show();
-      fireEvent.click(screen.getByTestId('collection-curator'));
-      // The sheet names the person, with the handle under the name.
-      expect(screen.getByText('Thai Ba Son')).toBeTruthy();
-      fireEvent.click(sheetRow(/Block @hanoicrew/)!);
-      vi.runAllTimers();
-    } finally {
-      vi.useRealTimers();
-    }
-    expect(alert.mock.calls.at(-1)![0]).toBe('Block @hanoicrew?');
+    const { raw } = show();
+    const head = screen.getByTestId('collection-curator');
+    expect(head.getAttribute('role')).toBe('button');
+    fireEvent.click(head);
+    // By the handle, its `@` off, as the page is addressed.
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'hanoicrew' });
+    // And no sheet about them here any more.
+    expect(sheetRow(/Block/)).toBeNull();
+    expect(sheetRow(/Report this list/)).toBeNull();
     expect(spies.blockUser).not.toHaveBeenCalled();
-    pressInAlert('Block');
-    expect(spies.blockUser).toHaveBeenCalledWith('curator');
-    await waitFor(() => expect(alert.mock.calls.at(-1)![0]).toBe('@hanoicrew is blocked'));
   });
 
-  it('says so when the block fails', async () => {
+  it('knows a person by a face the shelf holds, before any lookup answers', () => {
     state.cachedAvatar = 'https://img/face.jpg';
-    spies.blockUser.mockImplementation(async () => { throw new Error('nope'); });
-    vi.useFakeTimers();
-    try {
-      show();
-      fireEvent.click(screen.getByTestId('collection-curator'));
-      fireEvent.click(sheetRow(/Block @hanoicrew/)!);
-      vi.runAllTimers();
-    } finally {
-      vi.useRealTimers();
-    }
-    pressInAlert('Block');
-    await waitFor(() => expect(alert.mock.calls.at(-1)![0]).toBe('Could not block'));
+    const { raw } = show();
+    fireEvent.click(screen.getByTestId('collection-curator'));
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'hanoicrew' });
   });
 
-  it('is not a button where there is nothing to do — signed out', () => {
+  // Nobody behind the handle: no page, so no press — a press that opens
+  // "Nobody here" is a dead control. It could be reported from here
+  // before; it still can, from the ⋯.
+  it('is not a button for an editorial handle with nobody behind it', () => {
+    const { raw } = show();
+    const head = screen.getByTestId('collection-curator');
+    expect(head.getAttribute('role')).not.toBe('button');
+    fireEvent.click(head);
+    expect(raw.navigate).not.toHaveBeenCalled();
+    openMenu();
+    expect(sheetRow(/Report this list/)).toBeTruthy();
+  });
+
+  // A guest can read a profile — profiles are public — so a guest's
+  // press opens the page too.
+  it('opens the author’s page for a guest as well', () => {
     state.uid = null;
     spies.canReport.mockImplementation(() => false);
-    show();
-    expect(screen.getByTestId('collection-curator').getAttribute('role')).not.toBe('button');
-  });
-
-  it('closes the sheet when dismissed', () => {
-    show();
+    spies.profileLookup.mockImplementation(() => ({ data: { id: 'curator', full_name: '', avatar_url: '' }, loading: false }));
+    const { raw } = show();
     fireEvent.click(screen.getByTestId('collection-curator'));
-    fireEvent.click(screen.getAllByLabelText('Close').at(-1)!);
-    endModalFade();
-    expect(sheetRow(/Report this list/)).toBeNull();
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'hanoicrew' });
   });
 
   it('leads your own list with your own face and handle, from your profile, as no button', () => {
@@ -3321,6 +3301,9 @@ describe('the head of the card', () => {
     expect(screen.queryByText('Public')).toBeNull();
     expect(screen.queryByTestId('collection-visibility')).toBeNull();
     // Both lines are the press, and VoiceOver hears both.
+    spies.profileLookup.mockImplementation(() => ({ data: { id: 'curator', full_name: '', avatar_url: '' }, loading: false }));
+    cleanup();
+    show();
     const press = screen.getByTestId('collection-curator');
     expect(press.getAttribute('role')).toBe('button');
     expect(press.contains(meta())).toBe(true);
@@ -3362,7 +3345,8 @@ describe('the head of the card', () => {
     show();
     expect(screen.queryByTestId('collection-meta')).toBeNull();
     expect(screen.getByTestId('collection-curator').textContent).toBe('hanoicrew');
-    expect(screen.getByTestId('collection-curator').getAttribute('aria-label')).toBe('hanoicrew');
+    // Nobody behind an editorial handle: words to read, not a press.
+    expect(screen.getByTestId('collection-curator').getAttribute('role')).not.toBe('button');
   });
 
   it('keeps who can see it on a list of yours with no age', () => {
