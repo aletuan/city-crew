@@ -176,7 +176,13 @@ export const s = StyleSheet.create({
     paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
   },
   stat: { alignItems: 'center', gap: 2, paddingVertical: 6 },
-  statN: { color: colors.text, fontSize: 22, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
+  // 18, down from 22 (owner, 16 Nov 2026). At 22 bold a number stood the
+  // size of the section headings under it (`type.section`, 22) and
+  // heavier than the reader's own name beside the picture (19) — fine
+  // for three of them, and with four in the row since that day the
+  // numbers were the loudest thing on the page. 18 keeps the order the
+  // page means: headings, then the figures, then their 13pt labels.
+  statN: { color: colors.text, fontSize: 18, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
   statLabel: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   statDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: colors.borderGlassSoft },
   // The dash is a placeholder, so it takes the label's grey rather than
