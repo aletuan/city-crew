@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { levelFromSaves, levelWords, PER_LEVEL } from './level';
+import { levelFromSaves, levelSteps, levelWords, PER_LEVEL } from './level';
 
 describe('levelFromSaves', () => {
   // A profile reading "Lv 0" says the account is broken; a new one is not.
@@ -40,19 +40,21 @@ describe('levelFromSaves', () => {
   });
 });
 
-// What a press on the "Lv" pill says (owner, 16 Nov 2026).
+// What the sheet a press on the "Lv" pill opens says (owner, 16 Nov 2026).
 describe('levelWords', () => {
   const en = (e: string) => e;
   const vi = (_e: string, v: string) => v;
 
-  it('says the rule, the count, and how many more the next level takes', () => {
+  it('says the level, what the next one takes, and the rule with the count', () => {
     expect(levelWords(74, en)).toEqual({
       title: 'Level 15',
-      body: 'Every 5 places you save into a collection takes you up a level. You have saved 74 so far, and 1 more takes you to Level 16.',
+      next: 'Save 1 more place to reach Level 16.',
+      rule: 'You have saved 74 places. Every 5 take you up a level.',
     });
     expect(levelWords(74, vi)).toEqual({
       title: 'Level 15',
-      body: 'Cứ 5 địa điểm bạn lưu vào bộ sưu tập là lên một level. Bạn đã lưu 74 địa điểm, lưu thêm 1 địa điểm nữa để lên Level 16.',
+      next: 'Lưu thêm 1 địa điểm để đạt Level 16.',
+      rule: 'Bạn đã lưu 74 địa điểm. Cứ 5 địa điểm là lên một level.',
     });
   });
 
@@ -66,18 +68,28 @@ describe('levelWords', () => {
   // The boundary belongs to the next level, so there is never "0 more":
   // on it, a whole level is still to go.
   it('never says 0 more: a full level is to go on the boundary', () => {
-    expect(levelWords(75, en).body).toContain('saved 75 so far, and 5 more takes you to Level 17.');
-    expect(levelWords(0, en).body).toContain('saved 0 so far, and 5 more takes you to Level 2.');
-    expect(levelWords(71, en).body).toContain('and 4 more takes you to Level 16.');
+    expect(levelWords(75, en).next).toBe('Save 5 more places to reach Level 17.');
+    expect(levelWords(0, en).next).toBe('Save 5 more places to reach Level 2.');
+    expect(levelWords(71, en).next).toBe('Save 4 more places to reach Level 16.');
   });
 
-  it('says it in every language, each with the three numbers', () => {
+  // English alone counts its nouns, each on its own number.
+  it('says one place as one place, in either sentence', () => {
+    expect(levelWords(1, en).rule).toBe('You have saved 1 place. Every 5 take you up a level.');
+    expect(levelWords(1, en).next).toBe('Save 4 more places to reach Level 2.');
+    expect(levelWords(4, en).next).toBe('Save 1 more place to reach Level 2.');
+    expect(levelWords(4, en).rule).toContain('4 places');
+  });
+
+  it('says it in every language, each with its numbers', () => {
     const pick = (i: number) => (...a: (string | undefined)[]) => a[i] ?? a[0]!;
     for (const i of [2, 3, 4]) {
       const w = levelWords(74, pick(i));
       expect(w.title).toContain('15');
-      for (const n of ['5', '74', '1', '16']) expect(w.body).toContain(n);
-      expect(w.body).not.toBe(levelWords(74, en).body);
+      for (const n of ['1', '16']) expect(w.next).toContain(n);
+      for (const n of ['74', '5']) expect(w.rule).toContain(n);
+      expect(w.next).not.toBe(levelWords(74, en).next);
+      expect(w.rule).not.toBe(levelWords(74, en).rule);
     }
   });
 
@@ -87,5 +99,28 @@ describe('levelWords', () => {
     expect(levelWords(-3, en)).toEqual(levelWords(0, en));
     expect(levelWords(NaN, en)).toEqual(levelWords(0, en));
     expect(levelWords(7.9, en)).toEqual(levelWords(7, en));
+  });
+});
+
+// The bar in that sheet: the ring's fraction, as two whole numbers.
+describe('levelSteps', () => {
+  it('is how far through the current level, out of a level', () => {
+    expect(levelSteps(74)).toEqual({ done: 4, of: PER_LEVEL });
+    expect(levelSteps(0)).toEqual({ done: 0, of: PER_LEVEL });
+    // On the boundary the new level is empty, as the ring is.
+    expect(levelSteps(75)).toEqual({ done: 0, of: PER_LEVEL });
+  });
+
+  it('agrees with the ring for every count', () => {
+    for (let n = 0; n <= 40; n++) {
+      const { done, of } = levelSteps(n);
+      expect(done / of).toBeCloseTo(levelFromSaves(n).progress);
+    }
+  });
+
+  it('reads a count that is not one as none', () => {
+    expect(levelSteps(-3)).toEqual(levelSteps(0));
+    expect(levelSteps(NaN)).toEqual(levelSteps(0));
+    expect(levelSteps(7.9)).toEqual(levelSteps(7));
   });
 });

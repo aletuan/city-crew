@@ -6,12 +6,8 @@ import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { Glyph } from '../../components/ui/glyph';
 import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
-import AvatarPicker from '../../components/AvatarPicker';
-import EngagementRing from '../../components/EngagementRing';
-import { levelFromSaves, levelWords } from '../../lib/level';
 import { useAuthActions, useProfile, useSession } from '../../lib/auth';
 import { visitSummary } from '../../lib/checkin';
-import { useIsEditor, useIsGuideAnywhere } from '../../lib/useGuideGrant';
 import { useMyTrips } from '../../lib/mytrips';
 import { membersOf, useMyPreferences } from '../../lib/data';
 import { useMyCheckins } from '../../lib/checkins';
@@ -25,6 +21,7 @@ import { Lang, useI18n } from '../../lib/i18n';
 import { useScheme } from '../../lib/theme';
 import { bgElevatedHex, colors } from '../../theme';
 import { goTo, type Nav } from '../../nav';
+import { HeroFace } from './HeroFace';
 import { RowGlyph, FeatureRow, AboutRow } from './rows';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
@@ -50,15 +47,6 @@ export function memberSinceLabel(d: Date, lang: Lang): string {
  * zeros — the same figures an empty account shows, and read as one
  * (UX-14, 17 Oct 2026). A zero here is now only ever an answer.
  */
-/** The "Lv" pill, pressed: what the level is, in the reader's own
- *  numbers — `levelWords`. A system alert, as the role disc's is: two
- *  badges on one picture explain themselves one way. Out here because
- *  the screen's function is at its ceiling (`oversize.js`). */
-const sayLevel = (saved: number, t: Parameters<typeof levelWords>[1]) => {
-  const w = levelWords(saved, t);
-  Alert.alert(w.title, w.body);
-};
-
 export function StatTile({ n, label, onPress }: { n: number | null; label: string; onPress: () => void }) {
   const { t } = useI18n();
   return (
@@ -121,34 +109,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   // `prefs.reload` is stable; `prefs` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs.reload]));
-  // The reader's standing in the catalog, for the badge under their name.
-  // Editor outranks guide and is shown alone: the desk's hand keeps every
-  // gallery, which includes the ones a guide keeps.
-  const editor = useIsEditor();
-  const guide = useIsGuideAnywhere();
-  const role = editor
-    ? {
-      icon: 'medal' as const, color: colors.accent, dress: s.roleEditor,
-      name: t('Super User', 'Super User', 'スーパーユーザー', '超级用户', '超級使用者'),
-      says: t(
-        'You can edit, and add photos to, every place in the app — new or already listed.',
-        'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
-        'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
-        '你可以编辑应用中的所有地点并为其添加照片，无论是新地点还是已收录的。', '你可以編輯 App 中的所有地點並為其新增照片，無論是新地點還是已收錄的。',
-      ),
-    }
-    : guide
-      ? {
-        icon: 'star' as const, color: colors.ok, dress: s.roleGuide,
-        name: t('Local Guide', 'Local Guide', 'ローカルガイド', '本地向导', '在地嚮導'),
-        says: t(
-          'You can edit, and add photos to, places in your collections and places you imported.',
-          'Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.',
-          '自分のコレクションの場所や、自分が追加した場所を編集し、写真を追加できます。',
-          '你可以编辑你合集中的地点和你导入的地点，并为其添加照片。', '你可以編輯你合集中的地點和你匯入的地點，並為其新增照片。',
-        ),
-      }
-      : null;
   const taste = useMemo(
     () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
     [prefs.data.categories],
@@ -168,7 +128,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
     for (const c of mine.data) for (const p of membersOf(c, [])) seen.add(p.slug);
     return seen.size;
   }, [mine.data]);
-  const { level, progress } = levelFromSaves(saved);
+  // What the level is made of — the ring is `HeroFace`'s, below.
   const trips = useMyTrips();
 
   // The four doors under the hero. Each is a count the reader made and a
@@ -209,43 +169,8 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   return (
     <>
       <View style={s.heroRow}>
-        {/* No camera badge here: the level badge takes that corner, and
-            Edit profile shows the same picker with its badge intact.
-
-            The reader's standing, on the picture. A guide, and an editor
-            (the desk's hand), may keep galleries the panel would otherwise
-            refuse; it used to be said in a pill under the name, beside
-            Edit profile, and the owner found the pill loud for what it
-            is — a mark, not a message. So: a small disc on the ring's
-            top-right corner, the level's own halo at the opposite corner,
-            with the role's glyph in the role's colour. Editor outranks
-            guide and is the one disc shown; a reader with neither wears
-            none. A tap still says what the grant lets them do, in the
-            desk's words, and VoiceOver reads the role as the disc's name.
-
-            And because the disc lies on the picture, its arriving a
-            round-trip late moves nothing else on the page — which is
-            what the pill's held room was for. */}
-        <View style={s.avatarBox} testID="avatar-box">
-          <EngagementRing size={88} level={level} progress={progress} onExplain={() => sayLevel(saved, t)}>
-            <AvatarPicker showCamera={false} />
-          </EngagementRing>
-          {role && (
-            <View style={s.roleHalo}>
-              <PressableScale
-                scaleTo={0.9}
-                contentStyle={[s.roleDisc, role.dress]}
-                accessibilityRole="button"
-                accessibilityLabel={role.name}
-                accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します', '说明这个身份可以做什么', '說明這個身份可以做什麼')}
-                onPress={() => Alert.alert(role.name, role.says)}
-                testID="role-badge"
-              >
-                <Glyph name={role.icon} size={13} color={role.color} />
-              </PressableScale>
-            </View>
-          )}
-        </View>
+        {/* The picture, its ring and the two badges on it — `HeroFace`. */}
+        <HeroFace saved={saved} />
         <View style={{ flex: 1, gap: 5 }}>
           {/* Two lines, two things: the name you are called, then the
               name you are found by.
