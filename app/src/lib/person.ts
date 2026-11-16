@@ -8,6 +8,29 @@
 import type { Collection } from './types';
 
 /**
+ * Whether a person's page draws "In common" — off (owner, 16 Nov 2026).
+ *
+ * The section shipped that morning: the places two people both keep in
+ * public collections and the collections both liked, five of each. On
+ * the owner's phone it was a lot for the page — two rows of tiles
+ * between a person's name and the collections the page is about — and
+ * the owner asked for it hidden, not removed, while that is thought
+ * about.
+ *
+ * So everything behind it stays as it was built and tested: the section
+ * (`components/InCommon`), its hook, the two database functions and the
+ * paragraph of the privacy policy that describes it (which now promises
+ * to show more than the app does — the safe direction to be wrong in).
+ * With this off the section is not mounted, so nothing is asked of the
+ * database either. Turning it back on is this one word.
+ *
+ * The "N mutual saves" the count line used to say to a friend is not
+ * back: the section replaced it, and the owner had already asked for it
+ * off that line.
+ */
+export const IN_COMMON_ON = false;
+
+/**
  * The public lists a person made, in the order the shelf holds them.
  *
  * The shelf (`useCollections`) is every public list, of every city,

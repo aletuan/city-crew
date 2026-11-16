@@ -53,6 +53,7 @@ const state = vi.hoisted(() => ({
   likes: {} as Record<string, number>,
   common: { places: [] as unknown[], lists: [] as string[] },
   commonAsked: [] as [string | null, string | null][],
+  inCommonOn: true,
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
 }));
@@ -81,6 +82,13 @@ vi.mock('../lib/data', async (orig) => ({
     return { data: h ? state.people[h] ?? null : null, ...state.lookup };
   },
 }));
+// The switch that hides "In common" (`IN_COMMON_ON`), read each time so a
+// test can stand on either side of it. On here unless a test says
+// otherwise, so the section that is built stays tested while it is off.
+vi.mock('../lib/person', async (orig) => {
+  const real = await orig<typeof import('../lib/person')>();
+  return { ...real, get IN_COMMON_ON() { return state.inCommonOn; } };
+});
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: state.scheme }) }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({
@@ -121,6 +129,7 @@ beforeEach(() => {
   state.likes = {};
   state.common = { places: [], lists: [] };
   state.commonAsked = [];
+  state.inCommonOn = true;
   state.lang = 'en';
   state.scheme = 'dark';
   crew.ships.data = [];
@@ -334,6 +343,24 @@ describe('in common', () => {
   const banh = { slug: 'banh', name_en: 'Banh', name_vi: 'Bánh', name_ja: null, photo_uri: 'https://p/banh.jpg' };
   const oc = { slug: 'oc', name_en: 'Snails', name_vi: 'Ốc', name_ja: null, photo_uri: null };
   const names = (testID: string) => screen.getAllByTestId(testID).map((x) => x.textContent);
+
+  // Hidden, not removed (owner, 16 Nov 2026): as shipped the section is
+  // not mounted, so it draws nothing and asks the database nothing —
+  // even for two people with plenty in common.
+  it('is switched off as shipped: nothing drawn, nothing asked', async () => {
+    const real = await vi.importActual<typeof import('../lib/person')>('../lib/person');
+    expect(real.IN_COMMON_ON).toBe(false);
+    state.inCommonOn = real.IN_COMMON_ON;
+    state.common = { places: [banh, oc], lists: ['minh-list'] };
+    state.shelf = [list('minh-list', { owner_id: 'minh-id' }), list('new')];
+    await show();
+    expect(screen.queryByTestId('person-in-common')).toBeNull();
+    expect(screen.queryByText('In common')).toBeNull();
+    expect(state.commonAsked).toEqual([]);
+    // The rest of the page is as it was.
+    expect(screen.getByTestId('person-counts').textContent).toBe('1 collection');
+    expect(screen.getAllByTestId('person-list')).toHaveLength(1);
+  });
 
   it('asks about this person, as the reader', async () => {
     await show();
