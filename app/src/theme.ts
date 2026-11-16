@@ -815,8 +815,17 @@ export const type = {
    * them fitted one line at 26, against 89% at 20. A place's name sits
    * centred in its bar at the same size.
    *
-   * Opted into per screen (`Screen`'s and `AuthHeader`'s `compactTitle`),
-   * so the pushed screens not yet moved keep `titleDetail` until they are.
+   * The forms too, from 16 Nov 2026 (owner): a collection's, the
+   * profile's, and deleting the account. They had stayed at 26 because
+   * they are drawn through `AuthHeader`, which the first pass did not
+   * read, and the owner met it on a collection's form: opened from a page
+   * titled at 20, its own title a size over it.
+   *
+   * Opted into per screen (`Screen`'s and `AuthHeader`'s `compactTitle`).
+   * What still wears `titleDetail` is the three ways in — signing in,
+   * signing up, a forgotten password — and on purpose: they are where a
+   * reader arrives, with no page above them to stand level with, and the
+   * owner left them (same day). `titles.test` holds both halves.
    */
   titleCompact: { fontSize: 20, fontFamily: display.bold, letterSpacing: 0.2 },
   /** A headline standing in for content — empty states, "coming soon".
