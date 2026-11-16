@@ -25,8 +25,10 @@
 // step is a section added, not a page drawn again: "Collections" was the
 // first, and "In common" (`InCommon`, 16 Nov 2026) the second, above it —
 // built, and switched off the same day (`IN_COMMON_ON`).
-// A count line sits between the head and the sections for the same
-// reason.
+//
+// No count line. "11 collections" stood between the head and the
+// sections until 16 Nov 2026, when the owner found it not needed: the
+// collections are right under it, to be seen rather than counted.
 //
 // ── the head ──
 //
@@ -46,8 +48,25 @@
 // way of doing both, for one screen, is more than a first step should
 // carry. Rejected for now, not for good.
 //
-// Handle first, then the name, quieter — the order every row of people
-// took on 15 Nov. Then the bio, when they wrote one.
+// The name beside the picture, then the handle under them with its
+// `@`, quieter; then the bio, when they wrote one (owner, 16 Nov 2026).
+//
+// Name first here, though every row of people leads with the handle
+// (15 Nov): the owner's exception, and the one their own Profile
+// already makes — a page about one person is headed as that person's
+// Profile is, "Tuan Anh" over "@tuananh". A row names somebody among
+// many, where the handle is what tells two people apart.
+//
+// Beside the picture, not under it. The handle, the name and the count
+// stood in three lines under the face with the width beside it empty,
+// and the collections began a quarter of a screen lower for it. Only
+// the name is beside it: with the friend button in the same row there
+// is room for one short line (`title`), and a second line there — the
+// handle, a count — was cut on almost every account by the arithmetic.
+// So the handle runs under the row, where it has the page's width.
+//
+// Somebody with no name is headed by their handle, `@` and all, and
+// has no second line.
 //
 // ── the friend button ──
 //
@@ -82,7 +101,7 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useSession } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { type Collection, coverUriOf, membersOf, useProfileByHandle } from '../lib/data';
-import { normalizeHandle } from '../lib/handle';
+import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { coverAmong, IN_COMMON_ON, listsBy } from '../lib/person';
@@ -95,6 +114,10 @@ const FACE = 88;
 /** The cover's height. Not measured on a phone: a little under the 16:9
  *  of a 346pt card, so the face and the handle are on the first screen. */
 const COVER_H = 148;
+/** How far the name shrinks to stay on its line beside the picture
+ *  before it is cut: 22 to about 17, still the largest words on the
+ *  page. */
+const TITLE_SHRINK = 0.78;
 /** A list's photograph on its tile. */
 const TILE_PHOTO_H = 108;
 
@@ -127,9 +150,6 @@ export default function PersonScreen({ navigation, route }: {
   const { scheme } = useScheme();
   const ring = { borderColor: bgHex[scheme] };
 
-  const listsWord = (n: number) => (n === 1
-    ? t('1 collection', '1 bộ sưu tập', 'コレクション1件', '1 个合集', '1 個合集')
-    : t(`${n} collections`, `${n} bộ sưu tập`, `コレクション${n}件`, `${n} 个合集`, `${n} 個合集`));
   const placesWord = (n: number) => (n === 1
     ? t('1 place', '1 địa điểm', '1か所', '1 个地点', '1 個地點')
     : t(`${n} places`, `${n} địa điểm`, `${n}か所`, `${n} 个地点`, `${n} 個地點`));
@@ -170,18 +190,17 @@ export default function PersonScreen({ navigation, route }: {
               `PersonRole` (owner, 16 Nov 2026). */}
           <PersonRole me={me} personId={person.id} />
         </View>
+        {/* The name, beside the picture — or the handle, for somebody
+            who gave no name. Shrinks before it is cut: see `title`. */}
+        {person.full_name
+          ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
+          : <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-handle">{atHandle(person.handle)}</Text>}
         {friendButton(person.id)}
       </View>
-      <View style={s.names}>
-        <Text style={s.handle} numberOfLines={1} testID="person-handle">{normalizeHandle(person.handle)}</Text>
-        {person.full_name
-          ? <Text style={s.name} numberOfLines={1} testID="person-name">{person.full_name}</Text>
-          : null}
-      </View>
+      {person.full_name
+        ? <Text style={s.handle} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
+        : null}
       {person.bio ? <Text style={s.bio} testID="person-bio">{person.bio}</Text> : null}
-      <Text style={s.counts} testID="person-counts">
-        {listsWord(lists.length)}
-      </Text>
       {/* What the two of you have in common — `InCommon`. It took the
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
@@ -296,17 +315,27 @@ const s = StyleSheet.create({
   coverPhoto: { width: '100%', height: COVER_H },
   // The face half over the cover's lower edge, at the card's own inset;
   // the button on the same row, level with the face's lower half.
+  // The picture, the name beside it, the friend button at the row's end.
+  // On the picture's foot: its upper half lies over the cover.
   headRow: {
-    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'flex-end', gap: 12,
     marginTop: -(FACE / 2), paddingHorizontal: space.cardPadding,
   },
   // The page's ground around the face, so it parts from the photograph.
   faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
-  names: { marginTop: 12, gap: 2 },
-  handle: { color: colors.text, fontSize: 24, fontFamily: display.bold, letterSpacing: 0.2 },
-  name: { color: colors.textTertiary, ...type.meta },
+  // The name: the display face at 22, the size the page's own Profile
+  // heads its sections in. It takes the room the picture and the button
+  // leave — about 130pt beside "Add friend" on a 390pt phone, by
+  // arithmetic and not yet by a phone — so it shrinks to `TITLE_SHRINK`
+  // before it is cut. Lifted off the row's foot to the middle of the
+  // half of the picture under the cover: (48 − 28) / 2.
+  title: {
+    flex: 1, color: colors.text, fontSize: 22, lineHeight: 28, fontFamily: display.bold,
+    letterSpacing: 0.2, marginBottom: 10,
+  },
+  // The handle, under the row, the page's width: an address, quieter.
+  handle: { color: colors.textTertiary, ...type.meta, marginTop: 8 },
   bio: { color: colors.textSecondary, ...type.body, lineHeight: 23, marginTop: 10 },
-  counts: { color: colors.textSecondary, ...type.meta, marginTop: 10 },
   // A section's label: the small capitals the place page heads a fact with.
   sectionLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
