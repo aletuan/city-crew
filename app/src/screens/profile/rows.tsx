@@ -221,7 +221,8 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
  * line like the others, so a bio of four lines hangs from it. The
  * narrower measure costs a line at `BIO_MAX`: about five, not four.
  *
- * Empty, the row is a door instead: "Add a bio", which opens Edit profile
+ * Empty, the row is a door instead: "Write a few words about you" (the
+ * words are weighed on `PersonScreen`'s `Bio`), which opens Edit profile
  * with the cursor already in the field. A new account has no bio — sign-up
  * does not ask for one, and should not: it is five fields and two steps
  * already — so without this the only way to find the field was to press
@@ -254,7 +255,7 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
     >
       <RowGlyph name="quote" />
       <Text style={s.bioAdd} numberOfLines={1}>
-        {t('Add a bio', 'Thêm giới thiệu', '自己紹介を追加', '添加个人简介', '添加個人簡介')}
+        {t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}
       </Text>
       <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
     </PressableScale>
