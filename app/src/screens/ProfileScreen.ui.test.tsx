@@ -64,7 +64,12 @@ const state = vi.hoisted(() => ({
   trips: [] as { id: string }[],
   // Loaded and fine unless a test says otherwise — the case every older
   // test assumes.
-  counts: { mineLoaded: true, mineError: null as string | null, tripsLoaded: true, tripsError: null as string | null },
+  // The check-ins and the friendships are the other two counts since 16
+  // Nov 2026; a test that names neither has them loaded.
+  counts: { mineLoaded: true, mineError: null, tripsLoaded: true, tripsError: null } as {
+    mineLoaded: boolean; mineError: string | null; tripsLoaded: boolean; tripsError: string | null;
+    visitsLoaded?: boolean; visitsError?: string | null; shipsLoaded?: boolean; shipsError?: string | null;
+  },
   city: { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as
     { short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'manual' as 'auto' | 'manual',
@@ -122,10 +127,14 @@ vi.mock('../lib/data', () => ({
     return { data: { categories: state.categories }, reload: spies.reload };
   },
 }));
-vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: state.checkins }) }));
+vi.mock('../lib/checkins', () => ({
+  useMyCheckins: () => ({ data: state.checkins, loaded: state.counts.visitsLoaded ?? true, error: state.counts.visitsError ?? null, reload: reloads.visits }),
+}));
 vi.mock('../lib/useActivityCount', () => ({ useActivityCount: () => state.feed }));
-vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
-const reloads = vi.hoisted(() => ({ mine: vi.fn(), trips: vi.fn() }));
+vi.mock('../lib/crew', () => ({
+  useCrew: () => ({ ships: { data: state.ships, loaded: state.counts.shipsLoaded ?? true, error: state.counts.shipsError ?? null, reload: reloads.ships } }),
+}));
+const reloads = vi.hoisted(() => ({ mine: vi.fn(), trips: vi.fn(), visits: vi.fn(), ships: vi.fn() }));
 vi.mock('../lib/save', () => {
   const useSave = () => ({ mine: { data: state.mine, loaded: state.counts.mineLoaded, error: state.counts.mineError, reload: reloads.mine } });
   return { useSave, useMyLists: () => (useSave() as { mine?: unknown }).mine, useSaveActions: () => useSave() };
@@ -195,7 +204,8 @@ const draw = () => {
   return r;
 };
 
-const tap = (text: string) => fireEvent.click(screen.getByText(text));
+/** A section's heading: the words where they are not a control's. */
+const heading = (text: string) => screen.getAllByText(text).find((e) => !e.closest('[role="button"]'))!;
 
 // A button whose accessible name *starts* with these words: rows carry a
 // sentence or a value after their title, and that is part of the name.
@@ -639,17 +649,37 @@ describe('the role badge', () => {
   });
 });
 
-// Three numbers under the hero, each a door into the tab that holds it.
-describe('the three doors', () => {
+// Four numbers under the hero, each a door into the place that holds it:
+// Collections, Check-ins, Friends, Trips (owner, 16 Nov 2026). "Saved
+// places" was the second until then — a detail of the collections beside
+// it, opening the same list.
+describe('the four doors', () => {
   const p = (slug: string) => ({ slug });
+  const edge = (requester: string, addressee: string, status: string) =>
+    ({ requester, addressee, status, created_at: '2026-01-01' });
 
-  it('counts collections, distinct saved places and trips', () => {
+  it('counts collections, places checked in at, friends and trips, in that order', () => {
     state.mine = [{ members: [p('a'), p('b')] }, { members: [p('a'), p('c')] }];
     state.trips = [{ id: 't1' }, { id: 't2' }, { id: 't3' }];
+    // Two evenings at one place and one at another: two places.
+    state.checkins = [
+      { id: 'a', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00Z' },
+      { id: 'b', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-01T03:00:00Z' },
+      { id: 'c', place_slug: 'pizza', city_id: 'saigon', at: '2026-09-20T03:00:00Z' },
+    ];
+    // Accepted, and this account's: not a request, not strangers' edges.
+    state.ships = [
+      edge('me', 'a', 'accepted'), edge('b', 'me', 'accepted'), edge('f', 'me', 'accepted'), edge('g', 'me', 'accepted'),
+      edge('me', 'c', 'pending'), edge('x', 'y', 'accepted'),
+    ];
     draw();
-    expect(screen.getByRole('button', { name: '2 Collections' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '3 Saved places' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '3 Trips' })).toBeTruthy();
+    const tiles = ['2 Collections', '2 Check-ins', '4 Friends', '3 Trips'].map((name) => screen.getByRole('button', { name }));
+    expect(new Set(tiles.map((x) => x.parentElement!.parentElement)).size).toBe(1);
+    for (let i = 1; i < tiles.length; i++) {
+      expect(tiles[i - 1].compareDocumentPosition(tiles[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    // Not drawn, though the level is still made of it (`the level ring`).
+    expect(screen.queryByText('Saved places')).toBeNull();
     // No review count: there is no review feature.
     expect(screen.queryByText(/Reviews/)).toBeNull();
   });
@@ -660,15 +690,36 @@ describe('the three doors', () => {
   // the two collection counts, with a fresh `at` that scrolls it to the top.
   it('opens the list each number lives in, at its top, whatever was open there', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1234);
-    const { parent } = draw();
+    const { raw, parent } = draw();
     const toList = { screen: 'CollectionsHome', params: { tab: 'yours', at: 1234 }, pop: true };
     fireEvent.click(screen.getByRole('button', { name: '0 Collections' }));
     expect(parent.navigate).toHaveBeenLastCalledWith('Collections', toList);
-    fireEvent.click(screen.getByRole('button', { name: '0 Saved places' }));
-    expect(parent.navigate).toHaveBeenLastCalledWith('Collections', toList);
     fireEvent.click(screen.getByRole('button', { name: '0 Trips' }));
     expect(parent.navigate).toHaveBeenLastCalledWith('Trips', { screen: 'TripsHome', params: { at: 1234 }, pop: true });
-    expect(parent.navigate).toHaveBeenCalledTimes(3);
+    expect(parent.navigate).toHaveBeenCalledTimes(2);
+    // The two tabs, and nothing pushed over this page for them.
+    expect(raw.navigate).not.toHaveBeenCalled();
+  });
+
+  // Check-ins and Friends are pages pushed over this one, the pages the
+  // rows further down open: each lists exactly what its number counts.
+  it('opens the check-ins and the crew from their numbers, each its own page', () => {
+    const { raw, parent } = draw();
+    fireEvent.click(screen.getByRole('button', { name: '0 Check-ins' }));
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Visited');
+    fireEvent.click(screen.getByRole('button', { name: '0 Friends' }));
+    expect(raw.navigate).toHaveBeenLastCalledWith('Crew');
+    expect(raw.navigate).toHaveBeenCalledTimes(2);
+    expect(parent.navigate).not.toHaveBeenCalled();
+  });
+
+  it('says the four in Vietnamese', () => {
+    state.lang = 'vi';
+    draw();
+    for (const name of ['0 Bộ sưu tập', '0 Check-in', '0 Bạn bè', '0 Chuyến đi']) {
+      expect(screen.getByRole('button', { name })).toBeTruthy();
+    }
+    expect(screen.queryByText('Địa điểm đã lưu')).toBeNull();
   });
 
   it('takes the same door through the root when there is no parent', () => {
@@ -699,9 +750,10 @@ describe('the three doors', () => {
   // reader with 11 lists and 55 trips signed in to three zeros. Not known
   // yet is a dash; a zero is only ever an answer.
   it('shows a dash, not a zero, for a count that has not loaded', () => {
-    state.counts = { mineLoaded: false, mineError: null, tripsLoaded: false, tripsError: null };
+    state.counts = { mineLoaded: false, mineError: null, tripsLoaded: false, tripsError: null, visitsLoaded: false, shipsLoaded: false };
+    state.checkins = [{ id: 'k', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00Z' }];
     draw();
-    for (const name of ['Collections', 'Saved places', 'Trips']) {
+    for (const name of ['Collections', 'Check-ins', 'Friends', 'Trips']) {
       const tile = screen.getByRole('button', { name: `${name}, loading` });
       expect(tile.textContent).toBe(`—${name}`);
     }
@@ -731,6 +783,25 @@ describe('the three doors', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(reloads.mine).toHaveBeenCalledOnce();
     expect(reloads.trips).not.toHaveBeenCalled();
+    expect(reloads.visits).not.toHaveBeenCalled();
+    expect(reloads.ships).not.toHaveBeenCalled();
+  });
+
+  // The two counts that joined the row fail the same way.
+  it.each(['visits', 'ships'] as const)('says so when the %s could not be loaded, and asks for them alone', (which) => {
+    state.counts = { mineLoaded: true, mineError: null, tripsLoaded: true, tripsError: null, [`${which}Loaded`]: false, [`${which}Error`]: 'offline' };
+    draw();
+    expect(screen.getByTestId('stats-failed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(reloads[which]).toHaveBeenCalledOnce();
+    for (const other of ['mine', 'trips', 'visits', 'ships'] as const) {
+      if (other !== which) expect(reloads[other]).not.toHaveBeenCalled();
+    }
+    cleanup();
+    // A refresh failing over a count already shown says nothing.
+    state.counts = { mineLoaded: true, mineError: null, tripsLoaded: true, tripsError: null, [`${which}Error`]: 'offline' };
+    draw();
+    expect(screen.queryByTestId('stats-failed')).toBeNull();
   });
 
   it('says nothing when a refresh fails over counts already shown', () => {
@@ -768,7 +839,8 @@ describe('friends card', () => {
 
   it('opens the crew', () => {
     const { raw } = draw();
-    tap('Friends');
+    // The heading, not the number under the hero that says the same word.
+    fireEvent.click(heading('Friends'));
     expect(raw.navigate).not.toHaveBeenCalled();
     press('Connect with friends');
     expect(raw.navigate).toHaveBeenCalledWith('Crew');
@@ -800,24 +872,16 @@ describe('friends card', () => {
     expect(activity.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
   });
 
-  it('counts accepted friends only, and shows no number with none', () => {
-    state.ships = [
-      edge('me', 'a', 'accepted'),
-      edge('b', 'me', 'accepted'),
-      edge('me', 'c', 'pending'),
-      edge('x', 'y', 'accepted'),
-    ];
-    const { unmount } = render(<ProfileScreen navigation={nav().n} />);
-    expect(screen.getByText('2')).toBeTruthy();
-    unmount();
-    // One friend is still a number worth showing.
-    state.ships = [edge('me', 'a', 'accepted')];
-    const again = render(<ProfileScreen navigation={nav().n} />);
-    expect(screen.getByText('1')).toBeTruthy();
-    again.unmount();
-    state.ships = [edge('me', 'c', 'pending')];
+  // The number of friends was a pill at this row's end until 16 Nov
+  // 2026. It is a number under the hero now (`the four doors`), and a
+  // figure said twice on one page is one of them wasted.
+  it('carries no number: the friends are counted under the hero', () => {
+    state.ships = [edge('me', 'a', 'accepted'), edge('b', 'me', 'accepted')];
     draw();
-    expect(screen.queryByText('1')).toBeNull();
+    const row = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]')!;
+    expect(row.querySelector('[data-testid="count-badge"]')).toBeNull();
+    expect(row.textContent).toBe('Connect with friends' + 'Make friends and plan together.');
+    expect(screen.getByRole('button', { name: '2 Friends' })).toBeTruthy();
   });
 
   // Ringed in the card's own colour, picked in JS by the app's scheme: a
@@ -1204,10 +1268,10 @@ describe('its tab, pressed again', () => {
 //
 // A row of its own section, between Interests and Friends — the places a
 // person has been are a fact about who they are, not about who they go
-// with. Not a fourth stat tile: the stats row's own note says four boxes
-// read as a toolbar.
+// with. Their number is under the hero since 16 Nov 2026 (`the four
+// doors`) and no longer at the row's end.
 describe('visited places', () => {
-  it('opens the visits, and counts the distinct places on the row', () => {
+  it('opens the visits, with no number on the row', () => {
     state.checkins = [
       { id: 'a', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00Z' },
       { id: 'b', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-01T03:00:00Z' },
@@ -1215,8 +1279,8 @@ describe('visited places', () => {
     ];
     const { raw } = draw();
     const row = screen.getByText('Places you checked in at').closest('[data-testid="feature-row"]')!;
-    expect(row.textContent).toContain('2');
-    expect(row.textContent).not.toContain('3');
+    expect(row.textContent).toBe('Places you checked in at' + "A record of the places you've been.");
+    expect(row.querySelector('[data-testid="count-badge"]')).toBeNull();
     fireEvent.click(row);
     expect(raw.navigate).toHaveBeenCalledWith('Visited');
   });
@@ -1231,7 +1295,7 @@ describe('visited places', () => {
     draw();
     const title = screen.getByText('Places you checked in at');
     expect(screen.getByText('Interests').compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(title.compareDocumentPosition(screen.getByText('Friends')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(title.compareDocumentPosition(heading('Friends')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -1244,15 +1308,16 @@ describe('visited places', () => {
 describe('the badges', () => {
   const edge = (requester: string, addressee: string, status: string) =>
     ({ requester, addressee, status, created_at: '2026-09-01T00:00:00Z' });
-  it('draws a total in a pill, the same pill on every row', () => {
+  // Activity's alone since 16 Nov 2026: the friends and the check-ins
+  // are counted under the hero.
+  it('draws a total in a pill, on the one row that has one', () => {
     state.ships = [edge('me', 'a', 'accepted'), edge('b', 'me', 'accepted')];
     state.feed = 5;
     state.checkins = [{ id: 'k', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00Z' }];
     draw();
     const badges = screen.getAllByTestId('count-badge');
-    expect(badges.map((b) => b.textContent)).toEqual(['1', '2', '5']);
-    const classes = new Set(badges.map((b) => b.className));
-    expect(classes.size).toBe(1);
+    expect(badges.map((b) => b.textContent)).toEqual(['5']);
+    expect(screen.getByText('Activity').closest('[data-testid="feature-row"]')!.contains(badges[0])).toBe(true);
     const box = getComputedStyle(badges[0]);
     expect(box.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     expect(box.minWidth).toBe('32px');
