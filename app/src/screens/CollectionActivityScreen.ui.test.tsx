@@ -863,6 +863,28 @@ describe('the way to the statistics', () => {
     expect(link().textContent).toBe('Thống kê');
   });
 
+  // A way to somewhere else, on the accent's tint, where the list and the
+  // people are on paper (owner, 16 Nov 2026) — the place page's "add a
+  // photo" offer wears the same. No rim, no disc behind the glyph, and
+  // every colour the palette's.
+  it('is a well of the accent’s tint with no rim, its glyph, word and chevron in the accent', async () => {
+    data.fetchLikesOnList.mockImplementation(async () => [like(ago(1 * MIN), 'a')]);
+    await show();
+    const well = link().parentElement!;
+    expect(viewStyleOf(well)).toMatchObject({
+      backgroundColor: colors.accentSoft, borderRadius: radius.card, marginBottom: 14,
+    });
+    expect(viewStyleOf(well).borderWidth ?? 0).toBe(0);
+    // Not the card the people are in.
+    expect(viewStyleOf(screen.getByTestId('activity-people')).backgroundColor).toBe(colors.surfaceCard);
+    expect(colors.accentSoft).not.toBe(colors.surfaceCard);
+    expect(textStyleOf(within(link()).getByText('Statistics'))?.color).toBe(colors.accent);
+    const glyphs = [...link().querySelectorAll('[data-icon]')] as HTMLElement[];
+    expect(glyphs.map((g) => g.getAttribute('data-color'))).toEqual([colors.accent, colors.accent]);
+    // The glyph stands on the tint itself, beside the word: no disc around it.
+    expect(glyphs[0].parentElement).toBe(within(link()).getByText('Statistics').parentElement);
+  });
+
   // Opens and trips have no people to list, so an empty Activity is not
   // an empty Statistics page.
   it('is there while nobody has liked or copied the list, right under the list, above the empty state', async () => {
@@ -923,8 +945,6 @@ describe('the people, in a card', () => {
     expect(viewStyleOf(people)).toMatchObject({
       borderRadius: radius.card, backgroundColor: colors.surfaceCard, borderWidth: 1, marginBottom: 14,
     });
-    // The statistics row's card, the same card at the same gap.
-    expect(viewStyleOf(screen.getByTestId('activity-stats-link').parentElement!)).toMatchObject({ borderRadius: radius.card, marginBottom: 14 });
   });
 
   it('pads each row as Crew’s are', async () => {

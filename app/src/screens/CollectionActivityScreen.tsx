@@ -327,8 +327,26 @@ export default function CollectionActivityScreen({ navigation, route }: {
   // The way to the statistics — see the header. Yours with an id only:
   // the figures are the owner's, and a launch-cache row has nothing to
   // ask about.
+  //
+  // A well of the accent's tint, not a card (owner, 16 Nov 2026): it was a
+  // card like the two it stands between, and only its chevron said it
+  // opens something. The tint is the place page's "add a photo" offer
+  // (`LocalGuidePanel`) — a way to somewhere else on a fill, the facts
+  // around it on paper — so the two pages say one thing with it. Glyph,
+  // word and chevron in the accent, as that offer's are. Every colour is
+  // the palette's, so it follows the look chosen in the profile.
+  //
+  // No disc behind the glyph (owner): the offer's holds a logo, and this
+  // row is one line that a 44pt disc would make the tallest thing on the
+  // page. Nor is one needed — computed over all 21 palettes, the accent
+  // on the composited tint runs from 4.14:1 (paper) to 8.61:1 (honey),
+  // where a graphical mark needs 3:1.
+  //
+  // Known and shared with the offer, not fixed here: the tint is nearly
+  // the page's own ground on two palettes (1.05:1 on plum, 1.09:1 on
+  // paper), where the well is told from the page by its shape alone.
   const statsLink = listId ? (
-    <Card style={s.group}>
+    <View style={s.well}>
       <PressableScale
         onPress={() => navigation.navigate('CollectionStats', { slug: route.params.slug })}
         haptic="selection"
@@ -336,11 +354,11 @@ export default function CollectionActivityScreen({ navigation, route }: {
         accessibilityRole="button"
         testID="activity-stats-link"
       >
-        <Glyph name="stats-chart-outline" size={LINK_GLYPH} color={colors.text} />
+        <Glyph name="stats-chart-outline" size={LINK_GLYPH} color={colors.accent} />
         <Text style={s.linkLabel}>{t('Statistics', 'Thống kê', '統計', '统计', '統計')}</Text>
-        <Glyph name="chevron-forward" size={LINK_CHEVRON} color={colors.textTertiary} />
+        <Glyph name="chevron-forward" size={LINK_CHEVRON} color={colors.accent} />
       </PressableScale>
-    </Card>
+    </View>
   ) : null;
 
   const someone = t('Someone', 'Ai đó', '誰か', '有人', '有人');
@@ -547,8 +565,11 @@ const LIKE_INK = '#FFFFFF';
 const s = StyleSheet.create({
   content: { paddingHorizontal: space.page },
   spinner: { marginTop: 20 },
-  // The statistics row's card and the people's: the page's gap under each.
+  // The people's card: the page's gap under it.
   group: { marginBottom: space.cardGap },
+  // The statistics row's well — see `statsLink`. The card's corner and the
+  // page's gap, the accent's tint for a ground, and no rim.
+  well: { backgroundColor: colors.accentSoft, borderRadius: radius.card, marginBottom: space.cardGap },
   // The statistics row: Crew's row padding, glyph and word at the left,
   // the chevron pushed to the right by the word's `flex` — the counts'
   // row it replaced, value for value.
@@ -556,7 +577,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
-  linkLabel: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flex: 1 },
+  linkLabel: { color: colors.accent, fontSize: 15, fontWeight: font.semibold, flex: 1 },
   // Crew's row inside its card, value for value: 14 between the face,
   // the words and the button, the card's padding at either end, 13 above
   // and below. Centred: a face beside two lines wants its middle on
