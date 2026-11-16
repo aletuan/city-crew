@@ -37,14 +37,12 @@
 // the sheets at the foot of the screen.
 import React, { useState } from 'react';
 import { Alert } from 'react-native';
-import { Glyph } from './ui/glyph';
-import { PressableScale } from './ui';
+import { INK_GAP_END, RoundIconButton } from './ui';
 import PersonSheet, { type PersonAction } from './PersonSheet';
 import { useReport } from './reportFlow';
 import { blockUser, type FriendProfile, unblockUser } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { colors } from '../theme';
 
 export function usePersonMenu(
   me: string | null,
@@ -148,17 +146,21 @@ export function usePersonMenu(
       },
   ];
 
+  // The header's own button, bare (`RoundIconButton`), as Crew's ⊕ is:
+  // a 44pt box, so it stands on the title's line beside the way back.
+  // It was a 22pt glyph in a press of its own size for a morning, and
+  // sat a row above "Profile" — a bare glyph has no box to centre it in
+  // the header's row (owner's phone, 16 Nov 2026). Hung past the margin
+  // by the glyph's empty edge, so its ink ends where the cover does.
   const button = (
-    <PressableScale
-      onPress={() => setOpen(true)}
-      scaleTo={0.85}
-      hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-      accessibilityRole="button"
-      accessibilityLabel={t('More', 'Tùy chọn khác', 'その他', '更多', '更多')}
+    <RoundIconButton
+      bare
+      style={{ marginRight: -INK_GAP_END['ellipsis-horizontal'] }}
+      icon="ellipsis-horizontal"
+      label={t('More', 'Tùy chọn khác', 'その他', '更多', '更多')}
       testID="person-more"
-    >
-      <Glyph name="ellipsis-horizontal" size={22} color={colors.text} />
-    </PressableScale>
+      onPress={() => setOpen(true)}
+    />
   );
   const node = (
     <>

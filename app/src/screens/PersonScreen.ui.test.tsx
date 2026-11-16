@@ -333,6 +333,26 @@ describe('the ⋯', () => {
   const pressInAlert = (text: string) => alert.mock.calls.at(-1)![2]!.find((b) => b.text === text)!.onPress!();
   const open = () => fireEvent.click(screen.getByTestId('person-more'));
 
+  // On the title's line, as the way back is: the header's own 44pt
+  // button, bare, hung past the margin by the glyph's empty edge. It was
+  // a bare 22pt glyph for a morning and stood a row above "Profile"
+  // (owner's phone, 16 Nov 2026).
+  it('stands in the header’s own 44pt box, bare, hung to the margin like Crew’s', async () => {
+    await show();
+    const boxed = (el: HTMLElement) => [el, ...el.querySelectorAll('*')]
+      .some((n) => getComputedStyle(n as HTMLElement).width === '44px');
+    const more = screen.getByTestId('person-more');
+    expect(boxed(more)).toBe(true);
+    // The same box the way back stands in.
+    expect(boxed(screen.getByTestId('person-back'))).toBe(true);
+    expect(more.getAttribute('aria-label')).toBe('More');
+    const margins: string[] = [];
+    for (let n: HTMLElement | null = more; n && margins.length < 6; n = n.parentElement) {
+      margins.push(getComputedStyle(n).marginRight);
+    }
+    expect(margins).toContain('-13px');
+  });
+
   it('names who it is about and offers a report and a block', async () => {
     await show();
     expect(screen.queryByTestId('person-menu-block')).toBeNull();
