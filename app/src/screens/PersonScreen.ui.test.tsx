@@ -159,14 +159,37 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('whose page it is', () => {
-  it('is headed by the person’s handle, bare, with their name under it and their bio', async () => {
+  // Name first, as their own Profile heads them (owner, 16 Nov 2026):
+  // the exception to the handle-first of every row of people.
+  it('is headed by the person’s name, beside the picture, with their handle under and their bio', async () => {
     await show();
-    expect(screen.getByTestId('person-handle').textContent).toBe('lan');
-    expect(screen.getByTestId('person-name').textContent).toBe('Lan Phạm');
+    const name = screen.getByTestId('person-name');
+    const handle = screen.getByTestId('person-handle');
+    expect(name.textContent).toBe('Lan Phạm');
+    expect(handle.textContent).toBe('@lan');
     expect(screen.getByTestId('person-bio').textContent).toBe('Coffee first, then the rest.');
-    // Handle strong, name quiet — the order every row of people has.
-    expect(textStyleOf(screen.getByTestId('person-handle'))?.color).toBe(colors.text);
-    expect(textStyleOf(screen.getByTestId('person-name'))?.color).toBe(colors.textTertiary);
+    // Name strong, handle quiet.
+    expect(textStyleOf(name)?.color).toBe(colors.text);
+    expect(textStyleOf(handle)?.color).toBe(colors.textTertiary);
+    expect(Number(textStyleOf(name)?.fontSize)).toBeGreaterThan(Number(textStyleOf(handle)?.fontSize));
+    // The name is in the picture's row; the handle is under that row.
+    const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
+    expect(viewStyleOf(row).flexDirection).toBe('row');
+    expect(row.contains(name)).toBe(true);
+    expect(row.contains(handle)).toBe(false);
+    expect(row.compareDocumentPosition(handle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // One line, which gives rather than pushes the friend button out.
+    expect(textStyleOf(name)?.flex).toBe(1);
+  });
+
+  // "11 collections" stood under the head until 16 Nov 2026; the
+  // collections are right there to be seen.
+  it('counts nothing under the head', async () => {
+    state.shelf = [list('one'), list('two')];
+    await show();
+    expect(screen.queryByTestId('person-counts')).toBeNull();
+    expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
+    expect(screen.getAllByTestId('person-list')).toHaveLength(2);
   });
 
   it('wears their face, not the reader’s, ringed in the page’s own ground', async () => {
@@ -179,13 +202,19 @@ describe('whose page it is', () => {
   it('asks for the profile by the handle it was opened with, the `@` and case off', async () => {
     await show('@Lan');
     expect(state.asked.every((h) => h === 'lan')).toBe(true);
-    expect(screen.getByTestId('person-handle').textContent).toBe('lan');
+    expect(screen.getByTestId('person-handle').textContent).toBe('@lan');
   });
 
   it('draws no name line and no bio for somebody who wrote neither', async () => {
     state.people = { lan: { ...LAN, full_name: '', bio: null } };
     await show();
-    expect(screen.getByTestId('person-handle').textContent).toBe('lan');
+    // Headed by the handle, `@` and all, where a name would stand —
+    // beside the picture — and no second line saying it again.
+    const handle = screen.getByTestId('person-handle');
+    expect(handle.textContent).toBe('@lan');
+    expect((screen.getByTestId('person-cover').nextElementSibling as HTMLElement).contains(handle)).toBe(true);
+    expect(textStyleOf(handle)?.color).toBe(colors.text);
+    expect(screen.getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
     expect(screen.queryByTestId('person-bio')).toBeNull();
   });
@@ -300,7 +329,6 @@ describe('their lists', () => {
     await show();
     const tiles = screen.getAllByTestId('person-list');
     expect(tiles.map((x) => x.textContent)).toEqual(['List new17 places · 3 likes', 'List old0 places']);
-    expect(screen.getByTestId('person-counts').textContent).toBe('2 collections');
     expect(screen.queryByTestId('person-no-lists')).toBeNull();
   });
 
@@ -317,12 +345,10 @@ describe('their lists', () => {
     state.likes = { one: 1 };
     await show();
     expect(screen.getByTestId('person-list').textContent).toBe('List one1 place · 1 like');
-    expect(screen.getByTestId('person-counts').textContent).toBe('1 collection');
     cleanup();
     state.lang = 'vi';
     await show();
     expect(screen.getByTestId('person-list').textContent).toBe('Bộ one1 địa điểm · 1 lượt thích');
-    expect(screen.getByTestId('person-counts').textContent).toBe('1 bộ sưu tập');
   });
 
   it('opens a list’s own page on a press', async () => {
@@ -347,7 +373,6 @@ describe('their lists', () => {
     await show();
     expect(screen.queryAllByTestId('person-list')).toEqual([]);
     expect(within(screen.getByTestId('person-no-lists')).getByText('No public collections yet')).toBeTruthy();
-    expect(screen.getByTestId('person-counts').textContent).toBe('0 collections');
   });
 });
 
@@ -405,7 +430,6 @@ describe('the friend button', () => {
     crew.mutual = { 'lan-id': 4 };
     await show();
     expect(screen.getByTestId('person-friends').textContent).toBe('Friends');
-    expect(screen.getByTestId('person-counts').textContent).toBe('0 collections');
   });
 
   it('offers Accept to somebody who asked, and accepts their request', async () => {
@@ -430,7 +454,7 @@ describe('the friend button', () => {
     await show();
     expect(screen.queryByText('Add friend')).toBeNull();
     // The page itself is still theirs.
-    expect(screen.getByTestId('person-handle').textContent).toBe('lan');
+    expect(screen.getByTestId('person-handle').textContent).toBe('@lan');
   });
 });
 
@@ -459,7 +483,6 @@ describe('in common', () => {
     expect(screen.queryByText('In common')).toBeNull();
     expect(state.commonAsked).toEqual([]);
     // The rest of the page is as it was.
-    expect(screen.getByTestId('person-counts').textContent).toBe('1 collection');
     expect(screen.getAllByTestId('person-list')).toHaveLength(1);
   });
 
@@ -489,10 +512,10 @@ describe('in common', () => {
     // One kind alone draws that row alone.
     expect(screen.queryByTestId('common-lists')).toBeNull();
     expect(within(section).queryByText('Collections you both liked')).toBeNull();
-    // Between the count line and the person's own collections.
-    const counts = screen.getByTestId('person-counts');
+    // Between the head and the person's own collections.
+    const head = screen.getByTestId('person-handle');
     const own = screen.getByTestId('person-list');
-    expect(counts.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(head.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(section.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -633,8 +656,9 @@ describe('the ⋯', () => {
     expect(screen.queryByTestId('person-menu-block')).toBeNull();
     open();
     // The sheet is headed by the name, the handle under it with its `@`.
+    // Each said twice now: on the page's head, and on the sheet's.
     expect(screen.getAllByText('Lan Phạm').length).toBe(2);
-    expect(screen.getByText('@lan')).toBeTruthy();
+    expect(screen.getAllByText('@lan').length).toBe(2);
     expect(screen.getByTestId('person-menu-report')).toBeTruthy();
     expect(screen.getByTestId('person-menu-block').textContent).toContain('Block @lan');
     expect(screen.queryByTestId('person-menu-unblock')).toBeNull();
@@ -643,8 +667,11 @@ describe('the ⋯', () => {
   it('heads the sheet with the handle alone for somebody with no name', async () => {
     state.people = { lan: { ...LAN, full_name: '', avatar_url: '' } };
     await show();
-    open();
+    // Once before the sheet (the page's head), once more on it — and no
+    // name line under either.
     expect(screen.getAllByText('@lan')).toHaveLength(1);
+    open();
+    expect(screen.getAllByText('@lan')).toHaveLength(2);
   });
 
   it('hands the desk the person, not a list', async () => {
