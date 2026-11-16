@@ -256,6 +256,18 @@ describe('the list, in a card', () => {
     expect(textStyleOf(within(screen.getByTestId('activity-list')).getByText('3h'))?.color).toBe(colors.textTertiary);
   });
 
+  // The page's air between the handle and the line under it (owner, 16
+  // Nov 2026), and the head still the face's 40 — one head, two pages.
+  it('keeps the page’s 3 of air between the handle and the age', async () => {
+    await show();
+    const handle = screen.getByTestId('activity-list-handle');
+    const lines = viewStyleOf(handle.parentElement!);
+    expect(lines.gap).toBe(3);
+    expect(lines.marginVertical).toBe(-1.5);
+    expect(textStyleOf(handle)?.lineHeight).toBe(20);
+    expect(textStyleOf(within(screen.getByTestId('activity-list')).getByText('3h'))?.lineHeight).toBe(20);
+  });
+
   it('says a list made a moment ago is New, as the card head does', async () => {
     state.mine = [list({ created_at: ago(10_000) })];
     await show();

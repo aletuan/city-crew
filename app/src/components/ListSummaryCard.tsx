@@ -131,6 +131,9 @@ export default function ListSummaryCard({ col, owned, onPerson, testID }: {
 const HEAD_FACE = 40;
 /** Each of the head's two lines — half the face, as on the page. */
 const HEAD_LINE = HEAD_FACE / 2;
+/** Air between the two lines, given back around them so the head is
+ *  still the face's height — the page's `BYLINE_GAP`, and its reasons. */
+const HEAD_GAP = 3;
 
 const s = StyleSheet.create({
   // The collection page's card rhythm (`descCard` there): 20 above the
@@ -143,7 +146,7 @@ const s = StyleSheet.create({
     marginBottom: space.cardGap,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headLines: { flexShrink: 1 },
+  headLines: { flexShrink: 1, gap: HEAD_GAP, marginVertical: -HEAD_GAP / 2 },
   headHandle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: HEAD_LINE },
   // The age under the handle in the third step, as the collection page's
   // own line under the handle is (13 Nov 2026).
