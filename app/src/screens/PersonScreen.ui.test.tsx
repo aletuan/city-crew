@@ -172,14 +172,19 @@ describe('whose page it is', () => {
     expect(textStyleOf(name)?.color).toBe(colors.text);
     expect(textStyleOf(handle)?.color).toBe(colors.textTertiary);
     expect(Number(textStyleOf(name)?.fontSize)).toBeGreaterThan(Number(textStyleOf(handle)?.fontSize));
-    // The name is in the picture's row; the handle is under that row.
+    // Both beside the picture, the handle right under the name: one
+    // column in the picture's row. The handle ran under the whole row
+    // for an evening, a picture's width left of its name.
     const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
     expect(viewStyleOf(row).flexDirection).toBe('row');
-    expect(row.contains(name)).toBe(true);
-    expect(row.contains(handle)).toBe(false);
-    expect(row.compareDocumentPosition(handle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // One line, which gives rather than pushes the friend button out.
-    expect(textStyleOf(name)?.flex).toBe(1);
+    const column = name.parentElement!;
+    expect([...column.children]).toEqual([name, handle]);
+    expect(column.parentElement).toBe(row);
+    expect(viewStyleOf(column).flexDirection).not.toBe('row');
+    // The column gives rather than pushing the friend button out, and
+    // its two lines are the picture's half under the cover.
+    expect(viewStyleOf(column).flex).toBe(1);
+    expect(Number(textStyleOf(name)?.lineHeight) + Number(textStyleOf(handle)?.lineHeight)).toBe(48);
   });
 
   // "11 collections" stood under the head until 16 Nov 2026; the
@@ -214,6 +219,9 @@ describe('whose page it is', () => {
     expect(handle.textContent).toBe('@lan');
     expect((screen.getByTestId('person-cover').nextElementSibling as HTMLElement).contains(handle)).toBe(true);
     expect(textStyleOf(handle)?.color).toBe(colors.text);
+    // Alone in its column, in the middle of the picture's lower half.
+    expect([...handle.parentElement!.children]).toEqual([handle]);
+    expect(viewStyleOf(handle.parentElement!)).toMatchObject({ minHeight: 48, justifyContent: 'center' });
     expect(screen.getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
     expect(screen.queryByTestId('person-bio')).toBeNull();
@@ -420,6 +428,34 @@ describe('the friend button', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add friend' })); });
     expect(data.sendFriendRequest).toHaveBeenCalledExactlyOnceWith('me-id', 'lan-id');
     expect(screen.getByTestId('person-requested').textContent).toBe('Requested');
+  });
+
+  // The page's one act, at the button scale's 44 and in Edit profile's
+  // dress; a row of people keeps the 32 (owner, 16 Nov 2026).
+  it('draws Add friend at 44 on the page, on the card’s surface', async () => {
+    await show();
+    const add = screen.getByTestId('person-add').firstElementChild!.firstElementChild as HTMLElement;
+    expect(viewStyleOf(add)).toMatchObject({
+      minHeight: 44, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    });
+  });
+
+  // What already stands is a fact: grey words and a mark, no pill, and
+  // nothing to press. A clock while it waits, a tick once it is so.
+  it('says Requested and Friends as words with a mark, not as pills', async () => {
+    crew.ships.data = [edge('me-id', 'lan-id', 'pending')];
+    await show();
+    const waiting = screen.getByTestId('person-requested');
+    expect(waiting.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('time-outline');
+    expect([viewStyleOf(waiting).borderWidth, viewStyleOf(waiting).backgroundColor]).toEqual([undefined, undefined]);
+    expect(viewStyleOf(waiting).minHeight).toBe(44);
+    expect(waiting.closest('[role="button"]')).toBeNull();
+    cleanup();
+    crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
+    await show();
+    const friends = screen.getByTestId('person-friends');
+    expect(friends.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('checkmark');
+    expect(friends.textContent).toBe('Friends');
   });
 
   // The line that counts their lists counts only that. Until 16 Nov 2026

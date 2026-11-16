@@ -1086,20 +1086,30 @@ describe('the friend button', () => {
       .toEqual(['Bạn bè', 'Đã gửi', 'Đồng ý', 'Kết bạn']);
   });
 
-  it('wears Crew’s looks: the quiet outline, the glass pill, the gradient — each at the chip’s height', async () => {
+  it('draws what stands as grey words, Add friend on the card’s surface, Accept in the gradient — each at the chip’s height', async () => {
     crew.ships.data = [edge('me', 'id-friend', 'accepted'), edge('me', 'id-waiting'), edge('id-asker', 'me')];
     data.fetchLikesOnList.mockImplementation(async () => [
       like(ago(1 * MIN), 'friend'), like(ago(2 * MIN), 'waiting'), like(ago(3 * MIN), 'asker'), like(ago(4 * MIN), 'stranger'),
     ]);
     await show();
-    for (const h of ['friend', 'waiting']) {
-      expect(viewStyleOf(buttonOf(h)!)).toMatchObject({
-        borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill, minHeight: CHIP_H,
-      });
+    // Facts, not buttons (owner, 16 Nov 2026): grey words led by a mark,
+    // with no pill round them, the height of the button that would be
+    // there. A tick for a friend, a clock for a request still waiting.
+    for (const [h, mark] of [['friend', 'checkmark'], ['waiting', 'time-outline']]) {
+      const fact = viewStyleOf(buttonOf(h)!);
+      expect([fact.borderWidth, fact.backgroundColor, fact.borderRadius]).toEqual([undefined, undefined, undefined]);
+      expect(fact).toMatchObject({ flexDirection: 'row', minHeight: CHIP_H });
+      expect(buttonOf(h)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe(mark);
       expect(textStyleOf(within(buttonOf(h)!).getByText(/./))?.color).toBe(colors.textTertiary);
+      expect(buttonOf(h)!.closest('[role="button"]')).toBeNull();
     }
+    // Add friend in Edit profile's dress: the card's surface and a
+    // hairline, not the glass tint.
     const add = buttonOf('stranger')!.firstElementChild!.firstElementChild as HTMLElement;
-    expect(viewStyleOf(add)).toMatchObject({ backgroundColor: colors.surfaceGlass, borderRadius: radius.pill, minHeight: CHIP_H });
+    expect(viewStyleOf(add)).toMatchObject({
+      backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+      borderRadius: radius.pill, minHeight: CHIP_H,
+    });
     expect(add.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('person-add-outline');
     const accept = buttonOf('asker')!;
     expect(accept.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();

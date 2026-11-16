@@ -11,11 +11,44 @@
 //
 // `prefix` names the testIDs (`activity-add`, `person-add`), so each
 // screen's tests find their own.
+//
+// ── which of them is a button (owner, 16 Nov 2026) ──
+//
+// Add friend and Accept are things to do. "Requested" and "Friends" are
+// facts, and until that day wore a bordered pill the size of the two
+// buttons: a control's dress on a thing that answers no press. Down a
+// list of people the column was pills from top to bottom, and the one
+// that could be pressed was no easier to find than the ones that could
+// not.
+//
+// So the facts are words now, in the quiet grey, each led by a small
+// mark: a clock for a request still waiting, a tick for a friend. Two
+// marks, not a tick on both — "✓ Requested" reads as done, a step from
+// "✓ Friends", and they are not the same answer.
+//
+// Not pressable, either of them. Taking a request back is on Crew; a
+// grey word that turned out to be a button would be the same confusion
+// from the other side.
+//
+// ── Add friend's dress, and its two sizes ──
+//
+// A pill, as every button in the app is. On the card's surface with a
+// hairline, as Edit profile is on your own Profile (`editBtn`): it was
+// the glass tint, which on the paper look is a grey smudge on a warm
+// page — the reason that button left the tint. The two are a pair: what
+// you do on your own page, what you do on somebody else's.
+//
+// 32 in a row of people (`CHIP_H`), where every row has one. 44 on a
+// person's page (`SECONDARY_CONTROL_H`, `size: 'page'`), where it is the
+// page's one act and Edit profile's opposite number. Accept takes the
+// same two sizes and keeps the gradient: it is a question waiting on
+// the reader, and should be the loudest thing beside a name.
+
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Glyph } from './ui/glyph';
-import { CHIP_H, CHIP_SLOP, PressableScale, successHaptic } from './ui';
+import { CHIP_H, CHIP_SLOP, PressableScale, SECONDARY_CONTROL_H, successHaptic } from './ui';
 import { useCrew } from '../lib/crew';
 import { acceptFriendRequest, sendFriendRequest } from '../lib/data';
 import { type Pledged, quietReason, rowButton } from '../lib/friends';
@@ -23,7 +56,7 @@ import { useI18n } from '../lib/i18n';
 import { usePending } from '../lib/pending';
 import { colors, font, gradAI, radius } from '../theme';
 
-export function useFriendButtons(me: string | null, prefix: string) {
+export function useFriendButtons(me: string | null, prefix: string, size: 'row' | 'page' = 'row') {
   const { t } = useI18n();
   // The friend buttons — see the header. `pledged` is each tap until the
   // crew is read again; `run` keeps one write per person in flight.
@@ -51,6 +84,10 @@ export function useFriendButtons(me: string | null, prefix: string) {
   const acceptFriend = (id: string) => ask(id, 'friends', () => acceptFriendRequest(id, me!),
     t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした', '无法接受请求', '無法接受請求'));
 
+  // On a page the buttons are 44 and need no slop to reach it.
+  const page = size === 'page';
+  const slop = page ? undefined : CHIP_SLOP;
+
   const friendButton = (id: string | null) => {
     const state = rowButton(id, me, crew.ships.data, crew.blocks.data, pledged);
     if (!state || !id) return null;
@@ -58,12 +95,12 @@ export function useFriendButtons(me: string | null, prefix: string) {
       return (
         <PressableScale
           onPress={() => addFriend(id)}
-          hitSlop={CHIP_SLOP}
+          hitSlop={slop}
           scaleTo={0.94}
           accessibilityRole="button"
           testID={`${prefix}-add`}
         >
-          <View style={s.addBtn}>
+          <View style={[s.addBtn, page && s.onPage]}>
             <Glyph name="person-add-outline" size={15} color={colors.accent} />
             <Text style={s.addText}>{t('Add friend', 'Kết bạn', '友達に追加', '加好友', '加好友')}</Text>
           </View>
@@ -74,12 +111,12 @@ export function useFriendButtons(me: string | null, prefix: string) {
       return (
         <PressableScale
           onPress={() => acceptFriend(id)}
-          hitSlop={CHIP_SLOP}
+          hitSlop={slop}
           scaleTo={0.94}
           accessibilityRole="button"
           testID={`${prefix}-accept`}
         >
-          <LinearGradient {...gradAI} style={s.acceptBtn}>
+          <LinearGradient {...gradAI} style={[s.acceptBtn, page && s.onPage]}>
             <Glyph name="checkmark" size={15} color={colors.accentInk} />
             <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受', '接受')}</Text>
           </LinearGradient>
@@ -88,7 +125,8 @@ export function useFriendButtons(me: string | null, prefix: string) {
     }
     // A state, not a control: drawn as Crew's quiet outline, read as words.
     return (
-      <View style={s.quietBtn} testID={`${prefix}-${state}`}>
+      <View style={[s.quiet, page && s.quietOnPage]} testID={`${prefix}-${state}`}>
+        <Glyph name={state === 'friends' ? 'checkmark' : 'time-outline'} size={15} color={colors.textTertiary} />
         <Text style={s.quietText}>
           {state === 'friends'
             ? t('Friends', 'Bạn bè', '友だち', '好友', '好友')
@@ -105,9 +143,13 @@ const s = StyleSheet.create({
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6,
-    backgroundColor: colors.surfaceGlass,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  addText: { color: colors.text, fontSize: 14, fontWeight: font.medium },
+  // Edit profile's weight, with its dress.
+  addText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
+  // On a person's page: the button scale's 44 and Edit profile's 16 of
+  // side room.
+  onPage: { minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 16 },
   // Crew's Accept, at the chip's height rather than its request card's.
   acceptBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -115,9 +157,9 @@ const s = StyleSheet.create({
   },
   acceptText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
   // Crew's quiet outline: Cancel, Unblock — here Friends and Requested.
-  quietBtn: {
-    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
-    minHeight: CHIP_H, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 6,
-  },
-  quietText: { color: colors.textTertiary, fontSize: 14, fontWeight: font.semibold },
+  // A fact, not a button: words and a mark, the height of the button
+  // that would stand here so a row of people keeps its line.
+  quiet: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: CHIP_H },
+  quietOnPage: { minHeight: SECONDARY_CONTROL_H },
+  quietText: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium },
 });
