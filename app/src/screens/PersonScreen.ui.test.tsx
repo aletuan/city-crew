@@ -59,9 +59,13 @@ const state = vi.hoisted(() => ({
   roleAsked: [] as [string | null, string | null][],
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
+  myBio: '',
 }));
 vi.mock('../lib/auth', () => ({
   useSession: () => ({ session: state.me ? { user: { id: state.me } } : null }),
+  // The reader's own profile, as the form saves it: the bio is what the
+  // page reads of it.
+  useProfile: () => ({ profile: { bio: state.myBio } }),
 }));
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.shelf, loading: false, reload: () => {} }),
@@ -125,8 +129,18 @@ const list = (slug: string, over: Partial<Collection> = {}): Collection => ({
 const members = (n: number) => Array.from({ length: n }, (_, i) => ({ sort_order: i, places: { slug: `p${i}` } }));
 
 const flush = async () => { await act(async () => {}); };
+/** What the page listens for on the navigator, so a test can say the
+ *  page was left and come back to. */
+const heard: Record<string, (() => void)[]> = {};
+const said = (event: 'blur' | 'focus') => act(() => { (heard[event] ?? []).forEach((fn) => fn()); });
 const show = async (handle = 'lan') => {
-  const navigation = { goBack: vi.fn(), navigate: vi.fn() };
+  const navigation = {
+    goBack: vi.fn(), navigate: vi.fn(),
+    addListener: vi.fn((event: string, fn: () => void) => {
+      (heard[event] ??= []).push(fn);
+      return () => { heard[event] = heard[event].filter((f) => f !== fn); };
+    }),
+  };
   render(<PersonScreen navigation={navigation as unknown as Nav} route={{ params: { handle } } as RootRoute<'Person'>} />);
   await flush();
   return navigation;
@@ -148,6 +162,8 @@ beforeEach(() => {
   state.roleAsked = [];
   state.lang = 'en';
   state.scheme = 'dark';
+  state.myBio = '';
+  for (const k of Object.keys(heard)) delete heard[k];
   crew.ships.data = [];
   crew.ships.reload.mockClear();
   crew.blocks.data = [];
@@ -231,6 +247,8 @@ describe('whose page it is', () => {
     expect(screen.getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
     expect(screen.queryByTestId('person-bio')).toBeNull();
+    // And no invitation to write one: it is not the reader's to write.
+    expect(screen.queryByTestId('person-bio-add')).toBeNull();
   });
 
   it('goes back through the navigation prop', async () => {
@@ -244,6 +262,106 @@ describe('whose page it is', () => {
 // Nov 2026). Only the account itself could see it until then, on its
 // own Profile; here it tells somebody else the desk trusts this account
 // to keep places.
+// Your own page with no bio offers the way to write one (owner, 16 Nov
+// 2026): 4 of the 16 people with a public list had a bio, and this is
+// the page a visitor meets. Nobody else is ever offered it.
+describe('the bio, and the way to write one', () => {
+  const mine = (over: Partial<Who> = {}) => {
+    state.me = LAN.id;
+    state.people = { lan: { ...LAN, ...over } };
+  };
+
+  it('offers "Add a bio" on your own page when you have written none, where the bio would stand', async () => {
+    mine({ bio: null });
+    const navigation = await show();
+    const add = screen.getByTestId('person-bio-add');
+    expect(add.getAttribute('role')).toBe('button');
+    expect(add.textContent).toBe('Add a bio');
+    expect(screen.queryByTestId('person-bio')).toBeNull();
+    // Under the head, as the bio is: the row after the picture and names.
+    expect(add.compareDocumentPosition(screen.getByTestId('person-handle')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    // A plus and the words, both in the accent: the colour of what a tap
+    // changes, as "Add a description" wears it on a list's card.
+    const plus = add.querySelector('[data-icon="add"]')!;
+    expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['17', String(colors.accent)]);
+    expect(textStyleOf(screen.getByText('Add a bio'))).toMatchObject({ color: colors.accent, fontSize: 14 });
+    // It opens the profile's form with the cursor in the bio.
+    fireEvent.click(add);
+    expect(navigation.navigate).toHaveBeenCalledWith('EditProfile', { focus: 'bio' });
+  });
+
+  it('says it in Vietnamese, in the Profile tab’s own words', async () => {
+    mine({ bio: '' });
+    state.lang = 'vi';
+    await show();
+    expect(screen.getByTestId('person-bio-add').textContent).toBe('Thêm giới thiệu');
+  });
+
+  it('draws your bio and no invitation once you have one', async () => {
+    mine();
+    await show();
+    expect(screen.getByTestId('person-bio').textContent).toBe('Coffee first, then the rest.');
+    expect(screen.queryByTestId('person-bio-add')).toBeNull();
+  });
+
+  // The form saves into your own profile; the page says the new words
+  // at once, before it has read itself again.
+  it('says the bio you have just saved, before the page has read itself again', async () => {
+    mine({ bio: null });
+    state.myBio = 'Weekends on a scooter.';
+    await show();
+    expect(screen.getByTestId('person-bio').textContent).toBe('Weekends on a scooter.');
+    expect(screen.queryByTestId('person-bio-add')).toBeNull();
+  });
+
+  // The reader's own bio is the reader's: never under somebody else's
+  // name, with or without one of their own there.
+  it('never draws the reader’s bio, or the invitation, on somebody else’s page', async () => {
+    state.myBio = 'Mine, not Lan’s.';
+    state.people = { lan: { ...LAN, bio: null } };
+    await show();
+    expect(screen.queryByTestId('person-bio')).toBeNull();
+    expect(screen.queryByTestId('person-bio-add')).toBeNull();
+    cleanup();
+    state.people = { lan: LAN };
+    await show();
+    expect(screen.getByTestId('person-bio').textContent).toBe('Coffee first, then the rest.');
+  });
+
+  it('offers nothing to somebody signed out', async () => {
+    state.me = null;
+    state.people = { lan: { ...LAN, bio: null } };
+    await show();
+    expect(screen.queryByTestId('person-bio-add')).toBeNull();
+  });
+
+  // The form changes the name and the picture as readily as the bio, so
+  // your own page reads itself again when you come back to it — a blur,
+  // then a focus — and not on arrival.
+  it('reads your own page again when you come back to it, and not before', async () => {
+    mine({ bio: null });
+    await show();
+    await said('focus');
+    expect(state.lookup.reload).not.toHaveBeenCalled();
+    await said('blur');
+    expect(state.lookup.reload).not.toHaveBeenCalled();
+    await said('focus');
+    expect(state.lookup.reload).toHaveBeenCalledTimes(1);
+    // Once a return, not once a focus after it.
+    await said('focus');
+    expect(state.lookup.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves somebody else’s page as it was fetched, and stops listening when it goes', async () => {
+    await show();
+    await said('blur');
+    await said('focus');
+    expect(state.lookup.reload).not.toHaveBeenCalled();
+    cleanup();
+    expect([heard.blur, heard.focus]).toEqual([[], []]);
+  });
+});
+
 describe('the mark of a role', () => {
   const face = () => screen.getByTestId('person-cover').nextElementSibling!.firstElementChild as HTMLElement;
 

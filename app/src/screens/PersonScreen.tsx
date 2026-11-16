@@ -96,7 +96,7 @@
 // to answer, and nothing in it counts the press: the production build
 // sends no usage analytics (`lib/legal`), so the answer will come from
 // asking people.
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
   ScrollView, StyleSheet, Text, View,
@@ -111,9 +111,9 @@ import InCommon from '../components/InCommon';
 import { usePersonMenu } from '../components/PersonMenu';
 import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
-import { useSession } from '../lib/auth';
+import { useProfile, useSession } from '../lib/auth';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
-import { type Collection, coverUriOf, membersOf, useProfileByHandle } from '../lib/data';
+import { type Collection, coverUriOf, type FriendProfile, membersOf, useProfileByHandle } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
@@ -133,6 +133,9 @@ const COVER_H = 148;
 const TITLE_SHRINK = 0.78;
 /** A list's photograph on its tile. */
 const TILE_PHOTO_H = 108;
+/** What "Add a bio" adds above and below its 24pt row to make the button
+ *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
+const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
 
 export default function PersonScreen({ navigation, route }: {
   navigation: Nav;
@@ -158,6 +161,9 @@ export default function PersonScreen({ navigation, route }: {
 
   const personId = person?.id ?? null;
   const friend = friendButton(personId);
+  // Your own page, come back to from the form its "Add a bio" opens:
+  // read again — `useReloadOnReturn`.
+  useReloadOnReturn(navigation, !!me && personId === me, who.reload);
   // The same button, small, for the header once the row has scrolled
   // away — a thing to do only (`actsOnly`): a fact is not worth the
   // header's room. Switched off for now: `TOP_FRIEND_ON`.
@@ -224,7 +230,7 @@ export default function PersonScreen({ navigation, route }: {
           `Acts`. Not on your own page, nor signed out: no friend button,
           no row. */}
       {friend ? <Acts friend={friend} onLayout={top.onRowLayout} /> : null}
-      {person.bio ? <Text style={s.bio} testID="person-bio">{person.bio}</Text> : null}
+      <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} />
       {/* What the two of you have in common — `InCommon`. It took the
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
@@ -316,6 +322,96 @@ export default function PersonScreen({ navigation, route }: {
  * when the offset is. State only on the crossing, not on every frame.
  * The tab bar's duck still hears every scroll.
  */
+/**
+ * The bio under the head — or, on your own page with none written, the
+ * way to write one (owner, 16 Nov 2026).
+ *
+ * ── why here ──
+ *
+ * Measured on the live profiles that day: 14 of 126 have a bio, and of
+ * the 16 people with a public list — the pages somebody else opens — 4
+ * do. The Profile tab had gained its own door the same day (`BioRow`,
+ * "Add a bio" at the head of About me). This is the other place the
+ * absence can be seen by the one person able to mend it, and the better
+ * one for seeing it: your page as a visitor meets it, a cover and a name
+ * and then nothing before the lists.
+ *
+ * Only on your own page. A visitor to a page with no bio is shown
+ * nothing there, as before: an invitation to write somebody else's
+ * introduction is not theirs to take.
+ *
+ * Drawn as the collection card's "Add a description" is: a plus and the
+ * words in the accent, the colour this app gives what a tap changes, at
+ * the caption's size, where the words will go. The same words as the
+ * Profile tab's door, so one act has one name; and it opens the same
+ * form with the cursor already in the field (`{ focus: 'bio' }`).
+ *
+ * Your own bio is read off your own profile (`useProfile`) when it has
+ * one, not only off the page's fetch: the form saves into that profile,
+ * so the page says the new words the moment the form closes, with no
+ * blink of the invitation while the page reads itself again.
+ *
+ * Weighed with it, and not taken (the owner chose this one alone):
+ *   - the bio in a tinted box, a "personal statement". 13 of the 14 bios
+ *     are one line, the longest 56 characters, and one line in a rounded
+ *     box is a text field to look at.
+ *   - "Read more". The field stops at 160 (`BIO_MAX`), about four lines.
+ *   - asking for a bio at the moment a first list is made public. The
+ *     moment is the right one and the ask lands inside another act; left
+ *     until the two doors have had time to show what they do.
+ */
+function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; onAdd: () => void }) {
+  const { t } = useI18n();
+  const { profile } = useProfile();
+  const mine = !!me && person.id === me;
+  const bio = (mine && profile.bio) || person.bio;
+  if (bio) return <Text style={s.bio} testID="person-bio">{bio}</Text>;
+  if (!mine) return null;
+  return (
+    <PressableScale
+      onPress={onAdd}
+      scaleTo={0.96}
+      haptic="selection"
+      hitSlop={BIO_ADD_SLOP}
+      accessibilityRole="button"
+      contentStyle={s.bioAdd}
+      testID="person-bio-add"
+    >
+      <Glyph name="add" size={17} color={colors.accent} />
+      <Text style={s.bioAddText}>{t('Add a bio', 'Thêm giới thiệu', '自己紹介を追加', '添加个人简介', '添加個人簡介')}</Text>
+    </PressableScale>
+  );
+}
+
+/**
+ * Your own page, read again when you come back to it.
+ *
+ * The page keeps the answer it fetched on opening, and until 16 Nov 2026
+ * nothing on it led anywhere that could change that answer. "Add a bio"
+ * opens the profile's form, which changes the name and the picture as
+ * readily as the bio; without this the page would greet the reader, on
+ * the way back, with the name they had just replaced.
+ *
+ * On a return and not on arrival: a blur and then a focus, heard from
+ * the navigation prop. Counting focuses instead would read twice on
+ * opening wherever the first focus is announced, and never on a return
+ * wherever it is not. Somebody else's page is left alone: nothing this
+ * reader can do from it changes what it says.
+ */
+function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
+  const latest = useRef({ on, reload });
+  latest.current = { on, reload };
+  useEffect(() => {
+    let away = false;
+    const blur = navigation.addListener('blur', () => { away = true; });
+    const focus = navigation.addListener('focus', () => {
+      if (away && latest.current.on) latest.current.reload();
+      away = false;
+    });
+    return () => { blur(); focus(); };
+  }, [navigation]);
+}
+
 function usePastRow(duck: ((e: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined) {
   const [foot, setFoot] = useState<number | null>(null);
   const [past, setPast] = useState(false);
@@ -452,6 +548,12 @@ const s = StyleSheet.create({
   // The handle, right under the name: an address, quieter.
   handle: { color: colors.textTertiary, ...type.meta, lineHeight: 20 },
   bio: { color: colors.textSecondary, ...type.body, lineHeight: 23, marginTop: 10 },
+  // The invitation in the bio's place — see `Bio`. The collection card's
+  // "Add a description" (`descAdd`): a 17pt plus 4 from 14pt semibold
+  // words, in the accent, hugging its words so the row beside it is not a
+  // button.
+  bioAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24, marginTop: 10 },
+  bioAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   // A section's label: the small capitals the place page heads a fact with.
   sectionLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
