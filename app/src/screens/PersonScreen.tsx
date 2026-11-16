@@ -59,11 +59,15 @@
 //
 // Beside the picture, not under it. The handle, the name and the count
 // stood in three lines under the face with the width beside it empty,
-// and the collections began a quarter of a screen lower for it. Only
-// the name is beside it: with the friend button in the same row there
-// is room for one short line (`title`), and a second line there — the
-// handle, a count — was cut on almost every account by the arithmetic.
-// So the handle runs under the row, where it has the page's width.
+// and the collections began a quarter of a screen lower for it.
+//
+// The handle right under the name, both beside the picture. For an
+// evening the handle ran under the whole row instead, at the page's
+// left edge: a second line beside the picture had been ruled out when
+// that line was "name · 11 collections", too long for the room. With
+// the count gone the line is a handle, which is short — and under the
+// row it sat a picture's width to the left of the name it belongs to,
+// which the owner read, rightly, as out of line.
 //
 // Somebody with no name is headed by their handle, `@` and all, and
 // has no second line.
@@ -139,7 +143,7 @@ export default function PersonScreen({ navigation, route }: {
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places.data));
   const cover = coverAmong(lists, coverFor);
 
-  const { friendButton, crew } = useFriendButtons(me, 'person');
+  const { friendButton, crew } = useFriendButtons(me, 'person', 'page');
   // Report, block, unblock — `usePersonMenu`.
   const menu = usePersonMenu(me, person, crew);
 
@@ -190,16 +194,17 @@ export default function PersonScreen({ navigation, route }: {
               `PersonRole` (owner, 16 Nov 2026). */}
           <PersonRole me={me} personId={person.id} />
         </View>
-        {/* The name, beside the picture — or the handle, for somebody
-            who gave no name. Shrinks before it is cut: see `title`. */}
-        {person.full_name
-          ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
-          : <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-handle">{atHandle(person.handle)}</Text>}
+        {/* The name, beside the picture, and the handle right under it
+            — or the handle alone, for somebody who gave no name. The
+            name shrinks before it is cut: see `title`. */}
+        <View style={s.names}>
+          {person.full_name
+            ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
+            : null}
+          <Text style={person.full_name ? s.handle : s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
+        </View>
         {friendButton(person.id)}
       </View>
-      {person.full_name
-        ? <Text style={s.handle} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
-        : null}
       {person.bio ? <Text style={s.bio} testID="person-bio">{person.bio}</Text> : null}
       {/* What the two of you have in common — `InCommon`. It took the
           "mutual saves" this line counted, for a friend only, until 16
@@ -323,18 +328,23 @@ const s = StyleSheet.create({
   },
   // The page's ground around the face, so it parts from the photograph.
   faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
-  // The name: the display face at 22, the size the page's own Profile
-  // heads its sections in. It takes the room the picture and the button
-  // leave — about 130pt beside "Add friend" on a 390pt phone, by
-  // arithmetic and not yet by a phone — so it shrinks to `TITLE_SHRINK`
-  // before it is cut. Lifted off the row's foot to the middle of the
-  // half of the picture under the cover: (48 − 28) / 2.
+  // The name over the handle, one column beside the picture: 28 and 20,
+  // the 48 of the picture's half under the cover, so the two lines stand
+  // exactly on it and the 44pt friend button is level with them.
+  //
+  // A handle alone (nobody's name) stands in the middle of that 48.
+  names: { flex: 1, minHeight: FACE / 2 + 4, justifyContent: 'center' },
+  // The display face at 22, the size the page's own Profile heads its
+  // sections in. It takes the room the picture and the button leave —
+  // about 130pt beside "Add friend" on a 390pt phone, by arithmetic and
+  // not yet by a phone — so it shrinks to `TITLE_SHRINK` before it is
+  // cut.
   title: {
-    flex: 1, color: colors.text, fontSize: 22, lineHeight: 28, fontFamily: display.bold,
-    letterSpacing: 0.2, marginBottom: 10,
+    color: colors.text, fontSize: 22, lineHeight: 28, fontFamily: display.bold,
+    letterSpacing: 0.2,
   },
-  // The handle, under the row, the page's width: an address, quieter.
-  handle: { color: colors.textTertiary, ...type.meta, marginTop: 8 },
+  // The handle, right under the name: an address, quieter.
+  handle: { color: colors.textTertiary, ...type.meta, lineHeight: 20 },
   bio: { color: colors.textSecondary, ...type.body, lineHeight: 23, marginTop: 10 },
   // A section's label: the small capitals the place page heads a fact with.
   sectionLabel: {
