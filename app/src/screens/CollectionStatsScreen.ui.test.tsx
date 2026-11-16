@@ -171,6 +171,22 @@ describe('what it asks for', () => {
     state.faces = {};
   });
 
+  // The card's head opens the author's page here as on Activity (owner,
+  // 16 Nov 2026): one card, one behaviour, on both pages about a list.
+  it('opens the author’s page from the card’s head: yours on your list, theirs on theirs', async () => {
+    const navigation = await show();
+    fireEvent.click(screen.getByTestId('stats-list-person'));
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'andy' });
+    cleanup();
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', curator_handle: '@maydidaudo' })];
+    state.faces = { maydidaudo: 'https://faces/may.jpg' };
+    const theirs = await show('theirs');
+    fireEvent.click(screen.getByTestId('stats-list-person'));
+    expect(theirs.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'maydidaudo' });
+    state.faces = {};
+  });
+
   it('asks for somebody else’s list for a reader of it, public or lent', async () => {
     state.mine = [];
     state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', title_en: 'Their list' })];
@@ -258,7 +274,8 @@ describe('the tiles', () => {
 
   it('is not a control', async () => {
     await show();
-    expect(screen.queryAllByRole('button').map((b) => b.getAttribute('data-testid'))).toEqual(['stats-back']);
+    // Back, and the card's head since 16 Nov 2026 — no tile among them.
+    expect(screen.queryAllByRole('button').map((b) => b.getAttribute('data-testid'))).toEqual(['stats-back', 'stats-list-person']);
   });
 
   it('sits each tile in a card, half the row', async () => {
