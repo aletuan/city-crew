@@ -24,6 +24,8 @@
 // public list is readable by everyone, and naming three friends on it
 // narrows nothing.
 
+import type Ionicons from '@expo/vector-icons/Ionicons';
+
 /** One share, as the owner's read returns it. Structural, because Node
  *  runs this and the data layer hands back exactly these columns. */
 export type ShareRow = { collection_id: string; user_id: string; created_at: string };
@@ -129,6 +131,44 @@ export function shareCta(
 }
 
 type T = (en: string, vi: string, ja: string, zh: string, hant?: string) => string;
+
+/** The glyph each of the three answers wears, wherever one is drawn:
+ *  under your handle on the list's page, on the rows of its who-sees-it
+ *  sheet, and at the head of the list's form. */
+export const SEEN_GLYPH: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
+  public: 'globe-outline',
+  friends: 'people-outline',
+  private: 'lock-closed-outline',
+};
+
+/** The one word for each answer — the page's, and so the form's. */
+export function seenName(seen: Visibility, t: T): string {
+  if (seen === 'public') return t('Public', 'Công khai', '公開', '公开', '公開');
+  if (seen === 'friends') return t('Friends', 'Bạn bè', '友だち', '好友', '好友');
+  return t('Private', 'Riêng tư', '非公開', '私密', '私密');
+}
+
+/**
+ * What each answer means, in the few words that fit after its name on
+ * one line: "Public · Everyone can see it" (the list's form, owner,
+ * 16 Nov 2026).
+ *
+ * Friends and Private are the sentences the who-sees-it sheet already
+ * says under those rows, so a reader meets the same words in both
+ * places. Public is not the sheet's ("Shown in Explore and in search"):
+ * that one says where a public list turns up, to somebody deciding
+ * whether to publish; this one says who is reading, to somebody about to
+ * change the words they read. Not the friends' names, as the sheet gives
+ * once some are chosen: the form is not where the owner checks who has
+ * the list.
+ */
+export function seenGloss(seen: Visibility, t: T): string {
+  if (seen === 'public') return t('Everyone can see it', 'Mọi người có thể xem', '誰でも見られます', '所有人可见', '所有人可見');
+  if (seen === 'friends') {
+    return t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友だちだけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見');
+  }
+  return t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます', '仅你可见', '僅你可見');
+}
 
 /**
  * Who a list is shared with, briefly: "Minh Anh", "Minh Anh and Hà My",

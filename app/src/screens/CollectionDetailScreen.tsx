@@ -4,7 +4,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, Text, useWindowDimensions, View,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph } from '../components/ui/glyph';
 import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
@@ -28,7 +27,7 @@ import {
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
-import { namesBriefly, sharesByList, type Visibility, visibilityOf } from '../lib/shares';
+import { namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
 import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
@@ -52,14 +51,6 @@ import { useReorderDraft } from './collectionDetail/useReorderDraft';
 /** What a change of who-sees-it says to VoiceOver: published, private
  *  again, or shared with this many people — see `said`. */
 type Said = 'public' | 'private' | { shared: number };
-
-/** The glyph under your handle and on the sheet's row, for each of the
- *  three answers — see `visibility`. */
-const SEEN_GLYPH: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
-  public: 'globe-outline',
-  friends: 'people-outline',
-  private: 'lock-closed-outline',
-};
 
 /**
  * A card's pitch before it has reported its size: a 16:10 photograph the
@@ -253,12 +244,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     [listShares.data, col?.id],
   );
   const seen = visibilityOf(isPublic, sharedWith.length);
-  const seenWords: Record<Visibility, string> = {
-    public: t('Public', 'Công khai', '公開', '公开', '公開'),
-    friends: t('Friends', 'Bạn bè', '友だち', '好友', '好友'),
-    private: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
-  };
-  const seenWord = seenWords[seen];
+  const seenWord = seenName(seen, t);
   const { ships, blocks, people } = useCrew();
   const friendIds = useMemo(() => (uid ? splitFriendships(ships.data, uid).friends : []), [ships.data, uid]);
   /**
@@ -978,7 +964,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     {
       key: 'friends',
       icon: SEEN_GLYPH.friends,
-      title: seenWords.friends,
+      title: seenName('friends', t),
       desc: sharedWith.length
         ? namesBriefly(sharedWith.map(nameOf), t)
         : t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友だちだけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見'),
