@@ -4,7 +4,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { Glyph } from '../../components/ui/glyph';
-import { Card, CountBadge, fireHaptic, PressableScale } from '../../components/ui';
+import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import AvatarPicker from '../../components/AvatarPicker';
 import EngagementRing from '../../components/EngagementRing';
@@ -162,8 +162,8 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   const { level, progress } = levelFromSaves(saved);
   const trips = useMyTrips();
 
-  // The three doors under the hero. Each is a count the reader made and a
-  // tap into the tab that holds it — a number on a profile earns its place
+  // The four doors under the hero. Each is a count the reader made and a
+  // tap into the place that holds it — a number on a profile earns its place
   // only as a door (the ring already says "how far"; these say "how many"
   // and "where"). A tab navigator is the parent when the screen is in the
   // app; the root ref is the way out when it is not, naming each tab's
@@ -177,6 +177,13 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   // `navigate` no longer goes back to a screen already in the stack on
   // its own — `at` is a fresh param the list reads as "scroll to the
   // top", and Collections is aimed at Yours, the half these counts are of.
+  //
+  // Collections and Trips are tabs, and hop. Check-ins and Friends are
+  // pages pushed over this one (`Visited`, `Crew`), opened as the rows
+  // further down open them.
+  // The four fetches behind them, for the one line that says a count
+  // could not be loaded and the one press that asks again.
+  const counts = [mine, visits, ships, trips];
   const hop = (tab: 'Collections' | 'Trips', first: 'CollectionsHome' | 'TripsHome') => {
     fireHaptic('selection');
     const at = Date.now();
@@ -288,13 +295,34 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
 
       {/* Bare numbers over a hairline, not boxed tiles: four filled boxes
           beside a title read as a second toolbar (the desk learned this in
-          #634), where the number alone is the thing being read. Three, not
-          the reference's four: there is no review feature, and a count
-          with no data behind it is the one number that must not appear. */}
+          #634), where the number alone is the thing being read. No review
+          count: there is no review feature, and a count with no data
+          behind it is the one number that must not appear.
+
+          Collections, Check-ins, Friends, Trips (owner, 16 Nov 2026). It
+          was Collections, Saved places, Trips. "Saved places" went: the
+          places are the ones in the collections beside it — a detail of
+          that number, not a fourth thing — and it had no door of its
+          own, opening the same list Collections does. The one other
+          place for it, Places filtered to saved, shows one city where
+          the number counts every city. The figure still sets the level
+          (`saved`, below the ring); it is only not drawn.
+
+          Check-ins and Friends took the room: each is a thing the reader
+          did and each has a page that lists exactly what is counted —
+          `Visited` spans every city, as its number does. They were
+          numbers at the ends of their rows further down, and a figure
+          said twice on one page is one of them wasted, so those rows
+          keep their words and lose their pills. Four short words fit
+          where three with a long one did. */}
       <View style={s.stats}>
         <StatTile n={mine.loaded ? mine.data.length : null} label={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')} onPress={() => hop('Collections', 'CollectionsHome')} />
         <View style={s.statDivider} />
-        <StatTile n={mine.loaded ? saved : null} label={t('Saved places', 'Địa điểm đã lưu', '保存した場所', '已保存的地点', '已儲存的地點')} onPress={() => hop('Collections', 'CollectionsHome')} />
+        {/* Distinct places, not visits: three evenings at one bar is one
+            place been to — the figure the row below carried. */}
+        <StatTile n={visits.loaded ? visitSummary(visits.data).places : null} label={t('Check-ins', 'Check-in', 'チェックイン', '打卡', '打卡')} onPress={() => navigation.navigate('Visited')} />
+        <View style={s.statDivider} />
+        <StatTile n={ships.loaded ? crew.friends.length : null} label={t('Friends', 'Bạn bè', '友達', '好友', '好友')} onPress={() => navigation.navigate('Crew')} />
         <View style={s.statDivider} />
         <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', 'トリップ', '行程', '行程')} onPress={() => hop('Trips', 'TripsHome')} />
       </View>
@@ -302,16 +330,13 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           and it says so — only for a count still unknown: a fetch that
           fails over figures already on screen (a cached copy) leaves
           those standing, and they are not wrong enough to interrupt. */}
-      {((!mine.loaded && mine.error) || (!trips.loaded && trips.error)) ? (
+      {counts.some((c) => !c.loaded && c.error) ? (
         <View style={s.statsFailed} testID="stats-failed">
           <Text style={s.statsFailedText}>
             {t("Couldn't load your counts.", 'Không tải được số liệu.', '件数を読み込めませんでした。', '无法加载统计数据。', '無法載入統計資料。')}
           </Text>
           <PressableScale
-            onPress={() => {
-              if (!mine.loaded) mine.reload();
-              if (!trips.loaded) trips.reload();
-            }}
+            onPress={() => counts.forEach((c) => { if (!c.loaded) c.reload(); })}
             accessibilityRole="button"
             hitSlop={10}
           >
@@ -422,8 +447,8 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
 
       {/* Where you have been, after what you like: both are facts about
           who you are, and they read in that order — taste, then the
-          evidence. Not a fourth stat tile: the row of three carries its
-          own note on why four boxes read as a toolbar. A section of its
+          evidence. Its number is a stat tile under the hero since 16 Nov
+          2026 and not on the row. A section of its
           own rather than a row in Interests, because the chips there are
           a picker at rest and a navigation row under a picker is two
           kinds of thing in one card. */}
@@ -433,7 +458,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           icon="location-outline"
           title={t('Places you checked in at', 'Địa điểm check-in', 'チェックインした場所', '你打过卡的地点', '你打過卡的地點')}
           sub={t("A record of the places you've been.", 'Ghi lại những nơi bạn đã đi qua.', '訪れた場所の記録。', '你去过的地方的记录。', '你去過的地方的記錄。')}
-          count={visitSummary(visits.data).places}
           onPress={() => navigation.navigate('Visited')}
           last
         />
@@ -448,9 +472,9 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           the app behaves, and then the ways out. */}
       <Text style={s.section}>{t('Friends', 'Bạn bè', '友達', '好友', '好友')}</Text>
       {/* The pill said "Coming soon" from the day this screen shipped;
-          the row opens the crew now. The number is friends, the dot is
-          requests — two different facts, and neither borrows the other's
-          mark. */}
+          the row opens the crew now. The dot is requests. The number of
+          friends was a pill at the row's end until 16 Nov 2026; it is a
+          stat tile under the hero now, and not said twice. */}
       <Card style={s.featureCard}>
         <PressableScale
           contentStyle={[s.twoLineRow, s.featureRowDivider]}
@@ -468,7 +492,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
               {t('Make friends and plan together.', 'Kết bạn để cùng lên kế hoạch.', '友達になって、一緒に計画。', '结交好友，一起规划。', '結交好友，一起規劃。')}
             </Text>
           </View>
-          <CountBadge n={crew.friends.length} style={s.rowEnd} />
           <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
         </PressableScale>
         {/* The door to Activity, re-hung. The feed's one entry used to be

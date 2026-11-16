@@ -169,8 +169,8 @@ export const s = StyleSheet.create({
   // smudge on a warm page, where the About-me card sitting inches below
   // it is white. Matching that card makes the button read as part of the
   // same set of objects rather than a hole in the background.
-  // Under the hero, over a hairline: the width is split three ways and
-  // the numbers centre in their thirds, with a short rule between.
+  // Under the hero, over a hairline: the width is split evenly and each
+  // number centres in its share, with a short rule between.
   stats: {
     flexDirection: 'row', alignItems: 'center', marginTop: 14,
     paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
