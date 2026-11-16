@@ -158,6 +158,12 @@ function ExploreStack() {
       {/* And the statistics its activity page opens, for the same reason. */}
       <Stack.Screen name="CollectionStats" component={CollectionStatsScreen} />
       <Stack.Screen name="Person" component={PersonScreen} />
+      {/* A person's page is in three stacks, and on your own it offers
+          "Add a bio" (16 Nov 2026), which opens this form. By the rule
+          above — a screen in several stacks can only navigate to what all
+          of them have — the form is in all three, and Back from it is the
+          page it was opened from. */}
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>
   );
 }
@@ -173,6 +179,8 @@ function CollectionsStack() {
       <Stack.Screen name="CollectionActivity" component={CollectionActivityScreen} />
       <Stack.Screen name="CollectionStats" component={CollectionStatsScreen} />
       <Stack.Screen name="Person" component={PersonScreen} />
+      {/* For the page's "Add a bio" — see the note in the Explore stack. */}
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       {/* Opened from a list to add places to it, and back is the list. */}
