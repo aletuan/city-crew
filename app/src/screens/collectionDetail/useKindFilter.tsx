@@ -1,19 +1,16 @@
 import { useMemo, useState } from 'react';
-import { collectionKinds, narrowTo } from '../../lib/collectionKinds';
-import type { Collection } from '../../lib/data';
+import { derivedKinds, narrowTo } from '../../lib/collectionKinds';
 import type { Place } from '../../lib/types';
 
 /**
  * The kinds a list's places carry, and the one of them the reader has
  * narrowed the list to — the card's chips and what they filter.
  */
-export function useKindFilter(col: Pick<Collection, 'kinds_hidden'> | null | undefined, members: Place[]) {
-  // The list's chips: every kind its places carry, most places first,
-  // less what the owner hid (`lib/collectionKinds`).
-  const kinds = useMemo(
-    () => (col ? collectionKinds(members, { hidden: col.kinds_hidden }) : []),
-    [col, members],
-  );
+export function useKindFilter(members: Place[]) {
+  // The list's chips: every kind its places carry, most places first
+  // (`lib/collectionKinds`). A list not yet loaded has no members, and so
+  // no chips.
+  const kinds = useMemo(() => derivedKinds(members), [members]);
 
   // ── the chips are the filter (owner, 15 Oct 2026) ──
   //

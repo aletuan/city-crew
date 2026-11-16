@@ -344,7 +344,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
   const desc = col ? t(col.desc_en, col.desc_vi, col.desc_ja) : '';
   // The list's chips and the one the reader has narrowed to: `useKindFilter`.
-  const { kinds, filters, chosen, narrowed, pick, kept, setPicked } = useKindFilter(col, members);
+  const { kinds, filters, chosen, narrowed, pick, kept, setPicked } = useKindFilter(members);
   /* ── the count, at the end of the kinds' row (owner, 13 Nov 2026) ──
      How many places, beside what kinds they are: the two say what is in
      the list, so they share a row, the count fixed at its right edge and
@@ -811,7 +811,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // `membersOf` — copying the list means copying the sequence the
         // curator chose, not the order the rows happen to come back in.
         placeSlugs: members.map((p) => p.slug),
-        kinds: { hidden: col.kinds_hidden ?? [] },
       },
     });
   };
@@ -1456,8 +1455,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       ── the chips (owner, 15 Oct 2026) ──
       Under the words, in the same card, because they answer the same
       question — what is this list — and one form edits both. They
-      are every kind the places carry, most places first, less what
-      the owner hid (`lib/collectionKinds`), drawn as `KindPill` — the
+      are every kind the places carry, most places first
+      (`lib/collectionKinds`), drawn as `KindPill` — the
       pill a place's card and page wear, a dot in the category's
       colour and its word. They are also the list's filter (see "the
       chips are the filter"), lit in the accent while chosen. */

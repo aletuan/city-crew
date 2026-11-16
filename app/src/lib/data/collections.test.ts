@@ -48,8 +48,9 @@ describe('createCollection', () => {
       is_public: false,
       // Made from scratch: no list it was copied from.
       copied_from: null,
-      // And no word yet on its chips.
-      kinds_hidden: [], kinds_added: [],
+      // Nothing about its chips: they are worked out from its places, and
+      // the two columns that once held an owner's word on them are left
+      // to their defaults (16 Nov 2026) — see `lib/collectionKinds`.
     });
     expect(slug).toMatch(/^quan-ca-phe-cu-[a-z0-9]{1,6}$/);
   });
@@ -120,14 +121,6 @@ describe('updateCollection', () => {
 
     const [call] = fake().log;
     expect(call.payload).toMatchObject({ cover_photo_id: 'ph-9' });
-  });
-
-  // The rename above sent no chips and so wrote none: a save that never
-  // showed them must not clear them. One that did writes both lists.
-  it('writes the owner’s chip decisions only when it has them', async () => {
-    await updateCollection('quan-ca-phe-cu', { title: 'Mới', kinds: { hidden: ['eats'] } });
-    // Adding a kind is retired, so a save that has the chips clears it.
-    expect(fake().log[0].payload).toMatchObject({ kinds_hidden: ['eats'], kinds_added: [] });
   });
 
   it('throws what the database said', async () => {
@@ -767,8 +760,10 @@ describe('copyCollection', () => {
     // lets `copies_of_mine` tell the curator (7 Oct 2026).
     expect(fake().log[0]).toMatchObject({ table: 'collections', op: 'insert' });
     expect((fake().log[0].payload as { copied_from: string | null }).copied_from).toBe('c-src');
-    // No chips carried here, so none written.
-    expect(fake().log[0].payload).toMatchObject({ kinds_hidden: [], kinds_added: [] });
+    // Nothing of the original's chips rides along: a copy's are worked
+    // out from the places it took, as every list's are.
+    expect(fake().log[0].payload).not.toHaveProperty('kinds_hidden');
+    expect(fake().log[0].payload).not.toHaveProperty('kinds_added');
 
     const insert = fake().log[3];
     expect(insert).toMatchObject({ table: 'collection_places', op: 'insert' });
@@ -776,13 +771,6 @@ describe('copyCollection', () => {
       { collection_id: 'c-1', place_id: 'p-a', sort_order: 0 },
       { collection_id: 'c-1', place_id: 'p-b', sort_order: 1 },
     ]);
-  });
-
-  // The original's chip decisions travel with it, as its description does.
-  it('carries the original’s chip decisions onto the copy', async () => {
-    fake().replies({ error: null });
-    await copyCollection({ ...input, placeSlugs: [], kinds: { hidden: ['cafes'] } });
-    expect(fake().log[0].payload).toMatchObject({ kinds_hidden: ['cafes'], kinds_added: [] });
   });
 
   it('stops at the empty list when there is nothing to copy', async () => {

@@ -14,7 +14,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ t: (en: string) => en, lang: 'en' }),
 }));
 
-import { KindPill, KindPills, KindToggles } from './KindPill';
+import { KindPill, KindPills } from './KindPill';
 
 const rgb = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
@@ -122,48 +122,5 @@ describe('KindPills, bare', () => {
     const one = getComputedStyle(screen.getByTestId('row-eats'));
     expect(one.backgroundColor).toBe('rgba(0, 0, 0, 0)');
     expect(one.borderBottomWidth).not.toBe('2px');
-  });
-});
-
-// The list form's show/hide row (owner, 16 Oct 2026): the page's pills,
-// each a toggle. Shown is drawn as the page draws it; hidden fades in
-// place with its dot greyed.
-describe('KindToggles', () => {
-  const pillOf = (id: string) => screen.getByTestId(`${id}-pill`);
-
-  it('draws a shown kind as the page does — its dot, its word, no glyph — and says it is on', () => {
-    render(<KindToggles kinds={['cafes']} shown={['cafes']} onToggle={() => {}} testID="k" />);
-    const button = screen.getByTestId('k-cafes');
-    expect(button.getAttribute('role')).toBe('button');
-    expect(button.getAttribute('aria-label')).toBe('Cafés');
-    expect(button.getAttribute('aria-selected')).toBe('true');
-    expect(button.querySelector('[data-icon]')).toBeNull();
-    const pill = pillOf('k-cafes');
-    expect(pill.textContent).toBe('Cafés');
-    expect(getComputedStyle(pill.firstElementChild as HTMLElement).backgroundColor).toBe(rgb(CATEGORIES.cafes.color));
-    expect(getComputedStyle(pill).opacity).not.toBe('0.4');
-  });
-
-  it('fades a hidden kind in place and greys its dot', () => {
-    render(<KindToggles kinds={['cafes', 'eats']} shown={['eats']} onToggle={() => {}} testID="k" />);
-    expect(screen.getByTestId('k').textContent).toBe('CafésEats');
-    expect(screen.getByTestId('k-cafes').getAttribute('aria-selected')).toBe('false');
-    const pill = pillOf('k-cafes');
-    expect(getComputedStyle(pill).opacity).toBe('0.4');
-    expect(getComputedStyle(pill.firstElementChild as HTMLElement).backgroundColor).toBe(rgb(colors.textTertiary as string));
-  });
-
-  it('hands back the kind and the state a tap asks for', () => {
-    const onToggle = vi.fn();
-    render(<KindToggles kinds={['cafes', 'eats']} shown={['eats']} onToggle={onToggle} testID="k" />);
-    fireEvent.click(screen.getByTestId('k-eats'));
-    expect(onToggle).toHaveBeenLastCalledWith('eats', false);
-    fireEvent.click(screen.getByTestId('k-cafes'));
-    expect(onToggle).toHaveBeenLastCalledWith('cafes', true);
-  });
-
-  it('needs no test id to draw', () => {
-    const { container } = render(<KindToggles kinds={['fun']} shown={[]} onToggle={() => {}} />);
-    expect(container.textContent).toBe('Fun');
   });
 });
