@@ -424,6 +424,29 @@ describe('in common', () => {
     await show();
     expect(names('common-place')).toEqual(['Place 0', 'Place 1', 'Place 2', 'Place 3', 'Place 4']);
     expect(names('common-list')).toEqual(['List l0', 'List l1', 'List l2', 'List l3', 'List l4']);
+    // A row that was cut says what its five are: the database answers the
+    // most recent first.
+    expect(screen.getByTestId('common-places-label').textContent).toBe('Places you both keep · 5 most recent');
+    expect(screen.getByTestId('common-lists-label').textContent).toBe('Collections you both liked · 5 most recent');
+    cleanup();
+    state.lang = 'vi';
+    await show();
+    expect(screen.getByTestId('common-places-label').textContent).toBe('Địa điểm cả hai cùng lưu · 5 gần đây nhất');
+    expect(screen.getByTestId('common-lists-label').textContent).toBe('Bộ sưu tập cùng thích · 5 gần đây nhất');
+  });
+
+  // "Most recent" of five is the five: a row that shows all there is says
+  // nothing more than its name. Counted after the shelf is consulted — a
+  // sixth the reader cannot open is not a sixth.
+  it('says nothing of recency on a row that was not cut', async () => {
+    state.common = {
+      places: Array.from({ length: 5 }, (_, i) => ({ ...banh, slug: `p${i}`, name_en: `Place ${i}` })),
+      lists: ['l0', 'l1', 'l2', 'l3', 'l4', 'gone'],
+    };
+    state.shelf = ['l0', 'l1', 'l2', 'l3', 'l4'].map((slug) => list(slug, { owner_id: 'minh-id' }));
+    await show();
+    expect(screen.getByTestId('common-places-label').textContent).toBe('Places you both keep');
+    expect(screen.getByTestId('common-lists-label').textContent).toBe('Collections you both liked');
   });
 
   it('shows it to somebody who is not a friend, and asks nothing signed out or on your own page', async () => {

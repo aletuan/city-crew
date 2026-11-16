@@ -62,6 +62,26 @@ insert into public.collection_places (collection_id, place_id) values
  ('f8000000-0000-0000-0000-0000000000c4', 'f8000000-0000-0000-0000-0000000000f1'),
  ('f8000000-0000-0000-0000-0000000000c5', 'f8000000-0000-0000-0000-0000000000f1');
 
+-- When each was kept. An: by Ana on 1 Nov, by Ben on 3 Nov. Bánh: by Ben
+-- on 2 Nov, by Ana on 5 Nov — the latest of the four, so Bánh leads,
+-- though "An" would lead by name and "ic-an" by slug. Only the two asked
+-- about are read: see the owner's keeping of An, below.
+update public.collection_places set created_at = '2026-11-01 10:00+07'
+ where collection_id = 'f8000000-0000-0000-0000-0000000000c1' and place_id = 'f8000000-0000-0000-0000-0000000000f2';
+update public.collection_places set created_at = '2026-11-03 10:00+07'
+ where collection_id = 'f8000000-0000-0000-0000-0000000000c2' and place_id = 'f8000000-0000-0000-0000-0000000000f2';
+update public.collection_places set created_at = '2026-11-02 10:00+07'
+ where collection_id = 'f8000000-0000-0000-0000-0000000000c2' and place_id = 'f8000000-0000-0000-0000-0000000000f1';
+update public.collection_places set created_at = '2026-11-05 10:00+07'
+ where collection_id = 'f8000000-0000-0000-0000-0000000000c1' and place_id = 'f8000000-0000-0000-0000-0000000000f1';
+update public.collection_places set created_at = '2026-10-01 10:00+07'
+ where collection_id in ('f8000000-0000-0000-0000-0000000000c4', 'f8000000-0000-0000-0000-0000000000c5');
+-- And somebody else keeps An later than anybody keeps anything: the
+-- owner, in a public list, on 20 Nov. Were anybody's keeping read, An
+-- would lead.
+insert into public.collection_places (collection_id, place_id, created_at) values
+ ('f8000000-0000-0000-0000-0000000000c6', 'f8000000-0000-0000-0000-0000000000f2', '2026-11-20 10:00+07');
+
 -- Likes. Ana and Ben both like the owner's public list (Ben first), its
 -- private one, and the barred one; Ana alone likes Ben's own; Dee and Eve
 -- like the owner's public list too.
@@ -94,12 +114,12 @@ begin
   select string_agg(slug, ',' order by ord) into lists
     from (select *, row_number() over () as ord from public.lists_liked_in_common('f8000000-0000-0000-0000-00000000000b')) t;
   reset role;
-  -- The two both keep in public, by name; not Ana's alone, not the one
-  -- that is not live, not the one Ben keeps private.
-  assert places = 'ic-an,ic-banh', format('Ana and Ben share these places: %s', places);
+  -- The two both keep in public, the more lately kept first; not Ana's
+  -- alone, not the one that is not live, not the one Ben keeps private.
+  assert places = 'ic-banh,ic-an', format('Ana and Ben share these places: %s', places);
   -- The cover, not the hidden one nor the plain one before it; none for a
   -- place whose only photograph is hidden.
-  assert photos = '-,https://p/cover.jpg', format('with these photographs: %s', photos);
+  assert photos = 'https://p/cover.jpg,-', format('with these photographs: %s', photos);
   -- The most lately liked by either first: Ana's own (Ben, 7 Nov), the
   -- owner's second list (4 Nov), the owner's first (2 Nov). Not the
   -- owner's private one, and not Ben's own, which Ben has not liked.

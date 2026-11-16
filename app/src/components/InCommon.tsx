@@ -56,10 +56,16 @@ import type { Nav } from '../nav';
  * what you share, not a list of it. Five is the owner's number; at 116pt
  * a tile, three are on a phone's screen and two more are a short pull.
  *
- * The first five as the database orders them: collections by the latest
- * like of either of you, places by name. Cut here and not in the two
- * functions, so that a "see all" later is a screen and not a migration.
- * Nothing says there are more: the row does not claim to be the whole.
+ * The first five as the database orders them, which is the most recent
+ * of each: collections by the latest like of either of you, places by
+ * the last time either of you put one in a public collection
+ * (`20261116140000_in_common_recent_first` — they came by name until the
+ * owner asked that a cut row say what its five are). A row that was cut
+ * says so in its label, "· 5 most recent"; a row that shows all there is
+ * says nothing, since "most recent" of three is the three.
+ *
+ * Cut here and not in the two functions, so that a "see all" later is a
+ * screen and not a migration.
  */
 export const IN_COMMON_SHOWN = 5;
 
@@ -95,20 +101,26 @@ export default function InCommon({ me, otherId, navigation }: {
   const shelf = useCollections();
   const catalog = usePlaces();
 
-  const places = q.data.places.slice(0, IN_COMMON_SHOWN);
-  const lists = q.data.lists
+  const everyPlace = q.data.places;
+  const places = everyPlace.slice(0, IN_COMMON_SHOWN);
+  const everyList = q.data.lists
     .map((slug) => shelf.data.find((c) => c.slug === slug))
-    .filter((c): c is Collection => !!c)
-    .slice(0, IN_COMMON_SHOWN);
+    .filter((c): c is Collection => !!c);
+  const lists = everyList.slice(0, IN_COMMON_SHOWN);
   if (places.length === 0 && lists.length === 0) return null;
+
+  // What a cut row's five are — see `IN_COMMON_SHOWN`.
+  const cut = (label: string, all: number) => (all > IN_COMMON_SHOWN
+    ? `${label} · ${t(`${IN_COMMON_SHOWN} most recent`, `${IN_COMMON_SHOWN} gần đây nhất`, `最近の${IN_COMMON_SHOWN}件`, `最近 ${IN_COMMON_SHOWN} 个`, `最近 ${IN_COMMON_SHOWN} 個`)}`
+    : label);
 
   return (
     <View testID="person-in-common">
       <Text style={s.sectionLabel}>{t('In common', 'Điểm chung', '共通点', '共同点', '共同點')}</Text>
       {places.length > 0 ? (
         <>
-          <Text style={s.rowLabel}>
-            {t('Places you both keep', 'Địa điểm cả hai cùng lưu', 'お互いが保存しているスポット', '你们都收藏的地点', '你們都收藏的地點')}
+          <Text style={s.rowLabel} testID="common-places-label">
+            {cut(t('Places you both keep', 'Địa điểm cả hai cùng lưu', 'お互いが保存しているスポット', '你们都收藏的地点', '你們都收藏的地點'), everyPlace.length)}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.bleed} contentContainerStyle={s.row} testID="common-places">
             {places.map((p) => (
@@ -125,8 +137,8 @@ export default function InCommon({ me, otherId, navigation }: {
       ) : null}
       {lists.length > 0 ? (
         <>
-          <Text style={[s.rowLabel, places.length > 0 && s.rowLabelNext]}>
-            {t('Collections you both liked', 'Bộ sưu tập cùng thích', 'お互いがいいねしたコレクション', '你们都赞过的合集', '你們都贊過的合集')}
+          <Text style={[s.rowLabel, places.length > 0 && s.rowLabelNext]} testID="common-lists-label">
+            {cut(t('Collections you both liked', 'Bộ sưu tập cùng thích', 'お互いがいいねしたコレクション', '你们都赞过的合集', '你們都贊過的合集'), everyList.length)}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.bleed} contentContainerStyle={s.row} testID="common-lists">
             {lists.map((c) => (
