@@ -23,7 +23,8 @@
 //
 // So the body is built as sections stacked under a head, and a later
 // step is a section added, not a page drawn again: "Collections" was the
-// first, and "In common" (`InCommon`, 16 Nov 2026) the second, above it.
+// first, and "In common" (`InCommon`, 16 Nov 2026) the second, above it —
+// built, and switched off the same day (`IN_COMMON_ON`).
 // A count line sits between the head and the sections for the same
 // reason.
 //
@@ -83,7 +84,7 @@ import { type Collection, coverUriOf, membersOf, useProfileByHandle } from '../l
 import { normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
-import { coverAmong, listsBy } from '../lib/person';
+import { coverAmong, IN_COMMON_ON, listsBy } from '../lib/person';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, display, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -178,8 +179,8 @@ export default function PersonScreen({ navigation, route }: {
       </Text>
       {/* What the two of you have in common — `InCommon`. It took the
           "mutual saves" this line counted, for a friend only, until 16
-          Nov 2026. */}
-      <InCommon me={me} otherId={person.id} navigation={navigation} />
+          Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
+      {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
 
       <Text style={s.sectionLabel}>{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
       {lists.length === 0 ? (
