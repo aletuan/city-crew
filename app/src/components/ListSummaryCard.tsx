@@ -25,13 +25,32 @@
 // disc — the card keeps the slot rather than moving the two lines, since
 // unlike the page's head nothing here waits to be laid out once.
 //
+// ── the head opens the author's page (owner, 16 Nov 2026) ──
+//
+// The same face and handle on the collection page open the person's
+// page, yours included; here they opened nothing, and the owner pressed
+// the face and asked. One picture that is a button on one page and not
+// on the next reads as a fault. So the head is one press — the face and
+// both lines, as a visitor's head is on the page; unlike your own head
+// there, no control sits in the second line to be swallowed.
+//
+// The head only. The title and the words under it stay still: the list
+// they would open is the one the reader just came from.
+//
+// Not for an editorial handle: nobody stands behind it, and a press
+// that opens "Nobody here" is a dead control. Somebody is there when
+// the shelf holds a face for the handle or the lookup found a row —
+// the collection page's rule (`curatorIsPerson`). The card is told
+// where to go (`onPerson`) rather than navigating itself, as no
+// component here reaches for the navigator.
+//
 // Drawn on the Activity page alone until the Statistics page needed the
 // same reminder; moved here rather than copied, so the two pages about
 // one list say which list in one way.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Avatar, Card } from './ui';
+import { Avatar, Card, PressableScale } from './ui';
 import { useProfile } from '../lib/auth';
 import { useCuratorAvatar } from '../lib/catalog';
 import { useProfileByHandle } from '../lib/data';
@@ -41,10 +60,12 @@ import { ageWord, listAgeOf } from '../lib/listAge';
 import type { Collection } from '../lib/types';
 import { colors, font, space, type } from '../theme';
 
-export default function ListSummaryCard({ col, owned, testID }: {
+export default function ListSummaryCard({ col, owned, onPerson, testID }: {
   col: Collection;
   /** Whether the list is the reader's own — see the header. */
   owned: boolean;
+  /** Opens the author's page, by handle — see the header. */
+  onPerson: (handle: string) => void;
   testID: string;
 }) {
   const { t, lang } = useI18n();
@@ -59,19 +80,42 @@ export default function ListSummaryCard({ col, owned, testID }: {
   const title = t(col.title_en, col.title_vi, col.title_ja);
   const desc = t(col.desc_en, col.desc_vi, col.desc_ja);
   const age = col.created_at ? listAgeOf(col.created_at, new Date()) : null;
+  const ageText = age ? ageWord(age, lang, t, t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立')) : '';
+  // Somebody with a page: you, once you have a handle; another author
+  // the shelf has a face for or the lookup found — see the header.
+  const person = !!handle && (owned || !!cached || !!lookup.data);
+  const head = (
+    <>
+      <Avatar url={face} size={HEAD_FACE} />
+      <View style={s.headLines}>
+        {handle
+          ? <Text style={s.headHandle} numberOfLines={1} testID={`${testID}-handle`}>{handle}</Text>
+          : null}
+        {ageText ? <Text style={s.headAge}>{ageText}</Text> : null}
+      </View>
+    </>
+  );
   return (
     <Card style={s.card} testID={testID}>
-      <View style={s.head}>
-        <Avatar url={face} size={HEAD_FACE} />
-        <View style={s.headLines}>
-          {handle
-            ? <Text style={s.headHandle} numberOfLines={1} testID={`${testID}-handle`}>{handle}</Text>
-            : null}
-          {age
-            ? <Text style={s.headAge}>{ageWord(age, lang, t, t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立'))}</Text>
-            : null}
-        </View>
-      </View>
+      {person ? (
+        <PressableScale
+          contentStyle={s.head}
+          onPress={() => onPerson(handle)}
+          // The collection page's head, pressed (0.97 there): a row this
+          // wide at the default scale visibly leaves its card.
+          scaleTo={0.97}
+          // The face is 40; two more above and below is the 44 a thumb
+          // is owed, as on the page.
+          hitSlop={{ top: 2, bottom: 2 }}
+          haptic="selection"
+          accessibilityRole="button"
+          // Both lines, as VoiceOver hears the page's head.
+          accessibilityLabel={[handle, ageText].filter(Boolean).join(', ')}
+          testID={`${testID}-person`}
+        >
+          {head}
+        </PressableScale>
+      ) : <View style={s.head}>{head}</View>}
       <View style={s.words}>
         <Text style={s.title} testID={`${testID}-title`}>{title}</Text>
         {desc

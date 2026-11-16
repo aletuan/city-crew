@@ -380,6 +380,66 @@ describe('what it asks for', () => {
     }
   });
 
+  // ── the head opens the author's page (owner, 16 Nov 2026) ──
+  //
+  // The face and handle that open a page on the collection page opened
+  // nothing here. The head is the press; the title and words are not —
+  // the list they name is one Back away.
+  it('opens your own page from the head of your own list — the head, not the words', async () => {
+    const navigation = await show();
+    const head = screen.getByTestId('activity-list-person');
+    // The face and both lines are in the press; the title and words are not.
+    expect(head.querySelector('img')!.getAttribute('src')).toBe('https://faces/andy.jpg');
+    expect(head.contains(screen.getByTestId('activity-list-handle'))).toBe(true);
+    expect(within(head).getByText('3h')).toBeTruthy();
+    expect(head.contains(screen.getByTestId('activity-list-title'))).toBe(false);
+    expect(head.contains(screen.getByTestId('activity-list-desc'))).toBe(false);
+    expect(head.getAttribute('role')).toBe('button');
+    expect(head.getAttribute('aria-label')).toBe('andy, 3h');
+    fireEvent.click(head);
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'andy' });
+    // The words are no way anywhere.
+    fireEvent.click(screen.getByTestId('activity-list-title'));
+    fireEvent.click(screen.getByTestId('activity-list-desc'));
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the author’s page from somebody else’s list, by the author’s handle and not the reader’s', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', curator_handle: '@maydidaudo' })];
+    state.faces = { maydidaudo: 'https://faces/may.jpg' };
+    const navigation = await show('theirs');
+    fireEvent.click(screen.getByTestId('activity-list-person'));
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'maydidaudo' });
+    cleanup();
+    // Somebody the shelf has no face for, found by handle — with no
+    // photograph at all, still somebody with a page.
+    state.faces = {};
+    state.profiles = { maydidaudo: { avatar_url: null } };
+    const cold = await show('theirs');
+    fireEvent.click(screen.getByTestId('activity-list-person'));
+    expect(cold.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'maydidaudo' });
+  });
+
+  // A press that opens "Nobody here" is a dead control.
+  it('is no press where nobody has a page: an editorial handle, or you before you chose a handle', async () => {
+    state.mine = [];
+    state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: null, curator_handle: '@hanoicrew' })];
+    const navigation = await show('theirs');
+    expect(screen.queryByTestId('activity-list-person')).toBeNull();
+    expect(screen.queryByRole('button', { name: /hanoicrew/ })).toBeNull();
+    // The head is still drawn, and pressing it goes nowhere.
+    fireEvent.click(screen.getByTestId('activity-list-handle'));
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    cleanup();
+    state.mine = [list()];
+    state.profile = { handle: '', avatar_url: 'https://faces/andy.jpg' };
+    const mine = await show();
+    expect(screen.queryByTestId('activity-list-person')).toBeNull();
+    expect(screen.getByTestId('activity-list').querySelector('img')).toBeTruthy();
+    expect(mine.navigate).not.toHaveBeenCalled();
+  });
+
   it('draws somebody else’s public list for a reader, asked for by that list’s id', async () => {
     state.mine = [];
     state.cols = [list({ id: 'c9', slug: 'theirs', owner_id: 'curator', title_en: 'Their list' })];
