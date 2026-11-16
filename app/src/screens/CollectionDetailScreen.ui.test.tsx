@@ -749,12 +749,15 @@ describe('your own list', () => {
   it('offers the owner the full menu, in its order, and nothing meant for visitors', () => {
     show();
     openMenu();
+    // Every act on the list, then the views, then Delete (owner, 16 Nov
+    // 2026; the views stood between the acts until then).
     expect(menuTitles()).toEqual([
-      'Add place', 'Plan a trip', 'Grid', 'List', 'Edit collection', 'Share', 'Delete collection',
+      'Add place', 'Plan a trip', 'Edit collection', 'Share', 'Grid', 'List', 'Delete collection',
     ]);
-    // Delete alone in the warning red.
+    // Delete alone in the warning red, and alone in its card.
     const red = menuRows().filter((r) => r.querySelector(`[data-color="${String(colors.bad)}"]`));
     expect(red.map((r) => r.getAttribute('aria-label'))).toEqual(['Delete collection']);
+    expect(menuRow('Delete collection').parentElement!.childElementCount).toBe(1);
     // The order is changed on the list itself now, by holding a card.
     expect(screen.queryByText('Reorder places')).toBeNull();
     expect(screen.queryByText('Save a copy')).toBeNull();
@@ -2031,11 +2034,15 @@ describe("somebody else's list", () => {
   it('offers Save a copy, Share and Report — never Edit, Reorder, Publish or Delete', () => {
     show();
     openMenu();
-    expect(menuTitles()).toEqual(['Plan a trip', 'Save a copy', 'Grid', 'List', 'Share', 'Report this list']);
+    expect(menuTitles()).toEqual(['Plan a trip', 'Save a copy', 'Share', 'Grid', 'List', 'Report this list']);
     expect(menuRow('Report this list').textContent).toBe('Report this list');
-    // Report alone in the warning red: the row about a person.
+    // Report alone in the warning red: the row about a person. And alone
+    // in its card, under the views, as Delete is on your own list; Share
+    // is with the other things you do with a list, above them.
     const red = menuRows().filter((r) => r.querySelector(`[data-color="${String(colors.bad)}"]`));
     expect(red.map((r) => r.getAttribute('aria-label'))).toEqual(['Report this list']);
+    expect(menuRow('Report this list').parentElement!.childElementCount).toBe(1);
+    expect(menuRow('Share').parentElement).toBe(menuRow('Plan a trip').parentElement);
     for (const label of ['Edit collection', 'Reorder places', 'Make public', 'Make private', 'Delete collection', 'Add place']) {
       expect(screen.queryByText(label)).toBeNull();
     }
@@ -2107,7 +2114,7 @@ describe("somebody else's list", () => {
     const { raw } = show();
     openMenu();
     // A row that could only close the menu is not offered.
-    expect(menuTitles()).toEqual(['Plan a trip', 'Grid', 'List', 'Share', 'Report this list']);
+    expect(menuTitles()).toEqual(['Plan a trip', 'Share', 'Grid', 'List', 'Report this list']);
     expect(screen.queryByText('Save a copy')).toBeNull();
     expect(raw.navigate).not.toHaveBeenCalled();
   });
@@ -2405,7 +2412,7 @@ describe('a friend’s list, shared with you', () => {
     show();
     expect(screen.getByRole('button', { name: 'Like' })).toBeTruthy();
     openMenu();
-    expect(menuTitles()).toEqual(['Plan a trip', 'Save a copy', 'Grid', 'List', 'Share', 'Report this list']);
+    expect(menuTitles()).toEqual(['Plan a trip', 'Save a copy', 'Share', 'Grid', 'List', 'Report this list']);
     expect(screen.getByTestId('collection-menu-share')).toBeTruthy();
   });
 
@@ -3859,21 +3866,25 @@ describe('the grid', () => {
   });
 
   // How a list is looked at is the reader's, whoever made the list.
-  it('is in a visitor’s menu too, and leads it when nothing else does', () => {
+  // With nothing to plan from and nowhere to file a copy, a visitor's
+  // first card is Share alone (it stood under the views until 16 Nov
+  // 2026, and the views led the sheet then).
+  it('is in a visitor’s menu too, under whatever they can still do with the list', () => {
     state.mine = [];
     state.city = null;
     state.cols = [theirs({ city_id: null } as Partial<Collection>, [])];
     show();
     openMenu();
-    expect(menuTitles()).toEqual(['Grid', 'List', 'Share', 'Report this list']);
-    // Straight from the list's name to the views': no empty card above.
+    expect(menuTitles()).toEqual(['Share', 'Grid', 'List', 'Report this list']);
     const heading = screen.getByRole('heading', { name: 'View' });
-    expect(screen.getByRole('heading', { name: 'Old Quarter eats' }).nextElementSibling).toBe(heading);
+    expect(heading.previousElementSibling).toBe(menuRow('Share').parentElement);
+    expect(screen.getByRole('heading', { name: 'Old Quarter eats' }).nextElementSibling).toBe(menuRow('Share').parentElement);
   });
 
   // A card of their own, under their name, between the acts above and
-  // below them: a tick among verbs would read as one more thing done.
-  it('puts the views in a card of their own, under their name, between the acts', () => {
+  // the red row below: a tick among verbs would read as one more thing
+  // done.
+  it('puts the views in a card of their own, under their name, between the acts and Delete', () => {
     show();
     openMenu();
     const cardOf = (title: string) => menuRow(title).parentElement!;
@@ -3883,9 +3894,9 @@ describe('the grid', () => {
     const heading = screen.getByRole('heading', { name: 'View' });
     expect(heading.previousElementSibling).toBe(cardOf('Add place'));
     expect(heading.nextElementSibling).toBe(views);
-    expect(views.nextElementSibling).toBe(cardOf('Edit collection'));
-    expect(cardOf('Plan a trip')).toBe(cardOf('Add place'));
-    expect(cardOf('Delete collection')).toBe(cardOf('Edit collection'));
+    expect(views.nextElementSibling).toBe(cardOf('Delete collection'));
+    for (const act of ['Plan a trip', 'Edit collection', 'Share']) expect(cardOf(act)).toBe(cardOf('Add place'));
+    expect(cardOf('Delete collection')).not.toBe(cardOf('Add place'));
   });
 
   // The grid as the default (owner, 22 Oct 2026), for a reader who has
