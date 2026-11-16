@@ -189,7 +189,7 @@ export type RootStackParamList = {
    *  twice. Filled in, still editable, and nothing is sent until asked. */
   ForgotPassword: { email?: string } | undefined;
   /** `focus`: the field to open with the keyboard already in it — the
-   *  bio, from Profile's "Add a bio" row, which is a promise to land the
+   *  bio, from Profile's "Write a few words about you" row, which is a promise to land the
    *  reader on that field and not at the top of a form. */
   EditProfile: { focus?: 'bio' } | undefined;
   /** Closing the account. A route rather than the two alerts it replaced:

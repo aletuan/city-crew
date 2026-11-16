@@ -390,7 +390,7 @@ describe('account identity', () => {
     expect(screen.queryByTestId('bio-add')).toBeNull();
   });
 
-  it('offers "Add a bio" where the bio would be, and opens the editor on that field', () => {
+  it('offers "Write a few words about you" where the bio would be, and opens the editor on that field', () => {
     state.profile = { full_name: 'Le Minh', handle: 'leminh' };
     const { raw } = draw();
     expect(screen.queryByTestId('bio-row')).toBeNull();
@@ -399,7 +399,7 @@ describe('account identity', () => {
     expect(add.querySelector('[data-testid="row-glyph"] [data-icon="quote"]')).toBeTruthy();
     const email = screen.getByTestId('profile-email');
     expect(add.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    fireEvent.click(screen.getByText('Add a bio'));
+    fireEvent.click(screen.getByText('Write a few words about you'));
     expect(raw.navigate).toHaveBeenCalledWith('EditProfile', { focus: 'bio' });
   });
 

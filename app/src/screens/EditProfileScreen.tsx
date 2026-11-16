@@ -70,7 +70,7 @@ type EditRoute = { params?: { focus?: 'bio' } };
  * the platform lets such a value be shortened but not added to, and the
  * counter turns to the error colour so the reader can see why.
  *
- * `autoFocus` when the route asked for it: Profile's "Add a bio" row
+ * `autoFocus` when the route asked for it: Profile's "Write a few words about you" row
  * leads here, and its promise is the field, not the form (see `nav.ts`).
  */
 function BioField({ value, onChangeText, route }: {

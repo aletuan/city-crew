@@ -271,12 +271,12 @@ describe('the bio, and the way to write one', () => {
     state.people = { lan: { ...LAN, ...over } };
   };
 
-  it('offers "Add a bio" on your own page when you have written none, where the bio would stand', async () => {
+  it('offers "Write a few words about you" on your own page when you have written none, where the bio would stand', async () => {
     mine({ bio: null });
     const navigation = await show();
     const add = screen.getByTestId('person-bio-add');
     expect(add.getAttribute('role')).toBe('button');
-    expect(add.textContent).toBe('Add a bio');
+    expect(add.textContent).toBe('Write a few words about you');
     expect(screen.queryByTestId('person-bio')).toBeNull();
     // Under the head, as the bio is: the row after the picture and names.
     expect(add.compareDocumentPosition(screen.getByTestId('person-handle')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
@@ -284,7 +284,7 @@ describe('the bio, and the way to write one', () => {
     // changes, as "Add a description" wears it on a list's card.
     const plus = add.querySelector('[data-icon="add"]')!;
     expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['17', String(colors.accent)]);
-    expect(textStyleOf(screen.getByText('Add a bio'))).toMatchObject({ color: colors.accent, fontSize: 14 });
+    expect(textStyleOf(screen.getByText('Write a few words about you'))).toMatchObject({ color: colors.accent, fontSize: 14 });
     // It opens the profile's form with the cursor in the bio.
     fireEvent.click(add);
     expect(navigation.navigate).toHaveBeenCalledWith('EditProfile', { focus: 'bio' });
@@ -294,7 +294,7 @@ describe('the bio, and the way to write one', () => {
     mine({ bio: '' });
     state.lang = 'vi';
     await show();
-    expect(screen.getByTestId('person-bio-add').textContent).toBe('Thêm giới thiệu');
+    expect(screen.getByTestId('person-bio-add').textContent).toBe('Viết đôi dòng về bạn');
   });
 
   it('draws your bio and no invitation once you have one', async () => {
@@ -302,6 +302,28 @@ describe('the bio, and the way to write one', () => {
     await show();
     expect(screen.getByTestId('person-bio').textContent).toBe('Coffee first, then the rest.');
     expect(screen.queryByTestId('person-bio-add')).toBeNull();
+  });
+
+  // How it stands (owner, 17 Nov 2026): led by the quote the Profile
+  // tab's row leads with, in the page's ink rather than the handle's
+  // grey, and hung from the mark when it runs to a second line.
+  it('leads the bio with a quote, in the page’s ink, the lines hanging from the mark', async () => {
+    await show();
+    const row = screen.getByTestId('person-bio-row');
+    const bio = screen.getByTestId('person-bio');
+    const mark = row.querySelector('[data-icon="quote"]')!;
+    expect([mark.getAttribute('data-size'), mark.getAttribute('data-color')]).toEqual(['16', String(colors.textTertiary)]);
+    // The mark first, then the words — and only the words are the bio.
+    expect(mark.compareDocumentPosition(bio) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(row.textContent).toBe('Coffee first, then the rest.');
+    expect(textStyleOf(bio)).toMatchObject({ color: colors.text, fontSize: 16 });
+    expect(textStyleOf(bio)?.color).not.toBe(textStyleOf(screen.getByTestId('person-handle'))?.color);
+    // A row with the text taking what the mark leaves: line two starts
+    // under line one's first word.
+    expect(viewStyleOf(row)).toMatchObject({ flexDirection: 'row', alignItems: 'flex-start' });
+    expect(textStyleOf(bio)).toMatchObject({ flex: 1 });
+    // The mark's box is one line of the text, so it sits at line one.
+    expect(viewStyleOf(mark.parentElement!)?.height).toBe(textStyleOf(bio)?.lineHeight);
   });
 
   // The form saves into your own profile; the page says the new words

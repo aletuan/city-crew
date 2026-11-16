@@ -133,7 +133,12 @@ const COVER_H = 148;
 const TITLE_SHRINK = 0.78;
 /** A list's photograph on its tile. */
 const TILE_PHOTO_H = 108;
-/** What "Add a bio" adds above and below its 24pt row to make the button
+/** The bio's line, and the quote that leads it: the text's own 16, so
+ *  the mark is a letter's size beside the words and not a row's icon. */
+const BIO_LINE = 23;
+const BIO_MARK = 16;
+
+/** What "Write a few words about you" adds above and below its 24pt row to make the button
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
 
@@ -161,7 +166,7 @@ export default function PersonScreen({ navigation, route }: {
 
   const personId = person?.id ?? null;
   const friend = friendButton(personId);
-  // Your own page, come back to from the form its "Add a bio" opens:
+  // Your own page, come back to from the form its "Write a few words about you" opens:
   // read again — `useReloadOnReturn`.
   useReloadOnReturn(navigation, !!me && personId === me, who.reload);
   // The same button, small, for the header once the row has scrolled
@@ -331,7 +336,7 @@ export default function PersonScreen({ navigation, route }: {
  * Measured on the live profiles that day: 14 of 126 have a bio, and of
  * the 16 people with a public list — the pages somebody else opens — 4
  * do. The Profile tab had gained its own door the same day (`BioRow`,
- * "Add a bio" at the head of About me). This is the other place the
+ * "Write a few words about you" at the head of About me). This is the other place the
  * absence can be seen by the one person able to mend it, and the better
  * one for seeing it: your page as a visitor meets it, a cover and a name
  * and then nothing before the lists.
@@ -351,6 +356,32 @@ export default function PersonScreen({ navigation, route }: {
  * so the page says the new words the moment the form closes, with no
  * blink of the invitation while the page reads itself again.
  *
+ * ── the words (owner, 17 Nov 2026) ──
+ *
+ * "Write a few words about you" for a day, then "Write a few words about you". The first
+ * names a field, and 14 of 126 had filled it. The owner weighed two:
+ * "Introduce yourself" ("Giới thiệu bản thân"), which reads as a set
+ * task and invites putting it off until it can be done properly, and
+ * "A line about you" ("Một dòng về bạn"), lighter and without a verb —
+ * a label, not an invitation — and one line where the field takes 160
+ * characters. This keeps the second's lightness, says what to do, and
+ * asks for the amount the field holds. Both doors say it.
+ *
+ * ── how the bio stands (owner, 17 Nov 2026) ──
+ *
+ * It was the handle's grey at the body's size, 10 under the names and
+ * right over the first section's small capitals: on the phone it read as
+ * a caption to the lists, with nothing to say it was the person
+ * speaking. Now it leads with the quote the Profile tab's row leads with
+ * (`Glyph`), so the two pages mark a bio the same way; it is the page's
+ * ink, not the handle's grey, because it is the one sentence here the
+ * person wrote; and it stands 6 further off the section under it. No
+ * box, no rule down its side, no italic: see below for the box, and
+ * Vietnamese carries its tone marks badly on a slanted face.
+ *
+ * A bio of several lines hangs from the quote — the second line starts
+ * under the first word, not under the mark.
+ *
  * Weighed with it, and not taken (the owner chose this one alone):
  *   - the bio in a tinted box, a "personal statement". 13 of the 14 bios
  *     are one line, the longest 56 characters, and one line in a rounded
@@ -365,7 +396,16 @@ function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; 
   const { profile } = useProfile();
   const mine = !!me && person.id === me;
   const bio = (mine && profile.bio) || person.bio;
-  if (bio) return <Text style={s.bio} testID="person-bio">{bio}</Text>;
+  if (bio) {
+    return (
+      <View style={s.bioRow} testID="person-bio-row">
+        <View style={s.bioMark}>
+          <Glyph name="quote" size={BIO_MARK} color={colors.textTertiary} />
+        </View>
+        <Text style={s.bio} testID="person-bio">{bio}</Text>
+      </View>
+    );
+  }
   if (!mine) return null;
   return (
     <PressableScale
@@ -378,7 +418,7 @@ function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; 
       testID="person-bio-add"
     >
       <Glyph name="add" size={17} color={colors.accent} />
-      <Text style={s.bioAddText}>{t('Add a bio', 'Thêm giới thiệu', '自己紹介を追加', '添加个人简介', '添加個人簡介')}</Text>
+      <Text style={s.bioAddText}>{t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}</Text>
     </PressableScale>
   );
 }
@@ -387,7 +427,7 @@ function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; 
  * Your own page, read again when you come back to it.
  *
  * The page keeps the answer it fetched on opening, and until 16 Nov 2026
- * nothing on it led anywhere that could change that answer. "Add a bio"
+ * nothing on it led anywhere that could change that answer. "Write a few words about you"
  * opens the profile's form, which changes the name and the picture as
  * readily as the bio; without this the page would greet the reader, on
  * the way back, with the name they had just replaced.
@@ -547,7 +587,11 @@ const s = StyleSheet.create({
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // The handle, right under the name: an address, quieter.
   handle: { color: colors.textTertiary, ...type.meta, lineHeight: 20 },
-  bio: { color: colors.textSecondary, ...type.body, lineHeight: 23, marginTop: 10 },
+  // The bio — see `Bio`. The mark's box is one line of the text tall, so
+  // the quote sits at the first line's middle however many follow.
+  bioRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12, marginBottom: 6 },
+  bioMark: { height: BIO_LINE, justifyContent: 'center' },
+  bio: { flex: 1, color: colors.text, ...type.body, lineHeight: BIO_LINE },
   // The invitation in the bio's place — see `Bio`. The collection card's
   // "Add a description" (`descAdd`): a 17pt plus 4 from 14pt semibold
   // words, in the accent, hugging its words so the row beside it is not a
