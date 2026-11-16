@@ -97,6 +97,41 @@ const GRID_COLUMNS = 3;
  *  than a place. Not a slug: slugs never carry a "+". */
 const ADD_CELL = '+add' as const;
 
+/* ── the way to your own page, from your own list (owner, 16 Nov 2026) ──
+   Somebody else's head opens their page, the whole of it one press. Your
+   own could not be that: its second line holds a control — who sees the
+   list — and a press around a control swallows it. So on your own list
+   the face is a press and the handle is a press, each on its own, and the
+   line under them is left alone.
+
+   It was no press at all for a morning. The head had only ever opened a
+   sheet to report or block, which nobody does to themselves, and when
+   its destination became a page the "not your own" stayed: the owner was
+   signed in as the author of the list they tried it on, and nothing
+   happened. Your own page is the one worth opening first — it is how
+   everybody else sees you.
+
+   Outside the screen's function, which is at its ceiling (`oversize.js`). */
+const ownDoor = (navigation: Nav, owned: boolean, handle: string) =>
+  (owned && handle ? () => navigation.navigate('Person', { handle }) : undefined);
+
+function FaceDoor({ url, onPress }: { url: string | null; onPress?: () => void }) {
+  const { t } = useI18n();
+  return (
+    <PressableScale
+      onPress={onPress}
+      // The face is 40; two more each way makes the 44 a thumb is owed.
+      hitSlop={{ top: 2, bottom: 2, left: 2, right: 2 }}
+      haptic="selection"
+      accessibilityRole="button"
+      accessibilityLabel={t('Your page', 'Trang của bạn', 'あなたのページ', '你的主页', '你的主頁')}
+      testID="collection-own-face"
+    >
+      <Avatar url={url} size={FACE} />
+    </PressableScale>
+  );
+}
+
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t, lang } = useI18n();
   // `userId` keys what the phone keeps per reader (`readerKey`), and is
@@ -1222,10 +1257,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const curatorFace = (
     <>
       {owned
-        ? <Avatar url={profile?.avatar_url || null} size={FACE} />
+        ? <FaceDoor url={profile?.avatar_url || null} onPress={ownDoor(navigation, owned, faceName)} />
         : holdForFace ? <Avatar url={curatorAvatar} size={FACE} /> : null}
       <View style={s.curatorLines}>
-        <Text style={s.curatorTag} numberOfLines={1} testID="collection-handle">{faceName}</Text>
+        <Text style={s.curatorTag} numberOfLines={1} testID="collection-handle" onPress={ownDoor(navigation, owned, faceName)}>{faceName}</Text>
         {byline}
       </View>
     </>
