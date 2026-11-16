@@ -1588,14 +1588,31 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      in the curator's sheet, where it stands beside Block; here it is the
      one red row among plain ones, and its name is enough.
 
-     The rows are the popover's, in its order and on its conditions, in
-     three cards: what you do with the list, the two views under their
-     name (`viewRows`), and the rest. A card with nothing in it is not
-     drawn (`SheetRows`), which is how a list lent to you, with nothing
-     to plan from, opens on the views.
+     The rows are the popover's, on its conditions, in three cards:
+     what you do with the list, the two views under their name
+     (`viewRows`), and the one row in red. A card with nothing in it is
+     not drawn (`SheetRows`), which is how a list lent to you, with
+     nothing to plan from, opens on the views.
+
+     ── the order (owner, 16 Nov 2026) ──
+     Every act on the list in the first card, the views under it, the red
+     row alone at the foot. Until then the sheet kept the popover's
+     order, which nobody had argued for: two acts, the views, then the
+     other two with the red row closing their card. The views cut what
+     you do with a list in half, and Delete stood one row under Share in
+     the same card. Deleting asks first (`remove`), so the row apart is
+     not what saves a list from a slipped thumb; it is that a card of
+     plain verbs ending in a red one reads as four of a kind, and the
+     red row is not one of them. What it costs is the views two rows
+     further down, and which view a reader looks at is kept for them
+     (`LIST_OR_GRID`), so that row is pressed once and rarely again. The
+     sheet is as tall as it was: the same rows in the same three cards.
+
+     Both sheets, yours and a visitor's, so the menu is one shape
+     whoever's list it is on.
 
      ── yours ──
-     Add place, Plan a trip; the views; Edit collection, Share, Delete.
+     Add place, Plan a trip, Edit collection, Share; the views; Delete.
      No publish row: who can see the list is changed where it is said,
      under your handle at the card's head — see `visibility`.
 
@@ -1614,9 +1631,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      tap rather than after it. Only with a city to file the copy under (`canCopy`):
      without one the row could only close the sheet and do nothing.
 
-     Report last and in red, because it is the row that is about a
-     person rather than about the list — and never on your own, which is
-     yours to delete.
+     Plan a trip, Save a copy, Share; the views; Report. Report last,
+     alone and in red, because it is the row that is about a person
+     rather than about the list — and never on your own, which is yours
+     to delete.
 
      A friend's list shared with you keeps only the reading half: Plan a
      trip and the two views. See `sharedToMe`. */
@@ -1646,8 +1664,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           testID: 'collection-menu-add',
         },
         planRow,
-      ]),
-      [
         {
           key: 'edit',
           icon: 'create-outline',
@@ -1656,6 +1672,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           testID: 'collection-menu-edit',
         },
         shareRow,
+      ]),
+      [
         {
           key: 'delete',
           icon: 'trash-outline',
@@ -1676,9 +1694,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           onPress: copy,
           testID: 'collection-menu-copy',
         },
+        !sharedToMe && shareRow,
       ]),
       present([
-        !sharedToMe && shareRow,
         reportRow && { ...reportRow, desc: undefined, destructive: true, testID: 'collection-menu-report' },
       ]),
     ];
