@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  cityOfList, coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity, withPhotos,
+  chosenCoverOf, cityOfList, coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity, withPhotos,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -98,6 +98,66 @@ describe('coverUriOf', () => {
   it('wears nothing when the first place has no photograph, or there is none', () => {
     expect(coverUriOf(collection(), [place(), second])).toBeUndefined();
     expect(coverUriOf(collection(), [])).toBeUndefined();
+  });
+});
+
+// A chosen cover is a photograph of one place, and nothing clears it when
+// that place is taken out of the list (owner, 16 Nov 2026): 1 of the 34
+// live lists with a chosen cover was wearing a place it no longer held.
+describe('chosenCoverOf', () => {
+  const rows = (...slugs: string[]) => slugs.map((slug, i) => ({ sort_order: i, places: { slug } }));
+  const chosen = (slug?: string | null) => ({
+    id: 'ph', photo_uri: 'chosen.jpg', ...(slug === undefined ? {} : { place: slug ? { slug } : null }),
+  });
+
+  it('is the chosen cover while its place is in the list, wherever in it', () => {
+    const cover = chosen('second');
+    expect(chosenCoverOf(collection({ cover, collection_places: rows('first', 'second') }))).toBe(cover);
+  });
+
+  it('is no cover once its place has left the list, or the list is empty', () => {
+    expect(chosenCoverOf(collection({ cover: chosen('gone'), collection_places: rows('first', 'second') }))).toBeNull();
+    expect(chosenCoverOf(collection({ cover: chosen('gone'), collection_places: [] }))).toBeNull();
+  });
+
+  // The list's own rows, not the places the catalog has resolved: a row
+  // whose place the reader cannot see is still a row, and is not the one.
+  it('reads the list’s rows, and passes over one whose place is withheld', () => {
+    const withheld = [{ sort_order: 0, places: null }, ...rows('second')];
+    expect(chosenCoverOf(collection({ cover: chosen('second'), collection_places: withheld }))).not.toBeNull();
+    expect(chosenCoverOf(collection({ cover: chosen('gone'), collection_places: withheld }))).toBeNull();
+  });
+
+  // A row from a launch cache written before the cover said whose it is,
+  // and a cover whose place the reader may not see: nothing says the
+  // place is gone, so the cover stays.
+  it('keeps a cover that does not say whose it is', () => {
+    for (const cover of [chosen(), chosen(null)]) {
+      expect(chosenCoverOf(collection({ cover, collection_places: rows('first') }))).toBe(cover);
+    }
+  });
+
+  it('is nothing where nothing was chosen', () => {
+    expect(chosenCoverOf(collection({ collection_places: rows('first') }))).toBeNull();
+  });
+});
+
+describe('coverUriOf, of a cover whose place has left', () => {
+  const first = place({ slug: 'first', place_photos: [photo({ photo_uri: 'first.jpg' })] });
+  const list = (of: string) => collection({
+    cover: { id: 'ph', photo_uri: 'chosen.jpg', place: { slug: of } },
+    collection_places: [{ sort_order: 0, places: { slug: 'first' } }],
+  });
+
+  it('falls back to the first place, as a list with no cover does', () => {
+    expect(coverUriOf(list('gone'), [first])).toBe('first.jpg');
+    expect(coverUriOf(list('first'), [first])).toBe('chosen.jpg');
+  });
+
+  // Judged by the list's rows: a member the loaded catalog does not hold
+  // yet leaves `members` short, and the chosen cover is still the list's.
+  it('keeps the chosen cover while the members have not arrived', () => {
+    expect(coverUriOf(list('first'), [])).toBe('chosen.jpg');
   });
 });
 

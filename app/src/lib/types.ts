@@ -135,8 +135,14 @@ export type Collection = {
   curator_handle: string | null;
   /** The chosen cover photograph, when the owner (or the desk) picked
    *  one; null falls back to the first place's own cover. `id` optional
-   *  for the same launch-cache reason as PlacePhoto.id. */
-  cover: { id?: string; photo_uri: string } | null;
+   *  for the same launch-cache reason as PlacePhoto.id.
+   *
+   *  `place` is whose photograph it is (16 Nov 2026), which is what tells
+   *  a cover whose place has since left the list from one that still
+   *  speaks for it — see `chosenCoverOf`. Absent on a row from a launch
+   *  cache written before then, and null where the reader may not see the
+   *  place; either way the cover is kept, since nothing says it is gone. */
+  cover: { id?: string; photo_uri: string; place?: { slug: string } | null } | null;
   collection_places: { sort_order: number; places: { slug: string } | null }[];
   /** Null on the editorial collections — those belong to the desk. Set to a
    *  user's id on the lists they made for themselves. */

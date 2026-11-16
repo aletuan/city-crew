@@ -40,8 +40,45 @@ export function withPhotos(p: Place, all: PlacePhoto[] | undefined): Place {
 }
 
 /**
- * The photograph a collection's card wears: the one its owner chose, else
- * its first place's own cover, else none.
+ * The cover a list's owner chose, while it still speaks for the list:
+ * null once the place it is a photograph of has left the list.
+ *
+ * ── a chosen cover outlives its place, and should not (owner, 16 Nov 2026) ──
+ *
+ * `cover_photo_id` names a photograph, and nothing clears it when its
+ * place is taken out of the list. The card went on wearing a place the
+ * list no longer held, and the form could not ring it, since it offers
+ * only the members' photographs. Measured on the live lists that day: 34
+ * of 94 had a chosen cover, and 1 of the 34 was of a place no longer in
+ * its list.
+ *
+ * It mattered little while the form always offered "Auto" to go back to.
+ * From the same day the form hides Auto once a cover is chosen, so the
+ * way back has to be taken for the owner: such a cover reads as no cover,
+ * everywhere one is drawn and in the form, and the list falls back to
+ * its first place. Put the place back and the cover is the list's again;
+ * the row is only rewritten when the owner next saves the form.
+ *
+ * Read off the list's own rows (`collection_places`), not the resolved
+ * members: a member the loaded catalog does not hold is still a member,
+ * and judging by `members` would take a cover off a list whose places
+ * have merely not arrived. A cover that does not say whose it is — a row
+ * from an older launch cache, a place the reader may not see — is kept.
+ *
+ * Not done in the database, with a trigger on `collection_places`: the
+ * rows already astray would need a backfill as well, a delete through an
+ * older build or the desk would each need the trigger to be right, and
+ * putting the place back could not give the cover back.
+ */
+export function chosenCoverOf(c: Pick<Collection, 'cover' | 'collection_places'>): Collection['cover'] {
+  const of = c.cover?.place?.slug;
+  if (!c.cover || !of) return c.cover;
+  return c.collection_places.some((row) => row.places?.slug === of) ? c.cover : null;
+}
+
+/**
+ * The photograph a collection's card wears: the one its owner chose
+ * (`chosenCoverOf`), else its first place's own cover, else none.
  *
  * The first place and not the best-looking one, because the order of a
  * list is its owner's and the top of it is what they put first. Takes the
@@ -49,8 +86,8 @@ export function withPhotos(p: Place, all: PlacePhoto[] | undefined): Place {
  * has them in hand, and `membersOf` builds an index of the whole catalog
  * each time it is called.
  */
-export function coverUriOf(c: Pick<Collection, 'cover'>, members: readonly Place[]): string | undefined {
-  return c.cover?.photo_uri ?? (members[0] ? coverOf(members[0])?.photo_uri : undefined);
+export function coverUriOf(c: Pick<Collection, 'cover' | 'collection_places'>, members: readonly Place[]): string | undefined {
+  return chosenCoverOf(c)?.photo_uri ?? (members[0] ? coverOf(members[0])?.photo_uri : undefined);
 }
 
 /** Explicitly free (0₫) — distinct from a missing price. */
