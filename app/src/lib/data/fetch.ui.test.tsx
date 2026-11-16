@@ -15,7 +15,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '../../uitest/render';
-import { CACHE_MAX_CHARS, packCache } from './cache';
+import { CACHE_MAX_CHARS, CACHE_MAX_PARTS, packCache } from './cache';
 import { forgetSharedFetches, prefetchShared, usePersistedFetch, useSharedFetch } from './fetch';
 import { startupTrace } from '../trace';
 
@@ -163,24 +163,46 @@ describe('usePersistedFetch measures its cache read', () => {
   });
 });
 
-// A blob too long for Android to read back (owner, 30 Oct 2026): not
-// written, the last one removed, and a mark to say so. Kept, the old blob
-// would go on opening the app with an answer every later fetch replaced.
-describe('usePersistedFetch keeps an oversize answer off the phone', () => {
-  it('writes nothing, removes the last blob, and marks the length', async () => {
+// An answer longer than Android reads back in one row. From 30 Oct 2026
+// it was not written and the last one was removed; from 16 Nov, when the
+// public shelf outgrew the row, it is written in parts (`cacheStore`) and
+// only one too long even for those is refused.
+describe('usePersistedFetch keeps a long answer in parts, and an endless one off the phone', () => {
+  it('writes an answer past one row in parts, marks how many, and opens on it next time', async () => {
     const key = 'citycrew.cache.giant.hcmc.anon';
-    await AsyncStorage.setItem(key, packCache(['yesterday'], Date.now()));
     const spy = vi.spyOn(startupTrace, 'mark');
     const huge = 'x'.repeat(CACHE_MAX_CHARS);
     try {
-      render(<Probe k={key} fetcher={async () => [huge]} />);
+      const first = render(<Probe k={key} fetcher={async () => [huge, 'tail']} />);
+      await waitFor(() => expect(read('fromCache')).toBe('false'));
+      await waitFor(() => expect(spy.mock.calls.find(([name]) => name === 'cache:giant:parts')?.[1]).toBe(2));
+      expect(spy.mock.calls.filter(([name]) => String(name).endsWith(':too-big'))).toEqual([]);
+      // No single row holds it: the head is a few characters.
+      expect((await AsyncStorage.getItem(key))!.length).toBeLessThan(100);
+      first.unmount();
+      // The next launch: the network never answers, and the phone does.
+      render(<Probe k={key} fetcher={() => new Promise<string[]>(() => {})} />);
+      await waitFor(() => expect(read('fromCache')).toBe('true'));
+      expect(read('data')).toBe(`${huge},tail`);
+      expect(read('loaded')).toBe('true');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('writes nothing for one too long even for parts, removes the last blob, and marks the length', async () => {
+    const key = 'citycrew.cache.endless.hcmc.anon';
+    await AsyncStorage.setItem(key, packCache(['yesterday'], Date.now()));
+    const spy = vi.spyOn(startupTrace, 'mark');
+    const endless = Array.from({ length: CACHE_MAX_PARTS }, () => 'x'.repeat(CACHE_MAX_CHARS));
+    try {
+      render(<Probe k={key} fetcher={async () => endless} />);
       await waitFor(() => expect(read('fromCache')).toBe('false'));
       // Still on screen: only the copy on the phone is refused.
-      expect(read('data')).toBe(huge);
+      expect(read('data').length).toBeGreaterThan(CACHE_MAX_CHARS * CACHE_MAX_PARTS);
       await waitFor(async () => expect(await AsyncStorage.getItem(key)).toBeNull());
-      const mark = spy.mock.calls.find(([name]) => name === 'cache:giant:too-big');
-      // The packed blob's length: the answer plus its envelope, stamp included.
-      expect(mark?.[1]).toBe(packCache([huge], Date.now()).length);
+      await waitFor(() => expect(spy.mock.calls.find(([name]) => name === 'cache:endless:too-big')?.[1])
+        .toBe(packCache(endless, Date.now()).length));
     } finally {
       spy.mockRestore();
     }
@@ -327,11 +349,22 @@ describe('useSharedFetch', () => {
     }
   });
 
-  it('does not write an answer too long to read back, and removes the old one', async () => {
+  // In parts since 16 Nov 2026 (`cacheStore`), where it was refused.
+  it('writes an answer past one row in parts', async () => {
     await AsyncStorage.setItem('shared-h', packCache(['old'], Date.now()));
     render(<Shared k="shared-h" fetcher={async () => ['x'.repeat(CACHE_MAX_CHARS)]} />);
     await waitFor(() => expect(read('data').length).toBe(CACHE_MAX_CHARS));
-    await waitFor(async () => expect(await AsyncStorage.getItem('shared-h')).toBeNull());
+    await waitFor(async () => expect((await AsyncStorage.getItem('shared-h.part1'))).not.toBeNull());
+    expect((await AsyncStorage.getItem('shared-h'))!.length).toBeLessThan(100);
+    expect(await AsyncStorage.getItem('shared-h')).not.toContain('old');
+  });
+
+  it('does not write an answer too long even for parts, and removes the old one', async () => {
+    await AsyncStorage.setItem('shared-i', packCache(['old'], Date.now()));
+    const endless = Array.from({ length: CACHE_MAX_PARTS }, () => 'x'.repeat(CACHE_MAX_CHARS));
+    render(<Shared k="shared-i" fetcher={async () => endless} />);
+    await waitFor(() => expect(read('data').length).toBeGreaterThan(CACHE_MAX_CHARS * CACHE_MAX_PARTS));
+    await waitFor(async () => expect(await AsyncStorage.getItem('shared-i')).toBeNull());
   });
 
   it('asks nothing for no key, and answers the empty value, settled', async () => {
