@@ -51,6 +51,8 @@ const state = vi.hoisted(() => ({
   shelf: [] as unknown[],
   places: [] as unknown[],
   likes: {} as Record<string, number>,
+  common: { places: [] as unknown[], lists: [] as string[] },
+  commonAsked: [] as [string | null, string | null][],
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
 }));
@@ -68,6 +70,12 @@ vi.mock('../lib/data', async (orig) => ({
   acceptFriendRequest: data.acceptFriendRequest,
   blockUser: data.blockUser,
   unblockUser: data.unblockUser,
+  // What the two have in common, as the database answered it; `commonAsked`
+  // keeps who it was asked for and about.
+  useInCommonQuery: (me: string | null, other: string | null) => {
+    state.commonAsked.push([me, other]);
+    return { data: state.common, loading: false, error: null, reload: () => {} };
+  },
   useProfileByHandle: (h: string | null) => {
     state.asked.push(h);
     return { data: h ? state.people[h] ?? null : null, ...state.lookup };
@@ -111,6 +119,8 @@ beforeEach(() => {
   state.shelf = [];
   state.places = [];
   state.likes = {};
+  state.common = { places: [], lists: [] };
+  state.commonAsked = [];
   state.lang = 'en';
   state.scheme = 'dark';
   crew.ships.data = [];
@@ -277,17 +287,15 @@ describe('the friend button', () => {
     expect(screen.getByTestId('person-requested').textContent).toBe('Requested');
   });
 
-  it('says Friends for a friend, with the places you both save', async () => {
+  // The line that counts their lists counts only that. Until 16 Nov 2026
+  // it also said, to a friend, how many places the two both save; that is
+  // the "In common" section now.
+  it('says Friends for a friend, and the count line says nothing of the two of you', async () => {
     crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
     crew.mutual = { 'lan-id': 4 };
     await show();
     expect(screen.getByTestId('person-friends').textContent).toBe('Friends');
-    expect(screen.getByTestId('person-counts').textContent).toBe('0 collections · 4 mutual saves');
-    cleanup();
-    crew.mutual = { 'lan-id': 1 };
-    state.lang = 'vi';
-    await show();
-    expect(screen.getByTestId('person-counts').textContent).toBe('0 bộ sưu tập · 1 chỗ cùng lưu');
+    expect(screen.getByTestId('person-counts').textContent).toBe('0 collections');
   });
 
   it('offers Accept to somebody who asked, and accepts their request', async () => {
@@ -319,6 +327,105 @@ describe('the friend button', () => {
 // The ⋯ in the header (16 Nov 2026): report the person, block them, or
 // take a block back. The block stood in a sheet on a list's page until
 // that day, behind the author's face — which opens this page now.
+// What the reader and this person have in common (owner, 16 Nov 2026):
+// the places both keep in public collections, and the public collections
+// both liked. For anybody signed in, a friend or not.
+describe('in common', () => {
+  const banh = { slug: 'banh', name_en: 'Banh', name_vi: 'Bánh', name_ja: null, photo_uri: 'https://p/banh.jpg' };
+  const oc = { slug: 'oc', name_en: 'Snails', name_vi: 'Ốc', name_ja: null, photo_uri: null };
+  const names = (testID: string) => screen.getAllByTestId(testID).map((x) => x.textContent);
+
+  it('asks about this person, as the reader', async () => {
+    await show();
+    expect(state.commonAsked.at(-1)).toEqual(['me-id', 'lan-id']);
+  });
+
+  it('draws nothing where nothing is shared', async () => {
+    await show();
+    expect(screen.queryByTestId('person-in-common')).toBeNull();
+    expect(screen.queryByText('In common')).toBeNull();
+  });
+
+  it('lists the places both keep, each with its own name and photograph, above their collections', async () => {
+    state.common = { places: [banh, oc], lists: [] };
+    state.shelf = [list('new')];
+    await show();
+    const section = screen.getByTestId('person-in-common');
+    expect(within(section).getByText('In common')).toBeTruthy();
+    expect(within(section).getByText('Places you both keep')).toBeTruthy();
+    expect(names('common-place')).toEqual(['Banh', 'Snails']);
+    const [first, second] = screen.getAllByTestId('common-place');
+    expect(first.querySelector('img')!.getAttribute('src')).toBe('https://p/banh.jpg');
+    // No photograph: the tint, not a hole.
+    expect(second.querySelector('img')).toBeNull();
+    // One kind alone draws that row alone.
+    expect(screen.queryByTestId('common-lists')).toBeNull();
+    expect(within(section).queryByText('Collections you both liked')).toBeNull();
+    // Between the count line and the person's own collections.
+    const counts = screen.getByTestId('person-counts');
+    const own = screen.getByTestId('person-list');
+    expect(counts.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('names a place in the reader’s language and opens it by its slug', async () => {
+    state.common = { places: [banh, oc], lists: [] };
+    state.lang = 'vi';
+    const navigation = await show();
+    expect(names('common-place')).toEqual(['Bánh', 'Ốc']);
+    expect(screen.getByText('Điểm chung')).toBeTruthy();
+    fireEvent.click(screen.getAllByTestId('common-place')[1]);
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('PlaceDetail', { slug: 'oc' });
+  });
+
+  it('lists the collections both liked from the shelf, in the order answered, and opens one', async () => {
+    state.common = { places: [], lists: ['desk-eats', 'minh-list'] };
+    state.shelf = [
+      list('minh-list', { owner_id: 'minh-id', cover: { photo_uri: 'https://covers/minh.jpg' } }),
+      list('desk-eats', { owner_id: null }),
+    ];
+    const navigation = await show();
+    expect(screen.getByText('Collections you both liked')).toBeTruthy();
+    expect(names('common-list')).toEqual(['List desk-eats', 'List minh-list']);
+    expect(screen.getAllByTestId('common-list')[1].querySelector('img')!.getAttribute('src')).toBe('https://covers/minh.jpg');
+    expect(screen.queryByTestId('common-places')).toBeNull();
+    // Somebody else's list is in common without being this person's own.
+    expect(screen.queryAllByTestId('person-list')).toEqual([]);
+    fireEvent.click(screen.getAllByTestId('common-list')[0]);
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionDetail', { slug: 'desk-eats' });
+  });
+
+  // A slug the shelf does not hold is a list this reader cannot open.
+  it('leaves out a liked list the shelf does not hold, and the section with it when that was all', async () => {
+    state.common = { places: [], lists: ['gone'] };
+    await show();
+    expect(screen.queryByTestId('person-in-common')).toBeNull();
+    cleanup();
+    state.common = { places: [banh], lists: ['gone', 'kept'] };
+    state.shelf = [list('kept', { owner_id: 'minh-id' })];
+    await show();
+    expect(names('common-list')).toEqual(['List kept']);
+    // Both rows: the second label stands off the first row.
+    expect(names('common-place')).toEqual(['Banh']);
+  });
+
+  it('shows it to somebody who is not a friend, and asks nothing signed out or on your own page', async () => {
+    state.common = { places: [banh], lists: [] };
+    await show();
+    expect(screen.getByRole('button', { name: 'Add friend' })).toBeTruthy();
+    expect(screen.getByTestId('person-in-common')).toBeTruthy();
+    cleanup();
+    state.me = null;
+    await show();
+    expect(state.commonAsked.at(-1)).toEqual([null, 'lan-id']);
+    cleanup();
+    state.me = 'me-id';
+    state.people = { lan: { ...LAN, id: 'me-id' } };
+    await show();
+    expect(state.commonAsked.at(-1)).toEqual(['me-id', 'me-id']);
+  });
+});
+
 describe('the ⋯', () => {
   /** Press a row of the open sheet; the sheet closes, then the row acts. */
   const pick = (testID: string) => {

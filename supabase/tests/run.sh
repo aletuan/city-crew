@@ -654,3 +654,12 @@ for f in "$ROOT"/supabase/migrations/*_list_activity_for_readers.sql \
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/list_activity_for_readers_test.sql"
+
+# What two people have in common (16 Nov 2026): the places both keep in
+# public collections, and the public collections both liked, to anybody
+# signed in. After the blocks and the likes it reads.
+echo "→ in common"
+for f in "$ROOT"/supabase/migrations/*_in_common.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/in_common_test.sql"

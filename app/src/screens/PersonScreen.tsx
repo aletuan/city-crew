@@ -21,9 +21,11 @@
 //   - moments — a new kind of content, with storage, reporting and a desk
 //     to review it.
 //
-// So the body is built as sections stacked under a head, one today
-// ("Collections"), and a later step is a section added, not a page drawn
-// again. A count line sits between the two for the same reason.
+// So the body is built as sections stacked under a head, and a later
+// step is a section added, not a page drawn again: "Collections" was the
+// first, and "In common" (`InCommon`, 16 Nov 2026) the second, above it.
+// A count line sits between the head and the sections for the same
+// reason.
 //
 // ── the head ──
 //
@@ -72,6 +74,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { Image } from 'expo-image';
 import { Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { useFriendButtons } from '../components/FriendButton';
+import InCommon from '../components/InCommon';
 import { usePersonMenu } from '../components/PersonMenu';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useSession } from '../lib/auth';
@@ -112,7 +115,6 @@ export default function PersonScreen({ navigation, route }: {
   const cover = coverAmong(lists, coverFor);
 
   const { friendButton, crew } = useFriendButtons(me, 'person');
-  const mutual = person ? crew.mutual[person.id] ?? 0 : 0;
   // Report, block, unblock — `usePersonMenu`.
   const menu = usePersonMenu(me, person, crew);
 
@@ -126,9 +128,6 @@ export default function PersonScreen({ navigation, route }: {
   const listsWord = (n: number) => (n === 1
     ? t('1 collection', '1 bộ sưu tập', 'コレクション1件', '1 个合集', '1 個合集')
     : t(`${n} collections`, `${n} bộ sưu tập`, `コレクション${n}件`, `${n} 个合集`, `${n} 個合集`));
-  const savesWord = (n: number) => (n === 1
-    ? t('1 mutual save', '1 chỗ cùng lưu', '共通の保存1件', '1 个共同收藏', '1 個共同收藏')
-    : t(`${n} mutual saves`, `${n} chỗ cùng lưu`, `共通の保存${n}件`, `${n} 个共同收藏`, `${n} 個共同收藏`));
   const placesWord = (n: number) => (n === 1
     ? t('1 place', '1 địa điểm', '1か所', '1 个地点', '1 個地點')
     : t(`${n} places`, `${n} địa điểm`, `${n}か所`, `${n} 个地点`, `${n} 個地點`));
@@ -175,8 +174,12 @@ export default function PersonScreen({ navigation, route }: {
       </View>
       {person.bio ? <Text style={s.bio} testID="person-bio">{person.bio}</Text> : null}
       <Text style={s.counts} testID="person-counts">
-        {[listsWord(lists.length), mutual > 0 ? savesWord(mutual) : ''].filter(Boolean).join(' · ')}
+        {listsWord(lists.length)}
       </Text>
+      {/* What the two of you have in common — `InCommon`. It took the
+          "mutual saves" this line counted, for a friend only, until 16
+          Nov 2026. */}
+      <InCommon me={me} otherId={person.id} navigation={navigation} />
 
       <Text style={s.sectionLabel}>{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
       {lists.length === 0 ? (

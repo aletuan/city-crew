@@ -20,7 +20,8 @@ import {
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import {
-  fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, type FriendProfile, profileByHandle,
+  fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, fetchListsLikedInCommon, fetchPlacesInCommon,
+  type FriendProfile, type PlaceInCommon, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
@@ -342,6 +343,31 @@ export const usePrefetchOwnListActivity = (
     prefetchShared(likesKey, () => fetchLikesOnList(collectionId as string), NO_LIKES);
     prefetchShared(copiesKey, () => fetchCopiesOfList(collectionId as string), NO_COPIES);
   }, [mine, readerId, collectionId]);
+};
+
+// ── what the reader and one other person have in common ──
+//
+// For a person's page (`InCommon`, 16 Nov 2026): the places both keep in
+// public, and the public lists both liked. One plain fetch per page
+// opened, not a shared entry — nothing else asks this question, and the
+// answer is about a pair, so there is no second reader to share it with.
+// Both halves in one promise: the section is drawn when both are in, and
+// a failure of either draws no section at all, which is what an answer
+// that cannot be trusted to be whole should draw.
+//
+// Nobody signed in, or no other person, asks nothing — and so does
+// yourself: there is nothing in common with yourself to list.
+const NOTHING_IN_COMMON: { places: PlaceInCommon[]; lists: string[] } = { places: [], lists: [] };
+
+export const useInCommonQuery = (readerId: string | null | undefined, otherId: string | null | undefined) => {
+  const ask = readerId && otherId && readerId !== otherId ? otherId : null;
+  const fetcher = useCallback(
+    () => (ask
+      ? Promise.all([fetchPlacesInCommon(ask), fetchListsLikedInCommon(ask)]).then(([places, lists]) => ({ places, lists }))
+      : Promise.resolve(NOTHING_IN_COMMON)),
+    [ask],
+  );
+  return useFetch(fetcher, NOTHING_IN_COMMON);
 };
 
 // ── a list's statistics, for whoever reads it ──
