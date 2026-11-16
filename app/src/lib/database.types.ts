@@ -1387,6 +1387,10 @@ export type Database = {
       is_local_guide:
         | { Args: never; Returns: boolean }
         | { Args: { p_city_id: string }; Returns: boolean }
+      lists_liked_in_common: {
+        Args: { other: string }
+        Returns: { slug: string }[]
+      }
       likes_on_list: {
         Args: { cid: string }
         Returns: {
@@ -1396,6 +1400,16 @@ export type Database = {
           liker_handle: string
           liker_id: string
           liker_name: string
+        }[]
+      }
+      places_in_common: {
+        Args: { other: string }
+        Returns: {
+          name_en: string
+          name_ja: string
+          name_vi: string
+          photo_uri: string
+          slug: string
         }[]
       }
       likes_on_mine: {

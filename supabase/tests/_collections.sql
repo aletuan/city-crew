@@ -39,6 +39,11 @@ create table if not exists public.places (
   -- reads `desc_en` where the desk has marked it Google's words.
   phone           text,
   desc_en         text,
+  -- Nullable here; the two names a row of places is drawn with. Here for
+  -- `places_in_common` (16 Nov 2026), which returns them — a function
+  -- whose body names a column the table lacks does not get created.
+  name_en         text,
+  name_vi         text,
   reviewer_source text,
   created_at     timestamptz not null default now(),
   -- `not null default now()` exactly as production has it. The stamping

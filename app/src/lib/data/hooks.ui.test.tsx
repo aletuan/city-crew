@@ -31,6 +31,8 @@ const q = vi.hoisted(() => ({
   fetchLikeCounts: vi.fn(),
   fetchLikesOnList: vi.fn(),
   fetchCopiesOfList: vi.fn(),
+  fetchPlacesInCommon: vi.fn(),
+  fetchListsLikedInCommon: vi.fn(),
   fetchCollectionStats: vi.fn(),
   fetchListUse: vi.fn(),
 }));
@@ -56,6 +58,7 @@ vi.mock('./preferences', async () => ({
 }));
 vi.mock('./people', () => ({
   fetchCuratorAvatars: vi.fn(), profileByHandle: vi.fn(), fetchLikesOnList: q.fetchLikesOnList, fetchCopiesOfList: q.fetchCopiesOfList,
+  fetchPlacesInCommon: q.fetchPlacesInCommon, fetchListsLikedInCommon: q.fetchListsLikedInCommon,
 }));
 vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
 vi.mock('./stats', () => ({
@@ -68,7 +71,7 @@ vi.mock('./stats', () => ({
 }));
 
 import {
-  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, useListUseQuery, usePrefetchCollectionStats, useListActivityOfQuery, useMyCollections, usePrefetchOwnListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, useListUseQuery, usePrefetchCollectionStats, useInCommonQuery, useListActivityOfQuery, useMyCollections, usePrefetchOwnListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
 } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
@@ -489,6 +492,57 @@ describe('a list’s activity, kept and shared', () => {
 // One open of a list's page, one count (owner, 13 Nov 2026): per mount,
 // once the list's id is known, and never a word to the reader if the
 // count fails.
+// What the reader and one other person have in common (16 Nov 2026):
+// both halves in one answer, for the one pair.
+describe('what two people have in common', () => {
+  type Common = { places: { slug: string }[]; lists: string[] };
+  const common = () => seen.common as Fetch<Common>;
+  function Page({ me, other }: { me: string | null; other: string | null }) {
+    const f = useInCommonQuery(me, other);
+    useEffect(() => { seen.common = f as Fetch<unknown>; });
+    return null;
+  }
+
+  it('asks both functions about the other person, and answers with both', async () => {
+    q.fetchPlacesInCommon.mockResolvedValue([{ slug: 'banh' }]);
+    q.fetchListsLikedInCommon.mockResolvedValue(['eats']);
+    render(<Page me="u1" other="lan" />);
+    await waitFor(() => expect(common().data).toEqual({ places: [{ slug: 'banh' }], lists: ['eats'] }));
+    expect(q.fetchPlacesInCommon).toHaveBeenCalledExactlyOnceWith('lan');
+    expect(q.fetchListsLikedInCommon).toHaveBeenCalledExactlyOnceWith('lan');
+    expect(common().error).toBeNull();
+  });
+
+  it('asks nothing for nobody signed in, nobody to ask about, or yourself', async () => {
+    for (const [me, other] of [[null, 'lan'], ['u1', null], ['u1', 'u1']] as [string | null, string | null][]) {
+      const view = render(<Page me={me} other={other} />);
+      await act(async () => {});
+      expect(common().data).toEqual({ places: [], lists: [] });
+      view.unmount();
+    }
+    expect(q.fetchPlacesInCommon).not.toHaveBeenCalled();
+    expect(q.fetchListsLikedInCommon).not.toHaveBeenCalled();
+  });
+
+  // Half an answer is not shown as the whole of what two people share.
+  it('answers nothing, and says it failed, when either half fails', async () => {
+    q.fetchPlacesInCommon.mockResolvedValue([{ slug: 'banh' }]);
+    q.fetchListsLikedInCommon.mockRejectedValue(new Error('timeout'));
+    render(<Page me="u1" other="lan" />);
+    await waitFor(() => expect(common().error).toBeTruthy());
+    expect(common().data).toEqual({ places: [], lists: [] });
+  });
+
+  it('asks again for another person', async () => {
+    q.fetchPlacesInCommon.mockResolvedValue([]);
+    q.fetchListsLikedInCommon.mockResolvedValue([]);
+    const view = render(<Page me="u1" other="lan" />);
+    await waitFor(() => expect(q.fetchPlacesInCommon).toHaveBeenCalledWith('lan'));
+    view.rerender(<Page me="u1" other="minh" />);
+    await waitFor(() => expect(q.fetchPlacesInCommon).toHaveBeenCalledWith('minh'));
+  });
+});
+
 describe('an open of a list, counted', () => {
   beforeEach(() => { views.counted = []; views.refuse = false; });
   function Page({ id, tick }: { id: string | null | undefined; tick?: number }) {

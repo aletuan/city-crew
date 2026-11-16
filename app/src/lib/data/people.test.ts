@@ -19,7 +19,7 @@ vi.mock('../supabase', async () => {
 
 import {
   acceptFriendRequest, blockUser, dismissSuggestion, fetchApplause, fetchCopies, fetchCopiesOfList, fetchCuratorAvatars, fetchFriendships, fetchLikesOnList, fetchMyActs,
-  fetchListTitles, fetchMutualSaves, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
+  fetchListsLikedInCommon, fetchListTitles, fetchMutualSaves, fetchPlacesInCommon, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
   removeFriendship, searchHandles, sendFriendRequest, submitReport, unblockUser,
 } from './people';
 
@@ -443,6 +443,34 @@ describe('fetchCopies', () => {
 
 // One list's likes and copies, for whoever can read the list (owner,
 // 15 Nov 2026): the reader's two functions, asked by the list's id.
+// What two people have in common (16 Nov 2026). Who is told what is the
+// database's rule (`in_common_test.sql`); here, that each asks its own
+// function about the other person and nobody else.
+describe('fetchPlacesInCommon and fetchListsLikedInCommon', () => {
+  it('ask the two functions about the one other person', async () => {
+    const banh = { slug: 'banh', name_en: 'Banh', name_vi: 'Bánh', name_ja: null, photo_uri: 'http://x/b.jpg' };
+    fake().replies({ data: [banh] }, { data: [{ slug: 'eats' }, { slug: 'cafes' }] });
+    expect(await fetchPlacesInCommon('lan-id')).toEqual([banh]);
+    // Slugs alone, in the order the function gave them.
+    expect(await fetchListsLikedInCommon('lan-id')).toEqual(['eats', 'cafes']);
+    const [places, lists] = fake().log;
+    expect(places).toMatchObject({ op: 'rpc', fn: 'places_in_common', payload: { other: 'lan-id' } });
+    expect(lists).toMatchObject({ op: 'rpc', fn: 'lists_liked_in_common', payload: { other: 'lan-id' } });
+  });
+
+  it('throw when the call failed', async () => {
+    fake().replies({ error: { message: 'timeout' } }, { error: { message: 'refused' } });
+    await expect(fetchPlacesInCommon('lan-id')).rejects.toThrow('timeout');
+    await expect(fetchListsLikedInCommon('lan-id')).rejects.toThrow('refused');
+  });
+
+  it('answer empty where nothing is shared', async () => {
+    fake().replies({ data: null }, { data: null });
+    expect(await fetchPlacesInCommon('lan-id')).toEqual([]);
+    expect(await fetchListsLikedInCommon('lan-id')).toEqual([]);
+  });
+});
+
 describe('fetchLikesOnList and fetchCopiesOfList', () => {
   it('ask the reader’s functions for the one list', async () => {
     fake().replies({ data: [{ collection_id: 'c-9', liker_handle: 'hado' }] }, { data: [{ collection_id: 'c-9', copier_handle: 'bao' }] });

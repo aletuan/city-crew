@@ -270,6 +270,38 @@ export async function fetchCopiesOfList(collectionId: string): Promise<import('.
   return (data ?? []) as import('../friends').Copy[];
 }
 
+/** A place two people both keep in public collections, as a row of
+ *  places needs it: enough to name it, show it and open it. It carries
+ *  its own names and photograph because the catalog in memory is one
+ *  city's, and what two people share is not confined to one. */
+export type PlaceInCommon = {
+  slug: string; name_en: string | null; name_vi: string | null; name_ja: string | null;
+  photo_uri: string | null;
+};
+
+/**
+ * What the reader and one other person have in common (owner, 16 Nov
+ * 2026) — `places_in_common` and `lists_liked_in_common`
+ * (`20261116120000_in_common`), where who is told what, and why, is
+ * written: anybody signed in, only the intersection with themselves,
+ * only from what is already public to them, nothing across a block.
+ *
+ * The lists come back as slugs alone: every public list is already on
+ * the shelf in memory, and a slug the shelf does not hold is a list the
+ * reader could not open anyway. Both throw on failure.
+ */
+export async function fetchPlacesInCommon(otherId: string): Promise<PlaceInCommon[]> {
+  const { data, error } = await supabase.rpc('places_in_common', { other: otherId });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PlaceInCommon[];
+}
+
+export async function fetchListsLikedInCommon(otherId: string): Promise<string[]> {
+  const { data, error } = await supabase.rpc('lists_liked_in_common', { other: otherId });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { slug: string }[]).map((r) => r.slug);
+}
+
 /** A list somebody else made, as an Activity row needs it to name and
  *  open it. */
 export type ActList = { id: string; slug: string; title_en: string; title_vi: string; title_ja: string | null };
