@@ -157,6 +157,7 @@ vi.mock('lucide-react-native/icons/calendar-days', () => line('calendar-outline'
 vi.mock('lucide-react-native/icons/compass', () => line('compass-outline'));
 vi.mock('lucide-react-native/icons/map-pinned', () => line('places'));
 vi.mock('lucide-react-native/icons/user', () => line('person-outline'));
+vi.mock('lucide-react-native/icons/quote', () => line('quote'));
 vi.mock('lucide-react-native/icons/star', () => line('star-outline', 'star'));
 
 // These must return promises, not undefined. `fireHaptic` calls
