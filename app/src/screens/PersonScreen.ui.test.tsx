@@ -11,7 +11,7 @@
 // reader as the author of somebody else's list).
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
@@ -54,6 +54,8 @@ const state = vi.hoisted(() => ({
   common: { places: [] as unknown[], lists: [] as string[] },
   commonAsked: [] as [string | null, string | null][],
   inCommonOn: true,
+  role: null as 'editor' | 'guide' | null,
+  roleAsked: [] as [string | null, string | null][],
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
 }));
@@ -76,6 +78,12 @@ vi.mock('../lib/data', async (orig) => ({
   useInCommonQuery: (me: string | null, other: string | null) => {
     state.commonAsked.push([me, other]);
     return { data: state.common, loading: false, error: null, reload: () => {} };
+  },
+  // The mark the person wears, as the database answered it; `roleAsked`
+  // keeps who asked and about whom.
+  useRoleOfQuery: (me: string | null, person: string | null) => {
+    state.roleAsked.push([me, person]);
+    return { data: state.role, loading: false, error: null, reload: () => {} };
   },
   useProfileByHandle: (h: string | null) => {
     state.asked.push(h);
@@ -130,6 +138,8 @@ beforeEach(() => {
   state.common = { places: [], lists: [] };
   state.commonAsked = [];
   state.inCommonOn = true;
+  state.role = null;
+  state.roleAsked = [];
   state.lang = 'en';
   state.scheme = 'dark';
   crew.ships.data = [];
@@ -184,6 +194,97 @@ describe('whose page it is', () => {
     const navigation = await show();
     fireEvent.click(screen.getByTestId('person-back'));
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A local guide's star or an editor's medal, on the picture (owner, 16
+// Nov 2026). Only the account itself could see it until then, on its
+// own Profile; here it tells somebody else the desk trusts this account
+// to keep places.
+describe('the mark of a role', () => {
+  const face = () => screen.getByTestId('person-cover').nextElementSibling!.firstElementChild as HTMLElement;
+
+  it('wears no mark for a person with no role, and asks about this person as the reader', async () => {
+    await show();
+    expect(screen.queryByTestId('person-role')).toBeNull();
+    expect(screen.queryByTestId('role-badge')).toBeNull();
+    expect(new Set(state.roleAsked.map((a) => a.join('/')))).toEqual(new Set([`me-id/${LAN.id}`]));
+  });
+
+  it('draws a guide’s star on the picture, named for VoiceOver', async () => {
+    state.role = 'guide';
+    await show();
+    const disc = screen.getByRole('button', { name: 'Local Guide' });
+    expect(face().contains(disc)).toBe(true);
+    expect(disc.querySelector('[data-icon="star"]')).toBeTruthy();
+    // The name is not written on the page: the disc is a mark.
+    expect(screen.queryByText('Local Guide')).toBeNull();
+    // On the corner of the picture, laid over it.
+    expect(viewStyleOf(screen.getByTestId('person-role')).position).toBe('absolute');
+  });
+
+  // The app's sheet, as the badges on your own Profile open — and about
+  // a Local Guide, not "you": the page may be anybody's.
+  it('says what a Local Guide can do, in a sheet, about them and not to you', async () => {
+    state.role = 'guide';
+    await show();
+    expect(screen.queryByTestId('badge-sheet-head')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
+    const head = screen.getByTestId('badge-sheet-head');
+    expect(head.textContent).toBe('Local Guide');
+    expect(head.querySelector('[data-icon="star"]')).toBeTruthy();
+    // One frame, not two (owner, 16 Nov 2026): the title stands on the
+    // sheet as other sheets' titles do, and the card is the words'.
+    const frame = viewStyleOf(screen.getByTestId('badge-sheet-head'));
+    expect([frame.borderWidth, frame.backgroundColor]).toEqual([undefined, undefined]);
+    expect(viewStyleOf(screen.getByTestId('badge-sheet-body')).borderWidth).toBe(1);
+    expect(screen.getByTestId('badge-sheet-body').textContent)
+      .toBe('A Local Guide can edit, and add photos to, places in their collections and places they imported.');
+    // Closed by the backdrop, then the fade react-native-web runs.
+    fireEvent.click(screen.getByLabelText('Close'));
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    await waitFor(() => expect(screen.queryByTestId('badge-sheet-head')).toBeNull());
+  });
+
+  it('draws an editor’s medal, called Super User, with its own words', async () => {
+    state.role = 'editor';
+    await show();
+    const disc = screen.getByRole('button', { name: 'Super User' });
+    expect(disc.querySelector('[data-icon="medal"]')).toBeTruthy();
+    expect(disc.querySelector('[data-icon="star"]')).toBeNull();
+    fireEvent.click(disc);
+    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Super User');
+    expect(screen.getByTestId('badge-sheet-body').textContent)
+      .toBe('A Super User can edit, and add photos to, every place in the app.');
+  });
+
+  it('says it in Vietnamese', async () => {
+    state.lang = 'vi';
+    state.role = 'guide';
+    await show();
+    fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
+    expect(screen.getByTestId('badge-sheet-body').textContent)
+      .toBe('Local Guide có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của họ hoặc các địa điểm họ đã nhập.');
+  });
+
+  // Your own page wears your own mark, as other people see it — and
+  // says it as they read it.
+  it('wears your own mark on your own page, in the same words', async () => {
+    state.me = LAN.id;
+    state.role = 'guide';
+    await show();
+    expect(state.roleAsked.at(-1)).toEqual([LAN.id, LAN.id]);
+    fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
+    expect(screen.getByTestId('badge-sheet-body').textContent).toMatch(/^A Local Guide can edit/);
+  });
+
+  // Nobody signed in is not told (the database refuses): the question
+  // goes out with no reader, which the hook answers with no mark.
+  it('asks as nobody when signed out', async () => {
+    state.me = null;
+    await show();
+    expect(state.roleAsked.at(-1)).toEqual([null, LAN.id]);
+    expect(screen.queryByTestId('role-badge')).toBeNull();
   });
 });
 

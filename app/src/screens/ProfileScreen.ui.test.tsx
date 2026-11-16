@@ -645,7 +645,8 @@ describe('the role badge', () => {
   // react-native-web writes colours as classes, which jsdom's computed
   // style does not resolve, so the class list is what is compared.
   it('wears a different colour for each role, the editor’s when both apply', () => {
-    const dress = (name: string) => badge(name).firstElementChild!.className;
+    // The disc: the box the glyph stands in.
+    const dress = (name: string) => badge(name).querySelector('[data-icon]')!.parentElement!.className;
     state.guide = true;
     draw();
     const guideDress = dress('Local Guide');
@@ -872,6 +873,11 @@ describe('the level ring', () => {
     expect(alert).not.toHaveBeenCalled();
     // Six distinct places: level 2, one of its five.
     expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Level 2' + '1 / 5');
+    // One frame, not two (owner, 16 Nov 2026): the title stands on the
+    // sheet as other sheets' titles do, and the card is the words'.
+    const head = viewStyleOf(screen.getByTestId('badge-sheet-head'));
+    expect([head.borderWidth, head.backgroundColor]).toEqual([undefined, undefined]);
+    expect(viewStyleOf(screen.getByTestId('badge-sheet-body')).borderWidth).toBe(1);
     const body = screen.getByTestId('badge-sheet-body');
     expect([...body.children].slice(1).map((c) => c.textContent)).toEqual([
       'Save 4 more places to reach Level 3.',

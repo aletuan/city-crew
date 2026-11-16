@@ -666,3 +666,12 @@ for f in "$ROOT"/supabase/migrations/*_in_common.sql \
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/in_common_test.sql"
+
+# The mark a person wears on their page (16 Nov 2026): editor, guide or
+# nothing, to anybody signed in. After the local guides and the blocks it
+# reads.
+echo "→ role of a person"
+for f in "$ROOT"/supabase/migrations/*_role_of.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/role_of_test.sql"

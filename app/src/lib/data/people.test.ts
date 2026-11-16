@@ -19,7 +19,7 @@ vi.mock('../supabase', async () => {
 
 import {
   acceptFriendRequest, blockUser, dismissSuggestion, fetchApplause, fetchCopies, fetchCopiesOfList, fetchCuratorAvatars, fetchFriendships, fetchLikesOnList, fetchMyActs,
-  fetchListsLikedInCommon, fetchListTitles, fetchMutualSaves, fetchPlacesInCommon, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
+  fetchListsLikedInCommon, fetchListTitles, fetchMutualSaves, fetchPlacesInCommon, fetchMyBlocks, fetchProfilesById, fetchRoleOf, fetchSuggestedFriends, profileByHandle,
   removeFriendship, searchHandles, sendFriendRequest, submitReport, unblockUser,
 } from './people';
 
@@ -468,6 +468,29 @@ describe('fetchPlacesInCommon and fetchListsLikedInCommon', () => {
     fake().replies({ data: null }, { data: null });
     expect(await fetchPlacesInCommon('lan-id')).toEqual([]);
     expect(await fetchListsLikedInCommon('lan-id')).toEqual([]);
+  });
+});
+
+// The mark a person wears (16 Nov 2026). Who is told is the database's
+// rule (`role_of_test.sql`); here, the question and what counts as a mark.
+describe('fetchRoleOf', () => {
+  it('asks role_of about the one person, and takes its word', async () => {
+    fake().replies({ data: 'guide' }, { data: 'editor' });
+    expect(await fetchRoleOf('lan-id')).toBe('guide');
+    expect(await fetchRoleOf('ed-id')).toBe('editor');
+    expect(fake().log[0]).toMatchObject({ op: 'rpc', fn: 'role_of', payload: { person: 'lan-id' } });
+    expect(fake().log[1]).toMatchObject({ op: 'rpc', fn: 'role_of', payload: { person: 'ed-id' } });
+  });
+
+  // A word a later migration adds is no mark here, not an empty disc.
+  it('reads anything but the two words as no mark', async () => {
+    fake().replies({ data: null }, { data: 'moderator' }, { data: true }, {});
+    for (let i = 0; i < 4; i++) expect(await fetchRoleOf('lan-id')).toBeNull();
+  });
+
+  it('throws when the call failed', async () => {
+    fake().replies({ error: { message: 'permission denied' } });
+    await expect(fetchRoleOf('lan-id')).rejects.toThrow('permission denied');
   });
 });
 

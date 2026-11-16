@@ -32,15 +32,14 @@
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import ActionSheet, { sheetHeader } from '../../components/ActionSheet';
+import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from '../../components/ActionSheet';
 import AvatarPicker from '../../components/AvatarPicker';
 import EngagementRing from '../../components/EngagementRing';
-import { PressableScale } from '../../components/ui';
-import { Glyph } from '../../components/ui/glyph';
+import { type Role, RoleBody, RoleButton, RoleHead } from '../../components/RoleBadge';
 import { useI18n } from '../../lib/i18n';
 import { levelFromSaves, levelSteps, levelWords } from '../../lib/level';
 import { useIsEditor, useIsGuideAnywhere } from '../../lib/useGuideGrant';
-import { colors, font, radius, space } from '../../theme';
+import { colors, font } from '../../theme';
 import { s } from './styles';
 
 export function HeroFace({ saved }: {
@@ -57,30 +56,7 @@ export function HeroFace({ saved }: {
   // gallery, which includes the ones a guide keeps.
   const editor = useIsEditor();
   const guide = useIsGuideAnywhere();
-  const role = editor
-    ? {
-      icon: 'medal' as const, color: colors.accent, dress: s.roleEditor,
-      name: t('Super User', 'Super User', 'スーパーユーザー', '超级用户', '超級使用者'),
-      says: t(
-        'You can edit, and add photos to, every place in the app — new or already listed.',
-        'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
-        'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
-        '你可以编辑应用中的所有地点并为其添加照片，无论是新地点还是已收录的。', '你可以編輯 App 中的所有地點並為其新增照片，無論是新地點還是已收錄的。',
-      ),
-    }
-    : guide
-      ? {
-        icon: 'star' as const, color: colors.ok, dress: s.roleGuide,
-        name: t('Local Guide', 'Local Guide', 'ローカルガイド', '本地向导', '在地嚮導'),
-        says: t(
-          'You can edit, and add photos to, places in your collections and places you imported.',
-          'Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.',
-          '自分のコレクションの場所や、自分が追加した場所を編集し、写真を追加できます。',
-          '你可以编辑你合集中的地点和你导入的地点，并为其添加照片。', '你可以編輯你合集中的地點和你匯入的地點，並為其新增照片。',
-        ),
-      }
-      : null;
-
+  const role: Role | null = editor ? 'editor' : guide ? 'guide' : null;
   const words = levelWords(saved, t);
   const steps = levelSteps(saved);
   const open = (about: 'level' | 'role') => setSheet({ open: true, about });
@@ -112,17 +88,7 @@ export function HeroFace({ saved }: {
         </EngagementRing>
         {role && (
           <View style={s.roleHalo}>
-            <PressableScale
-              scaleTo={0.9}
-              contentStyle={[s.roleDisc, role.dress]}
-              accessibilityRole="button"
-              accessibilityLabel={role.name}
-              accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します', '说明这个身份可以做什么', '說明這個身份可以做什麼')}
-              onPress={() => open('role')}
-              testID="role-badge"
-            >
-              <Glyph name={role.icon} size={13} color={role.color} />
-            </PressableScale>
+            <RoleButton role={role} onPress={() => open('role')} />
           </View>
         )}
       </View>
@@ -130,32 +96,20 @@ export function HeroFace({ saved }: {
       <ActionSheet
         visible={sheet.open}
         onClose={close}
-        header={aboutRole ? (
-          // The disc itself, then its name: the mark that was pressed,
-          // above what it means.
-          <View style={sheetHeader} testID="badge-sheet-head">
-            <View style={[s.roleDisc, aboutRole.dress]}>
-              <Glyph name={aboutRole.icon} size={13} color={aboutRole.color} />
-            </View>
-            <Text style={h.title} accessibilityRole="header">{aboutRole.name}</Text>
-          </View>
-        ) : (
+        header={aboutRole ? <RoleHead role={aboutRole} /> : (
           // No pill beside "Level 15": it would say the title twice. The
           // steps at the end are the bar's figure, read.
-          <View style={sheetHeader} testID="badge-sheet-head">
-            <Text style={h.title} accessibilityRole="header">{words.title}</Text>
+          // On nothing, as a sheet's title is; the one card is under it.
+          <View style={sheetTitleRow} testID="badge-sheet-head">
+            <Text style={sheetTitleText} accessibilityRole="header">{words.title}</Text>
             <View style={h.steps}>
               <Text style={h.stepsText} testID="level-steps">{`${steps.done} / ${steps.of}`}</Text>
             </View>
           </View>
         )}
       >
-        {aboutRole ? (
-          <View style={h.body} testID="badge-sheet-body">
-            <Text style={h.lead}>{aboutRole.says}</Text>
-          </View>
-        ) : (
-          <View style={h.body} testID="badge-sheet-body">
+        {aboutRole ? <RoleBody role={aboutRole} whose="yours" /> : (
+          <View style={sheetBody} testID="badge-sheet-body">
             <View
               style={h.track}
               accessibilityRole="progressbar"
@@ -186,9 +140,6 @@ export function HeroFace({ saved }: {
 const BAR = 8;
 
 const h = StyleSheet.create({
-  // The sheet's rows' title (16 semibold, `ActionSheet`), a step up: it
-  // heads the sheet rather than naming one of several rows.
-  title: { flex: 1, color: colors.text, fontSize: 18, fontWeight: font.bold },
   // The steps, on a tint of the accent — the reader's look, as the
   // Statistics well on the Activity page is. A count's pill in shape.
   steps: {
@@ -196,12 +147,6 @@ const h = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft,
   },
   stepsText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
-  // The card the rows of other sheets stand on (`ActionSheet`'s group).
-  body: {
-    gap: 12, padding: space.cardPadding,
-    backgroundColor: colors.surfaceCard,
-    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
-  },
   // The accent on its own tint: both follow the look the reader chose.
   track: { height: BAR, borderRadius: BAR / 2, backgroundColor: colors.accentSoft, overflow: 'hidden' },
   fill: { height: BAR, borderRadius: BAR / 2, backgroundColor: colors.accent },

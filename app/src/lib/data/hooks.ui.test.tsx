@@ -33,6 +33,7 @@ const q = vi.hoisted(() => ({
   fetchCopiesOfList: vi.fn(),
   fetchPlacesInCommon: vi.fn(),
   fetchListsLikedInCommon: vi.fn(),
+  fetchRoleOf: vi.fn(),
   fetchCollectionStats: vi.fn(),
   fetchListUse: vi.fn(),
 }));
@@ -58,7 +59,7 @@ vi.mock('./preferences', async () => ({
 }));
 vi.mock('./people', () => ({
   fetchCuratorAvatars: vi.fn(), profileByHandle: vi.fn(), fetchLikesOnList: q.fetchLikesOnList, fetchCopiesOfList: q.fetchCopiesOfList,
-  fetchPlacesInCommon: q.fetchPlacesInCommon, fetchListsLikedInCommon: q.fetchListsLikedInCommon,
+  fetchPlacesInCommon: q.fetchPlacesInCommon, fetchListsLikedInCommon: q.fetchListsLikedInCommon, fetchRoleOf: q.fetchRoleOf,
 }));
 vi.mock('./shares', () => ({ fetchMyListShares: q.fetchMyListShares }));
 vi.mock('./stats', () => ({
@@ -71,7 +72,7 @@ vi.mock('./stats', () => ({
 }));
 
 import {
-  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, useListUseQuery, usePrefetchCollectionStats, useInCommonQuery, useListActivityOfQuery, useMyCollections, usePrefetchOwnListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
+  type ListActivityQuery, useCollectionStatsQuery, useCountView, useLikeCountsQuery, useListUseQuery, usePrefetchCollectionStats, useInCommonQuery, useRoleOfQuery, useListActivityOfQuery, useMyCollections, usePrefetchOwnListActivity, useMyLikesQuery, useMyListShares, useMyPreferences, usePlacesQuery, useSharedWithMe,
 } from './hooks';
 
 /** A request the test answers when it chooses — or never. */
@@ -492,6 +493,48 @@ describe('a list’s activity, kept and shared', () => {
 // One open of a list's page, one count (owner, 13 Nov 2026): per mount,
 // once the list's id is known, and never a word to the reader if the
 // count fails.
+// The mark a person wears on their page (16 Nov 2026).
+describe('the mark a person wears', () => {
+  const role = () => seen.role as Fetch<string | null>;
+  function Page({ me, person }: { me: string | null; person: string | null }) {
+    const f = useRoleOfQuery(me, person);
+    useEffect(() => { seen.role = f as Fetch<unknown>; });
+    return null;
+  }
+
+  it('asks about the person, and answers with their mark', async () => {
+    q.fetchRoleOf.mockResolvedValue('guide');
+    render(<Page me="u1" person="lan" />);
+    await waitFor(() => expect(role().data).toBe('guide'));
+    expect(q.fetchRoleOf).toHaveBeenCalledExactlyOnceWith('lan');
+  });
+
+  // Your own page wears your own mark, as other people see it.
+  it('asks about yourself too', async () => {
+    q.fetchRoleOf.mockResolvedValue('editor');
+    render(<Page me="u1" person="u1" />);
+    await waitFor(() => expect(role().data).toBe('editor'));
+    expect(q.fetchRoleOf).toHaveBeenCalledExactlyOnceWith('u1');
+  });
+
+  it('asks nothing for nobody signed in, or nobody to ask about', async () => {
+    for (const [me, person] of [[null, 'lan'], ['u1', null]] as [string | null, string | null][]) {
+      const view = render(<Page me={me} person={person} />);
+      await act(async () => {});
+      expect(role().data).toBeNull();
+      view.unmount();
+    }
+    expect(q.fetchRoleOf).not.toHaveBeenCalled();
+  });
+
+  it('answers no mark when the question fails', async () => {
+    q.fetchRoleOf.mockRejectedValue(new Error('timeout'));
+    render(<Page me="u1" person="lan" />);
+    await waitFor(() => expect(role().error).toBeTruthy());
+    expect(role().data).toBeNull();
+  });
+});
+
 // What the reader and one other person have in common (16 Nov 2026):
 // both halves in one answer, for the one pair.
 describe('what two people have in common', () => {

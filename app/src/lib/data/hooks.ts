@@ -21,7 +21,7 @@ import {
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import {
   fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, fetchListsLikedInCommon, fetchPlacesInCommon,
-  type FriendProfile, type PlaceInCommon, profileByHandle,
+  fetchRoleOf, type FriendProfile, type PersonRole, type PlaceInCommon, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
@@ -368,6 +368,27 @@ export const useInCommonQuery = (readerId: string | null | undefined, otherId: s
     [ask],
   );
   return useFetch(fetcher, NOTHING_IN_COMMON);
+};
+
+// ── the mark a person wears ──
+//
+// For a person's page (`PersonRole`, 16 Nov 2026): editor, guide, or
+// nothing. A plain fetch per page opened, as what two people have in
+// common is: the answer is about one person, asked where it is drawn.
+//
+// Yourself included — your own page wears your own mark, as other
+// people see it. Nobody signed in asks nothing: the database would
+// refuse, and a refusal is not worth a round trip to learn.
+//
+// A failure answers no mark. A disc is a small thing to be told about
+// and a wrong one is worse than none; the page says nothing of it.
+export const useRoleOfQuery = (readerId: string | null | undefined, personId: string | null | undefined) => {
+  const ask = readerId && personId ? personId : null;
+  const fetcher = useCallback(
+    () => (ask ? fetchRoleOf(ask) : Promise.resolve(null as PersonRole)),
+    [ask],
+  );
+  return useFetch(fetcher, null as PersonRole);
 };
 
 // ── a list's statistics, for whoever reads it ──
