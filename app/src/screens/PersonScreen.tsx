@@ -117,7 +117,7 @@ import { type Collection, coverUriOf, membersOf, useProfileByHandle } from '../l
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
-import { coverAmong, IN_COMMON_ON, listsBy } from '../lib/person';
+import { coverAmong, IN_COMMON_ON, listsBy, TOP_FRIEND_ON } from '../lib/person';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, display, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -160,9 +160,9 @@ export default function PersonScreen({ navigation, route }: {
   const friend = friendButton(personId);
   // The same button, small, for the header once the row has scrolled
   // away — a thing to do only (`actsOnly`): a fact is not worth the
-  // header's room.
+  // header's room. Switched off for now: `TOP_FRIEND_ON`.
   const top = usePastRow(useDuckOnScroll());
-  const topFriend = top.past ? friendButton(personId, { size: 'row', prefix: 'person-top', actsOnly: true }) : null;
+  const topFriend = TOP_FRIEND_ON && top.past ? friendButton(personId, { size: 'row', prefix: 'person-top', actsOnly: true }) : null;
 
   const tabClearance = useTabBarClearance();
   // A ring is a border, and a dynamic colour on a border flattens against
