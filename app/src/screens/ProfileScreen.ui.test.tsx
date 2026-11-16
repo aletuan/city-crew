@@ -703,6 +703,18 @@ describe('the four doors', () => {
   // "48 Saved places" opened whichever collection had been open. Each
   // door now lands on its tab's list — popped back to, aimed at Yours for
   // the two collection counts, with a fresh `at` that scrolls it to the top.
+  // 22 was the section headings' size, and four of them in a row were
+  // the loudest thing on the page (owner, 16 Nov 2026).
+  it('sets the numbers under the headings’ size and over their labels’', () => {
+    state.mine = [{ members: [p('a')] }];
+    draw();
+    const tile = screen.getByRole('button', { name: '1 Collections' });
+    const [n, label] = [...tile.querySelectorAll('[dir]')].map((e) => Number(textStyleOf(e as HTMLElement)?.fontSize));
+    expect(n).toBe(18);
+    expect(n).toBeLessThan(Number(textStyleOf(screen.getByText('About me'))?.fontSize));
+    expect(n).toBeGreaterThan(label);
+  });
+
   it('opens the list each number lives in, at its top, whatever was open there', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1234);
     const { raw, parent } = draw();
