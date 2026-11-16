@@ -31,6 +31,21 @@ import type { Collection } from './types';
 export const IN_COMMON_ON = false;
 
 /**
+ * Whether a person's page offers Add friend again in its header once the
+ * row of acts has scrolled away — off (owner, 16 Nov 2026).
+ *
+ * It was built that evening and switched off within the hour, before
+ * much of anybody had met it: a button arriving beside the ⋯ changes
+ * the one corner of the page whose control must be where the thumb left
+ * it, and the owner did not want the ⋯ unsettled for a convenience.
+ * Hidden, not removed, as "In common" above is: `usePastRow` and the
+ * small button in `PersonScreen` are as they were built and tested, and
+ * with this off the button is not drawn. The row under the name is
+ * unaffected.
+ */
+export const TOP_FRIEND_ON = false;
+
+/**
  * The public lists a person made, in the order the shelf holds them.
  *
  * The shelf (`useCollections`) is every public list, of every city,

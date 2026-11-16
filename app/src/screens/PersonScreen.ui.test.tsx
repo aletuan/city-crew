@@ -54,6 +54,7 @@ const state = vi.hoisted(() => ({
   common: { places: [] as unknown[], lists: [] as string[] },
   commonAsked: [] as [string | null, string | null][],
   inCommonOn: true,
+  topFriendOn: true,
   role: null as 'editor' | 'guide' | null,
   roleAsked: [] as [string | null, string | null][],
   lang: 'en' as 'en' | 'vi',
@@ -95,7 +96,8 @@ vi.mock('../lib/data', async (orig) => ({
 // otherwise, so the section that is built stays tested while it is off.
 vi.mock('../lib/person', async (orig) => {
   const real = await orig<typeof import('../lib/person')>();
-  return { ...real, get IN_COMMON_ON() { return state.inCommonOn; } };
+  // And the one that hides the header's friend button (`TOP_FRIEND_ON`).
+  return { ...real, get IN_COMMON_ON() { return state.inCommonOn; }, get TOP_FRIEND_ON() { return state.topFriendOn; } };
 });
 // The tab bar's duck, which hears every scroll of the page.
 const duck = vi.hoisted(() => vi.fn());
@@ -141,6 +143,7 @@ beforeEach(() => {
   state.common = { places: [], lists: [] };
   state.commonAsked = [];
   state.inCommonOn = true;
+  state.topFriendOn = true;
   state.role = null;
   state.roleAsked = [];
   state.lang = 'en';
@@ -515,6 +518,22 @@ describe('the row of acts', () => {
 describe('the friend button in the header', () => {
   const edge = (requester: string, addressee: string, status: 'pending' | 'accepted'): FriendshipRow =>
     ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z', responded_at: null }) as FriendshipRow;
+
+  // Hidden, not removed (owner, 16 Nov 2026): as shipped the header
+  // gains nothing on scroll, and the ⋯ stays where it was, alone.
+  it('is switched off as shipped: the header stays the ⋯ alone, however far the page scrolls', async () => {
+    const real = await vi.importActual<typeof import('../lib/person')>('../lib/person');
+    expect(real.TOP_FRIEND_ON).toBe(false);
+    state.topFriendOn = real.TOP_FRIEND_ON;
+    await show();
+    layRow();
+    scrollTo(900);
+    expect(screen.queryByTestId('person-top-add')).toBeNull();
+    expect(screen.getByTestId('person-more')).toBeTruthy();
+    // The row under the name is as it was.
+    expect(screen.getByTestId('person-add')).toBeTruthy();
+    expect(screen.getByTestId('person-message')).toBeTruthy();
+  });
 
   it('is not there until the row has scrolled away, and goes when the row is back', async () => {
     await show();
