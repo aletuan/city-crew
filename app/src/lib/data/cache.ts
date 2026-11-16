@@ -69,6 +69,90 @@ export function fitsCache(blob: string): boolean {
   return blob.length <= CACHE_MAX_CHARS;
 }
 
+// ── an answer longer than one row ──
+//
+// `CACHE_MAX_CHARS` is a bound on a row, and until 16 Nov 2026 it was a
+// bound on an answer too: a blob past it was not written and the last
+// one was removed, so the next launch waited for the network. That was
+// written when the largest blob was half the bound.
+//
+// The public shelf grew through it. It arrives as every public list with
+// its places embedded (`fetchCollections`); measured on the live project
+// that day, 62 lists holding 744 places came to about 1.56 million
+// characters, where a week earlier — eleven lists fewer — they had come
+// to about 1.3. So the shelf stopped being remembered: Explore opened on
+// the places it had kept and two grey cards where "From the community"
+// should be, for the seconds a megabyte and a half takes to come down,
+// which is how the owner met it.
+//
+// So a long answer is written as several rows, each inside the bound,
+// under one head that says how many and how long. Nothing about a row
+// changes — each is as readable on Android as it ever was — and nothing
+// about the answer does: the parts are the blob, cut.
+//
+// It does not make the answer smaller. The download is the same
+// megabyte and a half on every launch, behind the remembered copy now
+// rather than in front of the reader, and it grows with every list
+// published. Narrowing what a list carries of its places is the fix for
+// that, and is its own change (`fetchCollections` names it).
+
+/** The most rows one answer is cut into. Six is nine million characters:
+ *  past that the parse alone is a launch's worth of the JS thread, and
+ *  an answer that long is told to the traces rather than stored. */
+export const CACHE_MAX_PARTS = 6;
+
+/** The row a part is kept in: the answer's key, and which part. Under
+ *  the same `citycrew.cache.<kind>` head, so `cacheKind` still reads it. */
+export function partKey(key: string, i: number): string {
+  return `${key}.part${i}`;
+}
+
+/**
+ * A packed blob as the rows it is written in: itself when it fits one,
+ * its parts when it does not, and null when it is too long to keep.
+ *
+ * A cut never falls inside a surrogate pair. The catalog carries emoji,
+ * and half of one written to a row comes back as a replacement mark —
+ * a blob that no longer parses, on the launch it was kept for.
+ */
+export function splitCache(blob: string, size: number = CACHE_MAX_CHARS): string[] | null {
+  if (blob.length <= size) return [blob];
+  const parts: string[] = [];
+  for (let at = 0; at < blob.length;) {
+    let end = Math.min(at + size, blob.length);
+    const last = blob.charCodeAt(end - 1);
+    if (end < blob.length && last >= 0xd800 && last <= 0xdbff) end -= 1;
+    parts.push(blob.slice(at, end));
+    at = end;
+  }
+  return parts.length <= CACHE_MAX_PARTS ? parts : null;
+}
+
+/** The head of an answer kept in parts: how many, and how long they are
+ *  together — what a read checks before it trusts them. No `at`, so a
+ *  build that predates parts reads it as no cache (`unpackCache`). */
+export function packParts(parts: number, chars: number): string {
+  return JSON.stringify({ v: CACHE_VERSION, parts, chars });
+}
+
+/** A stored value read as such a head, or null when it is anything else
+ *  — an answer in one row, nothing, or a head from another version. */
+export function partsOf(raw: string | null): { parts: number; chars: number } | null {
+  // A head is short; an answer is not worth parsing twice to find out.
+  if (!raw || raw.length > 100) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const e = parsed as Record<string, unknown>;
+  if (e.v !== CACHE_VERSION || typeof e.parts !== 'number' || typeof e.chars !== 'number') return null;
+  if (!Number.isInteger(e.parts) || e.parts < 2 || e.parts > CACHE_MAX_PARTS) return null;
+  return { parts: e.parts, chars: e.chars };
+}
+
 /** Bump on any change to the shape of cached rows — see the note above. */
 export const CACHE_VERSION = 1;
 

@@ -5,11 +5,11 @@
 // plain async function a Node process can call. `hooks.ts` is the other
 // half — see `index.ts` for the whole arrangement.
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { shouldRefresh } from '../stale';
 import { startupTrace } from '../trace';
-import { CACHE_CATALOG, cacheKind, fitsCache, packCache, unpackCache } from './cache';
+import { CACHE_CATALOG, cacheKind, packCache, unpackCache } from './cache';
+import { readCache, writeCache } from './cacheStore';
 
 export type Fetch<T> = {
   loading: boolean;
@@ -119,20 +119,20 @@ export function usePersistedFetch<T>(
         setState({ loading: false, loaded: true, error: null, data, loadedAt: Date.now(), fromCache: false });
         if (asked) {
           const blob = packCache(data, Date.now());
-          // Too long to read back on Android (`CACHE_MAX_CHARS`): not
-          // written, and the last one removed with it. Kept, the old blob
-          // would go on opening the app for a week with an answer every
-          // later fetch had replaced — a closed place still listed, a new
-          // one missing. Without it, the next launch of this question
-          // waits for the network, which is the launch the app had before
-          // it cached anything. Marked, so a catalog that outgrows the
-          // phone shows up in the traces rather than as a slower launch.
-          if (fitsCache(blob)) {
-            AsyncStorage.setItem(asked, blob).catch(() => {});
-          } else {
-            AsyncStorage.removeItem(asked).catch(() => {});
-            startupTrace.mark(`cache:${cacheKind(asked)}:too-big`, blob.length);
-          }
+          // In as many rows as it takes (`writeCache`): one for nearly
+          // every answer, several for one past Android's row
+          // (`CACHE_MAX_CHARS`) — the public shelf, since 16 Nov 2026.
+          // Too long even for that, it is not written and the last one is
+          // removed: kept, the old blob would go on opening the app for a
+          // week with an answer every later fetch had replaced. Both are
+          // marked, so a catalog outgrowing the phone shows up in the
+          // traces rather than as a slower launch.
+          writeCache(asked, blob)
+            .then((rows) => {
+              if (rows === 0) startupTrace.mark(`cache:${cacheKind(asked)}:too-big`, blob.length);
+              else if (rows > 1) startupTrace.mark(`cache:${cacheKind(asked)}:parts`, rows);
+            })
+            .catch(() => {});
         }
       })
       // `loadedAt` is deliberately left where it was: a refresh that failed
@@ -158,7 +158,7 @@ export function usePersistedFetch<T>(
     // question, and free. Marks dedupe by name, so this is the launch's
     // first read of each kind and nothing after.
     const kind = cacheKind(key);
-    AsyncStorage.getItem(key)
+    readCache(key)
       .then((raw) => {
         if (!live) return;
         const t0 = Date.now();
@@ -240,7 +240,7 @@ function entryFor(key: string, empty: unknown): Entry {
   entries.set(key, e);
   // Once per key per launch: the entry is the memory from here on.
   if (CACHE_CATALOG) {
-    AsyncStorage.getItem(key)
+    readCache(key)
       .then((raw) => {
         const hit = unpackCache<unknown>(raw, Date.now());
         if (!hit || e.state.loadedAt !== null) return;
@@ -266,8 +266,7 @@ function load(key: string, fetcher: () => Promise<unknown>, empty: unknown) {
       e.inFlight = false;
       publish(e, { loading: false, loaded: true, error: null, data, loadedAt: Date.now(), fromCache: false });
       const blob = packCache(data, Date.now());
-      if (fitsCache(blob)) AsyncStorage.setItem(key, blob).catch(() => {});
-      else AsyncStorage.removeItem(key).catch(() => {});
+      writeCache(key, blob).catch(() => {});
     })
     .catch((err: Error) => {
       e.inFlight = false;
