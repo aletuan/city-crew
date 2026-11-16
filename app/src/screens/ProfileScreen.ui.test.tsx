@@ -365,15 +365,37 @@ describe('guest hub', () => {
 });
 
 describe('account identity', () => {
-  it('shows the full name, and the handle and the bio on one line with a dot between', () => {
-    state.profile = { full_name: 'Le Minh', handle: 'leminh', bio: 'Coffee first.' };
+  // The bio left the hero on 16 Nov 2026: that line is cut at two, and a
+  // bio is a paragraph. It is the first row of About me, whole.
+  it('shows the name and the handle in the hero, and the bio whole in About me', () => {
+    const long = 'Coffee first. '.repeat(11).trim();
+    state.profile = { full_name: 'Le Minh', handle: 'leminh', bio: long };
     draw();
     expect(screen.getByText('Le Minh')).toBeTruthy();
     const handle = screen.getByText('@leminh');
-    const bio = screen.getByText('Coffee first.');
-    // Runs of one Text: the same parent, reading "@leminh · Coffee first."
-    expect(handle.parentElement).toBe(bio.parentElement);
-    expect(handle.parentElement!.textContent).toBe('@leminh · Coffee first.');
+    // The handle stands alone: no dot, and nothing of the bio beside it.
+    expect(handle.textContent).toBe('@leminh');
+    expect(handle.parentElement!.textContent).not.toContain('Coffee');
+    expect(screen.queryByText(/·/)).toBeNull();
+    // Said once on the page, in the card, before the facts — and not cut.
+    expect(screen.getAllByText(long)).toHaveLength(1);
+    const bio = screen.getByTestId('profile-bio');
+    expect(bio.textContent).toBe(long);
+    const card = bio.closest('[data-testid="bio-row"]')!;
+    const email = screen.getByTestId('profile-email');
+    expect(card.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId('bio-add')).toBeNull();
+  });
+
+  it('offers "Add a bio" where the bio would be, and opens the editor on that field', () => {
+    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
+    const { raw } = draw();
+    expect(screen.queryByTestId('bio-row')).toBeNull();
+    const add = screen.getByTestId('bio-add');
+    const email = screen.getByTestId('profile-email');
+    expect(add.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByText('Add a bio'));
+    expect(raw.navigate).toHaveBeenCalledWith('EditProfile', { focus: 'bio' });
   });
 
   // The page's second heading (owner, 14 Nov 2026): under "Profile" at
@@ -382,17 +404,6 @@ describe('account identity', () => {
     state.profile = { full_name: 'Le Minh', handle: 'leminh' };
     draw();
     expect(textStyleOf(screen.getByText('Le Minh'))).toMatchObject({ fontSize: 20, lineHeight: 25 });
-  });
-
-  it('draws no dot when only one of the two is there', () => {
-    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
-    draw();
-    expect(screen.getByText('@leminh').parentElement!.textContent).toBe('@leminh');
-    cleanup();
-    state.profile = { full_name: 'Le Minh', bio: 'Coffee first.' };
-    draw();
-    expect(screen.getByText('Coffee first.').parentElement!.textContent).toBe('Coffee first.');
-    expect(screen.queryByText(/·/)).toBeNull();
   });
 
   it('falls back to the local part of the email when there is no name, and draws no empty handle', () => {

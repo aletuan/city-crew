@@ -22,7 +22,7 @@ import { useScheme } from '../../lib/theme';
 import { bgElevatedHex, colors } from '../../theme';
 import { goTo, type Nav } from '../../nav';
 import { HeroFace } from './HeroFace';
-import { RowGlyph, FeatureRow, AboutRow } from './rows';
+import { RowGlyph, FeatureRow, AboutRow, BioRow } from './rows';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
 import { ROW_GLYPH, TITLE_LINE, s } from './styles';
@@ -190,24 +190,22 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
               not the width. A name long enough to need two takes two and
               truncates after that.
 
-              The dot came back one line down. The handle and the bio each
-              had a line of their own under the name, and three stacked
-              lines of small grey type beside the ring read as a form; the
-              bio is a tagline — "Food lover", "Coffee first." — and a
-              tagline sits after the address the way it does on every
-              profile the reader has seen: "@trang · Food lover". One
-              line, two lines at most for a long tagline, and the handle
-              is never what gets cut because it comes first. Three Text
-              runs rather than one string, so each keeps its own colour
-              and a test can still find each on its own. */}
+              ── the bio left this line (owner, 16 Nov 2026) ──
+              It stood after the handle behind the app's dot, as a
+              tagline: "@trang · Food lover". That held while a bio was
+              three words. The field that writes it is multiline and had
+              no limit, and this line is cut at two — so a bio of any
+              length was shown as its first forty characters and an
+              ellipsis, with nowhere on the screen to read the rest. A
+              line that cannot grow is the wrong place for a paragraph.
+              It is the first thing in About me now (`BioRow`), across the
+              card's full measure, and the hero is a name and an address:
+              two lines whose height does not depend on what anyone
+              wrote. */}
           <View style={s.nameBlock}>
             <Text style={s.accountName} numberOfLines={2}>{name}</Text>
-            {profile.handle || profile.bio ? (
-              <Text style={s.handleLine} numberOfLines={2}>
-                {profile.handle ? <Text style={s.handle}>{`@${profile.handle}`}</Text> : null}
-                {profile.handle && profile.bio ? <Text style={s.handle}>{' · '}</Text> : null}
-                {profile.bio ? <Text style={s.heroBody}>{profile.bio}</Text> : null}
-              </Text>
+            {profile.handle ? (
+              <Text style={s.handle} numberOfLines={1}>{`@${profile.handle}`}</Text>
             ) : null}
           </View>
           {/* Edit profile, by itself, under the name. Words only: it wore a
@@ -281,6 +279,10 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
 
       <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介', '关于我', '關於我')}</Text>
       <Card style={s.featureCard}>
+        {/* What you say about yourself, before what the account knows
+            about you — or, while there is nothing, the way to say it.
+            See `BioRow`. */}
+        <BioRow bio={profile.bio} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} />
         <AboutRow
           icon="mail-outline"
           label={t('Email', 'Email', 'メール', '邮箱', '電子郵件')}

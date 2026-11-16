@@ -6,6 +6,7 @@ import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph } from '../../components/ui/glyph';
 import { CountBadge, PressableScale, Toggle } from '../../components/ui';
+import { useI18n } from '../../lib/i18n';
 import { colors } from '../../theme';
 import { GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './styles';
 
@@ -198,5 +199,51 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
         {children ?? <Text style={s.aboutValue} testID={valueTestID}>{value}</Text>}
       </View>
     </View>
+  );
+}
+
+/**
+ * The bio, as the first row of About me — or the invitation to write one.
+ *
+ * A paragraph, not a label over a value like the rows under it: the
+ * section's heading already says "About me", and a caption reading "Bio"
+ * above the one sentence on the card that is plainly a bio would be the
+ * heading said twice. No glyph either, so it takes the card's full
+ * measure; at `BIO_MAX` that is about four lines, and it is never cut.
+ *
+ * Empty, the row is a door instead: "Add a bio", which opens Edit profile
+ * with the cursor already in the field. A new account has no bio — sign-up
+ * does not ask for one, and should not: it is five fields and two steps
+ * already — so without this the only way to find the field was to press
+ * Edit profile without knowing what was behind it. It is drawn like the
+ * rows that go somewhere (glyph, words, chevron) because it is one, and in
+ * the accent because it is the one row on the card that asks for a tap.
+ *
+ * Only the account's owner ever sees the door: this card is on their own
+ * profile and nowhere else.
+ */
+export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
+  const { t } = useI18n();
+  if (bio) {
+    return (
+      <View style={[s.bioRow, s.featureRowDivider]} testID="bio-row">
+        <Text style={s.bioText} testID="profile-bio">{bio}</Text>
+      </View>
+    );
+  }
+  return (
+    <PressableScale
+      scaleTo={0.98}
+      contentStyle={[s.featureRow, s.featureRowDivider]}
+      onPress={onAdd}
+      accessibilityRole="button"
+      testID="bio-add"
+    >
+      <RowGlyph name="chatbubble-ellipses-outline" />
+      <Text style={s.bioAdd} numberOfLines={1}>
+        {t('Add a bio', 'Thêm giới thiệu', '自己紹介を追加', '添加个人简介', '添加個人簡介')}
+      </Text>
+      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+    </PressableScale>
   );
 }

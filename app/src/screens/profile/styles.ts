@@ -156,8 +156,6 @@ export const s = StyleSheet.create({
     lineHeight: 25,
   },
   handle: { color: colors.textTertiary, ...type.meta },
-  // The shared line's own box; the runs inside carry their colours.
-  handleLine: { ...type.meta, lineHeight: 21 },
   // The card surface, not the glass tint: on paper the tint is a grey
   // smudge on a warm page, where the About-me card sitting inches below
   // it is white. Matching that card makes the button read as part of the
@@ -195,6 +193,13 @@ export const s = StyleSheet.create({
 
   aboutLabel: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium, lineHeight: CAPTION_LINE },
   aboutValue: { color: colors.text, fontSize: 16, fontWeight: font.regular, lineHeight: 21 },
+  // The bio: the values' own type, so the paragraph and the answers under
+  // it read as one card, with a line a point taller because it is the one
+  // text here that runs to several.
+  bioRow: { paddingVertical: 14 },
+  bioText: { color: colors.text, fontSize: 16, fontWeight: font.regular, lineHeight: 22 },
+  // The door shown in its place — see `BioRow`.
+  bioAdd: { flex: 1, color: colors.accent, fontSize: 16, fontWeight: font.medium },
 
   // Both on the button scale's 44 (owner, 28 Oct 2026), where padding
   // alone had made Sign out 46 and Delete 40 in the same footer.
