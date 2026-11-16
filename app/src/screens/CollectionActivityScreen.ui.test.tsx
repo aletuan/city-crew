@@ -542,6 +542,22 @@ describe('the rows', () => {
     expect(rowLines()).toEqual([['Lan Phạm 5m']]);
   });
 
+  // A face opens that person's page (16 Nov 2026) — `PersonScreen`.
+  it('opens a person’s page from their face, by their handle, and nothing for somebody with none', async () => {
+    data.fetchLikesOnList.mockImplementation(async () => [
+      like(ago(5 * MIN), 'lan', 'Lan Phạm'),
+      like(ago(9 * MIN), null, null),
+    ]);
+    const navigation = await show();
+    const [lan, gone] = screen.getAllByTestId('activity-row');
+    fireEvent.click(within(lan).getByTestId('activity-open-person'));
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'lan' });
+    // The badge is still on the face that is pressed.
+    expect(within(lan).getByTestId('activity-open-person').contains(within(lan).getByTestId('activity-badge-like'))).toBe(true);
+    expect(within(gone).queryByTestId('activity-open-person')).toBeNull();
+    expect(within(gone).getByTestId('activity-badge-like')).toBeTruthy();
+  });
+
   // No name: the handle is the name, bare, with the age beside it — as
   // the collection card's head draws a handle alone.
   it('draws a handle with no name bare, on one line with its age', async () => {
@@ -589,7 +605,7 @@ describe('the rows', () => {
   it('draws a 40pt face', async () => {
     data.fetchLikesOnList.mockImplementation(async () => [like(ago(5 * MIN), 'lan')]);
     await show();
-    const face = whoOf(screen.getByTestId('activity-row')).firstElementChild as HTMLElement;
+    const face = screen.getByTestId('activity-badge-like').parentElement as HTMLElement;
     expect([viewStyleOf(face).width, viewStyleOf(face).height]).toEqual([40, 40]);
   });
 
@@ -609,8 +625,10 @@ describe('the rows', () => {
     expect(copied.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.accentInk));
     for (const b of [liked, copied]) {
       expect(viewStyleOf(b)).toMatchObject({ position: 'absolute', right: -3, bottom: -3, width: 20, borderWidth: 2 });
-      // Pinned on the face itself, not beside it.
-      expect(b.parentElement).toBe(b.closest('[data-testid="activity-who"]')!.firstElementChild);
+      // Pinned on the face itself, not beside it: the 40pt face, which
+      // leads the row's who.
+      expect(viewStyleOf(b.parentElement!)).toMatchObject({ width: 40, height: 40 });
+      expect(b.closest('[data-testid="activity-who"]')!.firstElementChild!.contains(b)).toBe(true);
     }
   });
 

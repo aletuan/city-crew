@@ -394,6 +394,23 @@ describe('your friends', () => {
     crew.mutual = { a: 3 };
   });
 
+  // A press opens their page (16 Nov 2026); the long press and the ⋯
+  // still open the sheet.
+  it('opens a friend’s page on a press of their row, by their handle', () => {
+    const navigation = nav();
+    render(<CrewScreen navigation={navigation} />);
+    fireEvent.click(screen.getByTestId('crew-friend-0'));
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'anh' });
+  });
+
+  it('opens nothing for a friend whose profile has not arrived', () => {
+    crew.people = {};
+    const navigation = nav();
+    render(<CrewScreen navigation={navigation} />);
+    fireEvent.click(screen.getByTestId('crew-friend-0'));
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
   it('shows how many places you both save', () => {
     render(<CrewScreen navigation={nav()} />);
     // After the name, on the second line.

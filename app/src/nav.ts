@@ -123,6 +123,10 @@ export type RootStackParamList = {
    *  and the last seven days — from its Activity page's "Statistics ›".
    *  By slug, for the reason `CollectionActivity` is. */
   CollectionStats: { slug: string };
+  /** A person's page, opened by pressing their face (16 Nov 2026). By
+   *  handle rather than id: a handle is what a link outside the app can
+   *  carry later, and every row of people already holds one. */
+  Person: { handle: string };
   /** `from` is a collection the planner should start from, ticked on
    *  arrival — the detail screen's "Plan a trip". `at` is the moment of
    *  the tap, so a repeat tap on the same list is a new param. */

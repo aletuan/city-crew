@@ -687,15 +687,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           </Text>
                           {p ? <Text style={s.meta}>{atHandle(p.handle)}</Text> : null}
                         </View>
-                        <PressableScale
-                          onPress={() => openRequestSheet(r.requester, p)}
-                          scaleTo={0.85}
-                          hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项', '選項')}
-                        >
-                          <Glyph name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
-                        </PressableScale>
+                        <Options onPress={() => openRequestSheet(r.requester, p)} />
                       </View>
                       <View style={s.answers}>
                         <PressableScale
@@ -853,6 +845,10 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     <PressableScale
                       key={id}
                       contentStyle={[s.row, i > 0 && s.rowDivider]}
+                      // A press opens their page (16 Nov 2026); until then
+                      // the row answered only a long press. Nothing to
+                      // open for a profile that has not arrived.
+                      onPress={p ? () => navigation.navigate('Person', { handle: p.handle }) : undefined}
                       onLongPress={() => openFriendSheet(known(id), mutual[id])}
                       accessibilityLabel={p ? atHandle(p.handle) : id}
                       testID={`crew-friend-${i}`}
@@ -863,15 +859,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           long-press stays, but a gesture with no mark on
                           the screen is a feature only its author knows
                           about. */}
-                      <PressableScale
-                        onPress={() => openFriendSheet(known(id), mutual[id])}
-                        scaleTo={0.85}
-                        hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项', '選項')}
-                      >
-                        <Glyph name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
-                      </PressableScale>
+                      <Options onPress={() => openFriendSheet(known(id), mutual[id])} />
                     </PressableScale>
                   );
                 })}
@@ -966,6 +954,25 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       />
       {reportSheet}
     </Screen>
+  );
+}
+
+/** The visible door to a row's sheet — the ⋯ at its right end. Twice on
+ *  this screen, word for word, until 16 Nov 2026; one piece now, and
+ *  outside the screen's function, which is over its ceiling
+ *  (`oversize.js`). */
+function Options({ onPress }: { onPress: () => void }) {
+  const { t } = useI18n();
+  return (
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.85}
+      hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
+      accessibilityRole="button"
+      accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项', '選項')}
+    >
+      <Glyph name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+    </PressableScale>
   );
 }
 
