@@ -45,6 +45,7 @@ import AvatarPicker from '../components/AvatarPicker';
 import TastePicker from '../components/TastePicker';
 import { Card, PressableScale, successHaptic, Toggle } from '../components/ui';
 import { useAuthActions, useProfile, useSession } from '../lib/auth';
+import { BIO_MAX } from '../lib/bio';
 import { CATEGORIES } from '../lib/categories';
 import { useCurrentCity } from '../lib/city';
 import { clearMyHistory, savePreferences, useMyPreferences } from '../lib/data';
@@ -54,7 +55,51 @@ import { cleanTaste } from '../lib/tastepick';
 import { colors, font, space } from '../theme';
 import type { Nav } from '../nav';
 
-export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
+type EditRoute = { params?: { focus?: 'bio' } };
+
+/**
+ * The bio's row of the card: the field, and how much of it is left.
+ *
+ * Its own component for the counter, and because the screen's function
+ * is at its ceiling (`oversize.js`) and this is the one row with
+ * something to work out.
+ *
+ * `maxLength` is what enforces `BIO_MAX`; the counter is what makes the
+ * stop explicable — a field that silently refuses a keystroke reads as a
+ * broken keyboard. A bio written before the limit can be longer than it:
+ * the platform lets such a value be shortened but not added to, and the
+ * counter turns to the error colour so the reader can see why.
+ *
+ * `autoFocus` when the route asked for it: Profile's "Add a bio" row
+ * leads here, and its promise is the field, not the form (see `nav.ts`).
+ */
+function BioField({ value, onChangeText, route }: {
+  value: string;
+  onChangeText: (v: string) => void;
+  route?: EditRoute;
+}) {
+  const { t } = useI18n();
+  return (
+    <View>
+      <FieldRow
+        grouped
+        icon="chatbubble-ellipses-outline"
+        label={t('Bio', 'Giới thiệu', '自己紹介', '个人简介', '個人簡介')}
+        placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家', '咖啡爱好者 · 周末探索家', '咖啡愛好者 · 週末探索家')}
+        value={value}
+        onChangeText={onChangeText}
+        multiline
+        maxLength={BIO_MAX}
+        autoFocus={route?.params?.focus === 'bio'}
+      />
+      <Text style={[s.bioCount, value.length > BIO_MAX && s.bioCountOver]} testID="bio-count">
+        {`${value.length}/${BIO_MAX}`}
+      </Text>
+    </View>
+  );
+}
+
+export default function EditProfileScreen({ navigation, route }: { navigation: Nav; route?: EditRoute }) {
   const { t } = useI18n();
   const { city } = useCurrentCity();
   const { session } = useSession();
@@ -326,15 +371,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         onChangeText={setLocation}
       />
       <View style={s.fieldLine} />
-      <FieldRow
-        grouped
-        icon="chatbubble-ellipses-outline"
-        label={t('Bio', 'Giới thiệu', '自己紹介', '个人简介', '個人簡介')}
-        placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家', '咖啡爱好者 · 周末探索家', '咖啡愛好者 · 週末探索家')}
-        value={bio}
-        onChangeText={setBio}
-        multiline
-      />
+      <BioField value={bio} onChangeText={setBio} route={route} />
       </Card>
       {/* Chips rather than a box, and the reason is in the rows the box
           collected: it accepted "Sleep" and "Nitendo" as readily as
@@ -428,6 +465,15 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
+  // Under the bio, at the card's right edge, in the labels' own small
+  // type: a figure about the field, not a second value in it. Pulled up
+  // under the text so it reads as the field's last line rather than as a
+  // row of its own.
+  bioCount: {
+    alignSelf: 'flex-end', marginTop: -6, paddingHorizontal: space.cardPadding, paddingBottom: 10,
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.medium, fontVariant: ['tabular-nums'],
+  },
+  bioCountOver: { color: colors.bad },
   // Inside the card, padded the way the toggle row below it is — the
   // two `preferences` blocks should measure the same from the border in.
   taste: { gap: 6, paddingHorizontal: space.cardPadding, paddingVertical: 14 },

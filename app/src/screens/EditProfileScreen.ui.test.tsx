@@ -16,7 +16,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, textStyleOf, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 
 // `Alert` from react-native-web is a silent no-op, so it is caught at the
@@ -140,6 +140,44 @@ beforeEach(() => {
   state.profile = { handle: 'minh', full_name: 'Minh Le', location: 'Hanoi', bio: 'Coffee first', interests: '', avatar_url: '' };
   state.prefs = { data: { categories: [], budget_vnd: null, history_on: true }, loadedAt: 1 };
   state.city = { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
+});
+
+describe('the bio and its limit', () => {
+  it('stops at 160 and says how much has been used', () => {
+    renderScreen();
+    expect(bioField().maxLength).toBe(160);
+    expect(screen.getByTestId('bio-count').textContent).toBe('12/160');
+    type(bioField(), 'Pho at dawn');
+    expect(screen.getByTestId('bio-count').textContent).toBe('11/160');
+  });
+
+  // A bio from before the limit: shown whole, and the counter says why
+  // nothing more can be typed.
+  it('turns the counter to the error colour over a bio already past the limit', () => {
+    renderScreen();
+    const quiet = textStyleOf(screen.getByTestId('bio-count'))?.color;
+    cleanup();
+    state.profile = { ...state.profile, bio: 'x'.repeat(161) };
+    renderScreen();
+    expect(bioField().value).toHaveLength(161);
+    expect(screen.getByTestId('bio-count').textContent).toBe('161/160');
+    expect(textStyleOf(screen.getByTestId('bio-count'))?.color).not.toBe(quiet);
+    cleanup();
+    state.profile = { ...state.profile, bio: 'x'.repeat(160) };
+    renderScreen();
+    expect(textStyleOf(screen.getByTestId('bio-count'))?.color).toBe(quiet);
+  });
+
+  it('opens with the cursor in the bio only when the route asks for it', () => {
+    renderScreen();
+    expect(document.activeElement).not.toBe(bioField());
+    cleanup();
+    render(<EditProfileScreen navigation={nav()} route={{ params: { focus: 'bio' } }} />);
+    expect(document.activeElement).toBe(bioField());
+    cleanup();
+    render(<EditProfileScreen navigation={nav()} route={{}} />);
+    expect(document.activeElement).not.toBe(bioField());
+  });
 });
 
 describe('the form as it opens', () => {

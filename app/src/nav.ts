@@ -188,7 +188,10 @@ export type RootStackParamList = {
   /** `email`: what Sign in already held, so the reader does not type it
    *  twice. Filled in, still editable, and nothing is sent until asked. */
   ForgotPassword: { email?: string } | undefined;
-  EditProfile: undefined;
+  /** `focus`: the field to open with the keyboard already in it — the
+   *  bio, from Profile's "Add a bio" row, which is a promise to land the
+   *  reader on that field and not at the top of a form. */
+  EditProfile: { focus?: 'bio' } | undefined;
   /** Closing the account. A route rather than the two alerts it replaced:
    *  what makes a destructive tap deliberate here is having navigated to
    *  a screen that is about nothing else, and buttons this app lays out
