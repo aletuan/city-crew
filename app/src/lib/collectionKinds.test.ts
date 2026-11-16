@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseKind, collectionKinds, derivedKinds, narrowTo } from './collectionKinds';
+import { derivedKinds, narrowTo } from './collectionKinds';
 
 const p = (...categories: string[]) => ({ categories });
 const many = (n: number, ...categories: string[]) => Array.from({ length: n }, () => p(...categories));
@@ -39,31 +39,6 @@ describe('derivedKinds', () => {
 
   it('is empty for an empty list', () => {
     expect(derivedKinds([])).toEqual([]);
-  });
-});
-
-describe('collectionKinds', () => {
-  const list = [p('cafes'), p('cafes', 'nightlife')];
-
-  it('is what the places carry when the owner has said nothing', () => {
-    expect(collectionKinds(list, {})).toEqual(['cafes', 'nightlife']);
-    expect(collectionKinds(list, { hidden: [] })).toEqual(['cafes', 'nightlife']);
-  });
-
-  it('takes off what the owner hid, and keeps the order of the rest', () => {
-    expect(collectionKinds([...list, p('eats'), p('eats'), p('eats')], { hidden: ['cafes'] })).toEqual(['eats', 'nightlife']);
-  });
-});
-
-describe('chooseKind', () => {
-  it('hides a kind, once however often it is hidden', () => {
-    expect(chooseKind({ hidden: ['eats'] }, 'cafes', false)).toEqual({ hidden: ['eats', 'cafes'] });
-    expect(chooseKind({ hidden: ['cafes'] }, 'cafes', false)).toEqual({ hidden: ['cafes'] });
-  });
-
-  it('shows a kind again by not hiding it', () => {
-    expect(chooseKind({ hidden: ['eats', 'cafes'] }, 'cafes', true)).toEqual({ hidden: ['eats'] });
-    expect(chooseKind({ hidden: [] }, 'cafes', true)).toEqual({ hidden: [] });
   });
 });
 

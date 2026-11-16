@@ -99,9 +99,6 @@ export type RootStackParamList = {
        *  because a list read from the launch cache may not carry its id. */
       sourceId?: string;
       cityId: string; title: string; desc: string; placeSlugs: string[];
-      /** The kinds the original's owner hid, carried like its description.
-       *  Optional for the same launch-cache reason as `sourceId`. */
-      kinds?: { hidden: string[] };
     };
   } | undefined;
   PlaceDetail: { slug: string };

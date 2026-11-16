@@ -677,8 +677,7 @@ describe('saving a copy of somebody else’s list', () => {
     await waitFor(() => expect(copyCollection).toHaveBeenCalledWith({
       ownerId: 'u1', cityId: 'hanoi', title: 'Mine now', desc: 'By @linh', placeSlugs: ['sam', 'heim'],
       copiedFrom: 'c-src',
-      // The source hid no kinds, and none were hidden here.
-      kinds: { hidden: [] },
+      // And not a word about chips: a copy's are its places'.
     }));
     // Auto, the common case, needs no second write.
     expect(updateCollection).not.toHaveBeenCalled();
@@ -714,91 +713,39 @@ describe('saving a copy of somebody else’s list', () => {
   });
 });
 
-// The chips (owner, 15 Oct 2026): every kind the list's places carry, in
-// the order the card shows them, lit unless hidden; a tap hides one or
-// shows it again. Nothing to put on — a kind no place carries is not
-// offered. A rename reads its own row; a copy, the original's.
+// No chips in the form (owner, 16 Nov 2026). From 15 Oct it showed every
+// kind the list's places carry, each a toggle that hid it from the list's
+// page; the kinds are worked out from the places now and the form has
+// nothing to say about them — see `lib/collectionKinds`.
 describe('the categories', () => {
   const typed = (p: Place, ...categories: string[]) => ({ ...(p as object), categories }) as unknown as Place;
   const CAFE = typed(HEIM, 'cafes');
   const BAR = typed(SAM, 'nightlife', 'cafes');
-  const pick = (k: string) => screen.getByTestId(`collection-kind-pick-${k}`);
-  const lit = () => ['cafes', 'nightlife'].filter((k) => pick(k).getAttribute('aria-selected') === 'true');
-  const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   const rename = (over: object = {}) => {
     catalog.data = [CAFE, BAR];
     saved.data = [{ ...(listOf([CAFE, BAR]) as object), ...over }];
-    // The title as the detail screen passes it, so a chip alone can light ✓.
     render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
   };
 
-  it('offers only the kinds the places carry, most places first, all lit', () => {
+  it('are not in the form, whatever the places carry', () => {
     rename();
-    const field = screen.getByTestId('collection-kinds-field');
-    expect(field.textContent).toContain('CATEGORIES');
-    const labels = [...field.querySelectorAll('[role="button"]')].map((b) => b.textContent);
-    // Both are cafés, one a bar too: Cafés leads, and nothing else is offered.
-    expect(labels).toEqual(['Cafés', 'Nightlife']);
-    expect(screen.queryByTestId('collection-kind-pick-nature')).toBeNull();
-    expect(lit()).toEqual(['cafes', 'nightlife']);
+    expect(screen.queryByTestId('collection-kinds-field')).toBeNull();
+    expect(screen.queryByText('CATEGORIES')).toBeNull();
+    expect(screen.queryByText('Cafés')).toBeNull();
+    expect(screen.queryByText('Nightlife')).toBeNull();
+    // The cover picker, which stood under them, is still there.
+    expect(screen.getByText('COVER')).toBeTruthy();
   });
 
-  it('starts from the kinds the owner hid on the row', () => {
+  // A row that still holds a kind hidden on an older build is saved
+  // without a word about it: this form neither clears it nor repeats it.
+  it('are not in what a rename saves, on a row that still holds one hidden', async () => {
     rename({ kinds_hidden: ['nightlife'] });
-    expect(lit()).toEqual(['cafes']);
-  });
-
-  // Untouched, the rename writes no chips at all — and a tap and its undo
-  // is untouched: the ✓ stays dim.
-  it('writes nothing about chips it only showed', async () => {
-    rename();
-    const tick = () => screen.getByRole('button', { name: 'Save changes' }).getAttribute('aria-disabled');
-    expect(tick()).toBe('true');
-    fireEvent.click(pick('nightlife'));
-    expect(tick()).not.toBe('true');
-    fireEvent.click(pick('nightlife'));
-    expect(tick()).toBe('true');
+    expect(screen.getByRole('button', { name: 'Save changes' }).getAttribute('aria-disabled')).toBe('true');
     fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Late bars' } });
-    save();
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(updateCollection).toHaveBeenCalled());
-    expect((updateCollection.mock.calls[0] as unknown[])[1]).not.toHaveProperty('kinds', expect.anything());
-  });
-
-  it('saves a kind hidden, and one shown again, as the owner’s word', async () => {
-    rename({ kinds_hidden: ['cafes'] });
-    fireEvent.click(pick('cafes'));
-    fireEvent.click(pick('nightlife'));
-    expect(lit()).toEqual(['cafes']);
-    save();
-    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({
-      kinds: { hidden: ['nightlife'] },
-    })));
-  });
-
-  it('carries a copy’s hidden kinds from the original, with this form’s own on top', async () => {
-    catalog.data = [CAFE, BAR];
-    render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: {
-      sourceId: 'c-src', title: 'Hanoi by night', desc: '', cityId: 'hanoi', placeSlugs: ['heim', 'sam'],
-      kinds: { hidden: ['cafes'] },
-    } })} />);
-    expect(lit()).toEqual(['nightlife']);
-    fireEvent.click(pick('cafes'));
-    fireEvent.click(screen.getByRole('button', { name: 'Save the copy' }));
-    await waitFor(() => expect(copyCollection).toHaveBeenCalledWith(expect.objectContaining({
-      kinds: { hidden: [] },
-    })));
-  });
-
-  // Nothing carried, nothing to hide: a brand-new list, or one whose
-  // places nobody has classified.
-  it('is not offered where the places carry no kind', () => {
-    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    expect(screen.queryByTestId('collection-kinds-field')).toBeNull();
-    cleanup();
-    catalog.data = [HEIM, SAM];
-    saved.data = [listOf([HEIM, SAM])];
-    render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
-    expect(screen.queryByTestId('collection-kinds-field')).toBeNull();
+    expect(updateCollection.mock.calls[0]).toEqual(['night-bar', { title: 'Late bars', desc: '', coverPhotoId: null }]);
   });
 });
 

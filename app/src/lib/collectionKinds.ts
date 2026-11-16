@@ -1,10 +1,9 @@
 // Which categories a collection wears as chips — and narrows by.
 //
-// Worked out from the list's own places, then corrected by its owner:
-// chips come from the category vocabulary and nowhere else (no free
-// words, nothing read out of the title, which owners already use for
-// their own conventions), they are derived rather than typed, and the
-// owner can take one off (owner, 15 Oct 2026).
+// Worked out from the list's own places and nothing else: chips come
+// from the category vocabulary (no free words, nothing read out of the
+// title, which owners already use for their own conventions), and they
+// are derived rather than typed.
 //
 // ── every kind the places carry, most places first ──
 //
@@ -22,26 +21,42 @@
 // 10 three, 4 four and 1 six (the Đà Lạt café list). No cap, then: the
 // most a card has to wrap is two lines.
 //
-// ── what is stored ──
+// ── nothing is stored, and the owner has no say (owner, 16 Nov 2026) ──
 //
-// Only the kinds the owner took off (`kinds_hidden`), never the derived
-// set — see `20261015090000_collection_kinds.sql` for why a list that is
-// still growing must not have its chips frozen at a save.
+// From 15 Oct an owner could take a chip off in the list's form: "From
+// the places in it. Tap one to hide it." The kinds taken off were kept in
+// `kinds_hidden`, and stuck however many more such places arrived. The
+// owner of the app asked what the control was for, and then for it to go.
 //
-// Putting a kind on (`kinds_added`) went with the threshold: every kind a
-// place carries already shows, so the only kind left to add is one no
-// place carries — a chip that says something untrue of the list and
-// filters it to nothing. The column stays, written empty.
+// Measured on the live lists that day: 1 of 94 had anything hidden —
+// "Về đêm" off a lunch list of 27 places, two of which carry it. On the
+// other 93 the control changed nothing, and on a list of one kind it
+// could only do harm: hide the one chip and the card no longer says what
+// the list is, and the Community Mosaic no longer sits it with its kind.
+// A chip is also the list's filter, so a hidden one took away the way in
+// to places that are in the list all the same. What the list *is* is
+// said by the order, which no setting has to keep true.
+//
+// Rejected with it: keeping the control only on lists of two kinds or
+// more. That drops the one-kind harm and keeps a setting one list in
+// ninety-four used.
+//
+// The columns stay in the database, unread and unwritten by this app:
+// `kinds_hidden`, and `kinds_added` beside it (retired on 15 Oct with
+// the threshold, when the only kind left to add was one no place
+// carries). Builds in the field that have not taken this update still
+// select both, and a dropped column is a failed query there: no lists at
+// all, for the sake of tidiness. Until they are gone those builds also
+// still honour the one hidden chip, so that list shows two chips on an
+// old build and three on this one.
 
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, type Categorisable } from './categories';
-
-export type KindChoice = { hidden: readonly string[] };
 
 const rank = (k: string) => CATEGORY_ORDER.indexOf(k as (typeof CATEGORY_ORDER)[number]);
 
 /**
- * Every category the places carry, most places first, the filter row's
- * order breaking ties. Keys the table does not know are not counted — a
+ * The chips a list shows, and narrows by: every category its places
+ * carry, most places first, the filter row's order breaking ties. Keys the table does not know are not counted — a
  * chip is a category's glyph and colour, and an unknown key has neither.
  */
 export function derivedKinds(members: readonly Categorisable[]): string[] {
@@ -54,23 +69,6 @@ export function derivedKinds(members: readonly Categorisable[]): string[] {
   return [...tally]
     .sort(([a, n], [b, m]) => m - n || rank(a) - rank(b))
     .map(([k]) => k);
-}
-
-/** The chips a list shows: what its places carry, less what the owner
- *  took off. */
-export function collectionKinds(members: readonly Categorisable[], choice: Partial<KindChoice>): string[] {
-  const hidden = new Set(choice.hidden ?? []);
-  return derivedKinds(members).filter((k) => !hidden.has(k));
-}
-
-/**
- * The owner shows or hides one chip. Hidden sticks — however many more
- * places of that kind arrive, the owner said it is not what this list
- * is — and shown again is simply not hidden.
- */
-export function chooseKind(choice: KindChoice, key: string, on: boolean): KindChoice {
-  const hidden = choice.hidden.filter((k) => k !== key);
-  return { hidden: on ? hidden : [...hidden, key] };
 }
 
 /**

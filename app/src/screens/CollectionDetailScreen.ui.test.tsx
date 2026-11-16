@@ -2091,8 +2091,7 @@ describe("somebody else's list", () => {
         // on the row and the curator's Activity, not the copy's text.
         desc: 'Where we eat.',
         placeSlugs: ['pho', 'cafe', 'museum'],
-        // The kinds the original's owner hid go with it; this one has none.
-        kinds: { hidden: [] },
+        // And nothing about kinds: a copy's are its places'.
       },
     });
   });
@@ -2502,13 +2501,14 @@ describe('the chips', () => {
     expect(screen.queryByText('All')).toBeNull();
   });
 
-  it('leaves out what the owner hid', () => {
+  // An owner could hide a kind from 15 Oct to 16 Nov 2026, and a row may
+  // still say so (as it may still say one was "put on", retired earlier).
+  // Neither is read: the row shows what the places carry.
+  it('shows every kind the places carry, whatever an older build left on the row', () => {
     eatery();
-    state.mine = [collection({ kinds_hidden: ['eats'], kinds_added: ['nature'] }, four)];
+    state.mine = [collection({ kinds_hidden: ['eats'], kinds_added: ['nature'] } as Partial<Collection>, four)];
     show();
-    // A kind once "put on" is retired with the threshold: it shows only
-    // if a place carries it.
-    expect(screen.getByTestId('collection-kinds').textContent).toBe('CafésCultureNightlife');
+    expect(screen.getByTestId('collection-kinds').textContent).toBe('EatsCafésCultureNightlife');
   });
 
   it('speaks the reader’s language', () => {
@@ -2742,17 +2742,22 @@ describe('the chips', () => {
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
   });
 
-  it('carries the kinds the original’s owner hid into a copy', () => {
+  // A copy took the original's hidden kinds with it until 16 Nov 2026;
+  // its kinds are its places' now, like every list's.
+  it('hands a copy nothing about kinds, on a list that still holds one hidden', async () => {
     eatery();
     state.mine = [];
-    state.cols = [theirs({ kinds_hidden: ['eats'] }, four)];
+    state.cols = [theirs({ kinds_hidden: ['eats'] } as Partial<Collection>, four)];
     const { raw } = show();
     openMenu();
     pick('Save a copy');
     endModalFade();
-    return waitFor(() => expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', expect.objectContaining({
-      copyFrom: expect.objectContaining({ kinds: { hidden: ['eats'] } }),
-    })));
+    await waitFor(() => expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
+      copyFrom: {
+        sourceId: expect.any(String), cityId: expect.any(String), title: expect.any(String),
+        desc: expect.any(String), placeSlugs: expect.any(Array),
+      },
+    }));
   });
 });
 

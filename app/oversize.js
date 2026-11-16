@@ -47,7 +47,7 @@
 const CEILING = { lines: 150, complexity: 25 };
 
 const OVERSIZE = {
-  'src/screens/CollectionDetailScreen.tsx': { lines: 811, complexity: 142 },
+  'src/screens/CollectionDetailScreen.tsx': { lines: 810, complexity: 142 },
   'src/screens/CollectionsScreen.tsx': { lines: 728, complexity: 56 },
   'src/screens/CrewScreen.tsx': { lines: 664, complexity: 32 },
   'src/screens/PlaceDetailScreen.tsx': { lines: 663, complexity: 118 },
@@ -59,7 +59,7 @@ const OVERSIZE = {
   'src/screens/GalleryScreen.tsx': { lines: 356, complexity: 46 },
   'src/screens/PlanEditScreen.tsx': { lines: 317 },
   'src/screens/profile/AccountProfile.tsx': { lines: 270, complexity: 28 },
-  'src/screens/CollectionFormScreen.tsx': { lines: 299, complexity: 47 },
+  'src/screens/CollectionFormScreen.tsx': { lines: 268, complexity: 40 },
   'src/screens/TripDetailScreen.tsx': { lines: 294, complexity: 34 },
   'src/components/ExploreFilterSheet.tsx': { lines: 280 },
   'src/screens/EditProfileScreen.tsx': { lines: 266, complexity: 27 },

@@ -50,7 +50,7 @@ import { useListRank } from '../lib/tasteProfile';
 import { likesWorthShowing } from '../lib/likes';
 import { isNewList } from '../lib/newest';
 import { leadingCity, mosaicCaption, mosaicGroups, mosaicRows, type MosaicEntry, type MosaicRow } from '../lib/collectionMosaic';
-import { collectionKinds as listKinds } from '../lib/collectionKinds';
+import { derivedKinds } from '../lib/collectionKinds';
 import NewBadge from '../components/NewBadge';
 import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
@@ -578,7 +578,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // order — a chip already says which city, and a search ranks by hits.
   const groups = useMemo(() => (onYours || communityView !== 'mosaic' || asked ? null : mosaicGroups(sifted, {
     cityOf: (c) => leadingCity(membersOf(c, places).map((p) => p.city_id), c.city_id),
-    kindOf: (c) => listKinds(membersOf(c, places), { hidden: c.kinds_hidden ?? [] })[0] ?? null,
+    kindOf: (c) => derivedKinds(membersOf(c, places))[0] ?? null,
     rank,
     home: here?.id,
   })), [onYours, communityView, asked, sifted, places, rank, here?.id]);

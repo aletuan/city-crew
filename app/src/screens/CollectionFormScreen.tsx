@@ -23,12 +23,10 @@ import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native
 import { Glyph } from '../components/ui/glyph';
 import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
-import { KindToggles } from '../components/KindPill';
 import { PressableScale, successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
-import { chooseKind, collectionKinds, derivedKinds, type KindChoice } from '../lib/collectionKinds';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection, usePlacePhotos } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
@@ -186,20 +184,6 @@ export default function CollectionFormScreen({ navigation, route }: {
     : null;
   const coverId = pick.chosen ? pick.id : startCover;
 
-  // The chips, as the kinds the owner hid — see `lib/collectionKinds`.
-  // Seeded the way the cover is, from the row as it stands until the
-  // reader touches one: a rename reads its own row, a copy the
-  // original's, carried in the route.
-  const startKinds: KindChoice = { hidden: (copyFrom ? copyFrom.kinds?.hidden : col?.kinds_hidden) ?? [] };
-  // Every kind the places carry, in the card's order, each lit unless hidden.
-  const offered = derivedKinds(members);
-  const [kindPick, setKindPick] = useState<KindChoice | null>(null);
-  const kindChoice = kindPick ?? startKinds;
-  const shownKinds = collectionKinds(members, kindChoice);
-  // Changed means the chips the list would show changed, not that a list
-  // was rewritten: off and on again is no edit.
-  const kindsChanged = shownKinds.join() !== collectionKinds(members, startKinds).join();
-
   // Whether the form now says something it did not say on opening — the
   // one question both the ✓ and the discard guard ask, so the two can
   // never disagree, as on the profile form.
@@ -208,8 +192,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   // save that would write back exactly what was there. A new list and a
   // copy need only a name — the copy is born on submit, so submitting
   // its prefilled suggestion unchanged is the whole point of the button.
-  const changed = title.trim() !== start.title.trim() || desc.trim() !== start.desc.trim() || coverId !== startCover
-    || kindsChanged;
+  const changed = title.trim() !== start.title.trim() || desc.trim() !== start.desc.trim() || coverId !== startCover;
 
   // Leaving with changes asks first — header Back and iOS's swipe alike,
   // both of which go through `beforeRemove`. A form that has just saved
@@ -267,7 +250,6 @@ export default function CollectionFormScreen({ navigation, route }: {
           // The row remembers its original, so the curator hears about
           // the copy the way they hear about a like (7 Oct 2026).
           copiedFrom: copyFrom.sourceId,
-          kinds: kindChoice,
         });
         // A chosen cover rides a second write: `copyCollection` stays the
         // create-and-fill it was, and Auto — the common case — needs no
@@ -286,11 +268,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         return;
       }
       if (editing) {
-        // The chips only when they changed: an untouched form must not
-        // rewrite decisions it merely displayed.
-        await updateCollection(editing, {
-          title: name, desc, coverPhotoId: coverId, kinds: kindsChanged ? kindChoice : undefined,
-        });
+        await updateCollection(editing, { title: name, desc, coverPhotoId: coverId });
         // A public list is drawn from the catalog's copy too — the
         // Community tab, Explore's shelf, Ideas — and that copy refreshes
         // only on a pull or a stale foreground. A new cover went unseen
@@ -443,38 +421,11 @@ export default function CollectionFormScreen({ navigation, route }: {
         multiline
         returnKeyType="done"
       />
-      {/* ── the chips ──
-          Every kind the list's places carry, in the order the card shows
-          them, lit unless hidden; a tap hides one or shows it again, and
-          hidden sticks — see `chooseKind`. Only what the places carry:
-          putting on a kind no place has (offered for a day, 15 Oct 2026)
-          went when every carried kind started to show, since the only
-          kind left to add was one that says something untrue of the list
-          and filters it to nothing.
-
-          Not where nothing is carried — a brand-new list, or a list of
-          places nobody has classified: there is nothing to hide. */}
-      {offered.length > 0 ? (
-        <View style={s.coverBlock} testID="collection-kinds-field">
-          <Text style={s.coverLabel}>{t('CATEGORIES', 'THỂ LOẠI', 'カテゴリー', '类别', '類別')}</Text>
-          <Text style={s.kindsHint}>
-            {t(
-              'From the places in it. Tap one to hide it from the list, or show it again.',
-              'Lấy từ các địa điểm trong bộ sưu tập. Chạm để ẩn hoặc hiện lại.',
-              'リストのスポットから。タップで非表示・再表示を切り替えます。',
-              '来自清单里的地点。点按可在清单中隐藏或重新显示。', '來自清單裡的地點。點按可在清單中隱藏或重新顯示。',
-            )}
-          </Text>
-          {/* Drawn as the list page draws them (`KindToggles`), so the
-              form previews the page; a hidden one fades in place. */}
-          <KindToggles
-            kinds={offered}
-            shown={shownKinds}
-            onToggle={(k, show) => setKindPick(chooseKind(kindChoice, k, show))}
-            testID="collection-kind-pick"
-          />
-        </View>
-      ) : null}
+      {/* No chips here (owner, 16 Nov 2026). The list's kinds were shown
+          between the description and the cover from 15 Oct, each a toggle
+          that hid it from the list's page; they are worked out from the
+          places now and the owner has no say — see `lib/collectionKinds`
+          for the count that settled it. */}
       {/* `choices` is only ever non-empty when there are members to draw
           from — a rename or a copy; a brand-new list offers no picker. */}
       {choices.length > 0 ? (
@@ -562,7 +513,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   thumbOn: { borderColor: colors.accentFill },
-  kindsHint: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, marginBottom: 10 },
   // Wrapped, all nine in view: a row that scrolls sideways hides most of
   // what it holds (the cover grid's note says the same of its chips).
   thumbImg: { width: '100%', height: '100%' },
