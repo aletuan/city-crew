@@ -199,6 +199,23 @@ describe('a grouped row laid on the page', () => {
     expect(getComputedStyle(screen.getByText('Taken too')).paddingLeft).toBe('16px');
   });
 
+  // The label 6 over its value in a grouped row, in a card or on the
+  // page, one line or many (owner, 16 Nov 2026): at the box's 2 a label
+  // with marks under it all but met a value with marks over it. A boxed
+  // field keeps its 2.
+  it('stands the label 6 over the value, where a boxed field keeps 2', () => {
+    lang = 'en';
+    const gapOver = (id: string) => {
+      const c = getComputedStyle(screen.getByTestId(id).parentElement as HTMLElement);
+      return c.rowGap || c.gap;
+    };
+    render(<FieldRow grouped flush icon="bookmark-outline" label="Name" value="x" testID="on-page" onChangeText={() => {}} />);
+    render(<FieldRow grouped icon="bookmark-outline" label="Name" value="x" testID="in-card" onChangeText={() => {}} />);
+    render(<FieldRow grouped flush multiline icon="text-outline" label="Words" value="x" testID="many-lines" onChangeText={() => {}} />);
+    render(<FieldRow icon="mail-outline" label="Email" value="x" testID="in-box" onChangeText={() => {}} />);
+    expect(['on-page', 'in-card', 'many-lines', 'in-box'].map(gapOver)).toEqual(['6px', '6px', '6px', '2px']);
+  });
+
   // A boxed field has a border to pad away from: `flush` is the grouped
   // row's, and means nothing without it.
   it('leaves a boxed field its box', () => {

@@ -248,7 +248,7 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
             two signals agreeing is what makes the field findable in a
             scroll. */}
         {grouped ? null : <Glyph name={icon} size={22} color={error ? colors.bad : colors.accent} />}
-        <View style={{ flex: 1, gap: 2 }}>
+        <View style={[s.fieldText, grouped && s.fieldTextGrouped]}>
           {/* Grouped, the label is the smaller half: there is no glyph to
               find the row by, so the label is what names it and the value
               is what the reader came to read. Boxed, the two are peers.
@@ -766,6 +766,35 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingHorizontal: space.cardPadding, paddingVertical: 11,
   },
+  // The label over its value. 2 apart in a box, where the two are peers
+  // of nearly one size and the box holds them together.
+  fieldText: { flex: 1, gap: 2 },
+  // ── a grouped row's label stands 6 over its value (owner, 16 Nov 2026) ──
+  //
+  // It was the box's 2, and on the collection form the owner found the
+  // label too close to the name under it. Measured on their screenshot,
+  // between the ink of the one and the ink of the other: 3.4pt in the
+  // name field, 8.5 in the description, with 15 from either field to its
+  // rule. The two fields are set alike — label baseline to value
+  // baseline works out at 18.9 in the one and 18.8 in the other — and
+  // the difference is all in the letters: "Tên bộ sưu tập" hangs its dots
+  // 2.1 under the baseline where "Mô tả" hangs nothing, and "Chất" stacks
+  // two marks about 3 higher than the tallest letter of "Quán nhỏ". A
+  // Vietnamese label over a Vietnamese value can lose 5pt of a gap to
+  // its own marks.
+  //
+  // (Not the multiline field's doing, as first supposed: React Native
+  // gives a multiline input 5 of top padding only when the caller sets
+  // none, and `fieldInput` sets 2.)
+  //
+  // So the gap is set for the worst pair, not the kind one. At 6 the name
+  // field clears 7.4 with both sets of marks and the description 12.5
+  // with neither — about the 8 a section label keeps over its grid here,
+  // and still under the 15 to the rule, so a label reads as its value's
+  // and not as the line above's. 7 would give 8.4 and 13.5, the last of
+  // them all but the distance to the rule. Every grouped row: the
+  // profile's card wears the same label over the same value.
+  fieldTextGrouped: { gap: 6 },
   // The grouped row with no card to sit in — see `flush`.
   fieldFlush: { paddingHorizontal: 0, paddingVertical: 0 },
   fieldErrorFlush: { paddingHorizontal: 0 },
