@@ -89,6 +89,14 @@ describe('profileByHandle', () => {
     expect(fake().log[0].filters).toEqual([['handle~~*', 'Anh']]);
   });
 
+  // A person's page draws what they wrote about themselves (16 Nov 2026),
+  // and this is the one query that carries it.
+  it('asks for the bio with the face and the names', async () => {
+    fake().replies({ data: { ...profile('u1', 'anh'), bio: 'Coffee first.' } });
+    expect((await profileByHandle('anh'))?.bio).toBe('Coffee first.');
+    expect(fake().log[0].payload).toBe('id, handle, full_name, avatar_url, bio');
+  });
+
   it('asks the forgiving question, because no such handle is an answer', async () => {
     fake().replies({ data: null });
     expect(await profileByHandle('nobody')).toBeNull();

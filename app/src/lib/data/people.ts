@@ -12,6 +12,10 @@ import { cleanNote } from '../report';
 
 export type FriendProfile = {
   id: string; handle: string; full_name: string; avatar_url: string;
+  /** What they wrote about themselves. Only `profileByHandle` asks for
+   *  it — a person's own page draws it (16 Nov 2026); the rows of people
+   *  everywhere else do not, and their queries do not carry it. */
+  bio?: string | null;
 };
 
 export async function fetchFriendships(): Promise<import('../friends').FriendshipRow[]> {
@@ -42,7 +46,7 @@ export async function fetchProfilesById(ids: string[]): Promise<Record<string, F
 export async function profileByHandle(handle: string): Promise<FriendProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, handle, full_name, avatar_url')
+    .select('id, handle, full_name, avatar_url, bio')
     .ilike('handle', handle)
     .maybeSingle();
   if (error) throw new Error(error.message);

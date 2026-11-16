@@ -49,6 +49,7 @@ import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import CollectionActivityScreen from './src/screens/CollectionActivityScreen';
 import CollectionStatsScreen from './src/screens/CollectionStatsScreen';
+import PersonScreen from './src/screens/PersonScreen';
 import IdeasScreen from './src/screens/IdeasScreen';
 import SketchingScreen from './src/screens/SketchingScreen';
 import PlanOptionsScreen from './src/screens/PlanOptionsScreen';
@@ -156,6 +157,7 @@ function ExploreStack() {
       <Stack.Screen name="CollectionActivity" component={CollectionActivityScreen} />
       {/* And the statistics its activity page opens, for the same reason. */}
       <Stack.Screen name="CollectionStats" component={CollectionStatsScreen} />
+      <Stack.Screen name="Person" component={PersonScreen} />
     </Stack.Navigator>
   );
 }
@@ -170,6 +172,7 @@ function CollectionsStack() {
           and the figures that page's "Statistics" opens. */}
       <Stack.Screen name="CollectionActivity" component={CollectionActivityScreen} />
       <Stack.Screen name="CollectionStats" component={CollectionStatsScreen} />
+      <Stack.Screen name="Person" component={PersonScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       {/* Opened from a list to add places to it, and back is the list. */}
@@ -205,6 +208,7 @@ function ProfileStack() {
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
       <Stack.Screen name="CollectionActivity" component={CollectionActivityScreen} />
       <Stack.Screen name="CollectionStats" component={CollectionStatsScreen} />
+      <Stack.Screen name="Person" component={PersonScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       <Stack.Screen name="Search" component={SearchScreen} />

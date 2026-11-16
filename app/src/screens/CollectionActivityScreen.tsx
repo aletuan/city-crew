@@ -195,27 +195,22 @@
 // `pulling` — and stays lit until all three have settled.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Glyph } from '../components/ui/glyph';
 import {
-  Avatar, Card, CHIP_H, CHIP_SLOP, EmptyState, GradientCta, PressableScale, Screen, successHaptic, useTabBarClearance,
+  Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
+import { useFriendButtons } from '../components/FriendButton';
 import ListSummaryCard from '../components/ListSummaryCard';
 import { useDuckOnScroll } from '../components/tabBarDuck';
-import { useCrew } from '../lib/crew';
-import {
-  acceptFriendRequest, sendFriendRequest, useListActivityOfQuery, usePrefetchCollectionStats,
-} from '../lib/data';
-import { type Pledged, quietReason, rowButton } from '../lib/friends';
+import { useListActivityOfQuery, usePrefetchCollectionStats } from '../lib/data';
 import { normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { actsOn, type ListAct } from '../lib/listActivity';
-import { usePending } from '../lib/pending';
 import { actAgeOf, ageWord } from '../lib/listAge';
 import { useReadableList } from '../lib/readableList';
 import { useScheme } from '../lib/theme';
-import { bgHex, colors, font, gradAI, radius, space, type } from '../theme';
+import { bgHex, colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 export default function CollectionActivityScreen({ navigation, route }: {
@@ -263,31 +258,10 @@ export default function CollectionActivityScreen({ navigation, route }: {
   // Either half failing; said only when nothing is there to show.
   const failed = !!likes.error || !!copies.error;
 
-  // The friend buttons — see the header. `pledged` is each tap until the
-  // crew is read again; `run` keeps one write per person in flight.
-  //
-  // No dimmed, disabled button while a write is out, as Crew has: the
-  // pledge takes the button away for the length of the write — Add
-  // friend becomes the inert "Requested", Accept the inert "Friends" —
-  // so there is nothing left to dim, and `run` refuses a second write
-  // for the same person all the same.
-  const crew = useCrew();
-  const [pledged, setPledged] = useState<Record<string, Pledged>>({});
-  const { run } = usePending();
-  const unpledge = (id: string) => setPledged(({ [id]: _gone, ...rest }) => rest);
-  const ask = (id: string, as: Pledged, write: () => Promise<void>, title: string) => {
-    setPledged((p) => ({ ...p, [id]: as }));
-    run(
-      id,
-      write,
-      () => { successHaptic(); crew.ships.reload(); },
-      (e) => { unpledge(id); Alert.alert(title, quietReason(e)); },
-    );
-  };
-  const addFriend = (id: string) => ask(id, 'requested', () => sendFriendRequest(me!, id),
-    t('Could not send the request', 'Không gửi được lời mời', 'リクエストを送れませんでした', '无法发送请求', '無法傳送請求'));
-  const acceptFriend = (id: string) => ask(id, 'friends', () => acceptFriendRequest(id, me!),
-    t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした', '无法接受请求', '無法接受請求'));
+  // The friend buttons — see the header, and `useFriendButtons`, where
+  // they have lived since the person's page needed the same one (16 Nov
+  // 2026).
+  const { friendButton, crew } = useFriendButtons(me, 'activity');
 
   // The pull — see the header. The spinner belongs to the pull, as on the
   // collection page: armed by the gesture, disarmed when what it asked
@@ -379,6 +353,19 @@ export default function CollectionActivityScreen({ navigation, route }: {
     const did = item.kind === 'like'
       ? t('Liked', 'Đã thích', 'いいね', '点赞', '按讚')
       : t('Saved a copy', 'Đã lưu bản sao', 'コピーを保存', '保存了副本', '儲存了副本');
+    const face = (
+      <View style={s.face}>
+        {/* The face off the row itself — see the header. */}
+        <Avatar url={item.avatar} size={ROW_FACE} />
+        <View style={[s.badge, ring, item.kind === 'like' ? s.badgeLike : s.badgeCopy]} testID={`activity-badge-${item.kind}`}>
+          <Glyph
+            name={item.kind === 'like' ? 'heart' : 'duplicate'}
+            size={BADGE_GLYPH}
+            color={item.kind === 'like' ? LIKE_INK : colors.accentInk}
+          />
+        </View>
+      </View>
+    );
     return (
       <View
         key={`${item.kind}-${item.at}-${item.handle ?? ''}-${index}`}
@@ -395,17 +382,20 @@ export default function CollectionActivityScreen({ navigation, route }: {
         >
           {/* Who, and what they did on the face's corner — Activity's
               arrangement, at Threads' sizes. */}
-          <View style={s.face}>
-            {/* The face off the row itself — see the header. */}
-            <Avatar url={item.avatar} size={ROW_FACE} />
-            <View style={[s.badge, ring, item.kind === 'like' ? s.badgeLike : s.badgeCopy]} testID={`activity-badge-${item.kind}`}>
-              <Glyph
-                name={item.kind === 'like' ? 'heart' : 'duplicate'}
-                size={BADGE_GLYPH}
-                color={item.kind === 'like' ? LIKE_INK : colors.accentInk}
-              />
-            </View>
-          </View>
+          {/* The face opens their page (16 Nov 2026) — `PersonScreen`.
+              Not for somebody with no handle: there is no page to open.
+              Known and not solved here: the group around it is one
+              element to VoiceOver, so this press is not reachable by
+              it; Crew's row, which is a button, is the way there. */}
+          {handle ? (
+            <PressableScale
+              onPress={() => navigation.navigate('Person', { handle })}
+              haptic="selection"
+              testID="activity-open-person"
+            >
+              {face}
+            </PressableScale>
+          ) : face}
           <View style={s.lines}>
             {/* The age beside the handle, on its line, whether or not a
                 name stands under it. */}
@@ -422,53 +412,6 @@ export default function CollectionActivityScreen({ navigation, route }: {
   };
 
   /** The button at a row's right end, or none — see the header. */
-  const friendButton = (id: string | null) => {
-    const state = rowButton(id, me, crew.ships.data, crew.blocks.data, pledged);
-    if (!state || !id) return null;
-    if (state === 'add') {
-      return (
-        <PressableScale
-          onPress={() => addFriend(id)}
-          hitSlop={CHIP_SLOP}
-          scaleTo={0.94}
-          accessibilityRole="button"
-          testID="activity-add"
-        >
-          <View style={s.addBtn}>
-            <Glyph name="person-add-outline" size={15} color={colors.accent} />
-            <Text style={s.addText}>{t('Add friend', 'Kết bạn', '友達に追加', '加好友', '加好友')}</Text>
-          </View>
-        </PressableScale>
-      );
-    }
-    if (state === 'accept') {
-      return (
-        <PressableScale
-          onPress={() => acceptFriend(id)}
-          hitSlop={CHIP_SLOP}
-          scaleTo={0.94}
-          accessibilityRole="button"
-          testID="activity-accept"
-        >
-          <LinearGradient {...gradAI} style={s.acceptBtn}>
-            <Glyph name="checkmark" size={15} color={colors.accentInk} />
-            <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受', '接受')}</Text>
-          </LinearGradient>
-        </PressableScale>
-      );
-    }
-    // A state, not a control: drawn as Crew's quiet outline, read as words.
-    return (
-      <View style={s.quietBtn} testID={`activity-${state}`}>
-        <Text style={s.quietText}>
-          {state === 'friends'
-            ? t('Friends', 'Bạn bè', '友だち', '好友', '好友')
-            : t('Requested', 'Đã gửi', '送信済み', '已发送', '已傳送')}
-        </Text>
-      </View>
-    );
-  };
-
   const emptyTitle = t('No likes or copies yet', 'Chưa có lượt thích hay bản sao nào', 'まだいいねやコピーはありません', '还没有点赞或复制', '還沒有按讚或複製');
   const state = finding ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} />
@@ -612,24 +555,4 @@ const s = StyleSheet.create({
   // handle, and as Crew's name under a handle (15 Nov 2026).
   name: { color: colors.textTertiary, ...type.meta },
 
-  // ── the friend button, in Crew's looks ──
-  // Crew's "Add" suggestion pill.
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6,
-    backgroundColor: colors.surfaceGlass,
-  },
-  addText: { color: colors.text, fontSize: 14, fontWeight: font.medium },
-  // Crew's Accept, at the chip's height rather than its request card's.
-  acceptBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    minHeight: CHIP_H, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6,
-  },
-  acceptText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
-  // Crew's quiet outline: Cancel, Unblock — here Friends and Requested.
-  quietBtn: {
-    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
-    minHeight: CHIP_H, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 6,
-  },
-  quietText: { color: colors.textTertiary, fontSize: 14, fontWeight: font.semibold },
 });
