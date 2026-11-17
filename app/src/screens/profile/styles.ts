@@ -28,7 +28,7 @@ export const CAPTION_LINE = 15;
 
 export const TITLE_LINE = 19;
 /** The bio's line: the values' 21 and a point, for the one text on the
- *  card that runs to several lines. `RowGlyph` lifts the quote to it. */
+ *  card that runs to several lines. `RowGlyph` lifts the bio's mark to it. */
 export const BIO_LINE = 22;
 
 /** The About rows' glyph slot (`rowGlyph`) and the glyph in it: the

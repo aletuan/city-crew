@@ -437,7 +437,7 @@ describe('Glyph', () => {
   const drawn = () => document.querySelector('[data-icon]')!;
 
   it('draws the five marks from the line set, at Ionicons’ weight', () => {
-    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places', 'quote'] as const) {
+    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places', 'speech'] as const) {
       const { unmount } = render(<Glyph name={name} size={20} color="#123456" />);
       expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual([name, 'lucide']);
       expect([drawn().getAttribute('data-size'), drawn().getAttribute('data-color')]).toEqual(['20', '#123456']);
@@ -452,6 +452,11 @@ describe('Glyph', () => {
     const { unmount } = render(<Glyph name="bookmark" size={20} color="#c00" />);
     expect(drawn().getAttribute('data-icon')).toBe('bookmark');
     unmount();
+    // The bio's bubble too (owner, 17 Nov 2026): a line round nothing,
+    // like the envelope and the calendar it stands over, never a blot.
+    const bubble = render(<Glyph name="speech" size={20} color="#c00" />);
+    expect(drawn().getAttribute('data-icon')).toBe('speech');
+    bubble.unmount();
     for (const [name, line] of [['compass', 'compass-outline'], ['calendar', 'calendar-outline'], ['person', 'person-outline']] as const) {
       const r = render(<Glyph name={name} size={20} color="#c00" />);
       expect(drawn().getAttribute('data-icon')).toBe(line);

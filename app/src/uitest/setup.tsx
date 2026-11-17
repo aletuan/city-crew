@@ -157,7 +157,9 @@ vi.mock('lucide-react-native/icons/calendar-days', () => line('calendar-outline'
 vi.mock('lucide-react-native/icons/compass', () => line('compass-outline'));
 vi.mock('lucide-react-native/icons/map-pinned', () => line('places'));
 vi.mock('lucide-react-native/icons/user', () => line('person-outline'));
-vi.mock('lucide-react-native/icons/quote', () => line('quote'));
+// A second name for the filled form, as the bookmark has, so a test can
+// tell the bubble drawn open from one filled in: it is only ever open.
+vi.mock('lucide-react-native/icons/message-circle', () => line('speech', 'speech-solid'));
 vi.mock('lucide-react-native/icons/star', () => line('star-outline', 'star'));
 
 // These must return promises, not undefined. `fireHaptic` calls
