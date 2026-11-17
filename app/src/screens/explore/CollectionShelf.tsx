@@ -27,12 +27,12 @@ import { Collection, coverUriOf, membersOf, touchesCity } from '../../lib/data';
 import { useCollections, useLikes, usePlaces } from '../../lib/catalog';
 import { useSession } from '../../lib/auth';
 import { useSaveActions } from '../../lib/save';
-import { likesWorthShowing } from '../../lib/likes';
 import { useListRank } from '../../lib/tasteProfile';
 import { isNewList } from '../../lib/newest';
 import { shelfRatio } from '../../lib/shelfCard';
 import NewBadge from '../../components/NewBadge';
 import { useI18n } from '../../lib/i18n';
+import LikeHeart from '../../components/LikeHeart';
 import { colors, coverScrim, onPhoto, space } from '../../theme';
 import { type Nav } from '../../nav';
 import { s } from './styles';
@@ -215,28 +215,16 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                         The collection's own screen and the Collections
                         grid draw the same heart by the same rule. */}
                     {c.id ? (
-                      <PressableScale
+                      <LikeHeart
+                        tone="photo"
+                        liked={myLikes.includes(c.id)}
+                        count={likes[c.slug] ?? 0}
+                        onPress={() => onHeart(c)}
                         style={s.shelfLikeHit}
                         contentStyle={s.shelfLikes}
-                        scaleTo={0.82}
-                        haptic="none"
+                        countStyle={s.shelfCardMeta}
                         hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
-                        onPress={() => onHeart(c)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: myLikes.includes(c.id) }}
-                        accessibilityLabel={myLikes.includes(c.id)
-                          ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
-                          : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
-                      >
-                        <Glyph
-                          name={myLikes.includes(c.id) ? 'heart' : 'heart-outline'}
-                          size={15}
-                          color={myLikes.includes(c.id) ? onPhoto.accent : onPhoto.text}
-                        />
-                        {likesWorthShowing(likes[c.slug]) && (
-                          <Text style={s.shelfCardMeta}>{likes[c.slug]}</Text>
-                        )}
-                      </PressableScale>
+                      />
                     ) : null}
                   </View>
                 </View>

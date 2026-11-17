@@ -47,7 +47,6 @@ import { sharesByList, visibilityOf as seenOf } from '../lib/shares';
 import { normalizeHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useListRank } from '../lib/tasteProfile';
-import { likesWorthShowing } from '../lib/likes';
 import { isNewList } from '../lib/newest';
 import { leadingCity, mosaicCaption, mosaicGroups, mosaicRows, type MosaicEntry, type MosaicRow } from '../lib/collectionMosaic';
 import { derivedKinds } from '../lib/collectionKinds';
@@ -60,6 +59,7 @@ import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { colors, coverScrim, mosaicScrim, onPhoto, space } from '../theme';
+import LikeHeart from '../components/LikeHeart';
 import type { Nav } from '../nav';
 import { GuestNotice, EmptyCover, FirstCollection, CommunityEmpty } from './collections/empties';
 import { s } from './collections/styles';
@@ -1284,28 +1284,16 @@ export default function CollectionsScreen({ navigation, route }: {
                                 — the list nobody has liked yet is the
                                 one that most needs the invitation. */}
                             {c.id && c.is_public ? (
-                              <PressableScale
+                              <LikeHeart
+                                tone="photo"
+                                liked={my}
+                                count={likes[c.slug] ?? 0}
+                                onPress={() => onHeart(c)}
                                 style={{ marginLeft: 'auto' }}
                                 contentStyle={s.gcardLikes}
-                                scaleTo={0.82}
-                                haptic="none"
+                                countStyle={s.gcardMeta}
                                 hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
-                                onPress={() => onHeart(c)}
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: my }}
-                                accessibilityLabel={my
-                                  ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
-                                  : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
-                              >
-                                <Glyph
-                                  name={my ? 'heart' : 'heart-outline'}
-                                  size={15}
-                                  color={my ? onPhoto.accent : onPhoto.text}
-                                />
-                                {likesWorthShowing(likes[c.slug]) && (
-                                  <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
-                                )}
-                              </PressableScale>
+                              />
                             ) : null}
                           </View>
                         </View>

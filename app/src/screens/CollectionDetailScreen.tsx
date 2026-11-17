@@ -27,6 +27,7 @@ import {
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
+import LikeHeart from '../components/LikeHeart';
 import { likeable, marked, namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
 import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
@@ -977,27 +978,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // A button on a public list, and on one shared with friends, for the
   // friends and for you — `shares.likeable`.
   const heart = col && likeable(isPublic, owned, sharedWith.length) && col.id ? (
-    <PressableScale
-      contentStyle={s.like}
-      scaleTo={0.82}
-      haptic="none"
-      hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
+    <LikeHeart
+      brief
+      liked={liked}
+      count={likes[col.slug] ?? 0}
       onPress={onHeart}
-      accessibilityRole="button"
-      accessibilityState={{ selected: liked }}
-      accessibilityLabel={liked
-        ? t('Unlike', 'Bỏ thích', 'いいねを取り消す', '取消点赞', '取消按讚')
-        : t('Like', 'Thích', 'いいね', '点赞', '按讚')}
-    >
-      <Glyph
-        name={liked ? 'heart' : 'heart-outline'}
-        size={ACT_GLYPH}
-        color={liked ? colors.like : colors.textSecondary}
-      />
-      {likesWorthShowing(likes[col.slug])
-        ? <Text style={s.act}>{likes[col.slug]}</Text>
-        : null}
-    </PressableScale>
+      contentStyle={s.like}
+      countStyle={s.act}
+      hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
+    />
   ) : null;
 
   /* ── the likes a list kept (owner, 13 Nov 2026) ──
