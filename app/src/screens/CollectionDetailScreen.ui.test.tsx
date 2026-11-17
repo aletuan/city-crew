@@ -386,7 +386,7 @@ const chooseVisibility = (key: 'public' | 'private' | 'friends') => {
 };
 /** The same, for a test already on the fake clock. */
 const pickVisibility = (key: 'public' | 'private' | 'friends') => {
-  fireEvent.click(screen.getByTestId('collection-visibility'));
+  fireEvent.click(screen.getByTestId('collection-share'));
   fireEvent.click(screen.getByTestId(`sheet-action-${key}`));
   act(() => { vi.advanceTimersByTime(220); });
 };
@@ -654,7 +654,7 @@ describe('your own list', () => {
     // padlock, named Private for VoiceOver.
     expect(screen.getByTestId('collection-meta').textContent).toBe('');
     expect(screen.getByTestId('collection-meta').querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
-    expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
+    expect(screen.getByTestId('collection-activity').textContent).toBe('ShareActivity');
     expect(screen.getByTestId('collection-count').textContent).toBe('3');
     expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
@@ -669,10 +669,12 @@ describe('your own list', () => {
     expect(screen.getByText('旧市街で食べる。')).toBeTruthy();
   });
 
-  it('says "place" for one, and "Public" once published', () => {
+  // No mark is public (owner, 18 Nov 2026): Share's name says it.
+  it('says "place" for one, and wears no mark once published', () => {
     state.mine = [collection({ is_public: true }, [PHO])];
     show();
-    expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Public');
+    expect(screen.queryByTestId('collection-visibility')).toBeNull();
+    expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public');
     expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Add place');
     expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('1 place');
     expect(screen.queryByText(/Private/)).toBeNull();
@@ -877,13 +879,17 @@ describe('Share, at the card’s foot', () => {
   const iconsOf = (el: Element) => [...el.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'));
   const share = (id: string) => ({ collection_id: 'c1', user_id: id, created_at: '2026-11-13T10:00:00Z' });
 
-  it('stands after the heart and before View activity on your own list, in the heart’s grey', () => {
+  it('stands after the heart and before Activity on your own list, in the heart’s grey and size', () => {
     state.mine = [collection({ is_public: true })];
     show();
     const button = screen.getByTestId('collection-share');
     expect(footer().contains(button)).toBe(true);
     expect(iconsOf(footer())).toEqual(['heart-outline', 'share-outline', 'chevron-forward']);
-    expect(button.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.textTertiary));
+    // 18 in the secondary grey, both (owner, 18 Nov 2026): at 15 in the
+    // byline's grey a liked heart stood beside a Share that had gone.
+    const worn = (el: Element) => { const g = el.querySelector('[data-icon]')!; return [g.getAttribute('data-size'), g.getAttribute('data-color')]; };
+    expect(worn(button)).toEqual(['18', String(colors.textSecondary)]);
+    expect(worn(screen.getByRole('button', { name: 'Like' }))).toEqual(['18', String(colors.textSecondary)]);
     expect(button.getAttribute('role')).toBe('button');
     // How the list stands is in the button's name, since the mark at
     // the head no longer says it in words.
@@ -900,14 +906,16 @@ describe('Share, at the card’s foot', () => {
   // The figure is how many friends have the list, and only while it is
   // shared with friends: beside a share mark on a public list a number
   // reads as "shared 3 times".
-  it('counts the friends a list is shared with, and prints no figure otherwise', () => {
+  // With its word since 18 Nov 2026, and the figure after the word and a
+  // dot, where it cannot be read as "shared 3 times".
+  it('says Share, and after it how many friends a list is shared with, and no figure otherwise', () => {
     show();
-    expect(screen.queryByTestId('collection-share-count')).toBeNull();
-    expect(screen.getByTestId('collection-share').textContent).toBe('');
+    expect(screen.getByTestId('collection-share').textContent).toBe('Share');
+    expect(textStyleOf(screen.getByTestId('collection-share-word'))).toMatchObject({ fontSize: 15, color: colors.textSecondary });
     cleanup();
     state.shares = [share('lan'), share('minh'), share('trang')];
     show();
-    expect(screen.getByTestId('collection-share-count').textContent).toBe('3');
+    expect(screen.getByTestId('collection-share').textContent).toBe('Share · 3');
     expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Friends, 3');
     cleanup();
     // Public, whoever it is shared with: everybody, and no number.
@@ -1013,7 +1021,7 @@ describe('Share, at the card’s foot', () => {
 describe('publishing', () => {
   it('asks who can see the list, says what each answer means, and ticks the one given', () => {
     show();
-    fireEvent.click(screen.getByTestId('collection-visibility'));
+    fireEvent.click(screen.getByTestId('collection-share'));
     expect(screen.getByText('Who can see your list?')).toBeTruthy();
     const pub = screen.getByTestId('sheet-action-public');
     const priv = screen.getByTestId('sheet-action-private');
@@ -1028,7 +1036,7 @@ describe('publishing', () => {
   it('moves the tick to Public on a public list', () => {
     state.mine = [collection({ is_public: true })];
     show();
-    fireEvent.click(screen.getByTestId('collection-visibility'));
+    fireEvent.click(screen.getByTestId('collection-share'));
     expect(screen.getByTestId('sheet-action-public').querySelector('[data-testid="sheet-selected"]')).toBeTruthy();
     expect(screen.getByTestId('sheet-action-private').querySelector('[data-testid="sheet-selected"]')).toBeNull();
   });
@@ -1054,24 +1062,36 @@ describe('publishing', () => {
     expect([...line.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['lock-closed-outline']);
     expect(line.textContent).toBe('');
     cleanup();
+    // No mark is public (owner, 18 Nov 2026): a globe stood here for a
+    // day. With no age either, the line is not drawn.
     state.mine = [collection({ is_public: true })];
     show();
+    expect(screen.queryByTestId('collection-meta')).toBeNull();
+    expect(document.querySelector('[data-icon="globe-outline"]')).toBeNull();
+    cleanup();
+    state.mine = [collection({ is_public: true, created_at: '2020-01-01T00:00:00Z' })];
+    show();
     line = screen.getByTestId('collection-meta');
-    expect([...line.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['globe-outline']);
-    expect(line.textContent).toBe('');
+    expect(line.querySelector('[data-icon]')).toBeNull();
+    // The age alone, and no dot waiting for a mark.
+    expect(line.textContent).not.toBe('');
+    expect(line.textContent).not.toContain('·');
   });
 
   // On your own public list the heart stays in the activity row, where
   // it is on everybody's — the same place whoever is looking — and who
   // can see the list is the head's.
-  it('keeps the heart in the activity row and the visibility at the head on your own public list', () => {
+  it('keeps the heart in the activity row and the visibility at the head on your own list', () => {
     state.mine = [collection({ is_public: true })];
     show();
     const row = screen.getByTestId('collection-activity');
     expect([...row.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
       .toEqual(['heart-outline', 'share-outline', 'chevron-forward']);
     expect(row.contains(screen.getByRole('button', { name: 'Like' }))).toBe(true);
-    expect(row.contains(screen.getByTestId('collection-visibility'))).toBe(false);
+    cleanup();
+    state.mine = [collection({ is_public: false })];
+    show();
+    expect(screen.getByTestId('collection-activity').contains(screen.getByTestId('collection-visibility'))).toBe(false);
     expect(screen.getByTestId('collection-meta').contains(screen.getByTestId('collection-visibility'))).toBe(true);
   });
 
@@ -1079,7 +1099,7 @@ describe('publishing', () => {
   // no outline — and since 17 Nov 2026 the glyph alone, its word spoken
   // and not drawn.
   it('draws the visibility bare: the glyph alone, named for VoiceOver', () => {
-    state.mine = [collection({ is_public: true })];
+    state.mine = [collection({ is_public: false })];
     show();
     const control = screen.getByTestId('collection-visibility');
     const face = viewStyleOf(control.firstElementChild as HTMLElement);
@@ -1087,25 +1107,29 @@ describe('publishing', () => {
     expect(face.borderWidth ?? 0).toBe(0);
     expect(face.borderRadius).toBeUndefined();
     expect(control.textContent).toBe('');
-    expect(control.getAttribute('aria-label')).toBe('Public');
-    expect([...control.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['globe-outline']);
+    expect(control.getAttribute('aria-label')).toBe('Private');
+    expect([...control.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['lock-closed-outline']);
+    // And it is still a door to the sheet, for whoever learned to press it.
+    fireEvent.click(control);
+    expect(screen.getByText('Who can see your list?')).toBeTruthy();
   });
 
   // One grey for both states (owner, 12 Nov 2026): Public was the app's
   // green and semibold, the loudest thing on the card after the title.
-  it('wears one grey whether the list is public or private', () => {
-    const worn = (is_public: boolean) => {
-      state.mine = [collection({ is_public })];
+  it('wears one grey whether the list is shared or private', () => {
+    const worn = (shared: boolean) => {
+      state.mine = [collection({ is_public: false })];
+      state.shares = shared ? [{ collection_id: 'c1', user_id: 'lan', created_at: '2026-11-13T10:00:00Z' }] : [];
       show();
       const control = screen.getByTestId('collection-visibility');
-      const glyph = control.querySelector(`[data-icon="${is_public ? 'globe-outline' : 'lock-closed-outline'}"]`);
+      const glyph = control.querySelector(`[data-icon="${shared ? 'people-outline' : 'lock-closed-outline'}"]`);
       const out = glyph?.getAttribute('data-color');
       cleanup();
       return out;
     };
-    const [priv, pub] = [worn(false), worn(true)];
-    expect(pub).toBe(priv);
-    expect(pub).toBe(String(colors.textTertiary));
+    const [priv, friends] = [worn(false), worn(true)];
+    expect(friends).toBe(priv);
+    expect(friends).toBe(String(colors.textTertiary));
   });
 
   it('makes a list public, reloads both catalogs, and says so with no Undo', async () => {
@@ -1120,8 +1144,10 @@ describe('publishing', () => {
     expect(spies.colsReload).toHaveBeenCalled();
     // The way back is the word at the card's foot, not a button here.
     expect(screen.queryByText('Undo')).toBeNull();
-    // And that word is the record: it says Public now.
-    await waitFor(() => expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Public'));
+    // And Share's name is the record: it says Public now, and the
+    // padlock under the handle has gone.
+    await waitFor(() => expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public'));
+    expect(screen.queryByTestId('collection-visibility')).toBeNull();
   });
 
   it('makes a public list private again', async () => {
@@ -1148,7 +1174,7 @@ describe('publishing', () => {
       state.mine = [collection({ is_public: next })];
     });
     show();
-    fireEvent.click(screen.getByTestId('collection-visibility'));
+    fireEvent.click(screen.getByTestId('collection-share'));
     const row = screen.getByTestId('sheet-action-public');
     // On the row reached for, in place of what Public would mean alone.
     expect(row.textContent).toBe(
@@ -1160,7 +1186,7 @@ describe('publishing', () => {
     await said('This collection is now public');
     // And says it again once public: the owner showing it to a friend is
     // told what the friend will not see.
-    fireEvent.click(screen.getByTestId('collection-visibility'));
+    fireEvent.click(screen.getByTestId('collection-share'));
     expect(screen.getByTestId('sheet-action-public').textContent).toBe(
       'PublicShown in Explore and in search, except 1 place not public yet and 1 not accepted',
     );
@@ -1170,13 +1196,13 @@ describe('publishing', () => {
     const pending = { is_published: false, review_status: 'pending' } as Partial<Place>;
     state.places = [place('pho', 'Pho 10', pending), place('cafe', 'Cafe Giang', pending), MUSEUM];
     show();
-    fireEvent.click(screen.getByTestId('collection-visibility'));
+    fireEvent.click(screen.getByTestId('collection-share'));
     expect(screen.getByText('Shown in Explore and in search, except 2 places not public yet')).toBeTruthy();
   });
 
   it('says only what Public means when every place is live', () => {
     show();
-    fireEvent.click(screen.getByTestId('collection-visibility'));
+    fireEvent.click(screen.getByTestId('collection-share'));
     expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
   });
 
@@ -1277,7 +1303,9 @@ describe('sharing with friends', () => {
       state.mine = [collection({ is_public: true })];
       state.shares = [share('lan')];
       show();
-      expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Public');
+      expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public');
+      expect(screen.getByTestId('collection-share').textContent).toBe('Share');
+      expect(screen.queryByTestId('collection-visibility')).toBeNull();
     });
 
     it('says Private when the shares are on another of your lists', () => {
@@ -1297,7 +1325,7 @@ describe('sharing with friends', () => {
   describe('the sheet', () => {
     it('puts Friends between Public and Private, and says what it means while nobody has it', () => {
       show();
-      fireEvent.click(screen.getByTestId('collection-visibility'));
+      fireEvent.click(screen.getByTestId('collection-share'));
       const keys = [...document.querySelectorAll('[data-testid^="sheet-action-"]')].map((el) => el.getAttribute('data-testid'));
       expect(keys).toEqual(['sheet-action-public', 'sheet-action-friends', 'sheet-action-private']);
       const row = screen.getByTestId('sheet-action-friends');
@@ -1310,7 +1338,7 @@ describe('sharing with friends', () => {
     it('names who has it, ticks Friends, and moves the tick off Private', () => {
       state.shares = [share('minh', 2), share('lan', 1)];
       show();
-      fireEvent.click(screen.getByTestId('collection-visibility'));
+      fireEvent.click(screen.getByTestId('collection-share'));
       const row = screen.getByTestId('sheet-action-friends');
       // In the order they were shared with: Lan first.
       expect(row.textContent).toBe('FriendsLan Phương and Minh Anh');
@@ -1323,12 +1351,12 @@ describe('sharing with friends', () => {
       state.people = { ...state.people, vy: friend('vy', '', 'vyvy') };
       state.shares = [share('lan', 2), share('vy', 1), share('ha', 3), share('x1', 4), share('x2', 5)];
       show();
-      fireEvent.click(screen.getByTestId('collection-visibility'));
+      fireEvent.click(screen.getByTestId('collection-share'));
       expect(screen.getByTestId('sheet-action-friends').textContent).toBe('Friends@vyvy, Lan Phương and 3 others');
       cleanup();
       state.shares = [share('nobody')];
       show();
-      fireEvent.click(screen.getByTestId('collection-visibility'));
+      fireEvent.click(screen.getByTestId('collection-share'));
       expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsSomeone');
     });
 
@@ -2453,7 +2481,7 @@ describe('a friend’s list, shared with you', () => {
     expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
     // The activity row holds the heart and the way to the list's activity.
     const row = screen.getByTestId('collection-activity');
-    expect(row.textContent).toBe('View activity');
+    expect(row.textContent).toBe('Activity');
     expect(row.contains(screen.getByRole('button', { name: 'Like' }))).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Like' }));
     expect(spies.toggleLike).toHaveBeenCalledTimes(1);
@@ -2856,7 +2884,7 @@ describe('the chips', () => {
     state.cols = [theirs({ desc_en: null }, four)];
     show();
     const card = screen.getByTestId('collection-desc');
-    expect(card.textContent).toBe('hanoicrewEatsCafésCultureNightlife4View activity');
+    expect(card.textContent).toBe('hanoicrewEatsCafésCultureNightlife4Activity');
     expect(screen.getByLabelText('4 places')).toBeTruthy();
     expect(card.querySelector('[data-icon="document-text-outline"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit description' })).toBeNull();
@@ -2908,7 +2936,7 @@ describe('the introduction card', () => {
     const gapOf = (el: Element | null | undefined) => viewStyleOf(el as Element)?.gap;
     const heart = screen.getByRole('button', { name: 'Like' }).querySelector('[data-icon]')?.parentElement;
     const count = screen.getByTestId('collection-count');
-    expect([gapOf(foot), gapOf(heart), gapOf(count)]).toEqual([20, 4, 3]);
+    expect([gapOf(foot), gapOf(heart), gapOf(count)]).toEqual([20, 5, 3]);
   });
 
   // The words run across the card (owner, 13 Nov 2026): out of the
@@ -3059,7 +3087,7 @@ describe('the introduction card', () => {
   it('leaves the visibility control its own press, outside the face’s', () => {
     state.cols = [];
     state.profile = { handle: 'andy', avatar_url: 'https://img/me.jpg' };
-    state.mine = [collection({ is_public: true })];
+    state.mine = [collection({ is_public: false })];
     const { raw } = show();
     const control = screen.getByTestId('collection-visibility');
     expect(screen.getByTestId('collection-own-face').contains(control)).toBe(false);
@@ -3211,7 +3239,7 @@ describe('the likes a list kept', () => {
     expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'c1', slug: 'old-quarter' });
     // And the way to who liked it, a reader's as the owner's (15 Nov 2026).
     expect(screen.getByTestId('collection-activity-link')).toBeTruthy();
-    expect(screen.getByTestId('collection-activity').textContent).toBe('12View activity');
+    expect(screen.getByTestId('collection-activity').textContent).toBe('12Activity');
   });
 
   it('says one like in the singular, and in Vietnamese', () => {
@@ -3226,7 +3254,10 @@ describe('the likes a list kept', () => {
     expect(kept()!.getAttribute('aria-label')).toBe('12 lượt thích');
   });
 
-  it('is drawn as the public heart is: the same glyph, gap and figure', () => {
+  // The same shape and size as the live heart, a step quieter in ink:
+  // the tertiary grey, glyph and figure, where the live one is the
+  // secondary (owner, 18 Nov 2026) — a figure, not a button.
+  it('is drawn as the public heart is, a step quieter: the same glyph, gap and size', () => {
     state.mine = [collection({ is_public: false })];
     state.likes = { 'old-quarter': 12 };
     show();
@@ -3237,9 +3268,13 @@ describe('the likes a list kept', () => {
       glyph: [glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')],
       count: textStyleOf(within(el).getByText('12')),
     };
-    expect(mine.inner).toEqual({ flexDirection: 'row', alignItems: 'center', gap: 4 });
+    expect(mine.inner).toEqual({ flexDirection: 'row', alignItems: 'center', gap: 5 });
     expect(mine.count?.color).toBe(colors.textTertiary);
-    expect(mine).toEqual(publicHeart());
+    expect(glyph.getAttribute('data-size')).toBe('18');
+    const live = publicHeart();
+    expect(live.inner).toEqual(mine.inner);
+    expect(live.glyph).toEqual(['heart-outline', String(colors.textSecondary)]);
+    expect(live.count).toEqual({ ...mine.count, color: colors.textSecondary });
   });
 
   it('shows nothing in the slot at no likes, to the owner or to a friend', () => {
@@ -3250,13 +3285,13 @@ describe('the likes a list kept', () => {
       state.likes = likes;
       show();
       expect(kept()).toBeNull();
-      expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
+      expect(screen.getByTestId('collection-activity').textContent).toBe('ShareActivity');
       cleanup();
       state.mine = [];
       state.shared = [collection({ owner_id: 'lan-id', is_public: false, curator_handle: 'lan' })];
       show();
       expect(kept()).toBeNull();
-      expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
+      expect(screen.getByTestId('collection-activity').textContent).toBe('Activity');
     }
   });
 
@@ -3281,7 +3316,7 @@ describe('the likes a list kept', () => {
     state.cols = [theirs({ id: undefined } as Partial<Collection>)];
     show();
     expect(kept()).toBeNull();
-    expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
+    expect(screen.getByTestId('collection-activity').textContent).toBe('Activity');
   });
 });
 
@@ -3304,16 +3339,17 @@ describe('the way to the list’s activity', () => {
     expect(link()).toBeTruthy();
   });
 
-  it('says View activity with a chevron, and in Vietnamese', () => {
+  // "Activity" drawn, "View activity" spoken (owner, 18 Nov 2026).
+  it('says Activity with a chevron, and in Vietnamese', () => {
     state.mine = [collection()];
     show();
-    expect(link()!.textContent).toBe('View activity');
+    expect(link()!.textContent).toBe('Activity');
     expect(link()!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('chevron-forward');
     expect(button('View activity')).toBe(link());
     cleanup();
     state.lang = 'vi';
     show();
-    expect(link()!.textContent).toBe('Xem hoạt động');
+    expect(link()!.textContent).toBe('Hoạt động');
     expect(link()!.getAttribute('aria-label')).toBe('Xem hoạt động');
   });
 
@@ -3326,6 +3362,14 @@ describe('the way to the list’s activity', () => {
 
   // The link is the target and the heart keeps its own: a tap on one is
   // never the other.
+  it('fills the heart in the like’s own red once you have liked the list', () => {
+    state.mine = [collection({ is_public: true })];
+    state.myLikes = ['c1'];
+    show();
+    const g = button('Unlike').querySelector('[data-icon]')!;
+    expect([g.getAttribute('data-icon'), g.getAttribute('data-size'), g.getAttribute('data-color')]).toEqual(['heart', '18', String(colors.like)]);
+  });
+
   it('leaves the heart its own press', () => {
     state.mine = [collection({ is_public: true })];
     const { raw } = show();
@@ -3342,7 +3386,7 @@ describe('the way to the list’s activity', () => {
   it('is in the meta size and the byline’s grey, glyph and word alike', () => {
     state.mine = [collection()];
     show();
-    const word = within(link()!).getByText('View activity');
+    const word = within(link()!).getByText('Activity');
     expect(textStyleOf(word)).toMatchObject({ fontSize: 15, color: colors.textTertiary });
     const glyph = link()!.querySelector('[data-icon]')!;
     expect([glyph.getAttribute('data-size'), glyph.getAttribute('data-color')]).toEqual(['15', String(colors.textTertiary)]);

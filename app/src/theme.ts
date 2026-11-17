@@ -236,6 +236,20 @@ export const colors = {
    */
   accent: pick('accent'),
   /**
+   * A heart that has been liked, on a card (owner, 18 Nov 2026).
+   *
+   * The accent's value under its own name. A liked heart was the accent
+   * on a list's page and `bad` on a person's page — two reds for one
+   * state, and the second borrowed from the colour for deleting things,
+   * which would take the heart with it the day that colour changes. Red
+   * is what a liked heart is on Instagram, Threads and TikTok; this app's
+   * accent is already a red, the coral, and a second, brighter one beside
+   * it was weighed and not taken. A different red is this one line.
+   *
+   * On a photograph the heart keeps `onPhoto.accent`.
+   */
+  like: pick('accent'),
+  /**
    * The accent **as a surface** — a ticked checkbox, anything that must
    * read as switched on. One value for both themes, and the same coral the
    * gradient and the tints are made of, because a fill has no legibility
