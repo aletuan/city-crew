@@ -619,25 +619,62 @@ describe('interests', () => {
   });
 });
 
-// The reader's standing, as a small disc on the avatar's top-right corner.
-// Editor outranks guide and is shown alone; a reader with neither wears
-// none; a tap explains the grant in the desk's words.
+// The reader's standing, as a small disc after the name (owner, 17 Nov
+// 2026; on the avatar's top-right corner before that). Editor outranks
+// guide and is shown alone; a reader with neither wears none; a tap
+// explains the grant in the desk's words.
 describe('the role badge', () => {
   const badge = (name: RegExp | string) => screen.getByRole('button', { name });
+  // The disc: the box the glyph stands in.
+  const discOf = (name: string) => badge(name).querySelector('[data-icon]')!.parentElement!;
 
-  it('is absent for a reader with no grant', () => {
+  it('is absent for a reader with no grant, and the name stands as it does with one', () => {
+    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
     draw();
     expect(screen.queryByRole('button', { name: /Local Guide|Super User/ })).toBeNull();
     expect(screen.queryByTestId('role-badge')).toBeNull();
+    expect(screen.queryByTestId('role-mark')).toBeNull();
+    // The row is there before the answer is, so a disc arriving a round
+    // trip late is added after the name and moves nothing.
+    expect(screen.getByTestId('role-row').contains(screen.getByText('Le Minh'))).toBe(true);
   });
 
-  it('sits on the avatar, not under the name, and says nothing in words', () => {
+  it('stands after the name, on its first line, and not on the picture', () => {
     state.guide = true;
+    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
     draw();
     const disc = badge('Local Guide');
-    expect(screen.getByTestId('avatar-box').contains(disc)).toBe(true);
+    expect(screen.getByTestId('avatar-box').contains(disc)).toBe(false);
+    // One row: the name, then the mark, 6 apart, from the top so a
+    // second line of name falls under the first.
+    const row = screen.getByTestId('role-row');
+    const name = screen.getByText('Le Minh');
+    expect(row.contains(name)).toBe(true);
+    expect(row.contains(disc)).toBe(true);
+    expect(name.compareDocumentPosition(disc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const lay = viewStyleOf(row);
+    expect([lay.flexDirection, lay.alignItems, lay.gap]).toEqual(['row', 'flex-start', 6]);
+    // The handle is under the row, not in it.
+    expect(row.contains(screen.getByText('@leminh'))).toBe(false);
+    // A long name gives way; the mark does not.
+    expect(viewStyleOf(row.firstElementChild!).flexShrink).toBe(1);
+    expect(viewStyleOf(screen.getByTestId('role-mark')).flexShrink).toBeUndefined();
+    // In the middle of the name's first line: the line is 25 here.
+    const mark = viewStyleOf(screen.getByTestId('role-mark'));
+    expect([mark.height, mark.justifyContent, mark.position]).toEqual([25, 'center', undefined]);
+    expect(textStyleOf(name)?.lineHeight).toBe(25);
+    // 20, not the 24 it was on the picture, and its glyph in proportion.
+    const box = viewStyleOf(discOf('Local Guide'));
+    expect([box.width, box.height, box.borderRadius]).toEqual([20, 20, 10]);
+    expect(disc.querySelector('[data-icon="star"]')!.getAttribute('data-size')).toBe('11');
+    // And the thumb is still owed 44 of it: the press's own slop, read
+    // off the component that set it.
+    type Fiber = { memoizedProps?: { hitSlop?: unknown }; return?: Fiber };
+    let f: Fiber | undefined = (disc as unknown as Record<string, Fiber>)[Object.keys(disc).find((k) => k.startsWith('__reactFiber'))!];
+    while (f && typeof f.memoizedProps?.hitSlop !== 'number') f = f.return;
+    expect(20 + 2 * (f!.memoizedProps!.hitSlop as number)).toBe(44);
+    // A mark, not a message: its name is not written on the page.
     expect(screen.queryByText('Local Guide')).toBeNull();
-    expect(disc.querySelector('[data-icon="star"]')).toBeTruthy();
   });
 
   it('names a local guide, and says what the grant lets them do', () => {
@@ -679,8 +716,7 @@ describe('the role badge', () => {
   // react-native-web writes colours as classes, which jsdom's computed
   // style does not resolve, so the class list is what is compared.
   it('wears a different colour for each role, the editor’s when both apply', () => {
-    // The disc: the box the glyph stands in.
-    const dress = (name: string) => badge(name).querySelector('[data-icon]')!.parentElement!.className;
+    const dress = (name: string) => discOf(name).className;
     state.guide = true;
     draw();
     const guideDress = dress('Local Guide');

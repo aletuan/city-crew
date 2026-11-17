@@ -150,6 +150,8 @@ const NAME_DROP = 6;
  *  before it is cut: 22 to about 17, still the largest words on the
  *  page. */
 const TITLE_SHRINK = 0.78;
+/** The name's line, which the role's mark after it is centred on. */
+const TITLE_LINE = 28;
 /** What "Write a few words about you" adds above and below its 24pt row to make the button
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
@@ -202,19 +204,25 @@ export default function PersonScreen({ navigation, route }: {
       <View style={s.headRow}>
         <View style={[s.faceRing, ring]}>
           <Avatar url={person.avatar_url || null} size={FACE} />
-          {/* A local guide's star or an editor's medal, on the picture's
-              corner, with the sheet that says what it means —
-              `PersonRole` (owner, 16 Nov 2026). */}
-          <PersonRole me={me} personId={person.id} />
         </View>
         {/* The name, beside the picture, and the handle right under it
             — or the handle alone, for somebody who gave no name. The
-            name shrinks before it is cut: see `title`. */}
+            name shrinks before it is cut: see `title`.
+
+            After whichever stands first, a local guide's star or an
+            editor's medal, with the sheet that says what it means —
+            `PersonRole`. On the picture's corner for a day; after the
+            name since 17 Nov 2026 (owner), for the reasons written
+            there. */}
         <View style={s.names}>
+          <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
+            {person.full_name
+              ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
+              : <Text style={s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>}
+          </PersonRole>
           {person.full_name
-            ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
+            ? <Text style={s.handle} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
             : null}
-          <Text style={person.full_name ? s.handle : s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
           {/* What they say about themselves, as a bubble from the picture
               — `Bio`. */}
           <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} />
@@ -554,7 +562,7 @@ const s = StyleSheet.create({
   // for a row of its own; it still shrinks to `TITLE_SHRINK` before it
   // is cut, for the name that is longer than that.
   title: {
-    color: colors.text, fontSize: 22, lineHeight: 28, fontFamily: display.bold,
+    color: colors.text, fontSize: 22, lineHeight: TITLE_LINE, fontFamily: display.bold,
     letterSpacing: 0.2,
   },
   // The row of acts — see `Acts`: one group in the page's middle, 22

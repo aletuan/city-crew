@@ -1,7 +1,7 @@
-// The picture on your own profile, with its ring and the two badges on
-// it — and the sheet that says what either badge is.
+// The picture on your own profile, with its ring and the level's pill on
+// it — and the sheet that says what the level is.
 //
-// ── the two badges explain themselves in one sheet (owner, 16 Nov 2026) ──
+// ── a badge explains itself in a sheet (owner, 16 Nov 2026) ──
 //
 // The role's disc had always answered a press with a system alert. The
 // level's pill answered with nothing until that day, then with an alert
@@ -11,8 +11,8 @@
 // grey whatever look the reader chose, and is the system's way of
 // stopping someone for a thing that matters; a level is a note.
 //
-// So a sheet, in the reader's look, and for both badges: two marks on
-// one picture that open two kinds of thing is one of them a surprise.
+// So a sheet, in the reader's look, and for both badges: two marks that
+// open two kinds of thing is one of them a surprise.
 //
 // A sheet from the bottom, not a bubble hung from the pill. A popover
 // was what the owner was first shown, and it is the tidier picture — but
@@ -23,22 +23,27 @@
 //
 // The bar is the ring's reading, not the count's — `levelSteps`.
 //
+// ── the role's disc left the picture (owner, 17 Nov 2026) ──
+//
+// It lay on the ring's top-right corner, and this file held one sheet
+// for the two badges. It stands after the name now (`HeroName`, and
+// `components/RoleBadge` for why), and took its sheet with it: the same
+// `ActionSheet`, opened from where the disc is. What is on the picture
+// is the level's alone — a ring and a pill that say one thing.
+//
 // ── out of `AccountProfile` ──
 //
-// The role, the ring and the disc were drawn there, and its function is
-// at its ceiling (`oversize.js`); a sheet's state and body had nowhere
-// to go. They moved here together, and the ceiling came down by what
-// left.
+// The ring was drawn there, and its function is at its ceiling
+// (`oversize.js`); a sheet's state and body had nowhere to go. They
+// moved here together, and the ceiling came down by what left.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from '../../components/ActionSheet';
 import AvatarPicker from '../../components/AvatarPicker';
 import EngagementRing from '../../components/EngagementRing';
-import { type Role, RoleBody, RoleButton, RoleHead } from '../../components/RoleBadge';
 import { useI18n } from '../../lib/i18n';
 import { levelFromSaves, levelSteps, levelWords } from '../../lib/level';
-import { useIsEditor, useIsGuideAnywhere } from '../../lib/useGuideGrant';
 import { colors, font } from '../../theme';
 import { s } from './styles';
 
@@ -47,56 +52,25 @@ export function HeroFace({ saved }: {
   saved: number;
 }) {
   const { t } = useI18n();
-  // Which badge the sheet is about, kept while it closes: a sheet whose
-  // words change as it fades reads as a flicker.
-  const [sheet, setSheet] = useState<{ open: boolean; about: 'level' | 'role' }>({ open: false, about: 'level' });
+  const [open, setOpen] = useState(false);
   const { level, progress } = levelFromSaves(saved);
-  // The reader's standing in the catalog, for the disc on the picture.
-  // Editor outranks guide and is shown alone: the desk's hand keeps every
-  // gallery, which includes the ones a guide keeps.
-  const editor = useIsEditor();
-  const guide = useIsGuideAnywhere();
-  const role: Role | null = editor ? 'editor' : guide ? 'guide' : null;
   const words = levelWords(saved, t);
   const steps = levelSteps(saved);
-  const open = (about: 'level' | 'role') => setSheet({ open: true, about });
-  const close = () => setSheet((was) => ({ ...was, open: false }));
-  const aboutRole = sheet.about === 'role' && role;
 
   return (
     <>
       {/* No camera badge here: the level badge takes that corner, and
-          Edit profile shows the same picker with its badge intact.
-
-          The reader's standing, on the picture. A guide, and an editor
-          (the desk's hand), may keep galleries the panel would otherwise
-          refuse; it used to be said in a pill under the name, beside
-          Edit profile, and the owner found the pill loud for what it
-          is — a mark, not a message. So: a small disc on the ring's
-          top-right corner, the level's own halo at the opposite corner,
-          with the role's glyph in the role's colour. Editor outranks
-          guide and is the one disc shown; a reader with neither wears
-          none. A tap still says what the grant lets them do, in the
-          desk's words, and VoiceOver reads the role as the disc's name.
-
-          And because the disc lies on the picture, its arriving a
-          round-trip late moves nothing else on the page — which is
-          what the pill's held room was for. */}
+          Edit profile shows the same picker with its badge intact. */}
       <View style={s.avatarBox} testID="avatar-box">
-        <EngagementRing size={88} level={level} progress={progress} onExplain={() => open('level')}>
+        <EngagementRing size={88} level={level} progress={progress} onExplain={() => setOpen(true)}>
           <AvatarPicker showCamera={false} />
         </EngagementRing>
-        {role && (
-          <View style={s.roleHalo}>
-            <RoleButton role={role} onPress={() => open('role')} />
-          </View>
-        )}
       </View>
 
       <ActionSheet
-        visible={sheet.open}
-        onClose={close}
-        header={aboutRole ? <RoleHead role={aboutRole} /> : (
+        visible={open}
+        onClose={() => setOpen(false)}
+        header={(
           // No pill beside "Level 15": it would say the title twice. The
           // steps at the end are the bar's figure, read.
           // On nothing, as a sheet's title is; the one card is under it.
@@ -108,27 +82,25 @@ export function HeroFace({ saved }: {
           </View>
         )}
       >
-        {aboutRole ? <RoleBody role={aboutRole} whose="yours" /> : (
-          <View style={sheetBody} testID="badge-sheet-body">
-            <View
-              style={h.track}
-              accessibilityRole="progressbar"
-              accessibilityValue={{ min: 0, max: steps.of, now: steps.done }}
-              // Said, too: a bar's value alone is read as a percentage.
-              accessibilityLabel={t(
-                `${steps.done} of ${steps.of} places toward the next level`,
-                `${steps.done} trên ${steps.of} địa điểm để lên level tiếp theo`,
-                `次のレベルまで${steps.of}件中${steps.done}件`,
-                `距下一级：${steps.of} 个地点中的 ${steps.done} 个`, `距下一級：${steps.of} 個地點中的 ${steps.done} 個`,
-              )}
-              testID="level-bar"
-            >
-              <View style={[h.fill, { width: `${(steps.done / steps.of) * 100}%` }]} testID="level-bar-fill" />
-            </View>
-            <Text style={h.lead}>{words.next}</Text>
-            <Text style={h.rule}>{words.rule}</Text>
+        <View style={sheetBody} testID="badge-sheet-body">
+          <View
+            style={h.track}
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 0, max: steps.of, now: steps.done }}
+            // Said, too: a bar's value alone is read as a percentage.
+            accessibilityLabel={t(
+              `${steps.done} of ${steps.of} places toward the next level`,
+              `${steps.done} trên ${steps.of} địa điểm để lên level tiếp theo`,
+              `次のレベルまで${steps.of}件中${steps.done}件`,
+              `距下一级：${steps.of} 个地点中的 ${steps.done} 个`, `距下一級：${steps.of} 個地點中的 ${steps.done} 個`,
+            )}
+            testID="level-bar"
+          >
+            <View style={[h.fill, { width: `${(steps.done / steps.of) * 100}%` }]} testID="level-bar-fill" />
           </View>
-        )}
+          <Text style={h.lead}>{words.next}</Text>
+          <Text style={h.rule}>{words.rule}</Text>
+        </View>
       </ActionSheet>
     </>
   );

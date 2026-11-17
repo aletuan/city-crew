@@ -1,11 +1,11 @@
 // The mark of a role — a local guide's star, an editor's medal — and what
-// it means, wherever a person's picture wears it.
+// it means, wherever a person's name wears it.
 //
 // It was drawn in one place: on your own picture on Profile, where only
 // you could see it (`profile/HeroFace`). On 16 Nov 2026 the owner asked
 // for it on a person's page too, where it does its real work: it tells
 // somebody else that the desk trusts this account to keep places. So the
-// look and the words moved here, and both pictures draw the one disc.
+// look and the words moved here, and both pages draw the one disc.
 //
 // ── two voices ──
 //
@@ -17,21 +17,58 @@
 // A person's page uses the third voice for its owner too: that page is
 // yourself as other people see you, and it reads as they read it.
 //
-// ── on a person's page ──
+// ── after the name, not on the picture (owner, 17 Nov 2026) ──
 //
-// `PersonRole` is the whole of it for that page: the question
-// (`useRoleOfQuery`), the disc on the picture's corner, and the sheet a
-// press opens — the app's sheet, as the level's and the role's on
-// Profile are, so that every badge on a picture explains itself one way.
+// For a day the disc lay on a corner of the picture on both pages. The
+// owner, with a reference that set it after the name, asked for that:
 //
-// Bottom right, where Profile puts the level's pill. A person's page
-// shows no level, so the corner is free — and the top of that picture
-// lies over the cover photograph, where a small disc is lost against
-// whatever the photograph is; the bottom lies on the page.
+//   - a role is a thing about the account, and is read with its name,
+//     as the tick after a name is wherever names are verified;
+//   - on a person's page the corner it had was the one the bio's bubble
+//     points at, so a disc and a tail met on the picture's foot, and
+//     the disc covered part of the face;
+//   - on Profile the picture carried the level's ring, the level's pill
+//     and this — two marks about how much you keep and one about what
+//     the desk allows. The picture now says the one thing.
 //
-// Nothing is drawn until the answer is in, and nothing if it fails or
-// there is none: a disc arriving a round trip late lies on the picture
-// and moves nothing.
+// `WithRole` is the whole of it: the name it is given, the disc after
+// it, and the sheet a press opens — the app's sheet, as the level's on
+// Profile is, so that every badge explains itself one way.
+//
+// Taken from the reference: the place, and a smaller mark (`DISC`).
+// Not taken:
+//
+//   - the disc's ground and edge removed. A bare star after a name is
+//     a favourite or a rating before it is a rank; in its disc it is a
+//     badge. And the two roles are told apart by the disc's colour as
+//     well as by the glyph.
+//   - a popover hung from the mark. Every pop-up in the app rises from
+//     the bottom and closes one way (`CollectionDetailScreen`, 13 Nov
+//     2026); the level's badge was made a sheet on that ground a day
+//     before this (`profile/HeroFace`).
+//
+// ── what a long name does ──
+//
+// The name gives way, never the mark: the name's box shrinks
+// (`d.name`) and the name is cut, or made smaller, inside it — as each
+// page already cuts it — while the disc keeps its 20 and its place on
+// the first line. Measured on the 130 profiles of 17 Nov 2026: the
+// longest name is 19 characters, the median 7, and six are over 14; a
+// person's page has about 240pt for the name at 22, and the mark and
+// its gap take 26 of it.
+//
+// A name that wraps to a second line (Profile allows two) fills its
+// box, so the disc then stands at the row's end rather than after the
+// last word. Not seen in the data above; an inline mark in the text
+// would follow the word, and cannot be pressed reliably inside a Text.
+//
+// ── arriving late ──
+//
+// The role is asked for and comes a round trip after the name. Nothing
+// is drawn until the answer is in, and nothing if it fails or there is
+// none. The row is there from the start and the name's box is as wide
+// as the name, so the disc appears after it and moves nothing — except
+// for a name long enough to be giving way already, which gives 26 more.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -99,7 +136,7 @@ export function RoleDisc({ role }: { role: Role }) {
   const look = dressOf(role);
   return (
     <View style={[d.disc, look.dress]}>
-      <Glyph name={look.icon} size={13} color={look.color} />
+      <Glyph name={look.icon} size={GLYPH} color={look.color} />
     </View>
   );
 }
@@ -110,8 +147,9 @@ export function RoleButton({ role, onPress }: { role: Role; onPress: () => void 
   return (
     <PressableScale
       scaleTo={0.9}
-      // The disc is 24; ten more each way is the 44 a thumb is owed.
-      hitSlop={10}
+      // The disc is 20; twelve more each way is the 44 a thumb is owed.
+      // Around it are a name and a handle, neither of them pressed.
+      hitSlop={12}
       accessibilityRole="button"
       accessibilityLabel={roleName(role, t)}
       accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します', '说明这个身份可以做什么', '說明這個身份可以做什麼')}
@@ -146,44 +184,75 @@ export function RoleBody({ role, whose }: { role: Role; whose: 'yours' | 'theirs
   );
 }
 
-/** The mark on a person's page, and its sheet — see the header. */
-export default function PersonRole({ me, personId }: {
-  me: string | null;
-  personId: string;
+/**
+ * A name, the role's disc after it, and the sheet the disc opens — see
+ * the header.
+ *
+ * `line` is the name's line height: the disc is centred on the name's
+ * first line, whatever the name's size.
+ */
+export function WithRole({ role, whose, line, children }: {
+  role: Role | null;
+  whose: 'yours' | 'theirs';
+  line: number;
+  children: React.ReactNode;
 }) {
-  const role = useRoleOfQuery(me, personId).data;
   const [open, setOpen] = useState(false);
-  if (!role) return null;
   return (
-    <>
-      <View style={d.corner} testID="person-role">
-        <RoleButton role={role} onPress={() => setOpen(true)} />
-      </View>
-      <ActionSheet visible={open} onClose={() => setOpen(false)} header={<RoleHead role={role} />}>
-        <RoleBody role={role} whose="theirs" />
-      </ActionSheet>
-    </>
+    <View style={d.row} testID="role-row">
+      <View style={d.name}>{children}</View>
+      {role ? (
+        <>
+          <View style={[d.mark, { height: line }]} testID="role-mark">
+            <RoleButton role={role} onPress={() => setOpen(true)} />
+          </View>
+          <ActionSheet visible={open} onClose={() => setOpen(false)} header={<RoleHead role={role} />}>
+            <RoleBody role={role} whose={whose} />
+          </ActionSheet>
+        </>
+      ) : null}
+    </View>
   );
 }
 
+/** A person's name on their page, with the mark the database says they
+ *  wear — the question (`useRoleOfQuery`), then `WithRole`. */
+export default function PersonRole({ me, personId, line, children }: {
+  me: string | null;
+  personId: string;
+  line: number;
+  children: React.ReactNode;
+}) {
+  const role = useRoleOfQuery(me, personId).data ?? null;
+  return <WithRole role={role} whose="theirs" line={line}>{children}</WithRole>;
+}
+
+/** The disc: 20, from the 24 it was on a picture's corner, where it
+ *  matched the level pill's height. After a name it stands in the
+ *  name's line — 25 on Profile, 28 on a person's page — and 20 leaves
+ *  room above and below in the shorter of them, a little taller than
+ *  the capitals beside it (about 15 at 22pt). Not yet seen on a phone. */
+const DISC = 20;
+/** Its glyph: 11, the 13 it was, in the disc's proportion (13 × 20/24). */
+const GLYPH = 11;
+
 const d = StyleSheet.create({
-  // 24pt: the level pill's height on Profile, so the two corners of that
-  // picture read as a pair.
   disc: {
-    width: 24, height: 24, borderRadius: 12, borderWidth: 1,
+    width: DISC, height: DISC, borderRadius: DISC / 2, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
   guide: { borderColor: colors.ok, backgroundColor: colors.okSoft },
   editor: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
-  // A ring of page round the disc, as Profile's has (`roleHalo` there):
-  // background, not a border, which can come back stale after a change
-  // of look. Its edge on the picture's: the picture's own ring is 4 wide,
-  // and the halo's 2.5 sits inside it.
-  corner: {
-    position: 'absolute', right: -2, bottom: -2,
-    backgroundColor: colors.bg, borderRadius: 999, padding: 2.5,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
-  },
+  // The name, then the mark: 6 between, the near end of the reference's
+  // 6 to 8, so the disc reads as the name's and not as a thing beside
+  // it. From the top, so a second line of name falls under the first
+  // and the disc stays level with the first.
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  // As wide as the name and no wider, and the one that gives way.
+  name: { flexShrink: 1 },
+  // The first line's height, with the disc in its middle. No halo and no
+  // shadow now: those parted it from a photograph, and it is on the page.
+  mark: { justifyContent: 'center' },
   // The level sheet's lead (`profile/HeroFace`): one sheet, one type,
   // whichever badge it is about.
   //
