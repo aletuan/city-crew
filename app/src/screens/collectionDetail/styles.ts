@@ -100,6 +100,10 @@ export const s = StyleSheet.create({
   // `activity`). In the header it had to sit beside the count, or it read
   // as a second header control slipped a line under ⋯ — inside the card
   // there is no control above it to be mistaken for.
+  // The Share sheet's head: its title, and under it the question its
+  // first card answers, in the quiet grey a card's own lines wear.
+  sheetHead: { gap: 4 },
+  sheetAsk: { color: colors.textTertiary, ...type.meta, paddingHorizontal: 4 },
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Public or Private, in one grey — see `visibility`.
   visibilityWord: { color: colors.textTertiary, ...type.meta, lineHeight: BYLINE_LINE },

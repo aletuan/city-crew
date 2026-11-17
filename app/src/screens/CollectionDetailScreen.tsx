@@ -44,6 +44,7 @@ import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
 import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
+import { sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
 import { ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
 import { useReorderDraft } from './collectionDetail/useReorderDraft';
@@ -699,36 +700,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const openPlace = useCallback((slug: string) => navigation.navigate('PlaceDetail', { slug }), [navigation]);
   const step = useCallback((index: number, by: -1 | 1) => latest.current(index, index + by), []);
 
-  // Deliberately inert, and now inert for two different reasons — which
-  // is why the sentence branches. A private list has no address to send
-  // anyone to — and the sentence is about this list, not all of yours,
-  // and says where its switch is. A published one is visible
-  // to everybody but the app still has no link to hand over, because
-  // nothing here registers a URL scheme or a web address for a
-  // collection. Either way the honest placeholder
-  // says which wall you have hit rather than opening a share sheet onto a
-  // link that would 404 for whoever received it.
-  const share = () => Alert.alert(
-    t('Sharing is coming', 'Sắp có chia sẻ', '共有は近日公開', '分享功能即将推出', '分享功能即將推出'),
-    isPublic
-      ? t(
-        'This list is public, but there is no link to send yet. Sharing one is on the way.',
-        'Bộ sưu tập này đã công khai, nhưng chưa có liên kết để gửi. Tính năng chia sẻ sẽ sớm có.',
-        'このコレクションは公開中ですが、送れるリンクはまだありません。共有機能は近日公開予定です。',
-        '这个清单已公开，但还没有可发送的链接。分享功能即将推出。', '這個清單已公開，但還沒有可傳送的連結。分享功能即將推出。',
-      )
-      // The word the card says, Private or Friends: a list shared with
-      // friends is private too, and the sentence points at the control
-      // by what it reads, and where — at the card's head, under your
-      // handle, since 13 Nov 2026; "at the foot" until then.
-      : t(
-        `This list is private. Tap ${seenWord} at the top of its card to make it public — share links are on the way.`,
-        `Bộ sưu tập này đang riêng tư. Bấm ${seenWord} ở đầu thẻ giới thiệu để công khai — liên kết chia sẻ sẽ sớm có.`,
-        `このコレクションは非公開です。紹介カードの上の「${seenWord}」から公開できます。共有リンクは近日公開予定です。`,
-        `这个清单是私密的。点按卡片顶部的“${seenWord}”即可公开 — 分享链接即将推出。`, `這個清單是私密的。點按卡片頂部的「${seenWord}」即可公開 — 分享連結即將推出。`,
-      ),
-  );
-
   /**
    * Take this list into your own collections.
    *
@@ -888,6 +859,15 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      the card for the description and 5.65 for these now. The control is still told from the tally by its chevron and
      its place, not by its ink.
 
+     The glyph alone since 17 Nov 2026: the word and the chevron went,
+     and the control with them in all but the press. The owner did not
+     like a setting standing in the line that says who made the list and
+     when; it is Share at the card's foot now (`collectionDetail/Share`,
+     which has the argument), and what stays here is a mark of how the
+     list stands. Everything above about the word and the chevron is how
+     it came to be one grey glyph; `seenWord` is what VoiceOver is told.
+     It still opens the sheet, for whoever learned to press here.
+
      Tapping opens a choice rather than flipping the switch: a word that
      changes who can see your list on one touch is a word nobody would
      dare tap to find out what it does. */
@@ -901,17 +881,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       hitSlop={BYLINE_SLOP}
       onPress={() => setWhoSees(true)}
       accessibilityRole="button"
-      accessibilityHint={t(
-        'Choose who can see this list',
-        'Chọn ai có thể xem bộ sưu tập này',
-        'このリストを見られる人を選びます',
-        '选择谁可以看到这个清单', '選擇誰可以看到這個清單',
-      )}
+      // The word the glyph stands for: VoiceOver has no glyph to read.
+      accessibilityLabel={seenWord}
+      accessibilityHint={whoHint(t)}
       testID="collection-visibility"
     >
       <Glyph name={SEEN_GLYPH[seen]} size={15} color={colors.textTertiary} />
-      <Text style={s.visibilityWord}>{seenWord}</Text>
-      <Glyph name="chevron-down" size={13} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
 
@@ -1130,9 +1105,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <Glyph name="chevron-forward" size={ACTIVITY_CHEVRON} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
+  // Share, beside the heart: who can see the list, and sending it —
+  // `collectionDetail/Share`. Yours alone, as the mark under your handle is.
+  const shareButton = visibility
+    ? <ShareButton seen={seen} friends={sharedWith.length} onPress={() => setWhoSees(true)} />
+    : null;
   const activity = (
     <View style={s.activity} testID="collection-activity">
-      <View style={s.activityRow}>{heart ?? keptHeart}{activityLink}</View>
+      <View style={s.activityRow}>{heart ?? keptHeart}{shareButton}{activityLink}</View>
     </View>
   );
 
@@ -1630,13 +1610,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     onPress: plan,
     testID: 'collection-menu-plan',
   } : null;
-  const shareRow: SheetAction = {
-    key: 'share',
-    icon: 'share-outline',
-    title: t('Share', 'Chia sẻ', '共有', '分享', '分享'),
-    onPress: share,
-    testID: 'collection-menu-share',
-  };
   const present = (rows: (SheetAction | null | false)[]) => rows.filter((r): r is SheetAction => !!r);
   const [actsBefore, actsAfter]: SheetAction[][] = owned
     ? [
@@ -1656,7 +1629,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           onPress: edit,
           testID: 'collection-menu-edit',
         },
-        shareRow,
       ]),
       [
         {
@@ -1679,7 +1651,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           onPress: copy,
           testID: 'collection-menu-copy',
         },
-        !sharedToMe && shareRow,
       ]),
       present([
         reportRow && { ...reportRow, desc: undefined, destructive: true, testID: 'collection-menu-report' },
@@ -1868,13 +1839,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <ActionSheet
         visible={whoSees}
         onClose={() => setWhoSees(false)}
-        actions={whoSeesRows}
-        header={
-          <Text style={s.sheetTitle} accessibilityRole="header">
-            {t('Who can see your list?', 'Những ai xem được bộ sưu tập của bạn?', 'あなたのリストを見られるのは？', '谁能看到你的清单？', '誰能看到你的清單？')}
-          </Text>
-        }
-      />
+        header={<ShareHead />}
+      >
+        <SheetRows actions={whoSeesRows} onClose={() => setWhoSees(false)} />
+        <SheetRows actions={sendRows(t)} onClose={() => setWhoSees(false)} />
+      </ActionSheet>
     </Screen>
   );
 }
