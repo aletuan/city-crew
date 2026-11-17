@@ -25,13 +25,27 @@
 // an address to send, nothing to send either: a button that opened one
 // dimmed row would be a door onto a wall.
 //
-// The heart's grey, size and reach: one of the row's quiet marks, not a
-// call to act.
+// The heart's grey, size and reach.
+//
+// ── with its word (owner, 18 Nov 2026) ──
+//
+// The glyph stood alone for a day, and beside a heart with a number it
+// read as an afterthought. "Share" after it now, and while the list is
+// shared with friends, "Share · 2". The word is what makes the iOS share
+// glyph honest here: alone it promises a send sheet, and with "Share"
+// beside it it is the button a shared document has, which opens who has
+// the thing. The figure after the word and a dot cannot be read as
+// "shared twice", which a bare number beside the glyph could.
+//
+// Weighed with it: the glyph on a tinted disc (heavier than the heart,
+// for a button only the owner has), and "7 likes" spelled out beside
+// "Share" (three phrases do not fit the row on a narrow phone). The row
+// fits this one because "View activity" became "Activity" the same day.
 //
 // ── what stays under the handle ──
 //
-// The state's glyph alone — a globe, two heads, a padlock — with no word
-// and no chevron: a mark of how the list stands, not the place to change
+// The state's glyph alone — two heads, a padlock, and nothing for a
+// public list (`shares.marked`) — with no word and no chevron: a mark of how the list stands, not the place to change
 // it. It still opens the sheet for now. Whoever learned to press there
 // reaches the same sheet, and the press can go once nobody does.
 //
@@ -55,7 +69,7 @@ import { Glyph } from '../../components/ui/glyph';
 import { useI18n } from '../../lib/i18n';
 import { seenName } from '../../lib/shares';
 import { colors } from '../../theme';
-import { s } from './styles';
+import { ACT_GLYPH, s } from './styles';
 
 type T = ReturnType<typeof useI18n>['t'];
 type Seen = Parameters<typeof seenName>[0];
@@ -94,8 +108,10 @@ export function ShareButton({ seen, friends, onPress }: {
       accessibilityHint={whoHint(t)}
       testID="collection-share"
     >
-      <Glyph name="share-outline" size={15} color={colors.textTertiary} />
-      {seen === 'friends' ? <Text style={s.meta} testID="collection-share-count">{friends}</Text> : null}
+      <Glyph name="share-outline" size={ACT_GLYPH} color={colors.textSecondary} />
+      <Text style={s.act} testID="collection-share-word">
+        {seen === 'friends' ? `${t('Share', 'Chia sẻ', '共有', '分享', '分享')} · ${friends}` : t('Share', 'Chia sẻ', '共有', '分享', '分享')}
+      </Text>
     </PressableScale>
   );
 }
