@@ -126,7 +126,7 @@ import { usePersonMenu } from '../components/PersonMenu';
 import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
-import Shared from './person/Shared';
+import Shared, { useReach } from './person/Shared';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { type Collection, coverUriOf, type FriendProfile, membersOf, useProfileByHandle } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
@@ -186,6 +186,10 @@ export default function PersonScreen({ navigation, route }: {
   const top = usePastRow(useDuckOnScroll());
   const topFriend = TOP_FRIEND_ON && top.past ? friendButton(personId, { size: 'row', prefix: 'person-top', actsOnly: true }) : null;
 
+  // The feed's next cards, drawn before the reader reaches them —
+  // `useReach`.
+  const end = useReach();
+
   const tabClearance = useTabBarClearance();
   // A ring is a border, and a dynamic colour on a border flattens against
   // the phone's appearance rather than the app's (`bgHex`).
@@ -237,6 +241,7 @@ export default function PersonScreen({ navigation, route }: {
         lists={lists}
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
+        reach={end.reach}
       />
     </>
   ) : who.loading ? (
@@ -274,7 +279,7 @@ export default function PersonScreen({ navigation, route }: {
       right={<View style={s.topRight}>{topFriend}{menu.button}</View>}
     >
       <ScrollView
-        onScroll={top.onScroll}
+        onScroll={(e) => { top.onScroll(e); end.onScroll(e); }}
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}

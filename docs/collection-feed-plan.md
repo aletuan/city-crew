@@ -49,6 +49,10 @@ marketing hay hạ tầng.
   tạo bộ sưu tập", mới nhất trước, năm thẻ một lần.
 - Thẻ gồm: dòng lý do (ai, làm gì, khi nào), ảnh bìa, tên bộ, số địa
   điểm, hai dòng mô tả, nút tim.
+- Thẻ tự nạp khi cuộn: còn cách đáy một màn hình rưỡi thì vẽ thêm năm
+  thẻ (`lib/feed.ts`), và ảnh bìa của năm thẻ kế tiếp được tải trước vào
+  bộ nhớ. Nút "Xem thêm" còn lại làm dự phòng. Danh sách ảo hoá và phân
+  trang từ máy chủ để dành cho bước 2.
 - Lưới không mất: số đếm "N bộ sưu tập" bên phải tiêu đề mục chuyển mục
   sang lưới, và "Hoạt động" chuyển lại.
 - Migration: không. Dùng `collections.created_at` và `collection_likes`.
