@@ -972,6 +972,52 @@ nộp. Không nhắc ở đây: chỉnh khoảng cách, cỡ chữ, màu (#1291�
 • 新しいアイコン、すっきりしたスポットページ、より多くの画面で引っ張って更新。
 ```
 
+## Release notes v1.0.17 (What's New)
+
+Viết từ các PR merge sau tag v1.0.16 (cafd321, #1351): #1352 → #1399.
+1.0.16 đã được duyệt nên train của nó đã đóng; app.json nâng lên 1.0.17 ở PR
+này. Không có native mới: thay đổi duy nhất ở package.json là
+`@react-navigation/core` trong devDependencies (cho test). `runtimeVersion`
+vẫn là exposdk:58.0.0, nên mọi thay đổi dưới đây đã tới máy 1.0.x qua EAS
+Update. Năm migration (list_activity_for_readers, own_like_counted, in_common,
+in_common_recent_first, role_of) đã có trên production trước khi nộp. Không
+nhắc ở đây: "In common" và nút kết bạn trên header (#1372–#1374, #1389, đang
+ẩn), nút Nhắn tin mờ "Sắp có" (#1386), lint, test, tách file (#1352–#1358),
+chỉnh cỡ chữ và khoảng cách.
+
+### EN
+
+```
+• Tap a person's face or handle to open their page: their bio, role badge and public collections. Add friend, Block and Report are there too.
+• Anyone who can open a collection can now see who liked and copied it, and its Statistics.
+• Write a short bio, up to 160 characters, under About me on your Profile.
+• Your Profile counts Collections, Check-ins, Friends and Trips. The level and role badges explain themselves when tapped.
+• Collection form: who can see the list in one line, and the current cover first. A list's categories now follow its places.
+• Community collections on Explore show up faster after launch.
+```
+
+### VI
+
+```
+• Chạm vào ảnh đại diện hoặc tên người dùng để mở trang của người đó: phần giới thiệu, huy hiệu vai trò và các bộ sưu tập công khai. Kết bạn, Chặn và Báo cáo cũng nằm ở đó.
+• Ai mở được một bộ sưu tập giờ cũng xem được ai đã thích, ai đã sao chép, và phần Thống kê của bộ sưu tập đó.
+• Viết đôi dòng về bạn, tối đa 160 ký tự, ở mục Về tôi trong Hồ sơ.
+• Hồ sơ đếm Bộ sưu tập, Check-in, Bạn bè và Chuyến đi. Chạm vào huy hiệu cấp độ hay vai trò để xem ý nghĩa.
+• Trang sửa bộ sưu tập: ai xem được hiện trong một dòng, ảnh bìa đang dùng đứng đầu. Loại của bộ sưu tập giờ lấy theo các địa điểm trong đó.
+• Bộ sưu tập cộng đồng ở Khám phá hiện nhanh hơn khi mở app.
+```
+
+### JA
+
+```
+• アイコンやユーザー名をタップすると、その人のページが開きます。自己紹介、役割バッジ、公開中のコレクションを表示し、友達に追加・ブロック・報告もここからできます。
+• コレクションを開ける人なら誰でも、いいねやコピーをした人と統計を見られるようになりました。
+• プロフィールの「自己紹介」に、160文字までのひとことを書けます。
+• プロフィールにはコレクション・チェックイン・友達・旅程の数を表示します。レベルと役割のバッジはタップすると説明が出ます。
+• コレクションの編集画面：公開範囲を1行で表示し、今のカバー写真を先頭に並べます。カテゴリーはスポットから自動で決まります。
+• 探索の「みんなの」コレクションが、起動後すぐに表示されます。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
