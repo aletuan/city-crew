@@ -946,14 +946,47 @@ describe('lists that are not for everybody', () => {
       expect(within(open).getByTestId('activity-when')).toBeTruthy();
     });
 
-    it('offers a heart on the public one alone', async () => {
+    // A list shared with friends is liked by them and by you; a private
+    // one by nobody (`shares.likeable`).
+    it('offers a heart on the public one and the shared one, and none on the private', async () => {
       await show('me');
       const [shared, secret, open] = acts();
-      expect(within(shared).queryByTestId('activity-heart')).toBeNull();
-      expect(within(shared).getByTestId('activity-no-heart')).toBeTruthy();
       expect(within(secret).queryByTestId('activity-heart')).toBeNull();
+      expect(within(secret).getByTestId('activity-no-heart')).toBeTruthy();
+      expect(within(secret).queryByTestId('activity-likes-kept')).toBeNull();
       expect(within(open).getByTestId('activity-heart')).toBeTruthy();
       expect(within(open).queryByTestId('activity-no-heart')).toBeNull();
+      fireEvent.click(within(shared).getByTestId('activity-heart'));
+      expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'noodles', slug: 'noodles' });
+    });
+
+    it('shows the likes a private list kept as a figure, with nothing to press', async () => {
+      state.likes = { secret: 4, noodles: 2 };
+      await show('me');
+      const [shared, secret] = acts();
+      const kept = within(secret).getByTestId('activity-likes-kept');
+      expect(kept.textContent).toBe('4');
+      expect(kept.getAttribute('aria-label')).toBe('4 likes');
+      expect(kept.getAttribute('role')).toBeNull();
+      const glyph = kept.querySelector('[data-icon]')!;
+      expect([glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')]).toEqual(['heart-outline', String(colors.textTertiary)]);
+      expect(within(secret).queryByTestId('activity-no-heart')).toBeNull();
+      fireEvent.click(kept);
+      expect(spies.toggleLike).not.toHaveBeenCalled();
+      // The shared one's are on its heart.
+      expect(within(shared).getByTestId('activity-likes').textContent).toBe('2');
+      expect(within(shared).queryByTestId('activity-likes-kept')).toBeNull();
+    });
+
+    it('says one kept like in the singular, and says it in Vietnamese', async () => {
+      state.likes = { secret: 1 };
+      await show('me');
+      expect(within(acts()[1]).getByTestId('activity-likes-kept').getAttribute('aria-label')).toBe('1 like');
+      cleanup();
+      state.lang = 'vi';
+      state.likes = { secret: 4 };
+      await show('me');
+      expect(within(acts()[1]).getByTestId('activity-likes-kept').getAttribute('aria-label')).toBe('4 lượt thích');
     });
 
     it('draws the mark with no dot before it on a list that says no time', async () => {
@@ -1028,13 +1061,14 @@ describe('lists that are not for everybody', () => {
       expect(screen.getByTestId('person-turn').textContent).toBe('2 collections');
     });
 
-    it('says "Shared with you" on it, in words, and offers no heart', async () => {
+    it('says "Shared with you" on it, in words, and offers its heart to the friend it was shared with', async () => {
       await show();
       const [lent, open] = acts();
       expect(markIn(lent)!.textContent).toBe('·Shared with you');
       expect(markIn(lent)!.getAttribute('aria-label')).toBe('Shared with you');
       expect(markIn(lent)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('people-outline');
-      expect(within(lent).queryByTestId('activity-heart')).toBeNull();
+      fireEvent.click(within(lent).getByTestId('activity-heart'));
+      expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'for-me', slug: 'for-me' });
       expect(markIn(open)).toBeNull();
       expect(within(open).getByTestId('activity-heart')).toBeTruthy();
       expect(tiles()[0].getAttribute('aria-label')).toBe('List for-me, 0 places, Shared with you');

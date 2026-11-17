@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  diffShares, namesBriefly, shareCta, shareRows, sharesByList, visibilityOf, type ShareRow,
+  diffShares, likeable, namesBriefly, shareCta, shareRows, sharesByList, visibilityOf, type ShareRow,
   SEEN_GLYPH, seenGloss, seenName,
 } from './shares';
 
@@ -155,5 +155,28 @@ describe('namesBriefly', () => {
     expect(namesBriefly(five, at(1))).toBe('A, B và 3 người khác');
     expect(namesBriefly(five, at(2))).toBe('A、Bほか3人');
     expect(namesBriefly(five, at(3))).toBe('A、B和另外 3 人');
+  });
+});
+
+// The app's copy of the insert policy on `collection_likes`.
+describe('likeable', () => {
+  it('is anybody’s on a public list, shared or not, yours or not', () => {
+    expect(likeable(true, true, 0)).toBe(true);
+    expect(likeable(true, false, 0)).toBe(true);
+    expect(likeable(true, true, 3)).toBe(true);
+  });
+
+  it('is yours on a list of your own once it is shared with somebody', () => {
+    expect(likeable(false, true, 1)).toBe(true);
+    expect(likeable(false, true, 4)).toBe(true);
+  });
+
+  it('is nobody’s on a list of your own shared with nobody', () => {
+    expect(likeable(false, true, 0)).toBe(false);
+  });
+
+  // Not public and not yours: it reached you through a share.
+  it('is the friend’s on a list lent to them', () => {
+    expect(likeable(false, false, 0)).toBe(true);
   });
 });

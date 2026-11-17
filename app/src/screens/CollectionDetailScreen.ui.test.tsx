@@ -2446,13 +2446,17 @@ describe('a friend’s list, shared with you', () => {
     expect(screen.queryByText('Collection not found.')).toBeNull();
   });
 
-  it('credits the friend whose list it is, says it is shared with you, and draws no heart', () => {
+  // A list shared with a group is liked by the group (owner, 17 Nov 2026).
+  it('credits the friend whose list it is, says it is shared with you, and offers its heart', () => {
     show();
     expect(screen.getByTestId('collection-handle').textContent).toBe('lan');
     expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
-    expect(screen.queryByRole('button', { name: 'Like' })).toBeNull();
-    // The activity row holds the way to the list's activity, and no heart.
-    expect(screen.getByTestId('collection-activity').textContent).toBe('View activity');
+    // The activity row holds the heart and the way to the list's activity.
+    const row = screen.getByTestId('collection-activity');
+    expect(row.textContent).toBe('View activity');
+    expect(row.contains(screen.getByRole('button', { name: 'Like' }))).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Like' }));
+    expect(spies.toggleLike).toHaveBeenCalledTimes(1);
     // Nor the owner's word for who can see it.
     expect(screen.queryByTestId('collection-visibility')).toBeNull();
   });
@@ -2461,8 +2465,9 @@ describe('a friend’s list, shared with you', () => {
     show();
     const card = screen.getByTestId('collection-desc');
     expect(card.contains(screen.getByTestId('collection-more'))).toBe(true);
-    // Two buttons on the card: the ⋯, and the way to the list's activity.
-    expect(card.querySelectorAll('[role="button"]')).toHaveLength(2);
+    // Three buttons on the card: the ⋯, the heart, and the way to the
+    // list's activity.
+    expect(card.querySelectorAll('[role="button"]')).toHaveLength(3);
     expect(screen.queryByRole('button', { name: 'Save a copy' })).toBeNull();
   });
 
@@ -2961,12 +2966,14 @@ describe('the introduction card', () => {
 
   // Reserved for the list's activity (owner, 13 Nov 2026): drawn on every
   // card, the same height with or without the heart in it.
+  // A list of your own shared with nobody: nobody may like it.
   it('draws the activity row, one height, with no heart in it', () => {
-    state.cols = [theirs({ is_public: false })];
+    state.cols = [];
+    state.mine = [theirs({ is_public: false, owner_id: 'me' })];
     show();
     const activity = screen.getByTestId('collection-activity');
-    expect(activity.textContent).toBe('View activity');
-    expect(activity.querySelectorAll('[role="button"]')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /^(Like|Unlike)$/ })).toBeNull();
+    expect(activity.querySelector('[data-icon^="heart"]')).toBeNull();
     expect(viewStyleOf(activity.firstElementChild as HTMLElement).height).toBe(CHIP_H);
     expect(screen.getByTestId('collection-count')).toBeTruthy();
   });
@@ -3174,23 +3181,34 @@ describe('the likes a list kept', () => {
     expect(row.lastElementChild).toBe(screen.getByTestId('collection-activity-link'));
   });
 
-  it('shows the owner the likes a Friends list kept, read-only', () => {
+  // Since 17 Nov 2026 a list shared with friends is liked by them and by
+  // its owner: the likes it kept stand beside a heart that is a button
+  // again, and a new one adds to them.
+  it('gives the owner of a Friends list its heart back, on the likes it kept', () => {
     state.mine = [collection({ is_public: false })];
     state.shares = [{ collection_id: 'c1', user_id: 'lan', created_at: '2026-11-13T10:00:00Z' }];
     state.likes = { 'old-quarter': 12 };
     show();
     expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Friends');
-    expectKept(12, '12 likes');
+    expect(kept()).toBeNull();
+    const h = button('Like');
+    expect(h.textContent).toBe('12');
+    fireEvent.click(h);
+    expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'c1', slug: 'old-quarter' });
   });
 
-  it('shows a friend the likes the list lent to them kept, the number and nothing else', () => {
+  it('gives a friend the heart of the list lent to them, filled when they have liked it', () => {
     state.mine = [];
     state.shared = [collection({ owner_id: 'lan-id', is_public: false, curator_handle: 'lan' })];
     state.myLikes = ['c1'];
     state.likes = { 'old-quarter': 12 };
     show();
     expect(screen.getByTestId('collection-meta').textContent).toBe('Shared with you');
-    expectKept(12, '12 likes');
+    expect(kept()).toBeNull();
+    const h = button('Unlike');
+    expect(h.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('heart');
+    fireEvent.click(h);
+    expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'c1', slug: 'old-quarter' });
     // And the way to who liked it, a reader's as the owner's (15 Nov 2026).
     expect(screen.getByTestId('collection-activity-link')).toBeTruthy();
     expect(screen.getByTestId('collection-activity').textContent).toBe('12View activity');

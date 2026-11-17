@@ -61,8 +61,10 @@ marketing hay hạ tầng.
   người xem vốn đã mở được. Trang của chính mình có mọi bộ của mình; trang
   người khác có bộ công khai và bộ họ chia sẻ với mình. Thẻ không công
   khai mang dấu: ổ khoá (riêng tư), hai người kèm số bạn (đã chia sẻ),
-  hai người kèm "Chia sẻ với bạn" (được chia sẻ). Chỉ bộ công khai có
-  nút tim. Ảnh bìa trang vẫn chỉ lấy từ bộ công khai. Không migration,
+  hai người kèm "Chia sẻ với bạn" (được chia sẻ). Bộ công khai và bộ
+  chia sẻ nhóm có nút tim (nhóm thả tim được,
+  `20261117233000_likes_in_the_group.sql`); bộ riêng tư chỉ hiện số tim
+  đã giữ, không bấm được. Ảnh bìa trang vẫn chỉ lấy từ bộ công khai. Không migration,
   không sửa chính sách: không ai thấy thêm thứ họ chưa xem được. Quy tắc
   ở `lib/person.ts` (`listsOn`, `seenOn`). Feed cộng đồng ở bước 2 vẫn chỉ
   có bộ công khai.

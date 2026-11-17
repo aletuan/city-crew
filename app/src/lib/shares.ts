@@ -39,6 +39,25 @@ export function visibilityOf(isPublic: boolean, shares: number): Visibility {
 }
 
 /**
+ * Whether this reader may like the list — the app's copy of the insert
+ * policy on `collection_likes` (`20261117233000_likes_in_the_group.sql`).
+ *
+ * A public list, anybody. A list shared with friends, the friends and
+ * its owner (owner, 17 Nov 2026: a group a list is read in is a place to
+ * say you like it; until then a new like needed a public list). A list
+ * shared with nobody, nobody: a heart only its owner could press would
+ * count its owner.
+ *
+ * `owned` false on a list that is not public means it was shared with
+ * the reader — the only other way a private list reaches a screen
+ * (`CollectionDetailScreen`, `sharedToMe`). `shares` is how many friends
+ * the owner's list is shared with, and is not asked of anybody else's.
+ */
+export function likeable(isPublic: boolean, owned: boolean, shares: number): boolean {
+  return isPublic || !owned || shares > 0;
+}
+
+/**
  * The owner's shares, by list, each list's friends in the order they were
  * named.
  *

@@ -58,7 +58,9 @@
 // public says who sees it (`marks`): a padlock, two heads and how many,
 // or two heads and "Shared with you". The count in the heading is of
 // what is drawn, so it is all of yours on your page and what you may see
-// on another's. Only a public list has a heart, as on its own page.
+// on another's. A list shared with friends has its heart, for them and
+// for its owner (`shares.likeable`); a private one shows the likes it
+// kept as a figure, as on its own page.
 //
 // ── the heart ──
 //
@@ -259,7 +261,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, re
               liked={!!c.id && myLikes.includes(c.id)}
               likes={likes[c.slug] ?? 0}
               onOpen={() => onOpen(c)}
-              onHeart={c.id && c.is_public !== false ? () => heart(c) : undefined}
+              onHeart={c.id && seenOf(c)?.kind !== 'private' ? () => heart(c) : undefined}
             />
           ))}
           {lists.length > shown ? (
