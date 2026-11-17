@@ -89,7 +89,11 @@ export default function ActivityCard({
         testID="activity-open"
       >
         {uri
-          ? <Image source={{ uri }} style={s.photo} contentFit="cover" transition={160} />
+          // `memory-disk`, where `expo-image` defaults to `disk`: a feed
+          // prefetches the covers it is about to draw into memory, and a
+          // card must read from where they were put (`Avatar` has the
+          // same reason).
+          ? <Image source={{ uri }} style={s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
           : <View style={[s.photo, s.tint]} testID="activity-tint" />}
         <View style={s.words}>
           <Text style={s.title} numberOfLines={2}>{title}</Text>

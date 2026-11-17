@@ -25,12 +25,30 @@
 // and pressing it turns the section into the grid, with "Activity" there
 // to turn it back. The grid is the one that was here, tiles and all.
 //
-// ── five at a time ──
+// ── five at a time, added before the reader reaches them ──
 //
-// The feed draws `PAGE` cards and a "Show more" under them, which adds
-// `PAGE` more. Every card is a photograph the page's width, and the
+// The feed draws `PAGE` cards, and `PAGE` more each time the reader
+// comes within a screen and a half of the end of them (`lib/feed`,
+// `useReach`). Every card is a photograph the page's width, and the
 // screen is a scroll view, not a list that recycles: all 24 at once is
 // 24 decodes for a reader who came to see who this is.
+//
+// For a morning the next five came from a "Show more" under the fifth.
+// The owner, the same afternoon: a feed loads as you go. The button is
+// still drawn under the last card while there are more — a reader who
+// reaches it before a scroll event has (a page barely longer than the
+// screen, a switch control) has a way on — but a scroll gets there
+// first.
+//
+// The collections are already in memory (the shelf is loaded whole), so
+// "loading" here is drawing: there is nothing to wait for and no
+// spinner. What does arrive late is a photograph, so the covers of the
+// next `PAGE` are prefetched into memory as each batch is drawn, and
+// the cards read them from there (`ActivityCard`'s cache policy).
+//
+// Not a recycling list, and not pages from the server: both are step 2
+// of the plan, where the feed is the community's and has no end. Here
+// the longest page is 24 cards.
 //
 // ── the heart ──
 //
@@ -39,14 +57,15 @@
 // write and the optimistic count, so a like made here shows everywhere.
 // A row from a launch cache with no id cannot be liked and draws none.
 
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import ActivityCard from '../../components/ActivityCard';
 import { Glyph } from '../../components/ui/glyph';
 import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { agoLabel } from '../../lib/ago';
 import { useLikes } from '../../lib/catalog';
+import { nearEnd } from '../../lib/feed';
 import type { Collection, FriendProfile } from '../../lib/data';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
@@ -59,19 +78,64 @@ export const PAGE = 5;
 /** A tile's photograph: the height the grid has always had. */
 const TILE_PHOTO_H = 108;
 
-export default function Shared({ me, person, lists, coverFor, onOpen }: {
+/**
+ * The page's scroll, as a count of the times the reader has come near
+ * the end of what is drawn — the number `Shared` adds cards on.
+ *
+ * Once for each height the page has had: scroll events arrive sixty a
+ * second and every one of them near the end would be "near the end", so
+ * a reach is counted when the content's height is one it has not been
+ * counted at. Five more cards make the page taller; if the reader is
+ * still near the end of that, it counts again.
+ */
+export function useReach() {
+  const [reach, setReach] = useState(0);
+  const countedAt = useRef(-1);
+  return {
+    reach,
+    onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const at = e.nativeEvent;
+      if (!nearEnd(at) || countedAt.current === at.contentSize.height) return;
+      countedAt.current = at.contentSize.height;
+      setReach((n) => n + 1);
+    },
+  };
+}
+
+export default function Shared({ me, person, lists, coverFor, onOpen, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
   /** Their public collections, newest first (`person.listsBy`). */
   lists: Collection[];
   coverFor: (c: Collection) => string | undefined;
   onOpen: (c: Collection) => void;
+  /** How many times the reader has come near the page's end (`useReach`). */
+  reach?: number;
 }) {
   const { t, lang } = useI18n();
   const { likes, myLikes, toggleLike } = useLikes();
   const { askToSignIn } = useSaveActions();
   const [all, setAll] = useState(false);
   const [shown, setShown] = useState(PAGE);
+
+  // A new reach, and the feed showing: five more, while there are more.
+  // Near the end of the grid is not near the end of the feed.
+  const counted = useRef(reach);
+  useEffect(() => {
+    if (reach === counted.current) return;
+    counted.current = reach;
+    if (!all) setShown((n) => (n < lists.length ? n + PAGE : n));
+  }, [reach, all, lists.length]);
+
+  // The covers of the cards that would be added next, on their way into
+  // memory before they are asked for. A string, so the effect runs when
+  // the set changes and not on every render that builds a new array.
+  // Turning to the grid changes neither `shown` nor this, so nothing is
+  // fetched again for it.
+  const ahead = lists.slice(shown, shown + PAGE).map(coverFor).filter(Boolean).join(' ');
+  useEffect(() => {
+    if (ahead) Image.prefetch(ahead.split(' '), 'memory-disk').catch(() => {});
+  }, [ahead]);
 
   const placesWord = (n: number) => (n === 1
     ? t('1 place', '1 địa điểm', '1か所', '1 个地点', '1 個地點')
