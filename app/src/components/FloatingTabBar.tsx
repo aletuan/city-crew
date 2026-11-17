@@ -43,6 +43,7 @@ import { splitFriendships } from '../lib/friends';
 import { useI18n } from '../lib/i18n';
 import { useInvitations } from '../lib/invitations';
 import { useMyTrips } from '../lib/mytrips';
+import { useRewards } from '../lib/rewards';
 import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
@@ -132,6 +133,61 @@ const ICONS: Record<string, GlyphName> = {
   Profile: 'person-outline',
 };
 
+type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string;
+
+/**
+ * What VoiceOver says for a tab wearing a dot. The dot is a 9pt view
+ * with no text, so until 2 Oct 2026 a reader using the screen reader
+ * heard "Profile" and never learned a person was waiting on them — the
+ * one signal the bar carries, carried for sighted readers only. The
+ * count goes in the label rather than a hint: a hint is read after a
+ * pause, and is off by default for many readers. The eye still gets a
+ * dot and no number, as before — see the dots' own comment.
+ *
+ * Out of the component (17 Nov 2026), which stands at its ceiling
+ * (`oversize.js`) and had a fourth reason for a dot to say.
+ */
+export function spokenTab(
+  name: string,
+  label: string,
+  on: { requests: number; invites: number; today: string | null; badges: number },
+  t: T,
+): string {
+  if (name === 'Profile' && on.requests > 0) {
+    return t(
+      `${label}, ${on.requests} friend request${on.requests === 1 ? '' : 's'} waiting`,
+      `${label}, ${on.requests} lời mời kết bạn đang chờ`,
+      `${label}、友達リクエスト${on.requests}件待ち`,
+      `${label}，${on.requests} 个好友请求待处理`, `${label}，${on.requests} 個好友請求待處理`,
+    );
+  }
+  // After the request, when both apply: the person waiting comes first.
+  if (name === 'Profile' && on.badges > 0) {
+    return t(
+      `${label}, ${on.badges} new badge${on.badges === 1 ? '' : 's'}`,
+      `${label}, ${on.badges} huy hiệu mới`,
+      `${label}、新しいバッジ${on.badges}個`,
+      `${label}，${on.badges} 枚新徽章`, `${label}，${on.badges} 枚新徽章`,
+    );
+  }
+  if (name === 'Trips' && on.invites > 0) {
+    return t(
+      `${label}, ${on.invites} trip invitation${on.invites === 1 ? '' : 's'} waiting`,
+      `${label}, ${on.invites} lời mời chuyến đi đang chờ`,
+      `${label}、旅程の招待${on.invites}件待ち`,
+      `${label}，${on.invites} 个行程邀请待处理`, `${label}，${on.invites} 個行程邀請待處理`,
+    );
+  }
+  // After the invitation, when both apply: the one somebody else is
+  // waiting on comes first. The soonest trip is named, as Activity
+  // names it.
+  if (name === 'Trips' && on.today !== null) {
+    const title = on.today;
+    return t(`${label}, “${title}” is today`, `${label}, “${title}” là hôm nay`, `${label}、「${title}」は今日です`, `${label}，“${title}”就在今天`, `${label}，「${title}」就在今天`);
+  }
+  return label;
+}
+
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   // The guide's ring on this tab is the pill's own shape (owner, 22 Oct
   // 2026): the cell's width, and the inset in from the island's rim above
@@ -201,41 +257,18 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // dot needs to be right.
   const myTrips = useMyTrips();
   const today = tripsToday(myTrips.data, todayISO(), minutesOf());
+  // And a fourth, on Profile, of the third's kind (17 Nov 2026): nobody
+  // is waiting, but a badge was earned since the reader last looked at
+  // them, and the sheet that shows which is behind "Lv" on that tab. The
+  // banner said so for four seconds; this is what is left when it has
+  // gone. From `lib/rewards`, which works the badges out once.
+  const badgesNew = useRewards().unseen.length;
   const { t } = useI18n();
 
-  // What VoiceOver says for a tab wearing a dot. The dot is a 9pt view
-  // with no text, so until 2 Oct 2026 a reader using the screen reader
-  // heard "Profile" and never learned a person was waiting on them — the
-  // one signal the bar carries, carried for sighted readers only. The
-  // count goes in the label rather than a hint: a hint is read after a
-  // pause, and is off by default for many readers. The eye still gets a
-  // dot and no number, as before — see the dots' own comment.
-  const spoken = (name: string, label: string): string => {
-    if (name === 'Profile' && requestsWaiting > 0) {
-      return t(
-        `${label}, ${requestsWaiting} friend request${requestsWaiting === 1 ? '' : 's'} waiting`,
-        `${label}, ${requestsWaiting} lời mời kết bạn đang chờ`,
-        `${label}、友達リクエスト${requestsWaiting}件待ち`,
-        `${label}，${requestsWaiting} 个好友请求待处理`, `${label}，${requestsWaiting} 個好友請求待處理`,
-      );
-    }
-    if (name === 'Trips' && invitesWaiting > 0) {
-      return t(
-        `${label}, ${invitesWaiting} trip invitation${invitesWaiting === 1 ? '' : 's'} waiting`,
-        `${label}, ${invitesWaiting} lời mời chuyến đi đang chờ`,
-        `${label}、旅程の招待${invitesWaiting}件待ち`,
-        `${label}，${invitesWaiting} 个行程邀请待处理`, `${label}，${invitesWaiting} 個行程邀請待處理`,
-      );
-    }
-    // After the invitation, when both apply: the one somebody else is
-    // waiting on comes first. The soonest trip is named, as Activity
-    // names it.
-    if (name === 'Trips' && today.length > 0) {
-      const title = today[0].title;
-      return t(`${label}, “${title}” is today`, `${label}, “${title}” là hôm nay`, `${label}、「${title}」は今日です`, `${label}，“${title}”就在今天`, `${label}，「${title}」就在今天`);
-    }
-    return label;
-  };
+  // What VoiceOver says for a tab wearing a dot — `spokenTab`.
+  const spoken = (name: string, label: string) => (
+    spokenTab(name, label, { requests: requestsWaiting, invites: invitesWaiting, today: today[0]?.title ?? null, badges: badgesNew }, t)
+  );
 
   // The dot wears one pair per theme, selected or not: pill-ink core,
   // ringed in the pill's own coral.
@@ -455,7 +488,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           {state.routes.map((route) => (
             <View key={route.key} style={[s.windowCell, { width: cell }]}>
               <View style={s.dotBox}>
-                {(route.name === 'Profile' && waiting)
+                {(route.name === 'Profile' && (waiting || badgesNew > 0))
                   || (route.name === 'Trips' && (invitesWaiting > 0 || today.length > 0))
                   ? <View style={[s.reqDot, dotInk]} testID={`dot-${route.name.toLowerCase()}`} /> : null}
               </View>

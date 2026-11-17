@@ -36,10 +36,16 @@ type Lang = 'en' | 'vi' | 'ja';
 // `Alert` from react-native-web is a silent no-op, so a failed sign-out is
 // caught at the import the screen actually uses.
 const alert = vi.hoisted(() => vi.fn<(title: string, body?: string) => void>());
-vi.mock('react-native', async (orig) => ({
-  ...(await orig<Record<string, unknown>>()),
-  Alert: { alert },
-}));
+// And a window with a height: jsdom's has none, and the sheet behind
+// "Lv" takes a share of it (`HeroFace`'s `ROOM`).
+vi.mock('react-native', async (orig) => {
+  const real = await orig<typeof import('react-native')>();
+  return {
+    ...real,
+    Alert: { alert },
+    useWindowDimensions: () => ({ ...real.useWindowDimensions(), height: 852 }),
+  };
+});
 // The root ref only; the route types stay real.
 const goTo = vi.hoisted(() => vi.fn());
 vi.mock('../nav', async (orig) => ({
@@ -186,14 +192,33 @@ vi.mock('../components/AvatarPicker', () => ({
 // The ring's drawing is its own business; the numbers it is handed are
 // this screen's.
 vi.mock('../components/EngagementRing', () => ({
-  default: ({ level, progress, onExplain, children }: { level: number; progress: number; onExplain: () => void; children: React.ReactNode }) => (
-    <div data-testid="ring" data-level={level} data-progress={progress}>
+  default: ({ level, progress, fresh, onExplain, children }: { level: number; progress: number; fresh?: boolean; onExplain: () => void; children: React.ReactNode }) => (
+    <div data-testid="ring" data-level={level} data-progress={progress} data-fresh={String(!!fresh)}>
       {children}
       {/* The pill, which the real ring makes a press. */}
       <button type="button" data-testid="ring-explain" onClick={onExplain} />
     </div>
   ),
 }));
+
+// The one copy of the reader's badges (`lib/rewards`): what this screen
+// does with it is open its sheet, and say when it opened and closed.
+const rewards = vi.hoisted(() => ({
+  facts: null as Record<string, number> | null,
+  unseen: [] as string[],
+  wanted: false,
+  opened: vi.fn(),
+  closed: vi.fn(),
+}));
+vi.mock('../lib/rewards', async () => {
+  const { NO_FACTS, earnedBadges } = await import('../lib/badges');
+  return {
+    useRewards: () => {
+      const facts = { ...NO_FACTS, ...rewards.facts };
+      return { facts, earned: earnedBadges(facts), unseen: rewards.unseen, wanted: rewards.wanted, opened: rewards.opened, closed: rewards.closed };
+    },
+  };
+});
 
 import ProfileScreen from './ProfileScreen';
 
@@ -219,6 +244,7 @@ const button = (start: string) =>
 const press = (start: string) => fireEvent.click(button(start));
 
 beforeEach(async () => {
+  rewards.facts = null; rewards.unseen = []; rewards.wanted = false;
   guide.enabled = false; guide.setEnabled.mockClear(); guide.replay.mockClear(); guide.notice = null; guide.noticeTop = null;
   vi.clearAllMocks();
   state.resume = null;
@@ -1006,6 +1032,83 @@ describe('the level ring', () => {
   it('starts a new account at level 1', () => {
     draw();
     expect(screen.getByTestId('ring').getAttribute('data-level')).toBe('1');
+  });
+});
+
+// The nine badges, in the sheet behind "Lv" and nowhere else on the tab
+// (owner, 17 Nov 2026) — `components/BadgeShelf` draws them, and
+// `lib/rewards` holds them.
+describe('the badges, under the level', () => {
+  const shut = async () => {
+    fireEvent.click(screen.getByLabelText('Close'));
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    await waitFor(() => expect(screen.queryByTestId('badge-sheet-head')).toBeNull());
+  };
+
+  it('are not on the tab itself', () => {
+    draw();
+    expect(screen.queryByTestId('badge-shelf')).toBeNull();
+  });
+
+  it('are the sheet’s second card, after the level’s, with the reader’s own', () => {
+    rewards.facts = { saved: 2, trips: 1 };
+    draw();
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    const level = screen.getByTestId('badge-sheet-body');
+    const shelf = screen.getByTestId('badge-shelf');
+    expect(level.compareDocumentPosition(shelf) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(level.parentElement).toBe(shelf.parentElement);
+    expect(screen.getByTestId('badge-count').textContent).toBe('2 / 9');
+    // The level's card is still the level's alone.
+    expect(level.contains(shelf)).toBe(false);
+    // Twelve between the two, as between the header and the first.
+    expect(viewStyleOf(level.parentElement!).gap).toBe(12);
+  });
+
+  // A phone too short for both cards scrolls them, and leaves the page
+  // showing above the sheet to close it by. The window here is 852 tall.
+  it('scrolls the two cards within seven tenths of the screen', () => {
+    draw();
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    const scroll = screen.getByTestId('badge-shelf').parentElement!.parentElement!;
+    expect(viewStyleOf(scroll).maxHeight).toBe(596);
+    expect(Math.round(852 * 0.7)).toBe(596);
+  });
+
+  it('says when the sheet opened and when it closed, once each', async () => {
+    draw();
+    expect(rewards.opened).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('ring-explain'));
+    expect(rewards.opened).toHaveBeenCalledTimes(1);
+    expect(rewards.closed).not.toHaveBeenCalled();
+    await shut();
+    expect(rewards.closed).toHaveBeenCalledTimes(1);
+    expect(rewards.opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells the pill when a badge is new, and not otherwise', () => {
+    draw();
+    expect(screen.getByTestId('ring').getAttribute('data-fresh')).toBe('false');
+    cleanup();
+    rewards.unseen = ['beenThere'];
+    draw();
+    expect(screen.getByTestId('ring').getAttribute('data-fresh')).toBe('true');
+  });
+
+  // The banner was pressed somewhere else in the app: it brought the
+  // reader here and asks for the sheet.
+  it('opens the sheet by itself when the banner asked for it', () => {
+    rewards.wanted = true;
+    draw();
+    expect(screen.getByTestId('badge-sheet-head').textContent).toContain('Level 1');
+    expect(screen.getByTestId('badge-shelf')).toBeTruthy();
+    expect(rewards.opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays shut when nothing asked', () => {
+    draw();
+    expect(screen.queryByTestId('badge-sheet-head')).toBeNull();
+    expect(rewards.opened).not.toHaveBeenCalled();
   });
 });
 

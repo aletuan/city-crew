@@ -31,6 +31,8 @@ vi.mock('../lib/auth', () => {
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 vi.mock('../lib/invitations', () => ({ useInvitations: () => invitations }));
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => trips }));
+const rewards = vi.hoisted(() => ({ unseen: [] as string[] }));
+vi.mock('../lib/rewards', () => ({ useRewards: () => rewards }));
 const theme = vi.hoisted(() => ({ scheme: 'dark' as 'dark' | 'light' }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
@@ -101,6 +103,7 @@ beforeEach(() => {
   crew.ships = { data: [], reload: vi.fn(), loadedAt: Date.now() };
   invitations.waiting = 0;
   trips.data = [];
+  rewards.unseen = [];
   theme.scheme = 'dark';
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
@@ -487,6 +490,40 @@ describe('the waiting dots', () => {
     invitations.waiting = 2;
     mount(propsFor(0).props);
     expect(dotsIn('Trips')).toBe(quiet + 1);
+  });
+
+  // The fourth reason for a dot (17 Nov 2026): a badge earned since the
+  // reader last closed the sheet behind "Lv" on that tab.
+  it('marks Profile for a badge not yet looked at, and says how many', () => {
+    const { unmount } = mount(propsFor(0).props);
+    const quiet = dotsIn('Profile');
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile');
+    unmount();
+
+    rewards.unseen = ['beenThere'];
+    const one = mount(propsFor(0).props);
+    expect(dotsIn('Profile')).toBe(quiet + 1);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 1 new badge');
+    // And no other tab is marked for it.
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
+    one.unmount();
+
+    rewards.unseen = ['beenThere', 'curator'];
+    mount(propsFor(0).props);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 2 new badges');
+  });
+
+  // One dot, whatever is behind it; and the person waiting is said first.
+  it('says the friend request, not the badge, when both are waiting on Profile', () => {
+    crew.ships.data = [request('me')];
+    const { unmount } = mount(propsFor(0).props);
+    const one = dotsIn('Profile');
+    unmount();
+
+    rewards.unseen = ['beenThere'];
+    mount(propsFor(0).props);
+    expect(dotsIn('Profile')).toBe(one);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 1 friend request waiting');
   });
 
   it('marks nothing for a reader who is signed out', () => {
