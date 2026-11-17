@@ -50,6 +50,7 @@ import React from 'react';
 import type Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import LikeHeart from './LikeHeart';
 import { Glyph } from './ui/glyph';
 import { PressableScale } from './ui/controls';
 import { Avatar, Card } from './ui/surfaces';
@@ -74,10 +75,8 @@ export type ActivityMark = {
  *  the heart of the first card on a 393 × 852 screen with a head above
  *  it (drawn to scale, not measured on a phone). */
 const PHOTO_H = 168;
-/** The heart: 18, the size a list's own page draws it at, and
- *  `colors.like` when liked. It was 20 and `bad` until 18 Nov 2026 — a
- *  second size and a second red for one button
- *  (`collectionDetail/styles`, `ACT_GLYPH`). */
+/** The figure a private list kept, at the size the heart is drawn at
+ *  (`LikeHeart`, the `card` tone). */
 const HEART = 18;
 /** The mark's glyph: 13, a cap's height beside the time's 13pt type. */
 const MARK = 13;
@@ -150,23 +149,16 @@ export default function ActivityCard({
       </PressableScale>
       {onHeart ? (
         <View style={s.foot}>
-          <PressableScale
-            contentStyle={s.heart}
-            scaleTo={0.82}
-            haptic="none"
-            hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+          <LikeHeart
+            liked={liked}
+            count={likes}
             onPress={onHeart}
-            accessibilityRole="button"
-            accessibilityState={{ selected: liked }}
-            accessibilityLabel={liked
-              ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す', '取消点赞这个合集', '取消按讚這個合集')
-              : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
+            contentStyle={s.heart}
+            countStyle={s.count}
+            hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
             testID="activity-heart"
-          >
-            <Glyph name={liked ? 'heart' : 'heart-outline'} size={HEART} color={liked ? colors.like : colors.textSecondary} />
-            {/* The tally from one like up, as everywhere (`likesWorthShowing`). */}
-            {likesWorthShowing(likes) ? <Text style={s.count} testID="activity-likes">{likes}</Text> : null}
-          </PressableScale>
+            countTestID="activity-likes"
+          />
         </View>
       ) : likesWorthShowing(likes) ? (
         <View

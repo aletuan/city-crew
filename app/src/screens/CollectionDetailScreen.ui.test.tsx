@@ -2934,7 +2934,9 @@ describe('the introduction card', () => {
     // glyph to its count, 24 between the pairs. Those are made of these
     // gaps and the glyphs' own bearings; see `activityRow`.
     const gapOf = (el: Element | null | undefined) => viewStyleOf(el as Element)?.gap;
-    const heart = screen.getByRole('button', { name: 'Like' }).querySelector('[data-icon]')?.parentElement;
+    // The glyph stands in the view that swells when it is liked (`LikeHeart`);
+    // the row is the one around that.
+    const heart = screen.getByRole('button', { name: 'Like' }).querySelector('[data-icon]')?.parentElement?.parentElement;
     const count = screen.getByTestId('collection-count');
     expect([gapOf(foot), gapOf(heart), gapOf(count)]).toEqual([20, 5, 3]);
   });
@@ -3167,7 +3169,8 @@ describe('the likes a list kept', () => {
     const h = button('Like');
     const glyph = h.querySelector('[data-icon]')!;
     return {
-      inner: layoutOf(glyph.parentElement as HTMLElement),
+      // Past the view that swells on a like (`LikeHeart`), to the row.
+      inner: layoutOf(glyph.parentElement!.parentElement as HTMLElement),
       glyph: [glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')],
       count: textStyleOf(within(h).getByText('12')),
     };
