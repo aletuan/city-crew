@@ -304,26 +304,29 @@ describe('the bio, and the way to write one', () => {
     expect(screen.queryByTestId('person-bio-add')).toBeNull();
   });
 
-  // How it stands (owner, 17 Nov 2026): led by the quote the Profile
-  // tab's row leads with, in the page's ink rather than the handle's
-  // grey, and hung from the mark when it runs to a second line.
-  it('leads the bio with a quote, in the page’s ink, the lines hanging from the mark', async () => {
+  // How it stands (owner, 17 Nov 2026): a bubble as wide as its words,
+  // at the picture's inset with its corner under the picture tight, in
+  // the page's ink — and no mark inside it.
+  it('draws the bio as a bubble that hugs its words, its corner under the picture tight', async () => {
     await show();
-    const row = screen.getByTestId('person-bio-row');
+    const bubble = screen.getByTestId('person-bio-row');
     const bio = screen.getByTestId('person-bio');
-    const mark = row.querySelector('[data-icon="quote"]')!;
-    expect([mark.getAttribute('data-size'), mark.getAttribute('data-color')]).toEqual(['16', String(colors.textTertiary)]);
-    // The mark first, then the words — and only the words are the bio.
-    expect(mark.compareDocumentPosition(bio) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(row.textContent).toBe('Coffee first, then the rest.');
-    expect(textStyleOf(bio)).toMatchObject({ color: colors.text, fontSize: 16 });
+    expect(bubble.textContent).toBe('Coffee first, then the rest.');
+    expect(bubble.querySelector('[data-icon]')).toBeNull();
+    const dress = viewStyleOf(bubble);
+    // As wide as the words, not the page.
+    expect(dress.alignSelf).toBe('flex-start');
+    // The pills' dress: the card's ground and its hairline.
+    expect(dress).toMatchObject({ backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft });
+    // One corner tight, toward the picture; the others round.
+    expect(Number(dress.borderTopLeftRadius)).toBeLessThan(Number(dress.borderRadius) / 2);
+    // On the picture's inset: the head row's own side room.
+    const head = viewStyleOf(screen.getByTestId('person-cover').nextElementSibling as HTMLElement);
+    expect(dress.marginHorizontal).toBe(head.paddingHorizontal);
+    // The page's ink, upright.
+    expect(textStyleOf(bio)).toMatchObject({ color: colors.text, fontSize: 15 });
+    expect(textStyleOf(bio)?.fontStyle).toBeUndefined();
     expect(textStyleOf(bio)?.color).not.toBe(textStyleOf(screen.getByTestId('person-handle'))?.color);
-    // A row with the text taking what the mark leaves: line two starts
-    // under line one's first word.
-    expect(viewStyleOf(row)).toMatchObject({ flexDirection: 'row', alignItems: 'flex-start' });
-    expect(textStyleOf(bio)).toMatchObject({ flex: 1 });
-    // The mark's box is one line of the text, so it sits at line one.
-    expect(viewStyleOf(mark.parentElement!)?.height).toBe(textStyleOf(bio)?.lineHeight);
   });
 
   // The form saves into your own profile; the page says the new words
@@ -599,7 +602,7 @@ describe('the row of acts', () => {
     ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z', responded_at: null }) as FriendshipRow;
   const headRow = () => screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
 
-  it('holds the friend button and Message, under the head and over the bio', async () => {
+  it('holds the friend button and Message, under the head and under the bio', async () => {
     await show();
     const acts = screen.getByTestId('person-acts');
     expect(viewStyleOf(acts).flexDirection).toBe('row');
@@ -610,7 +613,34 @@ describe('the row of acts', () => {
     // Out of the name's row, which the name now has to itself.
     expect(headRow().contains(screen.getByTestId('person-add'))).toBe(false);
     expect(headRow().compareDocumentPosition(acts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(acts.compareDocumentPosition(screen.getByTestId('person-bio')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The bio first: who they are, then what to do about them.
+    expect(acts.compareDocumentPosition(screen.getByTestId('person-bio')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(headRow().compareDocumentPosition(screen.getByTestId('person-bio')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // Two equal halves with a rule between (owner, 17 Nov 2026): each act
+  // in the middle of its own half, whichever state the friend button is in.
+  it('lays the two out as equal halves, each centred, a short rule between', async () => {
+    await show();
+    const acts = screen.getByTestId('person-acts');
+    const [left, rule, right] = Array.from(acts.children) as HTMLElement[];
+    expect(acts.children).toHaveLength(3);
+    expect(left.contains(screen.getByTestId('person-add'))).toBe(true);
+    expect(rule).toBe(screen.getByTestId('person-acts-rule'));
+    expect(right).toBe(screen.getByTestId('person-message'));
+    for (const half of [left, right]) expect(viewStyleOf(half)).toMatchObject({ flex: 1 });
+    expect(viewStyleOf(left)).toMatchObject({ alignItems: 'center' });
+    expect(viewStyleOf(right.firstElementChild as HTMLElement)).toMatchObject({ justifyContent: 'center' });
+    const line = viewStyleOf(rule);
+    expect([line.width, line.backgroundColor]).toEqual([1, colors.borderGlassSoft]);
+    expect(Number(line.height)).toBeLessThan(44 / 2);
+    cleanup();
+    // The same halves when what stands is a fact, not a button.
+    crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
+    await show();
+    const half = screen.getByTestId('person-acts').firstElementChild as HTMLElement;
+    expect(half.contains(screen.getByTestId('person-friends'))).toBe(true);
+    expect(viewStyleOf(half)).toMatchObject({ flex: 1, alignItems: 'center' });
   });
 
   // Not built yet, and said so: dimmed, "Soon" beside the word, and no
@@ -620,7 +650,10 @@ describe('the row of acts', () => {
     const message = screen.getByTestId('person-message');
     expect(message.textContent).toBe('Message' + 'Soon');
     const face = message.firstElementChild as HTMLElement;
-    expect(viewStyleOf(face)).toMatchObject({ opacity: 0.45, minHeight: 44, backgroundColor: colors.surfaceCard });
+    expect(viewStyleOf(face)).toMatchObject({ opacity: 0.45, minHeight: 44 });
+    // Words, not a pill: beside "Friends" a dimmed pill was the louder of the two.
+    expect(viewStyleOf(face).backgroundColor).toBeUndefined();
+    expect(viewStyleOf(face).borderWidth).toBeUndefined();
     expect(message.getAttribute('aria-disabled')).toBe('true');
     expect(message.getAttribute('aria-label')).toBe('Message, Soon');
     fireEvent.click(message);

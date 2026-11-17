@@ -133,11 +133,6 @@ const COVER_H = 148;
 const TITLE_SHRINK = 0.78;
 /** A list's photograph on its tile. */
 const TILE_PHOTO_H = 108;
-/** The bio's line, and the quote that leads it: the text's own 16, so
- *  the mark is a letter's size beside the words and not a row's icon. */
-const BIO_LINE = 23;
-const BIO_MARK = 16;
-
 /** What "Write a few words about you" adds above and below its 24pt row to make the button
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
@@ -231,11 +226,12 @@ export default function PersonScreen({ navigation, route }: {
           <Text style={person.full_name ? s.handle : s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
         </View>
       </View>
-      {/* What there is to do about this person, in a row of its own —
+      {/* What they say about themselves, under the picture — `Bio` —
+          and then what there is to do about them, in a row of its own —
           `Acts`. Not on your own page, nor signed out: no friend button,
           no row. */}
-      {friend ? <Acts friend={friend} onLayout={top.onRowLayout} /> : null}
       <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} />
+      {friend ? <Acts friend={friend} onLayout={top.onRowLayout} /> : null}
       {/* What the two of you have in common — `InCommon`. It took the
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
@@ -369,23 +365,41 @@ export default function PersonScreen({ navigation, route }: {
  *
  * ── how the bio stands (owner, 17 Nov 2026) ──
  *
- * It was the handle's grey at the body's size, 10 under the names and
- * right over the first section's small capitals: on the phone it read as
- * a caption to the lists, with nothing to say it was the person
- * speaking. Now it leads with the quote the Profile tab's row leads with
- * (`Glyph`), so the two pages mark a bio the same way; it is the page's
- * ink, not the handle's grey, because it is the one sentence here the
- * person wrote; and it stands 6 further off the section under it. No
- * box, no rule down its side, no italic: see below for the box, and
- * Vietnamese carries its tone marks badly on a slanted face.
+ * A speech bubble under the picture, over the row of acts.
  *
- * A bio of several lines hangs from the quote — the second line starts
- * under the first word, not under the mark.
+ * It was the handle's grey at the body's size, right over the first
+ * section's small capitals, and read as a caption to the lists. For a
+ * morning it then led with Lucide's quote in the page's ink, under the
+ * acts: on the phone the owner found the mark ugly and too large beside
+ * a short line, and the sentence in the wrong place — after "Friends"
+ * and "Message", when it is the person and those are what a reader does
+ * about them. The owner's reference drew it as a small bubble by the
+ * face, and that is this:
  *
- * Weighed with it, and not taken (the owner chose this one alone):
- *   - the bio in a tinted box, a "personal statement". 13 of the 14 bios
- *     are one line, the longest 56 characters, and one line in a rounded
- *     box is a text field to look at.
+ *   - a bubble that hugs its words, in the dress the page's pills wear
+ *     (the card's ground and its hairline), so 13 bios in 14 are a pill
+ *     a few words wide and not a box across the page;
+ *   - its upper left corner tight, the other three round — the corner
+ *     under the picture, which is all the tail a bubble needs to say
+ *     whose words these are. A drawn tail was not taken: it is a rotated
+ *     square to keep lined up with a border in nineteen themes;
+ *   - at the picture's own inset, so its edge is the picture's edge;
+ *   - no mark inside it. The bubble says "said by", which is what the
+ *     quote was there to say. The Profile tab's row keeps its quote: that
+ *     is a row in a column of glyphs, and has no bubble.
+ *
+ * Upright, though the reference slanted it: Vietnamese carries its tone
+ * marks badly on a slanted face, and most bios here are Vietnamese.
+ *
+ * A bio at the field's limit is a bubble the page's width and about five
+ * lines tall. It reads as a note, and it is 1 profile in 14 today.
+ *
+ * Weighed with it, and not taken:
+ *   - the bio in a tinted box across the page, a "personal statement".
+ *     13 of the 14 bios are one line, the longest 56 characters, and one
+ *     line in a box the page's width is a text field to look at. (The
+ *     bubble above is the answer to that objection, not a change of
+ *     mind about it: it is as wide as its words.)
  *   - "Read more". The field stops at 160 (`BIO_MAX`), about four lines.
  *   - asking for a bio at the moment a first list is made public. The
  *     moment is the right one and the ask lands inside another act; left
@@ -398,10 +412,7 @@ function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; 
   const bio = (mine && profile.bio) || person.bio;
   if (bio) {
     return (
-      <View style={s.bioRow} testID="person-bio-row">
-        <View style={s.bioMark}>
-          <Glyph name="quote" size={BIO_MARK} color={colors.textTertiary} />
-        </View>
+      <View style={s.bioBubble} testID="person-bio-row">
         <Text style={s.bio} testID="person-bio">{bio}</Text>
       </View>
     );
@@ -480,6 +491,19 @@ function usePastRow(duck: ((e: NativeSyntheticEvent<NativeScrollEvent>) => void)
  * (the grey words for "Requested" and "Friends" cannot be read on a
  * photograph, and would need the pill they had just lost).
  *
+ * ── two halves and a rule (owner, 17 Nov 2026) ──
+ *
+ * The row is the page's width in two equal halves, each with its act in
+ * the middle, and a short rule between them — the owner's reference.
+ * Before, the two stood side by side from the page's left edge: the grey
+ * words "Friends" with no dress beside Message in a pill, 16 left of
+ * the picture they sit under, and the rest of the row empty. The halves
+ * give the two the same weight and one line, whichever state the friend
+ * button is in — a pill (Add friend, Accept) or words (Requested,
+ * Friends) — and Message gives up its pill to be words too: beside
+ * "Friends" a dimmed pill was the louder of the two, and it is the one
+ * that does nothing.
+ *
  * Message is not built. It is drawn anyway, dimmed and said to be
  * coming — the owner's choice over leaving the place empty — as
  * `ActionSheet` draws a row that is not yet a thing to do: 0.45, the
@@ -493,18 +517,20 @@ function Acts({ friend, onLayout }: { friend: React.ReactNode; onLayout: (e: Lay
   const soon = t('Soon', 'Sắp có', '近日公開', '即将推出', '即將推出');
   return (
     <View style={s.acts} onLayout={onLayout} testID="person-acts">
-      {friend}
+      <View style={s.act}>{friend}</View>
+      <View style={s.actsRule} testID="person-acts-rule" />
       <PressableScale
         // `disabled` alone, as `ActionSheet`'s rows that are not yet a
         // thing to do: the press is dropped and VoiceOver says dimmed.
         disabled
         scaleTo={1}
+        style={s.act}
         contentStyle={s.message}
         accessibilityRole="button"
         accessibilityLabel={`${message}, ${soon}`}
         testID="person-message"
       >
-        <Glyph name="chatbubble-outline" size={15} color={colors.accent} />
+        <Glyph name="chatbubble-outline" size={16} color={colors.text} />
         <Text style={s.messageText}>{message}</Text>
         <Text style={s.messageSoon}>{soon}</Text>
       </PressableScale>
@@ -570,15 +596,18 @@ const s = StyleSheet.create({
     color: colors.text, fontSize: 22, lineHeight: 28, fontFamily: display.bold,
     letterSpacing: 0.2,
   },
-  // The row of acts, under the head: the friend button's 44, 14 under
-  // the picture's foot.
-  acts: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
-  // Add friend's dress (`FriendButton`), dimmed: a button that is not
-  // one yet.
+  // The row of acts — see `Acts`: two equal halves, each act in the
+  // middle of its own, 12 under whatever stands over it.
+  acts: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
+  act: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // The rule between them: a hairline 20 tall, under half the row's 44,
+  // so it parts two things without fencing them.
+  actsRule: { width: 1, height: 20, backgroundColor: colors.borderGlassSoft },
+  // Words and a mark at the button scale's height, dimmed: a button that
+  // is not one yet.
   message: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, opacity: 0.45,
-    minHeight: SECONDARY_CONTROL_H, borderRadius: radius.pill, paddingHorizontal: 16,
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0.45,
+    minHeight: SECONDARY_CONTROL_H,
   },
   messageText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
   messageSoon: { color: colors.textTertiary, fontSize: 13 },
@@ -587,16 +616,26 @@ const s = StyleSheet.create({
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // The handle, right under the name: an address, quieter.
   handle: { color: colors.textTertiary, ...type.meta, lineHeight: 20 },
-  // The bio — see `Bio`. The mark's box is one line of the text tall, so
-  // the quote sits at the first line's middle however many follow.
-  bioRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12, marginBottom: 6 },
-  bioMark: { height: BIO_LINE, justifyContent: 'center' },
-  bio: { flex: 1, color: colors.text, ...type.body, lineHeight: BIO_LINE },
+  // The bio's bubble — see `Bio`. As wide as its words and no wider
+  // than the room inside the head's inset; 18 round, the height of a
+  // one-line bubble's half (21 + 9 + 9 + the two hairlines is 41), so one
+  // line is a pill, and 6 at the corner under the picture.
+  bioBubble: {
+    alignSelf: 'flex-start', marginTop: 12, marginHorizontal: space.cardPadding,
+    paddingHorizontal: 14, paddingVertical: 9,
+    borderRadius: 18, borderTopLeftRadius: 6,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+  },
+  bio: { color: colors.text, ...type.meta, lineHeight: 21 },
   // The invitation in the bio's place — see `Bio`. The collection card's
   // "Add a description" (`descAdd`): a 17pt plus 4 from 14pt semibold
   // words, in the accent, hugging its words so the row beside it is not a
   // button.
-  bioAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24, marginTop: 10 },
+  // At the bubble's inset: the words stand where the bubble will.
+  bioAdd: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24,
+    marginTop: 12, marginLeft: space.cardPadding,
+  },
   bioAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   // A section's label: the small capitals the place page heads a fact with.
   sectionLabel: {
