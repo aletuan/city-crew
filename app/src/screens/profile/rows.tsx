@@ -216,9 +216,9 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
  * 2026). For a day it had none, to give the paragraph the card's full
  * measure — and on the phone it read as a line that had lost its row:
  * the envelope and the calendar make a column down the card's left, and
- * the bio started 58pt left of the words under it. A speech bubble is
- * the mark, a pair of quotation marks for the day before it (see `Glyph`
- * for both choices and what each was chosen over), lifted to the first
+ * the bio started 58pt left of the words under it. A feather is the
+ * mark — a pair of quotation marks, then a speech bubble, before it (see
+ * `Glyph` for the three choices and what each was chosen over) — lifted to the first
  * line like the others, so a bio of four lines hangs from it. The
  * narrower measure costs a line at `BIO_MAX`: about five, not four.
  *
@@ -230,7 +230,7 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
  * Edit profile without knowing what was behind it. It is drawn like the
  * rows that go somewhere (glyph, words, chevron) because it is one, and in
  * the accent because it is the one row on the card that asks for a tap.
- * The same bubble leads it, so the row does not change its mark the
+ * The same feather leads it, so the row does not change its mark the
  * moment it is filled in.
  *
  * Only the account's owner ever sees the door: this card is on their own
@@ -241,7 +241,7 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
   if (bio) {
     return (
       <View style={[s.twoLineRow, s.featureRowDivider]} testID="bio-row">
-        <RowGlyph name="speech" line={BIO_LINE} />
+        <RowGlyph name="quill" line={BIO_LINE} />
         <Text style={s.bioText} testID="profile-bio">{bio}</Text>
       </View>
     );
@@ -254,7 +254,7 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
       accessibilityRole="button"
       testID="bio-add"
     >
-      <RowGlyph name="speech" />
+      <RowGlyph name="quill" />
       <Text style={s.bioAdd} numberOfLines={1}>
         {t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}
       </Text>

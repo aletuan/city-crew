@@ -395,11 +395,12 @@ describe('account identity', () => {
     expect(bio.textContent).toBe(long);
     const card = bio.closest('[data-testid="bio-row"]')!;
     // On the card's glyph column like the facts under it: one mark, the
-    // speech bubble (owner, 17 Nov 2026; a pair of quotation marks for
-    // the day before), the shape a person's page draws the bio in.
+    // feather (owner, 17 Nov 2026; a pair of quotation marks the day
+    // before, and a speech bubble for that morning): a few lines the
+    // person wrote. The bubble is left to mean a message.
     expect(card.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
-    expect(card.querySelector('[data-testid="row-glyph"] [data-icon="speech"]')).toBeTruthy();
-    expect(card.querySelector('[data-icon="quote"]')).toBeNull();
+    expect(card.querySelector('[data-testid="row-glyph"] [data-icon="quill"]')).toBeTruthy();
+    expect(card.querySelector('[data-icon="quote"], [data-icon="speech"], [data-icon^="chatbubble"]')).toBeNull();
     const email = screen.getByTestId('profile-email');
     expect(card.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByTestId('bio-add')).toBeNull();
@@ -411,7 +412,7 @@ describe('account identity', () => {
     expect(screen.queryByTestId('bio-row')).toBeNull();
     const add = screen.getByTestId('bio-add');
     // The mark the filled row wears, so filling it in does not change it.
-    expect(add.querySelector('[data-testid="row-glyph"] [data-icon="speech"]')).toBeTruthy();
+    expect(add.querySelector('[data-testid="row-glyph"] [data-icon="quill"]')).toBeTruthy();
     const email = screen.getByTestId('profile-email');
     expect(add.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByText('Write a few words about you'));
