@@ -62,6 +62,13 @@ const state = vi.hoisted(() => ({
   scheme: 'dark' as 'dark' | 'light',
   myBio: '',
   myLikes: [] as string[],
+  // The reader's own library, the lists lent to them and who their own
+  // are shared with — and for whom each of the last two was asked.
+  mine: [] as unknown[],
+  lent: [] as unknown[],
+  lentAsked: [] as (string | null | undefined)[],
+  myShares: [] as { collection_id: string; user_id: string; created_at: string }[],
+  sharesAsked: [] as (string | null | undefined)[],
 }));
 vi.mock('../lib/auth', () => ({
   useSession: () => ({ session: state.me ? { user: { id: state.me } } : null }),
@@ -76,7 +83,10 @@ vi.mock('../lib/catalog', () => ({
 }));
 // The heart's two ways out: the like, and the invitation to sign in.
 const spies = vi.hoisted(() => ({ toggleLike: vi.fn(async () => {}), askToSignIn: vi.fn() }));
-vi.mock('../lib/save', () => ({ useSaveActions: () => ({ askToSignIn: spies.askToSignIn }) }));
+vi.mock('../lib/save', () => ({
+  useSaveActions: () => ({ askToSignIn: spies.askToSignIn }),
+  useMyLists: () => ({ data: state.mine, loading: false, reload: () => {} }),
+}));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   sendFriendRequest: data.sendFriendRequest,
@@ -94,6 +104,14 @@ vi.mock('../lib/data', async (orig) => ({
   useRoleOfQuery: (me: string | null, person: string | null) => {
     state.roleAsked.push([me, person]);
     return { data: state.role, loading: false, error: null, reload: () => {} };
+  },
+  useSharedWithMe: (reader: string | null | undefined) => {
+    state.lentAsked.push(reader);
+    return { data: reader ? state.lent : [], loading: false, reload: () => {} };
+  },
+  useMyListShares: (owner: string | null | undefined) => {
+    state.sharesAsked.push(owner);
+    return { data: owner ? state.myShares : [], loading: false, reload: () => {} };
   },
   useProfileByHandle: (h: string | null) => {
     state.asked.push(h);
@@ -170,6 +188,11 @@ beforeEach(() => {
   state.places = [];
   state.likes = {};
   state.myLikes = [];
+  state.mine = [];
+  state.lent = [];
+  state.lentAsked = [];
+  state.myShares = [];
+  state.sharesAsked = [];
   spies.toggleLike.mockClear();
   spies.askToSignIn.mockClear();
   state.common = { places: [], lists: [] };
@@ -873,6 +896,175 @@ describe('their lists', () => {
     await show();
     expect(tiles()).toEqual([]);
     expect(within(screen.getByTestId('person-no-lists')).getByText('No public collections yet')).toBeTruthy();
+  });
+});
+
+// Since 17 Nov 2026 the page holds what this reader may open, not only
+// what everybody may: all of your own on your own page, and on a
+// friend's the lists they shared with you — each marked.
+describe('lists that are not for everybody', () => {
+  const ME: Who = { id: 'me-id', handle: 'me', full_name: 'Tuan Anh', avatar_url: 'https://faces/me.jpg' };
+  const mineList = (slug: string, over: Partial<Collection> = {}) => list(slug, { owner_id: 'me-id', curator_handle: '@me', ...over });
+  const share = (collection_id: string, user_id: string) => ({ collection_id, user_id, created_at: '2026-11-17T00:00:00Z' });
+  const acts = () => screen.queryAllByTestId('person-act');
+  const markIn = (card: HTMLElement) => within(card).queryByTestId('activity-mark');
+
+  describe('on your own page', () => {
+    beforeEach(() => {
+      state.people = { me: ME, lan: LAN };
+      const open = mineList('open', { created_at: '2026-11-01T00:00:00Z' });
+      state.shelf = [open, list('lan-open')];
+      state.mine = [
+        mineList('noodles', { is_public: false, created_at: '2026-11-16T00:00:00Z' }),
+        mineList('secret', { is_public: false, created_at: '2026-11-10T00:00:00Z' }),
+        open,
+      ];
+      state.myShares = [share('noodles', 'lan-id'), share('noodles', 'minh-id'), share('open', 'lan-id')];
+    });
+
+    it('holds every list you made, the shared and the private with the public, and counts them all', async () => {
+      await show('me');
+      expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
+        .toEqual(['List noodles, 0 places', 'List secret, 0 places', 'List open, 0 places']);
+      expect(screen.getByTestId('person-turn').textContent).toBe('3 collections');
+      // Nobody else's, though the shelf holds one.
+      expect(screen.queryByText('List lan-open')).toBeNull();
+    });
+
+    it('marks the shared one with two heads and how many, the private with a padlock, and the public with nothing', async () => {
+      await show('me');
+      const [shared, secret, open] = acts();
+      expect(markIn(shared)!.getAttribute('aria-label')).toBe('Friends, 2');
+      // After the time, a dot between; the number is the mark's only word.
+      expect(markIn(shared)!.textContent).toBe('·2');
+      expect(markIn(secret)!.getAttribute('aria-label')).toBe('Private');
+      expect(markIn(secret)!.textContent).toBe('·');
+      expect(markIn(shared)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('people-outline');
+      expect(markIn(secret)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('lock-closed-outline');
+      // Shared with somebody and public is public: no mark.
+      expect(markIn(open)).toBeNull();
+      expect(within(open).getByTestId('activity-when')).toBeTruthy();
+    });
+
+    it('offers a heart on the public one alone', async () => {
+      await show('me');
+      const [shared, secret, open] = acts();
+      expect(within(shared).queryByTestId('activity-heart')).toBeNull();
+      expect(within(shared).getByTestId('activity-no-heart')).toBeTruthy();
+      expect(within(secret).queryByTestId('activity-heart')).toBeNull();
+      expect(within(open).getByTestId('activity-heart')).toBeTruthy();
+      expect(within(open).queryByTestId('activity-no-heart')).toBeNull();
+    });
+
+    it('draws the mark with no dot before it on a list that says no time', async () => {
+      state.mine = [mineList('undated', { is_public: false })];
+      state.shelf = [];
+      await show('me');
+      expect(within(acts()[0]).queryByTestId('activity-when')).toBeNull();
+      expect(markIn(acts()[0])!.textContent).toBe('');
+      expect(markIn(acts()[0])!.getAttribute('aria-label')).toBe('Private');
+    });
+
+    it('says the marks in Vietnamese', async () => {
+      state.lang = 'vi';
+      await show('me');
+      expect(acts().map((c) => markIn(c)?.getAttribute('aria-label') ?? null)).toEqual(['Bạn bè, 2', 'Riêng tư', null]);
+    });
+
+    it('leads a tile’s count with the mark’s glyph, and tells VoiceOver the words', async () => {
+      await show('me');
+      const [shared, secret, open] = tiles();
+      expect(shared.getAttribute('aria-label')).toBe('List noodles, 0 places, Friends, 2');
+      expect(secret.getAttribute('aria-label')).toBe('List secret, 0 places, Private');
+      expect(open.getAttribute('aria-label')).toBe('List open, 0 places');
+      // The glyph alone on a tile: no number, no word.
+      const glyphs = (tile: HTMLElement) => [...tile.querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
+      expect(glyphs(shared)).toEqual(['people-outline']);
+      expect(glyphs(secret)).toEqual(['lock-closed-outline']);
+      expect(glyphs(open)).toEqual([]);
+      expect(shared.textContent).toBe('List noodles0 places');
+    });
+
+    // A cover off a private list would be a head only its owner sees.
+    it('still takes the cover from a public list, though a private one is newer', async () => {
+      state.mine = (state.mine as Collection[]).map((c) => ({
+        ...c, cover: { photo_uri: `https://covers/${c.slug}.jpg` },
+      })) as Collection[];
+      state.shelf = [(state.mine as Collection[])[2]];
+      await show('me');
+      expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://covers/open.jpg');
+    });
+
+    it('wears the tint for a cover when every list you have is private', async () => {
+      state.shelf = [];
+      state.mine = [mineList('secret', { is_public: false, cover: { photo_uri: 'https://covers/secret.jpg' } } as Partial<Collection>)];
+      await show('me');
+      expect(screen.getByTestId('person-cover-tint')).toBeTruthy();
+    });
+
+    it('asks who your lists are shared with as you, and for nothing lent', async () => {
+      await show('me');
+      expect(state.sharesAsked.at(-1)).toBe('me-id');
+      expect(state.lentAsked.at(-1)).toBeNull();
+    });
+  });
+
+  describe('on somebody else’s page', () => {
+    beforeEach(() => {
+      state.shelf = [list('open', { created_at: '2026-11-01T00:00:00Z' })];
+      state.lent = [
+        list('for-me', { is_public: false, created_at: '2026-11-16T00:00:00Z' }),
+        list('minh-for-me', { owner_id: 'minh-id', is_public: false, created_at: '2026-11-17T00:00:00Z' }),
+      ];
+      // The reader's own library and its shares are not this page's.
+      state.mine = [list('my-secret', { owner_id: 'me-id', is_public: false })];
+      state.myShares = [share('for-me', 'x'), share('my-secret', 'lan-id')];
+    });
+
+    it('holds the list they shared with you beside their public ones, and nobody else’s', async () => {
+      await show();
+      expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
+        .toEqual(['List for-me, 0 places', 'List open, 0 places']);
+      expect(screen.getByTestId('person-turn').textContent).toBe('2 collections');
+    });
+
+    it('says "Shared with you" on it, in words, and offers no heart', async () => {
+      await show();
+      const [lent, open] = acts();
+      expect(markIn(lent)!.textContent).toBe('·Shared with you');
+      expect(markIn(lent)!.getAttribute('aria-label')).toBe('Shared with you');
+      expect(markIn(lent)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('people-outline');
+      expect(within(lent).queryByTestId('activity-heart')).toBeNull();
+      expect(markIn(open)).toBeNull();
+      expect(within(open).getByTestId('activity-heart')).toBeTruthy();
+      expect(tiles()[0].getAttribute('aria-label')).toBe('List for-me, 0 places, Shared with you');
+    });
+
+    it('says it in Vietnamese', async () => {
+      state.lang = 'vi';
+      await show();
+      expect(markIn(acts()[0])!.textContent).toBe('·Chia sẻ với bạn');
+    });
+
+    it('opens the lent list’s own page on a press', async () => {
+      const navigation = await show();
+      fireEvent.click(within(acts()[0]).getByTestId('activity-open'));
+      expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'for-me' });
+    });
+
+    it('asks for what was lent to you as you, and for nobody’s shares', async () => {
+      await show();
+      expect(state.lentAsked.at(-1)).toBe('me-id');
+      expect(state.sharesAsked.at(-1)).toBeNull();
+    });
+
+    it('shows a guest the public lists alone, and asks for nothing as nobody', async () => {
+      state.me = null;
+      await show();
+      expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'))).toEqual(['List open, 0 places']);
+      expect(state.lentAsked.at(-1)).toBeNull();
+      expect(state.sharesAsked.at(-1)).toBeNull();
+    });
   });
 });
 
