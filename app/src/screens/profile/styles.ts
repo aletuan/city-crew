@@ -27,6 +27,9 @@ export const GLYPH_BOX = 26;
 export const CAPTION_LINE = 15;
 
 export const TITLE_LINE = 19;
+/** The account name's line, which the role's mark after it is centred
+ *  on (`HeroName`). */
+export const NAME_LINE = 25;
 /** The bio's line: the values' 21 and a point, for the one text on the
  *  card that runs to several lines. `RowGlyph` lifts the bio's mark to it. */
 export const BIO_LINE = 22;
@@ -64,13 +67,6 @@ export const s = StyleSheet.create({
   // ring's own), the role's disc at top-right (this screen's). Shrunk to
   // the ring, so "top-right" is the ring's corner and not the row's.
   avatarBox: { alignSelf: 'flex-start' },
-  // The level pill's halo, mirrored to the top: the page's ground around
-  // the disc, so the arc plainly runs underneath it (see EngagementRing).
-  roleHalo: {
-    position: 'absolute', right: -4, top: 0,
-    backgroundColor: colors.bg, borderRadius: 999, padding: 2.5,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
-  },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
   avatarBig: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
@@ -144,7 +140,9 @@ export const s = StyleSheet.create({
   nameBlock: { gap: 2 },
   // No `flexShrink` on either any more: on their own lines neither is
   // competing for width with the other, and each wraps or truncates
-  // against the column instead.
+  // against the column instead. (The name's box shrinks for the role's
+  // disc after it, when there is one — `WithRole` — which is 26 of the
+  // line, not a rival for it.)
   // 20 since 14 Nov 2026 (owner), from 23. The tab's own title, "Profile"
   // at 30 in the display face, stands just above it, so the name is the
   // page's second heading, not a rival first: the social apps that set a
@@ -156,7 +154,7 @@ export const s = StyleSheet.create({
   // would read as two titles. The line keeps the 1.22 it had (28 at 23).
   accountName: {
     color: colors.text, fontSize: 20, fontWeight: font.bold, letterSpacing: 0.2,
-    lineHeight: 25,
+    lineHeight: NAME_LINE,
   },
   handle: { color: colors.textTertiary, ...type.meta },
   // The card surface, not the glass tint: on paper the tint is a grey

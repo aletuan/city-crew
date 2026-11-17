@@ -22,6 +22,7 @@ import { useScheme } from '../../lib/theme';
 import { bgElevatedHex, colors } from '../../theme';
 import { goTo, type Nav } from '../../nav';
 import { HeroFace } from './HeroFace';
+import { HeroName } from './HeroName';
 import { RowGlyph, FeatureRow, AboutRow, BioRow } from './rows';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
@@ -169,45 +170,12 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   return (
     <>
       <View style={s.heroRow}>
-        {/* The picture, its ring and the two badges on it — `HeroFace`. */}
+        {/* The picture, its ring and the level's pill on it — `HeroFace`. */}
         <HeroFace saved={saved} />
         <View style={{ flex: 1, gap: 5 }}>
-          {/* Two lines, two things: the name you are called, then the
-              name you are found by.
-
-              These shared a line, separated by the app's own dot, with
-              the name set to yield and the handle set to hold its width —
-              on the argument that a handle cut to "@tra…" is not an
-              address while "Tran Thi Tra…" is still a person. Both halves
-              of that were true and the conclusion was still wrong: what
-              it produced was "Le Nguy…  ·  @lenguyenngocminh", a screen
-              that hides your name to protect an address nobody reads off
-              their own profile.
-
-              Stacked, neither has to yield. The measure here is about
-              247pt beside the 88pt ring, which fits most display names
-              whole on one line — the handle was what pushed them over,
-              not the width. A name long enough to need two takes two and
-              truncates after that.
-
-              ── the bio left this line (owner, 16 Nov 2026) ──
-              It stood after the handle behind the app's dot, as a
-              tagline: "@trang · Food lover". That held while a bio was
-              three words. The field that writes it is multiline and had
-              no limit, and this line is cut at two — so a bio of any
-              length was shown as its first forty characters and an
-              ellipsis, with nowhere on the screen to read the rest. A
-              line that cannot grow is the wrong place for a paragraph.
-              It is the first thing in About me now (`BioRow`), across the
-              card's full measure, and the hero is a name and an address:
-              two lines whose height does not depend on what anyone
-              wrote. */}
-          <View style={s.nameBlock}>
-            <Text style={s.accountName} numberOfLines={2}>{name}</Text>
-            {profile.handle ? (
-              <Text style={s.handle} numberOfLines={1}>{`@${profile.handle}`}</Text>
-            ) : null}
-          </View>
+          {/* The name you are called, the role's mark after it, then the
+              name you are found by — `HeroName`. */}
+          <HeroName name={name} handle={profile.handle} />
           {/* Edit profile, by itself, under the name. Words only: it wore a
               pencil for a while, and the owner did not care for it — a
               glyph beside two words that already say "change" was one more

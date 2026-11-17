@@ -217,8 +217,12 @@ describe('whose page it is', () => {
     // for an evening, a picture's width left of its name.
     const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
     expect(viewStyleOf(row).flexDirection).toBe('row');
-    const column = name.parentElement!;
-    expect([...column.children]).toEqual([name, handle, screen.getByTestId('person-bio-row')]);
+    // The name stands in a row of its own, which a role's mark shares
+    // when there is one (`the mark of a role`, below).
+    const named = screen.getByTestId('role-row');
+    expect(named.contains(name)).toBe(true);
+    const column = named.parentElement!;
+    expect([...column.children]).toEqual([named, handle, screen.getByTestId('person-bio-row')]);
     expect(column.parentElement).toBe(row);
     expect(viewStyleOf(column).flexDirection).not.toBe('row');
     // The column takes the row's width beside the picture.
@@ -260,8 +264,10 @@ describe('whose page it is', () => {
     expect((screen.getByTestId('person-cover').nextElementSibling as HTMLElement).contains(handle)).toBe(true);
     expect(textStyleOf(handle)?.color).toBe(colors.text);
     // Alone in its column, begun just under the cover's edge.
-    expect([...handle.parentElement!.children]).toEqual([handle]);
-    expect(viewStyleOf(handle.parentElement!)).toMatchObject({ flex: 1, marginTop: 34 });
+    const named = screen.getByTestId('role-row');
+    expect(named.contains(handle)).toBe(true);
+    expect([...named.parentElement!.children]).toEqual([named]);
+    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 34 });
     expect(screen.getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
     expect(screen.queryByTestId('person-bio')).toBeNull();
@@ -441,21 +447,50 @@ describe('the mark of a role', () => {
 
   it('wears no mark for a person with no role, and asks about this person as the reader', async () => {
     await show();
-    expect(screen.queryByTestId('person-role')).toBeNull();
+    expect(screen.queryByTestId('role-mark')).toBeNull();
     expect(screen.queryByTestId('role-badge')).toBeNull();
+    // The row is there before the answer is, with the name in it.
+    expect(screen.getByTestId('role-row').contains(screen.getByTestId('person-name'))).toBe(true);
     expect(new Set(state.roleAsked.map((a) => a.join('/')))).toEqual(new Set([`me-id/${LAN.id}`]));
   });
 
-  it('draws a guide’s star on the picture, named for VoiceOver', async () => {
+  it('draws a guide’s star after the name, named for VoiceOver, and not on the picture', async () => {
     state.role = 'guide';
     await show();
     const disc = screen.getByRole('button', { name: 'Local Guide' });
-    expect(face().contains(disc)).toBe(true);
+    expect(face().contains(disc)).toBe(false);
     expect(disc.querySelector('[data-icon="star"]')).toBeTruthy();
     // The name is not written on the page: the disc is a mark.
     expect(screen.queryByText('Local Guide')).toBeNull();
-    // On the corner of the picture, laid over it.
-    expect(viewStyleOf(screen.getByTestId('person-role')).position).toBe('absolute');
+    // One row: the name, then the mark, in the middle of the name's line
+    // — 28 here. The handle is under the row, not in it.
+    const row = screen.getByTestId('role-row');
+    const name = screen.getByTestId('person-name');
+    expect(row.contains(name)).toBe(true);
+    expect(row.contains(disc)).toBe(true);
+    expect(name.compareDocumentPosition(disc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(row.contains(screen.getByTestId('person-handle'))).toBe(false);
+    const mark = viewStyleOf(screen.getByTestId('role-mark'));
+    expect([mark.height, mark.justifyContent, mark.position]).toEqual([28, 'center', undefined]);
+    expect(textStyleOf(name)?.lineHeight).toBe(28);
+    // The name still shrinks before it is cut, in the box that gives way.
+    expect(viewStyleOf(row.firstElementChild!).flexShrink).toBe(1);
+  });
+
+  // Somebody who gave no name is called by their handle, in the name's
+  // place and the name's type — and that is what the mark follows.
+  it('follows the handle of a person with no name', async () => {
+    state.role = 'guide';
+    state.people = { lan: { ...LAN, full_name: '' } };
+    await show();
+    expect(screen.queryByTestId('person-name')).toBeNull();
+    const row = screen.getByTestId('role-row');
+    const handle = screen.getByTestId('person-handle');
+    expect(handle.textContent).toBe('@lan');
+    expect(row.contains(handle)).toBe(true);
+    expect(textStyleOf(handle)?.fontSize).toBe(22);
+    expect(row.contains(screen.getByRole('button', { name: 'Local Guide' }))).toBe(true);
+    expect(screen.getAllByText('@lan')).toHaveLength(1);
   });
 
   // The app's sheet, as the badges on your own Profile open — and about
