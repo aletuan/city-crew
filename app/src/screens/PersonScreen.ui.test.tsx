@@ -11,6 +11,7 @@
 // reader as the author of somebody else's list).
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Image } from 'expo-image';
 import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { FriendshipRow } from '../lib/friends';
@@ -641,6 +642,89 @@ describe('what they did', () => {
     expect(screen.queryByTestId('person-show-more')).toBeNull();
   });
 
+  // A feed loads as you go (owner, 17 Nov 2026): five more before the
+  // reader reaches the end of the five there are. A screen is 844 here,
+  // so "near" is less than 1266 left under it.
+  describe('as the reader scrolls', () => {
+    const twelve = () => { state.shelf = Array.from({ length: 12 }, (_, i) => list(`l${i}`)); };
+
+    it('adds nothing while the end is more than a screen and a half away', async () => {
+      twelve();
+      await show();
+      // 5000 of page, 2890 left under the screen.
+      scrollAt(1266, 5000);
+      expect(acts()).toHaveLength(5);
+    });
+
+    it('adds five within a screen and a half of the end, with no press', async () => {
+      twelve();
+      await show();
+      // 1265 left.
+      scrollAt(2891, 5000);
+      expect(acts()).toHaveLength(10);
+    });
+
+    // Sixty scroll events a second, every one of them still "near".
+    it('adds once for each height the page has had, however many events arrive there', async () => {
+      twelve();
+      await show();
+      scrollAt(2891, 5000);
+      scrollAt(2950, 5000);
+      scrollAt(3100, 5000);
+      expect(acts()).toHaveLength(10);
+      // The page grew with the five; near the end of that, the rest.
+      scrollAt(5000, 6900);
+      expect(acts()).toHaveLength(12);
+      expect(screen.queryByTestId('person-show-more')).toBeNull();
+      // And nothing past the last of them.
+      scrollAt(6000, 7700);
+      expect(acts()).toHaveLength(12);
+    });
+
+    it('keeps "Show more" under the last card for a reader who gets there first', async () => {
+      twelve();
+      await show();
+      fireEvent.click(screen.getByTestId('person-show-more'));
+      expect(acts()).toHaveLength(10);
+      scrollAt(5000, 6900);
+      expect(acts()).toHaveLength(12);
+    });
+
+    // Near the end of the grid is not near the end of the feed.
+    it('adds nothing to the feed while the grid is showing', async () => {
+      twelve();
+      await show();
+      fireEvent.click(screen.getByTestId('person-turn'));
+      scrollAt(900, 1500);
+      fireEvent.click(screen.getByTestId('person-turn'));
+      expect(acts()).toHaveLength(5);
+    });
+
+    it('sends the next five covers into memory ahead of the cards, and none when there are no more', async () => {
+      const prefetch = vi.mocked(Image.prefetch);
+      prefetch.mockClear();
+      state.shelf = Array.from({ length: 8 }, (_, i) => list(`l${i}`, i === 6 ? {} : { cover: { id: `c${i}`, photo_uri: `https://covers/${i}.jpg` } }));
+      await show();
+      // The sixth to the eighth; the seventh has no photograph to fetch.
+      expect(prefetch).toHaveBeenCalledExactlyOnceWith(['https://covers/5.jpg', 'https://covers/7.jpg'], 'memory-disk');
+      // The cards read from where they were put.
+      expect(inCard(0).getByTestId('activity-open').querySelector('img')!.getAttribute('cachePolicy')).toBe('memory-disk');
+      prefetch.mockClear();
+      scrollAt(2891, 5000);
+      expect(acts()).toHaveLength(8);
+      expect(prefetch).not.toHaveBeenCalled();
+    });
+
+    it('fetches nothing ahead for the grid', async () => {
+      const prefetch = vi.mocked(Image.prefetch);
+      state.shelf = Array.from({ length: 8 }, (_, i) => list(`l${i}`, { cover: { id: `c${i}`, photo_uri: `https://covers/${i}.jpg` } }));
+      await show();
+      prefetch.mockClear();
+      fireEvent.click(screen.getByTestId('person-turn'));
+      expect(prefetch).not.toHaveBeenCalled();
+    });
+  });
+
   it('draws no "Show more" for five or fewer', async () => {
     state.shelf = Array.from({ length: 5 }, (_, i) => list(`l${i}`));
     await show();
@@ -812,11 +896,12 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
 const layRow = () => act(() => {
   (propsWhere((q) => q.testID === 'person-acts').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 250, height: 50 } } });
 });
-const scrollTo = (y: number) => act(() => {
+const scrollAt = (y: number, content: number) => act(() => {
   (propsWhere((q) => typeof q.onScroll === 'function' && 'contentContainerStyle' in q).onScroll as (e: unknown) => void)({
-    nativeEvent: { contentOffset: { x: 0, y }, contentSize: { width: 390, height: 2000 }, layoutMeasurement: { width: 390, height: 844 } },
+    nativeEvent: { contentOffset: { x: 0, y }, contentSize: { width: 390, height: content }, layoutMeasurement: { width: 390, height: 844 } },
   });
 });
+const scrollTo = (y: number) => scrollAt(y, 2000);
 
 // What there is to do about a person, in a row of its own under the head
 // (owner, 16 Nov 2026). The friend button stood at the end of the name's
