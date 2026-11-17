@@ -310,7 +310,7 @@ export default function PersonScreen({ navigation, route }: {
 
   return (
     <Screen
-      title={t('Profile', 'Hồ sơ', 'プロフィール', '主页', '主頁')}
+      title={t('Profile', 'Trang cá nhân', 'プロフィール', '主页', '主頁')}
       onBack={() => navigation.goBack()}
       backTestID="person-back"
       backBare

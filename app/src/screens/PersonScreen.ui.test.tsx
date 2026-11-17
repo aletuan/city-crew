@@ -293,6 +293,10 @@ describe('the bio, and the way to write one', () => {
     state.lang = 'vi';
     await show();
     expect(screen.getByTestId('person-bio-add').textContent).toBe('Viết đôi dòng về bạn');
+    // And the page is "Trang cá nhân" — the name for the page a person
+    // shows the world; "Hồ sơ" until 17 Nov 2026.
+    expect(screen.getByText('Trang cá nhân')).toBeTruthy();
+    expect(screen.queryByText('Hồ sơ')).toBeNull();
   });
 
   it('draws your bio and no invitation once you have one', async () => {

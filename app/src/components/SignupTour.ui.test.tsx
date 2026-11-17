@@ -225,7 +225,7 @@ const saved = async (uid = 'new') => JSON.parse((await AsyncStorage.getItem(`hig
 it('persists skipping across remounts, enables without navigating, and explicitly replays', async () => {
   const view = render(tree()); await start();
   fireEvent.click(screen.getByText('Bỏ qua hướng dẫn'));
-  expect(screen.getByTestId('guide-notice').textContent).toContain('Hồ sơ → Hiện hướng dẫn');
+  expect(screen.getByTestId('guide-notice').textContent).toContain('Tài khoản → Hiện hướng dẫn');
   await waitFor(async () => expect((await saved()).enabled).toBe(false));
   view.unmount(); render(tree());
   await waitFor(() => expect(screen.getByTestId('enabled').textContent).toBe('false'));
