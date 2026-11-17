@@ -31,19 +31,35 @@
 // `ActionSheet`, opened from where the disc is. What is on the picture
 // is the level's alone — a ring and a pill that say one thing.
 //
+// ── the badges, under the level (owner, 17 Nov 2026) ──
+//
+// Nine badges came to stand beside the level (`lib/badges` for what they
+// are and why the level stays). The owner weighed a card of their own on
+// this tab, as the reference drew one, and kept them in this sheet: the
+// tab is long already, and "Lv" is where a reader asks how they are
+// doing. So the sheet is the level's card and then the badges'
+// (`BadgeShelf`), in a scroll for the phone too short for both.
+//
+// The pill wears a dot while a badge is new, and the banner that
+// announced it opens this sheet from wherever it was pressed
+// (`useRewards().wanted`): the sheet is here and nowhere else, so the
+// banner asks and this answers.
+//
 // ── out of `AccountProfile` ──
 //
 // The ring was drawn there, and its function is at its ceiling
 // (`oversize.js`); a sheet's state and body had nowhere to go. They
 // moved here together, and the ceiling came down by what left.
 
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from '../../components/ActionSheet';
 import AvatarPicker from '../../components/AvatarPicker';
+import BadgeShelf from '../../components/BadgeShelf';
 import EngagementRing from '../../components/EngagementRing';
 import { useI18n } from '../../lib/i18n';
 import { levelFromSaves, levelSteps, levelWords } from '../../lib/level';
+import { useRewards } from '../../lib/rewards';
 import { colors, font } from '../../theme';
 import { s } from './styles';
 
@@ -53,6 +69,13 @@ export function HeroFace({ saved }: {
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const { height } = useWindowDimensions();
+  const { unseen, wanted, opened, closed } = useRewards();
+  const show = useCallback(() => { setOpen(true); opened(); }, [opened]);
+  const close = () => { setOpen(false); closed(); };
+  // The banner was pressed: it has brought the reader to this tab, and
+  // asks for the sheet. Answered here, mounted before the press or after.
+  useEffect(() => { if (wanted) show(); }, [wanted, show]);
   const { level, progress } = levelFromSaves(saved);
   const words = levelWords(saved, t);
   const steps = levelSteps(saved);
@@ -62,14 +85,14 @@ export function HeroFace({ saved }: {
       {/* No camera badge here: the level badge takes that corner, and
           Edit profile shows the same picker with its badge intact. */}
       <View style={s.avatarBox} testID="avatar-box">
-        <EngagementRing size={88} level={level} progress={progress} onExplain={() => setOpen(true)}>
+        <EngagementRing size={88} level={level} progress={progress} fresh={unseen.length > 0} onExplain={show}>
           <AvatarPicker showCamera={false} />
         </EngagementRing>
       </View>
 
       <ActionSheet
         visible={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
         header={(
           // No pill beside "Level 15": it would say the title twice. The
           // steps at the end are the bar's figure, read.
@@ -82,6 +105,15 @@ export function HeroFace({ saved }: {
           </View>
         )}
       >
+        {/* Two cards, and a scroll for the phone they do not fit.
+            `ROOM` of the screen is theirs; the rest is the header, and
+            the page left showing above to close it by. */}
+        <ScrollView
+          style={{ maxHeight: Math.round(height * ROOM) }}
+          contentContainerStyle={h.cards}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
         <View style={sheetBody} testID="badge-sheet-body">
           <View
             style={h.track}
@@ -101,6 +133,8 @@ export function HeroFace({ saved }: {
           <Text style={h.lead}>{words.next}</Text>
           <Text style={h.rule}>{words.rule}</Text>
         </View>
+        <BadgeShelf />
+        </ScrollView>
       </ActionSheet>
     </>
   );
@@ -111,7 +145,18 @@ export function HeroFace({ saved }: {
  *  phone, 4 is a hairline and 8 is a bar. */
 const BAR = 8;
 
+/** How much of the screen's height the two cards may take before they
+ *  scroll: 0.7. Drawn in a web build with the real sheet, the two are
+ *  576 tall at 393 wide (the level's 125, the gap, the badges' 439). On
+ *  an 852pt phone 0.7 is 596, so nothing scrolls; on a 667pt one it is
+ *  467, which leaves the header (about 70 with the grabber) and 100 of
+ *  page above the sheet to close it by, and the third row of badges is
+ *  a scroll away. Not yet seen on a phone. */
+const ROOM = 0.7;
+
 const h = StyleSheet.create({
+  // The cards' own gap, as between the header and the first.
+  cards: { gap: 12 },
   // The steps, on a tint of the accent — the reader's look, as the
   // Statistics well on the Activity page is. A count's pill in shape.
   steps: {

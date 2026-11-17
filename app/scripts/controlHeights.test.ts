@@ -32,6 +32,7 @@ import { describe, expect, it } from 'vitest';
 const src = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
 const NOT_BUTTONS: Record<string, string> = {
+  'components/BadgeShelf.tsx cellIn': 'a badge\'s tile in the grid: a picture and its name, sized by its cell, and its round corners are the tint that says which one the line below is about',
   'components/CityRow.tsx newChip': 'the "New" flag beside a city\'s name; the row is the button',
   'components/EngagementRing.tsx badge': 'the "Lv" badge on the avatar\'s ring, which says what it is when pressed — as the role disc on the same picture does, left alone by its fixed width; a badge 32 tall would cover the ring it sits on, and its reach is 44 by hitSlop',
   'components/ReviewBadge.tsx pill': 'a label on a card; the card is the button',

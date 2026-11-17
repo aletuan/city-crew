@@ -28,11 +28,13 @@ import { ReminderSync } from './src/lib/reminderSync';
 import { GuideGrantSync } from './src/lib/useGuideGrant';
 import { SessionNavSync } from './src/lib/sessionNavSync';
 import { ThemeAccountSync } from './src/lib/themeAccountSync';
+import { RewardsProvider } from './src/lib/rewards';
 import { SaveProvider } from './src/lib/save';
 import SaveSheets from './src/components/SaveSheets';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
 import FloatingTabBar from './src/components/FloatingTabBar';
+import RewardBanner from './src/components/RewardBanner';
 import { AppBoundary, ScreenBoundary } from './src/components/ScreenBoundary';
 import WelcomeSheet from './src/components/WelcomeSheet';
 import ShareShield from './src/components/ShareShield';
@@ -405,6 +407,12 @@ function Root() {
                         and put on — see `lib/themeAccountSync`. */}
                     <ThemeAccountSync />
                     <SaveProvider>
+                      {/* The reader's badges and level, worked out once:
+                          the tab bar's dot, Profile's sheet and the
+                          banner below all read this one copy. Inside the
+                          lists, check-ins, friends and trips it counts —
+                          see `lib/rewards`. */}
+                      <RewardsProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
                       <TabBarDuckProvider>
@@ -413,6 +421,11 @@ function Root() {
                       {/* The save and sign-in sheets, after the tabs so
                           they paint over them — see `components/SaveSheets`. */}
                       <SaveSheets />
+                      {/* A badge earned, said over whichever screen is
+                          up; a press goes to Profile, where its sheet is
+                          — see `components/RewardBanner`. */}
+                      <RewardBanner onOpen={() => goTo('Profile', { screen: 'ProfileHome' })} />
+                      </RewardsProvider>
                     </SaveProvider>
                     </CheckinsProvider>
                     </MyTripsProvider>
