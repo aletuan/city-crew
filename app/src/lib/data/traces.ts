@@ -1,4 +1,4 @@
-// The two trace tables a preview build writes to — see docs/tracing.md.
+// The three trace tables a preview build writes to — see docs/tracing.md.
 //
 // The inserts moved here from `tracereport.ts` and `decktrace.ts` on
 // 20 Oct 2026, when lint began holding `lib/*.ts` to not importing the
@@ -23,4 +23,9 @@ export async function insertStartupTrace(row: TablesInsert<'startup_traces'>) {
 /** One visit to the sketching deck. */
 export async function insertDeckTrace(row: TablesInsert<'deck_traces'>) {
   return supabase.from('deck_traces').insert(row);
+}
+
+/** The tab bar's switches since it was last quiet. */
+export async function insertTabTrace(row: TablesInsert<'tab_traces'>) {
+  return supabase.from('tab_traces').insert(row);
 }

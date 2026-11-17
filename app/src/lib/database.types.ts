@@ -1133,6 +1133,36 @@ export type Database = {
         }
         Relationships: []
       }
+      tab_traces: {
+        Row: {
+          channel: string | null
+          created_at: string
+          id: string
+          is_dev: boolean
+          os_version: string | null
+          platform: string
+          switches: Json
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          id?: string
+          is_dev?: boolean
+          os_version?: string | null
+          platform: string
+          switches: Json
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          id?: string
+          is_dev?: boolean
+          os_version?: string | null
+          platform?: string
+          switches?: Json
+        }
+        Relationships: []
+      }
       trip_invites: {
         Row: {
           created_at: string

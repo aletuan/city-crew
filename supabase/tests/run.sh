@@ -683,3 +683,12 @@ for f in "$ROOT"/supabase/migrations/*_likes_in_the_group.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/likes_in_the_group_test.sql"
+
+# Where the tab bar files what a change of tab took (18 Nov 2026) — the
+# third trace table. After the safety block, whose `rls_client` and desk
+# account it borrows.
+echo "→ tab traces"
+for f in "$ROOT"/supabase/migrations/*_tab_traces.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/tab_traces_test.sql"
