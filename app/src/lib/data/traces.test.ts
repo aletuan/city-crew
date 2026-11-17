@@ -1,4 +1,4 @@
-// The two trace inserts: which table each row goes to, and that a refusal
+// The three trace inserts: which table each row goes to, and that a refusal
 // comes back as a reply for the reporter to read rather than as a throw.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,7 +10,7 @@ vi.mock('../supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { insertDeckTrace, insertStartupTrace } from './traces';
+import { insertDeckTrace, insertStartupTrace, insertTabTrace } from './traces';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -21,9 +21,15 @@ const deck = {
   options: 3, span: 2, still: true, total_ms: 940, events: [],
 };
 
+const tabs = {
+  platform: 'ios', os_version: '18.1', is_dev: false, channel: null,
+  switches: [{ from: 'Explore', to: 'Trips', first: true, still: false, press: 84, commit: 131, frame: 150, settle: 512 }],
+};
+
 describe.each([
   ['startup_traces', () => insertStartupTrace(startup), startup],
   ['deck_traces', () => insertDeckTrace(deck), deck],
+  ['tab_traces', () => insertTabTrace(tabs), tabs],
 ] as const)('%s', (table, send, row) => {
   it('inserts the row into its own table, as given', async () => {
     await send();
