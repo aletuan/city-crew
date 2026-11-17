@@ -27,7 +27,7 @@ import {
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
-import { likeable, namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
+import { likeable, marked, namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
 import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
@@ -45,7 +45,7 @@ import { goTo, type Nav, type RootRoute } from '../nav';
 import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
 import { sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
-import { ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
+import { ACT_GLYPH, ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
 import { useReorderDraft } from './collectionDetail/useReorderDraft';
 
@@ -867,11 +867,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      it came to be one grey glyph; `seenWord` is what VoiceOver is told.
      It still opens the sheet, for whoever learned to press here.
 
+     And no glyph at all on a public list since 18 Nov 2026: no mark is
+     public (`shares.marked`).
+
      Tapping opens a choice rather than flipping the switch: a word that
      changes who can see your list on one touch is a word nobody would
      dare tap to find out what it does. */
   const [whoSees, setWhoSees] = useState(false);
-  const visibility = col && owned ? (
+  const visibility = marked(owned, seen) ? (
     <PressableScale
       contentStyle={s.visibility}
       scaleTo={0.94}
@@ -988,11 +991,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     >
       <Glyph
         name={liked ? 'heart' : 'heart-outline'}
-        size={15}
-        color={liked ? colors.accent : colors.textTertiary}
+        size={ACT_GLYPH}
+        color={liked ? colors.like : colors.textSecondary}
       />
       {likesWorthShowing(likes[col.slug])
-        ? <Text style={s.meta}>{likes[col.slug]}</Text>
+        ? <Text style={s.act}>{likes[col.slug]}</Text>
         : null}
     </PressableScale>
   ) : null;
@@ -1041,7 +1044,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       )}
       testID="collection-likes-kept"
     >
-      <Glyph name="heart-outline" size={15} color={colors.textTertiary} />
+      <Glyph name="heart-outline" size={ACT_GLYPH} color={colors.textTertiary} />
       <Text style={s.meta}>{keptLikes}</Text>
     </View>
   ) : null;
@@ -1097,7 +1100,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      a call to act, so not the accent a tier-4 link wears (`docs/
      architecture.md`, "Bốn cấp nút") — beside the heart's coral when the
      list is liked, a second coral would read as a second state. `CHIP_H`
-     drawn, the row's own height, and 44 to the thumb with `CHIP_SLOP`. */
+     drawn, the row's own height, and 44 to the thumb with `CHIP_SLOP`.
+
+     "Activity", where it said "View activity" (owner, 18 Nov 2026): the
+     chevron says "open", a person's page already calls the same thing
+     "Activity", and the row needed the room for Share's word. VoiceOver
+     is still told "View activity". */
   const activityLink = uid && col ? (
     <PressableScale
       onPress={() => navigation.navigate('CollectionActivity', { slug: col.slug })}
@@ -1109,13 +1117,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       accessibilityLabel={t('View activity', 'Xem hoạt động', 'アクティビティを見る', '查看动态', '檢視動態')}
       testID="collection-activity-link"
     >
-      <Text style={s.activityLinkText}>{t('View activity', 'Xem hoạt động', 'アクティビティを見る', '查看动态', '檢視動態')}</Text>
+      <Text style={s.activityLinkText}>{t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}</Text>
       <Glyph name="chevron-forward" size={ACTIVITY_CHEVRON} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
   // Share, beside the heart: who can see the list, and sending it —
-  // `collectionDetail/Share`. Yours alone, as the mark under your handle is.
-  const shareButton = visibility
+  // `collectionDetail/Share`. Yours alone.
+  const shareButton = owned
     ? <ShareButton seen={seen} friends={sharedWith.length} onPress={() => setWhoSees(true)} />
     : null;
   const activity = (

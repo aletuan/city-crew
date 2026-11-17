@@ -67,6 +67,23 @@ const TALLY_LINE = 18;
 const ROW_AIR = (CHIP_H - TALLY_LINE) / 2;
 /** "View activity ›"'s chevron, at the words' 15. */
 export const ACTIVITY_CHEVRON = 15;
+/**
+ * The heart and Share at the card's foot: 18, in the secondary grey
+ * (owner, 18 Nov 2026).
+ *
+ * They were 15 in the tertiary grey, the byline's — "one of the row's
+ * quiet marks" — and on the owner's phone a liked heart, filled, stood
+ * beside a Share that had all but gone: an outline's stroke is 32/512 of
+ * its size, 0.94pt at 15, in the app's faintest ink. At 18 it is 1.1pt,
+ * and a step darker. Not 20, the size a feed's card gave its heart: this
+ * row also holds the words "Share" and "Activity". The feed's card came
+ * down to this the same day, so one heart is one size on a card.
+ *
+ * Not the hearts on a photograph (Explore's shelf, the Collections
+ * tab's tiles): white on a picture has no contrast to find, and a tile
+ * has no room.
+ */
+export const ACT_GLYPH = 18;
 /** How far the chevron's ink stops short of its box's right edge, read
  *  off the icon font itself (13 Nov 2026): Ionicons' `chevron-forward`
  *  is drawn from 159 to 352 of a 512 advance, so 160/512 = 0.312 of the
@@ -96,6 +113,9 @@ export const s = StyleSheet.create({
   // Visited's sheet titles use.
   sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold, paddingHorizontal: 4 },
   meta: { color: colors.textTertiary, ...type.meta },
+  // The heart's tally and Share's word: the acts' ink, a step darker
+  // than the byline's — see `ACT_GLYPH`.
+  act: { color: colors.textSecondary, ...type.meta },
   // The heart and its tally, one fact, first in the activity row (see
   // `activity`). In the header it had to sit beside the count, or it read
   // as a second header control slipped a line under ⋯ — inside the card
@@ -104,7 +124,7 @@ export const s = StyleSheet.create({
   // first card answers, in the quiet grey a card's own lines wear.
   sheetHead: { gap: 4 },
   sheetAsk: { color: colors.textTertiary, ...type.meta, paddingHorizontal: 4 },
-  like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  like: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   // Public or Private, in one grey — see `visibility`.
   visibilityWord: { color: colors.textTertiary, ...type.meta, lineHeight: BYLINE_LINE },
   // The list's age, then who sees it, under the handle. 6 round the

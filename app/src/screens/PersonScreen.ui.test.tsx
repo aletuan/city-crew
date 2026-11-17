@@ -960,6 +960,21 @@ describe('lists that are not for everybody', () => {
       expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'noodles', slug: 'noodles' });
     });
 
+    // One heart, one size and one red on a card (owner, 18 Nov 2026):
+    // it was 20 here and 15 on the list's page, and `bad` when liked.
+    it('draws the heart at 18, in the secondary grey, and in the like’s own red once liked', async () => {
+      state.myLikes = ['open'];
+      await show('me');
+      const [shared, , open] = acts();
+      const worn = (card: HTMLElement) => {
+        const g = within(card).getByTestId('activity-heart').querySelector('[data-icon]')!;
+        return [g.getAttribute('data-icon'), g.getAttribute('data-size'), g.getAttribute('data-color')];
+      };
+      expect(worn(shared)).toEqual(['heart-outline', '18', String(colors.textSecondary)]);
+      expect(worn(open)).toEqual(['heart', '18', String(colors.like)]);
+      expect(colors.like).toBe(colors.accent);
+    });
+
     it('shows the likes a private list kept as a figure, with nothing to press', async () => {
       state.likes = { secret: 4, noodles: 2 };
       await show('me');
@@ -969,7 +984,7 @@ describe('lists that are not for everybody', () => {
       expect(kept.getAttribute('aria-label')).toBe('4 likes');
       expect(kept.getAttribute('role')).toBeNull();
       const glyph = kept.querySelector('[data-icon]')!;
-      expect([glyph.getAttribute('data-icon'), glyph.getAttribute('data-color')]).toEqual(['heart-outline', String(colors.textTertiary)]);
+      expect([glyph.getAttribute('data-icon'), glyph.getAttribute('data-size'), glyph.getAttribute('data-color')]).toEqual(['heart-outline', '18', String(colors.textTertiary)]);
       expect(within(secret).queryByTestId('activity-no-heart')).toBeNull();
       fireEvent.click(kept);
       expect(spies.toggleLike).not.toHaveBeenCalled();

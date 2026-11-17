@@ -74,6 +74,11 @@ export type ActivityMark = {
  *  the heart of the first card on a 393 × 852 screen with a head above
  *  it (drawn to scale, not measured on a phone). */
 const PHOTO_H = 168;
+/** The heart: 18, the size a list's own page draws it at, and
+ *  `colors.like` when liked. It was 20 and `bad` until 18 Nov 2026 — a
+ *  second size and a second red for one button
+ *  (`collectionDetail/styles`, `ACT_GLYPH`). */
+const HEART = 18;
 /** The mark's glyph: 13, a cap's height beside the time's 13pt type. */
 const MARK = 13;
 
@@ -158,7 +163,7 @@ export default function ActivityCard({
               : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね', '点赞这个合集', '按讚這個合集')}
             testID="activity-heart"
           >
-            <Glyph name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? colors.bad : colors.textSecondary} />
+            <Glyph name={liked ? 'heart' : 'heart-outline'} size={HEART} color={liked ? colors.like : colors.textSecondary} />
             {/* The tally from one like up, as everywhere (`likesWorthShowing`). */}
             {likesWorthShowing(likes) ? <Text style={s.count} testID="activity-likes">{likes}</Text> : null}
           </PressableScale>
@@ -172,7 +177,7 @@ export default function ActivityCard({
             : t(`${likes} likes`, `${likes} lượt thích`, `${likes}件のいいね`, `${likes} 个赞`, `${likes} 個讚`)}
           testID="activity-likes-kept"
         >
-          <Glyph name="heart-outline" size={20} color={colors.textTertiary} />
+          <Glyph name="heart-outline" size={HEART} color={colors.textTertiary} />
           <Text style={[s.count, s.kept]}>{likes}</Text>
         </View>
       ) : <View style={s.noFoot} testID="activity-no-heart" />}
