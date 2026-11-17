@@ -32,14 +32,34 @@
 // ink, as the saved bookmark is: the solid star here is a fact (a score,
 // a cover chosen), not a dot of decoration, so it keeps its fill.
 //
-// ── the quote (owner, 16 Nov 2026) ──
+// ── the bio's mark: a quote, then a speech bubble (owner, 16–17 Nov 2026) ──
 //
-// A seventh, for the bio's row in About me. The owner chose it from four
-// of Lucide's: `user-round` says what the Profile tab already says,
-// `message-square-text` and `notebook-pen` say a message and a diary,
-// and a bio is neither — it is something the person said about
-// themselves, which is what quotation marks are for. Ionicons has no
-// quote at all, so it is a name of this component's own, as `places` is.
+// A seventh, for the bio's row in About me. On 16 Nov the owner chose
+// Lucide's `quote` from four: `user-round` says what the Profile tab
+// already says, `message-square-text` and `notebook-pen` say a message
+// and a diary, and a bio is neither — it is something the person said
+// about themselves, which is what quotation marks are for.
+//
+// A day later it is `message-circle`, the owner's choice from six more.
+// Two things had changed. A person's page had come to draw the bio as a
+// speech bubble from their picture (`PersonScreen`'s `Bio`), so the
+// row's mark now says what that page draws: these are words this person
+// is saying. And on the card the pair of marks had read as a quotation,
+// which is somebody else's words set down, where a bio is one's own.
+//
+// What it costs, and the owner was told before choosing: "Message" on a
+// person's page wears a chat bubble too (Ionicons' `chatbubble-outline`),
+// so one shape stands for a bio here and for sending a message there.
+// They are on different screens and Message is not yet a button; when it
+// is one, the two will want telling apart. It is why this is a name of
+// the component's own, `speech`, and not `chatbubble-outline` routed to
+// the line set as the star was: that would redraw Message as well, and
+// nobody asked for that.
+//
+// Not taken from the six: `feather` (says writing, not "about me"),
+// `pen-line` (an edit button to look at, on a row that is not pressed
+// once it holds a bio), `sparkles` (the mark of what the app drafts or
+// picks by itself), and `user-round` and `message-square-text` again.
 //
 // ── the line ──
 //
@@ -65,16 +85,16 @@ import Bookmark from 'lucide-react-native/icons/bookmark';
 import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import Compass from 'lucide-react-native/icons/compass';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
-import Quote from 'lucide-react-native/icons/quote';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 import Star from 'lucide-react-native/icons/star';
 import User from 'lucide-react-native/icons/user';
 
 type IonName = keyof typeof Ionicons.glyphMap;
 
-/** Any Ionicons name, and the two Ionicons does not have: `places`, the
- *  pin on the ground the Places tab wears, and `quote`, the pair of marks
+/** Any Ionicons name, and two of this component's own: `places`, the
+ *  pin on the ground the Places tab wears, and `speech`, the bubble
  *  that leads the bio on Profile. */
-export type GlyphName = IonName | 'places' | 'quote';
+export type GlyphName = IonName | 'places' | 'speech';
 
 /** Lucide's 24-grid stroke at Ionicons' weight: a sixteenth of the box. */
 export const LINE_STROKE = 1.5;
@@ -83,7 +103,7 @@ export const LINE_STROKE = 1.5;
  *  filled form. */
 const LINE: Partial<Record<GlyphName, [LucideIcon, boolean]>> = {
   places: [MapPinned, false],
-  quote: [Quote, false],
+  speech: [MessageCircle, false],
   compass: [Compass, false],
   'compass-outline': [Compass, false],
   calendar: [CalendarDays, false],
