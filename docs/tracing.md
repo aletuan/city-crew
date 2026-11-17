@@ -7,7 +7,7 @@ những gì, bật tắt ra sao, đọc ở đâu, và những cái bẫy đã m
 **Bối cảnh:** app này được phát triển từ điện thoại. Không ai ngồi trước
 terminal xem console của máy thật, nên "cảm thấy chậm" hay "cảm thấy
 giật" không có cách nào biến thành con số — trừ khi app tự ghi lại và
-gửi lên. Đó là lý do hai bảng dưới đây tồn tại.
+gửi lên. Đó là lý do các bảng dưới đây tồn tại.
 
 ---
 
@@ -75,9 +75,9 @@ có dev tooling — mọi con số mili-giây đều sai lệch. Chỉ `preview`
 
 ---
 
-## 3. Hai bảng đang có
+## 3. Ba bảng đang có
 
-Cả hai nằm ở Supabase project `citycrew-data` (`amdvitzpogaejzzqroco`),
+Cả ba nằm ở Supabase project `citycrew-data` (`amdvitzpogaejzzqroco`),
 schema `public`. **Không có bên thứ ba nào** — không Sentry, không
 Firebase, không analytics SDK.
 
@@ -141,9 +141,49 @@ Không có sự kiện "biến mất": một địa điểm rời ô đúng vào
 
 Code: `app/src/lib/decktrace.ts` (cả ghi lẫn gửi).
 
+### `tab_traces` — một lần chuyển tab tốn bao lâu
+
+Thêm ngày 18/11/2026, vì chủ app thấy pill ở thanh tab "hơi lag" khi bấm
+sang tab khác. Đọc `FloatingTabBar.tsx` cho ra một **giả thuyết**: pill
+khởi hành trong một effect theo `state.index`, nên nó không thể đi trước
+khi React commit xong lượt render mà cú bấm khơi ra — lượt đó gồm cả màn
+hình đích. Nếu đúng, lần đầu vào một tab (mount cả stack) phải tệ hơn lần
+sau. Bảng này tồn tại để giả thuyết đó được đo chứ không được tin.
+
+Một dòng là các lần chuyển tab kể từ lần cuối thanh tab đứng yên 3 giây
+(`QUIET_MS`) — thanh tab không có "lúc rời màn hình" như deck, nên nó gửi
+khi yên. Tối đa 60 lần chuyển một dòng, 20 dòng một lần chạy app.
+
+| cột | nội dung |
+|---|---|
+| `platform`, `os_version`, `is_dev`, `channel` | như `deck_traces`; `channel` null = Expo Go / build không dấu (không có `(not sent)`: cột có từ ngày đầu) |
+| `switches[]` | `[{from, to, first, still, press, commit, frame, settle}]` |
+
+Bốn con số, đều là mili-giây **kể từ lúc ngón tay chạm xuống**:
+
+| | nghĩa |
+|---|---|
+| `press` | nhả tay, `onPress` chạy. Trước mốc này không có gì di chuyển — đây là thời gian người dùng giữ ngón tay, không phải của app |
+| `commit` | effect của thanh tab chạy với index mới, pill được lệnh đi. **`commit − press` là phép đo chính**: pill đứng yên trong lúc JS render |
+| `frame` | khung hình đầu tiên JS thread rảnh để nhận sau đó. `frame − commit` = JS còn bận gì sau khi đã ra lệnh |
+| `settle` | toàn bộ chuyển động của pill dừng. Chạy native nên không đo JS; là độ dài hành trình thật. `null` = bị cú bấm kế cắt ngang |
+
+`first` = lần đầu tab đó được hiện kể từ khi mở app. `still` = Reduce
+Motion (pill trượt 160ms, không nảy — hành trình khác, đừng trộn).
+
+Không ghi: chuyển tab không do bấm (hướng dẫn đưa sang Collections, mở từ
+thông báo), và bấm vào tab đang chọn.
+
+**Giới hạn phải nhớ khi đọc:** mọi mốc là lúc *JS nghe thấy*, không phải
+lúc kính được chạm. JS thread đang bận thì nghe muộn, và con số không
+thấy được phần đó.
+
+Code: `app/src/lib/tabtrace.ts` (ghi + gửi), gọi từ
+`components/FloatingTabBar.tsx` ở đúng bốn chỗ.
+
 ---
 
-## 4. Quy ước chung của cả hai
+## 4. Quy ước chung
 
 | | |
 |---|---|
@@ -189,7 +229,7 @@ biết máy lúc ấy đang chạy kênh gì, và mọi câu trả lời đều 
    tới khi ra ba lựa chọn (thoát giữa chừng thì không có dòng nào gửi).
 4. Đọc bảng (mục 6).
 5. Xong việc thì xoá: `delete from deck_traces;` — **không có cơ chế xoá
-   tự động**, cả hai bảng đều dọn bằng tay.
+   tự động**, cả ba bảng đều dọn bằng tay.
 
 ### Bản preview và EAS Update — đã sửa 25/9/2026
 
@@ -275,6 +315,30 @@ from public.startup_traces t, jsonb_array_elements(t.marks) m
 where m->>'name' like 'cache:%' and t.created_at > now() - interval '7 days'
 group by 1, 2 order by 1, 2;
 ```
+
+```sql
+-- Chuyển tab: mỗi lần một hàng, mới nhất trước
+select to_char(t.created_at,'HH24:MI:SS') as at, coalesce(t.channel,'(null)') as channel, t.is_dev,
+       s->>'from' as "from", s->>'to' as "to", (s->>'first')::bool as first,
+       (s->>'press')::int as press,
+       (s->>'commit')::int - (s->>'press')::int as wait_js,
+       (s->>'frame')::int  - (s->>'commit')::int as after,
+       (s->>'settle')::int - (s->>'commit')::int as travel
+from public.tab_traces t, jsonb_array_elements(t.switches) s
+order by t.created_at desc, (s->>'commit')::int limit 60;
+
+-- Giả thuyết: lần đầu vào tab chậm hơn lần sau
+select (s->>'first')::bool as first, count(*) as n,
+       percentile_cont(0.5) within group (order by (s->>'commit')::int - (s->>'press')::int) as wait_js_p50,
+       max((s->>'commit')::int - (s->>'press')::int) as wait_js_max
+from public.tab_traces t, jsonb_array_elements(t.switches) s
+where not t.is_dev and not (s->>'still')::bool
+group by 1;
+```
+
+Dòng có `is_dev: true` thì bỏ: mọi mili-giây trong đó là của Metro, không
+phải của app. Số đo trên Expo Go (`channel` null) đúng cho vỏ Expo Go;
+muốn kết luận cho binary thật thì đo lại trên bản `preview`.
 
 ### Cách đọc một dòng thời gian khoẻ mạnh
 
@@ -507,6 +571,7 @@ khác.
 | `app/src/lib/channel.ts` | đọc `Updates.channel`, dựng `IS_PRODUCTION_CHANNEL` |
 | `app/src/lib/trace.ts` · `tracereport.ts` | trace khởi động (ghi · gửi) |
 | `app/src/lib/decktrace.ts` | trace deck (cả hai nửa) |
+| `app/src/lib/tabtrace.ts` | trace chuyển tab (cả hai nửa) |
 | `app/src/lib/legal.ts` | **lời hứa phải tôn trọng** |
 | `app/src/uitest/setup.tsx` · `network.test.ts` | chốt chặn mạng trong test |
 | `.github/workflows/app-release.yml` | build binary (`profile: production|preview`) |
@@ -514,3 +579,4 @@ khác.
 | `app/eas.json` | ánh xạ profile → channel |
 | `supabase/migrations/20260825070000_startup_traces.sql` | bảng khởi động |
 | `supabase/migrations/20260924140000_deck_traces.sql` (+3 bản vá sau) | bảng deck |
+| `supabase/migrations/20261118002000_tab_traces.sql` | bảng chuyển tab |

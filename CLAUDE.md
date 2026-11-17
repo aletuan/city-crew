@@ -172,7 +172,7 @@ the point:
 | | |
 |---|---|
 | `docs/architecture.md` | The layers of the app, which may import which, and what in CI turns red when one does. Read it before moving code between `screens/`, `components/` and `lib/`. |
-| `docs/tracing.md` | Measuring on a real device: the two trace tables, a measuring session, and the diagnosis order for an empty table. |
+| `docs/tracing.md` | Measuring on a real device: the three trace tables, a measuring session, and the diagnosis order for an empty table. |
 | `docs/store/listing.md` | App Store copy in three languages, and the catalog figures to re-check before each submission. |
 | `app/README.md` | Running the app, the three ways onto a phone, and the Google Maps keys. |
 | `docs/testing/e2e-simulator.md` | The Maestro suite on the iOS simulator: what it checks, and the environment failures already hit. Setup is `app/.maestro/README.md`; how to write a flow is `app/.maestro/GUIDELINES.md`. |

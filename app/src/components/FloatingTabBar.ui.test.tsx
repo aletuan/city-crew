@@ -43,6 +43,18 @@ vi.mock('react-native', async (orig) => ({
   useWindowDimensions: () => ({ width: win.width, height: 852, scale: 3, fontScale: 1 }),
 }));
 
+// The switch trace, as the bar calls it. Stood in for whole: the real one
+// is a module singleton with a three-second timer and an insert behind it,
+// and what it does with these calls is `lib/tabtrace.test.ts`'s to pin.
+const trace = vi.hoisted(() => ({
+  down: vi.fn(), press: vi.fn(), commit: vi.fn(), settled: vi.fn(), device: [] as unknown[],
+}));
+vi.mock('../lib/tabtrace', () => ({
+  tabTrace: { down: trace.down, press: trace.press, commit: trace.commit },
+  tabSettled: (device: unknown) => { trace.device.push(device); return trace.settled; },
+}));
+vi.mock('../lib/channel', () => ({ CHANNEL: 'preview', IS_PRODUCTION_CHANNEL: false }));
+
 // The guide's anchor on the collections tab, as the bar asks for it: the
 // real hook, with what it was asked kept.
 const anchorCalls = vi.hoisted(() => [] as unknown[][]);
@@ -378,6 +390,84 @@ describe('the pill’s travel', () => {
     theme.scheme = 'light';
     render(tree(propsFor(0).props));
     expect(getComputedStyle(veil()).backgroundColor).toBe('rgb(245, 241, 234)'); // paper's page
+  });
+});
+
+// `lib/tabtrace` measures a change of tab from the finger coming down to
+// the pill coming to rest. The arithmetic is its own; what is the bar's is
+// calling it at the four instants, and at no others.
+describe('what a switch reports', () => {
+  const tree = (props: BottomTabBarProps) => (
+    <TabBarDuckProvider><Scroller /><FloatingTabBar {...props} /></TabBarDuckProvider>
+  );
+  beforeEach(() => { [trace.down, trace.press, trace.commit, trace.settled].forEach((f) => f.mockClear()); });
+  // react-native-web's press responder starts a press on a timer, so the
+  // clock is faked for the touch — as it is for the pill's lift above.
+  const touch = (name: string) => {
+    vi.useFakeTimers();
+    fireEvent.mouseDown(tab(name), { button: 0 });
+    act(() => { vi.advanceTimersByTime(150); });
+  };
+
+  it('says which phone and which build it is, once', () => {
+    expect(trace.device).toEqual([
+      { platform: 'web', osVersion: expect.any(String), isDev: expect.any(Boolean), channel: 'preview' },
+    ]);
+  });
+
+  it('marks the finger coming down on another tab, from where the reader is to where they pressed', () => {
+    mount(propsFor(1).props);
+    touch('Trips');
+    expect(trace.down.mock.calls).toEqual([['Explore', 'Trips']]);
+    expect(trace.press).not.toHaveBeenCalled();
+  });
+
+  // Nothing travels for a press on the tab already selected, so there is
+  // nothing to time: the pill lifts under the finger instead.
+  it('marks nothing down for the selected tab', () => {
+    mount(propsFor(1).props);
+    touch('Explore');
+    expect(trace.down).not.toHaveBeenCalled();
+  });
+
+  // Before the navigation, not after: `navigate` is where the render
+  // being measured begins.
+  it('marks the press before it navigates', () => {
+    const { navigation, props } = propsFor(1);
+    mount(props);
+    fireEvent.click(tab('Trips'));
+    expect(trace.press).toHaveBeenCalledOnce();
+    expect(trace.press.mock.invocationCallOrder[0]).toBeLessThan(navigation.navigate.mock.invocationCallOrder[0]);
+  });
+
+  it('marks the commit when the selected tab changes, and hands the journey its end', async () => {
+    const { rerender } = render(tree(propsFor(1).props));
+    expect(trace.commit).not.toHaveBeenCalled();
+    rerender(tree(propsFor(2).props));
+    expect(trace.commit.mock.calls).toEqual([['Trips', false]]);
+    await waitFor(() => expect(trace.settled).toHaveBeenCalledWith({ finished: true }), { timeout: 3000 });
+    expect(trace.settled).toHaveBeenCalledOnce();
+  });
+
+  // The navigator hands over a new state on every push inside a tab; the
+  // tab has not changed, and nothing set off.
+  it('marks no commit for a new state on the same tab, nor for a new width', () => {
+    const { rerender } = render(tree(propsFor(1).props));
+    rerender(tree(propsFor(1).props));
+    win.width = 430;
+    rerender(tree(propsFor(1).props));
+    expect(trace.commit).not.toHaveBeenCalled();
+    expect(trace.settled).not.toHaveBeenCalled();
+  });
+
+  // Reduce Motion's slide is a different journey, and the row says so.
+  it('marks the commit as still under Reduce Motion, and the slide’s end too', async () => {
+    vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    const { rerender } = render(tree(propsFor(0).props));
+    await act(async () => {});
+    rerender(tree(propsFor(3).props));
+    expect(trace.commit.mock.calls).toEqual([['Collections', true]]);
+    await waitFor(() => expect(trace.settled).toHaveBeenCalledWith({ finished: true }), { timeout: 2000 });
   });
 });
 

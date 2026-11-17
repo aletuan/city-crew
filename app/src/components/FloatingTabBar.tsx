@@ -35,9 +35,10 @@
 
 import { useTourAnchor } from './SignupTour';
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, Platform, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSession } from '../lib/auth';
+import { CHANNEL } from '../lib/channel';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useI18n } from '../lib/i18n';
@@ -47,6 +48,7 @@ import { useRewards } from '../lib/rewards';
 import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
+import { tabSettled, tabTrace } from '../lib/tabtrace';
 import { useScheme } from '../lib/theme';
 import { badgeSolidHex, bgHex, colors, pillGround, pillInk, radius, textHex } from '../theme';
 import { GlassMaterial, Glyph, PressableScale, TAB_BAR_HEIGHT, useReducedMotion, useTabBarFrame, useTabBarLift, type GlyphName } from './ui';
@@ -188,6 +190,13 @@ export function spokenTab(
   return label;
 }
 
+/**
+ * Where the pill's journey reports its end — see `lib/tabtrace` for what
+ * is being measured and why. Made here, once, because which phone this is
+ * is `react-native`'s to say and `lib/*.ts` may not ask it.
+ */
+const settled = tabSettled({ platform: Platform.OS, osVersion: String(Platform.Version), isDev: __DEV__, channel: CHANNEL });
+
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   // The guide's ring on this tab is the pill's own shape (owner, 22 Oct
   // 2026): the cell's width, and the inset in from the island's rim above
@@ -218,6 +227,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // hide, show, at scroll-event rate: the strobe a reader saw as the bar
   // shivering while they pulled the page up.
   const index = state.index;
+  const here = state.routes[index].name;
   const { show } = duck;
   useEffect(() => { show(); }, [state, show]);
 
@@ -322,12 +332,12 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     const was = shown.current;
     shown.current = { index, cell };
     // A new width (rotation, a split screen) is not a journey: jump.
-    if (was.cell !== cell || reduced) {
-      if (was.cell !== cell) { x.setValue(index * cell); return; }
-      Animated.timing(x, { toValue: index * cell, duration: 160, useNativeDriver: true }).start();
-      return;
-    }
+    if (was.cell !== cell) { x.setValue(index * cell); return; }
     if (was.index === index) return;
+    // The pill is told to go on the next line or the one after: this is
+    // the instant `lib/tabtrace` calls `commit`, and `settled` its end.
+    tabTrace.commit(here, reduced);
+    if (reduced) { Animated.timing(x, { toValue: index * cell, duration: 160, useNativeDriver: true }).start(settled); return; }
     const steps = Math.abs(index - was.index);
     Animated.parallel([
       Animated.spring(x, { toValue: index * cell, useNativeDriver: true, stiffness: 320, damping: 28, mass: 1 }),
@@ -340,8 +350,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         Animated.delay(110),
         Animated.timing(rise, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]),
-    ]).start();
-  }, [index, cell, reduced, x, stretch, rise]);
+    ]).start(settled);
+  }, [index, here, cell, reduced, x, stretch, rise]);
   // The selected tab, pressed: the pill lifts under the finger rather
   // than the cell shrinking away from it.
   const press = (down: boolean) => {
@@ -409,6 +419,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           const { options } = descriptors[route.key];
           const label = (options.title ?? route.name) as string;
           const onPress = () => {
+            tabTrace.press();
             const event = navigation.emit({
               type: 'tabPress', target: route.key, canPreventDefault: true,
             });
@@ -429,7 +440,9 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               // selection haptic; a second one here would double-tap.
               haptic="none"
               onPress={onPress}
-              onPressIn={focused ? () => press(true) : undefined}
+              // On another tab the finger coming down is where a switch
+              // is measured from (`lib/tabtrace`); nothing is drawn for it.
+              onPressIn={() => (focused ? press(true) : tabTrace.down(here, route.name))}
               onPressOut={focused ? () => press(false) : undefined}
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
               accessibilityRole="tab"
