@@ -119,15 +119,18 @@ describe('RewardBanner', () => {
     render(<RewardBanner onOpen={() => {}} />);
     expect(banner()!.textContent).toBe('Your badgesYou hold 5 badges');
     expect(banner()!.querySelector('img')).toBeNull();
-    expect(banner()!.querySelector('[data-icon="ribbon"]')).toBeTruthy();
+    // The ribbon that heads the sheet it opens.
+    expect(banner()!.querySelector('[data-icon="ribbon-outline"]')).toBeTruthy();
+    expect(banner()!.querySelector('[data-icon="trophy-outline"]')).toBeNull();
   });
 
-  it('says a level under a rising line', () => {
+  // The trophy the level's card wears in that sheet.
+  it('says a level under the level’s own trophy', () => {
     say({ kind: 'level', level: 19 });
     render(<RewardBanner onOpen={() => {}} />);
     expect(banner()!.textContent).toBe('Level upLevel 19');
-    expect(banner()!.querySelector('[data-icon="trending-up"]')).toBeTruthy();
-    expect(banner()!.querySelector('[data-icon="ribbon"]')).toBeNull();
+    expect(banner()!.querySelector('[data-icon="trophy-outline"]')).toBeTruthy();
+    expect(banner()!.querySelector('[data-icon="ribbon-outline"]')).toBeNull();
   });
 
   it('says it in Vietnamese', () => {

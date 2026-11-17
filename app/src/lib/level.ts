@@ -53,28 +53,32 @@ export function levelSteps(saved: number): { done: number; of: number } {
  * disc beside it explained itself on a press; the level, on the same
  * picture, did not, and the owner asked what either meant.
  *
- * Three lines, each its own, because the sheet sets them apart: the
- * level, what the next one takes, and the rule with the reader's count.
- * They were one paragraph in a system alert for an hour, which the owner
- * found a wall to read; the bar between the title and the sentences
- * (`levelSteps`) says most of it before a word is read.
+ * Two lines: the level, and what the next one takes. They were one
+ * paragraph in a system alert for an hour, which the owner found a wall
+ * to read; the bar under them (`levelSteps`) says most of it before a
+ * word is read.
  *
- * The count is said here because it is said nowhere else since the same
- * day, when "Saved places" left the row of numbers under the hero — it
- * is the figure the level is made of.
+ * There was a third until 17 Nov 2026: "You have saved 74 places. Every
+ * 5 take you up a level." The owner, with a reference that drew the
+ * level as a title, one line and a bar, asked for it as tidy. The rule
+ * is still said — "3 / 5" beside the title is every five, and the line
+ * says it is places that are saved — and what goes is the total, which
+ * is the level's own number times five and was news to nobody.
+ *
+ * "Save … more", not the reference's "… more to go": the sentence is the
+ * one place left that says what the level counts.
  *
  * Never "0 more": the boundary belongs to the next level
  * (`levelFromSaves`), so there is always between one and `PER_LEVEL` to
  * go.
  */
-export function levelWords(saved: number, t: T): { title: string; next: string; rule: string } {
+export function levelWords(saved: number, t: T): { title: string; next: string } {
   const n = whole(saved);
   const { level } = levelFromSaves(n);
   const more = PER_LEVEL - (n % PER_LEVEL);
   const up = level + 1;
   // English alone counts its nouns.
   const morePlaces = more === 1 ? 'place' : 'places';
-  const savedPlaces = n === 1 ? 'place' : 'places';
   return {
     title: t(`Level ${level}`, `Level ${level}`, `レベル${level}`, `${level} 级`, `${level} 級`),
     next: t(
@@ -82,12 +86,6 @@ export function levelWords(saved: number, t: T): { title: string; next: string; 
       `Lưu thêm ${more} địa điểm để đạt Level ${up}.`,
       `あと${more}件保存するとレベル${up}になります。`,
       `再保存 ${more} 个地点即可升到 ${up} 级。`, `再儲存 ${more} 個地點即可升到 ${up} 級。`,
-    ),
-    rule: t(
-      `You have saved ${n} ${savedPlaces}. Every ${PER_LEVEL} take you up a level.`,
-      `Bạn đã lưu ${n} địa điểm. Cứ ${PER_LEVEL} địa điểm là lên một level.`,
-      `これまでに${n}件保存しました。${PER_LEVEL}件ごとにレベルが1つ上がります。`,
-      `你已保存 ${n} 个地点。每保存 ${PER_LEVEL} 个地点升一级。`, `你已儲存 ${n} 個地點。每儲存 ${PER_LEVEL} 個地點升一級。`,
     ),
   };
 }

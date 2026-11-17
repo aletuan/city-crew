@@ -122,8 +122,9 @@ function About({ id }: { id: BadgeId }) {
 
 const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  // The card's own heading, at the size of the sentence in the card
-  // above it (`HeroFace`'s `lead`), a weight up.
+  // The card's own heading: a step under the level's, in the card above
+  // (`HeroFace`'s `title`, 18), which is the first thing the sheet is
+  // asked about.
   title: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.semibold },
   count: { color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
   // Three across. Each cell is a third of the row, so the columns line

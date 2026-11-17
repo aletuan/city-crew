@@ -253,8 +253,9 @@ const d = StyleSheet.create({
   // The first line's height, with the disc in its middle. No halo and no
   // shadow now: those parted it from a photograph, and it is on the page.
   mark: { justifyContent: 'center' },
-  // The level sheet's lead (`profile/HeroFace`): one sheet, one type,
-  // whichever badge it is about.
+  // The size the level's sheet set its first sentence in when the two
+  // badges shared a sheet (`profile/HeroFace`, 16 Nov 2026); kept, as a
+  // sentence that is the whole of its card.
   //
   // Justified (owner, 17 Nov 2026), as a list's description is
   // (`collectionDetail/styles`, 3 Nov): in its box the sentence ran three

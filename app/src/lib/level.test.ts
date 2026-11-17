@@ -45,16 +45,16 @@ describe('levelWords', () => {
   const en = (e: string) => e;
   const vi = (_e: string, v: string) => v;
 
-  it('says the level, what the next one takes, and the rule with the count', () => {
+  // Two lines, and no third (owner, 17 Nov 2026): the total and "every
+  // 5" went, said already by "3 / 5" and the bar.
+  it('says the level and what the next one takes, and nothing else', () => {
     expect(levelWords(74, en)).toEqual({
       title: 'Level 15',
       next: 'Save 1 more place to reach Level 16.',
-      rule: 'You have saved 74 places. Every 5 take you up a level.',
     });
     expect(levelWords(74, vi)).toEqual({
       title: 'Level 15',
       next: 'Lưu thêm 1 địa điểm để đạt Level 16.',
-      rule: 'Bạn đã lưu 74 địa điểm. Cứ 5 địa điểm là lên một level.',
     });
   });
 
@@ -73,12 +73,10 @@ describe('levelWords', () => {
     expect(levelWords(71, en).next).toBe('Save 4 more places to reach Level 16.');
   });
 
-  // English alone counts its nouns, each on its own number.
-  it('says one place as one place, in either sentence', () => {
-    expect(levelWords(1, en).rule).toBe('You have saved 1 place. Every 5 take you up a level.');
+  // English alone counts its nouns.
+  it('says one place as one place', () => {
     expect(levelWords(1, en).next).toBe('Save 4 more places to reach Level 2.');
     expect(levelWords(4, en).next).toBe('Save 1 more place to reach Level 2.');
-    expect(levelWords(4, en).rule).toContain('4 places');
   });
 
   it('says it in every language, each with its numbers', () => {
@@ -87,9 +85,7 @@ describe('levelWords', () => {
       const w = levelWords(74, pick(i));
       expect(w.title).toContain('15');
       for (const n of ['1', '16']) expect(w.next).toContain(n);
-      for (const n of ['74', '5']) expect(w.rule).toContain(n);
       expect(w.next).not.toBe(levelWords(74, en).next);
-      expect(w.rule).not.toBe(levelWords(74, en).rule);
     }
   });
 
