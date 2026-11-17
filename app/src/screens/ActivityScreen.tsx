@@ -100,13 +100,13 @@ import { Avatar, Card, EmptyState, GradientCta, PressableScale } from '../compon
 import { SettingRow } from './profile/rows';
 import { useSession } from '../lib/auth';
 import { windowStart } from '../lib/activityWindow';
-import { numericDate } from '../lib/format';
+import { agoLabel } from '../lib/ago';
 import { useCollections } from '../lib/catalog';
 import {
   fetchApplause, fetchCopies, fetchMyActs, type FriendProfile, type MyActs, useCuratorAvatarsQuery, useMyCollections,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
-import { type ActivityItem, agoOf, type Applause, buildActivity, type Copy, friendsMade } from '../lib/friends';
+import { type ActivityItem, type Applause, buildActivity, type Copy, friendsMade } from '../lib/friends';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { colors, space, type } from '../theme';
@@ -188,19 +188,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const collectionOf = (collectionId: string) =>
     [...mine.data, ...cols.data, ...theirs].find((c) => c.id === collectionId) ?? null;
 
-  const agoLabel = (iso: string): string => {
-    const ago = agoOf(iso, Date.now());
-    if (ago.unit === 'now') return t('just now', 'vừa xong', 'たった今', '刚刚', '剛剛');
-    if (ago.unit === 'minutes') return t(`${ago.n}m ago`, `${ago.n} phút trước`, `${ago.n}分前`, `${ago.n} 分钟前`, `${ago.n} 分鐘前`);
-    if (ago.unit === 'hours') return t(`${ago.n}h ago`, `${ago.n} giờ trước`, `${ago.n}時間前`, `${ago.n} 小时前`, `${ago.n} 小時前`);
-    if (ago.n === 1) return t('yesterday', 'hôm qua', '昨日', '昨天', '昨天');
-    // A week of "n days ago", then the date: past a week nobody counts
-    // back, they look at a calendar — Mail and Instagram turn the same
-    // corner. The date is `numericDate`, the check-in rows' form, so a
-    // day already past is written one way across the profile stack.
-    if (ago.n > RELATIVE_DAYS) return numericDate(lang, new Date(iso));
-    return t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`, `${ago.n} 天前`, `${ago.n} 天前`);
-  };
+  // The words for "how long ago" are `lib/ago`'s, shared with a person's
+  // page since 17 Nov 2026.
+  const ago = (iso: string): string => agoLabel(iso, Date.now(), lang, t);
 
   // Only the three fetches the timeline is built from; the crew's
   // friendships join it when they land.
@@ -375,7 +365,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                       <Text style={s.line} numberOfLines={2}>
                         {line}
                       </Text>
-                      <Text style={s.meta}>{agoLabel(item.at)}</Text>
+                      <Text style={s.meta}>{ago(item.at)}</Text>
                     </View>
                     {/* Only where there is somewhere to go: the same
                         condition as the role above, so what VoiceOver
@@ -452,8 +442,6 @@ const NO_ACTS: MyActs = { likes: [], copies: [], lists: [] };
 /** The feed line's line height, and the box that holds a 19pt glyph's
  *  whole line — see `mark`. */
 const LINE = 21;
-/** How many days a time is told as a distance before it is told as a date. */
-const RELATIVE_DAYS = 7;
 /** The face's side: the 44pt the slot it replaced had, so the text
  *  column stays where it was. */
 const FACE = 44;
