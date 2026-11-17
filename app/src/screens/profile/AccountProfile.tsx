@@ -9,7 +9,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuthActions, useProfile, useSession } from '../../lib/auth';
 import { visitSummary } from '../../lib/checkin';
 import { useMyTrips } from '../../lib/mytrips';
-import { membersOf, useMyPreferences } from '../../lib/data';
+import { savedPlaces } from '../../lib/badges';
+import { useMyPreferences } from '../../lib/data';
 import { useMyCheckins } from '../../lib/checkins';
 import { useActivityCount } from '../../lib/useActivityCount';
 import { useCrew } from '../../lib/crew';
@@ -124,11 +125,9 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   // consulting anything — passing the real catalog would mean this
   // screen waiting on a fetch it otherwise has no use for.
   const mine = useMyLists();
-  const saved = useMemo(() => {
-    const seen = new Set<string>();
-    for (const c of mine.data) for (const p of membersOf(c, [])) seen.add(p.slug);
-    return seen.size;
-  }, [mine.data]);
+  // `savedPlaces` holds the sum now: the badges count the same places
+  // (`lib/badges`), and two copies of it would be two answers.
+  const saved = useMemo(() => savedPlaces(mine.data), [mine.data]);
   // What the level is made of — the ring is `HeroFace`'s, below.
   const trips = useMyTrips();
 
