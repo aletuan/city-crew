@@ -675,3 +675,11 @@ for f in "$ROOT"/supabase/migrations/*_role_of.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/role_of_test.sql"
+
+# A list shared with friends can be liked by them and by its owner
+# (17 Nov 2026). After the shares and the like counts it reads.
+echo "→ likes in the group"
+for f in "$ROOT"/supabase/migrations/*_likes_in_the_group.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/likes_in_the_group_test.sql"

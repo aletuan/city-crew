@@ -27,7 +27,7 @@ import {
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
-import { namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
+import { likeable, namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
 import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
@@ -213,9 +213,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    *
    * What it changes is what the screen offers, by the owner's call the
    * day sharing shipped: you may read it and plan from it, and that is
-   * all. No heart to press (likes are public-only — `heart` already
-   * asks `isPublic`), though the likes it kept from being public show,
-   * read-only (`keptHeart`). No "Save a copy", at either of its doors (`canCopy`):
+   * all — and, since 17 Nov 2026, like it: a list shared with a group is
+   * liked by the group (`shares.likeable`). No "Save a copy", at either of its doors (`canCopy`):
    * the list was lent to you to read, and the app does not offer to make
    * it yours. No Report: moderation never reaches a private list
    * (`legal.ts`, "nothing there can reach a private collection"), so the
@@ -972,7 +971,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      It prints from one: a `0` reads as "nobody liked this" rather than
      "no votes yet", and below that the heart draws bare — exactly when it
      is most obviously an invitation. */
-  const heart = col && isPublic && col.id ? (
+  // A button on a public list, and on one shared with friends, for the
+  // friends and for you — `shares.likeable`.
+  const heart = col && likeable(isPublic, owned, sharedWith.length) && col.id ? (
     <PressableScale
       contentStyle={s.like}
       scaleTo={0.82}
@@ -997,6 +998,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   ) : null;
 
   /* ── the likes a list kept (owner, 13 Nov 2026) ──
+     Since 17 Nov 2026 this is a Private list alone: one shared with
+     friends has the heart above, for them and for its owner, and the
+     row draws the heart before it looks for this (`heart ?? keptHeart`).
+     What follows was written when neither could be liked, and still
+     says why a list nobody else can open shows a figure and not a
+     button.
+
      A list that gathered likes while public and then went to Friends or
      Private kept every row in `collection_likes`, and lost them from
      view: the heart above asks `isPublic`, and so did the count. The

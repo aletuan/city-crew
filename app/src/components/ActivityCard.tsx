@@ -41,10 +41,10 @@
 // no word where the page is your own, as that byline is; the caller
 // decides, and hands the word VoiceOver says either way.
 //
-// A collection with no heart ends in the card's own padding where the
-// heart's row would be: until private lists came here a card without a
-// heart was a row from a launch cache, and its words ran to the card's
-// edge unseen.
+// A collection nobody may like — a private one — shows the likes it
+// kept from being public as a figure in the heart's place: the outline
+// in the quiet grey, the number, and nothing to press, as its own page
+// draws them. With none kept it ends in the card's own padding.
 
 import React from 'react';
 import type Ionicons from '@expo/vector-icons/Ionicons';
@@ -163,6 +163,18 @@ export default function ActivityCard({
             {likesWorthShowing(likes) ? <Text style={s.count} testID="activity-likes">{likes}</Text> : null}
           </PressableScale>
         </View>
+      ) : likesWorthShowing(likes) ? (
+        <View
+          style={[s.foot, s.heart]}
+          accessible
+          accessibilityLabel={likes === 1
+            ? t('1 like', '1 lượt thích', '1件のいいね', '1 个赞', '1 個讚')
+            : t(`${likes} likes`, `${likes} lượt thích`, `${likes}件のいいね`, `${likes} 个赞`, `${likes} 個讚`)}
+          testID="activity-likes-kept"
+        >
+          <Glyph name="heart-outline" size={20} color={colors.textTertiary} />
+          <Text style={[s.count, s.kept]}>{likes}</Text>
+        </View>
       ) : <View style={s.noFoot} testID="activity-no-heart" />}
     </Card>
   );
@@ -178,6 +190,7 @@ const s = StyleSheet.create({
   // apart, as the collection's byline sets its own.
   under: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   mark: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
+  kept: { color: colors.textTertiary },
   // Where the heart's row would be: the card's padding under its words.
   noFoot: { height: space.cardPadding },
   photo: { width: '100%', height: PHOTO_H },
