@@ -21,6 +21,13 @@
 //   - moments — a new kind of content, with storage, reporting and a desk
 //     to review it.
 //
+// One thing has been added to "only what was already public" since
+// (owner, 17 Nov 2026): what this reader could already open. Your own
+// page holds all your lists, and a friend's the ones they shared with
+// you, each marked for who sees it — `usePageLists`. Still no table, no
+// migration and no change to the policy, which already says a private
+// collection is shown to its owner and to the friends it is shared with.
+//
 // So the body is built as sections stacked under a head, and a later
 // step is a section added, not a page drawn again: "Collections" was the
 // first, and "In common" (`InCommon`, 16 Nov 2026) the second, above it —
@@ -128,10 +135,14 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { type Collection, coverUriOf, type FriendProfile, membersOf, useProfileByHandle } from '../lib/data';
+import {
+  type Collection, coverUriOf, type FriendProfile, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
+} from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { coverAmong, IN_COMMON_ON, listsBy, TOP_FRIEND_ON } from '../lib/person';
+import { coverAmong, IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/person';
+import { useMyLists } from '../lib/save';
+import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, display, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -167,11 +178,12 @@ export default function PersonScreen({ navigation, route }: {
   const who = useProfileByHandle(handle || null);
   const person = who.data;
 
-  const shelf = useCollections();
   const places = usePlaces();
-  const lists = listsBy(person?.id, shelf.data);
+  // What of theirs this reader may see, and what everybody may —
+  // `usePageLists`. The cover is asked of the second.
+  const { lists, open, seenOf } = usePageLists(me, person?.id);
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places.data));
-  const cover = coverAmong(lists, coverFor);
+  const cover = coverAmong(open, coverFor);
 
   const { friendButton, crew } = useFriendButtons(me, 'person', 'page');
   // Report, block, unblock — `usePersonMenu`.
@@ -247,6 +259,7 @@ export default function PersonScreen({ navigation, route }: {
         me={me}
         person={person}
         lists={lists}
+        seenOf={seenOf}
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
         reach={end.reach}
@@ -464,6 +477,38 @@ function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
     });
     return () => { blur(); focus(); };
   }, [navigation]);
+}
+
+/**
+ * The lists on this page for this reader, the public ones among them,
+ * and who sees each that is not public (owner, 17 Nov 2026).
+ *
+ * `lists` is `person.listsOn`: all of yours on your own page, their
+ * public ones and those they shared with you on another's. `open` is the
+ * public ones alone, which the page's cover is still chosen from — a
+ * cover off a private list would head your page with a photograph no
+ * visitor is shown.
+ *
+ * Three reads the app already makes, and each only where it is used:
+ * your library (`useMyLists`, the app's one copy), the lists lent to you
+ * (asked on somebody else's page only) and who your lists are shared
+ * with (asked on your own only, for the number beside the two heads).
+ * The last two are remembered between launches, so a shared list of
+ * yours opens with its two heads and not as a padlock that changes.
+ */
+function usePageLists(me: string | null, personId: string | undefined) {
+  // A guest is `null` and a profile not yet here `undefined`: never equal.
+  const own = personId === me;
+  const shelf = useCollections();
+  const mine = useMyLists();
+  const shared = useSharedWithMe(own ? null : me);
+  const myShares = useMyListShares(own ? me : null);
+  const sharesOf = sharesByList(myShares.data);
+  return {
+    lists: listsOn(personId, me, { shelf: shelf.data, mine: mine.data, shared: shared.data }),
+    open: listsBy(personId, shelf.data),
+    seenOf: (c: Collection) => seenOn(c, own, (c.id ? sharesOf[c.id] ?? [] : []).length),
+  };
 }
 
 function usePastRow(duck: ((e: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined) {

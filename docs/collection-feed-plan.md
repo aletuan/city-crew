@@ -57,6 +57,15 @@ marketing hay hạ tầng.
   sang lưới, và "Hoạt động" chuyển lại.
 - Migration: không. Dùng `collections.created_at` và `collection_likes`.
 - Code: `app/src/screens/person/Shared.tsx`, `ActivityCard`, `lib/ago.ts`.
+- **Không chỉ bộ công khai (17/11, cùng ngày):** trang hiện những bộ mà
+  người xem vốn đã mở được. Trang của chính mình có mọi bộ của mình; trang
+  người khác có bộ công khai và bộ họ chia sẻ với mình. Thẻ không công
+  khai mang dấu: ổ khoá (riêng tư), hai người kèm số bạn (đã chia sẻ),
+  hai người kèm "Chia sẻ với bạn" (được chia sẻ). Chỉ bộ công khai có
+  nút tim. Ảnh bìa trang vẫn chỉ lấy từ bộ công khai. Không migration,
+  không sửa chính sách: không ai thấy thêm thứ họ chưa xem được. Quy tắc
+  ở `lib/person.ts` (`listsOn`, `seenOn`). Feed cộng đồng ở bước 2 vẫn chỉ
+  có bộ công khai.
 
 ### Bước 2. Bộ sưu tập cộng đồng thành feed
 

@@ -1,10 +1,15 @@
 // A person's page: what of the catalog is theirs to show.
 //
-// The page (`PersonScreen`, 16 Nov 2026) is built only from what was
+// The page (`PersonScreen`, 16 Nov 2026) was built only from what was
 // already public — the profile, and the lists a person published — so it
-// asks the database nothing new but the profile's `bio`. These two
+// asked the database nothing new but the profile's `bio`. Since 17 Nov
+// 2026 it also draws what this reader, and only this reader, may already
+// open: every list of your own on your own page, and on a friend's page
+// the lists they shared with you (`listsOn`). Still nothing new asked of
+// the database: both are reads the Collections tab already makes. These
 // functions are the whole of its arithmetic, kept out of the screen so
 // they can be read and tested without one.
+import { visibilityOf } from './shares';
 import type { Collection } from './types';
 
 /**
@@ -64,6 +69,79 @@ export function listsBy(ownerId: string | null | undefined, shelf: readonly Coll
   return shelf.filter((c) => c.owner_id === ownerId && c.is_public !== false);
 }
 
+/** Newest first; a row that does not say when it was made, last. */
+const madeAt = (c: Collection): number => Date.parse(c.created_at ?? '') || 0;
+
+/**
+ * The lists on a person's page, for this reader (owner, 17 Nov 2026).
+ *
+ * Until then the page held public lists alone, for everybody — `listsBy`.
+ * The owner shared a list with two friends, opened their own page and
+ * did not find it there, which reads as a list that was lost. So:
+ *
+ *   - **your own page** holds every list you made, private and shared
+ *     ones too, each marked for who can see it (`seenOn`) so the page
+ *     still says what a visitor is shown;
+ *   - **somebody else's page** holds their public lists and the ones
+ *     they shared with you — which you could already open from the
+ *     Collections tab. Nobody is shown a list they could not open
+ *     before; the page is a second door to it, where a reader looks.
+ *
+ * Signed out there is no reader, so no library and nothing shared: the
+ * public lists, as before.
+ *
+ * Your library leads on your own page and the shelf fills in what it
+ * lacks: the library is the copy your own edits write to, and before it
+ * has loaded the shelf still has your public lists to draw. On another
+ * page the shelf leads, so a list both public and shared is the public
+ * row and wears no mark.
+ *
+ * Sorted only when two sources were joined. One source alone is already
+ * newest first (both queries order by `created_at`), and a row from a
+ * launch cache written before lists carried that stamp would sink to the
+ * bottom of a page that had been in the right order without it.
+ *
+ * `mine` is asked whose it is although the library is the reader's own:
+ * a library still in memory from the account signed in before must not
+ * put its private lists on this one's page.
+ */
+export function listsOn(
+  ownerId: string | null | undefined,
+  reader: string | null,
+  from: { shelf: readonly Collection[]; mine: readonly Collection[]; shared: readonly Collection[] },
+): Collection[] {
+  if (!ownerId) return [];
+  const theirs = (c: Collection) => c.owner_id === ownerId;
+  const open = listsBy(ownerId, from.shelf);
+  const [first, second] = ownerId === reader
+    ? [from.mine.filter(theirs), open]
+    : [open, from.shared.filter(theirs)];
+  const have = new Set(first.map((c) => c.slug));
+  const rest = second.filter((c) => !have.has(c.slug));
+  if (!rest.length) return first;
+  return [...first, ...rest].sort((a, b) => madeAt(b) - madeAt(a));
+}
+
+/**
+ * Who can see a list that is on the page and is not public — the mark
+ * its card wears. Nothing for a public list: it is what the page has
+ * always held, and a mark on every card marks none.
+ *
+ *   - `private`: on your own page, a list only you can see;
+ *   - `friends`: on your own page, a list shared with `n` friends
+ *     (`shares.visibilityOf`, the rule the list's own page goes by);
+ *   - `lent`: on somebody else's page, a list they shared with you — so
+ *     the reader knows not everybody sees this card.
+ *
+ * A row that does not say is public, as `listsBy` takes it.
+ */
+export type ListSeen = { kind: 'private' | 'lent' } | { kind: 'friends'; n: number };
+export function seenOn(c: Collection, own: boolean, shares: number): ListSeen | null {
+  if (c.is_public !== false) return null;
+  if (!own) return { kind: 'lent' };
+  return visibilityOf(false, shares) === 'friends' ? { kind: 'friends', n: shares } : { kind: 'private' };
+}
+
 /**
  * The photograph across the top of the page: the cover of their newest
  * list that has one.
@@ -76,6 +154,9 @@ export function listsBy(ownerId: string | null | undefined, shelf: readonly Coll
  * one — the newest list being bare should not leave the page bare when
  * the one before it is not.
  */
+// The cover is still asked of the public lists alone (`listsBy`), your
+// own page included: a cover from a private list would be a head only
+// its owner ever saw, on the page that shows them what others see.
 export function coverAmong(
   lists: readonly Collection[],
   coverFor: (c: Collection) => string | undefined,

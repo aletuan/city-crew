@@ -50,6 +50,16 @@
 // of the plan, where the feed is the community's and has no end. Here
 // the longest page is 24 cards.
 //
+// ── not only public ones (owner, 17 Nov 2026, the same evening) ──
+//
+// The page holds what this reader may open (`person.listsOn`): every
+// list of your own on your own page, and on a friend's the lists they
+// shared with you beside their public ones. A card or a tile that is not
+// public says who sees it (`marks`): a padlock, two heads and how many,
+// or two heads and "Shared with you". The count in the heading is of
+// what is drawn, so it is all of yours on your page and what you may see
+// on another's. Only a public list has a heart, as on its own page.
+//
 // ── the heart ──
 //
 // The collection's own like, wired as the shelf wires it: signed out,
@@ -60,7 +70,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import ActivityCard from '../../components/ActivityCard';
+import ActivityCard, { type ActivityMark } from '../../components/ActivityCard';
 import { Glyph } from '../../components/ui/glyph';
 import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { agoLabel } from '../../lib/ago';
@@ -70,7 +80,9 @@ import type { Collection, FriendProfile } from '../../lib/data';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
+import type { ListSeen } from '../../lib/person';
 import { useSaveActions } from '../../lib/save';
+import { SEEN_GLYPH, seenName } from '../../lib/shares';
 import { colors, font, space, type } from '../../theme';
 
 /** How many cards the feed draws at first, and adds at each "Show more". */
@@ -102,11 +114,36 @@ export function useReach() {
   };
 }
 
-export default function Shared({ me, person, lists, coverFor, onOpen, reach = 0 }: {
+type T = ReturnType<typeof useI18n>['t'];
+
+/**
+ * A list's mark, in the card's terms: the glyph, the word beside it when
+ * there is one, and what VoiceOver says.
+ *
+ * On your own page the glyph stands alone, as it does under your handle
+ * on the list's own page — with the number of friends after the two
+ * heads, the figure its Share button carries. On somebody else's page
+ * the two heads would say "shared" and not with whom, so the words are
+ * there: "Shared with you".
+ */
+export function marks(seen: ListSeen | null, t: T): ActivityMark | null {
+  if (!seen) return null;
+  if (seen.kind === 'private') return { icon: SEEN_GLYPH.private, label: seenName('private', t) };
+  if (seen.kind === 'friends') {
+    return { icon: SEEN_GLYPH.friends, text: String(seen.n), label: `${seenName('friends', t)}, ${seen.n}` };
+  }
+  const lent = t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你共享', '與你共享');
+  return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
+}
+
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
-  /** Their public collections, newest first (`person.listsBy`). */
+  /** The collections this reader may see here, newest first
+   *  (`person.listsOn`). */
   lists: Collection[];
+  /** Who can see one that is not public (`person.seenOn`). */
+  seenOf: (c: Collection) => ListSeen | null;
   coverFor: (c: Collection) => string | undefined;
   onOpen: (c: Collection) => void;
   /** How many times the reader has come near the page's end (`useReach`). */
@@ -202,6 +239,7 @@ export default function Shared({ me, person, lists, coverFor, onOpen, reach = 0 
             return [placesWord(c.collection_places.length), liked > 0 ? likesWord(liked) : ''].filter(Boolean).join(' · ');
           }}
           titleOf={(c) => localized(c, 'title', lang)}
+          markOf={(c) => marks(seenOf(c), t)}
         />
       ) : (
         <View style={s.feed} testID="person-activity">
@@ -213,6 +251,7 @@ export default function Shared({ me, person, lists, coverFor, onOpen, reach = 0 
               who={person.full_name || atHandle(person.handle)}
               did={t(' created a collection', ' đã tạo bộ sưu tập', 'さんがコレクションを作成', ' 创建了合集', ' 建立了合集')}
               when={c.created_at ? agoLabel(c.created_at, Date.now(), lang, t) : undefined}
+              mark={marks(seenOf(c), t)}
               title={localized(c, 'title', lang)}
               uri={coverFor(c)}
               meta={placesWord(c.collection_places.length)}
@@ -220,7 +259,7 @@ export default function Shared({ me, person, lists, coverFor, onOpen, reach = 0 
               liked={!!c.id && myLikes.includes(c.id)}
               likes={likes[c.slug] ?? 0}
               onOpen={() => onOpen(c)}
-              onHeart={c.id ? () => heart(c) : undefined}
+              onHeart={c.id && c.is_public !== false ? () => heart(c) : undefined}
             />
           ))}
           {lists.length > shown ? (
@@ -243,12 +282,13 @@ export default function Shared({ me, person, lists, coverFor, onOpen, reach = 0 
 /** Every collection they made, two to a row — the grid the page ended
  *  in until 17 Nov 2026. Pairs rather than a wrapping row: a wrapping
  *  row needs a width, and the width is the screen's. */
-function Grid({ lists, coverFor, onOpen, metaOf, titleOf }: {
+function Grid({ lists, coverFor, onOpen, metaOf, titleOf, markOf }: {
   lists: Collection[];
   coverFor: (c: Collection) => string | undefined;
   onOpen: (c: Collection) => void;
   metaOf: (c: Collection) => string;
   titleOf: (c: Collection) => string;
+  markOf: (c: Collection) => ActivityMark | null;
 }) {
   const rows: Collection[][] = [];
   for (let i = 0; i < lists.length; i += 2) rows.push(lists.slice(i, i + 2));
@@ -257,7 +297,7 @@ function Grid({ lists, coverFor, onOpen, metaOf, titleOf }: {
       {rows.map((pair) => (
         <View key={pair[0].slug} style={s.gridRow}>
           {pair.map((c) => (
-            <ListTile key={c.slug} title={titleOf(c)} uri={coverFor(c)} meta={metaOf(c)} onPress={() => onOpen(c)} />
+            <ListTile key={c.slug} title={titleOf(c)} uri={coverFor(c)} meta={metaOf(c)} mark={markOf(c)} onPress={() => onOpen(c)} />
           ))}
           {pair.length === 1 ? <View style={s.tileSlot} /> : null}
         </View>
@@ -267,9 +307,12 @@ function Grid({ lists, coverFor, onOpen, metaOf, titleOf }: {
 }
 
 /** One of their lists: its photograph, its title, and how much is on
- *  it. A tile with no photograph wears the tint, as the cover does. */
-function ListTile({ title, uri, meta, onPress }: {
-  title: string; uri: string | undefined; meta: string; onPress: () => void;
+ *  it. A tile with no photograph wears the tint, as the cover does.
+ *  One that is not public leads its count with the mark's glyph alone —
+ *  half a page wide, the tile has no room for "Shared with you" beside
+ *  "12 places · 3 likes"; VoiceOver is told the words. */
+function ListTile({ title, uri, meta, mark, onPress }: {
+  title: string; uri: string | undefined; meta: string; mark: ActivityMark | null; onPress: () => void;
 }) {
   return (
     <PressableScale
@@ -277,7 +320,7 @@ function ListTile({ title, uri, meta, onPress }: {
       haptic="selection"
       style={s.tileSlot}
       accessibilityRole="button"
-      accessibilityLabel={[title, meta].join(', ')}
+      accessibilityLabel={[title, meta, ...(mark ? [mark.label] : [])].join(', ')}
       testID="person-list"
     >
       <Card>
@@ -286,7 +329,10 @@ function ListTile({ title, uri, meta, onPress }: {
           : <View style={[s.tilePhoto, s.tint]} />}
         <View style={s.tileWords}>
           <Text style={s.tileTitle} numberOfLines={2}>{title}</Text>
-          <Text style={s.tileMeta} numberOfLines={1}>{meta}</Text>
+          <View style={s.tileUnder}>
+            {mark ? <Glyph name={mark.icon} size={13} color={colors.textTertiary} /> : null}
+            <Text style={s.tileMeta} numberOfLines={1}>{meta}</Text>
+          </View>
         </View>
       </Card>
     </PressableScale>
@@ -317,7 +363,8 @@ const s = StyleSheet.create({
   tilePhoto: { width: '100%', height: TILE_PHOTO_H },
   tileWords: { padding: 12, gap: 6 },
   tileTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: 20 },
-  tileMeta: { color: colors.textTertiary, fontSize: 13 },
+  tileUnder: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  tileMeta: { color: colors.textTertiary, fontSize: 13, flexShrink: 1 },
   none: { padding: space.cardPadding, gap: 6 },
   noneTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   noneBody: { color: colors.textSecondary, ...type.meta },

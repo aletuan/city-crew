@@ -27,8 +27,27 @@
 //
 // The photograph and the words are one press, into the collection. The
 // heart is its own.
+//
+// ── the mark (owner, 17 Nov 2026) ──
+//
+// After the time, when the collection is not for everybody: a padlock on
+// a private one, two heads and a number on one shared with friends, two
+// heads and "Shared with you" on one lent to the reader. A person's page
+// began to hold such collections that day (`person.listsOn`), and the
+// owner's condition for it was that each says so on its face — a page of
+// your own private lists with nothing to tell them from the public ones
+// reads as a page everybody sees. The glyphs are the list's own
+// (`shares.SEEN_GLYPH`), at the size its byline draws them. A glyph with
+// no word where the page is your own, as that byline is; the caller
+// decides, and hands the word VoiceOver says either way.
+//
+// A collection with no heart ends in the card's own padding where the
+// heart's row would be: until private lists came here a card without a
+// heart was a row from a launch cache, and its words ran to the card's
+// edge unseen.
 
 import React from 'react';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Glyph } from './ui/glyph';
@@ -41,13 +60,25 @@ import { colors, font, space, type } from '../theme';
 /** The face beside the reason: a line of the reason and a line of the
  *  time is 20 + 17, and the face is their height. */
 const FACE = 36;
+/** Who can see a collection that is not for everybody — see the note
+ *  on the mark above. */
+export type ActivityMark = {
+  icon: keyof typeof Ionicons.glyphMap;
+  /** Drawn after the glyph; absent where the glyph says it alone. */
+  text?: string;
+  /** What VoiceOver says for the mark. */
+  label: string;
+};
+
 /** The photograph: 16:9 of a 349pt card is 196; 168 keeps the title and
  *  the heart of the first card on a 393 × 852 screen with a head above
  *  it (drawn to scale, not measured on a phone). */
 const PHOTO_H = 168;
+/** The mark's glyph: 13, a cap's height beside the time's 13pt type. */
+const MARK = 13;
 
 export default function ActivityCard({
-  face, who, did, when, title, uri, meta, desc, liked, likes, onOpen, onHeart, testID,
+  face, who, did, when, mark, title, uri, meta, desc, liked, likes, onOpen, onHeart, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -57,6 +88,8 @@ export default function ActivityCard({
   did: string;
   /** How long ago, already in words; absent when nothing says. */
   when?: string;
+  /** Who can see it, when that is not everybody. */
+  mark?: ActivityMark | null;
   title: string;
   uri?: string;
   meta: string;
@@ -77,7 +110,16 @@ export default function ActivityCard({
           <Text style={s.line} numberOfLines={2} testID="activity-line">
             <Text style={s.who}>{who}</Text>{did}
           </Text>
-          {when ? <Text style={s.when} numberOfLines={1} testID="activity-when">{when}</Text> : null}
+          <View style={s.under}>
+            {when ? <Text style={s.when} numberOfLines={1} testID="activity-when">{when}</Text> : null}
+            {mark ? (
+              <View style={s.mark} accessible accessibilityLabel={mark.label} testID="activity-mark">
+                {when ? <Text style={s.when}>·</Text> : null}
+                <Glyph name={mark.icon} size={MARK} color={colors.textTertiary} />
+                {mark.text ? <Text style={s.when} numberOfLines={1}>{mark.text}</Text> : null}
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
       <PressableScale
@@ -121,7 +163,7 @@ export default function ActivityCard({
             {likesWorthShowing(likes) ? <Text style={s.count} testID="activity-likes">{likes}</Text> : null}
           </PressableScale>
         </View>
-      ) : null}
+      ) : <View style={s.noFoot} testID="activity-no-heart" />}
     </Card>
   );
 }
@@ -132,6 +174,12 @@ const s = StyleSheet.create({
   line: { color: colors.textSecondary, fontSize: 15, lineHeight: 20 },
   who: { color: colors.text, fontWeight: font.semibold },
   when: { color: colors.textTertiary, fontSize: 13, lineHeight: 17 },
+  // The time and the mark on one line; the mark's dot, glyph and word 4
+  // apart, as the collection's byline sets its own.
+  under: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  mark: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
+  // Where the heart's row would be: the card's padding under its words.
+  noFoot: { height: space.cardPadding },
   photo: { width: '100%', height: PHOTO_H },
   // The accent's tint: a collection with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },
