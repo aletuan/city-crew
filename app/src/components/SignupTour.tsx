@@ -149,7 +149,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   useEffect(() => {
     if (!notice) { setNoticeTop(null); return; }
     AccessibilityInfo.announceForAccessibility(notice === 'off'
-      ? t('Guide turned off. Enable it in Profile → Show guide.', 'Đã tắt hướng dẫn. Bạn có thể bật lại trong Hồ sơ → Hiện hướng dẫn.', 'ガイドをオフにしました。プロフィール → ガイドを表示で再開できます。', '新手引导已关闭。可在“个人主页 → 显示新手引导”中重新开启。', '新手引導已關閉。可在「個人檔案 → 顯示新手引導」中重新開啟。')
+      ? t('Guide turned off. Enable it in Account → Show guide.', 'Đã tắt hướng dẫn. Bạn có thể bật lại trong Tài khoản → Hiện hướng dẫn.', 'ガイドをオフにしました。アカウント → ガイドを表示で再開できます。', '新手引导已关闭。可在“账号 → 显示新手引导”中重新开启。', '新手引導已關閉。可在「帳號 → 顯示新手引導」中重新開啟。')
       : t('Guide enabled. Start whenever you are ready.', 'Đã bật hướng dẫn. Bắt đầu khi bạn sẵn sàng.', 'ガイドをオンにしました。準備ができたら開始できます。', '新手引导已开启，准备好后随时开始。', '新手引導已開啟，準備好後隨時開始。'));
     // The actionable invitation stays until dismissed, including for VoiceOver.
     if (notice === 'ready') return;
@@ -259,7 +259,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
           ? t('Guide turned off', 'Đã tắt hướng dẫn', 'ガイドをオフにしました', '新手引导已关闭', '新手引導已關閉')
           : t('Guide turned on', 'Đã bật hướng dẫn', 'ガイドをオンにしました', '新手引导已开启', '新手引導已開啟')}</Text>
         <Text style={s.noticeBody}>{notice === 'off'
-          ? t('Turn it back on in Profile → Show guide.', 'Bật lại trong Hồ sơ → Hiện hướng dẫn.', 'プロフィール → ガイドを表示で再開できます。', '可在“个人主页 → 显示新手引导”中重新开启。', '可在「個人檔案 → 顯示新手引導」中重新開啟。')
+          ? t('Turn it back on in Account → Show guide.', 'Bật lại trong Tài khoản → Hiện hướng dẫn.', 'アカウント → ガイドを表示で再開できます。', '可在“账号 → 显示新手引导”中重新开启。', '可在「帳號 → 顯示新手引導」中重新開啟。')
           : t('Short tips will show you around the app.', 'Chúng tôi sẽ hiển thị gợi ý ngắn để bạn làm quen nhanh với các tính năng.', '短いヒントで主な機能をご案内します。', '简短的提示会带你熟悉应用。', '簡短的提示會帶你熟悉 App。')}</Text>
         {notice === 'ready' && <Pressable onPress={replay} accessibilityRole="button" testID="guide-notice-start" style={s.noticeStart}>
           <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{t('Start', 'Bắt đầu', '開始', '开始', '開始')}</Text></LinearGradient>

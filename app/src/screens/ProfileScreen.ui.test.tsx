@@ -247,10 +247,22 @@ beforeEach(async () => {
 });
 
 describe('the gate', () => {
+  // The tab is Account (owner, 17 Nov 2026): email, theme, language and
+  // delete live here. "Profile" / "Trang cá nhân" is the page other
+  // people open.
+  it('is headed "Tài khoản" in Vietnamese, not the name of the page others see', () => {
+    state.ready = false;
+    state.lang = 'vi';
+    draw();
+    expect(screen.getByText('Tài khoản')).toBeTruthy();
+    expect(screen.queryByText('Cá nhân')).toBeNull();
+    expect(screen.queryByText('Trang cá nhân')).toBeNull();
+  });
+
   it('shows only a spinner while auth is still being read, and neither persona', () => {
     state.ready = false;
     draw();
-    expect(screen.getByText('Profile')).toBeTruthy();
+    expect(screen.getByText('Account')).toBeTruthy();
     expect(document.querySelector('[role="progressbar"]')).toBeTruthy();
     expect(screen.queryByText('Keep the places you love')).toBeNull();
     expect(screen.queryByText('Sign out')).toBeNull();

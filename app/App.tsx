@@ -260,7 +260,13 @@ function Tabs() {
     Explore: t('Places', 'Địa điểm', 'スポット'),
     Trips: t('Trips', 'Chuyến đi', '旅程'),
     Collections: t('Collections', 'Bộ sưu tập', '保存'),
-    Profile: t('Profile', 'Cá nhân', 'マイページ'),
+    // The tab is Account (owner, 17 Nov 2026), and the page other people
+    // open is the Profile — "Trang cá nhân", the name Vietnamese readers
+    // already have for the page a person shows the world. Until then the
+    // tab was "Cá nhân" and that page "Hồ sơ", which had the two the
+    // wrong way round: email, theme, language and delete live here. The
+    // route keeps its name; nothing a reader sees is the route.
+    Profile: t('Account', 'Tài khoản', 'アカウント'),
   };
   return (
     <Tab.Navigator
