@@ -954,10 +954,11 @@ describe('the level ring', () => {
 
   // The pill says what the level is (owner, 16 Nov 2026), in the
   // reader's own numbers — the distinct places, not the lists' sizes
-  // added up, and the count that left the row of numbers the same day.
+  // added up.
   //
-  // In a sheet, drawn: the level, a bar, what the next one takes, the
-  // rule. It was a paragraph in a system alert for an hour.
+  // In a sheet, drawn. Since 17 Nov 2026 as the owner's reference drew
+  // it: the sheet is headed for what it is, and the level's card is a
+  // mark, the level, how far through it, one sentence, and the bar.
   it('opens a sheet that draws the level when the pill is pressed, with the reader’s own count', () => {
     const p = (slug: string) => ({ slug });
     state.mine = [
@@ -968,18 +969,35 @@ describe('the level ring', () => {
     expect(screen.queryByTestId('badge-sheet-head')).toBeNull();
     fireEvent.click(screen.getByTestId('ring-explain'));
     expect(alert).not.toHaveBeenCalled();
-    // Six distinct places: level 2, one of its five.
-    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Level 2' + '1 / 5');
-    // One frame, not two (owner, 16 Nov 2026): the title stands on the
-    // sheet as other sheets' titles do, and the card is the words'.
-    const head = viewStyleOf(screen.getByTestId('badge-sheet-head'));
-    expect([head.borderWidth, head.backgroundColor]).toEqual([undefined, undefined]);
-    expect(viewStyleOf(screen.getByTestId('badge-sheet-body')).borderWidth).toBe(1);
+    // The header is the sheet's — the level and the badges are both
+    // under it — on nothing, as other sheets' titles are.
+    const head = screen.getByTestId('badge-sheet-head');
+    expect(head.textContent).toBe('Achievements');
+    expect(head.querySelector('[data-icon="ribbon-outline"]')).toBeTruthy();
+    expect([viewStyleOf(head).borderWidth, viewStyleOf(head).backgroundColor]).toEqual([undefined, undefined]);
+    // Six distinct places: level 2, one of its five, four to go — and
+    // no third line saying the total.
     const body = screen.getByTestId('badge-sheet-body');
-    expect([...body.children].slice(1).map((c) => c.textContent)).toEqual([
-      'Save 4 more places to reach Level 3.',
-      'You have saved 6 places. Every 5 take you up a level.',
-    ]);
+    expect(viewStyleOf(body).borderWidth).toBe(1);
+    expect(body.textContent).toBe('Level 2' + '1 / 5' + 'Save 4 more places to reach Level 3.');
+    expect(screen.getByTestId('level-steps').textContent).toBe('1 / 5');
+    expect(body.querySelector('[data-icon="trophy-outline"]')).toBeTruthy();
+    // The words first, the bar last, across the card under them.
+    const [words, bar] = [...body.children];
+    expect(body.children).toHaveLength(2);
+    expect(bar).toBe(screen.getByTestId('level-bar'));
+    expect(viewStyleOf(words).flexDirection).toBe('row');
+    // The steps ride the level's own line, so the sentence has the
+    // whole width under them.
+    const title = screen.getByText('Level 2');
+    const steps = screen.getByTestId('level-steps');
+    expect(title.parentElement!.contains(steps)).toBe(true);
+    const next = screen.getByText('Save 4 more places to reach Level 3.');
+    expect(title.parentElement!.contains(next)).toBe(false);
+    // Under that line, in the one column beside the mark.
+    expect(next.parentElement).toBe(title.parentElement!.parentElement);
+    expect(viewStyleOf(next.parentElement!).flexDirection).not.toBe('row');
+    expect(textStyleOf(title)?.fontSize).toBe(18);
   });
 
   // The bar is the ring's fraction — one fifth here, as the ring's
@@ -1001,9 +1019,9 @@ describe('the level ring', () => {
     state.lang = 'vi';
     draw();
     fireEvent.click(screen.getByTestId('ring-explain'));
-    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Level 1' + '0 / 5');
+    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Thành tích');
     expect(screen.getByTestId('badge-sheet-body').textContent)
-      .toBe('Lưu thêm 5 địa điểm để đạt Level 2.' + 'Bạn đã lưu 0 địa điểm. Cứ 5 địa điểm là lên một level.');
+      .toBe('Level 1' + '0 / 5' + 'Lưu thêm 5 địa điểm để đạt Level 2.');
   });
 
   // One sheet for the two badges: it is about whichever was pressed, and
@@ -1019,14 +1037,15 @@ describe('the level ring', () => {
     state.guide = true;
     draw();
     fireEvent.click(screen.getByTestId('ring-explain'));
-    expect(screen.getByTestId('badge-sheet-head').textContent).toContain('Level 1');
+    expect(screen.getByTestId('badge-sheet-body').textContent).toContain('Level 1');
     await shut();
     fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
     expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Local Guide');
     await shut();
     // And the level again after a role: not left on the role.
     fireEvent.click(screen.getByTestId('ring-explain'));
-    expect(screen.getByTestId('badge-sheet-head').textContent).toContain('Level 1');
+    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Achievements');
+    expect(screen.getByTestId('badge-sheet-body').textContent).toContain('Level 1');
   });
 
   it('starts a new account at level 1', () => {
@@ -1100,7 +1119,7 @@ describe('the badges, under the level', () => {
   it('opens the sheet by itself when the banner asked for it', () => {
     rewards.wanted = true;
     draw();
-    expect(screen.getByTestId('badge-sheet-head').textContent).toContain('Level 1');
+    expect(screen.getByTestId('badge-sheet-body').textContent).toContain('Level 1');
     expect(screen.getByTestId('badge-shelf')).toBeTruthy();
     expect(rewards.opened).toHaveBeenCalledTimes(1);
   });

@@ -113,7 +113,7 @@ export default function RewardBanner({ onOpen }: {
             ? <Image source={BADGE_IMAGES[notice.id].on} style={s.picture} contentFit="contain" accessible={false} />
             : (
               <View style={s.mark}>
-                <Glyph name={notice.kind === 'level' ? 'trending-up' : 'ribbon'} size={22} color={colors.accent} />
+                <Glyph name={notice.kind === 'level' ? 'trophy-outline' : 'ribbon-outline'} size={22} color={colors.accent} />
               </View>
             )}
           <View style={s.words}>
@@ -142,7 +142,9 @@ const s = StyleSheet.create({
   },
   // 44: the two lines' height beside it, and the size a thumb is owed.
   picture: { width: 44, height: 44 },
-  // Where there is no one badge to draw: several at once, or a level.
+  // Where there is no one badge to draw: several at once, under the
+  // ribbon that heads their sheet, or a level, under the trophy its
+  // card wears there (`profile/HeroFace`).
   mark: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.accentSoft,

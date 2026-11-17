@@ -57,6 +57,7 @@ import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from '../../com
 import AvatarPicker from '../../components/AvatarPicker';
 import BadgeShelf from '../../components/BadgeShelf';
 import EngagementRing from '../../components/EngagementRing';
+import { Glyph } from '../../components/ui/glyph';
 import { useI18n } from '../../lib/i18n';
 import { levelFromSaves, levelSteps, levelWords } from '../../lib/level';
 import { useRewards } from '../../lib/rewards';
@@ -77,8 +78,6 @@ export function HeroFace({ saved }: {
   // asks for the sheet. Answered here, mounted before the press or after.
   useEffect(() => { if (wanted) show(); }, [wanted, show]);
   const { level, progress } = levelFromSaves(saved);
-  const words = levelWords(saved, t);
-  const steps = levelSteps(saved);
 
   return (
     <>
@@ -94,14 +93,14 @@ export function HeroFace({ saved }: {
         visible={open}
         onClose={close}
         header={(
-          // No pill beside "Level 15": it would say the title twice. The
-          // steps at the end are the bar's figure, read.
-          // On nothing, as a sheet's title is; the one card is under it.
+          // What the sheet is about, on nothing, as a sheet's title is:
+          // the level's card and the badges' are under it, and it is
+          // neither's — see `Level`.
           <View style={sheetTitleRow} testID="badge-sheet-head">
-            <Text style={sheetTitleText} accessibilityRole="header">{words.title}</Text>
-            <View style={h.steps}>
-              <Text style={h.stepsText} testID="level-steps">{`${steps.done} / ${steps.of}`}</Text>
-            </View>
+            <Glyph name="ribbon-outline" size={20} color={colors.textSecondary} />
+            <Text style={sheetTitleText} accessibilityRole="header">
+              {t('Achievements', 'Thành tích', '実績', '成就', '成就')}
+            </Text>
           </View>
         )}
       >
@@ -114,29 +113,70 @@ export function HeroFace({ saved }: {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-        <View style={sheetBody} testID="badge-sheet-body">
-          <View
-            style={h.track}
-            accessibilityRole="progressbar"
-            accessibilityValue={{ min: 0, max: steps.of, now: steps.done }}
-            // Said, too: a bar's value alone is read as a percentage.
-            accessibilityLabel={t(
-              `${steps.done} of ${steps.of} places toward the next level`,
-              `${steps.done} trên ${steps.of} địa điểm để lên level tiếp theo`,
-              `次のレベルまで${steps.of}件中${steps.done}件`,
-              `距下一级：${steps.of} 个地点中的 ${steps.done} 个`, `距下一級：${steps.of} 個地點中的 ${steps.done} 個`,
-            )}
-            testID="level-bar"
-          >
-            <View style={[h.fill, { width: `${(steps.done / steps.of) * 100}%` }]} testID="level-bar-fill" />
-          </View>
-          <Text style={h.lead}>{words.next}</Text>
-          <Text style={h.rule}>{words.rule}</Text>
-        </View>
+        <Level saved={saved} />
         <BadgeShelf />
         </ScrollView>
       </ActionSheet>
     </>
+  );
+}
+
+/**
+ * The level's card: a mark, the level, what the next one takes, how far
+ * through it — and under them the bar.
+ *
+ * Laid out from the owner's reference (17 Nov 2026), which drew it as a
+ * title, one line and a bar, where this had been a bar over two
+ * sentences with the level itself up in the sheet's header:
+ *
+ *   - the level is this card's title, since it is this card that is
+ *     about it; the header says what the whole sheet is, now that the
+ *     badges are half of it;
+ *   - one sentence, not two (`levelWords` for what went and why);
+ *   - the steps beside the title, where the header had them: the bar's
+ *     figure, read;
+ *   - the bar last, across the card, under everything it measures.
+ *
+ * The mark is a trophy on the accent's tint — the look's own, where the
+ * reference's was gold whatever the theme — and the banner that says a
+ * level was reached wears the same one (`RewardBanner`).
+ */
+export function Level({ saved }: { saved: number }) {
+  const { t } = useI18n();
+  const words = levelWords(saved, t);
+  const steps = levelSteps(saved);
+  return (
+    <View style={sheetBody} testID="badge-sheet-body">
+      <View style={h.level}>
+        <View style={h.mark}>
+          <Glyph name="trophy-outline" size={22} color={colors.accent} />
+        </View>
+        <View style={h.words}>
+          <View style={h.titleRow}>
+            <Text style={h.title} numberOfLines={1} accessibilityRole="header">{words.title}</Text>
+            <View style={h.steps}>
+              <Text style={h.stepsText} testID="level-steps">{`${steps.done} / ${steps.of}`}</Text>
+            </View>
+          </View>
+          <Text style={h.next}>{words.next}</Text>
+        </View>
+      </View>
+      <View
+        style={h.track}
+        accessibilityRole="progressbar"
+        accessibilityValue={{ min: 0, max: steps.of, now: steps.done }}
+        // Said, too: a bar's value alone is read as a percentage.
+        accessibilityLabel={t(
+          `${steps.done} of ${steps.of} places toward the next level`,
+          `${steps.done} trên ${steps.of} địa điểm để lên level tiếp theo`,
+          `次のレベルまで${steps.of}件中${steps.done}件`,
+          `距下一级：${steps.of} 个地点中的 ${steps.done} 个`, `距下一級：${steps.of} 個地點中的 ${steps.done} 個`,
+        )}
+        testID="level-bar"
+      >
+        <View style={[h.fill, { width: `${(steps.done / steps.of) * 100}%` }]} testID="level-bar-fill" />
+      </View>
+    </View>
   );
 }
 
@@ -147,7 +187,7 @@ const BAR = 8;
 
 /** How much of the screen's height the two cards may take before they
  *  scroll: 0.7. Drawn in a web build with the real sheet, the two are
- *  576 tall at 393 wide (the level's 125, the gap, the badges' 439). On
+ *  550 tall at 393 wide (the level's 99, the gap, the badges' 439). On
  *  an 852pt phone 0.7 is 596, so nothing scrolls; on a 667pt one it is
  *  467, which leaves the header (about 70 with the grabber) and 100 of
  *  page above the sheet to close it by, and the third row of badges is
@@ -167,6 +207,20 @@ const h = StyleSheet.create({
   // The accent on its own tint: both follow the look the reader chose.
   track: { height: BAR, borderRadius: BAR / 2, backgroundColor: colors.accentSoft, overflow: 'hidden' },
   fill: { height: BAR, borderRadius: BAR / 2, backgroundColor: colors.accent },
-  lead: { color: colors.text, fontSize: 16, lineHeight: 22 },
-  rule: { color: colors.textTertiary, fontSize: 14, lineHeight: 19 },
+  // The mark, then the words; the steps ride the title's line, so the
+  // sentence under it has the words' whole width and stays on one line
+  // where it can ("Lưu thêm 2 địa điểm để đạt Level 19." is 36
+  // characters at 14).
+  level: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // 44, the banner's mark: the two lines' height beside it.
+  mark: {
+    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+  },
+  words: { flex: 1, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  // A step over the badges' heading (16) in the card below: the level is
+  // the first thing the sheet is asked about.
+  title: { flexShrink: 1, color: colors.text, fontSize: 18, lineHeight: 24, fontWeight: font.semibold },
+  next: { color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
 });
