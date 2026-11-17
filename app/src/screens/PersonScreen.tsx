@@ -117,7 +117,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
-  Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
+  Avatar, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
 } from '../components/ui';
 import { Glyph } from '../components/ui/glyph';
 import { useFriendButtons } from '../components/FriendButton';
@@ -126,11 +126,11 @@ import { usePersonMenu } from '../components/PersonMenu';
 import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
-import { useCollections, useLikes, usePlaces } from '../lib/catalog';
+import Shared from './person/Shared';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { type Collection, coverUriOf, type FriendProfile, membersOf, useProfileByHandle } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { localized } from '../lib/localized';
 import { coverAmong, IN_COMMON_ON, listsBy, TOP_FRIEND_ON } from '../lib/person';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, display, font, radius, space, type } from '../theme';
@@ -150,8 +150,6 @@ const NAME_DROP = 6;
  *  before it is cut: 22 to about 17, still the largest words on the
  *  page. */
 const TITLE_SHRINK = 0.78;
-/** A list's photograph on its tile. */
-const TILE_PHOTO_H = 108;
 /** What "Write a few words about you" adds above and below its 24pt row to make the button
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
@@ -160,7 +158,7 @@ export default function PersonScreen({ navigation, route }: {
   navigation: Nav;
   route: RootRoute<'Person'>;
 }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { session } = useSession();
   const me = session?.user?.id ?? null;
   const handle = normalizeHandle(route.params.handle);
@@ -169,7 +167,6 @@ export default function PersonScreen({ navigation, route }: {
 
   const shelf = useCollections();
   const places = usePlaces();
-  const { likes } = useLikes();
   const lists = listsBy(person?.id, shelf.data);
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places.data));
   const cover = coverAmong(lists, coverFor);
@@ -194,31 +191,6 @@ export default function PersonScreen({ navigation, route }: {
   // the phone's appearance rather than the app's (`bgHex`).
   const { scheme } = useScheme();
   const ring = { borderColor: bgHex[scheme] };
-
-  const placesWord = (n: number) => (n === 1
-    ? t('1 place', '1 địa điểm', '1か所', '1 个地点', '1 個地點')
-    : t(`${n} places`, `${n} địa điểm`, `${n}か所`, `${n} 个地点`, `${n} 個地點`));
-  const likesWord = (n: number) => (n === 1
-    ? t('1 like', '1 lượt thích', 'いいね1件', '1 个赞', '1 個讚')
-    : t(`${n} likes`, `${n} lượt thích`, `いいね${n}件`, `${n} 个赞`, `${n} 個讚`));
-
-  const tile = (c: Collection) => {
-    const liked = likes[c.slug] ?? 0;
-    return (
-      <ListTile
-        key={c.slug}
-        title={localized(c, 'title', lang)}
-        uri={coverFor(c)}
-        meta={[placesWord(c.collection_places.length), liked > 0 ? likesWord(liked) : ''].filter(Boolean).join(' · ')}
-        onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
-      />
-    );
-  };
-
-  // Two to a row. Pairs rather than a wrapping row: a wrapping row needs a
-  // width, and the width is the screen's.
-  const rows: Collection[][] = [];
-  for (let i = 0; i < lists.length; i += 2) rows.push(lists.slice(i, i + 2));
 
   const page = person ? (
     <>
@@ -257,31 +229,15 @@ export default function PersonScreen({ navigation, route }: {
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
 
-      <Text style={s.sectionLabel}>{t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}</Text>
-      {lists.length === 0 ? (
-        <Card style={s.none} testID="person-no-lists">
-          <Text style={s.noneTitle}>
-            {t('No public collections yet', 'Chưa có bộ sưu tập công khai', '公開コレクションはまだありません', '还没有公开的合集', '還沒有公開的合集')}
-          </Text>
-          <Text style={s.noneBody}>
-            {t(
-              'When they share a collection, it will show here.',
-              'Khi họ chia sẻ một bộ sưu tập, nó sẽ hiện ở đây.',
-              'コレクションが公開されると、ここに表示されます。',
-              '对方分享合集后，会显示在这里。', '對方分享合集後，會顯示在這裡。',
-            )}
-          </Text>
-        </Card>
-      ) : (
-        <View style={s.grid}>
-          {rows.map((pair) => (
-            <View key={pair[0].slug} style={s.gridRow}>
-              {pair.map(tile)}
-              {pair.length === 1 ? <View style={s.tileSlot} /> : null}
-            </View>
-          ))}
-        </View>
-      )}
+      {/* What they have shared: what they did, newest first, and every
+          collection they made a tap away — `person/Shared`. */}
+      <Shared
+        me={me}
+        person={person}
+        lists={lists}
+        coverFor={coverFor}
+        onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
+      />
     </>
   ) : who.loading ? (
     <ActivityIndicator color={colors.accent} style={s.spinner} testID="person-loading" />
@@ -573,37 +529,10 @@ function Acts({ friend, onLayout }: { friend: React.ReactNode; onLayout: (e: Lay
   );
 }
 
-/** One of their lists: its photograph, its title, and how much is on
- *  it. A tile with no photograph wears the tint, as the cover does. */
-function ListTile({ title, uri, meta, onPress }: {
-  title: string; uri: string | undefined; meta: string; onPress: () => void;
-}) {
-  return (
-    <PressableScale
-      onPress={onPress}
-      haptic="selection"
-      style={s.tileSlot}
-      accessibilityRole="button"
-      accessibilityLabel={[title, meta].join(', ')}
-      testID="person-list"
-    >
-      <Card>
-        {uri
-          ? <Image source={{ uri }} style={s.tilePhoto} contentFit="cover" transition={160} />
-          : <View style={[s.tilePhoto, s.tint]} />}
-        <View style={s.tileWords}>
-          <Text style={s.tileTitle} numberOfLines={2}>{title}</Text>
-          <Text style={s.tileMeta} numberOfLines={1}>{meta}</Text>
-        </View>
-      </Card>
-    </PressableScale>
-  );
-}
-
 const s = StyleSheet.create({
   content: { paddingHorizontal: space.page },
   spinner: { marginTop: 20 },
-  // The accent's tint: a cover or a tile with no photograph to wear.
+  // The accent's tint: a cover with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },
   coverCard: { borderRadius: radius.card, overflow: 'hidden' },
   coverPhoto: { width: '100%', height: COVER_H },
@@ -677,20 +606,4 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   bioAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  // A section's label: the small capitals the place page heads a fact with.
-  sectionLabel: {
-    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
-    textTransform: 'uppercase', letterSpacing: 1.2,
-    marginTop: 22, marginBottom: 10,
-  },
-  grid: { gap: space.cardGap },
-  gridRow: { flexDirection: 'row', gap: space.cardGap },
-  tileSlot: { flex: 1 },
-  tilePhoto: { width: '100%', height: TILE_PHOTO_H },
-  tileWords: { padding: 12, gap: 6 },
-  tileTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: 20 },
-  tileMeta: { color: colors.textTertiary, fontSize: 13 },
-  none: { padding: space.cardPadding, gap: 6 },
-  noneTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
-  noneBody: { color: colors.textSecondary, ...type.meta },
 });

@@ -60,6 +60,7 @@ const state = vi.hoisted(() => ({
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
   myBio: '',
+  myLikes: [] as string[],
 }));
 vi.mock('../lib/auth', () => ({
   useSession: () => ({ session: state.me ? { user: { id: state.me } } : null }),
@@ -70,8 +71,11 @@ vi.mock('../lib/auth', () => ({
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.shelf, loading: false, reload: () => {} }),
   usePlaces: () => ({ data: state.places, loading: false, reload: () => {} }),
-  useLikes: () => ({ likes: state.likes }),
+  useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
 }));
+// The heart's two ways out: the like, and the invitation to sign in.
+const spies = vi.hoisted(() => ({ toggleLike: vi.fn(async () => {}), askToSignIn: vi.fn() }));
+vi.mock('../lib/save', () => ({ useSaveActions: () => ({ askToSignIn: spies.askToSignIn }) }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   sendFriendRequest: data.sendFriendRequest,
@@ -129,6 +133,16 @@ const list = (slug: string, over: Partial<Collection> = {}): Collection => ({
 const members = (n: number) => Array.from({ length: n }, (_, i) => ({ sort_order: i, places: { slug: `p${i}` } }));
 
 const flush = async () => { await act(async () => {}); };
+/** The grid's tiles. The section opens on the feed since 17 Nov 2026,
+ *  with the grid a press of its heading's count away — so this turns to
+ *  the grid first when it is not already showing. */
+const tiles = (): HTMLElement[] => {
+  if (!screen.queryByTestId('person-grid')) {
+    const turn = screen.queryByTestId('person-turn');
+    if (turn) fireEvent.click(turn);
+  }
+  return screen.queryAllByTestId('person-' + 'list');
+};
 /** What the page listens for on the navigator, so a test can say the
  *  page was left and come back to. */
 const heard: Record<string, (() => void)[]> = {};
@@ -154,6 +168,9 @@ beforeEach(() => {
   state.shelf = [];
   state.places = [];
   state.likes = {};
+  state.myLikes = [];
+  spies.toggleLike.mockClear();
+  spies.askToSignIn.mockClear();
   state.common = { places: [], lists: [] };
   state.commonAsked = [];
   state.inCommonOn = true;
@@ -207,14 +224,16 @@ describe('whose page it is', () => {
     expect(viewStyleOf(column).flex).toBe(1);
   });
 
-  // "11 collections" stood under the head until 16 Nov 2026; the
-  // collections are right there to be seen.
-  it('counts nothing under the head', async () => {
+  // "11 collections" stood under the head until 16 Nov 2026 and is not
+  // back there. Since 17 Nov the count is the section's own way to its
+  // grid, on the heading's right — one, and not a row of figures.
+  it('counts nothing under the head; the one count is the way to the grid', async () => {
     state.shelf = [list('one'), list('two')];
     await show();
     expect(screen.queryByTestId('person-counts')).toBeNull();
-    expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
-    expect(screen.getAllByTestId('person-list')).toHaveLength(2);
+    expect(screen.getAllByText(/^\d+ collections?$/)).toHaveLength(1);
+    expect(screen.getByTestId('person-turn').textContent).toBe('2 collections');
+    expect(tiles()).toHaveLength(2);
   });
 
   it('wears their face, not the reader’s, ringed in the page’s own ground', async () => {
@@ -503,6 +522,183 @@ describe('the mark of a role', () => {
   });
 });
 
+// What they did, where the grid was (owner, 17 Nov 2026): one card a
+// collection, headed by who did what and when. The first step of the
+// plan that makes a collection the thing every interaction hangs on.
+describe('what they did', () => {
+  const NOW = Date.parse('2026-11-17T09:00:00Z');
+  const daysBack = (n: number) => new Date(NOW - n * 86_400_000).toISOString();
+  const acts = () => screen.queryAllByTestId('person-act');
+  const inCard = (i: number) => within(acts()[i]);
+
+  beforeEach(() => { vi.useFakeTimers({ now: NOW, toFake: ['Date'] }); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('opens on the feed: a card for each list they published, newest first, and no grid', async () => {
+    state.shelf = [
+      list('new', { collection_places: members(17) as Collection['collection_places'], created_at: daysBack(2), desc_en: 'Where the broth is.' }),
+      list('minh-list', { owner_id: 'minh-id' }),
+      list('hidden', { is_public: false }),
+      list('old', { created_at: daysBack(3) }),
+    ];
+    await show();
+    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(screen.queryByTestId('person-grid')).toBeNull();
+    expect(acts()).toHaveLength(2);
+    // Who did what, the name first.
+    const line = inCard(0).getByTestId('activity-line');
+    expect(line.textContent).toBe('Lan Phạm created a collection');
+    // The name is its own run at the head of the sentence.
+    expect(line.firstElementChild!.textContent).toBe('Lan Phạm');
+    expect(inCard(0).getByTestId('activity-when').textContent).toBe('2 days ago');
+    expect(inCard(1).getByTestId('activity-when').textContent).toBe('3 days ago');
+    // The collection: its title, how much is on it, and what it is.
+    expect(inCard(0).getByText('List new')).toBeTruthy();
+    expect(inCard(0).getByText('17 places')).toBeTruthy();
+    expect(inCard(0).getByTestId('activity-desc').textContent).toBe('Where the broth is.');
+    expect(inCard(1).queryByTestId('activity-desc')).toBeNull();
+    // Their face on each, the one the head wears.
+    expect(acts()[0].querySelector('img')!.getAttribute('src')).toBe('https://faces/lan.jpg');
+  });
+
+  it('heads a card with the handle for somebody with no name, and says no time for a list with none', async () => {
+    state.people = { lan: { ...LAN, full_name: '' } };
+    state.shelf = [list('one')];
+    await show();
+    expect(inCard(0).getByTestId('activity-line').textContent).toBe('@lan created a collection');
+    expect(inCard(0).queryByTestId('activity-when')).toBeNull();
+  });
+
+  it('says it in Vietnamese', async () => {
+    state.lang = 'vi';
+    state.shelf = [list('one', { created_at: daysBack(1), collection_places: members(1) as Collection['collection_places'] })];
+    await show();
+    expect(screen.getByText('Hoạt động')).toBeTruthy();
+    expect(inCard(0).getByTestId('activity-line').textContent).toBe('Lan Phạm đã tạo bộ sưu tập');
+    expect(inCard(0).getByTestId('activity-when').textContent).toBe('hôm qua');
+    expect(inCard(0).getByText('1 địa điểm')).toBeTruthy();
+    expect(screen.getByTestId('person-turn').textContent).toBe('1 bộ sưu tập');
+  });
+
+  it('wears the collection’s photograph, or the accent’s tint where it has none', async () => {
+    state.shelf = [
+      list('bare'),
+      list('lit', { cover: { id: 'c1', photo_uri: 'https://covers/lit.jpg' } }),
+    ];
+    await show();
+    expect(inCard(0).getByTestId('activity-tint')).toBeTruthy();
+    expect(inCard(1).queryByTestId('activity-tint')).toBeNull();
+    expect(inCard(1).getByTestId('activity-open').querySelector('img')!.getAttribute('src')).toBe('https://covers/lit.jpg');
+  });
+
+  it('opens the collection on a press of its photograph or its words', async () => {
+    state.shelf = [list('one'), list('two')];
+    const navigation = await show();
+    fireEvent.click(inCard(1).getByTestId('activity-open'));
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionDetail', { slug: 'two' });
+  });
+
+  // A feed is for reading and a grid is for finding: the count on the
+  // heading's right turns the section into the grid, and back.
+  it('turns to the grid of every collection from the count, and back to the feed', async () => {
+    state.shelf = [list('one'), list('two'), list('three')];
+    await show();
+    const turn = screen.getByTestId('person-turn');
+    expect(turn.textContent).toBe('3 collections');
+    fireEvent.click(turn);
+    expect(screen.getByTestId('person-grid')).toBeTruthy();
+    expect(screen.queryAllByTestId('person-' + 'list')).toHaveLength(3);
+    expect(acts()).toEqual([]);
+    expect(screen.getByText('Collections')).toBeTruthy();
+    expect(screen.getByTestId('person-turn').textContent).toBe('Activity');
+    fireEvent.click(screen.getByTestId('person-turn'));
+    expect(screen.queryByTestId('person-grid')).toBeNull();
+    expect(acts()).toHaveLength(3);
+  });
+
+  it('says "1 collection" for one', async () => {
+    state.shelf = [list('one')];
+    await show();
+    expect(screen.getByTestId('person-turn').textContent).toBe('1 collection');
+  });
+
+  it('offers no way to a grid of nothing', async () => {
+    await show();
+    expect(screen.getByTestId('person-no-lists')).toBeTruthy();
+    expect(screen.queryByTestId('person-turn')).toBeNull();
+    expect(acts()).toEqual([]);
+  });
+
+  // Every card is a photograph the page's width, in a scroll view.
+  it('draws five, and five more at each "Show more", until there are none to add', async () => {
+    state.shelf = Array.from({ length: 12 }, (_, i) => list(`l${i}`));
+    await show();
+    expect(acts()).toHaveLength(5);
+    fireEvent.click(screen.getByTestId('person-show-more'));
+    expect(acts()).toHaveLength(10);
+    fireEvent.click(screen.getByTestId('person-show-more'));
+    expect(acts()).toHaveLength(12);
+    expect(screen.queryByTestId('person-show-more')).toBeNull();
+  });
+
+  it('draws no "Show more" for five or fewer', async () => {
+    state.shelf = Array.from({ length: 5 }, (_, i) => list(`l${i}`));
+    await show();
+    expect(acts()).toHaveLength(5);
+    expect(screen.queryByTestId('person-show-more')).toBeNull();
+  });
+
+  describe('the heart', () => {
+    const heart = (i: number) => inCard(i).getByTestId('activity-heart');
+
+    it('likes the collection itself, through the provider the shelf uses', async () => {
+      state.shelf = [list('one'), list('two')];
+      await show();
+      fireEvent.click(heart(1));
+      expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'two', slug: 'two' });
+      expect(spies.askToSignIn).not.toHaveBeenCalled();
+    });
+
+    it('is the invitation to sign in for a reader who has not', async () => {
+      state.me = null;
+      state.shelf = [list('one')];
+      await show();
+      fireEvent.click(heart(0));
+      expect(spies.askToSignIn).toHaveBeenCalledExactlyOnceWith('like');
+      expect(spies.toggleLike).not.toHaveBeenCalled();
+    });
+
+    it('is full, and offers to unlike, on a collection the reader liked; hollow on the rest', async () => {
+      state.shelf = [list('mine'), list('not')];
+      state.myLikes = ['mine'];
+      await show();
+      expect(heart(0).querySelector('[data-icon="heart"]')).toBeTruthy();
+      expect(heart(0).getAttribute('aria-label')).toBe('Unlike this collection');
+      expect(heart(1).querySelector('[data-icon="heart-outline"]')).toBeTruthy();
+      expect(heart(1).getAttribute('aria-label')).toBe('Like this collection');
+      // Two colours: the liked one is not the quiet one.
+      expect(heart(0).querySelector('[data-icon]')!.getAttribute('data-color'))
+        .not.toBe(heart(1).querySelector('[data-icon]')!.getAttribute('data-color'));
+    });
+
+    it('shows the tally from one like up, and none for a collection nobody has liked', async () => {
+      state.shelf = [list('loved'), list('new')];
+      state.likes = { loved: 4 };
+      await show();
+      expect(inCard(0).getByTestId('activity-likes').textContent).toBe('4');
+      expect(inCard(1).queryByTestId('activity-likes')).toBeNull();
+    });
+
+    // A row from a launch cache written before ids were kept.
+    it('draws none on a collection with no id to like', async () => {
+      state.shelf = [list('cached', { id: undefined })];
+      await show();
+      expect(acts()).toHaveLength(1);
+      expect(inCard(0).queryByTestId('activity-heart')).toBeNull();
+    });
+  });
+});
+
 describe('their lists', () => {
   it('shows the lists they published, newest first, and nobody else’s', async () => {
     state.shelf = [
@@ -513,8 +709,7 @@ describe('their lists', () => {
     ];
     state.likes = { new: 3 };
     await show();
-    const tiles = screen.getAllByTestId('person-list');
-    expect(tiles.map((x) => x.textContent)).toEqual(['List new17 places · 3 likes', 'List old0 places']);
+    expect(tiles().map((x) => x.textContent)).toEqual(['List new17 places · 3 likes', 'List old0 places']);
     expect(screen.queryByTestId('person-no-lists')).toBeNull();
   });
 
@@ -523,31 +718,31 @@ describe('their lists', () => {
   it('never shows a private list', async () => {
     state.shelf = [list('secret', { is_public: false }), list('open')];
     await show();
-    expect(screen.getAllByTestId('person-list').map((x) => x.textContent)).toEqual(['List open0 places']);
+    expect(tiles().map((x) => x.textContent)).toEqual(['List open0 places']);
   });
 
   it('says one of each in the singular, and titles a list in the reader’s language', async () => {
     state.shelf = [list('one', { collection_places: members(1) as Collection['collection_places'] })];
     state.likes = { one: 1 };
     await show();
-    expect(screen.getByTestId('person-list').textContent).toBe('List one1 place · 1 like');
+    expect(tiles()[0].textContent).toBe('List one1 place · 1 like');
     cleanup();
     state.lang = 'vi';
     await show();
-    expect(screen.getByTestId('person-list').textContent).toBe('Bộ one1 địa điểm · 1 lượt thích');
+    expect(tiles()[0].textContent).toBe('Bộ one1 địa điểm · 1 lượt thích');
   });
 
   it('opens a list’s own page on a press', async () => {
     state.shelf = [list('new'), list('old')];
     const navigation = await show();
-    fireEvent.click(screen.getAllByTestId('person-list')[1]);
+    fireEvent.click(tiles()[1]);
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionDetail', { slug: 'old' });
   });
 
   it('sets them two to a row, with an empty slot beside an odd one out', async () => {
     state.shelf = [list('a'), list('b'), list('c')];
     await show();
-    const [a, b, c] = screen.getAllByTestId('person-list');
+    const [a, b, c] = tiles();
     expect(a.parentElement).toBe(b.parentElement);
     expect(c.parentElement).not.toBe(a.parentElement);
     expect(c.parentElement!.children).toHaveLength(2);
@@ -557,7 +752,7 @@ describe('their lists', () => {
   it('says there are none yet, in a card, for somebody who has published nothing', async () => {
     state.shelf = [list('minh-list', { owner_id: 'minh-id' })];
     await show();
-    expect(screen.queryAllByTestId('person-list')).toEqual([]);
+    expect(tiles()).toEqual([]);
     expect(within(screen.getByTestId('person-no-lists')).getByText('No public collections yet')).toBeTruthy();
   });
 });
@@ -575,7 +770,7 @@ describe('the cover', () => {
     expect(coverSrc()).toBe('https://covers/chosen.jpg');
     expect(screen.queryByTestId('person-cover-tint')).toBeNull();
     // The bare one wears the tint; the other two their own photographs.
-    expect(screen.getAllByTestId('person-list').map((x) => x.querySelector('img')?.getAttribute('src') ?? null))
+    expect(tiles().map((x) => x.querySelector('img')?.getAttribute('src') ?? null))
       .toEqual([null, 'https://covers/chosen.jpg', 'https://covers/older.jpg']);
   });
 
@@ -913,7 +1108,7 @@ describe('in common', () => {
     expect(screen.queryByText('In common')).toBeNull();
     expect(state.commonAsked).toEqual([]);
     // The rest of the page is as it was.
-    expect(screen.getAllByTestId('person-list')).toHaveLength(1);
+    expect(tiles()).toHaveLength(1);
   });
 
   it('asks about this person, as the reader', async () => {
@@ -944,7 +1139,7 @@ describe('in common', () => {
     expect(within(section).queryByText('Collections you both liked')).toBeNull();
     // Between the head and the person's own collections.
     const head = screen.getByTestId('person-handle');
-    const own = screen.getByTestId('person-list');
+    const own = tiles()[0];
     expect(head.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(section.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -971,7 +1166,7 @@ describe('in common', () => {
     expect(screen.getAllByTestId('common-list')[1].querySelector('img')!.getAttribute('src')).toBe('https://covers/minh.jpg');
     expect(screen.queryByTestId('common-places')).toBeNull();
     // Somebody else's list is in common without being this person's own.
-    expect(screen.queryAllByTestId('person-list')).toEqual([]);
+    expect(tiles()).toEqual([]);
     fireEvent.click(screen.getAllByTestId('common-list')[0]);
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionDetail', { slug: 'desk-eats' });
   });
