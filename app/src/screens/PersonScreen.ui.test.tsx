@@ -327,22 +327,29 @@ describe('the bio, and the way to write one', () => {
     expect(dress.alignSelf).toBe('flex-start');
     expect(dress.backgroundColor).toBe(colors.surfaceGlassStrong);
     expect(dress.borderWidth).toBeUndefined();
-    // The tail: a window left of the bubble's edge, at its upper end,
-    // showing the corner of a turned square in the bubble's own fill.
+    // Four corners the same: for an hour the upper left was tighter, and
+    // read as one corner gone square.
+    for (const corner of ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius'] as const) {
+      expect(dress[corner]).toBeUndefined();
+    }
+    expect(dress.borderRadius).toBe(18);
+    // The tail: a window left of the bubble's edge, about the first
+    // line's middle, showing the corner of a turned square in the
+    // bubble's own fill.
     const tail = screen.getByTestId('person-bio-tail');
     expect(tail.parentElement).toBe(bubble);
     const win = viewStyleOf(tail);
     expect(win).toMatchObject({ position: 'absolute', overflow: 'hidden' });
-    // Wholly outside the bubble, so the two washes never overlap.
-    expect(Number(win.left)).toBe(-Number(win.width));
-    // On the straight part of the edge: under the tight corner, over the
-    // first line's foot.
-    expect(Number(win.top)).toBeGreaterThanOrEqual(Number(dress.borderTopLeftRadius));
-    expect(Number(win.top) + Number(win.height)).toBeLessThanOrEqual(9 + 21);
-    expect(Number(dress.borderTopLeftRadius)).toBeLessThan(Number(dress.borderRadius) / 2);
+    // Outside the bubble but for the half point that closes the round
+    // edge, so the two washes do not darken each other.
+    const lap = Number(win.left) + Number(win.width);
+    expect(lap).toBeGreaterThanOrEqual(0);
+    expect(lap).toBeLessThan(0.5);
+    // Centred on the first line's middle: 9 of padding and half of 21.
+    expect(Number(win.top) + Number(win.height) / 2).toBe(9 + 21 / 2);
     const fill = viewStyleOf(tail.firstElementChild as HTMLElement);
     expect(fill.backgroundColor).toBe(dress.backgroundColor);
-    expect(JSON.stringify(fill.transform)).toContain('-36deg');
+    expect(JSON.stringify(fill.transform)).toContain('-43deg');
     // The page's ink, slanted as the reference.
     expect(textStyleOf(bio)).toMatchObject({ color: colors.text, fontSize: 15, fontStyle: 'italic' });
   });

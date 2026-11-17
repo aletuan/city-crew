@@ -186,5 +186,12 @@ const d = StyleSheet.create({
   },
   // The level sheet's lead (`profile/HeroFace`): one sheet, one type,
   // whichever badge it is about.
-  says: { color: colors.text, fontSize: 16, lineHeight: 22 },
+  //
+  // Justified (owner, 17 Nov 2026), as a list's description is
+  // (`collectionDetail/styles`, 3 Nov): in its box the sentence ran three
+  // lines with each stopping short at a different place, and the owner
+  // read the box as weighted to one side. The same cost as there — iOS
+  // does not hyphenate Vietnamese, so the slack goes into the spaces —
+  // and the last line stays ragged, as justified text always ends.
+  says: { color: colors.text, fontSize: 16, lineHeight: 22, textAlign: 'justify' },
 });
