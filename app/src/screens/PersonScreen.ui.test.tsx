@@ -200,13 +200,11 @@ describe('whose page it is', () => {
     const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
     expect(viewStyleOf(row).flexDirection).toBe('row');
     const column = name.parentElement!;
-    expect([...column.children]).toEqual([name, handle]);
+    expect([...column.children]).toEqual([name, handle, screen.getByTestId('person-bio-row')]);
     expect(column.parentElement).toBe(row);
     expect(viewStyleOf(column).flexDirection).not.toBe('row');
-    // The column gives rather than pushing the friend button out, and
-    // its two lines are the picture's half under the cover.
+    // The column takes the row's width beside the picture.
     expect(viewStyleOf(column).flex).toBe(1);
-    expect(Number(textStyleOf(name)?.lineHeight) + Number(textStyleOf(handle)?.lineHeight)).toBe(48);
   });
 
   // "11 collections" stood under the head until 16 Nov 2026; the
@@ -241,9 +239,9 @@ describe('whose page it is', () => {
     expect(handle.textContent).toBe('@lan');
     expect((screen.getByTestId('person-cover').nextElementSibling as HTMLElement).contains(handle)).toBe(true);
     expect(textStyleOf(handle)?.color).toBe(colors.text);
-    // Alone in its column, in the middle of the picture's lower half.
+    // Alone in its column, begun just under the cover's edge.
     expect([...handle.parentElement!.children]).toEqual([handle]);
-    expect(viewStyleOf(handle.parentElement!)).toMatchObject({ minHeight: 48, justifyContent: 'center' });
+    expect(viewStyleOf(handle.parentElement!)).toMatchObject({ flex: 1, marginTop: 34 });
     expect(screen.getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
     expect(screen.queryByTestId('person-bio')).toBeNull();
@@ -304,29 +302,49 @@ describe('the bio, and the way to write one', () => {
     expect(screen.queryByTestId('person-bio-add')).toBeNull();
   });
 
-  // How it stands (owner, 17 Nov 2026): a bubble as wide as its words,
-  // at the picture's inset with its corner under the picture tight, in
-  // the page's ink — and no mark inside it.
-  it('draws the bio as a bubble that hugs its words, its corner under the picture tight', async () => {
+  // How it stands (owner, 17 Nov 2026), after the owner's reference: a
+  // speech bubble under the handle, beside the picture, with a tail
+  // toward the face.
+  it('draws the bio as a speech bubble under the handle, beside the picture, its tail toward the face', async () => {
     await show();
     const bubble = screen.getByTestId('person-bio-row');
     const bio = screen.getByTestId('person-bio');
+    const handle = screen.getByTestId('person-handle');
     expect(bubble.textContent).toBe('Coffee first, then the rest.');
     expect(bubble.querySelector('[data-icon]')).toBeNull();
+    // In the names' column, the line after the handle: beside the
+    // picture, not under it.
+    expect(bubble.parentElement).toBe(handle.parentElement);
+    expect(handle.nextElementSibling).toBe(bubble);
+    const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
+    expect(row.contains(bubble)).toBe(true);
+    // The picture hangs lower so the bubble stands level with its foot:
+    // the row starts at the top of the column, 28 of the picture on the
+    // cover where it was 44.
+    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -28 });
     const dress = viewStyleOf(bubble);
-    // As wide as the words, not the page.
+    // As wide as the words; a tinted well with no hairline.
     expect(dress.alignSelf).toBe('flex-start');
-    // The pills' dress: the card's ground and its hairline.
-    expect(dress).toMatchObject({ backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft });
-    // One corner tight, toward the picture; the others round.
+    expect(dress.backgroundColor).toBe(colors.surfaceGlassStrong);
+    expect(dress.borderWidth).toBeUndefined();
+    // The tail: a window left of the bubble's edge, at its upper end,
+    // showing the corner of a turned square in the bubble's own fill.
+    const tail = screen.getByTestId('person-bio-tail');
+    expect(tail.parentElement).toBe(bubble);
+    const win = viewStyleOf(tail);
+    expect(win).toMatchObject({ position: 'absolute', overflow: 'hidden' });
+    // Wholly outside the bubble, so the two washes never overlap.
+    expect(Number(win.left)).toBe(-Number(win.width));
+    // On the straight part of the edge: under the tight corner, over the
+    // first line's foot.
+    expect(Number(win.top)).toBeGreaterThanOrEqual(Number(dress.borderTopLeftRadius));
+    expect(Number(win.top) + Number(win.height)).toBeLessThanOrEqual(9 + 21);
     expect(Number(dress.borderTopLeftRadius)).toBeLessThan(Number(dress.borderRadius) / 2);
-    // On the picture's inset: the head row's own side room.
-    const head = viewStyleOf(screen.getByTestId('person-cover').nextElementSibling as HTMLElement);
-    expect(dress.marginHorizontal).toBe(head.paddingHorizontal);
-    // The page's ink, upright.
-    expect(textStyleOf(bio)).toMatchObject({ color: colors.text, fontSize: 15 });
-    expect(textStyleOf(bio)?.fontStyle).toBeUndefined();
-    expect(textStyleOf(bio)?.color).not.toBe(textStyleOf(screen.getByTestId('person-handle'))?.color);
+    const fill = viewStyleOf(tail.firstElementChild as HTMLElement);
+    expect(fill.backgroundColor).toBe(dress.backgroundColor);
+    expect(JSON.stringify(fill.transform)).toContain('-36deg');
+    // The page's ink, slanted as the reference.
+    expect(textStyleOf(bio)).toMatchObject({ color: colors.text, fontSize: 15, fontStyle: 'italic' });
   });
 
   // The form saves into your own profile; the page says the new words
@@ -602,7 +620,7 @@ describe('the row of acts', () => {
     ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z', responded_at: null }) as FriendshipRow;
   const headRow = () => screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
 
-  it('holds the friend button and Message, under the head and under the bio', async () => {
+  it('holds the friend button and Message, under the head and the bio in it', async () => {
     await show();
     const acts = screen.getByTestId('person-acts');
     expect(viewStyleOf(acts).flexDirection).toBe('row');
@@ -613,34 +631,47 @@ describe('the row of acts', () => {
     // Out of the name's row, which the name now has to itself.
     expect(headRow().contains(screen.getByTestId('person-add'))).toBe(false);
     expect(headRow().compareDocumentPosition(acts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // The bio first: who they are, then what to do about them.
-    expect(acts.compareDocumentPosition(screen.getByTestId('person-bio')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-    expect(headRow().compareDocumentPosition(screen.getByTestId('person-bio')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The bio first, in the head: who they are, then what to do about them.
+    expect(headRow().contains(screen.getByTestId('person-bio'))).toBe(true);
+    expect(acts.contains(screen.getByTestId('person-bio'))).toBe(false);
   });
 
-  // Two equal halves with a rule between (owner, 17 Nov 2026): each act
-  // in the middle of its own half, whichever state the friend button is in.
-  it('lays the two out as equal halves, each centred, a short rule between', async () => {
+  // One group in the page's middle, a rule between (owner, 17 Nov 2026):
+  // the reference. Two equal halves, for a morning, set the pair 190
+  // apart.
+  it('lays the two out as one centred group, the same space either side of a short rule', async () => {
     await show();
     const acts = screen.getByTestId('person-acts');
     const [left, rule, right] = Array.from(acts.children) as HTMLElement[];
     expect(acts.children).toHaveLength(3);
-    expect(left.contains(screen.getByTestId('person-add'))).toBe(true);
+    expect(left.contains(screen.getByTestId('person-add')) || left === screen.getByTestId('person-add')).toBe(true);
     expect(rule).toBe(screen.getByTestId('person-acts-rule'));
     expect(right).toBe(screen.getByTestId('person-message'));
-    for (const half of [left, right]) expect(viewStyleOf(half)).toMatchObject({ flex: 1 });
-    expect(viewStyleOf(left)).toMatchObject({ alignItems: 'center' });
-    expect(viewStyleOf(right.firstElementChild as HTMLElement)).toMatchObject({ justifyContent: 'center' });
+    const row = viewStyleOf(acts);
+    expect(row).toMatchObject({ justifyContent: 'center', alignItems: 'center', gap: 22 });
+    // Neither stretches: a group, not halves.
+    for (const one of [left, right]) expect(viewStyleOf(one).flex).toBeUndefined();
     const line = viewStyleOf(rule);
-    expect([line.width, line.backgroundColor]).toEqual([1, colors.borderGlassSoft]);
+    expect(line.width).toBe(1);
     expect(Number(line.height)).toBeLessThan(44 / 2);
-    cleanup();
-    // The same halves when what stands is a fact, not a button.
+  });
+
+  // What stands — Friends, Requested — is words at Message's own size
+  // beside it, and Message is words too.
+  it('sets "Friends" and Message in the same type, one plain and one dimmed', async () => {
     crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
     await show();
-    const half = screen.getByTestId('person-acts').firstElementChild as HTMLElement;
-    expect(half.contains(screen.getByTestId('person-friends'))).toBe(true);
-    expect(viewStyleOf(half)).toMatchObject({ flex: 1, alignItems: 'center' });
+    const friends = screen.getByTestId('person-friends');
+    expect(screen.getByTestId('person-acts').firstElementChild).toBe(friends);
+    const said = textStyleOf(screen.getByText('Friends'));
+    const message = textStyleOf(screen.getByText('Message'));
+    expect(said).toMatchObject({ fontSize: 16, color: colors.textSecondary });
+    expect(message?.fontSize).toBe(said?.fontSize);
+    expect(message?.fontWeight).toBe(said?.fontWeight);
+    const tick = friends.querySelector('[data-icon="checkmark"]')!;
+    expect([tick.getAttribute('data-size'), tick.getAttribute('data-color')]).toEqual(['18', String(colors.textSecondary)]);
+    // "Soon" slanted beside it, as the reference.
+    expect(textStyleOf(screen.getByText('Soon'))).toMatchObject({ fontStyle: 'italic' });
   });
 
   // Not built yet, and said so: dimmed, "Soon" beside the word, and no

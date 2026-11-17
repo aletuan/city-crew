@@ -137,8 +137,12 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
     if (as.actsOnly) return null;
     return (
       <View style={[s.quiet, page && s.quietOnPage]} testID={`${name}-${state}`}>
-        <Glyph name={state === 'friends' ? 'checkmark' : 'time-outline'} size={15} color={colors.textTertiary} />
-        <Text style={s.quietText}>
+        <Glyph
+          name={state === 'friends' ? 'checkmark' : 'time-outline'}
+          size={page ? 18 : 15}
+          color={page ? colors.textSecondary : colors.textTertiary}
+        />
+        <Text style={[s.quietText, page && s.quietTextOnPage]}>
           {state === 'friends'
             ? t('Friends', 'Bạn bè', '友だち', '好友', '好友')
             : t('Requested', 'Đã gửi', '送信済み', '已发送', '已傳送')}
@@ -173,4 +177,8 @@ const s = StyleSheet.create({
   quiet: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: CHIP_H },
   quietOnPage: { minHeight: SECONDARY_CONTROL_H },
   quietText: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium },
+  // On a person's page the fact stands beside Message as its equal, in
+  // the body's 16 and a shade darker: there it is half of a row, not a
+  // note at the end of one (owner, 17 Nov 2026).
+  quietTextOnPage: { color: colors.textSecondary, fontSize: 16, fontWeight: font.regular },
 });
