@@ -399,15 +399,22 @@ export default function PersonScreen({ navigation, route }: {
  *   - A tinted well (`surfaceGlassStrong`), no hairline: the reference's
  *     bubble is the page pressed a shade darker, not a white pill, and a
  *     well is what this app calls that.
- *   - A tail at its upper left, pointing up and left at the picture's
- *     lower right, where a role's badge sits. Made of two views — a
- *     square turned 36° inside a 9 × 13 window — and not an Svg path:
+ *   - A tail on its left edge, level with the first line's middle,
+ *     pointing left and up at the picture's lower right, where a role's
+ *     badge sits. Made of two views — a square turned 43° inside a
+ *     9 × 11 window — and not an Svg path:
  *     the fill is a dynamic colour, which a view resolves against the
  *     app's look and a drawing may flatten against the phone's
  *     (`bgHex`'s note in `theme`). The window ends at the bubble's edge,
- *     so the two washes never lie over each other and darken.
- *   - Its upper left corner at 7 where the others are 18, so the edge
- *     the tail leaves from is straight.
+ *     so the two washes do not lie over each other and darken.
+ *   - Four corners the same, 18. For an hour the upper left was 7, to
+ *     give the tail a straight edge to leave from at the bubble's top:
+ *     on the phone the owner saw one corner squarer than the rest, which
+ *     is what it was. The tail moved down to the first line's middle
+ *     instead — the point of a one-line bubble's left edge that stands
+ *     furthest out, where the round edge is within half a point of
+ *     straight over the tail's 11 (18 − √(18² − 4²) = 0.45), so the
+ *     window laps 0.3 over the bubble to close it.
  *   - Slanted, as the reference. Said against it once: Vietnamese
  *     carries its tone marks less well on a slanted face. The owner
  *     chose the reference.
@@ -640,21 +647,24 @@ const s = StyleSheet.create({
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // The handle, right under the name: an address, quieter.
   handle: { color: colors.textTertiary, ...type.meta, lineHeight: 20 },
-  // The bio's bubble — see `Bio`. 4 under the handle and 4 left of the
+  // The bio's bubble — see `Bio`. 18 round at every corner, a point and
+  // a half under a one-line bubble's half-height (39), so one line is
+  // all but a pill. 4 under the handle and 4 left of the
   // names' edge, as the reference sets it a little toward the picture.
   bioBubble: {
     alignSelf: 'flex-start', marginTop: 4, marginLeft: -4,
     paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: 18, borderTopLeftRadius: 7,
+    borderRadius: 18,
     backgroundColor: colors.surfaceGlassStrong,
   },
-  // The tail's window, against the bubble's straight upper-left edge;
+  // The tail's window, on the bubble's left edge about the first line's
+  // middle (9 of padding and half of 21 is 19.5; the window is 14 to 25);
   // and the square turned in it, of which the window shows a corner.
-  bioTail: { position: 'absolute', left: -9, top: 7, width: 9, height: 13, overflow: 'hidden' },
+  bioTail: { position: 'absolute', left: -9, top: 14, width: 9.3, height: 11, overflow: 'hidden' },
   bioTailFill: {
     position: 'absolute', left: 0, top: 1, width: 24, height: 24,
     backgroundColor: colors.surfaceGlassStrong,
-    transformOrigin: 'left top', transform: [{ rotate: '-36deg' }],
+    transformOrigin: 'left top', transform: [{ rotate: '-43deg' }],
   },
   bio: { color: colors.text, ...type.meta, lineHeight: 21, fontStyle: 'italic' },
   // The invitation in the bio's place — see `Bio`. The collection card's

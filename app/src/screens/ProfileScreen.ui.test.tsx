@@ -654,6 +654,9 @@ describe('the role badge', () => {
     expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Super User');
     expect(screen.getByTestId('badge-sheet-head').querySelector('[data-icon="medal"]')).toBeTruthy();
     expect(screen.getByTestId('badge-sheet-body').textContent).toMatch(/every place in the app/);
+    // Its sentence justified in the box, as a list's description is
+    // (owner, 17 Nov 2026): ragged, it read as weighted to one side.
+    expect(textStyleOf(screen.getByTestId('badge-sheet-body').firstElementChild as HTMLElement)?.textAlign).toBe('justify');
   });
 
   // Two roles, two colours: the disc's edge and glyph follow the role,
