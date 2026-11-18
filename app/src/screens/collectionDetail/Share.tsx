@@ -54,8 +54,8 @@
 // handle already (`shares.SEEN_GLYPH`), so the button would have doubled
 // it.
 //
-// Drawn from the line set (`ui/glyph`): Ionicons' plane was three sharp
-// points beside the heart's curves, and the owner asked for it softer.
+// Ionicons' own plane, as the heart beside it is Ionicons' (`ui/glyph`
+// has the day it spent in the line set, and why it came back).
 //
 // The figure after it is back to a bare number, as it first was: how
 // many friends the list is shared with. VoiceOver is told all of it —
