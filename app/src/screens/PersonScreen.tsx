@@ -254,7 +254,7 @@ export default function PersonScreen({ navigation, route }: {
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
 
       {/* What they have shared: what they did, newest first, and every
-          collection they made a tap away — `person/Shared`. */}
+          — `person/Shared`. */}
       <Shared
         me={me}
         person={person}

@@ -152,16 +152,12 @@ const list = (slug: string, over: Partial<Collection> = {}): Collection => ({
 const members = (n: number) => Array.from({ length: n }, (_, i) => ({ sort_order: i, places: { slug: `p${i}` } }));
 
 const flush = async () => { await act(async () => {}); };
-/** The grid's tiles. The section opens on the feed since 17 Nov 2026,
- *  with the grid a press of its heading's count away — so this turns to
- *  the grid first when it is not already showing. */
-const tiles = (): HTMLElement[] => {
-  if (!screen.queryByTestId('person-grid')) {
-    const turn = screen.queryByTestId('person-turn');
-    if (turn) fireEvent.click(turn);
-  }
-  return screen.queryAllByTestId('person-' + 'list');
-};
+/** The feed's cards. The page had a grid of tiles too, a press of the
+ *  heading's count away, from 17 to 19 Nov 2026; the cards are all there
+ *  is now, so what was asked of a tile is asked of a card. */
+const cards = (): HTMLElement[] => screen.queryAllByTestId('person-act');
+/** What each card says it opens: "List one, 0 places". */
+const opens = (): (string | null)[] => cards().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'));
 /** What the page listens for on the navigator, so a test can say the
  *  page was left and come back to. */
 const heard: Record<string, (() => void)[]> = {};
@@ -252,16 +248,15 @@ describe('whose page it is', () => {
     expect(viewStyleOf(column).flex).toBe(1);
   });
 
-  // "11 collections" stood under the head until 16 Nov 2026 and is not
-  // back there. Since 17 Nov the count is the section's own way to its
-  // grid, on the heading's right — one, and not a row of figures.
-  it('counts nothing under the head; the one count is the way to the grid', async () => {
+  // "11 collections" stood under the head until 16 Nov 2026. From 17 Nov
+  // the one count was on the section's heading, the way to its grid; on
+  // 19 Nov the grid went and the count with it.
+  it('counts nothing: not under the head, and not on the heading', async () => {
     state.shelf = [list('one'), list('two')];
     await show();
     expect(screen.queryByTestId('person-counts')).toBeNull();
-    expect(screen.getAllByText(/^\d+ collections?$/)).toHaveLength(1);
-    expect(screen.getByTestId('person-turn').textContent).toBe('2 collections');
-    expect(tiles()).toHaveLength(2);
+    expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
+    expect(cards()).toHaveLength(2);
   });
 
   it('wears their face, not the reader’s, ringed in the page’s own ground', async () => {
@@ -640,7 +635,6 @@ describe('what they did', () => {
     expect(inCard(0).getByTestId('activity-line').textContent).toBe('Lan Phạm đã tạo bộ sưu tập');
     expect(inCard(0).getByTestId('activity-when').textContent).toBe('hôm qua');
     expect(inCard(0).getByText('1 địa điểm')).toBeTruthy();
-    expect(screen.getByTestId('person-turn').textContent).toBe('1 bộ sưu tập');
   });
 
   it('wears the collection’s photograph, or the accent’s tint where it has none', async () => {
@@ -661,31 +655,24 @@ describe('what they did', () => {
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionDetail', { slug: 'two' });
   });
 
-  // A feed is for reading and a grid is for finding: the count on the
-  // heading's right turns the section into the grid, and back.
-  it('turns to the grid of every collection from the count, and back to the feed', async () => {
+  // The count on the heading's right turned the section into a grid of
+  // every list, and back, until 19 Nov 2026. It went so that somebody
+  // else's page and your own are one page: yours had lost it to
+  // "Profile ›" that morning.
+  it('is the feed and nothing else: no count on the heading, no grid to turn to', async () => {
     state.shelf = [list('one'), list('two'), list('three')];
     await show();
-    const turn = screen.getByTestId('person-turn');
-    expect(turn.textContent).toBe('3 collections');
-    fireEvent.click(turn);
-    expect(screen.getByTestId('person-grid')).toBeTruthy();
-    expect(screen.queryAllByTestId('person-' + 'list')).toHaveLength(3);
-    expect(acts()).toEqual([]);
-    expect(screen.getByText('Collections')).toBeTruthy();
-    expect(screen.getByTestId('person-turn').textContent).toBe('Activity');
-    fireEvent.click(screen.getByTestId('person-turn'));
+    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(screen.queryByTestId('person-turn')).toBeNull();
     expect(screen.queryByTestId('person-grid')).toBeNull();
+    expect(screen.queryByText('Collections')).toBeNull();
+    expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
+    // Nor the way to a profile that is not the reader's to edit.
+    expect(screen.queryByTestId('person-profile')).toBeNull();
     expect(acts()).toHaveLength(3);
   });
 
-  it('says "1 collection" for one', async () => {
-    state.shelf = [list('one')];
-    await show();
-    expect(screen.getByTestId('person-turn').textContent).toBe('1 collection');
-  });
-
-  it('offers no way to a grid of nothing', async () => {
+  it('draws no card for somebody with nothing to show', async () => {
     await show();
     expect(screen.getByTestId('person-no-lists')).toBeTruthy();
     expect(screen.queryByTestId('person-turn')).toBeNull();
@@ -752,16 +739,6 @@ describe('what they did', () => {
       expect(acts()).toHaveLength(12);
     });
 
-    // Near the end of the grid is not near the end of the feed.
-    it('adds nothing to the feed while the grid is showing', async () => {
-      twelve();
-      await show();
-      fireEvent.click(screen.getByTestId('person-turn'));
-      scrollAt(900, 1500);
-      fireEvent.click(screen.getByTestId('person-turn'));
-      expect(acts()).toHaveLength(5);
-    });
-
     it('sends the next five covers into memory ahead of the cards, and none when there are no more', async () => {
       const prefetch = vi.mocked(Image.prefetch);
       prefetch.mockClear();
@@ -774,15 +751,6 @@ describe('what they did', () => {
       prefetch.mockClear();
       scrollAt(2891, 5000);
       expect(acts()).toHaveLength(8);
-      expect(prefetch).not.toHaveBeenCalled();
-    });
-
-    it('fetches nothing ahead for the grid', async () => {
-      const prefetch = vi.mocked(Image.prefetch);
-      state.shelf = Array.from({ length: 8 }, (_, i) => list(`l${i}`, { cover: { id: `c${i}`, photo_uri: `https://covers/${i}.jpg` } }));
-      await show();
-      prefetch.mockClear();
-      fireEvent.click(screen.getByTestId('person-turn'));
       expect(prefetch).not.toHaveBeenCalled();
     });
   });
@@ -853,9 +821,8 @@ describe('their lists', () => {
       list('desk', { owner_id: null }),
       list('old'),
     ];
-    state.likes = { new: 3 };
     await show();
-    expect(tiles().map((x) => x.textContent)).toEqual(['List new17 places · 3 likes', 'List old0 places']);
+    expect(opens()).toEqual(['List new, 17 places', 'List old, 0 places']);
     expect(screen.queryByTestId('person-no-lists')).toBeNull();
   });
 
@@ -864,41 +831,30 @@ describe('their lists', () => {
   it('never shows a private list', async () => {
     state.shelf = [list('secret', { is_public: false }), list('open')];
     await show();
-    expect(tiles().map((x) => x.textContent)).toEqual(['List open0 places']);
+    expect(opens()).toEqual(['List open, 0 places']);
   });
 
   it('says one of each in the singular, and titles a list in the reader’s language', async () => {
     state.shelf = [list('one', { collection_places: members(1) as Collection['collection_places'] })];
-    state.likes = { one: 1 };
     await show();
-    expect(tiles()[0].textContent).toBe('List one1 place · 1 like');
+    expect(opens()).toEqual(['List one, 1 place']);
     cleanup();
     state.lang = 'vi';
     await show();
-    expect(tiles()[0].textContent).toBe('Bộ one1 địa điểm · 1 lượt thích');
+    expect(opens()).toEqual(['Bộ one, 1 địa điểm']);
   });
 
   it('opens a list’s own page on a press', async () => {
     state.shelf = [list('new'), list('old')];
     const navigation = await show();
-    fireEvent.click(tiles()[1]);
+    fireEvent.click(within(cards()[1]).getByTestId('activity-open'));
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionDetail', { slug: 'old' });
-  });
-
-  it('sets them two to a row, with an empty slot beside an odd one out', async () => {
-    state.shelf = [list('a'), list('b'), list('c')];
-    await show();
-    const [a, b, c] = tiles();
-    expect(a.parentElement).toBe(b.parentElement);
-    expect(c.parentElement).not.toBe(a.parentElement);
-    expect(c.parentElement!.children).toHaveLength(2);
-    expect(viewStyleOf(c.parentElement!.lastElementChild as HTMLElement).flex).toBe(1);
   });
 
   it('says there are none yet, in a card, for somebody who has published nothing', async () => {
     state.shelf = [list('minh-list', { owner_id: 'minh-id' })];
     await show();
-    expect(tiles()).toEqual([]);
+    expect(cards()).toEqual([]);
     expect(within(screen.getByTestId('person-no-lists')).getByText('No public collections yet')).toBeTruthy();
   });
 });
@@ -1028,25 +984,21 @@ describe('lists that are not for everybody', () => {
       expect(acts().map((c) => markIn(c)?.getAttribute('aria-label') ?? null)).toEqual(['Bạn bè, 2', 'Riêng tư', 'Công khai']);
     });
 
-    // The count's place is the way to your profile here (owner, 19 Nov
-    // 2026): the grid it turned to is the Collections tab's "Yours" over
-    // again, and the page had no way to the one thing only you can do
-    // with it.
-    it('has the way to your profile where the count stands for anybody else, and no grid', async () => {
+    // On the heading's right, where a count turned the section into a
+    // grid until the same morning (owner, 19 Nov 2026): the page had no
+    // way to the one thing only you can do with it.
+    it('has the way to your profile on the heading, and it leaves the page as it is', async () => {
       const navigation = await show('me');
       const link = screen.getByTestId('person-profile');
       expect(link.textContent).toBe('Profile');
       expect(link.getAttribute('aria-label')).toBe('Edit profile');
-      expect(screen.queryByTestId('person-turn')).toBeNull();
-      expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
       fireEvent.click(link);
       expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('EditProfile');
       // A way out of the page, not a turn of it: the feed is still here.
-      expect(screen.queryByTestId('person-grid')).toBeNull();
       expect(acts()).toHaveLength(3);
     });
 
-    // The turn waits for a list to count; this is not a way to them.
+    // It is not a way to your lists, so it does not wait for one.
     it('has it with no list to your name', async () => {
       state.mine = [];
       state.shelf = [];
@@ -1095,7 +1047,6 @@ describe('lists that are not for everybody', () => {
       await show();
       expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
         .toEqual(['List for-me, 0 places', 'List open, 0 places']);
-      expect(screen.getByTestId('person-turn').textContent).toBe('2 collections');
     });
 
     it('says "Shared with you" on it, in words, and offers its heart to the friend it was shared with', async () => {
@@ -1110,16 +1061,8 @@ describe('lists that are not for everybody', () => {
       expect(markIn(open)!.getAttribute('aria-label')).toBe('Public');
       expect(markIn(open)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('globe-outline');
       expect(within(open).getByTestId('activity-heart')).toBeTruthy();
-      const [lentTile, openTile] = tiles();
-      expect(lentTile.getAttribute('aria-label')).toBe('List for-me, 0 places, Shared with you');
-      expect(openTile.getAttribute('aria-label')).toBe('List open, 0 places, Public');
-      // The glyph alone on a tile: no word, though the card has them.
-      const glyphs = (tile: HTMLElement) => [...tile.querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
-      expect(glyphs(lentTile)).toEqual(['people-outline']);
-      expect(glyphs(openTile)).toEqual(['globe-outline']);
-      expect(lentTile.textContent).toBe('List for-me0 places');
-      // Somebody else's page: the count is there, and no way to a profile
-      // that is not yours to edit.
+      // Somebody else's page: no way to a profile that is not yours to
+      // edit, and since the grid went nothing else on the heading.
       expect(screen.queryByTestId('person-profile')).toBeNull();
     });
 
@@ -1154,7 +1097,7 @@ describe('lists that are not for everybody', () => {
 describe('the cover', () => {
   const coverSrc = () => screen.getByTestId('person-cover').querySelector('img')?.getAttribute('src') ?? null;
 
-  it('is the cover of their newest list that has one, and each tile wears its own', async () => {
+  it('is the cover of their newest list that has one, and each card wears its own', async () => {
     state.shelf = [
       list('bare'),
       list('chosen', { cover: { photo_uri: 'https://covers/chosen.jpg' } }),
@@ -1164,7 +1107,7 @@ describe('the cover', () => {
     expect(coverSrc()).toBe('https://covers/chosen.jpg');
     expect(screen.queryByTestId('person-cover-tint')).toBeNull();
     // The bare one wears the tint; the other two their own photographs.
-    expect(tiles().map((x) => x.querySelector('img')?.getAttribute('src') ?? null))
+    expect(cards().map((x) => within(x).getByTestId('activity-open').querySelector('img')?.getAttribute('src') ?? null))
       .toEqual([null, 'https://covers/chosen.jpg', 'https://covers/older.jpg']);
   });
 
@@ -1503,7 +1446,7 @@ describe('in common', () => {
     expect(screen.queryByText('In common')).toBeNull();
     expect(state.commonAsked).toEqual([]);
     // The rest of the page is as it was.
-    expect(tiles()).toHaveLength(1);
+    expect(cards()).toHaveLength(1);
   });
 
   it('asks about this person, as the reader', async () => {
@@ -1534,7 +1477,7 @@ describe('in common', () => {
     expect(within(section).queryByText('Collections you both liked')).toBeNull();
     // Between the head and the person's own collections.
     const head = screen.getByTestId('person-handle');
-    const own = tiles()[0];
+    const own = cards()[0];
     expect(head.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(section.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -1561,7 +1504,7 @@ describe('in common', () => {
     expect(screen.getAllByTestId('common-list')[1].querySelector('img')!.getAttribute('src')).toBe('https://covers/minh.jpg');
     expect(screen.queryByTestId('common-places')).toBeNull();
     // Somebody else's list is in common without being this person's own.
-    expect(tiles()).toEqual([]);
+    expect(cards()).toEqual([]);
     fireEvent.click(screen.getAllByTestId('common-list')[0]);
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('CollectionDetail', { slug: 'desk-eats' });
   });
