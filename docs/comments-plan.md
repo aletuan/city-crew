@@ -165,9 +165,8 @@ Mỗi mục là một PR, merge sau cờ tắt, theo thứ tự.
 - Tài liệu này vào repo, thêm dòng vào `CLAUDE.md`.
 - Khoá cờ `comments`, mặc định tắt.
 
-**C1. Cơ sở dữ liệu** — migration và kiểm thử xong
-(`20261118050000_comments.sql`); **chưa áp lên cơ sở dữ liệu thật, chưa
-sinh lại kiểu dữ liệu**
+**C1. Cơ sở dữ liệu** — xong (`20261118050000_comments.sql`; đã áp lên
+cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại)
 - Migration: hai bảng, các hàm ở 2.1, quyền truy cập, trigger độ sâu,
   `banned_words`, `reports.kind`.
 - Chưa làm ở đây, thuộc C7: hai loại dòng "trả lời bạn" và "nhắc tới
