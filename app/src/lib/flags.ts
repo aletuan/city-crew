@@ -86,6 +86,29 @@ export const FLAG_DEFAULTS = {
    *     on conflict (key) do update set enabled = true;
    */
   city_place_counts: false,
+  /**
+   * Comments on a collection: the count and the two newest on a card,
+   * the thread, the composer. **Off** as shipped, and off until the
+   * release that carries them has been through App Review.
+   *
+   * The plan is `docs/comments-plan.md`: eleven pull requests, each
+   * merged as it is finished — and every merge to `main` is an update on
+   * every phone within the hour. A reader must not meet half of it (a
+   * count that opens nothing, a thread nobody can report), and comments
+   * are people's own words to each other, which Apple reviews an app for
+   * (Guideline 1.2: a filter, a report on every comment, a block). So
+   * the pieces land behind this, and the row is what turns them on, for
+   * the build the reviewer opens and then for everyone:
+   *
+   *     insert into app_flags (key, enabled, note) values
+   *       ('comments', true, 'Comments on collections.')
+   *     on conflict (key) do update set enabled = true;
+   *
+   * A row rather than a constant for the other direction too: if a
+   * thread goes wrong faster than the desk can act, comments can be
+   * taken off every phone at the next launch, with no build to publish.
+   */
+  comments: false,
 } as const;
 
 export type FlagKey = keyof typeof FLAG_DEFAULTS;
