@@ -42,5 +42,6 @@ export * from './gallery';
 export * from './checkins';
 export * from './invites';
 export * from './shares';
+export * from './comments';
 export * from './stats';
 export * from './hooks';

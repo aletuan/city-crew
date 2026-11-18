@@ -178,8 +178,15 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
   xoá tài khoản làm rỗng nội dung.
 - Áp migration lên cơ sở dữ liệu thật, sinh lại kiểu dữ liệu.
 
-**C2. Lõi ứng dụng**
+**C2. Lõi ứng dụng** — xong
 - `Subject`, `lib/comments.ts`, `lib/data/comments.ts`, kèm kiểm thử.
+- Vị trí tag và độ dài nội dung tính theo **ký tự**, như Postgres, không
+  theo đơn vị UTF-16 của JavaScript: một emoji đứng trước tag sẽ làm lệch
+  một chữ nếu cắt chuỗi thẳng. Ô soạn (C4, C5) phải dùng `bodyLength` và
+  tính vị trí tag theo cùng cách.
+- Thứ tự vẽ: dưới một bình luận gốc, mỗi trả lời trực tiếp đi kèm ngay
+  sau nó mọi thứ nói bên dưới, cũ trước, ở mức thụt thứ 2 (mức sâu nhất
+  được vẽ); bình luận sâu hơn mức đó kèm tên người được trả lời.
 
 **C3. Đọc**
 - Màn `Comments`: cây 2 cấp, "Xem thêm N trả lời", dòng "đã xoá", tự nạp
@@ -225,9 +232,14 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 
 ## 4. Còn mở
 
-1. **Luồng đầy đủ mở ở đâu**: một màn riêng (đề xuất, vì cây lồng cần
-   chiều cao và bàn phím) hay một tấm trượt từ dưới lên như Instagram.
-   Chốt trước C3.
+1. ~~Luồng đầy đủ mở ở đâu~~ — **đã chốt 18/11/2026: màn riêng**, không
+   phải tấm trượt từ dưới lên kiểu Instagram. Lý do: cây lồng cộng bàn
+   phím cần đủ chiều cao (trong tấm trượt, bật bàn phím là không còn thấy
+   bình luận đang trả lời); màn Hoạt động (C7) cần mở thẳng vào một bình
+   luận, mà màn riêng thì có sẵn địa chỉ; và nhu cầu "liếc nhanh" đã có 2
+   bình luận xem trước ngay trên thẻ. Threads cũng mở bài thành màn riêng;
+   không lấy kiểu "mỗi trả lời là một màn" của Threads vì luồng ở đây
+   ngắn.
 2. **Danh sách từ cấm ban đầu**: cần cả tiếng Việt và tiếng Anh. Ai soạn
    bản đầu. Chốt trước C10; C1 tạo bảng rỗng.
 
