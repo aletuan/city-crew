@@ -42,7 +42,7 @@ export const VIBES: Record<string, VibeStyle> = {
   cafes: { icon: 'cafe-outline', en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', zh: '咖啡馆', hant: '咖啡館' },
   food_tour: { icon: 'restaurant-outline', en: 'Food', vi: 'Ăn uống', ja: 'グルメ', zh: '美食', hant: '美食' },
   nightlife: { icon: 'wine-outline', en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', zh: '夜生活', hant: '夜生活' },
-  views: { icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', zh: '观景', hant: '觀景' },
+  views: { icon: 'binoculars-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', zh: '观景', hant: '觀景' },
   culture: { icon: 'library-outline', en: 'Culture', vi: 'Văn hóa', ja: 'カルチャー', zh: '文化', hant: '文化' },
   outdoors: { icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然', zh: '自然', hant: '自然' },
   chill: { icon: 'happy-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり', zh: '放松', hant: '放鬆' },
