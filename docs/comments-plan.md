@@ -74,9 +74,23 @@ liên kết, không phải chữ: người hoặc địa điểm bị xoá thì 
 đoạn chữ còn lại là chữ thường.
 
 **Một hàm quyết định "ai thấy đối tượng này"**:
-`comment_subject_visible(...)`. Hôm nay: bộ sưu tập công khai, hoặc của
-chính mình. Mọi quyền đọc và ghi bình luận đều gọi hàm này, cộng với kiểm
-tra chặn nhau (`blocked_with`, đã có).
+`comment_subject_visible(...)`. Hôm nay: bộ sưu tập công khai, và chỉ
+thế. Bộ chia sẻ riêng cho bạn bè không có luồng; bộ chuyển về riêng tư thì
+luồng bị ẩn (không mất) cho tới khi công khai lại. Mọi quyền đọc và ghi
+bình luận đều gọi hàm này, cộng với kiểm tra chặn nhau
+(`is_blocked_pair`, đã có).
+
+**Hai bảng không có policy nào.** Bật RLS và không cấp quyền gì cho ứng
+dụng: đọc cũng qua hàm (`comment_thread`, `comment_previews`), ghi cũng
+qua hàm. Lý do: luật "ai chặn ai, bộ nào công khai, bình luận đã xoá còn
+hiện gì" chỉ viết một chỗ; viết lại lần nữa bằng policy thì hai bản sẽ
+lệch nhau.
+
+**Đọc**: `comment_thread(bộ, thứ tự)` trả cả luồng dạng phẳng, đúng thứ
+tự vẽ (gốc mới nhất trước, trả lời cũ nhất trước). Khách chưa đăng nhập
+đọc được, vì luồng công khai như chính bộ sưu tập. Bình luận của người bị
+chặn (hoặc đã chặn mình) trả về y như bình luận đã xoá, để ứng dụng không
+phân biệt được hai trường hợp.
 
 **Ghi chỉ qua hàm phía máy chủ**, không cho chèn thẳng vào bảng:
 
@@ -90,11 +104,15 @@ tra chặn nhau (`blocked_with`, đã có).
 
 **Phần đi kèm**
 
-- `collections.comments_off` (công tắc của chủ bộ) và
-  `collections.comment_count` (đếm sẵn, trigger giữ đúng; feed lấy số đếm
-  mà không tốn truy vấn riêng).
-- `comment_previews(danh sách đối tượng)`: trả 2 bình luận mới nhất cho
-  mỗi thẻ, một lần gọi cho cả lứa thẻ.
+- `collections.comments_off` (công tắc của chủ bộ): tắt là không nhận
+  bình luận mới, bình luận cũ vẫn đọc được.
+- `comment_previews(danh sách đối tượng)`: trả **số đếm** và 2 bình luận
+  mới nhất cho mỗi thẻ, một lần gọi cho cả lứa thẻ.
+- Đã bỏ: cột `collections.comment_count` đếm sẵn bằng trigger (bản đầu của
+  kế hoạch). Bảng `collections` đã có trigger và policy cho chủ bộ sửa;
+  thêm một cột đếm là thêm một thứ ứng dụng có thể ghi và trigger phải
+  canh. Với khoảng sáu chục bộ công khai, đếm lúc hỏi là một lần quét
+  index. Khi nào chậm thì mới thành cột.
 - `banned_words`: danh sách từ cấm, sửa được từ Data Desk.
 - `reports.kind` thêm giá trị `comment` (bảng báo cáo đã có).
 - Hoạt động: thêm hai loại dòng "trả lời bạn" và "nhắc tới bạn" vào nguồn
@@ -127,7 +145,8 @@ tra chặn nhau (`blocked_with`, đã có).
    "đúng một cột".
 2. Thêm một nhánh vào `comment_subject_visible`: chỉ bạn bè của người
    check-in thấy.
-3. Thêm `checkins.comment_count` và cùng trigger.
+3. Thêm tham số check-in cho `comment_thread`, `comment_previews` và
+   `post_comment` (không cần cột đếm, xem 2.1).
 4. Ứng dụng: thêm `{ kind: 'checkin', id }` vào `Subject`; địa điểm tag
    được là chính địa điểm của check-in.
 
@@ -146,9 +165,12 @@ Mỗi mục là một PR, merge sau cờ tắt, theo thứ tự.
 - Tài liệu này vào repo, thêm dòng vào `CLAUDE.md`.
 - Khoá cờ `comments`, mặc định tắt.
 
-**C1. Cơ sở dữ liệu**
-- Migration: hai bảng, các hàm ở 2.1, quyền truy cập, trigger độ sâu và
-  số đếm, `banned_words`, `reports.kind`.
+**C1. Cơ sở dữ liệu** — xong (`20261118050000_comments.sql`; đã áp lên
+cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại)
+- Migration: hai bảng, các hàm ở 2.1, quyền truy cập, trigger độ sâu,
+  `banned_words`, `reports.kind`.
+- Chưa làm ở đây, thuộc C7: hai loại dòng "trả lời bạn" và "nhắc tới
+  bạn" trong nguồn dữ liệu của màn Hoạt động.
 - Kiểm thử trong `supabase/tests`: người lạ không thấy bình luận trên bộ
   riêng tư; hai người chặn nhau không thấy nhau; quá 30 một ngày bị từ
   chối; từ cấm bị từ chối; cha khác đối tượng bị từ chối; tag người không

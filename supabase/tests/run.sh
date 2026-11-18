@@ -692,3 +692,12 @@ for f in "$ROOT"/supabase/migrations/*_tab_traces.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/tab_traces_test.sql"
+
+# Comments on a collection (18 Nov 2026): two tables no client touches
+# and the five functions that are the only way in. Last: it reads the
+# blocks, the friendships, the editors, the reports and the collections.
+echo "→ comments"
+for f in "$ROOT"/supabase/migrations/*_comments.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comments_test.sql"
