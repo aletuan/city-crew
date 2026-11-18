@@ -159,4 +159,20 @@ describe('useCardComments', () => {
     expect(got(a)).toEqual(NOTHING);
     expect(data.fetchPreviews.mock.calls.every(([s]) => s.length === 0)).toBe(true);
   });
+
+  // C6: a thread its owner has closed.
+  it('gives a card no way in to a closed thread with nothing in it, and the thread itself when there is something', async () => {
+    appFlags.set('comments', true);
+    data.fetchPreviews.mockImplementation(async () => ({
+      c1: { n: 0, latest: [], off: true }, c2: { n: 3, latest: [], off: true }, c3: { n: 0, latest: [], off: false },
+    }));
+    const [a, b, c] = [list('c1'), list('c2'), list('c3')];
+    inApp(<Probe drawn={[a, b, c]} />);
+    await flush();
+    expect(got(a)).toEqual(NOTHING);
+    expect(got(b)).toEqual({ n: 3, door: true });
+    expect(got(c)).toEqual({ n: 0, door: true });
+    fireEvent.click(screen.getByTestId(`card-${b.slug}`));
+    expect(open).toHaveBeenCalledExactlyOnceWith(b);
+  });
 });

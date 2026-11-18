@@ -38,7 +38,7 @@ afterEach(cleanup);
 
 describe('a card with no thread to open', () => {
   it('draws nothing about comments, whatever it was told of them', () => {
-    show({ n: 3, latest: [said('a')] }, false);
+    show({ n: 3, latest: [said('a')], off: false }, false);
     expect(bubble()).toBeNull();
     expect(screen.queryByTestId('activity-previews')).toBeNull();
     // And the heart is as it was.
@@ -58,18 +58,18 @@ describe('the way into the thread', () => {
   });
 
   it('counts the comments, one in the singular', () => {
-    show({ n: 1, latest: [said('a')] });
+    show({ n: 1, latest: [said('a')], off: false });
     expect(screen.getByTestId('activity-comments-count').textContent).toBe('1');
     expect(bubble()!.getAttribute('aria-label')).toBe('1 comment');
     cleanup();
     state.lang = 'vi';
-    show({ n: 12, latest: [said('a'), said('b')] });
+    show({ n: 12, latest: [said('a'), said('b')], off: false });
     expect(screen.getByTestId('activity-comments-count').textContent).toBe('12');
     expect(bubble()!.getAttribute('aria-label')).toBe('12 bình luận');
   });
 
   it('opens the thread, and leaves the heart alone', () => {
-    show({ n: 1, latest: [said('a')] });
+    show({ n: 1, latest: [said('a')], off: false });
     fireEvent.click(bubble()!);
     expect(onComments).toHaveBeenCalledTimes(1);
     expect(onHeart).not.toHaveBeenCalled();

@@ -33,7 +33,7 @@ export function CommentsDoor({ list, about, onPress }: {
   /** The list on the page, or none while it is being found. Its id may
    *  be missing on a row from the launch cache. Taken whole so the page
    *  hands it over without reading into it. */
-  list: { id?: string | null; is_public?: boolean | null } | null | undefined;
+  list: { id?: string | null; is_public?: boolean | null; owner_id?: string | null } | null | undefined;
   /** The list's name, said above the field when the first comment is
    *  written here on the page. */
   about?: string;
@@ -47,12 +47,18 @@ export function CommentsDoor({ list, about, onPress }: {
   // Nothing drawn asks nothing: no ids, no request.
   const previews = usePreviewsQuery(listId ? [listId] : []);
   const n = previews.data[listId ?? '']?.n ?? 0;
+  const off = previews.data[listId ?? '']?.off ?? false;
+  const me = session?.user?.id ?? null;
+  const mine = !!me && list?.owner_id === me;
   // The first comment is written here, over the page; a thread with
   // something in it is opened — `quickOrThread`.
   const quick = useQuickComment();
-  if (!listId) return null;
+  // Closed with nothing in it: nothing to read and nothing may be
+  // written, so no way in — except for the owner, whose way to open it
+  // again is on the thread's page.
+  if (!listId || (off && n === 0 && !mine)) return null;
   const press = () => (quick && quickOrThread({
-    me: session?.user?.id ?? null, n, loaded: previews.loaded, loading: previews.loading,
+    me, n, loaded: previews.loaded, loading: previews.loading, off, mine,
   }) === 'quick'
     ? quick({ kind: 'collection', id: listId }, about)
     : onPress(listId));

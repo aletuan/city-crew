@@ -53,8 +53,15 @@ export type TagPlace = { id: string; slug: string; name: string };
  *  columns a name is read from in whichever language the reader has. */
 export type TagPlaceRow = LocalizedRow & { id: string; slug: string };
 
-/** Everything the writer may tag on one subject. */
-export type Taggable = { people: TagPerson[]; places: TagPlaceRow[] };
+/**
+ * What a field is told when it opens on a subject: whom and what may be
+ * tagged, and the two things that decide whether there is a field at
+ * all — the owner has closed the thread (`off`), and the reader is that
+ * owner (`mine`). They travel with the tags because it is the one
+ * question asked by exactly the reader who might write, just before
+ * they do (20261119070000).
+ */
+export type Taggable = { people: TagPerson[]; places: TagPlaceRow[]; off: boolean; mine: boolean };
 
 /** The places as the reader's language names them. One with no name in
  *  any language is left out: there would be nothing to write it as. */
@@ -71,10 +78,12 @@ export function placesNamed(rows: readonly TagPlaceRow[], lang: Lang): TagPlace[
  * `comment_taggable`'s answer, read as untrusted: a person is an id and
  * a handle, a place is an id and a slug, and anything else in either
  * list is skipped — an answer that is not the object at all is nobody
- * and nowhere.
+ * and nowhere. Closed and the reader's own only on the word `true`: a
+ * server from before it said either reads as an open thread on somebody
+ * else's list, which is what every thread was then.
  */
 export function taggableOf(raw: unknown): Taggable {
-  const doc = (raw && typeof raw === 'object' ? raw : {}) as { people?: unknown; places?: unknown };
+  const doc = (raw && typeof raw === 'object' ? raw : {}) as { people?: unknown; places?: unknown; off?: unknown; mine?: unknown };
   const text = (v: unknown) => (typeof v === 'string' ? v : null);
   const people: TagPerson[] = [];
   for (const p of (Array.isArray(doc.people) ? doc.people : []) as Record<string, unknown>[]) {
@@ -86,7 +95,7 @@ export function taggableOf(raw: unknown): Taggable {
     if (!p || typeof p.id !== 'string' || typeof p.slug !== 'string') continue;
     places.push(p as TagPlaceRow);
   }
-  return { people, places };
+  return { people, places, off: doc.off === true, mine: doc.mine === true };
 }
 
 /** One line of what "@" offers. */
