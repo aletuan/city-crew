@@ -110,13 +110,13 @@
   "views": {
     "file": "views.png",
     "fill": "#216572",
-    "icon": "business-outline",
+    "icon": "binoculars-outline",
     "ink": "#FFFFFF"
   },
   "views-chosen": {
     "file": "views-chosen.png",
     "fill": "#FF6F5B",
-    "icon": "business-outline",
+    "icon": "binoculars-outline",
     "ink": "#17150F"
   }
 }

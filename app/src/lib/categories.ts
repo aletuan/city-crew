@@ -144,8 +144,18 @@ const STYLES = {
     pin: '#B16133', food: true,
     terms: ['restaurant', 'food', 'dining', 'lunch', 'dinner', 'nhà hàng', 'quán ăn', 'ăn uống', 'レストラン', 'グルメ', '餐厅', '美食', '餐廳'],
   },
+  // Binoculars since 18 Nov 2026. It was `business-outline`, an office
+  // block, chosen for "skyline": an audit of every glyph in the app found
+  // it the one mark that said something else — on a chip beside a cup and
+  // a wine glass it read as "offices", and half of what the category
+  // holds is a hill, a bridge or a riverbank with no tower in sight.
+  // Binoculars say the act, looking out, which is what the five names
+  // say. Not `eye-outline`: that is a collection's view count
+  // (`CollectionStatsScreen`) and "who can see this". Not
+  // `telescope-outline`: it reads as stars. Not `image-outline`: that is
+  // a photograph (`photoKind`).
   views: {
-    en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', zh: '观景', hant: '觀景', icon: 'business-outline', color: '#6FB3C0',
+    en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', zh: '观景', hant: '觀景', icon: 'binoculars-outline', color: '#6FB3C0',
     pin: '#216572',
     terms: ['rooftop', 'skyline', 'scenic', 'view', 'ngắm cảnh', 'tầng thượng', '展望', '天台', '观景', '頂樓', '觀景'],
   },
