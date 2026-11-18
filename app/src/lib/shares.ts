@@ -39,23 +39,6 @@ export function visibilityOf(isPublic: boolean, shares: number): Visibility {
 }
 
 /**
- * Whether a list of your own wears a mark for who can see it, under your
- * handle on its page (owner, 18 Nov 2026).
- *
- * Not when it is public. A globe stood there for a day; the owner's
- * rule: no mark is public, a padlock is private, two heads are friends —
- * the rule a person's page had already taken (`person.seenOn`). A mark
- * on every list marks none, and the public one is the ordinary case.
- *
- * The globe stays where the three answers are listed to choose from (the
- * who-sees-it sheet, the list's form): a list of three rows wants a
- * glyph on each.
- */
-export function marked(owned: boolean, seen: Visibility): boolean {
-  return owned && seen !== 'public';
-}
-
-/**
  * Whether this reader may like the list — the app's copy of the insert
  * policy on `collection_likes` (`20261117233000_likes_in_the_group.sql`).
  *

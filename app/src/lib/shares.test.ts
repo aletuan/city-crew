@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  diffShares, likeable, marked, namesBriefly, shareCta, shareRows, sharesByList, visibilityOf, type ShareRow,
+  diffShares, likeable, namesBriefly, shareCta, shareRows, sharesByList, visibilityOf, type ShareRow,
   SEEN_GLYPH, seenGloss, seenName,
 } from './shares';
 
@@ -178,23 +178,5 @@ describe('likeable', () => {
   // Not public and not yours: it reached you through a share.
   it('is the friend’s on a list lent to them', () => {
     expect(likeable(false, false, 0)).toBe(true);
-  });
-});
-
-// No mark is public: a padlock is private, two heads are friends.
-describe('marked', () => {
-  it('marks a list of your own that is private or shared with friends', () => {
-    expect(marked(true, 'private')).toBe(true);
-    expect(marked(true, 'friends')).toBe(true);
-  });
-
-  it('marks no public list', () => {
-    expect(marked(true, 'public')).toBe(false);
-  });
-
-  it('marks nothing that is not yours, whatever it is', () => {
-    expect(marked(false, 'private')).toBe(false);
-    expect(marked(false, 'friends')).toBe(false);
-    expect(marked(false, 'public')).toBe(false);
   });
 });
