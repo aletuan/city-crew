@@ -72,18 +72,24 @@ export function cleanTaste(stored: readonly string[], known: readonly string[]):
 }
 
 /**
- * Whether the faint rule after interest `i` on Profile is drawn: only when
- * the next interest stands on the same line (owner, 3 Nov 2026). Five
- * interests wrap, and a rule ending a line, or starting one, separates
- * nothing. `count` is how many interests there are; `ys` their measured
- * tops, as many as have been measured; until both are measured
- * the rule is drawn, as one line is the common case. The rule keeps its
- * room when it is not drawn, so hiding it never moves an interest from
- * one line to the other and back.
+ * The interests in the order the picker lays them out, for showing them
+ * on Profile (owner, 18 Nov 2026).
+ *
+ * They are stored in the order they were pressed, and were shown in it:
+ * choose Nature and then Culture, and Profile read "Nature, Culture"
+ * where the picker one screen away has Culture before Nature. The same
+ * choice in two orders on two screens was the owner's "something is off
+ * between the display and the edit". The picker's order is the
+ * taxonomy's (`known`), so that is the order here.
+ *
+ * Only for showing. What is stored stays as pressed: the cap keeps the
+ * first five of that list (`cleanTaste`), and reordering the row itself
+ * would change which five survive.
+ *
+ * (`ruleAfter` stood here from 3 Nov 2026: whether to draw the faint
+ * rule between two interests on one line. The interests are a grid of
+ * two columns now and the columns do the separating.)
  */
-export function ruleAfter(ys: readonly (number | undefined)[], i: number, count: number): boolean {
-  if (i >= count - 1) return false;
-  const here = ys[i];
-  const next = ys[i + 1];
-  return here === undefined || next === undefined || here === next;
+export function tasteInOrder(taste: readonly string[], known: readonly string[]): string[] {
+  return known.filter((k) => taste.includes(k));
 }

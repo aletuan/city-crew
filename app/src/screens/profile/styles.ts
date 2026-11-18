@@ -40,26 +40,24 @@ export const GLYPH_SLOT = 44;
 export const ROW_GLYPH = 19;
 
 export const s = StyleSheet.create({
-  // The first glyph on the About rows' column, the rest by their names
-  // (owner, 3 Nov 2026). The column is the middle of `rowGlyph`'s 44pt
-  // slot, so the row starts half of what is left beside a 19pt glyph in:
-  // (44 − 19) / 2. A name 8pt after its glyph; 24 between one interest and
-  // the next, with the faint rule halfway: 12, the rule, 12. Up to five
-  // wrap to a second line, 12 below, starting on the column; a rule
-  // whose next interest has wrapped is not drawn (`ruleAfter`). 14 above
-  // and below, as the card's rows.
+  // The first column's glyphs on the About rows' column (owner, 3 Nov
+  // 2026): that column is the middle of `rowGlyph`'s 44pt slot, so the
+  // grid starts half of what is left beside a 19pt glyph in:
+  // (44 − 19) / 2. A name 8pt after its glyph.
+  //
+  // Two columns of half the row each (owner, 18 Nov 2026), so the second
+  // column's glyphs stand under one another whatever the names before
+  // them are. 12 between rows, as the lines of the flow it replaces had;
+  // 14 above and below, as the card's rows. A name keeps to one line and
+  // gives way before its column does: the longest today, "Thiên nhiên",
+  // is some 85pt at this type and a column leaves about 116 on a 393pt
+  // phone — computed from the type, not measured on one.
   tasteChips: {
-    flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 12,
+    flexDirection: 'row', flexWrap: 'wrap', rowGap: 12,
     paddingVertical: 14, paddingLeft: (GLYPH_SLOT - ROW_GLYPH) / 2,
   },
-  tasteItem: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 24 },
-  // The card's own row divider, stood on end: its hairline and its ink.
-  // 18 tall, a little under the name's 21 line, as the reference draws it.
-  tasteRule: {
-    width: StyleSheet.hairlineWidth, height: 18, marginLeft: 4,
-    backgroundColor: colors.borderGlassSoft,
-  },
-  tasteRuleOff: { opacity: 0 },
+  tasteItem: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 24, paddingRight: 12 },
+  tasteName: { flexShrink: 1 },
   tasteEmpty: { paddingVertical: 14 },
   // The role badge and the Edit profile button, one row under the name.
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },

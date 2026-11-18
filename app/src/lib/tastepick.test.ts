@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanTaste, ruleAfter, tasteFull, TASTE_MAX, toggleTaste } from './tastepick';
+import { cleanTaste, tasteFull, tasteInOrder, TASTE_MAX, toggleTaste } from './tastepick';
 import { CATEGORIES } from './categories';
 
 const KNOWN = Object.keys(CATEGORIES);
@@ -74,29 +74,26 @@ describe('cleanTaste', () => {
   });
 });
 
-describe('ruleAfter', () => {
-  it('draws the rule between two interests on one line', () => {
-    expect(ruleAfter([10, 10, 10], 0, 3)).toBe(true);
-    expect(ruleAfter([10, 10, 10], 1, 3)).toBe(true);
+describe('tasteInOrder', () => {
+  const known = ['cafes', 'eats', 'views', 'heritage', 'nature'];
+
+  it('shows the interests in the picker’s order, whatever order they were pressed in', () => {
+    expect(tasteInOrder(['nature', 'heritage', 'eats'], known)).toEqual(['eats', 'heritage', 'nature']);
+    expect(tasteInOrder(['views', 'cafes'], known)).toEqual(['cafes', 'views']);
   });
 
-  it('draws none after the last interest', () => {
-    expect(ruleAfter([10, 10], 1, 2)).toBe(false);
-    expect(ruleAfter([10], 0, 1)).toBe(false);
-    expect(ruleAfter([], 1, 2)).toBe(false);
+  it('leaves a list already in that order as it is, and an empty one empty', () => {
+    expect(tasteInOrder(['cafes', 'nature'], known)).toEqual(['cafes', 'nature']);
+    expect(tasteInOrder([], known)).toEqual([]);
   });
 
-  it('draws none where the next interest starts a new line', () => {
-    expect(ruleAfter([10, 10, 50], 1, 3)).toBe(false);
-    expect(ruleAfter([10, 10, 50], 0, 3)).toBe(true);
+  it('shows nothing the taxonomy does not have', () => {
+    expect(tasteInOrder(['Nitendo', 'eats'], known)).toEqual(['eats']);
   });
 
-  // Nothing measured yet — the first frame, or a build that does not
-  // measure — is one line, the common case.
-  it('draws it until both tops are measured', () => {
-    expect(ruleAfter([], 0, 2)).toBe(true);
-    expect(ruleAfter([undefined, undefined], 0, 2)).toBe(true);
-    expect(ruleAfter([10, undefined], 0, 2)).toBe(true);
-    expect(ruleAfter([undefined, 10], 0, 2)).toBe(true);
+  it('does not touch the list it was handed', () => {
+    const pressed = ['nature', 'cafes'];
+    tasteInOrder(pressed, known);
+    expect(pressed).toEqual(['nature', 'cafes']);
   });
 });
