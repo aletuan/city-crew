@@ -29,6 +29,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from './ui/controls';
+import { Glyph } from './ui/glyph';
 import { Avatar } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
 import { normalizeHandle } from '../lib/handle';
@@ -42,14 +43,17 @@ export const FACE = 36;
  *  before 13 Nov, and what is left of 36 when the eye should read "under"
  *  before it reads "who". */
 export const FACE_REPLY = 28;
+/** The ⋯ at a row's end: 18, the size the feed card draws its heart and
+ *  bubble at — a mark of the same weight. */
+const MORE_GLYPH = 18;
 /** How far in each level sits: a root's face and its gap (36 + 10), so an
  *  answer's face starts under the root's words. The second step is the
  *  answer's own (28 + 10). On a 393pt screen with the page's margins that
- *  leaves the deepest level some 240pt of words — drawn to scale, not
+ *  leaves the deepest level some 200pt of words beside its ⋯ — drawn to scale, not
  *  measured on a phone. */
 export const INDENT = [0, FACE + 10, FACE + 10 + FACE_REPLY + 10] as const;
 
-export default function CommentRow({ comment, when, onPerson, onPlace, onReply }: {
+export default function CommentRow({ comment, when, onPerson, onPlace, onReply, onMore }: {
   comment: Placed;
   /** How long ago, already in words. */
   when: string;
@@ -58,6 +62,9 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply }
   onPlace?: (placeId: string) => void;
   /** Answer this comment. Absent on a page that is read-only. */
   onReply?: () => void;
+  /** Raise what can be done about this comment — delete, report. Absent
+   *  where there is nothing to offer. */
+  onMore?: () => void;
 }) {
   const { t } = useI18n();
   const indent = { marginLeft: INDENT[comment.level] };
@@ -136,6 +143,22 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply }
           </PressableScale>
         ) : null}
       </View>
+      {/* What can be done about it, at the row's end and outside the line
+          VoiceOver reads. The glyph is 18 in the quiet ink — it is on
+          every row, and a page of them at full ink would be a column of
+          dots louder than the names. 44 to the thumb by its slop. */}
+      {onMore ? (
+        <PressableScale
+          onPress={onMore}
+          haptic="selection"
+          hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
+          accessibilityRole="button"
+          accessibilityLabel={t(`More about ${who}'s comment`, `Thêm về bình luận của ${who}`, `${who}さんのコメントのその他`, `关于 ${who} 的评论的更多操作`, `關於 ${who} 的評論的更多操作`)}
+          testID="comment-more-menu"
+        >
+          <Glyph name="ellipsis-horizontal" size={MORE_GLYPH} color={colors.textTertiary} />
+        </PressableScale>
+      ) : null}
     </View>
   );
 }

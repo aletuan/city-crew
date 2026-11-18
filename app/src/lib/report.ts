@@ -38,10 +38,12 @@ export function cleanNote(note: string | null | undefined): string | null {
  * it — a control that exists to fail is worse than no control. Your own
  * collection is the same case wearing a different hat: it is yours to
  * delete, and reporting it to the desk would be asking somebody else to
- * do what the row above already does.
+ * do what the row above already does. A comment is a collection's case
+ * exactly: yours is yours to delete, and one whose writer is unknown —
+ * an account since deleted — has nobody to report.
  */
 export function reportable(
-  target: { kind: 'collection' | 'profile'; ownerId?: string | null; id: string },
+  target: { kind: 'collection' | 'profile' | 'comment'; ownerId?: string | null; id: string },
   me: string | null | undefined,
 ): boolean {
   if (!me) return false;

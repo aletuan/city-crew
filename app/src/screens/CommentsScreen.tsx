@@ -60,6 +60,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import CommentRow, { INDENT } from '../components/CommentRow';
+import { useCommentMenu } from './comments/useCommentMenu';
 import { Avatar, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { agoLabel } from '../lib/ago';
@@ -131,6 +132,8 @@ export default function CommentsScreen({ navigation, route }: {
   const { profile } = useProfile();
   const { askToSignIn } = useSaveActions();
   const { subject } = route.params;
+  // Delete your own, report somebody else's — `useCommentMenu`.
+  const { menuOf, node: menuSheet } = useCommentMenu(session?.user?.id ?? null);
   const write = (to?: Placed) => {
     if (!session?.user?.id) { askToSignIn('comment'); return; }
     navigation.navigate('CommentForm', to
@@ -143,9 +146,9 @@ export default function CommentsScreen({ navigation, route }: {
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(b.root)} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(b.root)} onMore={menuOf(b.root)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(r)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(r)} onMore={menuOf(r)} />
         ))}
         {more > 0 ? (
           <PressableScale
@@ -228,6 +231,7 @@ export default function CommentsScreen({ navigation, route }: {
         {state}
         {branches.slice(0, shown).map(branch)}
       </ScrollView>
+      {menuSheet}
     </Screen>
   );
 }

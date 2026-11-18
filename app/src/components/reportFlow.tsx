@@ -23,7 +23,7 @@ import { useI18n } from '../lib/i18n';
 import { reportable, REPORT_REASONS, type ReportReason } from '../lib/report';
 
 export type ReportTarget = {
-  kind: 'collection' | 'profile';
+  kind: 'collection' | 'profile' | 'comment';
   /** collections.id or profiles.id — what the row will point at. */
   id: string;
   /** Whose it is, for a collection. Your own is not reportable; see

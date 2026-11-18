@@ -114,6 +114,26 @@ describe('the way to answer', () => {
   });
 });
 
+describe('the ⋯ at its end', () => {
+  it('is not drawn where the page has nothing to offer', () => {
+    show(placed());
+    expect(screen.queryByTestId('comment-more-menu')).toBeNull();
+  });
+
+  it('raises what can be done, as a control of its own named for whose comment it is', () => {
+    const onMore = vi.fn();
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onMore={onMore} />);
+    const more = screen.getByTestId('comment-more-menu');
+    expect(more.getAttribute('aria-label')).toBe("More about trang's comment");
+    expect(screen.getByTestId('comment-words').contains(more)).toBe(false);
+    // After the words, at the row's end.
+    expect(screen.getByTestId('comment-row').lastElementChild!.contains(more)).toBe(true);
+    fireEvent.click(more);
+    expect(onMore).toHaveBeenCalledTimes(1);
+    expect(onPerson).not.toHaveBeenCalled();
+  });
+});
+
 describe('a tag', () => {
   const tagged = placed({
     body: '🍜 @trang at Cafe!',
