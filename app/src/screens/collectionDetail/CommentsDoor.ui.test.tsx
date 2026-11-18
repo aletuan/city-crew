@@ -25,10 +25,14 @@ vi.mock('../../lib/auth', () => ({
 }));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: 'vi', t: (_en: string, vi: string) => vi }) }));
 
+import { CommentQuickProvider } from '../../components/CommentQuick';
 import { CommentsDoor } from './CommentsDoor';
 
 const onPress = vi.fn();
-const show = (list: Parameters<typeof CommentsDoor>[0]['list']) => render(<CommentsDoor list={list} about="Hội An Coffee" onPress={onPress} />);
+// Under the app's one field, as the page is.
+const show = (list: Parameters<typeof CommentsDoor>[0]['list']) => render(
+  <CommentQuickProvider><CommentsDoor list={list} about="Hội An Coffee" onPress={onPress} /></CommentQuickProvider>,
+);
 const door = () => screen.queryByTestId('collection-comments');
 
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
@@ -60,6 +64,14 @@ describe('CommentsDoor', () => {
     expect(screen.getByTestId('comment-quick')).toBeTruthy();
     expect(screen.getByTestId('composer-about').textContent).toBe('Hội An Coffee');
     expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('opens the thread where no field is mounted to raise', async () => {
+    appFlags.set('comments', true);
+    render(<CommentsDoor list={{ id: 'c1', is_public: true }} onPress={onPress} />);
+    await flush();
+    fireEvent.click(door()!);
+    expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
   });
 
   it('opens the thread for a guest, and before the count is in', async () => {

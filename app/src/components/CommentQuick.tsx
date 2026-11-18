@@ -21,7 +21,8 @@
 //
 // A `Modal`, transparent: it is above the page and above the floating
 // tab bar without either having to move, so a screen that raises it
-// changes nothing of its own layout. The dim behind it is a press that
+// changes nothing of its own layout. Mounted once for the whole app
+// (`CommentQuickProvider`), not by each bubble — where the reason is. The dim behind it is a press that
 // puts it away, as on every sheet in the app; the words typed go with
 // it — the same as leaving the thread's page with words in its field.
 //
@@ -29,7 +30,7 @@
 // this counts one, and the field goes away. The reader stays where they
 // were; the comment is a press on that bubble away.
 
-import React, { useState } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from './CommentComposer';
@@ -48,6 +49,8 @@ import { useI18n } from '../lib/i18n';
  * The thread otherwise: there are comments to read; or the count is not
  * in yet, and "none" would be a guess that hides them; or nobody is
  * signed in, and the thread's page is where a guest is asked to be.
+ * (And where no field is mounted to raise, a caller opens the thread
+ * without asking this — `useQuickComment` answers null.)
  */
 export function quickOrThread(at: {
   me: string | null; n: number; loaded: boolean; loading: boolean;
@@ -103,14 +106,50 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
   );
 }
 
-/** The field for a screen: the press that raises it, and what to render
- *  once, anywhere — as `useReport` hands back its sheet. */
-export function useQuickComment() {
+type Quick = (subject: Subject, about?: string) => void;
+const Ctx = createContext<Quick | null>(null);
+
+/**
+ * The one field of the app, mounted above the navigator.
+ *
+ * ── why it is here and not beside the bubble that raises it ──
+ *
+ * For an evening each bubble rendered its own field next to itself
+ * (`useQuickComment` handed back a `node`), which put the `Modal` inside
+ * whatever the bubble was inside: the list page's scroll view, the
+ * feed's. On a phone the send button then took two presses — the first
+ * put the keyboard away and did nothing else (owner, 18 Nov 2026).
+ *
+ * That is React Native's scroll view, not this field. A scroll view
+ * that is not told `keyboardShouldPersistTaps` answers the first touch
+ * outside a focused input by dismissing the keyboard and swallowing the
+ * touch — and it decides what is "inside" it by the React tree, so a
+ * `Modal` rendered among its children counts, though it is drawn over
+ * the whole screen (facebook/react-native#28871). The thread's own field
+ * never had this: it is a sibling of its scroll view, not a child.
+ *
+ * Rejected: `keyboardShouldPersistTaps="handled"` on each scroll view a
+ * bubble sits in. It works, and it has to be remembered for the next
+ * page that draws a bubble; forgotten, it fails the same quiet way. One
+ * field here, with no scroll view above it, cannot be put in the wrong
+ * place.
+ */
+export function CommentQuickProvider({ children }: { children: React.ReactNode }) {
   const [target, setTarget] = useState<Target | null>(null);
-  return {
-    quick: (subject: Subject, about?: string) => setTarget({ subject, about }),
-    node: <CommentQuick target={target} onClose={() => setTarget(null)} />,
-  };
+  const quick = useCallback<Quick>((subject, about) => setTarget({ subject, about }), []);
+  return (
+    <Ctx.Provider value={quick}>
+      {children}
+      <CommentQuick target={target} onClose={() => setTarget(null)} />
+    </Ctx.Provider>
+  );
+}
+
+/** The press that raises the field — or null where there is no field to
+ *  raise (a screen rendered outside the provider, as in its own tests),
+ *  and then a bubble opens its thread. */
+export function useQuickComment(): Quick | null {
+  return useContext(Ctx);
 }
 
 const s = StyleSheet.create({

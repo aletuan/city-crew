@@ -30,7 +30,11 @@ vi.mock('../../lib/auth', () => ({
 }));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
 
+import { CommentQuickProvider } from '../../components/CommentQuick';
 import { useCardComments } from './useCardComments';
+
+/** Under the app's one field, as every screen is. */
+const inApp = (el: React.ReactElement) => render(<CommentQuickProvider>{el}</CommentQuickProvider>);
 
 const list = (id: string | null, is_public = true) => ({ id, slug: `s-${id}`, is_public }) as unknown as Collection;
 const open = vi.fn();
@@ -38,10 +42,9 @@ const open = vi.fn();
 // handed (or null), whether it has a door, and the door itself as the
 // press.
 function Probe({ drawn, withOpen = true }: { drawn: Collection[]; withOpen?: boolean }) {
-  const { talkOf: of, node } = useCardComments(drawn, (c) => c.is_public === true, (c) => `List ${c.slug}`, withOpen ? open : undefined);
+  const of = useCardComments(drawn, (c) => c.is_public === true, (c) => `List ${c.slug}`, withOpen ? open : undefined);
   return (
     <>
-      {node}
       {drawn.map((c) => {
         const card = of(c);
         return (
@@ -108,7 +111,7 @@ describe('useCardComments', () => {
       appFlags.set('comments', true);
       data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 3, latest: [] } }));
       const [a, b] = [list('c1'), list('c2')];
-      render(<Probe drawn={[a, b]} />);
+      inApp(<Probe drawn={[a, b]} />);
       await flush();
       fireEvent.click(screen.getByTestId('card-s-c2'));
       expect(screen.getByTestId('comment-quick')).toBeTruthy();
@@ -120,7 +123,7 @@ describe('useCardComments', () => {
       appFlags.set('comments', true);
       state.me = null;
       const a = list('c1');
-      render(<Probe drawn={[a]} />);
+      inApp(<Probe drawn={[a]} />);
       await flush();
       fireEvent.click(screen.getByTestId('card-s-c1'));
       expect(open).toHaveBeenCalledExactlyOnceWith(a);
@@ -131,11 +134,20 @@ describe('useCardComments', () => {
       appFlags.set('comments', true);
       data.fetchPreviews.mockImplementation(() => new Promise(() => {}));
       const a = list('c1');
-      render(<Probe drawn={[a]} />);
+      inApp(<Probe drawn={[a]} />);
       await flush();
       fireEvent.click(screen.getByTestId('card-s-c1'));
       expect(open).toHaveBeenCalledExactlyOnceWith(a);
       expect(screen.queryByTestId('comment-quick')).toBeNull();
+    });
+
+    it('opens the thread where no field is mounted to raise', async () => {
+      appFlags.set('comments', true);
+      const a = list('c1');
+      render(<Probe drawn={[a]} />);
+      await flush();
+      fireEvent.click(screen.getByTestId('card-s-c1'));
+      expect(open).toHaveBeenCalledExactlyOnceWith(a);
     });
   });
 
