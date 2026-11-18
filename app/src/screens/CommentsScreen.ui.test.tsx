@@ -362,3 +362,30 @@ describe('writing', () => {
     expect(screen.queryByTestId('comments-loading')).toBeNull();
   });
 });
+
+// C4b: the ⋯ on each comment. What the menu holds and does is pinned in
+// `useCommentMenu`'s test; here it is which rows wear one, and that the
+// page raises the right sheet for the reader it has.
+describe('what can be done about a comment', () => {
+  it('puts a ⋯ on every living comment for a reader who is signed in, and none for a guest', async () => {
+    const rows = [row('a', null, { gone: true, body: null, author: null, handle: null }), row('a1', 'a'), row('b', null)];
+    await show(rows);
+    expect(screen.getAllByTestId('comment-more-menu')).toHaveLength(2);
+    cleanup();
+    state.me = null;
+    await show(rows);
+    expect(screen.queryByTestId('comment-more-menu')).toBeNull();
+  });
+
+  it('offers the reader\'s own comment for deleting and anybody else\'s for reporting', async () => {
+    await show([row('mine', null, { author: 'me' }), row('theirs', null)]);
+    fireEvent.click(screen.getAllByTestId('comment-more-menu')[0]);
+    expect(screen.getByTestId('sheet-action-delete')).toBeTruthy();
+    expect(screen.queryByTestId('sheet-action-report')).toBeNull();
+    cleanup();
+    await show([row('mine', null, { author: 'me' }), row('theirs', null)]);
+    fireEvent.click(screen.getAllByTestId('comment-more-menu')[1]);
+    expect(screen.getByTestId('sheet-action-report')).toBeTruthy();
+    expect(screen.queryByTestId('sheet-action-delete')).toBeNull();
+  });
+});

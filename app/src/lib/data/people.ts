@@ -176,7 +176,7 @@ export async function fetchMutualSaves(others: string[]): Promise<Record<string,
 
 export async function submitReport(input: {
   reporter: string;
-  kind: 'collection' | 'profile';
+  kind: 'collection' | 'profile' | 'comment';
   targetId: string;
   reason: import('../report').ReportReason;
   note?: string | null;

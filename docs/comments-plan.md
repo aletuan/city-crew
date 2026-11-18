@@ -230,9 +230,16 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Sau khi đăng, luồng, số trên thẻ và số trên nút đều tự hỏi lại
   (`lib/commentsChanged`). Không vẽ trước bình luận khi máy chủ chưa nhận.
 
-*C4b — chưa làm:*
-- Xoá bình luận của mình.
-- Báo cáo một bình luận (dùng lại luồng báo cáo đã có).
+*C4b — xong:*
+- Nút ⋯ ở cuối mỗi bình luận (chỉ khi đã đăng nhập, và không có trên dòng
+  "đã xoá").
+- Bình luận của mình: "Xoá bình luận", hỏi lại một lần và nói trước điều
+  gì còn lại (có trả lời thì để lại dòng "Bình luận đã bị xoá"). Xoá xong
+  thì luồng và các con số tự tải lại; lỗi thì báo và không đổi gì.
+- Bình luận của người khác: "Báo cáo bình luận", đi qua đúng luồng báo
+  cáo sẵn có (bốn lý do, cùng hàng chờ của Data Desk) với loại `comment`.
+- Chủ bộ xoá bình luận của người khác vẫn là C6, chưa có ở đây dù máy chủ
+  đã cho phép.
 
 **C5. Tag**
 - Cần trước: tag địa điểm hiện chỉ mang `id`, mà trang địa điểm mở bằng
