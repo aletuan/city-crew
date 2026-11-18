@@ -69,20 +69,23 @@
 // mark of what the app drafts or picks by itself), and `user-round` and
 // `message-square-text` again.
 //
-// ── the paper plane (owner, 18 Nov 2026) ──
+// ── the paper plane, for two hours (owner, 18 Nov 2026) ──
 //
-// An eighth: the plane on a list's Share button, and on the invitation
-// sheet's "send" row. Ionicons' was there for an hour: three sharp
-// points in a thin line, beside a heart that is all curves, and the
-// owner asked for it softer. Lucide's `send` is the mark he had been
-// shown when he chose a plane in the first place — the same plane, the
-// same tilt, its three tips rounded — and at `LINE_STROKE` it weighs
-// what the heart's outline weighs.
+// An eighth mark was routed here that morning: Lucide's `send` for the
+// plane on a list's Share button, because Ionicons' was called "three
+// sharp points". Drawn side by side at 160pt the two are one shape —
+// Lucide's a little larger and a little thinner — so the move bought no
+// softness, and put a mark from this set beside a heart from the other.
+// It went back the same morning, and the rule it broke is written down:
 //
-// The same morning he asked whether it should lie level
-// (`send-horizontal`) and set that aside: level is the mark on a message
-// box's send button, and tilted is the one Instagram and Threads wear
-// for passing a thing to somebody.
+//   **the line set is for getting about and for marks of identity** —
+//   the tab bar, the star of a role, the feather of a bio. Everything
+//   else is Ionicons, so two marks in one row are of one family.
+//
+// What the owner had wanted was the softness of the plane on Threads,
+// which is level, round-cornered and thick-stroked, and Meta's own.
+// Ionicons' `send-outline` is the nearest in the family and is what the
+// Share button wears now (`collectionDetail/Share`).
 //
 // ── the line ──
 //
@@ -109,7 +112,6 @@ import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import Compass from 'lucide-react-native/icons/compass';
 import Feather from 'lucide-react-native/icons/feather';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
-import Send from 'lucide-react-native/icons/send';
 import Star from 'lucide-react-native/icons/star';
 import User from 'lucide-react-native/icons/user';
 
@@ -138,7 +140,6 @@ const LINE: Partial<Record<GlyphName, [LucideIcon, boolean]>> = {
   'person-outline': [User, false],
   star: [Star, true],
   'star-outline': [Star, false],
-  'paper-plane-outline': [Send, false],
 };
 
 /** True when `name` is drawn from the line set rather than Ionicons. */
