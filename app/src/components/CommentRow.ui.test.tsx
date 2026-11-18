@@ -3,8 +3,7 @@
 // One comment, as drawn: who and when on a line and the words under it;
 // how far in each level sits and which face it wears; the name a deep
 // answer carries; a tag as something to press, by the handle a person
-// has today; and the one quiet line a comment that is gone leaves, with
-// nothing of whose it was.
+// has today.
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,7 +20,7 @@ import CommentRow, { FACE, FACE_REPLY, INDENT } from './CommentRow';
 
 const placed = (over: Partial<Placed> = {}): Placed => ({
   id: 'k1', parent_id: null, root_id: null, depth: 0, level: 0, to: null,
-  body: 'Lovely rooftop', created_at: '2026-11-18T00:00:00Z', gone: false,
+  body: 'Lovely rooftop', created_at: '2026-11-18T00:00:00Z',
   author: 'u1', handle: '@Trang', full_name: 'Trang Le', avatar_url: 'https://faces/trang.jpg', mentions: [],
   ...over,
 });
@@ -99,7 +98,9 @@ describe('the way to answer', () => {
   it('is a control of its own under the words, named for whom it answers', () => {
     render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onReply={onReply} />);
     const reply = screen.getByTestId('comment-reply');
-    expect(reply.textContent).toBe('Reply');
+    // A bubble, not a word: its name is what says it.
+    expect(reply.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('chatbubble-outline');
+    expect(reply.textContent).toBe('');
     expect(reply.getAttribute('aria-label')).toBe('Reply to trang');
     // Outside the line VoiceOver reads as one, or it could not be reached.
     expect(screen.getByTestId('comment-words').contains(reply)).toBe(false);
@@ -108,10 +109,6 @@ describe('the way to answer', () => {
     expect(onPerson).not.toHaveBeenCalled();
   });
 
-  it('is not drawn on a comment that is gone, whatever the page gave', () => {
-    render(<CommentRow comment={placed({ gone: true, body: null, handle: null })} when="" onPerson={onPerson} onReply={onReply} />);
-    expect(screen.queryByTestId('comment-reply')).toBeNull();
-  });
 });
 
 describe('the ⋯ at its end', () => {
@@ -175,25 +172,5 @@ describe('a tag', () => {
     show(tagged, true);
     fireEvent.click(screen.getByTestId('comment-tag-place'));
     expect(onPlace).toHaveBeenCalledWith('p1');
-  });
-});
-
-describe('a comment that is gone', () => {
-  const husk = placed({ gone: true, body: null, author: null, handle: null, full_name: null, avatar_url: null, level: 1 });
-
-  it('is one quiet line where it stood, with no face, no name and no time', () => {
-    show(husk);
-    const line = screen.getByTestId('comment-gone');
-    expect(line.textContent).toBe('This comment was deleted');
-    expect(viewStyleOf(line).marginLeft).toBe(INDENT[1]);
-    expect(line.querySelector('img')).toBeNull();
-    expect(screen.queryByTestId('comment-row')).toBeNull();
-    expect(screen.queryByTestId('comment-when')).toBeNull();
-  });
-
-  it('says so in the reader\'s language', () => {
-    state.lang = 'vi';
-    show(husk);
-    expect(screen.getByTestId('comment-gone').textContent).toBe('Bình luận đã bị xoá');
   });
 });

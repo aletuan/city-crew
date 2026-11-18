@@ -63,12 +63,17 @@ export const COUNT_FROM = 50;
  *  of 15/21 type and its padding. Past that the thread above is gone. */
 const FIELD_MAX_H = 4 * 21 + 16;
 
-export default function CommentComposer({ avatarUrl, replyTo, onCancelReply, onSend, onGuest, inputRef, bottomInset = 0 }: {
+export default function CommentComposer({ avatarUrl, replyTo, about, onCancelReply, onSend, onGuest, inputRef, autoFocus, bottomInset = 0 }: {
   /** The reader's own face. */
   avatarUrl?: string | null;
   /** Whom the next words answer, or nobody. */
   replyTo: { who: string } | null;
-  onCancelReply: () => void;
+  /** What the words are about, said above the field where there is no
+   *  thread behind it to say so — the field a card raises over a feed
+   *  (`CommentQuick`). Not drawn while `replyTo` says whom instead. */
+  about?: string;
+  /** Absent where nothing can be answered, and then is never called. */
+  onCancelReply?: () => void;
   /** Send the words. Resolves when the server took them; rejects with
    *  what it said when it did not. */
   onSend: (body: string) => Promise<void>;
@@ -77,6 +82,8 @@ export default function CommentComposer({ avatarUrl, replyTo, onCancelReply, onS
   onGuest?: () => void;
   /** So the page can put the cursor in the field when "Reply" is pressed. */
   inputRef?: React.RefObject<React.ComponentRef<typeof TextInput> | null>;
+  /** Open with the cursor in the field and the keyboard up. */
+  autoFocus?: boolean;
   /** The phone's own margin under the bar — the home indicator's. */
   bottomInset?: number;
 }) {
@@ -137,10 +144,14 @@ export default function CommentComposer({ avatarUrl, replyTo, onCancelReply, onS
           </PressableScale>
         </View>
       ) : null}
+      {about && !replyTo ? (
+        <Text style={[s.replyingText, s.about]} numberOfLines={1} testID="composer-about">{about}</Text>
+      ) : null}
       <View style={s.pill}>
         <Avatar url={avatarUrl} size={FACE} />
         <TextInput
           ref={inputRef}
+          autoFocus={autoFocus}
           style={s.field}
           value={body}
           onChangeText={setBody}
@@ -210,5 +221,7 @@ const s = StyleSheet.create({
   sendOff: { opacity: 0.35 },
   replying: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8 },
   replyingText: { flex: 1, color: colors.textTertiary, fontSize: 13, lineHeight: 18 },
+  // The same line with nothing beside it: it keeps the row's inset, not its `flex`.
+  about: { flex: 0, paddingHorizontal: 8 },
   error: { color: colors.bad, fontSize: 13, lineHeight: 18, paddingHorizontal: 8 },
 });

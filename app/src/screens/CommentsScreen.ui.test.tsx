@@ -2,8 +2,7 @@
 //
 // A thread, read (C3): what the page asks for (the subject it was handed,
 // once), the order and the indent it draws the answer in, the fold under
-// a root and what opens it, the roots arriving as the reader scrolls, a
-// gone comment as its line, and the four states — waiting, empty, failed
+// a root and what opens it, the roots arriving as the reader scrolls, and the four states — waiting, empty, failed
 // with Try again, and rows kept when a refresh fails behind them.
 // `threadOf`, `agoLabel`, `nearEnd` and the hook under the page run for
 // real; only the one RPC wrapper and the providers are stood in.
@@ -64,7 +63,7 @@ import CommentsScreen, { PAGE, REPLIES_SHOWN } from './CommentsScreen';
 
 const row = (id: string, parent: string | null, over: Partial<Row> = {}): Row => ({
   id, parent_id: parent, root_id: null, depth: parent ? 1 : 0, body: `says ${id}`, created_at: ago(60),
-  gone: false, author: `u-${id}`, handle: `h${id}`, full_name: null, avatar_url: null, mentions: [],
+  author: `u-${id}`, handle: `h${id}`, full_name: null, avatar_url: null, mentions: [],
   ...over,
 });
 const SUBJECT: Subject = { kind: 'collection', id: 'c1' };
@@ -107,9 +106,8 @@ const scrollAt = (y: number, content: number) => act(() => {
 const page = () => propsWhere((p) => 'onRefresh' in p && 'refreshing' in p) as { onRefresh: () => void; refreshing: boolean };
 
 const branches = () => screen.queryAllByTestId('comment-branch');
-/** Each branch as the bodies it draws, top to bottom; a gone line as "—". */
-const drawn = () => branches().map((b) => [...b.querySelectorAll('[data-testid="comment-body"],[data-testid="comment-gone"]')]
-  .map((el) => (el.getAttribute('data-testid') === 'comment-gone' ? '—' : el.textContent)));
+/** Each branch as the bodies it draws, top to bottom. */
+const drawn = () => branches().map((b) => [...b.querySelectorAll('[data-testid="comment-body"]')].map((el) => el.textContent));
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -152,12 +150,6 @@ describe('a thread', () => {
   it('says how long ago each was written', async () => {
     await show([row('a', null, { created_at: ago(5) })]);
     expect(screen.getByTestId('comment-when').textContent).toBe('5m ago');
-  });
-
-  it('draws a gone comment as its line while an answer hangs from it, and not otherwise', async () => {
-    const gone = { gone: true, body: null, author: null, handle: null };
-    await show([row('a', null, gone), row('a1', 'a'), row('b', null, gone)]);
-    expect(drawn()).toEqual([['—', 'says a1']]);
   });
 
   it('opens a person from their face', async () => {
@@ -441,10 +433,10 @@ describe('writing', () => {
 // `useCommentMenu`'s test; here it is which rows wear one, and that the
 // page raises the right sheet for the reader it has.
 describe('what can be done about a comment', () => {
-  it('puts a ⋯ on every living comment for a reader who is signed in, and none for a guest', async () => {
-    const rows = [row('a', null, { gone: true, body: null, author: null, handle: null }), row('a1', 'a'), row('b', null)];
+  it('puts a ⋯ on every comment for a reader who is signed in, and none for a guest', async () => {
+    const rows = [row('a', null), row('a1', 'a'), row('b', null)];
     await show(rows);
-    expect(screen.getAllByTestId('comment-more-menu')).toHaveLength(2);
+    expect(screen.getAllByTestId('comment-more-menu')).toHaveLength(3);
     cleanup();
     state.me = null;
     await show(rows);

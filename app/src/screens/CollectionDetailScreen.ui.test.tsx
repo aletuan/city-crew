@@ -165,7 +165,7 @@ vi.mock('../lib/data/stats', () => ({ recordCollectionView: spies.countView }));
 // What the door to the comments asks for its figure, when it is drawn.
 vi.mock('../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  fetchPreviews: async () => ({}),
+  fetchPreviews: async () => ({ c1: { n: 2, latest: [] } }),
 }));
 vi.mock('../lib/crew', () => ({
   useCrew: () => ({
@@ -4287,10 +4287,12 @@ describe('the way into the comments', () => {
     expect(door()).toBeNull();
   });
 
-  it('stands after Share and before Activity on a public list, and opens the list\'s thread', () => {
+  it('stands after Share and before Activity on a public list, and opens the list\'s thread', async () => {
     appFlags.set('comments', true);
     state.mine = [collection({ is_public: true })];
     const { raw } = show();
+    // The count lands: the thread has comments, so the door opens it.
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     const row = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
     // In reading order, wherever each sits in its own wrapper.
     const doors = ['collection-share', 'collection-comments', 'collection-activity-link'];
