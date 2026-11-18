@@ -69,6 +69,102 @@ describe('flagsStore', () => {
     expect(s.get('photo_attribution')).toBe(true);
   });
 
+  // On for one account (`app_flag_testers`, 18 Nov 2026).
+  describe('the switches that are on for the reader alone', () => {
+    const flagsOff = { data: [{ key: 'comments', enabled: false }] };
+
+    it('are not asked about for nobody', async () => {
+      const fake = fakeSupabase();
+      fake.replies(flagsOff);
+      const s = flagsStore();
+      await s.load(client(fake));
+      expect(fake.log.map((q) => q.table)).toEqual(['app_flags']);
+      expect(s.get('comments')).toBe(false);
+    });
+
+    it('turn a switch on for somebody signed in, whatever the table says', async () => {
+      const fake = fakeSupabase();
+      fake.replies(flagsOff, { data: [{ key: 'comments' }] });
+      const s = flagsStore();
+      await s.load(client(fake), true);
+      expect(fake.log.map((q) => [q.table, q.payload])).toEqual([['app_flags', 'key, enabled'], ['app_flag_testers', 'key']]);
+      expect(s.get('comments')).toBe(true);
+      // And nothing else moved.
+      expect(s.get('place_checkin')).toBe(false);
+      expect(s.get('photo_attribution')).toBe(true);
+    });
+
+    it('never turn one off: a tester sees what the public sees, and more', async () => {
+      const fake = fakeSupabase();
+      fake.replies({ data: [{ key: 'photo_attribution', enabled: true }] }, { data: [] });
+      const s = flagsStore();
+      await s.load(client(fake), true);
+      expect(s.get('photo_attribution')).toBe(true);
+    });
+
+    it('ignore a key the app does not know, and a row that is not one', async () => {
+      const fake = fakeSupabase();
+      fake.replies(flagsOff, { data: [{ key: 'something_newer' }, { key: 7 }, {}] });
+      const s = flagsStore();
+      await s.load(client(fake), true);
+      expect(s.get('comments')).toBe(false);
+    });
+
+    it('leave the table\'s answer standing when they cannot be read', async () => {
+      const s = flagsStore();
+      const refused = fakeSupabase();
+      refused.replies({ data: [{ key: 'place_checkin', enabled: true }] }, { error: { message: 'permission denied' } });
+      await s.load(client(refused), true);
+      expect(s.get('place_checkin')).toBe(true);
+      expect(s.get('comments')).toBe(false);
+
+      const odd = fakeSupabase();
+      odd.replies({ data: [{ key: 'place_checkin', enabled: true }] }, { data: { key: 'comments' } });
+      await s.load(client(odd), true);
+      expect(s.get('comments')).toBe(false);
+    });
+
+    it('go when the reader signs out: the next read puts the switch where the table has it', async () => {
+      const s = flagsStore();
+      const inn = fakeSupabase();
+      inn.replies(flagsOff, { data: [{ key: 'comments' }] });
+      await s.load(client(inn), true);
+      expect(s.get('comments')).toBe(true);
+      const out = fakeSupabase();
+      out.replies(flagsOff);
+      await s.load(client(out));
+      expect(s.get('comments')).toBe(false);
+    });
+
+    it('put a switch back to its default when its row has gone from the table', async () => {
+      const s = flagsStore();
+      const first = fakeSupabase();
+      first.replies({ data: [{ key: 'place_checkin', enabled: true }] });
+      await s.load(client(first));
+      expect(s.get('place_checkin')).toBe(true);
+      const second = fakeSupabase();
+      second.replies({ data: [] });
+      await s.load(client(second));
+      expect(s.get('place_checkin')).toBe(false);
+    });
+
+    // The launch reads as nobody; the session restores and reads again.
+    // Whichever lands last, the later ask is the answer.
+    it('apply the later of two reads in flight, whichever lands last', async () => {
+      const s = flagsStore();
+      let landFirst: (v: unknown) => void = () => {};
+      const slow: FlagsClient = { from: () => ({ select: () => new Promise((res) => { landFirst = res; }) as never }) };
+      const asNobody = s.load(slow);
+      const fast = fakeSupabase();
+      fast.replies(flagsOff, { data: [{ key: 'comments' }] });
+      await s.load(client(fast), true);
+      expect(s.get('comments')).toBe(true);
+      landFirst({ data: [{ key: 'comments', enabled: false }], error: null });
+      await asNobody;
+      expect(s.get('comments')).toBe(true);
+    });
+  });
+
   it('tells a subscriber once per change, and not about a repeat', () => {
     const s = flagsStore();
     const f = vi.fn();

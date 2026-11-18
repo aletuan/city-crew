@@ -22,6 +22,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_flag_testers: {
+        Row: {
+          created_at: string
+          key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_flag_testers_key_fkey"
+            columns: ["key"]
+            isOneToOne: false
+            referencedRelation: "app_flags"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       app_flags: {
         Row: {
           enabled: boolean
