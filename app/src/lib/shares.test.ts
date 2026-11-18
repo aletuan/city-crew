@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  diffShares, likeable, namesBriefly, shareCta, shareRows, sharesByList, visibilityOf, type ShareRow,
+  diffShares, likeable, namesBriefly, readerMark, shareCta, shareRows, sharesByList, visibilityOf, type ShareRow,
   SEEN_GLYPH, seenGloss, seenName,
 } from './shares';
 
@@ -178,5 +178,33 @@ describe('likeable', () => {
   // Not public and not yours: it reached you through a share.
   it('is the friend’s on a list lent to them', () => {
     expect(likeable(false, false, 0)).toBe(true);
+  });
+});
+
+// What a reader who is not the owner sees under the handle.
+describe('readerMark', () => {
+  it('is the globe on a person’s public list', () => {
+    expect(readerMark({ is_public: true, owner_id: 'lan' }, false)).toBe('public');
+  });
+
+  it('is "lent" on a list that is not public, said or unsaid', () => {
+    expect(readerMark({ is_public: false, owner_id: 'lan' }, false)).toBe('lent');
+    expect(readerMark({ owner_id: 'lan' }, false)).toBe('lent');
+    expect(readerMark({ is_public: null, owner_id: 'lan' }, false)).toBe('lent');
+  });
+
+  it('is nothing for the owner, who has their own mark there', () => {
+    expect(readerMark({ is_public: true, owner_id: 'me' }, true)).toBeNull();
+    expect(readerMark({ is_public: false, owner_id: 'me' }, true)).toBeNull();
+  });
+
+  it('is nothing on a list of the desk’s, which has no person', () => {
+    expect(readerMark({ is_public: true, owner_id: null }, false)).toBeNull();
+    expect(readerMark({ is_public: true }, false)).toBeNull();
+  });
+
+  it('is nothing before there is a list', () => {
+    expect(readerMark(null, false)).toBeNull();
+    expect(readerMark(undefined, false)).toBeNull();
   });
 });

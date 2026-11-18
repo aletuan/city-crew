@@ -3547,13 +3547,28 @@ describe('the head of the card', () => {
     expect(screen.getByTestId('sheet-action-private').getAttribute('aria-selected')).toBe('true');
   });
 
-  it('says only the age on somebody else’s public list — not "Public"', () => {
+  // The globe for every reader (owner, 18 Nov 2026), as a public post
+  // wears one: until then it was the owner's alone, and the reader it
+  // tells most — a like here is in front of everybody — did not see it.
+  // A mark and not a control: the owner's, in the same place, is the one
+  // that opens the sheet.
+  it('says the age and wears the globe on somebody else’s public list, as a mark and not a control', () => {
     state.mine = [];
     state.cols = [theirs({ created_at: ago(5 * MIN) })];
     show();
-    expect(meta().textContent).toBe('5m');
+    expect(meta().textContent).toBe('5m·');
     expect(screen.queryByText('Public')).toBeNull();
     expect(screen.queryByTestId('collection-visibility')).toBeNull();
+    const mark = screen.getByTestId('collection-public');
+    expect(meta().lastElementChild).toBe(mark);
+    expect(mark.getAttribute('aria-label')).toBe('Public');
+    expect(mark.getAttribute('role')).toBeNull();
+    const g = mark.querySelector('[data-icon]')!;
+    expect([g.getAttribute('data-icon'), g.getAttribute('data-size'), g.getAttribute('data-color')])
+      .toEqual(['globe-outline', '15', String(colors.textTertiary)]);
+    expect(screen.queryByTestId('collection-shared')).toBeNull();
+    // Pressing it is pressing the line it is on, not opening the sheet.
+    expect(screen.queryByText('Who can see your list?')).toBeNull();
     // Both lines are the press, and VoiceOver hears both.
     spies.profileLookup.mockImplementation(() => ({ data: { id: 'curator', full_name: '', avatar_url: '' }, loading: false }));
     cleanup();
@@ -3561,7 +3576,7 @@ describe('the head of the card', () => {
     const press = screen.getByTestId('collection-curator');
     expect(press.getAttribute('role')).toBe('button');
     expect(press.contains(meta())).toBe(true);
-    expect(press.getAttribute('aria-label')).toBe('hanoicrew, 5m');
+    expect(press.getAttribute('aria-label')).toBe('hanoicrew, 5m, Public');
   });
 
   it('says the age and "Shared with you", with two heads and no control, on a friend’s list', () => {
@@ -3618,7 +3633,8 @@ describe('the head of the card', () => {
       state.mine = [];
       state.cols = [theirs({ created_at })];
       show();
-      const out = meta().textContent;
+      // The age: the line's first words, before the dot and the globe.
+      const out = meta().firstElementChild!.textContent;
       cleanup();
       return out;
     };
