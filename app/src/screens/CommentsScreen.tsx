@@ -1,5 +1,7 @@
-// A subject's thread of comments, read (C3 of `docs/comments-plan.md`).
-// Writing is C4; this page draws what is there.
+// A subject's thread of comments (C3 of `docs/comments-plan.md`), and
+// the two ways from it to writing one (C4): a line at the head of the
+// page, and "Reply" under each comment. The writing itself is a form of
+// its own — `CommentFormScreen`, where the reason is.
 //
 // ── a screen, not a sheet (owner, 18 Nov 2026) ──
 //
@@ -33,6 +35,19 @@
 // `lib/data/comments.fetchThread` — so this is rows not yet mounted, not
 // a request.
 //
+// ── writing ──
+//
+// "Write a comment…" at the head of the page, above the newest root:
+// where a new comment will appear, and in reach without scrolling an
+// empty thread. Not at the foot, where the tab bar floats.
+//
+// Signed out, either way in raises the sign-in sheet (`askToSignIn`)
+// and the reader comes back to this page; nothing is resumed on their
+// behalf, since what they meant to say has not been written yet.
+//
+// The page asks again when a comment is posted — `useThreadQuery`
+// listens to `lib/commentsChanged` — so the form has only to go back.
+//
 // ── states ──
 //
 // A spinner while the first answer is out; "No comments yet" for an
@@ -45,14 +60,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import CommentRow, { INDENT } from '../components/CommentRow';
-import { EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { Avatar, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { agoLabel } from '../lib/ago';
-import { threadOf, type Branch } from '../lib/comments';
+import { threadOf, type Branch, type Placed } from '../lib/comments';
 import { useThreadQuery } from '../lib/data';
 import { nearEnd } from '../lib/feed';
+import { useProfile, useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { colors, font, space } from '../theme';
+import { normalizeHandle } from '../lib/handle';
+import { useSaveActions } from '../lib/save';
+import { colors, font, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 /** How many roots are drawn at first, and added each time the reader
@@ -64,6 +82,9 @@ export const PAGE = 10;
  *  show that there is a conversation and who is in it — what the feed
  *  card previews of a whole thread, for the same reason. */
 export const REPLIES_SHOWN = 2;
+/** The face beside "Write a comment…": an answer's 28, so the line reads
+ *  as the place a comment goes and not as a comment. */
+const WRITE_FACE = 28;
 
 export default function CommentsScreen({ navigation, route }: {
   navigation: Nav;
@@ -105,14 +126,26 @@ export default function CommentsScreen({ navigation, route }: {
   const now = Date.now();
   const onPerson = (handle: string) => navigation.navigate('Person', { handle });
 
+  // The two ways to writing — see the header.
+  const { session } = useSession();
+  const { profile } = useProfile();
+  const { askToSignIn } = useSaveActions();
+  const { subject } = route.params;
+  const write = (to?: Placed) => {
+    if (!session?.user?.id) { askToSignIn('comment'); return; }
+    navigation.navigate('CommentForm', to
+      ? { subject, replyTo: { id: to.id, who: to.handle ? normalizeHandle(to.handle) : to.full_name ?? '', body: to.body ?? '' } }
+      : { subject });
+  };
+
   const branch = (b: Branch) => {
     const replies = opened.has(b.root.id) ? b.replies : b.replies.slice(0, REPLIES_SHOWN);
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(b.root)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(r)} />
         ))}
         {more > 0 ? (
           <PressableScale
@@ -181,6 +214,17 @@ export default function CommentsScreen({ navigation, route }: {
         refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
         testID="comments-scroll"
       >
+        <PressableScale
+          onPress={() => write()}
+          haptic="selection"
+          contentStyle={s.write}
+          accessibilityRole="button"
+          testID="comments-write"
+        >
+          {/* The reader's own face: whose comment this would be. */}
+          <Avatar url={profile?.avatar_url} size={WRITE_FACE} />
+          <Text style={s.writeText}>{t('Write a comment…', 'Viết bình luận…', 'コメントを書く…', '写评论…', '寫評論…')}</Text>
+        </PressableScale>
         {state}
         {branches.slice(0, shown).map(branch)}
       </ScrollView>
@@ -191,6 +235,14 @@ export default function CommentsScreen({ navigation, route }: {
 const s = StyleSheet.create({
   content: { paddingHorizontal: space.page },
   spinner: { marginTop: 20 },
+  // The way to writing: a field's shape without being one — the page's
+  // glass, the card's corner, 44 tall to the thumb.
+  write: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44,
+    paddingHorizontal: 12, marginBottom: 8,
+    borderRadius: radius.card, backgroundColor: colors.surfaceGlass,
+  },
+  writeText: { color: colors.textTertiary, fontSize: 15 },
   // A hairline between one root's talk and the next, and the row's own 8
   // either side of it.
   branch: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft, paddingVertical: 4 },

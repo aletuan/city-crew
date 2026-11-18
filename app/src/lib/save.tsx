@@ -46,7 +46,7 @@ import { dropResume, focusedTab, holdResume } from './resume';
  * - `search`: asking Google Maps for places the catalog has not got.
  * - `trip`: Save to Trips, under a drafted plan.
  */
-export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search' | 'trip' | 'start' | 'checkin';
+export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search' | 'trip' | 'start' | 'checkin' | 'comment';
 
 /**
  * What a screen can do about saving — the acts, without the lists.

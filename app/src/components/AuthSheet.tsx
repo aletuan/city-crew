@@ -52,6 +52,7 @@ const TITLES: Record<SignInWhy, (t: T) => string> = {
   trip: (t) => t('Save this trip', 'Lưu chuyến đi này', 'この旅程を保存', '保存这个行程', '儲存這個行程'),
   start: (t) => t('Find a starting point', 'Tìm điểm xuất phát', '出発地を探す', '寻找出发地点', '尋找出發地點'),
   checkin: (t) => t('Check in here', 'Check-in ở đây', 'ここにチェックイン', '在这里打卡', '在這裡打卡'),
+  comment: (t) => t('Join the conversation', 'Tham gia bình luận', 'コメントに参加', '参与评论', '參與評論'),
 };
 
 /** Width over height of both files (900×471). */

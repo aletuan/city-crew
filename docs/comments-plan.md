@@ -212,10 +212,27 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Việc để lại cho C4: sau khi đăng hoặc xoá, số trên thẻ và trên nút phải
   được hỏi lại (hiện chỉ hỏi lại khi danh sách thẻ đổi).
 
-**C4. Viết**
-- Ô soạn: bình luận mới, trả lời (tự chèn "@tên" khi trả lời ở cấp 2),
-  đếm ký tự, thông báo lỗi cho từng lý do bị từ chối.
-- Xoá của mình. Báo cáo một bình luận (dùng lại luồng báo cáo đã có).
+**C4. Viết** — chia hai PR
+
+*C4a — xong:*
+- Viết bình luận và trả lời là một **màn soạn riêng** (`CommentForm`),
+  không phải ô ghim dưới chân luồng như bản đầu của kế hoạch. Lý do:
+  thanh tab nổi che chân mọi trang; mọi chỗ khác app nhờ người dùng viết
+  (tên bộ, giới thiệu) đều đã là một màn form có xử lý bàn phím sẵn; và
+  bình luận đang được trả lời nằm phía trên ô nhập nên bàn phím không che
+  (Threads làm đúng như vậy).
+- Lối vào: dòng "Viết bình luận…" ở đầu luồng, và "Trả lời" dưới mỗi bình
+  luận. Khách chưa đăng nhập bấm vào thì được mời đăng nhập.
+- Đếm ký tự theo cách máy chủ đếm, nút Đăng chỉ sáng khi có gì để gửi,
+  mỗi lý do bị từ chối có một câu riêng và giữ nguyên chữ đã gõ.
+- Không tự chèn "@tên" vào nội dung khi trả lời sâu: màn luồng đã tự hiện
+  tên người được trả lời từ quan hệ cha con, chèn nữa sẽ thành hai lần.
+- Sau khi đăng, luồng, số trên thẻ và số trên nút đều tự hỏi lại
+  (`lib/commentsChanged`). Không vẽ trước bình luận khi máy chủ chưa nhận.
+
+*C4b — chưa làm:*
+- Xoá bình luận của mình.
+- Báo cáo một bình luận (dùng lại luồng báo cáo đã có).
 
 **C5. Tag**
 - Cần trước: tag địa điểm hiện chỉ mang `id`, mà trang địa điểm mở bằng

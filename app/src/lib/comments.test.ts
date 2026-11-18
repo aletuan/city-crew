@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BODY_MAX, LEVEL_MAX, MENTIONS_MAX, REFUSALS,
-  bodyLength, latestOf, livingCount, mentionsOf, refusalOf, segmentsOf, threadOf,
+  bodyLength, bodyProblem, latestOf, livingCount, mentionsOf, refusalOf, segmentsOf, threadOf,
   type CommentRow, type Mention,
 } from './comments';
 
@@ -34,6 +34,21 @@ describe('bodyLength', () => {
     expect(bodyLength('phở')).toBe(3);
     expect('🍜'.length).toBe(2);
     expect(bodyLength('🍜 ngon')).toBe(6);
+  });
+});
+
+describe('bodyProblem', () => {
+  it('is none for words, "empty" for spaces alone, and "long" past the ceiling', () => {
+    expect(bodyProblem('  hello  ')).toBeNull();
+    expect(bodyProblem('')).toBe('empty');
+    expect(bodyProblem(' \n\t ')).toBe('empty');
+    expect(bodyProblem('é'.repeat(BODY_MAX))).toBeNull();
+    expect(bodyProblem('é'.repeat(BODY_MAX + 1))).toBe('long');
+  });
+
+  it('counts after trimming, and in characters: 500 emoji and a space on each side still fit', () => {
+    expect(bodyProblem(` ${'🍜'.repeat(BODY_MAX)} `)).toBeNull();
+    expect(bodyProblem('🍜'.repeat(BODY_MAX + 1))).toBe('long');
   });
 });
 

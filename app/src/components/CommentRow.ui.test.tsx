@@ -28,6 +28,7 @@ const placed = (over: Partial<Placed> = {}): Placed => ({
 
 const onPerson = vi.fn();
 const onPlace = vi.fn();
+const onReply = vi.fn();
 const show = (c: Placed, withPlace = false) =>
   render(<CommentRow comment={c} when="2h ago" onPerson={onPerson} onPlace={withPlace ? onPlace : undefined} />);
 /** The face's drawn size, off the image inside the row. */
@@ -86,6 +87,30 @@ describe('a comment', () => {
     show(placed({ level: 2, depth: 3, to: '@Hado', body: 'agreed' }));
     expect(screen.getByTestId('comment-to').textContent).toBe('@hado ');
     expect(screen.getByTestId('comment-body').textContent).toBe('@hado agreed');
+  });
+});
+
+describe('the way to answer', () => {
+  it('is not drawn on a page that gave none', () => {
+    show(placed());
+    expect(screen.queryByTestId('comment-reply')).toBeNull();
+  });
+
+  it('is a control of its own under the words, named for whom it answers', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onReply={onReply} />);
+    const reply = screen.getByTestId('comment-reply');
+    expect(reply.textContent).toBe('Reply');
+    expect(reply.getAttribute('aria-label')).toBe('Reply to trang');
+    // Outside the line VoiceOver reads as one, or it could not be reached.
+    expect(screen.getByTestId('comment-words').contains(reply)).toBe(false);
+    fireEvent.click(reply);
+    expect(onReply).toHaveBeenCalledTimes(1);
+    expect(onPerson).not.toHaveBeenCalled();
+  });
+
+  it('is not drawn on a comment that is gone, whatever the page gave', () => {
+    render(<CommentRow comment={placed({ gone: true, body: null, handle: null })} when="" onPerson={onPerson} onReply={onReply} />);
+    expect(screen.queryByTestId('comment-reply')).toBeNull();
   });
 });
 
