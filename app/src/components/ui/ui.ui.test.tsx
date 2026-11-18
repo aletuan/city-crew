@@ -14,7 +14,7 @@ vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import { Avatar, CHIP_H, CHIP_SLOP, Chip, Glyph, ICON, LINE_STROKE, SECONDARY_CONTROL_H, Screen, Tile, TileGrid, UnderlineChoice, isLineGlyph, useArrival } from './index';
+import { Avatar, CHIP_H, CHIP_SLOP, Chip, Glyph, ICON, SECONDARY_CONTROL_H, Screen, Tile, TileGrid, UnderlineChoice, useArrival } from './index';
 import { bgHex, colors } from '../../theme';
 
 describe('useArrival', () => {
@@ -430,38 +430,24 @@ describe('TileGrid', () => {
   });
 });
 
-// The five marks the tab bar is made of come from Lucide's line set
-// wherever they are drawn; every other name is Ionicons, untouched
-// (owner, 12 Nov 2026).
+// One font (owner, 18 Nov 2026): every name is Ionicons', drawn as asked.
+// The six days of a second set, and how it ended, are in `glyph.tsx`.
 describe('Glyph', () => {
   const drawn = () => document.querySelector('[data-icon]')!;
 
-  it('draws the five marks from the line set, at Ionicons’ weight', () => {
-    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places', 'quill'] as const) {
+  it('draws the name it is given, solid or outlined, with its size and ink', () => {
+    // The names the line set used to answer for, and one it never did: a
+    // solid one stays solid now, where the set drew its outline.
+    for (const name of ['compass-outline', 'calendar', 'bookmark', 'person-outline', 'star', 'location-outline', 'reader-outline', 'chevron-back'] as const) {
       const { unmount } = render(<Glyph name={name} size={22} color="#123456" />);
-      expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual([name, 'lucide']);
-      expect([drawn().getAttribute('data-size'), drawn().getAttribute('data-color')]).toEqual(['22', '#123456']);
-      expect(drawn().getAttribute('data-stroke')).toBe(String(LINE_STROKE));
+      expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-size'), drawn().getAttribute('data-color')])
+        .toEqual([name, '22', '#123456']);
       unmount();
     }
-    // 32 units on Ionicons' 512 grid is a sixteenth; so is 1.5 on 24.
-    expect(LINE_STROKE / 24).toBe(32 / 512);
-  });
-
-  it('fills only the saved bookmark; a solid compass, calendar or person is its outline', () => {
-    const { unmount } = render(<Glyph name="bookmark" size={22} color="#c00" />);
-    expect(drawn().getAttribute('data-icon')).toBe('bookmark');
-    unmount();
-    // The bio's feather too (owner, 17 Nov 2026): a line round nothing,
-    // like the envelope and the calendar it stands over, never a blot.
-    const feather = render(<Glyph name="quill" size={22} color="#c00" />);
-    expect(drawn().getAttribute('data-icon')).toBe('quill');
-    feather.unmount();
-    for (const [name, line] of [['compass', 'compass-outline'], ['calendar', 'calendar-outline'], ['person', 'person-outline']] as const) {
-      const r = render(<Glyph name={name} size={22} color="#c00" />);
-      expect(drawn().getAttribute('data-icon')).toBe(line);
-      r.unmount();
-    }
+    const { container } = render(<Glyph size={15} color="#000" />);
+    // Ionicons' own answer to no name: its box, holding nothing.
+    expect(container.querySelector('[data-icon]')).toBeNull();
+    expect(container.querySelector('[data-size="15"]')).toBeTruthy();
   });
 
   // The scale (owner, 18 Nov 2026): seven sizes where there were twenty.
@@ -481,47 +467,12 @@ describe('Glyph', () => {
     const bare = render(<Glyph name="close" />);
     expect(drawn().getAttribute('data-size')).toBe(String(ICON.meta));
     bare.unmount();
-    // `fit` wins over `size`, in both families: two fifths of a 41pt face.
-    for (const [name, family] of [['person-outline', 'lucide'], ['close', null]] as const) {
-      const r = render(<Glyph name={name} size={ICON.action} fit={16.4} />);
-      expect([drawn().getAttribute('data-family'), drawn().getAttribute('data-size')]).toEqual([family, '16.4']);
-      r.unmount();
-    }
+    // `fit` wins over `size`: two fifths of a 41pt face.
+    const fitted = render(<Glyph name="person-outline" size={ICON.action} fit={16.4} />);
+    expect(drawn().getAttribute('data-size')).toBe('16.4');
+    fitted.unmount();
     const face = render(<Avatar size={40} />);
     expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-size')]).toEqual(['person-outline', '16']);
     face.unmount();
-  });
-
-  // The star from the line set too (owner, 14 Nov 2026): round joins at
-  // its points, solid filled with its own ink, the outline left open.
-  it('draws the star from the line set, filled when solid and open when outlined', () => {
-    const { unmount } = render(<Glyph name="star" size={18} color="#c00" />);
-    expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family'), drawn().getAttribute('data-stroke')])
-      .toEqual(['star', 'lucide', String(LINE_STROKE)]);
-    unmount();
-    render(<Glyph name="star-outline" size={18} color="#c00" />);
-    expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual(['star-outline', 'lucide']);
-    expect([isLineGlyph('star'), isLineGlyph('star-outline'), isLineGlyph('star-half')]).toEqual([true, true, false]);
-  });
-
-  it('passes every other name, and none, to Ionicons as it was', () => {
-    const { unmount } = render(<Glyph name="chevron-back" size={22} color="#000" strokeWidth={9} />);
-    expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual(['chevron-back', null]);
-    expect(drawn().getAttribute('data-size')).toBe('22');
-    unmount();
-    const { container } = render(<Glyph size={15} color="#000" />);
-    // Ionicons' own answer to no name: its box, holding nothing.
-    expect(container.querySelector('[data-icon]')).toBeNull();
-    expect(container.querySelector('[data-size="15"]')).toBeTruthy();
-    expect([isLineGlyph('places'), isLineGlyph('location-outline')]).toEqual([true, false]);
-    // The line set is for getting about and for marks of identity: the
-    // plane was routed to it for a day (18 Nov 2026) and went back, so a
-    // list's Share and the heart beside it are of one family.
-    expect([isLineGlyph('paper-plane-outline'), isLineGlyph('heart-outline')]).toEqual([false, false]);
-  });
-
-  it('takes a lighter line where it is asked for one', () => {
-    render(<Glyph name="compass-outline" size={22} color="#000" strokeWidth={1.2} />);
-    expect(drawn().getAttribute('data-stroke')).toBe('1.2');
   });
 });

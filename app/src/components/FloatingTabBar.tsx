@@ -84,16 +84,24 @@ import { useTabBarDuck } from './tabBarDuck';
 const inkOf = (focused: boolean, light: boolean) =>
   (focused ? pillInk[light ? 'light' : 'dark'] : textHex[light ? 'light' : 'dark']);
 
-// ── the five marks (owner, 12 Nov 2026) ──
+// ── the five marks (owner, 12 and 18 Nov 2026) ──
 //
-// One family of thin, even lines — Lucide's, through `Glyph` — chosen from
-// a reference over the Ionicons set this bar wore: a filled compass
-// needle, a solid calendar on the selected tab and a pin standing on a
-// many-lined folded map (`PlacesGlyph`, which went with it). The selected
-// tab keeps the outline and takes the pill's ink, as the reference does:
-// the pill already says "here", and a mark that turns solid in it said
+// Ionicons' outlines, the family of every other glyph in the app. From
+// 12 to 18 Nov they were Lucide's thinner lines, chosen from a reference
+// over what this bar wore then — a filled compass needle, a solid
+// calendar on the selected tab and a pin standing on a many-lined folded
+// map (`PlacesGlyph`, which went with it) — and they came back with the
+// rest of that set when the owner asked for one font across the app
+// (`Glyph` has the three ways out and what each cost). The needle is
+// filled again and the line is 1.4pt where Lucide's was 1.1: Ionicons
+// has one compass and one weight.
+//
+// What 12 Nov decided apart from the family stays: the selected tab
+// keeps the outline and takes the pill's ink, as the reference does.
+// The pill already says "here", and a mark that turns solid in it said
 // it twice. Instagram and Apple's own tab bars fill the selected glyph;
-// they have no pill.
+// they have no pill. And the catalog tab is a pin alone, not a pin on a
+// map.
 //
 // The planning tab, "Explore", wears the compass — "find out what to do".
 // The catalog tab, "Places", the pin on the ground.
@@ -103,21 +111,17 @@ const PILL_INSET = 4;
 /** The pill's height: the island's, less the inset above and below. */
 const PILL_H = TAB_BAR_HEIGHT - PILL_INSET * 2;
 /**
- * The glyph's box, in points, and its line on Lucide's 24 grid.
+ * The glyph's box, in points: 22, the scale's step for getting about.
  *
- * From the reference (12 Nov 2026), read against its own pill so the
- * scale cancels: its marks are 0.28 of the pill's height and their line
- * 0.073 of the mark, against our Ionicons' 0.40 and 0.098 at 25. The
- * owner took the line and the lightness and not the size: a 52pt pill at
- * 0.28 is a 14pt mark, where Threads' tab marks measure 22 and Apple's
- * sit in a 25pt box, and the owner had already once found these marks too
- * small for the air around them. So a 22pt box — Lucide draws 20 of its
- * 24 units, about 19pt of ink, the reference's proportion of pill to
- * mark nearer ours than its own — and a 1.2 line, about 1.1pt, the
- * reference's line for a mark that size.
+ * Set against a reference on 12 Nov 2026, read against its own pill so
+ * the scale cancels: its marks are 0.28 of the pill's height, where
+ * Ionicons at 25 had been 0.40. The owner took the lightness and not the
+ * size: a 52pt pill at 0.28 is a 14pt mark, where Threads' tab marks
+ * measure 22 and Apple's sit in a 25pt box, and the owner had already
+ * once found these marks too small for the air around them. So 22, down
+ * from 25, and it stayed 22 when the marks came back to Ionicons.
  */
 const GLYPH = ICON.nav;
-const TAB_STROKE = 1.2;
 /** How much wider the pill runs per cell it travels, and the most it
  *  will: one cell over covers both glyphs, as Threads' does. */
 const STRETCH_PER_STEP = 0.28;
@@ -128,7 +132,7 @@ const STRETCH_MAX = 0.6;
 const LIFT_SCALE = 1.06;
 
 const ICONS: Record<string, GlyphName> = {
-  Explore: 'places',
+  Explore: 'location-outline',
   Ideas: 'compass-outline',
   Trips: 'calendar-outline',
   Collections: 'bookmark-outline',
@@ -371,7 +375,6 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     <Glyph
       name={ICONS[name]}
       size={GLYPH}
-      strokeWidth={TAB_STROKE}
       // Full strength when idle, where this used to be a mid grey. That
       // grey was the reason the glass had to stay nearly opaque: over an
       // unknown photograph the scrim averages towards mid-tone, and a

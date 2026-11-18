@@ -33,8 +33,6 @@ import { BIO_LINE, GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './s
  * figures; the well is gone from the Profile stack.
  */
 export function RowGlyph({ name, line }: {
-  /** Wider than the rows' own `icon`: the bio's bubble is the line set's,
-   *  not Ionicons' (see `Glyph`). */
   name: GlyphName;
   /** The height of the row's first line, when the glyph should sit level
    *  with it rather than with the row's middle — see `GLYPH_BOX`. */
@@ -216,9 +214,10 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
  * 2026). For a day it had none, to give the paragraph the card's full
  * measure — and on the phone it read as a line that had lost its row:
  * the envelope and the calendar make a column down the card's left, and
- * the bio started 58pt left of the words under it. A feather is the
- * mark — a pair of quotation marks, then a speech bubble, before it (see
- * `Glyph` for the three choices and what each was chosen over) — lifted to the first
+ * the bio started 58pt left of the words under it. A page with a few
+ * lines on it is the mark, Ionicons' `reader-outline` — a pair of
+ * quotation marks, a speech bubble, then a feather before it, all three
+ * from the line set that left on 18 Nov (see `Glyph`) — lifted to the first
  * line like the others, so a bio of four lines hangs from it. The
  * narrower measure costs a line at `BIO_MAX`: about five, not four.
  *
@@ -230,7 +229,7 @@ export function AboutRow({ icon, label, value, children, last, valueTestID }: {
  * Edit profile without knowing what was behind it. It is drawn like the
  * rows that go somewhere (glyph, words, chevron) because it is one, and in
  * the accent because it is the one row on the card that asks for a tap.
- * The same feather leads it, so the row does not change its mark the
+ * The same page leads it, so the row does not change its mark the
  * moment it is filled in.
  *
  * Only the account's owner ever sees the door: this card is on their own
@@ -241,7 +240,7 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
   if (bio) {
     return (
       <View style={[s.twoLineRow, s.featureRowDivider]} testID="bio-row">
-        <RowGlyph name="quill" line={BIO_LINE} />
+        <RowGlyph name="reader-outline" line={BIO_LINE} />
         <Text style={s.bioText} testID="profile-bio">{bio}</Text>
       </View>
     );
@@ -254,7 +253,7 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
       accessibilityRole="button"
       testID="bio-add"
     >
-      <RowGlyph name="quill" />
+      <RowGlyph name="reader-outline" />
       <Text style={s.bioAdd} numberOfLines={1}>
         {t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}
       </Text>
