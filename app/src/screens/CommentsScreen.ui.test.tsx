@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, viewStyleOf, within } from '../uitest/render';
 import type { CommentRow as Row, Subject } from '../lib/comments';
 import type { Nav, RootRoute } from '../nav';
+import { commentsChanged } from '../lib/commentsChanged';
 import { INDENT } from '../components/CommentRow';
 
 const NOW = new Date(2026, 10, 18, 12, 0, 0);
@@ -28,7 +29,16 @@ vi.mock('../lib/data/comments', async (orig) => ({
 }));
 const duck = vi.hoisted(() => ({ fn: vi.fn() as ((e: unknown) => void) | undefined }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => duck.fn }));
-const state = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi' }));
+const state = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi', me: 'me' as string | null }));
+const askToSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../lib/auth', () => {
+  const all = () => ({
+    session: state.me ? { user: { id: state.me } } : null,
+    profile: state.me ? { avatar_url: 'https://faces/me.jpg' } : null,
+  });
+  return { useSession: all, useProfile: all };
+});
+vi.mock('../lib/save', () => ({ useSaveActions: () => ({ askToSignIn }) }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({
     lang: state.lang, setLang: () => {},
@@ -93,6 +103,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   duck.fn = vi.fn();
   state.lang = 'en';
+  state.me = 'me';
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -286,5 +297,68 @@ describe('pulling the page down', () => {
     await flush();
     expect(drawn()).toEqual([['says a']]);
     expect(screen.queryByTestId('comments-failed')).toBeNull();
+  });
+});
+
+// C4: the two ways from the thread to writing, and the thread asking
+// again once something was written.
+describe('writing', () => {
+  it('opens the form for this subject from the line at the head of the page, which wears the reader\'s face', async () => {
+    const nav = await show([row('a', null)]);
+    const line = screen.getByTestId('comments-write');
+    expect(line.textContent).toBe('Write a comment…');
+    expect(line.querySelector('img')!.getAttribute('src')).toBe('https://faces/me.jpg');
+    // Above the newest root.
+    expect(line.compareDocumentPosition(branches()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(line);
+    expect(nav.navigate).toHaveBeenCalledExactlyOnceWith('CommentForm', { subject: SUBJECT });
+  });
+
+  it('is there on an empty thread too, above "No comments yet"', async () => {
+    await show([]);
+    expect(screen.getByTestId('comments-write')).toBeTruthy();
+    expect(screen.getByTestId('comments-empty')).toBeTruthy();
+  });
+
+  it('answers a comment with what the form will quote: who, by handle or else by name, and what they said', async () => {
+    const nav = await show([row('a', null, { handle: '@Trang', body: 'Lovely rooftop' }), row('a1', 'a', { handle: null, full_name: 'Lan Pham' })]);
+    const [first, second] = screen.getAllByTestId('comment-reply');
+    fireEvent.click(first);
+    expect(nav.navigate).toHaveBeenLastCalledWith('CommentForm', { subject: SUBJECT, replyTo: { id: 'a', who: 'trang', body: 'Lovely rooftop' } });
+    fireEvent.click(second);
+    expect(nav.navigate).toHaveBeenLastCalledWith('CommentForm', { subject: SUBJECT, replyTo: { id: 'a1', who: 'Lan Pham', body: 'says a1' } });
+  });
+
+  it('names nobody for a writer with neither handle nor name', async () => {
+    const nav = await show([row('a', null, { handle: null })]);
+    fireEvent.click(screen.getByTestId('comment-reply'));
+    expect(nav.navigate).toHaveBeenLastCalledWith('CommentForm', { subject: SUBJECT, replyTo: { id: 'a', who: '', body: 'says a' } });
+  });
+
+  it('offers no reply to a comment that is gone', async () => {
+    await show([row('a', null, { gone: true, body: null, author: null, handle: null }), row('a1', 'a')]);
+    expect(screen.getAllByTestId('comment-reply')).toHaveLength(1);
+  });
+
+  it('asks a guest to sign in from either way, and opens no form', async () => {
+    state.me = null;
+    const nav = await show([row('a', null)]);
+    fireEvent.click(screen.getByTestId('comments-write'));
+    fireEvent.click(screen.getByTestId('comment-reply'));
+    expect(askToSignIn).toHaveBeenCalledTimes(2);
+    expect(askToSignIn).toHaveBeenCalledWith('comment');
+    expect(nav.navigate).not.toHaveBeenCalled();
+  });
+
+  it('asks for the thread again when a comment is written or taken back anywhere', async () => {
+    await show([row('a', null)]);
+    expect(data.fetchThread).toHaveBeenCalledTimes(1);
+    data.fetchThread.mockImplementation(async () => [row('b', null), row('a', null)]);
+    act(() => { commentsChanged(); });
+    await flush();
+    expect(data.fetchThread).toHaveBeenCalledTimes(2);
+    expect(drawn()).toEqual([['says b'], ['says a']]);
+    // The rows stood through the ask: no page spinner behind them.
+    expect(screen.queryByTestId('comments-loading')).toBeNull();
   });
 });

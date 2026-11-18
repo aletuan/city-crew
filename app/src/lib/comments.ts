@@ -92,6 +92,18 @@ export type Placed = CommentRow & {
 /** A comment on the subject itself, and everything said under it. */
 export type Branch = { root: Placed; replies: Placed[] };
 
+/**
+ * Why a body cannot be sent as it stands, or null when it can: nothing
+ * but spaces, or over `BODY_MAX`. The server's two checks (`post_comment`
+ * trims and then counts), made here first so the button is not lit for a
+ * comment that would only come back refused.
+ */
+export function bodyProblem(body: string): 'empty' | 'long' | null {
+  const words = body.trim();
+  if (words === '') return 'empty';
+  return bodyLength(words) > BODY_MAX ? 'long' : null;
+}
+
 /** How long a body is as the server will count it. */
 export function bodyLength(body: string): number {
   return Array.from(body).length;

@@ -7,7 +7,7 @@
 // own: a wrapper that grew a decision would be a decision no test can
 // reach.
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useCurrentCity } from '../city';
 import type { Applause, Copy } from '../friends';
 import { normalizeHandle } from '../handle';
@@ -26,6 +26,7 @@ import {
 import { fetchMyListShares } from './shares';
 import { fetchPreviews, fetchThread } from './comments';
 import type { CommentRow, Preview, Subject } from '../comments';
+import { changes, onChange } from '../commentsChanged';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
 import type { StatsRow } from '../listStats';
 import type { ShareRow } from '../shares';
@@ -531,9 +532,14 @@ const NO_COMMENTS: CommentRow[] = [];
 export const useThreadQuery = (subject: Subject | null): Fetch<CommentRow[]> => {
   const kind = subject?.kind;
   const id = subject?.id;
+  // Asked again whenever a comment is written or taken back anywhere —
+  // see `lib/commentsChanged`. Read into the question, so a change is a
+  // new question and `useFetch` asks it.
+  const stamp = useSyncExternalStore(onChange, changes);
   const fetcher = useCallback(
     () => (kind && id ? fetchThread({ kind, id }) : Promise.resolve(NO_COMMENTS)),
-    [kind, id],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `stamp` is the reason to ask again, not a value read
+    [kind, id, stamp],
   );
   return useFetch(fetcher, NO_COMMENTS);
 };
@@ -555,9 +561,12 @@ const NO_PREVIEWS: Record<string, Preview> = {};
 /** The previews of these collections' threads, by collection id. */
 export const usePreviewsQuery = (collectionIds: readonly string[]): Fetch<Record<string, Preview>> => {
   const joined = collectionIds.join(',');
+  // And again after a comment is written or taken back, as a thread is.
+  const stamp = useSyncExternalStore(onChange, changes);
   const fetcher = useCallback(
     () => fetchPreviews(joined ? joined.split(',').map((id) => ({ kind: 'collection' as const, id })) : []),
-    [joined],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- as above
+    [joined, stamp],
   );
   return useFetch(fetcher, NO_PREVIEWS);
 };

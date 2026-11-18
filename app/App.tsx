@@ -51,6 +51,7 @@ import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import CollectionActivityScreen from './src/screens/CollectionActivityScreen';
 import CommentsScreen from './src/screens/CommentsScreen';
+import CommentFormScreen from './src/screens/CommentFormScreen';
 import CollectionStatsScreen from './src/screens/CollectionStatsScreen';
 import PersonScreen from './src/screens/PersonScreen';
 import IdeasScreen from './src/screens/IdeasScreen';
@@ -163,6 +164,7 @@ function ExploreStack() {
       {/* A list's thread of comments: its door is on the list's page, so
           it is in every stack that page is. */}
       <Stack.Screen name="Comments" component={CommentsScreen} />
+      <Stack.Screen name="CommentForm" component={CommentFormScreen} />
       <Stack.Screen name="Person" component={PersonScreen} />
       {/* A person's page is in three stacks, and on your own it offers
           "Add a bio" (16 Nov 2026), which opens this form. By the rule
@@ -187,6 +189,7 @@ function CollectionsStack() {
       {/* A list's thread of comments: its door is on the list's page, so
           it is in every stack that page is. */}
       <Stack.Screen name="Comments" component={CommentsScreen} />
+      <Stack.Screen name="CommentForm" component={CommentFormScreen} />
       <Stack.Screen name="Person" component={PersonScreen} />
       {/* For the page's "Add a bio" — see the note in the Explore stack. */}
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
@@ -228,6 +231,7 @@ function ProfileStack() {
       {/* A list's thread of comments: its door is on the list's page, so
           it is in every stack that page is. */}
       <Stack.Screen name="Comments" component={CommentsScreen} />
+      <Stack.Screen name="CommentForm" component={CommentFormScreen} />
       <Stack.Screen name="Person" component={PersonScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />

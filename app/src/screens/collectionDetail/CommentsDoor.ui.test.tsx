@@ -9,6 +9,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '../../uitest/render';
 import { appFlags } from '../../lib/flags';
+import { commentsChanged } from '../../lib/commentsChanged';
 
 const data = vi.hoisted(() => ({
   fetchPreviews: vi.fn(async (_s: { id: string }[]): Promise<Record<string, unknown>> => ({})),
@@ -52,6 +53,18 @@ describe('CommentsDoor', () => {
     expect(data.fetchPreviews).toHaveBeenCalledExactlyOnceWith([{ kind: 'collection', id: 'c1' }]);
     expect(screen.getByTestId('collection-comments-count').textContent).toBe('4');
     expect(door()!.getAttribute('aria-label')).toBe('Bình luận, 4');
+  });
+
+  it('asks again when a comment is written or taken back, and wears the new figure', async () => {
+    appFlags.set('comments', true);
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 4, latest: [] } }));
+    show({ id: 'c1', is_public: true });
+    await flush();
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 5, latest: [] } }));
+    act(() => { commentsChanged(); });
+    await flush();
+    expect(data.fetchPreviews).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('collection-comments-count').textContent).toBe('5');
   });
 
   it('asks nothing while it is not drawn', async () => {

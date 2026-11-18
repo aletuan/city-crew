@@ -9,7 +9,8 @@
 //
 // ── a comment that is gone ──
 //
-// One quiet line, no face and no name: the server sends neither, and
+// One quiet line, no face, no name and no way to answer it (the server
+// refuses an answer to a comment that is gone): the server sends neither, and
 // does not say whether it was deleted or is by somebody blocked from the
 // reader. The line is drawn only where answers still hang from it —
 // `threadOf` drops the rest — so it reads as the thing they answer.
@@ -48,13 +49,15 @@ export const FACE_REPLY = 28;
  *  measured on a phone. */
 export const INDENT = [0, FACE + 10, FACE + 10 + FACE_REPLY + 10] as const;
 
-export default function CommentRow({ comment, when, onPerson, onPlace }: {
+export default function CommentRow({ comment, when, onPerson, onPlace, onReply }: {
   comment: Placed;
   /** How long ago, already in words. */
   when: string;
   onPerson: (handle: string) => void;
   /** Absent until a place tag has somewhere to open. */
   onPlace?: (placeId: string) => void;
+  /** Answer this comment. Absent on a page that is read-only. */
+  onReply?: () => void;
 }) {
   const { t } = useI18n();
   const indent = { marginLeft: INDENT[comment.level] };
@@ -89,7 +92,8 @@ export default function CommentRow({ comment, when, onPerson, onPlace }: {
           <Avatar url={comment.avatar_url} size={size} />
         </PressableScale>
       ) : <Avatar url={comment.avatar_url} size={size} />}
-      <View style={s.words} accessible accessibilityLabel={[who, when, body].join(', ')} testID="comment-words">
+      <View style={s.words}>
+        <View accessible accessibilityLabel={[who, when, body].join(', ')} testID="comment-words">
         <View style={s.head}>
           <Text style={s.who} numberOfLines={1} testID="comment-who">{who}</Text>
           <Text style={s.when} testID="comment-when">{when}</Text>
@@ -114,6 +118,23 @@ export default function CommentRow({ comment, when, onPerson, onPlace }: {
             );
           })}
         </Text>
+        </View>
+        {/* Outside the line VoiceOver reads: a control of its own. 44 to
+            the thumb by its slop; drawn at the age's size, since it is
+            the same kind of thing — small print under the words. */}
+        {onReply ? (
+          <PressableScale
+            onPress={onReply}
+            haptic="selection"
+            hitSlop={{ top: 12, bottom: 14, left: 12, right: 24 }}
+            style={s.replyHang}
+            accessibilityRole="button"
+            accessibilityLabel={t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`)}
+            testID="comment-reply"
+          >
+            <Text style={s.reply}>{t('Reply', 'Trả lời', '返信', '回复', '回覆')}</Text>
+          </PressableScale>
+        ) : null}
       </View>
     </View>
   );
@@ -133,5 +154,7 @@ const s = StyleSheet.create({
   // Who a deep answer is to: the accent, as a tag is, since it is one.
   to: { color: colors.accent },
   tag: { color: colors.accent, fontWeight: font.medium },
+  replyHang: { alignSelf: 'flex-start', marginTop: 4 },
+  reply: { color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold, lineHeight: 18 },
   gone: { color: colors.textTertiary, fontSize: 14, lineHeight: 20, fontStyle: 'italic' },
 });
