@@ -18,7 +18,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -40,6 +40,21 @@ export type Database = {
           key?: string
           note?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      banned_words: {
+        Row: {
+          created_at: string
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          word: string
+        }
+        Update: {
+          created_at?: string
+          word?: string
         }
         Relationships: []
       }
@@ -248,6 +263,42 @@ export type Database = {
           },
         ]
       }
+      collection_places: {
+        Row: {
+          collection_id: string
+          created_at: string
+          place_id: string
+          sort_order: number
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          place_id: string
+          sort_order?: number
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          place_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_places_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_places_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_shares: {
         Row: {
           collection_id: string
@@ -300,45 +351,10 @@ export type Database = {
           },
         ]
       }
-      collection_places: {
-        Row: {
-          collection_id: string
-          created_at: string
-          place_id: string
-          sort_order: number
-        }
-        Insert: {
-          collection_id: string
-          created_at?: string
-          place_id: string
-          sort_order?: number
-        }
-        Update: {
-          collection_id?: string
-          created_at?: string
-          place_id?: string
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "collection_places_collection_id_fkey"
-            columns: ["collection_id"]
-            isOneToOne: false
-            referencedRelation: "collections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "collection_places_place_id_fkey"
-            columns: ["place_id"]
-            isOneToOne: false
-            referencedRelation: "places"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       collections: {
         Row: {
           city_id: string
+          comments_off: boolean
           copied_from: string | null
           cover_photo_id: string | null
           created_at: string
@@ -359,6 +375,7 @@ export type Database = {
         }
         Insert: {
           city_id?: string
+          comments_off?: boolean
           copied_from?: string | null
           cover_photo_id?: string | null
           created_at?: string
@@ -379,6 +396,7 @@ export type Database = {
         }
         Update: {
           city_id?: string
+          comments_off?: boolean
           copied_from?: string | null
           cover_photo_id?: string | null
           created_at?: string
@@ -417,6 +435,103 @@ export type Database = {
             columns: ["cover_photo_id"]
             isOneToOne: false
             referencedRelation: "place_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comment_mentions: {
+        Row: {
+          at: number
+          comment_id: string
+          len: number
+          person_id: string | null
+          place_id: string | null
+        }
+        Insert: {
+          at: number
+          comment_id: string
+          len: number
+          person_id?: string | null
+          place_id?: string | null
+        }
+        Update: {
+          at?: number
+          comment_id?: string
+          len?: number
+          person_id?: string | null
+          place_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_mentions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_mentions_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          author: string | null
+          body: string | null
+          collection_id: string | null
+          created_at: string
+          deleted_at: string | null
+          depth: number
+          id: string
+          parent_id: string | null
+          root_id: string | null
+        }
+        Insert: {
+          author?: string | null
+          body?: string | null
+          collection_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          depth?: number
+          id?: string
+          parent_id?: string | null
+          root_id?: string | null
+        }
+        Update: {
+          author?: string | null
+          body?: string | null
+          collection_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          depth?: number
+          id?: string
+          parent_id?: string | null
+          root_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_root_id_fkey"
+            columns: ["root_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
             referencedColumns: ["id"]
           },
         ]
@@ -553,6 +668,33 @@ export type Database = {
         Update: {
           added_at?: string
           email?: string
+        }
+        Relationships: []
+      }
+      fetch_place_calls: {
+        Row: {
+          action: string
+          day: string
+          day_cap: number
+          n: number
+          user_cap: number | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          day: string
+          day_cap: number
+          n?: number
+          user_cap?: number | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          day?: string
+          day_cap?: number
+          n?: number
+          user_cap?: number | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -701,7 +843,7 @@ export type Database = {
           {
             foreignKeyName: "photo_scores_photo_id_fkey"
             columns: ["photo_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "place_photos"
             referencedColumns: ["id"]
           },
@@ -811,6 +953,7 @@ export type Database = {
         Row: {
           added_by: string | null
           address: string | null
+          business_status: string | null
           categories: string[]
           category: string
           channel: string | null
@@ -822,7 +965,11 @@ export type Database = {
           duration_max: number | null
           duration_min: number | null
           emoji: string | null
+          google_phone: string | null
           google_place_id: string | null
+          google_refreshed_at: string | null
+          google_summary: string | null
+          google_website: string | null
           i18n: Json
           id: string
           instagram_handle: string | null
@@ -845,10 +992,13 @@ export type Database = {
           primary_type: string | null
           rating: number | null
           rating_count: number | null
-          review_pace: number | null
           review_note: string | null
+          review_pace: number | null
           review_status: string
           reviewed_at: string | null
+          reviewer_name: string | null
+          reviewer_source: string | null
+          reviewer_url: string | null
           saved_count: number
           slug: string
           sort_order: number | null
@@ -861,6 +1011,7 @@ export type Database = {
         Insert: {
           added_by?: string | null
           address?: string | null
+          business_status?: string | null
           categories?: string[]
           category: string
           channel?: string | null
@@ -872,7 +1023,11 @@ export type Database = {
           duration_max?: number | null
           duration_min?: number | null
           emoji?: string | null
+          google_phone?: string | null
           google_place_id?: string | null
+          google_refreshed_at?: string | null
+          google_summary?: string | null
+          google_website?: string | null
           i18n?: Json
           id?: string
           instagram_handle?: string | null
@@ -895,10 +1050,13 @@ export type Database = {
           primary_type?: string | null
           rating?: number | null
           rating_count?: number | null
-          review_pace?: number | null
           review_note?: string | null
+          review_pace?: number | null
           review_status?: string
           reviewed_at?: string | null
+          reviewer_name?: string | null
+          reviewer_source?: string | null
+          reviewer_url?: string | null
           saved_count?: number
           slug: string
           sort_order?: number | null
@@ -911,6 +1069,7 @@ export type Database = {
         Update: {
           added_by?: string | null
           address?: string | null
+          business_status?: string | null
           categories?: string[]
           category?: string
           channel?: string | null
@@ -922,7 +1081,11 @@ export type Database = {
           duration_max?: number | null
           duration_min?: number | null
           emoji?: string | null
+          google_phone?: string | null
           google_place_id?: string | null
+          google_refreshed_at?: string | null
+          google_summary?: string | null
+          google_website?: string | null
           i18n?: Json
           id?: string
           instagram_handle?: string | null
@@ -945,10 +1108,13 @@ export type Database = {
           primary_type?: string | null
           rating?: number | null
           rating_count?: number | null
-          review_pace?: number | null
           review_note?: string | null
+          review_pace?: number | null
           review_status?: string
           reviewed_at?: string | null
+          reviewer_name?: string | null
+          reviewer_source?: string | null
+          reviewer_url?: string | null
           saved_count?: number
           slug?: string
           sort_order?: number | null
@@ -968,14 +1134,32 @@ export type Database = {
           },
         ]
       }
+      plan_assist_guest_calls: {
+        Row: {
+          day: string
+          ip_hash: string
+          n: number
+        }
+        Insert: {
+          day: string
+          ip_hash: string
+          n?: number
+        }
+        Update: {
+          day?: string
+          ip_hash?: string
+          n?: number
+        }
+        Relationships: []
+      }
       preferences: {
         Row: {
           budget_vnd: number | null
           categories: string[]
           grid_notice_closed_at: string | null
           history_on: boolean
-          theme: string | null
           owner_id: string
+          theme: string | null
           updated_at: string
         }
         Insert: {
@@ -983,8 +1167,8 @@ export type Database = {
           categories?: string[]
           grid_notice_closed_at?: string | null
           history_on?: boolean
-          theme?: string | null
           owner_id: string
+          theme?: string | null
           updated_at?: string
         }
         Update: {
@@ -992,8 +1176,8 @@ export type Database = {
           categories?: string[]
           grid_notice_closed_at?: string | null
           history_on?: boolean
-          theme?: string | null
           owner_id?: string
+          theme?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1163,6 +1347,36 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_collections: {
+        Row: {
+          collection_id: string
+          trip_id: string
+        }
+        Insert: {
+          collection_id: string
+          trip_id: string
+        }
+        Update: {
+          collection_id?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_collections_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_collections_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_invites: {
         Row: {
           created_at: string
@@ -1191,36 +1405,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "trip_invites_trip_id_fkey"
-            columns: ["trip_id"]
-            isOneToOne: false
-            referencedRelation: "trips"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      trip_collections: {
-        Row: {
-          collection_id: string
-          trip_id: string
-        }
-        Insert: {
-          collection_id: string
-          trip_id: string
-        }
-        Update: {
-          collection_id?: string
-          trip_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "trip_collections_collection_id_fkey"
-            columns: ["collection_id"]
-            isOneToOne: false
-            referencedRelation: "collections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "trip_collections_trip_id_fkey"
             columns: ["trip_id"]
             isOneToOne: false
             referencedRelation: "trips"
@@ -1373,6 +1557,37 @@ export type Database = {
           views: number
         }[]
       }
+      comment_clean: { Args: { p_body: string }; Returns: boolean }
+      comment_previews: {
+        Args: { p_collections: string[] }
+        Returns: {
+          collection_id: string
+          latest: Json
+          n: number
+        }[]
+      }
+      comment_prune: { Args: { p_id: string }; Returns: undefined }
+      comment_subject_visible: {
+        Args: { p_collection: string }
+        Returns: boolean
+      }
+      comment_thread: {
+        Args: { p_collection: string; p_order?: string }
+        Returns: {
+          author: string
+          avatar_url: string
+          body: string
+          created_at: string
+          depth: number
+          full_name: string
+          gone: boolean
+          handle: string
+          id: string
+          mentions: Json
+          parent_id: string
+          root_id: string
+        }[]
+      }
       copies_of_list: {
         Args: { cid: string }
         Returns: {
@@ -1395,16 +1610,31 @@ export type Database = {
           copier_name: string
         }[]
       }
+      delete_comment: { Args: { p_id: string }; Returns: undefined }
+      fetch_place_allowed: {
+        Args: {
+          p_action: string
+          p_day_cap: number
+          p_user: string
+          p_user_cap: number
+        }
+        Returns: string
+      }
+      fetch_place_usage: { Args: never; Returns: Json }
       friend_suggestions: {
         Args: never
         Returns: {
-          collection_id: string | null
+          collection_id: string
           n: number
           other: string
           reason: string
         }[]
       }
       friends_with: { Args: { other: string }; Returns: boolean }
+      guest_assist_allowed: {
+        Args: { p_day_cap: number; p_ip_cap: number; p_ip_hash: string }
+        Returns: boolean
+      }
       guide_may_manage: { Args: { photo: string }; Returns: boolean }
       guide_set_cover: { Args: { photo: string }; Returns: undefined }
       guide_set_hidden: {
@@ -1417,10 +1647,6 @@ export type Database = {
       is_local_guide:
         | { Args: never; Returns: boolean }
         | { Args: { p_city_id: string }; Returns: boolean }
-      lists_liked_in_common: {
-        Args: { other: string }
-        Returns: { slug: string }[]
-      }
       likes_on_list: {
         Args: { cid: string }
         Returns: {
@@ -1430,16 +1656,6 @@ export type Database = {
           liker_handle: string
           liker_id: string
           liker_name: string
-        }[]
-      }
-      places_in_common: {
-        Args: { other: string }
-        Returns: {
-          name_en: string
-          name_ja: string
-          name_vi: string
-          photo_uri: string
-          slug: string
         }[]
       }
       likes_on_mine: {
@@ -1453,6 +1669,13 @@ export type Database = {
           liker_name: string
         }[]
       }
+      lists_liked_in_common: {
+        Args: { other: string }
+        Returns: {
+          slug: string
+        }[]
+      }
+      may_check_in: { Args: { p_place: string }; Returns: boolean }
       moderate_collection: {
         Args: { hide: boolean; target: string }
         Returns: undefined
@@ -1476,11 +1699,40 @@ export type Database = {
       my_reports_today: { Args: never; Returns: number }
       on_trip: { Args: { t: string }; Returns: boolean }
       own_collection_places_today: { Args: never; Returns: number }
+      own_collections_today: { Args: never; Returns: number }
+      own_comments_today: { Args: never; Returns: number }
+      own_friend_requests_today: { Args: never; Returns: number }
       own_photos_on_place: { Args: { target: string }; Returns: number }
+      own_place_events_today: { Args: never; Returns: number }
       own_place_photos_today: { Args: never; Returns: number }
       owns_collection: { Args: { cid: string }; Returns: boolean }
+      places_in_common: {
+        Args: { other: string }
+        Returns: {
+          name_en: string
+          name_ja: string
+          name_vi: string
+          photo_uri: string
+          slug: string
+        }[]
+      }
+      popular_themes: {
+        Args: never
+        Returns: {
+          theme: string
+        }[]
+      }
+      post_comment: {
+        Args: {
+          p_body: string
+          p_collection: string
+          p_mentions?: Json
+          p_parent: string
+        }
+        Returns: string
+      }
+      random_avatar_preset: { Args: never; Returns: string }
       random_handle: { Args: never; Returns: string }
-      popular_themes: { Args: never; Returns: { theme: string }[] }
       record_collection_view: { Args: { cid: string }; Returns: undefined }
       reorder_collection: {
         Args: { collection_slug: string; place_slugs: string[] }
