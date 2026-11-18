@@ -131,13 +131,12 @@ describe('the five tabs', () => {
     // its window. (`accessibilityState.selected` is set too, but
     // react-native-web drops it on the floor — see `Chip`.)
     //
-    // The five are one family, Lucide's lines (owner, 12 Nov 2026), and
-    // the pill's copies are the same outlines, not solids: the pill says
-    // which tab, and the reference the owner chose keeps the line there.
-    const marks = ['compass-outline', 'places', 'calendar-outline', 'bookmark-outline', 'person-outline'];
+    // The five are Ionicons' outlines, the app's one family (owner, 18
+    // Nov 2026), and the pill's copies are the same outlines, not solids:
+    // the pill says which tab (owner, 12 Nov 2026).
+    const marks = ['compass-outline', 'location-outline', 'calendar-outline', 'bookmark-outline', 'person-outline'];
     expect(NAMES.map((n) => tab(n).querySelector('[data-icon]')?.getAttribute('data-icon'))).toEqual(marks);
     expect([...solids().querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'))).toEqual(marks);
-    for (const g of document.querySelectorAll('[data-icon]')) expect(g.getAttribute('data-family')).toBe('lucide');
   });
 
   // The pill stands over the selected cell, and its window looks back at
@@ -249,16 +248,14 @@ describe('the five tabs', () => {
     expect(PILL_FADE).toBeGreaterThan(0);
   });
 
-  // The reference's line and lightness at a size near Threads' (owner,
-  // 12 Nov 2026): a 22pt box, a 1.2 line on Lucide's 24 grid — lighter
-  // than the 1.5 every other glyph in the app wears.
-  it('draws every glyph at the one size, in the bar’s lighter line', () => {
+  // A size near Threads' (owner, 12 Nov 2026): 22, the scale's step for
+  // getting about.
+  it('draws every glyph at the one size', () => {
     mount(propsFor(0).props);
     const all = [...document.querySelectorAll('[data-icon]')];
     expect(all).toHaveLength(10);
     for (const g of all) {
       expect(g.getAttribute('data-size')).toBe('22');
-      expect(g.getAttribute('data-stroke')).toBe('1.2');
     }
   });
 

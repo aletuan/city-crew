@@ -218,7 +218,7 @@ export default function CollectionStatsScreen({ navigation, route }: {
 }
 
 /** Each figure's mark: the open eye, the Activity page's heart and copy
- *  mark, and the trips tab's calendar (drawn from the line set). */
+ *  mark, and the trips tab's calendar. */
 const GLYPH: Record<StatKind, GlyphName> = {
   views: 'eye-outline',
   likes: 'heart-outline',

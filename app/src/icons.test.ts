@@ -28,8 +28,7 @@
 // It reads the source with a regular expression, the same trade `nav.test`
 // takes and for the same reason: the literal `<Glyph name="..." />`
 // that every direct call site in this app is written as (`Glyph` since
-// 12 Nov 2026, when the calendar and four other marks moved to Lucide's
-// line set — see components/ui/glyph.tsx). A glyph name held
+// 12 Nov 2026 — see components/ui/glyph.tsx). A glyph name held
 // in a variable would go unseen. Two indirections do hold one — the
 // header's `IconSubtitle` and Profile's `RoundIcon` — so `IconSubtitle`,
 // the one that draws a dateline, gets its own assertion below. `RoundIcon`
