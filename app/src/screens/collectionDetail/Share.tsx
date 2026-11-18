@@ -86,7 +86,7 @@ import { type SheetAction } from '../../components/ActionSheet';
 import { PressableScale } from '../../components/ui';
 import { Glyph } from '../../components/ui/glyph';
 import { useI18n } from '../../lib/i18n';
-import { seenName } from '../../lib/shares';
+import { type ReaderMark, SEEN_GLYPH, seenName } from '../../lib/shares';
 import { colors } from '../../theme';
 import { ACT_GLYPH, s } from './styles';
 
@@ -135,6 +135,36 @@ export function ShareButton({ seen, friends, onPress }: {
 
 /** The sheet's head: what the button said, then the question its first
  *  card answers. The second card is the other half of sharing. */
+/** What VoiceOver is told of the reader's mark; nothing for none. */
+export function readerWord(kind: ReaderMark | null, t: T): string {
+  if (!kind) return '';
+  return kind === 'lent'
+    ? t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你分享', '與你分享')
+    : seenName('public', t);
+}
+
+/**
+ * The mark under the handle for a reader who is not the owner
+ * (`shares.readerMark`): two heads and "Shared with you" on a list lent
+ * to them, the globe alone on a person's public list. Not a button —
+ * the owner's mark in the same place is, and opens the sheet — and at
+ * that mark's size and in its grey, so the line reads the same whoever
+ * is looking.
+ */
+export function ReaderSeen({ kind }: { kind: ReaderMark }) {
+  const { t } = useI18n();
+  return kind === 'lent' ? (
+    <View style={s.visibility} testID="collection-shared">
+      <Glyph name={SEEN_GLYPH.friends} size={15} color={colors.textTertiary} />
+      <Text style={s.visibilityWord}>{readerWord(kind, t)}</Text>
+    </View>
+  ) : (
+    <View style={s.visibility} accessible accessibilityLabel={readerWord(kind, t)} testID="collection-public">
+      <Glyph name={SEEN_GLYPH.public} size={15} color={colors.textTertiary} />
+    </View>
+  );
+}
+
 export function ShareHead() {
   const { t } = useI18n();
   return (

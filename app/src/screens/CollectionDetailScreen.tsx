@@ -28,7 +28,7 @@ import {
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import LikeHeart from '../components/LikeHeart';
-import { likeable, namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
+import { likeable, namesBriefly, readerMark, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
 import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
@@ -45,7 +45,7 @@ import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
 import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
-import { sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
+import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
 import { ACT_GLYPH, ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
 import { useReorderDraft } from './collectionDetail/useReorderDraft';
@@ -1213,13 +1213,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // The rest of the words are `ageWord`'s, which the list's activity page
   // reads too, so a list's "3h" and a like's cannot be spelled apart.
   const ageText = age ? ageWord(age, lang, t, t('New', 'Mới tạo', '作成したばかり', '刚创建', '剛建立')) : '';
-  const sharedWord = t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你分享', '與你分享');
-  const sharedMark = sharedToMe ? (
-    <View style={s.visibility} testID="collection-shared">
-      <Glyph name={SEEN_GLYPH.friends} size={15} color={colors.textTertiary} />
-      <Text style={s.visibilityWord}>{sharedWord}</Text>
-    </View>
-  ) : null;
+  // What a reader who is not the owner sees there: "Shared with you",
+  // or the globe of a person's public list — `shares.readerMark`.
+  const readerSees = readerMark(col, owned);
+  const sharedMark = readerSees ? <ReaderSeen kind={readerSees} /> : null;
   const seenOnLine = visibility ?? sharedMark;
   const byline = ageText || seenOnLine ? (
     <View style={s.byline} testID="collection-meta">
@@ -1251,7 +1248,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // The whole head is the press, both lines with the face, as a
         // post's is — so VoiceOver hears both lines too, not the handle
         // alone. A visitor's line holds no control to be swallowed.
-        accessibilityLabel={[faceName, ageText, sharedMark ? sharedWord : ''].filter(Boolean).join(', ')}
+        accessibilityLabel={[faceName, ageText, readerWord(readerSees, t)].filter(Boolean).join(', ')}
         testID="collection-curator"
       >
         {curatorFace}

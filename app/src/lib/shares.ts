@@ -39,6 +39,36 @@ export function visibilityOf(isPublic: boolean, shares: number): Visibility {
 }
 
 /**
+ * The mark a reader who is not the owner sees under the handle of
+ * somebody's list, after its age (owner, 18 Nov 2026).
+ *
+ *   - `lent`: a list that is not public reached this reader through a
+ *     share — two heads and "Shared with you", as since 13 Nov;
+ *   - `public`: a person's public list — the globe, as a public post
+ *     wears one on Facebook. Until this the globe was the owner's alone,
+ *     and the reader it tells most was the one who did not see it: a
+ *     like here, and a name on the list's activity page, are in front of
+ *     everybody. It also left one place on the card marked for a friend's
+ *     shared list and bare for a stranger's public one.
+ *
+ * Nothing for the owner, who has the mark that opens the who-sees-it
+ * sheet in the same place; and nothing for a list of the desk's, which
+ * has no person, no age and no byline to stand a mark on.
+ *
+ * `is_public` is read as the list's page reads it: public only when it
+ * says so.
+ */
+export type ReaderMark = 'lent' | 'public';
+export function readerMark(
+  col: { is_public?: boolean | null; owner_id?: string | null } | null | undefined,
+  owned: boolean,
+): ReaderMark | null {
+  if (!col || owned) return null;
+  if (!col.is_public) return 'lent';
+  return col.owner_id ? 'public' : null;
+}
+
+/**
  * Whether this reader may like the list — the app's copy of the insert
  * policy on `collection_likes` (`20261117233000_likes_in_the_group.sql`).
  *
