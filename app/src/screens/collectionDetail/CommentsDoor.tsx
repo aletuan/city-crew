@@ -49,13 +49,14 @@ export function CommentsDoor({ list, about, onPress }: {
   const n = previews.data[listId ?? '']?.n ?? 0;
   // The first comment is written here, over the page; a thread with
   // something in it is opened — `quickOrThread`.
-  const { quick, node } = useQuickComment();
+  const quick = useQuickComment();
   if (!listId) return null;
-  const press = () => (quickOrThread({ me: session?.user?.id ?? null, n, loaded: previews.loaded, loading: previews.loading }) === 'quick'
+  const press = () => (quick && quickOrThread({
+    me: session?.user?.id ?? null, n, loaded: previews.loaded, loading: previews.loading,
+  }) === 'quick'
     ? quick({ kind: 'collection', id: listId }, about)
     : onPress(listId));
   return (
-    <>
     <PressableScale
       contentStyle={s.like}
       scaleTo={0.82}
@@ -70,7 +71,5 @@ export function CommentsDoor({ list, about, onPress }: {
       <Glyph name="chatbubble-outline" size={ACT_GLYPH} color={colors.textSecondary} />
       {n > 0 ? <Text style={s.act} testID="collection-comments-count">{n}</Text> : null}
     </PressableScale>
-    {node}
-    </>
   );
 }

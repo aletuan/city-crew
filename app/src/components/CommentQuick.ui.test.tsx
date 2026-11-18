@@ -6,7 +6,7 @@
 // words; and that the dim behind it puts it away having sent nothing.
 
 import React from 'react';
-import { Keyboard, StyleSheet, Text } from 'react-native';
+import { Keyboard, StyleSheet, Text, View } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import { changes } from '../lib/commentsChanged';
@@ -28,7 +28,7 @@ vi.mock('react-native-safe-area-context', () => ({
 }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
 
-import CommentQuick, { quickOrThread, useQuickComment } from './CommentQuick';
+import CommentQuick, { CommentQuickProvider, quickOrThread, useQuickComment } from './CommentQuick';
 
 const SUBJECT: Subject = { kind: 'collection', id: 'c1' };
 const onClose = vi.fn();
@@ -141,19 +141,21 @@ describe('the field over the page', () => {
   });
 });
 
-describe('useQuickComment', () => {
-  function Page() {
-    const { quick, node } = useQuickComment();
+// One field for the app, above the navigator: a bubble anywhere under the
+// provider raises it, and nothing a bubble sits in is its parent.
+describe('the app\'s one field', () => {
+  function Bubble() {
+    const quick = useQuickComment();
     return (
-      <>
-        <Text onPress={() => quick(SUBJECT, 'Old Quarter eats')} testID="bubble">bubble</Text>
-        {node}
-      </>
+      <Text onPress={() => quick?.(SUBJECT, 'Old Quarter eats')} testID="bubble">
+        {quick ? 'has a field' : 'no field'}
+      </Text>
     );
   }
+  const mount = () => render(<CommentQuickProvider><View testID="page"><Bubble /></View></CommentQuickProvider>);
 
-  it('raises the field on the press, and puts it away when it is done with', async () => {
-    render(<Page />);
+  it('is raised by a press under the provider, and put away when it is done with', async () => {
+    mount();
     expect(screen.queryByTestId('comment-quick')).toBeNull();
     fireEvent.click(screen.getByTestId('bubble'));
     expect(screen.getByTestId('composer-about').textContent).toBe('Old Quarter eats');
@@ -165,5 +167,20 @@ describe('useQuickComment', () => {
     expect(field().value).toBe('');
     fireEvent.click(screen.getByTestId('comment-quick-close'));
     expect(screen.queryByTestId('comment-quick')).toBeNull();
+  });
+
+  // The send button took two presses on a phone while each bubble
+  // rendered the field beside itself, inside its page's scroll view
+  // (facebook/react-native#28871). The field is the provider's child,
+  // never the page's.
+  it('is drawn outside the page that raised it', () => {
+    mount();
+    fireEvent.click(screen.getByTestId('bubble'));
+    expect(screen.getByTestId('page').contains(screen.getByTestId('comment-quick'))).toBe(false);
+  });
+
+  it('answers no field where none is mounted', () => {
+    render(<Bubble />);
+    expect(screen.getByTestId('bubble').textContent).toBe('no field');
   });
 });

@@ -17,6 +17,7 @@ import { ThemeProvider, useScheme } from './src/lib/theme';
 import { landingState } from './src/lib/look';
 import { holdingFirstFrame } from './src/lib/boot';
 import { FlagsSync } from './src/lib/flagsSync';
+import { CommentQuickProvider } from './src/components/CommentQuick';
 import { startupTrace } from './src/lib/trace';
 import { CatalogProvider } from './src/lib/catalog';
 import { CrewProvider } from './src/lib/crew';
@@ -421,9 +422,15 @@ function Root() {
                       <RewardsProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
+                      {/* The field a first comment is written in, raised
+                          over whatever page its bubble is on. Here, above
+                          the navigator, so no screen's scroll view is its
+                          parent — see `components/CommentQuick`. */}
+                      <CommentQuickProvider>
                       <TabBarDuckProvider>
                         <SignupTourProvider onReplay={() => goTo('Explore', { screen: 'ExploreHome' })} getRoute={() => navRef.getCurrentRoute()?.name}><Tabs /></SignupTourProvider>
                       </TabBarDuckProvider>
+                      </CommentQuickProvider>
                       {/* The save and sign-in sheets, after the tabs so
                           they paint over them — see `components/SaveSheets`. */}
                       <SaveSheets />

@@ -262,6 +262,14 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
   tên bộ, không chuyển trang (`CommentQuick`, dùng lại đúng
   `CommentComposer`). Gửi xong thì ô đóng và số trên bong bóng thành 1.
 - Bộ đã có bình luận thì vẫn sang màn Bình luận.
+- **Lỗi đã sửa (18/11/2026)**: trên máy thật, nút gửi của ô bật tại chỗ
+  phải bấm hai lần; lần đầu chỉ làm bàn phím hạ xuống. Nguyên nhân: ô (một
+  `Modal`) được vẽ ngay cạnh nút bong bóng, tức là nằm trong `ScrollView`
+  của trang; `ScrollView` của React Native nuốt cú chạm đầu tiên khi bàn
+  phím đang mở, và nó xét "nằm trong" theo cây React chứ không theo chỗ
+  vẽ (facebook/react-native#28871). Nay cả app chỉ có **một** ô, gắn phía
+  trên bộ điều hướng (`CommentQuickProvider` trong `App.tsx`), không có
+  `ScrollView` nào là cha. Chưa xác nhận lại trên máy.
 - Chỉ bật tại chỗ khi **đã biết chắc** luồng trống: đã đăng nhập, con số
   đã về và không đang được hỏi lại. Chưa biết thì mở luồng, để không che
   mất bình luận đang có. Khách cũng mở luồng, nơi họ được mời đăng nhập.
