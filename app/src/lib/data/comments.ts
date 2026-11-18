@@ -138,10 +138,6 @@ export async function deleteComment(id: string): Promise<void> {
  * does.
  */
 export async function likeComment(id: string, on: boolean): Promise<void> {
-  // Not in the generated types until the migration has run on the live
-  // project and they are generated again; named here as what it is.
-  const { error } = await (supabase.rpc as unknown as (
-    fn: string, args: Record<string, unknown>,
-  ) => PromiseLike<{ error: { message: string } | null }>)('like_comment', { p_id: id, p_on: on });
+  const { error } = await supabase.rpc('like_comment', { p_id: id, p_on: on });
   if (error) throw new Error(error.message);
 }
