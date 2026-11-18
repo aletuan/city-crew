@@ -872,9 +872,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      the owner asked for it back the next morning, small, after the
      time, as a public post wears one on Facebook: with it a list of your
      own always says how it stands, and its absence is not left to be
-     read. A person's page keeps the other rule — a public card wears no
-     mark (`person.seenOn`) — because there the exception is what is
-     marked among many cards, and here there is one list.
+     read. A person's page says it in the same glyph (`person.seenOn`).
 
      Tapping opens a choice rather than flipping the switch: a word that
      changes who can see your list on one touch is a word nobody would

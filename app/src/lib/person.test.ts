@@ -119,10 +119,12 @@ describe('listsOn', () => {
 });
 
 describe('seenOn', () => {
-  it('marks nothing public, yours or not, said or unsaid', () => {
-    expect(seenOn(list('a'), true, 3)).toBeNull();
-    expect(seenOn(list('a'), false, 0)).toBeNull();
-    expect(seenOn(list('a', { is_public: undefined }), true, 0)).toBeNull();
+  // Every card is marked (owner, 18 Nov 2026): a public one wore nothing
+  // for a day.
+  it('says public for a public list, yours or not, said or unsaid, shared or not', () => {
+    expect(seenOn(list('a'), true, 3)).toEqual({ kind: 'public' });
+    expect(seenOn(list('a'), false, 0)).toEqual({ kind: 'public' });
+    expect(seenOn(list('a', { is_public: undefined }), true, 0)).toEqual({ kind: 'public' });
   });
 
   it('says private for a list of yours nobody else has', () => {

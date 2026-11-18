@@ -123,21 +123,28 @@ export function listsOn(
 }
 
 /**
- * Who can see a list that is on the page and is not public — the mark
- * its card wears. Nothing for a public list: it is what the page has
- * always held, and a mark on every card marks none.
+ * Who can see a list that is on the page — the mark its card wears.
  *
+ *   - `public`: anybody — the globe;
  *   - `private`: on your own page, a list only you can see;
  *   - `friends`: on your own page, a list shared with `n` friends
  *     (`shares.visibilityOf`, the rule the list's own page goes by);
  *   - `lent`: on somebody else's page, a list they shared with you — so
  *     the reader knows not everybody sees this card.
  *
+ * Every card is marked (owner, 18 Nov 2026). For a day a public one wore
+ * nothing — "a mark on every card marks none", and the exception alone
+ * was marked. The same morning the globe went back under the handle of
+ * a public list on its own page, and then onto it for every reader; the
+ * owner asked for it here too, so a list says how it stands in the same
+ * glyph wherever it is drawn. One rule on two screens was worth more to
+ * him than the quieter page.
+ *
  * A row that does not say is public, as `listsBy` takes it.
  */
-export type ListSeen = { kind: 'private' | 'lent' } | { kind: 'friends'; n: number };
-export function seenOn(c: Collection, own: boolean, shares: number): ListSeen | null {
-  if (c.is_public !== false) return null;
+export type ListSeen = { kind: 'public' | 'private' | 'lent' } | { kind: 'friends'; n: number };
+export function seenOn(c: Collection, own: boolean, shares: number): ListSeen {
+  if (c.is_public !== false) return { kind: 'public' };
   if (!own) return { kind: 'lent' };
   return visibilityOf(false, shares) === 'friends' ? { kind: 'friends', n: shares } : { kind: 'private' };
 }
