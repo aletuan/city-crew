@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -16,8 +16,7 @@ import { I18nProvider, useI18n } from './src/lib/i18n';
 import { ThemeProvider, useScheme } from './src/lib/theme';
 import { landingState } from './src/lib/look';
 import { holdingFirstFrame } from './src/lib/boot';
-import { appFlags } from './src/lib/flags';
-import { supabase } from './src/lib/supabase';
+import { FlagsSync } from './src/lib/flagsSync';
 import { startupTrace } from './src/lib/trace';
 import { CatalogProvider } from './src/lib/catalog';
 import { CrewProvider } from './src/lib/crew';
@@ -323,11 +322,6 @@ const navTheme = {
 /** Everything below the theme, so the scheme is readable from here down. */
 function Root() {
   const { ready, resume } = useScheme();
-  // The launch's switches — see `lib/flags.ts`. Fired once and not
-  // awaited: the first frame is held for fonts and the theme, not for
-  // this, and a switch that arrives a beat after the cards do is fine.
-  // A switch that never arrives leaves the app as it shipped.
-  useEffect(() => { void appFlags.load(supabase); }, []);
   // Display type and the quote face — see theme.ts. Until the faces are
   // ready the app holds on its own ground colour rather than rendering
   // titles in the system font and swapping them a frame later, which
@@ -408,6 +402,8 @@ function Root() {
                         trip later and shoving the card down. Renders
                         nothing; see `lib/guideGrant`. */}
                     <GuideGrantSync />
+                    {/* The launch's switches, and again on sign in and out. */}
+                    <FlagsSync />
                     <ReminderSync />
                     {/* Cuts every tab's stack back to its first screen
                         the moment a signed-in account ends — signed out,

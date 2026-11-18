@@ -701,3 +701,11 @@ for f in "$ROOT"/supabase/migrations/*_comments.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/comments_test.sql"
+
+# A switch on for one account (18 Nov 2026). After the app's switches,
+# whose rows it points at, and the safety block's `rls_client`.
+echo "→ flag testers"
+for f in "$ROOT"/supabase/migrations/*_app_flag_testers.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/app_flag_testers_test.sql"
