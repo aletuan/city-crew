@@ -58,7 +58,7 @@ export function NoMatches({ term, where }: { term: string; where?: string | null
   return (
     <View style={s.noneBox}>
       <View style={s.noneMark}>
-        <Glyph name="search" size={ICON.feature} color={colors.textTertiary} />
+        <Glyph name="search-outline" size={ICON.feature} color={colors.textTertiary} />
         {/* The question mark is the whole difference between "we are
             looking" and "we looked". A magnifier alone is what a screen
             shows while it is still searching. */}

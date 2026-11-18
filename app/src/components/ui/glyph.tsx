@@ -142,6 +142,32 @@ const LINE: Partial<Record<GlyphName, [LucideIcon, boolean]>> = {
 /** True when `name` is drawn from the line set rather than Ionicons. */
 export const isLineGlyph = (name: GlyphName): boolean => LINE[name] != null;
 
+/*
+ * ── one concept, one glyph (owner, 18 Nov 2026) ──
+ *
+ * The audit that set the scale below also found three concepts drawn two
+ * ways, and each is one now:
+ *
+ *   to search — `search-outline`, never `search`. Ionicons draws the
+ *     plain name with a 48-unit line and the outline with the 32 every
+ *     other outline has; eight places wore the heavy one, three of them
+ *     text fields beside four fields that wore the light one.
+ *   an error — `alert-circle-outline`, never the solid disc, which stood
+ *     on the sign-in banner and on a start point outside the catalog
+ *     while the error page and a failed load drew the ring. A reason to
+ *     report is `warning-outline` and a note is
+ *     `information-circle-outline`; those are other things to say.
+ *   again — `refresh`. Its `-outline` is the same drawing under a second
+ *     name (rendered side by side at 150pt: identical), so this one is
+ *     the name thirteen places already used.
+ *
+ * Left as they are, having looked: `image-outline`, `images-outline` and
+ * `albums-outline` are a photograph, a library and a way of laying out;
+ * `navigate` is a direction and `location-outline` a place; and a solid
+ * glyph on a filled button (`location`, `people`, `person-add`) is the
+ * app's convention there.
+ */
+
 /**
  * The sizes a glyph is drawn at: seven, each a step of about 1.2 from the
  * one before, and each named for the job the glyph is doing rather than

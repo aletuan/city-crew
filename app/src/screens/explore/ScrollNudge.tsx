@@ -65,7 +65,7 @@ export function ScrollNudge({ visible, onSearch, onAdd }: {
   return (
     <DockSlot visible={visible} onPress={onSearch} accessibilityRole="button">
       <DockOffer
-        icon="search"
+        icon="search-outline"
         title={t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？', '没找到？', '沒找到？')}
         sub={t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加', '搜索，或自己添加', '搜尋，或自己新增')}
       />

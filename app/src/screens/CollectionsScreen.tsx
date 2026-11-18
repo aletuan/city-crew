@@ -1387,7 +1387,7 @@ export default function CollectionsScreen({ navigation, route }: {
           this screen's own header pill does. Guests start no lists. */}
       <DockSlot visible={dock} onPress={findFromDock} accessibilityRole="button" testID="collections-dock">
         <DockOffer
-          icon="search"
+          icon="search-outline"
           title={t('Find a collection', 'Tìm bộ sưu tập', 'コレクションを探す', '查找合集', '查詢合集')}
           // Short, for one line beside the pill: about 23 characters fit
           // there (CollectionDetail's dock measured it, 17 Oct 2026).

@@ -750,7 +750,7 @@ describe('your own list', () => {
     // No cell, and so no count: the card is the whole answer.
     expect(screen.queryByTestId('collection-add-cell')).toBeNull();
     expect(screen.getByTestId('collection-desc').querySelector('[data-icon="location-outline"]')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Find places' }).querySelector('[data-icon="search"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Find places' }).querySelector('[data-icon="search-outline"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Find places'));
     expect(raw.navigate).toHaveBeenCalledWith('Search', { addTo: 'old-quarter' });
     // The card is the one offer; an Add place row over it would be two.

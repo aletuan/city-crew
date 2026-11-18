@@ -105,7 +105,7 @@ export function SettingsCard() {
           last={!tour.enabled}
         />
         {tour.enabled && <SettingRow
-          icon="refresh-outline"
+          icon="refresh"
           label={t('Replay guide', 'Xem lại hướng dẫn', 'ガイドをもう一度見る', '重新播放新手引导', '重新播放新手引導')}
           onPress={tour.replay}
           testID="profile-replay-guide"

@@ -488,7 +488,7 @@ export function SwitchRow({ prompt, action, onPress, testID }: {
 export function FormError({ children }: { children: string }) {
   return (
     <View style={s.formError} accessibilityLiveRegion="polite" testID="auth-error">
-      <Glyph name="alert-circle" size={ICON.nav} color={colors.bad} />
+      <Glyph name="alert-circle-outline" size={ICON.nav} color={colors.bad} />
       <Text style={s.formErrorText}>{children}</Text>
     </View>
   );
