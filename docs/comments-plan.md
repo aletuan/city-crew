@@ -50,7 +50,8 @@ và một chữ "Thanks" không biết trả lời cái gì. Cách của Tildes 
 diễn đàn, nơi một trả lời tự nó là một lập luận; ở đây bình luận là một
 dòng dưới một danh sách quán, và trả lời mất nghĩa khi câu gốc mất.
 
-Nay (`20261118150000_comments_cascade.sql`):
+Nay (`20261118150000_comments_cascade.sql`, đã áp lên cơ sở dữ liệu thật
+ngày 18/11/2026; ba bình luận thử đang có lúc đó đã bị xoá theo luật mới):
 
 - Xoá bình luận là xoá cả nhánh bên dưới. Cái giá: bạn có thể mất trả lời
   của mình vì người khác xoá bình luận của họ. App nói điều này với người
