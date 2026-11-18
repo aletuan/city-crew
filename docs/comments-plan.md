@@ -17,7 +17,7 @@ phải viết lại.
 | 2 | Lồng nhau | **Có lồng** (chủ dự án chọn; đề nghị ban đầu là một cấp). Dữ liệu lồng tự do; màn hình thụt tối đa 2 cấp, sâu hơn thì nằm ở cấp 2 kèm "@tên". | Facebook |
 | 3 | Ai được bình luận | Mọi người đã đăng nhập, trên bộ sưu tập công khai. Chủ bộ có công tắc **tắt bình luận** cho từng bộ. | Instagram |
 | 4 | Tag | Tag người mở Trang cá nhân; tag địa điểm (chỉ địa điểm trong chính bộ đó) mở trang chi tiết địa điểm. Tag được: bạn bè của người viết, chủ bộ, người đã bình luận trong luồng. | Instagram (mức "người mình theo dõi") |
-| 5 | Xoá | Xoá của mình; chủ bộ xoá được bình luận trên bộ của họ. Còn trả lời bên dưới thì để lại dòng "Bình luận đã bị xoá"; không còn trả lời thì biến mất hẳn. Không cho sửa. | Tildes, Reddit |
+| 5 | Xoá | Xoá của mình; chủ bộ xoá được bình luận trên bộ của họ. **Xoá một bình luận là xoá luôn các trả lời bên dưới** (đổi ngày 18/11/2026, xem dưới). Không cho sửa. | Instagram, Facebook |
 | 6 | Thông báo | Chủ bộ và người đã tham gia luồng được báo trong màn Hoạt động sẵn có. Chưa có thông báo đẩy. | Letterboxd |
 | 7 | Giới hạn | 500 ký tự; 30 bình luận mỗi người mỗi ngày. | |
 | 8 | An toàn (Apple 1.2) | Bộ lọc từ cấm lúc đăng; báo cáo từng bình luận; hai người chặn nhau không thấy bình luận của nhau. | App Review Guidelines 1.2 |
@@ -40,6 +40,26 @@ Bình luận gốc là bình luận viết thẳng vào đối tượng, không 
 Về sau: khi làm tim trên bình luận, thêm kiểu xếp **"Nổi bật"** (số tim
 là chính, số trả lời là phụ). Chỉ đổi mặc định sang "Nổi bật" khi các
 luồng thường xuyên vượt khoảng 20 bình luận.
+
+### Về việc xoá (quyết định 5, đổi ngày 18/11/2026)
+
+Bản đầu theo Tildes: bình luận đã có người trả lời thì khi xoá để lại dòng
+"Bình luận đã bị xoá" cho các trả lời bám vào, để một người không xoá được
+lời của người khác. Trên máy thật nó thành hai dòng "đã bị xoá" chồng nhau
+và một chữ "Thanks" không biết trả lời cái gì. Cách của Tildes hợp với
+diễn đàn, nơi một trả lời tự nó là một lập luận; ở đây bình luận là một
+dòng dưới một danh sách quán, và trả lời mất nghĩa khi câu gốc mất.
+
+Nay (`20261118150000_comments_cascade.sql`):
+
+- Xoá bình luận là xoá cả nhánh bên dưới. Cái giá: bạn có thể mất trả lời
+  của mình vì người khác xoá bình luận của họ. App nói điều này với người
+  bấm xoá, không nói được với người bị mất.
+- Xoá tài khoản thì bình luận của người đó và các trả lời bên dưới mất.
+- Bình luận của người bị chặn (hoặc đã chặn mình) và mọi thứ bên dưới nó
+  không được trả về cho người đọc đó; dữ liệu vẫn nguyên.
+- Không còn dòng "đã bị xoá", không còn cột `deleted_at`, nội dung không
+  bao giờ rỗng.
 
 ### Hoãn, sẽ làm sau
 
@@ -235,18 +255,23 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Chưa kiểm được bằng kiểm thử tự động: ô có trượt lên đúng theo bàn phím
   không. Phải xem trên máy.
 
-*C4c — chưa làm (chủ dự án yêu cầu 18/11/2026):*
+*C4c — xong (chủ dự án yêu cầu 18/11/2026):*
 - Bộ **chưa có bình luận nào**: bấm bong bóng (trên trang bộ sưu tập hoặc
-  trên thẻ) thì ô soạn và bàn phím bật lên ngay tại chỗ, không chuyển
-  trang, như Threads làm trên feed. Dùng lại đúng `CommentComposer`.
-- Bộ đã có bình luận thì vẫn sang màn Bình luận như hiện nay.
+  trên thẻ) thì ô soạn và bàn phím bật lên ngay tại chỗ, phía trên ô ghi
+  tên bộ, không chuyển trang (`CommentQuick`, dùng lại đúng
+  `CommentComposer`). Gửi xong thì ô đóng và số trên bong bóng thành 1.
+- Bộ đã có bình luận thì vẫn sang màn Bình luận.
+- Chỉ bật tại chỗ khi **đã biết chắc** luồng trống: đã đăng nhập, con số
+  đã về và không đang được hỏi lại. Chưa biết thì mở luồng, để không che
+  mất bình luận đang có. Khách cũng mở luồng, nơi họ được mời đăng nhập.
+- "Trả lời" dưới mỗi bình luận nay là **biểu tượng bong bóng**, không phải
+  chữ, để dành chỗ cho trái tim cạnh nó khi bình luận có lượt thích.
 
 *C4b — xong:*
-- Nút ⋯ ở cuối mỗi bình luận (chỉ khi đã đăng nhập, và không có trên dòng
-  "đã xoá").
-- Bình luận của mình: "Xoá bình luận", hỏi lại một lần và nói trước điều
-  gì còn lại (có trả lời thì để lại dòng "Bình luận đã bị xoá"). Xoá xong
-  thì luồng và các con số tự tải lại; lỗi thì báo và không đổi gì.
+- Nút ⋯ ở cuối mỗi bình luận (chỉ khi đã đăng nhập).
+- Bình luận của mình: "Xoá bình luận", hỏi lại một lần và nói trước rằng
+  các trả lời bên dưới cũng bị xoá. Xoá xong thì luồng và các con số tự
+  tải lại; lỗi thì báo và không đổi gì.
 - Bình luận của người khác: "Báo cáo bình luận", đi qua đúng luồng báo
   cáo sẵn có (bốn lý do, cùng hàng chờ của Data Desk) với loại `comment`.
 - Chủ bộ xoá bình luận của người khác vẫn là C6, chưa có ở đây dù máy chủ

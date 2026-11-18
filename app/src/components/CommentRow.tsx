@@ -7,14 +7,6 @@
 // decided by `lib/comments.threadOf`; this turns `level` into an indent
 // and `to` into a name at the head of the words.
 //
-// ── a comment that is gone ──
-//
-// One quiet line, no face, no name and no way to answer it (the server
-// refuses an answer to a comment that is gone): the server sends neither, and
-// does not say whether it was deleted or is by somebody blocked from the
-// reader. The line is drawn only where answers still hang from it —
-// `threadOf` drops the rest — so it reads as the thing they answer.
-//
 // ── the tags ──
 //
 // A person's opens their page, by the handle they have today; the text
@@ -69,20 +61,10 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   const { t } = useI18n();
   const indent = { marginLeft: INDENT[comment.level] };
 
-  if (comment.gone) {
-    return (
-      <View style={[s.row, s.goneRow, indent]} testID="comment-gone">
-        <Text style={s.gone}>
-          {t('This comment was deleted', 'Bình luận đã bị xoá', 'このコメントは削除されました', '该评论已删除', '該評論已刪除')}
-        </Text>
-      </View>
-    );
-  }
-
   const handle = comment.handle ? normalizeHandle(comment.handle) : '';
   const who = handle || comment.full_name || t('Someone', 'Ai đó', '誰か', '有人', '有人');
   const size = comment.level === 0 ? FACE : FACE_REPLY;
-  const body = comment.body ?? '';
+  const { body } = comment;
 
   return (
     <View style={[s.row, indent]} testID="comment-row">
@@ -126,9 +108,11 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
           })}
         </Text>
         </View>
-        {/* Outside the line VoiceOver reads: a control of its own. 44 to
-            the thumb by its slop; drawn at the age's size, since it is
-            the same kind of thing — small print under the words. */}
+        {/* Outside the line VoiceOver reads: a control of its own. A
+            bubble, not the word "Reply" (owner, 18 Nov 2026): the row
+            under a comment is where its acts stand as marks, as Threads
+            draws them, and a heart will stand beside this one when
+            comments can be liked. 44 to the thumb by its slop. */}
         {onReply ? (
           <PressableScale
             onPress={onReply}
@@ -139,7 +123,7 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
             accessibilityLabel={t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`)}
             testID="comment-reply"
           >
-            <Text style={s.reply}>{t('Reply', 'Trả lời', '返信', '回复', '回覆')}</Text>
+            <Glyph name="chatbubble-outline" size={ICON.action} color={colors.textTertiary} />
           </PressableScale>
         ) : null}
       </View>
@@ -167,7 +151,6 @@ const s = StyleSheet.create({
   // 10 between the face and the words, the feed card's head; 8 above and
   // below, so two rows stand 16 apart — a line of the body's type.
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 8 },
-  goneRow: { paddingVertical: 10 },
   words: { flex: 1 },
   head: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   // The name gives when it is long; the age never does.
@@ -177,7 +160,5 @@ const s = StyleSheet.create({
   // Who a deep answer is to: the accent, as a tag is, since it is one.
   to: { color: colors.accent },
   tag: { color: colors.accent, fontWeight: font.medium },
-  replyHang: { alignSelf: 'flex-start', marginTop: 4 },
-  reply: { color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold, lineHeight: 18 },
-  gone: { color: colors.textTertiary, fontSize: 14, lineHeight: 20, fontStyle: 'italic' },
+  replyHang: { alignSelf: 'flex-start', marginTop: 6 },
 });

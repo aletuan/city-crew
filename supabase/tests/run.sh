@@ -709,3 +709,13 @@ for f in "$ROOT"/supabase/migrations/*_app_flag_testers.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/app_flag_testers_test.sql"
+
+# Comments, with a delete taking its answers (18 Nov 2026). After the
+# comments it rewrites, whose own test ran above against the first rule.
+echo "→ comments, cascading"
+# A husk and its answer, for the migration to clear — see the seed.
+run "$DB" -f "$HERE/comments_cascade_seed.sql" >/dev/null
+for f in "$ROOT"/supabase/migrations/*_comments_cascade.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comments_cascade_test.sql"

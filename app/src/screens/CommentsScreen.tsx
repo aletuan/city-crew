@@ -64,11 +64,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from '../components/CommentComposer';
 import CommentRow, { INDENT } from '../components/CommentRow';
+import { useKeyboardUp } from '../components/keyboard';
 import { useCommentMenu } from './comments/useCommentMenu';
 import { EmptyState, GradientCta, PressableScale, Screen } from '../components/ui';
 import { useTabBarAway } from '../components/tabBarDuck';
@@ -129,18 +130,10 @@ export default function CommentsScreen({ navigation, route }: {
 
   // The bar is away while this page is in front — see the header.
   useTabBarAway(navigation);
-  // The home indicator's margin under the field — and none while the
-  // keyboard is up, when the field sits on the keyboard and that margin
-  // would be a 34pt gap between the two. `Will`, so the margin goes as
-  // the keyboard starts to rise and not a beat after it has landed; iOS
-  // alone sends it, and iOS alone has the indicator.
+  // The home indicator's margin under the field, and none while the
+  // keyboard is up — `useKeyboardUp`.
   const insets = useSafeAreaInsets();
-  const [typing, setTyping] = useState(false);
-  useEffect(() => {
-    const up = Keyboard.addListener('keyboardWillShow', () => setTyping(true));
-    const down = Keyboard.addListener('keyboardWillHide', () => setTyping(false));
-    return () => { up.remove(); down.remove(); };
-  }, []);
+  const typing = useKeyboardUp();
   const now = Date.now();
   const onPerson = (handle: string) => navigation.navigate('Person', { handle });
 

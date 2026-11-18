@@ -1,12 +1,11 @@
 // The shape of a thread, proved without a screen: what sits under what
-// and how far in, which rows are drawn as a "deleted" line and which not
-// at all, where a tag begins when the body has an emoji in it, and which
+// and how far in, where a tag begins when the body has an emoji in it, and which
 // of the server's refusals is which.
 
 import { describe, expect, it } from 'vitest';
 import {
   BODY_MAX, LEVEL_MAX, MENTIONS_MAX, REFUSALS,
-  bodyLength, bodyProblem, latestOf, livingCount, mentionsOf, refusalOf, segmentsOf, threadOf,
+  bodyLength, bodyProblem, latestOf, mentionsOf, refusalOf, segmentsOf, threadOf,
   type CommentRow, type Mention,
 } from './comments';
 
@@ -14,11 +13,10 @@ import {
 function row(id: string, parent: string | null, over: Partial<CommentRow> = {}): CommentRow {
   return {
     id, parent_id: parent, root_id: null, depth: 0, body: `body of ${id}`, created_at: `2026-11-0${id.length}T00:00:00Z`,
-    gone: false, author: `u-${id}`, handle: `h-${id}`, full_name: null, avatar_url: null, mentions: [],
+    author: `u-${id}`, handle: `h-${id}`, full_name: null, avatar_url: null, mentions: [],
     ...over,
   };
 }
-const gone = { gone: true, body: null, author: null, handle: null } as const;
 /** `id@level` for each row drawn, `>handle` appended where it names who it answers. */
 const drawn = (rows: CommentRow[]) => threadOf(rows).map((b) => [b.root, ...b.replies]
   .map((p) => `${p.id}@${p.level}${p.to ? `>${p.to}` : ''}`).join(' '));
@@ -98,35 +96,17 @@ describe('threadOf', () => {
     expect(drawn(rows)).toEqual(['a@0 a1@1 y@2 x@2']);
   });
 
-  it('draws a gone comment that somebody living answered, and names nobody for an answer to it', () => {
+  it('names nobody for a deep answer whose writer has no handle', () => {
     const rows = [
-      row('a', null, gone),
-      row('a1', 'a', { depth: 1, ...gone }),
-      row('p', 'a1', { depth: 2, ...gone }),
-      row('q', 'p', { depth: 3 }),
+      row('a', null), row('a1', 'a', { depth: 1 }),
+      row('p', 'a1', { depth: 2, handle: null }), row('q', 'p', { depth: 3 }),
     ];
-    const [branch] = threadOf(rows);
-    expect(drawn(rows)).toEqual(['a@0 a1@1 p@2 q@2']);
-    expect(branch.root.gone).toBe(true);
-    expect(branch.replies[2]).toMatchObject({ id: 'q', to: null });
+    expect(threadOf(rows)[0].replies[2]).toMatchObject({ id: 'q', to: null });
   });
 
-  it('draws nothing for a gone comment with nothing living under it', () => {
-    const rows = [
-      row('a', null),
-      row('a1', 'a', { depth: 1, ...gone }),         // a blocked writer's answer, unanswered
-      row('a2', 'a', { depth: 1, ...gone }),         // gone, and so is all it holds
-      row('a2x', 'a2', { depth: 2, ...gone }),
-      row('a3', 'a', { depth: 1 }),
-      row('a3x', 'a3', { depth: 2, ...gone }),       // a gone leaf at the last level
-      row('b', null, gone),                          // a whole branch of husks
-      row('b1', 'b', { depth: 1, ...gone }),
-    ];
-    expect(drawn(rows)).toEqual(['a@0 a3@1']);
-  });
-
-  it('drops an answer whose parent did not arrive', () => {
-    expect(drawn([row('a', null), row('lost', 'nowhere', { depth: 1 })])).toEqual(['a@0']);
+  // A thread read while something in it was being deleted.
+  it('drops an answer whose parent did not arrive, and what was said under it', () => {
+    expect(drawn([row('a', null), row('lost', 'nowhere', { depth: 1 }), row('lost2', 'lost', { depth: 2 })])).toEqual(['a@0']);
   });
 
   it('is nothing for nothing', () => {
@@ -138,13 +118,6 @@ describe('threadOf', () => {
     const before = JSON.stringify(rows);
     threadOf(rows);
     expect(JSON.stringify(rows)).toBe(before);
-  });
-});
-
-describe('livingCount', () => {
-  it('counts the comments and not the lines that stand for one', () => {
-    expect(livingCount([row('a', null, gone), row('a1', 'a'), row('b', null)])).toBe(2);
-    expect(livingCount([])).toBe(0);
   });
 });
 

@@ -9,7 +9,16 @@
 //
 // Here, not in `Shared`, so that the feed's function does not grow a
 // branch for a feature that is a switch away from not existing.
+//
+// A press on a card's bubble opens that collection's thread — or, while
+// nobody has commented on it, raises the field over the feed so the
+// first comment is written there (`components/CommentQuick`, owner, 18
+// Nov 2026). The field is this hook's to hand back (`node`) and the
+// feed's to render once.
 
+import type React from 'react';
+import { quickOrThread, useQuickComment } from '../../components/CommentQuick';
+import { useSession } from '../../lib/auth';
 import { usePreviewsQuery } from '../../lib/data';
 import type { Preview } from '../../lib/comments';
 import { useFlag } from '../../lib/useFlag';
@@ -22,13 +31,27 @@ export function useCardComments(
   drawn: readonly Collection[],
   /** Whether a collection has a thread: public, as the page reads it. */
   hasThread: (c: Collection) => boolean,
+  /** What a collection is called, for the line above the field. */
+  nameOf: (c: Collection) => string,
   /** Opens a collection's thread; absent where the page has no way to. */
   open?: (c: Collection) => void,
-): (c: Collection) => CardComments {
+): { talkOf: (c: Collection) => CardComments; node: React.ReactNode } {
   const on = useFlag('comments') && !!open;
+  const { session } = useSession();
+  const me = session?.user?.id ?? null;
   const ids = on ? drawn.filter((c) => c.id && hasThread(c)).map((c) => c.id as string) : [];
-  const previews = usePreviewsQuery(ids).data;
-  return (c) => (on && c.id && hasThread(c)
-    ? { comments: previews[c.id], onComments: () => (open as (c: Collection) => void)(c) }
-    : {});
+  const previews = usePreviewsQuery(ids);
+  const { quick, node } = useQuickComment();
+  const talkOf = (c: Collection): CardComments => {
+    const id = c.id;
+    if (!on || !id || !hasThread(c)) return {};
+    const comments = previews.data[id];
+    return {
+      comments,
+      onComments: () => (quickOrThread({ me, n: comments?.n ?? 0, loaded: previews.loaded, loading: previews.loading }) === 'quick'
+        ? quick({ kind: 'collection', id }, nameOf(c))
+        : (open as (c: Collection) => void)(c)),
+    };
+  };
+  return { talkOf, node };
 }

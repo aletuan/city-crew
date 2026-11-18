@@ -5,6 +5,8 @@
 // the page gave no way to open one — and otherwise the preview filed
 // under its id and a press that opens that collection's thread. One ask
 // for all the cards drawn, and none when there is nothing to ask about.
+// And which press writes the first comment where the reader is, and
+// which opens the thread.
 
 import React from 'react';
 import { Text } from 'react-native';
@@ -21,6 +23,13 @@ vi.mock('../../lib/data/comments', async (orig) => ({
   fetchPreviews: data.fetchPreviews,
 }));
 
+const state = vi.hoisted(() => ({ me: 'me' as string | null }));
+vi.mock('../../lib/auth', () => ({
+  useSession: () => ({ session: state.me ? { user: { id: state.me } } : null }),
+  useProfile: () => ({ profile: null }),
+}));
+vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
+
 import { useCardComments } from './useCardComments';
 
 const list = (id: string | null, is_public = true) => ({ id, slug: `s-${id}`, is_public }) as unknown as Collection;
@@ -29,9 +38,10 @@ const open = vi.fn();
 // handed (or null), whether it has a door, and the door itself as the
 // press.
 function Probe({ drawn, withOpen = true }: { drawn: Collection[]; withOpen?: boolean }) {
-  const of = useCardComments(drawn, (c) => c.is_public === true, withOpen ? open : undefined);
+  const { talkOf: of, node } = useCardComments(drawn, (c) => c.is_public === true, (c) => `List ${c.slug}`, withOpen ? open : undefined);
   return (
     <>
+      {node}
       {drawn.map((c) => {
         const card = of(c);
         return (
@@ -47,7 +57,7 @@ const got = (c: Collection) => JSON.parse(screen.getByTestId(`card-${c.slug}`).t
 const NOTHING = { n: null, door: false };
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
-beforeEach(() => { vi.clearAllMocks(); data.fetchPreviews.mockImplementation(async () => ({})); });
+beforeEach(() => { vi.clearAllMocks(); data.fetchPreviews.mockImplementation(async () => ({})); state.me = 'me'; });
 afterEach(() => { cleanup(); appFlags.reset(); });
 
 describe('useCardComments', () => {
@@ -73,8 +83,10 @@ describe('useCardComments', () => {
     // Not public, or no id to ask by: nothing about comments at all.
     expect(got(hidden)).toEqual(NOTHING);
     expect(got(bare)).toEqual(NOTHING);
-    fireEvent.click(screen.getByTestId('card-s-c2'));
-    expect(open).toHaveBeenCalledExactlyOnceWith(b);
+    // A press on the one with comments opens its thread.
+    fireEvent.click(screen.getByTestId('card-s-c1'));
+    expect(open).toHaveBeenCalledExactlyOnceWith(a);
+    expect(screen.queryByTestId('comment-quick')).toBeNull();
   });
 
   it('asks again when more cards are drawn, and not for the same cards in a new array', async () => {
@@ -88,6 +100,43 @@ describe('useCardComments', () => {
     rerender(<Probe drawn={[a, b]} />);
     await flush();
     expect(data.fetchPreviews).toHaveBeenCalledTimes(2);
+  });
+
+  // The first comment is written where the reader is (18 Nov 2026).
+  describe('a press on a card nobody has commented on', () => {
+    it('raises the field over the feed, about that collection, and opens nothing', async () => {
+      appFlags.set('comments', true);
+      data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 3, latest: [] } }));
+      const [a, b] = [list('c1'), list('c2')];
+      render(<Probe drawn={[a, b]} />);
+      await flush();
+      fireEvent.click(screen.getByTestId('card-s-c2'));
+      expect(screen.getByTestId('comment-quick')).toBeTruthy();
+      expect(screen.getByTestId('composer-about').textContent).toBe('List s-c2');
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('opens the thread instead for a guest, where a guest is asked to sign in', async () => {
+      appFlags.set('comments', true);
+      state.me = null;
+      const a = list('c1');
+      render(<Probe drawn={[a]} />);
+      await flush();
+      fireEvent.click(screen.getByTestId('card-s-c1'));
+      expect(open).toHaveBeenCalledExactlyOnceWith(a);
+      expect(screen.queryByTestId('comment-quick')).toBeNull();
+    });
+
+    it('opens the thread while the count is not in yet: "none" would be a guess', async () => {
+      appFlags.set('comments', true);
+      data.fetchPreviews.mockImplementation(() => new Promise(() => {}));
+      const a = list('c1');
+      render(<Probe drawn={[a]} />);
+      await flush();
+      fireEvent.click(screen.getByTestId('card-s-c1'));
+      expect(open).toHaveBeenCalledExactlyOnceWith(a);
+      expect(screen.queryByTestId('comment-quick')).toBeNull();
+    });
   });
 
   it('hands nothing where the page has no way to open a thread', async () => {
