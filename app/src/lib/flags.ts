@@ -125,9 +125,28 @@ export type Flags = {
   subscribe: (onChange: () => void) => () => void;
   /** Override one switch. `load` uses it; tests use it to stand in for a row. */
   set: (key: FlagKey, enabled: boolean) => void;
-  /** Read every known switch from `app_flags`. Never throws: a switch
-   *  that cannot be read stays as shipped. */
-  load: (client: FlagsClient) => Promise<void>;
+  /**
+   * Read every known switch from `app_flags`, and — for somebody signed
+   * in — the switches turned on for them alone (`app_flag_testers`).
+   * Never throws: a switch that cannot be read stays as shipped.
+   *
+   * ── on for one account ──
+   *
+   * A feature built behind a switch over many merges has to be seen on
+   * a phone before the switch is thrown for everybody, and the switch is
+   * one row for every phone. `app_flag_testers` is the same switch with
+   * a name on it: a row (key, user) turns that key on for that account
+   * and nobody else, whatever `app_flags` says. It can only turn a
+   * switch on — a tester sees more than the public, never less — and a
+   * row can only be written in the SQL editor, as a switch can.
+   *
+   * The whole answer is worked out and then applied: defaults, then the
+   * table's rows, then the reader's own. So signing out puts a tester's
+   * switch back where the table has it, and of two reads in flight —
+   * the launch's as nobody, then the session's — only the later one
+   * asked is applied, whichever lands last.
+   */
+  load: (client: FlagsClient, signedIn?: boolean) => Promise<void>;
   /** Back to the shipped defaults. */
   reset: () => void;
 };
@@ -135,6 +154,8 @@ export type Flags = {
 export function flagsStore(defaults: Record<FlagKey, boolean> = FLAG_DEFAULTS): Flags {
   const state: Record<FlagKey, boolean> = { ...defaults };
   const subs = new Set<() => void>();
+  // Which `load` was asked last — see `Flags.load`.
+  let latest = 0;
   const set = (key: FlagKey, enabled: boolean) => {
     if (state[key] === enabled) return;
     state[key] = enabled;
@@ -144,18 +165,33 @@ export function flagsStore(defaults: Record<FlagKey, boolean> = FLAG_DEFAULTS): 
     get: (key) => state[key],
     subscribe: (f) => { subs.add(f); return () => { subs.delete(f); }; },
     set,
-    load: async (client) => {
+    load: async (client, signedIn = false) => {
+      const asked = ++latest;
       try {
         const { data, error } = await client.from('app_flags').select('key, enabled');
         if (error || !Array.isArray(data)) return;
+        const next: Record<FlagKey, boolean> = { ...defaults };
         for (const row of data as { key?: unknown; enabled?: unknown }[]) {
           // A key the app does not know is a switch for a newer app; a
           // value that is not a boolean is a row somebody typed wrong.
           // Neither is allowed to move anything.
           if (typeof row.key === 'string' && row.key in defaults && typeof row.enabled === 'boolean') {
-            set(row.key as FlagKey, row.enabled);
+            next[row.key as FlagKey] = row.enabled;
           }
         }
+        // The reader's own, which only ever turn a switch on. A read
+        // that fails is nobody's switches: the table's answer stands.
+        if (signedIn) {
+          const own = await client.from('app_flag_testers').select('key');
+          if (!own.error && Array.isArray(own.data)) {
+            for (const row of own.data as { key?: unknown }[]) {
+              if (typeof row.key === 'string' && row.key in defaults) next[row.key as FlagKey] = true;
+            }
+          }
+        }
+        // A later ask is on its way or has landed: this answer is old.
+        if (asked !== latest) return;
+        (Object.keys(next) as FlagKey[]).forEach((k) => set(k, next[k]));
       } catch {
         // No network. The defaults are the answer.
       }

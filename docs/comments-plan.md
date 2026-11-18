@@ -275,6 +275,26 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 **C10. Phát hành**
 - Bật cờ, nộp bản mới, theo dõi kết quả duyệt.
 
+## 3b. Xem thử trước khi bật cho mọi người
+
+Cờ `comments` là một dòng cho mọi máy. Để xem trên máy thật mà không bật
+cho tất cả, có bảng `app_flag_testers` (18/11/2026): một dòng (khoá, tài
+khoản) bật cờ đó riêng cho tài khoản ấy. Chỉ bật thêm được, không tắt
+bớt; chỉ sửa được trong SQL editor; mỗi người chỉ đọc được dòng của mình.
+
+Đang bật `comments` cho: **@trang**, **@tuananh**.
+
+Thêm một người:
+
+```sql
+insert into public.app_flag_testers (key, user_id)
+select 'comments', id from public.profiles where handle = '<handle>';
+```
+
+Bỏ một người: `delete` dòng tương ứng. App đọc lại khi mở và mỗi lần đăng
+nhập, đăng xuất. Trước C10 nên xoá hết các dòng này, vì lúc đó cờ chung
+đã bật.
+
 ## 4. Còn mở
 
 1. ~~Luồng đầy đủ mở ở đâu~~ — **đã chốt 18/11/2026: màn riêng**, không
