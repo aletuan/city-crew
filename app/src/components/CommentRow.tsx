@@ -29,7 +29,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from './ui/controls';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { Avatar } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
 import { normalizeHandle } from '../lib/handle';
@@ -45,7 +45,7 @@ export const FACE = 36;
 export const FACE_REPLY = 28;
 /** The ⋯ at a row's end: 18, the size the feed card draws its heart and
  *  bubble at — a mark of the same weight. */
-const MORE_GLYPH = 18;
+const MORE_GLYPH = ICON.action;
 /** How far in each level sits: a root's face and its gap (36 + 10), so an
  *  answer's face starts under the root's words. The second step is the
  *  answer's own (28 + 10). On a 393pt screen with the page's margins that

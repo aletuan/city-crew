@@ -9,7 +9,7 @@ import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useSt
 import { ActivityIndicator, FlatList, Keyboard, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import SearchField from '../components/SearchField';
 import { AddSlot } from '../components/add';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
@@ -442,7 +442,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
               `正在添加到“${listTitle}”，${listCount} 个地点`, `正在新增到「${listTitle}」，${listCount} 個地點`,
             )}
           >
-            <Glyph name="bookmark-outline" size={15} color={colors.textTertiary} />
+            <Glyph name="bookmark-outline" size={ICON.text} color={colors.textTertiary} />
             <Text style={s.addingToText} numberOfLines={1}>
               {t('Add to collection: ', 'Thêm vào bộ sưu tập: ', 'コレクションに追加：', '添加到合集：', '新增到合集：')}
               <Text style={s.addingToTitle}>{listTitle}</Text>
@@ -525,7 +525,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                   accessibilityRole="button"
                   accessibilityLabel={item.term}
                 >
-                  <Glyph name="time-outline" size={18} color={colors.textTertiary} />
+                  <Glyph name="time-outline" size={ICON.action} color={colors.textTertiary} />
                   <Text style={s.recentTerm} numberOfLines={1}>{item.term}</Text>
                 </PressableScale>
                 <PressableScale
@@ -537,7 +537,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                 >
                   <Glyph
                     name="arrow-up"
-                    size={17}
+                    size={ICON.action}
                     color={colors.textTertiary}
                     style={{ transform: [{ rotate: '45deg' }] }}
                   />
@@ -642,7 +642,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                       ? (
                         <View style={s.metaRow}>
                           {area
-                            ? <Glyph name="location-outline" size={13} color={colors.textTertiary} />
+                            ? <Glyph name="location-outline" size={ICON.meta} color={colors.textTertiary} />
                             : null}
                           <Text style={s.cardMeta} numberOfLines={1}>{meta}</Text>
                         </View>
@@ -682,7 +682,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                           : null}
                       </View>
                     )
-                    : <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />}
+                    : <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />}
                   {list
                     ? <ListToggle {...inList(pl)!} testID={`search-${item.kind}-${pl.slug}-in-list`} />
                     : null}
@@ -747,7 +747,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                     {item.count} {t(item.count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}
                   </Text>
                 </View>
-                <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+                <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
               </Card>
             </PressableScale>
           );

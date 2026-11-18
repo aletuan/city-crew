@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, LayoutAnimation, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -260,7 +260,7 @@ export default function ExploreFilterSheet({
             accessibilityLabel={t('Close filters', 'Đóng bộ lọc', 'フィルターを閉じる', '关闭筛选', '關閉篩選')}
             contentStyle={s.close}
           >
-            <Glyph name="close" size={19} color={colors.text} />
+            <Glyph name="close" size={ICON.action} color={colors.text} />
           </PressableScale>
         </View>
         </View>
@@ -311,7 +311,7 @@ export default function ExploreFilterSheet({
               >
                 <Glyph
                   name={sortIcon(value)}
-                  size={16}
+                  size={ICON.text}
                   color={active ? colors.accent : colors.textSecondary}
                 />
                 <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
@@ -392,7 +392,7 @@ export default function ExploreFilterSheet({
         >
           <Glyph
             name={draft.savedOnly ? 'bookmark' : 'bookmark-outline'}
-            size={19}
+            size={ICON.action}
             color={draft.savedOnly ? colors.accent : colors.textSecondary}
           />
           <Text style={[s.rowText, draft.savedOnly && s.rowTextOn]}>
@@ -404,12 +404,12 @@ export default function ExploreFilterSheet({
               row leads somewhere. */}
           {signedIn ? (
             <View style={[s.check, draft.savedOnly && s.checkOn]}>
-              {draft.savedOnly ? <Glyph name="checkmark" size={14} color={colors.accentInk} /> : null}
+              {draft.savedOnly ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
             </View>
           ) : (
             <View style={s.signIn}>
               <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
-              <Glyph name="chevron-forward" size={14} color={colors.accent} />
+              <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
             </View>
           )}
         </PressableScale>
@@ -443,7 +443,7 @@ export default function ExploreFilterSheet({
             >
               <Glyph
                 name={draft.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                size={19}
+                size={ICON.action}
                 color={draft.visitedOnly ? colors.accent : colors.textSecondary}
               />
               <Text style={[s.rowText, draft.visitedOnly && s.rowTextOn]}>
@@ -451,12 +451,12 @@ export default function ExploreFilterSheet({
               </Text>
               {signedIn ? (
                 <View style={[s.check, draft.visitedOnly && s.checkOn]}>
-                  {draft.visitedOnly ? <Glyph name="checkmark" size={14} color={colors.accentInk} /> : null}
+                  {draft.visitedOnly ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
                 </View>
               ) : (
                 <View style={s.signIn}>
                   <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
-                  <Glyph name="chevron-forward" size={14} color={colors.accent} />
+                  <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
                 </View>
               )}
             </PressableScale>
@@ -500,7 +500,7 @@ export default function ExploreFilterSheet({
               accessibilityRole="button"
               contentStyle={s.reset}
             >
-              <Glyph name="refresh" size={17} color={colors.textSecondary} />
+              <Glyph name="refresh" size={ICON.action} color={colors.textSecondary} />
               <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット', '重置', '重設')}</Text>
             </PressableScale>
           ) : null}

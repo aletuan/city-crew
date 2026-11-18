@@ -57,7 +57,7 @@ import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from '../../com
 import AvatarPicker from '../../components/AvatarPicker';
 import BadgeShelf from '../../components/BadgeShelf';
 import EngagementRing from '../../components/EngagementRing';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { useI18n } from '../../lib/i18n';
 import { levelFromSaves, levelSteps, levelWords } from '../../lib/level';
 import { useRewards } from '../../lib/rewards';
@@ -97,7 +97,7 @@ export function HeroFace({ saved }: {
           // the level's card and the badges' are under it, and it is
           // neither's — see `Level`.
           <View style={sheetTitleRow} testID="badge-sheet-head">
-            <Glyph name="ribbon-outline" size={20} color={colors.textSecondary} />
+            <Glyph name="ribbon-outline" size={ICON.nav} color={colors.textSecondary} />
             <Text style={sheetTitleText} accessibilityRole="header">
               {t('Achievements', 'Thành tích', '実績', '成就', '成就')}
             </Text>
@@ -149,7 +149,7 @@ export function Level({ saved }: { saved: number }) {
     <View style={sheetBody} testID="badge-sheet-body">
       <View style={h.level}>
         <View style={h.mark}>
-          <Glyph name="trophy-outline" size={22} color={colors.accent} />
+          <Glyph name="trophy-outline" size={ICON.nav} color={colors.accent} />
         </View>
         <View style={h.words}>
           <View style={h.titleRow}>

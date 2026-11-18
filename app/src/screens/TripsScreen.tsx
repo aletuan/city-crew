@@ -41,7 +41,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { AddPill } from '../components/add';
 import {
   AmbientWarmth,
@@ -171,7 +171,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
         <AmbientWarmth />
         <View style={s.first}>
           <View style={s.firstIcon}>
-            <Glyph name="map" size={27} color={colors.accent} />
+            <Glyph name="map" size={ICON.feature} color={colors.accent} />
           </View>
           <Text style={s.firstTitle}>
             {t('Where to next?', 'Đi đâu tiếp theo?', '次はどこへ？', '下一站去哪儿？', '下一站去哪裡？')}
@@ -333,7 +333,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               button: "New trip" is in the header, one glance up. */}
           {!!mine.length && !upcoming.length && (
             <View style={s.none} testID="trips-none-ahead">
-              <Glyph name="calendar-outline" size={20} color={colors.accent} />
+              <Glyph name="calendar-outline" size={ICON.nav} color={colors.accent} />
               <Text style={s.noneText}>
                 {t(
                   'No upcoming trips',

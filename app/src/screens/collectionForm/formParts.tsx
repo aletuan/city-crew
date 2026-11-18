@@ -24,7 +24,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Lede } from '../../components/authUi';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { useMyListShares } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
 import { SEEN_GLYPH, seenGloss, seenName, sharesByList, visibilityOf } from '../../lib/shares';
@@ -64,7 +64,7 @@ export function SeenLine({ col, uid }: {
   const seen = visibilityOf(!!col?.is_public, shared);
   return (
     <View style={s.seen} testID="collection-form-seen">
-      <Glyph name={SEEN_GLYPH[seen]} size={15} color={colors.textTertiary} />
+      <Glyph name={SEEN_GLYPH[seen]} size={ICON.text} color={colors.textTertiary} />
       <Text style={s.seenText} numberOfLines={1}>{`${seenName(seen, t)} · ${seenGloss(seen, t)}`}</Text>
     </View>
   );

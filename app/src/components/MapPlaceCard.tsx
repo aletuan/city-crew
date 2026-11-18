@@ -8,7 +8,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { coverOf, fmtCount, type Place } from '../lib/data';
 import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
@@ -81,9 +81,10 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
         </View>
         <Text style={s.facts} numberOfLines={1}>{facts.join(' · ')}</Text>
       </View>
-      {/* 17, the one size a row-end chevron has in this app (Profile,
-          Search, the planning screen); this was 16 for no written reason. */}
-      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+      {/* The size a row-end chevron has in this app (Profile, Search, the
+          planning screen): 17 until the scale (`ICON`, 18 Nov 2026), 18
+          on it. */}
+      <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
     </PressableScale>
   );
 }

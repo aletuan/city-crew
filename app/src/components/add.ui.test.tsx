@@ -4,7 +4,7 @@
 // them, and every screen test looks at its own words rather than the
 // shape's. What is pinned here is the one fact the shapes share with the
 // rest of the app and nobody else asserts: the chevron that ends a row is
-// 17pt in the tertiary ink, everywhere a row goes somewhere.
+// 18pt in the tertiary ink, everywhere a row goes somewhere.
 
 import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
@@ -24,7 +24,7 @@ describe('AddSlot', () => {
     const onPress = vi.fn();
     render(<AddSlot title="New collection" subtitle="Group places for your next plan" onPress={onPress} />);
     const chevron = document.querySelector('[data-icon="chevron-forward"]')!;
-    expect(chevron.getAttribute('data-size')).toBe('17');
+    expect(chevron.getAttribute('data-size')).toBe('18');
     expect(chevron.getAttribute('data-color')).toBe(colors.textTertiary);
     fireEvent.click(screen.getByRole('button', { name: /New collection/ }));
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -57,7 +57,7 @@ describe('AddCell', () => {
     const { rerender } = render(<AddCell label="Add place" size={110} onPress={onPress} testID="cell" />);
     const box = () => screen.getByTestId('cell').firstElementChild as HTMLElement;
     expect([box().style.width, box().style.height]).toEqual(['110px', '110px']);
-    expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('24');
+    expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('22');
     fireEvent.click(screen.getByRole('button', { name: 'Add place' }));
     expect(onPress).toHaveBeenCalledTimes(1);
     rerender(<AddCell label="Add place" onPress={onPress} testID="cell" />);

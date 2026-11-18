@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import PlaceCard from '../../components/PlaceCard';
 import { CHIP_SLOP, PressableScale } from '../../components/ui';
 import { type Place } from '../../lib/data';
@@ -58,7 +58,7 @@ export function NoMatches({ term, where }: { term: string; where?: string | null
   return (
     <View style={s.noneBox}>
       <View style={s.noneMark}>
-        <Glyph name="search" size={30} color={colors.textTertiary} />
+        <Glyph name="search" size={ICON.feature} color={colors.textTertiary} />
         {/* The question mark is the whole difference between "we are
             looking" and "we looked". A magnifier alone is what a screen
             shows while it is still searching. */}
@@ -151,7 +151,7 @@ function ForkChip({ icon, label, onPress }: {
   return (
     <PressableScale onPress={onPress} haptic="selection" hitSlop={CHIP_SLOP} accessibilityRole="button">
       <View style={s.forkChip}>
-        <Glyph name={icon} size={15} color={colors.accent} />
+        <Glyph name={icon} size={ICON.text} color={colors.accent} />
         <Text style={s.forkChipText} numberOfLines={1}>{label}</Text>
       </View>
     </PressableScale>

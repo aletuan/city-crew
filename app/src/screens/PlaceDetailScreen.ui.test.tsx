@@ -1093,7 +1093,7 @@ describe('PlaceDetailScreen — the bar', () => {
     expect(flat(back.style).marginLeft).toBe(-18);
     expect(flat(save.style).marginRight).toBe(-16);
     const size = (icon: string) => document.querySelector(`[data-icon="${icon}"]`)!.getAttribute('data-size');
-    expect([size('chevron-back'), size('bookmark-outline')]).toEqual(['22', '20']);
+    expect([size('chevron-back'), size('bookmark-outline')]).toEqual(['22', '22']);
   });
 
   it('centres the brand on one line, shrinking a little before it cuts', () => {

@@ -10,7 +10,7 @@ import { Keyboard, type NativeScrollEvent, type NativeSyntheticEvent, SectionLis
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import {
   AmbientWarmth,
   Avatar,
@@ -716,7 +716,7 @@ export default function CollectionsScreen({ navigation, route }: {
       accessibilityHint={t('Go to another city', 'Đến thành phố khác', '別の都市へ移動', '前往其他城市', '前往其他城市')}
     >
       <Text style={s.cityHeadName} numberOfLines={1}>{cityWord(city.id)}</Text>
-      <Glyph name="chevron-down" size={16} color={colors.textSecondary} style={s.cityHeadChevron} />
+      <Glyph name="chevron-down" size={ICON.text} color={colors.textSecondary} style={s.cityHeadChevron} />
       <Text style={s.cityHeadCount}>{listsWord(city.count, t)}</Text>
     </PressableScale>
   );
@@ -780,7 +780,7 @@ export default function CollectionsScreen({ navigation, route }: {
               >
                 <Glyph
                   name={v === 'mosaic' ? 'albums-outline' : 'grid-outline'}
-                  size={14}
+                  size={ICON.text}
                   color={communityView === v ? colors.accent : colors.textTertiary}
                 />
               </PressableScale>
@@ -924,7 +924,7 @@ export default function CollectionsScreen({ navigation, route }: {
                   accessibilityRole="button"
                   accessibilityLabel={term}
                 >
-                  <Glyph name="search-outline" size={17} color={colors.textTertiary} />
+                  <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
                   <Text style={s.suggestionText} numberOfLines={1}>{term}</Text>
                 </PressableScale>
               ))}
@@ -1193,11 +1193,11 @@ export default function CollectionsScreen({ navigation, route }: {
                         {item.own && !c.is_public ? (
                           seenFor(c) === 'friends' ? (
                             <View style={s.gcardLock} testID="collection-tile-shared">
-                              <Glyph name="people-outline" size={13} color={colors.text} />
+                              <Glyph name="people-outline" size={ICON.meta} color={colors.text} />
                             </View>
                           ) : (
                             <View style={s.gcardLock} testID="collection-tile-lock">
-                              <Glyph name="lock-closed-outline" size={13} color={colors.text} />
+                              <Glyph name="lock-closed-outline" size={ICON.meta} color={colors.text} />
                             </View>
                           )
                         ) : null}
@@ -1270,7 +1270,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                 accessibilityLabel={placesOf(members)}
                                 testID="collection-tile-count"
                               >
-                                <Glyph name="location-outline" size={13} color={onPhoto.textSecondary} />
+                                <Glyph name="location-outline" size={ICON.meta} color={onPhoto.textSecondary} />
                                 <Text style={s.gcardMeta}>{members}</Text>
                               </View>
                             ))}

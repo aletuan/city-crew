@@ -330,7 +330,7 @@ describe('the bio, and the way to write one', () => {
     // A plus and the words, both in the accent: the colour of what a tap
     // changes, as "Add a description" wears it on a list's card.
     const plus = add.querySelector('[data-icon="add"]')!;
-    expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['17', String(colors.accent)]);
+    expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['18', String(colors.accent)]);
     expect(textStyleOf(screen.getByText('Write a few words about you'))).toMatchObject({ color: colors.accent, fontSize: 14 });
     // It opens the profile's form with the cursor in the bio.
     fireEvent.click(add);

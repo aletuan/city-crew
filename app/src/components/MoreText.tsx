@@ -50,7 +50,7 @@ import React, { useState } from 'react';
 import { LayoutAnimation, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import { useI18n } from '../lib/i18n';
 import { colors, type } from '../theme';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { SLIDE } from './SearchField';
 import { CHIP_H, CHIP_SLOP, useReducedMotion } from './ui';
 
@@ -81,7 +81,7 @@ export default function MoreText({ text, style, lines = MORE_LINES, testID }: {
   const link = (word: string, chevron: 'chevron-down' | 'chevron-up') => (
     <View style={s.link}>
       <Text style={s.word}>{word}</Text>
-      <Glyph name={chevron} size={13} color={colors.textTertiary} />
+      <Glyph name={chevron} size={ICON.meta} color={colors.textTertiary} />
     </View>
   );
 

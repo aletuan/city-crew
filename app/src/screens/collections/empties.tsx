@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { GradientCta, PressableScale } from '../../components/ui';
 import { holdResume } from '../../lib/resume';
 import { useSession } from '../../lib/auth';
@@ -88,7 +88,7 @@ export function GuestNotice({ navigation }: { navigation: Nav }) {
           on the two lines beside it. */}
       <LinearGradient {...gradAI} style={s.noticeChip}>
         <Text style={s.noticeChipText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
-        <Glyph name="arrow-forward" size={15} color={colors.accentInk} />
+        <Glyph name="arrow-forward" size={ICON.text} color={colors.accentInk} />
       </LinearGradient>
     </PressableScale>
   );
@@ -110,7 +110,7 @@ export function EmptyCover() {
       end={{ x: 1, y: 1 }}
       style={[s.thumbFill, s.thumbEmpty]}
     >
-      <Glyph name="bookmark-outline" size={26} color={colors.accentFaint} />
+      <Glyph name="bookmark-outline" size={ICON.feature} color={colors.accentFaint} />
     </LinearGradient>
   );
 }
@@ -131,7 +131,7 @@ export function FirstCollection({ onPress }: { onPress: () => void }) {
     <View style={s.firstWrap}>
       <View style={s.first}>
         <View style={s.firstIcon}>
-          <Glyph name="bookmark" size={27} color={colors.accent} />
+          <Glyph name="bookmark" size={ICON.feature} color={colors.accent} />
         </View>
         <Text style={s.firstTitle}>
           {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}
@@ -191,7 +191,7 @@ export function CommunityEmpty({ signedIn, onCreate, onExplore }: {
     <View style={s.firstWrap}>
       <View style={s.first}>
         <View style={s.firstIcon}>
-          <Glyph name="globe" size={27} color={colors.accent} />
+          <Glyph name="globe" size={ICON.feature} color={colors.accent} />
         </View>
         <Text style={s.firstTitle}>
           {t('No public lists yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません', '还没有公开的清单', '還沒有公開的清單')}

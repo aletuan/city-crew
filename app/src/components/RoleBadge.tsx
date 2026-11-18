@@ -75,7 +75,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type Ionicons from '@expo/vector-icons/Ionicons';
 import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from './ActionSheet';
 import { PressableScale } from './ui';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { useRoleOfQuery } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors } from '../theme';
@@ -234,7 +234,7 @@ export default function PersonRole({ me, personId, line, children }: {
  *  the capitals beside it (about 15 at 22pt). Not yet seen on a phone. */
 const DISC = 20;
 /** Its glyph: 11, the 13 it was, in the disc's proportion (13 × 20/24). */
-const GLYPH = 11;
+const GLYPH = ICON.tiny;
 
 const d = StyleSheet.create({
   disc: {

@@ -84,7 +84,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { type SheetAction } from '../../components/ActionSheet';
 import { PressableScale } from '../../components/ui';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { useI18n } from '../../lib/i18n';
 import { type ReaderMark, SEEN_GLYPH, seenName } from '../../lib/shares';
 import { colors } from '../../theme';
@@ -155,12 +155,12 @@ export function ReaderSeen({ kind }: { kind: ReaderMark }) {
   const { t } = useI18n();
   return kind === 'lent' ? (
     <View style={s.visibility} testID="collection-shared">
-      <Glyph name={SEEN_GLYPH.friends} size={15} color={colors.textTertiary} />
+      <Glyph name={SEEN_GLYPH.friends} size={ICON.text} color={colors.textTertiary} />
       <Text style={s.visibilityWord}>{readerWord(kind, t)}</Text>
     </View>
   ) : (
     <View style={s.visibility} accessible accessibilityLabel={readerWord(kind, t)} testID="collection-public">
-      <Glyph name={SEEN_GLYPH.public} size={15} color={colors.textTertiary} />
+      <Glyph name={SEEN_GLYPH.public} size={ICON.text} color={colors.textTertiary} />
     </View>
   );
 }

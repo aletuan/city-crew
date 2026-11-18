@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { colors } from '../../theme';
 import { s } from './styles';
 
@@ -57,7 +57,7 @@ export function InfoRow({ icon, label, first, onPress, trailing, hug, children }
         accessibilityRole={tappable ? 'button' : undefined}
       >
         <View style={s.infoIconSlot}>
-          <Glyph name={icon} size={19} color={colors.textTertiary} />
+          <Glyph name={icon} size={ICON.action} color={colors.textTertiary} />
         </View>
         <View style={[s.infoWords, hug && s.infoWordsHug]}>
           <Text style={s.infoLabel}>{label}</Text>

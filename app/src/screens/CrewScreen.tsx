@@ -26,7 +26,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FieldRow, PrimaryButton } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
@@ -699,7 +699,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           testID={`crew-accept-${i}`}
                         >
                           <LinearGradient {...gradAI} style={s.accept}>
-                            <Glyph name="checkmark" size={17} color={colors.accentInk} />
+                            <Glyph name="checkmark" size={ICON.action} color={colors.accentInk} />
                             <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受', '接受')}</Text>
                           </LinearGradient>
                         </PressableScale>
@@ -791,7 +791,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                               glass of `AddPill`'s quiet; Accept, on a
                               request made to you, stays filled. */}
                           <View style={s.addBtn} testID={`crew-suggestion-add-${sg.other}`}>
-                            <Glyph name="person-add-outline" size={15} color={colors.accent} />
+                            <Glyph name="person-add-outline" size={ICON.text} color={colors.accent} />
                             <Text style={s.addText}>{t('Add', 'Thêm', '追加', '添加', '新增')}</Text>
                           </View>
                         </PressableScale>
@@ -803,7 +803,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           accessibilityLabel={t('Hide suggestion', 'Ẩn gợi ý', 'おすすめを非表示', '隐藏推荐', '隱藏推薦')}
                           testID={`crew-suggestion-dismiss-${sg.other}`}
                         >
-                          <Glyph name="close" size={18} color={colors.textTertiary} />
+                          <Glyph name="close" size={ICON.action} color={colors.textTertiary} />
                         </PressableScale>
                       </View>
                     );
@@ -971,7 +971,7 @@ function Options({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项', '選項')}
     >
-      <Glyph name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+      <Glyph name="ellipsis-horizontal" size={ICON.nav} color={colors.textTertiary} />
     </PressableScale>
   );
 }

@@ -142,10 +142,75 @@ const LINE: Partial<Record<GlyphName, [LucideIcon, boolean]>> = {
 /** True when `name` is drawn from the line set rather than Ionicons. */
 export const isLineGlyph = (name: GlyphName): boolean => LINE[name] != null;
 
+/**
+ * The sizes a glyph is drawn at: seven, each a step of about 1.2 from the
+ * one before, and each named for the job the glyph is doing rather than
+ * for its number.
+ *
+ * ── why a scale (owner, 18 Nov 2026) ──
+ *
+ * An audit that day counted 239 `<Glyph>` tags at twenty sizes — every
+ * whole number from 9 to 22 and six more above — and 213 of the 230 with
+ * a fixed size wrote the number where they stood. Nothing was wrong with
+ * any one of them; each had been chosen against the text or the box
+ * beside it. Together they made the app's line uneven, because a glyph's
+ * stroke is a sixteenth of its size (see `LINE_STROKE`): a 17pt chevron
+ * beside a 19pt bookmark is two weights of line in one row, and 13 to 20
+ * held 194 of the tags, a point apart from each other.
+ *
+ * The steps are where the tags already stood thickest, so the fewest
+ * moved: 103 of 230 kept their size, 106 moved a point, 21 moved two or
+ * three (sixteen of those are 20 → 22). The heart and the plane on a
+ * collection (18), the heart on a photograph (15) and the tab bar (22),
+ * each settled with the owner that week, are steps as they were.
+ *
+ * Weighed against it, on the same 230 tags:
+ *
+ *   11·13·15·17·20·24·28·40 — moved fewest (112), but is eight steps and
+ *     keeps neither 18 nor 22, the two sizes just settled.
+ *   12·14·16·18·20·24·28·40 — the even numbers every kit ships. Moved 149,
+ *     and 18 → 20 is a step of 1.11, which is the unevenness again.
+ *   11·13·16·19·22·27·40 — fewest large moves (5), but makes 16 and 19 the
+ *     standard and so resizes the hearts.
+ *
+ * A size between two steps went to the larger, so no glyph got thinner
+ * than it was by more than a point.
+ *
+ * `Glyph` takes nothing else: a number off the scale does not compile,
+ * and `ui.ui.test.tsx` holds a line that must not, so typecheck is red
+ * the day one does.
+ */
+export const ICON = {
+  /** A badge's mark, a dot of state inside a pill. */
+  tiny: 11,
+  /** Beside caption type: a date's line, a count, a mark of who can see. */
+  meta: 13,
+  /** In a line of 15–16pt type: a row's chevron, a choice's tick. */
+  text: 15,
+  /** A control: the heart, the plane, a row's leading glyph, a toolbar. */
+  action: 18,
+  /** Getting about: the tab bar, a screen's back and close. */
+  nav: 22,
+  /** A picture more than a control: an empty state, a large tile. */
+  feature: 27,
+  /** Alone on the page. */
+  hero: 40,
+} as const;
+
+export type IconSize = (typeof ICON)[keyof typeof ICON];
+
 type IoniconsProps = React.ComponentProps<typeof Ionicons>;
 
 /** Ionicons' own props, with a name the line set may answer for. */
-export type GlyphProps = Omit<IoniconsProps, 'name' | 'style'> & {
+export type GlyphProps = Omit<IoniconsProps, 'name' | 'style' | 'size'> & {
+  /** A step of `ICON`, and nothing between two of them. */
+  size?: IconSize;
+  /** A size taken from the frame the glyph fills instead of from the
+   *  scale, and it wins over `size`: the person in a blank face, which is
+   *  two fifths of a circle that is itself anything from 16 to 96 across.
+   *  That is a proportion of a picture, not a glyph beside type, and
+   *  snapping it to a step would draw one person in a 44 and a 52. */
+  fit?: number;
   /** Optional, as Ionicons' is: a control whose glyph is chosen at run
    *  time may have none, and draws nothing. */
   name?: GlyphName;
@@ -156,17 +221,18 @@ export type GlyphProps = Omit<IoniconsProps, 'name' | 'style'> & {
   strokeWidth?: number;
 };
 
-export function Glyph({ name, size = 12, color, style, strokeWidth = LINE_STROKE, ...rest }: GlyphProps) {
+export function Glyph({ name, size = ICON.meta, fit, color, style, strokeWidth = LINE_STROKE, ...rest }: GlyphProps) {
   const line = name ? LINE[name] : undefined;
+  const px = fit ?? size;
   if (!line) {
-    return <Ionicons {...rest} name={name as IonName | undefined} size={size} color={color} style={style} />;
+    return <Ionicons {...rest} name={name as IonName | undefined} size={px} color={color} style={style} />;
   }
   const [Mark, filled] = line;
   const ink = color as string | undefined;
   return (
     <Mark
       {...(rest as object)}
-      size={size}
+      size={px}
       color={ink}
       strokeWidth={strokeWidth}
       fill={filled ? ink : 'none'}

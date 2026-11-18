@@ -4,7 +4,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, Text, useWindowDimensions, View,
 } from 'react-native';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import MoreText from '../components/MoreText';
 import { KindPills } from '../components/KindPill';
 import {
@@ -373,7 +373,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       testID="collection-count"
     >
       {kinds.length > 0 ? <View style={s.countRule} testID="collection-count-rule" /> : null}
-      <Glyph name="location-outline" size={13} color={colors.textTertiary} />
+      <Glyph name="location-outline" size={ICON.meta} color={colors.textTertiary} />
       <Text style={s.placeCountText}>{members.length}</Text>
     </View>
   ) : null;
@@ -893,7 +893,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       accessibilityHint={whoHint(t)}
       testID="collection-visibility"
     >
-      <Glyph name={SEEN_GLYPH[seen]} size={15} color={colors.textTertiary} />
+      <Glyph name={SEEN_GLYPH[seen]} size={ICON.text} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
 
@@ -1298,7 +1298,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       accessibilityLabel={t('More', 'Tùy chọn khác', 'その他', '更多', '更多')}
       testID="collection-more"
     >
-      <Glyph name="ellipsis-horizontal" size={21} color={colors.textSecondary} />
+      <Glyph name="ellipsis-horizontal" size={ICON.nav} color={colors.textSecondary} />
     </PressableScale>
   );
 
@@ -1482,7 +1482,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           {owned && !ownTag ? (
             <Glyph
               name="document-text-outline"
-              size={20}
+              size={ICON.nav}
               color={desc ? colors.textSecondary : colors.textTertiary}
             />
           ) : null}
@@ -1521,7 +1521,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             contentStyle={s.descAdd}
             testID="collection-desc-add"
           >
-            <Glyph name="add" size={17} color={colors.accent} />
+            <Glyph name="add" size={ICON.action} color={colors.accent} />
             <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加', '添加简介', '新增簡介')}</Text>
           </PressableScale>
         ) : null}

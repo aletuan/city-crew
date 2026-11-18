@@ -3,7 +3,7 @@
 // dozen of these, and a copy per part would drift.
 
 import { StyleSheet } from 'react-native';
-import { SECONDARY_CONTROL_H } from '../../components/ui';
+import { ICON, SECONDARY_CONTROL_H } from '../../components/ui';
 import { colors, font, quoteFace, radius, space, type } from '../../theme';
 
 /**
@@ -14,7 +14,7 @@ import { colors, font, quoteFace, radius, space, type } from '../../theme';
  * so the same bare glyph read as two conventions one tab apart.
  *
  * The arithmetic is the detail screen's. The slot is `GLYPH_BOX` tall —
- * room for a 19pt glyph's whole line, where a box the height of the
+ * room for an 18pt glyph's whole line, where a box the height of the
  * label's line clipped it — and a margin of `(line − GLYPH_BOX) / 2`
  * puts the box's middle on the first line's middle, whatever the second
  * line does. The first lines are stated, not left to the platform: 15 for
@@ -37,7 +37,8 @@ export const BIO_LINE = 22;
 /** The About rows' glyph slot (`rowGlyph`) and the glyph in it: the
  *  column every glyph on the facts card and the interests stands on. */
 export const GLYPH_SLOT = 44;
-export const ROW_GLYPH = 19;
+/** A control's step: 19 until the scale (`ICON`, 18 Nov 2026). */
+export const ROW_GLYPH = ICON.action;
 
 export const s = StyleSheet.create({
   // Three to a row, each a third of the card, its glyph over its name
@@ -113,7 +114,7 @@ export const s = StyleSheet.create({
 
   // On the glyph's shoulder. It sat on the well's corner (−2, −2) while
   // there was a well; on a bare 19pt glyph centred in a 44pt slot the
-  // glyph spans 12.5–31.5, so a 10pt dot at 8 from the top and the right
+  // glyph spans 12.5–31.5 (13–31 at the scale's 18), so a 10pt dot at 8 from the top and the right
   // (26–36) overlaps its top-right corner the way a badge sits on an
   // icon, rather than floating in the slot's empty corner 13pt away.
   reqDot: {

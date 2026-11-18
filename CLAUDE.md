@@ -60,6 +60,12 @@ at the size it stood at, and lint is red the moment one grows. Bring a
 function down and lower its number in the same change; nothing lowers it
 for you.
 
+**A glyph has seven sizes**: `ICON` in `app/src/components/ui/glyph.tsx`
+(11, 13, 15, 18, 22, 27, 40), each named for the job it does. `Glyph`'s
+`size` takes nothing else, so a number between two steps fails
+typecheck; the reasoning and the scales it was weighed against are
+written there.
+
 Run all five locally before pushing. One validated push beats three
 speculative ones, and a red PR costs a cycle of the reviewer's trust.
 

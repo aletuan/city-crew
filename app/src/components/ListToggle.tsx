@@ -15,7 +15,7 @@
 
 import React from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { useI18n } from '../lib/i18n';
 import { colors, onPhoto } from '../theme';
 import { photoDisc, PressableScale } from './ui';
@@ -50,7 +50,7 @@ export default function ListToggle({ on, title, onPress, overPhoto, style, testI
     >
       <Glyph
         name={on ? 'checkmark' : 'add'}
-        size={20}
+        size={ICON.nav}
         color={on ? colors.accentInk : overPhoto ? onPhoto.text : colors.accent}
       />
     </PressableScale>
@@ -59,8 +59,10 @@ export default function ListToggle({ on, title, onPress, overPhoto, style, testI
 
 const s = StyleSheet.create({
   // The bookmark's disc, to the point: `photoDisc`, every round control
-  // over a picture. The glyph is 20 in it as in a row's 34: 22 was 40's,
-  // and the ⊕ keeps the bookmark's proportion to its disc.
+  // over a picture. The glyph is 22 in it as in a row's 34. It was 20
+  // while the bookmark beside it was 17; on the scale (`ICON`, 18 Nov
+  // 2026) the bookmark is 18 and the ⊕ a step above it, which keeps the
+  // proportion between the two that 20 to 17 had.
   photo: photoDisc,
   // A row's: 34pt beside a 64pt thumbnail, with the 10pt slop making 54.
   row: {

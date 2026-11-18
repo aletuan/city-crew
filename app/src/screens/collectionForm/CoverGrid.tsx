@@ -11,7 +11,7 @@
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { PressableScale } from '../../components/ui';
 import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
@@ -59,14 +59,14 @@ export type CoverChoice = { ph: PlacePhoto & { id: string }; place: Place; n: nu
  *
  * The disc is `accentFill` and the tick `accentInk`, the pair a filled
  * button wears: 4.5:1 or better on every look (`theme.test`, "accentInk"),
- * whatever the photograph under the disc is. 22pt with a 14pt tick, 6 in
+ * whatever the photograph under the disc is. 22pt with a 15pt tick, 6 in
  * from the corner: about a fifth of a 111pt tile, so it marks the picture
  * without covering what makes it worth choosing.
  */
 function Tick() {
   return (
     <View style={s.tick} testID="cover-tick">
-      <Glyph name="checkmark" size={14} color={colors.accentInk} />
+      <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} />
     </View>
   );
 }
@@ -177,7 +177,7 @@ export function CoverGrid({ choices, opened, picked, autoUri, onPick }: {
               </>
             ) : (
               <>
-                <Glyph name="sparkles-outline" size={22} color={colors.textSecondary} />
+                <Glyph name="sparkles-outline" size={ICON.nav} color={colors.textSecondary} />
                 <Text style={s.autoText}>{t('Auto', 'Tự động', '自動', '自动', '自動')}</Text>
               </>
             )}

@@ -5,7 +5,7 @@ import React, { useRef, useState } from 'react';
 import { Animated, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Switch, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from './glyph';
+import { Glyph, ICON, type IconSize } from './glyph';
 import { useI18n } from '../../lib/i18n';
 import { moreToTheRight, peekGap, rowWidth, type PeekRow } from '../../lib/peek';
 import { useScheme } from '../../lib/theme';
@@ -39,8 +39,11 @@ import { useReducedMotion, useLoop } from './motion';
  */
 export const PHOTO_DISC = 36;
 export const PHOTO_SLOP = (SECONDARY_CONTROL_H - PHOTO_DISC) / 2;
-/** A 36pt disc's glyph: 17, the bookmark's, about half the disc. */
-export const PHOTO_GLYPH = 17;
+/** A 36pt disc's glyph: a control's step, half the disc. It was 17, the
+ *  bookmark's, and the × a point more because Ionicons draws its cross
+ *  short of the box; on the scale (`ICON`, 18 Nov 2026) the two are one
+ *  size, the ×'s. */
+export const PHOTO_GLYPH = ICON.action;
 export const photoDisc = {
   width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
   alignItems: 'center', justifyContent: 'center',
@@ -138,7 +141,7 @@ export function Chip({ label, count, active, onPress, icon, testID }: {
       aria-selected={onPress ? !!active : undefined}
       testID={testID}
     >
-      {icon ? <Glyph name={icon} size={15} color={active ? colors.accent : colors.textSecondary} /> : null}
+      {icon ? <Glyph name={icon} size={ICON.text} color={active ? colors.accent : colors.textSecondary} /> : null}
       <Text style={[s.chipText, active && s.chipTextOn]}>
         {label}
         {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
@@ -243,7 +246,7 @@ export function Tile({ label, icon, active, compact, onPress, testID }: {
       aria-selected={!!active}
       testID={testID}
     >
-      <Glyph name={icon} size={compact ? 22 : 24} color={active ? colors.accent : colors.textSecondary} />
+      <Glyph name={icon} size={ICON.nav} color={active ? colors.accent : colors.textSecondary} />
       {/* Two lines allowed, and needed: "Nightlife" is "Về đêm" in one
           language and "ナイトライフ" in another, and a cell a third of
           the screen wide cannot hold the third on one line. Centred, so
@@ -353,7 +356,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
           >
-            <Glyph name={icon} size={16} color={on ? colors.accent : colors.textTertiary} />
+            <Glyph name={icon} size={ICON.text} color={on ? colors.accent : colors.textTertiary} />
             <Text style={[s.tabText, on && s.tabTextOn]} numberOfLines={1}>
               {worded}
             </Text>
@@ -529,7 +532,7 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
               accessibilityRole="button"
               aria-selected={on}
             >
-              {icon ? <Glyph name={icon} size={16} color={on ? colors.accent : colors.textSecondary} /> : null}
+              {icon ? <Glyph name={icon} size={ICON.text} color={on ? colors.accent : colors.textSecondary} /> : null}
               <Text style={[s.choiceText, on && s.tabTextOn]} numberOfLines={1}>
                 {label}
                 {count !== undefined ? <Text style={s.chipCount}>{` (${count})`}</Text> : null}
@@ -552,11 +555,11 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   );
 }
 
-export function RoundIconButton({ icon, onPress, label, size = 21, color, bare, style, testID }: {
+export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, bare, style, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   label?: string;
-  size?: number;
+  size?: IconSize;
   /**
    * Ink, when the glyph carries a state rather than an action.
    *
@@ -690,7 +693,7 @@ export function GradientCta({ icon, label, onPress, wide, quiet, busy, disabled,
         <Animated.View
           style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}
         >
-          <Glyph name={glyph} size={20} color={quiet ? colors.accent : colors.accentInk} />
+          <Glyph name={glyph} size={ICON.nav} color={quiet ? colors.accent : colors.accentInk} />
         </Animated.View>
       )}
       <Text style={[s.ctaText, quiet && s.ctaTextQuiet]}>{label}</Text>
@@ -741,7 +744,7 @@ export function SelectTick({ on }: { on: boolean }) {
   if (!on) return <View style={s.tick} />;
   return (
     <LinearGradient {...gradAI} style={[s.tick, s.tickOn]}>
-      <Glyph name="checkmark" size={15} color={colors.accentInk} />
+      <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} />
     </LinearGradient>
   );
 }

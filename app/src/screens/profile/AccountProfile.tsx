@@ -3,7 +3,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthActions, useProfile, useSession } from '../../lib/auth';
@@ -409,7 +409,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
               {t('Make friends and plan together.', 'Kết bạn để cùng lên kế hoạch.', '友達になって、一緒に計画。', '结交好友，一起规划。', '結交好友，一起規劃。')}
             </Text>
           </View>
-          <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
+          <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} />
         </PressableScale>
         {/* The door to Activity, re-hung. The feed's one entry used to be
             the "N requests waiting" banner on Crew, and when Crew grew a
@@ -518,7 +518,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
         onPress={() => navigation.navigate('DeleteAccount')}
         testID="profile-delete-account"
       >
-        <Glyph name="trash-outline" size={15} color={colors.bad} />
+        <Glyph name="trash-outline" size={ICON.text} color={colors.bad} />
         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除', '删除账号', '刪除帳號')}</Text>
       </PressableScale>
     </>

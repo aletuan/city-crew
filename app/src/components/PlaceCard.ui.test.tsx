@@ -205,7 +205,7 @@ describe('the bookmark', () => {
     expect([face.width, face.height, face.borderRadius]).toEqual([36, 36, 18]);
     expect(face.backgroundColor).toBe('rgba(10,11,10,0.58)');
     expect(36 + 2 * (props!.hitSlop as number)).toBeGreaterThanOrEqual(44);
-    expect(document.querySelector('[data-icon="bookmark-outline"]')!.getAttribute('data-size')).toBe('17');
+    expect(document.querySelector('[data-icon="bookmark-outline"]')!.getAttribute('data-size')).toBe('18');
   });
 
   it('speaks the reader’s language', () => {
