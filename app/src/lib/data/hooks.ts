@@ -24,8 +24,8 @@ import {
   fetchRoleOf, type FriendProfile, type PersonRole, type PlaceInCommon, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
-import { fetchThread } from './comments';
-import type { CommentRow, Subject } from '../comments';
+import { fetchPreviews, fetchThread } from './comments';
+import type { CommentRow, Preview, Subject } from '../comments';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
 import type { StatsRow } from '../listStats';
 import type { ShareRow } from '../shares';
@@ -536,4 +536,28 @@ export const useThreadQuery = (subject: Subject | null): Fetch<CommentRow[]> => 
     [kind, id],
   );
   return useFetch(fetcher, NO_COMMENTS);
+};
+
+// ── what the cards show of their threads ──
+//
+// A count and the two newest for each collection named, in one ask
+// (`comment_previews`), filed by the collection's id. Asked again when
+// the set of ids changes — five more cards on a person's page is one
+// more ask, for all that are drawn — and by the ids themselves, joined,
+// so a new array holding the same ids on the next render asks nothing.
+// No ids asks nothing at all: that is the page with the `comments`
+// switch off.
+//
+// Not kept between opens, for the reason a thread is not: the figure on
+// a card should not be one the thread behind it has already taken back.
+const NO_PREVIEWS: Record<string, Preview> = {};
+
+/** The previews of these collections' threads, by collection id. */
+export const usePreviewsQuery = (collectionIds: readonly string[]): Fetch<Record<string, Preview>> => {
+  const joined = collectionIds.join(',');
+  const fetcher = useCallback(
+    () => fetchPreviews(joined ? joined.split(',').map((id) => ({ kind: 'collection' as const, id })) : []),
+    [joined],
+  );
+  return useFetch(fetcher, NO_PREVIEWS);
 };

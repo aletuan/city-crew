@@ -201,9 +201,16 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Luồng không lưu đệm giữa các lần mở: bình luận vừa bị xoá hoặc của
   người vừa bị chặn không được vẽ lại từ bản cũ.
 
-*C3b — chưa làm:*
-- `ActivityCard`: số bình luận và 2 bình luận xem trước, nút mở luồng.
-- Số đếm trên nút ở trang chi tiết (cùng nguồn với thẻ).
+*C3b — xong:*
+- `ActivityCard`: nút bong bóng cạnh tim, kèm số khi có bình luận; dưới
+  chân thẻ là 2 bình luận mới nhất (mỗi cái một dòng) và "Xem tất cả N
+  bình luận" khi còn nhiều hơn. Thẻ của bộ chưa có bình luận chỉ có nút,
+  không có số.
+- Một lần hỏi cho mọi thẻ đang vẽ trên Trang cá nhân (`comment_previews`);
+  thêm thẻ thì hỏi lại một lần. Cờ tắt thì không hỏi gì.
+- Nút ở trang chi tiết bộ sưu tập mang cùng con số, từ cùng hàm.
+- Việc để lại cho C4: sau khi đăng hoặc xoá, số trên thẻ và trên nút phải
+  được hỏi lại (hiện chỉ hỏi lại khi danh sách thẻ đổi).
 
 **C4. Viết**
 - Ô soạn: bình luận mới, trả lời (tự chèn "@tên" khi trả lời ở cấp 2),

@@ -162,6 +162,11 @@ vi.mock('../lib/data', async (orig) => ({
 // The count itself, under the real `useCountView`: what is under test
 // here is when this page counts an open, not how the call is made.
 vi.mock('../lib/data/stats', () => ({ recordCollectionView: spies.countView }));
+// What the door to the comments asks for its figure, when it is drawn.
+vi.mock('../lib/data/comments', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchPreviews: async () => ({}),
+}));
 vi.mock('../lib/crew', () => ({
   useCrew: () => ({
     ships: { data: state.ships, reload: spies.shipsReload },

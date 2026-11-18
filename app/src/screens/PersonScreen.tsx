@@ -262,6 +262,7 @@ export default function PersonScreen({ navigation, route }: {
         seenOf={seenOf}
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
+        onComments={(c) => navigation.navigate('Comments', { subject: { kind: 'collection', id: c.id as string } })}
         reach={end.reach}
       />
     </>

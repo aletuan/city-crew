@@ -87,6 +87,7 @@ import type { ListSeen } from '../../lib/person';
 import { useSaveActions } from '../../lib/save';
 import { SEEN_GLYPH, seenName } from '../../lib/shares';
 import { colors, font, space, type } from '../../theme';
+import { useCardComments } from './useCardComments';
 
 /** How many cards the feed draws at first, and adds at each "Show more". */
 export const PAGE = 5;
@@ -140,7 +141,7 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
   return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, reach = 0 }: {
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -150,6 +151,8 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, re
   seenOf: (c: Collection) => ListSeen;
   coverFor: (c: Collection) => string | undefined;
   onOpen: (c: Collection) => void;
+  /** Opens a collection's thread of comments — `useCardComments`. */
+  onComments?: (c: Collection) => void;
   /** How many times the reader has come near the page's end (`useReach`). */
   reach?: number;
 }) {
@@ -193,6 +196,10 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, re
     fireHaptic('light');
     void toggleLike({ id: c.id as string, slug: c.slug });
   };
+
+  // What each card shows of its thread, for the cards drawn — nothing,
+  // with the switch off.
+  const talkOf = useCardComments(lists.slice(0, shown), (c) => seenOf(c).kind === 'public', onComments);
 
   const none = lists.length === 0;
   return (
@@ -264,6 +271,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, re
               likes={likes[c.slug] ?? 0}
               onOpen={() => onOpen(c)}
               onHeart={c.id && seenOf(c).kind !== 'private' ? () => heart(c) : undefined}
+              {...talkOf(c)}
             />
           ))}
           {lists.length > shown ? (
