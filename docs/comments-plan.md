@@ -258,6 +258,10 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
   (`lib/commentsChanged`). Không vẽ trước bình luận khi máy chủ chưa nhận.
 - Chưa kiểm được bằng kiểm thử tự động: ô có trượt lên đúng theo bàn phím
   không. Phải xem trên máy.
+- **Gửi xong thì bàn phím hạ xuống** (19/11/2026, sau khi xem trên máy:
+  bàn phím ở lại che nửa trang, đúng chỗ bình luận vừa viết hiện ra).
+  Luồng bình luận không phải khung chat. Bị máy chủ từ chối thì bàn phím
+  ở lại để sửa chữ.
 
 *C4d — xong: tim trên bình luận (chủ dự án yêu cầu 18/11/2026;
 migration đã áp lên cơ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã

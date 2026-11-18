@@ -381,6 +381,8 @@ describe('writing', () => {
     expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'Agreed');
     // Sent, the next words answer nobody again.
     expect(replying()).toBeNull();
+    // And the keyboard goes down, off the comment just written.
+    expect(document.activeElement).not.toBe(field());
   });
 
   it('answers nobody after the ✕, and the words typed stay', async () => {
@@ -403,6 +405,8 @@ describe('writing', () => {
     expect(screen.getByTestId('composer-error').textContent).toContain('limit');
     expect(replying()).toBe('Replying to trang');
     expect(field().value).toBe('One more');
+    // The keyboard stays, for the words to be mended.
+    expect(document.activeElement).toBe(field());
     // Nothing was written, so nothing is asked again.
     expect(data.fetchThread).toHaveBeenCalledTimes(1);
   });

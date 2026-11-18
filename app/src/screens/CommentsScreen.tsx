@@ -157,6 +157,15 @@ export default function CommentsScreen({ navigation, route }: {
   const send = async (body: string) => {
     await postComment(subject, replyTo ? replyTo.id : null, body);
     setReplyTo(null);
+    // The keyboard goes down once the words are sent (owner, on a phone,
+    // 19 Nov 2026): it was left up, over the half of the page where the
+    // comment just written appears, and had to be put away by hand. This
+    // is a thread, not a chat — Instagram, TikTok and YouTube drop theirs
+    // on a comment for the same reason, and Messages keeps its own
+    // because the next line there is usually yours. Only on a comment
+    // the server took: a refusal throws above, and the field keeps its
+    // words and its keyboard so they can be mended.
+    field.current?.blur();
     commentsChanged();
   };
   // Delete your own, report somebody else's — `useCommentMenu`.
