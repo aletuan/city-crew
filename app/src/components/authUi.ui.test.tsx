@@ -182,20 +182,21 @@ describe('a grouped row laid on the page', () => {
 
   it('has no glyph and no padding, where a card\'s row keeps the card\'s', () => {
     lang = 'en';
-    render(<FieldRow grouped flush icon="bookmark-outline" label="Collection name" value="x" testID="flush" onChangeText={() => {}} />);
-    expect(document.querySelector('[data-icon="bookmark-outline"]')).toBeNull();
+    render(<FieldRow grouped flush label="Collection name" value="x" testID="flush" onChangeText={() => {}} />);
+    // `data-size`, not `data-icon`: a glyph drawn with no name has a size.
+    expect(document.querySelector('[data-size]')).toBeNull();
     expect(pad(rowOf('flush'))).toEqual(['0px', '0px', '0px', '0px']);
     expect(screen.getByText('Collection name')).toBeTruthy();
 
-    render(<FieldRow grouped icon="bookmark-outline" label="In a card" value="x" testID="carded" onChangeText={() => {}} />);
+    render(<FieldRow grouped label="In a card" value="x" testID="carded" onChangeText={() => {}} />);
     expect(pad(rowOf('carded'))).toEqual(['16px', '16px', '11px', '11px']);
   });
 
   it('starts its error on the same margin', () => {
     lang = 'en';
-    render(<FieldRow grouped flush icon="at-outline" label="Name" value="x" error="Taken" onChangeText={() => {}} />);
+    render(<FieldRow grouped flush label="Name" value="x" error="Taken" onChangeText={() => {}} />);
     expect(getComputedStyle(screen.getByText('Taken')).paddingLeft).toBe('0px');
-    render(<FieldRow grouped icon="at-outline" label="Name" value="x" error="Taken too" onChangeText={() => {}} />);
+    render(<FieldRow grouped label="Name" value="x" error="Taken too" onChangeText={() => {}} />);
     expect(getComputedStyle(screen.getByText('Taken too')).paddingLeft).toBe('16px');
   });
 
@@ -209,17 +210,32 @@ describe('a grouped row laid on the page', () => {
       const c = getComputedStyle(screen.getByTestId(id).parentElement as HTMLElement);
       return c.rowGap || c.gap;
     };
-    render(<FieldRow grouped flush icon="bookmark-outline" label="Name" value="x" testID="on-page" onChangeText={() => {}} />);
-    render(<FieldRow grouped icon="bookmark-outline" label="Name" value="x" testID="in-card" onChangeText={() => {}} />);
-    render(<FieldRow grouped flush multiline icon="text-outline" label="Words" value="x" testID="many-lines" onChangeText={() => {}} />);
+    render(<FieldRow grouped flush label="Name" value="x" testID="on-page" onChangeText={() => {}} />);
+    render(<FieldRow grouped label="Name" value="x" testID="in-card" onChangeText={() => {}} />);
+    render(<FieldRow grouped flush multiline label="Words" value="x" testID="many-lines" onChangeText={() => {}} />);
     render(<FieldRow icon="mail-outline" label="Email" value="x" testID="in-box" onChangeText={() => {}} />);
     expect(['on-page', 'in-card', 'many-lines', 'in-box'].map(gapOver)).toEqual(['6px', '6px', '6px', '2px']);
+  });
+
+  // A glyph is asked for only where it is drawn (19 Nov 2026): a grouped
+  // row draws none, so it takes none, and a boxed row cannot forget its
+  // own. Six names had been passed to grouped rows and never shown.
+  it('takes a glyph on a boxed row only', () => {
+    // @ts-expect-error — a grouped row draws no glyph.
+    const grouped = <FieldRow grouped icon="text-outline" label="Words" value="x" onChangeText={() => {}} />;
+    // @ts-expect-error — a boxed row is found by its glyph.
+    const boxed = <FieldRow label="Email" value="x" onChangeText={() => {}} />;
+    expect([grouped.props.icon, boxed.props.icon]).toEqual(['text-outline', undefined]);
+    render(<FieldRow grouped label="Bio" value="x" testID="bio" onChangeText={() => {}} />);
+    expect(document.querySelector('[data-size]')).toBeNull();
   });
 
   // A boxed field has a border to pad away from: `flush` is the grouped
   // row's, and means nothing without it.
   it('leaves a boxed field its box', () => {
     lang = 'en';
+    // The type refuses it too (`FieldGlyph`); drawn anyway, it is ignored.
+    // @ts-expect-error — `flush` without `grouped`.
     render(<FieldRow flush icon="mail-outline" label="Email" value="x" testID="boxed" error="Bad" onChangeText={() => {}} />);
     expect(pad(rowOf('boxed')).slice(0, 2)).toEqual(['16px', '16px']);
     expect(document.querySelector('[data-icon="mail-outline"]')).toBeTruthy();

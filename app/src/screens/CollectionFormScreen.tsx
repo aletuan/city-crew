@@ -336,7 +336,6 @@ export default function CollectionFormScreen({ navigation, route }: {
       <FieldRow
         grouped
         flush
-        icon="bookmark-outline"
         // "Collection name", not "Name": with the glyph gone the label is
         // all that says what the line is, and it is the small half now.
         label={t('Collection name', 'Tên bộ sưu tập', 'コレクション名', '合集名称', '合集名稱')}
@@ -356,7 +355,6 @@ export default function CollectionFormScreen({ navigation, route }: {
       <FieldRow
         grouped
         flush
-        icon="text-outline"
         label={t('Description', 'Mô tả', '説明', '简介', '簡介')}
         placeholder={t('What ties these together?', 'Điều gì gắn kết những nơi này?', '共通点は何ですか？', '这些地点有什么共同点？', '這些地點有什麼共同點？')}
         value={desc}
