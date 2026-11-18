@@ -1790,3 +1790,45 @@ describe('when there is nobody to show', () => {
     expect(state.asked.every((h) => h === null)).toBe(true);
   });
 });
+
+// What a card on the page shows of its collection's thread (C3b of
+// `docs/comments-plan.md`). The card's own drawing is pinned in its test
+// and the rule for which card gets what in `useCardComments`'s; here it
+// is the page's wiring: nothing as the app ships, and with the switch on
+// a public collection's card wears its count and opens that thread.
+const talk = vi.hoisted(() => ({
+  fetchPreviews: vi.fn(async (_s: { id: string }[]): Promise<Record<string, unknown>> => ({})),
+}));
+vi.mock('../lib/data/comments', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchPreviews: talk.fetchPreviews,
+}));
+
+describe('comments on the cards', () => {
+  afterEach(async () => {
+    (await import('../lib/flags')).appFlags.reset();
+    talk.fetchPreviews.mockImplementation(async () => ({}));
+  });
+
+  it('draws nothing about them as the app ships', async () => {
+    state.shelf = [list('one')];
+    await show();
+    expect(screen.queryByTestId('activity-comments')).toBeNull();
+  });
+
+  it('shows the count and the newest with the switch on, and opens that collection\'s thread', async () => {
+    (await import('../lib/flags')).appFlags.set('comments', true);
+    talk.fetchPreviews.mockImplementation(async () => ({
+      two: { n: 3, latest: [{ id: 'k1', body: 'lovely', created_at: 'x', author: 'u', handle: 'trang', full_name: null, avatar_url: null }] },
+    }));
+    state.shelf = [list('one'), list('two')];
+    const nav = await show();
+    const cards = screen.getAllByTestId('person-act');
+    // The card with no comments has the way in and no figure.
+    expect(within(cards[0]).queryByTestId('activity-comments-count')).toBeNull();
+    expect(within(cards[1]).getByTestId('activity-comments-count').textContent).toBe('3');
+    expect(within(cards[1]).getByTestId('activity-preview').textContent).toBe('trang lovely');
+    fireEvent.click(within(cards[1]).getByTestId('activity-comments'));
+    expect(nav.navigate).toHaveBeenCalledWith('Comments', { subject: { kind: 'collection', id: 'two' } });
+  });
+});
