@@ -28,7 +28,7 @@ import {
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import LikeHeart from '../components/LikeHeart';
-import { likeable, marked, namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
+import { likeable, namesBriefly, SEEN_GLYPH, seenName, sharesByList, visibilityOf } from '../lib/shares';
 import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
@@ -868,14 +868,19 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      it came to be one grey glyph; `seenWord` is what VoiceOver is told.
      It still opens the sheet, for whoever learned to press here.
 
-     And no glyph at all on a public list since 18 Nov 2026: no mark is
-     public (`shares.marked`).
+     The globe was gone for a day (17 Nov 2026: "no mark is public") and
+     the owner asked for it back the next morning, small, after the
+     time, as a public post wears one on Facebook: with it a list of your
+     own always says how it stands, and its absence is not left to be
+     read. A person's page keeps the other rule — a public card wears no
+     mark (`person.seenOn`) — because there the exception is what is
+     marked among many cards, and here there is one list.
 
      Tapping opens a choice rather than flipping the switch: a word that
      changes who can see your list on one touch is a word nobody would
      dare tap to find out what it does. */
   const [whoSees, setWhoSees] = useState(false);
-  const visibility = marked(owned, seen) ? (
+  const visibility = owned ? (
     <PressableScale
       contentStyle={s.visibility}
       scaleTo={0.94}

@@ -63,8 +63,8 @@
 //
 // ── what stays under the handle ──
 //
-// The state's glyph alone — two heads, a padlock, and nothing for a
-// public list (`shares.marked`) — with no word and no chevron: a mark of how the list stands, not the place to change
+// The state's glyph alone — a globe, two heads, a padlock — with no word
+// and no chevron: a mark of how the list stands, not the place to change
 // it. It still opens the sheet for now. Whoever learned to press there
 // reaches the same sheet, and the press can go once nobody does.
 //

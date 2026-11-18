@@ -669,11 +669,10 @@ describe('your own list', () => {
     expect(screen.getByText('旧市街で食べる。')).toBeTruthy();
   });
 
-  // No mark is public (owner, 18 Nov 2026): Share's name says it.
-  it('says "place" for one, and wears no mark once published', () => {
+  it('says "place" for one, and "Public" once published', () => {
     state.mine = [collection({ is_public: true }, [PHO])];
     show();
-    expect(screen.queryByTestId('collection-visibility')).toBeNull();
+    expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Public');
     expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public');
     expect(screen.getByTestId('collection-add-cell').getAttribute('aria-label')).toBe('Add place');
     expect(screen.getByTestId('collection-count').getAttribute('aria-label')).toBe('1 place');
@@ -1064,20 +1063,22 @@ describe('publishing', () => {
     expect([...line.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['lock-closed-outline']);
     expect(line.textContent).toBe('');
     cleanup();
-    // No mark is public (owner, 18 Nov 2026): a globe stood here for a
-    // day. With no age either, the line is not drawn.
+    // The globe, after a day without one (owner, 18 Nov 2026: small,
+    // after the time, as a public post wears it).
     state.mine = [collection({ is_public: true })];
     show();
-    expect(screen.queryByTestId('collection-meta')).toBeNull();
-    expect(document.querySelector('[data-icon="globe-outline"]')).toBeNull();
+    line = screen.getByTestId('collection-meta');
+    expect([...line.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['globe-outline']);
+    expect(line.textContent).toBe('');
     cleanup();
+    // After the time, a dot between.
     state.mine = [collection({ is_public: true, created_at: '2020-01-01T00:00:00Z' })];
     show();
     line = screen.getByTestId('collection-meta');
-    expect(line.querySelector('[data-icon]')).toBeNull();
-    // The age alone, and no dot waiting for a mark.
-    expect(line.textContent).not.toBe('');
-    expect(line.textContent).not.toContain('·');
+    expect([...line.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'))).toEqual(['globe-outline']);
+    expect(line.textContent).toContain('·');
+    expect(line.lastElementChild!.contains(screen.getByTestId('collection-visibility'))
+      || line.lastElementChild === screen.getByTestId('collection-visibility')).toBe(true);
   });
 
   // On your own public list the heart stays in the activity row, where
@@ -1146,10 +1147,9 @@ describe('publishing', () => {
     expect(spies.colsReload).toHaveBeenCalled();
     // The way back is the word at the card's foot, not a button here.
     expect(screen.queryByText('Undo')).toBeNull();
-    // And Share's name is the record: it says Public now, and the
-    // padlock under the handle has gone.
-    await waitFor(() => expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public'));
-    expect(screen.queryByTestId('collection-visibility')).toBeNull();
+    // And the mark under the handle is the record: it says Public now.
+    await waitFor(() => expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Public'));
+    expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public');
   });
 
   it('makes a public list private again', async () => {
@@ -1307,7 +1307,7 @@ describe('sharing with friends', () => {
       show();
       expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public');
       expect(screen.getByTestId('collection-share').textContent).toBe('');
-      expect(screen.queryByTestId('collection-visibility')).toBeNull();
+      expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Public');
     });
 
     it('says Private when the shares are on another of your lists', () => {
