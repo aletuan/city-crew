@@ -654,7 +654,7 @@ describe('your own list', () => {
     // padlock, named Private for VoiceOver.
     expect(screen.getByTestId('collection-meta').textContent).toBe('');
     expect(screen.getByTestId('collection-meta').querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
-    expect(screen.getByTestId('collection-activity').textContent).toBe('ShareActivity');
+    expect(screen.getByTestId('collection-activity').textContent).toBe('Activity');
     expect(screen.getByTestId('collection-count').textContent).toBe('3');
     expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Private');
     expect(screen.queryByText('Public')).toBeNull();
@@ -884,7 +884,7 @@ describe('Share, at the card’s foot', () => {
     show();
     const button = screen.getByTestId('collection-share');
     expect(footer().contains(button)).toBe(true);
-    expect(iconsOf(footer())).toEqual(['heart-outline', 'share-outline', 'chevron-forward']);
+    expect(iconsOf(footer())).toEqual(['heart-outline', 'paper-plane-outline', 'chevron-forward']);
     // 18 in the secondary grey, both (owner, 18 Nov 2026): at 15 in the
     // byline's grey a liked heart stood beside a Share that had gone.
     const worn = (el: Element) => { const g = el.querySelector('[data-icon]')!; return [g.getAttribute('data-size'), g.getAttribute('data-color')]; };
@@ -899,23 +899,25 @@ describe('Share, at the card’s foot', () => {
   // A private list has no heart to stand after: Share leads the row.
   it('leads the row on a private list, which has no heart', () => {
     show();
-    expect(iconsOf(footer())).toEqual(['share-outline', 'chevron-forward']);
+    expect(iconsOf(footer())).toEqual(['paper-plane-outline', 'chevron-forward']);
     expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Private');
   });
 
   // The figure is how many friends have the list, and only while it is
   // shared with friends: beside a share mark on a public list a number
   // reads as "shared 3 times".
-  // With its word since 18 Nov 2026, and the figure after the word and a
-  // dot, where it cannot be read as "shared 3 times".
-  it('says Share, and after it how many friends a list is shared with, and no figure otherwise', () => {
+  // A paper plane and no word (owner, 18 Nov 2026): the word lasted a
+  // night. The figure is the friends the list is shared with.
+  it('is a paper plane with no word, and counts the friends a list is shared with', () => {
     show();
-    expect(screen.getByTestId('collection-share').textContent).toBe('Share');
-    expect(textStyleOf(screen.getByTestId('collection-share-word'))).toMatchObject({ fontSize: 15, color: colors.textSecondary });
+    expect(screen.getByTestId('collection-share').textContent).toBe('');
+    expect(screen.queryByTestId('collection-share-count')).toBeNull();
+    expect(screen.getByTestId('collection-share').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('paper-plane-outline');
     cleanup();
     state.shares = [share('lan'), share('minh'), share('trang')];
     show();
-    expect(screen.getByTestId('collection-share').textContent).toBe('Share · 3');
+    expect(screen.getByTestId('collection-share').textContent).toBe('3');
+    expect(textStyleOf(screen.getByTestId('collection-share-count'))).toMatchObject({ fontSize: 15, color: colors.textSecondary });
     expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Friends, 3');
     cleanup();
     // Public, whoever it is shared with: everybody, and no number.
@@ -1086,7 +1088,7 @@ describe('publishing', () => {
     show();
     const row = screen.getByTestId('collection-activity');
     expect([...row.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
-      .toEqual(['heart-outline', 'share-outline', 'chevron-forward']);
+      .toEqual(['heart-outline', 'paper-plane-outline', 'chevron-forward']);
     expect(row.contains(screen.getByRole('button', { name: 'Like' }))).toBe(true);
     cleanup();
     state.mine = [collection({ is_public: false })];
@@ -1304,7 +1306,7 @@ describe('sharing with friends', () => {
       state.shares = [share('lan')];
       show();
       expect(screen.getByTestId('collection-share').getAttribute('aria-label')).toBe('Share, Public');
-      expect(screen.getByTestId('collection-share').textContent).toBe('Share');
+      expect(screen.getByTestId('collection-share').textContent).toBe('');
       expect(screen.queryByTestId('collection-visibility')).toBeNull();
     });
 
@@ -3288,7 +3290,7 @@ describe('the likes a list kept', () => {
       state.likes = likes;
       show();
       expect(kept()).toBeNull();
-      expect(screen.getByTestId('collection-activity').textContent).toBe('ShareActivity');
+      expect(screen.getByTestId('collection-activity').textContent).toBe('Activity');
       cleanup();
       state.mine = [];
       state.shared = [collection({ owner_id: 'lan-id', is_public: false, curator_handle: 'lan' })];

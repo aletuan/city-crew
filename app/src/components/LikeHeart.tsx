@@ -20,8 +20,8 @@
 //
 // ── the motion ──
 //
-// Liked: the heart swells to `POP_PEAK` and springs back, as Instagram's
-// and Threads' do, in about a quarter of a second.
+// Liked: the heart swells to `POP_PEAK` and settles back, as Instagram's
+// and Threads' do.
 // Unliked: nothing. Taking a like back is not an occasion.
 // The tally: the old figure slides out and the new one in, upward when
 // it grew and downward when it fell — X's counter. A figure arriving at
@@ -51,9 +51,9 @@
 //
 // ── the numbers ──
 //
-// Drawn against the references, not measured on a phone: `Animated` does
-// not tick where the tests run, and nobody has timed these on a device.
-// They are the first thing to tune if the heart feels slow or jumpy.
+// Judged by eye on the owner's phone, not timed: `Animated` does not
+// tick where the tests run. The note above the constants has the first
+// set and why it was wrong.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, type Insets, type StyleProp, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
@@ -64,18 +64,37 @@ import { useI18n } from '../lib/i18n';
 import { likesWorthShowing } from '../lib/likes';
 import { colors, onPhoto } from '../theme';
 
-/** How far the heart swells: a quarter over its size. Instagram's reads
- *  as about 1.2 to 1.3; under 1.15 it is lost in the press's own sink to
- *  0.82 and back. */
-export const POP_PEAK = 1.25;
-/** The swell: 90ms out, then a spring home — some 250ms in all. */
-const POP_UP_MS = 90;
-/** The tally's slide: 180ms, inside the heart's quarter second so the
- *  two finish together. */
-const ROLL_MS = 180;
-/** How far a figure travels: 10pt, about two thirds of the 15pt line it
- *  is set in, so it is gone before it would overlap the row above. */
-const ROLL_DY = 10;
+// ── tuned once, on the owner's phone (18 Nov 2026) ──
+//
+// The first numbers were 1.25, a spring with a bounce of 12, and a tally
+// that slid 10pt in 180ms on an ease-out cubic. On the phone: "the heart
+// bounces a little too hard, the number goes a little too fast". Why,
+// looked at afterwards:
+//
+//   - the swell multiplies the press. The button has already sunk to
+//     0.82 under the thumb, so 1.25 was a swing from 0.82 to 1.25 — over
+//     half the heart's size, not the quarter the number says;
+//   - a bounce of 12 carries the heart back past its size and out again,
+//     a second beat nobody's heart has;
+//   - an ease-out cubic covers half its distance in the first fifth of
+//     its time: 180ms read as under 100, and the figure leaving was gone
+//     before it was seen to leave;
+//   - both were squeezed into a quarter second for fear of feeling slow.
+//     X plays its heart over 0.8s (a 29-frame sprite). A like is worth
+//     being seen.
+
+/** How far the heart swells: 1.12. From the press's 0.82 that is a
+ *  swing of 0.30, where 1.25 made it 0.43. */
+export const POP_PEAK = 1.12;
+/** The swell: 110ms out, then a spring home that settles once (no
+ *  bounce). */
+const POP_UP_MS = 110;
+/** The tally's slide: 320ms, eased at both ends so the figure leaving
+ *  is seen to start and the one arriving is seen to land. */
+const ROLL_MS = 320;
+/** How far a figure travels: 14pt, most of the 15pt line it is set in —
+ *  far enough to read as a figure passing, where 10 read as a flicker. */
+const ROLL_DY = 14;
 /** How long after a press a change is taken to be that press's. */
 export const PRESS_WINDOW_MS = 1000;
 
@@ -140,13 +159,13 @@ export default function LikeHeart({
     if (liked && !before.liked) {
       Animated.sequence([
         Animated.timing(pop, { toValue: POP_PEAK, duration: POP_UP_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.spring(pop, { toValue: 1, speed: 14, bounciness: 12, useNativeDriver: true }),
+        Animated.spring(pop, { toValue: 1, speed: 12, bounciness: 0, useNativeDriver: true }),
       ]).start();
     }
     if (count !== before.count) {
       setLeaving({ n: before.count, way: rollWay(before.count, count) });
       roll.setValue(0);
-      Animated.timing(roll, { toValue: 1, duration: ROLL_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+      Animated.timing(roll, { toValue: 1, duration: ROLL_MS, easing: Easing.inOut(Easing.quad), useNativeDriver: true })
         .start(() => setLeaving(null));
     }
   }, [liked, count, still, pop, roll]);
