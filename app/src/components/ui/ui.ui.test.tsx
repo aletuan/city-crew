@@ -437,9 +437,7 @@ describe('Glyph', () => {
   const drawn = () => document.querySelector('[data-icon]')!;
 
   it('draws the five marks from the line set, at Ionicons’ weight', () => {
-    // And the paper plane (owner, 18 Nov 2026): Ionicons' was three sharp
-    // points beside a heart that is all curves.
-    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places', 'quill', 'paper-plane-outline'] as const) {
+    for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places', 'quill'] as const) {
       const { unmount } = render(<Glyph name={name} size={20} color="#123456" />);
       expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual([name, 'lucide']);
       expect([drawn().getAttribute('data-size'), drawn().getAttribute('data-color')]).toEqual(['20', '#123456']);
@@ -488,8 +486,10 @@ describe('Glyph', () => {
     expect(container.querySelector('[data-icon]')).toBeNull();
     expect(container.querySelector('[data-size="15"]')).toBeTruthy();
     expect([isLineGlyph('places'), isLineGlyph('location-outline')]).toEqual([true, false]);
-    // The outline alone was routed: the solid plane is nowhere in the app.
-    expect([isLineGlyph('paper-plane-outline'), isLineGlyph('paper-plane')]).toEqual([true, false]);
+    // The line set is for getting about and for marks of identity: the
+    // plane was routed to it for a day (18 Nov 2026) and went back, so a
+    // list's Share and the heart beside it are of one family.
+    expect([isLineGlyph('paper-plane-outline'), isLineGlyph('heart-outline')]).toEqual([false, false]);
   });
 
   it('takes a lighter line where it is asked for one', () => {
