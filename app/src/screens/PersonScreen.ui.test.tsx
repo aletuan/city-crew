@@ -1831,5 +1831,9 @@ describe('comments on the cards', () => {
     expect(within(cards[1]).queryByText(/lovely/)).toBeNull();
     fireEvent.click(within(cards[1]).getByTestId('activity-comments'));
     expect(nav.navigate).toHaveBeenCalledWith('Comments', { subject: { kind: 'collection', id: 'two' } });
+    // And the one nobody has commented on is answered where the reader is.
+    fireEvent.click(within(cards[0]).getByTestId('activity-comments'));
+    expect(screen.getByTestId('composer-about').textContent).toBe('List one');
+    expect(nav.navigate).toHaveBeenCalledTimes(1);
   });
 });

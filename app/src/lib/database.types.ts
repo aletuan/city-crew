@@ -506,33 +506,30 @@ export type Database = {
       }
       comments: {
         Row: {
-          author: string | null
-          body: string | null
+          author: string
+          body: string
           collection_id: string | null
           created_at: string
-          deleted_at: string | null
           depth: number
           id: string
           parent_id: string | null
           root_id: string | null
         }
         Insert: {
-          author?: string | null
-          body?: string | null
+          author: string
+          body: string
           collection_id?: string | null
           created_at?: string
-          deleted_at?: string | null
           depth?: number
           id?: string
           parent_id?: string | null
           root_id?: string | null
         }
         Update: {
-          author?: string | null
-          body?: string | null
+          author?: string
+          body?: string
           collection_id?: string | null
           created_at?: string
-          deleted_at?: string | null
           depth?: number
           id?: string
           parent_id?: string | null
@@ -1592,7 +1589,6 @@ export type Database = {
           n: number
         }[]
       }
-      comment_prune: { Args: { p_id: string }; Returns: undefined }
       comment_subject_visible: {
         Args: { p_collection: string }
         Returns: boolean
@@ -1606,13 +1602,31 @@ export type Database = {
           created_at: string
           depth: number
           full_name: string
-          gone: boolean
           handle: string
           id: string
           mentions: Json
           parent_id: string
           root_id: string
         }[]
+      }
+      comments_seen: {
+        Args: { p_collections: string[] }
+        Returns: {
+          author: string
+          body: string
+          collection_id: string | null
+          created_at: string
+          depth: number
+          id: string
+          parent_id: string | null
+          root_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "comments"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       copies_of_list: {
         Args: { cid: string }

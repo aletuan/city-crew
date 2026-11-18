@@ -66,13 +66,9 @@ export type CommentRow = {
   parent_id: string | null;
   root_id: string | null;
   depth: number;
-  /** Null when `gone`. */
-  body: string | null;
+  body: string;
   created_at: string;
-  /** Deleted, or by somebody blocked from the reader — the server does
-   *  not say which, on purpose. */
-  gone: boolean;
-  author: string | null;
+  author: string;
   handle: string | null;
   full_name: string | null;
   avatar_url: string | null;
@@ -84,8 +80,7 @@ export type Placed = CommentRow & {
   /** 0, 1 or 2 — how far in it is drawn. */
   level: number;
   /** The handle of who it answers, when the indent alone no longer says:
-   *  a comment deeper than the last level drawn. Null otherwise — and
-   *  null when that comment is gone, since a gone row has no handle. */
+   *  a comment deeper than the last level drawn. Null otherwise. */
   to: string | null;
 };
 
@@ -141,19 +136,18 @@ export function mentionsOf(raw: unknown): Mention[] {
  *   - after each, everything said beneath that answer, oldest first, at
  *     the last level — the flattening the head of this file describes.
  *
- * ── what is not drawn ──
+ * ── what is not here to draw ──
  *
- * A `gone` comment with nothing living under it. The server already
- * deletes a deleted comment nobody answered; what still arrives here is
- * the comment of somebody blocked, which comes back gone *with* or
- * without answers, and a branch whose every answer is also gone. Either
- * would draw as a "deleted" line answering to nothing. Gone and
- * answered by somebody living, it stays, as the line the answers hang
- * from.
+ * A comment that was deleted, and one by somebody blocked from the
+ * reader: the server sends neither, nor anything said under them
+ * (20261118150000 — until that evening a deleted comment that had been
+ * answered came back as a line to draw, "This comment was deleted", and
+ * this function decided which of those lines still had a reason to be
+ * there).
  *
- * A comment whose parent is not in the list is dropped with it: there is
- * no honest place to draw an answer to nothing. That is a thread read
- * while it was being pruned, and the next read is whole.
+ * A comment whose parent is not in the list is dropped: there is no
+ * honest place to draw an answer to nothing. That is a thread read while
+ * something in it was being deleted, and the next read is whole.
  */
 export function threadOf(rows: readonly CommentRow[]): Branch[] {
   const kids = new Map<string, CommentRow[]>();
@@ -165,17 +159,6 @@ export function threadOf(rows: readonly CommentRow[]): Branch[] {
     if (list) list.push(r); else kids.set(r.parent_id, [r]);
   }
 
-  // Whether anything living is at or under a comment. Remembered, since
-  // every ancestor asks about the same subtree.
-  const living = new Map<string, boolean>();
-  const lives = (r: CommentRow): boolean => {
-    const known = living.get(r.id);
-    if (known !== undefined) return known;
-    const yes = !r.gone || (kids.get(r.id) ?? []).some(lives);
-    living.set(r.id, yes);
-    return yes;
-  };
-
   const place = (r: CommentRow, level: number): Placed => {
     const parent = r.depth > LEVEL_MAX && r.parent_id ? byId.get(r.parent_id) : undefined;
     return { ...r, level, to: parent ? parent.handle : null };
@@ -184,7 +167,6 @@ export function threadOf(rows: readonly CommentRow[]): Branch[] {
   // Everything under a comment, oldest first whatever it answers.
   const under = (r: CommentRow, into: CommentRow[]): CommentRow[] => {
     for (const k of kids.get(r.id) ?? []) {
-      if (!lives(k)) continue;
       into.push(k);
       under(k, into);
     }
@@ -193,10 +175,9 @@ export function threadOf(rows: readonly CommentRow[]): Branch[] {
 
   const out: Branch[] = [];
   for (const r of rows) {
-    if (r.parent_id !== null || !lives(r)) continue;
+    if (r.parent_id !== null) continue;
     const replies: Placed[] = [];
     for (const a of kids.get(r.id) ?? []) {
-      if (!lives(a)) continue;
       replies.push(place(a, 1));
       const deeper = under(a, []).sort((x, y) => (x.created_at < y.created_at ? -1 : x.created_at > y.created_at ? 1 : 0));
       for (const d of deeper) replies.push(place(d, LEVEL_MAX));
@@ -204,12 +185,6 @@ export function threadOf(rows: readonly CommentRow[]): Branch[] {
     out.push({ root: place(r, 0), replies });
   }
   return out;
-}
-
-/** How many comments a thread holds, as the card counts them: the living
- *  ones. A "deleted" line is drawn and is not a comment. */
-export function livingCount(rows: readonly CommentRow[]): number {
-  return rows.reduce((n, r) => n + (r.gone ? 0 : 1), 0);
 }
 
 /** A stretch of a body: plain words, or a tag to press. */
@@ -255,13 +230,13 @@ export function segmentsOf(body: string, mentions: readonly Mention[]): Segment[
  * sentence, as `DAILY_LIMIT` is; the screen has the words.
  *
  *   signed_out  nobody is signed in
- *   subject     the list is gone, or private, or its owner and you are blocked
+ *   subject     the list is not there, or private, or its owner and you are blocked
  *   off         the owner has turned comments off
  *   empty       nothing but spaces
  *   long        over `BODY_MAX`
  *   banned      a word the desk keeps out
  *   cap         thirty today already
- *   parent      the comment answered is gone, or its writer and you are blocked
+ *   parent      the comment answered was deleted, or its writer and you are blocked
  *   mention     a tag the rules do not allow
  *   not_yours   deleting a comment that is neither yours nor on your list
  */
@@ -281,7 +256,7 @@ export function refusalOf(e: unknown): Refusal | null {
 
 /** What a card shows of a thread without opening it. */
 export type Preview = {
-  /** How many living comments the reader may see. */
+  /** How many comments the reader may see. */
   n: number;
   /** The two newest, newest first. */
   latest: PreviewComment[];

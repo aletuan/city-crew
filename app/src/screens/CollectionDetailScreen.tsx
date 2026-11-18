@@ -1121,7 +1121,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     : null;
   const activity = (
     <View style={s.activity} testID="collection-activity">
-      <View style={s.activityRow}>{heart ?? keptHeart}{shareButton}<CommentsDoor list={col} onPress={(id) => navigation.navigate('Comments', { subject: { kind: 'collection', id } })} />{activityLink}</View>
+      <View style={s.activityRow}>{heart ?? keptHeart}{shareButton}<CommentsDoor list={col} about={title} onPress={(id) => navigation.navigate('Comments', { subject: { kind: 'collection', id } })} />{activityLink}</View>
     </View>
   );
 

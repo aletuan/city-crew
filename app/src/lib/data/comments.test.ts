@@ -32,15 +32,15 @@ describe('fetchThread', () => {
 
   it('hands back each row as it came, nulls and all, with its tags read', async () => {
     const wire = {
-      id: 'k1', parent_id: null, root_id: null, depth: 0, body: 'Hi @trang', created_at: 'x', gone: false,
+      id: 'k1', parent_id: null, root_id: null, depth: 0, body: 'Hi @trang', created_at: 'x',
       author: 'u1', handle: 'long', full_name: null, avatar_url: null,
       mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null }, { at: 'bad' }],
     };
-    const husk = { ...wire, id: 'k2', body: null, gone: true, author: null, handle: null, mentions: [] };
-    fake().replies({ data: [wire, husk] });
+    const nameless = { ...wire, id: 'k2', parent_id: 'k1', root_id: 'k1', depth: 1, handle: null, mentions: [] };
+    fake().replies({ data: [wire, nameless] });
     const [a, b] = await fetchThread(list('c1'));
     expect(a).toEqual({ ...wire, mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null }] });
-    expect(b).toEqual(husk);
+    expect(b).toEqual(nameless);
   });
 
   it('is an empty thread for a null answer', async () => {

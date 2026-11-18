@@ -18,16 +18,21 @@ vi.mock('../../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchPreviews: data.fetchPreviews,
 }));
+const state = vi.hoisted(() => ({ me: 'me' as string | null }));
+vi.mock('../../lib/auth', () => ({
+  useSession: () => ({ session: state.me ? { user: { id: state.me } } : null }),
+  useProfile: () => ({ profile: null }),
+}));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: 'vi', t: (_en: string, vi: string) => vi }) }));
 
 import { CommentsDoor } from './CommentsDoor';
 
 const onPress = vi.fn();
-const show = (list: Parameters<typeof CommentsDoor>[0]['list']) => render(<CommentsDoor list={list} onPress={onPress} />);
+const show = (list: Parameters<typeof CommentsDoor>[0]['list']) => render(<CommentsDoor list={list} about="Hội An Coffee" onPress={onPress} />);
 const door = () => screen.queryByTestId('collection-comments');
 
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
-afterEach(() => { cleanup(); appFlags.reset(); vi.clearAllMocks(); data.fetchPreviews.mockImplementation(async () => ({})); });
+afterEach(() => { cleanup(); appFlags.reset(); vi.clearAllMocks(); data.fetchPreviews.mockImplementation(async () => ({})); state.me = 'me'; });
 
 describe('CommentsDoor', () => {
   it('is nothing while the switch is off, which is how it ships', () => {
@@ -35,12 +40,41 @@ describe('CommentsDoor', () => {
     expect(door()).toBeNull();
   });
 
-  it('opens the list\'s thread with the switch on, and names itself for VoiceOver', () => {
+  it('opens a thread that has comments, and names itself for VoiceOver', async () => {
     appFlags.set('comments', true);
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 2, latest: [] } }));
     show({ id: 'c1', is_public: true });
     expect(door()!.getAttribute('aria-label')).toBe('Bình luận');
+    await flush();
     fireEvent.click(door()!);
-    expect(onPress).toHaveBeenCalledWith('c1');
+    expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
+    expect(screen.queryByTestId('comment-quick')).toBeNull();
+  });
+
+  // The first comment is written on the page it is about (18 Nov 2026).
+  it('raises the field over the page while nobody has commented, saying which list, and opens nothing', async () => {
+    appFlags.set('comments', true);
+    show({ id: 'c1', is_public: true });
+    await flush();
+    fireEvent.click(door()!);
+    expect(screen.getByTestId('comment-quick')).toBeTruthy();
+    expect(screen.getByTestId('composer-about').textContent).toBe('Hội An Coffee');
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('opens the thread for a guest, and before the count is in', async () => {
+    appFlags.set('comments', true);
+    // Pressed before the answer: nothing says the thread is empty yet.
+    show({ id: 'c1', is_public: true });
+    fireEvent.click(door()!);
+    expect(onPress).toHaveBeenCalledTimes(1);
+    cleanup();
+    state.me = null;
+    show({ id: 'c1', is_public: true });
+    await flush();
+    fireEvent.click(door()!);
+    expect(onPress).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('comment-quick')).toBeNull();
   });
 
   it('wears the number of comments, from the card\'s own function, and says it to VoiceOver', async () => {

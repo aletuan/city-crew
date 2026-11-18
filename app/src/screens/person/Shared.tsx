@@ -199,7 +199,9 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
 
   // What each card shows of its thread, for the cards drawn — nothing,
   // with the switch off.
-  const talkOf = useCardComments(lists.slice(0, shown), (c) => seenOf(c).kind === 'public', onComments);
+  const { talkOf, node: quickComment } = useCardComments(
+    lists.slice(0, shown), (c) => seenOf(c).kind === 'public', (c) => localized(c, 'title', lang), onComments,
+  );
 
   const none = lists.length === 0;
   return (
@@ -287,6 +289,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
           ) : null}
         </View>
       )}
+      {quickComment}
     </>
   );
 }

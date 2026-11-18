@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 //
-// What can be done about one comment (C4b): nothing as nobody and nothing
-// about a comment that is gone; your own is yours to delete, after being
+// What can be done about one comment (C4b): nothing as nobody; your own is yours to delete, after being
 // asked once and told what will be left; somebody else's is reported
 // through the app's one report flow, as a comment. A delete tells the
 // rest of the app; a failed one says so and tells nobody.
@@ -38,7 +37,7 @@ import { useCommentMenu } from './useCommentMenu';
 
 const placed = (over: Partial<Placed> = {}): Placed => ({
   id: 'k1', parent_id: null, root_id: null, depth: 0, level: 0, to: null,
-  body: 'Lovely rooftop', created_at: 'x', gone: false,
+  body: 'Lovely rooftop', created_at: 'x',
   author: 'them', handle: '@Trang', full_name: null, avatar_url: 'https://faces/trang.jpg', mentions: [],
   ...over,
 });
@@ -71,13 +70,9 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe('who is offered a menu', () => {
-  it('nobody signed out, and nobody about a comment that is gone', () => {
+  it('nobody signed out', () => {
     state.me = null;
     show(placed());
-    expect(screen.getByTestId('none')).toBeTruthy();
-    cleanup();
-    state.me = 'me';
-    show(placed({ gone: true, body: null, author: null, handle: null }));
     expect(screen.getByTestId('none')).toBeTruthy();
   });
 
@@ -100,14 +95,14 @@ describe('your own comment', () => {
     expect(screen.queryByTestId('sheet-action-report')).toBeNull();
   });
 
-  it('asks once, saying what stays, and deletes nothing on Cancel', async () => {
+  it('asks once, saying what goes with it, and deletes nothing on Cancel', async () => {
     show(mine);
     fireEvent.click(screen.getByTestId('more'));
     await choose('delete');
     expect(alert).toHaveBeenCalledTimes(1);
     const [title, body, buttons] = alert.mock.calls[0];
     expect(title).toBe('Delete this comment?');
-    expect(body).toContain('their replies stay');
+    expect(body).toBe('Any replies under it will be deleted too.');
     expect(buttons!.map((b) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Delete', 'destructive']]);
     expect(buttons![0].onPress).toBeUndefined();
     expect(data.deleteComment).not.toHaveBeenCalled();
@@ -164,7 +159,7 @@ describe('somebody else\'s comment', () => {
     fireEvent.click(screen.getByTestId('more'));
     expect(screen.getByText('Lan Pham')).toBeTruthy();
     cleanup();
-    show(placed({ handle: null, full_name: null, author: null }));
+    show(placed({ handle: null, full_name: null }));
     fireEvent.click(screen.getByTestId('more'));
     expect(screen.getByText('Someone')).toBeTruthy();
   });

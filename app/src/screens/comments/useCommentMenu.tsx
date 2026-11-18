@@ -5,9 +5,10 @@
 // ── your own ──
 //
 // "Delete comment", which asks once in an Alert and then calls
-// `delete_comment`. What happens to it is the server's to decide and is
-// said before it is done: answered, it leaves "This comment was deleted"
-// for its answers to hang from; unanswered, it is gone. There is no edit
+// `delete_comment`. What goes with it is said before it is done: the
+// replies under it (20261118150000 — for a day an answered comment left
+// "This comment was deleted" for its answers to hang from, and on a
+// phone that was two empty lines over a stray word). There is no edit
 // (decision 5): a comment that can change after it was answered makes a
 // liar of whoever answered it.
 //
@@ -55,10 +56,10 @@ export function useCommentMenu(me: string | null) {
   const remove = (c: Placed) => Alert.alert(
     t('Delete this comment?', 'Xoá bình luận này?', 'このコメントを削除しますか？', '删除这条评论？', '刪除這條評論？'),
     t(
-      'If anyone has replied, their replies stay and yours reads "This comment was deleted".',
-      'Nếu đã có người trả lời, các trả lời vẫn còn và chỗ của bạn sẽ ghi "Bình luận đã bị xoá".',
-      '返信がある場合、返信は残り、あなたのコメントは「このコメントは削除されました」と表示されます。',
-      '如果已有人回复，回复会保留，你的评论将显示为“该评论已删除”。', '如果已有人回覆，回覆會保留，你的評論將顯示為「該評論已刪除」。',
+      'Any replies under it will be deleted too.',
+      'Các trả lời bên dưới cũng sẽ bị xoá.',
+      'このコメントへの返信も削除されます。',
+      '它下面的回复也会被删除。', '它下面的回覆也會被刪除。',
     ),
     [
       { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
@@ -94,8 +95,8 @@ export function useCommentMenu(me: string | null) {
 
   return {
     /** The press that raises the menu for a comment, or none where there
-     *  is nothing to offer: nobody signed in, or a comment that is gone. */
-    menuOf: (c: Placed): (() => void) | undefined => (me && !c.gone ? () => setAbout(c) : undefined),
+     *  is nothing to offer: nobody signed in. */
+    menuOf: (c: Placed): (() => void) | undefined => (me ? () => setAbout(c) : undefined),
     /** Render once, anywhere in the screen. */
     node: (
       <>
@@ -103,7 +104,7 @@ export function useCommentMenu(me: string | null) {
           visible={about !== null}
           name={about ? nameOf(about) : ''}
           // What was said, so the reader sees which comment the row is about.
-          meta={about?.body ?? undefined}
+          meta={about?.body}
           avatarUrl={about?.avatar_url ?? undefined}
           actions={about ? actions(about) : []}
           onClose={() => setAbout(null)}

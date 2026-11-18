@@ -52,8 +52,8 @@ export async function fetchThread(subject: Subject, order: ThreadOrder = 'new'):
   });
   if (error) throw new Error(error.message);
   // The generated types call every column a string; the function returns
-  // nulls for a root's parent and for everything about a comment that is
-  // gone. Read as what it is.
+  // null for a root's parent and root, and for a name nobody gave. Read
+  // as what it is.
   type Wire = Omit<CommentRow, 'mentions'> & { mentions: unknown };
   return ((data ?? []) as unknown as Wire[]).map((r) => ({ ...r, mentions: mentionsOf(r.mentions) }));
 }
@@ -110,10 +110,10 @@ export async function postComment(
 }
 
 /**
- * Take a comment back: yours, or one on your own list. Answered, the
- * server leaves the line its answers hang from; unanswered, it goes.
- * Deleting one that is already gone is not an error there, so a second
- * press here is not one either.
+ * Take a comment back: yours, or one on your own list — and with it
+ * everything said under it (20261118150000). Deleting one that is not
+ * there is not an error on the server, so a second press here is not
+ * one either.
  */
 export async function deleteComment(id: string): Promise<void> {
   const { error } = await supabase.rpc('delete_comment', { p_id: id });
