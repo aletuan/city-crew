@@ -635,7 +635,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
           )}
 
           <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
-            <Glyph name="search" size={ICON.action} color={colors.textTertiary} />
+            <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
             <TextInput
               value={query}
               onChangeText={(v) => { setQuery(v); setMissed(false); }}
@@ -667,7 +667,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
               "none": the catalog has not reached there, not the place. */}
           {elsewhere && (
             <View style={[s.well, s.warnWell]} testID="start-elsewhere">
-              <Glyph name="alert-circle" size={ICON.action} color={colors.warnInk} />
+              <Glyph name="alert-circle-outline" size={ICON.action} color={colors.warnInk} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[s.wellTitle, { color: colors.warnInk }]}>
                   {t(
@@ -808,7 +808,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
               the biggest warmest thing on the screen, and started the day
               in Ba Đình. See `ctaMode`. */}
           <GradientCta
-            icon={cta === 'search' ? 'search' : 'checkmark'}
+            icon={cta === 'search' ? 'search-outline' : 'checkmark'}
             label={cta === 'search'
               ? t('Search', 'Tìm', '検索', '搜索', '搜尋')
               : t('Use this location', 'Dùng chỗ này', 'ここにする', '使用这个位置', '使用這個位置')}

@@ -198,7 +198,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
         </View>
 
         <View style={s.search}>
-          <Glyph name="search" size={ICON.action} color={colors.textTertiary} />
+          <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
           <TextInput
             style={s.searchInput}
             value={query}

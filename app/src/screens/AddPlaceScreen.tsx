@@ -107,7 +107,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
       <AmbientWarmth />
 
       <View style={s.field}>
-        <Glyph name="search" size={ICON.action} color={colors.textTertiary} />
+        <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
         <TextInput
           ref={input}
           value={query}

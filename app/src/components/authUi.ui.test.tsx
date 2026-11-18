@@ -119,7 +119,7 @@ describe('the banner itself', () => {
     const banner = container.firstElementChild as HTMLElement;
 
     expect(banner.getAttribute('aria-live')).toBe('polite');
-    expect(banner.querySelector('[data-icon="alert-circle"]')).toBeTruthy();
+    expect(banner.querySelector('[data-icon="alert-circle-outline"]')).toBeTruthy();
     expect(banner.textContent).toContain('Email hoặc mật khẩu không đúng.');
   });
 });

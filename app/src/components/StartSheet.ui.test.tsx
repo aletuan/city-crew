@@ -329,7 +329,7 @@ describe('the search', () => {
     expect(setCity).not.toHaveBeenCalled();
     const well = screen.getByTestId('start-elsewhere');
     expect(well.textContent).toBe('No places near Nha Trang yet.Search somewhere else, pick an area below, or use your current location.');
-    expect(well.querySelector('[data-icon="alert-circle"]')).toBeTruthy();
+    expect(well.querySelector('[data-icon="alert-circle-outline"]')).toBeTruthy();
     expect(getComputedStyle(well).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     // The list goes; the words typed stay.
     expect(screen.queryByText('Khánh Hòa')).toBeNull();

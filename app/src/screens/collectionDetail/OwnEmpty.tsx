@@ -29,7 +29,7 @@ export function OwnEmpty({ onAdd }: { onAdd: () => void }) {
           {t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。', '这里还没有内容。', '這裡還沒有內容。')}
         </Text>
         <GradientCta
-          icon="search"
+          icon="search-outline"
           label={t('Find places', 'Tìm địa điểm', 'スポットを探す', '查找地点', '查詢地點')}
           onPress={onAdd}
         />
