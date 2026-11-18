@@ -345,7 +345,11 @@ describe('the bio, and the way to write one', () => {
     // And the page is "Trang cá nhân" — the name for the page a person
     // shows the world; "Hồ sơ" until 17 Nov 2026.
     expect(screen.getByText('Trang cá nhân')).toBeTruthy();
-    expect(screen.queryByText('Hồ sơ')).toBeNull();
+    // "Hồ sơ" is on it once since 19 Nov 2026, and not as its name: the
+    // way to the form the profile is edited in, on the heading's right.
+    expect(screen.getAllByText('Hồ sơ')).toHaveLength(1);
+    expect(screen.getByTestId('person-profile').textContent).toBe('Hồ sơ');
+    expect(screen.getByTestId('person-profile').getAttribute('aria-label')).toBe('Sửa hồ sơ');
   });
 
   it('draws your bio and no invitation once you have one', async () => {
@@ -922,11 +926,10 @@ describe('lists that are not for everybody', () => {
       state.myShares = [share('noodles', 'lan-id'), share('noodles', 'minh-id'), share('open', 'lan-id')];
     });
 
-    it('holds every list you made, the shared and the private with the public, and counts them all', async () => {
+    it('holds every list you made, the shared and the private with the public', async () => {
       await show('me');
       expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
         .toEqual(['List noodles, 0 places', 'List secret, 0 places', 'List open, 0 places']);
-      expect(screen.getByTestId('person-turn').textContent).toBe('3 collections');
       // Nobody else's, though the shelf holds one.
       expect(screen.queryByText('List lan-open')).toBeNull();
     });
@@ -1025,18 +1028,31 @@ describe('lists that are not for everybody', () => {
       expect(acts().map((c) => markIn(c)?.getAttribute('aria-label') ?? null)).toEqual(['Bạn bè, 2', 'Riêng tư', 'Công khai']);
     });
 
-    it('leads a tile’s count with the mark’s glyph, and tells VoiceOver the words', async () => {
+    // The count's place is the way to your profile here (owner, 19 Nov
+    // 2026): the grid it turned to is the Collections tab's "Yours" over
+    // again, and the page had no way to the one thing only you can do
+    // with it.
+    it('has the way to your profile where the count stands for anybody else, and no grid', async () => {
+      const navigation = await show('me');
+      const link = screen.getByTestId('person-profile');
+      expect(link.textContent).toBe('Profile');
+      expect(link.getAttribute('aria-label')).toBe('Edit profile');
+      expect(screen.queryByTestId('person-turn')).toBeNull();
+      expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
+      fireEvent.click(link);
+      expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('EditProfile');
+      // A way out of the page, not a turn of it: the feed is still here.
+      expect(screen.queryByTestId('person-grid')).toBeNull();
+      expect(acts()).toHaveLength(3);
+    });
+
+    // The turn waits for a list to count; this is not a way to them.
+    it('has it with no list to your name', async () => {
+      state.mine = [];
+      state.shelf = [];
       await show('me');
-      const [shared, secret, open] = tiles();
-      expect(shared.getAttribute('aria-label')).toBe('List noodles, 0 places, Friends, 2');
-      expect(secret.getAttribute('aria-label')).toBe('List secret, 0 places, Private');
-      expect(open.getAttribute('aria-label')).toBe('List open, 0 places, Public');
-      // The glyph alone on a tile: no number, no word.
-      const glyphs = (tile: HTMLElement) => [...tile.querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
-      expect(glyphs(shared)).toEqual(['people-outline']);
-      expect(glyphs(secret)).toEqual(['lock-closed-outline']);
-      expect(glyphs(open)).toEqual(['globe-outline']);
-      expect(shared.textContent).toBe('List noodles0 places');
+      expect(screen.getByTestId('person-no-lists')).toBeTruthy();
+      expect(screen.getByTestId('person-profile')).toBeTruthy();
     });
 
     // A cover off a private list would be a head only its owner sees.
@@ -1094,8 +1110,17 @@ describe('lists that are not for everybody', () => {
       expect(markIn(open)!.getAttribute('aria-label')).toBe('Public');
       expect(markIn(open)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('globe-outline');
       expect(within(open).getByTestId('activity-heart')).toBeTruthy();
-      expect(tiles()[0].getAttribute('aria-label')).toBe('List for-me, 0 places, Shared with you');
-      expect(tiles()[1].getAttribute('aria-label')).toBe('List open, 0 places, Public');
+      const [lentTile, openTile] = tiles();
+      expect(lentTile.getAttribute('aria-label')).toBe('List for-me, 0 places, Shared with you');
+      expect(openTile.getAttribute('aria-label')).toBe('List open, 0 places, Public');
+      // The glyph alone on a tile: no word, though the card has them.
+      const glyphs = (tile: HTMLElement) => [...tile.querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
+      expect(glyphs(lentTile)).toEqual(['people-outline']);
+      expect(glyphs(openTile)).toEqual(['globe-outline']);
+      expect(lentTile.textContent).toBe('List for-me0 places');
+      // Somebody else's page: the count is there, and no way to a profile
+      // that is not yours to edit.
+      expect(screen.queryByTestId('person-profile')).toBeNull();
     });
 
     it('says it in Vietnamese', async () => {

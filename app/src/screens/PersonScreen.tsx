@@ -263,6 +263,7 @@ export default function PersonScreen({ navigation, route }: {
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
         onComments={(c) => navigation.navigate('Comments', { subject: { kind: 'collection', id: c.id as string } })}
+        onProfile={me && person.id === me ? () => navigation.navigate('EditProfile') : undefined}
         reach={end.reach}
       />
     </>

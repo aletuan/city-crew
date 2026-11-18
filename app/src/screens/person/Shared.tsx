@@ -141,7 +141,35 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
   return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, reach = 0 }: {
+/**
+ * The way on the heading's right: a word, a chevron, the accent's ink.
+ * One shape for both things that stand there — the turn to the grid on
+ * somebody's page, and the way to your profile on your own.
+ */
+function HeadLink({ word, says, onPress, testID }: {
+  word: string;
+  /** What VoiceOver says, where the word alone would not tell it. */
+  says?: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      haptic="selection"
+      contentStyle={s.turn}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      accessibilityRole="button"
+      accessibilityLabel={says}
+      testID={testID}
+    >
+      <Text style={s.turnText}>{word}</Text>
+      <Glyph name="chevron-forward" size={ICON.meta} color={colors.accent} />
+    </PressableScale>
+  );
+}
+
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, onProfile, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -153,6 +181,26 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   onOpen: (c: Collection) => void;
   /** Opens a collection's thread of comments — `useCardComments`. */
   onComments?: (c: Collection) => void;
+  /**
+   * On your own page: opens the form your profile is edited in. Given,
+   * it takes the count's place on the heading's right (owner, 19 Nov
+   * 2026).
+   *
+   * The count turned the section into a grid of every list, which on
+   * your own page is the Collections tab's "Yours" over again; what the
+   * page had no way to from here was the one thing only its owner can
+   * do with it. So "Profile ›" stands there for you, and "15
+   * collections ›" for everybody else, as before.
+   *
+   * What it costs, said to the owner and accepted: on your own page the
+   * grid is gone, and so is the figure. And it stands with no lists to
+   * count, where the turn does not — it is not a way to them.
+   *
+   * "Profile", not "Edit profile": the row has room for one word beside
+   * the heading at the largest type, and the chevron already says
+   * "open". VoiceOver is told the whole of it.
+   */
+  onProfile?: () => void;
   /** How many times the reader has come near the page's end (`useReach`). */
   reach?: number;
 }) {
@@ -212,20 +260,19 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
             ? t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')
             : t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}
         </Text>
-        {none ? null : (
-          <PressableScale
+        {onProfile ? (
+          <HeadLink
+            word={t('Profile', 'Hồ sơ', 'プロフィール', '个人资料', '個人資料')}
+            says={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}
+            onPress={onProfile}
+            testID="person-profile"
+          />
+        ) : none ? null : (
+          <HeadLink
+            word={all ? t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態') : listsWord(lists.length)}
             onPress={() => setAll((v) => !v)}
-            haptic="selection"
-            contentStyle={s.turn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityRole="button"
             testID="person-turn"
-          >
-            <Text style={s.turnText}>
-              {all ? t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態') : listsWord(lists.length)}
-            </Text>
-            <Glyph name="chevron-forward" size={ICON.meta} color={colors.accent} />
-          </PressableScale>
+          />
         )}
       </View>
       {none ? (
