@@ -22,12 +22,14 @@ const ago = (min: number) => new Date(NOW.getTime() - min * 60_000).toISOString(
 const data = vi.hoisted(() => ({
   fetchThread: vi.fn(async (_s: unknown): Promise<unknown[]> => []),
   postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string): Promise<string> => 'k-new'),
+  likeComment: vi.fn(async (_id: string, _on: boolean): Promise<void> => {}),
 }));
 // The module the hook reads the RPC from, not the barrel.
 vi.mock('../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchThread: data.fetchThread,
   postComment: data.postComment,
+  likeComment: data.likeComment,
 }));
 // A phone with a home indicator: 34 under the page, where the bench's
 // own stand-in says zero and the field's margin could not be told from
@@ -63,7 +65,7 @@ import CommentsScreen, { PAGE, REPLIES_SHOWN } from './CommentsScreen';
 
 const row = (id: string, parent: string | null, over: Partial<Row> = {}): Row => ({
   id, parent_id: parent, root_id: null, depth: parent ? 1 : 0, body: `says ${id}`, created_at: ago(60),
-  author: `u-${id}`, handle: `h${id}`, full_name: null, avatar_url: null, mentions: [],
+  author: `u-${id}`, handle: `h${id}`, full_name: null, avatar_url: null, mentions: [], likes: 0, liked: false,
   ...over,
 });
 const SUBJECT: Subject = { kind: 'collection', id: 'c1' };
@@ -453,5 +455,33 @@ describe('what can be done about a comment', () => {
     fireEvent.click(screen.getAllByTestId('comment-more-menu')[1]);
     expect(screen.getByTestId('sheet-action-report')).toBeTruthy();
     expect(screen.queryByTestId('sheet-action-delete')).toBeNull();
+  });
+});
+
+describe('a heart on each comment', () => {
+  const hearts = () => screen.getAllByTestId('comment-heart');
+  const icon = (el: HTMLElement) => el.querySelector('[data-icon]')!.getAttribute('data-icon');
+
+  it('is drawn on a comment and on a reply, as the thread has them, and a press fills it and tells the server', async () => {
+    data.likeComment.mockClear();
+    await show([row('a', null, { likes: 2 }), row('b', 'a', { likes: 1, liked: true })]);
+    expect(hearts().map(icon)).toEqual(['heart-outline', 'heart']);
+    expect(screen.getAllByTestId('comment-likes').map((el) => el.textContent)).toEqual(['2', '1']);
+    await act(async () => { fireEvent.click(hearts()[0]); });
+    await act(async () => { fireEvent.click(hearts()[1]); });
+    expect(hearts().map(icon)).toEqual(['heart', 'heart-outline']);
+    expect(data.likeComment.mock.calls).toEqual([['a', true], ['b', false]]);
+    // The thread is not asked again for a like.
+    expect(data.fetchThread).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks a guest in, as a comment would', async () => {
+    state.me = null;
+    askToSignIn.mockClear(); data.likeComment.mockClear();
+    await show([row('a', null)]);
+    fireEvent.click(hearts()[0]);
+    expect(askToSignIn).toHaveBeenCalledWith('comment');
+    expect(data.likeComment).not.toHaveBeenCalled();
+    state.me = 'me';
   });
 });

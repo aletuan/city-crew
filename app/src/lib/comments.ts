@@ -73,7 +73,28 @@ export type CommentRow = {
   full_name: string | null;
   avatar_url: string | null;
   mentions: Mention[];
+  /** How many hearts it has, everybody's. */
+  likes: number;
+  /** Whether one of them is the reader's. */
+  liked: boolean;
 };
+
+/** A comment's hearts, as the row draws them. */
+export type Hearts = Pick<CommentRow, 'likes' | 'liked'>;
+
+/**
+ * A comment's hearts after the reader sets theirs or takes it back —
+ * what the row draws at once, before the server has answered.
+ *
+ * The count moves only when the reader's heart does: a press that asks
+ * for what is already so (a second tap landing before the first has
+ * drawn) leaves the figure alone, as the server's function does. Never
+ * below zero, whatever a stale count said.
+ */
+export function heartsAfter(was: Hearts, on: boolean): Hearts {
+  if (was.liked === on) return { likes: was.likes, liked: was.liked };
+  return { liked: on, likes: Math.max(0, was.likes + (on ? 1 : -1)) };
+}
 
 /** A comment placed for drawing. */
 export type Placed = CommentRow & {

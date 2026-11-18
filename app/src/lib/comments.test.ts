@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BODY_MAX, LEVEL_MAX, MENTIONS_MAX, REFUSALS,
-  bodyLength, bodyProblem, latestOf, mentionsOf, refusalOf, segmentsOf, threadOf,
+  bodyLength, bodyProblem, heartsAfter, latestOf, mentionsOf, refusalOf, segmentsOf, threadOf,
   type CommentRow, type Mention,
 } from './comments';
 
@@ -13,7 +13,7 @@ import {
 function row(id: string, parent: string | null, over: Partial<CommentRow> = {}): CommentRow {
   return {
     id, parent_id: parent, root_id: null, depth: 0, body: `body of ${id}`, created_at: `2026-11-0${id.length}T00:00:00Z`,
-    author: `u-${id}`, handle: `h-${id}`, full_name: null, avatar_url: null, mentions: [],
+    author: `u-${id}`, handle: `h-${id}`, full_name: null, avatar_url: null, mentions: [], likes: 0, liked: false,
     ...over,
   };
 }
@@ -229,5 +229,26 @@ describe('latestOf', () => {
     expect(latestOf([null, { id: 'c1' }, { body: 'x' }, { id: 1, body: 'x' }])).toEqual([]);
     expect(latestOf(null)).toEqual([]);
     expect(latestOf({})).toEqual([]);
+  });
+});
+
+describe('heartsAfter', () => {
+  it('adds the reader\'s heart and takes it back, the figure moving with it', () => {
+    expect(heartsAfter({ likes: 2, liked: false }, true)).toEqual({ likes: 3, liked: true });
+    expect(heartsAfter({ likes: 3, liked: true }, false)).toEqual({ likes: 2, liked: false });
+  });
+
+  it('leaves the figure alone when asked for what is already so', () => {
+    expect(heartsAfter({ likes: 3, liked: true }, true)).toEqual({ likes: 3, liked: true });
+    expect(heartsAfter({ likes: 2, liked: false }, false)).toEqual({ likes: 2, liked: false });
+  });
+
+  it('never counts below none, whatever a stale figure said', () => {
+    expect(heartsAfter({ likes: 0, liked: true }, false)).toEqual({ likes: 0, liked: false });
+  });
+
+  it('answers with the hearts alone, not the row it was handed', () => {
+    const row = { likes: 1, liked: true, body: 'x' };
+    expect(heartsAfter(row, true)).toEqual({ likes: 1, liked: true });
   });
 });

@@ -20,12 +20,13 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import LikeHeart from './LikeHeart';
 import { PressableScale } from './ui/controls';
 import { Glyph, ICON } from './ui/glyph';
 import { Avatar } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
 import { normalizeHandle } from '../lib/handle';
-import { segmentsOf, type Placed } from '../lib/comments';
+import { segmentsOf, type Hearts, type Placed } from '../lib/comments';
 import { colors, font } from '../theme';
 
 /** A comment's face: 36, the feed card's, where a face stands beside two
@@ -45,7 +46,7 @@ const MORE_GLYPH = ICON.action;
  *  measured on a phone. */
 export const INDENT = [0, FACE + 10, FACE + 10 + FACE_REPLY + 10] as const;
 
-export default function CommentRow({ comment, when, onPerson, onPlace, onReply, onMore }: {
+export default function CommentRow({ comment, when, onPerson, onPlace, onReply, onMore, hearts, onHeart }: {
   comment: Placed;
   /** How long ago, already in words. */
   when: string;
@@ -54,6 +55,12 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   onPlace?: (placeId: string) => void;
   /** Answer this comment. Absent on a page that is read-only. */
   onReply?: () => void;
+  /** Its hearts as the page has them — the server's, with the reader's
+   *  own press laid over. Absent, the comment's own. */
+  hearts?: Hearts;
+  /** Set the reader's heart or take it back. Absent on a page that is
+   *  read-only, and then no heart is drawn. */
+  onHeart?: () => void;
   /** Raise what can be done about this comment — delete, report. Absent
    *  where there is nothing to offer. */
   onMore?: () => void;
@@ -108,23 +115,39 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
           })}
         </Text>
         </View>
-        {/* Outside the line VoiceOver reads: a control of its own. A
-            bubble, not the word "Reply" (owner, 18 Nov 2026): the row
-            under a comment is where its acts stand as marks, as Threads
-            draws them, and a heart will stand beside this one when
-            comments can be liked. 44 to the thumb by its slop. */}
-        {onReply ? (
-          <PressableScale
-            onPress={onReply}
-            haptic="selection"
-            hitSlop={{ top: 12, bottom: 14, left: 12, right: 24 }}
-            style={s.replyHang}
-            accessibilityRole="button"
-            accessibilityLabel={t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`)}
-            testID="comment-reply"
-          >
-            <Glyph name="chatbubble-outline" size={ICON.action} color={colors.textTertiary} />
-          </PressableScale>
+        {/* The acts, as marks under the words, outside the line VoiceOver
+            reads: a heart and the bubble that answers, as Threads draws
+            them (owner, 18 Nov 2026 — "Reply" was a word for a day).
+            Each is 44 to the thumb by its slop; 20 between them, so the
+            heart's figure reads as the heart's. */}
+        {onHeart || onReply ? (
+          <View style={s.acts}>
+            {onHeart ? (
+              <LikeHeart
+                liked={(hearts ?? comment).liked}
+                count={(hearts ?? comment).likes}
+                onPress={onHeart}
+                brief
+                contentStyle={s.heart}
+                countStyle={s.count}
+                hitSlop={{ top: 12, bottom: 14, left: 12, right: 8 }}
+                testID="comment-heart"
+                countTestID="comment-likes"
+              />
+            ) : null}
+            {onReply ? (
+              <PressableScale
+                onPress={onReply}
+                haptic="selection"
+                hitSlop={{ top: 12, bottom: 14, left: 8, right: 24 }}
+                accessibilityRole="button"
+                accessibilityLabel={t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`)}
+                testID="comment-reply"
+              >
+                <Glyph name="chatbubble-outline" size={ICON.action} color={colors.textSecondary} />
+              </PressableScale>
+            ) : null}
+          </View>
         ) : null}
       </View>
       {/* What can be done about it, at the row's end and outside the line
@@ -160,5 +183,8 @@ const s = StyleSheet.create({
   // Who a deep answer is to: the accent, as a tag is, since it is one.
   to: { color: colors.accent },
   tag: { color: colors.accent, fontWeight: font.medium },
-  replyHang: { alignSelf: 'flex-start', marginTop: 6 },
+  acts: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 6 },
+  // The heart and its figure: 5 between, the card's foot at a row's scale.
+  heart: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  count: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium, fontVariant: ['tabular-nums'] },
 });

@@ -21,7 +21,7 @@ import CommentRow, { FACE, FACE_REPLY, INDENT } from './CommentRow';
 const placed = (over: Partial<Placed> = {}): Placed => ({
   id: 'k1', parent_id: null, root_id: null, depth: 0, level: 0, to: null,
   body: 'Lovely rooftop', created_at: '2026-11-18T00:00:00Z',
-  author: 'u1', handle: '@Trang', full_name: 'Trang Le', avatar_url: 'https://faces/trang.jpg', mentions: [],
+  author: 'u1', handle: '@Trang', full_name: 'Trang Le', avatar_url: 'https://faces/trang.jpg', mentions: [], likes: 0, liked: false,
   ...over,
 });
 
@@ -86,6 +86,54 @@ describe('a comment', () => {
     show(placed({ level: 2, depth: 3, to: '@Hado', body: 'agreed' }));
     expect(screen.getByTestId('comment-to').textContent).toBe('@hado ');
     expect(screen.getByTestId('comment-body').textContent).toBe('@hado agreed');
+  });
+});
+
+describe('the heart', () => {
+  const onHeart = vi.fn();
+  beforeEach(() => onHeart.mockReset());
+
+  it('is not drawn on a page that gave no way to press it', () => {
+    render(<CommentRow comment={placed({ likes: 4, liked: true })} when="2h ago" onPerson={onPerson} />);
+    expect(screen.queryByTestId('comment-heart')).toBeNull();
+    expect(screen.queryByTestId('comment-likes')).toBeNull();
+  });
+
+  it('stands before the bubble, outside the line VoiceOver reads, and a press is its own', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onReply={onReply} onHeart={onHeart} />);
+    const heart = screen.getByTestId('comment-heart');
+    const reply = screen.getByTestId('comment-reply');
+    expect(heart.compareDocumentPosition(reply) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('comment-words').contains(heart)).toBe(false);
+    // One of many on the page, and not a collection's: just "Like".
+    expect(heart.getAttribute('aria-label')).toBe('Like');
+    fireEvent.click(heart);
+    expect(onHeart).toHaveBeenCalledTimes(1);
+    expect(onReply).not.toHaveBeenCalled();
+    expect(onPerson).not.toHaveBeenCalled();
+  });
+
+  it('draws the comment\'s own hearts: empty and without a figure at none', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onHeart={onHeart} />);
+    expect(screen.getByTestId('comment-heart').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('heart-outline');
+    expect(screen.queryByTestId('comment-likes')).toBeNull();
+  });
+
+  it('draws them filled with their figure when the reader\'s is among them', () => {
+    render(<CommentRow comment={placed({ likes: 4, liked: true })} when="2h ago" onPerson={onPerson} onHeart={onHeart} />);
+    expect(screen.getByTestId('comment-heart').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('heart');
+    expect(screen.getByTestId('comment-likes').textContent).toBe('4');
+  });
+
+  it('draws what the page laid over them in place of the comment\'s own', () => {
+    render(
+      <CommentRow
+        comment={placed({ likes: 4, liked: true })} when="2h ago" onPerson={onPerson}
+        onHeart={onHeart} hearts={{ likes: 3, liked: false }}
+      />,
+    );
+    expect(screen.getByTestId('comment-heart').querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('heart-outline');
+    expect(screen.getByTestId('comment-likes').textContent).toBe('3');
   });
 });
 

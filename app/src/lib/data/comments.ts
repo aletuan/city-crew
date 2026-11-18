@@ -54,8 +54,18 @@ export async function fetchThread(subject: Subject, order: ThreadOrder = 'new'):
   // The generated types call every column a string; the function returns
   // null for a root's parent and root, and for a name nobody gave. Read
   // as what it is.
-  type Wire = Omit<CommentRow, 'mentions'> & { mentions: unknown };
-  return ((data ?? []) as unknown as Wire[]).map((r) => ({ ...r, mentions: mentionsOf(r.mentions) }));
+  //
+  // The hearts are read as untrusted too: a count that is not a number
+  // is none, and only `true` is the reader's — which is also what makes
+  // a server from before 20261118190000 read as "no hearts" and not as
+  // `undefined` drawn in a row.
+  type Wire = Omit<CommentRow, 'mentions' | 'likes' | 'liked'> & { mentions: unknown; likes?: unknown; liked?: unknown };
+  return ((data ?? []) as unknown as Wire[]).map((r) => ({
+    ...r,
+    mentions: mentionsOf(r.mentions),
+    likes: typeof r.likes === 'number' ? r.likes : 0,
+    liked: r.liked === true,
+  }));
 }
 
 /**
@@ -117,5 +127,21 @@ export async function postComment(
  */
 export async function deleteComment(id: string): Promise<void> {
   const { error } = await supabase.rpc('delete_comment', { p_id: id });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Set the reader's heart on a comment, or take it back. The server's
+ * function is idempotent both ways, so a retry lands where the reader
+ * meant; a refusal — the comment was deleted a moment ago, its writer
+ * and the reader are blocked — throws the server's word, as a post's
+ * does.
+ */
+export async function likeComment(id: string, on: boolean): Promise<void> {
+  // Not in the generated types until the migration has run on the live
+  // project and they are generated again; named here as what it is.
+  const { error } = await (supabase.rpc as unknown as (
+    fn: string, args: Record<string, unknown>,
+  ) => PromiseLike<{ error: { message: string } | null }>)('like_comment', { p_id: id, p_on: on });
   if (error) throw new Error(error.message);
 }

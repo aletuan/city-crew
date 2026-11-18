@@ -22,6 +22,7 @@ phải viết lại.
 | 7 | Giới hạn | 500 ký tự; 30 bình luận mỗi người mỗi ngày. | |
 | 8 | An toàn (Apple 1.2) | Bộ lọc từ cấm lúc đăng; báo cáo từng bình luận; hai người chặn nhau không thấy bình luận của nhau. | App Review Guidelines 1.2 |
 | 9 | Phát hành | Làm sau cờ `comments` (tắt sẵn), merge dần; bật trong một bản nộp duyệt kèm ghi chú cho App Review. | Điều 2.5.2 |
+| 11 | Tim | Mỗi bình luận và mỗi trả lời có **một trái tim**, cạnh bong bóng trả lời (thêm ngày 18/11/2026, chủ dự án yêu cầu; trước đó nằm ở mục Hoãn). Ai đã đăng nhập cũng thả được, kể cả lên bình luận của mình. Chỉ hiện con số, không hiện danh sách ai đã thả. | Threads, Instagram |
 | 10 | Thứ tự | Bình luận gốc: **mới nhất trước**. Trả lời trong một nhánh: cũ trước. Thứ tự là một tham số của hàm đọc luồng, không viết cứng. | Xem dưới |
 
 ### Về thứ tự (quyết định 10)
@@ -64,7 +65,9 @@ ngày 18/11/2026; ba bình luận thử đang có lúc đó đã bị xoá theo 
 
 ### Hoãn, sẽ làm sau
 
-- Tim trên từng bình luận (kéo theo kiểu xếp "Nổi bật").
+- Kiểu xếp "Nổi bật" theo số tim. Tim đã có (quyết định 11); thứ tự vẫn
+  là mới nhất trước.
+- Báo cho người viết khi bình luận của họ được thả tim. Xem lại ở C7.
 - Ảnh trong bình luận (trùng với Moment, bước 5 của kế hoạch feed).
 
 ## 2. Thiết kế để mở rộng
@@ -255,6 +258,23 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
   (`lib/commentsChanged`). Không vẽ trước bình luận khi máy chủ chưa nhận.
 - Chưa kiểm được bằng kiểm thử tự động: ô có trượt lên đúng theo bàn phím
   không. Phải xem trên máy.
+
+*C4d — tim trên bình luận (chủ dự án yêu cầu 18/11/2026):*
+- Máy chủ (`20261118190000_comment_likes.sql`): bảng `comment_likes`
+  (một dòng cho mỗi cặp bình luận và người; xoá bình luận hoặc xoá tài
+  khoản thì tim đi theo), hàm `like_comment(id, bật/tắt)` gọi lặp lại
+  cũng không sao, và `comment_thread` trả thêm `likes`, `liked`. Bảng
+  không có policy nào: chỉ đọc và ghi qua hai hàm đó. Không thả được lên
+  bình luận mình không được thấy (bộ riêng tư, hai người chặn nhau).
+- Ứng dụng: trái tim (`LikeHeart`, cùng một trái tim với bộ sưu tập) đứng
+  trước bong bóng. Bấm là **vẽ ngay**, rồi mới báo máy chủ
+  (`useCommentHearts`); máy chủ từ chối thì trái tim lặng lẽ trở lại như
+  cũ, không báo lỗi. Thả tim không tải lại luồng. Khách bấm thì được mời
+  đăng nhập.
+- Ứng dụng đọc `likes`, `liked` như dữ liệu chưa tin: thiếu thì coi là 0
+  và chưa thả, nên bản app này chạy được cả khi migration chưa lên live.
+- Số tim **không** tính những người đã bị chặn riêng ra: con số là của
+  mọi người. Tên người thả thì không hiện ở đâu.
 
 *C4c — xong (chủ dự án yêu cầu 18/11/2026):*
 - Bộ **chưa có bình luận nào**: bấm bong bóng (trên trang bộ sưu tập hoặc
