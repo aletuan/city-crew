@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { Card, fireHaptic } from '../../components/ui';
 import LegalSheet from '../../components/LegalSheet';
 import AboutSheet from '../../components/AboutSheet';
@@ -88,7 +88,7 @@ export function Tagline() {
           words, not "paw". */}
       <Glyph
         name="paw"
-        size={18}
+        size={ICON.action}
         color={colors.accent}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"

@@ -105,7 +105,7 @@ describe('PhotoSheet', () => {
     render(<PhotoSheet {...props({ photos: gallery(3), index: 0 })} />);
     for (const [id, corner, icon, glyph] of [
       ['photo-sheet-close', { top: 10, right: 10 }, 'close', '18'],
-      ['photo-sheet-full', { bottom: 10, right: 10 }, 'expand', '17'],
+      ['photo-sheet-full', { bottom: 10, right: 10 }, 'expand', '18'],
     ] as const) {
       const btn = pressable(id);
       const face = flat(btn.contentStyle);

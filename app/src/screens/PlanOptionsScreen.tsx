@@ -32,7 +32,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, useArrival, useReducedMotion,
@@ -568,7 +568,7 @@ function PlanCard({ plan, name, why, listed, nth, onPress }: {
             <View style={s.head}>
               {best ? (
                 <LinearGradient {...gradAI} style={s.badgeOn}>
-                  <Glyph name="star" size={11} color={colors.accentInk} />
+                  <Glyph name="star" size={ICON.tiny} color={colors.accentInk} />
                   <Text style={s.badgeOnText}>{badgeText}</Text>
                 </LinearGradient>
               ) : (
@@ -671,7 +671,7 @@ function PlanCard({ plan, name, why, listed, nth, onPress }: {
                   words and a chevron, where the eye lands last. */}
               <View style={s.open}>
                 <Text style={s.openText}>{t('View & edit', 'Xem & sửa', '見る・編集', '查看和编辑', '檢視和編輯')}</Text>
-                <Glyph name="chevron-forward" size={14} color={colors.accent} />
+                <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
               </View>
             </View>
           </View>

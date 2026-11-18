@@ -31,7 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, space } from '../theme';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { Avatar, GradientCta, PressableScale } from './ui';
 
 type Icon = keyof typeof Ionicons.glyphMap;
@@ -140,7 +140,7 @@ export default function FriendPicker({
                     <Text style={s.badge}>{r.badge}</Text>
                   ) : (
                     <View style={[s.tick, r.on && s.tickOn]}>
-                      {r.on ? <Glyph name="checkmark" size={15} color={colors.accentInk} /> : null}
+                      {r.on ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
                     </View>
                   )}
                 </PressableScale>
@@ -150,7 +150,7 @@ export default function FriendPicker({
         )}
 
         <View style={s.note}>
-          <Glyph name={note.icon} size={15} color={colors.textTertiary} />
+          <Glyph name={note.icon} size={ICON.text} color={colors.textTertiary} />
           <Text style={s.noteText}>{note.text}</Text>
         </View>
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLoop } from '../../components/ui';
 import { type FindingLine, type StepState } from '../../lib/sketch';
@@ -111,7 +111,7 @@ export function FindingFeed({ previous, current, still }: {
           <View style={s.findingBadge}>
             <Glyph
               name={previous.icon as React.ComponentProps<typeof Ionicons>['name']}
-              size={15}
+              size={ICON.text}
               color={colors.textSecondary}
             />
           </View>
@@ -128,7 +128,7 @@ export function FindingFeed({ previous, current, still }: {
               view and the weight of the text, both of which stay. */}
           <Glyph
             name={current.icon as React.ComponentProps<typeof Ionicons>['name']}
-            size={15}
+            size={ICON.text}
             color={colors.textSecondary}
           />
         </Animated.View>
@@ -175,7 +175,7 @@ export function Fact({ icon, primary, secondary }: {
   return (
     <View style={s.factCell}>
       <View style={s.factDisc}>
-        <Glyph name={icon} size={19} color={colors.text} />
+        <Glyph name={icon} size={ICON.action} color={colors.text} />
       </View>
       <View style={s.factText}>
         <Text style={s.factPrimary} numberOfLines={1}>{primary}</Text>
@@ -191,7 +191,7 @@ function StepMark({ state, still }: { state: StepState; still: boolean }) {
   if (state === 'done') {
     return (
       <LinearGradient {...gradAI} style={s.mark}>
-        <Glyph name="checkmark" size={14} color={colors.accentInk} />
+        <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} />
       </LinearGradient>
     );
   }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { PressableScale, TileGrid } from '../../components/ui';
 import { colors, space } from '../../theme';
 import { s } from './styles';
@@ -23,7 +23,7 @@ export function MoreRow({ label, onPress }: { label: string; onPress: () => void
   return (
     <PressableScale onPress={onPress} contentStyle={s.more} accessibilityRole="button" testID="seeds-more" hitSlop={6}>
       <Text style={s.moreText}>{label}</Text>
-      <Glyph name="chevron-down" size={16} color={colors.accent} />
+      <Glyph name="chevron-down" size={ICON.text} color={colors.accent} />
     </PressableScale>
   );
 }

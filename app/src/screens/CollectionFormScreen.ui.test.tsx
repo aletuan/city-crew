@@ -270,7 +270,7 @@ describe('the cover picker', () => {
     // in the tile's corner.
     const tick = screen.getByTestId('cover-tick');
     const mark = tick.querySelector('[data-icon="checkmark"]')!;
-    expect([mark.getAttribute('data-size'), mark.getAttribute('data-color')]).toEqual(['14', String(colors.accentInk)]);
+    expect([mark.getAttribute('data-size'), mark.getAttribute('data-color')]).toEqual(['15', String(colors.accentInk)]);
     const probe = document.createElement('div');
     probe.style.backgroundColor = String(colors.accentFill);
     const drawn = getComputedStyle(tick);

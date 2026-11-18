@@ -39,7 +39,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { AuthHeader, AuthScreen, FieldRow, FormError, useFailText } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import TastePicker from '../components/TastePicker';
@@ -452,7 +452,7 @@ export default function EditProfileScreen({ navigation, route }: { navigation: N
               and the two do not undo equally: the switch can be flipped
               back and the history cannot be brought back. */}
           <PressableScale onPress={confirmClear} contentStyle={s.clearRow} accessibilityRole="button">
-            <Glyph name="trash-outline" size={18} color={colors.bad} />
+            <Glyph name="trash-outline" size={ICON.action} color={colors.bad} />
             <Text style={s.clearText}>
               {cleared
                 ? t('History deleted', 'Đã xoá lịch sử', '履歴を削除しました', '浏览记录已删除', '瀏覽記錄已刪除')

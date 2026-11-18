@@ -51,7 +51,7 @@ import { shouldRefresh } from '../lib/stale';
 import { tabSettled, tabTrace } from '../lib/tabtrace';
 import { useScheme } from '../lib/theme';
 import { badgeSolidHex, bgHex, colors, pillGround, pillInk, radius, textHex } from '../theme';
-import { GlassMaterial, Glyph, PressableScale, TAB_BAR_HEIGHT, useReducedMotion, useTabBarFrame, useTabBarLift, type GlyphName } from './ui';
+import { GlassMaterial, Glyph, ICON, PressableScale, TAB_BAR_HEIGHT, useReducedMotion, useTabBarFrame, useTabBarLift, type GlyphName } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 
 /**
@@ -116,7 +116,7 @@ const PILL_H = TAB_BAR_HEIGHT - PILL_INSET * 2;
  * mark nearer ours than its own — and a 1.2 line, about 1.1pt, the
  * reference's line for a mark that size.
  */
-const GLYPH = 22;
+const GLYPH = ICON.nav;
 const TAB_STROKE = 1.2;
 /** How much wider the pill runs per cell it travels, and the most it
  *  will: one cell over covers both glyphs, as Threads' does. */

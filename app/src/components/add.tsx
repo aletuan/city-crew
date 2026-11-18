@@ -45,7 +45,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { PressableScale, SECONDARY_CONTROL_H } from './ui';
 import { useScheme } from '../lib/theme';
 import { colors, font, gradAI, radius, space, textTertiaryHex, type } from '../theme';
@@ -70,7 +70,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
     <View style={s.slotWrap}>
       <PressableScale onPress={onPress} accessibilityRole="button" contentStyle={s.slot} testID={testID}>
         <View style={s.slotIcon}>
-          <Glyph name="add" size={26} color={colors.accent} />
+          <Glyph name="add" size={ICON.feature} color={colors.accent} />
         </View>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={s.slotTitle} numberOfLines={1}>{title}</Text>
@@ -81,7 +81,7 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
             every other row-end chevron in the app — it was 18 beside the
             18pt title, which is the one size on the row the chevron does
             not need to match. */}
-        <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+        <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
       </PressableScale>
     </View>
   );
@@ -202,7 +202,7 @@ export function AddCell({ label, onPress, size, testID }: {
         testID={testID}
       >
         <View style={[s.cellDisc, { borderColor: textTertiaryHex[scheme] }]}>
-          <Glyph name="add" size={24} color={colors.accent} />
+          <Glyph name="add" size={ICON.nav} color={colors.accent} />
         </View>
       </PressableScale>
     );
@@ -216,7 +216,7 @@ export function AddCell({ label, onPress, size, testID }: {
       contentStyle={s.cellRow}
       testID={testID}
     >
-      <Glyph name="add" size={24} color={colors.text} />
+      <Glyph name="add" size={ICON.nav} color={colors.text} />
       <Text style={s.cellRowText} numberOfLines={2}>{label}</Text>
     </PressableScale>
   );
@@ -335,7 +335,7 @@ export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibili
   /** For the smoke flows, which tap by id. */
   testID?: string;
 }) {
-  const glyph = 18;
+  const glyph = ICON.action;
   const mark = quiet ? colors.accent : colors.accentInk;
   const face = [s.pill, quiet && s.pillQuiet, busy && s.pillBusy];
   const inside = (

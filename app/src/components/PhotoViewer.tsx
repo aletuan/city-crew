@@ -119,7 +119,7 @@ export default function PhotoViewer({ photos, index, onIndex, onClose }: {
               accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
               testID="photo-viewer-close"
             >
-              <Glyph name="close" size={PHOTO_GLYPH + 1} color={onPhoto.text} />
+              <Glyph name="close" size={PHOTO_GLYPH} color={onPhoto.text} />
             </PressableScale>
             <Text style={s.count} testID="photo-viewer-count">{count}</Text>
             {/* The ×'s width on the other side, so the count is centred. */}

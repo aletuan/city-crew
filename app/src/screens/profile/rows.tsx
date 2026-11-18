@@ -4,7 +4,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph, type GlyphName } from '../../components/ui/glyph';
+import { Glyph, ICON, type GlyphName } from '../../components/ui/glyph';
 import { CountBadge, PressableScale, Toggle } from '../../components/ui';
 import { useI18n } from '../../lib/i18n';
 import { colors } from '../../theme';
@@ -71,7 +71,7 @@ export function FeatureRow({ icon, title, sub, onPress, last, count }: {
         <Text style={s.featureSub}>{sub}</Text>
       </View>
       <CountBadge n={count ?? 0} style={s.rowEnd} />
-      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
+      <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );
 }
@@ -175,7 +175,7 @@ export function SettingRow({ icon, label, value, onPress, last, testID }: {
       {value === undefined
         ? <View style={{ flex: 1 }} />
         : <Text style={s.settingValue} numberOfLines={1}>{value}</Text>}
-      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+      <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
     </PressableScale>
   );
 }
@@ -258,7 +258,7 @@ export function BioRow({ bio, onAdd }: { bio: string; onAdd: () => void }) {
       <Text style={s.bioAdd} numberOfLines={1}>
         {t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}
       </Text>
-      <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+      <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
     </PressableScale>
   );
 }

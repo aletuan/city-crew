@@ -333,13 +333,13 @@ describe('the faces down the left', () => {
 describe('the chevron at the end of a row', () => {
   const chevronIn = (el: Element) => el.querySelector('[data-icon="chevron-forward"]');
 
-  it('ends a live applause row, at 17pt in the tertiary ink', async () => {
+  it('ends a live applause row, at 18pt in the tertiary ink', async () => {
     catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
     data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
     await renderScreen();
     const chevron = chevronIn(screen.getByRole('button', { name: /@bao liked “Pho walk”/ }))!;
     expect(chevron).toBeTruthy();
-    expect(chevron.getAttribute('data-size')).toBe('17');
+    expect(chevron.getAttribute('data-size')).toBe('18');
     expect(chevron.getAttribute('data-color')).toBe(colors.textTertiary);
   });
 

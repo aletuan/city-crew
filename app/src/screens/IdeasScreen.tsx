@@ -19,7 +19,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
@@ -395,7 +395,7 @@ export default function IdeasScreen({ navigation, route }: {
           {cover
             ? <Image source={{ uri: cover }} style={s.thumb} contentFit="cover" transition={200} />
             : <View style={[s.thumb, s.thumbEmpty]}>
-                <Glyph name="bookmark-outline" size={18} color={colors.accentFaint} />
+                <Glyph name="bookmark-outline" size={ICON.action} color={colors.accentFaint} />
               </View>}
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={s.fromTitle} numberOfLines={1}>
@@ -506,9 +506,9 @@ export default function IdeasScreen({ navigation, route }: {
           <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…', '何时何地…', '何時何地…')}</Text>
           <Card style={s.whenCard}>
             <PressableScale onPress={() => setSheet(true)} contentStyle={s.whereRow} accessibilityRole="button">
-              <Glyph name="location-outline" size={19} color={colors.accent} />
+              <Glyph name="location-outline" size={ICON.action} color={colors.accent} />
               <Text style={s.whereText} numberOfLines={1}>{whereLabel}</Text>
-              <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+              <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
             </PressableScale>
             <View style={s.divider} />
             <View style={s.whenRow}>
@@ -530,7 +530,7 @@ export default function IdeasScreen({ navigation, route }: {
                 contentStyle={s.dayHit}
                 accessibilityRole="button"
               >
-                <Glyph name="calendar-outline" size={19} color={colors.accent} />
+                <Glyph name="calendar-outline" size={ICON.action} color={colors.accent} />
                 <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
               </PressableScale>
               {/* One control, not two chips side by side. Day and Evening
@@ -586,7 +586,7 @@ export default function IdeasScreen({ navigation, route }: {
                 accessible={false}
                 importantForAccessibility="no-hide-descendants"
               >
-                <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+                <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
               </PressableScale>
             </View>
           </Card>
@@ -630,7 +630,7 @@ export default function IdeasScreen({ navigation, route }: {
                 is still on it — a switch made afterwards is a new fact. */}
             {moved && city?.id === moved.id && (
               <View style={s.movedWell} testID="ideas-moved">
-                <Glyph name="checkmark-circle" size={18} color={colors.okInk} />
+                <Glyph name="checkmark-circle" size={ICON.action} color={colors.okInk} />
                 <Text style={s.movedText}>
                   {t(
                     `The plan will be made in ${cityName(moved)}.`,

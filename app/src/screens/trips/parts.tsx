@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { Image } from 'expo-image';
 import { GradientCta, PressableScale } from '../../components/ui';
 import { fromISO } from '../../lib/day';
@@ -55,7 +55,7 @@ function CompanyChip({ company }: { company: string | null }) {
   return (
     <View style={s.company} testID="trip-company">
       {c.icon ? (
-        <Glyph name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={colors.textTertiary} />
+        <Glyph name={c.icon as keyof typeof Ionicons.glyphMap} size={ICON.meta} color={colors.textTertiary} />
       ) : null}
       <Text style={s.companyText}>{t(c.en, c.vi, c.ja, c.zh, c.hant)}</Text>
     </View>
@@ -124,7 +124,7 @@ export function TripCard({ trip, past, onPress, testID }: {
             says "this is a date" at a glance, in a list where every card
             starts with a name. */}
         <View style={s.metaRow}>
-          <Glyph name="calendar-outline" size={14} color={colors.accent} />
+          <Glyph name="calendar-outline" size={ICON.text} color={colors.accent} />
           <Text style={s.meta} numberOfLines={1}>
             {/* The day alone: not the hour, and not the city.
 
@@ -197,7 +197,7 @@ export function TripCard({ trip, past, onPress, testID }: {
         <View style={s.foot}>
           <View style={s.open}>
             <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る', '查看计划', '檢視計畫')}</Text>
-            <Glyph name="chevron-forward" size={15} color={colors.accent} />
+            <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
           </View>
         </View>
       </View>
@@ -218,7 +218,7 @@ export function FirstTrip({ onPress }: { onPress: () => void }) {
   return (
     <View style={s.first} testID="trips-empty">
       <View style={s.firstIcon}>
-        <Glyph name="map" size={27} color={colors.accent} />
+        <Glyph name="map" size={ICON.feature} color={colors.accent} />
       </View>
       <Text style={s.firstTitle}>
         {t('No trips yet', 'Chưa có chuyến đi nào', '旅程はまだありません', '还没有行程', '還沒有行程')}

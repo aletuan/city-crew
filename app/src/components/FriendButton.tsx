@@ -47,7 +47,7 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { CHIP_H, CHIP_SLOP, PressableScale, SECONDARY_CONTROL_H, successHaptic } from './ui';
 import { useCrew } from '../lib/crew';
 import { acceptFriendRequest, sendFriendRequest } from '../lib/data';
@@ -111,7 +111,7 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
           testID={`${name}-add`}
         >
           <View style={[s.addBtn, page && s.onPage]}>
-            <Glyph name="person-add-outline" size={15} color={colors.accent} />
+            <Glyph name="person-add-outline" size={ICON.text} color={colors.accent} />
             <Text style={s.addText}>{t('Add friend', 'Kết bạn', '友達に追加', '加好友', '加好友')}</Text>
           </View>
         </PressableScale>
@@ -127,7 +127,7 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
           testID={`${name}-accept`}
         >
           <LinearGradient {...gradAI} style={[s.acceptBtn, page && s.onPage]}>
-            <Glyph name="checkmark" size={15} color={colors.accentInk} />
+            <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} />
             <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受', '接受')}</Text>
           </LinearGradient>
         </PressableScale>
@@ -139,7 +139,7 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
       <View style={[s.quiet, page && s.quietOnPage]} testID={`${name}-${state}`}>
         <Glyph
           name={state === 'friends' ? 'checkmark' : 'time-outline'}
-          size={page ? 18 : 15}
+          size={page ? ICON.action : ICON.text}
           color={page ? colors.textSecondary : colors.textTertiary}
         />
         <Text style={[s.quietText, page && s.quietTextOnPage]}>

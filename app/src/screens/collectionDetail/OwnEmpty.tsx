@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { GradientCta } from '../../components/ui';
 import { useI18n } from '../../lib/i18n';
 import { colors } from '../../theme';
@@ -19,7 +19,7 @@ export function OwnEmpty({ onAdd }: { onAdd: () => void }) {
     <View style={s.emptyWrap}>
       <View style={s.empty}>
         <View style={s.emptyIcon}>
-          <Glyph name="bookmark-outline" size={26} color={colors.accent} />
+          <Glyph name="bookmark-outline" size={ICON.feature} color={colors.accent} />
         </View>
         {/* One line. The second sentence was telling you to go looking,
             which is what the button underneath already says — a card this

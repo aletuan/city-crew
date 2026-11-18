@@ -14,7 +14,7 @@ vi.mock('../../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import { CHIP_H, CHIP_SLOP, Chip, Glyph, LINE_STROKE, SECONDARY_CONTROL_H, Screen, Tile, TileGrid, UnderlineChoice, isLineGlyph, useArrival } from './index';
+import { Avatar, CHIP_H, CHIP_SLOP, Chip, Glyph, ICON, LINE_STROKE, SECONDARY_CONTROL_H, Screen, Tile, TileGrid, UnderlineChoice, isLineGlyph, useArrival } from './index';
 import { bgHex, colors } from '../../theme';
 
 describe('useArrival', () => {
@@ -254,7 +254,7 @@ describe('UnderlineChoice', () => {
     render(<UnderlineChoice items={items} chosen={null} onPick={() => {}} testID="row" />);
     const inline = screen.getByRole('button', { name: 'Cafés' });
     expect(getComputedStyle(inline.firstElementChild as HTMLElement).flexDirection).toBe('row');
-    expect(inline.querySelector('[data-icon]')!.getAttribute('data-size')).toBe('16');
+    expect(inline.querySelector('[data-icon]')!.getAttribute('data-size')).toBe('15');
     expect(sizeOf(within(inline).getByText('Cafés'))).toBe(15);
     expect(gapOf()).toBe('22px');
   });
@@ -389,7 +389,7 @@ describe('Tile', () => {
     expect(sizeOf(screen.getByText('Cà phê'))).toBe(13);
     unmount();
     render(<Tile label="Cà phê" icon="cafe-outline" onPress={() => {}} />);
-    expect(face('Cà phê')).toEqual({ minHeight: '82px', glyph: '24' });
+    expect(face('Cà phê')).toEqual({ minHeight: '82px', glyph: '22' });
     expect(sizeOf(screen.getByText('Cà phê'))).toBe(14);
   });
 });
@@ -438,9 +438,9 @@ describe('Glyph', () => {
 
   it('draws the five marks from the line set, at Ionicons’ weight', () => {
     for (const name of ['compass-outline', 'calendar-outline', 'bookmark-outline', 'person-outline', 'places', 'quill'] as const) {
-      const { unmount } = render(<Glyph name={name} size={20} color="#123456" />);
+      const { unmount } = render(<Glyph name={name} size={22} color="#123456" />);
       expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual([name, 'lucide']);
-      expect([drawn().getAttribute('data-size'), drawn().getAttribute('data-color')]).toEqual(['20', '#123456']);
+      expect([drawn().getAttribute('data-size'), drawn().getAttribute('data-color')]).toEqual(['22', '#123456']);
       expect(drawn().getAttribute('data-stroke')).toBe(String(LINE_STROKE));
       unmount();
     }
@@ -449,29 +449,57 @@ describe('Glyph', () => {
   });
 
   it('fills only the saved bookmark; a solid compass, calendar or person is its outline', () => {
-    const { unmount } = render(<Glyph name="bookmark" size={20} color="#c00" />);
+    const { unmount } = render(<Glyph name="bookmark" size={22} color="#c00" />);
     expect(drawn().getAttribute('data-icon')).toBe('bookmark');
     unmount();
     // The bio's feather too (owner, 17 Nov 2026): a line round nothing,
     // like the envelope and the calendar it stands over, never a blot.
-    const feather = render(<Glyph name="quill" size={20} color="#c00" />);
+    const feather = render(<Glyph name="quill" size={22} color="#c00" />);
     expect(drawn().getAttribute('data-icon')).toBe('quill');
     feather.unmount();
     for (const [name, line] of [['compass', 'compass-outline'], ['calendar', 'calendar-outline'], ['person', 'person-outline']] as const) {
-      const r = render(<Glyph name={name} size={20} color="#c00" />);
+      const r = render(<Glyph name={name} size={22} color="#c00" />);
       expect(drawn().getAttribute('data-icon')).toBe(line);
       r.unmount();
     }
   });
 
+  // The scale (owner, 18 Nov 2026): seven sizes where there were twenty.
+  // What keeps it seven is the compiler — a size between two steps is a
+  // type error — so the test of that is a line that must not compile: the
+  // day `size` is widened to a number, `@ts-expect-error` has nothing to
+  // expect and typecheck is red.
+  it('draws at a step of the scale and at nothing between, a blank face’s fit apart', () => {
+    expect(Object.values(ICON)).toEqual([11, 13, 15, 18, 22, 27, 40]);
+    // Each step far enough from the last to be seen as one: 1.15 at least.
+    const steps = Object.values(ICON);
+    expect(steps.slice(1).every((v, i) => v / steps[i] >= 1.15)).toBe(true);
+    // @ts-expect-error — 17 is between two steps.
+    const off = <Glyph name="close" size={17} />;
+    expect(off.props.size).toBe(17);
+    // No size is caption's, where it was a 12 nothing else drew.
+    const bare = render(<Glyph name="close" />);
+    expect(drawn().getAttribute('data-size')).toBe(String(ICON.meta));
+    bare.unmount();
+    // `fit` wins over `size`, in both families: two fifths of a 41pt face.
+    for (const [name, family] of [['person-outline', 'lucide'], ['close', null]] as const) {
+      const r = render(<Glyph name={name} size={ICON.action} fit={16.4} />);
+      expect([drawn().getAttribute('data-family'), drawn().getAttribute('data-size')]).toEqual([family, '16.4']);
+      r.unmount();
+    }
+    const face = render(<Avatar size={40} />);
+    expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-size')]).toEqual(['person-outline', '16']);
+    face.unmount();
+  });
+
   // The star from the line set too (owner, 14 Nov 2026): round joins at
   // its points, solid filled with its own ink, the outline left open.
   it('draws the star from the line set, filled when solid and open when outlined', () => {
-    const { unmount } = render(<Glyph name="star" size={17} color="#c00" />);
+    const { unmount } = render(<Glyph name="star" size={18} color="#c00" />);
     expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family'), drawn().getAttribute('data-stroke')])
       .toEqual(['star', 'lucide', String(LINE_STROKE)]);
     unmount();
-    render(<Glyph name="star-outline" size={17} color="#c00" />);
+    render(<Glyph name="star-outline" size={18} color="#c00" />);
     expect([drawn().getAttribute('data-icon'), drawn().getAttribute('data-family')]).toEqual(['star-outline', 'lucide']);
     expect([isLineGlyph('star'), isLineGlyph('star-outline'), isLineGlyph('star-half')]).toEqual([true, true, false]);
   });

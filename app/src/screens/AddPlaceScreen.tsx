@@ -34,7 +34,7 @@ import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { AmbientWarmth, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import { finished } from '../lib/batch';
@@ -107,7 +107,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
       <AmbientWarmth />
 
       <View style={s.field}>
-        <Glyph name="search" size={19} color={colors.textTertiary} />
+        <Glyph name="search" size={ICON.action} color={colors.textTertiary} />
         <TextInput
           ref={input}
           value={query}
@@ -134,7 +134,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
             accessibilityRole="button"
             accessibilityLabel={t('Clear search', 'Xoá tìm kiếm', '検索をクリア', '清除搜索', '清除搜尋')}
           >
-            <Glyph name="close-circle" size={19} color={colors.textTertiary} />
+            <Glyph name="close-circle" size={ICON.action} color={colors.textTertiary} />
           </PressableScale>
         )}
       </View>

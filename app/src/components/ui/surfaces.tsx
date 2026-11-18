@@ -10,7 +10,7 @@ import { setStatusBarStyle, type StatusBarStyle } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph } from './glyph';
+import { Glyph, ICON } from './glyph';
 import { useScheme } from '../../lib/theme';
 import { colors, display, font, glass, radius, space, type } from '../../theme';
 import { BackButton } from './controls';
@@ -118,7 +118,7 @@ export function IconSubtitle({ icon, text }: {
 }) {
   return (
     <View style={s.iconSubtitle}>
-      <Glyph name={icon} size={13} color={colors.accent} />
+      <Glyph name={icon} size={ICON.meta} color={colors.accent} />
       <Text style={[s.subtitle, { flexShrink: 1 }]} numberOfLines={1}>{text}</Text>
     </View>
   );
@@ -467,7 +467,7 @@ export function Avatar({ url, size }: { url?: string | null; size: number }) {
   }
   return (
     <View style={[round, s.avatarBlank]} accessible={false}>
-      <Glyph name="person-outline" size={size * 0.4} color={colors.textTertiary} />
+      <Glyph name="person-outline" fit={size * 0.4} color={colors.textTertiary} />
     </View>
   );
 }
@@ -504,7 +504,7 @@ export function EmptyState({ icon, title, body, children, testID }: {
   return (
     <View style={s.state} testID={testID}>
       <View style={s.stateWell}>
-        <Glyph name={icon} size={27} color={colors.accent} />
+        <Glyph name={icon} size={ICON.feature} color={colors.accent} />
       </View>
       <Text style={s.stateTitle}>{title}</Text>
       <Text style={s.stateBody}>{body}</Text>

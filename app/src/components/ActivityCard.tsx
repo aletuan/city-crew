@@ -51,7 +51,7 @@ import type Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import LikeHeart from './LikeHeart';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { PressableScale } from './ui/controls';
 import { Avatar, Card } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
@@ -79,11 +79,11 @@ export type ActivityMark = {
 const PHOTO_H = 168;
 /** The figure a private list kept, at the size the heart is drawn at
  *  (`LikeHeart`, the `card` tone). */
-const HEART = 18;
+const HEART = ICON.action;
 /** How many comments a card previews: the two `comment_previews` sends. */
 export const PREVIEWS = 2;
 /** The mark's glyph: 13, a cap's height beside the time's 13pt type. */
-const MARK = 13;
+const MARK = ICON.meta;
 
 export default function ActivityCard({
   face, who, did, when, mark, title, uri, meta, desc, liked, likes, onOpen, onHeart, comments, onComments, testID,

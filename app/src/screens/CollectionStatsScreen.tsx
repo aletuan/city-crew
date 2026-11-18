@@ -85,7 +85,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Glyph, type GlyphName } from '../components/ui/glyph';
+import { Glyph, ICON, type GlyphName } from '../components/ui/glyph';
 import { Card, EmptyState, GradientCta, Screen, useTabBarClearance } from '../components/ui';
 import ListSummaryCard from '../components/ListSummaryCard';
 import { useDuckOnScroll } from '../components/tabBarDuck';
@@ -226,7 +226,7 @@ const GLYPH: Record<StatKind, GlyphName> = {
   trips: 'calendar-outline',
 };
 /** The label's glyph: 15, the size "View activity ›" sets beside 15pt words. */
-const TILE_GLYPH = 15;
+const TILE_GLYPH = ICON.text;
 
 const s = StyleSheet.create({
   content: { paddingHorizontal: space.page },

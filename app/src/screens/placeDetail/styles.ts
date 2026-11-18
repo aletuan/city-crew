@@ -19,11 +19,14 @@ const HISTORY_ROW = 48;
  * font rasterised at the glyph's 20pt (12 Nov 2026): `bookmark` and
  * `bookmark-outline` both leave 3.75pt of their 20pt advance clear on
  * each side, so centred in a 44pt box the ink stops 15.75 short of it.
+ * The glyph is 22 since the scale (`ICON`, 18 Nov 2026), back's size:
+ * its clear side grows as its box's margin shrinks, 15.1 by the same
+ * arithmetic, so the hang is a point generous and was left.
  */
 const SAVE_HANG = 16;
 
 /** The left column the glyphs sit in, and the inset every hairline and
- *  every continuation under a row lines up against. Glyph 19, air 14. */
+ *  every continuation under a row lines up against. Glyph 18 (19 until the scale, `ICON`), air 15. */
 const GUTTER = 33;
 
 /** Where a glyph sits down its row: level with the first line of the

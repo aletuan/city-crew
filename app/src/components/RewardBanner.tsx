@@ -38,7 +38,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BADGE_IMAGES } from './badgeImages';
 import { PressableScale } from './ui';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { successHaptic } from './ui/haptics';
 import { noticeWords } from '../lib/badges';
 import { useI18n } from '../lib/i18n';
@@ -113,14 +113,14 @@ export default function RewardBanner({ onOpen }: {
             ? <Image source={BADGE_IMAGES[notice.id].on} style={s.picture} contentFit="contain" accessible={false} />
             : (
               <View style={s.mark}>
-                <Glyph name={notice.kind === 'level' ? 'trophy-outline' : 'ribbon-outline'} size={22} color={colors.accent} />
+                <Glyph name={notice.kind === 'level' ? 'trophy-outline' : 'ribbon-outline'} size={ICON.nav} color={colors.accent} />
               </View>
             )}
           <View style={s.words}>
             <Text style={s.lead} numberOfLines={1}>{words.lead}</Text>
             <Text style={s.name} numberOfLines={1}>{words.name}</Text>
           </View>
-          <Glyph name="chevron-forward" size={17} color={colors.textTertiary} />
+          <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
         </PressableScale>
       </Animated.View>
     </View>

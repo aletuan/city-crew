@@ -40,7 +40,7 @@ import { useFlag } from '../lib/useFlag';
 import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
 import { reviewAfterCheckin } from '../lib/askReview';
@@ -304,7 +304,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const creditLine = blurbFrom ? (
     <Text style={[s.credit, blurbHref ? s.creditLink : null]}>
       {blurbMark ? (
-        <Glyph name={blurbMark} size={13} color={blurbHref ? colors.accent : colors.textTertiary} />
+        <Glyph name={blurbMark} size={ICON.meta} color={blurbHref ? colors.accent : colors.textTertiary} />
       ) : null}
       {blurbMark ? ' ' : ''}
       {creditWords}
@@ -416,7 +416,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
           : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
       >
-        <Glyph name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.accent : colors.text} />
+        <Glyph name={saved ? 'bookmark' : 'bookmark-outline'} size={ICON.nav} color={saved ? colors.accent : colors.text} />
       </PressableScale>
     </View>
   );
@@ -595,7 +595,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               and two cases on a line, and a long tagline breaks mid-way. */}
           {place.is_featured ? (
             <View style={s.pick} testID="detail-pick">
-              <Glyph name="ribbon-outline" size={13} color={colors.accent} />
+              <Glyph name="ribbon-outline" size={ICON.meta} color={colors.accent} />
               <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ', 'City Crew 精选', 'City Crew 精選')}</Text>
             </View>
           ) : null}
@@ -633,7 +633,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー', '条评价', '條評價')}`
                   : String(place.rating)}
               >
-                <Glyph name="star" size={17} color={colors.accent} />
+                <Glyph name="star" size={ICON.action} color={colors.accent} />
                 <Text style={s.ratingValue}>{place.rating}</Text>
                 {reviews ? (
                   <>
@@ -664,7 +664,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <PricePill place={place} />
               ) : (
                 <View style={s.priceLine}>
-                  <Glyph name="pricetag-outline" size={15} color={colors.textSecondary} />
+                  <Glyph name="pricetag-outline" size={ICON.text} color={colors.textSecondary} />
                   <PricePill place={place} />
                 </View>
               )
@@ -750,7 +750,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 contentStyle={[s.checkin, latestVisit && s.checkinOn]}
                 testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
               >
-                <Glyph name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
+                <Glyph name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={ICON.text} color={latestVisit ? colors.okInk : colors.accent} />
                 {/* ── one width in both states ──
                     The pill was as wide as its word, and the two words
                     are not the same length: "Check-in" and "Đã qua" are
@@ -1043,7 +1043,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       contentStyle={s.go}
                       testID="detail-directions"
                     >
-                      <Glyph name="navigate" size={18} color={colors.accent} />
+                      <Glyph name="navigate" size={ICON.action} color={colors.accent} />
                     </PressableScale>
                   ) : undefined}
                 >
@@ -1148,7 +1148,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     contentStyle={s.goDisc}
                     testID="detail-directions"
                   >
-                    <Glyph name="navigate" size={18} color={colors.accent} />
+                    <Glyph name="navigate" size={ICON.action} color={colors.accent} />
                   </PressableScale>
                 </View>
               )}
@@ -1169,7 +1169,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     accessibilityState={{ expanded: hoursOpen }}
                   >
                     <View style={s.infoIconSlot}>
-                      <Glyph name="time-outline" size={19} color={colors.textTertiary} />
+                      <Glyph name="time-outline" size={ICON.action} color={colors.textTertiary} />
                     </View>
                     <View style={s.infoWords}>
                       <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}</Text>
@@ -1208,7 +1208,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                         two heights — the raggedness this change is about,
                         moved to the other end of the row. */}
                     <View style={s.infoChevronSlot}>
-                      <Glyph name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
+                      <Glyph name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={ICON.action} color={colors.textTertiary} />
                     </View>
                   </Pressable>
                   {hoursOpen && (
@@ -1331,7 +1331,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   const d = new Date(v.at);
                   return (
                     <View key={v.id} style={[s.historyRow, i > 0 && s.historyDivider]} testID="checkin-visit">
-                      <Glyph name="time-outline" size={17} color={colors.textTertiary} />
+                      <Glyph name="time-outline" size={ICON.action} color={colors.textTertiary} />
                       <Text style={s.historyText} numberOfLines={1}>
                         {dateline(lang, d)} · {clockOf(d.getHours() * 60 + d.getMinutes())}
                       </Text>
@@ -1345,7 +1345,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                         accessibilityRole="button"
                         accessibilityLabel={t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除', '删除这次打卡', '刪除這次打卡')}
                       >
-                        <Glyph name="trash-outline" size={18} color={colors.bad} />
+                        <Glyph name="trash-outline" size={ICON.action} color={colors.bad} />
                       </PressableScale>
                     </View>
                   );

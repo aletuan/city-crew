@@ -41,14 +41,14 @@ describe('MapPlaceCard', () => {
   // shuts in half an hour says so; one open until late says nothing; one
   // that is shut says that, and when it opens. Same rule `PlaceCard` keeps.
   // The pin under this strip is the branch; the name line is the brand.
-  // The chevron at the end of a row is one size across the app — 17pt
+  // The chevron at the end of a row is one size across the app — 18pt, a step of `ICON`
   // in the tertiary ink, as Profile, Search and the planning screen draw
   // it. This card had 16 and the dashed add-slot 18, neither for a reason
   // anyone wrote down (owner, 7 Oct 2026).
   it('ends with the row-end chevron at the app\'s one size', () => {
     render(<MapPlaceCard place={place()} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
     const chevron = document.querySelector('[data-icon="chevron-forward"]')!;
-    expect(chevron.getAttribute('data-size')).toBe('17');
+    expect(chevron.getAttribute('data-size')).toBe('18');
     expect(chevron.getAttribute('data-color')).toBe(colors.textTertiary);
   });
 

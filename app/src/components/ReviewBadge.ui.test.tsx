@@ -82,7 +82,7 @@ describe('ReviewBadge', () => {
     render(<ReviewBadge place={place()} compact overPhoto testID="pill" />);
     expect(word().fontSize).toBe(11);
     expect(ground().borderColor).toBe(onPhoto.line);
-    expect(pill().querySelector('[data-icon]')?.getAttribute('data-size')).toBe('12');
+    expect(pill().querySelector('[data-icon]')?.getAttribute('data-size')).toBe('13');
   });
 
   it('sets the card’s 12pt word, with no hairline, off a photograph', () => {

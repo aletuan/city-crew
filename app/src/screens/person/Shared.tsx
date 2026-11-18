@@ -74,7 +74,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import ActivityCard, { type ActivityMark } from '../../components/ActivityCard';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { agoLabel } from '../../lib/ago';
 import { useLikes } from '../../lib/catalog';
@@ -222,7 +222,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
             <Text style={s.turnText}>
               {all ? t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態') : listsWord(lists.length)}
             </Text>
-            <Glyph name="chevron-forward" size={13} color={colors.accent} />
+            <Glyph name="chevron-forward" size={ICON.meta} color={colors.accent} />
           </PressableScale>
         )}
       </View>
@@ -342,7 +342,7 @@ function ListTile({ title, uri, meta, mark, onPress }: {
         <View style={s.tileWords}>
           <Text style={s.tileTitle} numberOfLines={2}>{title}</Text>
           <View style={s.tileUnder}>
-            <Glyph name={mark.icon} size={13} color={colors.textTertiary} />
+            <Glyph name={mark.icon} size={ICON.meta} color={colors.textTertiary} />
             <Text style={s.tileMeta} numberOfLines={1}>{meta}</Text>
           </View>
         </View>

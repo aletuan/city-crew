@@ -3,7 +3,7 @@ import {
   type AccessibilityActionEvent, type AccessibilityActionInfo, type GestureResponderEvent, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { categoriesOf, pinCategory } from '../lib/categories';
 import { coverOf, fmtCount, isLive, Place } from '../lib/data';
 import { useCityList } from '../lib/city';
@@ -173,7 +173,7 @@ export default function PlaceCard({
           >
             <Glyph
               name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={17}
+              size={ICON.action}
               color={saved ? onPhoto.accent : onPhoto.text}
             />
           </PressableScale>
@@ -440,7 +440,7 @@ export default function PlaceCard({
               {(where || far || when) ? (
                 <View style={s.whereRow}>
                   {(where || far)
-                    ? <Glyph name="location-outline" size={13} color={colors.textTertiary} />
+                    ? <Glyph name="location-outline" size={ICON.meta} color={colors.textTertiary} />
                     : null}
                   {where ? (
                     <Text style={s.where} numberOfLines={1} testID={testID ? `${testID}-district` : undefined}>
@@ -642,8 +642,8 @@ const s = StyleSheet.create({
   //
   // ── 36, not 40 (owner, 4 Nov 2026) ──
   // A reference asked for the disc a step quieter: smaller, and its ground
-  // down to 25–30% black. Smaller it is — 36 and a 17pt glyph, the same
-  // proportion as 40 and 19, and the 8pt slop keeps the target at 52. The
+  // down to 25–30% black. Smaller it is — 36 and a 17pt glyph (18 since
+  // the scale, `ICON`), the same proportion as 40 and 19, and the 8pt slop keeps the target at 52. The
   // ground stays: over a white wall, which the second card in the
   // reference is all but, 58% black under a white glyph is 4.9:1, and
   // 25–30% is 1.8–2.0 — under the 3:1 a glyph needs, which 43% is the

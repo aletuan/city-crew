@@ -14,7 +14,7 @@ import { Animated, Platform, SectionList, Text, useWindowDimensions, View } from
 import { useScrollToTop, type ParamListBase } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import * as Location from 'expo-location';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
@@ -779,7 +779,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               colour. */}
           <Glyph
             name="options-outline"
-            size={19}
+            size={ICON.action}
             color={filterCount > 0 ? colors.accent : colors.textSecondary}
           />
           {filterCount > 0 ? (
@@ -811,7 +811,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           >
             <Glyph
               name={mapMode ? 'close' : 'map-outline'}
-              size={15}
+              size={ICON.text}
               color={colors.textSecondary}
             />
             <Text style={s.viewBtnText}>
@@ -988,7 +988,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                   >
                     <Glyph
                       name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
-                      size={19}
+                      size={ICON.action}
                       color={appliedFilters.status !== 'any' ? colors.accent : colors.textSecondary}
                     />
                   </PressableScale>
@@ -1004,7 +1004,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                   >
                     <Glyph
                       name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
-                      size={19}
+                      size={ICON.action}
                       color={appliedFilters.savedOnly ? colors.accent : colors.textSecondary}
                     />
                   </PressableScale>
@@ -1026,7 +1026,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                       >
                         <Glyph
                           name={appliedFilters.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                          size={19}
+                          size={ICON.action}
                           color={appliedFilters.visitedOnly ? colors.accent : colors.textSecondary}
                         />
                       </PressableScale>

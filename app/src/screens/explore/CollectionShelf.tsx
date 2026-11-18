@@ -20,7 +20,7 @@ import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Glyph } from '../../components/ui/glyph';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { fireHaptic, PressableScale, Skeleton } from '../../components/ui';
 import { useCurrentCity } from '../../lib/city';
 import { Collection, coverUriOf, membersOf, touchesCity } from '../../lib/data';
@@ -174,7 +174,7 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
                       accessible
                       accessibilityLabel={`${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}`}
                     >
-                      <Glyph name="location-outline" size={13} color={onPhoto.textSecondary} />
+                      <Glyph name="location-outline" size={ICON.meta} color={onPhoto.textSecondary} />
                       <Text style={s.shelfCardMeta}>{count}</Text>
                     </View>
                     {/* One heart, and it is both the gesture and the

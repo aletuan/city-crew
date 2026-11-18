@@ -6,7 +6,7 @@
 // to agree in #783, by hand, which is how they would have drifted again;
 // this row is where they agree now. The words are `legLine`'s and the
 // glyph `modeIcon`'s (`lib/travel`), so a test can hold the line without
-// a renderer; what this file adds is the 12pt glyph in tertiary ink, 5pt
+// a renderer; what this file adds is the 13pt glyph in tertiary ink, 5pt
 // from the figure, which is how all three screens had it.
 //
 // No spacing of its own. Where the row sits — under a card, under a
@@ -15,7 +15,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { useI18n } from '../lib/i18n';
 import { legLine, modeIcon, type Leg } from '../lib/travel';
 import { colors, font } from '../theme';
@@ -28,7 +28,7 @@ export default function LegRow({ leg, style, testID }: {
   const { lang } = useI18n();
   return (
     <View style={[s.row, style]} testID={testID}>
-      <Glyph name={modeIcon(leg.mode)} size={12} color={colors.textTertiary} />
+      <Glyph name={modeIcon(leg.mode)} size={ICON.meta} color={colors.textTertiary} />
       <Text style={s.text}>{legLine(leg, lang)}</Text>
     </View>
   );

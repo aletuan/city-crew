@@ -36,7 +36,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { clockOf, fmtMinutes, openLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -117,7 +117,7 @@ export default function StopCard({
           accessibilityLabel={openLabel(place.name_en, t)}
         >
           <View style={[s.well, cat && { backgroundColor: `${cat.color}24` }]}>
-            <Glyph name={cat?.icon ?? 'location-outline'} size={20} color={cat?.color ?? colors.textTertiary} />
+            <Glyph name={cat?.icon ?? 'location-outline'} size={ICON.nav} color={cat?.color ?? colors.textTertiary} />
           </View>
           <View style={s.headCol}>
             <View style={s.nameRow}>
@@ -132,7 +132,7 @@ export default function StopCard({
                   solved for the page, dark enough on paper to be seen. */}
               {place.rating != null && (
                 <View style={s.rating}>
-                  <Glyph name="star" size={12} color={colors.sun} />
+                  <Glyph name="star" size={ICON.meta} color={colors.sun} />
                   <Text style={s.ratingText}>{place.rating}</Text>
                 </View>
               )}
@@ -180,7 +180,7 @@ export default function StopCard({
               accessibilityRole="button"
               accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${place.name_en}`, `Đến ${place.name_en} sớm ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分早く着く`, `提早 ${NUDGE_MIN} 分钟到达${place.name_en}`, `提早 ${NUDGE_MIN} 分鐘到達${place.name_en}`)}
             >
-              <Glyph name="remove" size={17} color={colors.text} />
+              <Glyph name="remove" size={ICON.action} color={colors.text} />
             </PressableScale>
             <Text style={[s.time, pinned && s.timePinned]} testID={timeTestID}>{clockOf(arriveMin)}</Text>
             <PressableScale
@@ -191,7 +191,7 @@ export default function StopCard({
               accessibilityRole="button"
               accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${place.name_en}`, `Đến ${place.name_en} muộn ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分遅く着く`, `推迟 ${NUDGE_MIN} 分钟到达${place.name_en}`, `推遲 ${NUDGE_MIN} 分鐘到達${place.name_en}`)}
             >
-              <Glyph name="add" size={17} color={colors.text} />
+              <Glyph name="add" size={ICON.action} color={colors.text} />
             </PressableScale>
           </View>
 
@@ -205,7 +205,7 @@ export default function StopCard({
               accessibilityRole="button"
               accessibilityLabel={t(`Remove ${place.name_en}`, `Bỏ ${place.name_en}`, `${place.name_en}を外す`, `移除${place.name_en}`, `移除${place.name_en}`)}
             >
-              <Glyph name="close" size={16} color={colors.textTertiary} />
+              <Glyph name="close" size={ICON.text} color={colors.textTertiary} />
             </PressableScale>
           </View>
         </View>

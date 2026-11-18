@@ -2,7 +2,7 @@
 // screen and its parts: one file's worth, as they were in one file.
 
 import { StyleSheet } from 'react-native';
-import { CHIP_H, INK_GAP_END, SECONDARY_CONTROL_H } from '../../components/ui';
+import { ICON, CHIP_H, INK_GAP_END, SECONDARY_CONTROL_H } from '../../components/ui';
 import { colors, display, font, radius, space, type } from '../../theme';
 
 /** Between tiles, both ways. The reference's, measured off it: about a
@@ -66,7 +66,7 @@ const TALLY_LINE = 18;
  *  did in the foot, and how much higher off the card's bottom: 7. */
 const ROW_AIR = (CHIP_H - TALLY_LINE) / 2;
 /** "View activity ›"'s chevron, at the words' 15. */
-export const ACTIVITY_CHEVRON = 15;
+export const ACTIVITY_CHEVRON = ICON.text;
 /**
  * The heart and Share at the card's foot: 18, in the secondary grey
  * (owner, 18 Nov 2026).
@@ -83,7 +83,7 @@ export const ACTIVITY_CHEVRON = 15;
  * tab's tiles): white on a picture has no contrast to find, and a tile
  * has no room.
  */
-export const ACT_GLYPH = 18;
+export const ACT_GLYPH = ICON.action;
 /** How far the chevron's ink stops short of its box's right edge, read
  *  off the icon font itself (13 Nov 2026): Ionicons' `chevron-forward`
  *  is drawn from 159 to 352 of a 512 advance, so 160/512 = 0.312 of the

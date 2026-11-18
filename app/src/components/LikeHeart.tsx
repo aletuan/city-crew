@@ -58,7 +58,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, type Insets, type StyleProp, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 import { PressableScale } from './ui/controls';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON, type IconSize } from './ui/glyph';
 import { useReducedMotion } from './ui/motion';
 import { useI18n } from '../lib/i18n';
 import { likesWorthShowing } from '../lib/likes';
@@ -101,17 +101,17 @@ export const PRESS_WINDOW_MS = 1000;
 /**
  * Where the heart stands, which decides its size and its two inks.
  *
- * `card`: on a card's ground — 18, the secondary grey, `colors.like`
+ * `card`: on a card's ground — 18, a control's step, the secondary grey, `colors.like`
  * when liked (`collectionDetail/styles`, `ACT_GLYPH`, has the argument).
- * `photo`: over a photograph — 15, white, the accent as it is drawn on
+ * `photo`: over a photograph — 15, the step below, white, the accent as it is drawn on
  * photographs; a tile has no room for more and white on a picture needs
  * no help.
  */
 export type HeartTone = 'card' | 'photo';
 type Ink = NonNullable<React.ComponentProps<typeof Glyph>['color']>;
-const TONE: Record<HeartTone, { size: number; on: Ink; off: Ink }> = {
-  card: { size: 18, on: colors.like, off: colors.textSecondary },
-  photo: { size: 15, on: onPhoto.accent, off: onPhoto.text },
+const TONE: Record<HeartTone, { size: IconSize; on: Ink; off: Ink }> = {
+  card: { size: ICON.action, on: colors.like, off: colors.textSecondary },
+  photo: { size: ICON.text, on: onPhoto.accent, off: onPhoto.text },
 };
 
 /**

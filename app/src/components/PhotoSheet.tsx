@@ -71,7 +71,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { Glyph } from './ui/glyph';
+import { Glyph, ICON } from './ui/glyph';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -240,7 +240,7 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
               accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
               testID="photo-sheet-close"
             >
-              <Glyph name="close" size={PHOTO_GLYPH + 1} color={onPhoto.text} />
+              <Glyph name="close" size={PHOTO_GLYPH} color={onPhoto.text} />
             </PressableScale>
             <View style={s.count} pointerEvents="none">
               <Text style={s.countText}>{count}</Text>
@@ -262,11 +262,11 @@ export default function PhotoSheet({ photos, index, onIndex, actionsFor, onClose
             <View style={[s.name, scored && s.nameHeld]} testID="photo-sheet-name">
               {p.kind ? (
                 <View style={s.kind} testID="photo-sheet-kind">
-                  <Glyph name={kindIcon(p.kind)} size={20} color={colors.text} />
+                  <Glyph name={kindIcon(p.kind)} size={ICON.action} color={colors.text} />
                   <Text style={s.kindText}>{kindName(p.kind, t)}</Text>
                   {p.is_cover && (
                     <View accessibilityLabel={t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面')} testID="photo-sheet-cover">
-                      <Glyph name="star" size={16} color={colors.okInk} />
+                      <Glyph name="star" size={ICON.text} color={colors.okInk} />
                     </View>
                   )}
                 </View>
@@ -349,9 +349,11 @@ const s = StyleSheet.create({
   // chỉnh hàng thông tin" board). It used to start at the page's edge:
   // the kind's mark sat 17pt left of the Light, Focus and Composition
   // marks below it, and its name 17pt left of theirs, so two columns of
-  // marks and two of words ran down one sheet. Inset, the 20pt mark and
-  // 8pt gap put the name at 45pt, where the rows' 18pt mark and 10pt gap
-  // put theirs. On the right, the number ends where the rows' verdicts
+  // marks and two of words ran down one sheet. Inset, the 18pt mark and
+  // 10pt gap put the name at 45pt, as the rows' 18 and 10 put theirs —
+  // the mark was 20 with a gap of 8 until the scale (`ICON`, 18 Nov
+  // 2026), where 22, the step a 20 otherwise went to, would have moved
+  // the name 2pt off the column this inset was made for. On the right, the number ends where the rows' verdicts
   // end, so both margins match.
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: space.cardPadding + 1 },
   // The words beside the number keep one height, so the sheet stays still
@@ -368,11 +370,11 @@ const s = StyleSheet.create({
   // shows (19 Oct 2026), so a hidden photograph grows by that line.
   name: { flex: 1, gap: HEAD_GAP },
   nameHeld: { minHeight: KIND_LINE + HEAD_GAP + STANDING_LINES * TEXT_LINE },
-  // Under the kind's words, not its mark: 20pt glyph and 8pt gap.
+  // Under the kind's words, not its mark: 18pt glyph and 10pt gap.
   underKind: { marginLeft: 28 },
   status: { color: colors.textTertiary, fontSize: 14, lineHeight: TEXT_LINE },
   // The head's type, opposite the number: the sentence's ink and size
   // before it, since the kind took its place.
-  kind: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  kind: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   kindText: { color: colors.text, fontSize: 17, lineHeight: KIND_LINE, fontWeight: font.semibold },
 });

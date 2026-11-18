@@ -196,7 +196,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import {
   Avatar, Card, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
@@ -482,14 +482,14 @@ const waitBody = (t: T) => t(
  *  written there — Facebook and X draw 40 — and the two lines here stand
  *  about its height. */
 const ROW_FACE = 40;
-/** The statistics row's glyph: 17, what Crew's Accept sets beside its
- *  15pt word — the app's one glyph that leads a 15pt label on a row of
- *  its own. The two counts this row replaced led with it too. */
-const LINK_GLYPH = 17;
+/** The statistics row's glyph: a control's step, leading a 15pt label
+ *  on a row of its own. It was 17 until the scale (`ICON`, 18 Nov 2026);
+ *  the two counts this row replaced led with it too. */
+const LINK_GLYPH = ICON.action;
 /** Its chevron: 15, as "View activity ›" draws it beside its words. */
-const LINK_CHEVRON = 15;
+const LINK_CHEVRON = ICON.text;
 /** The badge's glyph: Activity's 11, a mark rather than an icon to tap. */
-const BADGE_GLYPH = 11;
+const BADGE_GLYPH = ICON.tiny;
 /** The badge's ring of page: 2, enough to cut the disc off the face it
  *  overlaps, where Activity's hairline sat on a card and needed none. */
 const RING = 2;

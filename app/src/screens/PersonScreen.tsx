@@ -126,7 +126,7 @@ import { Image } from 'expo-image';
 import {
   Avatar, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
 } from '../components/ui';
-import { Glyph } from '../components/ui/glyph';
+import { Glyph, ICON } from '../components/ui/glyph';
 import { useFriendButtons } from '../components/FriendButton';
 import InCommon from '../components/InCommon';
 import { usePersonMenu } from '../components/PersonMenu';
@@ -445,7 +445,7 @@ function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; 
       contentStyle={s.bioAdd}
       testID="person-bio-add"
     >
-      <Glyph name="add" size={17} color={colors.accent} />
+      <Glyph name="add" size={ICON.action} color={colors.accent} />
       <Text style={s.bioAddText}>{t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}</Text>
     </PressableScale>
   );
@@ -580,7 +580,7 @@ function Acts({ friend, onLayout }: { friend: React.ReactNode; onLayout: (e: Lay
         accessibilityLabel={`${message}, ${soon}`}
         testID="person-message"
       >
-        <Glyph name="chatbubble-outline" size={18} color={colors.text} />
+        <Glyph name="chatbubble-outline" size={ICON.action} color={colors.text} />
         <Text style={s.messageText}>{message}</Text>
         <Text style={s.messageSoon}>{soon}</Text>
       </PressableScale>
@@ -656,7 +656,7 @@ const s = StyleSheet.create({
   },
   bio: { color: colors.text, ...type.meta, lineHeight: 21, fontStyle: 'italic' },
   // The invitation in the bio's place — see `Bio`. The collection card's
-  // "Add a description" (`descAdd`): a 17pt plus 4 from 14pt semibold
+  // "Add a description" (`descAdd`): an 18pt plus 4 from 14pt semibold
   // words, in the accent, hugging its words so the row beside it is not a
   // button.
   // Where the bubble will stand, under the handle.
