@@ -312,14 +312,37 @@ sinh lại):*
 - Chủ bộ xoá bình luận của người khác vẫn là C6, chưa có ở đây dù máy chủ
   đã cho phép.
 
-**C5. Tag**
-- Cần trước: tag địa điểm hiện chỉ mang `id`, mà trang địa điểm mở bằng
-  `slug`. Hoặc cho `comment_thread` trả thêm `slug` trong mỗi tag địa
-  điểm (một migration nhỏ), hoặc tra `id` trong danh sách địa điểm của
-  bộ. Từ C3a tag địa điểm đã được tô màu nhưng chưa bấm được.
-- Gõ "@" mở danh sách người tag được; nút địa điểm mở danh sách địa điểm
-  của bộ.
-- Tag hiện thành liên kết; bấm mở Trang cá nhân hoặc trang địa điểm.
+**C5. Tag** — xong (`20261119050000_comment_tags.sql`; đã áp lên cơ sở
+dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
+- Máy chủ: hàm `comment_taggable(bộ)` trả một lần cả **người** được tag
+  (chủ bộ, rồi người đã viết trong luồng theo bình luận mới nhất, rồi bạn
+  bè; không có chính mình, không có người chặn nhau) và **địa điểm** của
+  bộ (chỉ địa điểm đã duyệt, theo thứ tự của bộ). Danh sách người khớp
+  đúng với luật của `post_comment`; kiểm thử giữ hai bên với nhau bằng
+  cách đăng thử một tag cho từng người được trả về.
+- Mỗi tag địa điểm trong `comment_thread` nay mang thêm `slug`, nên bấm
+  vào là mở trang địa điểm. Địa điểm bị gỡ khỏi bộ sau khi bình luận đã
+  viết thì tag vẫn mở được.
+- Ô soạn: gõ **"@"** thì hiện tối đa 5 dòng phía trên ô, người trước rồi
+  địa điểm (giữ 2 dòng cho địa điểm khi cả hai đều nhiều), gõ thêm chữ
+  thì lọc theo đầu handle, đầu tên, hoặc đầu một từ trong tên, không
+  phân biệt dấu. Bấm một dòng thì "@…" đang gõ thành "@handle" hoặc
+  "@Tên quán" kèm một dấu cách. Dùng được ở cả màn Bình luận và ô gõ tại
+  chỗ.
+- **Khác với bản kế hoạch đầu: không có nút địa điểm riêng.** Địa điểm
+  cũng vào từ "@". Lý do: tên quán chèn từ một nút là chữ thường, không
+  có gì cho thấy nó là tag (sửa một chữ là mất tag mà không ai biết);
+  viết thành "@Tên quán" thì nhìn là biết. Và viên ô soạn đã có ảnh, bộ
+  đếm, nút gửi; thêm một nút nữa là chật.
+- Sửa vào chữ của một tag thì tag đó thành chữ thường (không xoá cả cụm
+  bằng một lần lùi như Instagram, vì việc đó đòi đặt con trỏ từ phía app,
+  thứ React Native làm không ổn định trên iOS).
+- Trong ô soạn, tag chưa được tô màu; đăng xong mới thấy màu. Tối đa 10
+  tag một bình luận: tới đó "@" thôi gợi ý.
+- Vị trí tag tính theo ký tự và theo nội dung đã cắt khoảng trắng hai đầu
+  (`lib/commentTags.outgoing`), khớp với cách máy chủ đo.
+- Chưa kiểm được bằng kiểm thử tự động: con trỏ và bàn phím trên máy thật
+  khi chọn một dòng gợi ý ở giữa câu.
 
 **C6. Quyền của chủ bộ**
 - Công tắc tắt bình luận trong màn sửa bộ sưu tập.

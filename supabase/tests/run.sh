@@ -727,3 +727,11 @@ for f in "$ROOT"/supabase/migrations/*_comment_likes.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/comment_likes_test.sql"
+
+# Tags made usable (19 Nov 2026): whom a caller may tag, and a place tag
+# with its slug. After the likes, whose `comment_thread` it replaces.
+echo "→ comment tags"
+for f in "$ROOT"/supabase/migrations/*_comment_tags.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comment_tags_test.sql"

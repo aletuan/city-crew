@@ -18,7 +18,7 @@ vi.mock('../lib/i18n', () => ({
 
 import CommentComposer, { COUNT_FROM } from './CommentComposer';
 
-const onSend = vi.fn(async (_body: string): Promise<void> => {});
+const onSend = vi.fn(async (_body: string, _mentions: unknown[]): Promise<void> => {});
 const onCancelReply = vi.fn();
 const onGuest = vi.fn();
 const show = (over: Partial<React.ComponentProps<typeof CommentComposer>> = {}) => render(
@@ -64,11 +64,11 @@ describe('the field', () => {
 });
 
 describe('sending', () => {
-  it('hands over the words as typed and empties the field when they are taken', async () => {
+  it('hands over the words, without the space around them, and empties the field when they are taken', async () => {
     show();
-    type('Lovely rooftop');
+    type('  Lovely rooftop \n');
     await press();
-    expect(onSend).toHaveBeenCalledExactlyOnceWith('Lovely rooftop');
+    expect(onSend).toHaveBeenCalledExactlyOnceWith('Lovely rooftop', []);
     expect(field().value).toBe('');
     expect(lit()).toBe(false);
     expect(screen.queryByTestId('composer-error')).toBeNull();
@@ -167,5 +167,166 @@ describe('for nobody signed in', () => {
     fireEvent.click(bar);
     expect(onGuest).toHaveBeenCalledTimes(1);
     expect(onSend).not.toHaveBeenCalled();
+  });
+});
+
+// Which rows "@" offers and where a tag lands are `lib/commentTags`'s,
+// pinned there. Here: that the field asks it on each keystroke and on a
+// moved caret, draws what it answers, writes the tag in, and sends the
+// tags with the words.
+describe('tagging', () => {
+  const taggable = {
+    people: [
+      { id: 'u-trang', handle: 'trang', full_name: 'Trang Lê', avatar_url: 'https://faces/trang.jpg' },
+      { id: 'u-dang', handle: 'dang', full_name: null, avatar_url: null },
+    ],
+    places: [
+      { id: 'p-cong', slug: 'cong-ca-phe', name_en: 'Cong Cafe', name_vi: 'Cộng Cà Phê' },
+      { id: 'p-tan', slug: 'tan-hien', name_en: 'Tan Hien', name_vi: 'Tán Hiên' },
+    ],
+  };
+  const rows = () => [...screen.queryAllByTestId(/^composer-offer-(person|place)$/)];
+  const said = () => rows().map((r) => r.textContent);
+  const take = (i: number) => fireEvent.click(rows()[i]);
+
+  it('offers nothing until an "@" is typed, then people and the list\'s places', () => {
+    show({ taggable });
+    expect(screen.queryByTestId('composer-offers')).toBeNull();
+    type('hi ');
+    expect(screen.queryByTestId('composer-offers')).toBeNull();
+    type('hi @');
+    expect(said()).toEqual(['trangTrang Lê', 'dang', 'Cong CafePlace', 'Tan HienPlace']);
+    expect(rows().map((r) => r.getAttribute('data-testid'))).toEqual([
+      'composer-offer-person', 'composer-offer-person', 'composer-offer-place', 'composer-offer-place',
+    ]);
+    // The rows stand over the field.
+    expect(screen.getByTestId('composer-offers').compareDocumentPosition(field()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('draws a person by their face and a place by the pin, and says what a press does', () => {
+    show({ taggable });
+    type('@');
+    expect(rows()[0].querySelector('img')!.getAttribute('src')).toBe('https://faces/trang.jpg');
+    expect(rows()[2].querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('location-outline');
+    expect(rows()[0].getAttribute('aria-label')).toBe('Tag @trang');
+    expect(rows()[2].getAttribute('aria-label')).toBe('Tag @Cong Cafe');
+  });
+
+  it('names places in the reader\'s language', () => {
+    state.lang = 'vi';
+    show({ taggable });
+    type('@c');
+    expect(said()).toEqual(['Cộng Cà PhêĐịa điểm']);
+  });
+
+  it('narrows as letters are typed, and offers nothing for letters nobody answers', () => {
+    show({ taggable });
+    type('@t');
+    expect(said()).toEqual(['trangTrang Lê', 'Tan HienPlace']);
+    type('@tr');
+    expect(said()).toEqual(['trangTrang Lê']);
+    type('@trx');
+    expect(screen.queryByTestId('composer-offers')).toBeNull();
+  });
+
+  it('treats "@" as a letter where nothing may be tagged', () => {
+    show();
+    type('@');
+    expect(screen.queryByTestId('composer-offers')).toBeNull();
+  });
+
+  it('writes the tag in for what was being typed, puts the offers away, and sends it with the words', async () => {
+    show({ taggable });
+    type('  thanks @tr');
+    take(0);
+    expect(field().value).toBe('  thanks @trang ');
+    expect(screen.queryByTestId('composer-offers')).toBeNull();
+    type('  thanks @trang see you at @c');
+    take(0);
+    expect(field().value).toBe('  thanks @trang see you at @Cong Cafe ');
+    await press();
+    // Trimmed, and the tags counted from where the trimmed words begin.
+    expect(onSend).toHaveBeenCalledExactlyOnceWith('thanks @trang see you at @Cong Cafe', [
+      { at: 7, len: 6, person: 'u-trang', place: null, handle: null, slug: null },
+      { at: 25, len: 10, person: null, place: 'p-cong', handle: null, slug: null },
+    ]);
+  });
+
+  it('counts an emoji before the "@" as one character, though the field counts it as two', async () => {
+    show({ taggable });
+    type('😀 @d');
+    expect(said()).toEqual(['dang']);
+    take(0);
+    await press();
+    expect(onSend).toHaveBeenCalledExactlyOnceWith('😀 @dang', [
+      { at: 2, len: 5, person: 'u-dang', place: null, handle: null, slug: null },
+    ]);
+  });
+
+  it('sends plain words for a tag whose letters were edited afterwards', async () => {
+    show({ taggable });
+    type('@tr');
+    take(0);
+    type('@trXng and more');
+    await press();
+    expect(onSend).toHaveBeenCalledExactlyOnceWith('@trXng and more', []);
+  });
+
+  it('moves a tag along with words typed before it', async () => {
+    show({ taggable });
+    type('@tr');
+    take(0);
+    type('hi @trang ');
+    await press();
+    expect(onSend).toHaveBeenCalledExactlyOnceWith('hi @trang', [
+      { at: 3, len: 6, person: 'u-trang', place: null, handle: null, slug: null },
+    ]);
+  });
+
+  it('starts the next comment with no tags left over from the last', async () => {
+    show({ taggable });
+    type('@tr');
+    take(0);
+    await press();
+    onSend.mockClear();
+    type('@trang again');
+    await press();
+    expect(onSend).toHaveBeenCalledExactlyOnceWith('@trang again', []);
+  });
+
+  it('keeps the tags, with the words, when the server refuses', async () => {
+    onSend.mockRejectedValueOnce(new Error('comment:cap'));
+    show({ taggable });
+    type('@tr');
+    take(0);
+    await press();
+    onSend.mockClear();
+    await press();
+    expect(onSend).toHaveBeenCalledExactlyOnceWith('@trang', [
+      { at: 0, len: 6, person: 'u-trang', place: null, handle: null, slug: null },
+    ]);
+  });
+
+  it('follows the caret: an "@" behind it offers, and moving off it puts the offers away', () => {
+    show({ taggable });
+    type('@tr and more');
+    expect(screen.queryByTestId('composer-offers')).toBeNull();
+    const el = field();
+    el.setSelectionRange(3, 3);
+    fireEvent.select(el);
+    expect(said()).toEqual(['trangTrang Lê']);
+    el.setSelectionRange(0, 0);
+    fireEvent.select(el);
+    expect(screen.queryByTestId('composer-offers')).toBeNull();
+  });
+
+  it('reads the caret the field reports in units as characters', () => {
+    show({ taggable });
+    type('😀 @d and more');
+    const el = field();
+    // After the d: five units in, four characters.
+    el.setSelectionRange(5, 5);
+    fireEvent.select(el);
+    expect(said()).toEqual(['dang']);
   });
 });

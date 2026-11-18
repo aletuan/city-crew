@@ -183,8 +183,8 @@ describe('a tag', () => {
   const tagged = placed({
     body: '🍜 @trang at Cafe!',
     mentions: [
-      { at: 2, len: 6, person: 'u2', handle: '@Trang.New', place: null },
-      { at: 12, len: 4, person: null, handle: null, place: 'p1' },
+      { at: 2, len: 6, person: 'u2', handle: '@Trang.New', place: null, slug: null },
+      { at: 12, len: 4, person: null, handle: null, place: 'p1', slug: 'cong-ca-phe' },
     ],
   });
 
@@ -205,7 +205,7 @@ describe('a tag', () => {
   });
 
   it('is not a door for a person whose handle did not come', () => {
-    show(placed({ body: '@gone', mentions: [{ at: 0, len: 5, person: 'u9', handle: null, place: null }] }));
+    show(placed({ body: '@gone', mentions: [{ at: 0, len: 5, person: 'u9', handle: null, place: null, slug: null }] }));
     const tag = screen.getByTestId('comment-tag-person');
     fireEvent.click(tag);
     expect(onPerson).not.toHaveBeenCalled();
@@ -219,6 +219,16 @@ describe('a tag', () => {
     cleanup();
     show(tagged, true);
     fireEvent.click(screen.getByTestId('comment-tag-place'));
-    expect(onPlace).toHaveBeenCalledWith('p1');
+    // By the slug the tag carries: the place's page opens by it.
+    expect(onPlace).toHaveBeenCalledExactlyOnceWith('cong-ca-phe');
+  });
+
+  it('does not open a place whose tag came without a slug, though it is drawn the same', () => {
+    const old = placed({ body: tagged.body, mentions: tagged.mentions.map((m) => ({ ...m, slug: null })) });
+    render(<CommentRow comment={old} when="2h ago" onPerson={onPerson} onPlace={onPlace} />);
+    const tag = screen.getByTestId('comment-tag-place');
+    expect(tag.getAttribute('role')).toBeNull();
+    fireEvent.click(tag);
+    expect(onPlace).not.toHaveBeenCalled();
   });
 });

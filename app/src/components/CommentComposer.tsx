@@ -39,14 +39,29 @@
 //
 // It knows nothing of threads or subjects: it is handed `onSend` and
 // tells the truth about what happened to it.
+//
+// ── tags ──
+//
+// Typing "@" offers the people and places the page said may be tagged
+// (`taggable`), as rows over the field (`CommentTagOffers`); what is
+// offered, where a tag lands and how it survives an edit are
+// `lib/commentTags`. The field itself draws a tag as the words it is —
+// "@name", uncoloured: colouring a run inside a `TextInput` means
+// handing it children instead of a value, which react-native-web does
+// not draw and iOS redraws with the caret thrown to the end.
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
+import CommentTagOffers from './CommentTagOffers';
 import { PressableScale } from './ui/controls';
 import { SECONDARY_CONTROL_H } from './ui/layout';
 import { Glyph, ICON } from './ui/glyph';
 import { Avatar } from './ui/surfaces';
-import { BODY_MAX, bodyLength, bodyProblem, refusalOf } from '../lib/comments';
+import { BODY_MAX, bodyLength, bodyProblem, refusalOf, type Mention } from '../lib/comments';
+import {
+  caretAfter, charsBefore, offersFor, outgoing, placesNamed, retag, tagQuery, tagged,
+  type Offer, type Tag, type Taggable,
+} from '../lib/commentTags';
 import { refusalWords } from '../lib/commentWords';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
@@ -63,7 +78,47 @@ export const COUNT_FROM = 50;
  *  of 15/21 type and its padding. Past that the thread above is gone. */
 const FIELD_MAX_H = 4 * 21 + 16;
 
-export default function CommentComposer({ avatarUrl, replyTo, about, onCancelReply, onSend, onGuest, inputRef, autoFocus, bottomInset = 0 }: {
+/**
+ * The words being written and the tags in them (`lib/commentTags`).
+ *
+ * The caret is kept as the field reports it — in UTF-16 units — and
+ * turned into characters against the words at each render, not when the
+ * report arrives: the field says where its caret is in an event of its
+ * own, which on a phone can land before the render that holds the words
+ * it was measured in, and a caret converted against the old words would
+ * be one letter short for exactly the keystroke the offer depends on.
+ */
+function useTagField(taggable: Taggable | undefined) {
+  const { lang } = useI18n();
+  const [body, setBody] = useState('');
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [caretUnits, setCaretUnits] = useState(0);
+
+  const people = taggable?.people;
+  const rows = taggable?.places;
+  const places = useMemo(() => placesNamed(rows ?? [], lang), [rows, lang]);
+  const typing = tagQuery(body, charsBefore(body, caretUnits), tags);
+  const offers = typing ? offersFor(typing.query, people ?? [], places, tags) : [];
+
+  const unitsAt = (text: string, chars: number) => Array.from(text).slice(0, chars).join('').length;
+  const change = (next: string) => {
+    setTags(retag(body, next, tags));
+    setCaretUnits(unitsAt(next, caretAfter(body, next)));
+    setBody(next);
+  };
+  const take = (offer: Offer) => {
+    // Offers are only drawn while something is being typed.
+    const out = tagged(body, tags, typing as { at: number; query: string }, offer);
+    setBody(out.text);
+    setTags(out.tags);
+    setCaretUnits(unitsAt(out.text, out.caret));
+  };
+  const clear = () => { setBody(''); setTags([]); setCaretUnits(0); };
+
+  return { body, tags, offers, change, take, clear, select: setCaretUnits };
+}
+
+export default function CommentComposer({ avatarUrl, replyTo, about, onCancelReply, onSend, onGuest, inputRef, autoFocus, bottomInset = 0, taggable }: {
   /** The reader's own face. */
   avatarUrl?: string | null;
   /** Whom the next words answer, or nobody. */
@@ -76,7 +131,7 @@ export default function CommentComposer({ avatarUrl, replyTo, about, onCancelRep
   onCancelReply?: () => void;
   /** Send the words. Resolves when the server took them; rejects with
    *  what it said when it did not. */
-  onSend: (body: string) => Promise<void>;
+  onSend: (body: string, mentions: Mention[]) => Promise<void>;
   /** For nobody signed in: what a press on the bar does. When given, the
    *  bar is a press and there is no field. */
   onGuest?: () => void;
@@ -86,9 +141,11 @@ export default function CommentComposer({ avatarUrl, replyTo, about, onCancelRep
   autoFocus?: boolean;
   /** The phone's own margin under the bar — the home indicator's. */
   bottomInset?: number;
+  /** Whom and what "@" offers here. Absent, "@" is a letter. */
+  taggable?: Taggable;
 }) {
   const { t } = useI18n();
-  const [body, setBody] = useState('');
+  const { body, tags, offers, change, take, clear, select } = useTagField(taggable);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,8 +171,10 @@ export default function CommentComposer({ avatarUrl, replyTo, about, onCancelRep
     setBusy(true);
     setError(null);
     try {
-      await onSend(body);
-      setBody('');
+      // Trimmed here, with the tags moved to match — see `outgoing`.
+      const out = outgoing(body, tags);
+      await onSend(out.body, out.mentions);
+      clear();
     } catch (e) {
       setError(refusalWords(refusalOf(e), t));
     }
@@ -147,6 +206,7 @@ export default function CommentComposer({ avatarUrl, replyTo, about, onCancelRep
       {about && !replyTo ? (
         <Text style={[s.replyingText, s.about]} numberOfLines={1} testID="composer-about">{about}</Text>
       ) : null}
+      <CommentTagOffers offers={offers} onTake={take} />
       <View style={s.pill}>
         <Avatar url={avatarUrl} size={FACE} />
         <TextInput
@@ -154,7 +214,8 @@ export default function CommentComposer({ avatarUrl, replyTo, about, onCancelRep
           autoFocus={autoFocus}
           style={s.field}
           value={body}
-          onChangeText={setBody}
+          onChangeText={change}
+          onSelectionChange={(e) => select(e.nativeEvent.selection.end)}
           placeholder={placeholder}
           placeholderTextColor={colors.textTertiary}
           multiline
