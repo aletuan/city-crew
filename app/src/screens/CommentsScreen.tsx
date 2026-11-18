@@ -75,9 +75,9 @@ import { useCommentMenu } from './comments/useCommentMenu';
 import { EmptyState, GradientCta, PressableScale, Screen } from '../components/ui';
 import { useTabBarAway } from '../components/tabBarDuck';
 import { agoLabel } from '../lib/ago';
-import { threadOf, type Branch, type Placed } from '../lib/comments';
+import { threadOf, type Branch, type Mention, type Placed } from '../lib/comments';
 import { commentsChanged } from '../lib/commentsChanged';
-import { postComment, useThreadQuery } from '../lib/data';
+import { postComment, useTaggableQuery, useThreadQuery } from '../lib/data';
 import { nearEnd } from '../lib/feed';
 import { useProfile, useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
@@ -137,6 +137,7 @@ export default function CommentsScreen({ navigation, route }: {
   const typing = useKeyboardUp();
   const now = Date.now();
   const onPerson = (handle: string) => navigation.navigate('Person', { handle });
+  const onPlace = (slug: string) => navigation.navigate('PlaceDetail', { slug });
 
   // Writing — see the header.
   const { session } = useSession();
@@ -154,8 +155,8 @@ export default function CommentsScreen({ navigation, route }: {
     setReplyTo(c);
     field.current?.focus();
   };
-  const send = async (body: string) => {
-    await postComment(subject, replyTo ? replyTo.id : null, body);
+  const send = async (body: string, mentions: Mention[]) => {
+    await postComment(subject, replyTo ? replyTo.id : null, body, mentions);
     setReplyTo(null);
     // The keyboard goes down once the words are sent (owner, on a phone,
     // 19 Nov 2026): it was left up, over the half of the page where the
@@ -168,6 +169,8 @@ export default function CommentsScreen({ navigation, route }: {
     field.current?.blur();
     commentsChanged();
   };
+  // Whom and what "@" offers in the field — asked once, for a reader.
+  const taggable = useTaggableQuery(subject, me);
   // Delete your own, report somebody else's — `useCommentMenu`.
   const { menuOf, node: menuSheet } = useCommentMenu(me);
   // A heart on each, drawn on the press — `useCommentHearts`.
@@ -178,9 +181,9 @@ export default function CommentsScreen({ navigation, route }: {
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(b.root)} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(b.root)} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(r)} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(r)} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
         ))}
         {more > 0 ? (
           <PressableScale
@@ -267,6 +270,7 @@ export default function CommentsScreen({ navigation, route }: {
           onSend={send}
           onGuest={me ? undefined : askIn}
           inputRef={field}
+          taggable={taggable.data}
           bottomInset={typing ? 0 : insets.bottom}
         />
       </KeyboardAvoidingView>

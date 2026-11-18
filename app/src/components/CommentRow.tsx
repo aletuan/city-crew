@@ -11,9 +11,11 @@
 //
 // A person's opens their page, by the handle they have today; the text
 // tagged stays as it was written. A tag with no handle behind it (an
-// account whose handle the read could not find) and a place's, until C5
-// gives it somewhere to go, are drawn in the accent and are not pressed:
-// `onPlace` is the caller's to hand in when there is a page to open.
+// account whose handle the read could not find) is drawn in the accent
+// and is not pressed. A place's opens the place, by the slug its tag
+// carries (20261119050000); one with no slug — a thread read from a
+// server older than that — is drawn the same and not pressed, and so is
+// any place's where the caller handed in no `onPlace`.
 //
 // The whole row is one line to VoiceOver — who, when, what — as a
 // message is; a tag inside it is a link within that text.
@@ -52,7 +54,7 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   when: string;
   onPerson: (handle: string) => void;
   /** Absent until a place tag has somewhere to open. */
-  onPlace?: (placeId: string) => void;
+  onPlace?: (slug: string) => void;
   /** Answer this comment. Absent on a page that is read-only. */
   onReply?: () => void;
   /** Its hearts as the page has them — the server's, with the reader's
@@ -100,7 +102,7 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
             if (seg.kind === 'text') return <Text key={i}>{seg.text}</Text>;
             const open = seg.kind === 'person'
               ? (seg.handle ? () => onPerson(normalizeHandle(seg.handle as string)) : undefined)
-              : (onPlace ? () => onPlace(seg.id) : undefined);
+              : (onPlace && seg.slug ? () => onPlace(seg.slug as string) : undefined);
             return (
               <Text
                 key={i}

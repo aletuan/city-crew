@@ -124,20 +124,25 @@ describe('threadOf', () => {
 describe('mentionsOf', () => {
   it('reads a person and a place, and a handle only where there is one', () => {
     expect(mentionsOf([
-      { at: 0, len: 6, person: 'u1', handle: 'trang', place: null },
-      { at: 8, len: 4, person: null, handle: null, place: 'p1' },
+      { at: 0, len: 6, person: 'u1', handle: 'trang', place: null, slug: null },
+      { at: 8, len: 4, person: null, handle: null, place: 'p1', slug: 'cong-ca-phe' },
       { at: 14, len: 2, person: 'u2' },
+      // A place from a server that sends no slug yet, and one that sends nonsense.
+      { at: 18, len: 2, place: 'p2' },
+      { at: 22, len: 2, place: 'p3', slug: 7 },
     ])).toEqual([
-      { at: 0, len: 6, person: 'u1', handle: 'trang', place: null },
-      { at: 8, len: 4, person: null, handle: null, place: 'p1' },
-      { at: 14, len: 2, person: 'u2', handle: null, place: null },
+      { at: 0, len: 6, person: 'u1', handle: 'trang', place: null, slug: null },
+      { at: 8, len: 4, person: null, handle: null, place: 'p1', slug: 'cong-ca-phe' },
+      { at: 14, len: 2, person: 'u2', handle: null, place: null, slug: null },
+      { at: 18, len: 2, person: null, handle: null, place: 'p2', slug: null },
+      { at: 22, len: 2, person: null, handle: null, place: 'p3', slug: null },
     ]);
   });
 
   it('drops what is not a tag: no offsets, no target, two targets, not an object', () => {
     expect(mentionsOf([
       null, 'x', { at: '0', len: 1, person: 'u' }, { at: 0, len: '1', person: 'u' },
-      { at: 0, len: 1 }, { at: 0, len: 1, person: 'u', place: 'p' },
+      { at: 0, len: 1 }, { at: 0, len: 1, person: 'u', place: 'p', slug: null },
     ])).toEqual([]);
   });
 
@@ -149,8 +154,8 @@ describe('mentionsOf', () => {
 });
 
 describe('segmentsOf', () => {
-  const person = (at: number, len: number): Mention => ({ at, len, person: 'u1', handle: 'trang', place: null });
-  const place = (at: number, len: number): Mention => ({ at, len, person: null, handle: null, place: 'p1' });
+  const person = (at: number, len: number): Mention => ({ at, len, person: 'u1', handle: 'trang', place: null, slug: null });
+  const place = (at: number, len: number): Mention => ({ at, len, person: null, handle: null, place: 'p1', slug: 'cong-ca-phe' });
 
   it('is the whole body when there are no tags, and nothing for an empty one', () => {
     expect(segmentsOf('just words', [])).toEqual([{ kind: 'text', text: 'just words' }]);
@@ -162,7 +167,7 @@ describe('segmentsOf', () => {
       { kind: 'text', text: 'Hi ' },
       { kind: 'person', text: '@trang', id: 'u1', handle: 'trang' },
       { kind: 'text', text: ' at ' },
-      { kind: 'place', text: 'Cafe', id: 'p1' },
+      { kind: 'place', text: 'Cafe', id: 'p1', slug: 'cong-ca-phe' },
       { kind: 'text', text: '!' },
     ]);
   });
@@ -192,7 +197,7 @@ describe('segmentsOf', () => {
   });
 
   it('draws a tag that points at nothing as the words it covers', () => {
-    expect(segmentsOf('abc', [{ at: 1, len: 1, person: null, handle: null, place: null }])).toEqual([
+    expect(segmentsOf('abc', [{ at: 1, len: 1, person: null, handle: null, place: null, slug: null }])).toEqual([
       { kind: 'text', text: 'a' }, { kind: 'text', text: 'b' }, { kind: 'text', text: 'c' },
     ]);
   });

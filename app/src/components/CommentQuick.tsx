@@ -35,10 +35,10 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from './CommentComposer';
 import { useKeyboardUp } from './keyboard';
-import { useProfile } from '../lib/auth';
-import type { Subject } from '../lib/comments';
+import { useProfile, useSession } from '../lib/auth';
+import type { Mention, Subject } from '../lib/comments';
 import { commentsChanged } from '../lib/commentsChanged';
-import { postComment } from '../lib/data';
+import { postComment, useTaggableQuery } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 
 /**
@@ -64,12 +64,16 @@ type Target = { subject: Subject; about?: string };
 export default function CommentQuick({ target, onClose }: { target: Target | null; onClose: () => void }) {
   const { t } = useI18n();
   const { profile } = useProfile();
+  const { session } = useSession();
   const insets = useSafeAreaInsets();
   const typing = useKeyboardUp();
 
-  const send = async (body: string) => {
+  // Whom and what "@" offers: asked when a target is set, not before.
+  const taggable = useTaggableQuery(target ? target.subject : null, session?.user?.id);
+
+  const send = async (body: string, mentions: Mention[]) => {
     // Never without a target: the field is not mounted without one.
-    await postComment((target as Target).subject, null, body);
+    await postComment((target as Target).subject, null, body, mentions);
     commentsChanged();
     onClose();
   };
@@ -97,6 +101,7 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
               about={target.about}
               onSend={send}
               autoFocus
+              taggable={taggable.data}
               bottomInset={typing ? 0 : insets.bottom}
             />
           </View>

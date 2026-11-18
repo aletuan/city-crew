@@ -1,5 +1,5 @@
-// Comments, on the wire: the four functions of 20261118050000_comments
-// and nothing else. No client reads or writes the two tables — row level
+// Comments, on the wire: the functions of 20261118050000_comments and
+// the migrations after it, and nothing else. No client reads or writes the two tables — row level
 // security is on and there is not one policy — so there is no query
 // here, only calls.
 //
@@ -16,6 +16,7 @@
 // between them is here, and no screen changes.
 
 import { supabase } from '../supabase';
+import { taggableOf, type Taggable } from '../commentTags';
 import {
   latestOf, mentionsOf,
   type CommentRow, type Mention, type Preview, type Subject,
@@ -140,4 +141,16 @@ export async function deleteComment(id: string): Promise<void> {
 export async function likeComment(id: string, on: boolean): Promise<void> {
   const { error } = await supabase.rpc('like_comment', { p_id: id, p_on: on });
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Whom and what the reader may tag in a comment on this subject: the
+ * people `post_comment` would accept and the list's places. Nobody and
+ * nowhere for a guest, or on a subject no comment could be written on —
+ * the server answers empty there, not with a refusal.
+ */
+export async function fetchTaggable(subject: Subject): Promise<Taggable> {
+  const { data, error } = await supabase.rpc('comment_taggable', { p_collection: collectionOf(subject) });
+  if (error) throw new Error(error.message);
+  return taggableOf(data);
 }
