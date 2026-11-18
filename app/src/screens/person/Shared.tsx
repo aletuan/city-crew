@@ -1,5 +1,4 @@
-// What a person has shared, on their page: what they did, newest first —
-// and, a tap away, every collection they made.
+// What a person has shared, on their page: what they did, newest first.
 //
 // ── activity, where the grid was (owner, 17 Nov 2026) ──
 //
@@ -16,14 +15,32 @@
 // needs no new table — a collection's `created_at` and its likes were
 // already here — and that is why it is the first step.
 //
-// ── the grid is not gone ──
+// ── the grid, kept for two days and then gone (owner, 19 Nov 2026) ──
 //
-// A feed is for reading and a grid is for finding. One curator has 24
-// public collections; at a card each that is some 8,000pt of scrolling
-// to reach the oldest, where the grid shows six to a screen. So the
-// section's heading carries a count on its right — "24 collections" —
-// and pressing it turns the section into the grid, with "Activity" there
-// to turn it back. The grid is the one that was here, tiles and all.
+// It was kept beside the feed at first, on this argument: a feed is for
+// reading and a grid is for finding. One curator has 24 public
+// collections; at a card each that is some 8,000pt of scrolling to reach
+// the oldest, where the grid showed six to a screen. So the heading
+// carried a count on its right — "24 collections" — and pressing it
+// turned the section into the grid, with "Activity" there to turn it
+// back.
+//
+// It went in two steps the same morning. First on your own page, where
+// the count gave its place to "Profile ›" (`onProfile` below): the grid
+// of your own lists is the Collections tab's "Yours" over again. Then on
+// everybody else's, so the two pages are one page: a section that turned
+// into something else for a visitor and not for its owner was two
+// designs, and the count with nothing to open would have been a figure
+// the head had already given up (16 Nov 2026).
+//
+// What that costs is the argument above, and it still stands: somebody
+// else's oldest list is at the end of the feed and nowhere nearer. The
+// feed adds five as it is scrolled, so it is reachable; it is not quick.
+// If that is felt, the answer to weigh first is a search of a person's
+// lists, not the grid back.
+//
+// The tile went with it (`ListTile`, a cover 108pt tall over a title, a
+// mark's glyph and "8 places · 2 likes"). It is in this file's history.
 //
 // ── five at a time, added before the reader reaches them ──
 //
@@ -54,12 +71,9 @@
 //
 // The page holds what this reader may open (`person.listsOn`): every
 // list of your own on your own page, and on a friend's the lists they
-// shared with you beside their public ones. A card or a tile that is not
-// says who sees it (`marks`): the globe, a padlock, two heads and how
+// shared with you beside their public ones. A card says who sees it (`marks`): the globe, a padlock, two heads and how
 // many, or two heads and "Shared with you" — every card, a public one
-// too since the next morning (`person.seenOn`). The count in the heading is of
-// what is drawn, so it is all of yours on your page and what you may see
-// on another's. A list shared with friends has its heart, for them and
+// too since the next morning (`person.seenOn`). A list shared with friends has its heart, for them and
 // for its owner (`shares.likeable`); a private one shows the likes it
 // kept as a figure, as on its own page.
 //
@@ -91,8 +105,6 @@ import { useCardComments } from './useCardComments';
 
 /** How many cards the feed draws at first, and adds at each "Show more". */
 export const PAGE = 5;
-/** A tile's photograph: the height the grid has always had. */
-const TILE_PHOTO_H = 108;
 
 /**
  * The page's scroll, as a count of the times the reader has come near
@@ -141,7 +153,35 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
   return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, reach = 0 }: {
+/**
+ * The way on the heading's right: a word, a chevron, the accent's ink.
+ * The shape the turn to the grid had, which stood here until 19 Nov
+ * 2026; the way to your profile wears it now, on your own page alone.
+ */
+function HeadLink({ word, says, onPress, testID }: {
+  word: string;
+  /** What VoiceOver says: where it goes, which the word alone is not. */
+  says: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      haptic="selection"
+      contentStyle={s.turn}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      accessibilityRole="button"
+      accessibilityLabel={says}
+      testID={testID}
+    >
+      <Text style={s.turnText}>{word}</Text>
+      <Glyph name="chevron-forward" size={ICON.meta} color={colors.accent} />
+    </PressableScale>
+  );
+}
+
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, onProfile, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -153,29 +193,41 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   onOpen: (c: Collection) => void;
   /** Opens a collection's thread of comments — `useCardComments`. */
   onComments?: (c: Collection) => void;
+  /**
+   * On your own page: opens the form your profile is edited in, from
+   * the heading's right (owner, 19 Nov 2026). Nobody else's page has
+   * anything there.
+   *
+   * It took the place of the count that turned the section into a grid
+   * — the head of this file has what became of that. The page had no
+   * way from here to the one thing only its owner can do with it.
+   *
+   * It stands with no lists to show, too: it is not a way to them.
+   *
+   * "Profile", not "Edit profile": the row has room for one word beside
+   * the heading at the largest type, and the chevron already says
+   * "open". VoiceOver is told the whole of it.
+   */
+  onProfile?: () => void;
   /** How many times the reader has come near the page's end (`useReach`). */
   reach?: number;
 }) {
   const { t, lang } = useI18n();
   const { likes, myLikes, toggleLike } = useLikes();
   const { askToSignIn } = useSaveActions();
-  const [all, setAll] = useState(false);
   const [shown, setShown] = useState(PAGE);
 
-  // A new reach, and the feed showing: five more, while there are more.
-  // Near the end of the grid is not near the end of the feed.
+  // A new reach: five more, while there are more.
   const counted = useRef(reach);
   useEffect(() => {
     if (reach === counted.current) return;
     counted.current = reach;
-    if (!all) setShown((n) => (n < lists.length ? n + PAGE : n));
-  }, [reach, all, lists.length]);
+    setShown((n) => (n < lists.length ? n + PAGE : n));
+  }, [reach, lists.length]);
 
   // The covers of the cards that would be added next, on their way into
   // memory before they are asked for. A string, so the effect runs when
   // the set changes and not on every render that builds a new array.
-  // Turning to the grid changes neither `shown` nor this, so nothing is
-  // fetched again for it.
   const ahead = lists.slice(shown, shown + PAGE).map(coverFor).filter(Boolean).join(' ');
   useEffect(() => {
     if (ahead) Image.prefetch(ahead.split(' '), 'memory-disk').catch(() => {});
@@ -184,12 +236,6 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   const placesWord = (n: number) => (n === 1
     ? t('1 place', '1 địa điểm', '1か所', '1 个地点', '1 個地點')
     : t(`${n} places`, `${n} địa điểm`, `${n}か所`, `${n} 个地点`, `${n} 個地點`));
-  const likesWord = (n: number) => (n === 1
-    ? t('1 like', '1 lượt thích', 'いいね1件', '1 个赞', '1 個讚')
-    : t(`${n} likes`, `${n} lượt thích`, `いいね${n}件`, `${n} 个赞`, `${n} 個讚`));
-  const listsWord = (n: number) => (n === 1
-    ? t('1 collection', '1 bộ sưu tập', 'コレクション1件', '1 个合集', '1 個合集')
-    : t(`${n} collections`, `${n} bộ sưu tập`, `コレクション${n}件`, `${n} 个合集`, `${n} 個合集`));
 
   const heart = (c: Collection) => {
     if (!me) { askToSignIn('like'); return; }
@@ -207,26 +253,15 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   return (
     <>
       <View style={s.heading}>
-        <Text style={s.label}>
-          {all
-            ? t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')
-            : t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}
-        </Text>
-        {none ? null : (
-          <PressableScale
-            onPress={() => setAll((v) => !v)}
-            haptic="selection"
-            contentStyle={s.turn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityRole="button"
-            testID="person-turn"
-          >
-            <Text style={s.turnText}>
-              {all ? t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態') : listsWord(lists.length)}
-            </Text>
-            <Glyph name="chevron-forward" size={ICON.meta} color={colors.accent} />
-          </PressableScale>
-        )}
+        <Text style={s.label}>{t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}</Text>
+        {onProfile ? (
+          <HeadLink
+            word={t('Profile', 'Hồ sơ', 'プロフィール', '个人资料', '個人資料')}
+            says={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}
+            onPress={onProfile}
+            testID="person-profile"
+          />
+        ) : null}
       </View>
       {none ? (
         <Card style={s.none} testID="person-no-lists">
@@ -242,18 +277,6 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
             )}
           </Text>
         </Card>
-      ) : all ? (
-        <Grid
-          lists={lists}
-          coverFor={coverFor}
-          onOpen={onOpen}
-          metaOf={(c) => {
-            const liked = likes[c.slug] ?? 0;
-            return [placesWord(c.collection_places.length), liked > 0 ? likesWord(liked) : ''].filter(Boolean).join(' · ');
-          }}
-          titleOf={(c) => localized(c, 'title', lang)}
-          markOf={(c) => marks(seenOf(c), t)}
-        />
       ) : (
         <View style={s.feed} testID="person-activity">
           {lists.slice(0, shown).map((c) => (
@@ -293,71 +316,10 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   );
 }
 
-/** Every collection they made, two to a row — the grid the page ended
- *  in until 17 Nov 2026. Pairs rather than a wrapping row: a wrapping
- *  row needs a width, and the width is the screen's. */
-function Grid({ lists, coverFor, onOpen, metaOf, titleOf, markOf }: {
-  lists: Collection[];
-  coverFor: (c: Collection) => string | undefined;
-  onOpen: (c: Collection) => void;
-  metaOf: (c: Collection) => string;
-  titleOf: (c: Collection) => string;
-  markOf: (c: Collection) => ActivityMark;
-}) {
-  const rows: Collection[][] = [];
-  for (let i = 0; i < lists.length; i += 2) rows.push(lists.slice(i, i + 2));
-  return (
-    <View style={s.grid} testID="person-grid">
-      {rows.map((pair) => (
-        <View key={pair[0].slug} style={s.gridRow}>
-          {pair.map((c) => (
-            <ListTile key={c.slug} title={titleOf(c)} uri={coverFor(c)} meta={metaOf(c)} mark={markOf(c)} onPress={() => onOpen(c)} />
-          ))}
-          {pair.length === 1 ? <View style={s.tileSlot} /> : null}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-/** One of their lists: its photograph, its title, and how much is on
- *  it. A tile with no photograph wears the tint, as the cover does.
- *  It leads its count with the mark's glyph alone —
- *  half a page wide, the tile has no room for "Shared with you" beside
- *  "12 places · 3 likes"; VoiceOver is told the words. */
-function ListTile({ title, uri, meta, mark, onPress }: {
-  title: string; uri: string | undefined; meta: string; mark: ActivityMark; onPress: () => void;
-}) {
-  return (
-    <PressableScale
-      onPress={onPress}
-      haptic="selection"
-      style={s.tileSlot}
-      accessibilityRole="button"
-      accessibilityLabel={[title, meta, mark.label].join(', ')}
-      testID="person-list"
-    >
-      <Card>
-        {uri
-          ? <Image source={{ uri }} style={s.tilePhoto} contentFit="cover" transition={160} />
-          : <View style={[s.tilePhoto, s.tint]} />}
-        <View style={s.tileWords}>
-          <Text style={s.tileTitle} numberOfLines={2}>{title}</Text>
-          <View style={s.tileUnder}>
-            <Glyph name={mark.icon} size={ICON.meta} color={colors.textTertiary} />
-            <Text style={s.tileMeta} numberOfLines={1}>{meta}</Text>
-          </View>
-        </View>
-      </Card>
-    </PressableScale>
-  );
-}
-
 const s = StyleSheet.create({
-  // The accent's tint: a tile with no photograph to wear.
-  tint: { backgroundColor: colors.accentSoft },
   // The section's heading: its label in the small capitals the place
-  // page heads a fact with, and the way to the other view on its right.
+  // page heads a fact with, and on your own page the way to your profile
+  // on its right.
   heading: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: 22, marginBottom: 10,
@@ -371,14 +333,6 @@ const s = StyleSheet.create({
   feed: { gap: space.cardGap },
   more: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   moreText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  grid: { gap: space.cardGap },
-  gridRow: { flexDirection: 'row', gap: space.cardGap },
-  tileSlot: { flex: 1 },
-  tilePhoto: { width: '100%', height: TILE_PHOTO_H },
-  tileWords: { padding: 12, gap: 6 },
-  tileTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: 20 },
-  tileUnder: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  tileMeta: { color: colors.textTertiary, fontSize: 13, flexShrink: 1 },
   none: { padding: space.cardPadding, gap: 6 },
   noneTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   noneBody: { color: colors.textSecondary, ...type.meta },

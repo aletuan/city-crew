@@ -254,7 +254,7 @@ export default function PersonScreen({ navigation, route }: {
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
 
       {/* What they have shared: what they did, newest first, and every
-          collection they made a tap away — `person/Shared`. */}
+          — `person/Shared`. */}
       <Shared
         me={me}
         person={person}
@@ -263,6 +263,7 @@ export default function PersonScreen({ navigation, route }: {
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
         onComments={(c) => navigation.navigate('Comments', { subject: { kind: 'collection', id: c.id as string } })}
+        onProfile={me && person.id === me ? () => navigation.navigate('EditProfile') : undefined}
         reach={end.reach}
       />
     </>
