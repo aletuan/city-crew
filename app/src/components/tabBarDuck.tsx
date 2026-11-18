@@ -34,6 +34,15 @@ type Duck = {
    *  Stable identity: effects may depend on this without re-firing every
    *  time the bar moves. */
   show: () => void;
+  /**
+   * Keep the bar away until the returned release is called — for a
+   * screen that puts something of its own at the foot of the page, where
+   * the bar floats: the comments thread's field (18 Nov 2026), as
+   * Threads hides its bar on a post's page. While anything holds, a
+   * scroll does not bring the bar back and neither does `show`; the last
+   * release does. Stable identity.
+   */
+  hold: () => () => void;
 };
 
 const Ctx = createContext<Duck | null>(null);
@@ -68,19 +77,37 @@ export function TabBarDuckProvider({ children }: { children: React.ReactNode }) 
     });
   }, [anim]);
 
+  // How many screens are holding the bar away — see `Duck.hold`. A
+  // count, not a flag: a held screen pushed over another held screen
+  // releases once, and the bar must stay away for the one beneath.
+  const holds = useRef(0);
+
   const report = useCallback((y: number, maxY?: number) => {
     const decision = tracker.report(y, maxY);
-    if (decision) setTo(decision === 'hide');
+    if (decision && holds.current === 0) setTo(decision === 'hide');
   }, [tracker, setTo]);
 
   const show = useCallback(() => {
     tracker.reset();
-    setTo(false);
+    if (holds.current === 0) setTo(false);
+  }, [tracker, setTo]);
+
+  const hold = useCallback(() => {
+    holds.current += 1;
+    setTo(true);
+    let released = false;
+    return () => {
+      // Once: a blur and an unmount can both come for the same hold.
+      if (released) return;
+      released = true;
+      holds.current -= 1;
+      if (holds.current === 0) { tracker.reset(); setTo(false); }
+    };
   }, [tracker, setTo]);
 
   const value = useMemo(
-    () => ({ anim, ducked, report, show }),
-    [anim, ducked, report, show],
+    () => ({ anim, ducked, report, show, hold }),
+    [anim, ducked, report, show, hold],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -124,4 +151,25 @@ export function useDuckOnScroll():
       : undefined),
     [report],
   );
+}
+
+/**
+ * Hold the bar away while this screen is the one in front.
+ *
+ * From mount to unmount, less the time something is pushed over it: a
+ * person's page opened from a comment has the bar, and coming back takes
+ * it away again. Outside the provider (a screen rendered alone, as in
+ * its tests) there is no bar to hold and this does nothing.
+ */
+export function useTabBarAway(navigation: {
+  addListener: (event: 'focus' | 'blur', cb: () => void) => () => void;
+}): void {
+  const hold = useContext(Ctx)?.hold;
+  useEffect(() => {
+    if (!hold) return undefined;
+    let release: (() => void) | null = hold();
+    const offFocus = navigation.addListener('focus', () => { release ??= hold(); });
+    const offBlur = navigation.addListener('blur', () => { release?.(); release = null; });
+    return () => { offFocus(); offBlur(); release?.(); };
+  }, [hold, navigation]);
 }

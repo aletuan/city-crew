@@ -120,17 +120,11 @@ export type RootStackParamList = {
   /** A subject's thread of comments (C3 of `docs/comments-plan.md`) — a
    *  screen of its own, not a sheet: a nested thread and a keyboard want
    *  the height, and Activity's "replied to you" needs somewhere to land.
+   *  A comment is written in the field at its foot.
    *  By the subject, which is all the screen knows of what is discussed;
    *  registered in every stack that has `CollectionDetail`, where its
    *  door is. */
   Comments: { subject: Subject };
-  /** Writing a comment, or an answer to one (C4): a form of its own, as
-   *  Threads opens a reply — the comment answered stands above the field
-   *  so the keyboard cannot hide it, and the tab bar is not in the way of
-   *  a field pinned to the foot of a page. `replyTo` carries what the form
-   *  quotes; the thread it came from hears of the post and asks again
-   *  (`lib/commentsChanged`). Wherever `Comments` is. */
-  CommentForm: { subject: Subject; replyTo?: { id: string; who: string; body: string } };
   /** One of your lists' figures — opens, likes, copies, trips, all time
    *  and the last seven days — from its Activity page's "Statistics ›".
    *  By slug, for the reason `CollectionActivity` is. */

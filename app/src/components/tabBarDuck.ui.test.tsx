@@ -14,7 +14,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 
-import { TabBarDuckProvider, useDuckOnScroll, useTabBarDuck, useTabBarDucked } from './tabBarDuck';
+import { TabBarDuckProvider, useDuckOnScroll, useTabBarAway, useTabBarDuck, useTabBarDucked } from './tabBarDuck';
 
 /** A scroll event as a ScrollView would report it. */
 const scroll = (y: number, max?: number) => ({
@@ -176,5 +176,84 @@ describe('useTabBarDucked', () => {
     expect(screen.getByText('here')).toBeTruthy();
     feed();
     expect(screen.getByText('away')).toBeTruthy();
+  });
+});
+
+// A screen with something of its own at the foot of the page keeps the
+// bar away for as long as it is in front (18 Nov 2026) — the comments
+// thread, whose field sits where the bar floats.
+describe('a screen that holds the bar away', () => {
+  type Heard = { focus: (() => void)[]; blur: (() => void)[] };
+  const nav = (heard: Heard) => ({
+    addListener: (event: 'focus' | 'blur', cb: () => void) => {
+      heard[event].push(cb);
+      return () => { heard[event] = heard[event].filter((f) => f !== cb); };
+    },
+  });
+  function Holder({ navigation }: { navigation: ReturnType<typeof nav> }) {
+    useTabBarAway(navigation);
+    return null;
+  }
+  const bar = () => screen.getByText(/^(ducked|shown)$/).textContent;
+  const mountWith = (held: boolean, heard: Heard, events: ReturnType<typeof scroll>[] = []) => render(
+    <TabBarDuckProvider>
+      <Screen events={events} />
+      {held ? <Holder navigation={nav(heard)} /> : null}
+    </TabBarDuckProvider>,
+  );
+
+  it('takes the bar away on arriving and gives it back on leaving', () => {
+    const heard: Heard = { focus: [], blur: [] };
+    const { rerender } = mountWith(true, heard);
+    expect(bar()).toBe('ducked');
+    rerender(<TabBarDuckProvider><Screen events={[]} /></TabBarDuckProvider>);
+    expect(bar()).toBe('shown');
+    // And stops listening to the navigator it has left.
+    expect(heard).toEqual({ focus: [], blur: [] });
+  });
+
+  it('is not talked out of it by a pull up, nor by anything asking for the bar', () => {
+    mountWith(true, { focus: [], blur: [] }, [scroll(400, 2000), scroll(200, 2000)]);
+    feed();
+    expect(bar()).toBe('ducked');
+    fireEvent.click(screen.getByRole('button', { name: 'show' }));
+    expect(bar()).toBe('ducked');
+  });
+
+  it('gives the bar to a screen pushed over it, and takes it back on return', () => {
+    const heard: Heard = { focus: [], blur: [] };
+    mountWith(true, heard);
+    act(() => heard.blur.forEach((f) => f()));
+    expect(bar()).toBe('shown');
+    // A second blur for the same absence releases nothing twice.
+    act(() => heard.blur.forEach((f) => f()));
+    act(() => heard.focus.forEach((f) => f()));
+    expect(bar()).toBe('ducked');
+    // Nor does a second focus hold twice: one blur is enough to let go.
+    act(() => heard.focus.forEach((f) => f()));
+    act(() => heard.blur.forEach((f) => f()));
+    expect(bar()).toBe('shown');
+  });
+
+  it('keeps the bar away while any one of two screens still holds it', () => {
+    const a: Heard = { focus: [], blur: [] };
+    const b: Heard = { focus: [], blur: [] };
+    render(
+      <TabBarDuckProvider>
+        <Screen events={[]} />
+        <Holder navigation={nav(a)} />
+        <Holder navigation={nav(b)} />
+      </TabBarDuckProvider>,
+    );
+    act(() => a.blur.forEach((f) => f()));
+    expect(bar()).toBe('ducked');
+    act(() => b.blur.forEach((f) => f()));
+    expect(bar()).toBe('shown');
+  });
+
+  it('does nothing where there is no bar to hold', () => {
+    const heard: Heard = { focus: [], blur: [] };
+    render(<Holder navigation={nav(heard)} />);
+    expect(heard).toEqual({ focus: [], blur: [] });
   });
 });
