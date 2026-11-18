@@ -83,7 +83,6 @@ function BioField({ value, onChangeText, route }: {
     <View>
       <FieldRow
         grouped
-        icon="chatbubble-ellipses-outline"
         label={t('Bio', 'Giới thiệu', '自己紹介', '个人简介', '個人簡介')}
         placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家', '咖啡爱好者 · 周末探索家', '咖啡愛好者 · 週末探索家')}
         value={value}
@@ -339,7 +338,6 @@ export default function EditProfileScreen({ navigation, route }: { navigation: N
       <Card style={s.fields}>
       <FieldRow
         grouped
-        icon="person-outline"
         label={t('Display name', 'Tên hiển thị', '表示名', '显示名称', '顯示名稱')}
         placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力', '输入你的姓名', '輸入你的姓名')}
         value={name}
@@ -350,7 +348,6 @@ export default function EditProfileScreen({ navigation, route }: { navigation: N
       <View style={s.fieldLine} />
       <FieldRow
         grouped
-        icon="at-outline"
         label={t('Username', 'Tên người dùng', 'ユーザー名', '用户名', '使用者名稱')}
         placeholder="yourname"
         value={handle}
@@ -363,7 +360,6 @@ export default function EditProfileScreen({ navigation, route }: { navigation: N
       <View style={s.fieldLine} />
       <FieldRow
         grouped
-        icon="location-outline"
         // Same word the profile shows it under. The field and the row that
         // displays it drifting apart is how a reader ends up unsure whether
         // they are two different things.

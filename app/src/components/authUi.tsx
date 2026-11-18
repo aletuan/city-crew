@@ -194,6 +194,54 @@ export function Lede({ children }: { children: string }) {
 }
 
 /**
+ * The glyph is asked for only where it is drawn. A grouped row draws none
+ * (see `grouped`), and until 19 Nov 2026 it still took one, because the
+ * prop was required on every row: six names were passed and never shown,
+ * and an audit of the app's icons counted two of them —
+ * `chatbubble-ellipses-outline` on the bio, `text-outline` on a
+ * collection's description — as glyphs a reader sees. Typed as a union,
+ * a boxed row cannot leave its glyph out and a grouped one cannot pass
+ * one.
+ */
+type FieldGlyph =
+  | {
+    grouped?: false;
+    flush?: never;
+    /** Its glyph, before the label, in the accent (the error's colour
+     *  when the field has one). */
+    icon: keyof typeof Ionicons.glyphMap;
+  }
+  | {
+    /**
+     * Drawn as one row of a card rather than as a field of its own: no
+     * border, no fill, no glyph. For a stack of fields that belong to one
+     * subject — a profile — where four separate boxes each with an accent
+     * icon make four objects out of what the reader thinks of as one, and
+     * spend the accent four times over on the way. The caller supplies the
+     * card and the hairlines between.
+     *
+     * An auth screen asks for one thing at a time and keeps the boxes: each
+     * field there really is its own question, and the glyph is how it is
+     * found mid-scroll.
+     */
+    grouped: true;
+    /**
+     * A grouped row laid straight on the page, with no card round it
+     * (the collection form, owner, 16 Nov 2026): the same small label over
+     * the value, and no padding of its own. Its words start on the page's
+     * own margin, under the screen's title; and what stands between it and
+     * the rule above or below is the gap the screen already keeps between
+     * one block and the next (`AuthScreen`, `space.cardGap`), so a field is
+     * as far from its rule as any block here is from its neighbour. The
+     * caller rules the hairlines, as it does for a card's rows.
+     *
+     * Only with `grouped`: a boxed field has a border to pad away from.
+     */
+    flush?: boolean;
+    icon?: never;
+  };
+
+/**
  * A labelled input, and the place its own error is allowed to appear.
  *
  * `error` belongs here rather than at the foot of the form because that
@@ -202,7 +250,6 @@ export function Lede({ children }: { children: string }) {
  * this was written for named a value three fields further up.
  */
 export function FieldRow({ icon, label, secure, strength, error, invalid, grouped, flush, ...input }: {
-  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   secure?: boolean;
   /** Score the value as a password being invented. Sign-up and reset
@@ -211,33 +258,7 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
   error?: string | null;
   /** Mark a field whose error is explained in the form banner, without adding a row. */
   invalid?: boolean;
-  /**
-   * Drawn as one row of a card rather than as a field of its own: no
-   * border, no fill, no glyph. For a stack of fields that belong to one
-   * subject — a profile — where four separate boxes each with an accent
-   * icon make four objects out of what the reader thinks of as one, and
-   * spend the accent four times over on the way. The caller supplies the
-   * card and the hairlines between.
-   *
-   * An auth screen asks for one thing at a time and keeps the boxes: each
-   * field there really is its own question, and the glyph is how it is
-   * found mid-scroll.
-   */
-  grouped?: boolean;
-  /**
-   * A grouped row laid straight on the page, with no card round it
-   * (the collection form, owner, 16 Nov 2026): the same small label over
-   * the value, and no padding of its own. Its words start on the page's
-   * own margin, under the screen's title; and what stands between it and
-   * the rule above or below is the gap the screen already keeps between
-   * one block and the next (`AuthScreen`, `space.cardGap`), so a field is
-   * as far from its rule as any block here is from its neighbour. The
-   * caller rules the hairlines, as it does for a card's rows.
-   *
-   * Only with `grouped`: a boxed field has a border to pad away from.
-   */
-  flush?: boolean;
-} & TextInputProps) {
+} & FieldGlyph & TextInputProps) {
   const { t } = useI18n();
   const [hidden, setHidden] = useState(true);
   return (
@@ -247,7 +268,7 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
             carry a message, which is why the sentence below exists — but
             two signals agreeing is what makes the field findable in a
             scroll. */}
-        {grouped ? null : <Glyph name={icon} size={ICON.nav} color={error ? colors.bad : colors.accent} />}
+        {icon ? <Glyph name={icon} size={ICON.nav} color={error ? colors.bad : colors.accent} /> : null}
         <View style={[s.fieldText, grouped && s.fieldTextGrouped]}>
           {/* Grouped, the label is the smaller half: there is no glyph to
               find the row by, so the label is what names it and the value
