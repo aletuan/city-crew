@@ -24,6 +24,8 @@ import {
   fetchRoleOf, type FriendProfile, type PersonRole, type PlaceInCommon, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
+import { fetchThread } from './comments';
+import type { CommentRow, Subject } from '../comments';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
 import type { StatsRow } from '../listStats';
 import type { ShareRow } from '../shares';
@@ -511,3 +513,27 @@ const NO_USE: ListUseRow[] = [];
 
 export const useListUseQuery = (): Fetch<ListUseRow[]> =>
   useSharedFetch(cacheKey('listuse', 'all'), fetchListUse, NO_USE);
+
+// ── a subject's thread ──
+//
+// What the Comments screen draws (C3 of `docs/comments-plan.md`). Asked
+// by the subject's kind and id, not by the object, so a route handing a
+// fresh `{ kind, id }` on every render does not ask again.
+//
+// Plain `useFetch`, not kept between opens as a list's activity is: a
+// thread is the one page where a stale answer is worse than a spinner —
+// a comment deleted, or by somebody blocked a minute ago, would be drawn
+// again from the cache before the server could take it back. Nobody
+// signed in asks too: a public collection's thread is as public as it.
+const NO_COMMENTS: CommentRow[] = [];
+
+/** One subject's whole thread, flat; no subject asks nothing. */
+export const useThreadQuery = (subject: Subject | null): Fetch<CommentRow[]> => {
+  const kind = subject?.kind;
+  const id = subject?.id;
+  const fetcher = useCallback(
+    () => (kind && id ? fetchThread({ kind, id }) : Promise.resolve(NO_COMMENTS)),
+    [kind, id],
+  );
+  return useFetch(fetcher, NO_COMMENTS);
+};

@@ -46,6 +46,7 @@ import { goTo, type Nav, type RootRoute } from '../nav';
 import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
 import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
+import { CommentsDoor } from './collectionDetail/CommentsDoor';
 import { ACT_GLYPH, ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
 import { useReorderDraft } from './collectionDetail/useReorderDraft';
@@ -1120,7 +1121,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     : null;
   const activity = (
     <View style={s.activity} testID="collection-activity">
-      <View style={s.activityRow}>{heart ?? keptHeart}{shareButton}{activityLink}</View>
+      <View style={s.activityRow}>{heart ?? keptHeart}{shareButton}<CommentsDoor list={col} onPress={(id) => navigation.navigate('Comments', { subject: { kind: 'collection', id } })} />{activityLink}</View>
     </View>
   );
 

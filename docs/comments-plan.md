@@ -188,12 +188,22 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
   sau nó mọi thứ nói bên dưới, cũ trước, ở mức thụt thứ 2 (mức sâu nhất
   được vẽ); bình luận sâu hơn mức đó kèm tên người được trả lời.
 
-**C3. Đọc**
-- Màn `Comments`: cây 2 cấp, "Xem thêm N trả lời", dòng "đã xoá", tự nạp
-  khi cuộn (dùng lại `lib/feed`).
-- `ActivityCard`: số bình luận và 2 bình luận xem trước.
-- Trang chi tiết bộ sưu tập: lối vào luồng.
-- Khách chưa đăng nhập đọc được, muốn viết thì được mời đăng nhập.
+**C3. Đọc** — chia hai PR
+
+*C3a — xong:*
+- Màn `Comments` (tham số là `subject`): cây thụt 2 mức, dòng "đã xoá",
+  "Xem thêm N trả lời" sau 2 trả lời đầu của mỗi nhánh, 10 bình luận gốc
+  mỗi lứa và tự thêm khi cuộn gần cuối (dùng lại `lib/feed`), kéo để tải
+  lại, ba trạng thái (đang tải, trống, lỗi kèm Thử lại).
+- Trang chi tiết bộ sưu tập: nút bong bóng cạnh nút Chia sẻ, chỉ hiện khi
+  cờ bật và bộ đang công khai.
+- Khách chưa đăng nhập đọc được.
+- Luồng không lưu đệm giữa các lần mở: bình luận vừa bị xoá hoặc của
+  người vừa bị chặn không được vẽ lại từ bản cũ.
+
+*C3b — chưa làm:*
+- `ActivityCard`: số bình luận và 2 bình luận xem trước, nút mở luồng.
+- Số đếm trên nút ở trang chi tiết (cùng nguồn với thẻ).
 
 **C4. Viết**
 - Ô soạn: bình luận mới, trả lời (tự chèn "@tên" khi trả lời ở cấp 2),
@@ -201,6 +211,10 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Xoá của mình. Báo cáo một bình luận (dùng lại luồng báo cáo đã có).
 
 **C5. Tag**
+- Cần trước: tag địa điểm hiện chỉ mang `id`, mà trang địa điểm mở bằng
+  `slug`. Hoặc cho `comment_thread` trả thêm `slug` trong mỗi tag địa
+  điểm (một migration nhỏ), hoặc tra `id` trong danh sách địa điểm của
+  bộ. Từ C3a tag địa điểm đã được tô màu nhưng chưa bấm được.
 - Gõ "@" mở danh sách người tag được; nút địa điểm mở danh sách địa điểm
   của bộ.
 - Tag hiện thành liên kết; bấm mở Trang cá nhân hoặc trang địa điểm.
