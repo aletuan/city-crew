@@ -320,6 +320,17 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
 
           In the picker's order, not the order pressed (`tasteInOrder`).
 
+          ── three to a row, the glyph over the name (owner, 18 Nov
+          2026, an hour later) ──
+          He saw the two columns on his phone and sent a drawing of what
+          he wanted instead: thirds, centred, the glyph above its name —
+          the picker's own shape, the one weighed below and not taken.
+          What was said against it stands and he chose it knowing: the
+          card is taller, a fourth and fifth interest make a second row
+          with a gap beside it, and the first glyph leaves the About
+          rows' column. What it buys is the thing he had asked for all
+          along: the card reads as what was chosen on the picker.
+
           Weighed: the picker's own shape here, three columns with the
           glyph over the name. Twice the height, a second row of one or
           two with a hole beside it, and the first glyph off the About

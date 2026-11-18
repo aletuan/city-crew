@@ -552,53 +552,51 @@ describe('interests', () => {
     expect(screen.queryByText('Edit profile to add your interests.')).toBeNull();
   });
 
-  // On the facts card's column, its name by its glyph (owner, 3 Nov
-  // 2026): the first glyph centred where the envelope's is — the middle of
-  // a 44pt slot from the card's edge, so the row starts (44 − 19) / 2 in —
-  // each name 8pt after its glyph, the next interest 24 on. The glyphs at
-  // the About rows' size and in their ink. No pill, and not a control.
-  it('puts the first glyph on the About rows\u2019 column and each name by its glyph, as a fact', () => {
+  // Its glyph over its name, as a fact (owner, 18 Nov 2026): the glyph
+  // at the About rows' size and in their ink, the name 8pt under it. No
+  // pill, and not a control.
+  it('draws each interest as its glyph over its name, centred, as a fact', () => {
     state.categories = ['cafes', 'views'];
     draw();
     const item = screen.getByTestId('interest-cafes');
     expect(item.getAttribute('role')).toBeNull();
     expect(getComputedStyle(item).backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    const row = item.parentElement!;
     const envelope = document.querySelector('[data-icon="mail-outline"]')!;
-    const slot = parseFloat(getComputedStyle(envelope.parentElement!).width);
     const glyph = item.querySelector('[data-icon]')!;
-    const size = Number(glyph.getAttribute('data-size'));
-    expect(size).toBe(Number(envelope.getAttribute('data-size')));
-    // The first glyph's middle is the envelope's: half the slot in.
-    expect(parseFloat(getComputedStyle(row).paddingLeft) + size / 2).toBe(slot / 2);
-    expect(getComputedStyle(row).paddingLeft).toBe('12.5px');
+    expect(Number(glyph.getAttribute('data-size'))).toBe(Number(envelope.getAttribute('data-size')));
     expect(glyph.getAttribute('data-icon')).toBe(CATEGORIES.cafes.icon);
     // In the column's own ink, as the envelope is — neutral, as Search's
     // category glyphs are at rest.
     expect(glyph.getAttribute('data-color')).toBe(envelope.getAttribute('data-color'));
     expect(glyph.getAttribute('data-color')).not.toBe(CATEGORIES.cafes.color);
-    // The name by its glyph.
-    expect(getComputedStyle(item).columnGap || getComputedStyle(item).gap).toBe('8px');
+    // The glyph first and the name under it, both on the middle.
+    expect([...item.children].map((c) => (c.hasAttribute('data-icon') ? 'glyph' : c.textContent))).toEqual(['glyph', 'Cafés']);
+    const laid = getComputedStyle(item);
+    expect([laid.flexDirection, laid.alignItems, laid.rowGap || laid.gap]).toEqual(['column', 'center', '8px']);
+    expect(getComputedStyle(within(item).getByText('Cafés')).textAlign).toBe('center');
     expect(within(screen.getByTestId('interest-views')).getByText('Views')).toBeTruthy();
   });
 
-  // Two columns (owner, 18 Nov 2026): flowing, each interest stood where
-  // the one before it ended, and the second line's second name began
-  // nowhere near the first line's.
-  it('lays the interests out in two columns of half the row, with no rule between them', () => {
+  // Thirds (owner, 18 Nov 2026, from his drawing): three to a row, so a
+  // second row's interests stand under the first's. Flowing, they did
+  // not; in two columns they did and read as a table.
+  it('lays the interests out three to a row, a third of the card each, with no rule between them', () => {
     state.categories = ['cafes', 'eats', 'views', 'heritage', 'nature'];
     draw();
     const items = ['cafes', 'eats', 'views', 'heritage', 'nature'].map((k) => screen.getByTestId(`interest-${k}`));
     const row = items[0].parentElement!;
     expect([...row.children]).toEqual(items);
-    expect([getComputedStyle(row).flexDirection, getComputedStyle(row).flexWrap, getComputedStyle(row).rowGap]).toEqual(['row', 'wrap', '12px']);
+    expect([getComputedStyle(row).flexDirection, getComputedStyle(row).flexWrap, getComputedStyle(row).rowGap]).toEqual(['row', 'wrap', '16px']);
+    // No inset: a centred third keeps no column of the card above.
+    expect(parseFloat(getComputedStyle(row).paddingLeft) || 0).toBe(0);
     for (const item of items) {
-      expect(getComputedStyle(item).width).toBe('50%');
+      expect(parseFloat(getComputedStyle(item).width)).toBeCloseTo(100 / 3, 3);
+      expect(getComputedStyle(item).width.endsWith('%')).toBe(true);
       // Nothing in it but its glyph and its name.
       expect(item.children).toHaveLength(2);
     }
     expect(screen.queryByTestId('interest-rule')).toBeNull();
-    // A name keeps to one line and gives way before its column does.
+    // A name keeps to one line and gives way before its third does.
     const name = within(items[4]).getByText('Nature');
     expect(getComputedStyle(name).flexShrink).toBe('1');
     expect(getComputedStyle(name).whiteSpace).toBe('nowrap');
