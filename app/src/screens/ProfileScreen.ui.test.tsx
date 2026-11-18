@@ -24,7 +24,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommonActions, StackRouter } from '@react-navigation/routers';
 import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
-import { colors } from '../theme';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
 
@@ -578,53 +577,41 @@ describe('interests', () => {
     // category glyphs are at rest.
     expect(glyph.getAttribute('data-color')).toBe(envelope.getAttribute('data-color'));
     expect(glyph.getAttribute('data-color')).not.toBe(CATEGORIES.cafes.color);
-    // The name by its glyph; the next interest 12, a faint rule, 12 on.
+    // The name by its glyph.
     expect(getComputedStyle(item).columnGap || getComputedStyle(item).gap).toBe('8px');
-    expect(getComputedStyle(row).columnGap).toBe('12px');
     expect(within(screen.getByTestId('interest-views')).getByText('Views')).toBeTruthy();
   });
 
-  // The faint rule between two interests (owner, 3 Nov 2026): one between
-  // each pair, none after the last, and none where the next has wrapped
-  // to a new line — still taking its room, so nothing moves back.
-  it('draws a faint rule between interests on one line, and none at a line\u2019s end', () => {
-    state.categories = ['cafes', 'views', 'eats'];
+  // Two columns (owner, 18 Nov 2026): flowing, each interest stood where
+  // the one before it ended, and the second line's second name began
+  // nowhere near the first line's.
+  it('lays the interests out in two columns of half the row, with no rule between them', () => {
+    state.categories = ['cafes', 'eats', 'views', 'heritage', 'nature'];
     draw();
-    const rules = screen.getAllByTestId('interest-rule');
-    expect(rules).toHaveLength(2);
-    expect(screen.getByTestId('interest-cafes').contains(rules[0])).toBe(true);
-    expect(screen.getByTestId('interest-eats').querySelector('[data-testid="interest-rule"]')).toBeNull();
-    const rule = getComputedStyle(rules[0]);
-    expect(rule.height).toBe('18px');
-    expect(rule.opacity).not.toBe('0');
-    expect(rule.backgroundColor).toBe(String(colors.borderGlassSoft).replace(/,(?=\S)/g, ', '));
-    // Laid out: cafes and views on the first line, eats wrapped below.
-    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-    const layOut = (testID: string, y: number) => {
-      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
-      const stack: Fiber[] = [host[key].stateNode.current];
-      while (stack.length) {
-        const f = stack.pop()!;
-        const p = f.memoizedProps;
-        if (p && p.testID === testID && typeof p.onLayout === 'function') {
-          act(() => { (p.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { x: 0, y, width: 100, height: 24 } } }); });
-          return;
-        }
-        if (f.sibling) stack.push(f.sibling);
-        if (f.child) stack.push(f.child);
-      }
-      throw new Error(`no ${testID}`);
-    };
-    layOut('interest-cafes', 0);
-    layOut('interest-views', 0);
-    layOut('interest-eats', 36);
-    const [first, second] = screen.getAllByTestId('interest-rule');
-    expect(getComputedStyle(first).opacity).not.toBe('0');
-    expect(getComputedStyle(second).opacity).toBe('0');
-    // The same top again changes nothing.
-    layOut('interest-eats', 36);
-    expect(getComputedStyle(screen.getAllByTestId('interest-rule')[1]).opacity).toBe('0');
+    const items = ['cafes', 'eats', 'views', 'heritage', 'nature'].map((k) => screen.getByTestId(`interest-${k}`));
+    const row = items[0].parentElement!;
+    expect([...row.children]).toEqual(items);
+    expect([getComputedStyle(row).flexDirection, getComputedStyle(row).flexWrap, getComputedStyle(row).rowGap]).toEqual(['row', 'wrap', '12px']);
+    for (const item of items) {
+      expect(getComputedStyle(item).width).toBe('50%');
+      // Nothing in it but its glyph and its name.
+      expect(item.children).toHaveLength(2);
+    }
+    expect(screen.queryByTestId('interest-rule')).toBeNull();
+    // A name keeps to one line and gives way before its column does.
+    const name = within(items[4]).getByText('Nature');
+    expect(getComputedStyle(name).flexShrink).toBe('1');
+    expect(getComputedStyle(name).whiteSpace).toBe('nowrap');
+  });
+
+  // The picker's order, not the order pressed: the same choice read in
+  // two orders on two screens.
+  it('shows the interests in the picker’s order, whatever order they were chosen in', () => {
+    state.categories = ['nature', 'eats', 'heritage', 'views'];
+    draw();
+    const row = screen.getByTestId('interest-eats').parentElement!;
+    expect([...row.children].map((c) => c.getAttribute('data-testid')))
+      .toEqual(['interest-eats', 'interest-views', 'interest-heritage', 'interest-nature']);
   });
 
   it('points at Edit profile when nothing usable is stored', () => {

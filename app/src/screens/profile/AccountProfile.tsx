@@ -17,7 +17,7 @@ import { useCrew } from '../../lib/crew';
 import { splitFriendships } from '../../lib/friends';
 import { useMyLists } from '../../lib/save';
 import { CATEGORIES } from '../../lib/categories';
-import { cleanTaste, ruleAfter } from '../../lib/tastepick';
+import { cleanTaste, tasteInOrder } from '../../lib/tastepick';
 import { Lang, useI18n } from '../../lib/i18n';
 import { useScheme } from '../../lib/theme';
 import { bgElevatedHex, colors } from '../../theme';
@@ -76,8 +76,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   const { profile, memberSince } = useProfile();
   const { signOut } = useAuthActions();
   const [busy, setBusy] = useState(false);
-  // The interests' measured tops, for the rule between them (`ruleAfter`).
-  const [tasteYs, setTasteYs] = useState<(number | undefined)[]>([]);
   // The visits, for the one number the row below shows — the app's one
   // copy, so a check-in made a moment ago on a place's screen is already
   // in this count. Its own copy here said 2 under a list of 29 once.
@@ -112,7 +110,8 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs.reload]));
   const taste = useMemo(
-    () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
+    // Kept as stored, shown in the picker's order (`tasteInOrder`).
+    () => tasteInOrder(cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)), Object.keys(CATEGORIES)),
     [prefs.data.categories],
   );
   const name = profile.full_name || (email ?? '').split('@')[0];
@@ -305,34 +304,38 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           names that read as a gap, and the glyph as nobody's (owner, the
           same day). The name sits by its glyph now, as on the reference,
           and a faint rule stands between two interests on one line, as
-          the reference has it; only the first glyph keeps the column. */}
+          the reference has it; only the first glyph keeps the column.
+
+          ── two columns (owner, 18 Nov 2026) ──
+          That flowed: each interest stood where the one before it ended,
+          so with four chosen the second line's second name ("Culture")
+          began nowhere near the first line's ("Views"), and the owner saw
+          it as crooked. Two columns of equal width now, each interest at
+          its column's left: the second column is a column. The faint
+          rule is gone with the flow it punctuated — two columns need no
+          line between them — and no rule between the rows either, which
+          the reference for this had: the About card above is ruled, and
+          two ruled cards in a row would make the interests one more
+          table of facts.
+
+          In the picker's order, not the order pressed (`tasteInOrder`).
+
+          Weighed: the picker's own shape here, three columns with the
+          glyph over the name. Twice the height, a second row of one or
+          two with a hole beside it, and the first glyph off the About
+          rows' column. And three columns of this shape: a third of the
+          card is some 100pt, and "Thiên nhiên" with its glyph needs
+          about 112. */}
       <Text style={s.section}>{t('Interests', 'Sở thích', '興味', '兴趣', '興趣')}</Text>
       <Card style={s.featureCard}>
         {taste.length ? (
           <View style={s.tasteChips}>
-            {taste.map((k, i) => (
-              <View
-                key={k}
-                style={s.tasteItem}
-                testID={`interest-${k}`}
-                onLayout={(e) => {
-                  const y = Math.round(e.nativeEvent.layout.y);
-                  setTasteYs((ys) => (ys[i] === y ? ys : Object.assign([...ys], { [i]: y })));
-                }}
-              >
+            {taste.map((k) => (
+              <View key={k} style={s.tasteItem} testID={`interest-${k}`}>
                 <Glyph name={CATEGORIES[k].icon} size={ROW_GLYPH} color={colors.textTertiary} />
-                <Text style={s.aboutValue}>
+                <Text style={[s.aboutValue, s.tasteName]} numberOfLines={1}>
                   {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja, CATEGORIES[k].zh, CATEGORIES[k].hant)}
                 </Text>
-                {/* The faint rule between two interests on one line
-                    (owner, 3 Nov 2026), part of the interest before it so
-                    the room it takes never moves; see `ruleAfter`. */}
-                {i < taste.length - 1 ? (
-                  <View
-                    style={[s.tasteRule, !ruleAfter(tasteYs, i, taste.length) && s.tasteRuleOff]}
-                    testID="interest-rule"
-                  />
-                ) : null}
               </View>
             ))}
           </View>
