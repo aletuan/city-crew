@@ -59,8 +59,9 @@ marketing hay hạ tầng.
 - Code: `app/src/screens/person/Shared.tsx`, `ActivityCard`, `lib/ago.ts`.
 - **Không chỉ bộ công khai (17/11, cùng ngày):** trang hiện những bộ mà
   người xem vốn đã mở được. Trang của chính mình có mọi bộ của mình; trang
-  người khác có bộ công khai và bộ họ chia sẻ với mình. Thẻ không công
-  khai mang dấu: ổ khoá (riêng tư), hai người kèm số bạn (đã chia sẻ),
+  người khác có bộ công khai và bộ họ chia sẻ với mình. Mọi thẻ
+  mang dấu (từ 18/11 thẻ công khai mang quả địa cầu, như trên trang
+  của chính bộ đó): địa cầu (công khai), ổ khoá (riêng tư), hai người kèm số bạn (đã chia sẻ),
   hai người kèm "Chia sẻ với bạn" (được chia sẻ). Bộ công khai và bộ
   chia sẻ nhóm có nút tim (nhóm thả tim được,
   `20261117233000_likes_in_the_group.sql`); bộ riêng tư chỉ hiện số tim

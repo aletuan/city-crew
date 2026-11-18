@@ -931,7 +931,7 @@ describe('lists that are not for everybody', () => {
       expect(screen.queryByText('List lan-open')).toBeNull();
     });
 
-    it('marks the shared one with two heads and how many, the private with a padlock, and the public with nothing', async () => {
+    it('marks the shared one with two heads and how many, the private with a padlock, and the public with the globe', async () => {
       await show('me');
       const [shared, secret, open] = acts();
       expect(markIn(shared)!.getAttribute('aria-label')).toBe('Friends, 2');
@@ -941,8 +941,14 @@ describe('lists that are not for everybody', () => {
       expect(markIn(secret)!.textContent).toBe('·');
       expect(markIn(shared)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('people-outline');
       expect(markIn(secret)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('lock-closed-outline');
-      // Shared with somebody and public is public: no mark.
-      expect(markIn(open)).toBeNull();
+      // Shared with somebody and public is public: the globe, alone, as
+      // under its handle on its own page (owner, 18 Nov 2026 — a public
+      // card wore nothing for a day).
+      expect(markIn(open)!.getAttribute('aria-label')).toBe('Public');
+      expect(markIn(open)!.textContent).toBe('·');
+      const globe = markIn(open)!.querySelector('[data-icon]')!;
+      expect([globe.getAttribute('data-icon'), globe.getAttribute('data-size'), globe.getAttribute('data-color')])
+        .toEqual(['globe-outline', '13', String(colors.textTertiary)]);
       expect(within(open).getByTestId('activity-when')).toBeTruthy();
     });
 
@@ -1016,7 +1022,7 @@ describe('lists that are not for everybody', () => {
     it('says the marks in Vietnamese', async () => {
       state.lang = 'vi';
       await show('me');
-      expect(acts().map((c) => markIn(c)?.getAttribute('aria-label') ?? null)).toEqual(['Bạn bè, 2', 'Riêng tư', null]);
+      expect(acts().map((c) => markIn(c)?.getAttribute('aria-label') ?? null)).toEqual(['Bạn bè, 2', 'Riêng tư', 'Công khai']);
     });
 
     it('leads a tile’s count with the mark’s glyph, and tells VoiceOver the words', async () => {
@@ -1024,12 +1030,12 @@ describe('lists that are not for everybody', () => {
       const [shared, secret, open] = tiles();
       expect(shared.getAttribute('aria-label')).toBe('List noodles, 0 places, Friends, 2');
       expect(secret.getAttribute('aria-label')).toBe('List secret, 0 places, Private');
-      expect(open.getAttribute('aria-label')).toBe('List open, 0 places');
+      expect(open.getAttribute('aria-label')).toBe('List open, 0 places, Public');
       // The glyph alone on a tile: no number, no word.
       const glyphs = (tile: HTMLElement) => [...tile.querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon'));
       expect(glyphs(shared)).toEqual(['people-outline']);
       expect(glyphs(secret)).toEqual(['lock-closed-outline']);
-      expect(glyphs(open)).toEqual([]);
+      expect(glyphs(open)).toEqual(['globe-outline']);
       expect(shared.textContent).toBe('List noodles0 places');
     });
 
@@ -1084,9 +1090,12 @@ describe('lists that are not for everybody', () => {
       expect(markIn(lent)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('people-outline');
       fireEvent.click(within(lent).getByTestId('activity-heart'));
       expect(spies.toggleLike).toHaveBeenCalledExactlyOnceWith({ id: 'for-me', slug: 'for-me' });
-      expect(markIn(open)).toBeNull();
+      // Their public list wears the globe for a visitor too.
+      expect(markIn(open)!.getAttribute('aria-label')).toBe('Public');
+      expect(markIn(open)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('globe-outline');
       expect(within(open).getByTestId('activity-heart')).toBeTruthy();
       expect(tiles()[0].getAttribute('aria-label')).toBe('List for-me, 0 places, Shared with you');
+      expect(tiles()[1].getAttribute('aria-label')).toBe('List open, 0 places, Public');
     });
 
     it('says it in Vietnamese', async () => {

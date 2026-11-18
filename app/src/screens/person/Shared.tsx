@@ -55,8 +55,9 @@
 // The page holds what this reader may open (`person.listsOn`): every
 // list of your own on your own page, and on a friend's the lists they
 // shared with you beside their public ones. A card or a tile that is not
-// public says who sees it (`marks`): a padlock, two heads and how many,
-// or two heads and "Shared with you". The count in the heading is of
+// says who sees it (`marks`): the globe, a padlock, two heads and how
+// many, or two heads and "Shared with you" — every card, a public one
+// too since the next morning (`person.seenOn`). The count in the heading is of
 // what is drawn, so it is all of yours on your page and what you may see
 // on another's. A list shared with friends has its heart, for them and
 // for its owner (`shares.likeable`); a private one shows the likes it
@@ -128,8 +129,9 @@ type T = ReturnType<typeof useI18n>['t'];
  * the two heads would say "shared" and not with whom, so the words are
  * there: "Shared with you".
  */
-export function marks(seen: ListSeen | null, t: T): ActivityMark | null {
-  if (!seen) return null;
+export function marks(seen: ListSeen, t: T): ActivityMark {
+  // The globe alone, on anybody's page: what it is on the list's own.
+  if (seen.kind === 'public') return { icon: SEEN_GLYPH.public, label: seenName('public', t) };
   if (seen.kind === 'private') return { icon: SEEN_GLYPH.private, label: seenName('private', t) };
   if (seen.kind === 'friends') {
     return { icon: SEEN_GLYPH.friends, text: String(seen.n), label: `${seenName('friends', t)}, ${seen.n}` };
@@ -144,8 +146,8 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, re
   /** The collections this reader may see here, newest first
    *  (`person.listsOn`). */
   lists: Collection[];
-  /** Who can see one that is not public (`person.seenOn`). */
-  seenOf: (c: Collection) => ListSeen | null;
+  /** Who can see each (`person.seenOn`). */
+  seenOf: (c: Collection) => ListSeen;
   coverFor: (c: Collection) => string | undefined;
   onOpen: (c: Collection) => void;
   /** How many times the reader has come near the page's end (`useReach`). */
@@ -261,7 +263,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, re
               liked={!!c.id && myLikes.includes(c.id)}
               likes={likes[c.slug] ?? 0}
               onOpen={() => onOpen(c)}
-              onHeart={c.id && seenOf(c)?.kind !== 'private' ? () => heart(c) : undefined}
+              onHeart={c.id && seenOf(c).kind !== 'private' ? () => heart(c) : undefined}
             />
           ))}
           {lists.length > shown ? (
@@ -290,7 +292,7 @@ function Grid({ lists, coverFor, onOpen, metaOf, titleOf, markOf }: {
   onOpen: (c: Collection) => void;
   metaOf: (c: Collection) => string;
   titleOf: (c: Collection) => string;
-  markOf: (c: Collection) => ActivityMark | null;
+  markOf: (c: Collection) => ActivityMark;
 }) {
   const rows: Collection[][] = [];
   for (let i = 0; i < lists.length; i += 2) rows.push(lists.slice(i, i + 2));
@@ -310,11 +312,11 @@ function Grid({ lists, coverFor, onOpen, metaOf, titleOf, markOf }: {
 
 /** One of their lists: its photograph, its title, and how much is on
  *  it. A tile with no photograph wears the tint, as the cover does.
- *  One that is not public leads its count with the mark's glyph alone —
+ *  It leads its count with the mark's glyph alone —
  *  half a page wide, the tile has no room for "Shared with you" beside
  *  "12 places · 3 likes"; VoiceOver is told the words. */
 function ListTile({ title, uri, meta, mark, onPress }: {
-  title: string; uri: string | undefined; meta: string; mark: ActivityMark | null; onPress: () => void;
+  title: string; uri: string | undefined; meta: string; mark: ActivityMark; onPress: () => void;
 }) {
   return (
     <PressableScale
@@ -322,7 +324,7 @@ function ListTile({ title, uri, meta, mark, onPress }: {
       haptic="selection"
       style={s.tileSlot}
       accessibilityRole="button"
-      accessibilityLabel={[title, meta, ...(mark ? [mark.label] : [])].join(', ')}
+      accessibilityLabel={[title, meta, mark.label].join(', ')}
       testID="person-list"
     >
       <Card>
@@ -332,7 +334,7 @@ function ListTile({ title, uri, meta, mark, onPress }: {
         <View style={s.tileWords}>
           <Text style={s.tileTitle} numberOfLines={2}>{title}</Text>
           <View style={s.tileUnder}>
-            {mark ? <Glyph name={mark.icon} size={13} color={colors.textTertiary} /> : null}
+            <Glyph name={mark.icon} size={13} color={colors.textTertiary} />
             <Text style={s.tileMeta} numberOfLines={1}>{meta}</Text>
           </View>
         </View>
