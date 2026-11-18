@@ -31,7 +31,9 @@ declare mine text; n int;
 begin
   set local role rls_client;
   set local test.uid = 'f1a90000-0000-0000-0000-00000000000a';
-  select string_agg(key, ',' order by key), count(*) into mine, n from public.app_flag_testers;
+  -- By byte, so the answer does not depend on the bench's locale: the
+  -- underscore sorts before a letter in C and after it in en_US.
+  select string_agg(key, ',' order by key collate "C"), count(*) into mine, n from public.app_flag_testers;
   assert mine = '_ft_probe,comments', format('the tester reads: %s', mine);
   set local test.uid = 'f1a90000-0000-0000-0000-00000000000b';
   select string_agg(key, ',' order by key) into mine from public.app_flag_testers;
