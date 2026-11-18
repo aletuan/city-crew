@@ -54,6 +54,9 @@
 // handle already (`shares.SEEN_GLYPH`), so the button would have doubled
 // it.
 //
+// Drawn from the line set (`ui/glyph`): Ionicons' plane was three sharp
+// points beside the heart's curves, and the owner asked for it softer.
+//
 // The figure after it is back to a bare number, as it first was: how
 // many friends the list is shared with. VoiceOver is told all of it —
 // "Share, Friends, 3".

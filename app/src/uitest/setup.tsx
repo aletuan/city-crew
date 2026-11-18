@@ -161,6 +161,7 @@ vi.mock('lucide-react-native/icons/user', () => line('person-outline'));
 // tell the feather drawn open from one filled in: it is only ever open.
 vi.mock('lucide-react-native/icons/feather', () => line('quill', 'quill-solid'));
 vi.mock('lucide-react-native/icons/star', () => line('star-outline', 'star'));
+vi.mock('lucide-react-native/icons/send', () => line('paper-plane-outline'));
 
 // These must return promises, not undefined. `fireHaptic` calls
 // `.catch()` on what it gets back, so a stub that answered `undefined`
