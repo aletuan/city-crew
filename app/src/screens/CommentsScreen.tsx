@@ -1,7 +1,5 @@
 // A subject's thread of comments (C3 of `docs/comments-plan.md`), and
-// the two ways from it to writing one (C4): a line at the head of the
-// page, and "Reply" under each comment. The writing itself is a form of
-// its own — `CommentFormScreen`, where the reason is.
+// the field at its foot that one is written in (C4).
 //
 // ── a screen, not a sheet (owner, 18 Nov 2026) ──
 //
@@ -35,18 +33,25 @@
 // `lib/data/comments.fetchThread` — so this is rows not yet mounted, not
 // a request.
 //
-// ── writing ──
+// ── writing (owner, 18 Nov 2026) ──
 //
-// "Write a comment…" at the head of the page, above the newest root:
-// where a new comment will appear, and in reach without scrolling an
-// empty thread. Not at the foot, where the tab bar floats.
+// A field at the foot of the page, as Threads has (`CommentComposer`,
+// where the day this was a form of its own is written down). The tab
+// bar floats where the field has to be, so this page holds the bar away
+// while it is in front (`useTabBarAway`) and gives it back to whatever
+// is opened from it — a person's page — and on leaving.
 //
-// Signed out, either way in raises the sign-in sheet (`askToSignIn`)
-// and the reader comes back to this page; nothing is resumed on their
-// behalf, since what they meant to say has not been written yet.
+// "Reply" under a comment opens nothing: it names that comment as what
+// the field's next words answer, and puts the cursor in the field. The
+// page is wrapped in a `KeyboardAvoidingView`, so the field rides up on
+// the keyboard and the thread shortens above it.
 //
-// The page asks again when a comment is posted — `useThreadQuery`
-// listens to `lib/commentsChanged` — so the form has only to go back.
+// Sent, the app is told (`commentsChanged`) and this page's own query
+// asks again, as the cards' counts do. Nothing is drawn ahead of the
+// server, which is what decides whether a comment exists.
+//
+// Signed out, the field is a press that raises the sign-in sheet, and
+// so is "Reply".
 //
 // ── states ──
 //
@@ -57,21 +62,26 @@
 // reads as no comments: the list went private while this page was open,
 // and saying so here would tell a stranger that it exists.
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CommentComposer from '../components/CommentComposer';
 import CommentRow, { INDENT } from '../components/CommentRow';
 import { useCommentMenu } from './comments/useCommentMenu';
-import { Avatar, EmptyState, GradientCta, PressableScale, Screen, useTabBarClearance } from '../components/ui';
-import { useDuckOnScroll } from '../components/tabBarDuck';
+import { EmptyState, GradientCta, PressableScale, Screen } from '../components/ui';
+import { useTabBarAway } from '../components/tabBarDuck';
 import { agoLabel } from '../lib/ago';
 import { threadOf, type Branch, type Placed } from '../lib/comments';
-import { useThreadQuery } from '../lib/data';
+import { commentsChanged } from '../lib/commentsChanged';
+import { postComment, useThreadQuery } from '../lib/data';
 import { nearEnd } from '../lib/feed';
 import { useProfile, useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { normalizeHandle } from '../lib/handle';
 import { useSaveActions } from '../lib/save';
-import { colors, font, radius, space } from '../theme';
+import { colors, font, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 /** How many roots are drawn at first, and added each time the reader
@@ -83,9 +93,6 @@ export const PAGE = 10;
  *  show that there is a conversation and who is in it — what the feed
  *  card previews of a whole thread, for the same reason. */
 export const REPLIES_SHOWN = 2;
-/** The face beside "Write a comment…": an answer's 28, so the line reads
- *  as the place a comment goes and not as a comment. */
-const WRITE_FACE = 28;
 
 export default function CommentsScreen({ navigation, route }: {
   navigation: Nav;
@@ -105,10 +112,7 @@ export default function CommentsScreen({ navigation, route }: {
   // events come sixty a second and every one near the end is "near".
   const [shown, setShown] = useState(PAGE);
   const [countedAt, setCountedAt] = useState(-1);
-  const duckScroll = useDuckOnScroll();
   const onScroll: NonNullable<React.ComponentProps<typeof ScrollView>['onScroll']> = (e) => {
-    // Undefined outside the tab bar's provider, where there is no bar to duck.
-    duckScroll?.(e);
     const at = e.nativeEvent;
     if (!nearEnd(at) || countedAt === at.contentSize.height) return;
     setCountedAt(at.contentSize.height);
@@ -123,32 +127,55 @@ export default function CommentsScreen({ navigation, route }: {
   }, [pulling, thread.loading]);
   const pull = () => { setPulling(true); thread.reload(); };
 
-  const tabClearance = useTabBarClearance();
+  // The bar is away while this page is in front — see the header.
+  useTabBarAway(navigation);
+  // The home indicator's margin under the field — and none while the
+  // keyboard is up, when the field sits on the keyboard and that margin
+  // would be a 34pt gap between the two. `Will`, so the margin goes as
+  // the keyboard starts to rise and not a beat after it has landed; iOS
+  // alone sends it, and iOS alone has the indicator.
+  const insets = useSafeAreaInsets();
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const up = Keyboard.addListener('keyboardWillShow', () => setTyping(true));
+    const down = Keyboard.addListener('keyboardWillHide', () => setTyping(false));
+    return () => { up.remove(); down.remove(); };
+  }, []);
   const now = Date.now();
   const onPerson = (handle: string) => navigation.navigate('Person', { handle });
 
-  // The two ways to writing — see the header.
+  // Writing — see the header.
   const { session } = useSession();
   const { profile } = useProfile();
   const { askToSignIn } = useSaveActions();
   const { subject } = route.params;
-  // Delete your own, report somebody else's — `useCommentMenu`.
-  const { menuOf, node: menuSheet } = useCommentMenu(session?.user?.id ?? null);
-  const write = (to?: Placed) => {
-    if (!session?.user?.id) { askToSignIn('comment'); return; }
-    navigation.navigate('CommentForm', to
-      ? { subject, replyTo: { id: to.id, who: to.handle ? normalizeHandle(to.handle) : to.full_name ?? '', body: to.body ?? '' } }
-      : { subject });
+  const me = session?.user?.id ?? null;
+  const askIn = () => askToSignIn('comment');
+  // The comment the field's next words answer, or none.
+  const [replyTo, setReplyTo] = useState<Placed | null>(null);
+  const field = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const nameOf = (c: Placed) => (c.handle ? normalizeHandle(c.handle) : c.full_name ?? '');
+  const reply = (c: Placed) => {
+    if (!me) { askIn(); return; }
+    setReplyTo(c);
+    field.current?.focus();
   };
+  const send = async (body: string) => {
+    await postComment(subject, replyTo ? replyTo.id : null, body);
+    setReplyTo(null);
+    commentsChanged();
+  };
+  // Delete your own, report somebody else's — `useCommentMenu`.
+  const { menuOf, node: menuSheet } = useCommentMenu(me);
 
   const branch = (b: Branch) => {
     const replies = opened.has(b.root.id) ? b.replies : b.replies.slice(0, REPLIES_SHOWN);
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(b.root)} onMore={menuOf(b.root)} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(b.root)} onMore={menuOf(b.root)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => write(r)} onMore={menuOf(r)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(r)} onMore={menuOf(r)} />
         ))}
         {more > 0 ? (
           <PressableScale
@@ -209,44 +236,45 @@ export default function CommentsScreen({ navigation, route }: {
       backBare
       compactTitle
     >
-      <ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
-        testID="comments-scroll"
-      >
-        <PressableScale
-          onPress={() => write()}
-          haptic="selection"
-          contentStyle={s.write}
-          accessibilityRole="button"
-          testID="comments-write"
+      {/* The field rides up on the keyboard and the thread shortens
+          above it. `padding` on iOS, where the keyboard overlays the
+          window; Android resizes the window itself. */}
+      <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={s.fill}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={s.content}
+          showsVerticalScrollIndicator={false}
+          // A press on "Reply" or a ⋯ lands while the keyboard is up,
+          // rather than only putting it away.
+          keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={pulling} onRefresh={pull} />}
+          testID="comments-scroll"
         >
-          {/* The reader's own face: whose comment this would be. */}
-          <Avatar url={profile?.avatar_url} size={WRITE_FACE} />
-          <Text style={s.writeText}>{t('Write a comment…', 'Viết bình luận…', 'コメントを書く…', '写评论…', '寫評論…')}</Text>
-        </PressableScale>
-        {state}
-        {branches.slice(0, shown).map(branch)}
-      </ScrollView>
+          {state}
+          {branches.slice(0, shown).map(branch)}
+        </ScrollView>
+        <CommentComposer
+          avatarUrl={profile?.avatar_url}
+          replyTo={replyTo ? { who: nameOf(replyTo) } : null}
+          onCancelReply={() => setReplyTo(null)}
+          onSend={send}
+          onGuest={me ? undefined : askIn}
+          inputRef={field}
+          bottomInset={typing ? 0 : insets.bottom}
+        />
+      </KeyboardAvoidingView>
       {menuSheet}
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  content: { paddingHorizontal: space.page },
+  fill: { flex: 1 },
+  // 16 under the last comment, so it does not sit on the field's rule.
+  content: { paddingHorizontal: space.page, paddingBottom: 16 },
   spinner: { marginTop: 20 },
-  // The way to writing: a field's shape without being one — the page's
-  // glass, the card's corner, 44 tall to the thumb.
-  write: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44,
-    paddingHorizontal: 12, marginBottom: 8,
-    borderRadius: radius.card, backgroundColor: colors.surfaceGlass,
-  },
-  writeText: { color: colors.textTertiary, fontSize: 15 },
   // A hairline between one root's talk and the next, and the row's own 8
   // either side of it.
   branch: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft, paddingVertical: 4 },

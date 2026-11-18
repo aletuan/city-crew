@@ -1816,7 +1816,7 @@ describe('comments on the cards', () => {
     expect(screen.queryByTestId('activity-comments')).toBeNull();
   });
 
-  it('shows the count and the newest with the switch on, and opens that collection\'s thread', async () => {
+  it('shows the count with the switch on, and opens that collection\'s thread', async () => {
     (await import('../lib/flags')).appFlags.set('comments', true);
     talk.fetchPreviews.mockImplementation(async () => ({
       two: { n: 3, latest: [{ id: 'k1', body: 'lovely', created_at: 'x', author: 'u', handle: 'trang', full_name: null, avatar_url: null }] },
@@ -1827,7 +1827,8 @@ describe('comments on the cards', () => {
     // The card with no comments has the way in and no figure.
     expect(within(cards[0]).queryByTestId('activity-comments-count')).toBeNull();
     expect(within(cards[1]).getByTestId('activity-comments-count').textContent).toBe('3');
-    expect(within(cards[1]).getByTestId('activity-preview').textContent).toBe('trang lovely');
+    // The figure, and none of what was said: that is the thread's.
+    expect(within(cards[1]).queryByText(/lovely/)).toBeNull();
     fireEvent.click(within(cards[1]).getByTestId('activity-comments'));
     expect(nav.navigate).toHaveBeenCalledWith('Comments', { subject: { kind: 'collection', id: 'two' } });
   });

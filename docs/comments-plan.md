@@ -201,34 +201,45 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Luồng không lưu đệm giữa các lần mở: bình luận vừa bị xoá hoặc của
   người vừa bị chặn không được vẽ lại từ bản cũ.
 
-*C3b — xong:*
-- `ActivityCard`: nút bong bóng cạnh tim, kèm số khi có bình luận; dưới
-  chân thẻ là 2 bình luận mới nhất (mỗi cái một dòng) và "Xem tất cả N
-  bình luận" khi còn nhiều hơn. Thẻ của bộ chưa có bình luận chỉ có nút,
-  không có số.
-- Một lần hỏi cho mọi thẻ đang vẽ trên Trang cá nhân (`comment_previews`);
-  thêm thẻ thì hỏi lại một lần. Cờ tắt thì không hỏi gì.
+*C3b — xong, rồi gọn lại ngày 18/11/2026 sau khi xem trên máy:*
+- `ActivityCard`: nút bong bóng cạnh tim, kèm số khi có bình luận. Thẻ của
+  bộ chưa có bình luận chỉ có nút, không có số.
+- **Đã bỏ** hai dòng bình luận xem trước và "Xem tất cả N bình luận" dưới
+  chân thẻ. Trên máy chúng đọc như hai mẩu chữ rời ("trang Thanks"), làm
+  thẻ cao thấp không đều và không nói thêm gì ngoài con số. Hàm
+  `comment_previews` vẫn trả 2 bình luận mới nhất; app chỉ dùng số đếm.
+- Một lần hỏi cho mọi thẻ đang vẽ trên Trang cá nhân; thêm thẻ thì hỏi lại
+  một lần. Cờ tắt thì không hỏi gì.
 - Nút ở trang chi tiết bộ sưu tập mang cùng con số, từ cùng hàm.
-- Việc để lại cho C4: sau khi đăng hoặc xoá, số trên thẻ và trên nút phải
-  được hỏi lại (hiện chỉ hỏi lại khi danh sách thẻ đổi).
 
 **C4. Viết** — chia hai PR
 
-*C4a — xong:*
-- Viết bình luận và trả lời là một **màn soạn riêng** (`CommentForm`),
-  không phải ô ghim dưới chân luồng như bản đầu của kế hoạch. Lý do:
-  thanh tab nổi che chân mọi trang; mọi chỗ khác app nhờ người dùng viết
-  (tên bộ, giới thiệu) đều đã là một màn form có xử lý bàn phím sẵn; và
-  bình luận đang được trả lời nằm phía trên ô nhập nên bàn phím không che
-  (Threads làm đúng như vậy).
-- Lối vào: dòng "Viết bình luận…" ở đầu luồng, và "Trả lời" dưới mỗi bình
-  luận. Khách chưa đăng nhập bấm vào thì được mời đăng nhập.
-- Đếm ký tự theo cách máy chủ đếm, nút Đăng chỉ sáng khi có gì để gửi,
-  mỗi lý do bị từ chối có một câu riêng và giữ nguyên chữ đã gõ.
+*C4a — xong, rồi làm lại ngày 18/11/2026 sau khi xem trên máy:*
+- Bản đầu của C4a là một **màn soạn riêng** (`CommentForm`). Trên máy thật
+  nó thành ba lần bấm để nói một câu (bong bóng, "Viết bình luận…", rồi
+  màn soạn), trong khi Threads chỉ cần một. Chủ dự án yêu cầu đổi.
+- Nay: **ô soạn ghim dưới chân màn Bình luận** (`CommentComposer`), và màn
+  này **ẩn thanh tab** khi đang ở trước (`useTabBarAway`); mở Trang cá
+  nhân từ một bình luận thì thanh tab trở lại. Màn soạn riêng và dòng
+  "Viết bình luận…" ở đầu trang đã bỏ.
+- "Trả lời" không mở gì: nó đặt bình luận đó làm thứ được trả lời, hiện
+  dòng "Đang trả lời …" (có ✕ để thôi) phía trên ô và đưa con trỏ vào ô.
+- Bộ đếm ký tự chỉ hiện trong 50 ký tự cuối trước giới hạn. Nút gửi chỉ
+  sáng khi có gì để gửi. Bị từ chối thì câu lý do hiện trên ô, chữ đã gõ
+  và người đang được trả lời đều giữ nguyên.
+- Khách chưa đăng nhập: ô là một nút mời đăng nhập, "Trả lời" cũng vậy.
 - Không tự chèn "@tên" vào nội dung khi trả lời sâu: màn luồng đã tự hiện
-  tên người được trả lời từ quan hệ cha con, chèn nữa sẽ thành hai lần.
+  tên người được trả lời từ quan hệ cha con.
 - Sau khi đăng, luồng, số trên thẻ và số trên nút đều tự hỏi lại
   (`lib/commentsChanged`). Không vẽ trước bình luận khi máy chủ chưa nhận.
+- Chưa kiểm được bằng kiểm thử tự động: ô có trượt lên đúng theo bàn phím
+  không. Phải xem trên máy.
+
+*C4c — chưa làm (chủ dự án yêu cầu 18/11/2026):*
+- Bộ **chưa có bình luận nào**: bấm bong bóng (trên trang bộ sưu tập hoặc
+  trên thẻ) thì ô soạn và bàn phím bật lên ngay tại chỗ, không chuyển
+  trang, như Threads làm trên feed. Dùng lại đúng `CommentComposer`.
+- Bộ đã có bình luận thì vẫn sang màn Bình luận như hiện nay.
 
 *C4b — xong:*
 - Nút ⋯ ở cuối mỗi bình luận (chỉ khi đã đăng nhập, và không có trên dòng

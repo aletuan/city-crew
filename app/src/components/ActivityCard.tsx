@@ -56,7 +56,6 @@ import { PressableScale } from './ui/controls';
 import { Avatar, Card } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
 import type { Preview } from '../lib/comments';
-import { normalizeHandle } from '../lib/handle';
 import { likesWorthShowing } from '../lib/likes';
 import { colors, font, space, type } from '../theme';
 
@@ -80,8 +79,6 @@ const PHOTO_H = 168;
 /** The figure a private list kept, at the size the heart is drawn at
  *  (`LikeHeart`, the `card` tone). */
 const HEART = ICON.action;
-/** How many comments a card previews: the two `comment_previews` sends. */
-export const PREVIEWS = 2;
 /** The mark's glyph: 13, a cap's height beside the time's 13pt type. */
 const MARK = ICON.meta;
 
@@ -107,10 +104,14 @@ export default function ActivityCard({
   onOpen: () => void;
   /** Absent on a collection nobody may like — then no heart is drawn. */
   onHeart?: () => void;
-  /** What the thread holds, when anything: a count and its two newest.
-   *  Absent for a thread with nothing in it, which draws the way in and
-   *  no figure. */
-  comments?: Preview;
+  /** What the thread holds, when anything. Only the count is drawn
+   *  (owner, 18 Nov 2026): for a day the two newest stood under the foot
+   *  as well, a line each, and on a phone they read as two stray words
+   *  — "trang Thanks" — that made one card taller than its neighbours
+   *  and said nothing the bubble's figure had not. The thread is a press
+   *  away. Absent for a thread with nothing in it, which draws the way
+   *  in and no figure. */
+  comments?: Pick<Preview, 'n'>;
   /** Opens the thread. Absent where there is none to open — the switch
    *  off, or a collection that is not public — and then nothing about
    *  comments is drawn at all. Only ever handed in beside `onHeart`: a
@@ -120,11 +121,6 @@ export default function ActivityCard({
 }) {
   const { t } = useI18n();
   const n = comments?.n ?? 0;
-  // Two at most, whatever came: the function sends two, and a card that
-  // trusted that would draw twenty the day it sent twenty.
-  const latest = (comments?.latest ?? []).slice(0, PREVIEWS);
-  const nameOf = (c: Preview['latest'][number]) =>
-    (c.handle ? normalizeHandle(c.handle) : c.full_name || t('Someone', 'Ai đó', '誰か', '有人', '有人'));
   return (
     <Card testID={testID}>
       <View style={s.head}>
@@ -211,32 +207,6 @@ export default function ActivityCard({
           <Text style={[s.count, s.kept]}>{likes}</Text>
         </View>
       ) : <View style={s.noFoot} testID="activity-no-heart" />}
-      {/* The two newest, and the way to the rest: what Instagram draws
-          under a photograph, for the reason it does — who is talking is
-          the invitation to read on. One line each: the card is a card,
-          and the thread is a press away. */}
-      {onComments && latest.length > 0 ? (
-        <PressableScale
-          onPress={onComments}
-          haptic="selection"
-          scaleTo={0.985}
-          contentStyle={s.previews}
-          accessibilityRole="button"
-          accessibilityLabel={latest.map((c) => `${nameOf(c)}: ${c.body}`).join('. ')}
-          testID="activity-previews"
-        >
-          {latest.map((c) => (
-            <Text key={c.id} style={s.preview} numberOfLines={1} testID="activity-preview">
-              <Text style={s.previewWho}>{nameOf(c)}</Text>{` ${c.body}`}
-            </Text>
-          ))}
-          {n > latest.length ? (
-            <Text style={s.previewAll} testID="activity-previews-all">
-              {t(`View all ${n} comments`, `Xem tất cả ${n} bình luận`, `コメント${n}件をすべて見る`, `查看全部 ${n} 条评论`, `檢視全部 ${n} 條評論`)}
-            </Text>
-          ) : null}
-        </PressableScale>
-      ) : null}
     </Card>
   );
 }
@@ -265,11 +235,6 @@ const s = StyleSheet.create({
   // 18 between the heart and the bubble: with each one's 6 to its own
   // figure, the two read as two things and not as one row of four.
   foot: { flexDirection: 'row', alignItems: 'center', gap: 18, minHeight: 44, paddingHorizontal: space.cardPadding },
-  // Under the foot, to the card's own bottom padding.
-  previews: { paddingHorizontal: space.cardPadding, paddingBottom: space.cardPadding, gap: 3 },
-  preview: { color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
-  previewWho: { color: colors.text, fontWeight: font.semibold },
-  previewAll: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, marginTop: 1 },
   heart: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   count: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium, fontVariant: ['tabular-nums'] },
 });

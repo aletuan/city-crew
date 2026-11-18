@@ -9,6 +9,7 @@
 // real; only the one RPC wrapper and the providers are stood in.
 
 import React from 'react';
+import { Keyboard, StyleSheet } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, viewStyleOf, within } from '../uitest/render';
 import type { CommentRow as Row, Subject } from '../lib/comments';
@@ -21,14 +22,27 @@ const ago = (min: number) => new Date(NOW.getTime() - min * 60_000).toISOString(
 
 const data = vi.hoisted(() => ({
   fetchThread: vi.fn(async (_s: unknown): Promise<unknown[]> => []),
+  postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string): Promise<string> => 'k-new'),
 }));
 // The module the hook reads the RPC from, not the barrel.
 vi.mock('../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchThread: data.fetchThread,
+  postComment: data.postComment,
 }));
-const duck = vi.hoisted(() => ({ fn: vi.fn() as ((e: unknown) => void) | undefined }));
-vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => duck.fn }));
+// A phone with a home indicator: 34 under the page, where the bench's
+// own stand-in says zero and the field's margin could not be told from
+// its padding.
+vi.mock('react-native-safe-area-context', () => {
+  const through = ({ children }: { children?: React.ReactNode }) => children;
+  return {
+    SafeAreaProvider: through, SafeAreaView: through,
+    useSafeAreaInsets: () => ({ top: 0, bottom: 34, left: 0, right: 0 }),
+  };
+});
+// The hold on the tab bar: what the page asks of it, and with whose navigator.
+const away = vi.hoisted(() => vi.fn());
+vi.mock('../components/tabBarDuck', () => ({ useTabBarAway: away }));
 const state = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi', me: 'me' as string | null }));
 const askToSignIn = vi.hoisted(() => vi.fn());
 vi.mock('../lib/auth', () => {
@@ -101,7 +115,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
   vi.clearAllMocks();
-  duck.fn = vi.fn();
+  data.postComment.mockImplementation(async () => 'k-new');
   state.lang = 'en';
   state.me = 'me';
 });
@@ -199,14 +213,13 @@ describe('the fold under a root', () => {
 describe('as the reader scrolls', () => {
   const many = (n: number) => Array.from({ length: n }, (_, i) => row(`r${i}`, null));
 
-  it('draws ten roots at first, and tells the tab bar of every scroll', async () => {
+  it('draws ten roots at first, and none more far from the end', async () => {
     await show(many(25));
     expect(PAGE).toBe(10);
     expect(branches()).toHaveLength(10);
     // 5000 of page, 2890 left: far from the end.
     scrollAt(1266, 5000);
     expect(branches()).toHaveLength(10);
-    expect(duck.fn).toHaveBeenCalledTimes(1);
   });
 
   it('adds ten within a screen and a half of the end, once for each height the page has had', async () => {
@@ -218,8 +231,7 @@ describe('as the reader scrolls', () => {
     expect(branches()).toHaveLength(25);
   });
 
-  it('adds nothing once every root is drawn, and scrolls without a tab bar to tell', async () => {
-    duck.fn = undefined;
+  it('adds nothing once every root is drawn', async () => {
     await show(many(3));
     scrollAt(100, 900);
     expect(branches()).toHaveLength(3);
@@ -300,54 +312,116 @@ describe('pulling the page down', () => {
   });
 });
 
-// C4: the two ways from the thread to writing, and the thread asking
-// again once something was written.
+// C4, as it stands since 18 Nov 2026: a field at the foot of the page.
+// What the field shows of the rules is pinned in `CommentComposer`'s
+// test; here it is what the page does with it — whom the words answer,
+// what is sent and under what, the thread asking again, and the bar.
 describe('writing', () => {
-  it('opens the form for this subject from the line at the head of the page, which wears the reader\'s face', async () => {
-    const nav = await show([row('a', null)]);
-    const line = screen.getByTestId('comments-write');
-    expect(line.textContent).toBe('Write a comment…');
-    expect(line.querySelector('img')!.getAttribute('src')).toBe('https://faces/me.jpg');
-    // Above the newest root.
-    expect(line.compareDocumentPosition(branches()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    fireEvent.click(line);
-    expect(nav.navigate).toHaveBeenCalledExactlyOnceWith('CommentForm', { subject: SUBJECT });
+  const field = () => screen.getByTestId('composer-field') as HTMLTextAreaElement;
+  const type = (words: string) => fireEvent.change(field(), { target: { value: words } });
+  const sendIt = () => act(async () => { fireEvent.click(screen.getByTestId('composer-send')); await Promise.resolve(); await Promise.resolve(); });
+  const replying = () => screen.queryByTestId('composer-replying')?.textContent ?? null;
+
+  it('keeps the tab bar away while it is in front, by its own navigator', async () => {
+    const nav = await show([]);
+    expect(away).toHaveBeenCalledWith(nav);
   });
 
-  it('is there on an empty thread too, above "No comments yet"', async () => {
+  it('has the field under the thread, wearing the reader\'s face, on an empty thread too', async () => {
+    await show([row('a', null)]);
+    const bar = screen.getByTestId('composer');
+    expect(bar.querySelector('img')!.getAttribute('src')).toBe('https://faces/me.jpg');
+    expect(branches()[0].compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    cleanup();
     await show([]);
-    expect(screen.getByTestId('comments-write')).toBeTruthy();
+    expect(screen.getByTestId('composer')).toBeTruthy();
     expect(screen.getByTestId('comments-empty')).toBeTruthy();
   });
 
-  it('answers a comment with what the form will quote: who, by handle or else by name, and what they said', async () => {
-    const nav = await show([row('a', null, { handle: '@Trang', body: 'Lovely rooftop' }), row('a1', 'a', { handle: null, full_name: 'Lan Pham' })]);
+  // The home indicator's margin, which the field gives up to the keyboard.
+  it('sits on the phone\'s own margin, and on the keyboard without it', async () => {
+    // Every listener, not the last: the page's is not the only one on the keyboard.
+    const heard: Record<string, (() => void)[]> = {};
+    const removed: string[] = [];
+    const listen = vi.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: () => void) => {
+      (heard[event] ??= []).push(cb);
+      return { remove: () => { removed.push(event); } };
+    }) as never);
+    await show([]);
+    // Off the committed tree: an element's own fiber can be the one from
+    // before the last render, and would answer with the old margin.
+    const pad = () => (StyleSheet.flatten(propsWhere((q) => q.testID === 'composer').style as never) as { paddingBottom?: number }).paddingBottom;
+    expect(pad()).toBe(42);
+    act(() => heard.keyboardWillShow.forEach((f) => f()));
+    expect(pad()).toBe(8);
+    act(() => heard.keyboardWillHide.forEach((f) => f()));
+    expect(pad()).toBe(42);
+    cleanup();
+    expect([...new Set(removed)].sort()).toEqual(['keyboardWillHide', 'keyboardWillShow']);
+    listen.mockRestore();
+  });
+
+  it('posts a comment that answers nobody under this subject, and the thread asks again', async () => {
+    await show([row('a', null)]);
+    data.fetchThread.mockImplementation(async () => [row('new', null), row('a', null)]);
+    type('Lovely rooftop');
+    await sendIt();
+    await flush();
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'Lovely rooftop');
+    expect(data.fetchThread).toHaveBeenCalledTimes(2);
+    expect(drawn()).toEqual([['says new'], ['says a']]);
+    expect(field().value).toBe('');
+  });
+
+  it('answers the comment whose "Reply" was pressed: says whom, puts the cursor in the field, and sends under it', async () => {
+    await show([row('a', null, { handle: '@Trang' }), row('a1', 'a', { handle: null, full_name: 'Lan Pham' })]);
+    expect(replying()).toBeNull();
     const [first, second] = screen.getAllByTestId('comment-reply');
-    fireEvent.click(first);
-    expect(nav.navigate).toHaveBeenLastCalledWith('CommentForm', { subject: SUBJECT, replyTo: { id: 'a', who: 'trang', body: 'Lovely rooftop' } });
     fireEvent.click(second);
-    expect(nav.navigate).toHaveBeenLastCalledWith('CommentForm', { subject: SUBJECT, replyTo: { id: 'a1', who: 'Lan Pham', body: 'says a1' } });
+    expect(replying()).toBe('Replying to Lan Pham');
+    fireEvent.click(first);
+    expect(replying()).toBe('Replying to trang');
+    expect(document.activeElement).toBe(field());
+    type('Agreed');
+    await sendIt();
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'Agreed');
+    // Sent, the next words answer nobody again.
+    expect(replying()).toBeNull();
   });
 
-  it('names nobody for a writer with neither handle nor name', async () => {
-    const nav = await show([row('a', null, { handle: null })]);
+  it('answers nobody after the ✕, and the words typed stay', async () => {
+    await show([row('a', null)]);
     fireEvent.click(screen.getByTestId('comment-reply'));
-    expect(nav.navigate).toHaveBeenLastCalledWith('CommentForm', { subject: SUBJECT, replyTo: { id: 'a', who: '', body: 'says a' } });
+    type('On second thought');
+    fireEvent.click(screen.getByTestId('composer-cancel-reply'));
+    expect(replying()).toBeNull();
+    expect(field().value).toBe('On second thought');
+    await sendIt();
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'On second thought');
   });
 
-  it('offers no reply to a comment that is gone', async () => {
-    await show([row('a', null, { gone: true, body: null, author: null, handle: null }), row('a1', 'a')]);
-    expect(screen.getAllByTestId('comment-reply')).toHaveLength(1);
+  it('keeps whom it answers, and the words, when the server refuses', async () => {
+    await show([row('a', null, { handle: 'trang' })]);
+    data.postComment.mockRejectedValueOnce(new Error('comment:cap'));
+    fireEvent.click(screen.getByTestId('comment-reply'));
+    type('One more');
+    await sendIt();
+    expect(screen.getByTestId('composer-error').textContent).toContain('limit');
+    expect(replying()).toBe('Replying to trang');
+    expect(field().value).toBe('One more');
+    // Nothing was written, so nothing is asked again.
+    expect(data.fetchThread).toHaveBeenCalledTimes(1);
   });
 
-  it('asks a guest to sign in from either way, and opens no form', async () => {
+  it('asks a guest to sign in from the field and from "Reply", and answers nobody', async () => {
     state.me = null;
-    const nav = await show([row('a', null)]);
-    fireEvent.click(screen.getByTestId('comments-write'));
+    await show([row('a', null)]);
+    expect(screen.queryByTestId('composer-field')).toBeNull();
+    fireEvent.click(screen.getByTestId('composer-guest'));
     fireEvent.click(screen.getByTestId('comment-reply'));
     expect(askToSignIn).toHaveBeenCalledTimes(2);
     expect(askToSignIn).toHaveBeenCalledWith('comment');
-    expect(nav.navigate).not.toHaveBeenCalled();
+    expect(replying()).toBeNull();
   });
 
   it('asks for the thread again when a comment is written or taken back anywhere', async () => {
