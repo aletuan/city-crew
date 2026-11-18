@@ -54,15 +54,8 @@
 // handle already (`shares.SEEN_GLYPH`), so the button would have doubled
 // it.
 //
-// ── level (owner, 18 Nov 2026, later that morning) ──
-//
-// `send-outline` now: the plane lying level. The tilted one was three
-// acute corners whichever set drew it (Lucide's was tried for two hours
-// and is the same shape — `ui/glyph`), and what the owner had in mind
-// was Threads' share mark, which is level. Ionicons', so it is of the
-// heart's family and weight. Level was weighed the day before and put
-// aside as "the send button of a message box"; Threads and Instagram
-// wear it for passing a post on, and their readers are this app's.
+// Drawn from the line set (`ui/glyph`): Ionicons' plane was three sharp
+// points beside the heart's curves, and the owner asked for it softer.
 //
 // The figure after it is back to a bare number, as it first was: how
 // many friends the list is shared with. VoiceOver is told all of it —
@@ -134,7 +127,7 @@ export function ShareButton({ seen, friends, onPress }: {
       accessibilityHint={whoHint(t)}
       testID="collection-share"
     >
-      <Glyph name="send-outline" size={ACT_GLYPH} color={colors.textSecondary} />
+      <Glyph name="paper-plane-outline" size={ACT_GLYPH} color={colors.textSecondary} />
       {seen === 'friends' ? <Text style={s.act} testID="collection-share-count">{friends}</Text> : null}
     </PressableScale>
   );
