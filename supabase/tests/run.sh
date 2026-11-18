@@ -719,3 +719,11 @@ for f in "$ROOT"/supabase/migrations/*_comments_cascade.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/comments_cascade_test.sql"
+
+# A heart on a comment (18 Nov 2026). After the cascade, whose
+# `comment_thread` it remakes with two columns more.
+echo "→ comment likes"
+for f in "$ROOT"/supabase/migrations/*_comment_likes.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comment_likes_test.sql"

@@ -70,6 +70,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from '../components/CommentComposer';
 import CommentRow, { INDENT } from '../components/CommentRow';
 import { useKeyboardUp } from '../components/keyboard';
+import { useCommentHearts } from './comments/useCommentHearts';
 import { useCommentMenu } from './comments/useCommentMenu';
 import { EmptyState, GradientCta, PressableScale, Screen } from '../components/ui';
 import { useTabBarAway } from '../components/tabBarDuck';
@@ -160,15 +161,17 @@ export default function CommentsScreen({ navigation, route }: {
   };
   // Delete your own, report somebody else's — `useCommentMenu`.
   const { menuOf, node: menuSheet } = useCommentMenu(me);
+  // A heart on each, drawn on the press — `useCommentHearts`.
+  const { heartsOf, toggle } = useCommentHearts(me, thread.loadedAt, askIn);
 
   const branch = (b: Branch) => {
     const replies = opened.has(b.root.id) ? b.replies : b.replies.slice(0, REPLIES_SHOWN);
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(b.root)} onMore={menuOf(b.root)} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(b.root)} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(r)} onMore={menuOf(r)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(r)} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
         ))}
         {more > 0 ? (
           <PressableScale

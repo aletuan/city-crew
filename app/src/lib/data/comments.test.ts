@@ -14,7 +14,7 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { deleteComment, fetchPreviews, fetchThread, postComment } from './comments';
+import { deleteComment, fetchPreviews, fetchThread, likeComment, postComment } from './comments';
 import { refusalOf, type Subject } from '../comments';
 
 const list = (id: string): Subject => ({ kind: 'collection', id });
@@ -39,8 +39,24 @@ describe('fetchThread', () => {
     const nameless = { ...wire, id: 'k2', parent_id: 'k1', root_id: 'k1', depth: 1, handle: null, mentions: [] };
     fake().replies({ data: [wire, nameless] });
     const [a, b] = await fetchThread(list('c1'));
-    expect(a).toEqual({ ...wire, mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null }] });
-    expect(b).toEqual(nameless);
+    // A server from before the hearts sends neither column: none, and not the reader's.
+    expect(a).toEqual({ ...wire, mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null }], likes: 0, liked: false });
+    expect(b).toEqual({ ...nameless, likes: 0, liked: false });
+  });
+
+  it('reads the hearts as it reads the tags: a figure that is one, and only true is the reader\'s', async () => {
+    const wire = {
+      id: 'k1', parent_id: null, root_id: null, depth: 0, body: 'Hi', created_at: 'x',
+      author: 'u1', handle: 'long', full_name: null, avatar_url: null, mentions: [],
+    };
+    fake().replies({ data: [
+      { ...wire, likes: 3, liked: true },
+      { ...wire, id: 'k2', likes: '3', liked: 'yes' },
+      { ...wire, id: 'k3', likes: null, liked: null },
+      { ...wire, id: 'k4', likes: 1, liked: false },
+    ] });
+    const out = await fetchThread(list('c1'));
+    expect(out.map((c) => [c.likes, c.liked])).toEqual([[3, true], [0, false], [0, false], [1, false]]);
   });
 
   it('is an empty thread for a null answer', async () => {
@@ -129,5 +145,21 @@ describe('deleteComment', () => {
   it('throws a refusal so it can be named', async () => {
     fake().replies({ error: { message: 'comment:not_yours' } });
     expect(refusalOf(await deleteComment('k1').catch((e: unknown) => e))).toBe('not_yours');
+  });
+});
+
+describe('likeComment', () => {
+  it('asks the function to set the reader\'s heart, or to take it back', async () => {
+    await likeComment('k1', true);
+    await likeComment('k1', false);
+    expect(fake().log).toEqual([
+      { op: 'rpc', fn: 'like_comment', payload: { p_id: 'k1', p_on: true }, filters: [] },
+      { op: 'rpc', fn: 'like_comment', payload: { p_id: 'k1', p_on: false }, filters: [] },
+    ]);
+  });
+
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'comment:parent' } });
+    await expect(likeComment('k1', true)).rejects.toThrow('comment:parent');
   });
 });
