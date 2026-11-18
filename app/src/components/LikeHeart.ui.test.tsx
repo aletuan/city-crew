@@ -139,8 +139,11 @@ describe('when it moves', () => {
     rerender(heart({ liked: true, count: 8 }));
     await flush();
     // The swell out to the peak, the spring back to rest, and the slide.
-    expect(timing.mock.calls.map(([, cfg]) => [cfg.toValue, cfg.duration])).toEqual([[POP_PEAK, 90], [1, 180]]);
-    expect(spring.mock.calls.filter(([, cfg]) => cfg.toValue === 1)).toHaveLength(1);
+    expect(timing.mock.calls.map(([, cfg]) => [cfg.toValue, cfg.duration])).toEqual([[POP_PEAK, 110], [1, 320]]);
+    // Home, and settling once: a bounce carried it past its size and out
+    // again (the owner, 18 Nov 2026: "a little too hard").
+    expect(spring.mock.calls.filter(([, cfg]) => cfg.toValue === 1).map(([, cfg]) => (cfg as { bounciness?: number }).bounciness)).toEqual([0]);
+    expect(POP_PEAK).toBe(1.12);
     expect(timing.mock.calls.every(([, cfg]) => cfg.useNativeDriver)).toBe(true);
     // Landed: the new figure alone, drawn plainly again.
     expect(screen.queryByTestId('like-count-rolling')).toBeNull();
@@ -156,7 +159,7 @@ describe('when it moves', () => {
     rerender(heart({ liked: false, count: 7 }));
     await flush();
     expect(moved()).not.toContain(POP_PEAK);
-    expect(timing.mock.calls.map(([, cfg]) => [cfg.toValue, cfg.duration])).toEqual([[1, 180]]);
+    expect(timing.mock.calls.map(([, cfg]) => [cfg.toValue, cfg.duration])).toEqual([[1, 320]]);
     expect(screen.getByTestId('heart').textContent).toBe('7');
   });
 
@@ -181,24 +184,24 @@ describe('when it moves', () => {
   });
 
   // Up when it grew: the figure leaving rises out and the one arriving
-  // comes from below. Down when it fell: the reverse. 10pt either way.
+  // comes from below. Down when it fell: the reverse. 14pt either way.
   it('sends the two figures the way the tally went', async () => {
     timing.mockImplementation(() => ({ start: () => {}, stop: () => {}, reset: () => {} }) as unknown as Animated.CompositeAnimation);
     const interpolate = vi.spyOn(Animated.Value.prototype, 'interpolate');
     // Of the last draw: the one before it still holds the slide before.
-    const travelled = () => interpolate.mock.calls.map(([cfg]) => cfg.outputRange).filter((r) => r.some((v) => Math.abs(Number(v)) === 10)).slice(-2);
+    const travelled = () => interpolate.mock.calls.map(([cfg]) => cfg.outputRange).filter((r) => r.some((v) => Math.abs(Number(v)) === 14)).slice(-2);
     const { rerender } = render(heart({ count: 7 }));
     await flush();
     press();
     interpolate.mockClear();
     rerender(heart({ liked: true, count: 8 }));
     await flush();
-    expect(new Set(travelled().map(String))).toEqual(new Set(['0,-10', '10,0']));
+    expect(new Set(travelled().map(String))).toEqual(new Set(['0,-14', '14,0']));
     press();
     interpolate.mockClear();
     rerender(heart({ liked: false, count: 7 }));
     await flush();
-    expect(new Set(travelled().map(String))).toEqual(new Set(['0,10', '-10,0']));
+    expect(new Set(travelled().map(String))).toEqual(new Set(['0,14', '-14,0']));
   });
 
   it('slides the first like in with nothing leaving, and the last one out with nothing arriving', async () => {

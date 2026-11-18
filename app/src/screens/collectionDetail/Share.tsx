@@ -42,6 +42,22 @@
 // "Share" (three phrases do not fit the row on a narrow phone). The row
 // fits this one because "View activity" became "Activity" the same day.
 //
+// ── a paper plane, and no word (owner, 18 Nov 2026, the next morning) ──
+//
+// The word lasted a night. On the phone the owner took it off again and
+// changed the glyph: `paper-plane-outline`, from a set of five weighed
+// for him (the plane; three joined dots, Android's; two heads; a globe;
+// an arrow up and right). The iOS box-and-arrow needed the word to be
+// honest, and the plane does not: it says "to somebody", which is what
+// choosing who sees a list is, and it is not the system's own share
+// sheet. Two heads was the other candidate and is the mark under the
+// handle already (`shares.SEEN_GLYPH`), so the button would have doubled
+// it.
+//
+// The figure after it is back to a bare number, as it first was: how
+// many friends the list is shared with. VoiceOver is told all of it —
+// "Share, Friends, 3".
+//
 // ── what stays under the handle ──
 //
 // The state's glyph alone — two heads, a padlock, and nothing for a
@@ -108,10 +124,8 @@ export function ShareButton({ seen, friends, onPress }: {
       accessibilityHint={whoHint(t)}
       testID="collection-share"
     >
-      <Glyph name="share-outline" size={ACT_GLYPH} color={colors.textSecondary} />
-      <Text style={s.act} testID="collection-share-word">
-        {seen === 'friends' ? `${t('Share', 'Chia sẻ', '共有', '分享', '分享')} · ${friends}` : t('Share', 'Chia sẻ', '共有', '分享', '分享')}
-      </Text>
+      <Glyph name="paper-plane-outline" size={ACT_GLYPH} color={colors.textSecondary} />
+      {seen === 'friends' ? <Text style={s.act} testID="collection-share-count">{friends}</Text> : null}
     </PressableScale>
   );
 }
