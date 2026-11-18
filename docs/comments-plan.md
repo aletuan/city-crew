@@ -259,7 +259,9 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Chưa kiểm được bằng kiểm thử tự động: ô có trượt lên đúng theo bàn phím
   không. Phải xem trên máy.
 
-*C4d — tim trên bình luận (chủ dự án yêu cầu 18/11/2026):*
+*C4d — xong: tim trên bình luận (chủ dự án yêu cầu 18/11/2026;
+migration đã áp lên cơ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã
+sinh lại):*
 - Máy chủ (`20261118190000_comment_likes.sql`): bảng `comment_likes`
   (một dòng cho mỗi cặp bình luận và người; xoá bình luận hoặc xoá tài
   khoản thì tim đi theo), hàm `like_comment(id, bật/tắt)` gọi lặp lại
