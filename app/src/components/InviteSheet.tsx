@@ -174,7 +174,8 @@ export default function InviteSheet({
       )}
       note={{ icon: 'time-outline', text: note }}
       cta={{
-        icon: 'paper-plane-outline',
+        // One mark for sending across the app: a list's Share wears it too.
+        icon: 'send-outline',
         label,
         testID: 'invite-send',
         disabled: sending || !moved,
