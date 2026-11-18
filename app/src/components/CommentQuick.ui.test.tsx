@@ -13,14 +13,23 @@ import { changes } from '../lib/commentsChanged';
 import type { Subject } from '../lib/comments';
 
 const data = vi.hoisted(() => ({
-  postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string): Promise<string> => 'k-new'),
+  postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string, _mentions: unknown[]): Promise<string> => 'k-new'),
+  fetchTaggable: vi.fn(async (_s: unknown): Promise<{ people: unknown[]; places: unknown[] }> => ({ people: [], places: [] })),
 }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   postComment: data.postComment,
 }));
-const who = vi.hoisted(() => ({ profile: { avatar_url: 'https://faces/me.jpg' } as { avatar_url: string } | null }));
-vi.mock('../lib/auth', () => ({ useProfile: () => ({ profile: who.profile }) }));
+// The hook is the real one; what it asks the server is the fake's.
+vi.mock('../lib/data/comments', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchTaggable: data.fetchTaggable,
+}));
+const who = vi.hoisted(() => ({ profile: { avatar_url: 'https://faces/me.jpg' } as { avatar_url: string } | null, me: 'me' as string | null }));
+vi.mock('../lib/auth', () => ({
+  useProfile: () => ({ profile: who.profile }),
+  useSession: () => ({ session: who.me ? { user: { id: who.me } } : null }),
+}));
 // A phone with a home indicator, so the margin the field gives up to the
 // keyboard can be told from its own padding.
 vi.mock('react-native-safe-area-context', () => ({
@@ -40,6 +49,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   data.postComment.mockImplementation(async () => 'k-new');
   who.profile = { avatar_url: 'https://faces/me.jpg' };
+  who.me = 'me';
+  data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [] }));
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -115,9 +126,34 @@ describe('the field over the page', () => {
     const before = changes();
     type('First!');
     await send();
-    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'First!');
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'First!', []);
     expect(changes()).toBe(before + 1);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks whom may be tagged once there is something to write about, and sends a tag taken from "@"', async () => {
+    data.fetchTaggable.mockImplementation(async () => ({
+      people: [{ id: 'u-trang', handle: 'trang', full_name: null, avatar_url: null }], places: [],
+    }));
+    const { rerender } = render(<CommentQuick target={null} onClose={onClose} />);
+    await act(async () => { await Promise.resolve(); });
+    expect(data.fetchTaggable).not.toHaveBeenCalled();
+    rerender(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(data.fetchTaggable).toHaveBeenCalledExactlyOnceWith(SUBJECT);
+    type('@t');
+    fireEvent.click(screen.getByTestId('composer-offer-person'));
+    await send();
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, '@trang', [
+      { at: 0, len: 6, person: 'u-trang', place: null, handle: null, slug: null },
+    ]);
+  });
+
+  it('asks nothing of whom may be tagged before the reader is known', async () => {
+    who.me = null;
+    render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+    await act(async () => { await Promise.resolve(); });
+    expect(data.fetchTaggable).not.toHaveBeenCalled();
   });
 
   it('stays up with the words when the server refuses, and tells nobody', async () => {

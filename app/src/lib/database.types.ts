@@ -1619,6 +1619,7 @@ export type Database = {
         Args: { p_collection: string }
         Returns: boolean
       }
+      comment_taggable: { Args: { p_collection: string }; Returns: Json }
       comment_thread: {
         Args: { p_collection: string; p_order?: string }
         Returns: {

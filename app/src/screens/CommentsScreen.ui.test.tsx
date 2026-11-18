@@ -21,7 +21,8 @@ const ago = (min: number) => new Date(NOW.getTime() - min * 60_000).toISOString(
 
 const data = vi.hoisted(() => ({
   fetchThread: vi.fn(async (_s: unknown): Promise<unknown[]> => []),
-  postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string): Promise<string> => 'k-new'),
+  postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string, _mentions: unknown[]): Promise<string> => 'k-new'),
+  fetchTaggable: vi.fn(async (_s: unknown): Promise<{ people: unknown[]; places: unknown[] }> => ({ people: [], places: [] })),
   likeComment: vi.fn(async (_id: string, _on: boolean): Promise<void> => {}),
 }));
 // The module the hook reads the RPC from, not the barrel.
@@ -29,6 +30,7 @@ vi.mock('../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchThread: data.fetchThread,
   postComment: data.postComment,
+  fetchTaggable: data.fetchTaggable,
   likeComment: data.likeComment,
 }));
 // A phone with a home indicator: 34 under the page, where the bench's
@@ -361,7 +363,7 @@ describe('writing', () => {
     type('Lovely rooftop');
     await sendIt();
     await flush();
-    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'Lovely rooftop');
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'Lovely rooftop', []);
     expect(data.fetchThread).toHaveBeenCalledTimes(2);
     expect(drawn()).toEqual([['says new'], ['says a']]);
     expect(field().value).toBe('');
@@ -378,7 +380,7 @@ describe('writing', () => {
     expect(document.activeElement).toBe(field());
     type('Agreed');
     await sendIt();
-    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'Agreed');
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'Agreed', []);
     // Sent, the next words answer nobody again.
     expect(replying()).toBeNull();
     // And the keyboard goes down, off the comment just written.
@@ -393,7 +395,7 @@ describe('writing', () => {
     expect(replying()).toBeNull();
     expect(field().value).toBe('On second thought');
     await sendIt();
-    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'On second thought');
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'On second thought', []);
   });
 
   it('keeps whom it answers, and the words, when the server refuses', async () => {
@@ -486,6 +488,62 @@ describe('a heart on each comment', () => {
     fireEvent.click(hearts()[0]);
     expect(askToSignIn).toHaveBeenCalledWith('comment');
     expect(data.likeComment).not.toHaveBeenCalled();
+    state.me = 'me';
+  });
+});
+
+describe('tags', () => {
+  const field = () => screen.getByTestId('composer-field') as HTMLTextAreaElement;
+
+  it('opens a tagged place by its slug', async () => {
+    const nav = await show([row('a', null, {
+      body: 'at Cong',
+      mentions: [{ at: 3, len: 4, person: null, handle: null, place: 'p1', slug: 'cong-ca-phe' }],
+    })]);
+    fireEvent.click(screen.getByTestId('comment-tag-place'));
+    expect(nav.navigate).toHaveBeenCalledExactlyOnceWith('PlaceDetail', { slug: 'cong-ca-phe' });
+  });
+
+  it('opens one tagged in a reply as well', async () => {
+    const nav = await show([row('a', null), row('a1', 'a', {
+      body: 'Tan Hien too',
+      mentions: [{ at: 0, len: 8, person: null, handle: null, place: 'p2', slug: 'tan-hien' }],
+    })]);
+    fireEvent.click(screen.getByTestId('comment-tag-place'));
+    expect(nav.navigate).toHaveBeenCalledExactlyOnceWith('PlaceDetail', { slug: 'tan-hien' });
+  });
+
+  it('asks once whom the reader may tag here, offers them on "@", and sends the tag under what is answered', async () => {
+    data.fetchTaggable.mockClear(); data.postComment.mockClear();
+    data.fetchTaggable.mockImplementation(async () => ({
+      people: [{ id: 'u-trang', handle: 'trang', full_name: 'Trang Lê', avatar_url: null }],
+      places: [{ id: 'p-cong', slug: 'cong-ca-phe', name_en: 'Cong Cafe', name_vi: 'Cộng Cà Phê' }],
+    }));
+    await show([row('a', null)]);
+    await flush();
+    expect(data.fetchTaggable).toHaveBeenCalledExactlyOnceWith(SUBJECT);
+    fireEvent.click(screen.getByTestId('comment-reply'));
+    fireEvent.change(field(), { target: { value: 'go with @t' } });
+    fireEvent.click(screen.getByTestId('composer-offer-person'));
+    fireEvent.change(field(), { target: { value: 'go with @trang to @c' } });
+    fireEvent.click(screen.getByTestId('composer-offer-place'));
+    await act(async () => { fireEvent.click(screen.getByTestId('composer-send')); await Promise.resolve(); await Promise.resolve(); });
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'go with @trang to @Cong Cafe', [
+      { at: 8, len: 6, person: 'u-trang', place: null, handle: null, slug: null },
+      { at: 18, len: 10, person: null, place: 'p-cong', handle: null, slug: null },
+    ]);
+    // A comment written does not ask again whom may be tagged.
+    await flush();
+    expect(data.fetchTaggable).toHaveBeenCalledTimes(1);
+    data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [] }));
+  });
+
+  it('asks nothing for a guest, who has no field to tag in', async () => {
+    state.me = null;
+    data.fetchTaggable.mockClear();
+    await show([row('a', null)]);
+    await flush();
+    expect(data.fetchTaggable).not.toHaveBeenCalled();
     state.me = 'me';
   });
 });

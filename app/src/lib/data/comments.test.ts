@@ -14,7 +14,7 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { deleteComment, fetchPreviews, fetchThread, likeComment, postComment } from './comments';
+import { deleteComment, fetchPreviews, fetchTaggable, fetchThread, likeComment, postComment } from './comments';
 import { refusalOf, type Subject } from '../comments';
 
 const list = (id: string): Subject => ({ kind: 'collection', id });
@@ -34,13 +34,13 @@ describe('fetchThread', () => {
     const wire = {
       id: 'k1', parent_id: null, root_id: null, depth: 0, body: 'Hi @trang', created_at: 'x',
       author: 'u1', handle: 'long', full_name: null, avatar_url: null,
-      mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null }, { at: 'bad' }],
+      mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null, slug: null }, { at: 'bad' }],
     };
     const nameless = { ...wire, id: 'k2', parent_id: 'k1', root_id: 'k1', depth: 1, handle: null, mentions: [] };
     fake().replies({ data: [wire, nameless] });
     const [a, b] = await fetchThread(list('c1'));
     // A server from before the hearts sends neither column: none, and not the reader's.
-    expect(a).toEqual({ ...wire, mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null }], likes: 0, liked: false });
+    expect(a).toEqual({ ...wire, mentions: [{ at: 3, len: 6, person: 'u2', handle: 'trang', place: null, slug: null }], likes: 0, liked: false });
     expect(b).toEqual({ ...nameless, likes: 0, liked: false });
   });
 
@@ -114,8 +114,8 @@ describe('postComment', () => {
   it('sends an answer under its parent, and each tag as where it is and what it points at', async () => {
     fake().replies({ data: 'k-new' });
     await postComment(list('c1'), 'k1', 'Hi @trang at Cafe', [
-      { at: 3, len: 6, person: 'u2', handle: 'trang', place: null },
-      { at: 13, len: 4, person: null, handle: null, place: 'p1' },
+      { at: 3, len: 6, person: 'u2', handle: 'trang', place: null, slug: null },
+      { at: 13, len: 4, person: null, handle: null, place: 'p1', slug: null },
     ]);
     expect(fake().log[0].payload).toEqual({
       p_collection: 'c1', p_parent: 'k1', p_body: 'Hi @trang at Cafe',
@@ -161,5 +161,24 @@ describe('likeComment', () => {
   it('throws what the server said', async () => {
     fake().replies({ error: { message: 'comment:parent' } });
     await expect(likeComment('k1', true)).rejects.toThrow('comment:parent');
+  });
+});
+
+describe('fetchTaggable', () => {
+  it('asks by the subject, and reads the answer as people and places', async () => {
+    fake().replies({ data: {
+      people: [{ id: 'u1', handle: 'trang', full_name: null, avatar_url: null }, { id: 'bad' }],
+      places: [{ id: 'p1', slug: 'cong', name_en: 'Cong', name_vi: 'Cộng' }],
+    } });
+    expect(await fetchTaggable(list('c1'))).toEqual({
+      people: [{ id: 'u1', handle: 'trang', full_name: null, avatar_url: null }],
+      places: [{ id: 'p1', slug: 'cong', name_en: 'Cong', name_vi: 'Cộng' }],
+    });
+    expect(fake().log).toEqual([{ op: 'rpc', fn: 'comment_taggable', payload: { p_collection: 'c1' }, filters: [] }]);
+  });
+
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'down' } });
+    await expect(fetchTaggable(list('c1'))).rejects.toThrow('down');
   });
 });
