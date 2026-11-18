@@ -2,6 +2,7 @@ import type { WhereKind } from './lib/planHeading';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNavigationContainerRef, type RouteProp } from '@react-navigation/native';
 import { returnTab, takeResume } from './lib/resume';
+import type { Subject } from './lib/comments';
 
 /**
  * What the wizard asked, in the shape the two screens after it need.
@@ -116,6 +117,13 @@ export type RootStackParamList = {
    *  "View activity ›". By slug, like the page it opens from: the row is
    *  already in memory among your own lists, so only the key travels. */
   CollectionActivity: { slug: string };
+  /** A subject's thread of comments (C3 of `docs/comments-plan.md`) — a
+   *  screen of its own, not a sheet: a nested thread and a keyboard want
+   *  the height, and Activity's "replied to you" needs somewhere to land.
+   *  By the subject, which is all the screen knows of what is discussed;
+   *  registered in every stack that has `CollectionDetail`, where its
+   *  door is. */
+  Comments: { subject: Subject };
   /** One of your lists' figures — opens, likes, copies, trips, all time
    *  and the last seven days — from its Activity page's "Statistics ›".
    *  By slug, for the reason `CollectionActivity` is. */

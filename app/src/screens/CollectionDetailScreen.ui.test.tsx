@@ -47,6 +47,7 @@ import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
 import { colors, space } from '../theme';
 import { CHIP_H, CHIP_SLOP } from '../components/ui';
+import { appFlags } from '../lib/flags';
 
 const spies = vi.hoisted(() => ({
   goTo: vi.fn(),
@@ -4265,5 +4266,39 @@ describe('pulling the list down', () => {
     expect(list().refreshing).toBe(false);
     act(() => { list().onRefresh(); });
     expect(list().refreshing).toBe(true);
+  });
+});
+
+// The door to a list's comments (C3 of `docs/comments-plan.md`), at the
+// card's foot. It decides for itself whether it is drawn
+// (`collectionDetail/CommentsDoor`); what is pinned here is where it
+// stands on this page and what it opens.
+describe('the way into the comments', () => {
+  afterEach(() => appFlags.reset());
+  const door = () => screen.queryByTestId('collection-comments');
+
+  it('is not on the card as the app ships', () => {
+    show();
+    expect(door()).toBeNull();
+  });
+
+  it('stands after Share and before Activity on a public list, and opens the list\'s thread', () => {
+    appFlags.set('comments', true);
+    state.mine = [collection({ is_public: true })];
+    const { raw } = show();
+    const row = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
+    // In reading order, wherever each sits in its own wrapper.
+    const doors = ['collection-share', 'collection-comments', 'collection-activity-link'];
+    const order = [...row.querySelectorAll('[data-testid]')].map((c) => c.getAttribute('data-testid')).filter((id) => doors.includes(id!));
+    expect(order).toEqual(doors);
+    fireEvent.click(door()!);
+    expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Comments', { subject: { kind: 'collection', id: 'c1' } });
+  });
+
+  it('is not on a list that is not public, which has no thread', () => {
+    appFlags.set('comments', true);
+    // The bench's own list is private unless a test says otherwise.
+    show();
+    expect(door()).toBeNull();
   });
 });
