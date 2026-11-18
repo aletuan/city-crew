@@ -22,7 +22,11 @@ declare
     'own_collections_today', 'own_place_events_today', 'own_friend_requests_today',
     -- The themes a fifth of those who chose wear, as names and nothing
     -- else; the Theme sheet asks signed out too. See 20261012130000_popular_themes.
-    'popular_themes'
+    'popular_themes',
+    -- A public collection's thread, and the count and two newest a card
+    -- shows: as public as the collection, which a guest reads. Present
+    -- only once 20261118050000_comments has run, which is after this file.
+    'comment_thread', 'comment_previews'
   ];
   stray text;
 begin
