@@ -1114,14 +1114,30 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <Glyph name="chevron-forward" size={ACTIVITY_CHEVRON} color={colors.textTertiary} />
     </PressableScale>
   ) : null;
-  // Share, beside the heart: who can see the list, and sending it —
+  // Share: who can see the list, and sending it —
   // `collectionDetail/Share`. Yours alone.
+  //
+  // After the comments, not between the heart and them (owner, 19 Nov
+  // 2026). It stood beside the heart because it was there first; the
+  // comments came a day later and were put at the end. That left a plane
+  // between two tallies, where its own figure (how many friends hold the
+  // list) read as a third; it put the pair in the other order from a
+  // feed card, which has heart then comments; and since a visitor has no
+  // Share, the comments stood in a different place for the owner than
+  // for everybody else. Now the two tallies lead, in the card's order,
+  // and stand where they stand for every reader.
+  //
+  // Weighed with it, the owner's own first thought: the plane at the
+  // row's far end. That end is `activityLink`'s, and a plane beside
+  // "Activity ›" would be two doors at one edge; alone there with its
+  // figure it would also read as a count of sends more than it does at
+  // the end of the acts.
   const shareButton = owned
     ? <ShareButton seen={seen} friends={sharedWith.length} onPress={() => setWhoSees(true)} />
     : null;
   const activity = (
     <View style={s.activity} testID="collection-activity">
-      <View style={s.activityRow}>{heart ?? keptHeart}{shareButton}<CommentsDoor list={col} about={title} onPress={(id) => navigation.navigate('Comments', { subject: { kind: 'collection', id } })} />{activityLink}</View>
+      <View style={s.activityRow}>{heart ?? keptHeart}<CommentsDoor list={col} about={title} onPress={(id) => navigation.navigate('Comments', { subject: { kind: 'collection', id } })} />{shareButton}{activityLink}</View>
     </View>
   );
 

@@ -4287,17 +4287,23 @@ describe('the way into the comments', () => {
     expect(door()).toBeNull();
   });
 
-  it('stands after Share and before Activity on a public list, and opens the list\'s thread', async () => {
+  // Heart, comments, Share, as a feed card has heart then comments: the
+  // two tallies together, and the plane not between them, where its own
+  // figure read as a third (owner, 19 Nov 2026).
+  it('stands after the heart and before Share and Activity on a public list, and opens the list\'s thread', async () => {
     appFlags.set('comments', true);
     state.mine = [collection({ is_public: true })];
     const { raw } = show();
     // The count lands: the thread has comments, so the door opens it.
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     const row = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
-    // In reading order, wherever each sits in its own wrapper.
-    const doors = ['collection-share', 'collection-comments', 'collection-activity-link'];
-    const order = [...row.querySelectorAll('[data-testid]')].map((c) => c.getAttribute('data-testid')).filter((id) => doors.includes(id!));
-    expect(order).toEqual(doors);
+    // Where each stands among the row's own children, wherever it sits
+    // in its wrapper. The heart has no id of its own on this page: it is
+    // the one that is none of the other three, and it leads.
+    const cells = [...row.children];
+    const at = (id: string) => cells.findIndex((c) => c.matches(`[data-testid="${id}"]`) || !!c.querySelector(`[data-testid="${id}"]`));
+    expect(cells).toHaveLength(4);
+    expect(['collection-comments', 'collection-share', 'collection-activity-link'].map(at)).toEqual([1, 2, 3]);
     fireEvent.click(door()!);
     expect(raw.navigate).toHaveBeenCalledExactlyOnceWith('Comments', { subject: { kind: 'collection', id: 'c1' } });
   });
