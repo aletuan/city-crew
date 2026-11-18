@@ -22,6 +22,14 @@ describe('flagsStore', () => {
     expect(flagsStore().get('city_place_counts')).toBe(false);
   });
 
+  // Comments are built behind this over eleven merges, and are people's
+  // words to each other: off until the release that carries them has
+  // been reviewed (`docs/comments-plan.md`).
+  it('ships comments off', () => {
+    expect(FLAG_DEFAULTS.comments).toBe(false);
+    expect(flagsStore().get('comments')).toBe(false);
+  });
+
   it('takes a row from the table over the default', async () => {
     const fake = fakeSupabase();
     fake.replies({ data: [{ key: 'photo_attribution', enabled: false }] });

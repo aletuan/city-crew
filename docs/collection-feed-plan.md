@@ -69,6 +69,14 @@ marketing hay hạ tầng.
   ở `lib/person.ts` (`listsOn`, `seenOn`). Feed cộng đồng ở bước 2 vẫn chỉ
   có bộ công khai.
 
+### Bình luận trên bộ sưu tập — đã quyết làm (18/11/2026)
+
+Kế hoạch riêng: `docs/comments-plan.md`. Bình luận thuộc về bộ sưu tập
+công khai (mỗi bộ một luồng), lồng nhau, có tag người và địa điểm, làm
+sau cờ `comments` cho tới một bản nộp duyệt. Nguyên tắc 1 không đổi:
+bình luận được làm vì nó gắn vào một bộ sưu tập; bình luận tự do thì
+chưa.
+
 ### Bước 2. Bộ sưu tập cộng đồng thành feed
 
 - Mỗi bộ một thẻ, kèm dòng lý do. Lý do đọc từ dữ liệu sẵn có: tạo bộ,
