@@ -40,6 +40,12 @@ describe('reportable', () => {
     expect(reportable({ kind: 'collection', id: 'c1', ownerId: 'me' }, 'me')).toBe(false);
   });
 
+  it('somebody else’s comment, yes; your own is yours to delete; a writer nobody knows, no', () => {
+    expect(reportable({ kind: 'comment', id: 'k1', ownerId: 'them' }, 'me')).toBe(true);
+    expect(reportable({ kind: 'comment', id: 'k1', ownerId: 'me' }, 'me')).toBe(false);
+    expect(reportable({ kind: 'comment', id: 'k1', ownerId: null }, 'me')).toBe(false);
+  });
+
   it('the desk’s own editorial lists have no owner to report', () => {
     expect(reportable({ kind: 'collection', id: 'c1', ownerId: null }, 'me')).toBe(false);
   });
