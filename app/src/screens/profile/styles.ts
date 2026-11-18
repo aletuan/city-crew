@@ -40,24 +40,24 @@ export const GLYPH_SLOT = 44;
 export const ROW_GLYPH = 19;
 
 export const s = StyleSheet.create({
-  // The first column's glyphs on the About rows' column (owner, 3 Nov
-  // 2026): that column is the middle of `rowGlyph`'s 44pt slot, so the
-  // grid starts half of what is left beside a 19pt glyph in:
-  // (44 − 19) / 2. A name 8pt after its glyph.
+  // Three to a row, each a third of the card, its glyph over its name
+  // and both centred (owner, 18 Nov 2026, from a reference he drew): the
+  // shape the picker has one screen away, without its tiles. Thirds, so
+  // a second row's interests stand under the first row's — which the
+  // flow of 3 Nov did not do, and the two columns of that morning did at
+  // the cost of looking like a table of facts.
   //
-  // Two columns of half the row each (owner, 18 Nov 2026), so the second
-  // column's glyphs stand under one another whatever the names before
-  // them are. 12 between rows, as the lines of the flow it replaces had;
-  // 14 above and below, as the card's rows. A name keeps to one line and
-  // gives way before its column does: the longest today, "Thiên nhiên",
-  // is some 85pt at this type and a column leaves about 116 on a 393pt
-  // phone — computed from the type, not measured on one.
-  tasteChips: {
-    flexDirection: 'row', flexWrap: 'wrap', rowGap: 12,
-    paddingVertical: 14, paddingLeft: (GLYPH_SLOT - ROW_GLYPH) / 2,
-  },
-  tasteItem: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 24, paddingRight: 12 },
-  tasteName: { flexShrink: 1 },
+  // 8 between a glyph and its name, as the picker's tiles; 16 above and
+  // below and between two rows. A name keeps to one line: a third of the
+  // card is about 107pt on a 393pt phone and the longest name today,
+  // "Thiên nhiên", some 85 at this type — computed, not measured. The
+  // 4pt at each side keeps two long names from touching.
+  //
+  // The first glyph no longer stands on the About rows' column (3 Nov):
+  // a centred third has no column to keep.
+  tasteChips: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16, paddingVertical: 16 },
+  tasteItem: { width: `${100 / 3}%`, alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  tasteName: { flexShrink: 1, textAlign: 'center' },
   tasteEmpty: { paddingVertical: 14 },
   // The role badge and the Edit profile button, one row under the name.
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },
