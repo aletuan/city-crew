@@ -143,7 +143,14 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 
-import PersonScreen, { type Home } from './PersonScreen';
+// What only you see on your own page has its own tests (`Counts` in the
+// account's, `Requests` beside it); here, only where it stands.
+vi.mock('./profile/Counts', () => ({ Counts: () => <div data-testid="owner-counts" /> }));
+vi.mock('./person/Requests', () => ({
+  Requests: ({ onOpen }: { onOpen: () => void }) => <button type="button" data-testid="owner-requests" onClick={onOpen} />,
+}));
+
+import PersonScreen from './PersonScreen';
 
 const LAN: Who = { id: 'lan-id', handle: 'lan', full_name: 'Lan Phạm', avatar_url: 'https://faces/lan.jpg', bio: 'Coffee first, then the rest.' };
 
@@ -167,9 +174,10 @@ const opens = (): (string | null)[] => cards().map((c) => within(c).getByTestId(
  *  page was left and come back to. */
 const heard: Record<string, (() => void)[]> = {};
 const said = (event: 'blur' | 'focus') => act(() => { (heard[event] ?? []).forEach((fn) => fn()); });
-const show = async (handle = 'lan', home?: Home) => {
+const show = async (handle = 'lan', home?: boolean, routeNames?: string[]) => {
   const navigation = {
     goBack: vi.fn(), navigate: vi.fn(), getParent: () => out.tabs,
+    getState: () => (routeNames ? { routeNames } : undefined),
     addListener: vi.fn((event: string, fn: () => void) => {
       (heard[event] ??= []).push(fn);
       return () => { heard[event] = heard[event].filter((f) => f !== fn); };
@@ -1010,12 +1018,8 @@ describe('lists that are not for everybody', () => {
       expect(acts()).toHaveLength(3);
     });
 
-    it('goes by the container where the page has no navigator above it', async () => {
-      out.tabs = undefined;
-      await show('me');
-      fireEvent.click(screen.getByTestId('person-account'));
-      expect(out.goTo).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Account', initial: false });
-    });
+    // With no navigator above the page, the container's way — now
+    // `toProfileRoom`'s, tested with it in `nav.test.ts`.
 
     // It is not a way to your lists, so it does not wait for one.
     it('has it with no list to your name', async () => {
@@ -1827,44 +1831,54 @@ describe('comments on the cards', () => {
 });
 
 // The last tab's first page, your own (owner, 19 Nov 2026 —
-// docs/profile-home-plan.md): `MeScreen` hands it `home`. What goes in
-// `owner` — the counts, the requests — has its own tests.
-describe('as the last tab’s first page', () => {
-  const home = () => ({ toAccount: vi.fn(), owner: <div data-testid="owner-part" /> });
+// docs/profile-home-plan.md): no way back, no title. What only you see is
+// on your own page wherever it opens (owner, 19 Nov 2026).
+describe('your own page', () => {
+  const PROFILE_STACK = ['ProfileHome', 'Account', 'Crew', 'Visited', 'Person'];
 
   beforeEach(() => {
     state.people = { ...state.people, me: { id: 'me-id', handle: 'me', full_name: 'Me', avatar_url: '' } };
   });
 
-  it('has no way back and no title, and opens Account by the way it was handed', async () => {
-    const h = home();
-    await show('me', h);
+  it('as the tab’s first page has no way back and no title, and pushes Account in its own stack', async () => {
+    const navigation = await show('me', true, PROFILE_STACK);
     expect(screen.queryByTestId('person-back')).toBeNull();
     // The tab says whose page it is (owner, 19 Nov 2026).
     expect(screen.queryByText('Profile')).toBeNull();
     fireEvent.click(screen.getByTestId('person-account'));
-    expect(h.toAccount).toHaveBeenCalledTimes(1);
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Account');
     expect(out.tabs!.navigate).not.toHaveBeenCalled();
     expect(out.goTo).not.toHaveBeenCalled();
   });
 
   // Under the head and over the activity: who you are, then what only
   // you see, then what you did.
-  it('draws what only you see between your head and your activity', async () => {
-    await show('me', home());
-    const part = screen.getByTestId('owner-part');
-    const name = screen.getByTestId('person-name');
-    const account = screen.getByTestId('person-account');
-    expect(name.compareDocumentPosition(part) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(part.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  it('draws your counts, then the requests waiting, between your head and your activity', async () => {
+    await show('me', true, PROFILE_STACK);
+    const [name, counts, requests, account] = ['person-name', 'owner-counts', 'owner-requests', 'person-account'].map((id) => screen.getByTestId(id));
+    for (const [a, b] of [[name, counts], [counts, requests], [requests, account]]) {
+      expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 
-  // Your page reached from a card in another tab is the page as others
-  // see it, with a way back and its title.
-  it('is the page as others see it when it is not the tab’s first', async () => {
-    await show('me');
-    expect(screen.queryByTestId('owner-part')).toBeNull();
+  // One page of you, not two: opened from a list in another tab it has
+  // its way back and its title, and the same counts and requests — whose
+  // rooms are in the last tab, so a press changes tab.
+  it('is the same page from another tab, its rooms reached through the last tab', async () => {
+    const navigation = await show('me', false, ['CollectionsHome', 'CollectionDetail', 'Person']);
     expect(screen.getByTestId('person-back')).toBeTruthy();
     expect(screen.getByText('Profile')).toBeTruthy();
+    expect(screen.getByTestId('owner-counts')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('owner-requests'));
+    expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Crew', initial: false });
+    fireEvent.click(screen.getByTestId('person-account'));
+    expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Account', initial: false });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('shows none of it on somebody else’s page', async () => {
+    await show('lan', false, PROFILE_STACK);
+    expect(screen.queryByTestId('owner-counts')).toBeNull();
+    expect(screen.queryByTestId('owner-requests')).toBeNull();
   });
 });

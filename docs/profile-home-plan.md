@@ -64,9 +64,10 @@ mới cho chấm mà không thêm chỗ hiện thì test đỏ.
 
 ## 4. Trang cá nhân của mình, từ trên xuống
 
-Chỉ khi nó là gốc của tab. Trang của mình mở từ một thẻ ở tab khác (bấm
-vào mặt mình) giữ nguyên như hôm nay: là trang người khác thấy, có nút
-quay lại. Lý do ở mục 6.
+Trang của mình giống nhau ở mọi nơi nó mở (chủ dự án, 19/11, sau P2: "đều
+là Trang cá nhân của người dùng hiện tại"). Khác nhau duy nhất: mở từ tab
+khác thì có tiêu đề và nút quay lại, vì có trang phía dưới để về. Trong
+P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giới hạn đó.
 
 1. **Đầu trang:** không có tiêu đề (chủ dự án bỏ ngày 19/11: tab đã nói
    đây là trang của ai) và không có nút quay lại. Chuông (Hoạt động, có
@@ -109,17 +110,18 @@ nhưng ở trang khác, nên giữ. Xem lại ở P4.
   Hôm nay nó mở lại trên `ProfileHome`; sau khi đổi phải mở lại trên
   `Account`, nếu không người dùng đổi giao diện xong thì rơi về Trang cá
   nhân và bảng mở trên trang sai.
-- **Trang của mình trong tab khác** (Khám phá, Bộ sưu tập) không có chuông,
-  bốn con số hay lối vào Tài khoản. Một màn nằm trong nhiều stack chỉ đi
-  được tới màn mà mọi stack đều có, và `Account`, `Activity`, `Crew` chỉ
-  có ở `ProfileStack`.
+- **Trang của mình trong tab khác** (Khám phá, Bộ sưu tập) có đủ bốn con
+  số, thẻ lời mời và "Tài khoản ›". `Account`, `Crew`, `Visited` chỉ có ở
+  `ProfileStack`, nên các cửa đó đi qua `toProfileRoom` (`nav.ts`): trong
+  stack đó thì đẩy trang lên; ở tab khác thì chuyển sang tab cuối, mở
+  phòng đó đè lên trang của mình (`initial: false`).
 - **Bấm vào mặt mình bên trong tab cuối** thì quay về gốc tab, không đẩy
   thêm một bản thứ hai của chính trang đó. Làm ở P2 bằng `toPerson`
   (`nav.ts`), ở hai nơi mặt mình bấm được: đầu một bộ sưu tập của mình,
   và bình luận của mình.
-- **Lối vào Friends và Account do `MeScreen` trao cho trang** (`home`), không
-  do `PersonScreen` tự gọi: `PersonScreen` có trong ba stack, và
-  `nav.test.ts` giữ luật một màn chỉ đi tới màn mà cả ba stack đều có.
+- `MeScreen` chỉ báo cho trang biết nó là gốc tab (`home`): không nút quay
+  lại, không tiêu đề. Từ P1 tới sau P2 nó còn trao phần chỉ chủ trang
+  thấy; giờ trang tự vẽ phần đó cho chính chủ ở mọi stack.
 - **Tên tab cho VoiceOver:** "Tài khoản" thành "Trang cá nhân". Thanh tab
   không có chữ, nên chỉ VoiceOver đọc tên này.
 - **Kích thước file:** `PersonScreen.tsx` đã dài 669 dòng. Phần chỉ chủ
@@ -144,6 +146,9 @@ Mỗi PR một commit, revert là về như trước.
   19/11). `MeScreen` trao cho trang phần chỉ chủ trang thấy
   (`Home.owner`), vì các cửa của nó mở những trang chỉ có trong stack
   của tab cuối.
+- [x] **Sau P2: một trang của mình ở mọi nơi** (chủ dự án, 19/11). Bốn con
+  số, thẻ lời mời và "Tài khoản ›" có cả khi trang mở từ tab khác, qua
+  `toProfileRoom`.
 - [ ] **P3. Thông báo.** Chuông vào Hoạt động, và chỗ của nó khi trang
   không có tiêu đề; vòng cấp độ và Thành tích lên ảnh đại diện; bỏ ảnh,
   tên và dòng Hoạt động khỏi Tài khoản; xem lại nút Sửa hồ sơ; test cho
