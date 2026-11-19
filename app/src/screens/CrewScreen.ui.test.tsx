@@ -15,7 +15,7 @@ import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { colors, font } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, fontSizeOf, render, screen, textStyleOf, waitFor, within } from '../uitest/render';
+import { act, fireEvent, fontSizeOf, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { FriendProfile, ListTitle } from '../lib/data';
 import type { FriendshipRow, Suggestion } from '../lib/friends';
@@ -81,7 +81,7 @@ import CrewScreen from './CrewScreen';
 /** The flattened style a Text was committed with, by its words: jsdom does
  *  not resolve react-native-web's atomic font classes, so a weight is read
  *  off the props rather than the computed style. */
-const weightOf = (words: string): unknown => {
+const styleOf = (words: string): TextStyle | undefined => {
   type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
   const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
   const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
@@ -90,13 +90,14 @@ const weightOf = (words: string): unknown => {
     const f = stack.pop()!;
     const p = f.memoizedProps;
     if (p && typeof p === 'object' && p.children === words && 'style' in p) {
-      return StyleSheet.flatten(p.style as StyleProp<TextStyle>)?.fontWeight;
+      return StyleSheet.flatten(p.style as StyleProp<TextStyle>) ?? undefined;
     }
     if (f.sibling) stack.push(f.sibling);
     if (f.child) stack.push(f.child);
   }
   throw new Error(`no text "${words}" in the committed tree`);
 };
+const weightOf = (words: string): unknown => styleOf(words)?.fontWeight;
 
 
 const nav = () => ({
@@ -250,6 +251,38 @@ describe('which tab opens', () => {
     expect(screen.queryByText('Pending')).toBeNull();
     // ...and the unchosen Requests tab rings with the count instead.
     expect(tab(/Requests/).textContent).toBe('Requests2');
+  });
+});
+
+// The tabs on this screen are words alone since 20 Nov 2026 — a trial
+// here before anywhere else (`TabsLook`). What makes it more than a look
+// is that the chosen tab still differs in something besides colour.
+describe('the tabs, drawn as words', () => {
+
+  it('draws no glyph and no rule, and tells the chosen one by weight as well as colour', () => {
+    crew.ships.data = [edge('r', ME, 'pending')];
+    crew.people = { r: person('r', 'minh', 'Minh') };
+    render(<CrewScreen navigation={nav()} />);
+    const on = tab(/Requests/);
+    const off = tab(/Your friends/);
+    expect(on.querySelector('[data-icon]')).toBeNull();
+    expect(off.querySelector('[data-icon]')).toBeNull();
+    expect(styleOf('Requests (1)')).toEqual(expect.objectContaining({ color: colors.text, fontWeight: font.semibold, fontSize: 17 }));
+    expect(styleOf('Your friends')).toEqual(expect.objectContaining({ color: colors.textTertiary, fontWeight: font.regular, fontSize: 17 }));
+    // The rule is drawn on both and transparent on both, so the row is
+    // as tall as the underlined one and nothing moves between the looks.
+    const rule = (el: HTMLElement) => [el, ...el.querySelectorAll('div')]
+      .map((x) => viewStyleOf(x)).find((v) => v.borderBottomWidth != null);
+    expect(rule(on)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
+    expect(rule(off)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
+  });
+
+  // The rest of the app keeps the underline until the owner has seen this
+  // on the phone.
+  it('leaves the underlined look the default', async () => {
+    const { UnderlineTabs } = await import('../components/ui');
+    render(<UnderlineTabs tabs={[{ key: 'a', icon: 'mail-outline', label: 'Alpha' }, { key: 'b', icon: 'people-outline', label: 'Beta' }]} active="a" onChange={() => {}} />);
+    expect(screen.getByRole('tab', { name: /Alpha/ }).querySelector('[data-icon]')).toBeTruthy();
   });
 });
 
