@@ -83,6 +83,11 @@ vi.mock('../lib/catalog', () => ({
 }));
 // The heart's two ways out: the like, and the invitation to sign in.
 const spies = vi.hoisted(() => ({ toggleLike: vi.fn(async () => {}), askToSignIn: vi.fn() }));
+// The way out to another tab. `tabs` is the navigator above the page's
+// own stack, which a test takes away to read the page with none; `goTo`
+// is the container's, the way a page with no parent has.
+const out = vi.hoisted(() => ({ tabs: { navigate: vi.fn() } as { navigate: ReturnType<typeof vi.fn> } | undefined, goTo: vi.fn() }));
+vi.mock('../nav', async (orig) => ({ ...(await orig<typeof import('../nav')>()), goTo: out.goTo }));
 vi.mock('../lib/save', () => ({
   useSaveActions: () => ({ askToSignIn: spies.askToSignIn }),
   useMyLists: () => ({ data: state.mine, loading: false, reload: () => {} }),
@@ -164,7 +169,7 @@ const heard: Record<string, (() => void)[]> = {};
 const said = (event: 'blur' | 'focus') => act(() => { (heard[event] ?? []).forEach((fn) => fn()); });
 const show = async (handle = 'lan') => {
   const navigation = {
-    goBack: vi.fn(), navigate: vi.fn(),
+    goBack: vi.fn(), navigate: vi.fn(), getParent: () => out.tabs,
     addListener: vi.fn((event: string, fn: () => void) => {
       (heard[event] ??= []).push(fn);
       return () => { heard[event] = heard[event].filter((f) => f !== fn); };
@@ -176,6 +181,8 @@ const show = async (handle = 'lan') => {
 };
 
 beforeEach(() => {
+  out.tabs = { navigate: vi.fn() };
+  out.goTo.mockClear();
   state.me = 'me-id';
   state.people = { lan: LAN };
   state.asked = [];
@@ -340,11 +347,10 @@ describe('the bio, and the way to write one', () => {
     // And the page is "Trang cá nhân" — the name for the page a person
     // shows the world; "Hồ sơ" until 17 Nov 2026.
     expect(screen.getByText('Trang cá nhân')).toBeTruthy();
-    // "Hồ sơ" is on it once since 19 Nov 2026, and not as its name: the
-    // way to the form the profile is edited in, on the heading's right.
-    expect(screen.getAllByText('Hồ sơ')).toHaveLength(1);
-    expect(screen.getByTestId('person-profile').textContent).toBe('Hồ sơ');
-    expect(screen.getByTestId('person-profile').getAttribute('aria-label')).toBe('Sửa hồ sơ');
+    expect(screen.queryByText('Hồ sơ')).toBeNull();
+    // The way out on the heading wears the tab's own word. It read "Hồ
+    // sơ" for an hour on 19 Nov 2026, which this line is here to notice.
+    expect(screen.getByTestId('person-account').textContent).toBe('Tài khoản');
   });
 
   it('draws your bio and no invitation once you have one', async () => {
@@ -667,8 +673,8 @@ describe('what they did', () => {
     expect(screen.queryByTestId('person-grid')).toBeNull();
     expect(screen.queryByText('Collections')).toBeNull();
     expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
-    // Nor the way to a profile that is not the reader's to edit.
-    expect(screen.queryByTestId('person-profile')).toBeNull();
+    // Nor the way to an account that is not the reader's.
+    expect(screen.queryByTestId('person-account')).toBeNull();
     expect(acts()).toHaveLength(3);
   });
 
@@ -986,16 +992,27 @@ describe('lists that are not for everybody', () => {
 
     // On the heading's right, where a count turned the section into a
     // grid until the same morning (owner, 19 Nov 2026): the page had no
-    // way to the one thing only you can do with it.
-    it('has the way to your profile on the heading, and it leaves the page as it is', async () => {
+    // way to what only you can do about it. To the Account tab's page —
+    // not the form the profile is edited in, which it opened for an hour.
+    it('has the way to your account on the heading: the tab’s first page, with what was over it closed', async () => {
       const navigation = await show('me');
-      const link = screen.getByTestId('person-profile');
-      expect(link.textContent).toBe('Profile');
-      expect(link.getAttribute('aria-label')).toBe('Edit profile');
+      const link = screen.getByTestId('person-account');
+      expect(link.textContent).toBe('Account');
       fireEvent.click(link);
-      expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('EditProfile');
+      expect(out.tabs!.navigate).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'ProfileHome', pop: true });
+      // Not a page pushed on this stack, and not the container's way
+      // while there is a navigator to ask.
+      expect(navigation.navigate).not.toHaveBeenCalled();
+      expect(out.goTo).not.toHaveBeenCalled();
       // A way out of the page, not a turn of it: the feed is still here.
       expect(acts()).toHaveLength(3);
+    });
+
+    it('goes by the container where the page has no navigator above it', async () => {
+      out.tabs = undefined;
+      await show('me');
+      fireEvent.click(screen.getByTestId('person-account'));
+      expect(out.goTo).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'ProfileHome', pop: true });
     });
 
     // It is not a way to your lists, so it does not wait for one.
@@ -1004,7 +1021,7 @@ describe('lists that are not for everybody', () => {
       state.shelf = [];
       await show('me');
       expect(screen.getByTestId('person-no-lists')).toBeTruthy();
-      expect(screen.getByTestId('person-profile')).toBeTruthy();
+      expect(screen.getByTestId('person-account')).toBeTruthy();
     });
 
     // A cover off a private list would be a head only its owner sees.
@@ -1061,9 +1078,9 @@ describe('lists that are not for everybody', () => {
       expect(markIn(open)!.getAttribute('aria-label')).toBe('Public');
       expect(markIn(open)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('globe-outline');
       expect(within(open).getByTestId('activity-heart')).toBeTruthy();
-      // Somebody else's page: no way to a profile that is not yours to
-      // edit, and since the grid went nothing else on the heading.
-      expect(screen.queryByTestId('person-profile')).toBeNull();
+      // Somebody else's page: no way to an account that is not yours,
+      // and since the grid went nothing else on the heading.
+      expect(screen.queryByTestId('person-account')).toBeNull();
     });
 
     it('says it in Vietnamese', async () => {

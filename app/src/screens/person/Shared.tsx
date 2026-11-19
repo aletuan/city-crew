@@ -26,7 +26,7 @@
 // back.
 //
 // It went in two steps the same morning. First on your own page, where
-// the count gave its place to "Profile ›" (`onProfile` below): the grid
+// the count gave its place to a way out (`onAccount` below): the grid
 // of your own lists is the Collections tab's "Yours" over again. Then on
 // everybody else's, so the two pages are one page: a section that turned
 // into something else for a visitor and not for its owner was two
@@ -156,15 +156,9 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
 /**
  * The way on the heading's right: a word, a chevron, the accent's ink.
  * The shape the turn to the grid had, which stood here until 19 Nov
- * 2026; the way to your profile wears it now, on your own page alone.
+ * 2026; the way to your account wears it now, on your own page alone.
  */
-function HeadLink({ word, says, onPress, testID }: {
-  word: string;
-  /** What VoiceOver says: where it goes, which the word alone is not. */
-  says: string;
-  onPress: () => void;
-  testID: string;
-}) {
+function HeadLink({ word, onPress, testID }: { word: string; onPress: () => void; testID: string }) {
   return (
     <PressableScale
       onPress={onPress}
@@ -172,7 +166,6 @@ function HeadLink({ word, says, onPress, testID }: {
       contentStyle={s.turn}
       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       accessibilityRole="button"
-      accessibilityLabel={says}
       testID={testID}
     >
       <Text style={s.turnText}>{word}</Text>
@@ -181,7 +174,7 @@ function HeadLink({ word, says, onPress, testID }: {
   );
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, onProfile, reach = 0 }: {
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, onAccount, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -194,21 +187,39 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   /** Opens a collection's thread of comments — `useCardComments`. */
   onComments?: (c: Collection) => void;
   /**
-   * On your own page: opens the form your profile is edited in, from
-   * the heading's right (owner, 19 Nov 2026). Nobody else's page has
-   * anything there.
+   * On your own page: opens the Account tab's page, from the heading's
+   * right (owner, 19 Nov 2026). Nobody else's page has anything there.
    *
    * It took the place of the count that turned the section into a grid
    * — the head of this file has what became of that. The page had no
-   * way from here to the one thing only its owner can do with it.
+   * way from here to what only its owner can do about it.
    *
    * It stands with no lists to show, too: it is not a way to them.
    *
-   * "Profile", not "Edit profile": the row has room for one word beside
-   * the heading at the largest type, and the chevron already says
-   * "open". VoiceOver is told the whole of it.
+   * ── "Account ›", and it was "Profile ›" for an hour ──
+   *
+   * It first read "Profile" / "Hồ sơ" and opened the form the profile is
+   * edited in. The owner, on the phone the same morning: it should open
+   * the account's page, and the names want settling. They are three,
+   * for three things:
+   *
+   *   Profile page  "Trang cá nhân"  what other people open: this page
+   *   Account       "Tài khoản"      the last tab: email, theme,
+   *                                  language, sign out, delete
+   *   Edit profile  "Sửa hồ sơ"      the form for the name, the handle,
+   *                                  the photograph and the bio
+   *
+   * Weighed and not taken, both the owner's: "Account" for all of it,
+   * down to "Edit account" on the form — which changes no email and no
+   * password, so a reader would look there for both; and "Profile" /
+   * "Hồ sơ" for all of it, which is the tab named for the wrong thing
+   * again, as it was until 17 Nov 2026 (`App.tsx`, where the tabs are
+   * named).
+   *
+   * So the word here is the tab's own, and Edit profile is the button on
+   * that page, one press further.
    */
-  onProfile?: () => void;
+  onAccount?: () => void;
   /** How many times the reader has come near the page's end (`useReach`). */
   reach?: number;
 }) {
@@ -254,12 +265,11 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
     <>
       <View style={s.heading}>
         <Text style={s.label}>{t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}</Text>
-        {onProfile ? (
+        {onAccount ? (
           <HeadLink
-            word={t('Profile', 'Hồ sơ', 'プロフィール', '个人资料', '個人資料')}
-            says={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}
-            onPress={onProfile}
-            testID="person-profile"
+            word={t('Account', 'Tài khoản', 'アカウント', '账号', '帳號')}
+            onPress={onAccount}
+            testID="person-account"
           />
         ) : null}
       </View>
@@ -318,7 +328,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
 
 const s = StyleSheet.create({
   // The section's heading: its label in the small capitals the place
-  // page heads a fact with, and on your own page the way to your profile
+  // page heads a fact with, and on your own page the way to your account
   // on its right.
   heading: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
