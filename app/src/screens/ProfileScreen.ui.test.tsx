@@ -989,7 +989,7 @@ describe('the level ring', () => {
   // here with the hooks this file already mocks.
   const draw = () => {
     const r = nav();
-    render(<OwnFace size={96}><div data-testid="face" /></OwnFace>);
+    render(<OwnFace size={88}><div data-testid="face" /></OwnFace>);
     return r;
   };
   it('counts a place saved into two lists once', () => {
@@ -1110,7 +1110,7 @@ describe('the badges, under the level', () => {
   // here with the hooks this file already mocks.
   const draw = () => {
     const r = nav();
-    render(<OwnFace size={96}><div data-testid="face" /></OwnFace>);
+    render(<OwnFace size={88}><div data-testid="face" /></OwnFace>);
     return r;
   };
   const shut = async () => {

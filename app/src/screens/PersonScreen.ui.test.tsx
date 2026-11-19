@@ -283,6 +283,10 @@ describe('whose page it is', () => {
     const face = screen.getByTestId('person-cover').nextElementSibling!.firstElementChild as HTMLElement;
     expect(face.querySelector('img')!.getAttribute('src')).toBe('https://faces/lan.jpg');
     expect(viewStyleOf(face)).toMatchObject({ borderWidth: 4, borderColor: bgHex.dark });
+    // 80 since 19 Nov 2026, from 88, under a cover of 170, from 148
+    // (owner, after an outside review).
+    expect(viewStyleOf(face.querySelector('img')!)).toMatchObject({ width: 80, height: 80 });
+    expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 170 });
   });
 
   it('asks for the profile by the handle it was opened with, the `@` and case off', async () => {
@@ -304,7 +308,7 @@ describe('whose page it is', () => {
     const named = screen.getByTestId('role-row');
     expect(named.contains(handle)).toBe(true);
     expect([...named.parentElement!.children]).toEqual([named]);
-    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 34 });
+    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 32 });
     expect(screen.getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
     expect(screen.queryByTestId('person-bio')).toBeNull();
@@ -391,7 +395,7 @@ describe('the bio, and the way to write one', () => {
     // The picture hangs lower so the bubble stands level with its foot:
     // the row starts at the top of the column, 28 of the picture on the
     // cover where it was 44.
-    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -28 });
+    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -26 });
     const dress = viewStyleOf(bubble);
     // As wide as the words; a tinted well with no hairline.
     expect(dress.alignSelf).toBe('flex-start');
@@ -1938,6 +1942,10 @@ describe('your own page', () => {
     await show('me', true, PROFILE_STACK);
     expect(screen.getByTestId('person-own-face')).toBeTruthy();
     expect(screen.getByTestId('level-badge')).toBeTruthy();
+    // The face and the page's 4 round it, 88, in the level's ring: 103
+    // across, the Account page's own ringed picture (`profile/Hero`).
+    const ring = screen.getByTestId('avatar-box').firstElementChild!;
+    expect(viewStyleOf(ring)).toMatchObject({ width: 103, height: 103 });
   });
 
   // The plan's rule (docs/profile-home-plan.md §3): every reason the last
