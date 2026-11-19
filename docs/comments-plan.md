@@ -540,6 +540,14 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   dò một câu trả lời giữa chín dòng "Bạn đã thích…" là sai với điều cái
   chuông hứa. Đã cân nhắc và bỏ: giữ một dòng thời gian (câu trả lời bị
   chìm), và hai trang hay hai tab (thêm một chỗ phải tìm).
+- **Đổi lại ngày 20/11/2026 (chủ dự án): hai nhóm thành hai tab**, kiểu
+  chỉ có chữ của màn Kết nối bạn bè. Mở vào "Dành cho bạn", trừ khi tab
+  này trống mà "Việc bạn đã làm" thì không. "Dành cho bạn" mang pill bằng
+  đúng số dòng có chấm mới; "Việc bạn đã làm" không mang số. Bỏ tiêu đề
+  nhóm, vì tên tab đã là tên nhóm. Cái giá đã nêu hôm trước vẫn đúng và
+  được chấp nhận: việc của chính bạn lùi sau một lần bấm. Không dùng chữ
+  "Của bạn" như mẫu tham khảo, vì tab Bộ sưu tập đã dùng nó cho "bộ sưu
+  tập của bạn". Lý do đầy đủ ở đầu `screens/activity/ActivityRows.tsx`.
 - Dòng bình luận: mặt người làm, dấu nhỏ ở góc theo loại, một câu ("trang
   đã trả lời bạn"), rồi **trích một dòng** chính bình luận đó. Với tim thì
   trích bình luận được thả tim, và đếm người còn lại ("và 2 người khác").

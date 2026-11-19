@@ -18,7 +18,7 @@ import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { FriendProfile, MyActs } from '../lib/data';
 import type { CommentNews } from '../lib/commentNews';
 import { appFlags } from '../lib/flags';
-import { colors } from '../theme';
+import { colors, space } from '../theme';
 
 const ME = 'me';
 const NOW = new Date('2026-09-11T12:00:00');
@@ -113,6 +113,11 @@ const like = (collection_id: string, liked_at: string, liker_handle: string | nu
   ({ collection_id, liked_at, liker_handle, liker_name: null });
 
 const flush = () => act(async () => { await Promise.resolve(); });
+/** The two tabs the groups became (owner, 20 Nov 2026), found by the name
+ *  VoiceOver reads: "For you" may carry its figure, "For you (3)". */
+const tabOf = (name: RegExp) => screen.getByRole('tab', { name });
+const toYours = () => fireEvent.click(tabOf(/^What you did/));
+const toForYou = () => fireEvent.click(tabOf(/^For you/));
 const renderScreen = async (navigation = nav()) => {
   render(<ActivityScreen navigation={navigation} />);
   await flush();
@@ -593,31 +598,50 @@ describe('your own acts', () => {
   });
 
   // Until 19 Nov 2026 the two were one timeline; a reply was about to be
-  // found among the reader's own likes. See `lib/commentNews`.
-  it('stands under what is for the reader, each group newest first, however the times interleave', async () => {
+  // found among the reader's own likes. See `lib/commentNews`. From 20
+  // Nov they are two tabs, and the page opens on the one for the reader.
+  it('opens on what is for the reader, with the reader’s own acts a tab away, each newest first', async () => {
     data.mine = [col('c1', 'rooftops', 'Rooftops')];
     data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00', 'trang')]);
     data.fetchMyActs.mockImplementation(async () => acts({ likes: [{ collection_id: 'c9', at: '2026-09-11T11:00:00', owner_handle: 'bao' }] }));
     await renderScreen();
-    const lines = [...screen.getByTestId('earlier-card').querySelectorAll('[data-testid="row-face"] + *')]
-      .map((el) => el.textContent ?? '');
-    // The like of the reader's list is the older of the two, and first.
-    expect(lines[0]).toContain('@trang liked “Rooftops”');
-    expect(lines[1]).toContain('You liked @bao’s “Phở tour”');
-    expect(screen.getByTestId('activity-for-you').textContent).toContain('@trang liked');
-    expect(screen.getByTestId('activity-yours').textContent).toContain('You liked');
-    expect(screen.getByTestId('activity-for-you-head').textContent).toBe('For you');
-    expect(screen.getByTestId('activity-yours-head').textContent).toBe('What you did');
-    expect(screen.getByTestId('activity-for-you').compareDocumentPosition(screen.getByTestId('activity-yours'))
-      & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('tab').map((x) => x.getAttribute('aria-label')?.replace(/ \(\d+\)$/, ''))).toEqual(['For you', 'What you did']);
+    expect(screen.getByTestId('activity-for-you').textContent).toContain('@trang liked “Rooftops”');
+    expect(screen.queryByTestId('activity-yours')).toBeNull();
+    // The row of tabs lines up with the cards: the page has its margins
+    // already, and the wrapper takes back the ones the tabs bring.
+    const insets: unknown[] = [];
+    for (let el: Element | null = tabOf(/^For you/); el && el.getAttribute('data-testid') !== 'earlier-card'; el = el.parentElement) {
+      const v = viewStyleOf(el);
+      if (v.marginHorizontal != null) insets.push(v.marginHorizontal);
+    }
+    expect(insets).toEqual([space.page, -space.page]);
+    // No heading over the rows: the tab is the name.
+    expect(screen.queryByRole('header', { name: 'For you' })).toBeNull();
+    toYours();
+    expect(screen.getByTestId('activity-yours').textContent).toContain('You liked @bao’s “Phở tour”');
+    expect(screen.queryByTestId('activity-for-you')).toBeNull();
+    // The reader's own tab carries no figure.
+    expect(tabOf(/^What you did/).getAttribute('aria-label')).toBe('What you did');
   });
 
-  it('has no heading for a group with nothing in it', async () => {
+  // A page that opened on an empty tab over a full one would have the
+  // reader find the full one.
+  it('opens on what you did when nothing is for you, and the empty tab says so', async () => {
     data.fetchMyActs.mockImplementation(async () => acts({ likes: [{ collection_id: 'c9', at: '2026-09-11T11:00:00', owner_handle: 'bao' }] }));
     await renderScreen();
-    expect(screen.queryByTestId('activity-for-you-head')).toBeNull();
+    expect(screen.getByTestId('activity-yours')).toBeTruthy();
+    toForYou();
     expect(screen.queryByTestId('activity-for-you')).toBeNull();
-    expect(screen.getByTestId('activity-yours-head')).toBeTruthy();
+    expect(screen.getByTestId('activity-tab-empty').textContent).toBe('Nothing from anybody else in the last two weeks.');
+  });
+
+  it('says so on your own tab when only the others did anything', async () => {
+    data.mine = [col('c1', 'rooftops', 'Rooftops')];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00', 'trang')]);
+    await renderScreen();
+    toYours();
+    expect(screen.getByTestId('activity-tab-empty').textContent).toBe('Nothing you did in the last two weeks.');
   });
 
   it('counts a failure of its own as a failure, and asks again with the rest', async () => {
@@ -656,8 +680,10 @@ describe('a friendship that began', () => {
     crew.people = { 'u-d': person('u-d', 'dung'), 'u-c': person('u-c', 'chi') };
     i18n.lang = 'vi';
     const navigation = await renderScreen();
+    fireEvent.click(screen.getByRole('tab', { name: /^Việc bạn đã làm/ }));
     fireEvent.click(screen.getByRole('button', { name: /Bạn và @dung đã thành bạn bè/ }));
     expect(navigation.navigate).toHaveBeenLastCalledWith('Person', { handle: 'dung' });
+    fireEvent.click(screen.getByRole('tab', { name: /^Dành cho bạn/ }));
     fireEvent.click(screen.getByRole('button', { name: /@chi đã chấp nhận/ }));
     expect(navigation.navigate).toHaveBeenLastCalledWith('Person', { handle: 'chi' });
   });
@@ -668,8 +694,10 @@ describe('a friendship that began', () => {
     crew.ships.data = [made(ME, 'u-c', '2026-09-11T10:00:00'), made('u-d', ME, '2026-09-11T09:00:00')];
     await renderScreen();
     expect(screen.getByText('Someone accepted your friend request')).toBeTruthy();
-    expect(screen.getByText('You made a new friend')).toBeTruthy();
     // And nobody's page to open: no button, so no chevron.
+    expect(screen.queryAllByRole('button', { name: /friend/ })).toHaveLength(0);
+    toYours();
+    expect(screen.getByText('You made a new friend')).toBeTruthy();
     expect(screen.queryAllByRole('button', { name: /friend/ })).toHaveLength(0);
     expect(data.avatarsAsked).toHaveBeenCalledWith([]);
   });
@@ -1025,7 +1053,8 @@ describe('comment news', () => {
     await renderScreen();
     expect(lineOf('on_list')).toBe('@trang đã bình luận về “Cà phê Hội An”');
     expect(screen.queryByTestId('news-quote')).toBeNull();
-    expect(screen.getByTestId('activity-for-you-head').textContent).toBe('Dành cho bạn');
+    expect(screen.getByRole('tab', { name: /^Dành cho bạn/ })).toBeTruthy();
+    expect(screen.getByTestId('activity-for-you')).toBeTruthy();
   });
 
   it('falls back to "…" for a list whose name did not come', async () => {
@@ -1043,12 +1072,13 @@ describe('comment news', () => {
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Comments', { subject: { kind: 'collection', id: 'c1' }, focus: 'k7' });
   });
 
-  it('is enough on its own to fill the page, and stands above the reader\'s own acts', async () => {
+  it('is enough on its own to fill the page, and is the tab it opens on, before the reader\'s own acts', async () => {
     data.news.data = [news({ at: '2026-09-10T10:00:00' })];
     data.fetchMyActs.mockImplementation(async () => ({ likes: [{ collection_id: 'c9', at: '2026-09-11T11:00:00', owner_handle: 'bao' }], copies: [], lists: [] }));
     await renderScreen();
     expect(screen.queryByTestId('activity-empty')).toBeNull();
     expect(screen.getByTestId('activity-for-you').textContent).toContain('replied to you');
+    toYours();
     expect(screen.getByTestId('activity-yours').textContent).toContain('You liked');
   });
 
@@ -1072,13 +1102,17 @@ describe('comment news', () => {
       await renderScreen();
       const rows = [...screen.getByTestId('activity-for-you').querySelectorAll('[role="button"]')];
       expect(rows.map((r) => !!r.querySelector('[data-testid="row-new"]'))).toEqual([true, true, true, false]);
-      // The reader's own act is later than all of them, and is not news.
-      expect(dots('activity-yours')).toHaveLength(0);
+      // The tab's pill is the dots counted: one figure on the tab and on
+      // the page (owner, 20 Nov 2026).
+      expect(tabOf(/^For you/).getAttribute('aria-label')).toBe('For you (3)');
       // The tab's dot, before the chevron, and said.
       const dot = rows[0].querySelector('[data-testid="row-new"]') as HTMLElement;
       expect(dot.getAttribute('aria-label')).toBe('New');
       expect(viewStyleOf(dot)).toMatchObject({ width: 9, height: 9, backgroundColor: colors.accent });
       expect(dot.nextElementSibling?.getAttribute('data-icon')).toBe('chevron-forward');
+      // The reader's own act is later than all of them, and is not news.
+      toYours();
+      expect(dots('activity-yours')).toHaveLength(0);
     });
 
     it('dots nothing when nothing is later than the mark', async () => {

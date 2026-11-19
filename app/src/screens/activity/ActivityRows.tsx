@@ -41,11 +41,35 @@
 //
 // Opening the page is seeing it: the mark moves past the newest row
 // shown (`useSeenThrough`), and the dots stay for this visit.
+//
+// ── two tabs, where there were two groups (owner, 20 Nov 2026) ──
+//
+// The two groups stood one over the other on a single page from 19 Nov;
+// two pages or two tabs were weighed that day and not taken, as one more
+// place to look. The owner took tabs the next day, in the Crew screen's
+// words-alone look, seeing the cost and choosing it: with the bell
+// opening this page, what it promised should be all the page shows, not
+// the top of a page whose foot is nine rows of "You liked…". The second
+// group is a press away now, which is the cost.
+//
+// - "For you" carries a pill: the rows wearing the dot, so the figure
+//   and the dots on the page are one count. It stays for the visit, as
+//   the dots do.
+// - "What you did" carries none. It is not news, and a tally of your own
+//   acts would be a figure nobody asked for.
+// - The page opens on "For you", unless it is empty and the other is
+//   not: a page that opens on an empty tab over a full one has the
+//   reader find the full one.
+// - The groups' headings went: the tab is the name.
+//
+// "Yours", as the reference had it, was not taken: the Collections tab's
+// "Yours" means your lists, and one word for two things on two screens
+// is the confusion "Profile" and "Account" were untangled from.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Avatar, Card, PressableScale } from '../../components/ui';
+import { Avatar, Card, PressableScale, UnderlineTabs } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { type ActivityEntry, type CommentNews, newestAt } from '../../lib/commentNews';
 import type { FriendProfile } from '../../lib/data';
@@ -81,63 +105,80 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
   const onComment = (n: CommentNews) =>
     navigation.navigate('Comments', { subject: { kind: 'collection', id: n.list.id }, focus: n.comment_id });
   const isNew = useSeenThrough(newestAt(groups.forYou));
-  const group = (entries: ActivityEntry[], title: string, testID: string, news = false) => (entries.length === 0 ? null : (
-    <>
-      <Text style={s.head} accessibilityRole="header" testID={`${testID}-head`}>{title}</Text>
-      <Card testID={testID}>
-        {entries.map((e, i) => {
-          const row = e.from === 'log'
-            ? logRow(e.item, people, faces, collectionOf, onList, onPerson, t)
-            : newsRow(e.news, onComment, t);
-          return (
-            <PressableScale
-              key={row.key}
-              contentStyle={[s.row, i > 0 && s.rowDivider]}
-              onPress={row.open}
-              accessibilityRole={row.open ? 'button' : undefined}
-              testID={e.from === 'comments' ? `news-${e.news.kind}` : undefined}
-            >
-              {/* Who, then what: the actor's face leads the row, as
-                  every social feed has it (Instagram, Threads), and the
-                  kind of thing they did rides on its corner as a badge —
-                  filled and in the accent, small enough to be a mark and
-                  not a second picture. It replaced a bare glyph per row,
-                  which told the eye nothing once five rows shared it. */}
-              <View style={s.face} testID="row-face">
-                <Avatar url={row.face} size={FACE} />
-                <View style={s.kind} testID="kind-badge">
-                  <Glyph name={row.badge} size={ICON.tiny} color={colors.accent} />
-                </View>
-              </View>
-              <View style={s.words}>
-                <Text style={s.line} numberOfLines={2}>{row.line}</Text>
-                {row.quote ? <Text style={s.quote} numberOfLines={1} testID="news-quote">{row.quote}</Text> : null}
-                <Text style={s.meta}>{ago(e.at)}</Text>
-              </View>
-              {/* Only where there is somewhere to go: the same condition
-                  as the role above, so what VoiceOver hears and what the
-                  eye sees agree. */}
-              {news && isNew(e.at) ? (
-                <View
-                  style={s.fresh}
-                  accessible
-                  accessibilityLabel={t('New', 'Mới', '新着', '新', '新')}
-                  testID="row-new"
-                />
-              ) : null}
-              {row.open ? <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} /> : null}
-            </PressableScale>
-          );
-        })}
-      </Card>
-    </>
-  ));
+  const [tab, setTab] = useState<'forYou' | 'yours'>(() =>
+    (groups.forYou.length === 0 && groups.yours.length > 0 ? 'yours' : 'forYou'));
+  const news = tab === 'forYou';
+  const entries = news ? groups.forYou : groups.yours;
   return (
-    // One element holds both groups: what the page's tests, and a reader
-    // of them, call the timeline.
+    // One element holds the tabs and what they show: what the page's
+    // tests, and a reader of them, call the timeline.
     <View testID="earlier-card">
-      {group(groups.forYou, t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), 'activity-for-you', true)}
-      {group(groups.yours, t('What you did', 'Việc bạn đã làm', 'あなたがしたこと', '你做过的', '你做過的'), 'activity-yours')}
+      {/* The page already has its margins; the tabs bring their own. */}
+      <View style={s.tabs}>
+        <UnderlineTabs
+          look="words"
+          tabs={[
+            { key: 'forYou', icon: 'notifications-outline', label: t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), count: groups.forYou.filter((e) => isNew(e.at)).length, testID: 'activity-tab-for-you' },
+            { key: 'yours', icon: 'person-outline', label: t('What you did', 'Việc bạn đã làm', 'あなたがしたこと', '你做过的', '你做過的'), testID: 'activity-tab-yours' },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+      </View>
+      {entries.length === 0 ? (
+        <Text style={s.none} testID="activity-tab-empty">
+          {news
+            ? t('Nothing from anybody else in the last two weeks.', 'Hai tuần qua chưa có gì từ người khác.', 'この2週間、ほかの人からは何もありません。', '过去两周没有来自他人的动态。', '過去兩週沒有來自他人的動態。')
+            : t('Nothing you did in the last two weeks.', 'Hai tuần qua bạn chưa làm gì.', 'この2週間、あなたがしたことはありません。', '过去两周你还没有动态。', '過去兩週你還沒有動態。')}
+        </Text>
+      ) : (
+        <Card testID={news ? 'activity-for-you' : 'activity-yours'}>
+          {entries.map((e, i) => {
+            const row = e.from === 'log'
+              ? logRow(e.item, people, faces, collectionOf, onList, onPerson, t)
+              : newsRow(e.news, onComment, t);
+            return (
+              <PressableScale
+                key={row.key}
+                contentStyle={[s.row, i > 0 && s.rowDivider]}
+                onPress={row.open}
+                accessibilityRole={row.open ? 'button' : undefined}
+                testID={e.from === 'comments' ? `news-${e.news.kind}` : undefined}
+              >
+                {/* Who, then what: the actor's face leads the row, as
+                    every social feed has it (Instagram, Threads), and the
+                    kind of thing they did rides on its corner as a badge —
+                    filled and in the accent, small enough to be a mark and
+                    not a second picture. It replaced a bare glyph per row,
+                    which told the eye nothing once five rows shared it. */}
+                <View style={s.face} testID="row-face">
+                  <Avatar url={row.face} size={FACE} />
+                  <View style={s.kind} testID="kind-badge">
+                    <Glyph name={row.badge} size={ICON.tiny} color={colors.accent} />
+                  </View>
+                </View>
+                <View style={s.words}>
+                  <Text style={s.line} numberOfLines={2}>{row.line}</Text>
+                  {row.quote ? <Text style={s.quote} numberOfLines={1} testID="news-quote">{row.quote}</Text> : null}
+                  <Text style={s.meta}>{ago(e.at)}</Text>
+                </View>
+                {/* Only where there is somewhere to go: the same condition
+                    as the role above, so what VoiceOver hears and what the
+                    eye sees agree. */}
+                {news && isNew(e.at) ? (
+                  <View
+                    style={s.fresh}
+                    accessible
+                    accessibilityLabel={t('New', 'Mới', '新着', '新', '新')}
+                    testID="row-new"
+                  />
+                ) : null}
+                {row.open ? <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} /> : null}
+              </PressableScale>
+            );
+          })}
+        </Card>
+      )}
     </View>
   );
 }
@@ -288,8 +329,11 @@ const LINE = 21;
 const FACE = 44;
 
 const s = StyleSheet.create({
-  // The Profile stack's section heading (`profile/styles`' `section`).
-  head: { color: colors.text, ...type.section, marginTop: 10 },
+  // Out to the screen's edge by the page's margin, which `UnderlineTabs`
+  // puts back: it is drawn for screens whose content is not inset.
+  tabs: { marginHorizontal: -space.page },
+  // What an empty tab says, in the meta grey: a fact, not an error.
+  none: { color: colors.textTertiary, ...type.meta, paddingVertical: 8 },
   // Centred: a 44pt face beside one or two lines of text wants its
   // middle on theirs. The rows were top-aligned while the mark was a
   // 19pt glyph set on the first line; a face has no first line to sit on.
