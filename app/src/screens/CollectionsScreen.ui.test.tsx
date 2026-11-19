@@ -426,7 +426,10 @@ describe('CollectionsScreen — signed in', () => {
     ];
     state.cols.data = [col('theirs', ['a'])];
     show();
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Yours', 'Community']);
+    // Community stands first since 19 Nov 2026, and the tab that is open
+    // is still Yours for a reader with lists — the two lines under this
+    // one: the order moved, not the default.
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Community', 'Yours']);
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.queryByText('List theirs')).toBeNull();
     // The pin and the figure on the tile (owner, 2 Nov 2026), the word
