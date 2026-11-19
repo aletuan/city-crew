@@ -22,6 +22,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import LikeHeart from './LikeHeart';
 import { PressableScale } from './ui/controls';
 import { Glyph, ICON } from './ui/glyph';
@@ -48,7 +49,7 @@ const MORE_GLYPH = ICON.action;
  *  measured on a phone. */
 export const INDENT = [0, FACE + 10, FACE + 10 + FACE_REPLY + 10] as const;
 
-export default function CommentRow({ comment, when, onPerson, onPlace, onReply, replyOff, onMore, hearts, onHeart }: {
+export default function CommentRow({ comment, when, onPerson, onPlace, onReply, replyOff, onMore, hearts, onHeart, lit, onLayout }: {
   comment: Placed;
   /** How long ago, already in words. */
   when: string;
@@ -66,6 +67,11 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   /** Set the reader's heart or take it back. Absent on a page that is
    *  read-only, and then no heart is drawn. */
   onHeart?: () => void;
+  /** Lit for a beat: the comment a row of Activity led to
+   *  (`useThreadFocus`). A wash of the accent behind the whole row. */
+  lit?: boolean;
+  /** Where the row is laid out, for the page that scrolls to it. */
+  onLayout?: (e: LayoutChangeEvent) => void;
   /** Raise what can be done about this comment — delete, report. Absent
    *  where there is nothing to offer. */
   onMore?: () => void;
@@ -79,7 +85,7 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   const { body } = comment;
 
   return (
-    <View style={[s.row, indent]} testID="comment-row">
+    <View style={[s.row, indent, lit && s.lit]} onLayout={onLayout} testID="comment-row">
       {/* The face is a door of its own, outside the line VoiceOver reads.
           Nobody's handle, nobody's page: then it is a face and no door. */}
       {handle ? (
@@ -195,6 +201,9 @@ const s = StyleSheet.create({
   // Taken away, the row of marks shifted and read as a different page;
   // the send disc's 0.35, which already means "not now" in this app.
   off: { opacity: 0.35 },
+  // The accent's own soft tint, as a selected chip wears it; rounded so
+  // it reads as a wash behind the comment and not a band across the page.
+  lit: { backgroundColor: colors.accentSoft, borderRadius: 12 },
   acts: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 6 },
   // The heart and its figure: 5 between, the card's foot at a row's scale.
   heart: { flexDirection: 'row', alignItems: 'center', gap: 5 },
