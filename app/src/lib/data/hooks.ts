@@ -603,7 +603,10 @@ export const useTaggableQuery = (subject: Subject | null, readerId: string | nul
 // Activity's page function is at its ceiling (`app/oversize.js`) and
 // its three halves are a state machine a fourth would have had to be
 // threaded through. What that costs is written where it is used
-// (`screens/activity/useActivityNews`).
+// (`ActivityScreen`).
+//
+// Called in one place since C7c (19 Nov 2026): `lib/freshNews`, which
+// holds the app's one copy for Activity, the last tab's dot and the bell.
 //
 // The window opens at the moment of each ask, as Activity's does. Asked
 // again after a comment is written or taken back anywhere in the app

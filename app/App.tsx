@@ -29,6 +29,7 @@ import { GuideGrantSync } from './src/lib/useGuideGrant';
 import { SessionNavSync } from './src/lib/sessionNavSync';
 import { ThemeAccountSync } from './src/lib/themeAccountSync';
 import { RewardsProvider } from './src/lib/rewards';
+import { FreshNewsProvider } from './src/lib/freshNews';
 import { SaveProvider } from './src/lib/save';
 import SaveSheets from './src/components/SaveSheets';
 import { colors } from './src/theme';
@@ -429,6 +430,11 @@ function Root() {
                           lists, check-ins, friends and trips it counts —
                           see `lib/rewards`. */}
                       <RewardsProvider>
+                      {/* What is new for the reader in comments, once:
+                          the last tab's dot, the bell on their own page
+                          and Activity read this one copy, and Activity
+                          moves its mark — see `lib/freshNews`. */}
+                      <FreshNewsProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
                       {/* The field a first comment is written in, raised
@@ -440,6 +446,7 @@ function Root() {
                         <SignupTourProvider onReplay={() => goTo('Explore', { screen: 'ExploreHome' })} getRoute={() => navRef.getCurrentRoute()?.name}><Tabs /></SignupTourProvider>
                       </TabBarDuckProvider>
                       </CommentQuickProvider>
+                      </FreshNewsProvider>
                       {/* The save and sign-in sheets, after the tabs so
                           they paint over them — see `components/SaveSheets`. */}
                       <SaveSheets />

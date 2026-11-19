@@ -103,12 +103,12 @@ import { agoLabel } from '../lib/ago';
 import { activityGroups } from '../lib/commentNews';
 import { useCollections } from '../lib/catalog';
 import {
-  fetchApplause, fetchCopies, fetchMyActs, type MyActs, useCommentNewsQuery, useCuratorAvatarsQuery, useMyCollections,
+  fetchApplause, fetchCopies, fetchMyActs, type MyActs, useCuratorAvatarsQuery, useMyCollections,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { type ActivityItem, type Applause, buildActivity, type Copy, friendsMade } from '../lib/friends';
+import { useFreshNews } from '../lib/freshNews';
 import { useI18n } from '../lib/i18n';
-import { useFlag } from '../lib/useFlag';
 import { colors, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -175,10 +175,12 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // for every actor on the screen; a handle with no face gets the blank
   // disc, as does a like whose liker is unnamed.
   // What happened to the reader in comments — the page's fourth source,
-  // asked by its own hook (`useCommentNewsQuery` says why). So it is not
-  // one of the halves above: a failure of it is not said, the page simply
-  // has no comment rows; and a pull asks it again beside them.
-  const news = useCommentNewsQuery(me, useFlag('comments'));
+  // and not asked here: the app holds one copy (`lib/freshNews`), which
+  // the tab's dot and the bell read as well, so the page cannot show a
+  // reply the dot has not heard of. So it is not one of the halves
+  // above: a failure of it is not said, the page simply has no comment
+  // rows; and a pull asks it again beside them.
+  const { news } = useFreshNews();
   // Two groups, what is for the reader above what the reader did — see
   // `lib/commentNews`.
   const groups = useMemo(() => activityGroups(earlier, news.data, since), [earlier, news.data, since]);

@@ -72,7 +72,8 @@ P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giớ
 1. **Đầu trang:** không có tiêu đề (chủ dự án bỏ ngày 19/11: tab đã nói
    đây là trang của ai) và không có nút quay lại. **Chuông** (Hoạt động)
    nổi ở góc trên bên phải ảnh bìa, cách A trong hai cách vẽ cho chủ dự án
-   ngày 19/11 (cách B là cạnh "Tài khoản ›"). Chấm trên chuông chờ C7c.
+   ngày 19/11 (cách B là cạnh "Tài khoản ›"). Chuông có chấm khi có trả
+   lời, tag hoặc bình luận chưa xem (C7c).
 2. **Ảnh bìa, ảnh đại diện, tên, handle, tiểu sử** như hôm nay. Ảnh đại
    diện có vòng cấp độ, và nhãn "Lv" **ngay dưới ảnh, ở giữa** (chủ dự án,
    19/11), bấm mở Thành tích. Chỉ chủ trang thấy.
@@ -158,8 +159,11 @@ Mỗi PR một commit, revert là về như trước.
   (`useActivityCount`) bỏ theo. Test cho luật ở mục 3 nằm ở
   `PersonScreen.ui.test.tsx` ("has a place on the page for every reason the
   tab wears a dot").
-- [ ] **Còn lại:** chấm trên chuông khi C7c xong (phiên bình luận); xem lại
-  dòng Check-in và Bạn bè trên Tài khoản, vốn trùng đích với hai con số.
+- [x] **Chấm trên chuông** (C7c của `docs/comments-plan.md`): chuông đọc
+  `useFreshNews`, cùng con số với chấm trên tab; test ở mục 3 nay có lý do
+  thứ ba (`comments` → `person-bell-dot`).
+- [ ] **Còn lại:** xem lại dòng Check-in và Bạn bè trên Tài khoản, vốn
+  trùng đích với hai con số.
 
 ## 8. Phối hợp với phiên bình luận
 

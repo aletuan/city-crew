@@ -57,6 +57,7 @@ const state = vi.hoisted(() => ({
   inCommonOn: true,
   topFriendOn: true,
   role: null as 'editor' | 'guide' | null,
+  fresh: 0,
   roleAsked: [] as [string | null, string | null][],
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
@@ -133,6 +134,7 @@ vi.mock('../lib/person', async (orig) => {
 });
 // The tab bar's duck, which hears every scroll of the page.
 const duck = vi.hoisted(() => vi.fn());
+vi.mock('../lib/freshNews', () => ({ useFreshNews: () => ({ fresh: state.fresh }) }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => duck }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: state.scheme }) }));
 vi.mock('../lib/i18n', () => ({
@@ -212,6 +214,7 @@ beforeEach(() => {
   state.inCommonOn = true;
   state.topFriendOn = true;
   state.role = null;
+  state.fresh = 0;
   state.roleAsked = [];
   state.lang = 'en';
   state.scheme = 'dark';
@@ -1916,9 +1919,16 @@ describe('your own page', () => {
     expect(bell.getAttribute('aria-label')).toBe('Activity');
     fireEvent.click(bell);
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Activity');
-    // No dot until the comments' reading of what is new (C7c) lands.
+    // No dot with nothing new in comments; one, and its count said, with
+    // something (C7c) — the number the tab's dot reads (`lib/freshNews`).
     expect(screen.queryByTestId('person-bell-dot')).toBeNull();
     cleanup();
+    state.fresh = 2;
+    await show('me', true, PROFILE_STACK);
+    expect(screen.getByTestId('person-bell').contains(screen.getByTestId('person-bell-dot'))).toBe(true);
+    expect(screen.getByTestId('person-bell').getAttribute('aria-label')).toBe('Activity, 2 new');
+    cleanup();
+    state.fresh = 0;
     await show('me', false, ['CollectionsHome', 'Person']);
     fireEvent.click(screen.getByTestId('person-bell'));
     expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Activity', initial: false });
@@ -1934,13 +1944,14 @@ describe('your own page', () => {
   // tab wears a dot for is in sight on your own page. A reason added to
   // the tab's dot with no place here turns this red.
   it('has a place on the page for every reason the tab wears a dot', async () => {
-    const places: Record<string, string> = { requests: 'owner-requests', badges: 'level-badge' };
-    const none = { requests: 0, invites: 0, today: null, badges: 0 };
+    const places: Record<string, string> = { requests: 'owner-requests', badges: 'level-badge', comments: 'person-bell-dot' };
+    const none = { requests: 0, invites: 0, today: null, badges: 0, comments: 0 };
     for (const key of Object.keys(none) as (keyof typeof none)[]) {
       const said = spokenTab('Profile', 'Profile', { ...none, [key]: key === 'today' ? 'x' : 1 }, (en) => en);
       if (said === 'Profile') continue;
       expect(places[key], `the tab's dot says "${said}", and the page has no place for it`).toBeDefined();
     }
+    state.fresh = 1;
     await show('me', true, PROFILE_STACK);
     for (const id of Object.values(places)) expect(screen.getByTestId(id), id).toBeTruthy();
   });

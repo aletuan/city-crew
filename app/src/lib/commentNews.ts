@@ -114,3 +114,42 @@ export function activityGroups(
   const newest = (a: ActivityEntry, b: ActivityEntry) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0);
   return { forYou: forYou.sort(newest), yours: yours.sort(newest) };
 }
+
+// ── what is new (C7c; owner, 19 Nov 2026) ──
+//
+// The rows are worked out when asked for, so no row has a "read" of its
+// own (rule 5 of the plan). What the phone keeps instead is one mark:
+// the time of the newest row Activity has shown. A row later than the
+// mark is new.
+//
+// The mark is a row's own `at` — the server's clock — and never the
+// phone's "now". Rows are compared with rows, so a phone whose clock is
+// wrong, or which crossed a time zone, marks nothing new or old by it.
+// Weighed and not taken: the moment Activity was opened, by the phone's
+// clock. Five minutes fast, and every reply of the next five minutes
+// would arrive already seen.
+
+/** Whether a row is later than the mark. Nothing marked yet — a phone
+ *  meeting the account for the first time — and every row is. */
+export function newerThan(at: string, mark: string | null): boolean {
+  return mark === null || Date.parse(at) > Date.parse(mark);
+}
+
+/**
+ * How many rows call for the dot on the last tab and on the bell: a
+ * tag, a reply, or a comment on the reader's list, later than the mark.
+ *
+ * Not a heart (owner, 19 Nov 2026): a heart is good news, and nothing
+ * to answer. Its row is still marked new on the page; it does not send
+ * anybody there.
+ */
+export function freshNews(news: readonly CommentNews[], mark: string | null): number {
+  return news.filter((n) => n.kind !== 'heart' && newerThan(n.at, mark)).length;
+}
+
+/** The latest time among rows, or null for none: what the mark moves to. */
+export function newestAt(rows: readonly { at: string }[]): string | null {
+  let best: string | null = null;
+  for (const r of rows) if (best === null || Date.parse(r.at) > Date.parse(best)) best = r.at;
+  return best;
+}

@@ -33,6 +33,8 @@ vi.mock('../lib/invitations', () => ({ useInvitations: () => invitations }));
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => trips }));
 const rewards = vi.hoisted(() => ({ unseen: [] as string[] }));
 vi.mock('../lib/rewards', () => ({ useRewards: () => rewards }));
+const freshNews = vi.hoisted(() => ({ fresh: 0, freshen: vi.fn() }));
+vi.mock('../lib/freshNews', () => ({ useFreshNews: () => freshNews }));
 const theme = vi.hoisted(() => ({ scheme: 'dark' as 'dark' | 'light' }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
@@ -116,6 +118,8 @@ beforeEach(() => {
   invitations.waiting = 0;
   trips.data = [];
   rewards.unseen = [];
+  freshNews.fresh = 0;
+  freshNews.freshen.mockClear();
   theme.scheme = 'dark';
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
@@ -598,6 +602,44 @@ describe('the waiting dots', () => {
     rewards.unseen = ['beenThere', 'curator'];
     mount(propsFor(0).props);
     expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 2 new badges');
+  });
+
+  // C7c (19 Nov 2026): a reply, a tag or a comment on your list since
+  // Activity was last opened — the number the bell on your page reads.
+  it('marks Profile for news in comments, said before a badge and after a request', () => {
+    const { unmount } = mount(propsFor(0).props);
+    const quiet = dotsIn('Profile');
+    unmount();
+
+    // On its own it is reason enough for the dot.
+    freshNews.fresh = 2;
+    const alone = mount(propsFor(0).props);
+    expect(dotsIn('Profile')).toBe(quiet + 1);
+    alone.unmount();
+
+    rewards.unseen = ['beenThere'];
+    const both = mount(propsFor(0).props);
+    expect(dotsIn('Profile')).toBe(quiet + 1);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 2 new in comments');
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
+    both.unmount();
+
+    crew.ships.data = [request('me')];
+    mount(propsFor(0).props);
+    expect(dotsIn('Profile')).toBe(quiet + 1);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 1 friend request waiting');
+  });
+
+  it('asks whether the comment news has gone stale when it appears and on each change of tab', () => {
+    const bar = (props: BottomTabBarProps) => (
+      <TabBarDuckProvider><Scroller /><FloatingTabBar {...props} /></TabBarDuckProvider>
+    );
+    const { rerender } = render(bar(propsFor(0).props));
+    expect(freshNews.freshen).toHaveBeenCalledTimes(1);
+    rerender(bar(propsFor(0).props));
+    expect(freshNews.freshen).toHaveBeenCalledTimes(1);
+    rerender(bar(propsFor(2).props));
+    expect(freshNews.freshen).toHaveBeenCalledTimes(2);
   });
 
   // One dot, whatever is behind it; and the person waiting is said first.
