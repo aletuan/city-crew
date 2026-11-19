@@ -1942,10 +1942,16 @@ describe('your own page', () => {
     await show('me', true, PROFILE_STACK);
     expect(screen.getByTestId('person-own-face')).toBeTruthy();
     expect(screen.getByTestId('level-badge')).toBeTruthy();
-    // The face and the page's 4 round it, 88, in the level's ring: 103
-    // across, the Account page's own ringed picture (`profile/Hero`).
+    // Your picture at 88, bare, in the level's ring: 103 across, the
+    // Account page's own (`profile/Hero`). No band of page inside the
+    // ring (owner, 19 Nov 2026): the ring's gap is the page's.
     const ring = screen.getByTestId('avatar-box').firstElementChild!;
     expect(viewStyleOf(ring)).toMatchObject({ width: 103, height: 103 });
+    const sizes = [...screen.getByTestId('person-own-face').querySelectorAll('*')].map((el) => getComputedStyle(el).width);
+    expect(sizes).toContain('88px');
+    expect(sizes).not.toContain('80px');
+    // Nothing between the ring and the picture: no band of page of its own.
+    expect([...screen.getByTestId('person-own-face').querySelectorAll('*')].some((el) => getComputedStyle(el).borderWidth === '4px')).toBe(false);
   });
 
   // The plan's rule (docs/profile-home-plan.md §3): every reason the last

@@ -153,10 +153,9 @@ import { bgHex, colors, display, font, radius, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
 /** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
- *  that found the face large beside the cover and the name). With the
- *  page's 4 round it, your own sits in the level's ring at 88 — the size
- *  the Account page draws its picture in the same ring, so the two
- *  pages wear one ringed face, 103 across. */
+ *  that found the face large beside the cover and the name), in a ring
+ *  of page 4 wide: 88 across. Your own is 88 itself, in the level's ring
+ *  — the Account page's picture, 103 across with the ring (`Face`). */
 const FACE = 80;
 /** The cover's height: 170, from 148 (owner, 19 Nov 2026, the same
  *  review: the cover read low under a face that large). Still under the
@@ -179,16 +178,19 @@ const TITLE_LINE = 28;
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
 
-/** The face at the head: everyone's ringed in page, and yours in the
- *  level's ring too (`OwnFace`). Out of the screen for its ceiling. */
+/** The face at the head: everyone's ringed in page; yours bare, in the
+ *  level's ring, whose gap is the page (`OwnFace`, `EngagementRing`) —
+ *  a second band of page inside it was 7.5 of white round the picture
+ *  (owner, 19 Nov 2026), so the 4 went to the picture: 88, the Account
+ *  page's, in the same ring, 103 across. Out of the screen for its
+ *  ceiling. */
 function Face({ own, url, ring }: { own: boolean; url: string | null | undefined; ring: { borderColor: string } }) {
-  const face = (
+  if (own) return <OwnFace size={FACE + 8}><Avatar url={url || null} size={FACE + 8} /></OwnFace>;
+  return (
     <View style={[s.faceRing, ring]}>
       <Avatar url={url || null} size={FACE} />
     </View>
   );
-  // The level's ring around the page's own: the face and its 4 each side.
-  return own ? <OwnFace size={FACE + 8}>{face}</OwnFace> : face;
 }
 
 export default function PersonScreen({ navigation, route, home }: {
