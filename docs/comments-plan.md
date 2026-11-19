@@ -484,14 +484,40 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   bình luận gốc): mọi thứ viết trên bộ là việc của chủ bộ, người có quyền
   xoá nó.
 
-*C7b — ứng dụng:*
-- Bốn loại dòng trong màn Hoạt động, xếp chung dòng thời gian với phần
-  đang có. Con số trên Trang cá nhân tính thêm chúng.
-- Bấm mở màn Bình luận, cuộn tới bình luận đó và làm nổi một nhịp.
+*C7b — ứng dụng — xong phần các dòng; còn phần "mở đúng bình luận":*
+- Màn Hoạt động nay có **hai nhóm** (chủ dự án chốt ngày 19/11/2026):
+  **"Dành cho bạn"** ở trên, gồm mọi việc người khác làm (thích hoặc sao
+  chép bộ của bạn, chấp nhận lời mời kết bạn của bạn, và bốn loại dòng
+  bình luận), rồi **"Việc bạn đã làm"** ở dưới (lượt thích, bản sao của
+  bạn, lời mời bạn đã chấp nhận). Mỗi nhóm mới nhất trước; nhóm nào trống
+  thì không có tiêu đề.
+- Vì sao tách: trước đó là một dòng thời gian trộn cả hai, và sau
+  `docs/profile-home-plan.md` màn này mở từ cái chuông. Bấm chuông mà phải
+  dò một câu trả lời giữa chín dòng "Bạn đã thích…" là sai với điều cái
+  chuông hứa. Đã cân nhắc và bỏ: giữ một dòng thời gian (câu trả lời bị
+  chìm), và hai trang hay hai tab (thêm một chỗ phải tìm).
+- Dòng bình luận: mặt người làm, dấu nhỏ ở góc theo loại, một câu ("trang
+  đã trả lời bạn"), rồi **trích một dòng** chính bình luận đó. Với tim thì
+  trích bình luận được thả tim, và đếm người còn lại ("và 2 người khác").
+- Bấm một dòng thì mở màn Bình luận của bộ đó. **Chưa làm:** cuộn tới
+  đúng bình luận và làm nó nổi lên. Dòng đã gửi kèm bình luận nào
+  (`focus`); màn Bình luận chưa dùng tới. Đây là PR kế tiếp (C7b-2).
+- **Bỏ khỏi C7b:** "con số trên dòng Hoạt động ở Tài khoản tính thêm bình
+  luận". Theo `profile-home-plan.md` dòng đó sẽ bị bỏ, thay bằng chuông.
+- Dòng bình luận được hỏi bằng một hook riêng, không nằm trong ba nguồn
+  sẵn có của màn. Hệ quả: nếu riêng phần này lỗi thì màn không báo lỗi,
+  chỉ không có dòng bình luận.
 
-*C7c — cái gì là mới:*
-- Mốc "lần cuối mở Hoạt động" trên máy; chấm trên dòng mới; chấm trên
-  tab Trang cá nhân cho trả lời, tag và bình luận mới.
+*C7c — cái gì là mới (phải khớp `docs/profile-home-plan.md`, mục 3 và 8):*
+- Mốc "lần cuối mở Hoạt động" trên máy; chấm trên dòng mới hơn mốc.
+- Chấm trên tab cuối cho trả lời, tag và bình luận mới (tim không bật
+  chấm), **đọc từ một hook duy nhất**. Cái chuông trên Trang cá nhân (P3
+  của kế hoạch kia) đọc đúng hook đó, không tự tính lại.
+- Luật của kế hoạch kia: mỗi lý do làm tab có chấm phải thấy được ở màn
+  đầu Trang cá nhân và hết khi xử lý xong. Với bình luận: thấy ở chấm
+  trên chuông, hết khi mở Hoạt động. Có một test trên `spokenTab` giữ
+  luật này; nếu C7c xong trước P3 thì phải thống nhất chỗ hiện tạm với
+  phiên kia trước khi merge.
 
 **C8. Data Desk**
 - Hàng chờ báo cáo hiện loại `comment` kèm nội dung; nút gỡ bình luận.

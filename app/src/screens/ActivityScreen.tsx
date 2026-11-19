@@ -92,24 +92,24 @@
 // fifteen.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph, ICON } from '../components/ui/glyph';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen } from '../components/authUi';
-import { Avatar, Card, EmptyState, GradientCta, PressableScale } from '../components/ui';
+import { Card, EmptyState, GradientCta } from '../components/ui';
+import { ActivityGroups, handleOf } from './activity/ActivityRows';
 import { SettingRow } from './profile/rows';
 import { useSession } from '../lib/auth';
 import { windowStart } from '../lib/activityWindow';
 import { agoLabel } from '../lib/ago';
+import { activityGroups } from '../lib/commentNews';
 import { useCollections } from '../lib/catalog';
 import {
-  fetchApplause, fetchCopies, fetchMyActs, type FriendProfile, type MyActs, useCuratorAvatarsQuery, useMyCollections,
+  fetchApplause, fetchCopies, fetchMyActs, type MyActs, useCommentNewsQuery, useCuratorAvatarsQuery, useMyCollections,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { type ActivityItem, type Applause, buildActivity, type Copy, friendsMade } from '../lib/friends';
-import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { colors, space, type } from '../theme';
+import { useFlag } from '../lib/useFlag';
+import { colors, type } from '../theme';
 import type { Nav } from '../nav';
 
 /** One of the three fetches the timeline is built from. */
@@ -174,6 +174,16 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // catalog's faces nor the crew's cover everyone here. One batched ask
   // for every actor on the screen; a handle with no face gets the blank
   // disc, as does a like whose liker is unnamed.
+  // What happened to the reader in comments — the page's fourth source,
+  // asked by its own hook (`useCommentNewsQuery` says why). So it is not
+  // one of the halves above: a failure of it is not said, the page simply
+  // has no comment rows; and a pull asks it again beside them.
+  const news = useCommentNewsQuery(me, useFlag('comments'));
+  // Two groups, what is for the reader above what the reader did — see
+  // `lib/commentNews`.
+  const groups = useMemo(() => activityGroups(earlier, news.data, since), [earlier, news.data, since]);
+  const nothing = groups.forYou.length + groups.yours.length === 0;
+
   const actors = useMemo(
     () => earlier.map((it) => handleOf(it, crew.people) ?? '').filter(Boolean),
     [earlier, crew.people],
@@ -194,7 +204,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
 
   // Only the three fetches the timeline is built from; the crew's
   // friendships join it when they land.
-  const loading = applause === null || copies === null || acts === null;
+  const loading = applause === null || copies === null || acts === null || !news.loaded;
 
   // The pull — see the header. The spinner belongs to the pull, as on the
   // collection page: armed by the gesture, disarmed when what it waits on
@@ -204,13 +214,14 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // so one already out is left to land rather than asked again.
   const [pulling, setPulling] = useState(false);
   const [asking, setAsking] = useState(false);
-  const busy = asking || loading || crew.ships.loading;
+  const busy = asking || loading || crew.ships.loading || news.loading;
   useEffect(() => {
     if (pulling && !busy) setPulling(false);
   }, [pulling, busy]);
   const pull = () => {
     setPulling(true);
     if (!crew.ships.loading) crew.ships.reload();
+    if (!news.loading) news.reload();
     if (!me || loading || asking) return;
     setAsking(true);
     const mine = owner.current;
@@ -308,7 +319,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
 
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
-      ) : earlier.length === 0 && failed ? (
+      ) : nothing && failed ? (
         <EmptyState
           icon="cloud-offline"
           title={t("Couldn't load your activity", 'Không tải được hoạt động', 'アクティビティを読み込めませんでした', '无法加载动态', '無法載入動態')}
@@ -322,156 +333,27 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
             testID="activity-retry"
           />
         </EmptyState>
-      ) : earlier.length === 0 ? (
+      ) : nothing ? (
         empty
       ) : (
-            <Card testID="earlier-card">
-              {earlier.map((item, i) => {
-                const col = item.kind === 'friend' ? null : collectionOf(item.collection_id);
-                const title = col ? t(col.title_en, col.title_vi, col.title_ja) : null;
-                // The handle, not the full name: it is how the rest of the
-                // app names a person in public ("by @trang"), and it is the
-                // name they chose to be known by. The full name is for the
-                // request card on Your crew, where recognising a human is
-                // the decision being made.
-                const who = handleOf(item, crew.people);
-                const by = who ? atHandle(who) : null;
-                const shown = title ?? '…';
-                const line = lineOf(item, by, shown, t);
-                const key = item.kind === 'friend' ? `friend-${item.other}` : `${item.kind}-${item.collection_id}-${item.at}`;
-                return (
-                  <PressableScale
-                    key={key}
-                    contentStyle={[s.row, i > 0 && s.rowDivider]}
-                    onPress={col ? () => navigation.navigate('CollectionDetail', { slug: col.slug }) : undefined}
-                    // A button only when it goes somewhere — VoiceOver has to
-                    // hear that this row opens the list.
-                    accessibilityRole={col ? 'button' : undefined}
-                  >
-                    {/* Who, then what: the actor's face leads the row, as
-                        every social feed has it (Instagram, Threads), and
-                        the kind of thing they did rides on its corner as a
-                        badge — the heart or the copy, filled and in the
-                        accent, small enough to be a mark and not a second
-                        picture. It replaced a bare glyph per row, which
-                        told the eye nothing once five rows shared it. */}
-                    <View style={s.face} testID="row-face">
-                      <Avatar url={who ? faces.data[who] : null} size={FACE} />
-                      <View style={s.kind} testID="kind-badge">
-                        <Glyph name={BADGE[item.kind]} size={ICON.tiny} color={colors.accent} />
-                      </View>
-                    </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={s.line} numberOfLines={2}>
-                        {line}
-                      </Text>
-                      <Text style={s.meta}>{ago(item.at)}</Text>
-                    </View>
-                    {/* Only where there is somewhere to go: the same
-                        condition as the role above, so what VoiceOver
-                        hears and what the eye sees agree. */}
-                    {col ? <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} /> : null}
-                  </PressableScale>
-                );
-              })}
-            </Card>
+        <ActivityGroups
+          groups={groups}
+          people={crew.people}
+          faces={faces.data}
+          collectionOf={collectionOf}
+          ago={ago}
+          onList={(slug) => navigation.navigate('CollectionDetail', { slug })}
+          onComment={(n) => navigation.navigate('Comments', { subject: { kind: 'collection', id: n.list.id }, focus: n.comment_id })}
+        />
       )}
     </AuthScreen>
   );
 }
 
-/** The other person in a row, by handle: who liked or copied, whose list
- *  it was, or who the new friend is — whoever the face is of. */
-function handleOf(it: ActivityItem, people: Record<string, FriendProfile>): string | null {
-  if (it.kind === 'applause') return it.liker_handle;
-  if (it.kind === 'copy') return it.copier_handle;
-  if (it.kind === 'friend') return people[it.other]?.handle ?? null;
-  return it.owner_handle;
-}
-
-type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
-
-/** The mark on the face's corner: what kind of thing happened. A like is
- *  the heart and a copy the copy glyph whoever did it; a friendship is two
- *  people. */
-const BADGE: Record<ActivityItem['kind'], keyof typeof Ionicons.glyphMap> = {
-  applause: 'heart', liked: 'heart', copy: 'copy', copied: 'copy', friend: 'people',
-};
-
-/**
- * The sentence a row says. Two kinds are other people's acts on your
- * lists, two are yours on theirs, one is a friendship; each has the one
- * shape, and a missing name falls back rather than going blank. The
- * copy's verb is the button's own words — "Save a copy" is what was
- * pressed. Your own rows lead with you (owner's wording, 28 Oct 2026:
- * "Bạn đã thích “Y” của @b").
- */
-function lineOf(item: ActivityItem, by: string | null, shown: string, t: Translate): string {
-  switch (item.kind) {
-    case 'applause':
-      return by
-        ? t(`${by} liked “${shown}”`, `${by} đã thích “${shown}”`, `${by} が「${shown}」にいいねしました`, `${by} 点赞了“${shown}”`, `${by} 按讚了「${shown}」`)
-        : t(`Someone liked “${shown}”`, `Ai đó đã thích “${shown}”`, `誰かが「${shown}」にいいねしました`, `有人点赞了“${shown}”`, `有人按讚了「${shown}」`);
-    case 'copy':
-      return by
-        ? t(`${by} saved a copy of “${shown}”`, `${by} đã lưu bản sao “${shown}”`, `${by} が「${shown}」のコピーを保存しました`, `${by} 保存了“${shown}”的副本`, `${by} 儲存了「${shown}」的副本`)
-        : t(`Someone saved a copy of “${shown}”`, `Ai đó đã lưu bản sao “${shown}”`, `誰かが「${shown}」のコピーを保存しました`, `有人保存了“${shown}”的副本`, `有人儲存了「${shown}」的副本`);
-    case 'liked':
-      return by
-        ? t(`You liked ${by}’s “${shown}”`, `Bạn đã thích “${shown}” của ${by}`, `${by} の「${shown}」にいいねしました`, `你点赞了 ${by} 的“${shown}”`, `你按讚了 ${by} 的「${shown}」`)
-        : t(`You liked “${shown}”`, `Bạn đã thích “${shown}”`, `「${shown}」にいいねしました`, `你点赞了“${shown}”`, `你按讚了「${shown}」`);
-    case 'copied':
-      return by
-        ? t(`You saved a copy of ${by}’s “${shown}”`, `Bạn đã lưu bản sao “${shown}” của ${by}`, `${by} の「${shown}」のコピーを保存しました`, `你保存了 ${by} 的“${shown}”的副本`, `你儲存了 ${by} 的「${shown}」的副本`)
-        : t(`You saved a copy of “${shown}”`, `Bạn đã lưu bản sao “${shown}”`, `「${shown}」のコピーを保存しました`, `你保存了“${shown}”的副本`, `你儲存了「${shown}」的副本`);
-    case 'friend':
-      if (item.asked === 'you') {
-        return by
-          ? t(`${by} accepted your friend request`, `${by} đã chấp nhận lời mời kết bạn của bạn`, `${by} があなたの友達リクエストを承認しました`, `${by} 接受了你的好友请求`, `${by} 接受了你的好友請求`)
-          : t('Someone accepted your friend request', 'Ai đó đã chấp nhận lời mời kết bạn của bạn', '誰かがあなたの友達リクエストを承認しました', '有人接受了你的好友请求', '有人接受了你的好友請求');
-      }
-      return by
-        ? t(`You and ${by} are now friends`, `Bạn và ${by} đã thành bạn bè`, `${by} と友達になりました`, `你和 ${by} 成为了好友`, `你和 ${by} 成為了好友`)
-        : t('You made a new friend', 'Bạn đã có thêm một người bạn', '新しい友達ができました', '你有了一位新朋友', '你有了一位新朋友');
-  }
-}
-
 /** Nothing done yet, or nothing to read: the shape a failed fetch leaves. */
 const NO_ACTS: MyActs = { likes: [], copies: [], lists: [] };
 
-/** The feed line's line height, and the box that holds a 19pt glyph's
- *  whole line — see `mark`. */
-const LINE = 21;
-/** The face's side: the 44pt the slot it replaced had, so the text
- *  column stays where it was. */
-const FACE = 44;
-
 const s = StyleSheet.create({
-  // Centred: a 44pt face beside one or two lines of text wants its
-  // middle on theirs. The rows were top-aligned while the mark was a
-  // 19pt glyph set on the first line; a face has no first line to sit on.
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 13,
-    paddingHorizontal: space.cardPadding, paddingVertical: 12,
-  },
-  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  meta: { color: colors.textTertiary, ...type.meta },
-  // The row aligns its top so the mark can sit on the first line of text;
-  // the chevron keeps the middle, as Profile's rows do it.
-  rowEnd: { alignSelf: 'center' },
-  face: { width: FACE, height: FACE },
-  // The badge: a 20pt disc on the card's own ground with the row's
-  // hairline around it, hung a hair past the face's corner so it reads
-  // as pinned on rather than printed on. 11pt glyph: the heart is a
-  // mark here, not an icon to tap.
-  kind: {
-    position: 'absolute', right: -3, bottom: -3,
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: colors.surfaceCard,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  line: { color: colors.text, fontSize: 15, lineHeight: LINE },
   // The Profile stack's section heading (`profile/styles`' `section`).
   head: { color: colors.text, ...type.section, marginTop: 10 },
 });

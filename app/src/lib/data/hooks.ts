@@ -24,7 +24,9 @@ import {
   fetchRoleOf, type FriendProfile, type PersonRole, type PlaceInCommon, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
-import { fetchPreviews, fetchTaggable, fetchThread } from './comments';
+import { fetchCommentNews, fetchPreviews, fetchTaggable, fetchThread } from './comments';
+import type { CommentNews } from '../commentNews';
+import { windowStart } from '../activityWindow';
 import type { Taggable } from '../commentTags';
 import type { CommentRow, Preview, Subject } from '../comments';
 import { changes, onChange } from '../commentsChanged';
@@ -592,4 +594,30 @@ export const useTaggableQuery = (subject: Subject | null, readerId: string | nul
     [kind, id, readerId],
   );
   return useFetch(fetcher, NOBODY);
+};
+
+// ── what happened to the reader in comments ──
+//
+// Activity's fourth source, beside its likes, copies and the reader's
+// own acts — and asked apart from them, by its own hook, because
+// Activity's page function is at its ceiling (`app/oversize.js`) and
+// its three halves are a state machine a fourth would have had to be
+// threaded through. What that costs is written where it is used
+// (`screens/activity/useActivityNews`).
+//
+// The window opens at the moment of each ask, as Activity's does. Asked
+// again after a comment is written or taken back anywhere in the app
+// (`commentsChanged`) and on `reload`. Nobody reading, or `on` false —
+// the `comments` switch — asks nothing.
+const NO_NEWS: CommentNews[] = [];
+
+/** The reader's comment news over Activity's window. */
+export const useCommentNewsQuery = (readerId: string | null | undefined, on: boolean): Fetch<CommentNews[]> => {
+  const stamp = useSyncExternalStore(onChange, changes);
+  const fetcher = useCallback(
+    () => (readerId && on ? fetchCommentNews(windowStart(new Date())) : Promise.resolve(NO_NEWS)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `stamp` is the reason to ask again, not a value read
+    [readerId, on, stamp],
+  );
+  return useFetch(fetcher, NO_NEWS);
 };
