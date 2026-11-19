@@ -89,7 +89,7 @@ export async function fetchPreviews(subjects: readonly Subject[]): Promise<Recor
   // `off` only on the word `true`: a server from before 20261119070000
   // sends no such column, and every thread was open then.
   for (const r of data ?? []) {
-    out[r.collection_id] = { n: r.n, latest: latestOf(r.latest), off: (r as { off?: unknown }).off === true };
+    out[r.collection_id] = { n: r.n, latest: latestOf(r.latest), off: r.off === true };
   }
   return out;
 }
