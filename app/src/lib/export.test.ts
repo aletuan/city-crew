@@ -26,7 +26,7 @@ const bare = (over: Partial<ExportInput> = {}): ExportInput => ({
   profile: { handle: 'dang', full_name: 'Tran Hai Dang', location: '', bio: '', interests: '', avatar_url: 'https://x/y.jpg' },
   preferences: { categories: ['cafes'], budget_vnd: null, history_on: true },
   collections: [], likes: [], trips: [], tripSources: [], friendships: [], shares: { mine: [], withMe: [] }, blocked: [],
-  handles: {}, submitted: [], history: [], checkins: [],
+  handles: {}, submitted: [], history: [], checkins: [], comments: { comments: [], hearts: [] },
   ...over,
 });
 
@@ -313,8 +313,61 @@ describe('shared', () => {
     expect(JSON.stringify(out)).not.toMatch(/"(me|f1|f2)"/);
   });
 
-  it('is in format 3', () => {
-    expect(EXPORT_FORMAT_VERSION).toBe(3);
+  it('is in format 4', () => {
+    expect(EXPORT_FORMAT_VERSION).toBe(4);
+  });
+});
+
+// What the account wrote and liked in comments (19 Nov 2026, format 4).
+describe('buildExport — comments', () => {
+  const written = {
+    comments: [
+      { collection_slug: 'cafes', in_reply_to: 'trang', is_reply: true, text: 'hi @son at Cong', at: '2026-11-19T10:00:00+07:00', people: ['son'], places: ['cong'] },
+      { collection_slug: 'bars', in_reply_to: null, is_reply: false, text: 'first', at: '2026-11-18T03:00:00Z', people: [], places: [] },
+    ],
+    hearts: [
+      { collection_slug: 'cafes', author: 'trang', at: '2026-11-19T11:00:00+07:00' },
+      { collection_slug: 'bars', author: null, at: 'not a date' },
+    ],
+  };
+
+  it('writes each comment with its list, its words, its time in UTC, whom it answers and what it tags', () => {
+    expect(buildExport(bare({ comments: written }), NOW, 'en').comments).toEqual([
+      {
+        collection_slug: 'cafes', text: 'hi @son at Cong', at: '2026-11-19T03:00:00.000Z',
+        is_reply: true, in_reply_to: 'trang', tagged_people: ['son'], tagged_places: ['cong'],
+      },
+      {
+        collection_slug: 'bars', text: 'first', at: '2026-11-18T03:00:00.000Z',
+        is_reply: false, in_reply_to: null, tagged_people: [], tagged_places: [],
+      },
+    ]);
+  });
+
+  it('writes each heart given: where, whose comment, when — and a time it cannot read as none', () => {
+    expect(buildExport(bare({ comments: written }), NOW, 'en').comment_hearts).toEqual([
+      { collection_slug: 'cafes', author_handle: 'trang', at: '2026-11-19T04:00:00.000Z' },
+      { collection_slug: 'bars', author_handle: null, at: '' },
+    ]);
+  });
+
+  it('writes a comment whose time it cannot read with no time, rather than a parse failure', () => {
+    const odd = { comments: [{ ...written.comments[1], at: 'not a date' }], hearts: [] };
+    expect(buildExport(bare({ comments: odd }), NOW, 'en').comments[0].at).toBe('');
+  });
+
+  it('has both sections, empty, for an account that has written nothing', () => {
+    const b = buildExport(bare(), NOW, 'en');
+    expect(b.comments).toEqual([]);
+    expect(b.comment_hearts).toEqual([]);
+  });
+
+  // The omission is stated, as rule 8 has it for reports: what others
+  // wrote to or about the reader is not theirs to take.
+  it('says, in each language, that other people’s comments are not in the file', () => {
+    expect(buildExport(bare(), NOW, 'en').export.omitted).toMatch(/what other people wrote/);
+    expect(buildExport(bare(), NOW, 'vi').export.omitted).toMatch(/người khác viết/);
+    expect(buildExport(bare(), NOW, 'ja').export.omitted).toMatch(/コメント/);
   });
 });
 

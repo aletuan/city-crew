@@ -50,12 +50,16 @@ import type { Trip } from './data/trips';
 import type { Checkin } from './checkin';
 import type { Preferences } from './data/preferences';
 import type { FriendshipRow } from './friends';
-import type { HistoryEventRow, LikedCollectionRow, ShareRow, SubmittedPlaceRow, TripSourceRow } from './data/export';
+import type {
+  CommentTakeout, HistoryEventRow, LikedCollectionRow, ShareRow, SubmittedPlaceRow, TripSourceRow,
+} from './data/export';
 
 // 2 since 12 Nov 2026: `shared`, the lists shared between this account
 // and its friends, either way. 3 since 13 Nov 2026: `from_collections`
-// on each trip, the lists it was started from.
-export const EXPORT_FORMAT_VERSION = 3;
+// on each trip, the lists it was started from. 4 since 19 Nov 2026:
+// `comments` and `comment_hearts`, what the account wrote and liked in
+// comments (C9 of docs/comments-plan.md).
+export const EXPORT_FORMAT_VERSION = 4;
 
 /** The profile columns `lib/auth` reads. Declared here rather than
  *  imported because `auth.tsx` pulls in React, and this file is held to
@@ -96,6 +100,9 @@ export type ExportInput = {
   history: HistoryEventRow[];
   /** Every visit recorded, from `fetchMyCheckins`. */
   checkins: Checkin[];
+  /** What the account wrote and liked in comments, from
+   *  `fetchMyCommentTakeout` — other people already handles. */
+  comments: CommentTakeout;
 };
 
 export type ExportBundle = {
@@ -137,6 +144,21 @@ export type ExportBundle = {
   /** Where and when, and nothing else — that is all a check-in is yet. */
   checkins: { place_slug: string | null; city_id: string | null; at: string }[];
   places_added: { slug: string; name: string; submitted_at: string | null }[];
+  /**
+   * Every comment you wrote. Rule 6 draws the line here as it does for a
+   * trip: what you wrote is yours; a comment that answers you or tags
+   * you is its writer's, and who liked yours is their act, so neither is
+   * in the file. `in_reply_to` is null for a comment that answers
+   * nobody — and, with `is_reply` true, for an answer to somebody whose
+   * account is gone.
+   */
+  comments: {
+    collection_slug: string; text: string; at: string;
+    is_reply: boolean; in_reply_to: string | null;
+    tagged_people: string[]; tagged_places: string[];
+  }[];
+  /** Every heart you set on a comment: where, and whose comment. */
+  comment_hearts: { collection_slug: string; author_handle: string | null; at: string }[];
 };
 
 /**
@@ -180,17 +202,17 @@ const NOTES = {
   en: {
     about: 'Everything City Crew holds about this account. Photographs are given as links rather than as image data — save them separately if you want to keep them.',
     third_parties: 'Other people appear only by their public @handle. Nobody else\'s name, email or account id is in this file, and trips do not list who else was on them.',
-    omitted: 'Reports and moderation records are not included: they name other people, and an export must not become a way of learning who reported whom.',
+    omitted: 'Reports and moderation records are not included: they name other people, and an export must not become a way of learning who reported whom. Comments are yours where you wrote them: what other people wrote, even in answer to you or tagging you, is theirs and is not here.',
   },
   vi: {
     about: 'Toàn bộ những gì City Crew lưu về tài khoản này. Ảnh được ghi bằng đường dẫn chứ không phải dữ liệu ảnh — muốn giữ thì hãy lưu riêng.',
     third_parties: 'Người khác chỉ xuất hiện bằng @handle công khai. Không có tên, email hay id tài khoản của ai khác trong file này, và các chuyến đi không liệt kê những người cùng đi.',
-    omitted: 'Báo cáo vi phạm và hồ sơ kiểm duyệt không nằm trong bản xuất: chúng nêu tên người khác, và một bản xuất không được trở thành cách để biết ai đã báo cáo ai.',
+    omitted: 'Báo cáo vi phạm và hồ sơ kiểm duyệt không nằm trong bản xuất: chúng nêu tên người khác, và một bản xuất không được trở thành cách để biết ai đã báo cáo ai. Bình luận là của bạn khi chính bạn viết: những gì người khác viết, kể cả để trả lời hay nhắc tới bạn, là của họ và không có ở đây.',
   },
   ja: {
     about: 'City Crew がこのアカウントについて保持しているすべてです。写真は画像データではなくリンクとして記載されます。残したい場合は別途保存してください。',
     third_parties: '他の人は公開 @handle のみで登場します。他人の名前・メールアドレス・アカウント ID はこのファイルに含まれず、旅程にも同行者は記載されません。',
-    omitted: '通報および管理記録は含まれません。これらは他人の名前を含むため、エクスポートが「誰が誰を通報したか」を知る手段になってはならないからです。',
+    omitted: '通報および管理記録は含まれません。これらは他人の名前を含むため、エクスポートが「誰が誰を通報したか」を知る手段になってはならないからです。コメントは、あなた自身が書いたものだけが含まれます。他の人が書いたものは、あなたへの返信やメンションであっても、その人のものであり、ここには含まれません。',
   },
 } as const;
 
@@ -350,6 +372,24 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       slug: p.slug,
       name: placeName(p, lang),
       submitted_at: isoUtc(p.created_at),
+    })),
+
+    // Rule 5 was applied where these were read: the server answers
+    // handles and slugs, never an id. What is left is rule 2, and the
+    // field names a reader of the file would expect.
+    comments: input.comments.comments.map((c) => ({
+      collection_slug: c.collection_slug,
+      text: c.text,
+      at: isoUtc(c.at) ?? '',
+      is_reply: c.is_reply,
+      in_reply_to: c.in_reply_to,
+      tagged_people: c.people,
+      tagged_places: c.places,
+    })),
+    comment_hearts: input.comments.hearts.map((h) => ({
+      collection_slug: h.collection_slug,
+      author_handle: h.author,
+      at: isoUtc(h.at) ?? '',
     })),
   };
 }

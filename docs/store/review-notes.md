@@ -96,6 +96,45 @@ The app is available in English, Vietnamese and Japanese; it opens in
 English and the language is changed at Profile > Language.
 ```
 
+## Đoạn bình luận: chỉ dán vào bản nộp bật cờ `comments` (C10)
+
+Bình luận làm sau cờ `comments` (`docs/comments-plan.md`). Đoạn dưới đây
+**khẳng định bốn thứ của guideline 1.2 cho bình luận**, nên chỉ dán khi cả
+ba điều sau đã đúng; dán sớm hơn là nói với reviewer về một tính năng họ
+không tìm thấy, hoặc về một bộ lọc chưa lọc gì:
+
+1. Cờ `comments` đã bật cho mọi người (không chỉ `app_flag_testers`), và
+   tài khoản demo mở được luồng bình luận của một bộ sưu tập công khai.
+2. Bảng `banned_words` **không trống**. Câu "filtered against a list of
+   banned words" là sai khi danh sách chưa có từ nào:
+
+   ```sql
+   select count(*) from public.banned_words;   -- phải > 0
+   ```
+
+3. Trên Data Desk, một báo cáo bình luận thử hiện đúng nội dung và gỡ được
+   (trang Reports), để câu "our desk can remove a comment" đã được tự tay
+   kiểm.
+
+Dán ngay sau đoạn USER-GENERATED CONTENT, trước câu về ngôn ngữ:
+
+```
+COMMENTS (new in this version, guideline 1.2): signed-in users can comment
+on public collections, reply to a comment, tag friends and places from
+that collection, and like a comment. To see it: open any public collection
+and tap the speech bubble. All four requirements are met for comments:
+(1) Filter: a comment is checked on our server against a list of banned
+words as it is posted and refused if it contains one; comments are capped
+at 500 characters and 30 per user per day. (2) Report: every comment has a
+Report action in its "..." menu, with a reason and an optional note.
+(3) Block: users can block each other from a profile; across a block
+neither sees the other's comments or the replies under them. (4) Action:
+reports reach our moderation desk, which aims to act within 24 hours and
+can remove the comment and suspend the account behind it. The owner of a
+collection can also delete any comment on it and turn comments off. Our
+Terms of Service and Privacy Policy describe all of this.
+```
+
 ## Vì sao từng đoạn tồn tại (nội bộ, không dán)
 
 - **SIGN-IN**: app đăng nhập bằng **email + mật khẩu**. Đoạn này từng viết
@@ -152,6 +191,14 @@ English and the language is changed at Profile > Language.
   thế: khối Notes là khối duy nhất trong repo khẳng định điều gì đó về thế
   giới bên ngoài mã nguồn, nên nó cần một bước kiểm trước khi dán.
 
+- **COMMENTS**: bình luận là nội dung người dùng đầu tiên của app hiện ra
+  ngay lúc đăng, không qua duyệt, nên reviewer sẽ thử đúng bốn thứ của 1.2
+  trên nó. Đoạn này nêu từng thứ theo số và chỉ chỗ bấm. Con số (500 ký tự,
+  30 mỗi ngày, 24 giờ) lấy từ `docs/comments-plan.md` và `legal.ts`; đổi ở
+  đó thì đổi ở đây. Trên App Store Connect, câu hỏi về nội dung do người
+  dùng tạo (Age Rating → "User-Generated Content") vẫn trả lời **Yes** như
+  hiện tại; bình luận không đổi câu trả lời, chỉ thêm lý do.
+
 ## Checklist trước khi bấm Submit
 
 1. **Tài khoản demo đã tồn tại** (câu truy vấn ở đầu file trả về 1 dòng) và
@@ -176,3 +223,6 @@ English and the language is changed at Profile > Language.
 6. Hai cờ trace không cần đụng — cả `STARTUP_TRACE` (log console) lẫn
    `STARTUP_TRACE_UPLOAD` (gửi lên `startup_traces`) đều tự tắt trên channel
    `production`, nên bản App Store không log và không gửi gì.
+7. **Nếu bản này bật bình luận:** ba điều kiện ở mục "Đoạn bình luận" đã
+   đúng, đoạn COMMENTS đã dán, và nhãn App Privacy `Other User Content` đã
+   ghi thêm bình luận (`app-privacy-labels.md`).

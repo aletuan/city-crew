@@ -49,6 +49,10 @@ const reads = vi.hoisted(() => ({
     ],
   })),
   fetchMyTripSources: vi.fn(async () => [{ trip_id: 't1', collections: { slug: 'cafes' } }]),
+  fetchMyCommentTakeout: vi.fn(async () => ({
+    comments: [{ collection_slug: 'cafes', in_reply_to: 'trang', is_reply: true, text: 'hi', at: '2026-11-19T03:00:00Z', people: [], places: ['cong'] }],
+    hearts: [{ collection_slug: 'cafes', author: 'trang', at: '2026-11-19T04:00:00Z' }],
+  })),
   fetchProfilesById: vi.fn(async (ids: string[]) => Object.fromEntries(ids.map((id) => [id, {
     id, handle: `${id}_handle`, full_name: `Private Name ${id}`, avatar_url: `https://faces/${id}.jpg`,
   }]))),
@@ -81,6 +85,7 @@ vi.mock('./data/export', () => ({
   fetchMyHistory: reads.fetchMyHistory,
   fetchMyShares: reads.fetchMyShares,
   fetchMyTripSources: reads.fetchMyTripSources,
+  fetchMyCommentTakeout: reads.fetchMyCommentTakeout,
 }));
 vi.mock('expo-file-system', () => {
   class File {
@@ -160,6 +165,18 @@ describe('useTakeout', () => {
       await run();
       expect(reads.fetchProfilesById).toHaveBeenCalledOnce();
       expect([...(reads.fetchProfilesById.mock.calls[0][0] as string[])].sort()).toEqual(['b1', 'f1', 'f2', 's1', 's2']);
+    });
+
+    it('carries what the reader wrote and liked in comments', async () => {
+      mount();
+      await run();
+      expect(reads.fetchMyCommentTakeout).toHaveBeenCalledOnce();
+      const file = JSON.parse(world.written[0].body);
+      expect(file.comments).toEqual([{
+        collection_slug: 'cafes', text: 'hi', at: '2026-11-19T03:00:00.000Z',
+        is_reply: true, in_reply_to: 'trang', tagged_people: [], tagged_places: ['cong'],
+      }]);
+      expect(file.comment_hearts).toEqual([{ collection_slug: 'cafes', author_handle: 'trang', at: '2026-11-19T04:00:00.000Z' }]);
     });
 
     it('carries the lists each of the reader’s trips was started from', async () => {

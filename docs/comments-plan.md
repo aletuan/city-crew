@@ -610,15 +610,36 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
 - **Còn phải làm bằng tay trước khi mở cờ:** nhập danh sách từ cấm. Bảng
   vẫn trống.
 
-**C9. Pháp lý và cửa hàng**
-- Điều khoản: thêm bình luận vào danh sách nội dung do người dùng viết và
-  vào câu "mọi thứ đều báo cáo được".
-- Chính sách quyền riêng tư: bình luận hiện cho ai, tag, và bình luận có
-  trong "bản sao dữ liệu của bạn".
-- Bản sao dữ liệu: thêm bình luận của người dùng.
-- Ghi chú cho App Review và khai báo nội dung do người dùng tạo trên App
-  Store Connect.
-- Một luồng Maestro: mở luồng, đăng, trả lời, xoá.
+**C9. Pháp lý và cửa hàng** — xong, trừ luồng Maestro
+- [x] **Điều khoản** (`app/src/lib/legal.ts`, hiệu lực 19/11/2026): bình
+  luận vào danh sách nội dung do người dùng viết; một đoạn riêng về bình
+  luận (500 ký tự, 30 mỗi ngày, lọc từ cấm lúc đăng, không sửa được, xoá
+  là xoá cả câu trả lời bên dưới, chủ bộ xoá được và tắt được); "mọi bình
+  luận đều báo cáo được"; chặn thì hai người không thấy bình luận của
+  nhau; ban biên tập làm được **bốn** việc và việc thứ tư (gỡ bình luận)
+  không đảo ngược được.
+- [x] **Chính sách quyền riêng tư** (hiệu lực 19/11/2026): bình luận và
+  tim trong danh sách dữ liệu lưu; bình luận hiện cho ai (ai mở được bộ
+  công khai, kể cả chưa đăng nhập, vì `comment_thread` cấp cho `anon`);
+  báo cho ai; tag được ai; tim hiện con số, người thả chỉ người viết
+  biết; mốc "đã xem" nằm trên máy; ghi nhận khi ban biên tập gỡ (không
+  giữ nội dung); bình luận có trong bản sao dữ liệu và mất khi xoá tài
+  khoản, cùng các câu trả lời bên dưới.
+- [x] **Bản sao dữ liệu** (định dạng 4): `comments` (bộ nào, nội dung,
+  lúc nào, trả lời ai, tag ai và địa điểm nào) và `comment_hearts` (tim
+  bạn đã thả). Đọc qua hàm `my_comment_takeout`
+  (`20261119110000_comment_takeout.sql`, đã áp lên cơ sở dữ liệu thật ngày
+  19/11/2026) vì các bảng bình luận đóng với client. Không có trong bản
+  sao: bình luận người khác viết để trả lời hay tag bạn, và ai đã thả tim
+  bình luận của bạn; phần đầu file nói rõ điều này.
+- [x] **Ghi chú cho App Review** (`docs/store/review-notes.md`): một đoạn
+  COMMENTS riêng, kèm ba điều kiện phải đúng trước khi dán (cờ đã bật cho
+  mọi người, `banned_words` không trống, đã tự tay gỡ thử một bình luận
+  trên Data Desk). Khai báo nội dung do người dùng tạo vẫn là Yes; nhãn
+  App Privacy ghi thêm bình luận vào dòng `Other User Content`.
+- [ ] **Một luồng Maestro**: mở luồng, đăng, trả lời, xoá. Chưa làm: luồng
+  phải chạy được trên simulator mới đáng merge, và tài khoản thử cần một
+  dòng `app_flag_testers` cho tới khi cờ bật.
 
 **C10. Phát hành**
 - Bật cờ, nộp bản mới, theo dõi kết quả duyệt.
