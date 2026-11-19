@@ -137,6 +137,18 @@ describe('the heart', () => {
   });
 });
 
+describe('the comment a row of Activity led to', () => {
+  const wash = () => (viewStyleOf(screen.getByTestId('comment-row')) as { backgroundColor?: unknown }).backgroundColor;
+
+  it('wears the accent\'s soft wash while it is lit, and none otherwise', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} lit />);
+    expect(wash()).toBe(colors.accentSoft);
+    cleanup();
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} />);
+    expect(wash()).toBeUndefined();
+  });
+});
+
 describe('the way to answer, on a closed thread', () => {
   it('is drawn where it stands, dimmed, and answers nothing', () => {
     render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onReply={onReply} replyOff />);

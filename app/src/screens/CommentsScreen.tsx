@@ -72,6 +72,7 @@ import CommentRow, { INDENT } from '../components/CommentRow';
 import { useKeyboardUp } from '../components/keyboard';
 import { useCommentHearts } from './comments/useCommentHearts';
 import { useCommentMenu } from './comments/useCommentMenu';
+import { useThreadFocus } from './comments/useThreadFocus';
 import { useThreadOwner } from './comments/useThreadOwner';
 import { useThreadWriting } from './comments/useThreadWriting';
 import { EmptyState, GradientCta, PressableScale, Screen } from '../components/ui';
@@ -106,6 +107,8 @@ export default function CommentsScreen({ navigation, route }: {
 
   // Which branches the reader has opened past the fold. By the root's id,
   // so a refresh that reorders nothing keeps them open.
+  // The comment a row of Activity led here for — `useThreadFocus`.
+  const focus = useThreadFocus(route.params.focus, branches);
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const open = (id: string) => setOpened((was) => new Set(was).add(id));
 
@@ -159,13 +162,13 @@ export default function CommentsScreen({ navigation, route }: {
   const { heartsOf, toggle } = useCommentHearts(me, thread.loadedAt, askIn);
 
   const branch = (b: Branch) => {
-    const replies = opened.has(b.root.id) ? b.replies : b.replies.slice(0, REPLIES_SHOWN);
+    const replies = opened.has(b.root.id) || focus.reveal.open === b.root.id ? b.replies : b.replies.slice(0, REPLIES_SHOWN);
     const more = b.replies.length - replies.length;
     return (
-      <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(b.root)} replyOff={!!owner.closed} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
+      <View key={b.root.id} style={s.branch} onLayout={focus.branchAt(b.root.id)} testID="comment-branch">
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(b.root)} replyOff={!!owner.closed} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} {...focus.rowProps(b.root.id)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(r)} replyOff={!!owner.closed} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(r)} replyOff={!!owner.closed} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} {...focus.rowProps(r.id)} />
         ))}
         {more > 0 ? (
           <PressableScale
@@ -232,6 +235,7 @@ export default function CommentsScreen({ navigation, route }: {
           window; Android resizes the window itself. */}
       <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
+          ref={focus.scroll}
           style={s.fill}
           onScroll={onScroll}
           scrollEventThrottle={16}
@@ -244,7 +248,7 @@ export default function CommentsScreen({ navigation, route }: {
           testID="comments-scroll"
         >
           {state}
-          {branches.slice(0, shown).map(branch)}
+          {branches.slice(0, Math.max(shown, focus.reveal.shown)).map(branch)}
         </ScrollView>
         <CommentComposer
           avatarUrl={profile?.avatar_url}

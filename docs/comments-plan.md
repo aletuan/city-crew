@@ -484,7 +484,7 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   bình luận gốc): mọi thứ viết trên bộ là việc của chủ bộ, người có quyền
   xoá nó.
 
-*C7b — ứng dụng — xong phần các dòng; còn phần "mở đúng bình luận":*
+*C7b — ứng dụng — xong:*
 - Màn Hoạt động nay có **hai nhóm** (chủ dự án chốt ngày 19/11/2026):
   **"Dành cho bạn"** ở trên, gồm mọi việc người khác làm (thích hoặc sao
   chép bộ của bạn, chấp nhận lời mời kết bạn của bạn, và bốn loại dòng
@@ -499,9 +499,13 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
 - Dòng bình luận: mặt người làm, dấu nhỏ ở góc theo loại, một câu ("trang
   đã trả lời bạn"), rồi **trích một dòng** chính bình luận đó. Với tim thì
   trích bình luận được thả tim, và đếm người còn lại ("và 2 người khác").
-- Bấm một dòng thì mở màn Bình luận của bộ đó. **Chưa làm:** cuộn tới
-  đúng bình luận và làm nó nổi lên. Dòng đã gửi kèm bình luận nào
-  (`focus`); màn Bình luận chưa dùng tới. Đây là PR kế tiếp (C7b-2).
+- Bấm một dòng thì mở màn Bình luận của bộ đó **đúng tại bình luận ấy**
+  (C7b-2, `useThreadFocus`): gốc chứa nó được vẽ ra dù nằm ngoài 10 gốc
+  đầu, nhánh được mở nếu nó là một trả lời đang bị gập, trang cuộn tới nó
+  một lần, và nó sáng lên khoảng một giây rưỡi rồi tắt. Bình luận đã bị
+  xoá thì luồng mở ở đầu trang như thường, không báo gì.
+- Chưa kiểm được bằng kiểm thử tự động: cuộn có mượt và dừng đúng chỗ
+  trên máy thật không, và một giây rưỡi sáng có vừa không.
 - **Bỏ khỏi C7b:** "con số trên dòng Hoạt động ở Tài khoản tính thêm bình
   luận". Theo `profile-home-plan.md` dòng đó sẽ bị bỏ, thay bằng chuông.
 - Dòng bình luận được hỏi bằng một hook riêng, không nằm trong ba nguồn
