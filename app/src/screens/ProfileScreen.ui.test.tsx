@@ -79,7 +79,6 @@ const state = vi.hoisted(() => ({
     { short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'manual' as 'auto' | 'manual',
   checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
-  feed: 0,
   /** Where a theme's restart left the reader, on the launch that is one. */
   resume: null as { tab: string; sheet?: 'theme'; y?: number; at: number } | null,
 }));
@@ -135,7 +134,6 @@ vi.mock('../lib/data', () => ({
 vi.mock('../lib/checkins', () => ({
   useMyCheckins: () => ({ data: state.checkins, loaded: state.counts.visitsLoaded ?? true, error: state.counts.visitsError ?? null, reload: reloads.visits }),
 }));
-vi.mock('../lib/useActivityCount', () => ({ useActivityCount: () => state.feed }));
 vi.mock('../lib/crew', () => ({
   useCrew: () => ({ ships: { data: state.ships, loaded: state.counts.shipsLoaded ?? true, error: state.counts.shipsError ?? null, reload: reloads.ships } }),
 }));
@@ -191,6 +189,7 @@ vi.mock('../components/AvatarPicker', () => ({
 // The ring's drawing is its own business; the numbers it is handed are
 // this screen's.
 vi.mock('../components/EngagementRing', () => ({
+  RING_OUT: 7.5,
   default: ({ level, progress, fresh, onExplain, children }: { level: number; progress: number; fresh?: boolean; onExplain: () => void; children: React.ReactNode }) => (
     <div data-testid="ring" data-level={level} data-progress={progress} data-fresh={String(!!fresh)}>
       {children}
@@ -221,6 +220,7 @@ vi.mock('../lib/rewards', async () => {
 
 import ProfileScreen from './ProfileScreen';
 import { Counts } from './profile/Counts';
+import { OwnFace } from './person/OwnFace';
 import { s } from './profile/styles';
 import { StyleSheet } from 'react-native';
 
@@ -258,7 +258,6 @@ beforeEach(async () => {
   state.resume = null;
   state.guide = false;
   state.checkins = [];
-  state.feed = 0;
   state.editor = false;
   state.trips = [];
   state.counts = { mineLoaded: true, mineError: null, tripsLoaded: true, tripsError: null };
@@ -434,16 +433,17 @@ describe('guest hub', () => {
 describe('account identity', () => {
   // The bio left the hero on 16 Nov 2026: that line is cut at two, and a
   // bio is a paragraph. It is the first row of About me, whole.
-  it('shows the name and the handle in the hero, and the bio whole in About me', () => {
+  // Your name, handle and picture are on your own person page since 19
+  // Nov 2026 (P3, docs/profile-home-plan.md): Account heads with Edit
+  // profile alone.
+  it('draws no name, handle or picture, and the bio whole in About me', () => {
     const long = 'Coffee first. '.repeat(11).trim();
     state.profile = { full_name: 'Le Minh', handle: 'leminh', bio: long };
-    draw();
-    expect(screen.getByText('Le Minh')).toBeTruthy();
-    const handle = screen.getByText('@leminh');
-    // The handle stands alone: no dot, and nothing of the bio beside it.
-    expect(handle.textContent).toBe('@leminh');
-    expect(handle.parentElement!.textContent).not.toContain('Coffee');
-    expect(screen.queryByText(/·/)).toBeNull();
+    draw(true);
+    expect(screen.queryByText('Le Minh')).toBeNull();
+    expect(screen.queryByText('@leminh')).toBeNull();
+    expect(screen.queryByTestId('avatar')).toBeNull();
+    expect(screen.queryByTestId('ring')).toBeNull();
     // Said once on the page, in the card, before the facts — and not cut.
     expect(screen.getAllByText(long)).toHaveLength(1);
     const bio = screen.getByTestId('profile-bio');
@@ -476,18 +476,6 @@ describe('account identity', () => {
 
   // The page's second heading (owner, 14 Nov 2026): under "Profile" at
   // 30, the name at 20, in the system face's bold.
-  it('sets the name at 20, a step under the tab\'s title', () => {
-    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
-    draw();
-    expect(textStyleOf(screen.getByText('Le Minh'))).toMatchObject({ fontSize: 20, lineHeight: 25 });
-  });
-
-  it('falls back to the local part of the email when there is no name, and draws no empty handle', () => {
-    draw();
-    expect(screen.getByText('minh.le')).toBeTruthy();
-    expect(screen.queryByText(/^@/)).toBeNull();
-  });
-
   it('lists the email in About me', () => {
     draw();
     expect(screen.getByText('Email')).toBeTruthy();
@@ -557,9 +545,12 @@ describe('account identity', () => {
     expect(screen.getByText(value)).toBeTruthy();
   });
 
-  it('opens Edit profile, with the avatar drawn without its camera badge', () => {
-    const { raw } = draw();
-    expect(screen.getByTestId('avatar').getAttribute('data-camera')).toBe('false');
+  // Kept here when the rest of the head left (owner, 19 Nov 2026): the
+  // page of what you set, and its first control.
+  it('opens Edit profile from the top of the page', () => {
+    const { raw } = draw(true);
+    const edit = button('Edit profile');
+    expect(edit.compareDocumentPosition(screen.getByText('About me')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     press('Edit profile');
     expect(raw.navigate).toHaveBeenCalledWith('EditProfile');
   });
@@ -665,122 +656,10 @@ describe('interests', () => {
 // 2026; on the avatar's top-right corner before that). Editor outranks
 // guide and is shown alone; a reader with neither wears none; a tap
 // explains the grant in the desk's words.
-describe('the role badge', () => {
-  const badge = (name: RegExp | string) => screen.getByRole('button', { name });
-  // The disc: the box the glyph stands in.
-  const discOf = (name: string) => badge(name).querySelector('[data-icon]')!.parentElement!;
+// The role's mark stood after your name here until 19 Nov 2026; it is
+// after your name on your own person page now (`PersonRole`), tested
+// with that page.
 
-  it('is absent for a reader with no grant, and the name stands as it does with one', () => {
-    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
-    draw();
-    expect(screen.queryByRole('button', { name: /Local Guide|Super User/ })).toBeNull();
-    expect(screen.queryByTestId('role-badge')).toBeNull();
-    expect(screen.queryByTestId('role-mark')).toBeNull();
-    // The row is there before the answer is, so a disc arriving a round
-    // trip late is added after the name and moves nothing.
-    expect(screen.getByTestId('role-row').contains(screen.getByText('Le Minh'))).toBe(true);
-  });
-
-  it('stands after the name, on its first line, and not on the picture', () => {
-    state.guide = true;
-    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
-    draw();
-    const disc = badge('Local Guide');
-    expect(screen.getByTestId('avatar-box').contains(disc)).toBe(false);
-    // One row: the name, then the mark, 6 apart, from the top so a
-    // second line of name falls under the first.
-    const row = screen.getByTestId('role-row');
-    const name = screen.getByText('Le Minh');
-    expect(row.contains(name)).toBe(true);
-    expect(row.contains(disc)).toBe(true);
-    expect(name.compareDocumentPosition(disc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const lay = viewStyleOf(row);
-    expect([lay.flexDirection, lay.alignItems, lay.gap]).toEqual(['row', 'flex-start', 6]);
-    // The handle is under the row, not in it.
-    expect(row.contains(screen.getByText('@leminh'))).toBe(false);
-    // A long name gives way; the mark does not.
-    expect(viewStyleOf(row.firstElementChild!).flexShrink).toBe(1);
-    expect(viewStyleOf(screen.getByTestId('role-mark')).flexShrink).toBeUndefined();
-    // In the middle of the name's first line: the line is 25 here.
-    const mark = viewStyleOf(screen.getByTestId('role-mark'));
-    expect([mark.height, mark.justifyContent, mark.position]).toEqual([25, 'center', undefined]);
-    expect(textStyleOf(name)?.lineHeight).toBe(25);
-    // 20, not the 24 it was on the picture, and its glyph in proportion.
-    const box = viewStyleOf(discOf('Local Guide'));
-    expect([box.width, box.height, box.borderRadius]).toEqual([20, 20, 10]);
-    expect(disc.querySelector('[data-icon="star"]')!.getAttribute('data-size')).toBe('11');
-    // And the thumb is still owed 44 of it: the press's own slop, read
-    // off the component that set it.
-    type Fiber = { memoizedProps?: { hitSlop?: unknown }; return?: Fiber };
-    let f: Fiber | undefined = (disc as unknown as Record<string, Fiber>)[Object.keys(disc).find((k) => k.startsWith('__reactFiber'))!];
-    while (f && typeof f.memoizedProps?.hitSlop !== 'number') f = f.return;
-    expect(20 + 2 * (f!.memoizedProps!.hitSlop as number)).toBe(44);
-    // A mark, not a message: its name is not written on the page.
-    expect(screen.queryByText('Local Guide')).toBeNull();
-  });
-
-  it('names a local guide, and says what the grant lets them do', () => {
-    state.guide = true;
-    draw();
-    fireEvent.click(badge('Local Guide'));
-    // In the sheet the level opens too (16 Nov 2026), not a system alert:
-    // the disc that was pressed, its name, then what it lets them do.
-    expect(alert).not.toHaveBeenCalled();
-    const head = screen.getByTestId('badge-sheet-head');
-    expect(head.textContent).toBe('Local Guide');
-    expect(head.querySelector('[data-icon="star"]')).toBeTruthy();
-    expect(screen.getByTestId('badge-sheet-body').textContent)
-      .toBe('You can edit, and add photos to, places in your collections and places you imported.');
-    // A role's sheet draws no level: no bar, no steps.
-    expect(screen.queryByTestId('level-bar')).toBeNull();
-    expect(screen.queryByTestId('level-steps')).toBeNull();
-  });
-
-  it('names an editor as Super User, and only that, even when also a guide', () => {
-    state.guide = true;
-    state.editor = true;
-    draw();
-    expect(screen.queryByRole('button', { name: 'Local Guide' })).toBeNull();
-    const disc = badge('Super User');
-    expect(disc.querySelector('[data-icon="medal"]')).toBeTruthy();
-    fireEvent.click(disc);
-    expect(alert).not.toHaveBeenCalled();
-    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Super User');
-    expect(screen.getByTestId('badge-sheet-head').querySelector('[data-icon="medal"]')).toBeTruthy();
-    expect(screen.getByTestId('badge-sheet-body').textContent).toMatch(/every place in the app/);
-    // Its sentence justified in the box, as a list's description is
-    // (owner, 17 Nov 2026): ragged, it read as weighted to one side.
-    expect(textStyleOf(screen.getByTestId('badge-sheet-body').firstElementChild as HTMLElement)?.textAlign).toBe('justify');
-  });
-
-  // Two roles, two colours: the disc's edge and glyph follow the role,
-  // and an editor who is also a guide wears the editor's, not the guide's.
-  // react-native-web writes colours as classes, which jsdom's computed
-  // style does not resolve, so the class list is what is compared.
-  it('wears a different colour for each role, the editor’s when both apply', () => {
-    const dress = (name: string) => discOf(name).className;
-    state.guide = true;
-    draw();
-    const guideDress = dress('Local Guide');
-    cleanup();
-    state.editor = true;
-    draw();
-    expect(dress('Super User')).not.toBe(guideDress);
-    expect(guideDress).toMatch(/borderColor/);
-  });
-
-  // Words only on Edit profile: the pencil it wore was not wanted.
-  it('keeps Edit profile to its words, with no glyph', () => {
-    draw();
-    const edit = screen.getByRole('button', { name: 'Edit profile' });
-    expect(edit.querySelector('[data-icon]')).toBeNull();
-  });
-});
-
-// Four numbers under the hero, each a door into the place that holds it:
-// Collections, Check-ins, Friends, Trips (owner, 16 Nov 2026). "Saved
-// places" was the second until then — a detail of the collections beside
-// it, opening the same list.
 // On your own person page since 19 Nov 2026 (`Counts`, drawn by
 // `MeScreen`); read here with the hooks this file already mocks.
 describe('the four doors', () => {
@@ -987,6 +866,13 @@ describe('the account page', () => {
 });
 
 describe('the level ring', () => {
+  // On your own person page since 19 Nov 2026 (`person/OwnFace`), read
+  // here with the hooks this file already mocks.
+  const draw = () => {
+    const r = nav();
+    render(<OwnFace size={96}><div data-testid="face" /></OwnFace>);
+    return r;
+  };
   it('counts a place saved into two lists once', () => {
     const p = (slug: string) => ({ slug });
     state.mine = [
@@ -1074,26 +960,21 @@ describe('the level ring', () => {
 
   // One sheet for the two badges: it is about whichever was pressed, and
   // closes by its backdrop as every sheet in the app does.
-  it('is about the badge that was pressed, and closes by the backdrop', async () => {
-    // The backdrop, then the fade react-native-web runs before a closed
-    // Modal leaves the page.
+  // The role's sheet went with the role's mark to your person page (19
+  // Nov 2026); what is left here is the level's: it opens on the pill,
+  // closes by the backdrop, and opens again the same.
+  it('opens on the pill, closes by the backdrop, and opens again the same', async () => {
     const shut = async () => {
       fireEvent.click(screen.getByLabelText('Close'));
       document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
       await waitFor(() => expect(screen.queryByTestId('badge-sheet-head')).toBeNull());
     };
-    state.guide = true;
     draw();
     fireEvent.click(screen.getByTestId('ring-explain'));
     expect(screen.getByTestId('badge-sheet-body').textContent).toContain('Level 1');
     await shut();
-    fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
-    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Local Guide');
-    await shut();
-    // And the level again after a role: not left on the role.
     fireEvent.click(screen.getByTestId('ring-explain'));
     expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Achievements');
-    expect(screen.getByTestId('badge-sheet-body').textContent).toContain('Level 1');
   });
 
   it('starts a new account at level 1', () => {
@@ -1106,6 +987,13 @@ describe('the level ring', () => {
 // (owner, 17 Nov 2026) — `components/BadgeShelf` draws them, and
 // `lib/rewards` holds them.
 describe('the badges, under the level', () => {
+  // On your own person page since 19 Nov 2026 (`person/OwnFace`), read
+  // here with the hooks this file already mocks.
+  const draw = () => {
+    const r = nav();
+    render(<OwnFace size={96}><div data-testid="face" /></OwnFace>);
+    return r;
+  };
   const shut = async () => {
     fireEvent.click(screen.getByLabelText('Close'));
     document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
@@ -1193,29 +1081,14 @@ describe('friends card', () => {
     expect(screen.getByText('Make friends and plan together.')).toBeTruthy();
   });
 
-  // The feed had no door from 23 Aug 2026 (#309) until 6 Oct: its one
-  // entry was the "requests waiting" banner on Crew, and the two-tab
-  // Crew took the banner down with the requests it had pointed at. The
-  // applause and the trips it also carried were left behind a route
-  // nothing navigated to. It hangs here now, under the friends row.
-  it('opens the activity feed from the Friends card', () => {
-    const { raw } = draw();
-    press('Activity');
-    expect(raw.navigate).toHaveBeenCalledWith('Activity');
-    // The owner's subtitle (28 Oct 2026): a log of your own acts too, not news alone.
-    expect(screen.getByText('A log of your activity on City Crew.')).toBeTruthy();
-  });
-
-  it('files Activity in the same card as the friends row, under it', () => {
-    draw();
+  // Activity hung under the friends row from 6 Oct to 19 Nov 2026. It
+  // is the bell on your own page now (`person/Bell`), and the friends
+  // row stands alone in its card.
+  it('has no Activity row: it is the bell on your own page', () => {
+    draw(true);
+    expect(screen.queryByText('Activity')).toBeNull();
     const friends = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]')!;
-    const activity = screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
-    expect(activity).not.toBe(friends);
-    expect(activity.parentElement).toBe(friends.parentElement);
-    expect(friends.compareDocumentPosition(activity) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(activity.compareDocumentPosition(screen.getByText('Preferences')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // One glyph each, the same bare kind.
-    expect(activity.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
+    expect(friends.parentElement!.querySelectorAll('[data-testid="feature-row"]')).toHaveLength(1);
   });
 
   // The number of friends was a pill at this row's end until 16 Nov
@@ -1675,48 +1548,13 @@ describe('visited places', () => {
 // the text and the chevron with nothing to say they were counts rather
 // than values. One tone and one width for every row, because the number
 // means one thing on all of them — the size of what is behind the row.
+// Activity's count was the one pill on this page (16 Oct to 19 Nov 2026);
+// Activity is the bell on your own page now, which wears a dot, not a
+// number. No row here carries one.
 describe('the badges', () => {
-  const edge = (requester: string, addressee: string, status: string) =>
-    ({ requester, addressee, status, created_at: '2026-09-01T00:00:00Z' });
-  // Activity's alone since 16 Nov 2026: the friends and the check-ins
-  // are counted under the hero.
-  it('draws a total in a pill, on the one row that has one', () => {
-    state.ships = [edge('me', 'a', 'accepted'), edge('b', 'me', 'accepted')];
-    state.feed = 5;
-    state.checkins = [{ id: 'k', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00Z' }];
-    draw();
-    const badges = screen.getAllByTestId('count-badge');
-    expect(badges.map((b) => b.textContent)).toEqual(['5']);
-    expect(screen.getByText('Activity').closest('[data-testid="feature-row"]')!.contains(badges[0])).toBe(true);
-    const box = getComputedStyle(badges[0]);
-    expect(box.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(box.minWidth).toBe('32px');
-    expect(box.height).toBe('22px');
-  });
-
-  it('counts the feed on Activity, and nothing when it is empty', () => {
-    draw();
-    const row = () => screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
-    expect(row().querySelector('[data-testid="count-badge"]')).toBeNull();
-    cleanup();
-    state.feed = 3;
-    draw();
-    expect(row().querySelector('[data-testid="count-badge"]')!.textContent).toBe('3');
-  });
-
-  // Requests left Activity on 20 Oct 2026. A request waiting on this
-  // account is the dot on the friends row and nothing on Activity's —
-  // counted in both, one request read as two things to do.
-  it('does not count a request waiting on this account on Activity', () => {
-    state.ships = [edge('z', 'me', 'pending')];
-    draw();
-    const row = screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
-    expect(row.querySelector('[data-testid="count-badge"]')).toBeNull();
-    cleanup();
-    state.feed = 3;
-    state.ships = [edge('z', 'me', 'pending'), edge('y', 'me', 'pending')];
-    draw();
-    expect(screen.getByText('Activity').closest('[data-testid="feature-row"]')!
-      .querySelector('[data-testid="count-badge"]')!.textContent).toBe('3');
+  it('draws no count on any row', () => {
+    state.ships = [{ requester: 'me', addressee: 'a', status: 'accepted', created_at: '2026-09-01T00:00:00Z' }];
+    draw(true);
+    expect(screen.queryAllByTestId('count-badge')).toHaveLength(0);
   });
 });

@@ -216,7 +216,12 @@ export function WithRole({ role, whose, line, children }: {
 }
 
 /** A person's name on their page, with the mark the database says they
- *  wear — the question (`useRoleOfQuery`), then `WithRole`. */
+ *  wear — the question (`useRoleOfQuery`), then `WithRole`.
+ *
+ *  Your own page says it to you ("You can edit…"), as the Account page's
+ *  name did until 19 Nov 2026, when your name, and the mark after it,
+ *  left Account for your own page (docs/profile-home-plan.md, P3): read
+ *  as "A Super User can…", your own mark spoke about you as a stranger. */
 export default function PersonRole({ me, personId, line, children }: {
   me: string | null;
   personId: string;
@@ -224,7 +229,7 @@ export default function PersonRole({ me, personId, line, children }: {
   children: React.ReactNode;
 }) {
   const role = useRoleOfQuery(me, personId).data ?? null;
-  return <WithRole role={role} whose="theirs" line={line}>{children}</WithRole>;
+  return <WithRole role={role} whose={me === personId ? 'yours' : 'theirs'} line={line}>{children}</WithRole>;
 }
 
 /** The disc: 20, from the 24 it was on a picture's corner, where it

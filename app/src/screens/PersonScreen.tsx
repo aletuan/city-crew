@@ -136,6 +136,8 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
+import { Bell } from './person/Bell';
+import { OwnFace } from './person/OwnFace';
 import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
 import {
@@ -169,6 +171,18 @@ const TITLE_LINE = 28;
 /** What "Write a few words about you" adds above and below its 24pt row to make the button
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
+
+/** The face at the head: everyone's ringed in page, and yours in the
+ *  level's ring too (`OwnFace`). Out of the screen for its ceiling. */
+function Face({ own, url, ring }: { own: boolean; url: string | null | undefined; ring: { borderColor: string } }) {
+  const face = (
+    <View style={[s.faceRing, ring]}>
+      <Avatar url={url || null} size={FACE} />
+    </View>
+  );
+  // The ring around the page's own ring: 88 and its 4 each side.
+  return own ? <OwnFace size={FACE + 8}>{face}</OwnFace> : face;
+}
 
 export default function PersonScreen({ navigation, route, home }: {
   navigation: Nav;
@@ -244,11 +258,12 @@ export default function PersonScreen({ navigation, route, home }: {
         {cover
           ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
           : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
+        {/* Your way to Activity, on your own page — `person/Bell`. */}
+        {own ? <Bell onPress={() => toProfileRoom(navigation, 'Activity')} /> : null}
       </View>
       <View style={s.headRow}>
-        <View style={[s.faceRing, ring]}>
-          <Avatar url={person.avatar_url || null} size={FACE} />
-        </View>
+        {/* Your own in the level's ring — `person/OwnFace`. */}
+        <Face own={own} url={person.avatar_url} ring={ring} />
         {/* The name, beside the picture, and the handle right under it
             — or the handle alone, for somebody who gave no name. The
             name shrinks before it is cut: see `title`.
