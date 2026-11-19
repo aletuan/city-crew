@@ -48,7 +48,7 @@ const MORE_GLYPH = ICON.action;
  *  measured on a phone. */
 export const INDENT = [0, FACE + 10, FACE + 10 + FACE_REPLY + 10] as const;
 
-export default function CommentRow({ comment, when, onPerson, onPlace, onReply, onMore, hearts, onHeart }: {
+export default function CommentRow({ comment, when, onPerson, onPlace, onReply, replyOff, onMore, hearts, onHeart }: {
   comment: Placed;
   /** How long ago, already in words. */
   when: string;
@@ -57,6 +57,9 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   onPlace?: (slug: string) => void;
   /** Answer this comment. Absent on a page that is read-only. */
   onReply?: () => void;
+  /** The thread is closed to new comments: the bubble is drawn dimmed
+   *  and answers nothing, whatever `onReply` is. */
+  replyOff?: boolean;
   /** Its hearts as the page has them — the server's, with the reader's
    *  own press laid over. Absent, the comment's own. */
   hearts?: Hearts;
@@ -122,7 +125,7 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
             them (owner, 18 Nov 2026 — "Reply" was a word for a day).
             Each is 44 to the thumb by its slop; 20 between them, so the
             heart's figure reads as the heart's. */}
-        {onHeart || onReply ? (
+        {onHeart || onReply || replyOff ? (
           <View style={s.acts}>
             {onHeart ? (
               <LikeHeart
@@ -137,9 +140,11 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
                 countTestID="comment-likes"
               />
             ) : null}
-            {onReply ? (
+            {onReply || replyOff ? (
               <PressableScale
-                onPress={onReply}
+                onPress={replyOff ? undefined : onReply}
+                disabled={replyOff}
+                contentStyle={replyOff ? s.off : undefined}
                 haptic="selection"
                 hitSlop={{ top: 12, bottom: 14, left: 8, right: 24 }}
                 accessibilityRole="button"
@@ -185,6 +190,11 @@ const s = StyleSheet.create({
   // Who a deep answer is to: the accent, as a tag is, since it is one.
   to: { color: colors.accent },
   tag: { color: colors.accent, fontWeight: font.medium },
+  // Dimmed, not gone (owner, on a phone, 19 Nov 2026): on a thread its
+  // owner has closed the bubble stays where it was and stops answering.
+  // Taken away, the row of marks shifted and read as a different page;
+  // the send disc's 0.35, which already means "not now" in this app.
+  off: { opacity: 0.35 },
   acts: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 6 },
   // The heart and its figure: 5 between, the card's foot at a row's scale.
   heart: { flexDirection: 'row', alignItems: 'center', gap: 5 },

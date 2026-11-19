@@ -49,14 +49,14 @@ function Probe({ drawn, withOpen = true }: { drawn: Collection[]; withOpen?: boo
         const card = of(c);
         return (
           <Text key={c.slug} onPress={card.onComments} testID={`card-${c.slug}`}>
-            {JSON.stringify({ n: card.comments ? card.comments.n : null, door: !!card.onComments })}
+            {JSON.stringify({ n: card.comments ? card.comments.n : null, door: !!card.onComments, ...(card.commentsOff ? { off: true } : {}) })}
           </Text>
         );
       })}
     </>
   );
 }
-const got = (c: Collection) => JSON.parse(screen.getByTestId(`card-${c.slug}`).textContent!) as { n: number | null; door: boolean };
+const got = (c: Collection) => JSON.parse(screen.getByTestId(`card-${c.slug}`).textContent!) as { n: number | null; door: boolean; off?: boolean };
 const NOTHING = { n: null, door: false };
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
@@ -161,7 +161,7 @@ describe('useCardComments', () => {
   });
 
   // C6: a thread its owner has closed.
-  it('gives a card no way in to a closed thread with nothing in it, and the thread itself when there is something', async () => {
+  it('gives a card a bubble that is off, and no way in, for a closed thread with nothing in it — and the thread itself when there is something', async () => {
     appFlags.set('comments', true);
     data.fetchPreviews.mockImplementation(async () => ({
       c1: { n: 0, latest: [], off: true }, c2: { n: 3, latest: [], off: true }, c3: { n: 0, latest: [], off: false },
@@ -169,7 +169,7 @@ describe('useCardComments', () => {
     const [a, b, c] = [list('c1'), list('c2'), list('c3')];
     inApp(<Probe drawn={[a, b, c]} />);
     await flush();
-    expect(got(a)).toEqual(NOTHING);
+    expect(got(a)).toEqual({ n: 0, door: false, off: true });
     expect(got(b)).toEqual({ n: 3, door: true });
     expect(got(c)).toEqual({ n: 0, door: true });
     fireEvent.click(screen.getByTestId(`card-${b.slug}`));

@@ -137,6 +137,26 @@ describe('the heart', () => {
   });
 });
 
+describe('the way to answer, on a closed thread', () => {
+  it('is drawn where it stands, dimmed, and answers nothing', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onReply={onReply} replyOff />);
+    const bubble = screen.getByTestId('comment-reply');
+    expect(bubble.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(bubble);
+    expect(onReply).not.toHaveBeenCalled();
+  });
+
+  it('is drawn even on a page that gave no way to answer', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} replyOff />);
+    expect(screen.getByTestId('comment-reply').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('is at full strength on an open one', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onReply={onReply} />);
+    expect(screen.getByTestId('comment-reply').getAttribute('aria-disabled')).not.toBe('true');
+  });
+});
+
 describe('the way to answer', () => {
   it('is not drawn on a page that gave none', () => {
     show(placed());

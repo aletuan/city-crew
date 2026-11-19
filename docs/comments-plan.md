@@ -451,13 +451,15 @@ dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
 - Bấm ⋯ thì một hộp hỏi nói trước việc sẽ xảy ra: bình luận đang có vẫn
   đọc được, không ai viết thêm được cho tới khi bật lại.
 - Luồng đã tắt: chỗ ô soạn là một dòng "Chủ bộ sưu tập đã tắt bình luận"
-  (chủ bộ đọc "Bạn đã tắt…"), không còn bong bóng trả lời, tim vẫn thả
-  được.
+  (chủ bộ đọc "Bạn đã tắt…"), bong bóng trả lời **mờ đi và không bấm
+  được**, tim vẫn thả được.
 - Bong bóng trên thẻ và trên trang bộ sưu tập: luồng đã tắt mà chưa có
-  bình luận nào thì không hiện (không có gì để đọc, không viết được).
-  Riêng chủ bộ vẫn thấy bong bóng trên trang bộ của mình, và với chủ bộ
-  nó luôn mở màn Bình luận (không bật ô gõ tại chỗ), vì công tắc nằm ở
-  đó.
+  bình luận nào thì **mờ đi và không mở gì** (không có gì để đọc, không
+  viết được). Riêng chủ bộ, bong bóng trên trang bộ của mình vẫn sáng và
+  luôn mở màn Bình luận (không bật ô gõ tại chỗ), vì công tắc nằm ở đó.
+- Mờ, không ẩn (chủ dự án, 19/11/2026, sau khi xem trên máy): bản đầu
+  của C6 cho các bong bóng biến mất; biểu tượng mất đi làm hàng nút xô
+  lệch và người xem không hiểu vì sao.
 - Chủ bộ xoá được bình luận của người khác trên bộ của mình: ⋯ của bình
   luận có cả "Báo cáo bình luận" và "Xoá bình luận".
 - Máy chủ: `comment_previews` nay trả một dòng cho mọi bộ được hỏi mà
