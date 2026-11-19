@@ -20,8 +20,10 @@
 // came here to add two friends should not find out from the banner that
 // everybody else just lost it.
 //
-// The owner's own words since 19 Nov 2026, and one sentence where there
-// were two. It had said "it leaves Explore and search", which is what
+// The owner's words since 19 Nov 2026 — tightened with him the same
+// evening: "the friends you choose" for a phrase that could be read as
+// "whom your friends choose", and the private list's line given the same
+// two verbs, see and use — and one sentence where there were two. It had said "it leaves Explore and search", which is what
 // private means spelled out, and under the friends a second line in a
 // box — "They can open it and plan from it. Only you can change it." —
 // which the owner took out: "see and use" in the subtitle says the half
@@ -115,15 +117,15 @@ export default function ShareSheet({
       subtitle={isPublic
         ? t(
           'This list will become private: only the friends you choose can see and use it.',
-          'Bộ sưu tập sẽ chuyển sang chế độ riêng tư mà chỉ những người bạn bè lựa chọn mới được nhìn thấy và sử dụng.',
+          'Bộ sưu tập sẽ chuyển sang riêng tư: chỉ những người bạn mà bạn chọn mới xem và dùng được.',
           'このリストは非公開になり、選んだ友だちだけが見て使えるようになります。',
           '这个清单会变为私密，只有你选择的好友才能看到和使用。', '這個清單會變為私密，只有你選擇的好友才能看到和使用。',
         )
         : t(
-          'Only the friends you tick can open this list.',
-          'Chỉ những bạn bè bạn chọn mới mở được bộ sưu tập này.',
-          'チェックした友だちだけがこのリストを開けます。',
-          '只有你勾选的好友才能打开这个清单。', '只有你勾選的好友才能開啟這個清單。',
+          'Only the friends you choose can see and use this list.',
+          'Chỉ những người bạn mà bạn chọn mới xem và dùng được bộ sưu tập này.',
+          '選んだ友だちだけがこのリストを見て使えます。',
+          '只有你选择的好友才能看到和使用这个清单。', '只有你選擇的好友才能看到和使用這個清單。',
         )}
       rows={rows.map((id) => ({ id, on: picked.has(id) }))}
       people={people}
