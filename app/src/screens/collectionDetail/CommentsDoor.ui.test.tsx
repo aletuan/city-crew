@@ -67,16 +67,20 @@ describe('CommentsDoor', () => {
   });
 
   // C6: a thread its owner has closed.
-  it('is not drawn on a closed thread with nothing in it, and is on one with something to read', async () => {
+  it('is dimmed and opens nothing on a closed thread with nothing in it, and opens one with something to read', async () => {
     appFlags.set('comments', true);
     data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 0, latest: [], off: true } }));
     show({ id: 'c1', is_public: true, owner_id: 'them' });
     await flush();
-    expect(door()).toBeNull();
+    expect(door()!.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(door()!);
+    expect(onPress).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('comment-quick')).toBeNull();
     cleanup();
     data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 2, latest: [], off: true } }));
     show({ id: 'c1', is_public: true, owner_id: 'them' });
     await flush();
+    expect(door()!.getAttribute('aria-disabled')).not.toBe('true');
     fireEvent.click(door()!);
     expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
   });
@@ -86,6 +90,7 @@ describe('CommentsDoor', () => {
     data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 0, latest: [], off: true } }));
     show({ id: 'c1', is_public: true, owner_id: 'me' });
     await flush();
+    expect(door()!.getAttribute('aria-disabled')).not.toBe('true');
     fireEvent.click(door()!);
     expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
     expect(screen.queryByTestId('comment-quick')).toBeNull();
@@ -111,7 +116,7 @@ describe('CommentsDoor', () => {
     data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 0, latest: [], off: true } }));
     show({ id: 'c1', is_public: true, owner_id: null });
     await flush();
-    expect(door()).toBeNull();
+    expect(door()!.getAttribute('aria-disabled')).toBe('true');
   });
 
   it('opens the thread where no field is mounted to raise', async () => {

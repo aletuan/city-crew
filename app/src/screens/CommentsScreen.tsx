@@ -162,9 +162,9 @@ export default function CommentsScreen({ navigation, route }: {
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={owner.closed ? undefined : () => reply(b.root)} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(b.root)} replyOff={!!owner.closed} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={owner.closed ? undefined : () => reply(r)} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(r)} replyOff={!!owner.closed} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
         ))}
         {more > 0 ? (
           <PressableScale

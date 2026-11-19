@@ -565,14 +565,20 @@ describe('the owner\'s side', () => {
     expect(screen.queryByTestId('composer-closed')).toBeNull();
     expect(screen.getByTestId('composer-field')).toBeTruthy();
     expect(screen.getAllByTestId('comment-reply')).toHaveLength(2);
+    expect(screen.getAllByTestId('comment-reply').some((b) => b.getAttribute('aria-disabled') === 'true')).toBe(false);
   });
 
-  it('says a closed thread is closed where the field would be, and takes the reply bubbles away, the hearts staying', async () => {
+  it('says a closed thread is closed where the field would be, and dims the reply bubbles where they stand, the hearts staying', async () => {
     told({ off: true, mine: false });
     await open();
     expect(screen.getByTestId('composer-closed').textContent).toBe('The owner turned off comments.');
     expect(screen.queryByTestId('composer-field')).toBeNull();
-    expect(screen.queryAllByTestId('comment-reply')).toHaveLength(0);
+    // Still there, and answering nothing (owner, 19 Nov 2026).
+    const bubbles = screen.getAllByTestId('comment-reply');
+    expect(bubbles).toHaveLength(2);
+    expect(bubbles.every((b) => b.getAttribute('aria-disabled') === 'true')).toBe(true);
+    fireEvent.click(bubbles[0]);
+    expect(screen.queryByTestId('composer-replying')).toBeNull();
     expect(screen.getAllByTestId('comment-heart')).toHaveLength(2);
     expect(drawn()).toEqual([['says a', 'says a1']]);
     expect(screen.queryByTestId('comments-owner')).toBeNull();

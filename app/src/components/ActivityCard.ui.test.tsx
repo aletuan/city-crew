@@ -78,6 +78,39 @@ describe('the way into the thread', () => {
 
 // The two newest stood under the foot for a day and were taken off
 // (owner, 18 Nov 2026): the figure is the invitation, the thread a press.
+// A thread its owner closed with nothing in it (owner, 19 Nov 2026):
+// the bubble stays where it was, dimmed, and opens nothing.
+describe('a closed, empty thread', () => {
+  it('keeps the bubble, off, with no way in and no count', () => {
+    render(
+      <ActivityCard
+        who="Lan" did=" created a collection" title="Old Quarter eats" meta="3 places"
+        liked={false} likes={2} onOpen={() => {}} onHeart={onHeart}
+        comments={{ n: 0 }} commentsOff
+      />,
+    );
+    expect(bubble()!.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(bubble()!);
+    expect(onComments).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('activity-comments-count')).toBeNull();
+  });
+
+  it('is off even where a way in was handed over, and on without the word', () => {
+    render(
+      <ActivityCard
+        who="Lan" did=" created a collection" title="Old Quarter eats" meta="3 places"
+        liked={false} likes={2} onOpen={() => {}} onHeart={onHeart}
+        onComments={onComments} commentsOff
+      />,
+    );
+    fireEvent.click(bubble()!);
+    expect(onComments).not.toHaveBeenCalled();
+    cleanup();
+    show({ n: 0, latest: [], off: false });
+    expect(bubble()!.getAttribute('aria-disabled')).not.toBe('true');
+  });
+});
+
 describe('the newest comments', () => {
   it('are not drawn on the card, whatever came with the count', () => {
     render(

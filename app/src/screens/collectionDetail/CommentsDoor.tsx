@@ -30,6 +30,9 @@ import { useFlag } from '../../lib/useFlag';
 import { colors } from '../../theme';
 import { ACT_GLYPH, s } from './styles';
 
+/** The send disc's "not now". */
+const OFF = { opacity: 0.35 };
+
 export function CommentsDoor({ list, about, onPress }: {
   /** The list on the page, or none while it is being found. Its id may
    *  be missing on a row from the launch cache. Taken whole so the page
@@ -54,10 +57,12 @@ export function CommentsDoor({ list, about, onPress }: {
   // The first comment is written here, over the page; a thread with
   // something in it is opened — `quickOrThread`.
   const quick = useQuickComment();
+  if (!listId) return null;
   // Closed with nothing in it: nothing to read and nothing may be
-  // written, so no way in — except for the owner, whose way to open it
-  // again is on the thread's page.
-  if (!listId || (off && n === 0 && !mine)) return null;
+  // written, so the bubble is dimmed and opens nothing — not taken away,
+  // which moved Share (owner, 19 Nov 2026). Except for the owner, whose
+  // way to open the thread again is on its page.
+  const shut = off && n === 0 && !mine;
   const press = () => (quick && quickOrThread({
     me, n, loaded: previews.loaded, loading: previews.loading, off, mine,
   }) === 'quick'
@@ -65,12 +70,13 @@ export function CommentsDoor({ list, about, onPress }: {
     : onPress(listId));
   return (
     <PressableScale
-      contentStyle={s.like}
+      contentStyle={shut ? [s.like, OFF] : s.like}
       scaleTo={0.82}
       haptic="selection"
       // Share's slop, value for value: the two sit side by side.
       hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
-      onPress={press}
+      onPress={shut ? undefined : press}
+      disabled={shut}
       accessibilityRole="button"
       accessibilityLabel={[t('Comments', 'Bình luận', 'コメント', '评论', '評論'), ...(n > 0 ? [String(n)] : [])].join(', ')}
       testID="collection-comments"
