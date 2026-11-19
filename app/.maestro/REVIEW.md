@@ -16,6 +16,11 @@ Cập nhật: 27/10/2026. Dùng để chẩn đoán nhanh các lỗi E2E của C
 | Thấy đúng tên nhưng selector text không khớp | Đọc toàn bộ accessibility label, không chỉ chữ trên ảnh | `11`: `Maestro CRUD 2, Private` |
 | Modal hiện rõ nhưng mọi ID đều mất | Cây accessibility có chỉ còn app và status bar không? | `11`: Save sheet có tree rỗng |
 | Nội dung có vẻ đúng nhưng assertion vẫn lỗi | Có system dialog che màn hình không? | `13`: hộp thoại đánh giá Expo Go |
+| Gần như mọi flow lỗi ở cùng một bước; ảnh chụp là giao diện cũ hoặc một tài khoản lạ | Flow mở Metro nào? `grep -o 'exp://[^" ]*' logs/maestro.log`, và `lsof -iTCP:8081` xem worktree nào giữ cổng | 19/11/2026: cả bộ chạy trên Metro của `~/wt-ad` (cũ 5 ngày, đăng nhập @trang) vì flow ghi cứng 8081 |
+| Màn đỏ "Console Error" che app | Đọc lỗi trên ảnh: đó là lỗi thật của app, chỉ hiện ở bản dev | 19/11/2026: `POP_TO_TOP was not handled` khi đăng xuất: trang Account tự `popToTop` trong khi `SessionNavSync` đã cắt stack về đầu (xem `ProfileScreen`) |
+| Bấm một nút gần đỉnh màn hình mà lại sang trang cá nhân | Có banner huy hiệu (`reward-banner`) che ở trên không? Nó ở 4 giây và bấm vào mở trang của bạn | 19/11/2026: `06` bấm "Saved" ngay sau lần lưu đầu; nay chờ bằng `common/wait-reward-banner.yaml` |
+| `open-account` không thấy `person-account` dù đã đăng nhập | Tab cuối giữ stack: Account mở lúc trước vẫn nằm trên cùng | 19/11/2026: `05`, `06` lỗi ở `ensure-signed-out`; nay `open-account` nhận cả `account-back` |
+| Log Maestro dừng giữa chừng, flow fail sau vài giây | Có hai `xcodebuild test-without-building` cùng chạy không? (`pgrep -fl xcodebuild`) | 19/11/2026: driver của một lượt bị ngắt còn sống, giành simulator với lượt sau |
 
 ## Quy trình chẩn đoán
 

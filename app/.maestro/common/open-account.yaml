@@ -10,11 +10,14 @@ appId: host.exp.Exponent
 ---
 - tapOn:
     id: "tab-profile"
-# Either page, once it has loaded: the person page is found by handle and
-# shows a spinner first.
+# One of three pages, once it has loaded: the person page (found by
+# handle, a spinner first), the guest's hub, or Account itself. The tab
+# keeps its stack, so a flow that opened Account earlier — signing in
+# does — finds Account still on top when it taps the tab again (19 Nov
+# 2026: 05 and 06 failed in `ensure-signed-out` on exactly that).
 - extendedWaitUntil:
     visible:
-      id: "person-account|profile-sign-in"
+      id: "person-account|profile-sign-in|account-back"
     timeout: 15000
 - runFlow:
     when:

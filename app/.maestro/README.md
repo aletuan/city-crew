@@ -221,6 +221,20 @@ with `latest` pointing at the newest:
 (`exp://127.0.0.1:8081` — the simulator is on this Mac, so loopback always
 reaches Metro — and the Keychain entry).
 
+**Check which Metro the suite will open.** Another worktree's `expo start`
+may already hold 8081, and the suite will then test *that* code, signed in
+as whoever used it last. Start this worktree's Metro on a free port and
+pass it:
+
+```sh
+npx expo start --port 8082          # in this worktree's app/
+EXPO_URL=exp://127.0.0.1:8082 npm run smoke:ios
+```
+
+`lsof -nP -iTCP:8081 -sTCP:LISTEN` shows who holds 8081. Each flow reads
+`EXPO_URL` as `${EXPO_URL || '…'}`; a new flow must too, or it silently
+opens 8081 (see the head of `00-launch.yaml`).
+
 Open the app in Expo Go once by hand before the first run (press `i` in the
 `expo start` terminal). Each flow then kills Expo Go (`launchApp` with
 `stopApp: true`) and reopens the bundle through `openLink`, so it starts on

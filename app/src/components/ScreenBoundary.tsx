@@ -37,6 +37,7 @@ import { Glyph, ICON } from './ui/glyph';
 import * as Updates from 'expo-updates';
 import { BackButton, GradientCta, SECONDARY_CONTROL_H, useTabBarClearance } from './ui';
 import { I18nProvider, useI18n } from '../lib/i18n';
+import { isPushed, type StackReader } from '../lib/pushed';
 import { colors, display } from '../theme';
 
 /**
@@ -75,8 +76,9 @@ function Message({ title, body, children }: {
   );
 }
 
-/** Only the two methods the message uses, so a test can hand in its own. */
-type Nav = { canGoBack: () => boolean; goBack: () => void };
+/** Only what the message uses, so a test can hand in its own: where the
+ *  screen stands in its stack, and the way back. */
+type Nav = StackReader & { goBack: () => void };
 
 function ScreenFallback({ navigation, retry }: { navigation: Nav; retry: () => void }) {
   const { t } = useI18n();
@@ -84,9 +86,10 @@ function ScreenFallback({ navigation, retry }: { navigation: Nav; retry: () => v
   // Clears the floating tab bar, so the message sits in the middle of what
   // the reader can see rather than behind the bar.
   const clearance = useTabBarClearance();
-  // Asked as the message draws, not when the screen mounted: a stack's
-  // first screen can never go back, and a pushed one always can.
-  const pushed = navigation.canGoBack();
+  // Asked as the message draws, not when the screen mounted. The stack's
+  // own position, not `canGoBack()`: on a tab's first page that is true
+  // too, and "back" would be another tab (`lib/pushed`).
+  const pushed = isPushed(navigation);
   return (
     <View style={[s.page, { paddingTop: insets.top, paddingBottom: clearance }]}>
       {pushed && (

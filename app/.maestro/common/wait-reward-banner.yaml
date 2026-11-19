@@ -1,0 +1,15 @@
+# Reusable: wait out the reward banner, if one is up.
+#
+# A badge earned — the test account's first save of a run earns one —
+# drops `RewardBanner` from the top of the screen for four seconds
+# (`BANNER_MS`), over whatever is there, and a tap on it opens your own
+# page. A flow that taps near the top in those four seconds lands on the
+# last tab instead (19 Nov 2026: 06 tapped "Saved" through it and found
+# the person page where the save sheet should be). Waiting for it to go is
+# the condition, not a sleep: nothing is waited for when no banner came.
+appId: host.exp.Exponent
+---
+- extendedWaitUntil:
+    notVisible:
+      id: "reward-banner"
+    timeout: 8000

@@ -226,19 +226,24 @@ import { StyleSheet } from 'react-native';
 
 // `pushed`: the account's page over your own, as it is since 19 Nov
 // 2026; not pushed, the tab's first page, which only the guest's hub is.
+// `canGoBack` is true either way, as it is on a phone: the last tab can
+// always go back, to the first tab. Only the stack's index says which
+// (`lib/pushed`).
 const nav = (pushed = false) => {
   const parent = { navigate: vi.fn() };
   const n = {
-    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), canGoBack: vi.fn(() => pushed), popToTop: vi.fn(),
+    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), canGoBack: vi.fn(() => true), popToTop: vi.fn(),
     // The last tab's stack, where Account and its rooms are.
-    getState: vi.fn(() => ({ routeNames: ['ProfileHome', 'Account', 'Crew', 'Visited', 'Activity', 'Person'] })),
+    getState: vi.fn(() => ({
+      index: pushed ? 1 : 0, routeNames: ['ProfileHome', 'Account', 'Crew', 'Visited', 'Activity', 'Person'],
+    })),
   };
   return { n: n as unknown as Nav, raw: n, parent };
 };
 
 const draw = (pushed = false) => {
   const r = nav(pushed);
-  render(<ProfileScreen navigation={r.n} />);
+  render(<ProfileScreen navigation={r.n} home={!pushed} />);
   return r;
 };
 
@@ -301,10 +306,12 @@ describe('the gate', () => {
     expect(screen.queryByText('Sign out')).toBeNull();
   });
 
-  // The account's page over your own (19 Nov 2026): a way back, the
-  // compact title every pushed page has, and on signing out, the tab's
-  // first page — the guest's hub — since there is no account left.
-  it('is a page over your own: a way back, and out to the tab’s first page on signing out', () => {
+  // The account's page over your own (19 Nov 2026): a way back, and the
+  // compact title every pushed page has. Signed out, it leaves the
+  // leaving to `SessionNavSync`, which cuts every stack to its first page
+  // in one reset; a `popToTop` of its own raced that reset and lost, as a
+  // red screen in development (19 Nov 2026, the Maestro suite).
+  it('is a page over your own: a way back, and no pop of its own on signing out', () => {
     const r = draw(true);
     fireEvent.click(screen.getByTestId('account-back'));
     expect(r.raw.goBack).toHaveBeenCalledTimes(1);
@@ -312,12 +319,24 @@ describe('the gate', () => {
     cleanup();
     state.session = null;
     const out = draw(true);
-    expect(out.raw.popToTop).toHaveBeenCalledTimes(1);
+    expect(out.raw.popToTop).not.toHaveBeenCalled();
   });
 
   it('has no way back as the tab’s first page, and stays there signed out', () => {
     state.session = null;
     const r = draw();
+    expect(screen.queryByTestId('account-back')).toBeNull();
+    expect(r.raw.popToTop).not.toHaveBeenCalled();
+  });
+
+  // The moment the suite caught (19 Nov 2026): signed out on Account, the
+  // page under it becomes the guest's hub while Account is still on top —
+  // the stack at index 1, and `canGoBack` true as the tab bar makes it.
+  // The hub is home all the same, and leaves the popping to Account.
+  it('stays put as the hub even while Account is still over it, signing out', () => {
+    state.session = null;
+    const r = nav(true);
+    render(<ProfileScreen navigation={r.n} home />);
     expect(screen.queryByTestId('account-back')).toBeNull();
     expect(r.raw.popToTop).not.toHaveBeenCalled();
   });
@@ -864,7 +883,7 @@ describe('the four doors', () => {
   // with the room over the tab's first page.
   it('opens the check-ins and the crew through the last tab from another tab', () => {
     const r = nav();
-    r.raw.getState.mockReturnValue({ routeNames: ['CollectionsHome', 'CollectionDetail', 'Person'] });
+    r.raw.getState.mockReturnValue({ index: 2, routeNames: ['CollectionsHome', 'CollectionDetail', 'Person'] });
     render(<Counts navigation={r.n} />);
     fireEvent.click(screen.getByRole('button', { name: '0 Check-ins' }));
     expect(r.parent.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Visited', initial: false });

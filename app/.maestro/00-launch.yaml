@@ -3,9 +3,15 @@
 # EXPO_URL is the exp:// URL printed by `npx expo start` — see README.md.
 # Pass it with `-e EXPO_URL=exp://...`; the default matches the port
 # `expo start` uses when nothing else is listening.
+#
+# Written `${EXPO_URL || '…'}` in every flow, not as the bare address: a
+# flow's own `env` wins over `-e`, so with the bare address the runner's
+# EXPO_URL was ignored and every flow opened port 8081 whatever it was
+# told. On 19 Nov 2026 that ran the whole suite against another
+# worktree's Metro, five days old and signed in as a real account.
 appId: host.exp.Exponent
 env:
-  EXPO_URL: exp://127.0.0.1:8081
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
 ---
 # Kill Expo Go first so every flow starts from a fresh bundle load on
 # Explore, not from wherever the previous flow left the app.

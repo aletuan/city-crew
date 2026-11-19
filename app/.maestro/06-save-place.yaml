@@ -5,7 +5,7 @@
 # smoke") through the form the bookmark opens; later runs use the sheet.
 appId: host.exp.Exponent
 env:
-  EXPO_URL: exp://127.0.0.1:8081
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
 ---
 - runFlow: common/start.yaml
 - runFlow: common/ensure-signed-in.yaml
@@ -85,7 +85,9 @@ env:
       id: "detail-saved"
     timeout: 15000
 
-# And unsave, so the list is as it was.
+# And unsave, so the list is as it was. The save may have earned a badge,
+# and its banner lies over the top of the page for four seconds.
+- runFlow: common/wait-reward-banner.yaml
 - tapOn:
     id: "detail-saved"
 - extendedWaitUntil:

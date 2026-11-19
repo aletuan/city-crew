@@ -14,7 +14,7 @@
 // tab's first page — a guest has no page of their own — and is drawn
 // here, by `MeScreen`, as it always was.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { AmbientWarmth, Screen, useTabBarClearance } from '../components/ui';
 import { useScrollToTop } from '@react-navigation/native';
@@ -28,7 +28,12 @@ import { GuestHub } from './profile/GuestHub';
 import { AccountProfile } from './profile/AccountProfile';
 import { ProfileReturn } from './profile/ProfileReturn';
 
-export default function ProfileScreen({ navigation }: { navigation: Nav }) {
+export default function ProfileScreen({ navigation, home }: {
+  navigation: Nav;
+  /** Drawn by `MeScreen` as the last tab's first page — the guest's hub —
+   *  rather than as the Account route pushed over your own page. */
+  home?: boolean;
+}) {
   const { t } = useI18n();
   const { ready, session } = useSession();
   const tabClearance = useTabBarClearance();
@@ -67,17 +72,28 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   // of its own kept in view (the guide switch, under its invitation).
   const scrollBy = useCallback((dy: number) => scrollRef.current?.scrollTo({ y: y.current + dy, animated: true }), []);
   // Pushed: the account's page over your own (19 Nov 2026,
-  // docs/profile-home-plan.md). Not pushed: the guest's, which is still
-  // the tab's first page. Read once — a page does not move in its stack.
-  const [pushed] = useState(() => navigation.canGoBack());
+  // docs/profile-home-plan.md), the Account route, which only
+  // `toProfileRoom` opens and always over your page. Not pushed: the
+  // guest's hub, which `MeScreen` draws as the tab's first page and says
+  // so.
+  //
+  // Told, not read from a navigator, and two readings were wrong (19 Nov
+  // 2026, found by the Maestro suite). `canGoBack()` is true on every
+  // tab's first page but Explore's (`lib/pushed`), so the guest's hub
+  // drew a back chevron to Explore. And the stack's index is 1 at the
+  // moment of signing out on Account, when your page under it has
+  // already become the hub.
+  const pushed = !home;
   const stack = useMemo(() => (pushed ? ['ProfileHome', 'Account'] : undefined), [pushed]);
   const returning = useMemo(() => ({ sheet, spendSheet, y, scrollBy, stack }), [sheet, spendSheet, scrollBy, stack]);
   // Signed out from here — the last rows of this page — there is no
-  // account for it to be the page of: back to the tab's first page, which
-  // is the guest's now.
-  useEffect(() => {
-    if (pushed && ready && !session) navigation.popToTop();
-  }, [pushed, ready, session, navigation]);
+  // account for it to be the page of, and the tab goes back to its first
+  // page, the guest's hub. Not by a `popToTop` here: `SessionNavSync`
+  // cuts every tab's stack to its first page the moment an account ends,
+  // in one reset (`lib/sessionNav` says why it must be one). This page
+  // called `popToTop` as well for a day (19 Nov 2026), and whichever came
+  // second found nothing to pop — a red screen in development over every
+  // Maestro flow that signs out.
 
   return (
     <Screen

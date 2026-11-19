@@ -3,8 +3,11 @@
 //
 // Mounted inside the container beside `GuideGrantSync`, for the same
 // reason that one has no face: it needs the session and the navigator,
-// and belongs to no screen. The screen that signs you out is the Profile
-// tab's root, which is exactly the one stack this never has to cut.
+// and belongs to no screen. Since 19 Nov 2026 the screen that signs you
+// out, Account, is pushed over your own page, so this reset is also what
+// takes the last tab back to its first page, the guest's hub. Nothing
+// else may: a second `popToTop` from Account itself found the stack
+// already cut and raised a red screen in development.
 
 import { useEffect, useRef } from 'react';
 import { navRef } from '../nav';

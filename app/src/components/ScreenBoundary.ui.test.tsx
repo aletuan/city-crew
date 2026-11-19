@@ -37,8 +37,11 @@ function Fragile() {
   return <div>the screen</div>;
 }
 
-const root = () => ({ canGoBack: vi.fn(() => false), goBack: vi.fn() });
-const pushed = () => ({ canGoBack: vi.fn(() => true), goBack: vi.fn() });
+// A tab's first page can "go back" — to the first tab — so `canGoBack`
+// is true on both, as it is on a phone; only the stack's index tells them
+// apart (`lib/pushed`).
+const root = () => ({ canGoBack: vi.fn(() => true), getState: vi.fn(() => ({ index: 0 })), goBack: vi.fn() });
+const pushed = () => ({ canGoBack: vi.fn(() => true), getState: vi.fn(() => ({ index: 1 })), goBack: vi.fn() });
 
 describe('ScreenBoundary', () => {
   beforeEach(() => { broken.on = true; });

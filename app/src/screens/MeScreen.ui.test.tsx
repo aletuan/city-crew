@@ -28,7 +28,11 @@ vi.mock('./PersonScreen', () => ({
     return <div data-testid="person-page" />;
   },
 }));
-vi.mock('./ProfileScreen', () => ({ default: () => <div data-testid="account-or-guest" /> }));
+vi.mock('./ProfileScreen', () => ({
+  // `home` read back as an attribute: the hub must know it is the tab's
+  // first page, or it pops a stack it is the bottom of (`ProfileScreen`).
+  default: ({ home }: { home?: boolean }) => <div data-testid="account-or-guest" data-home={String(!!home)} />,
+}));
 vi.mock('../components/ui', () => ({
   Screen: ({ title, children }: { title: string; children: React.ReactNode }) => <section aria-label={title}>{children}</section>,
 }));
@@ -62,7 +66,7 @@ describe('MeScreen', () => {
   it('gives a guest the hub, as the tab always did', () => {
     state.session = null;
     draw();
-    expect(screen.getByTestId('account-or-guest')).toBeTruthy();
+    expect(screen.getByTestId('account-or-guest').getAttribute('data-home')).toBe('true');
     expect(screen.queryByTestId('person-page')).toBeNull();
   });
 
