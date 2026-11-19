@@ -7,16 +7,28 @@
 // somebody else that the desk trusts this account to keep places. So the
 // look and the words moved here, and both pages draw the one disc.
 //
-// ── two voices ──
+// ── pressed only by its holder (owner, 19 Nov 2026) ──
 //
-// On your own Profile the sheet says "You can edit…". On a person's
-// page it cannot — the page may be anybody's — so it says what a Local
-// Guide can do. `roleSays` holds both, side by side, so a change to what
-// a role allows is made to the pair.
+// On your own page the disc is a press and its sheet says what you may
+// do ("You can edit…"). On anybody else's it is the same disc, still,
+// and opens nothing. The owner asked for it: what a role allows is
+// worth reading for the one who holds it — it is what they can now do —
+// and to a visitor the mark itself, and its name, are the news.
 //
-// A person's page uses the third voice for its owner too: that page is
-// yourself as other people see you, and it reads as they read it.
+// Not a press that does nothing. A disc that sinks under a thumb and
+// opens nothing reads as broken; so on another's page it is not a
+// button at all, to the eye or to VoiceOver, which reads it by the
+// role's name, as an image.
 //
+// Given up with it: a visitor can no longer learn what the star or the
+// medal means, except by VoiceOver's name. If that is asked about, the
+// name in small type beside the disc is the step to weigh first.
+//
+// Until that day a person's page said it in the third voice ("A Local
+// Guide can…"), to everybody, its owner included until P3
+// (docs/profile-home-plan.md); with no sheet on another's page those
+// words had nowhere left to be read, and went.
+
 // ── after the name, not on the picture (owner, 17 Nov 2026) ──
 //
 // For a day the disc lay on a corner of the picture on both pages. The
@@ -32,8 +44,8 @@
 //     the desk allows. The picture now says the one thing.
 //
 // `WithRole` is the whole of it: the name it is given, the disc after
-// it, and the sheet a press opens — the app's sheet, as the level's on
-// Profile is, so that every badge explains itself one way.
+// it, and — on your own page — the sheet a press opens: the app's
+// sheet, as the level's is, so that every badge explains itself one way.
 //
 // Taken from the reference: the place, and a smaller mark (`DISC`).
 // Not taken:
@@ -99,43 +111,37 @@ export const roleName = (role: Role, t: T): string => (
     : t('Local Guide', 'Local Guide', 'ローカルガイド', '本地向导', '在地嚮導')
 );
 
-/** What the role lets its holder do — to them (`yours`), or about them. */
-export function roleSays(role: Role, whose: 'yours' | 'theirs', t: T): string {
-  if (role === 'editor') {
-    return whose === 'yours'
-      ? t(
-        'You can edit, and add photos to, every place in the app — new or already listed.',
-        'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
-        'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
-        '你可以编辑应用中的所有地点并为其添加照片，无论是新地点还是已收录的。', '你可以編輯 App 中的所有地點並為其新增照片，無論是新地點還是已收錄的。',
-      )
-      : t(
-        'A Super User can edit, and add photos to, every place in the app.',
-        'Super User có thể chỉnh sửa và thêm ảnh cho tất cả các địa điểm trong ứng dụng.',
-        'スーパーユーザーは、アプリ内のすべての場所を編集し、写真を追加できます。',
-        '超级用户可以编辑应用中的所有地点并为其添加照片。', '超級使用者可以編輯 App 中的所有地點並為其新增照片。',
-      );
-  }
-  return whose === 'yours'
+/** What the role lets you, its holder, do. */
+export function roleSays(role: Role, t: T): string {
+  return role === 'editor'
     ? t(
+      'You can edit, and add photos to, every place in the app — new or already listed.',
+      'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
+      'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
+      '你可以编辑应用中的所有地点并为其添加照片，无论是新地点还是已收录的。', '你可以編輯 App 中的所有地點並為其新增照片，無論是新地點還是已收錄的。',
+    )
+    : t(
       'You can edit, and add photos to, places in your collections and places you imported.',
       'Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.',
       '自分のコレクションの場所や、自分が追加した場所を編集し、写真を追加できます。',
       '你可以编辑你合集中的地点和你导入的地点，并为其添加照片。', '你可以編輯你合集中的地點和你匯入的地點，並為其新增照片。',
-    )
-    : t(
-      'A Local Guide can edit, and add photos to, places in their collections and places they imported.',
-      'Local Guide có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của họ hoặc các địa điểm họ đã nhập.',
-      'ローカルガイドは、自分のコレクションの場所や自分が追加した場所を編集し、写真を追加できます。',
-      '本地向导可以编辑自己合集中的地点和自己导入的地点，并为其添加照片。', '在地嚮導可以編輯自己合集中的地點和自己匯入的地點，並為其新增照片。',
     );
 }
 
-/** The disc alone: the role's glyph in the role's colour. */
-export function RoleDisc({ role }: { role: Role }) {
+/** The disc alone: the role's glyph in the role's colour. `named` makes
+ *  it a thing VoiceOver reads, by the role's name — the disc on another
+ *  person's page, which is nobody's press. */
+export function RoleDisc({ role, named = false }: { role: Role; named?: boolean }) {
+  const { t } = useI18n();
   const look = dressOf(role);
   return (
-    <View style={[d.disc, look.dress]}>
+    <View
+      style={[d.disc, look.dress]}
+      accessible={named || undefined}
+      accessibilityRole={named ? 'image' : undefined}
+      accessibilityLabel={named ? roleName(role, t) : undefined}
+      testID={named ? 'role-disc' : undefined}
+    >
       <Glyph name={look.icon} size={GLYPH} color={look.color} />
     </View>
   );
@@ -174,12 +180,12 @@ export function RoleHead({ role }: { role: Role }) {
   );
 }
 
-/** A sheet's body about a role: what it lets its holder do. */
-export function RoleBody({ role, whose }: { role: Role; whose: 'yours' | 'theirs' }) {
+/** A sheet's body about a role: what it lets you do. */
+export function RoleBody({ role }: { role: Role }) {
   const { t } = useI18n();
   return (
     <View style={sheetBody} testID="badge-sheet-body">
-      <Text style={d.says}>{roleSays(role, whose, t)}</Text>
+      <Text style={d.says}>{roleSays(role, t)}</Text>
     </View>
   );
 }
@@ -189,11 +195,12 @@ export function RoleBody({ role, whose }: { role: Role; whose: 'yours' | 'theirs
  * the header.
  *
  * `line` is the name's line height: the disc is centred on the name's
- * first line, whatever the name's size.
+ * first line, whatever the name's size. `own`: the page is the reader's,
+ * and only then is the disc a press.
  */
-export function WithRole({ role, whose, line, children }: {
+export function WithRole({ role, own, line, children }: {
   role: Role | null;
-  whose: 'yours' | 'theirs';
+  own: boolean;
   line: number;
   children: React.ReactNode;
 }) {
@@ -204,11 +211,13 @@ export function WithRole({ role, whose, line, children }: {
       {role ? (
         <>
           <View style={[d.mark, { height: line }]} testID="role-mark">
-            <RoleButton role={role} onPress={() => setOpen(true)} />
+            {own ? <RoleButton role={role} onPress={() => setOpen(true)} /> : <RoleDisc role={role} named />}
           </View>
-          <ActionSheet visible={open} onClose={() => setOpen(false)} header={<RoleHead role={role} />}>
-            <RoleBody role={role} whose={whose} />
-          </ActionSheet>
+          {own ? (
+            <ActionSheet visible={open} onClose={() => setOpen(false)} header={<RoleHead role={role} />}>
+              <RoleBody role={role} />
+            </ActionSheet>
+          ) : null}
         </>
       ) : null}
     </View>
@@ -216,12 +225,8 @@ export function WithRole({ role, whose, line, children }: {
 }
 
 /** A person's name on their page, with the mark the database says they
- *  wear — the question (`useRoleOfQuery`), then `WithRole`.
- *
- *  Your own page says it to you ("You can edit…"), as the Account page's
- *  name did until 19 Nov 2026, when your name, and the mark after it,
- *  left Account for your own page (docs/profile-home-plan.md, P3): read
- *  as "A Super User can…", your own mark spoke about you as a stranger. */
+ *  wear — the question (`useRoleOfQuery`), then `WithRole`, a press on
+ *  your own page and a still mark on anybody else's (see the header). */
 export default function PersonRole({ me, personId, line, children }: {
   me: string | null;
   personId: string;
@@ -229,7 +234,7 @@ export default function PersonRole({ me, personId, line, children }: {
   children: React.ReactNode;
 }) {
   const role = useRoleOfQuery(me, personId).data ?? null;
-  return <WithRole role={role} whose={me === personId ? 'yours' : 'theirs'} line={line}>{children}</WithRole>;
+  return <WithRole role={role} own={me === personId} line={line}>{children}</WithRole>;
 }
 
 /** The disc: 20, from the 24 it was on a picture's corner, where it

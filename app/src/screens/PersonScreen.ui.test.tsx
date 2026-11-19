@@ -494,7 +494,7 @@ describe('the mark of a role', () => {
   it('draws a guide’s star after the name, named for VoiceOver, and not on the picture', async () => {
     state.role = 'guide';
     await show();
-    const disc = screen.getByRole('button', { name: 'Local Guide' });
+    const disc = screen.getByRole('img', { name: 'Local Guide' });
     expect(face().contains(disc)).toBe(false);
     expect(disc.querySelector('[data-icon="star"]')).toBeTruthy();
     // The name is not written on the page: the disc is a mark.
@@ -526,15 +526,35 @@ describe('the mark of a role', () => {
     expect(handle.textContent).toBe('@lan');
     expect(row.contains(handle)).toBe(true);
     expect(textStyleOf(handle)?.fontSize).toBe(22);
-    expect(row.contains(screen.getByRole('button', { name: 'Local Guide' }))).toBe(true);
+    expect(row.contains(screen.getByRole('img', { name: 'Local Guide' }))).toBe(true);
     expect(screen.getAllByText('@lan')).toHaveLength(1);
   });
 
-  // The app's sheet, as the badges on your own Profile open — and about
-  // a Local Guide, not "you": the page may be anybody's.
-  it('says what a Local Guide can do, in a sheet, about them and not to you', async () => {
+  // Pressed only by its holder (owner, 19 Nov 2026): on somebody
+  // else's page the disc is a still mark — not a button to the eye or
+  // to VoiceOver, and a tap opens nothing.
+  it.each([
+    ['guide', 'Local Guide', 'star'],
+    ['editor', 'Super User', 'medal'],
+  ] as const)('wears a %s’s mark on another’s page as a still mark that opens nothing', async (role, name, icon) => {
+    state.role = role;
+    await show();
+    const disc = screen.getByRole('img', { name });
+    expect(disc.querySelector(`[data-icon="${icon}"]`)).toBeTruthy();
+    expect(disc.querySelectorAll('[data-icon]')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name })).toBeNull();
+    expect(screen.queryByTestId('role-badge')).toBeNull();
+    fireEvent.click(disc);
+    expect(screen.queryByTestId('badge-sheet-head')).toBeNull();
+    expect(screen.queryByTestId('badge-sheet-body')).toBeNull();
+  });
+
+  // The app's sheet, as the level's opens, on your own page.
+  it('opens a sheet from your own mark: the disc and its name over what you may do', async () => {
+    state.me = LAN.id;
     state.role = 'guide';
     await show();
+    expect(screen.queryByTestId('role-disc')).toBeNull();
     expect(screen.queryByTestId('badge-sheet-head')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
     const head = screen.getByTestId('badge-sheet-head');
@@ -545,24 +565,10 @@ describe('the mark of a role', () => {
     const frame = viewStyleOf(screen.getByTestId('badge-sheet-head'));
     expect([frame.borderWidth, frame.backgroundColor]).toEqual([undefined, undefined]);
     expect(viewStyleOf(screen.getByTestId('badge-sheet-body')).borderWidth).toBe(1);
-    expect(screen.getByTestId('badge-sheet-body').textContent)
-      .toBe('A Local Guide can edit, and add photos to, places in their collections and places they imported.');
     // Closed by the backdrop, then the fade react-native-web runs.
     fireEvent.click(screen.getByLabelText('Close'));
     document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
     await waitFor(() => expect(screen.queryByTestId('badge-sheet-head')).toBeNull());
-  });
-
-  it('draws an editor’s medal, called Super User, with its own words', async () => {
-    state.role = 'editor';
-    await show();
-    const disc = screen.getByRole('button', { name: 'Super User' });
-    expect(disc.querySelector('[data-icon="medal"]')).toBeTruthy();
-    expect(disc.querySelector('[data-icon="star"]')).toBeNull();
-    fireEvent.click(disc);
-    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Super User');
-    expect(screen.getByTestId('badge-sheet-body').textContent)
-      .toBe('A Super User can edit, and add photos to, every place in the app.');
   });
 
   // Your own mark speaks to you (19 Nov 2026): it left the Account page,
@@ -579,12 +585,13 @@ describe('the mark of a role', () => {
   });
 
   it('says it in Vietnamese', async () => {
+    state.me = LAN.id;
     state.lang = 'vi';
     state.role = 'guide';
     await show();
     fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
     expect(screen.getByTestId('badge-sheet-body').textContent)
-      .toBe('Local Guide có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của họ hoặc các địa điểm họ đã nhập.');
+      .toBe('Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.');
   });
 
   // Your own page wears your own mark. It said it as other people read
