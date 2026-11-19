@@ -16,7 +16,7 @@ mới được nộp.
 |---|---|---|---|---|
 | Contact Info → Email Address | **Yes** | Yes (email là tài khoản) | No | App Functionality |
 | User Content → Photos or Videos | **Yes** (ảnh đại diện tự chọn; từ 1.0.4 thêm ảnh địa điểm do local guide upload, #614) | Yes | No | App Functionality |
-| User Content → Other User Content | **Yes** (bộ sưu tập, kế hoạch, lưu/thích, đề xuất địa điểm, hồ sơ, **văn bản mô tả buổi tối gửi cho planner**) | Yes | No | App Functionality |
+| User Content → Other User Content | **Yes** (bộ sưu tập, kế hoạch, lưu/thích, đề xuất địa điểm, hồ sơ, **văn bản mô tả buổi tối gửi cho planner**; từ bản bật cờ `comments`: bình luận và tim trên bình luận. Cùng nhãn, không thêm dòng mới) | Yes | No | App Functionality |
 | Identifiers → User ID | **Yes** (id tài khoản Supabase) | Yes | No | App Functionality |
 | Usage Data → Product Interaction | **Yes** | Yes | No | App Functionality (xem ghi chú) |
 | Location (Precise/Coarse) | **No — xem lại trước lần nộp tới** | — | — | Trên máy: chọn thành phố gần nhất, sắp theo khoảng cách. **Rời máy ở một chỗ**: màn "Bắt đầu từ đâu?" khi chưa có ghim gửi vị trí qua `fetch-place` tới Google Geocoding/Places; server của mình chuyển tiếp, không lưu. Định nghĩa *collect* của Apple là truyền ra khỏi máy **và** giữ lâu hơn thời gian phục vụ yêu cầu: phía mình vẫn là không thu thập, phía Google tuỳ điều khoản Google Maps Platform — xem mục Google Maps SDK. Câu cũ ở ô này ("không bao giờ gửi lên server") sai, phát hiện 26/09 |

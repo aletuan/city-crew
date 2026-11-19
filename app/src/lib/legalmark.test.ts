@@ -129,7 +129,14 @@ describe('against the real documents', () => {
     // (docs/photo-labels.md §11). Per language, one link to Anthropic and
     // one emphasis on the part a guide most needs to see: that the photos
     // they add are among them.
+    //
+    // 56 became 64 when comments entered both documents (C9 of
+    // docs/comments-plan.md). Per language, four emphases: in the terms,
+    // the word that opens the paragraph and the one thing a writer must
+    // know before deleting (the replies under it go too); in the policy,
+    // the word that opens the paragraph and that the desk's record of a
+    // removal does not keep the words. No link was added.
     expect(links).toBe(24);
-    expect(bolds).toBe(56);
+    expect(bolds).toBe(64);
   });
 });
