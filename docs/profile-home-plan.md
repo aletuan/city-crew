@@ -70,11 +70,12 @@ khác thì có tiêu đề và nút quay lại, vì có trang phía dưới đ�
 P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giới hạn đó.
 
 1. **Đầu trang:** không có tiêu đề (chủ dự án bỏ ngày 19/11: tab đã nói
-   đây là trang của ai) và không có nút quay lại. Chuông (Hoạt động, có
-   chấm theo mục 3) đặt ở đâu khi không còn thanh tiêu đề: quyết ở P3.
+   đây là trang của ai) và không có nút quay lại. **Chuông** (Hoạt động)
+   nổi ở góc trên bên phải ảnh bìa, cách A trong hai cách vẽ cho chủ dự án
+   ngày 19/11 (cách B là cạnh "Tài khoản ›"). Chấm trên chuông chờ C7c.
 2. **Ảnh bìa, ảnh đại diện, tên, handle, tiểu sử** như hôm nay. Ảnh đại
-   diện thêm vòng cấp độ và nhãn "Lv", bấm mở Thành tích, như ở Tài khoản
-   hôm nay.
+   diện có vòng cấp độ, và nhãn "Lv" **ngay dưới ảnh, ở giữa** (chủ dự án,
+   19/11), bấm mở Thành tích. Chỉ chủ trang thấy.
 3. **Bốn con số:** Bộ sưu tập, Check-in, Bạn bè, Chuyến đi. Mỗi số là một
    cửa, như ở Tài khoản hôm nay (`StatTile`, cùng đích đến).
 4. **Thẻ lời mời kết bạn**, chỉ khi có lời mời.
@@ -82,9 +83,9 @@ P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giớ
    Đây là lối vào Tài khoản: #1451 đã đặt nó ở đó ngày 19/11, trước khi kế
    hoạch này viết xong, nên câu hỏi "bánh răng hay ⋯" không còn.
 
-Nút "Sửa hồ sơ" trên trang: chưa thêm. Bấm vào tiểu sử (hoặc "Viết vài
-dòng về bạn") đã mở Sửa hồ sơ, và Tài khoản có nút riêng; thêm một nút
-nữa thì cần chỗ, và chỗ đó gắn với nơi đặt chuông. Xem lại ở P3.
+Nút "Sửa hồ sơ" **ở lại Tài khoản**, ở đầu trang (chủ dự án, 19/11). Trên
+Trang cá nhân, bấm vào tiểu sử (hoặc "Viết vài dòng về bạn") đã mở Sửa
+hồ sơ.
 
 ## 5. Tài khoản sau khi đổi
 
@@ -92,7 +93,7 @@ Giữ: Về tôi (tiểu sử, email, thành viên từ), Sở thích, dòng Che
 dòng Bạn bè, Tuỳ chọn, Ứng dụng, Đăng xuất, Xoá tài khoản.
 
 Bỏ (vì đã lên Trang cá nhân): ảnh đại diện có vòng cấp độ, tên và handle,
-nút Sửa hồ sơ, bốn con số, dòng Hoạt động.
+bốn con số, dòng Hoạt động. Nút Sửa hồ sơ ở lại, đứng đầu trang.
 
 Dòng Check-in và Bạn bè trùng đích với hai con số trên Trang cá nhân,
 nhưng ở trang khác, nên giữ. Xem lại ở P4.
@@ -149,11 +150,16 @@ Mỗi PR một commit, revert là về như trước.
 - [x] **Sau P2: một trang của mình ở mọi nơi** (chủ dự án, 19/11). Bốn con
   số, thẻ lời mời và "Tài khoản ›" có cả khi trang mở từ tab khác, qua
   `toProfileRoom`.
-- [ ] **P3. Thông báo.** Chuông vào Hoạt động, và chỗ của nó khi trang
-  không có tiêu đề; vòng cấp độ và Thành tích lên ảnh đại diện; bỏ ảnh,
-  tên và dòng Hoạt động khỏi Tài khoản; xem lại nút Sửa hồ sơ; test cho
-  luật ở mục 3.
-- [ ] **P4. Dọn Tài khoản**, sau khi chủ dự án xem P1–P3 trên máy.
+- [x] **P3. Thông báo, và dọn Tài khoản** (chủ dự án gộp P4 vào). Chuông
+  nổi trên ảnh bìa (`person/Bell`), mở Hoạt động qua `toProfileRoom`;
+  vòng cấp độ và Thành tích lên ảnh đại diện (`person/OwnFace`, dùng lại
+  `HeroFace`), nhãn "Lv" ngay dưới ảnh; Tài khoản bỏ ảnh, vòng, tên, role
+  và dòng Hoạt động, giữ Sửa hồ sơ ở đầu; con số của dòng Hoạt động
+  (`useActivityCount`) bỏ theo. Test cho luật ở mục 3 nằm ở
+  `PersonScreen.ui.test.tsx` ("has a place on the page for every reason the
+  tab wears a dot").
+- [ ] **Còn lại:** chấm trên chuông khi C7c xong (phiên bình luận); xem lại
+  dòng Check-in và Bạn bè trên Tài khoản, vốn trùng đích với hai con số.
 
 ## 8. Phối hợp với phiên bình luận
 

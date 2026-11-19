@@ -1,6 +1,8 @@
-// Profile for a signed-in reader: who they are, About me, and the
-// account's ways out. The four counts that stood under the hero are on
-// your own person page since 19 Nov 2026 (`Counts`).
+// Account for a signed-in reader: Edit profile, About me, interests,
+// check-ins, friends, preferences, and the account's ways out. What stood
+// over them — your picture in the level's ring, your name, four counts —
+// and the Activity row are on your own person page since 19 Nov 2026
+// (`OwnFace`, `Counts`, `Bell`; docs/profile-home-plan.md).
 
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
@@ -8,20 +10,15 @@ import { Glyph, ICON } from '../../components/ui/glyph';
 import { Card, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthActions, useProfile, useSession } from '../../lib/auth';
-import { savedPlaces } from '../../lib/badges';
 import { useMyPreferences } from '../../lib/data';
-import { useActivityCount } from '../../lib/useActivityCount';
 import { useCrew } from '../../lib/crew';
 import { splitFriendships } from '../../lib/friends';
-import { useMyLists } from '../../lib/save';
 import { CATEGORIES } from '../../lib/categories';
 import { cleanTaste, tasteInOrder } from '../../lib/tastepick';
 import { Lang, useI18n } from '../../lib/i18n';
 import { useScheme } from '../../lib/theme';
 import { bgElevatedHex, colors } from '../../theme';
 import { type Nav } from '../../nav';
-import { HeroFace } from './HeroFace';
-import { HeroName } from './HeroName';
 import { RowGlyph, FeatureRow, AboutRow, BioRow } from './rows';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
@@ -49,11 +46,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   // Read once. This page is drawn only for a session (`ProfileScreen`),
   // so the empty case is a formality the hooks' types ask for.
   const me = session?.user?.id ?? null;
-  // How much the feed holds — likes and copies in its window, plus the
-  // requests waiting, which the feed lists first. A total, as the other
-  // rows' numbers are; see `lib/useActivityCount` for the "unseen"
-  // reading that was tried and read as nothing.
-  const feed = useActivityCount(me);
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
   // this account is on.
@@ -83,44 +75,25 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
     () => tasteInOrder(cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)), Object.keys(CATEGORIES)),
     [prefs.data.categories],
   );
-  const name = profile.full_name || (email ?? '').split('@')[0];
-  // Distinct places, not rows: a place saved into two of your lists is
-  // one place you have found, and counting it twice would turn the ring
-  // into a measure of tidying rather than of exploring.
-  //
-  // The empty catalog is not an oversight. Your own collections arrive
-  // carrying their members, so `membersOf` returns them without
-  // consulting anything — passing the real catalog would mean this
-  // screen waiting on a fetch it otherwise has no use for.
-  const mine = useMyLists();
-  // `savedPlaces` holds the sum now: the badges count the same places
-  // (`lib/badges`), and two copies of it would be two answers.
-  const saved = useMemo(() => savedPlaces(mine.data), [mine.data]);
 
   return (
     <>
-      <View style={s.heroRow}>
-        {/* The picture, its ring and the level's pill on it — `HeroFace`. */}
-        <HeroFace saved={saved} />
-        <View style={{ flex: 1, gap: 5 }}>
-          {/* The name you are called, the role's mark after it, then the
-              name you are found by — `HeroName`. */}
-          <HeroName name={name} handle={profile.handle} />
-          {/* Edit profile, by itself, under the name. Words only: it wore a
-              pencil for a while, and the owner did not care for it — a
-              glyph beside two words that already say "change" was one more
-              thing to read. */}
-          <View style={s.heroActions}>
-            <PressableScale
-              scaleTo={0.94}
-              contentStyle={s.editBtn}
-              onPress={() => navigation.navigate('EditProfile')}
-              accessibilityRole="button"
-            >
-              <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}</Text>
-            </PressableScale>
-          </View>
-        </View>
+      {/* Edit profile, by itself, at the top. Your picture, its ring and
+          your name stood beside it until 19 Nov 2026; they are on your
+          own person page now, the last tab's first page (`OwnFace`,
+          docs/profile-home-plan.md P3), and the owner kept this button
+          here, on the page of what you set. Words only: it wore a pencil
+          for a while, and the owner did not care for it — a glyph beside
+          two words that already say "change" was one more thing to read. */}
+      <View style={s.heroActions}>
+        <PressableScale
+          scaleTo={0.94}
+          contentStyle={s.editBtn}
+          onPress={() => navigation.navigate('EditProfile')}
+          accessibilityRole="button"
+        >
+          <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}</Text>
+        </PressableScale>
       </View>
 
       <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介', '关于我', '關於我')}</Text>
@@ -272,10 +245,13 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
       {/* The pill said "Coming soon" from the day this screen shipped;
           the row opens the crew now. The dot is requests. The number of
           friends was a pill at the row's end until 16 Nov 2026; it is a
-          count on your own page now (`Counts`), and not said twice. */}
+          count on your own page now (`Counts`), and not said twice.
+
+          Alone in its card since 19 Nov 2026: Activity, the row under
+          it, is the bell on your own page now (`person/Bell`). */}
       <Card style={s.featureCard}>
         <PressableScale
-          contentStyle={[s.twoLineRow, s.featureRowDivider]}
+          contentStyle={s.twoLineRow}
           onPress={() => navigation.navigate('Crew')}
           accessibilityRole="button"
           testID="feature-row"
@@ -292,29 +268,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           </View>
           <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} />
         </PressableScale>
-        {/* The door to Activity, re-hung. The feed's one entry used to be
-            the "N requests waiting" banner on Crew, and when Crew grew a
-            Requests tab (#309, 23 Aug 2026) the banner came down with the
-            requests it pointed at — nobody meant to close the feed, but
-            the applause on your lists was left behind a route nothing
-            navigated to, for six weeks.
-
-            Under the friends row rather than a bell in the header: who
-            liked or copied your collections is this section's subject,
-            and a header bell would be the one control on the screen
-            outside a card. Since 28 Oct 2026 the screen is a log of your
-            own acts too (the owner's subtitle); the count is still news
-            only, what others did. Requests are not counted here any more: they
-            left Activity on 20 Oct 2026 and are the dot on the friends row
-            above, so one request is one mark on this screen, not two. */}
-        <FeatureRow
-          icon="notifications-outline"
-          title={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}
-          count={feed}
-          sub={t('A log of your activity on City Crew.', 'Nhật ký hoạt động trên hệ thống.', 'City Crew でのあなたのアクティビティの記録。', '你在 City Crew 上的动态记录。', '你在 City Crew 上的動態記錄。')}
-          onPress={() => navigation.navigate('Activity')}
-          last
-        />
       </Card>
 
       {/* Named the way About me and Friends are, so this screen reads

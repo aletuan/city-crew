@@ -5,7 +5,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON, type GlyphName } from '../../components/ui/glyph';
-import { CountBadge, PressableScale, Toggle } from '../../components/ui';
+import { PressableScale, Toggle } from '../../components/ui';
 import { useI18n } from '../../lib/i18n';
 import { colors } from '../../theme';
 import { BIO_LINE, GLYPH_BOX, CAPTION_LINE, ROW_GLYPH, TITLE_LINE, s } from './styles';
@@ -46,14 +46,12 @@ export function RowGlyph({ name, line }: {
   );
 }
 
-export function FeatureRow({ icon, title, sub, onPress, last, count }: {
+export function FeatureRow({ icon, title, sub, onPress, last }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   sub: string;
   onPress: () => void;
   last?: boolean;
-  /** A number at the row's end — see `CountBadge`. */
-  count?: number;
 }) {
   return (
     <PressableScale
@@ -68,7 +66,6 @@ export function FeatureRow({ icon, title, sub, onPress, last, count }: {
         <Text style={s.featureTitle}>{title}</Text>
         <Text style={s.featureSub}>{sub}</Text>
       </View>
-      <CountBadge n={count ?? 0} style={s.rowEnd} />
       <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );

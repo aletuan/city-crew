@@ -19,6 +19,16 @@
 //
 // What feeds it is deliberately small. See `levelFromSaves`.
 //
+// ── the pill under the picture (owner, 19 Nov 2026) ──
+//
+// It lay on the ring's bottom-right corner while the ring stood on the
+// Account page. It moved with the ring to your own person page
+// (docs/profile-home-plan.md, P3), where the owner asked for it right
+// under the picture: the name and the bubble stand to the picture's
+// right, and a pill on that corner pointed into them. Centred under the
+// picture it is read with the face, and the arc runs on behind it, as
+// it did behind the corner.
+//
 // The pill is a press that says what the level is (owner, 16 Nov 2026) —
 // as the role's disc on the opposite corner says what the role is. What
 // it says is the caller's (`onExplain`): the ring is handed a level, not
@@ -37,6 +47,14 @@ import { useScheme } from '../lib/theme';
 // The arithmetic lives in `lib/level.ts`, which imports nothing, so the
 // test runner can reach it without loading React Native.
 export { levelFromSaves, PER_LEVEL } from '../lib/level';
+
+/** A gap of page between avatar and track, then the track. */
+const GAP = 3.5;
+const STROKE = 4;
+/** How far the ring stands outside the picture it is handed — for a
+ *  caller that keeps the picture where it was and lets the ring spread
+ *  (a negative margin of this much). */
+export const RING_OUT = GAP + STROKE;
 
 export default function EngagementRing({ size, level, progress, fresh = false, onExplain, children }: {
   /** The avatar's diameter. The ring is drawn outside it. */
@@ -58,8 +76,6 @@ export default function EngagementRing({ size, level, progress, fresh = false, o
 
   // A gap of page between avatar and track, so the ring reads as a
   // separate object rather than a border the picture grew.
-  const GAP = 3.5;
-  const STROKE = 4;
   const box = size + (GAP + STROKE) * 2;
   const c = box / 2;
   const r = (box - STROKE) / 2;
@@ -114,6 +130,7 @@ export default function EngagementRing({ size, level, progress, fresh = false, o
           Background rather than `borderColor`: a border resolves to a
           CGColor once and can come back stale after a theme change, which
           is what put a black ring on the camera badge. */}
+      <View style={s.pillRow} pointerEvents="box-none">
       <View style={s.halo}>
         <PressableScale
           // The role disc's press, on the other corner (0.9 there).
@@ -144,13 +161,16 @@ export default function EngagementRing({ size, level, progress, fresh = false, o
           {fresh ? <View style={s.freshHalo} testID="level-fresh"><View style={s.fresh} /></View> : null}
         </PressableScale>
       </View>
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  // Centred under the picture, over the ring's lowest point: the pill's
+  // middle on the track, so half of it hangs below the ring.
+  pillRow: { position: 'absolute', left: 0, right: 0, bottom: -10, alignItems: 'center' },
   halo: {
-    position: 'absolute', right: -4, bottom: 0,
     backgroundColor: colors.bg,
     borderRadius: 999,
     padding: 2.5,

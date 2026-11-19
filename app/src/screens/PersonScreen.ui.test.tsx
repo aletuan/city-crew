@@ -151,6 +151,7 @@ vi.mock('./person/Requests', () => ({
 }));
 
 import PersonScreen from './PersonScreen';
+import { spokenTab } from '../components/FloatingTabBar';
 
 const LAN: Who = { id: 'lan-id', handle: 'lan', full_name: 'Lan Phạm', avatar_url: 'https://faces/lan.jpg', bio: 'Coffee first, then the rest.' };
 
@@ -564,6 +565,19 @@ describe('the mark of a role', () => {
       .toBe('A Super User can edit, and add photos to, every place in the app.');
   });
 
+  // Your own mark speaks to you (19 Nov 2026): it left the Account page,
+  // where it always had, for your own page.
+  it.each([
+    ['guide', 'Local Guide', 'You can edit, and add photos to, places in your collections and places you imported.'],
+    ['editor', 'Super User', 'You can edit, and add photos to, every place in the app — new or already listed.'],
+  ] as const)('says what a %s may do to them on their own page', async (role, name, says) => {
+    state.people = { ...state.people, me: { id: 'me-id', handle: 'me', full_name: 'Me', avatar_url: '' } };
+    state.role = role;
+    await show('me');
+    fireEvent.click(screen.getByRole('button', { name }));
+    expect(screen.getByTestId('badge-sheet-body').textContent).toBe(says);
+  });
+
   it('says it in Vietnamese', async () => {
     state.lang = 'vi';
     state.role = 'guide';
@@ -573,15 +587,18 @@ describe('the mark of a role', () => {
       .toBe('Local Guide có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của họ hoặc các địa điểm họ đã nhập.');
   });
 
-  // Your own page wears your own mark, as other people see it — and
-  // says it as they read it.
-  it('wears your own mark on your own page, in the same words', async () => {
+  // Your own page wears your own mark. It said it as other people read
+  // it until 19 Nov 2026, when your page was how others see you and the
+  // Account page's name spoke to you; the name and its mark left Account
+  // for this page that day (P3), so here it speaks to you — see the
+  // `it.each` above for both roles' words.
+  it('wears your own mark on your own page, asked of yourself', async () => {
     state.me = LAN.id;
     state.role = 'guide';
     await show();
     expect(state.roleAsked.at(-1)).toEqual([LAN.id, LAN.id]);
     fireEvent.click(screen.getByRole('button', { name: 'Local Guide' }));
-    expect(screen.getByTestId('badge-sheet-body').textContent).toMatch(/^A Local Guide can edit/);
+    expect(screen.getByTestId('badge-sheet-body').textContent).toMatch(/^You can edit/);
   });
 
   // Nobody signed in is not told (the database refuses): the question
@@ -1834,7 +1851,7 @@ describe('comments on the cards', () => {
 // docs/profile-home-plan.md): no way back, no title. What only you see is
 // on your own page wherever it opens (owner, 19 Nov 2026).
 describe('your own page', () => {
-  const PROFILE_STACK = ['ProfileHome', 'Account', 'Crew', 'Visited', 'Person'];
+  const PROFILE_STACK = ['ProfileHome', 'Account', 'Activity', 'Crew', 'Visited', 'Person'];
 
   beforeEach(() => {
     state.people = { ...state.people, me: { id: 'me-id', handle: 'me', full_name: 'Me', avatar_url: '' } };
@@ -1878,7 +1895,46 @@ describe('your own page', () => {
 
   it('shows none of it on somebody else’s page', async () => {
     await show('lan', false, PROFILE_STACK);
-    expect(screen.queryByTestId('owner-counts')).toBeNull();
-    expect(screen.queryByTestId('owner-requests')).toBeNull();
+    for (const id of ['owner-counts', 'owner-requests', 'person-bell', 'person-own-face']) {
+      expect(screen.queryByTestId(id), id).toBeNull();
+    }
+  });
+
+  // P3 (owner, 19 Nov 2026): Activity's way in is a bell over the cover's
+  // corner, A of the two drawn; Account's row for it is gone.
+  it('has the bell over the cover, opening Activity in the last tab', async () => {
+    const navigation = await show('me', true, PROFILE_STACK);
+    const bell = screen.getByTestId('person-bell');
+    expect(screen.getByTestId('person-cover').contains(bell)).toBe(true);
+    expect(bell.getAttribute('aria-label')).toBe('Activity');
+    fireEvent.click(bell);
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Activity');
+    // No dot until the comments' reading of what is new (C7c) lands.
+    expect(screen.queryByTestId('person-bell-dot')).toBeNull();
+    cleanup();
+    await show('me', false, ['CollectionsHome', 'Person']);
+    fireEvent.click(screen.getByTestId('person-bell'));
+    expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Activity', initial: false });
+  });
+
+  it('draws your face in the level’s ring, and everyone else’s without', async () => {
+    await show('me', true, PROFILE_STACK);
+    expect(screen.getByTestId('person-own-face')).toBeTruthy();
+    expect(screen.getByTestId('level-badge')).toBeTruthy();
+  });
+
+  // The plan's rule (docs/profile-home-plan.md §3): every reason the last
+  // tab wears a dot for is in sight on your own page. A reason added to
+  // the tab's dot with no place here turns this red.
+  it('has a place on the page for every reason the tab wears a dot', async () => {
+    const places: Record<string, string> = { requests: 'owner-requests', badges: 'level-badge' };
+    const none = { requests: 0, invites: 0, today: null, badges: 0 };
+    for (const key of Object.keys(none) as (keyof typeof none)[]) {
+      const said = spokenTab('Profile', 'Profile', { ...none, [key]: key === 'today' ? 'x' : 1 }, (en) => en);
+      if (said === 'Profile') continue;
+      expect(places[key], `the tab's dot says "${said}", and the page has no place for it`).toBeDefined();
+    }
+    await show('me', true, PROFILE_STACK);
+    for (const id of Object.values(places)) expect(screen.getByTestId(id), id).toBeTruthy();
   });
 });

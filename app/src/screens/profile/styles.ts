@@ -27,9 +27,6 @@ export const GLYPH_BOX = 26;
 export const CAPTION_LINE = 15;
 
 export const TITLE_LINE = 19;
-/** The account name's line, which the role's mark after it is centred
- *  on (`HeroName`). */
-export const NAME_LINE = 25;
 /** The bio's line: the values' 21 and a point, for the one text on the
  *  card that runs to several lines. `RowGlyph` lifts the bio's mark to it. */
 export const BIO_LINE = 22;
@@ -132,30 +129,6 @@ export const s = StyleSheet.create({
   // and "99" are one width, and the pills down a card line up.
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
-  // 2, not the 5 the column around it uses: a name and the handle under
-  // it are one identity read top to bottom, and at the column's gap they
-  // read as two separate facts that happen to be adjacent. Everything
-  // below — the bio, the button — keeps the wider spacing.
-  nameBlock: { gap: 2 },
-  // No `flexShrink` on either any more: on their own lines neither is
-  // competing for width with the other, and each wraps or truncates
-  // against the column instead. (The name's box shrinks for the role's
-  // disc after it, when there is one — `WithRole` — which is 26 of the
-  // line, not a rival for it.)
-  // 20 since 14 Nov 2026 (owner), from 23. The tab's own title, "Profile"
-  // at 30 in the display face, stands just above it, so the name is the
-  // page's second heading, not a rival first: the social apps that set a
-  // name near 24 (Threads, Facebook) have no title over it, and X sets it
-  // near 20 — figures from memory, not measured. A four-word Vietnamese
-  // name ("Nguyễn Thị Phương Thảo") is also likelier to stay on one line
-  // beside the avatar at 20; not yet looked at on a device. The system
-  // face, not the display one: two lines in the display face, 30 and 20,
-  // would read as two titles. The line keeps the 1.22 it had (28 at 23).
-  accountName: {
-    color: colors.text, fontSize: 20, fontWeight: font.bold, letterSpacing: 0.2,
-    lineHeight: NAME_LINE,
-  },
-  handle: { color: colors.textTertiary, ...type.meta },
   // The card surface, not the glass tint: on paper the tint is a grey
   // smudge on a warm page, where the About-me card sitting inches below
   // it is white. Matching that card makes the button read as part of the

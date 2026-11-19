@@ -26,8 +26,8 @@
 // ── the role's disc left the picture (owner, 17 Nov 2026) ──
 //
 // It lay on the ring's top-right corner, and this file held one sheet
-// for the two badges. It stands after the name now (`HeroName`, and
-// `components/RoleBadge` for why), and took its sheet with it: the same
+// for the two badges. It stands after the name now (`PersonRole` on
+// your page; `components/RoleBadge` for why), and took its sheet with it: the same
 // `ActionSheet`, opened from where the disc is. What is on the picture
 // is the level's alone — a ring and a pill that say one thing.
 //
@@ -45,6 +45,14 @@
 // (`useRewards().wanted`): the sheet is here and nowhere else, so the
 // banner asks and this answers.
 //
+// ── on your own page (owner, 19 Nov 2026) ──
+//
+// The Account page drew this round your photo picker until P3 of
+// docs/profile-home-plan.md; your own person page draws it now, round
+// the face it hands in (`person/OwnFace`), with the pill centred under
+// the picture. The banner's ask (`wanted`) lands there: the banner opens
+// the last tab's first page, which is your page.
+//
 // ── out of `AccountProfile` ──
 //
 // The ring was drawn there, and its function is at its ceiling
@@ -54,7 +62,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from '../../components/ActionSheet';
-import AvatarPicker from '../../components/AvatarPicker';
 import BadgeShelf from '../../components/BadgeShelf';
 import EngagementRing from '../../components/EngagementRing';
 import { Glyph, ICON } from '../../components/ui/glyph';
@@ -64,9 +71,16 @@ import { useRewards } from '../../lib/rewards';
 import { colors, font } from '../../theme';
 import { s } from './styles';
 
-export function HeroFace({ saved }: {
+export function HeroFace({ saved, size, children }: {
   /** The distinct places the reader keeps — what the level is made of. */
   saved: number;
+  /** The picture's diameter; the ring is drawn outside it. */
+  size: number;
+  /** The picture: your own person page's face, ringed in page as every
+   *  face there is. The Account page drew the photo picker here until
+   *  19 Nov 2026, when the ring left it for your page (P3,
+   *  docs/profile-home-plan.md); Edit profile keeps the picker. */
+  children: React.ReactNode;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -81,11 +95,9 @@ export function HeroFace({ saved }: {
 
   return (
     <>
-      {/* No camera badge here: the level badge takes that corner, and
-          Edit profile shows the same picker with its badge intact. */}
       <View style={s.avatarBox} testID="avatar-box">
-        <EngagementRing size={88} level={level} progress={progress} fresh={unseen.length > 0} onExplain={show}>
-          <AvatarPicker showCamera={false} />
+        <EngagementRing size={size} level={level} progress={progress} fresh={unseen.length > 0} onExplain={show}>
+          {children}
         </EngagementRing>
       </View>
 
