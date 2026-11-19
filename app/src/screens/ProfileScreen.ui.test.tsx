@@ -21,7 +21,8 @@
 import type { Pref } from '../lib/look';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CommonActions, StackRouter } from '@react-navigation/routers';
+import { BaseNavigationContainer, createNavigationContainerRef, createNavigatorFactory, useNavigationBuilder } from '@react-navigation/core';
+import { CommonActions, StackRouter, TabRouter } from '@react-navigation/routers';
 import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
 import { useScrollToTop } from '@react-navigation/native';
@@ -231,7 +232,7 @@ const nav = (pushed = false) => {
   const n = {
     navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), canGoBack: vi.fn(() => pushed), popToTop: vi.fn(),
     // The last tab's stack, where Account and its rooms are.
-    getState: vi.fn(() => ({ routeNames: ['ProfileHome', 'Account', 'Crew', 'Visited', 'Activity', 'Person'] })),
+    getState: vi.fn(() => ({ index: pushed ? 1 : 0, routeNames: ['ProfileHome', 'Account', 'Crew', 'Visited', 'Activity', 'Person'] })),
   };
   return { n: n as unknown as Nav, raw: n, parent };
 };
@@ -864,7 +865,7 @@ describe('the four doors', () => {
   // with the room over the tab's first page.
   it('opens the check-ins and the crew through the last tab from another tab', () => {
     const r = nav();
-    r.raw.getState.mockReturnValue({ routeNames: ['CollectionsHome', 'CollectionDetail', 'Person'] });
+    r.raw.getState.mockReturnValue({ index: 0, routeNames: ['CollectionsHome', 'CollectionDetail', 'Person'] });
     render(<Counts navigation={r.n} />);
     fireEvent.click(screen.getByRole('button', { name: '0 Check-ins' }));
     expect(r.parent.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Visited', initial: false });
@@ -1695,4 +1696,52 @@ describe('the badges', () => {
     draw(true);
     expect(screen.queryAllByTestId('count-badge')).toHaveLength(0);
   });
+});
+
+// Real routers preserve the difference between a root stack and tab history.
+function ProfileTestStack({ children }: { children: React.ReactNode }) {
+  const { state, descriptors, NavigationContent } = useNavigationBuilder(StackRouter, { children });
+  return <NavigationContent>{descriptors[state.routes[state.index].key].render()}</NavigationContent>;
+}
+function ProfileTestTabs({ children }: { children: React.ReactNode }) {
+  const { state, descriptors, NavigationContent } = useNavigationBuilder(TabRouter, { children });
+  return <NavigationContent>{descriptors[state.routes[state.index].key].render()}</NavigationContent>;
+}
+const ProfileStack = createNavigatorFactory(ProfileTestStack)();
+const ProfileTabs = createNavigatorFactory(ProfileTestTabs)();
+
+it('keeps the guest hub at the stack root when the parent tab can go back', () => {
+  state.session = null;
+  const ref = createNavigationContainerRef<{ Explore: undefined; Profile: undefined }>();
+  const unhandled = vi.fn();
+  let profileNavigation: Nav;
+  function Guest({ navigation }: { navigation: Nav }) {
+    React.useEffect(() => { profileNavigation = navigation; }, [navigation]);
+    return <ProfileScreen navigation={navigation} />;
+  }
+  function Profile() {
+    return <ProfileStack.Navigator><ProfileStack.Screen name="ProfileHome" component={Guest} /></ProfileStack.Navigator>;
+  }
+  const Explore = () => <div>Explore home</div>;
+  render(<BaseNavigationContainer ref={ref} onUnhandledAction={unhandled}>
+    <ProfileTabs.Navigator>
+      <ProfileTabs.Screen name="Explore" component={Explore} />
+      <ProfileTabs.Screen name="Profile" component={Profile} />
+    </ProfileTabs.Navigator>
+  </BaseNavigationContainer>);
+  act(() => ref.navigate('Profile'));
+  expect(profileNavigation!.canGoBack()).toBe(true);
+  expect(profileNavigation!.getState().index).toBe(0);
+  expect(screen.getByTestId('profile-sign-in')).toBeTruthy();
+  expect(unhandled).not.toHaveBeenCalled();
+  expect(screen.queryByTestId('account-back')).toBeNull();
+  expect(ref.getCurrentRoute()?.name).toBe('ProfileHome');
+});
+
+it('does not pop again when session navigation has already reset the stack', () => {
+  state.session = null;
+  const r = nav();
+  r.raw.getState.mockReturnValueOnce({ ...r.raw.getState(), index: 1 });
+  render(<ProfileScreen navigation={r.n} />);
+  expect(r.raw.popToTop).not.toHaveBeenCalled();
 });

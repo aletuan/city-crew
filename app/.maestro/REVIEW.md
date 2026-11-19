@@ -1,6 +1,6 @@
 # Review lỗi thường gặp khi chạy Maestro trên iOS
 
-Cập nhật: 27/10/2026. Dùng để chẩn đoán nhanh các lỗi E2E của City Crew trên simulator iOS, đặc biệt khi giao diện vẫn hoạt động nhưng Maestro không tìm thấy phần tử.
+Cập nhật: 20/11/2026. Dùng để chẩn đoán nhanh các lỗi E2E của City Crew trên simulator iOS, đặc biệt khi giao diện vẫn hoạt động nhưng Maestro không tìm thấy phần tử.
 
 Đợt kiểm tra này dùng Maestro 2.10.0, iPhone 17 Pro / iOS 26.5 và Expo Go. Các bản sửa thay đổi test/tài liệu và thêm testID cho hàng SENT và trạng thái danh sách Trips trong app; không đổi logic nghiệp vụ. Kết quả PASS của từng ca không thay thế việc chạy lại toàn bộ suite.
 
@@ -39,6 +39,20 @@ Metro phải trả `packager-status:running`. Nếu chưa chạy, mở terminal 
 Artifacts nằm dưới `.smoke-local/maestro/<run>/` tính từ root repo. `latest` trỏ đến lượt mới nhất, kể cả lượt chỉ chạy một ca. Lưu tên thư mục cụ thể khi so sánh kết quả; artifacts này là dữ liệu local, không được Git lưu cùng tài liệu.
 
 ## Các cách sửa đã kiểm chứng
+
+### Profile ở gốc nhưng canGoBack trả true
+
+Lượt 19/11 trên `26629da8` có 15/22 flow thất bại; cây giao diện của cả 15 ca đều có thông báo `POP_TO_TOP was not handled by any navigator`. Assert thường báo thiếu `person-account|profile-sign-in`, thẻ địa điểm hoặc collection vì màn hình lỗi đang che nội dung.
+
+`canGoBack()` xét cả navigator cha. Sau khi chuyển từ Explore sang Profile, lịch sử của tab có thể làm nó trả true dù stack Profile có index 0. Dùng giá trị đó làm cờ `pushed` khiến trang khách vẽ nút Back và gọi `popToTop()` tại gốc.
+
+Bản sửa đọc index của stack hiện tại khi xác định `pushed`, đồng thời kiểm tra lại index trước khi pop sau khi kết thúc phiên. Việc kiểm tra lần hai xử lý trường hợp `SessionNavSync` đã reset stack trước effect của màn hình.
+
+Test hồi quy dùng container, TabRouter và StackRouter thật, xác nhận đồng thời `canGoBack() === true` và `index === 0`. Trang khách phải hiển thị, không có nút Back và không phát sinh action bị từ chối. Test này thất bại khi khôi phục cách xác định `pushed` cũ. Một test riêng kiểm tra stack đã được reset trước effect.
+
+Bài học khi mock navigation: giữ độc lập lịch sử navigator cha và độ sâu stack hiện tại. Khi nhiều flow cùng mất selector, xem screenshot và thông báo điều hướng trước khi sửa selector.
+
+Kiểm chứng ngày 20/11 trên bản sửa từ `4e352385`: 143 test liên quan đạt; TypeScript và ESLint đạt. Maestro `04-sign-in`, `07-sign-up-delete`, `09-collections-browse` đạt trong lượt `20261120-032436`; `04` đạt thêm lượt `20261120-033154`. Runner xác nhận tài khoản signup tạm đã bị xóa. Chưa chạy lại toàn bộ 22 flow trên bản sửa.
 
 ### 00-launch chọn nhầm switch Expo Go
 
