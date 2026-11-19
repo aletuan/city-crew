@@ -752,3 +752,12 @@ for f in "$ROOT"/supabase/migrations/*_comment_news.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/comment_news_test.sql"
+
+# A reported comment at the desk (19 Nov 2026, C8): the queue's reading of
+# one, and the desk's logged removal. After everything `delete_comment`
+# has become, which it calls.
+echo "→ comments at the desk"
+for f in "$ROOT"/supabase/migrations/*_comment_desk.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comment_desk_test.sql"

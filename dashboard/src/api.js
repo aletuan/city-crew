@@ -150,6 +150,41 @@ export const api = {
     }));
   },
 
+  /**
+   * Take a reported comment down, with the answers under it. The desk's
+   * own door rather than the author's `delete_comment`, because this one
+   * leaves a line in the moderation log — see the comment_desk migration.
+   * Not reversible, unlike the two above.
+   */
+  moderateComment: async (id) => {
+    db(await supabase.rpc('moderate_comment', { target: id }));
+  },
+
+  /**
+   * The words a comment may not contain, in the order they read.
+   *
+   * The table is the whole feature: `comment_clean` reads it on every
+   * comment written, so a word added here stops the next one and a word
+   * removed lets it through, with no release in between.
+   */
+  bannedWords: async () => {
+    const rows = db(await supabase.from('banned_words').select('word').order('word'));
+    return (rows ?? []).map((r) => r.word);
+  },
+
+  /** Add words, already cleaned (`cleanWords`). An upsert that ignores
+   *  what is there: typing a word the list already has is not an error. */
+  addBannedWords: async (words) => {
+    if (!words.length) return;
+    db(await supabase
+      .from('banned_words')
+      .upsert(words.map((word) => ({ word })), { onConflict: 'word', ignoreDuplicates: true }));
+  },
+
+  removeBannedWord: async (word) => {
+    db(await supabase.from('banned_words').delete().eq('word', word));
+  },
+
   /** Stop an account signing in, or let it back. The service role's
    *  work, so it goes through the edge function. */
   suspendUser: async (userId, suspend = true) => invoke('suspend-user', { user_id: userId, suspend }),

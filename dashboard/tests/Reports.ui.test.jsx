@@ -162,4 +162,66 @@ describe('Reports', () => {
     renderDesk('/reports');
     expect((await findToast()).textContent).toBe('rpc missing');
   });
+
+  // ── comments (C8) ──
+  const COMMENTS = [
+    {
+      id: 'r-said', kind: 'comment', reason: 'spam', status: 'new', created_at: ago(3),
+      target_id: 'k1', owner_id: 'u7', owner_handle: 'trang', title: 'Coffee in Hoi An', body: 'buy followers here',
+    },
+    // Reported, and since removed by its author: no row behind it.
+    {
+      id: 'r-gone', kind: 'comment', reason: 'offensive', status: 'new', created_at: ago(1),
+      target_id: 'k2', owner_id: null, owner_handle: null, title: null, body: null,
+    },
+  ];
+
+  it('shows a reported comment as a comment: its words, its writer and the list it is on', async () => {
+    api.reports.mockResolvedValue(COMMENTS);
+    renderDesk('/reports');
+    const said = (await screen.findByText('buy followers here')).closest('section');
+    expect(said.querySelector('.repkind').textContent).toBe('comment');
+    expect(within(said).getByText('@trang')).toBeTruthy();
+    expect(within(said).getByText('on “Coffee in Hoi An”')).toBeTruthy();
+    // A comment has no bio and no photo to clear, and is not a list to hide.
+    expect(within(said).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Remove the comment', 'Suspend the account', 'Nothing wrong',
+    ]);
+    // One already gone has nothing to remove; it can only be closed.
+    const gone = card('Nothing left to show — already cleared.');
+    expect(gone.querySelector('.repkind').textContent).toBe('comment');
+    expect(gone.querySelector('.repplace')).toBeNull();
+    expect(within(gone).getAllByRole('button').map((b) => b.textContent)).toEqual(['Nothing wrong']);
+  });
+
+  it('asks before removing a comment, says it cannot be undone, and does nothing when told no', async () => {
+    api.reports.mockResolvedValue(COMMENTS);
+    window.confirm.mockReturnValue(false);
+    renderDesk('/reports');
+    await screen.findByText('buy followers here');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove the comment' }));
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('cannot be put back'));
+    expect(api.moderateComment).not.toHaveBeenCalled();
+    expect(api.markReport).not.toHaveBeenCalled();
+  });
+
+  it('removes the comment through the desk\u2019s own function, then marks the report', async () => {
+    api.reports.mockResolvedValue(COMMENTS);
+    const order = [];
+    api.moderateComment.mockImplementation(async () => { order.push('remove'); });
+    api.markReport.mockImplementation(async () => { order.push('mark'); });
+    renderDesk('/reports');
+    await screen.findByText('buy followers here');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove the comment' }));
+    expect((await findToast()).textContent).toBe('Comment removed');
+    expect(api.moderateComment).toHaveBeenCalledWith('k1');
+    expect(api.markReport).toHaveBeenCalledWith('r-said', 'actioned');
+    expect(order).toEqual(['remove', 'mark']);
+  });
+
+  it('points at the banned words, which have a page of their own', async () => {
+    renderDesk('/reports');
+    await screen.findByText(/Nothing reported/);
+    expect(screen.getByRole('link', { name: 'Banned words' }).getAttribute('href')).toBe('/banned-words');
+  });
 });

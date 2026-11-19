@@ -602,6 +602,45 @@ test('moderateCollection names the list and which way the switch goes', async ()
   assert.deepEqual(client.calls[0].args, { target: 'c1', hide: false });
 });
 
+test('moderateComment names the comment to the desk\'s own function, not the author\'s', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  await api.moderateComment('k1');
+  assert.equal(client.calls[0].fn, 'moderate_comment');
+  assert.deepEqual(client.calls[0].args, { target: 'k1' });
+});
+
+// ---- banned words: a list read in order, added to without complaint
+// about what is already there, and pruned one word at a time.
+
+test('bannedWords answers the words alone, in the order they read', async () => {
+  const { api, client } = await loadApi([{ data: [{ word: 'ass' }, { word: 'buy followers' }], error: null }]);
+  assert.deepEqual(await api.bannedWords(), ['ass', 'buy followers']);
+  assert.equal(client.calls[0].table, 'banned_words');
+  assert.deepEqual(client.calls[0].chain.find(([m]) => m === 'order'), ['order', ['word']]);
+  const none = await loadApi([{ data: null, error: null }]);
+  assert.deepEqual(await none.api.bannedWords(), []);
+});
+
+test('addBannedWords writes one row a word and ignores what the list already has', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  await api.addBannedWords(['ass', 'buy followers']);
+  const [, args] = client.calls[0].chain.find(([m]) => m === 'upsert');
+  assert.deepEqual(args[0], [{ word: 'ass' }, { word: 'buy followers' }]);
+  assert.deepEqual(args[1], { onConflict: 'word', ignoreDuplicates: true });
+  // Nothing to add is nothing sent.
+  const idle = await loadApi([]);
+  await idle.api.addBannedWords([]);
+  assert.equal(idle.client.calls.length, 0);
+});
+
+test('removeBannedWord deletes that word and no other', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  await api.removeBannedWord('ass');
+  assert.equal(client.calls[0].table, 'banned_words');
+  assert.ok(client.calls[0].chain.some(([m]) => m === 'delete'));
+  assert.deepEqual(client.calls[0].chain.find(([m]) => m === 'eq'), ['eq', ['word', 'ass']]);
+});
+
 test('photoUris answers id → address for the ids asked, and only those', async () => {
   const { api, client } = await loadApi([{
     data: [{ id: 'a', photo_uri: 'https://x/a.jpg' }, { id: 'b', photo_uri: 'https://x/b.jpg' }],

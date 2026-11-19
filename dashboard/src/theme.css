@@ -1738,12 +1738,27 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .repkind { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .repreason { font-size: 13px; color: var(--text-primary); font-weight: 600; }
 .rephandle { font-family: var(--font-data); font-size: 13px; color: var(--text-tertiary); }
+.repplace { font-size: 13px; color: var(--text-secondary); }
 
 /* The words being judged, quoted at reading size — this is the evidence,
    not a caption. */
 .reptext { margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: var(--text-primary); }
 .repnote { margin: 0 0 6px; font-size: 14px; line-height: 1.5; color: var(--text-secondary); font-style: italic; }
 .repacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Banned words: the list as chips, each with its own way out. */
+.banlist { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.banword {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 4px 4px 12px; border-radius: 999px;
+  border: 1px solid var(--border-glass-soft);
+  font-family: var(--font-data); font-size: 13px; color: var(--text-primary);
+}
+.banx {
+  width: 24px; height: 24px; border-radius: 50%; border: 0; background: transparent;
+  color: var(--text-tertiary); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.banx:hover:not(:disabled) { color: var(--bad); }
 .syncbtn.danger { color: var(--bad); border-color: rgba(248, 113, 113, 0.65); }
 .syncbtn.danger:hover { background: rgba(248, 113, 113, 0.12); }
 

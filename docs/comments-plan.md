@@ -250,10 +250,11 @@ vào dòng của mình như với `is_public`.
 
 - `collections.comments_off`: tắt là không nhận bình luận mới, bình luận
   cũ vẫn đọc được.
-- `banned_words`: danh sách từ cấm. **Đang trống**; Data Desk chưa có
-  trang sửa (C8).
-- `reports.kind` có giá trị `comment`. Data Desk **chưa hiện đúng** loại
-  này (C8).
+- `banned_words`: danh sách từ cấm. **Đang trống**; Data Desk sửa ở trang
+  Banned words (C8).
+- `reports.kind` có giá trị `comment`; `reports_queue` trả nội dung, tên
+  bộ và người viết cho loại này, và `moderate_comment` là cách Data Desk
+  gỡ một bình luận, có ghi `moderation_log` (C8).
 - `app_flag_testers`: bật một cờ riêng cho vài tài khoản (mục 3b).
 - Đã bỏ: cột `collections.comment_count` đếm sẵn bằng trigger (bản đầu của
   kế hoạch). Bảng `collections` đã có trigger và policy cho chủ bộ sửa;
@@ -582,12 +583,32 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
 - Giới hạn đã biết: máy mới thì mọi dòng trong hai tuần là "mới" một
   lần; chưa xem trên máy thật.
 
-**C8. Data Desk** — việc kế tiếp của phiên bình luận
-- Hàng chờ báo cáo hiện loại `comment` kèm nội dung; nút gỡ bình luận.
-  Hiện Data Desk coi mọi báo cáo không phải bộ sưu tập là "profile", nên
-  báo cáo bình luận hiện sai loại và không có nội dung. Trên cơ sở dữ
-  liệu thật đã có 1 báo cáo như vậy (từ tài khoản thử).
-- Trang sửa danh sách từ cấm.
+**C8. Data Desk** — xong (`20261119100000_comment_desk.sql`)
+- **Hàng chờ báo cáo hiểu bình luận.** `reports_queue` trả cho báo cáo
+  loại `comment`: nội dung bình luận, tên bộ nó nằm trên, và người viết.
+  Trang Reports hiện đúng loại (trước đó mọi thứ không phải bộ sưu tập bị
+  coi là "profile"), kèm "on “tên bộ”", và ba nút: gỡ bình luận, khoá tài
+  khoản người viết, không có gì sai. Bình luận đã mất thì chỉ còn nút
+  đóng báo cáo.
+- **Gỡ bình luận là cửa riêng của Data Desk**: `moderate_comment`, chỉ
+  editor gọi được, gọi `delete_comment` rồi ghi một dòng vào
+  `moderation_log` (`remove_comment`). Đã cân nhắc và bỏ: để Data Desk
+  gọi thẳng `delete_comment`, vì khi đó đây là hành động kiểm duyệt duy
+  nhất không để lại dấu. Dòng log giữ người viết, bộ sưu tập và số câu
+  trả lời bị gỡ theo; **không giữ nội dung** (một bản chép trong log sẽ
+  là nơi duy nhất câu chữ còn sống sau khi bị gỡ và sau khi tài khoản bị
+  xoá). Giá phải trả: không xem lại được một lần gỡ dựa trên câu chữ; cái
+  còn lại là báo cáo, với lý do và ghi chú của người báo.
+- **Không hoàn tác được**, khác với ẩn bộ và xoá một trường hồ sơ. Gỡ một
+  bình luận là gỡ cả các câu trả lời dưới nó. Trang hỏi lại trước khi làm
+  và nói rõ cả hai điều.
+- **Trang Banned words** (`/banned-words`, mở từ trang Reports): danh
+  sách, ô thêm nhiều từ (mỗi dòng một từ hoặc cụm từ), nút gỡ từng từ, và
+  ô "thử một câu" trả lời theo đúng luật của máy chủ (khớp cả từ: cấm
+  "ass" không chặn "class"). Danh sách trống thì trang cảnh báo bình luận
+  chưa được lọc.
+- **Còn phải làm bằng tay trước khi mở cờ:** nhập danh sách từ cấm. Bảng
+  vẫn trống.
 
 **C9. Pháp lý và cửa hàng**
 - Điều khoản: thêm bình luận vào danh sách nội dung do người dùng viết và
