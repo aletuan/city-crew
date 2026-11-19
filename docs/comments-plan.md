@@ -542,15 +542,32 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   sẵn có của màn. Hệ quả: nếu riêng phần này lỗi thì màn không báo lỗi,
   chỉ không có dòng bình luận.
 
-*C7c — cái gì là mới — **phiên làm Trang cá nhân nhận việc này** (chủ dự
-án, 19/11/2026), vì cái chuông của họ (P3, đã merge) là nơi chấm hiện ra;
-theo dõi ở `docs/profile-home-plan.md`:*
-- Mốc "lần cuối mở Hoạt động" trên máy; chấm trên dòng mới hơn mốc.
-- Chấm trên tab cuối và trên chuông cho trả lời, tag và bình luận mới
-  (tim không bật chấm), đọc từ một hook duy nhất. `person/Bell` đã nhận
-  sẵn `fresh`.
-- Dữ liệu đã có: `useCommentNewsQuery` trả các dòng kèm loại và thời
-  điểm.
+*C7c — cái gì là mới — xong, do phiên làm Trang cá nhân làm (chủ dự án,
+19/11/2026); khớp `docs/profile-home-plan.md`, mục 3 và 8:*
+- **Một bản tin bình luận cho cả app** (`lib/freshNews`): màn Hoạt động,
+  chấm trên tab cuối và chấm trên chuông đọc cùng một bản, cùng một con
+  số (`fresh`). Chuông tự đọc hook đó, không nhận số từ ngoài vào.
+- **Chấm trên tab cuối và trên chuông** khi có trả lời, tag hoặc bình
+  luận mới hơn mốc. Tim không bật chấm. VoiceOver đọc kèm con số.
+- **Mốc lưu trên máy, theo từng tài khoản**, và là *thời điểm của dòng
+  mới nhất mà Hoạt động đã hiện*, không phải giờ của máy lúc mở màn. Đây
+  là chỗ khác với câu chữ ban đầu ("lần cuối mở Hoạt động"). Lý do: so
+  dòng với dòng thì đồng hồ máy sai hay đổi múi giờ không làm gì "mới"
+  hay "cũ" oan. Đã cân nhắc và bỏ: giờ của máy lúc mở màn (máy chạy
+  nhanh 5 phút thì mọi trả lời trong 5 phút tới bị coi là đã xem).
+- **Mở Hoạt động là đã xem:** màn hỏi lại bản tin lúc mở, đợi câu trả
+  lời đó rồi mới dời mốc (bản đang giữ có thể cũ vài phút; dời mốc trước
+  thì có thể vượt qua một trả lời máy chưa biết). Hỏi lỗi thì mốc đứng
+  yên, chấm còn đó cho lần sau.
+- **Chấm trên dòng:** mọi dòng trong "Dành cho bạn" mới hơn mốc lúc mở
+  màn có một chấm ở cuối dòng, kể cả tim và lượt thích; chấm ở lại suốt
+  lần xem đó. "Việc bạn đã làm" không bao giờ có chấm.
+- **Hỏi lại khi nào** (chưa có thông báo đẩy nên chấm chỉ mới bằng lần
+  hỏi gần nhất): lúc mở app, sau khi có bình luận được viết trong app,
+  khi quay lại app và khi đổi tab (hai cái sau chỉ khi câu trả lời đã cũ
+  hơn 2 phút), và mỗi lần mở Hoạt động.
+- Giới hạn đã biết: máy mới thì mọi dòng trong hai tuần là "mới" một
+  lần; chưa xem trên máy thật.
 
 **C8. Data Desk** — việc kế tiếp của phiên bình luận
 - Hàng chờ báo cáo hiện loại `comment` kèm nội dung; nút gỡ bình luận.

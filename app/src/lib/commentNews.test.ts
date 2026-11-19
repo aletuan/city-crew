@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activityGroups, commentNewsOf, type CommentNews } from './commentNews';
+import { activityGroups, commentNewsOf, freshNews, newerThan, newestAt, type CommentNews } from './commentNews';
 import type { ActivityItem } from './friends';
 
 const wire = (over: Record<string, unknown> = {}) => ({
@@ -99,5 +99,47 @@ describe('activityGroups', () => {
 
   it('is two empty groups for nothing', () => {
     expect(activityGroups([], [], 'x')).toEqual({ forYou: [], yours: [] });
+  });
+});
+
+// C7c: one mark on the phone, the time of the newest row Activity has
+// shown, and what is later than it is new.
+describe('what is new', () => {
+  const row = (at: string, kind: CommentNews['kind'] = 'reply'): CommentNews => commentNewsOf([wire({ at, kind })])[0];
+
+  it('calls a row new when it is later than the mark, and not when it is the mark itself', () => {
+    expect(newerThan('2026-11-18T10:00:01Z', '2026-11-18T10:00:00Z')).toBe(true);
+    expect(newerThan('2026-11-18T10:00:00Z', '2026-11-18T10:00:00Z')).toBe(false);
+    expect(newerThan('2026-11-18T09:59:59Z', '2026-11-18T10:00:00Z')).toBe(false);
+  });
+
+  it('calls every row new on a phone that has marked nothing', () => {
+    expect(newerThan('2020-01-01T00:00:00Z', null)).toBe(true);
+  });
+
+  // The server writes "+00:00" and a phone "Z"; as text the two sort
+  // apart, as times they are one instant.
+  it('compares instants, not text', () => {
+    expect(newerThan('2026-11-18T10:00:00+00:00', '2026-11-18T10:00:00Z')).toBe(false);
+    expect(newerThan('2026-11-18T17:00:01+07:00', '2026-11-18T10:00:00Z')).toBe(true);
+  });
+
+  it('counts replies, tags and comments on a list later than the mark, and never a heart', () => {
+    const rows = [
+      row('2026-11-18T12:00:00Z', 'tag'), row('2026-11-18T11:00:00Z', 'reply'),
+      row('2026-11-18T10:30:00Z', 'on_list'), row('2026-11-18T12:30:00Z', 'heart'),
+      row('2026-11-18T09:00:00Z', 'reply'),
+    ];
+    expect(freshNews(rows, '2026-11-18T10:00:00Z')).toBe(3);
+    expect(freshNews(rows, null)).toBe(4);
+    expect(freshNews(rows, '2026-11-18T12:00:00Z')).toBe(0);
+    expect(freshNews([], null)).toBe(0);
+  });
+
+  it('finds the latest time among rows, in whatever order, and none among none', () => {
+    expect(newestAt([{ at: '2026-11-18T10:00:00Z' }, { at: '2026-11-18T12:00:00Z' }, { at: '2026-11-18T11:00:00Z' }]))
+      .toBe('2026-11-18T12:00:00Z');
+    expect(newestAt([{ at: '2026-11-18T12:00:00Z' }, { at: '2026-11-18T10:00:00Z' }])).toBe('2026-11-18T12:00:00Z');
+    expect(newestAt([])).toBeNull();
   });
 });

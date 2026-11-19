@@ -20,15 +20,29 @@
 // It opens the list's thread. Landing on the comment itself — scrolled
 // to, and lit for a beat — is the thread page's to do with the `focus`
 // the row hands it; until that is built the thread opens at its top.
+//
+// ── what is new (C7c; owner, 19 Nov 2026) ──
+//
+// A row of the first group that came since Activity was last opened
+// wears a dot at its end, before the chevron: the tab's and the bell's
+// own dot, so the mark that sent the reader here is the mark that says
+// which rows it meant. Every row of that group, a like as much as a
+// reply — on the page "new" is about time; only the dot on the tab is
+// kept to what wants an answer (`freshNews`). Never on the second
+// group: what the reader did is not news to them.
+//
+// Opening the page is seeing it: the mark moves past the newest row
+// shown (`useSeenThrough`), and the dots stay for this visit.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar, Card, PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
-import type { ActivityEntry, CommentNews } from '../../lib/commentNews';
+import { type ActivityEntry, type CommentNews, newestAt } from '../../lib/commentNews';
 import type { FriendProfile } from '../../lib/data';
 import type { ActivityItem } from '../../lib/friends';
+import { useSeenThrough } from '../../lib/freshNews';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { colors, space, type } from '../../theme';
@@ -50,7 +64,8 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, onLis
   onComment: (news: CommentNews) => void;
 }) {
   const { t } = useI18n();
-  const group = (entries: ActivityEntry[], title: string, testID: string) => (entries.length === 0 ? null : (
+  const isNew = useSeenThrough(newestAt(groups.forYou));
+  const group = (entries: ActivityEntry[], title: string, testID: string, news = false) => (entries.length === 0 ? null : (
     <>
       <Text style={s.head} accessibilityRole="header" testID={`${testID}-head`}>{title}</Text>
       <Card testID={testID}>
@@ -86,6 +101,14 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, onLis
               {/* Only where there is somewhere to go: the same condition
                   as the role above, so what VoiceOver hears and what the
                   eye sees agree. */}
+              {news && isNew(e.at) ? (
+                <View
+                  style={s.fresh}
+                  accessible
+                  accessibilityLabel={t('New', 'Mới', '新着', '新', '新')}
+                  testID="row-new"
+                />
+              ) : null}
               {row.open ? <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} /> : null}
             </PressableScale>
           );
@@ -97,7 +120,7 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, onLis
     // One element holds both groups: what the page's tests, and a reader
     // of them, call the timeline.
     <View testID="earlier-card">
-      {group(groups.forYou, t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), 'activity-for-you')}
+      {group(groups.forYou, t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), 'activity-for-you', true)}
       {group(groups.yours, t('What you did', 'Việc bạn đã làm', 'あなたがしたこと', '你做过的', '你做過的'), 'activity-yours')}
     </View>
   );
@@ -260,6 +283,8 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
     alignItems: 'center', justifyContent: 'center',
   },
+  // The tab bar's dot, at its 9: one mark for "look here" in the app.
+  fresh: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: colors.accent },
   line: { color: colors.text, fontSize: 15, lineHeight: LINE },
   words: { flex: 1, gap: 2 },
   // The comment's own words: the line's size, a step back in colour, so

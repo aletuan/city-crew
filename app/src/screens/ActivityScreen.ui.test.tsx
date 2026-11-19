@@ -12,7 +12,7 @@
 import React from 'react';
 import { RefreshControl } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, fontSizeOf, render, screen } from '../uitest/render';
+import { act, fireEvent, fontSizeOf, render, screen, viewStyleOf } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { FriendProfile, MyActs } from '../lib/data';
@@ -34,7 +34,10 @@ const data = vi.hoisted(() => ({
   avatars: {} as Record<string, string>,
   // Comment news: what the hook hands the page, and what the page handed it.
   news: { data: [] as CommentNews[], loaded: true, loading: false, reload: vi.fn() },
-  newsAsked: vi.fn((_me: string | null, _on: boolean) => {}),
+  // The mark as the page found it (`undefined`: the phone has not said
+  // yet), and what the rows told `useSeenThrough` was their newest.
+  before: undefined as string | null | undefined,
+  seenThrough: vi.fn((_newest: string | null) => {}),
   avatarsAsked: vi.fn((_handles: string[]) => {}),
 }));
 vi.mock('../lib/data', () => ({
@@ -43,8 +46,19 @@ vi.mock('../lib/data', () => ({
   fetchMyActs: data.fetchMyActs,
   useMyCollections: (id: string | null) => { data.useMyCollections(id); return { data: data.mine }; },
   useCuratorAvatarsQuery: (handles: string[]) => { data.avatarsAsked(handles); return { data: data.avatars }; },
-  useCommentNewsQuery: (me: string | null, on: boolean) => { data.newsAsked(me, on); return data.news; },
 }));
+// The app's one copy of the comment news, and the mark — `lib/freshNews`,
+// tested there; here it is what the page reads and what the rows ask.
+vi.mock('../lib/freshNews', async () => {
+  const { newerThan } = await import('../lib/commentNews');
+  return {
+    useFreshNews: () => ({ news: data.news }),
+    useSeenThrough: (newest: string | null) => {
+      data.seenThrough(newest);
+      return (at: string) => data.before !== undefined && newerThan(at, data.before);
+    },
+  };
+});
 
 const catalog = vi.hoisted(() => ({ cols: [] as Col[] }));
 vi.mock('../lib/catalog', () => ({ useCollections: () => ({ data: catalog.cols }) }));
@@ -122,6 +136,8 @@ beforeEach(() => {
   auth.me = ME;
   i18n.lang = 'en';
   data.news = { data: [], loaded: true, loading: false, reload: vi.fn() };
+  data.before = undefined;
+  data.seenThrough.mockClear();
 });
 afterEach(() => { vi.useRealTimers(); appFlags.reset(); });
 
@@ -898,14 +914,6 @@ describe('comment news', () => {
   const row = (kind: CommentNews['kind']) => screen.getByTestId(`news-${kind}`);
   const lineOf = (kind: CommentNews['kind']) => row(kind).querySelector('[data-testid="row-face"] + * > *')!.textContent;
 
-  it('asks for the reader\'s news only with the comments switch on', async () => {
-    await renderScreen();
-    expect(data.newsAsked).toHaveBeenLastCalledWith(ME, false);
-    appFlags.set('comments', true);
-    await renderScreen();
-    expect(data.newsAsked).toHaveBeenLastCalledWith(ME, true);
-  });
-
   it('says each of the four things in a sentence, with the comment\'s words under it', async () => {
     data.news.data = [
       news({ kind: 'tag', comment_id: 'k4', at: '2026-09-11T13:00:00', body: '@you look' }),
@@ -984,6 +992,49 @@ describe('comment news', () => {
     expect(screen.queryByTestId('activity-empty')).toBeNull();
     expect(screen.getByTestId('activity-for-you').textContent).toContain('replied to you');
     expect(screen.getByTestId('activity-yours').textContent).toContain('You liked');
+  });
+
+  // C7c: what came since Activity was last opened.
+  describe('what is new', () => {
+    const dots = (id: string) => screen.getByTestId(id).querySelectorAll('[data-testid="row-new"]');
+    const fill = () => {
+      data.news.data = [
+        news({ kind: 'reply', comment_id: 'k3', at: '2026-09-11T12:00:00' }),
+        news({ kind: 'heart', comment_id: 'k2', at: '2026-09-11T10:00:00' }),
+        news({ kind: 'tag', comment_id: 'k1', at: '2026-09-11T08:00:00' }),
+      ];
+      data.mine = [{ id: 'c1', slug: 'hoi-an', title_en: 'Hoi An', title_vi: 'Hội An', title_ja: '' }];
+      data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T11:00:00', 'trang')]);
+      data.fetchMyActs.mockImplementation(async () => ({ likes: [{ collection_id: 'c9', at: '2026-09-11T13:00:00', owner_handle: 'bao' }], copies: [], lists: [] }));
+    };
+
+    it('dots the rows for you that are later than the mark — a like or a heart as much as a reply — and never your own', async () => {
+      fill();
+      data.before = '2026-09-11T09:00:00';
+      await renderScreen();
+      const rows = [...screen.getByTestId('activity-for-you').querySelectorAll('[role="button"]')];
+      expect(rows.map((r) => !!r.querySelector('[data-testid="row-new"]'))).toEqual([true, true, true, false]);
+      // The reader's own act is later than all of them, and is not news.
+      expect(dots('activity-yours')).toHaveLength(0);
+      // The tab's dot, before the chevron, and said.
+      const dot = rows[0].querySelector('[data-testid="row-new"]') as HTMLElement;
+      expect(dot.getAttribute('aria-label')).toBe('New');
+      expect(viewStyleOf(dot)).toMatchObject({ width: 9, height: 9, backgroundColor: colors.accent });
+      expect(dot.nextElementSibling?.getAttribute('data-icon')).toBe('chevron-forward');
+    });
+
+    it('dots nothing when nothing is later than the mark', async () => {
+      fill();
+      data.before = '2026-09-11T12:00:00';
+      await renderScreen();
+      expect(dots('earlier-card')).toHaveLength(0);
+    });
+
+    it('tells the mark the newest row for you, not the reader\'s own later act', async () => {
+      fill();
+      await renderScreen();
+      expect(data.seenThrough).toHaveBeenLastCalledWith('2026-09-11T12:00:00');
+    });
   });
 
   it('waits for the news with the rest before drawing, and does not call a page with only news empty', async () => {

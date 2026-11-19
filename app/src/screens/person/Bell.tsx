@@ -18,16 +18,18 @@
 //
 // The plan's rule: every reason for the last tab's dot is in sight on
 // this page and goes when it is answered. A reply, a tag or a comment on
-// your list will be one, and its place is here, on the bell, gone when
-// Activity is opened. That reading is the comments work's C7c, which is
-// not built yet (docs/comments-plan.md); it will hand `fresh` in from
-// the one hook the tab's dot reads, so the two cannot disagree. Until
-// then the bell wears no dot, and nothing on the tab says there is news
-// in Activity either.
+// your list is one (C7c of docs/comments-plan.md), and its place is
+// here, gone when Activity is opened. The bell reads it from
+// `useFreshNews`, the one copy the tab's dot reads, so the two cannot
+// disagree — and reads it itself, not as a prop: a caller could hand it
+// a number worked out some other way.
+//
+// VoiceOver hears the count with the name, as it does on the tab.
 
 import { StyleSheet, View } from 'react-native';
 import { PHOTO_GLYPH, PHOTO_SLOP, photoDisc, PressableScale } from '../../components/ui';
 import { Glyph } from '../../components/ui/glyph';
+import { useFreshNews } from '../../lib/freshNews';
 import { useI18n } from '../../lib/i18n';
 import { colors, onPhoto } from '../../theme';
 
@@ -35,8 +37,10 @@ import { colors, onPhoto } from '../../theme';
  *  on a place card. */
 const INSET = 10;
 
-export function Bell({ onPress, fresh = false }: { onPress: () => void; fresh?: boolean }) {
+export function Bell({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
+  const { fresh } = useFreshNews();
+  const name = t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態');
   return (
     <PressableScale
       style={s.at}
@@ -45,11 +49,11 @@ export function Bell({ onPress, fresh = false }: { onPress: () => void; fresh?: 
       hitSlop={PHOTO_SLOP}
       haptic="selection"
       accessibilityRole="button"
-      accessibilityLabel={t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}
+      accessibilityLabel={fresh > 0 ? t(`${name}, ${fresh} new`, `${name}, ${fresh} mới`, `${name}、新着${fresh}件`, `${name}，${fresh} 条新消息`, `${name}，${fresh} 條新訊息`) : name}
       testID="person-bell"
     >
       <Glyph name="notifications-outline" size={PHOTO_GLYPH} color={onPhoto.text} />
-      {fresh ? <View style={s.dot} testID="person-bell-dot" /> : null}
+      {fresh > 0 ? <View style={s.dot} testID="person-bell-dot" /> : null}
     </PressableScale>
   );
 }
