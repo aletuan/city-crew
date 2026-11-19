@@ -14,7 +14,7 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { deleteComment, fetchPreviews, fetchTaggable, fetchThread, likeComment, postComment } from './comments';
+import { deleteComment, fetchPreviews, fetchTaggable, fetchThread, likeComment, postComment, setCommentsOff } from './comments';
 import { refusalOf, type Subject } from '../comments';
 
 const list = (id: string): Subject => ({ kind: 'collection', id });
@@ -83,6 +83,19 @@ describe('fetchPreviews', () => {
     expect(Object.keys(out)).toEqual(['c2']);
     expect(out.c2.n).toBe(3);
     expect(out.c2.latest.map((c) => c.body)).toEqual(['newest', 'next']);
+    // And open: a server that says nothing of `off` is one from before a thread could be closed.
+    expect(out.c2.off).toBe(false);
+  });
+
+  it('reads a thread as closed only on the word true, with comments or with none', async () => {
+    fake().replies({ data: [
+      { collection_id: 'c1', n: 0, latest: [], off: true },
+      { collection_id: 'c2', n: 2, latest: [], off: false },
+      { collection_id: 'c3', n: 1, latest: [], off: 'true' },
+    ] });
+    const out = await fetchPreviews([list('c1'), list('c2'), list('c3')]);
+    expect(out.c1).toEqual({ n: 0, latest: [], off: true });
+    expect([out.c2.off, out.c3.off]).toEqual([false, false]);
   });
 
   it('says nothing to the network for an empty batch', async () => {
@@ -173,6 +186,7 @@ describe('fetchTaggable', () => {
     expect(await fetchTaggable(list('c1'))).toEqual({
       people: [{ id: 'u1', handle: 'trang', full_name: null, avatar_url: null }],
       places: [{ id: 'p1', slug: 'cong', name_en: 'Cong', name_vi: 'Cộng' }],
+      off: false, mine: false,
     });
     expect(fake().log).toEqual([{ op: 'rpc', fn: 'comment_taggable', payload: { p_collection: 'c1' }, filters: [] }]);
   });
@@ -180,5 +194,30 @@ describe('fetchTaggable', () => {
   it('throws what the server said', async () => {
     fake().replies({ error: { message: 'down' } });
     await expect(fetchTaggable(list('c1'))).rejects.toThrow('down');
+  });
+});
+
+describe('setCommentsOff', () => {
+  it('writes the switch, and nothing else, to the subject\'s own row', async () => {
+    fake().replies({ data: [{ id: 'c1' }] });
+    await setCommentsOff(list('c1'), true);
+    fake().replies({ data: [{ id: 'c1' }] });
+    await setCommentsOff(list('c1'), false);
+    expect(fake().log.map((l) => [l.op, l.payload, l.filters])).toEqual([
+      ['update', { comments_off: true }, [['id', 'c1']]],
+      ['update', { comments_off: false }, [['id', 'c1']]],
+    ]);
+  });
+
+  it('throws when the write changed no row: somebody else\'s list', async () => {
+    fake().replies({ data: [] });
+    await expect(setCommentsOff(list('c1'), true)).rejects.toThrow('comment:subject');
+    fake().replies({ data: null });
+    await expect(setCommentsOff(list('c1'), true)).rejects.toThrow('comment:subject');
+  });
+
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'down' } });
+    await expect(setCommentsOff(list('c1'), true)).rejects.toThrow('down');
   });
 });

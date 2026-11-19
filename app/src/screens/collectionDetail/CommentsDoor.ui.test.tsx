@@ -66,6 +66,54 @@ describe('CommentsDoor', () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 
+  // C6: a thread its owner has closed.
+  it('is not drawn on a closed thread with nothing in it, and is on one with something to read', async () => {
+    appFlags.set('comments', true);
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 0, latest: [], off: true } }));
+    show({ id: 'c1', is_public: true, owner_id: 'them' });
+    await flush();
+    expect(door()).toBeNull();
+    cleanup();
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 2, latest: [], off: true } }));
+    show({ id: 'c1', is_public: true, owner_id: 'them' });
+    await flush();
+    fireEvent.click(door()!);
+    expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
+  });
+
+  it('stays for the owner of a closed, empty thread, and opens the thread, where the switch is', async () => {
+    appFlags.set('comments', true);
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 0, latest: [], off: true } }));
+    show({ id: 'c1', is_public: true, owner_id: 'me' });
+    await flush();
+    fireEvent.click(door()!);
+    expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
+    expect(screen.queryByTestId('comment-quick')).toBeNull();
+  });
+
+  it('opens the thread for the owner of an open, empty one too, and the field for anybody else', async () => {
+    appFlags.set('comments', true);
+    show({ id: 'c1', is_public: true, owner_id: 'me' });
+    await flush();
+    fireEvent.click(door()!);
+    expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
+    cleanup(); onPress.mockClear();
+    show({ id: 'c1', is_public: true, owner_id: 'them' });
+    await flush();
+    fireEvent.click(door()!);
+    expect(onPress).not.toHaveBeenCalled();
+    expect(screen.getByTestId('comment-quick')).toBeTruthy();
+  });
+
+  it('is nobody\'s own for a guest, whatever the list says', async () => {
+    appFlags.set('comments', true);
+    state.me = null;
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 0, latest: [], off: true } }));
+    show({ id: 'c1', is_public: true, owner_id: null });
+    await flush();
+    expect(door()).toBeNull();
+  });
+
   it('opens the thread where no field is mounted to raise', async () => {
     appFlags.set('comments', true);
     render(<CommentsDoor list={{ id: 'c1', is_public: true }} onPress={onPress} />);

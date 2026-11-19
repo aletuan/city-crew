@@ -44,10 +44,14 @@ export function useCardComments(
     const id = c.id;
     if (!on || !id || !hasThread(c)) return {};
     const comments = previews.data[id];
+    // A thread closed with nothing in it has no way in from a card: there
+    // is nothing to read and nothing may be written. (Its owner reaches
+    // the switch from the list's own page — `CommentsDoor`.)
+    if (comments?.off && comments.n === 0) return {};
     return {
       comments,
       onComments: () => (quick && quickOrThread({
-        me, n: comments?.n ?? 0, loaded: previews.loaded, loading: previews.loading,
+        me, n: comments?.n ?? 0, loaded: previews.loaded, loading: previews.loading, off: comments?.off,
       }) === 'quick'
         ? quick({ kind: 'collection', id }, nameOf(c))
         : (open as (c: Collection) => void)(c)),

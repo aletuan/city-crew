@@ -581,7 +581,7 @@ export const usePreviewsQuery = (collectionIds: readonly string[]): Fetch<Record
 // been used by the only writer it could add, who cannot tag themself. A
 // failure is the empty answer: "@" then offers nothing, and a comment
 // can still be written.
-const NOBODY: Taggable = { people: [], places: [] };
+const NOBODY: Taggable = { people: [], places: [], off: false, mine: false };
 
 /** What may be tagged on a subject; no subject, or nobody reading, asks nothing. */
 export const useTaggableQuery = (subject: Subject | null, readerId: string | null | undefined): Fetch<Taggable> => {

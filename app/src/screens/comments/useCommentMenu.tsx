@@ -46,7 +46,13 @@ import { deleteComment } from '../../lib/data';
 import { normalizeHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 
-export function useCommentMenu(me: string | null) {
+export function useCommentMenu(
+  me: string | null,
+  /** Whether the list is the reader's own: its owner may take down
+   *  anybody's comment on it (decision 5; the server's `delete_comment`
+   *  has let them since C1). */
+  mine = false,
+) {
   const { t } = useI18n();
   const { report, node: reportSheet } = useReport();
   const [about, setAbout] = useState<Placed | null>(null);
@@ -78,20 +84,26 @@ export function useCommentMenu(me: string | null) {
     ],
   );
 
-  const actions = (c: Placed): PersonAction[] => (c.author === me
-    ? [{
-      key: 'delete',
-      icon: 'trash-outline',
-      title: t('Delete comment', 'Xoá bình luận', 'コメントを削除', '删除评论', '刪除評論'),
-      destructive: true,
-      onPress: () => remove(c),
-    }]
-    : [{
-      key: 'report',
-      icon: 'flag-outline',
-      title: t('Report comment', 'Báo cáo bình luận', 'コメントを報告', '举报评论', '舉報評論'),
-      onPress: () => report({ kind: 'comment', id: c.id, ownerId: c.author, name: nameOf(c), avatarUrl: c.avatar_url ?? undefined }),
-    }]);
+  const del = (c: Placed): PersonAction => ({
+    key: 'delete',
+    icon: 'trash-outline',
+    title: t('Delete comment', 'Xoá bình luận', 'コメントを削除', '删除评论', '刪除評論'),
+    destructive: true,
+    onPress: () => remove(c),
+  });
+  const flag = (c: Placed): PersonAction => ({
+    key: 'report',
+    icon: 'flag-outline',
+    title: t('Report comment', 'Báo cáo bình luận', 'コメントを報告', '举报评论', '舉報評論'),
+    onPress: () => report({ kind: 'comment', id: c.id, ownerId: c.author, name: nameOf(c), avatarUrl: c.avatar_url ?? undefined }),
+  });
+  // Your own: delete. Somebody else's: report — and, on your own list,
+  // delete as well, report first: taking a comment off your list and
+  // telling the desk about its writer are two acts, and the owner may
+  // want either or both.
+  const actions = (c: Placed): PersonAction[] => (
+    c.author === me ? [del(c)] : mine ? [flag(c), del(c)] : [flag(c)]
+  );
 
   return {
     /** The press that raises the menu for a comment, or none where there
