@@ -1,6 +1,7 @@
 import type { WhereKind } from './lib/planHeading';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNavigationContainerRef, type RouteProp } from '@react-navigation/native';
+import { normalizeHandle } from './lib/handle';
 import { returnTab, takeResume } from './lib/resume';
 import type { Subject } from './lib/comments';
 
@@ -269,6 +270,19 @@ export type RootRoute<T extends keyof RootStackParamList> = RouteProp<RootStackP
  * the supported way out of that, not a shortcut around passing props.
  */
 export const navRef = createNavigationContainerRef<RootStackParamList>();
+
+/**
+ * A person's page — or, for your own inside the last tab, that tab's
+ * first page, which *is* your page since 19 Nov 2026
+ * (docs/profile-home-plan.md). Pushed there, it was a second copy of the
+ * page under it, with a way back to the first. `mine` is your handle
+ * where the caller knows it; without it, every face is somebody's page.
+ */
+export function toPerson(navigation: Nav, handle: string, mine?: string | null) {
+  const first = navigation.getState?.()?.routes[0]?.name;
+  if (mine && first === 'ProfileHome' && normalizeHandle(handle) === normalizeHandle(mine)) navigation.popToTop();
+  else navigation.navigate('Person', { handle });
+}
 
 /** Jump to a screen inside another tab's stack. Silently does nothing
  *  before the container has mounted, which is only ever true at launch.

@@ -139,7 +139,7 @@ vi.mock('../lib/city', () => {
   const all = () => (m as { useCity: () => object }).useCity();
   return { ...m, useCurrentCity: all, useCityList: all };
 });
-vi.mock('../nav', () => ({ goTo: spies.goTo }));
+vi.mock('../nav', async (orig) => ({ ...(await orig<Record<string, unknown>>()), goTo: spies.goTo }));
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),

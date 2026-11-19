@@ -42,7 +42,7 @@ import { useI18n } from '../lib/i18n';
 import { ageWord, listAgeOf } from '../lib/listAge';
 import { colors, space } from '../theme';
 import type { Place } from '../lib/types';
-import { goTo, type Nav, type RootRoute } from '../nav';
+import { goTo, toPerson, type Nav, type RootRoute } from '../nav';
 import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
 import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
@@ -107,7 +107,9 @@ const ADD_CELL = '+add' as const;
 
    Outside the screen's function, which is at its ceiling (`oversize.js`). */
 const ownDoor = (navigation: Nav, owned: boolean, handle: string) =>
-  (owned && handle ? () => navigation.navigate('Person', { handle }) : undefined);
+  // Your own list, so your own page: in the last tab, its first page
+  // (`toPerson`, 19 Nov 2026).
+  (owned && handle ? () => toPerson(navigation, handle, handle) : undefined);
 
 function FaceDoor({ url, onPress }: { url: string | null; onPress?: () => void }) {
   const { t } = useI18n();

@@ -30,6 +30,11 @@ vi.mock('./PersonScreen', () => ({
   },
 }));
 vi.mock('./ProfileScreen', () => ({ default: () => <div data-testid="account-or-guest" /> }));
+const parts = vi.hoisted(() => ({ requests: null as null | { me: string; onOpen: () => void } }));
+vi.mock('./profile/Counts', () => ({ Counts: () => <div data-testid="counts" /> }));
+vi.mock('./person/Requests', () => ({
+  Requests: (p: { me: string; onOpen: () => void }) => { parts.requests = p; return <div data-testid="requests" />; },
+}));
 vi.mock('../components/ui', () => ({
   Screen: ({ title, children }: { title: string; children: React.ReactNode }) => <section aria-label={title}>{children}</section>,
 }));
@@ -62,11 +67,15 @@ describe('MeScreen', () => {
 
   // The rooms are in this tab's stack only, so the ways to them are
   // handed down from here (`nav.test.ts` holds the person page to it).
-  it('hands the page its ways to Account and to Friends', () => {
+  it('hands the page its way to Account, and what only you see: the counts, then the requests', () => {
     const navigation = draw();
     seen.person!.home!.toAccount();
     expect(navigation.navigate).toHaveBeenLastCalledWith('Account');
-    seen.person!.home!.toCrew();
+    render(<>{seen.person!.home!.owner}</>);
+    const counts = screen.getByTestId('counts');
+    expect(counts.compareDocumentPosition(screen.getByTestId('requests')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(parts.requests!.me).toBe('me-id');
+    parts.requests!.onOpen();
     expect(navigation.navigate).toHaveBeenLastCalledWith('Crew');
   });
 

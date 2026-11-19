@@ -84,7 +84,7 @@ import { useProfile, useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { useSaveActions } from '../lib/save';
 import { colors, font, space } from '../theme';
-import type { Nav, RootRoute } from '../nav';
+import { toPerson, type Nav, type RootRoute } from '../nav';
 
 /** How many roots are drawn at first, and added each time the reader
  *  nears the end. A root with two answers is about 3 × 60pt, so ten fill
@@ -136,7 +136,8 @@ export default function CommentsScreen({ navigation, route }: {
   const insets = useSafeAreaInsets();
   const typing = useKeyboardUp();
   const now = Date.now();
-  const onPerson = (handle: string) => navigation.navigate('Person', { handle });
+  // Your own face in the last tab is its first page — `toPerson`.
+  const onPerson = (handle: string) => toPerson(navigation, handle, profile.handle);
   const onPlace = (slug: string) => navigation.navigate('PlaceDetail', { slug });
 
   // Writing — see the header.
