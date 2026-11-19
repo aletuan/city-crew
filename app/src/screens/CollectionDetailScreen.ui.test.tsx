@@ -1422,7 +1422,7 @@ describe('sharing with friends', () => {
       state.mine = [collection({ is_public: true })];
       show();
       openPicker();
-      expect(screen.getByText(/Sharing makes this list private/)).toBeTruthy();
+      expect(screen.getByText(/This list will become private/)).toBeTruthy();
       tick('Lan Phương');
       fireEvent.click(screen.getByText('Share with 1 person'));
       await said('Shared with 1 person');

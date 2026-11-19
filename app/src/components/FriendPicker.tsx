@@ -66,8 +66,10 @@ export default function FriendPicker({
   /** What an empty crew is told in place of the list. */
   none: string;
   /** The boxed line between the list and the button: what happens
-   *  after the press, for the people ticked. */
-  note: { icon: Icon; text: string };
+   *  after the press, for the people ticked. Absent on the list's sheet
+   *  since 19 Nov 2026 (`ShareSheet`); the button then keeps the space
+   *  the box's two margins gave it (`gap`). */
+  note?: { icon: Icon; text: string };
   cta: { icon: Icon; label: string; testID: string; disabled: boolean; onPress: () => void };
   /** Each row's id, by its index. A function rather than a prefix so
    *  that the template is written at the call site, where the Maestro id
@@ -149,10 +151,12 @@ export default function FriendPicker({
           </ScrollView>
         )}
 
-        <View style={s.note}>
-          <Glyph name={note.icon} size={ICON.text} color={colors.textTertiary} />
-          <Text style={s.noteText}>{note.text}</Text>
-        </View>
+        {note ? (
+          <View style={s.note}>
+            <Glyph name={note.icon} size={ICON.text} color={colors.textTertiary} />
+            <Text style={s.noteText}>{note.text}</Text>
+          </View>
+        ) : <View style={s.gap} testID="picker-gap" />}
 
         <GradientCta
           icon={cta.icon}
@@ -206,6 +210,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
     borderRadius: 14, padding: 13, marginTop: 10, marginBottom: 12,
   },
+  // With no note: the note's two margins, 10 and 12, so the button
+  // stands as far under the last friend as it did under the box.
+  gap: { height: 22 },
   noteText: { flex: 1, color: colors.textTertiary, fontSize: 13, lineHeight: 19 },
 
   later: { paddingVertical: 14, marginTop: 2, alignSelf: 'center' },

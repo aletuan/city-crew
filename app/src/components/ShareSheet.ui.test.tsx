@@ -14,7 +14,7 @@
 import React from 'react';
 import * as Haptics from 'expo-haptics';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '../uitest/render';
+import { fireEvent, render, screen, viewStyleOf } from '../uitest/render';
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -63,7 +63,11 @@ describe('the list', () => {
     expect(screen.getByText('@hamy')).toBeTruthy();
     expect(ticked()).toEqual(['false', 'false', 'false']);
     expect(screen.getByText('Only the friends you tick can open this list.')).toBeTruthy();
-    expect(screen.getByText('They can open it and plan from it. Only you can change it.')).toBeTruthy();
+    // No second line under the friends (owner, 19 Nov 2026).
+    expect(screen.queryByText(/plan from it/)).toBeNull();
+    expect(document.querySelector('[data-icon="eye-outline"]')).toBeNull();
+    // The button keeps its distance from the last friend.
+    expect(viewStyleOf(screen.getByTestId('picker-gap')).height).toBe(22);
   });
 
   it('opens with the friends it is shared with ticked', () => {
@@ -146,7 +150,8 @@ describe('what the button promises', () => {
 describe('a public list', () => {
   it('says sharing makes it private', () => {
     show({ isPublic: true });
-    expect(screen.getByText(/Sharing makes this list private: it leaves Explore and search/)).toBeTruthy();
+    expect(screen.queryByText('Only the friends you tick can open this list.')).toBeNull();
+    expect(screen.getByText('This list will become private: only the friends you choose can see and use it.')).toBeTruthy();
   });
 
   // The same ticks still change who can see it: it goes private.
