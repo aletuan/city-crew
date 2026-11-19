@@ -1,8 +1,15 @@
-// Account for a signed-in reader: Edit profile, About me, interests,
-// check-ins, friends, Activity, preferences, and the account's ways out.
-// What stood over them — your picture in the level's ring, your name,
-// four counts — is on your own person page since 19 Nov 2026 (`OwnFace`,
-// `Counts`; docs/profile-home-plan.md).
+// Account for a signed-in reader: who they are, Edit profile, About me,
+// interests, check-ins, friends, Activity, preferences, and the
+// account's ways out. The four counts are on your own person page since
+// 19 Nov 2026 (`Counts`).
+//
+// ── copied, not moved (owner, 19 Nov 2026) ──
+//
+// P3 of docs/profile-home-plan.md took the picture in the level's ring,
+// the name and the role's mark off this page when it drew them on your
+// own person page (`OwnFace`, `PersonRole`). The owner, on seeing the
+// page headed by a button alone, asked for them back, and to keep both:
+// "copy, don't move". So who you are is said on two pages, knowingly.
 
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
@@ -18,6 +25,7 @@ import { colors } from '../../theme';
 import { type Nav } from '../../nav';
 import { FeatureRow, AboutRow, BioRow } from './rows';
 import { FriendsCard } from './FriendsCard';
+import { Hero } from './Hero';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
 import { ROW_GLYPH, s } from './styles';
@@ -66,23 +74,9 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
 
   return (
     <>
-      {/* Edit profile, by itself, at the top. Your picture, its ring and
-          your name stood beside it until 19 Nov 2026; they are on your
-          own person page now, the last tab's first page (`OwnFace`,
-          docs/profile-home-plan.md P3), and the owner kept this button
-          here, on the page of what you set. Words only: it wore a pencil
-          for a while, and the owner did not care for it — a glyph beside
-          two words that already say "change" was one more thing to read. */}
-      <View style={s.heroActions}>
-        <PressableScale
-          scaleTo={0.94}
-          contentStyle={s.editBtn}
-          onPress={() => navigation.navigate('EditProfile')}
-          accessibilityRole="button"
-        >
-          <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集', '编辑个人资料', '編輯個人資料')}</Text>
-        </PressableScale>
-      </View>
+      {/* Your picture in the level's ring, your name and role, and Edit
+          profile — `Hero`. */}
+      <Hero onEdit={() => navigation.navigate('EditProfile')} />
 
       <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介', '关于我', '關於我')}</Text>
       <Card style={s.featureCard}>
