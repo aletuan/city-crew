@@ -12,6 +12,13 @@
 // sheet still open after it leaves the owner wondering whether it landed.
 // A failure keeps it open, so the ticks are not lost to an alert.
 //
+// ── faces in a strip (owner, 19 Nov 2026) ──
+//
+// The friends are drawn across, not down, and in an order made for a
+// strip: who has the list, then who the owner shares with most —
+// `FriendPicker` has the drawing and what it costs, `lib/shares.shareRows`
+// the order and what was weighed for it.
+//
 // ── what it says before the press ──
 //
 // The subtitle says what sharing does to a public list: it goes private.
@@ -48,11 +55,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { diffShares, shareCta, shareRows } from '../lib/shares';
+import { diffShares, shareCta, shareRows, type ShareRow } from '../lib/shares';
+import { goTo } from '../nav';
 import FriendPicker from './FriendPicker';
 
 export default function ShareSheet({
-  open, isPublic, friendIds, blocked, people, shared, sending, onClose, onSave, onCrew,
+  open, isPublic, friendIds, blocked, people, shared, history, sending, onClose, onSave,
 }: {
   open: boolean;
   /** Whether the list is public now: sharing it makes it private, and the
@@ -65,14 +73,15 @@ export default function ShareSheet({
   people: Record<string, FriendProfile>;
   /** Who the list is shared with now, in the order they were named. */
   shared: readonly string[];
+  /** Every share on every list of the owner's: what the order of the
+   *  faces is worked out from (`shareRows`). */
+  history: readonly ShareRow[];
   sending: boolean;
   onClose: () => void;
   onSave: (add: string[], remove: string[]) => void;
-  /** To the Crew screen, for a reader with nobody in it. */
-  onCrew: () => void;
 }) {
   const { t } = useI18n();
-  const rows = useMemo(() => shareRows(friendIds, shared, blocked), [friendIds, shared, blocked]);
+  const rows = useMemo(() => shareRows(friendIds, shared, blocked, history), [friendIds, shared, blocked, history]);
 
   // Seeded from what is shared now, every time it opens: the sheet is the
   // one place that answers "who has this list?", and a name missing from
@@ -90,7 +99,11 @@ export default function ShareSheet({
       icon: 'person-add-outline' as const,
       label: t('Find friends', 'Tìm bạn bè', '友だちを探す', '查找好友', '查詢好友'),
       disabled: false,
-      onPress: onCrew,
+      // The Crew screen is in the Profile tab's stack, so the jump is
+      // across tabs; `initial: false` keeps Profile's home beneath it
+      // (see `goTo`). Here since 19 Nov 2026, from the list's page,
+      // whose function had no line to give for `history`.
+      onPress: () => { onClose(); goTo('Profile', { screen: 'Crew', initial: false }); },
     }
     : {
       icon: cta.kind === 'private' ? 'lock-closed-outline' as const : 'people-outline' as const,
@@ -127,6 +140,7 @@ export default function ShareSheet({
           '選んだ友だちだけがこのリストを見て使えます。',
           '只有你选择的好友才能看到和使用这个清单。', '只有你選擇的好友才能看到和使用這個清單。',
         )}
+      across
       rows={rows.map((id) => ({ id, on: picked.has(id) }))}
       people={people}
       none={t(

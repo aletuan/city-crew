@@ -43,7 +43,9 @@ describe('sharesByList', () => {
 });
 
 describe('shareRows', () => {
-  it('lists the crew in its own order', () => {
+  const share = (user_id: string, collection_id: string, created_at: string): ShareRow => ({ user_id, collection_id, created_at });
+
+  it('lists the crew in its own order when nothing has been shared', () => {
     expect(shareRows(['lan', 'minh', 'ha'], [], [])).toEqual(['lan', 'minh', 'ha']);
   });
 
@@ -53,15 +55,46 @@ describe('shareRows', () => {
     expect(shareRows(['lan', 'minh'], [], ['minh'])).toEqual(['lan']);
   });
 
-  // Already on the list, so the only thing the owner can do about them is
-  // take them off — which the row must be there to allow.
-  it('keeps a blocked friend the list is still shared with, at the end', () => {
-    expect(shareRows(['minh', 'lan'], ['minh'], ['minh'])).toEqual(['lan', 'minh']);
+  // Who has the list stands first (owner, 19 Nov 2026): the strip is read
+  // from its left end, and they open ticked.
+  it('puts who has this list first, in the order they were named', () => {
+    expect(shareRows(['lan', 'minh', 'ha', 'bao'], ['bao', 'minh'], [])).toEqual(['bao', 'minh', 'lan', 'ha']);
   });
 
-  it('adds a share the crew copy does not know, at the end, once', () => {
-    expect(shareRows(['lan'], ['ha', 'lan'], [])).toEqual(['lan', 'ha']);
-    expect(shareRows([], ['ha'], [])).toEqual(['ha']);
+  // Already on the list, so the only thing the owner can do about them is
+  // take them off — which the row must be there to allow.
+  it('keeps a blocked friend the list is still shared with', () => {
+    expect(shareRows(['minh', 'lan'], ['minh'], ['minh'])).toEqual(['minh', 'lan']);
+  });
+
+  it('lists a share the crew copy does not know, once', () => {
+    expect(shareRows(['lan'], ['ha', 'lan'], [])).toEqual(['ha', 'lan']);
+    expect(shareRows([], ['ha', 'ha'], [])).toEqual(['ha']);
+  });
+
+  it('then the friends shared with on more of the owner\'s lists, before the crew\'s order', () => {
+    const history = [
+      share('ha', 'c1', '2026-11-01'), share('ha', 'c2', '2026-11-02'),
+      share('minh', 'c1', '2026-11-10'),
+    ];
+    expect(shareRows(['lan', 'minh', 'ha', 'bao'], [], [], history)).toEqual(['ha', 'minh', 'lan', 'bao']);
+  });
+
+  it('between two with as many lists, the one shared with more recently — whatever order the rows came in', () => {
+    const history = [share('minh', 'c1', '2026-11-10'), share('lan', 'c2', '2026-11-03'), share('lan', 'c3', '2026-11-12'), share('minh', 'c4', '2026-11-11')];
+    expect(shareRows(['minh', 'lan'], [], [], history)).toEqual(['lan', 'minh']);
+    expect(shareRows(['lan', 'minh'], [], [], [...history].reverse())).toEqual(['lan', 'minh']);
+  });
+
+  it('leaves two alike in every way in the crew\'s order', () => {
+    const history = [share('lan', 'c1', '2026-11-10'), share('minh', 'c2', '2026-11-10')];
+    expect(shareRows(['minh', 'lan'], [], [], history)).toEqual(['minh', 'lan']);
+    expect(shareRows(['lan', 'minh'], [], [], history)).toEqual(['lan', 'minh']);
+  });
+
+  it('does not let the history bring back somebody blocked, or move who already has the list', () => {
+    const history = [share('minh', 'c1', '2026-11-10'), share('minh', 'c2', '2026-11-11'), share('ha', 'c1', '2026-11-01')];
+    expect(shareRows(['lan', 'minh', 'ha'], ['lan'], ['minh'], history)).toEqual(['lan', 'ha']);
   });
 });
 

@@ -114,9 +114,9 @@ export function sharesByList(rows: readonly ShareRow[]): Record<string, string[]
  * refuses those too (`blocked_with`), and a friendship can outlive a
  * block made by a bare insert into `blocks`.
  *
- * Then anybody the list is shared with who is not in that list, at the
- * end — a blocked friend still on the list among them, so the owner can
- * take them off. That row exists for the gap between two copies of the truth: the
+ * And anybody the list is shared with who is not in that list — a
+ * blocked friend still on the list among them, so the owner can take
+ * them off. That row exists for the gap between two copies of the truth: the
  * crew is fetched once for the app and can be a reload behind the shares
  * (a friend accepted on another phone, a crew still loading from cold).
  * The picker's button writes the difference between what was shared and
@@ -124,13 +124,48 @@ export function sharesByList(rows: readonly ShareRow[]): Record<string, string[]
  * unticked friend — and pressing Share would unshare them without anyone
  * having touched their name. Drawn, they open ticked and stay shared
  * unless the owner says otherwise.
+ *
+ * ── the order (owner, 19 Nov 2026) ──
+ *
+ * The picker became a strip of faces that day, four to a screen, and a
+ * strip is scanned from its left end: who stands first is most of
+ * finding somebody. So:
+ *
+ *   1. who has this list now, in the order they were named — the sheet
+ *      is where an owner checks who has it, and they open ticked in a
+ *      row at the front, not scattered along a scroll;
+ *   2. then the friends the owner shares with, the one who has more of
+ *      the owner's lists first, and between two with as many, the one
+ *      shared with more recently;
+ *   3. then the rest, in the crew's order.
+ *
+ * `history` is every share on every list of the owner's — the read the
+ * page already holds (`useMyListShares`), so the order costs no request.
+ * Weighed with the owner and not taken yet: who the owner talks with in
+ * comments, likes from, or went on a trip with. Each is a truer "close
+ * friend" than a share count and each is a read this sheet does not
+ * have; the shares are the one signal about this very act. To weigh
+ * again when a crew is large enough that the second rule leaves the
+ * person wanted off the first screen.
  */
 export function shareRows(
   friendIds: readonly string[], shared: readonly string[], blocked: readonly string[],
+  history: readonly ShareRow[] = [],
 ): string[] {
-  const out = friendIds.filter((id) => !blocked.includes(id));
-  for (const id of shared) if (!out.includes(id)) out.push(id);
-  return out;
+  const lists = new Map<string, number>();
+  const latest = new Map<string, string>();
+  for (const h of history) {
+    lists.set(h.user_id, (lists.get(h.user_id) ?? 0) + 1);
+    if ((latest.get(h.user_id) ?? '') < h.created_at) latest.set(h.user_id, h.created_at);
+  }
+  const rest = friendIds.filter((id) => !blocked.includes(id) && !shared.includes(id));
+  const place = new Map(rest.map((id, i) => [id, i]));
+  rest.sort((a, b) => (
+    (lists.get(b) ?? 0) - (lists.get(a) ?? 0)
+    || (latest.get(b) ?? '').localeCompare(latest.get(a) ?? '')
+    || (place.get(a) as number) - (place.get(b) as number)
+  ));
+  return [...new Set(shared), ...rest];
 }
 
 /**

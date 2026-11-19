@@ -15,6 +15,33 @@
 // rules (`lib/invites`, `lib/shares`) and hands this the outcome, so the
 // rules stay where a Node process can test them.
 //
+// ── across, for a list (owner, 19 Nov 2026) ──
+//
+// The list's sheet draws its friends as a strip of faces to scroll
+// sideways (`across`), after a reference the owner brought: a face with
+// the name under it, pressed to tick, the tick a disc on the face's
+// corner. What it buys is height — the rows took 300pt of the sheet and
+// the strip takes about 120, so the list being shared stays in sight
+// behind it — and a press on a face rather than on a line.
+//
+// What it costs, said to the owner and accepted:
+//
+//   - the handle is not drawn. There is room for a name under a face
+//     and no more; VoiceOver still says both. Two friends of one name
+//     are told apart by their pictures.
+//   - four and a half to a screen. The half is on purpose (`PER_SCREEN`):
+//     a face cut by the sheet's edge is what says there are more. A crew
+//     of twelve is three swipes, and who is ticked beyond the edge is
+//     not in sight — which is why the caller puts who has the list
+//     first (`lib/shares.shareRows`) and the button counts them.
+//
+// One way at every size (owner): no falling back to rows past some
+// number of friends, which would be two sheets to learn.
+//
+// The trip's sheet keeps its rows. A row there carries what a face has
+// no room for — the places saved in common, and "Answered" in place of
+// a tick — so `extra` and `badge` are the rows' alone.
+//
 // ── no search field ──
 //
 // The crew is small: a median of two friends a reader and a most of
@@ -26,7 +53,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
@@ -52,7 +79,7 @@ export type PickRow = {
 };
 
 export default function FriendPicker({
-  open, title, subtitle, rows, people, extra, none, note, cta, rowTestID, onToggle, onClose,
+  open, title, subtitle, rows, people, extra, none, note, across, cta, rowTestID, onToggle, onClose,
 }: {
   open: boolean;
   title: string;
@@ -70,6 +97,10 @@ export default function FriendPicker({
    *  since 19 Nov 2026 (`ShareSheet`); the button then keeps the space
    *  the box's two margins gave it (`gap`). */
   note?: { icon: Icon; text: string };
+  /** Faces in a strip to scroll sideways, in place of rows — see the
+   *  header. `extra`, and a row's `badge` and `off`, are the rows'
+   *  alone: a face is always one that can be ticked. */
+  across?: boolean;
   cta: { icon: Icon; label: string; testID: string; disabled: boolean; onPress: () => void };
   /** Each row's id, by its index. A function rather than a prefix so
    *  that the template is written at the call site, where the Maestro id
@@ -108,6 +139,8 @@ export default function FriendPicker({
           // Not an error, and not a dead end phrased as one: the reader
           // has simply not added anybody yet.
           <Text style={s.none}>{none}</Text>
+        ) : across ? (
+          <Strip rows={rows} people={people} rowTestID={rowTestID} onToggle={onToggle} />
         ) : (
           <ScrollView style={s.list} contentContainerStyle={{ paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
             {rows.map((r, row) => {
@@ -175,6 +208,75 @@ export default function FriendPicker({
   );
 }
 
+/** How many faces a screen's width holds: four, and half of a fifth cut
+ *  by the sheet's edge to say the strip goes on. */
+const PER_SCREEN = 4.5;
+/** A face in the strip: 60. The rows' was 44 beside two lines of type;
+ *  alone over its name it is the whole of the row and can be the size a
+ *  thumb aims at. On a 393pt screen a cell is 82 wide, which leaves 22
+ *  between two faces. Drawn to scale against the owner's reference, not
+ *  yet seen on a phone. */
+const FACE = 60;
+/** The wash round a ticked face: 4 all round. */
+const HALO = FACE + 8;
+
+/** The friends as a strip of faces — see the header. */
+function Strip({ rows, people, rowTestID, onToggle }: {
+  rows: readonly PickRow[];
+  people: Record<string, FriendProfile>;
+  rowTestID: (index: number) => string;
+  onToggle: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const { width } = useWindowDimensions();
+  // The strip runs to the sheet's two edges, so the first face stands on
+  // the page's margin and the last one seen is cut by the screen.
+  const cell = Math.floor((width - space.page) / PER_SCREEN);
+  return (
+    <ScrollView
+      horizontal
+      style={s.strip}
+      contentContainerStyle={s.stripIn}
+      showsHorizontalScrollIndicator={false}
+      testID="picker-strip"
+    >
+      {rows.map((r, i) => {
+        const p = people[r.id];
+        const name = p?.full_name || p?.handle || t('Someone', 'Ai đó', '誰か', '某人', '某人');
+        return (
+          <PressableScale
+            key={r.id}
+            onPress={() => onToggle(r.id)}
+            haptic="selection"
+            accessibilityRole="checkbox"
+            // The handle is said though it is not drawn: it is what
+            // tells two friends of one name apart.
+            accessibilityLabel={p?.handle && p.handle !== name ? `${name}, @${p.handle}` : name}
+            accessibilityState={{ checked: r.on }}
+            aria-checked={r.on}
+            testID={rowTestID(i)}
+            contentStyle={[s.cell, { width: cell }]}
+          >
+            <View style={[s.halo, r.on && s.haloOn]}>
+              <Avatar url={p?.avatar_url} size={FACE} />
+              {r.on ? (
+                // On the sheet's own ground, so the disc is parted from
+                // the photograph without a border to colour.
+                <View style={s.onRim} testID="picker-on">
+                  <View style={s.onDisc}>
+                    <Glyph name="checkmark" size={ICON.meta} color={colors.accentInk} />
+                  </View>
+                </View>
+              ) : null}
+            </View>
+            <Text style={s.cellName} numberOfLines={2}>{name}</Text>
+          </PressableScale>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 const s = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
   sheet: {
@@ -204,6 +306,30 @@ const s = StyleSheet.create({
   },
   tickOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
   badge: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
+
+  // Out to the sheet's edges and back in by the page's margin, less the
+  // slack each cell has beside its face, so the first face — not the
+  // first cell — stands on the margin the title stands on.
+  strip: { marginHorizontal: -space.page, flexGrow: 0 },
+  stripIn: { paddingHorizontal: space.page - 7, paddingTop: 8, paddingBottom: 2 },
+  cell: { alignItems: 'center', gap: 6 },
+  halo: { width: HALO, height: HALO, borderRadius: HALO / 2, alignItems: 'center', justifyContent: 'center' },
+  haloOn: { backgroundColor: colors.accentSoft },
+  onRim: {
+    position: 'absolute', right: -1, bottom: -1, width: 26, height: 26, borderRadius: 13,
+    backgroundColor: colors.bgElevated, alignItems: 'center', justifyContent: 'center',
+  },
+  onDisc: {
+    width: 20, height: 20, borderRadius: 10, backgroundColor: colors.accentFill,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  // Two lines, centred: "Tran Thi Trang" is wider than its cell at 13 and
+  // would be cut at one. The height of two is held, so a strip of short
+  // and long names keeps one foot.
+  cellName: {
+    color: colors.text, fontSize: 13, lineHeight: 17, minHeight: 34, fontWeight: font.medium,
+    textAlign: 'center', paddingHorizontal: 2,
+  },
 
   note: {
     flexDirection: 'row', gap: 9, alignItems: 'flex-start',
