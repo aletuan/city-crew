@@ -62,6 +62,9 @@ const state = vi.hoisted(() => ({
   lang: 'en' as 'en' | 'vi',
   scheme: 'dark' as 'dark' | 'light',
   myBio: '',
+  // The reader's own profile's handle and picture, as auth holds them.
+  myHandle: '',
+  myAvatar: '',
   myLikes: [] as string[],
   // The reader's own library, the lists lent to them and who their own
   // are shared with — and for whom each of the last two was asked.
@@ -75,7 +78,14 @@ vi.mock('../lib/auth', () => ({
   useSession: () => ({ session: state.me ? { user: { id: state.me } } : null }),
   // The reader's own profile, as the form saves it: the bio is what the
   // page reads of it.
-  useProfile: () => ({ profile: { bio: state.myBio } }),
+  useProfile: () => ({ profile: { bio: state.myBio, handle: state.myHandle, avatar_url: state.myAvatar } }),
+}));
+// The picker is its own business (`AvatarPicker.ui.test`); here, that it
+// is the face on your own page, and how.
+vi.mock('../components/AvatarPicker', () => ({
+  default: ({ size, showCamera }: { size?: number; showCamera?: boolean }) => (
+    <div data-testid="own-picker" data-size={size} data-camera={String(showCamera)} style={{ width: size }} />
+  ),
 }));
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.shelf, loading: false, reload: () => {} }),
@@ -219,6 +229,8 @@ beforeEach(() => {
   state.lang = 'en';
   state.scheme = 'dark';
   state.myBio = '';
+  state.myHandle = '';
+  state.myAvatar = '';
   for (const k of Object.keys(heard)) delete heard[k];
   crew.ships.data = [];
   crew.ships.reload.mockClear();
@@ -1952,6 +1964,51 @@ describe('your own page', () => {
     expect(sizes).not.toContain('80px');
     // Nothing between the ring and the picture: no band of page of its own.
     expect([...screen.getByTestId('person-own-face').querySelectorAll('*')].some((el) => getComputedStyle(el).borderWidth === '4px')).toBe(false);
+    // The picture is the picker the Account page draws (owner, 19 Nov
+    // 2026), without its camera badge: pressed, it changes your picture.
+    const picker = screen.getByTestId('own-picker');
+    expect([picker.getAttribute('data-size'), picker.getAttribute('data-camera')]).toEqual(['88', 'false']);
+  });
+
+  // One picture on both pages (owner, 19 Nov 2026): the picker writes
+  // your own profile, and the page draws you from it — on the cards of
+  // your feed as well — not from what it fetched before the change.
+  describe('your picture, changed', () => {
+    const face = () => screen.getAllByTestId('person-act')[0].querySelector('img')?.getAttribute('src');
+    beforeEach(() => {
+      state.shelf = [list('one')];
+    });
+
+    it('draws your own profile\'s picture on your page, over what the page fetched', async () => {
+      state.me = LAN.id;
+      state.myHandle = 'lan';
+      state.myAvatar = 'https://faces/new.jpg';
+      await show();
+      expect(face()).toBe('https://faces/new.jpg');
+    });
+
+    it('draws no picture once you have taken yours away', async () => {
+      state.me = LAN.id;
+      state.myHandle = 'lan';
+      state.myAvatar = '';
+      await show();
+      expect(face()).toBeUndefined();
+    });
+
+    it('keeps what was fetched while your profile has not been read', async () => {
+      state.me = LAN.id;
+      state.myAvatar = 'https://faces/new.jpg';
+      await show();
+      expect(face()).toBe('https://faces/lan.jpg');
+    });
+
+    it('never lays your picture on somebody else\'s page', async () => {
+      state.myHandle = 'me';
+      state.myAvatar = 'https://faces/new.jpg';
+      await show();
+      expect(face()).toBe('https://faces/lan.jpg');
+      expect(screen.queryByTestId('own-picker')).toBeNull();
+    });
   });
 
   // The plan's rule (docs/profile-home-plan.md §3): every reason the last
