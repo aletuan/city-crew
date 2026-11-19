@@ -5,6 +5,13 @@ Soạn 18/11/2026, chủ dự án duyệt cùng ngày. Là một phần của
 danh sách việc phải làm. Mỗi việc xong thì đánh dấu ở mục 3, trong chính
 PR làm việc đó.
 
+**File này là bản duy nhất** (chủ dự án, 19/11/2026). Trước đó có một bản
+chép tay trong Project CityCrew trên Claude và nó đã lệch ba lần; nay ở
+đó chỉ còn một dòng trỏ về đây. Sửa kế hoạch là sửa file này, qua PR.
+
+Đọc nhanh: mục 3 nói việc gì đã xong và còn gì; mục 1 nói đã quyết gì và
+vì sao; mục 2 tả thứ đang chạy (dọn lại ngày 19/11/2026 cho khớp code).
+
 Yêu cầu xuyên suốt: mọi thứ làm cho bình luận trên bộ sưu tập phải dùng
 lại được cho các hoạt động khác về sau (trước hết là check-in) mà không
 phải viết lại.
@@ -22,8 +29,8 @@ phải viết lại.
 | 7 | Giới hạn | 500 ký tự; 30 bình luận mỗi người mỗi ngày. | |
 | 8 | An toàn (Apple 1.2) | Bộ lọc từ cấm lúc đăng; báo cáo từng bình luận; hai người chặn nhau không thấy bình luận của nhau. | App Review Guidelines 1.2 |
 | 9 | Phát hành | Làm sau cờ `comments` (tắt sẵn), merge dần; bật trong một bản nộp duyệt kèm ghi chú cho App Review. | Điều 2.5.2 |
-| 11 | Tim | Mỗi bình luận và mỗi trả lời có **một trái tim**, cạnh bong bóng trả lời (thêm ngày 18/11/2026, chủ dự án yêu cầu; trước đó nằm ở mục Hoãn). Ai đã đăng nhập cũng thả được, kể cả lên bình luận của mình. Chỉ hiện con số, không hiện danh sách ai đã thả. | Threads, Instagram |
 | 10 | Thứ tự | Bình luận gốc: **mới nhất trước**. Trả lời trong một nhánh: cũ trước. Thứ tự là một tham số của hàm đọc luồng, không viết cứng. | Xem dưới |
+| 11 | Tim | Mỗi bình luận và mỗi trả lời có **một trái tim**, cạnh bong bóng trả lời (thêm ngày 18/11/2026, chủ dự án yêu cầu; trước đó nằm ở mục Hoãn). Ai đã đăng nhập cũng thả được, kể cả lên bình luận của mình. Chỉ hiện con số, không hiện danh sách ai đã thả. | Threads, Instagram |
 
 ### Về thứ tự (quyết định 10)
 
@@ -38,9 +45,9 @@ Bình luận gốc là bình luận viết thẳng vào đối tượng, không 
   có nghĩa là hay: bình luận gây tranh cãi hoặc khiếm nhã kéo nhiều trả
   lời nhất, và cách xếp này đưa đúng nó lên đầu.
 
-Về sau: khi làm tim trên bình luận, thêm kiểu xếp **"Nổi bật"** (số tim
-là chính, số trả lời là phụ). Chỉ đổi mặc định sang "Nổi bật" khi các
-luồng thường xuyên vượt khoảng 20 bình luận.
+Về sau: thêm kiểu xếp **"Nổi bật"** (số tim là chính, số trả lời là
+phụ); tim đã có từ C4d. Chỉ đổi mặc định sang "Nổi bật" khi các luồng
+thường xuyên vượt khoảng 20 bình luận.
 
 ### Về việc xoá (quyết định 5, đổi ngày 18/11/2026)
 
@@ -110,20 +117,16 @@ và C11.
 
 **Cái gì là mới**
 
-Con số trên dòng Hoạt động ở Trang cá nhân hôm nay là *tổng số dòng*,
-không phải "chưa xem" (chủ dự án chốt trước đây, để cùng nghĩa với các
-con số bên cạnh). Với lượt thích bộ sưu tập thì ổn. Với bình luận thì
-không đủ: một câu trả lời là thứ người ta cần biết *vừa có*, và hôm nay
-muốn thấy nó phải mở app, sang tab Trang cá nhân, rồi vào Hoạt động.
+Một câu trả lời là thứ người ta cần biết *vừa có*. Màn Hoạt động chỉ là
+một danh sách: không mở nó ra thì không biết có gì.
 
 Chủ dự án chốt ngày 19/11/2026, làm ở C7c:
 
-- Giữ con số là tổng.
-- Thêm một mốc "lần cuối mở Hoạt động", lưu trên máy. Dòng mới hơn mốc
-  có một chấm.
-- **Một chấm trên tab Trang cá nhân** khi có trả lời, tag hoặc bình luận
-  mới hơn mốc. Tim không bật chấm này: tim là tin vui, không phải việc
-  cần đáp.
+- Một mốc "lần cuối mở Hoạt động", lưu trên máy. Dòng mới hơn mốc có một
+  chấm.
+- **Một chấm trên tab cuối và trên cái chuông** ở Trang cá nhân khi có trả
+  lời, tag hoặc bình luận mới hơn mốc. Tim không bật chấm: tim là tin
+  vui, không phải việc cần đáp.
 
 Mốc lưu trên máy nghĩa là đổi máy thì mọi thứ trong hai tuần lại "mới"
 một lần. Chấp nhận được; lưu trên máy chủ thì thêm một bảng cho một cái
@@ -174,14 +177,22 @@ tượng** (`Subject`), và hôm nay chỉ có một loại đối tượng.
 
 ### 2.1 Cơ sở dữ liệu
 
+Bảy migration, theo thứ tự, đều đã áp lên cơ sở dữ liệu thật:
+`20261118050000_comments`, `…120000_app_flag_testers`,
+`…150000_comments_cascade`, `…190000_comment_likes`,
+`20261119050000_comment_tags`, `…070000_comment_owner`,
+`…080000_comment_news`.
+
 **Bảng `comments`**
 
-- `id`, `author` (tài khoản; khi tài khoản bị xoá thì thành rỗng), `body`
-  (1 đến 500 ký tự; rỗng khi đã xoá), `created_at`, `deleted_at`.
+- `id`, `author` (bắt buộc; xoá tài khoản thì bình luận đi theo), `body`
+  (1 đến 500 ký tự, không bao giờ rỗng), `created_at`.
 - `parent_id` (bình luận cha), `root_id` (bình luận gốc của nhánh),
   `depth` (độ sâu thật, do trigger tính).
 - **Cột đối tượng**: `collection_id` (khoá ngoại thật tới `collections`,
   xoá bộ thì xoá luồng). Ràng buộc: đúng một cột đối tượng có giá trị.
+- Xoá một bình luận là xoá cả nhánh bên dưới (khoá ngoại `parent_id` xoá
+  dây chuyền). Không có xoá mềm, không có dòng giữ chỗ.
 
 Vì sao chọn "mỗi loại đối tượng một cột khoá ngoại" thay cho cặp
 `subject_type` + `subject_id`: cặp chung chung không có khoá ngoại, nên
@@ -190,9 +201,12 @@ tự viết tay. Cột khoá ngoại thật giữ được toàn vẹn dữ li�
 mới chỉ là thêm một cột.
 
 **Bảng `comment_mentions`**: `comment_id`, vị trí bắt đầu và độ dài trong
-`body`, rồi `person_id` hoặc `place_id` (khoá ngoại thật). Tag lưu dạng
-liên kết, không phải chữ: người hoặc địa điểm bị xoá thì dòng tag tự mất,
-đoạn chữ còn lại là chữ thường.
+`body` (tính theo ký tự), rồi `person_id` hoặc `place_id` (khoá ngoại
+thật). Tag lưu dạng liên kết, không phải chữ: người hoặc địa điểm bị xoá
+thì dòng tag tự mất, đoạn chữ còn lại là chữ thường.
+
+**Bảng `comment_likes`**: một dòng cho mỗi cặp (bình luận, người). Xoá
+bình luận hoặc tài khoản thì tim đi theo.
 
 **Một hàm quyết định "ai thấy đối tượng này"**:
 `comment_subject_visible(...)`. Hôm nay: bộ sưu tập công khai, và chỉ
@@ -201,61 +215,75 @@ luồng bị ẩn (không mất) cho tới khi công khai lại. Mọi quyền �
 bình luận đều gọi hàm này, cộng với kiểm tra chặn nhau
 (`is_blocked_pair`, đã có).
 
-**Hai bảng không có policy nào.** Bật RLS và không cấp quyền gì cho ứng
-dụng: đọc cũng qua hàm (`comment_thread`, `comment_previews`), ghi cũng
-qua hàm. Lý do: luật "ai chặn ai, bộ nào công khai, bình luận đã xoá còn
-hiện gì" chỉ viết một chỗ; viết lại lần nữa bằng policy thì hai bản sẽ
-lệch nhau.
+**Ba bảng không có policy nào.** Bật RLS và không cấp quyền gì cho ứng
+dụng: đọc và ghi đều qua hàm. Lý do: luật "ai chặn ai, bộ nào công khai"
+chỉ viết một chỗ; viết lại lần nữa bằng policy thì hai bản sẽ lệch nhau.
+Ngoại lệ duy nhất là công tắc `collections.comments_off`, chủ bộ tự ghi
+vào dòng của mình như với `is_public`.
 
-**Đọc**: `comment_thread(bộ, thứ tự)` trả cả luồng dạng phẳng, đúng thứ
-tự vẽ (gốc mới nhất trước, trả lời cũ nhất trước). Khách chưa đăng nhập
-đọc được, vì luồng công khai như chính bộ sưu tập. Bình luận của người bị
-chặn (hoặc đã chặn mình) trả về y như bình luận đã xoá, để ứng dụng không
-phân biệt được hai trường hợp.
+**Các hàm đọc**
 
-**Ghi chỉ qua hàm phía máy chủ**, không cho chèn thẳng vào bảng:
+- `comments_seen(danh sách bộ)`: những bình luận người gọi được thấy. Bình
+  luận của người bị chặn (hoặc đã chặn mình) **và mọi thứ bên dưới nó**
+  không được trả về. Các hàm đọc khác đều đi qua hàm này.
+- `comment_thread(bộ, thứ tự)`: cả luồng dạng phẳng, đúng thứ tự vẽ (gốc
+  mới nhất trước, trả lời cũ nhất trước), kèm tag (tag địa điểm có `slug`)
+  và tim (`likes`, `liked`). Khách chưa đăng nhập đọc được.
+- `comment_previews(danh sách bộ)`: một dòng cho mỗi bộ người đọc thấy
+  được, kể cả bộ chưa có bình luận: số đếm, `off`, và 2 bình luận mới
+  nhất (ứng dụng hiện không dùng phần này). Một lần gọi cho cả lứa thẻ.
+- `comment_taggable(bộ)`: ô soạn hỏi khi mở. Trả người và địa điểm tag
+  được, cùng `off` (luồng đã tắt) và `mine` (người gọi là chủ bộ).
+- `comment_news(từ lúc nào)`: các dòng thông báo của người gọi (xem "Về
+  thông báo"). Tính lúc đọc; không có bảng thông báo.
+
+**Các hàm ghi** (không cho chèn thẳng vào bảng)
 
 - `post_comment(đối tượng, cha, nội dung, danh sách tag)`: kiểm tra quyền
   thấy, bình luận có đang tắt không, giới hạn ngày, bộ lọc từ cấm, cha có
   cùng đối tượng không, từng tag có hợp lệ không; rồi ghi bình luận và tag
   trong một giao dịch.
-- `delete_comment(id)`: tác giả hoặc chủ đối tượng. Còn con thì xoá mềm
-  (rỗng nội dung), hết con thì xoá hẳn và dọn ngược lên các dòng giữ chỗ
-  không còn con.
+- `delete_comment(id)`: tác giả hoặc chủ đối tượng.
+- `like_comment(id, bật/tắt)`: gọi lặp lại cũng không sao.
 
 **Phần đi kèm**
 
-- `collections.comments_off` (công tắc của chủ bộ): tắt là không nhận
-  bình luận mới, bình luận cũ vẫn đọc được.
-- `comment_previews(danh sách đối tượng)`: trả **số đếm** và 2 bình luận
-  mới nhất cho mỗi thẻ, một lần gọi cho cả lứa thẻ.
+- `collections.comments_off`: tắt là không nhận bình luận mới, bình luận
+  cũ vẫn đọc được.
+- `banned_words`: danh sách từ cấm. **Đang trống**; Data Desk chưa có
+  trang sửa (C8).
+- `reports.kind` có giá trị `comment`. Data Desk **chưa hiện đúng** loại
+  này (C8).
+- `app_flag_testers`: bật một cờ riêng cho vài tài khoản (mục 3b).
 - Đã bỏ: cột `collections.comment_count` đếm sẵn bằng trigger (bản đầu của
   kế hoạch). Bảng `collections` đã có trigger và policy cho chủ bộ sửa;
   thêm một cột đếm là thêm một thứ ứng dụng có thể ghi và trigger phải
   canh. Với khoảng sáu chục bộ công khai, đếm lúc hỏi là một lần quét
   index. Khi nào chậm thì mới thành cột.
-- `banned_words`: danh sách từ cấm, sửa được từ Data Desk.
-- `reports.kind` thêm giá trị `comment` (bảng báo cáo đã có).
-- Hoạt động: thêm hai loại dòng "trả lời bạn" và "nhắc tới bạn" vào nguồn
-  dữ liệu của màn Hoạt động.
-- Xoá tài khoản: bình luận của người đó mất nội dung ngay; dòng chỉ còn
-  lại làm chỗ giữ nếu có người khác trả lời bên dưới.
 
 ### 2.2 Ứng dụng
 
-- Kiểu `Subject = { kind: 'collection', id }`. Mọi hàm đọc, ghi và mọi
-  thành phần giao diện nhận `Subject`, không nhận "bộ sưu tập".
-- `lib/comments.ts` (thuần, kiểm thử 100%): dựng cây từ danh sách phẳng,
-  ép độ sâu hiển thị về 2, cắt nội dung thành đoạn chữ và đoạn tag, quy
-  tắc dòng "đã xoá".
-- `lib/data/comments.ts`: gọi các hàm máy chủ.
-- `components/CommentThread`, `CommentRow`, `CommentComposer`: nhận
-  `subject`, danh sách địa điểm tag được, và hai hàm mở Trang cá nhân / mở
-  địa điểm. Không tự biết đối tượng là gì.
-- `ActivityCard`: thêm số bình luận, 2 bình luận xem trước, và nút mở
-  luồng.
-- Màn `Comments` (tham số là `subject`): luồng đầy đủ, mở từ thẻ và từ
-  trang chi tiết bộ sưu tập.
+Mọi hàm và thành phần nhận `Subject = { kind: 'collection', id }`, không
+nhận "bộ sưu tập".
+
+- **Thuần, kiểm thử 100%** (`app/src/lib`): `comments.ts` (dựng cây, ép
+  độ sâu hiển thị về 2, cắt nội dung thành đoạn chữ và đoạn tag, tim),
+  `commentTags.ts` (tag trong lúc soạn), `commentNews.ts` (dòng thông báo
+  và hai nhóm của Hoạt động), `commentWords.ts` (câu từ chối),
+  `commentsChanged.ts` (báo cả app hỏi lại sau khi viết hoặc xoá).
+- **Gọi máy chủ**: `lib/data/comments.ts`, và các hook trong
+  `lib/data/hooks.ts`.
+- **Thành phần** (`app/src/components`): `CommentRow`, `CommentComposer`,
+  `CommentTagOffers`, `CommentQuick` (ô gõ tại chỗ, gắn một lần ở
+  `App.tsx`), và bong bóng trên `ActivityCard`.
+- **Màn Bình luận**: `screens/CommentsScreen.tsx`, với các phần của nó
+  trong `screens/comments/`: `useThreadWriting` (viết, trả lời),
+  `useCommentHearts` (tim), `useCommentMenu` (xoá, báo cáo),
+  `useThreadOwner` (tắt bình luận), `useThreadFocus` (mở đúng một bình
+  luận).
+- **Lối vào**: `screens/collectionDetail/CommentsDoor` (trang bộ sưu tập)
+  và `screens/person/useCardComments` (các thẻ).
+- **Hoạt động**: `screens/activity/ActivityRows`.
 - Cờ `comments` trong `app_flags`, mặc định tắt (`app/src/lib/flags.ts`).
 
 ### 2.3 Thêm check-in về sau cần những gì
@@ -290,13 +318,11 @@ Mỗi mục là một PR, merge sau cờ tắt, theo thứ tự.
 cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại)
 - Migration: hai bảng, các hàm ở 2.1, quyền truy cập, trigger độ sâu,
   `banned_words`, `reports.kind`.
-- Chưa làm ở đây, thuộc C7: hai loại dòng "trả lời bạn" và "nhắc tới
-  bạn" trong nguồn dữ liệu của màn Hoạt động.
 - Kiểm thử trong `supabase/tests`: người lạ không thấy bình luận trên bộ
   riêng tư; hai người chặn nhau không thấy nhau; quá 30 một ngày bị từ
   chối; từ cấm bị từ chối; cha khác đối tượng bị từ chối; tag người không
-  hợp lệ bị từ chối; xoá có con để lại chỗ giữ, xoá hết con thì dọn sạch;
-  xoá tài khoản làm rỗng nội dung.
+  hợp lệ bị từ chối. (Luật xoá của bản này, để lại dòng giữ chỗ, đã được
+  thay ở `…150000_comments_cascade`.)
 - Áp migration lên cơ sở dữ liệu thật, sinh lại kiểu dữ liệu.
 
 **C2. Lõi ứng dụng** — xong
@@ -312,7 +338,7 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 **C3. Đọc** — chia hai PR
 
 *C3a — xong:*
-- Màn `Comments` (tham số là `subject`): cây thụt 2 mức, dòng "đã xoá",
+- Màn `Comments` (tham số là `subject`): cây thụt 2 mức,
   "Xem thêm N trả lời" sau 2 trả lời đầu của mỗi nhánh, 10 bình luận gốc
   mỗi lứa và tự thêm khi cuộn gần cuối (dùng lại `lib/feed`), kéo để tải
   lại, ba trạng thái (đang tải, trống, lỗi kèm Thử lại).
@@ -392,7 +418,8 @@ sinh lại):*
   phím đang mở, và nó xét "nằm trong" theo cây React chứ không theo chỗ
   vẽ (facebook/react-native#28871). Nay cả app chỉ có **một** ô, gắn phía
   trên bộ điều hướng (`CommentQuickProvider` trong `App.tsx`), không có
-  `ScrollView` nào là cha. Chưa xác nhận lại trên máy.
+  `ScrollView` nào là cha. Chủ dự án xác nhận trên máy ngày 19/11/2026:
+  bấm một lần là gửi.
 - Chỉ bật tại chỗ khi **đã biết chắc** luồng trống: đã đăng nhập, con số
   đã về và không đang được hỏi lại. Chưa biết thì mở luồng, để không che
   mất bình luận đang có. Khách cũng mở luồng, nơi họ được mời đăng nhập.
@@ -406,8 +433,7 @@ sinh lại):*
   tải lại; lỗi thì báo và không đổi gì.
 - Bình luận của người khác: "Báo cáo bình luận", đi qua đúng luồng báo
   cáo sẵn có (bốn lý do, cùng hàng chờ của Data Desk) với loại `comment`.
-- Chủ bộ xoá bình luận của người khác vẫn là C6, chưa có ở đây dù máy chủ
-  đã cho phép.
+- Chủ bộ xoá bình luận của người khác: làm ở C6.
 
 **C5. Tag** — xong (`20261119050000_comment_tags.sql`; đã áp lên cơ sở
 dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
@@ -448,8 +474,12 @@ dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
   bản kế hoạch đầu. Lý do: Instagram và Threads đặt nó trên bài, không
   trong màn sửa; màn sửa lưu bằng nút Lưu còn công tắc này phải có hiệu
   lực ngay; và hàm của màn sửa đã chạm trần độ dài.
-- Bấm ⋯ thì một hộp hỏi nói trước việc sẽ xảy ra: bình luận đang có vẫn
-  đọc được, không ai viết thêm được cho tới khi bật lại.
+- Bấm ⋯ thì hiện **tấm trượt của app** với hai dòng "Bật bình luận" và
+  "Tắt bình luận", dòng đang đúng có dấu tích, mỗi dòng nói rõ nghĩa của
+  nó; cùng kiểu với tấm "Ai xem được bộ sưu tập". Bản đầu dùng hộp hỏi của
+  hệ điều hành; chủ dự án yêu cầu đổi ngày 19/11/2026 vì mọi nút ⋯ khác
+  trong app đều mở tấm trượt. Không hỏi lại lần hai: tắt bình luận không
+  xoá gì và bật lại được ngay.
 - Luồng đã tắt: chỗ ô soạn là một dòng "Chủ bộ sưu tập đã tắt bình luận"
   (chủ bộ đọc "Bạn đã tắt…"), bong bóng trả lời **mờ đi và không bấm
   được**, tim vẫn thả được.
@@ -512,19 +542,21 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   sẵn có của màn. Hệ quả: nếu riêng phần này lỗi thì màn không báo lỗi,
   chỉ không có dòng bình luận.
 
-*C7c — cái gì là mới (phải khớp `docs/profile-home-plan.md`, mục 3 và 8):*
+*C7c — cái gì là mới — **phiên làm Trang cá nhân nhận việc này** (chủ dự
+án, 19/11/2026), vì cái chuông của họ (P3, đã merge) là nơi chấm hiện ra;
+theo dõi ở `docs/profile-home-plan.md`:*
 - Mốc "lần cuối mở Hoạt động" trên máy; chấm trên dòng mới hơn mốc.
-- Chấm trên tab cuối cho trả lời, tag và bình luận mới (tim không bật
-  chấm), **đọc từ một hook duy nhất**. Cái chuông trên Trang cá nhân (P3
-  của kế hoạch kia) đọc đúng hook đó, không tự tính lại.
-- Luật của kế hoạch kia: mỗi lý do làm tab có chấm phải thấy được ở màn
-  đầu Trang cá nhân và hết khi xử lý xong. Với bình luận: thấy ở chấm
-  trên chuông, hết khi mở Hoạt động. Có một test trên `spokenTab` giữ
-  luật này; nếu C7c xong trước P3 thì phải thống nhất chỗ hiện tạm với
-  phiên kia trước khi merge.
+- Chấm trên tab cuối và trên chuông cho trả lời, tag và bình luận mới
+  (tim không bật chấm), đọc từ một hook duy nhất. `person/Bell` đã nhận
+  sẵn `fresh`.
+- Dữ liệu đã có: `useCommentNewsQuery` trả các dòng kèm loại và thời
+  điểm.
 
-**C8. Data Desk**
+**C8. Data Desk** — việc kế tiếp của phiên bình luận
 - Hàng chờ báo cáo hiện loại `comment` kèm nội dung; nút gỡ bình luận.
+  Hiện Data Desk coi mọi báo cáo không phải bộ sưu tập là "profile", nên
+  báo cáo bình luận hiện sai loại và không có nội dung. Trên cơ sở dữ
+  liệu thật đã có 1 báo cáo như vậy (từ tài khoản thử).
 - Trang sửa danh sách từ cấm.
 
 **C9. Pháp lý và cửa hàng**
@@ -571,8 +603,7 @@ nhập, đăng xuất. Trước C10 nên xoá hết các dòng này, vì lúc đ
    phải tấm trượt từ dưới lên kiểu Instagram. Lý do: cây lồng cộng bàn
    phím cần đủ chiều cao (trong tấm trượt, bật bàn phím là không còn thấy
    bình luận đang trả lời); màn Hoạt động (C7) cần mở thẳng vào một bình
-   luận, mà màn riêng thì có sẵn địa chỉ; và nhu cầu "liếc nhanh" đã có 2
-   bình luận xem trước ngay trên thẻ. Threads cũng mở bài thành màn riêng;
+   luận, mà màn riêng thì có sẵn địa chỉ. Threads cũng mở bài thành màn riêng;
    không lấy kiểu "mỗi trả lời là một màn" của Threads vì luồng ở đây
    ngắn.
 2. **Danh sách từ cấm ban đầu**: cần cả tiếng Việt và tiếng Anh. Ai soạn
@@ -581,8 +612,7 @@ nhập, đăng xuất. Trước C10 nên xoá hết các dòng này, vì lúc đ
 ## 5. Rủi ro
 
 - **Khối lượng**: đây là thay đổi lớn nhất từ trước tới giờ ở tầng dữ
-  liệu (2 bảng, khoảng 6 hàm, trigger). C1 quyết định chất lượng của cả
-  phần còn lại.
+  liệu (3 bảng, 12 hàm, trigger).
 - **Mật độ**: 126 hồ sơ. Luồng trống là trạng thái thường gặp, nên thẻ
   không hiện gì về bình luận khi chưa có cái nào, ngoài nút mở luồng.
 - **Kiểm duyệt**: báo cáo về bàn biên tập trong 24 giờ là cam kết đã có

@@ -590,24 +590,41 @@ describe('the owner\'s side', () => {
     expect(screen.getByTestId('composer-closed').textContent).toBe('You turned off comments on this collection.');
   });
 
-  it('gives the owner a ⋯ that asks before closing, saying what closing does', async () => {
+  // A sheet row closes the sheet, then acts 220 ms on (`SheetRows`).
+  const pick = async (key: 'on' | 'off') => {
+    fireEvent.click(screen.getByTestId(`sheet-action-${key}`));
+    await act(async () => { await new Promise((r) => { setTimeout(r, 240); }); });
+    await flush();
+  };
+  const rowSaid = (key: 'on' | 'off') => screen.getByTestId(`sheet-action-${key}`);
+
+  // The app's own sheet, not the system's alert (owner, 19 Nov 2026).
+  it('gives the owner a ⋯ that raises a sheet of the two states, the true one ticked, each saying what it means', async () => {
     told({ off: false, mine: true });
     const alert = alerts();
     await open();
+    expect(screen.queryByTestId('sheet-action-off')).toBeNull();
     const more = screen.getByTestId('comments-owner');
     expect(more.getAttribute('aria-label')).toBe('Comment settings');
     fireEvent.click(more);
-    expect(alert).toHaveBeenCalledTimes(1);
-    const [title, body, buttons] = alert.mock.calls[0];
-    expect(title).toBe('Turn off comments?');
-    expect(body).toBe('Comments already here stay readable. Nobody can add one until you turn them back on.');
-    expect(buttons!.map((b) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Turn off', 'destructive']]);
-    expect(buttons![0].onPress).toBeUndefined();
+    expect(alert).not.toHaveBeenCalled();
+    expect(rowSaid('on').textContent).toContain('Comments on');
+    expect(rowSaid('on').textContent).toContain('Anyone signed in can comment on this collection.');
+    expect(rowSaid('off').textContent).toContain('Comments off');
+    expect(rowSaid('off').textContent).toContain('Comments already here stay readable. Nobody can add one until you turn them back on.');
+    expect([rowSaid('on').getAttribute('aria-selected'), rowSaid('off').getAttribute('aria-selected')]).toEqual(['true', 'false']);
     expect(data.setCommentsOff).not.toHaveBeenCalled();
     alert.mockRestore();
   });
 
-  it('closes the thread, then asks again what the field is told and tells the cards', async () => {
+  it('has no sheet for anybody else', async () => {
+    told({ off: true, mine: false });
+    await open();
+    expect(screen.queryByTestId('comments-owner')).toBeNull();
+    expect(screen.queryByTestId('sheet-action-on')).toBeNull();
+  });
+
+  it('closes the thread from the sheet, asking nothing twice, then asks again what the field is told and tells the cards', async () => {
     told({ off: false, mine: true });
     const alert = alerts();
     await open();
@@ -615,8 +632,8 @@ describe('the owner\'s side', () => {
     const threads = data.fetchThread.mock.calls.length;
     fireEvent.click(screen.getByTestId('comments-owner'));
     told({ off: true, mine: true });
-    await act(async () => { alert.mock.calls[0][2]![1].onPress!(); await Promise.resolve(); await Promise.resolve(); });
-    await flush();
+    await pick('off');
+    expect(alert).not.toHaveBeenCalled();
     expect(data.setCommentsOff).toHaveBeenCalledExactlyOnceWith(SUBJECT, true);
     expect(data.fetchTaggable.mock.calls.length).toBe(asked + 1);
     // `commentsChanged`: the thread is asked again, as the cards' counts are.
@@ -625,18 +642,26 @@ describe('the owner\'s side', () => {
     alert.mockRestore();
   });
 
-  it('opens a closed thread again the same way, without the warning colour', async () => {
+  it('opens a closed thread again from the same sheet, where the tick has moved', async () => {
     told({ off: true, mine: true });
-    const alert = alerts();
     await open();
     fireEvent.click(screen.getByTestId('comments-owner'));
-    const [title, body, buttons] = alert.mock.calls[0];
-    expect(title).toBe('Turn comments back on?');
-    expect(body).toBe('People will be able to comment on this collection again.');
-    expect(buttons!.map((b) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Turn on', undefined]]);
-    await act(async () => { buttons![1].onPress!(); await Promise.resolve(); await Promise.resolve(); });
+    expect([rowSaid('on').getAttribute('aria-selected'), rowSaid('off').getAttribute('aria-selected')]).toEqual(['false', 'true']);
+    await pick('on');
     expect(data.setCommentsOff).toHaveBeenCalledExactlyOnceWith(SUBJECT, false);
-    alert.mockRestore();
+  });
+
+  it('changes nothing when the state that is already true is chosen', async () => {
+    told({ off: false, mine: true });
+    await open();
+    fireEvent.click(screen.getByTestId('comments-owner'));
+    await pick('on');
+    told({ off: true, mine: true });
+    cleanup();
+    await open();
+    fireEvent.click(screen.getByTestId('comments-owner'));
+    await pick('off');
+    expect(data.setCommentsOff).not.toHaveBeenCalled();
   });
 
   it('says so when the switch could not be thrown, and asks nothing again', async () => {
@@ -646,10 +671,9 @@ describe('the owner\'s side', () => {
     await open();
     const asked = data.fetchTaggable.mock.calls.length;
     fireEvent.click(screen.getByTestId('comments-owner'));
-    await act(async () => { alert.mock.calls[0][2]![1].onPress!(); await Promise.resolve(); await Promise.resolve(); });
-    await flush();
-    expect(alert).toHaveBeenCalledTimes(2);
-    expect(alert.mock.calls[1].slice(0, 2)).toEqual(['Could not change that', 'Please try again later.']);
+    await pick('off');
+    expect(alert).toHaveBeenCalledTimes(1);
+    expect(alert.mock.calls[0].slice(0, 2)).toEqual(['Could not change that', 'Please try again later.']);
     expect(data.fetchTaggable.mock.calls.length).toBe(asked);
     alert.mockRestore();
   });
