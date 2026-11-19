@@ -239,13 +239,8 @@ function newsLine(n: CommentNews, by: string | null, title: string, t: Translate
 function lineOf(item: ActivityItem, by: string | null, shown: string, t: Translate): string {
   switch (item.kind) {
     case 'applause':
-      return by
-        ? t(`${by} liked “${shown}”`, `${by} đã thích “${shown}”`, `${by} が「${shown}」にいいねしました`, `${by} 点赞了“${shown}”`, `${by} 按讚了「${shown}」`)
-        : t(`Someone liked “${shown}”`, `Ai đó đã thích “${shown}”`, `誰かが「${shown}」にいいねしました`, `有人点赞了“${shown}”`, `有人按讚了「${shown}」`);
     case 'copy':
-      return by
-        ? t(`${by} saved a copy of “${shown}”`, `${by} đã lưu bản sao “${shown}”`, `${by} が「${shown}」のコピーを保存しました`, `${by} 保存了“${shown}”的副本`, `${by} 儲存了「${shown}」的副本`)
-        : t(`Someone saved a copy of “${shown}”`, `Ai đó đã lưu bản sao “${shown}”`, `誰かが「${shown}」のコピーを保存しました`, `有人保存了“${shown}”的副本`, `有人儲存了「${shown}」的副本`);
+      return praiseLine(item.kind, by ?? t('Someone', 'Ai đó', '誰か', '有人', '有人'), item.others, shown, t);
     case 'liked':
       return by
         ? t(`You liked ${by}’s “${shown}”`, `Bạn đã thích “${shown}” của ${by}`, `${by} の「${shown}」にいいねしました`, `你点赞了 ${by} 的“${shown}”`, `你按讚了 ${by} 的「${shown}」`)
@@ -264,6 +259,25 @@ function lineOf(item: ActivityItem, by: string | null, shown: string, t: Transla
         ? t(`You and ${by} are now friends`, `Bạn và ${by} đã thành bạn bè`, `${by} と友達になりました`, `你和 ${by} 成为了好友`, `你和 ${by} 成為了好友`)
         : t('You made a new friend', 'Bạn đã có thêm một người bạn', '新しい友達ができました', '你有了一位新朋友', '你有了一位新朋友');
   }
+}
+
+/**
+ * What others did with one of your lists: the latest of them, and the
+ * rest as a number — "and 1 other", "and 2 others" — because a list is
+ * one row however many liked it (`buildActivity`), as a comment is. With
+ * no name to give it is "Someone", as it was.
+ */
+function praiseLine(kind: 'applause' | 'copy', who: string, others: number, shown: string, t: Translate): string {
+  if (kind === 'applause') {
+    if (others === 0) return t(`${who} liked “${shown}”`, `${who} đã thích “${shown}”`, `${who} が「${shown}」にいいねしました`, `${who} 点赞了“${shown}”`, `${who} 按讚了「${shown}」`);
+    return others === 1
+      ? t(`${who} and 1 other liked “${shown}”`, `${who} và 1 người khác đã thích “${shown}”`, `${who} と他1人が「${shown}」にいいねしました`, `${who} 和另外 1 人点赞了“${shown}”`, `${who} 和另外 1 人按讚了「${shown}」`)
+      : t(`${who} and ${others} others liked “${shown}”`, `${who} và ${others} người khác đã thích “${shown}”`, `${who} と他${others}人が「${shown}」にいいねしました`, `${who} 和另外 ${others} 人点赞了“${shown}”`, `${who} 和另外 ${others} 人按讚了「${shown}」`);
+  }
+  if (others === 0) return t(`${who} saved a copy of “${shown}”`, `${who} đã lưu bản sao “${shown}”`, `${who} が「${shown}」のコピーを保存しました`, `${who} 保存了“${shown}”的副本`, `${who} 儲存了「${shown}」的副本`);
+  return others === 1
+    ? t(`${who} and 1 other saved a copy of “${shown}”`, `${who} và 1 người khác đã lưu bản sao “${shown}”`, `${who} と他1人が「${shown}」のコピーを保存しました`, `${who} 和另外 1 人保存了“${shown}”的副本`, `${who} 和另外 1 人儲存了「${shown}」的副本`)
+    : t(`${who} and ${others} others saved a copy of “${shown}”`, `${who} và ${others} người khác đã lưu bản sao “${shown}”`, `${who} と他${others}人が「${shown}」のコピーを保存しました`, `${who} 和另外 ${others} 人保存了“${shown}”的副本`, `${who} 和另外 ${others} 人儲存了「${shown}」的副本`);
 }
 
 /** The feed line's line height, and the box that holds a 19pt glyph's

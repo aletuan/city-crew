@@ -308,8 +308,8 @@ describe('the empty state', () => {
 describe('the faces down the left', () => {
   it('lead with the actor\u2019s avatar, and a small badge for what they did', async () => {
     data.avatars = { bao: 'https://faces/bao.jpg' };
-    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao'), like('c1', '2026-09-10T10:00:00Z', 'anh')]);
-    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao'), like('c2', '2026-09-10T10:00:00Z', 'anh')]);
+    data.mine = [col('c1', 'pho-walk', 'Pho walk'), col('c2', 'my-cafes', 'My cafes')];
     await renderScreen();
     expect(document.querySelector('[data-testid="round-icon"]')).toBeNull();
     const slots = screen.getAllByTestId('row-face');
@@ -376,35 +376,78 @@ describe('the chevron at the end of a row', () => {
 
 describe('the applause', () => {
   it('names the liker by handle, newest first, with the time since in words', async () => {
-    catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
-    data.mine = [col('c2', 'my-cafes', 'My cafes')];
+    data.mine = ['a', 'b', 'c', 'd', 'e'].map((k) => col(`c-${k}`, `list-${k}`, `List ${k}`));
     data.fetchApplause.mockImplementation(async () => [
-      like('c1', '2026-09-09T12:00:00', 'dao'),
-      like('c2', '2026-09-11T11:59:30', 'anh'),
-      like('c1', '2026-09-11T11:55:00', 'bao'),
-      like('c2', '2026-09-11T09:00:00'),
-      like('c1', '2026-09-10T11:00:00', 'cam'),
+      like('c-e', '2026-09-09T12:00:00', 'dao'),
+      like('c-a', '2026-09-11T11:59:30', 'anh'),
+      like('c-b', '2026-09-11T11:55:00', 'bao'),
+      like('c-c', '2026-09-11T09:00:00'),
+      like('c-d', '2026-09-10T11:00:00', 'cam'),
     ]);
     await renderScreen();
     const lines = screen.getAllByText(/liked “/).map((n) => n.textContent);
     expect(lines).toEqual([
-      '@anh liked “My cafes”',
-      '@bao liked “Pho walk”',
-      'Someone liked “My cafes”',
-      '@cam liked “Pho walk”',
-      '@dao liked “Pho walk”',
+      '@anh liked “List a”',
+      '@bao liked “List b”',
+      'Someone liked “List c”',
+      '@cam liked “List d”',
+      '@dao liked “List e”',
     ]);
     for (const ago of ['just now', '5m ago', '3h ago', 'yesterday', '2 days ago']) {
       expect(screen.getByText(ago)).toBeTruthy();
     }
   });
 
+  // One row a list (owner, 19 Nov 2026): the latest liker named, the
+  // rest counted, at the latest like's time — as hearts on a comment are.
+  it('gathers the likes on one list into one row, naming the latest and counting the rest', async () => {
+    catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
+    data.mine = [col('c2', 'my-cafes', 'My cafes'), col('c3', 'bars', 'Bars')];
+    data.avatars = { anh: 'https://faces/anh.jpg' };
+    data.fetchApplause.mockImplementation(async () => [
+      like('c1', '2026-09-09T12:00:00', 'dao'),
+      like('c2', '2026-09-11T09:00:00'),
+      like('c1', '2026-09-11T11:55:00', 'bao'),
+      like('c2', '2026-09-11T11:59:30', 'anh'),
+      like('c1', '2026-09-10T11:00:00', 'cam'),
+      like('c3', '2026-09-08T11:00:00'),
+    ]);
+    const navigation = await renderScreen();
+    expect(screen.getAllByText(/liked “/).map((n) => n.textContent)).toEqual([
+      '@anh and 1 other liked “My cafes”',
+      '@bao and 2 others liked “Pho walk”',
+      'Someone liked “Bars”',
+    ]);
+    // The row is the latest liker's: their face, their like's time.
+    const first = screen.getByRole('button', { name: /@anh and 1 other/ });
+    expect(first.querySelector('img')!.getAttribute('src')).toBe('https://faces/anh.jpg');
+    expect(first.textContent).toContain('just now');
+    expect(screen.getByRole('button', { name: /@bao and 2 others/ }).textContent).toContain('5m ago');
+    expect(screen.queryByText('3h ago')).toBeNull();
+    fireEvent.click(first);
+    expect(navigation.navigate).toHaveBeenLastCalledWith('CollectionDetail', { slug: 'my-cafes' });
+  });
+
+  it('says the gathered lines in the reader\u2019s language', async () => {
+    data.mine = [col('c1', 'pho-walk', 'Pho walk'), col('c2', 'my-cafes', 'My cafes')];
+    data.fetchApplause.mockImplementation(async () => [
+      like('c1', '2026-09-11T11:00:00', 'bao'), like('c1', '2026-09-11T10:00:00', 'anh'), like('c1', '2026-09-11T09:00:00', 'cam'),
+    ]);
+    data.fetchCopies.mockImplementation(async () => ['dao', 'anh'].map((h, i): Copy => (
+      { collection_id: 'c2', copied_at: `2026-09-11T0${8 - i}:00:00`, copier_handle: h, copier_name: null }
+    )));
+    i18n.lang = 'vi';
+    await renderScreen();
+    expect(screen.getByText('@bao và 2 người khác đã thích “Pho walk (vi)”')).toBeTruthy();
+    expect(screen.getByText('@dao và 1 người khác đã lưu bản sao “My cafes (vi)”')).toBeTruthy();
+  });
+
   // A week of distances, then the date — past a week nobody counts back.
   it('tells a time older than a week as a date, in the check-in rows\u2019 form', async () => {
-    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
+    data.mine = [col('c1', 'pho-walk', 'Pho walk'), col('c2', 'my-cafes', 'My cafes')];
     data.fetchApplause.mockImplementation(async () => [
       like('c1', '2026-09-04T10:00:00', 'bao'), // 7 days: still a distance
-      like('c1', '2026-09-03T10:00:00', 'anh'), // 8 days: a date
+      like('c2', '2026-09-03T10:00:00', 'anh'), // 8 days: a date
     ]);
     await renderScreen();
     expect(screen.getByText('7 days ago')).toBeTruthy();
@@ -457,13 +500,22 @@ describe('the copies', () => {
   it('names the copier and the list, in the timeline with the likes, with its own glyph', async () => {
     catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
     data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00Z', 'anh')]);
-    data.fetchCopies.mockImplementation(async () => [copyOf('c1', '2026-09-11T10:00:00Z', 'bao'), copyOf('c1', '2026-09-10T10:00:00Z')]);
+    data.mine = [col('c2', 'my-cafes', 'My cafes'), col('c3', 'bars', 'Bars')];
+    data.fetchCopies.mockImplementation(async () => [
+      copyOf('c1', '2026-09-11T10:00:00Z', 'bao'), copyOf('c2', '2026-09-10T10:00:00Z'),
+      // One list copied by three people, one of them twice: a row, and
+      // the two who are not named are the others.
+      copyOf('c3', '2026-09-08T10:00:00Z', 'cam'), copyOf('c3', '2026-09-07T10:00:00Z', 'dao'),
+      copyOf('c3', '2026-09-06T10:00:00Z', 'cam'), copyOf('c3', '2026-09-05T10:00:00Z', 'anh'),
+    ]);
     await renderScreen();
     const lines = screen.getAllByText(/liked “|saved a copy of “/).map((n) => n.textContent);
+    // A like and a copy of the same list stay two rows.
     expect(lines).toEqual([
       '@bao saved a copy of “Pho walk”',
       '@anh liked “Pho walk”',
-      'Someone saved a copy of “Pho walk”',
+      'Someone saved a copy of “My cafes”',
+      '@cam and 2 others saved a copy of “Bars”',
     ]);
     const row = screen.getByRole('button', { name: /@bao saved a copy/ });
     expect(row.querySelector('[data-testid="kind-badge"] span')!.getAttribute('data-icon')).toBe('copy');

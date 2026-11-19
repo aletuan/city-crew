@@ -58,9 +58,9 @@ describe('activityGroups', () => {
   const news = (at: string, kind: CommentNews['kind'] = 'reply'): CommentNews => commentNewsOf([wire({ at, kind, comment_id: `k-${at}` })])[0];
   const items: ActivityItem[] = [
     { kind: 'liked', at: '2026-11-18T09:00:00Z', collection_id: 'c9', owner_handle: 'son' },
-    { kind: 'applause', at: '2026-11-17T09:00:00Z', collection_id: 'c1', liker_handle: 'bao', liker_name: null },
+    { kind: 'applause', at: '2026-11-17T09:00:00Z', collection_id: 'c1', liker_handle: 'bao', liker_name: null, others: 0 },
     { kind: 'copied', at: '2026-11-16T09:00:00Z', collection_id: 'c8', owner_handle: 'minh' },
-    { kind: 'copy', at: '2026-11-15T09:00:00Z', collection_id: 'c1', copier_handle: 'lan', copier_name: null },
+    { kind: 'copy', at: '2026-11-15T09:00:00Z', collection_id: 'c1', copier_handle: 'lan', copier_name: null, others: 0 },
     { kind: 'friend', at: '2026-11-14T09:00:00Z', other: 'u-x', asked: 'you' },
     { kind: 'friend', at: '2026-11-13T09:00:00Z', other: 'u-y', asked: 'them' },
   ];
