@@ -61,6 +61,12 @@
 // many friends the list is shared with. VoiceOver is told all of it —
 // "Share, Friends, 3".
 //
+// ── after the comments (owner, 19 Nov 2026) ──
+//
+// "Beside the heart" above is where it began. It is third now: heart,
+// comments, Share. `CollectionDetailScreen` has the reasons where the
+// row is put together.
+//
 // ── what stays under the handle ──
 //
 // The state's glyph alone — a globe, two heads, a padlock — with no word

@@ -1,5 +1,6 @@
-// The way into a list's comments, at the card's foot beside Share (C3 of
-// `docs/comments-plan.md`).
+// The way into a list's comments, at the card's foot beside the heart
+// (C3 of `docs/comments-plan.md`) — before Share since 19 Nov 2026; the
+// page has why.
 //
 // A chat bubble, the glyph a person's page already wears for a message's
 // sibling, at the row's own size and ink, with how many there are after
