@@ -46,23 +46,26 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   const { profile, memberSince } = useProfile();
   const { signOut } = useAuthActions();
   const [busy, setBusy] = useState(false);
+  // Read once. This page is drawn only for a session (`ProfileScreen`),
+  // so the empty case is a formality the hooks' types ask for.
+  const me = session?.user?.id ?? null;
   // How much the feed holds — likes and copies in its window, plus the
   // requests waiting, which the feed lists first. A total, as the other
   // rows' numbers are; see `lib/useActivityCount` for the "unseen"
   // reading that was tried and read as nothing.
-  const feed = useActivityCount(session?.user?.id ?? null);
+  const feed = useActivityCount(me);
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
   // this account is on.
   const { ships } = useCrew();
   const crew = useMemo(
-    () => splitFriendships(ships.data, session?.user?.id ?? ''),
-    [ships.data, session?.user?.id],
+    () => splitFriendships(ships.data, me ?? ''),
+    [ships.data, me],
   );
   // Cleaned on the way in for the same reason `useBrowseTaste` cleans
   // it: the column is a bare text[] and holds words written before any
   // picker existed.
-  const prefs = useMyPreferences(session?.user?.id ?? null);
+  const prefs = useMyPreferences(me);
   // Edit profile is pushed *over* this screen, so coming back reveals it
   // rather than remounting it — and `useFetch` loads once per mount.
   // Without this, saving your interests and pressing back left the row

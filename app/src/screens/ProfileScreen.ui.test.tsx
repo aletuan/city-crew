@@ -1526,6 +1526,18 @@ describe('highlight settings', () => {
   });
 });
 
+// An account with no email the session can read — a sign-in by a
+// provider that keeps it — is still an account: its name is the one it
+// gave, and the row says nothing rather than a blank.
+describe('an account with no email', () => {
+  it('draws the page with an empty email and the name it gave', () => {
+    state.email = null;
+    draw(true);
+    expect(screen.getByText('About me')).toBeTruthy();
+    expect(screen.queryByText('minh.le@example.com')).toBeNull();
+  });
+});
+
 describe('ways out', () => {
   it('calls signOut, with a spinner in place of the word until it settles', async () => {
     let finish!: () => void;
