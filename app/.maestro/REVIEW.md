@@ -54,6 +54,14 @@ Bài học khi mock navigation: giữ độc lập lịch sử navigator cha và
 
 Kiểm chứng ngày 20/11 trên bản sửa từ `4e352385`: 143 test liên quan đạt; TypeScript và ESLint đạt. Maestro `04-sign-in`, `07-sign-up-delete`, `09-collections-browse` đạt trong lượt `20261120-032436`; `04` đạt thêm lượt `20261120-033154`. Runner xác nhận tài khoản signup tạm đã bị xóa. Chưa chạy lại toàn bộ 22 flow trên bản sửa.
 
+### Bổ sung ưu tiên 2: kết thúc phiên khi các tab còn lịch sử
+
+Ngày 20/11/2026, bổ sung hai ca integration cho **đăng xuất** và **xóa tài khoản**. Dùng container, TabRouter, StackRouter và `SessionNavSync` thật; mở detail ở Explore, mở Account ở Profile, chuyển tab qua lại rồi bấm nút kết thúc phiên trên màn hình thật. Sau đó kiểm tra Profile về guest root, không có Back, Explore về root và không có action điều hướng bị từ chối qua hai vòng chuyển tab.
+
+**Bài học:** test tab phải giữ navigator của tab không được chọn ở trạng thái mounted. Nếu chỉ render tab đang chọn, test có thể vô tình xóa lịch sử bằng unmount, che lỗi reset stack. Cần kiểm tra cả stack của tab đang mở và stack được giữ ở tab khác. Backend auth và phần trình bày Person/Explore được mô phỏng; các ca này kiểm tra hợp đồng điều hướng khi phiên kết thúc, không chứng minh thao tác xóa trên backend.
+
+Kiểm chứng: tạm bỏ `SessionNavSync` khỏi harness khiến cả hai ca mới thất bại tại assertion Explore phải về root. Khôi phục component và chạy lại **162 test trên 6 file đều đạt** (Profile, Me, DeleteAccount, authNavigation, sessionNavSync, sessionNav); TypeScript, ESLint và diff check đạt. Thay đổi lần này chỉ gồm test và tài liệu; không chạy lại Maestro, kết quả simulator của ưu tiên 1 được ghi riêng ở trên.
+
 ### 00-launch chọn nhầm switch Expo Go
 
 **Dấu hiệu:** app đã hiện `tab-explore`, nhưng `gearshape.fill` vẫn còn sau Reload.
