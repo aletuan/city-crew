@@ -174,7 +174,11 @@ const s = StyleSheet.create({
     backgroundColor: colors.bg,
     borderRadius: 999,
     padding: 2.5,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+    // Lighter since 19 Nov 2026 (owner, after an outside review that
+    // found the pill heavy under the face): 0.18 at 4 and 2 down read as
+    // a second object standing off the page. Enough is left to part it
+    // from the arc it lies on.
+    shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
   },
   badge: {
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,

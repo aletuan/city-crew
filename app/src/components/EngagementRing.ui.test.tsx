@@ -82,6 +82,16 @@ describe('the engagement ring', () => {
     expect(explain).toHaveBeenCalledOnce();
   });
 
+  // Lighter since 19 Nov 2026 (owner): it read as a second object
+  // standing off the page.
+  it('lays the pill on a light shadow', () => {
+    ring(0.4, 7);
+    const halo = screen.getByTestId('level-badge').parentElement!;
+    const box = getComputedStyle(halo).boxShadow;
+    expect(box).toMatch(/0px 1px 3px/);
+    expect(box).toMatch(/rgba\(0,0,0,0\.10\)/);
+  });
+
   it('wraps the avatar it is given and names the level on its corner', () => {
     ring(0.4, 7);
     expect(screen.getByText('face')).toBeTruthy();

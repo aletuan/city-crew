@@ -152,14 +152,21 @@ import { useScheme } from '../lib/theme';
 import { bgHex, colors, display, font, radius, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
-/** The face: 88, the size Edit profile draws your own at. */
-const FACE = 88;
-/** The cover's height. Not measured on a phone: a little under the 16:9
- *  of a 346pt card, so the face and the handle are on the first screen. */
-const COVER_H = 148;
-/** How much of the ringed picture lies over the cover: 28 of its 96,
- *  the reference's proportion (87 of 290px), where it was half. */
-const FACE_OVER = 28;
+/** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
+ *  that found the face large beside the cover and the name). With the
+ *  page's 4 round it, your own sits in the level's ring at 88 — the size
+ *  the Account page draws its picture in the same ring, so the two
+ *  pages wear one ringed face, 103 across. */
+const FACE = 80;
+/** The cover's height: 170, from 148 (owner, 19 Nov 2026, the same
+ *  review: the cover read low under a face that large). Still under the
+ *  16:9 of a 346pt card (195), and the counts and the feed come down 22.
+ *  Not measured on a phone. */
+const COVER_H = 170;
+/** How much of the ringed picture lies over the cover: 26 of its 88,
+ *  the proportion it had at 28 of 96 — the reference's (87 of 290px),
+ *  where it was half. */
+const FACE_OVER = 26;
 /** The name starts this far under the cover's edge. */
 const NAME_DROP = 6;
 /** How far the name shrinks to stay on its line beside the picture
@@ -180,7 +187,7 @@ function Face({ own, url, ring }: { own: boolean; url: string | null | undefined
       <Avatar url={url || null} size={FACE} />
     </View>
   );
-  // The ring around the page's own ring: 88 and its 4 each side.
+  // The level's ring around the page's own: the face and its 4 each side.
   return own ? <OwnFace size={FACE + 8}>{face}</OwnFace> : face;
 }
 
