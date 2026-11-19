@@ -603,12 +603,14 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         />
       )}
     >
-      {/* Why underlines, and why the envelope: see UnderlineTabs. The
-          glyphs are not the person/people pair — the same silhouette at
+      {/* Words alone, no rule and no glyph, since 20 Nov 2026: a trial on
+          this screen before any other (`TabsLook` has why and what it
+          keeps). The glyphs stay in the list below for the day it is
+          undone: not the person/people pair — the same silhouette at
           16pt — but this file's own "inbox and outbox" and the two heads
           the trip wizard already puts on its Friends chip. */}
       <UnderlineTabs
-        tabs={[
+        look="words" tabs={[
           { key: 'requests', icon: 'mail-outline', label: t('Requests', 'Lời mời', 'リクエスト', '好友请求', '好友請求'), count: crew.incoming.length, testID: 'crew-tab-requests' },
           // A tally, not a count: how many friends is a fact, not news,
           // so it sits in the name in both states and never rings the

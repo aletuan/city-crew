@@ -321,10 +321,41 @@ export function TileGrid({ cols, gap = 8, rowGap = gap, children }: {
  *  below them (Collections' pinned city bar) reaches up into it. */
 export const TABS_ROW_GAP = 14;
 
-export function UnderlineTabs<K extends string>({ tabs, active, onChange, right }: {
+/**
+ * How a switch is drawn. `underline` is everything above. `words` is the
+ * same row with the glyph and the rule taken away, and the type carrying
+ * all of it: a larger word, the chosen one in the page's ink and a weight
+ * heavier, the others in the tertiary grey (owner, 20 Nov 2026 — from a
+ * reference of "text tabs" over an activity list).
+ *
+ * On the Crew screen alone, as a trial. The owner asked for it there
+ * first and the rest only if it holds up on the phone, so Collections
+ * still draws `underline`. If it is taken everywhere, the default moves
+ * and this option goes.
+ *
+ * What the underline was answering, and what `words` keeps of it:
+ *
+ * - "contrast has to come from the type itself" — kept, and taken further:
+ *   with no rule, type is the only cue, so the chosen tab differs in two
+ *   things, weight and colour, never colour alone. Colour alone on cream
+ *   was the failure the note above records.
+ * - The bubble rule — kept unchanged. The reference rang its bubble on
+ *   the chosen tab; here it rings on the unchosen one only, as above.
+ * - The row's height — kept: the rule's 2pt stays drawn and transparent,
+ *   so a screen moving between the two looks does not shift a pixel.
+ *
+ * What it gives up: the glyphs, and with them the envelope that told
+ * Requests from a list at a glance. Two words do that well enough; five
+ * would not, which is one reason this is not the default.
+ */
+export type TabsLook = 'underline' | 'words';
+
+export function UnderlineTabs<K extends string>({ tabs, active, onChange, right, look = 'underline' }: {
   tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number; tally?: number; testID?: string }[];
   active: K;
   onChange: (k: K) => void;
+  /** See `TabsLook`. */
+  look?: TabsLook;
   /** The row's far end — a small control about the list the tabs switch
    *  (a view toggle), in the space left-aligned tabs leave free. Removed
    *  once as unused; back with a tenant. */
@@ -337,6 +368,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
   // width nothing anticipated the last label ellipsizes rather than
   // running off the edge under the screen's rounded corner.
   const narrow = useNarrowWindow();
+  const words = look === 'words';
   return (
     <View style={[s.tabsRow, narrow && s.tabsRowNarrow]}>
       {tabs.map(({ key, icon, label, count, tally, testID }) => {
@@ -347,7 +379,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
         return (
           <PressableScale
             key={key}
-            contentStyle={[s.tabItem, on && s.tabItemOn]}
+            contentStyle={[s.tabItem, on && !words && s.tabItemOn]}
             scaleTo={0.97}
             haptic="selection"
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
@@ -356,8 +388,11 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
           >
-            <Glyph name={icon} size={ICON.text} color={on ? colors.accent : colors.textTertiary} />
-            <Text style={[s.tabText, on && s.tabTextOn]} numberOfLines={1}>
+            {words ? null : <Glyph name={icon} size={ICON.text} color={on ? colors.accent : colors.textTertiary} />}
+            <Text
+              style={words ? [s.tabWord, on && s.tabWordOn] : [s.tabText, on && s.tabTextOn]}
+              numberOfLines={1}
+            >
               {worded}
             </Text>
             {!on && count ? (
@@ -859,6 +894,17 @@ const s = StyleSheet.create({
   // words as on a row of actions.
   choiceOff: { opacity: 0.45 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
+  // `TabsLook` 'words'. 17pt where the underlined word is 15: with the
+  // glyph gone the word is the whole tab. Chosen, not measured — one
+  // step over the 16pt names in the list the tabs head (`type.body`,
+  // Crew's `name`), so the switch reads above its rows and still well
+  // under the screen's title. A number to argue with on the phone.
+  // Unchosen in regular,
+  // chosen in semibold — the weight is the cue that is not colour.
+  // Chosen in the page's ink rather than the accent: the reference's
+  // dark word over grey, and the accent stays the colour of a press.
+  tabWord: { color: colors.textTertiary, fontSize: 17, fontWeight: font.regular, flexShrink: 1 },
+  tabWordOn: { color: colors.text, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
     alignItems: 'center', justifyContent: 'center',
