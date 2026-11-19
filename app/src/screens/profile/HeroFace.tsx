@@ -45,13 +45,18 @@
 // (`useRewards().wanted`): the sheet is here and nowhere else, so the
 // banner asks and this answers.
 //
-// ── on your own page (owner, 19 Nov 2026) ──
+// ── on two pages (owner, 19 Nov 2026) ──
 //
-// The Account page drew this round your photo picker until P3 of
-// docs/profile-home-plan.md; your own person page draws it now, round
-// the face it hands in (`person/OwnFace`), with the pill centred under
-// the picture. The banner's ask (`wanted`) lands there: the banner opens
-// the last tab's first page, which is your page.
+// The Account page drew this round your photo picker. P3 of
+// docs/profile-home-plan.md moved it to your own person page, round the
+// face that page hands in (`person/OwnFace`), with the pill centred
+// under the picture; the owner then asked for it on Account as well —
+// copied, not moved. So the picture and its size are the caller's.
+//
+// Both can be up at once: Account is a page pushed over your own. The
+// banner's ask (`wanted`) is answered by one of them, your own page —
+// the banner opens the last tab's first page — or two sheets would rise
+// for one press, one of them from a page that is covered (`answers`).
 //
 // ── out of `AccountProfile` ──
 //
@@ -71,15 +76,16 @@ import { useRewards } from '../../lib/rewards';
 import { colors, font } from '../../theme';
 import { s } from './styles';
 
-export function HeroFace({ saved, size, children }: {
+export function HeroFace({ saved, size, answers = true, children }: {
   /** The distinct places the reader keeps — what the level is made of. */
   saved: number;
   /** The picture's diameter; the ring is drawn outside it. */
   size: number;
-  /** The picture: your own person page's face, ringed in page as every
-   *  face there is. The Account page drew the photo picker here until
-   *  19 Nov 2026, when the ring left it for your page (P3,
-   *  docs/profile-home-plan.md); Edit profile keeps the picker. */
+  /** Whether this one opens the sheet when the banner asks — see the
+   *  header. Account's does not. */
+  answers?: boolean;
+  /** The picture: the face on your own person page, the photo picker on
+   *  Account. */
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
@@ -90,7 +96,7 @@ export function HeroFace({ saved, size, children }: {
   const close = () => { setOpen(false); closed(); };
   // The banner was pressed: it has brought the reader to this tab, and
   // asks for the sheet. Answered here, mounted before the press or after.
-  useEffect(() => { if (wanted) show(); }, [wanted, show]);
+  useEffect(() => { if (wanted && answers) show(); }, [wanted, answers, show]);
   const { level, progress } = levelFromSaves(saved);
 
   return (

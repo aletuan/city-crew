@@ -84,17 +84,30 @@ P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giớ
    Đây là lối vào Tài khoản: #1451 đã đặt nó ở đó ngày 19/11, trước khi kế
    hoạch này viết xong, nên câu hỏi "bánh răng hay ⋯" không còn.
 
-Nút "Sửa hồ sơ" **ở lại Tài khoản**, ở đầu trang (chủ dự án, 19/11). Trên
+Nút "Sửa hồ sơ" **ở lại Tài khoản**, dưới tên (chủ dự án, 19/11). Trên
 Trang cá nhân, bấm vào tiểu sử (hoặc "Viết vài dòng về bạn") đã mở Sửa
 hồ sơ.
 
 ## 5. Tài khoản sau khi đổi
 
-Giữ: Về tôi (tiểu sử, email, thành viên từ), Sở thích, dòng Check-in,
-dòng Bạn bè, Tuỳ chọn, Ứng dụng, Đăng xuất, Xoá tài khoản.
+**Chép sang, không dời đi** (chủ dự án, 19/11, sau khi xem P3 trên máy:
+"chỉ copy sang chứ đừng move"). P3 đã bỏ ảnh, tên và dòng Hoạt động khỏi
+Tài khoản; chủ dự án yêu cầu đưa lại. Đầu trang Tài khoản nay có lại, như
+trước P3 (`profile/Hero`):
 
-Bỏ (vì đã lên Trang cá nhân): ảnh đại diện có vòng cấp độ, tên và handle,
-bốn con số, dòng Hoạt động. Nút Sửa hồ sơ ở lại, đứng đầu trang.
+- Ảnh đại diện có vòng cấp độ và nhãn "Lv" (bấm mở Thành tích).
+- Tên, handle, và dấu vai trò sau tên (bấm mở bảng giải thích).
+- Nút Sửa hồ sơ, dưới tên.
+
+Dòng Hoạt động cũng đã trở lại (#1463), không mang số. Các thứ này hiện ở
+**cả hai trang**; chỉ bốn con số là ở riêng Trang cá nhân. Hệ quả đã biết
+và chấp nhận: hai lối vào Hoạt động; huy hiệu mới xem được ở cả hai nơi.
+Khi thông báo huy hiệu được bấm, chỉ Trang cá nhân tự mở bảng Thành tích
+(`HeroFace`, `answers`): hai trang có thể cùng đang mở, và hai bảng cùng
+bật lên là lỗi.
+
+Giữ nguyên: Về tôi (tiểu sử, email, thành viên từ), Sở thích, dòng
+Check-in, dòng Bạn bè, Tuỳ chọn, Ứng dụng, Đăng xuất, Xoá tài khoản.
 
 Dòng Check-in và Bạn bè trùng đích với hai con số trên Trang cá nhân,
 nhưng ở trang khác, nên giữ. Xem lại ở P4.
@@ -166,6 +179,8 @@ Mỗi PR một commit, revert là về như trước.
   với P3): hai lối vào một trang, chuông trên Trang cá nhân và dòng dưới
   "Kết nối bạn bè". Dòng này không mang số và không mang chấm: chấm là
   của chuông, để luật ở mục 3 vẫn đúng.
+- [x] **Sau P3: đầu trang Tài khoản có lại ảnh, vòng cấp độ, tên và dấu vai
+  trò** (chủ dự án, 19/11: chép sang, không dời đi; mục 5).
 - [ ] **Còn lại:** xem lại dòng Check-in và Bạn bè trên Tài khoản, vốn
   trùng đích với hai con số.
 
