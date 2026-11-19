@@ -62,7 +62,7 @@ describe('the list', () => {
     expect(screen.getByText('Lan Phương')).toBeTruthy();
     expect(screen.getByText('@hamy')).toBeTruthy();
     expect(ticked()).toEqual(['false', 'false', 'false']);
-    expect(screen.getByText('Only the friends you tick can open this list.')).toBeTruthy();
+    expect(screen.getByText('Only the friends you choose can see and use this list.')).toBeTruthy();
     // No second line under the friends (owner, 19 Nov 2026).
     expect(screen.queryByText(/plan from it/)).toBeNull();
     expect(document.querySelector('[data-icon="eye-outline"]')).toBeNull();
@@ -150,7 +150,7 @@ describe('what the button promises', () => {
 describe('a public list', () => {
   it('says sharing makes it private', () => {
     show({ isPublic: true });
-    expect(screen.queryByText('Only the friends you tick can open this list.')).toBeNull();
+    expect(screen.queryByText('Only the friends you choose can see and use this list.')).toBeNull();
     expect(screen.getByText('This list will become private: only the friends you choose can see and use it.')).toBeTruthy();
   });
 
