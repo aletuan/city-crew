@@ -1368,15 +1368,24 @@ describe('sharing with friends', () => {
       expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsSomeone');
     });
 
-    it('opens the picker in its place, the crew in its order and who has it ticked', () => {
+    it('opens the picker in its place: who has it first and ticked, then the crew in its order', () => {
       state.shares = [share('minh')];
       show();
       openPicker();
       expect(screen.getByText('Share with friends')).toBeTruthy();
-      expect(ticks()).toEqual(['Lan Phương:false', 'Minh Anh:true', 'Hà My:false']);
+      expect(ticks()).toEqual(['Minh Anh:true', 'Lan Phương:false', 'Hà My:false']);
       // Chosen while already true, it still opens: Friends is a who, not
       // a toggle.
       expect(spies.setShares).not.toHaveBeenCalled();
+    });
+
+    // The order is worked out from every share on every list of yours
+    // (`shareRows`): the page hands the picker the whole read.
+    it('puts a friend who has another list of yours before one who has none', () => {
+      state.shares = [share('ha', 1, 'c2')];
+      show();
+      openPicker();
+      expect(ticks()).toEqual(['Hà My:false', 'Lan Phương:false', 'Minh Anh:false']);
     });
 
     it('leaves out of the picker a friend you have blocked', () => {

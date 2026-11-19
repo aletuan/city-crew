@@ -1854,10 +1854,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           sending={publishing}
           onClose={() => setPicking(false)}
           onSave={(add, remove) => saveShares(col, add, remove)}
-          // The Crew screen is in the Profile tab's stack, so the jump is
-          // across tabs; `initial: false` keeps Profile's home beneath it
-          // (see `goTo`).
-          onCrew={() => { setPicking(false); goTo('Profile', { screen: 'Crew', initial: false }); }}
+          history={listShares.data}
         />
       ) : null}
       <ActionSheet

@@ -14,10 +14,19 @@
 import React from 'react';
 import * as Haptics from 'expo-haptics';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, viewStyleOf } from '../uitest/render';
+import { cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf } from '../uitest/render';
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+}));
+
+const goTo = vi.hoisted(() => vi.fn());
+vi.mock('../nav', () => ({ goTo }));
+// A phone's width, where jsdom has 1024: the strip measures its cells
+// from it.
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<typeof import('react-native')>()),
+  useWindowDimensions: () => ({ width: 393, height: 852, scale: 3, fontScale: 1 }),
 }));
 
 import ShareSheet from './ShareSheet';
@@ -29,7 +38,6 @@ const people = {
 };
 const friendIds = ['lan', 'minh', 'ha'];
 const onSave = vi.fn();
-const onCrew = vi.fn();
 
 const show = (props: Partial<React.ComponentProps<typeof ShareSheet>> = {}) => render(
   <ShareSheet
@@ -39,10 +47,10 @@ const show = (props: Partial<React.ComponentProps<typeof ShareSheet>> = {}) => r
     blocked={[]}
     people={people}
     shared={[]}
+    history={[]}
     sending={false}
     onClose={() => {}}
     onSave={onSave}
-    onCrew={onCrew}
     {...props}
   />,
 );
@@ -53,14 +61,16 @@ const ticked = () => [0, 1, 2]
   .filter((el): el is HTMLElement => !!el)
   .map((el) => el.getAttribute('aria-checked'));
 
-beforeEach(() => { onSave.mockClear(); onCrew.mockClear(); });
+beforeEach(() => { onSave.mockClear(); goTo.mockClear(); });
 
 describe('the list', () => {
-  it('names each friend with their handle, and asks for a tick', () => {
+  it('names each friend under their face, says the handle to VoiceOver, and asks for a tick', () => {
     show();
     expect(screen.getByText('Share with friends')).toBeTruthy();
     expect(screen.getByText('Lan Phương')).toBeTruthy();
-    expect(screen.getByText('@hamy')).toBeTruthy();
+    // The handle is said, not drawn (owner, 19 Nov 2026: faces in a strip).
+    expect(screen.queryByText('@hamy')).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Hà My, @hamy' })).toBeTruthy();
     expect(ticked()).toEqual(['false', 'false', 'false']);
     expect(screen.getByText('Only the friends you choose can see and use this list.')).toBeTruthy();
     // No second line under the friends (owner, 19 Nov 2026).
@@ -70,9 +80,9 @@ describe('the list', () => {
     expect(viewStyleOf(screen.getByTestId('picker-gap')).height).toBe(22);
   });
 
-  it('opens with the friends it is shared with ticked', () => {
+  it('opens with the friends it is shared with ticked, at the head of the strip', () => {
     show({ shared: ['minh'] });
-    expect(ticked()).toEqual(['false', 'true', 'false']);
+    expect(ticked()).toEqual(['true', 'false', 'false']);
   });
 
   it('leaves out a friend the reader has blocked', () => {
@@ -86,7 +96,7 @@ describe('the list', () => {
   it('keeps a friend the list is shared with whom the crew does not know yet', () => {
     show({ friendIds: ['lan'], shared: ['ha'] });
     expect(screen.getByText('Hà My')).toBeTruthy();
-    expect(ticked()).toEqual(['false', 'true']);
+    expect(ticked()).toEqual(['true', 'false']);
     fireEvent.click(screen.getByText('Lan Phương'));
     fireEvent.click(cta());
     expect(onSave).toHaveBeenCalledWith(['lan'], []);
@@ -147,6 +157,59 @@ describe('what the button promises', () => {
   });
 });
 
+// Faces across, not rows down (owner, 19 Nov 2026).
+describe('the strip', () => {
+  const cell = (i: number) => screen.getByTestId(`share-friend-${i}`);
+  const names = () => [0, 1, 2].map((i) => cell(i).textContent);
+
+  it('is one strip to scroll sideways, out to the sheet\'s edges, four and a half faces to a screen', () => {
+    show();
+    const strip = screen.getByTestId('picker-strip');
+    expect(viewStyleOf(strip)).toMatchObject({ marginHorizontal: -22 });
+    expect(strip.contains(cell(0)) && strip.contains(cell(2))).toBe(true);
+    // (393 − 22) / 4.5, whole: the fifth is cut by the screen's edge.
+    expect(viewStyleOf(cell(0).firstElementChild!).width).toBe(82);
+    expect(4 * 82 + 22 < 393 && 5 * 82 + 22 > 393).toBe(true);
+  });
+
+  it('draws a face at 60 with the name under it, on two lines at most', () => {
+    show();
+    const name = screen.getByText('Lan Phương');
+    expect(cell(0).contains(name)).toBe(true);
+    expect(textStyleOf(name)).toMatchObject({ fontSize: 13, textAlign: 'center', minHeight: 34 });
+    expect(cell(0).querySelector('[data-icon="checkmark"]')).toBeNull();
+    expect(cell(0).querySelector('[data-testid="picker-on"]')).toBeNull();
+  });
+
+  it('ticks a face on its corner, on a wash, and takes both off again', () => {
+    show();
+    const halo = () => cell(1).firstElementChild!.firstElementChild!;
+    const bare = halo().className;
+    fireEvent.click(cell(1));
+    expect(ticked()).toEqual(['false', 'true', 'false']);
+    const on = cell(1).querySelector('[data-testid="picker-on"]')!;
+    expect(on.querySelector('[data-icon="checkmark"]')).toBeTruthy();
+    expect(halo().contains(on)).toBe(true);
+    expect(halo().className).not.toBe(bare);
+    fireEvent.click(cell(1));
+    expect(cell(1).querySelector('[data-testid="picker-on"]')).toBeNull();
+    expect(halo().className).toBe(bare);
+  });
+
+  it('puts who has the list first, then who the owner shares with most', () => {
+    const share = (user_id: string, collection_id: string) => ({ user_id, collection_id, created_at: '2026-11-10' });
+    show({ shared: ['ha'], history: [share('ha', 'c0'), share('minh', 'c1'), share('minh', 'c2')] });
+    expect(names()).toEqual(['Hà My', 'Minh Đỗ', 'Lan Phương']);
+    expect(ticked()).toEqual(['true', 'false', 'false']);
+  });
+
+  it('says a friend with no name by their handle, once, and nobody as Someone', () => {
+    show({ friendIds: ['lan', 'x'], people: { lan: { id: 'lan', handle: 'lanphuong', full_name: '', avatar_url: '' } } });
+    expect(screen.getByRole('checkbox', { name: 'lanphuong' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Someone' })).toBeTruthy();
+  });
+});
+
 describe('a public list', () => {
   it('says sharing makes it private', () => {
     show({ isPublic: true });
@@ -176,8 +239,13 @@ describe('an empty crew', () => {
     show({ friendIds: [] });
     expect(screen.getByText(/Nobody in your crew yet/)).toBeTruthy();
     expect(cta().textContent).toBe('Find friends');
+    const onClose = vi.fn();
+    cleanup();
+    show({ friendIds: [], onClose });
     fireEvent.click(cta());
-    expect(onCrew).toHaveBeenCalledTimes(1);
+    // Closed first, then across the tabs, Profile's home kept beneath.
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(goTo).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Crew', initial: false });
     expect(onSave).not.toHaveBeenCalled();
   });
 });
@@ -185,15 +253,16 @@ describe('an empty crew', () => {
 describe('closed, and opened again', () => {
   it('reseeds the ticks from the truth on opening', () => {
     const props = {
-      isPublic: false, friendIds, blocked: [], people, sending: false,
-      onClose: () => {}, onSave, onCrew,
+      isPublic: false, friendIds, blocked: [], people, sending: false, history: [],
+      onClose: () => {}, onSave,
     };
     const view = render(<ShareSheet open shared={['lan']} {...props} />);
     fireEvent.click(screen.getByText('Lan Phương'));
     expect(ticked()).toEqual(['false', 'false', 'false']);
     view.rerender(<ShareSheet open={false} shared={['lan']} {...props} />);
     view.rerender(<ShareSheet open shared={['ha']} {...props} />);
-    expect(ticked()).toEqual(['false', 'false', 'true']);
+    // Who has the list stands first in the strip.
+    expect(ticked()).toEqual(['true', 'false', 'false']);
   });
 
   it('leaves through Not now and through the page behind it', () => {
