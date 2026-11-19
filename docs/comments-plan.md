@@ -527,6 +527,13 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   bình luận), rồi **"Việc bạn đã làm"** ở dưới (lượt thích, bản sao của
   bạn, lời mời bạn đã chấp nhận). Mỗi nhóm mới nhất trước; nhóm nào trống
   thì không có tiêu đề.
+- **Lượt thích và bản sao của một bộ gộp thành một dòng** (chủ dự án,
+  19/11/2026), cùng luật 3 của tim trên bình luận: tên người mới nhất,
+  "và N người khác", đứng ở thời điểm mới nhất. Trước đó mười lượt thích
+  một bộ là mười dòng trong khi mười tim một bình luận là một dòng. Thích
+  và sao chép cùng một bộ vẫn là hai dòng. Đếm người, không đếm dòng. Gộp
+  ở app (`buildActivity` trong `lib/friends`), không đổi máy chủ: trang
+  Hoạt động của từng bộ vẫn cần từng người một dòng.
 - Vì sao tách: trước đó là một dòng thời gian trộn cả hai, và sau
   `docs/profile-home-plan.md` màn này mở từ cái chuông. Bấm chuông mà phải
   dò một câu trả lời giữa chín dòng "Bạn đã thích…" là sai với điều cái
