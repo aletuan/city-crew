@@ -77,7 +77,7 @@ describe('buildActivity', () => {
   // section of its own.
   it('weaves copies in with the applause, newest first, each in its own kind', () => {
     const items = buildActivity(
-      [like('c1', '2026-08-22T10:00:00Z', 'anh'), like('c1', '2026-08-24T10:00:00Z', 'bao')],
+      [like('c1', '2026-08-22T10:00:00Z', 'anh'), like('c3', '2026-08-24T10:00:00Z', 'bao')],
       [copy('c1', '2026-08-23T10:00:00Z', 'cam'), copy('c2', '2026-08-21T10:00:00Z')],
     );
     expect(items.map((i) => [i.kind, i.at])).toEqual([
@@ -86,8 +86,82 @@ describe('buildActivity', () => {
       ['applause', '2026-08-22T10:00:00Z'],
       ['copy', '2026-08-21T10:00:00Z'],
     ]);
-    expect(items[1]).toMatchObject({ kind: 'copy', collection_id: 'c1', copier_handle: 'cam', copier_name: 'Some One' });
-    expect(items[3]).toMatchObject({ kind: 'copy', collection_id: 'c2', copier_handle: null });
+    expect(items[1]).toMatchObject({ kind: 'copy', collection_id: 'c1', copier_handle: 'cam', copier_name: 'Some One', others: 0 });
+    expect(items[3]).toMatchObject({ kind: 'copy', collection_id: 'c2', copier_handle: null, others: 0 });
+  });
+});
+
+// One row a list for what others did (owner, 19 Nov 2026).
+describe('buildActivity, gathering', () => {
+  it('makes one row of a list\u2019s likes: the latest, at its time, and the other people counted', () => {
+    const items = buildActivity([
+      like('c1', '2026-08-22T10:00:00Z', 'anh'),
+      like('c1', '2026-08-24T10:00:00Z', 'bao'),
+      like('c2', '2026-08-23T10:00:00Z', 'cam'),
+      like('c1', '2026-08-21T10:00:00Z', 'dao'),
+    ], []);
+    expect(items).toEqual([
+      { kind: 'applause', at: '2026-08-24T10:00:00Z', collection_id: 'c1', liker_handle: 'bao', liker_name: 'Some One', others: 2 },
+      { kind: 'applause', at: '2026-08-23T10:00:00Z', collection_id: 'c2', liker_handle: 'cam', liker_name: 'Some One', others: 0 },
+    ]);
+  });
+
+  it('keeps a like and a copy of one list as two rows', () => {
+    const items = buildActivity(
+      [like('c1', '2026-08-22T10:00:00Z', 'anh'), like('c1', '2026-08-21T10:00:00Z', 'bao')],
+      [copy('c1', '2026-08-23T10:00:00Z', 'cam'), copy('c1', '2026-08-20T10:00:00Z', 'dao')],
+    );
+    expect(items.map((i) => [i.kind, i.at, (i as { others: number }).others])).toEqual([
+      ['copy', '2026-08-23T10:00:00Z', 1],
+      ['applause', '2026-08-22T10:00:00Z', 1],
+    ]);
+  });
+
+  // People, not rows: the one named is not among "the others" for a
+  // second copy, and somebody else's second copy is still one person.
+  it('counts people: a second copy by the same person is nobody new', () => {
+    const [row] = buildActivity([], [
+      copy('c1', '2026-08-24T10:00:00Z', 'cam'),
+      copy('c1', '2026-08-23T10:00:00Z', 'dao'),
+      copy('c1', '2026-08-22T10:00:00Z', 'cam'),
+      copy('c1', '2026-08-21T10:00:00Z', 'dao'),
+    ]);
+    expect(row).toMatchObject({ copier_handle: 'cam', others: 1 });
+  });
+
+  // The id where the server sends one: two people may not share a handle,
+  // but a row from before the migration has no id, and its handle stands in.
+  it('tells people apart by id, and by handle where there is no id', () => {
+    const withId = (h: string, id: string, at: string): Applause => ({ ...like('c1', at, h), liker_id: id });
+    const [row] = buildActivity([
+      withId('anh', 'u-1', '2026-08-24T10:00:00Z'),
+      withId('anh-renamed', 'u-1', '2026-08-23T10:00:00Z'),
+      withId('bao', 'u-2', '2026-08-22T10:00:00Z'),
+    ], []);
+    expect(row).toMatchObject({ liker_handle: 'anh', others: 1 });
+  });
+
+  it('and the same for copies', () => {
+    const withId = (h: string, id: string, at: string): Copy => ({ ...copy('c1', at, h), copier_id: id });
+    const [row] = buildActivity([], [
+      withId('cam', 'u-3', '2026-08-24T10:00:00Z'),
+      withId('cam-renamed', 'u-3', '2026-08-23T10:00:00Z'),
+      withId('dao', 'u-4', '2026-08-22T10:00:00Z'),
+    ]);
+    expect(row).toMatchObject({ copier_handle: 'cam', others: 1 });
+  });
+
+  // A profile since deleted has no id and no handle; each is their own
+  // person, named or counted.
+  it('counts each nameless person as one', () => {
+    const [named] = buildActivity([
+      like('c1', '2026-08-24T10:00:00Z', 'anh'), like('c1', '2026-08-23T10:00:00Z'), like('c1', '2026-08-22T10:00:00Z'),
+    ], []);
+    expect(named).toMatchObject({ liker_handle: 'anh', others: 2 });
+    const [nameless] = buildActivity([
+      like('c1', '2026-08-24T10:00:00Z'), like('c1', '2026-08-23T10:00:00Z'), like('c1', '2026-08-22T10:00:00Z', 'anh'),
+    ], []);
+    expect(nameless).toMatchObject({ liker_handle: null, others: 2 });
   });
 });
 

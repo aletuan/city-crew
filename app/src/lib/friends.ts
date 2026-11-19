@@ -187,8 +187,10 @@ export type MyAct = { collection_id: string; at: string; owner_handle: string | 
 export type FriendMade = { other: string; at: string; asked: 'you' | 'them' };
 
 export type ActivityItem =
-  | { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null }
-  | { kind: 'copy'; at: string; collection_id: string; copier_handle: string | null; copier_name: string | null }
+  /** `others`: how many more people liked the list in the window than the
+   *  one named — see `gathered`. */
+  | { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null; others: number }
+  | { kind: 'copy'; at: string; collection_id: string; copier_handle: string | null; copier_name: string | null; others: number }
   | { kind: 'liked'; at: string; collection_id: string; owner_handle: string | null }
   | { kind: 'copied'; at: string; collection_id: string; owner_handle: string | null }
   | { kind: 'friend'; at: string; other: string; asked: 'you' | 'them' };
@@ -235,6 +237,26 @@ export function friendsMade(rows: readonly FriendshipRow[], me: string, sinceISO
  * people's you liked and copied (`mine`), and the friendships that began,
  * whichever of you asked (`friends`). All of it in the one timeline, for
  * the same reason the copies went into it.
+ *
+ * ── one row a list, for what others did (owner, 19 Nov 2026) ──
+ *
+ * Until then each like and each copy was a row. Hearts on a comment had
+ * been one row a comment from the day they arrived (rule 3 of
+ * `docs/comments-plan.md`: ten hearts are one line, not ten), so the
+ * larger thing was the louder one: a list ten people liked filled the
+ * screen, and the reply the bell had rung for was under it. Likes on a
+ * list are now one row a list, and copies of it another: the latest
+ * person named, the rest counted, at the latest one's time — the comment
+ * hearts' rule. A like and a copy stay two rows: they are two things a
+ * reader did, and "liked or saved a copy of" is a sentence about nobody.
+ *
+ * Your own likes and copies are not gathered. Each is on a different
+ * list, and each row opens the list it names.
+ *
+ * Weighed and not taken: gathering on the server, as `comment_news` does.
+ * The two RPCs already answer every row of the window and the list's own
+ * Activity page (`lib/listActivity`) needs them one a person, so the
+ * gathering is this page's reading of them, not the answer's shape.
  */
 export function buildActivity(
   applause: readonly Applause[],
@@ -246,19 +268,37 @@ export function buildActivity(
   for (const l of mine.likes) out.push({ kind: 'liked', at: l.at, collection_id: l.collection_id, owner_handle: l.owner_handle });
   for (const c of mine.copies) out.push({ kind: 'copied', at: c.at, collection_id: c.collection_id, owner_handle: c.owner_handle });
   for (const f of friends) out.push({ kind: 'friend', at: f.at, other: f.other, asked: f.asked });
-  for (const a of applause) {
+  for (const g of gathered(applause.map((a) => ({ list: a.collection_id, at: a.liked_at, who: a.liker_id ?? a.liker_handle, row: a })))) {
     out.push({
-      kind: 'applause', at: a.liked_at, collection_id: a.collection_id,
-      liker_handle: a.liker_handle, liker_name: a.liker_name,
+      kind: 'applause', at: g.at, collection_id: g.list,
+      liker_handle: g.row.liker_handle, liker_name: g.row.liker_name, others: g.others,
     });
   }
-  for (const c of copies) {
+  for (const g of gathered(copies.map((c) => ({ list: c.collection_id, at: c.copied_at, who: c.copier_id ?? c.copier_handle, row: c })))) {
     out.push({
-      kind: 'copy', at: c.copied_at, collection_id: c.collection_id,
-      copier_handle: c.copier_handle, copier_name: c.copier_name,
+      kind: 'copy', at: g.at, collection_id: g.list,
+      copier_handle: g.row.copier_handle, copier_name: g.row.copier_name, others: g.others,
     });
   }
   return out.sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/**
+ * One entry a list: its latest act, and how many *other people* acted on
+ * it. People, not rows — one reader may save three copies of a list, and
+ * "and 2 others" would then count the one already named. Somebody with
+ * no id and no handle (a profile since deleted) is a person of their
+ * own each time: two of them are two.
+ */
+function gathered<T>(acts: readonly { list: string; at: string; who: string | null | undefined; row: T }[]):
+  { list: string; at: string; row: T; others: number }[] {
+  const byList = new Map<string, { list: string; at: string; who: string | null | undefined; row: T }[]>();
+  for (const a of acts) byList.set(a.list, [...(byList.get(a.list) ?? []), a]);
+  return [...byList.values()].map((of) => {
+    const [first, ...rest] = [...of].sort((a, b) => b.at.localeCompare(a.at));
+    const named = new Set(rest.filter((a) => a.who && a.who !== first.who).map((a) => a.who));
+    return { list: first.list, at: first.at, row: first.row, others: named.size + rest.filter((a) => !a.who).length };
+  });
 }
 
 // ── the add flow's suggestions ──
