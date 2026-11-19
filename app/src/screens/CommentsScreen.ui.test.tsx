@@ -75,13 +75,13 @@ const row = (id: string, parent: string | null, over: Partial<Row> = {}): Row =>
 const SUBJECT: Subject = { kind: 'collection', id: 'c1' };
 
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
-const show = async (rows: Row[] = [], subject: Subject = SUBJECT) => {
+const show = async (rows: Row[] = [], subject: Subject = SUBJECT, focus?: string) => {
   data.fetchThread.mockImplementation(async () => rows);
   const navigation = { goBack: vi.fn(), navigate: vi.fn() };
   render(
     <CommentsScreen
       navigation={navigation as unknown as Nav}
-      route={{ params: { subject } } as RootRoute<'Comments'>}
+      route={{ params: { subject, focus } } as RootRoute<'Comments'>}
     />,
   );
   await flush();
@@ -660,5 +660,65 @@ describe('the owner\'s side', () => {
     fireEvent.click(screen.getByTestId('comment-more-menu'));
     expect(screen.getByTestId('sheet-action-delete')).toBeTruthy();
     expect(screen.getByTestId('sheet-action-report')).toBeTruthy();
+  });
+});
+
+// C7b: a row of Activity opens the thread on the comment it was about.
+// Where to scroll and for how long it is lit are `useThreadFocus`'s,
+// pinned there; here it is that the page puts the comment on itself and
+// hands the hook what it reports.
+describe('landing on a comment', () => {
+  // Twelve roots, newest first as the server sends them; the oldest has
+  // four answers, of which the page shows two.
+  const thread = () => [
+    ...Array.from({ length: 11 }, (_, i) => row(`r${i}`, null, { created_at: ago(i + 1) })),
+    row('deep', null, { created_at: ago(100) }),
+    ...['d1', 'd2', 'd3', 'd4'].map((id, i) => row(id, 'deep', { created_at: ago(90 - i) })),
+  ];
+  const onPage = () => screen.queryAllByTestId('comment-body').map((el) => el.textContent);
+
+  it('leaves the eleventh root and a third answer off the page with no comment to land on', async () => {
+    await show(thread());
+    expect(onPage()).not.toContain('says deep');
+    expect(onPage()).not.toContain('says d4');
+  });
+
+  it('mounts the comment\'s root and opens its branch, however far down it is', async () => {
+    await show(thread(), SUBJECT, 'd4');
+    expect(onPage()).toContain('says deep');
+    expect(onPage()).toContain('says d4');
+    // Its branch is open whole, so there is nothing more to view under it.
+    expect(onPage().filter((b) => /says d\d/.test(b ?? ''))).toHaveLength(4);
+  });
+
+  it('mounts a root that is the comment itself, its answers still folded', async () => {
+    await show(thread(), SUBJECT, 'deep');
+    expect(onPage()).toContain('says deep');
+    expect(onPage()).toContain('says d2');
+    expect(onPage()).not.toContain('says d4');
+  });
+
+  it('lights the comment once the page has said where it and its branch are, and only it', async () => {
+    await show(thread(), SUBJECT, 'd4');
+    // Off the committed tree: an element's own fiber can be the one from
+    // before the last render, and would answer with the unlit row.
+    const lit = () => {
+      try {
+        return (propsWhere((q) => q.lit === true && 'comment' in q).comment as Row).id;
+      } catch { return null; }
+    };
+    expect(lit()).toBeNull();
+    const layout = { nativeEvent: { layout: { x: 0, y: 40, width: 300, height: 60 } } };
+    await act(async () => {
+      (propsWhere((q) => q.testID === 'comment-branch' && typeof q.onLayout === 'function').onLayout as (e: unknown) => void)(layout);
+      (propsWhere((q) => q.testID === 'comment-row' && typeof q.onLayout === 'function').onLayout as (e: unknown) => void)(layout);
+    });
+    expect(lit()).toBe('d4');
+  });
+
+  it('opens at the top, as ever, for a comment the thread no longer holds', async () => {
+    await show(thread(), SUBJECT, 'gone');
+    expect(onPage()).not.toContain('says deep');
+    expect(() => propsWhere((q) => q.testID === 'comment-row' && typeof q.onLayout === 'function')).toThrow('nothing matched');
   });
 });
