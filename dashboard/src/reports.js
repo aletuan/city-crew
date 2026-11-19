@@ -23,6 +23,26 @@ export const REASON_LABEL = {
   other: 'Something else',
 };
 
+/**
+ * What kind of thing was reported, as the page names it and marks it.
+ *
+ * Three kinds since comments (C8 of docs/comments-plan.md). Until then
+ * the page read "not a collection" as "a profile", which was true while
+ * there were two — and showed a reported comment as a profile with no
+ * words, and offered to clear the bio of nobody. A kind this build has
+ * not heard of is named as itself and offered no action of its own,
+ * rather than being taken for one of the three.
+ */
+export const KIND = {
+  collection: { label: 'collection', icon: 'list' },
+  profile: { label: 'profile', icon: 'users' },
+  comment: { label: 'comment', icon: 'balloon' },
+};
+
+export function kindOf(row) {
+  return KIND[row.kind] ?? { label: String(row.kind ?? 'unknown'), icon: 'alert' };
+}
+
 /** The window the store expects, in hours. Not a setting: it is the
  *  number the guideline names, and the page exists to keep it. */
 export const SLA_HOURS = 24;
@@ -92,8 +112,20 @@ export function sortQueue(rows) {
  * than the page showing an id and asking the reader to go and look.
  */
 export function previewOf(row, max = 180) {
-  const parts = [row.title, row.body].map((x) => (x ?? '').trim()).filter(Boolean);
+  // A comment's `title` is the list it was said on, not part of what
+  // was said: the page puts it beside the words (`placeOf`), and what is
+  // judged is the body alone. A removed comment has none, and must read
+  // as nothing left — not as the list's name standing in for it.
+  const said = row.kind === 'comment' ? [row.body] : [row.title, row.body];
+  const parts = said.map((x) => (x ?? '').trim()).filter(Boolean);
   const text = parts.join(' — ');
   if (!text) return '';
   return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+/** Where a reported comment was said: the list's name, or nothing for
+ *  the other kinds and for a comment that is gone. */
+export function placeOf(row) {
+  if (row.kind !== 'comment') return '';
+  return (row.title ?? '').trim();
 }

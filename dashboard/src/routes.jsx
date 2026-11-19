@@ -12,6 +12,7 @@ import AddPlace from './components/AddPlace.jsx';
 import CityHero from './components/CityHero.jsx';
 import CoverReview from './components/CoverReview.jsx';
 import Contributors from './components/Contributors.jsx';
+import BannedWords from './components/BannedWords.jsx';
 import Reports from './components/Reports.jsx';
 import Coverage from './components/Coverage.jsx';
 import PlaceList from './components/PlaceList.jsx';
@@ -38,6 +39,7 @@ export const routes = [
       // between Hanoi and Saigon.
       { path: 'search-words', element: <SearchTerms /> },
       { path: 'reports', element: <Reports /> },
+      { path: 'banned-words', element: <BannedWords /> },
       { path: 'covers', element: <CoverReview /> },
       { path: 'analytics/contributors', element: <Contributors /> },
       { path: 'analytics/coverage', element: <Coverage /> },
