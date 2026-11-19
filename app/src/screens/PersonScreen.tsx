@@ -137,7 +137,7 @@ import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
 import { Bell } from './person/Bell';
-import { OwnFace } from './person/OwnFace';
+import { OwnFace, useOwnPicture } from './person/OwnFace';
 import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
 import {
@@ -185,7 +185,8 @@ const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_C
  *  page's, in the same ring, 103 across. Out of the screen for its
  *  ceiling. */
 function Face({ own, url, ring }: { own: boolean; url: string | null | undefined; ring: { borderColor: string } }) {
-  if (own) return <OwnFace size={FACE + 8}><Avatar url={url || null} size={FACE + 8} /></OwnFace>;
+  // Yours is the picker itself, which draws your own picture (`OwnFace`).
+  if (own) return <OwnFace size={FACE + 8} />;
   return (
     <View style={[s.faceRing, ring]}>
       <Avatar url={url || null} size={FACE} />
@@ -216,7 +217,8 @@ export default function PersonScreen({ navigation, route, home }: {
   const me = session?.user?.id ?? null;
   const handle = normalizeHandle(route.params.handle);
   const who = useProfileByHandle(handle || null);
-  const person = who.data;
+  // Your own picture as your profile has it now — `useOwnPicture`.
+  const person = useOwnPicture(who.data, me);
 
   const places = usePlaces();
   // What of theirs this reader may see, and what everybody may —
