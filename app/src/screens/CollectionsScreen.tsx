@@ -746,11 +746,32 @@ export default function CollectionsScreen({ navigation, route }: {
   // list, where it is measured (`tabsY`), and as the pinned copy once
   // the list has carried it to the top — see `pinned`. The copy has no
   // test names, so a test finds exactly one of each.
+  //
+  // ── Community stands first; where the tab opens did not move (owner,
+  //    19 Nov 2026) ──
+  //
+  // Yours led until this day. The order is the reading order of what the
+  // app is becoming — collections as the thing people meet over
+  // (`docs/collection-feed-plan.md`) — and for a reader with no list yet
+  // Community is all there is, so it is the first word they read.
+  //
+  // Which one is open is a different question and has the answer it had:
+  // Yours for a reader with a list of their own or one a friend shared
+  // with them, Community for one with neither (`greeted`, above). Weighed
+  // with the order and not taken: opening on Community for everybody. A
+  // reader with fifteen lists comes here to open one or add to one, and
+  // would pay a press each time; "+ New" and "Places of your own" would
+  // stand over lists that are not theirs; and a list a friend had just
+  // shared with them is on Yours, behind the tab they were not shown.
+  //
+  // So a reader with lists arrives with the second tab lit, not the
+  // first. That is the cost of taking the order without the default, and
+  // the tab bar's own pill is the same sight every day.
   const tabsRow = (floating: boolean) => (session ? (
       <UnderlineTabs
         tabs={[
-          { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours' },
           { key: 'community', testID: floating ? undefined : 'collections-community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
+          { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours' },
         ]}
         active={tab}
         onChange={pickTab}
