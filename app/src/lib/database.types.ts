@@ -1785,6 +1785,7 @@ export type Database = {
           other: string
         }[]
       }
+      my_comment_takeout: { Args: never; Returns: Json }
       my_reports_today: { Args: never; Returns: number }
       on_trip: { Args: { t: string }; Returns: boolean }
       own_collection_places_today: { Args: never; Returns: number }

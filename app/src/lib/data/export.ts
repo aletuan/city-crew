@@ -161,3 +161,68 @@ export async function fetchMyHistory(ownerId: string): Promise<HistoryEventRow[]
     .order('id', { ascending: true })
     .range(from, to));
 }
+
+/** A comment this account wrote, as `my_comment_takeout` answers it:
+ *  other people already reduced to their handle on the server, the list
+ *  to its slug, and the tags to who and where they point. */
+export type WrittenCommentRow = {
+  collection_slug: string;
+  /** Whose comment it answers; null for one that answers nobody, and
+   *  for an answer to somebody whose profile is gone (`is_reply` tells
+   *  the two apart). */
+  in_reply_to: string | null;
+  is_reply: boolean;
+  text: string;
+  at: string;
+  people: string[];
+  places: string[];
+};
+
+/** A heart this account set on a comment. */
+export type GivenHeartRow = { collection_slug: string; author: string | null; at: string };
+
+export type CommentTakeout = { comments: WrittenCommentRow[]; hearts: GivenHeartRow[] };
+
+const str = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+const rows = (v: unknown): Record<string, unknown>[] =>
+  (Array.isArray(v) ? v.filter((r): r is Record<string, unknown> => !!r && typeof r === 'object') : []);
+
+/**
+ * Everything this account wrote in comments, and every heart it set on
+ * one (19 Nov 2026).
+ *
+ * Through a function, where its neighbours read a table: the comment
+ * tables are closed to clients, so there is no row of its own for an
+ * account to read (`20261119110000_comment_takeout`). The function is
+ * scoped to the caller on the server, which is why this one read takes
+ * no owner id — there is nothing here to state the scope with.
+ *
+ * Read as untrusted, like every jsonb answer: a row without the list it
+ * was on, its words or its time is not a row the file can state, and is
+ * left out rather than written half-empty.
+ */
+export async function fetchMyCommentTakeout(): Promise<CommentTakeout> {
+  const { data, error } = await supabase.rpc('my_comment_takeout');
+  if (error) throw new Error(error.message);
+  const raw = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+  const comments: WrittenCommentRow[] = [];
+  for (const r of rows(raw.comments)) {
+    const slug = str(r.collection_slug);
+    const text = str(r.text);
+    const at = str(r.at);
+    if (!slug || !text || !at) continue;
+    comments.push({
+      collection_slug: slug, in_reply_to: str(r.in_reply_to), is_reply: r.is_reply === true,
+      text, at, people: strs(r.people), places: strs(r.places),
+    });
+  }
+  const hearts: GivenHeartRow[] = [];
+  for (const r of rows(raw.hearts)) {
+    const slug = str(r.collection_slug);
+    const at = str(r.at);
+    if (!slug || !at) continue;
+    hearts.push({ collection_slug: slug, author: str(r.author), at });
+  }
+  return { comments, hearts };
+}

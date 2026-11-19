@@ -761,3 +761,11 @@ for f in "$ROOT"/supabase/migrations/*_comment_desk.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/comment_desk_test.sql"
+
+# An account's own comments and hearts, for the copy of its data (19 Nov
+# 2026, C9). After the likes and the tags it reads.
+echo "→ comment takeout"
+for f in "$ROOT"/supabase/migrations/*_comment_takeout.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comment_takeout_test.sql"

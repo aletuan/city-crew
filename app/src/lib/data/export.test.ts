@@ -16,7 +16,9 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources } from './export';
+import {
+  fetchMyCommentTakeout, fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources,
+} from './export';
 import { PAGE_ROWS } from './pages';
 
 beforeEach(() => fake().reset());
@@ -173,5 +175,74 @@ describe('fetchMyHistory', () => {
   it('throws what the server said', async () => {
     fake().replies({ error: { message: 'down' } });
     await expect(fetchMyHistory('u-1')).rejects.toThrow('down');
+  });
+});
+
+// The one read here that goes through a function: the comment tables are
+// closed to clients, and the function is scoped to the caller on the
+// server — so what is pinned is that it is that function, asked with no
+// argument a caller could widen, and that a jsonb answer is read as
+// untrusted.
+describe('fetchMyCommentTakeout', () => {
+  it('asks the takeout function, with nothing to scope it by', async () => {
+    fake().replies({ data: { comments: [], hearts: [] } });
+    expect(await fetchMyCommentTakeout()).toEqual({ comments: [], hearts: [] });
+    expect(fake().log).toEqual([{ op: 'rpc', fn: 'my_comment_takeout', payload: undefined, filters: [] }]);
+  });
+
+  it('reads the comments and the hearts as they are answered', async () => {
+    fake().replies({ data: {
+      comments: [
+        { collection_slug: 'cafes', in_reply_to: 'trang', is_reply: true, text: 'hi', at: '2026-11-19T03:00:00Z', people: ['son'], places: ['cong'] },
+        { collection_slug: 'bars', in_reply_to: null, is_reply: false, text: 'first', at: '2026-11-18T03:00:00Z', people: [], places: [] },
+      ],
+      hearts: [{ collection_slug: 'cafes', author: 'trang', at: '2026-11-19T04:00:00Z' }, { collection_slug: 'bars', author: null, at: '2026-11-18T04:00:00Z' }],
+    } });
+    expect(await fetchMyCommentTakeout()).toEqual({
+      comments: [
+        { collection_slug: 'cafes', in_reply_to: 'trang', is_reply: true, text: 'hi', at: '2026-11-19T03:00:00Z', people: ['son'], places: ['cong'] },
+        { collection_slug: 'bars', in_reply_to: null, is_reply: false, text: 'first', at: '2026-11-18T03:00:00Z', people: [], places: [] },
+      ],
+      hearts: [{ collection_slug: 'cafes', author: 'trang', at: '2026-11-19T04:00:00Z' }, { collection_slug: 'bars', author: null, at: '2026-11-18T04:00:00Z' }],
+    });
+  });
+
+  // A row the file could not state is left out, not written half-empty;
+  // a field of the wrong kind is read as absent.
+  it('leaves out a row without its list, its words or its time, and reads a wrong kind as nothing', async () => {
+    fake().replies({ data: {
+      comments: [
+        null, 'a string',
+        { text: 'no list', at: '2026-11-19T03:00:00Z' },
+        { collection_slug: 'cafes', at: '2026-11-19T03:00:00Z' },
+        { collection_slug: 'cafes', text: 'no time' },
+        { collection_slug: 'cafes', text: 'kept', at: '2026-11-19T03:00:00Z', in_reply_to: 7, is_reply: 'yes', people: 'son', places: [1, 'cong', null] },
+      ],
+      hearts: [
+        { author: 'trang', at: '2026-11-19T04:00:00Z' },
+        { collection_slug: 'cafes', author: 'trang' },
+        { collection_slug: 'cafes', author: 9, at: '2026-11-19T04:00:00Z' },
+      ],
+    } });
+    expect(await fetchMyCommentTakeout()).toEqual({
+      comments: [{ collection_slug: 'cafes', in_reply_to: null, is_reply: false, text: 'kept', at: '2026-11-19T03:00:00Z', people: [], places: ['cong'] }],
+      hearts: [{ collection_slug: 'cafes', author: null, at: '2026-11-19T04:00:00Z' }],
+    });
+  });
+
+  it('answers two empty lists for an answer that is not an object, or has neither list', async () => {
+    fake().replies({ data: null });
+    expect(await fetchMyCommentTakeout()).toEqual({ comments: [], hearts: [] });
+    fake().reset();
+    fake().replies({ data: 'nonsense' });
+    expect(await fetchMyCommentTakeout()).toEqual({ comments: [], hearts: [] });
+    fake().reset();
+    fake().replies({ data: { comments: 'x', hearts: 3 } });
+    expect(await fetchMyCommentTakeout()).toEqual({ comments: [], hearts: [] });
+  });
+
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'down' } });
+    await expect(fetchMyCommentTakeout()).rejects.toThrow('down');
   });
 });
