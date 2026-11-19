@@ -2,14 +2,13 @@
 //
 // The last tab's first page (owner, 19 Nov 2026 — docs/profile-home-plan.md):
 // your own person page, or the guest's hub. The two pages it chooses
-// between have their own tests; what is checked here is the choice, the
-// page it is handed, and the two ways it hands that page.
+// between have their own tests; what is checked here is the choice and
+// the page it is handed.
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
-import type { Home } from './PersonScreen';
 
 const state = vi.hoisted(() => ({
   ready: true,
@@ -22,19 +21,14 @@ vi.mock('../lib/auth', () => ({
 }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ t: (en: string) => en }) }));
 
-const seen = vi.hoisted(() => ({ person: null as null | { route: RootRoute<'Person'>; home?: Home } }));
+const seen = vi.hoisted(() => ({ person: null as null | { route: RootRoute<'Person'>; home?: boolean } }));
 vi.mock('./PersonScreen', () => ({
-  default: (p: { route: RootRoute<'Person'>; home?: Home }) => {
+  default: (p: { route: RootRoute<'Person'>; home?: boolean }) => {
     seen.person = p;
     return <div data-testid="person-page" />;
   },
 }));
 vi.mock('./ProfileScreen', () => ({ default: () => <div data-testid="account-or-guest" /> }));
-const parts = vi.hoisted(() => ({ requests: null as null | { me: string; onOpen: () => void } }));
-vi.mock('./profile/Counts', () => ({ Counts: () => <div data-testid="counts" /> }));
-vi.mock('./person/Requests', () => ({
-  Requests: (p: { me: string; onOpen: () => void }) => { parts.requests = p; return <div data-testid="requests" />; },
-}));
 vi.mock('../components/ui', () => ({
   Screen: ({ title, children }: { title: string; children: React.ReactNode }) => <section aria-label={title}>{children}</section>,
 }));
@@ -62,21 +56,7 @@ describe('MeScreen', () => {
     expect(seen.person!.route.params).toEqual({ handle: 'tuananh' });
     // Its own key: the page is this route, not a second one.
     expect(seen.person!.route.key).toBe('ProfileHome-1');
-    expect(seen.person!.home).toBeDefined();
-  });
-
-  // The rooms are in this tab's stack only, so the ways to them are
-  // handed down from here (`nav.test.ts` holds the person page to it).
-  it('hands the page its way to Account, and what only you see: the counts, then the requests', () => {
-    const navigation = draw();
-    seen.person!.home!.toAccount();
-    expect(navigation.navigate).toHaveBeenLastCalledWith('Account');
-    render(<>{seen.person!.home!.owner}</>);
-    const counts = screen.getByTestId('counts');
-    expect(counts.compareDocumentPosition(screen.getByTestId('requests')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(parts.requests!.me).toBe('me-id');
-    parts.requests!.onOpen();
-    expect(navigation.navigate).toHaveBeenLastCalledWith('Crew');
+    expect(seen.person!.home).toBe(true);
   });
 
   it('gives a guest the hub, as the tab always did', () => {

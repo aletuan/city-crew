@@ -28,7 +28,7 @@
 // the container ref rather than a stack's navigator — see `nav.ts`.
 
 import { describe, expect, it, vi } from 'vitest';
-import { toPerson } from './nav';
+import { navRef, toPerson, toProfileRoom } from './nav';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -143,5 +143,38 @@ describe('toPerson', () => {
       expect(n.navigate, `${first} ${handle} ${mine}`).toHaveBeenCalledExactlyOnceWith('Person', { handle });
       expect(n.popToTop).not.toHaveBeenCalled();
     }
+  });
+});
+
+// Account, Friends and Check-ins are only in the last tab's stack, and
+// your own page opens in three (19 Nov 2026).
+describe('toProfileRoom', () => {
+  const tabs = { navigate: vi.fn() };
+  const nav = (routeNames: string[] | null, parent: unknown = tabs) => ({
+    navigate: vi.fn(),
+    getParent: () => parent,
+    getState: () => (routeNames ? { routeNames } : undefined),
+  });
+
+  it('pushes the room in the stack that has it', () => {
+    const n = nav(['ProfileHome', 'Account', 'Crew']);
+    toProfileRoom(n as never, 'Crew');
+    expect(n.navigate).toHaveBeenCalledExactlyOnceWith('Crew');
+  });
+
+  it('goes by the last tab, with the room over its first page, from any other', () => {
+    tabs.navigate.mockClear();
+    const n = nav(['CollectionsHome', 'Person']);
+    toProfileRoom(n as never, 'Visited');
+    expect(tabs.navigate).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Visited', initial: false });
+    expect(n.navigate).not.toHaveBeenCalled();
+  });
+
+  it('goes by the container where the page has no navigator above it', () => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    const root = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    toProfileRoom(nav(null, null) as never, 'Account');
+    expect(root).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Account', initial: false });
+    vi.restoreAllMocks();
   });
 });

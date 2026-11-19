@@ -228,7 +228,11 @@ import { StyleSheet } from 'react-native';
 // 2026; not pushed, the tab's first page, which only the guest's hub is.
 const nav = (pushed = false) => {
   const parent = { navigate: vi.fn() };
-  const n = { navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), canGoBack: vi.fn(() => pushed), popToTop: vi.fn() };
+  const n = {
+    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), canGoBack: vi.fn(() => pushed), popToTop: vi.fn(),
+    // The last tab's stack, where Account and its rooms are.
+    getState: vi.fn(() => ({ routeNames: ['ProfileHome', 'Account', 'Crew', 'Visited', 'Activity', 'Person'] })),
+  };
   return { n: n as unknown as Nav, raw: n, parent };
 };
 
@@ -855,6 +859,20 @@ describe('the four doors', () => {
     expect(raw.navigate).toHaveBeenLastCalledWith('Crew');
     expect(raw.navigate).toHaveBeenCalledTimes(2);
     expect(parent.navigate).not.toHaveBeenCalled();
+  });
+
+  // Your page opened in another tab has the same counts (19 Nov 2026),
+  // and those two rooms are only in the last tab: a press changes tab,
+  // with the room over the tab's first page.
+  it('opens the check-ins and the crew through the last tab from another tab', () => {
+    const r = nav();
+    r.raw.getState.mockReturnValue({ routeNames: ['CollectionsHome', 'CollectionDetail', 'Person'] });
+    render(<Counts navigation={r.n} />);
+    fireEvent.click(screen.getByRole('button', { name: '0 Check-ins' }));
+    expect(r.parent.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Visited', initial: false });
+    fireEvent.click(screen.getByRole('button', { name: '0 Friends' }));
+    expect(r.parent.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Crew', initial: false });
+    expect(r.raw.navigate).not.toHaveBeenCalled();
   });
 
   it('says the four in Vietnamese', () => {

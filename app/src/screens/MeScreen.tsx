@@ -28,9 +28,7 @@ import { useProfile, useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors } from '../theme';
 import { type Nav, type RootRoute } from '../nav';
-import PersonScreen, { type Home } from './PersonScreen';
-import { Requests } from './person/Requests';
-import { Counts } from './profile/Counts';
+import PersonScreen from './PersonScreen';
 import ProfileScreen from './ProfileScreen';
 
 export default function MeScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'ProfileHome'> }) {
@@ -46,14 +44,5 @@ export default function MeScreen({ navigation, route }: { navigation: Nav; route
     );
   }
   const page = { key: route.key, name: 'Person', params: { handle: profile.handle } } as RootRoute<'Person'>;
-  const home: Home = {
-    toAccount: () => navigation.navigate('Account'),
-    owner: (
-      <>
-        <Counts navigation={navigation} />
-        <Requests me={session.user.id} onOpen={() => navigation.navigate('Crew')} />
-      </>
-    ),
-  };
-  return <PersonScreen navigation={navigation} route={page} home={home} />;
+  return <PersonScreen navigation={navigation} route={page} home />;
 }

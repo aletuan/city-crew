@@ -4,13 +4,12 @@
 // ── where they stand (owner, 19 Nov 2026) ──
 //
 // Under the hero of the Account page until P2 of
-// docs/profile-home-plan.md; on your own person page now, the last tab's
-// first page, under the head and over the requests waiting. Only there:
-// they are yours to see, and a visitor to your page sees it as before.
-// Drawn by `MeScreen` and handed to the page (`Home.owner`), because the
-// doors open Check-ins and Friends, which are only in the last tab's
-// stack. Not on Account any more: a figure said on two pages is two
-// copies to keep agreeing.
+// docs/profile-home-plan.md; on your own person page now, wherever it
+// opens, under the head and over the requests waiting. Yours to see: a
+// visitor to your page sees it as before. The doors to Check-ins and
+// Friends, rooms only the last tab's stack has, go through
+// `toProfileRoom`, which changes tab when it has to. Not on Account any
+// more: a figure said on two pages is two copies to keep agreeing.
 
 import { Text, View } from 'react-native';
 import { fireHaptic, PressableScale } from '../../components/ui';
@@ -22,7 +21,7 @@ import { splitFriendships } from '../../lib/friends';
 import { useI18n } from '../../lib/i18n';
 import { useMyTrips } from '../../lib/mytrips';
 import { useMyLists } from '../../lib/save';
-import { goTo, type Nav } from '../../nav';
+import { goTo, toProfileRoom, type Nav } from '../../nav';
 import { s } from './styles';
 
 /**
@@ -130,9 +129,9 @@ export function Counts({ navigation }: { navigation: Nav }) {
         <View style={s.statDivider} />
         {/* Distinct places, not visits: three evenings at one bar is one
             place been to — the figure the row below carried. */}
-        <StatTile n={visits.loaded ? visitSummary(visits.data).places : null} label={t('Check-ins', 'Check-in', 'チェックイン', '打卡', '打卡')} onPress={() => navigation.navigate('Visited')} />
+        <StatTile n={visits.loaded ? visitSummary(visits.data).places : null} label={t('Check-ins', 'Check-in', 'チェックイン', '打卡', '打卡')} onPress={() => toProfileRoom(navigation, 'Visited')} />
         <View style={s.statDivider} />
-        <StatTile n={ships.loaded ? friends : null} label={t('Friends', 'Bạn bè', '友達', '好友', '好友')} onPress={() => navigation.navigate('Crew')} />
+        <StatTile n={ships.loaded ? friends : null} label={t('Friends', 'Bạn bè', '友達', '好友', '好友')} onPress={() => toProfileRoom(navigation, 'Crew')} />
         <View style={s.statDivider} />
         <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', 'トリップ', '行程', '行程')} onPress={() => hop('Trips', 'TripsHome')} />
       </View>

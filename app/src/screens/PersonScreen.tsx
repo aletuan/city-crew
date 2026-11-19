@@ -135,6 +135,8 @@ import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
+import { Requests } from './person/Requests';
+import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
 import {
   type Collection, coverUriOf, type FriendProfile, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
@@ -146,7 +148,7 @@ import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, display, font, radius, space, type } from '../theme';
-import { goTo, type Nav, type RootRoute } from '../nav';
+import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
 /** The face: 88, the size Edit profile draws your own at. */
 const FACE = 88;
@@ -168,32 +170,23 @@ const TITLE_LINE = 28;
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
 
-/** What only the last tab's first page has — see `home`. */
-export type Home = {
-  toAccount: () => void;
-  /** What only you see on your page: the counts and the requests
-   *  waiting (`MeScreen`). Under the head, over the activity. */
-  owner: React.ReactNode;
-};
-
 export default function PersonScreen({ navigation, route, home }: {
   navigation: Nav;
   route: RootRoute<'Person'>;
   /**
    * Drawn as the last tab's first page, your own (owner, 19 Nov 2026 —
    * docs/profile-home-plan.md): no way back, since there is nothing
-   * under it; no title, since the tab says whose page it is and the
-   * owner found the line over the cover not needed; and what only its
-   * owner is shown — the counts and the requests waiting.
-   * Your own page reached from a card in another tab is not this: it is
-   * the page as others see it.
+   * under it, and no title, since the tab says whose page it is and the
+   * owner found the line over the cover not needed.
    *
-   * That part, and the way to Account, come from `MeScreen`, not from
-   * here: the rooms they open are only in the last tab's stack, and a
-   * screen registered in three stacks may only navigate to what all
-   * three have (`nav.test.ts`).
+   * That is all it changes. What only you see — the counts and the
+   * requests waiting — is on your own page wherever it opens (owner,
+   * 19 Nov 2026: one page of you, not two). For one evening it was on
+   * the tab's first page alone, handed in from `MeScreen`, because the
+   * rooms its doors open are only in the last tab's stack; the doors go
+   * through `toProfileRoom` now, which changes tab when it has to.
    */
-  home?: Home;
+  home?: boolean;
 }) {
   const { t } = useI18n();
   const { session } = useSession();
@@ -229,26 +222,10 @@ export default function PersonScreen({ navigation, route, home }: {
   // `useReach`.
   const end = useReach();
   // From your own page to the Account page — `Shared`'s `onAccount` has
-  // why it is that page and that word.
-  //
-  // Account was the last tab's first page until 19 Nov 2026, and this
-  // went there with whatever was over it closed (`pop`). It is a page
-  // under your own page now (docs/profile-home-plan.md), so: pushed, from
-  // the tab's first page (`home`); from anywhere else — your name on a
-  // list in Collections — the last tab, with Account over its first page
-  // (`initial: false`), so Back from Account is your page there. Through
-  // the parent as `AccountProfile`'s `hop` does it, and through the
-  // container where the page is read with no navigator above it.
-  const toAccount = () => {
-    if (home) {
-      home.toAccount();
-      return;
-    }
-    const params = { screen: 'Account', initial: false };
-    const tabs = navigation.getParent();
-    if (tabs) tabs.navigate('Profile', params);
-    else goTo('Profile', params);
-  };
+  // why it is that page and that word. Account was the last tab's first
+  // page until 19 Nov 2026; it is a page under your own now
+  // (docs/profile-home-plan.md), reached as `toProfileRoom` says.
+  const toAccount = () => toProfileRoom(navigation, 'Account');
   // The tab pressed again while this is its first page: back to the top,
   // as every tab's first page does (ExploreScreen's `tabPress` note). On
   // a pushed page React Navigation does nothing with it.
@@ -303,8 +280,15 @@ export default function PersonScreen({ navigation, route, home }: {
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
-      {/* What only you see on your own page — `Home.owner`. */}
-      {home?.owner}
+      {/* What only you see on your own page, wherever it opens: your
+          counts (`profile/Counts`), then the requests waiting
+          (`person/Requests`). Their rooms through `toProfileRoom`. */}
+      {own ? (
+        <>
+          <Counts navigation={navigation} />
+          <Requests me={me} onOpen={() => toProfileRoom(navigation, 'Crew')} />
+        </>
+      ) : null}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}

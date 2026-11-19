@@ -278,6 +278,26 @@ export type RootRoute<T extends keyof RootStackParamList> = RouteProp<RootStackP
 export const navRef = createNavigationContainerRef<RootStackParamList>();
 
 /**
+ * A room only the last tab's stack has — Account, Friends, Check-ins —
+ * from anywhere your own page is drawn (19 Nov 2026,
+ * docs/profile-home-plan.md). In that stack, pushed. From any other tab,
+ * the last tab with the room over its first page (`initial: false`), so
+ * Back from the room is your page there. Through the parent as
+ * `AccountProfile`'s `hop` does it, and through the container where a
+ * page is read with no navigator above it.
+ */
+export function toProfileRoom(navigation: Nav, room: 'Account' | 'Crew' | 'Visited') {
+  if (navigation.getState?.()?.routeNames.includes(room)) {
+    navigation.navigate(room);
+    return;
+  }
+  const params = { screen: room, initial: false };
+  const tabs = navigation.getParent();
+  if (tabs) tabs.navigate('Profile', params);
+  else goTo('Profile', params);
+}
+
+/**
  * A person's page — or, for your own inside the last tab, that tab's
  * first page, which *is* your page since 19 Nov 2026
  * (docs/profile-home-plan.md). Pushed there, it was a second copy of the
