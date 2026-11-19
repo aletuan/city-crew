@@ -1607,12 +1607,28 @@ export type Database = {
         }[]
       }
       comment_clean: { Args: { p_body: string }; Returns: boolean }
+      comment_news: {
+        Args: { p_since: string }
+        Returns: {
+          actor: string
+          at: string
+          avatar_url: string
+          body: string
+          comment_id: string
+          full_name: string
+          handle: string
+          kind: string
+          list: Json
+          others: number
+        }[]
+      }
       comment_previews: {
         Args: { p_collections: string[] }
         Returns: {
           collection_id: string
           latest: Json
           n: number
+          off: boolean
         }[]
       }
       comment_subject_visible: {
