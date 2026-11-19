@@ -3,7 +3,8 @@
 // collections, whose collections you liked or copied, and who became your
 // friend, whichever of you asked. A row about a list opens it and wears
 // the chevron that says so; one on a list that is gone opens nothing and
-// wears none, and a friendship row is a line to read.
+// wears none, and a friendship row opens the other person's page
+// (`activity/ActivityRows` says why).
 //
 // ── a log, not only news (owner, 28 Oct 2026) ──
 //
@@ -344,8 +345,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           faces={faces.data}
           collectionOf={collectionOf}
           ago={ago}
-          onList={(slug) => navigation.navigate('CollectionDetail', { slug })}
-          onComment={(n) => navigation.navigate('Comments', { subject: { kind: 'collection', id: n.list.id }, focus: n.comment_id })}
+          navigation={navigation}
         />
       )}
     </AuthScreen>

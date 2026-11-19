@@ -162,6 +162,10 @@ Mỗi PR một commit, revert là về như trước.
 - [x] **Chấm trên chuông** (C7c của `docs/comments-plan.md`): chuông đọc
   `useFreshNews`, cùng con số với chấm trên tab; test ở mục 3 nay có lý do
   thứ ba (`comments` → `person-bell-dot`).
+- [x] **Dòng Hoạt động trở lại Tài khoản** (chủ dự án, 19/11, cùng ngày
+  với P3): hai lối vào một trang, chuông trên Trang cá nhân và dòng dưới
+  "Kết nối bạn bè". Dòng này không mang số và không mang chấm: chấm là
+  của chuông, để luật ở mục 3 vẫn đúng.
 - [ ] **Còn lại:** xem lại dòng Check-in và Bạn bè trên Tài khoản, vốn
   trùng đích với hai con số.
 

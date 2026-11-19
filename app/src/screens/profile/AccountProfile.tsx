@@ -1,8 +1,8 @@
 // Account for a signed-in reader: Edit profile, About me, interests,
-// check-ins, friends, preferences, and the account's ways out. What stood
-// over them — your picture in the level's ring, your name, four counts —
-// and the Activity row are on your own person page since 19 Nov 2026
-// (`OwnFace`, `Counts`, `Bell`; docs/profile-home-plan.md).
+// check-ins, friends, Activity, preferences, and the account's ways out.
+// What stood over them — your picture in the level's ring, your name,
+// four counts — is on your own person page since 19 Nov 2026 (`OwnFace`,
+// `Counts`; docs/profile-home-plan.md).
 
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
@@ -11,18 +11,16 @@ import { Card, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthActions, useProfile, useSession } from '../../lib/auth';
 import { useMyPreferences } from '../../lib/data';
-import { useCrew } from '../../lib/crew';
-import { splitFriendships } from '../../lib/friends';
 import { CATEGORIES } from '../../lib/categories';
 import { cleanTaste, tasteInOrder } from '../../lib/tastepick';
 import { Lang, useI18n } from '../../lib/i18n';
-import { useScheme } from '../../lib/theme';
-import { bgElevatedHex, colors } from '../../theme';
+import { colors } from '../../theme';
 import { type Nav } from '../../nav';
-import { RowGlyph, FeatureRow, AboutRow, BioRow } from './rows';
+import { FeatureRow, AboutRow, BioRow } from './rows';
+import { FriendsCard } from './FriendsCard';
 import { SettingsCard } from './SettingsCard';
 import { AppCard, Tagline } from './AppCard';
-import { ROW_GLYPH, TITLE_LINE, s } from './styles';
+import { ROW_GLYPH, s } from './styles';
 
 export const MONTHS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -37,8 +35,6 @@ export function memberSinceLabel(d: Date, lang: Lang): string {
 
 export function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  // For the one border here that must resolve in JS — see `reqDot`.
-  const { scheme } = useScheme();
   const { email, session } = useSession();
   const { profile, memberSince } = useProfile();
   const { signOut } = useAuthActions();
@@ -46,14 +42,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   // Read once. This page is drawn only for a session (`ProfileScreen`),
   // so the empty case is a formality the hooks' types ask for.
   const me = session?.user?.id ?? null;
-  // The number on the friends card and the dot beside it. Sorted by the
-  // pure half in lib/friends; the fetch itself is scoped by RLS to edges
-  // this account is on.
-  const { ships } = useCrew();
-  const crew = useMemo(
-    () => splitFriendships(ships.data, me ?? ''),
-    [ships.data, me],
-  );
   // Cleaned on the way in for the same reason `useBrowseTaste` cleans
   // it: the column is a bare text[] and holds words written before any
   // picker existed.
@@ -242,33 +230,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           The order reads as a story: who you are, who you go with, how
           the app behaves, and then the ways out. */}
       <Text style={s.section}>{t('Friends', 'Bạn bè', '友達', '好友', '好友')}</Text>
-      {/* The pill said "Coming soon" from the day this screen shipped;
-          the row opens the crew now. The dot is requests. The number of
-          friends was a pill at the row's end until 16 Nov 2026; it is a
-          count on your own page now (`Counts`), and not said twice.
-
-          Alone in its card since 19 Nov 2026: Activity, the row under
-          it, is the bell on your own page now (`person/Bell`). */}
-      <Card style={s.featureCard}>
-        <PressableScale
-          contentStyle={s.twoLineRow}
-          onPress={() => navigation.navigate('Crew')}
-          accessibilityRole="button"
-          testID="feature-row"
-        >
-          <View>
-            <RowGlyph name="people-outline" line={TITLE_LINE} />
-            {crew.incoming.length > 0 ? <View style={[s.reqDot, { borderColor: bgElevatedHex[scheme] }]} /> : null}
-          </View>
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる', '与好友联系', '與好友聯絡')}</Text>
-            <Text style={s.featureSub}>
-              {t('Make friends and plan together.', 'Kết bạn để cùng lên kế hoạch.', '友達になって、一緒に計画。', '结交好友，一起规划。', '結交好友，一起規劃。')}
-            </Text>
-          </View>
-          <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} />
-        </PressableScale>
-      </Card>
+      <FriendsCard navigation={navigation} me={me} />
 
       {/* Named the way About me and Friends are, so this screen reads
           as sections rather than a stray card between them. The guest

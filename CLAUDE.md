@@ -55,7 +55,7 @@ and a Traditional word to change is changed in `scripts/hant.ts`, never
 in the call.
 
 **A function has a ceiling**: 150 lines of code and a complexity of 25
-(`app/oversize.js`). The 34 files already over it are listed there, each
+(`app/oversize.js`). The 33 files already over it are listed there, each
 at the size it stood at, and lint is red the moment one grows. Bring a
 function down and lower its number in the same change; nothing lowers it
 for you.

@@ -1081,14 +1081,20 @@ describe('friends card', () => {
     expect(screen.getByText('Make friends and plan together.')).toBeTruthy();
   });
 
-  // Activity hung under the friends row from 6 Oct to 19 Nov 2026. It
-  // is the bell on your own page now (`person/Bell`), and the friends
-  // row stands alone in its card.
-  it('has no Activity row: it is the bell on your own page', () => {
-    draw(true);
-    expect(screen.queryByText('Activity')).toBeNull();
+  // Activity hung under the friends row from 6 Oct 2026, left for the
+  // bell on your own page for half of 19 Nov, and came back the same
+  // day: the owner wants both ways in.
+  it('opens Activity from the row under the friends row, with no count on it', () => {
+    const { raw } = draw();
     const friends = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]')!;
-    expect(friends.parentElement!.querySelectorAll('[data-testid="feature-row"]')).toHaveLength(1);
+    const rows = [...friends.parentElement!.querySelectorAll('[data-testid="feature-row"]')];
+    expect(rows.map((r) => r.textContent)).toEqual([
+      'Connect with friendsMake friends and plan together.',
+      "ActivityWhat's new between you and others.",
+    ]);
+    expect(raw.navigate).not.toHaveBeenCalledWith('Activity');
+    press('Activity');
+    expect(raw.navigate).toHaveBeenLastCalledWith('Activity');
   });
 
   // The number of friends was a pill at this row's end until 16 Nov
