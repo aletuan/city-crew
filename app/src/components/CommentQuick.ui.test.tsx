@@ -67,6 +67,12 @@ describe('quickOrThread', () => {
     expect(quickOrThread({ ...known, loaded: false })).toBe('thread');
     expect(quickOrThread({ ...known, loading: true })).toBe('thread');
   });
+
+  it('opens the thread on a closed one, and for the list\'s owner, whose switch is there', () => {
+    expect(quickOrThread({ ...known, off: true })).toBe('thread');
+    expect(quickOrThread({ ...known, mine: true })).toBe('thread');
+    expect(quickOrThread({ ...known, off: false, mine: false })).toBe('quick');
+  });
 });
 
 describe('the field over the page', () => {

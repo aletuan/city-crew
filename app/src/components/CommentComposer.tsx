@@ -88,7 +88,7 @@ const FIELD_MAX_H = 4 * 21 + 16;
  * it was measured in, and a caret converted against the old words would
  * be one letter short for exactly the keystroke the offer depends on.
  */
-function useTagField(taggable: Taggable | undefined) {
+function useTagField(taggable: Pick<Taggable, 'people' | 'places'> | undefined) {
   const { lang } = useI18n();
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<Tag[]>([]);
@@ -118,7 +118,7 @@ function useTagField(taggable: Taggable | undefined) {
   return { body, tags, offers, change, take, clear, select: setCaretUnits };
 }
 
-export default function CommentComposer({ avatarUrl, replyTo, about, onCancelReply, onSend, onGuest, inputRef, autoFocus, bottomInset = 0, taggable }: {
+export default function CommentComposer({ avatarUrl, replyTo, about, onCancelReply, onSend, onGuest, inputRef, autoFocus, bottomInset = 0, taggable, closed }: {
   /** The reader's own face. */
   avatarUrl?: string | null;
   /** Whom the next words answer, or nobody. */
@@ -142,7 +142,11 @@ export default function CommentComposer({ avatarUrl, replyTo, about, onCancelRep
   /** The phone's own margin under the bar — the home indicator's. */
   bottomInset?: number;
   /** Whom and what "@" offers here. Absent, "@" is a letter. */
-  taggable?: Taggable;
+  taggable?: Pick<Taggable, 'people' | 'places'>;
+  /** For a thread its owner has closed: the words that say so. When
+   *  given there is no field at all, for the reason a guest has none — a
+   *  field that takes words it cannot send is worse than a line. */
+  closed?: string;
 }) {
   const { t } = useI18n();
   const { body, tags, offers, change, take, clear, select } = useTagField(taggable);
@@ -151,6 +155,14 @@ export default function CommentComposer({ avatarUrl, replyTo, about, onCancelRep
 
   const placeholder = t('Write a comment…', 'Viết bình luận…', 'コメントを書く…', '写评论…', '寫評論…');
   const pad = { paddingBottom: 8 + bottomInset };
+
+  if (closed) {
+    return (
+      <View style={[s.bar, pad]}>
+        <Text style={s.closed} testID="composer-closed">{closed}</Text>
+      </View>
+    );
+  }
 
   if (onGuest) {
     return (
@@ -285,4 +297,10 @@ const s = StyleSheet.create({
   // The same line with nothing beside it: it keeps the row's inset, not its `flex`.
   about: { flex: 0, paddingHorizontal: 8 },
   error: { color: colors.bad, fontSize: 13, lineHeight: 18, paddingHorizontal: 8 },
+  // The pill's height without the pill: the foot of the page does not
+  // jump when a thread is closed or opened.
+  closed: {
+    color: colors.textTertiary, fontSize: 14, lineHeight: 20, textAlign: 'center',
+    minHeight: SECONDARY_CONTROL_H, paddingVertical: 12, paddingHorizontal: 8,
+  },
 });

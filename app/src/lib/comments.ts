@@ -288,6 +288,9 @@ export type Preview = {
   n: number;
   /** The two newest, newest first. */
   latest: PreviewComment[];
+  /** Whether the owner has closed the thread to new comments. What is
+   *  there still reads. */
+  off: boolean;
 };
 
 export type PreviewComment = {

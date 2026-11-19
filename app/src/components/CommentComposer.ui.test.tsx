@@ -330,3 +330,13 @@ describe('tagging', () => {
     expect(said()).toEqual(['dang']);
   });
 });
+
+describe('a thread its owner has closed', () => {
+  it('has the words that say so where the field would be, and no field, button or invitation', () => {
+    show({ closed: 'The owner turned off comments.', onGuest });
+    expect(screen.getByTestId('composer-closed').textContent).toBe('The owner turned off comments.');
+    expect(screen.queryByTestId('composer-field')).toBeNull();
+    expect(screen.queryByTestId('composer-send')).toBeNull();
+    expect(screen.queryByTestId('composer-guest')).toBeNull();
+  });
+});

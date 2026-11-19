@@ -54,8 +54,14 @@ import { useI18n } from '../lib/i18n';
  */
 export function quickOrThread(at: {
   me: string | null; n: number; loaded: boolean; loading: boolean;
+  /** The owner has closed the thread: nothing can be written anywhere. */
+  off?: boolean;
+  /** The list is the reader's own: its thread's page is where the
+   *  switch that closes and opens it lives (`useThreadOwner`), and on a
+   *  thread with nothing in it this press is the only way there. */
+  mine?: boolean;
 }): 'quick' | 'thread' {
-  return at.me && at.loaded && !at.loading && at.n === 0 ? 'quick' : 'thread';
+  return at.me && at.loaded && !at.loading && at.n === 0 && !at.off && !at.mine ? 'quick' : 'thread';
 }
 
 type Target = { subject: Subject; about?: string };

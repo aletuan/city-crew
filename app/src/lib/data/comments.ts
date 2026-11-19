@@ -86,7 +86,11 @@ export async function fetchPreviews(subjects: readonly Subject[]): Promise<Recor
   });
   if (error) throw new Error(error.message);
   const out: Record<string, Preview> = {};
-  for (const r of data ?? []) out[r.collection_id] = { n: r.n, latest: latestOf(r.latest) };
+  // `off` only on the word `true`: a server from before 20261119070000
+  // sends no such column, and every thread was open then.
+  for (const r of data ?? []) {
+    out[r.collection_id] = { n: r.n, latest: latestOf(r.latest), off: r.off === true };
+  }
   return out;
 }
 
@@ -153,4 +157,21 @@ export async function fetchTaggable(subject: Subject): Promise<Taggable> {
   const { data, error } = await supabase.rpc('comment_taggable', { p_collection: collectionOf(subject) });
   if (error) throw new Error(error.message);
   return taggableOf(data);
+}
+
+/**
+ * Close a subject's thread to new comments, or open it again. The
+ * owner's alone: the write goes to their own row, and row level security
+ * makes anybody else's change nothing — which is why a write that
+ * changed no row throws here, so a stranger's switch does not look
+ * thrown.
+ */
+export async function setCommentsOff(subject: Subject, off: boolean): Promise<void> {
+  const { data, error } = await supabase
+    .from('collections')
+    .update({ comments_off: off })
+    .eq('id', collectionOf(subject))
+    .select('id');
+  if (error) throw new Error(error.message);
+  if (!data?.length) throw new Error('comment:subject');
 }

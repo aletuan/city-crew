@@ -735,3 +735,20 @@ for f in "$ROOT"/supabase/migrations/*_comment_tags.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/comment_tags_test.sql"
+
+# The owner's side of comments (19 Nov 2026): a closed thread and whose
+# list it is, told to the cards and the field. After the tags, whose
+# `comment_taggable` it replaces.
+echo "→ comment owner"
+for f in "$ROOT"/supabase/migrations/*_comment_owner.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comment_owner_test.sql"
+
+# What happened to you in comments (19 Nov 2026): the Activity screen's
+# rows, worked out on read. After the likes and the cascade it reads.
+echo "→ comment news"
+for f in "$ROOT"/supabase/migrations/*_comment_news.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/comment_news_test.sql"

@@ -221,6 +221,7 @@ describe('taggableOf', () => {
         { id: 'u2', handle: 'dang', full_name: null, avatar_url: null },
       ],
       places: [cong],
+      off: false, mine: false,
     });
   });
 
@@ -228,12 +229,18 @@ describe('taggableOf', () => {
     expect(taggableOf({
       people: [null, 'x', { id: 'u1' }, { handle: 'trang' }, { id: 7, handle: 'x' }],
       places: [null, { id: 'p1' }, { slug: 'cong' }, { id: 'p1', slug: 9 }],
-    })).toEqual({ people: [], places: [] });
+    })).toEqual({ people: [], places: [], off: false, mine: false });
+  });
+
+  it('reads a thread as closed, and as the reader\'s own, only on the word true', () => {
+    expect(taggableOf({ people: [], places: [], off: true, mine: true })).toMatchObject({ off: true, mine: true });
+    expect(taggableOf({ people: [], places: [], off: true, mine: false })).toMatchObject({ off: true, mine: false });
+    expect(taggableOf({ off: 'true', mine: 1 })).toMatchObject({ off: false, mine: false });
   });
 
   it('is nobody and nowhere for an answer that is not the object', () => {
     for (const raw of [null, undefined, 'x', [], { people: 'x', places: 3 }]) {
-      expect(taggableOf(raw)).toEqual({ people: [], places: [] });
+      expect(taggableOf(raw)).toEqual({ people: [], places: [], off: false, mine: false });
     }
   });
 });

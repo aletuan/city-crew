@@ -43,8 +43,8 @@ const placed = (over: Partial<Placed> = {}): Placed => ({
 });
 
 /** A page with one comment's ⋯ on it, or the word "none" where the hook offers no menu. */
-function Probe({ c }: { c: Placed }) {
-  const { menuOf, node } = useCommentMenu(state.me);
+function Probe({ c, mine }: { c: Placed; mine?: boolean }) {
+  const { menuOf, node } = useCommentMenu(state.me, mine);
   const open = menuOf(c);
   return (
     <>
@@ -53,7 +53,7 @@ function Probe({ c }: { c: Placed }) {
     </>
   );
 }
-const show = (c: Placed) => render(<Probe c={c} />);
+const show = (c: Placed, mine?: boolean) => render(<Probe c={c} mine={mine} />);
 /** Press a row of the sheet and let it close: the row acts once the sheet has gone. */
 const choose = async (key: string) => {
   fireEvent.click(screen.getByTestId(`sheet-action-${key}`));
@@ -162,5 +162,39 @@ describe('somebody else\'s comment', () => {
     show(placed({ handle: null, full_name: null }));
     fireEvent.click(screen.getByTestId('more'));
     expect(screen.getByText('Someone')).toBeTruthy();
+  });
+});
+
+// C6: the owner of the list the thread is on.
+describe('somebody else\'s comment on your own list', () => {
+  it('is yours to report and to delete, in that order', () => {
+    show(placed(), true);
+    fireEvent.click(screen.getByTestId('more'));
+    const keys = [...document.querySelectorAll('[data-testid^="sheet-action-"]')].map((el) => el.getAttribute('data-testid'));
+    expect(keys).toEqual(['sheet-action-report', 'sheet-action-delete']);
+  });
+
+  it('is deleted by the same question a writer is asked', async () => {
+    show(placed(), true);
+    fireEvent.click(screen.getByTestId('more'));
+    await choose('delete');
+    expect(alert.mock.calls[0][0]).toBe('Delete this comment?');
+    alert.mock.calls[0][2]![1].onPress!();
+    await settle();
+    expect(data.deleteComment).toHaveBeenCalledExactlyOnceWith('k1');
+  });
+
+  it('leaves your own comment there with delete alone', () => {
+    show(placed({ author: 'me' }), true);
+    fireEvent.click(screen.getByTestId('more'));
+    expect(screen.getByTestId('sheet-action-delete')).toBeTruthy();
+    expect(screen.queryByTestId('sheet-action-report')).toBeNull();
+  });
+
+  it('is only to report on a list that is not yours', () => {
+    show(placed(), false);
+    fireEvent.click(screen.getByTestId('more'));
+    expect(screen.getByTestId('sheet-action-report')).toBeTruthy();
+    expect(screen.queryByTestId('sheet-action-delete')).toBeNull();
   });
 });
