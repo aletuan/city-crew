@@ -263,6 +263,7 @@ export default function CommentsScreen({ navigation, route }: {
         />
       </KeyboardAvoidingView>
       {menuSheet}
+      {owner.node}
     </Screen>
   );
 }

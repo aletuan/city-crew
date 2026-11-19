@@ -17,10 +17,17 @@
 // (`app/oversize.js`), so the row would have been paid for by moving
 // something else out for no reason of its own.
 //
-// One alert is both the menu and the question: it says what the switch
-// does before it is thrown, in the direction it would be thrown. Closing
-// is not undone by accident — nothing is deleted, and the same ⋯ opens
-// it again.
+// The ⋯ raises the app's own sheet (owner, on a phone, 19 Nov 2026):
+// the first build raised the system's alert straight from the ⋯, and a
+// ⋯ everywhere else in the app — a comment's own, a list's — raises a
+// sheet, so the same mark did two different things on one page. The
+// sheet is the one "who can see a list" uses: a choice between two
+// states, each row saying what it means, a tick on the one that is true.
+// So the reader sees where the thread stands before changing it, and
+// there is nothing to ask twice — closing a thread deletes nothing, and
+// the same sheet opens it again. The system's alert is left for what it
+// is used for elsewhere: a failure, and a question before something that
+// cannot be taken back.
 //
 // ── what the others see ──
 //
@@ -35,15 +42,16 @@
 // switch thrown asks that again, and tells the cards (`commentsChanged`),
 // whose bubbles hide on a closed thread with nothing in it.
 
-import React from 'react';
-import { Alert } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import ActionSheet, { type SheetAction } from '../../components/ActionSheet';
 import { PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import type { Subject } from '../../lib/comments';
 import { commentsChanged } from '../../lib/commentsChanged';
 import { setCommentsOff } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
-import { colors } from '../../theme';
+import { colors, display, type } from '../../theme';
 
 export function useThreadOwner(
   subject: Subject,
@@ -64,30 +72,32 @@ export function useThreadOwner(
       ));
   };
 
-  const choose = () => Alert.alert(
-    off
-      ? t('Turn comments back on?', 'Bật lại bình luận?', 'コメントを再びオンにしますか？', '重新开启评论？', '重新開啟評論？')
-      : t('Turn off comments?', 'Tắt bình luận?', 'コメントをオフにしますか？', '关闭评论？', '關閉評論？'),
-    off
-      ? t(
-        'People will be able to comment on this collection again.',
-        'Mọi người sẽ lại bình luận được về bộ sưu tập này.',
-        'このコレクションに再びコメントできるようになります。',
-        '大家将可以再次评论这个合集。', '大家將可以再次評論這個合集。',
-      )
-      : t(
+  const [open, setOpen] = useState(false);
+  // A row for each state; the one that is true wears the tick and, chosen
+  // again, changes nothing.
+  const rows: SheetAction[] = [
+    {
+      key: 'on',
+      icon: 'chatbubble-outline',
+      title: t('Comments on', 'Bật bình luận', 'コメントをオン', '开启评论', '開啟評論'),
+      desc: t('Anyone signed in can comment on this collection.', 'Ai đã đăng nhập cũng bình luận được về bộ sưu tập này.', 'ログインしていれば誰でもこのコレクションにコメントできます。', '登录的用户都可以评论这个合集。', '登入的使用者都可以評論這個合集。'),
+      selected: !off,
+      onPress: () => { if (off) set(false); },
+    },
+    {
+      key: 'off',
+      icon: 'close-circle-outline',
+      title: t('Comments off', 'Tắt bình luận', 'コメントをオフ', '关闭评论', '關閉評論'),
+      desc: t(
         'Comments already here stay readable. Nobody can add one until you turn them back on.',
         'Bình luận đang có vẫn đọc được. Không ai viết thêm được cho tới khi bạn bật lại.',
         '既存のコメントは引き続き読めます。再びオンにするまで、誰も新しく書き込めません。',
         '已有的评论仍可阅读。在你重新开启之前，没有人可以再发表评论。', '已有的評論仍可閱讀。在你重新開啟之前，沒有人可以再發表評論。',
       ),
-    [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
-      off
-        ? { text: t('Turn on', 'Bật', 'オンにする', '开启', '開啟'), onPress: () => set(false) }
-        : { text: t('Turn off', 'Tắt', 'オフにする', '关闭', '關閉'), style: 'destructive', onPress: () => set(true) },
-    ],
-  );
+      selected: off,
+      onPress: () => { if (!off) set(true); },
+    },
+  ];
 
   return {
     /** The words that stand where the field would, or none on an open thread. */
@@ -97,7 +107,7 @@ export function useThreadOwner(
     /** The owner's ⋯ for the header, or nothing for anybody else. */
     right: mine ? (
       <PressableScale
-        onPress={choose}
+        onPress={() => setOpen(true)}
         haptic="selection"
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityRole="button"
@@ -107,5 +117,30 @@ export function useThreadOwner(
         <Glyph name="ellipsis-horizontal" size={ICON.nav} color={colors.text} />
       </PressableScale>
     ) : undefined,
+    /** The owner's sheet. Drawn for anybody, opened only by the ⋯, which
+     *  only the owner has. */
+    node: (
+      <ActionSheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        actions={rows}
+        header={(
+          <View style={s.head}>
+            <Text style={s.title} accessibilityRole="header">{t('Comments', 'Bình luận', 'コメント', '评论', '評論')}</Text>
+            <Text style={s.ask}>
+              {t('Who can comment on your collection?', 'Ai bình luận được về bộ sưu tập của bạn?', 'あなたのコレクションにコメントできるのは？', '谁可以评论你的合集？', '誰可以評論你的合集？')}
+            </Text>
+          </View>
+        )}
+      />
+    ),
   };
 }
+
+// The share sheet's own heading (`collectionDetail/styles`), so the two
+// sheets that ask "who can…" of a list read as the same kind of thing.
+const s = StyleSheet.create({
+  head: { gap: 4 },
+  title: { color: colors.text, fontSize: 18, fontFamily: display.semibold, paddingHorizontal: 4 },
+  ask: { color: colors.textTertiary, ...type.meta, paddingHorizontal: 4 },
+});
