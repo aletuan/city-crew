@@ -82,7 +82,12 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   const handle = comment.handle ? normalizeHandle(comment.handle) : '';
   const who = handle || comment.full_name || t('Someone', 'Ai đó', '誰か', '有人', '有人');
   const size = comment.level === 0 ? FACE : FACE_REPLY;
-  const { body } = comment;
+  const { body, under } = comment;
+  const reply = t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`);
+  // The figure is said with the act, as a tab's dot is said with its name.
+  const replyLabel = under > 0
+    ? t(`${reply}, ${under} ${under === 1 ? 'reply' : 'replies'}`, `${reply}, ${under} trả lời`, `${reply}、返信${under}件`, `${reply}，${under} 条回复`, `${reply}，${under} 條回覆`)
+    : reply;
 
   return (
     <View style={[s.row, indent, lit && s.lit]} onLayout={onLayout} testID="comment-row">
@@ -130,7 +135,15 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
             reads: a heart and the bubble that answers, as Threads draws
             them (owner, 18 Nov 2026 — "Reply" was a word for a day).
             Each is 44 to the thumb by its slop; 20 between them, so the
-            heart's figure reads as the heart's. */}
+            heart's figure reads as the heart's.
+
+            The bubble wears a figure as the heart does (owner, 19 Nov
+            2026, after Threads): how many comments are under this one —
+            `Placed.under`, and why it is the whole branch. Nothing at
+            none. The bubble itself never fills: a filled heart says
+            "you liked this", and there is no such thing to say of an
+            answer. On a closed thread the figure dims with the bubble;
+            it is still true, and the two are one mark. */}
         {onHeart || onReply || replyOff ? (
           <View style={s.acts}>
             {onHeart ? (
@@ -150,14 +163,15 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
               <PressableScale
                 onPress={replyOff ? undefined : onReply}
                 disabled={replyOff}
-                contentStyle={replyOff ? s.off : undefined}
+                contentStyle={[s.heart, replyOff && s.off]}
                 haptic="selection"
                 hitSlop={{ top: 12, bottom: 14, left: 8, right: 24 }}
                 accessibilityRole="button"
-                accessibilityLabel={t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`)}
+                accessibilityLabel={replyLabel}
                 testID="comment-reply"
               >
                 <Glyph name="chatbubble-outline" size={ICON.action} color={colors.textSecondary} />
+                {under > 0 ? <Text style={s.count} testID="comment-replies">{under}</Text> : null}
               </PressableScale>
             ) : null}
           </View>

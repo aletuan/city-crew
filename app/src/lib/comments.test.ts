@@ -88,6 +88,28 @@ describe('threadOf', () => {
     expect(drawn(rows)).toEqual(['a@0 a1@1 p@2 q@2>h-p s@2 r@2>h-q']);
   });
 
+  // The figure beside a comment's bubble (owner, 19 Nov 2026): the whole
+  // of what is under it, since the page lays a deep answer on the third
+  // level and a reader counts rows, not a tree.
+  it('counts everything under a comment, at any depth, and nothing under one nobody answered', () => {
+    // a ─ a1 ─ p ─ q      b (alone)
+    //   └ a2
+    const rows = [
+      row('a', null), row('b', null),
+      row('a1', 'a', { depth: 1 }), row('a2', 'a', { depth: 1 }),
+      row('p', 'a1', { depth: 2 }), row('q', 'p', { depth: 3 }),
+    ];
+    const all = threadOf(rows).flatMap((b) => [b.root, ...b.replies]);
+    expect(Object.fromEntries(all.map((c) => [c.id, c.under]))).toEqual({ a: 4, a1: 2, p: 1, q: 0, a2: 0, b: 0 });
+  });
+
+  // What the server left out for this reader is not counted: an answer
+  // whose parent did not come is not drawn, and is under nothing.
+  it('does not count an answer whose parent is not in the list', () => {
+    const rows = [row('a', null), row('a1', 'a', { depth: 1 }), row('z', 'gone', { depth: 2 })];
+    expect(threadOf(rows)[0].root.under).toBe(1);
+  });
+
   it('keeps the order they came in for two written at the same instant', () => {
     const rows = [
       row('a', null), row('a1', 'a', { depth: 1 }),

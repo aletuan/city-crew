@@ -425,6 +425,12 @@ sinh lại):*
   mất bình luận đang có. Khách cũng mở luồng, nơi họ được mời đăng nhập.
 - "Trả lời" dưới mỗi bình luận nay là **biểu tượng bong bóng**, không phải
   chữ, để dành chỗ cho trái tim cạnh nó khi bình luận có lượt thích.
+- **Số cạnh bong bóng** (chủ dự án, 19/11/2026, theo Threads): số bình
+  luận nằm dưới bình luận đó, đếm **cả nhánh** chứ không chỉ trả lời trực
+  tiếp, vì màn hình dồn các cấp sâu về cấp ba và người đọc đếm dòng chứ
+  không đếm cây. Bằng 0 thì không hiện. Bong bóng không tô đầy. Tính ở
+  app từ chính luồng máy chủ trả về (`threadOf`), nên không cần migration
+  và tự khớp với những gì người đọc được thấy.
 
 *C4b — xong:*
 - Nút ⋯ ở cuối mỗi bình luận (chỉ khi đã đăng nhập).

@@ -19,7 +19,7 @@ vi.mock('../lib/i18n', () => ({
 import CommentRow, { FACE, FACE_REPLY, INDENT } from './CommentRow';
 
 const placed = (over: Partial<Placed> = {}): Placed => ({
-  id: 'k1', parent_id: null, root_id: null, depth: 0, level: 0, to: null,
+  id: 'k1', parent_id: null, root_id: null, depth: 0, level: 0, to: null, under: 0,
   body: 'Lovely rooftop', created_at: '2026-11-18T00:00:00Z',
   author: 'u1', handle: '@Trang', full_name: 'Trang Le', avatar_url: 'https://faces/trang.jpg', mentions: [], likes: 0, liked: false,
   ...over,
@@ -146,6 +146,35 @@ describe('the comment a row of Activity led to', () => {
     cleanup();
     render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} />);
     expect(wash()).toBeUndefined();
+  });
+});
+
+// A figure beside the bubble, as the heart has one (owner, 19 Nov 2026).
+describe('how many are under it', () => {
+  it('draws no figure at none, and says only the act', () => {
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} onReply={onReply} />);
+    expect(screen.queryByTestId('comment-replies')).toBeNull();
+    expect(screen.getByTestId('comment-reply').getAttribute('aria-label')).toBe('Reply to trang');
+  });
+
+  it('draws the figure in the bubble\'s press, in the heart\'s type, and says it with the act', () => {
+    render(<CommentRow comment={placed({ under: 3, likes: 2 })} when="2h ago" onPerson={onPerson} onReply={onReply} onHeart={() => {}} />);
+    const bubble = screen.getByTestId('comment-reply');
+    const figure = screen.getByTestId('comment-replies');
+    expect(figure.textContent).toBe('3');
+    expect(bubble.contains(figure)).toBe(true);
+    expect(textStyleOf(figure)).toMatchObject(textStyleOf(screen.getByTestId('comment-likes'))!);
+    expect(bubble.getAttribute('aria-label')).toBe('Reply to trang, 3 replies');
+    // The bubble does not fill: there is no "you answered" to say.
+    expect(bubble.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('chatbubble-outline');
+    fireEvent.click(figure);
+    expect(onReply).toHaveBeenCalledTimes(1);
+  });
+
+  it('says one as "1 reply", and keeps the figure on a closed thread', () => {
+    render(<CommentRow comment={placed({ under: 1 })} when="2h ago" onPerson={onPerson} replyOff />);
+    expect(screen.getByTestId('comment-reply').getAttribute('aria-label')).toBe('Reply to trang, 1 reply');
+    expect(screen.getByTestId('comment-replies').textContent).toBe('1');
   });
 });
 
