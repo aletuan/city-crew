@@ -10,6 +10,14 @@
 // did rides on its corner as a badge. A row that opens something wears
 // the chevron that says so; one that opens nothing wears none.
 //
+// A row about a list opens the list; a friendship's opens the other
+// person's page (owner, 19 Nov 2026). Until then it was a line to read,
+// and the one row in "For you" that led nowhere: a new friend is the one
+// piece of news here whose next step is a person — see what they keep —
+// and the face on the row already looked like a way there. Only where
+// the other person has a handle to open: a profile not in yet has no
+// page, so its row keeps no chevron.
+//
 // A comment's row (C7b of `docs/comments-plan.md`) is the same row with
 // one line more: the comment's own words, in quotation marks, one line.
 // The sentence says who and what kind — "replied to you" — and the quote
@@ -45,6 +53,7 @@ import type { ActivityItem } from '../../lib/friends';
 import { useSeenThrough } from '../../lib/freshNews';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
+import { type Nav, toPerson } from '../../nav';
 import { colors, space, type } from '../../theme';
 
 type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
@@ -52,7 +61,7 @@ type Glyphs = keyof typeof Ionicons.glyphMap;
 /** A list as a row needs it: where it opens, and what it is called. */
 type Titled = { slug: string; title_en: string; title_vi: string; title_ja?: string | null };
 
-export function ActivityGroups({ groups, people, faces, collectionOf, ago, onList, onComment }: {
+export function ActivityGroups({ groups, people, faces, collectionOf, ago, navigation }: {
   groups: { forYou: ActivityEntry[]; yours: ActivityEntry[] };
   /** The crew, by id: a friendship row's other person. */
   people: Record<string, FriendProfile>;
@@ -60,10 +69,17 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, onLis
   faces: Record<string, string>;
   collectionOf: (collectionId: string) => Titled | null;
   ago: (iso: string) => string;
-  onList: (slug: string) => void;
-  onComment: (news: CommentNews) => void;
+  /** Where the rows go; the page's own, handed down whole since the
+   *  third destination arrived and the page's function was at its
+   *  ceiling. */
+  navigation: Nav;
 }) {
   const { t } = useI18n();
+  const onList = (slug: string) => navigation.navigate('CollectionDetail', { slug });
+  const onPerson = (handle: string) => toPerson(navigation, handle);
+  // The thread, at the comment: `useThreadFocus` scrolls to it and lights it.
+  const onComment = (n: CommentNews) =>
+    navigation.navigate('Comments', { subject: { kind: 'collection', id: n.list.id }, focus: n.comment_id });
   const isNew = useSeenThrough(newestAt(groups.forYou));
   const group = (entries: ActivityEntry[], title: string, testID: string, news = false) => (entries.length === 0 ? null : (
     <>
@@ -71,7 +87,7 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, onLis
       <Card testID={testID}>
         {entries.map((e, i) => {
           const row = e.from === 'log'
-            ? logRow(e.item, people, faces, collectionOf, onList, t)
+            ? logRow(e.item, people, faces, collectionOf, onList, onPerson, t)
             : newsRow(e.news, onComment, t);
           return (
             <PressableScale
@@ -131,7 +147,8 @@ type Row = { key: string; face: string | null; badge: Glyphs; line: string; quot
 
 function logRow(
   item: ActivityItem, people: Record<string, FriendProfile>, faces: Record<string, string>,
-  collectionOf: (id: string) => Titled | null, onList: (slug: string) => void, t: Translate,
+  collectionOf: (id: string) => Titled | null, onList: (slug: string) => void, onPerson: (handle: string) => void,
+  t: Translate,
 ): Row {
   const col = item.kind === 'friend' ? null : collectionOf(item.collection_id);
   const title = col ? t(col.title_en, col.title_vi, col.title_ja as string) : null;
@@ -141,7 +158,7 @@ function logRow(
     face: who ? faces[who] : null,
     badge: BADGE[item.kind],
     line: lineOf(item, who ? atHandle(who) : null, title ?? '…', t),
-    open: col ? () => onList(col.slug) : undefined,
+    open: item.kind === 'friend' ? (who ? () => onPerson(who) : undefined) : col ? () => onList(col.slug) : undefined,
   };
 }
 

@@ -597,13 +597,17 @@ describe('a friendship that began', () => {
     expect(data.avatarsAsked).toHaveBeenCalledWith(['chi']);
   });
 
-  it('says the reader and whoever asked are friends now, and goes nowhere on a tap', async () => {
-    crew.ships.data = [made('u-d', ME, '2026-09-11T10:00:00')];
-    crew.people = { 'u-d': person('u-d', 'dung') };
+  // Both friendship rows open the other person's page (owner, 19 Nov
+  // 2026): whoever said yes, the next step is the person.
+  it('says the reader and whoever asked are friends now, and opens their page', async () => {
+    crew.ships.data = [made('u-d', ME, '2026-09-11T10:00:00'), made(ME, 'u-c', '2026-09-11T09:00:00')];
+    crew.people = { 'u-d': person('u-d', 'dung'), 'u-c': person('u-c', 'chi') };
     i18n.lang = 'vi';
-    await renderScreen();
-    expect(screen.getByText('Bạn và @dung đã thành bạn bè')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /dung/ })).toBeNull();
+    const navigation = await renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /Bạn và @dung đã thành bạn bè/ }));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Person', { handle: 'dung' });
+    fireEvent.click(screen.getByRole('button', { name: /@chi đã chấp nhận/ }));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Person', { handle: 'chi' });
   });
 
   // The other person's profile not in yet: the sentence stands without the
@@ -613,6 +617,8 @@ describe('a friendship that began', () => {
     await renderScreen();
     expect(screen.getByText('Someone accepted your friend request')).toBeTruthy();
     expect(screen.getByText('You made a new friend')).toBeTruthy();
+    // And nobody's page to open: no button, so no chevron.
+    expect(screen.queryAllByRole('button', { name: /friend/ })).toHaveLength(0);
     expect(data.avatarsAsked).toHaveBeenCalledWith([]);
   });
 
