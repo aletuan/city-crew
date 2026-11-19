@@ -341,10 +341,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             the button they have to reach either way. */}
         <Text style={s.privacyNote}>
           {t(
-            'City Crew uses your interests, trips and activity history to suggest more relevant content. You can turn off activity recording in Profile → Edit profile.',
-            'City Crew sử dụng sở thích, hành trình và lịch sử hoạt động để gợi ý nội dung phù hợp hơn. Bạn có thể tắt việc ghi nhớ hoạt động trong Hồ sơ → Sửa hồ sơ.',
-            'City Crew は好みや旅程、アクティビティ履歴をもとに、あなたに合ったコンテンツを提案します。アクティビティの記録は「プロフィール」→「プロフィール編集」でオフにできます。',
-            'City Crew 会根据你的兴趣、行程和活动记录推荐更相关的内容。你可以在“个人主页 → 编辑个人资料”中关闭活动记录。', 'City Crew 會根據你的興趣、行程和活動記錄推薦更相關的內容。你可以在「個人檔案 → 編輯個人資料」中關閉活動記錄。',
+            'City Crew uses your interests, trips and activity history to suggest more relevant content. You can turn off activity recording in Account → Edit profile.',
+            'City Crew sử dụng sở thích, hành trình và lịch sử hoạt động để gợi ý nội dung phù hợp hơn. Bạn có thể tắt việc ghi nhớ hoạt động trong Tài khoản → Sửa hồ sơ.',
+            'City Crew は好みや旅程、アクティビティ履歴をもとに、あなたに合ったコンテンツを提案します。アクティビティの記録は「アカウント」→「プロフィール編集」でオフにできます。',
+            'City Crew 会根据你的兴趣、行程和活动记录推荐更相关的内容。你可以在“账号 → 编辑个人资料”中关闭活动记录。', 'City Crew 會根據你的興趣、行程和活動記錄推薦更相關的內容。你可以在「帳號 → 編輯個人資料」中關閉活動記錄。',
           )}
         </Text>
         {/* The account is made here now, so this is where its failures
