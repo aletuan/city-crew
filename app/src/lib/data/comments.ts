@@ -16,6 +16,7 @@
 // between them is here, and no screen changes.
 
 import { supabase } from '../supabase';
+import { commentNewsOf, type CommentNews } from '../commentNews';
 import { taggableOf, type Taggable } from '../commentTags';
 import {
   latestOf, mentionsOf,
@@ -174,4 +175,16 @@ export async function setCommentsOff(subject: Subject, off: boolean): Promise<vo
     .select('id');
   if (error) throw new Error(error.message);
   if (!data?.length) throw new Error('comment:subject');
+}
+
+/**
+ * What happened to the reader in comments since `sinceISO`: a tag, a
+ * reply, a comment on their list, hearts on their comment — the rows
+ * Activity draws (`lib/commentNews`). Nothing for a guest; the server
+ * answers empty there, as it does for a reader with no news.
+ */
+export async function fetchCommentNews(sinceISO: string): Promise<CommentNews[]> {
+  const { data, error } = await supabase.rpc('comment_news', { p_since: sinceISO });
+  if (error) throw new Error(error.message);
+  return commentNewsOf(data);
 }

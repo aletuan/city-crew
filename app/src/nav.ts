@@ -125,7 +125,13 @@ export type RootStackParamList = {
    *  By the subject, which is all the screen knows of what is discussed;
    *  registered in every stack that has `CollectionDetail`, where its
    *  door is. */
-  Comments: { subject: Subject };
+  Comments: {
+    subject: Subject;
+    /** The comment a row of Activity was about (`screens/activity`): the
+     *  one to land on. Carried from C7b; the thread opens at its top
+     *  until landing on it is built. */
+    focus?: string;
+  };
   /** One of your lists' figures — opens, likes, copies, trips, all time
    *  and the last seven days — from its Activity page's "Statistics ›".
    *  By slug, for the reason `CollectionActivity` is. */

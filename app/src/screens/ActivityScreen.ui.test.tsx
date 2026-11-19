@@ -16,6 +16,8 @@ import { act, fireEvent, fontSizeOf, render, screen } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { FriendProfile, MyActs } from '../lib/data';
+import type { CommentNews } from '../lib/commentNews';
+import { appFlags } from '../lib/flags';
 import { colors } from '../theme';
 
 const ME = 'me';
@@ -30,6 +32,9 @@ const data = vi.hoisted(() => ({
   mine: [] as Col[],
   useMyCollections: vi.fn(),
   avatars: {} as Record<string, string>,
+  // Comment news: what the hook hands the page, and what the page handed it.
+  news: { data: [] as CommentNews[], loaded: true, loading: false, reload: vi.fn() },
+  newsAsked: vi.fn((_me: string | null, _on: boolean) => {}),
   avatarsAsked: vi.fn((_handles: string[]) => {}),
 }));
 vi.mock('../lib/data', () => ({
@@ -38,6 +43,7 @@ vi.mock('../lib/data', () => ({
   fetchMyActs: data.fetchMyActs,
   useMyCollections: (id: string | null) => { data.useMyCollections(id); return { data: data.mine }; },
   useCuratorAvatarsQuery: (handles: string[]) => { data.avatarsAsked(handles); return { data: data.avatars }; },
+  useCommentNewsQuery: (me: string | null, on: boolean) => { data.newsAsked(me, on); return data.news; },
 }));
 
 const catalog = vi.hoisted(() => ({ cols: [] as Col[] }));
@@ -115,8 +121,9 @@ beforeEach(() => {
   crew.people = {};
   auth.me = ME;
   i18n.lang = 'en';
+  data.news = { data: [], loaded: true, loading: false, reload: vi.fn() };
 });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); appFlags.reset(); });
 
 describe('the frame', () => {
   it('names itself and goes back through the navigation prop', async () => {
@@ -517,15 +524,32 @@ describe('your own acts', () => {
     expect(screen.getByText('You saved a copy of “Phở tour”')).toBeTruthy();
   });
 
-  it('sits in time order with the news, newest first', async () => {
+  // Until 19 Nov 2026 the two were one timeline; a reply was about to be
+  // found among the reader's own likes. See `lib/commentNews`.
+  it('stands under what is for the reader, each group newest first, however the times interleave', async () => {
     data.mine = [col('c1', 'rooftops', 'Rooftops')];
     data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00', 'trang')]);
     data.fetchMyActs.mockImplementation(async () => acts({ likes: [{ collection_id: 'c9', at: '2026-09-11T11:00:00', owner_handle: 'bao' }] }));
     await renderScreen();
     const lines = [...screen.getByTestId('earlier-card').querySelectorAll('[data-testid="row-face"] + *')]
       .map((el) => el.textContent ?? '');
-    expect(lines[0]).toContain('You liked @bao’s “Phở tour”');
-    expect(lines[1]).toContain('@trang liked “Rooftops”');
+    // The like of the reader's list is the older of the two, and first.
+    expect(lines[0]).toContain('@trang liked “Rooftops”');
+    expect(lines[1]).toContain('You liked @bao’s “Phở tour”');
+    expect(screen.getByTestId('activity-for-you').textContent).toContain('@trang liked');
+    expect(screen.getByTestId('activity-yours').textContent).toContain('You liked');
+    expect(screen.getByTestId('activity-for-you-head').textContent).toBe('For you');
+    expect(screen.getByTestId('activity-yours-head').textContent).toBe('What you did');
+    expect(screen.getByTestId('activity-for-you').compareDocumentPosition(screen.getByTestId('activity-yours'))
+      & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('has no heading for a group with nothing in it', async () => {
+    data.fetchMyActs.mockImplementation(async () => acts({ likes: [{ collection_id: 'c9', at: '2026-09-11T11:00:00', owner_handle: 'bao' }] }));
+    await renderScreen();
+    expect(screen.queryByTestId('activity-for-you-head')).toBeNull();
+    expect(screen.queryByTestId('activity-for-you')).toBeNull();
+    expect(screen.getByTestId('activity-yours-head')).toBeTruthy();
   });
 
   it('counts a failure of its own as a failure, and asks again with the rest', async () => {
@@ -608,6 +632,22 @@ describe('pulling the timeline down', () => {
     throw new Error('no RefreshControl');
   };
   const pull = () => act(() => { list().onRefresh(); });
+
+  // Comment news is the page's fourth source, asked by its own hook.
+  it('asks the comment news again too', async () => {
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00', 'trang')]);
+    await renderScreen();
+    await pull();
+    expect(data.news.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the comment news alone while it is already being asked', async () => {
+    data.news = { data: [], loaded: true, loading: true, reload: vi.fn() };
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00', 'trang')]);
+    await renderScreen();
+    await pull();
+    expect(data.news.reload).not.toHaveBeenCalled();
+  });
   /** A promise the test answers, or refuses, when it chooses. */
   const deferred = <T,>() => {
     let ok: (v: T) => void = () => {};
@@ -840,5 +880,116 @@ describe('pulling the timeline down', () => {
     await likes.ok([like('c1', '2026-09-11T10:00:00Z', 'bao')]);
     expect(lines()).toEqual(['@anh liked “Pho walk”']);
     expect(list().refreshing).toBe(false);
+  });
+});
+
+// C7b of `docs/comments-plan.md`: what happened to the reader in
+// comments, among what is for them. Which rows there are is the
+// server's (`comment_news`) and which group is `lib/commentNews`'s; here
+// it is what a row says, shows and opens.
+describe('comment news', () => {
+  const news = (over: Partial<CommentNews> = {}): CommentNews => ({
+    kind: 'reply', comment_id: 'k1',
+    list: { id: 'c1', slug: 'hoi-an-coffee', title_en: 'Hoi An Coffee', title_vi: 'Cà phê Hội An', title_ja: null },
+    actor: 'u2', handle: '@Trang', full_name: 'Trang Lê', avatar_url: 'https://faces/trang.jpg',
+    body: 'Can I come with you', at: '2026-09-11T10:00:00', others: 0,
+    ...over,
+  });
+  const row = (kind: CommentNews['kind']) => screen.getByTestId(`news-${kind}`);
+  const lineOf = (kind: CommentNews['kind']) => row(kind).querySelector('[data-testid="row-face"] + * > *')!.textContent;
+
+  it('asks for the reader\'s news only with the comments switch on', async () => {
+    await renderScreen();
+    expect(data.newsAsked).toHaveBeenLastCalledWith(ME, false);
+    appFlags.set('comments', true);
+    await renderScreen();
+    expect(data.newsAsked).toHaveBeenLastCalledWith(ME, true);
+  });
+
+  it('says each of the four things in a sentence, with the comment\'s words under it', async () => {
+    data.news.data = [
+      news({ kind: 'tag', comment_id: 'k4', at: '2026-09-11T13:00:00', body: '@you look' }),
+      news({ kind: 'reply', comment_id: 'k3', at: '2026-09-11T12:00:00' }),
+      news({ kind: 'on_list', comment_id: 'k2', at: '2026-09-11T11:00:00', body: 'Lovely list' }),
+      news({ kind: 'heart', comment_id: 'k1', at: '2026-09-11T10:00:00', body: 'Mine' }),
+    ];
+    await renderScreen();
+    expect(lineOf('tag')).toBe('@trang mentioned you');
+    expect(lineOf('reply')).toBe('@trang replied to you');
+    expect(lineOf('on_list')).toBe('@trang commented on “Hoi An Coffee”');
+    expect(lineOf('heart')).toBe('@trang liked your comment');
+    expect(screen.getAllByTestId('news-quote').map((q) => q.textContent)).toEqual([
+      '“@you look”', '“Can I come with you”', '“Lovely list”', '“Mine”',
+    ]);
+    expect(screen.getByTestId('activity-for-you').querySelectorAll('[data-testid^="news-"]:not([data-testid="news-quote"])')).toHaveLength(4);
+  });
+
+  it('wears the actor\'s own face, and a mark for the kind on its corner', async () => {
+    data.news.data = [
+      news({ kind: 'tag', comment_id: 'k4' }), news({ kind: 'reply', comment_id: 'k3' }),
+      news({ kind: 'on_list', comment_id: 'k2' }), news({ kind: 'heart', comment_id: 'k1' }),
+    ];
+    await renderScreen();
+    expect(row('reply').querySelector('img')!.getAttribute('src')).toBe('https://faces/trang.jpg');
+    const badge = (kind: CommentNews['kind']) => row(kind).querySelector('[data-testid="kind-badge"] [data-icon]')!.getAttribute('data-icon');
+    expect([badge('tag'), badge('reply'), badge('on_list'), badge('heart')]).toEqual(['at', 'arrow-undo', 'chatbubble', 'heart']);
+    // The face came with the news: nobody is asked for it by handle.
+    expect(data.avatarsAsked).toHaveBeenLastCalledWith([]);
+  });
+
+  it('counts the others who liked, one in the singular', async () => {
+    data.news.data = [news({ kind: 'heart', others: 1 })];
+    await renderScreen();
+    expect(lineOf('heart')).toBe('@trang and 1 other liked your comment');
+    data.news.data = [news({ kind: 'heart', others: 4 })];
+    await renderScreen();
+    expect(screen.getAllByTestId('news-heart').pop()!.textContent).toContain('@trang and 4 others liked your comment');
+  });
+
+  it('names somebody by their name where no handle came, and "Someone" where neither did', async () => {
+    data.news.data = [news({ handle: null }), news({ kind: 'tag', comment_id: 'k2', handle: null, full_name: null })];
+    await renderScreen();
+    expect(lineOf('reply')).toBe('Trang Lê replied to you');
+    expect(lineOf('tag')).toBe('Someone mentioned you');
+  });
+
+  it('names the list in the reader\'s language, and has no quote for a comment with no words', async () => {
+    i18n.lang = 'vi';
+    data.news.data = [news({ kind: 'on_list', body: '' })];
+    await renderScreen();
+    expect(lineOf('on_list')).toBe('@trang đã bình luận về “Cà phê Hội An”');
+    expect(screen.queryByTestId('news-quote')).toBeNull();
+    expect(screen.getByTestId('activity-for-you-head').textContent).toBe('Dành cho bạn');
+  });
+
+  it('falls back to "…" for a list whose name did not come', async () => {
+    data.news.data = [news({ kind: 'on_list', list: { id: 'c1', slug: '', title_en: null, title_vi: null, title_ja: null } })];
+    await renderScreen();
+    expect(lineOf('on_list')).toBe('@trang commented on “…”');
+  });
+
+  it('opens the list\'s thread, handing over which comment it was about', async () => {
+    data.news.data = [news({ comment_id: 'k7' })];
+    const navigation = await renderScreen();
+    expect(row('reply').getAttribute('role')).toBe('button');
+    expect(row('reply').querySelector('[data-icon="chevron-forward"]')).toBeTruthy();
+    fireEvent.click(row('reply'));
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Comments', { subject: { kind: 'collection', id: 'c1' }, focus: 'k7' });
+  });
+
+  it('is enough on its own to fill the page, and stands above the reader\'s own acts', async () => {
+    data.news.data = [news({ at: '2026-09-10T10:00:00' })];
+    data.fetchMyActs.mockImplementation(async () => ({ likes: [{ collection_id: 'c9', at: '2026-09-11T11:00:00', owner_handle: 'bao' }], copies: [], lists: [] }));
+    await renderScreen();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.getByTestId('activity-for-you').textContent).toContain('replied to you');
+    expect(screen.getByTestId('activity-yours').textContent).toContain('You liked');
+  });
+
+  it('waits for the news with the rest before drawing, and does not call a page with only news empty', async () => {
+    data.news = { data: [], loaded: false, loading: true, reload: vi.fn() };
+    await renderScreen();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.queryByTestId('earlier-card')).toBeNull();
   });
 });

@@ -14,7 +14,7 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { deleteComment, fetchPreviews, fetchTaggable, fetchThread, likeComment, postComment, setCommentsOff } from './comments';
+import { deleteComment, fetchCommentNews, fetchPreviews, fetchTaggable, fetchThread, likeComment, postComment, setCommentsOff } from './comments';
 import { refusalOf, type Subject } from '../comments';
 
 const list = (id: string): Subject => ({ kind: 'collection', id });
@@ -219,5 +219,22 @@ describe('setCommentsOff', () => {
   it('throws what the server said', async () => {
     fake().replies({ error: { message: 'down' } });
     await expect(setCommentsOff(list('c1'), true)).rejects.toThrow('down');
+  });
+});
+
+describe('fetchCommentNews', () => {
+  it('asks for the news since an instant, and reads the rows', async () => {
+    fake().replies({ data: [
+      { kind: 'reply', comment_id: 'k1', list: { id: 'c1', slug: 's' }, handle: 'trang', body: 'hi', at: '2026-11-18T10:00:00Z', others: 0 },
+      { kind: 'unknown', comment_id: 'k2', list: { id: 'c1' }, at: 'x' },
+    ] });
+    const out = await fetchCommentNews('2026-11-05T00:00:00Z');
+    expect(out.map((n) => [n.kind, n.comment_id, n.handle])).toEqual([['reply', 'k1', 'trang']]);
+    expect(fake().log).toEqual([{ op: 'rpc', fn: 'comment_news', payload: { p_since: '2026-11-05T00:00:00Z' }, filters: [] }]);
+  });
+
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'down' } });
+    await expect(fetchCommentNews('x')).rejects.toThrow('down');
   });
 });
