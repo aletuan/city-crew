@@ -105,7 +105,8 @@ và C11.
    cho việc này.
 8. **Người thả tim được nêu tên với người viết bình luận** (và chỉ với
    người đó), như lượt thích bộ sưu tập đang nêu tên với chủ bộ. Trong
-   luồng vẫn chỉ hiện con số (quyết định 11).
+   luồng vẫn chỉ hiện con số (quyết định 11). Chủ dự án chốt ngày
+   19/11/2026.
 
 **Cái gì là mới**
 
@@ -115,7 +116,7 @@ con số bên cạnh). Với lượt thích bộ sưu tập thì ổn. Với bì
 không đủ: một câu trả lời là thứ người ta cần biết *vừa có*, và hôm nay
 muốn thấy nó phải mở app, sang tab Trang cá nhân, rồi vào Hoạt động.
 
-Đề nghị, làm cùng C7:
+Chủ dự án chốt ngày 19/11/2026, làm ở C7c:
 
 - Giữ con số là tổng.
 - Thêm một mốc "lần cuối mở Hoạt động", lưu trên máy. Dòng mới hơn mốc
@@ -440,11 +441,8 @@ dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
 - Chưa kiểm được bằng kiểm thử tự động: con trỏ và bàn phím trên máy thật
   khi chọn một dòng gợi ý ở giữa câu.
 
-**C6. Quyền của chủ bộ** — xong phần ứng dụng
-(`20261119070000_comment_owner.sql` **chưa áp lên cơ sở dữ liệu thật**:
-lời hỏi xác nhận ngày 19/11/2026 hết giờ; ứng dụng đọc `off`, `mine` như
-dữ liệu chưa tin nên chạy được trước khi migration lên, chỉ là chưa có
-gì để thấy)
+**C6. Quyền của chủ bộ** — xong (`20261119070000_comment_owner.sql`; đã
+áp lên cơ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
 - **Công tắc tắt bình luận nằm trên chính màn Bình luận**, sau nút ⋯ ở
   đầu trang mà chỉ chủ bộ thấy, không nằm trong màn sửa bộ sưu tập như
   bản kế hoạch đầu. Lý do: Instagram và Threads đặt nó trên bài, không
@@ -469,13 +467,20 @@ gì để thấy)
 
 **C7. Hoạt động** — thiết kế ở "Về thông báo"; chia ba PR
 
-*C7a — máy chủ:*
-- Một hàm trả các dòng của người gọi trong hai tuần: loại (bình luận trên
-  bộ của bạn, trả lời, tag, tim), bình luận nào, bộ nào, ai làm, trích
-  nội dung, lúc nào, và với tim là số người. Đã áp luật 1 đến 5.
+*C7a — máy chủ — xong (`20261119080000_comment_news.sql`; đã áp lên cơ
+sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
+- Hàm `comment_news(từ lúc nào)` trả các dòng của người gọi: loại (`tag`,
+  `reply`, `on_list`, `heart`), bình luận nào, bộ nào (id, slug, tên theo
+  từng ngôn ngữ), ai làm, nội dung bình luận, lúc nào, và với tim là số
+  người còn lại. Đã áp luật 1 đến 5. Mới nhất trước, tối đa 200 dòng; cửa
+  sổ do app gửi, máy chủ không cho quá 31 ngày.
 - Kiểm thử: mỗi loại tới đúng người; một bình luận chỉ ra một dòng cho
   một người; không có dòng cho việc của chính mình; chặn nhau thì không
-  có; xoá bình luận, rút tim, bộ về riêng tư thì dòng mất.
+  có; xoá bình luận, rút tim, bộ về riêng tư thì dòng mất, công khai lại
+  thì dòng trở lại.
+- Chủ bộ cũng nhận dòng cho **trả lời** viết trên bộ của mình (không chỉ
+  bình luận gốc): mọi thứ viết trên bộ là việc của chủ bộ, người có quyền
+  xoá nó.
 
 *C7b — ứng dụng:*
 - Bốn loại dòng trong màn Hoạt động, xếp chung dòng thời gian với phần
