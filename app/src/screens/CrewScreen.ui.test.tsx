@@ -81,7 +81,7 @@ import CrewScreen from './CrewScreen';
 /** The flattened style a Text was committed with, by its words: jsdom does
  *  not resolve react-native-web's atomic font classes, so a weight is read
  *  off the props rather than the computed style. */
-const styleOf = (words: string): TextStyle | undefined => {
+const styleOf = (words: string | number): TextStyle | undefined => {
   type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
   const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
   const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
@@ -204,11 +204,14 @@ describe('the frame', () => {
 });
 
 describe('which tab opens', () => {
-  it('opens on Your friends when nobody is waiting, with the tally in the name', () => {
+  it('opens on Your friends when nobody is waiting, with the tally beside the name', () => {
     crew.ships.data = [edge(ME, 'a', 'accepted'), edge('b', ME, 'accepted')];
     crew.people = { a: person('a', 'anh', 'Anh'), b: person('b', 'bao') };
     render(<CrewScreen navigation={nav()} />);
-    expect(tab(/Your friends/).textContent).toContain('Your friends (2)');
+    // The word, then the tally in its pill; the name read aloud carries
+    // it as the underline drew it.
+    expect(tab(/Your friends/).textContent).toBe('Your friends2');
+    expect(tab(/Your friends/).getAttribute('aria-label')).toBe('Your friends (2)');
     // Handle first (owner, 15 Nov 2026): the handle on top, bare, and the
     // name under it; a person with no name is the handle alone.
     const [anh, bao] = [screen.getByTestId('crew-friend-0'), screen.getByTestId('crew-friend-1')];
@@ -222,14 +225,17 @@ describe('which tab opens', () => {
     expect(screen.queryByText('Pending')).toBeNull();
   });
 
-  it('opens on Requests when somebody is waiting, and badges nothing on the open tab', () => {
+  it('opens on Requests when somebody is waiting, with the count in a pill on the open tab', () => {
     crew.ships.data = [edge('r', ME, 'pending')];
     crew.people = { r: person('r', 'minh', 'Minh') };
     render(<CrewScreen navigation={nav()} />);
     expect(screen.getByText('Pending')).toBeTruthy();
     expect(screen.getByText('Minh')).toBeTruthy();
     expect(screen.getByText('wants to join your crew')).toBeTruthy();
-    expect(tab(/Requests/).textContent).toContain('Requests (1)');
+    // A pill on the chosen tab too, since 20 Nov 2026 (`TabsLook`): the
+    // underline folds it into the name there; words alone do not.
+    expect(tab(/Requests/).textContent).toBe('Requests1');
+    expect(tab(/Requests/).getAttribute('aria-label')).toBe('Requests (1)');
   });
 
   it('waits for the edges to land before choosing, then never re-picks', () => {
@@ -267,7 +273,7 @@ describe('the tabs, drawn as words', () => {
     const off = tab(/Your friends/);
     expect(on.querySelector('[data-icon]')).toBeNull();
     expect(off.querySelector('[data-icon]')).toBeNull();
-    expect(styleOf('Requests (1)')).toEqual(expect.objectContaining({ color: colors.text, fontWeight: font.semibold, fontSize: 17 }));
+    expect(styleOf('Requests')).toEqual(expect.objectContaining({ color: colors.text, fontWeight: font.semibold, fontSize: 17 }));
     expect(styleOf('Your friends')).toEqual(expect.objectContaining({ color: colors.textTertiary, fontWeight: font.regular, fontSize: 17 }));
     // The rule is drawn on both and transparent on both, so the row is
     // as tall as the underlined one and nothing moves between the looks.
@@ -275,6 +281,21 @@ describe('the tabs, drawn as words', () => {
       .map((x) => viewStyleOf(x)).find((v) => v.borderBottomWidth != null);
     expect(rule(on)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
     expect(rule(off)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
+  });
+
+  // News and fact are told apart by the pill's ground: the count wears
+  // the badge, the tally the glass the screen's quiet "Add" stands on.
+  it('draws the count in the badge and the tally on the glass', () => {
+    crew.ships.data = [edge('r', ME, 'pending'), edge(ME, 'a', 'accepted'), edge('b', ME, 'accepted')];
+    crew.people = { r: person('r', 'minh', 'Minh'), a: person('a', 'anh', 'Anh'), b: person('b', 'bao') };
+    render(<CrewScreen navigation={nav()} />);
+    const pill = (name: RegExp, figure: string) => [...tab(name).querySelectorAll('div')]
+      .filter((el) => el.textContent === figure && el.children.length > 0)
+      .map((el) => viewStyleOf(el)).find((v) => v.backgroundColor != null);
+    expect(styleOf(1)).toEqual(expect.objectContaining({ color: colors.accentInk }));
+    expect(pill(/Requests/, '1')).toEqual(expect.objectContaining({ backgroundColor: colors.badgeSolid }));
+    expect(styleOf(2)).toEqual(expect.objectContaining({ color: colors.textSecondary }));
+    expect(pill(/Your friends/, '2')).toEqual(expect.objectContaining({ backgroundColor: colors.surfaceGlass }));
   });
 
   // The rest of the app keeps the underline until the owner has seen this

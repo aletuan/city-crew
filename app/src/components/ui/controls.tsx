@@ -347,6 +347,25 @@ export const TABS_ROW_GAP = 14;
  * What it gives up: the glyphs, and with them the envelope that told
  * Requests from a list at a glance. Two words do that well enough; five
  * would not, which is one reason this is not the default.
+ *
+ * ── the figures as pills (owner, 20 Nov 2026, seen on the phone) ──
+ *
+ * The first cut kept the underline's figures: "Requests (1)" on the
+ * chosen tab, a bubble on the other, "Your friends (13)" on both. Beside
+ * a 17pt word with nothing else around it, the parentheses read as part
+ * of the name. So both figures are pills after the word, in either state:
+ *
+ * - `count`, the news — the badge the bubble always was, now on the
+ *   chosen tab too. This undoes, for this look, "folded into the label
+ *   on the chosen one, where whatever it counts is already on screen":
+ *   the owner chose the reference's pill on the chosen tab knowing that.
+ * - `tally`, the fact — the same shape on the glass the screen's quiet
+ *   "Add" wears, its figure in the secondary grey. The two must still
+ *   differ: one asks something of the reader and one does not, and the
+ *   colour is now the only thing that says which.
+ *
+ * VoiceOver hears "Requests (1)" as before: the pill is drawn, and the
+ * name it reads is written out (`said`).
  */
 export type TabsLook = 'underline' | 'words';
 
@@ -376,6 +395,10 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right,
         const worded = tally
           ? `${label} (${tally})`
           : on && count ? `${label} (${count})` : label;
+        // In `words` the figure is a pill, so the word stands alone and the
+        // name read aloud is the one the underline would have drawn.
+        const figure = tally || count || 0;
+        const said = figure ? `${label} (${figure})` : label;
         return (
           <PressableScale
             key={key}
@@ -387,15 +410,21 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right,
             testID={testID}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
+            accessibilityLabel={words ? said : undefined}
           >
             {words ? null : <Glyph name={icon} size={ICON.text} color={on ? colors.accent : colors.textTertiary} />}
             <Text
               style={words ? [s.tabWord, on && s.tabWordOn] : [s.tabText, on && s.tabTextOn]}
               numberOfLines={1}
             >
-              {worded}
+              {words ? label : worded}
             </Text>
-            {!on && count ? (
+            {words && tally ? (
+              <View style={[s.tabBadge, s.tabTally]}>
+                <Text style={[s.tabBadgeText, s.tabTallyText]} maxFontSizeMultiplier={labelScaleCap}>{tally}</Text>
+              </View>
+            ) : null}
+            {(words || !on) && count ? (
               <View style={s.tabBadge}>
                 {/* A 21pt disc; the number is capped so it stays a
                     number in a disc rather than a digit spilling out of
@@ -911,6 +940,11 @@ const s = StyleSheet.create({
     backgroundColor: colors.badgeSolid,
   },
   tabBadgeText: { color: colors.accentInk, fontSize: 13, fontWeight: font.semibold },
+  // The tally's pill (`TabsLook` 'words'): the badge's shape on the glass
+  // Crew's quiet "Add" stands on, so it reads as a fact beside the name,
+  // not as news.
+  tabTally: { backgroundColor: colors.surfaceGlass },
+  tabTallyText: { color: colors.textSecondary },
   cta: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     minHeight: CONTROL_H, paddingHorizontal: 24, paddingVertical: 10,
