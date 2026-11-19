@@ -20,6 +20,14 @@
 // came here to add two friends should not find out from the banner that
 // everybody else just lost it.
 //
+// The owner's own words since 19 Nov 2026, and one sentence where there
+// were two. It had said "it leaves Explore and search", which is what
+// private means spelled out, and under the friends a second line in a
+// box — "They can open it and plan from it. Only you can change it." —
+// which the owner took out: "see and use" in the subtitle says the half
+// of it that is a choice, and that nobody else edits your list is true
+// of every list.
+//
 // The button says what it will do, from `lib/shares.shareCta`: "Share
 // with 3 people" counts who will have it, not who is new, because that is
 // the number the banner and the row will say afterwards. Unticking
@@ -106,10 +114,10 @@ export default function ShareSheet({
       title={t('Share with friends', 'Chia sẻ với bạn bè', '友だちと共有', '与好友分享', '與好友分享')}
       subtitle={isPublic
         ? t(
-          'Sharing makes this list private: it leaves Explore and search, and only the friends you tick can open it.',
-          'Chia sẻ sẽ chuyển bộ sưu tập sang riêng tư: nó rời Khám phá và tìm kiếm, chỉ những bạn bè bạn chọn mới mở được.',
-          '共有するとこのリストは非公開になり、「探索する」と検索から外れます。開けるのはチェックした友だちだけです。',
-          '分享后这个清单会变为私密：它将不再出现在探索和搜索中，只有你勾选的好友才能打开。', '分享後這個清單會變為私密：它將不再出現在探索和搜尋中，只有你勾選的好友才能開啟。',
+          'This list will become private: only the friends you choose can see and use it.',
+          'Bộ sưu tập sẽ chuyển sang chế độ riêng tư mà chỉ những người bạn bè lựa chọn mới được nhìn thấy và sử dụng.',
+          'このリストは非公開になり、選んだ友だちだけが見て使えるようになります。',
+          '这个清单会变为私密，只有你选择的好友才能看到和使用。', '這個清單會變為私密，只有你選擇的好友才能看到和使用。',
         )
         : t(
           'Only the friends you tick can open this list.',
@@ -125,20 +133,6 @@ export default function ShareSheet({
         'まだ仲間がいません。先に友だちを追加すると共有できます。',
         '你还没有好友。先添加好友，然后就可以分享了。', '你還沒有好友。先新增好友，然後就可以分享了。',
       )}
-      // What a friend can do with it, so the owner knows what they are
-      // handing over: read it and plan from it. Not like it or copy it —
-      // the friend's page offers neither (owner, 12 Nov 2026) — and that
-      // is left unsaid here, because it is a thing the friend meets, not
-      // one the owner chooses.
-      note={{
-        icon: 'eye-outline',
-        text: t(
-          'They can open it and plan from it. Only you can change it.',
-          'Họ mở được và lên kế hoạch từ đó. Chỉ bạn sửa được.',
-          '友だちは開いて予定づくりに使えます。編集できるのはあなただけです。',
-          '他们可以打开它并用来规划行程。只有你能修改。', '他們可以開啟它並用來規劃行程。只有你能修改。',
-        ),
-      }}
       cta={{ ...button, testID: 'share-save' }}
       rowTestID={(i) => `share-friend-${i}`}
       onToggle={(id) => setPicked((cur) => {
