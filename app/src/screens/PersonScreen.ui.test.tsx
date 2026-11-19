@@ -41,7 +41,6 @@ const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], loading: false, reload: vi.fn() },
   blocks: { data: [] as string[], reload: vi.fn() },
   mutual: {} as Record<string, number>,
-  people: {} as Record<string, { id: string; handle: string; full_name: string; avatar_url: string }>,
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 
@@ -145,7 +144,6 @@ vi.mock('../lib/i18n', () => ({
 }));
 
 import PersonScreen, { type Home } from './PersonScreen';
-import { askers } from './person/Requests';
 
 const LAN: Who = { id: 'lan-id', handle: 'lan', full_name: 'Lan Phạm', avatar_url: 'https://faces/lan.jpg', bio: 'Coffee first, then the rest.' };
 
@@ -1829,77 +1827,44 @@ describe('comments on the cards', () => {
 });
 
 // The last tab's first page, your own (owner, 19 Nov 2026 —
-// docs/profile-home-plan.md): `MeScreen` hands it `home`.
+// docs/profile-home-plan.md): `MeScreen` hands it `home`. What goes in
+// `owner` — the counts, the requests — has its own tests.
 describe('as the last tab’s first page', () => {
-  const row = (requester: string, at: string): FriendshipRow =>
-    ({ requester, addressee: 'me-id', status: 'pending', created_at: at }) as FriendshipRow;
-  const face = (id: string, full_name: string) => ({ id, handle: id, full_name, avatar_url: '' });
-  const home = () => ({ toAccount: vi.fn(), toCrew: vi.fn() });
+  const home = () => ({ toAccount: vi.fn(), owner: <div data-testid="owner-part" /> });
 
   beforeEach(() => {
     state.people = { ...state.people, me: { id: 'me-id', handle: 'me', full_name: 'Me', avatar_url: '' } };
-    crew.ships.data = [];
-    crew.people = {};
   });
 
-  it('has no way back, and opens Account by the way it was handed', async () => {
+  it('has no way back and no title, and opens Account by the way it was handed', async () => {
     const h = home();
     await show('me', h);
     expect(screen.queryByTestId('person-back')).toBeNull();
+    // The tab says whose page it is (owner, 19 Nov 2026).
+    expect(screen.queryByText('Profile')).toBeNull();
     fireEvent.click(screen.getByTestId('person-account'));
     expect(h.toAccount).toHaveBeenCalledTimes(1);
     expect(out.tabs!.navigate).not.toHaveBeenCalled();
     expect(out.goTo).not.toHaveBeenCalled();
   });
 
-  // The commonest reason for the tab's dot, in sight where the tab opens.
-  it('shows the requests waiting: how many, who, and one way to Friends', async () => {
-    crew.ships.data = [row('mai', '2026-11-18T10:00:00Z'), row('vu', '2026-11-19T10:00:00Z')];
-    crew.people = { mai: face('mai', 'Mai Anh'), vu: face('vu', 'Quang Vũ') };
-    const h = home();
-    await show('me', h);
-    const card = screen.getByTestId('person-requests');
-    expect(card.textContent).toContain('2 friend requests');
-    // Newest first, as Friends lists them.
-    expect(card.textContent).toContain('Quang Vũ and Mai Anh want to be friends');
-    expect(screen.getAllByTestId('person-requests-face')).toHaveLength(2);
-    fireEvent.click(card);
-    expect(h.toCrew).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows nothing when nobody is waiting, nor for a request you sent', async () => {
-    crew.ships.data = [{ requester: 'me-id', addressee: 'vu', status: 'pending', created_at: '2026-11-19T10:00:00Z' } as FriendshipRow];
+  // Under the head and over the activity: who you are, then what only
+  // you see, then what you did.
+  it('draws what only you see between your head and your activity', async () => {
     await show('me', home());
-    expect(screen.queryByTestId('person-requests')).toBeNull();
+    const part = screen.getByTestId('owner-part');
+    const name = screen.getByTestId('person-name');
+    const account = screen.getByTestId('person-account');
+    expect(name.compareDocumentPosition(part) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(part.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   // Your page reached from a card in another tab is the page as others
-  // see it: the rooms the card opens are not in that tab's stack.
-  it('keeps the requests to the tab’s first page', async () => {
-    crew.ships.data = [row('mai', '2026-11-18T10:00:00Z')];
-    crew.people = { mai: face('mai', 'Mai Anh') };
+  // see it, with a way back and its title.
+  it('is the page as others see it when it is not the tab’s first', async () => {
     await show('me');
-    expect(screen.queryByTestId('person-requests')).toBeNull();
+    expect(screen.queryByTestId('owner-part')).toBeNull();
     expect(screen.getByTestId('person-back')).toBeTruthy();
-  });
-
-  it('names who is asking before the faces have come, by the count alone', async () => {
-    crew.ships.data = [row('mai', '2026-11-18T10:00:00Z')];
-    await show('me', home());
-    const card = screen.getByTestId('person-requests');
-    expect(card.textContent).toBe('1 friend request');
-    expect(screen.queryAllByTestId('person-requests-face')).toHaveLength(0);
-  });
-});
-
-describe('askers', () => {
-  const t = (en: string) => en;
-  it('says one name, two, or the first and how many more', () => {
-    expect(askers([], 3, t)).toBeNull();
-    expect(askers(['Mai'], 1, t)).toBe('Mai wants to be friends');
-    expect(askers(['Mai', 'Vu'], 2, t)).toBe('Mai and Vu want to be friends');
-    // The second face not yet come: the first, and one other.
-    expect(askers(['Mai'], 2, t)).toBe('Mai and 1 other want to be friends');
-    expect(askers(['Mai', 'Vu', 'Lan'], 3, t)).toBe('Mai and 2 others want to be friends');
+    expect(screen.getByText('Profile')).toBeTruthy();
   });
 });

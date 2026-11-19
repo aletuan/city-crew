@@ -68,8 +68,9 @@ Chỉ khi nó là gốc của tab. Trang của mình mở từ một thẻ ở t
 vào mặt mình) giữ nguyên như hôm nay: là trang người khác thấy, có nút
 quay lại. Lý do ở mục 6.
 
-1. **Đầu trang:** "Trang cá nhân", không có nút quay lại. Bên phải:
-   chuông (Hoạt động, có chấm theo mục 3).
+1. **Đầu trang:** không có tiêu đề (chủ dự án bỏ ngày 19/11: tab đã nói
+   đây là trang của ai) và không có nút quay lại. Chuông (Hoạt động, có
+   chấm theo mục 3) đặt ở đâu khi không còn thanh tiêu đề: quyết ở P3.
 2. **Ảnh bìa, ảnh đại diện, tên, handle, tiểu sử** như hôm nay. Ảnh đại
    diện thêm vòng cấp độ và nhãn "Lv", bấm mở Thành tích, như ở Tài khoản
    hôm nay.
@@ -80,8 +81,9 @@ quay lại. Lý do ở mục 6.
    Đây là lối vào Tài khoản: #1451 đã đặt nó ở đó ngày 19/11, trước khi kế
    hoạch này viết xong, nên câu hỏi "bánh răng hay ⋯" không còn.
 
-Nút "Sửa hồ sơ" trên trang: xem lại ở P2. Hôm nay bấm vào tiểu sử (hoặc
-"Viết vài dòng về bạn") đã mở Sửa hồ sơ, và Tài khoản có nút riêng.
+Nút "Sửa hồ sơ" trên trang: chưa thêm. Bấm vào tiểu sử (hoặc "Viết vài
+dòng về bạn") đã mở Sửa hồ sơ, và Tài khoản có nút riêng; thêm một nút
+nữa thì cần chỗ, và chỗ đó gắn với nơi đặt chuông. Xem lại ở P3.
 
 ## 5. Tài khoản sau khi đổi
 
@@ -112,10 +114,9 @@ nhưng ở trang khác, nên giữ. Xem lại ở P4.
   được tới màn mà mọi stack đều có, và `Account`, `Activity`, `Crew` chỉ
   có ở `ProfileStack`.
 - **Bấm vào mặt mình bên trong tab cuối** thì quay về gốc tab, không đẩy
-  thêm một bản thứ hai của chính trang đó. *Chưa làm ở P1:* mỗi nơi mở
-  trang một người tự gọi `navigate('Person')`, và biết đó là mình cần
-  phiên đăng nhập ở từng nơi. Bản thứ hai hôm nay là trang như người khác
-  thấy, có nút quay lại; không hỏng gì. Để P2.
+  thêm một bản thứ hai của chính trang đó. Làm ở P2 bằng `toPerson`
+  (`nav.ts`), ở hai nơi mặt mình bấm được: đầu một bộ sưu tập của mình,
+  và bình luận của mình.
 - **Lối vào Friends và Account do `MeScreen` trao cho trang** (`home`), không
   do `PersonScreen` tự gọi: `PersonScreen` có trong ba stack, và
   `nav.test.ts` giữ luật một màn chỉ đi tới màn mà cả ba stack đều có.
@@ -137,12 +138,16 @@ Mỗi PR một commit, revert là về như trước.
   một chấm dẫn tới trang không có gì vi phạm mục 3 ngay từ bản đầu. Nội
   dung Tài khoản chưa đổi, nên bốn con số tạm thời vẫn ở đó, và huy hiệu
   mới vẫn chỉ thấy ở Tài khoản cho tới P3.
-- [ ] **P2. Bốn con số** lên Trang cá nhân (chỉ ở gốc tab); bỏ khỏi Tài
-  khoản; bấm vào mặt mình trong tab cuối thì về gốc; xem lại nút Sửa hồ
-  sơ.
-- [ ] **P3. Thông báo.** Chuông vào Hoạt động; vòng cấp độ và Thành tích
-  lên ảnh đại diện; bỏ ảnh, tên và dòng Hoạt động khỏi Tài khoản; test
-  cho luật ở mục 3.
+- [x] **P2. Bốn con số** lên Trang cá nhân (chỉ ở gốc tab, `Counts`), trên
+  thẻ lời mời; bỏ khỏi Tài khoản; bấm vào mặt mình trong tab cuối thì về
+  gốc (`toPerson`); bỏ tiêu đề "Trang cá nhân" ở gốc tab (chủ dự án,
+  19/11). `MeScreen` trao cho trang phần chỉ chủ trang thấy
+  (`Home.owner`), vì các cửa của nó mở những trang chỉ có trong stack
+  của tab cuối.
+- [ ] **P3. Thông báo.** Chuông vào Hoạt động, và chỗ của nó khi trang
+  không có tiêu đề; vòng cấp độ và Thành tích lên ảnh đại diện; bỏ ảnh,
+  tên và dòng Hoạt động khỏi Tài khoản; xem lại nút Sửa hồ sơ; test cho
+  luật ở mục 3.
 - [ ] **P4. Dọn Tài khoản**, sau khi chủ dự án xem P1–P3 trên máy.
 
 ## 8. Phối hợp với phiên bình luận

@@ -1,17 +1,15 @@
-// Profile for a signed-in reader: who they are, their counts, About me,
-// and the account's ways out.
+// Profile for a signed-in reader: who they are, About me, and the
+// account's ways out. The four counts that stood under the hero are on
+// your own person page since 19 Nov 2026 (`Counts`).
 
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { Glyph, ICON } from '../../components/ui/glyph';
-import { Card, fireHaptic, PressableScale } from '../../components/ui';
+import { Card, PressableScale } from '../../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthActions, useProfile, useSession } from '../../lib/auth';
-import { visitSummary } from '../../lib/checkin';
-import { useMyTrips } from '../../lib/mytrips';
 import { savedPlaces } from '../../lib/badges';
 import { useMyPreferences } from '../../lib/data';
-import { useMyCheckins } from '../../lib/checkins';
 import { useActivityCount } from '../../lib/useActivityCount';
 import { useCrew } from '../../lib/crew';
 import { splitFriendships } from '../../lib/friends';
@@ -21,7 +19,7 @@ import { cleanTaste, tasteInOrder } from '../../lib/tastepick';
 import { Lang, useI18n } from '../../lib/i18n';
 import { useScheme } from '../../lib/theme';
 import { bgElevatedHex, colors } from '../../theme';
-import { goTo, type Nav } from '../../nav';
+import { type Nav } from '../../nav';
 import { HeroFace } from './HeroFace';
 import { HeroName } from './HeroName';
 import { RowGlyph, FeatureRow, AboutRow, BioRow } from './rows';
@@ -40,34 +38,6 @@ export function memberSinceLabel(d: Date, lang: Lang): string {
   return `${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-/**
- * One number and its word, a door into the tab that holds them.
- *
- * `null` is "not known yet", and it is drawn as a dash, never as 0. The
- * tiles used to read `data.length` straight off fetches still in flight,
- * so a reader with 11 lists, 48 places and 55 trips signed in to three
- * zeros — the same figures an empty account shows, and read as one
- * (UX-14, 17 Oct 2026). A zero here is now only ever an answer.
- */
-export function StatTile({ n, label, onPress }: { n: number | null; label: string; onPress: () => void }) {
-  const { t } = useI18n();
-  return (
-    <PressableScale
-      scaleTo={0.96}
-      style={{ flex: 1 }}
-      contentStyle={s.stat}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={n === null
-        ? `${label}, ${t('loading', 'đang tải', '読み込み中', '加载中', '載入中')}`
-        : `${n} ${label}`}
-    >
-      <Text style={[s.statN, n === null && s.statPending]}>{n ?? '—'}</Text>
-      <Text style={s.statLabel} numberOfLines={1}>{label}</Text>
-    </PressableScale>
-  );
-}
-
 export function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   // For the one border here that must resolve in JS — see `reqDot`.
@@ -76,10 +46,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   const { profile, memberSince } = useProfile();
   const { signOut } = useAuthActions();
   const [busy, setBusy] = useState(false);
-  // The visits, for the one number the row below shows — the app's one
-  // copy, so a check-in made a moment ago on a place's screen is already
-  // in this count. Its own copy here said 2 under a list of 29 once.
-  const visits = useMyCheckins();
   // How much the feed holds — likes and copies in its window, plus the
   // requests waiting, which the feed lists first. A total, as the other
   // rows' numbers are; see `lib/useActivityCount` for the "unseen"
@@ -127,43 +93,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
   // `savedPlaces` holds the sum now: the badges count the same places
   // (`lib/badges`), and two copies of it would be two answers.
   const saved = useMemo(() => savedPlaces(mine.data), [mine.data]);
-  // What the level is made of — the ring is `HeroFace`'s, below.
-  const trips = useMyTrips();
-
-  // The four doors under the hero. Each is a count the reader made and a
-  // tap into the place that holds it — a number on a profile earns its place
-  // only as a door (the ring already says "how far"; these say "how many"
-  // and "where"). A tab navigator is the parent when the screen is in the
-  // app; the root ref is the way out when it is not, naming each tab's
-  // first screen (see the guest link's note on `getParent()?.`).
-  //
-  // To the tab's list, at its top, every time — not to wherever the tab
-  // was last left. A bare `navigate(tab)` restored that tab's stack, so
-  // "48 Saved places" opened whichever collection the reader had been in
-  // (UX-09, 17 Oct 2026): a door whose room depended on history. `pop`
-  // closes what was open above the list — React Navigation 7's
-  // `navigate` no longer goes back to a screen already in the stack on
-  // its own — `at` is a fresh param the list reads as "scroll to the
-  // top", and Collections is aimed at Yours, the half these counts are of.
-  //
-  // Collections and Trips are tabs, and hop. Check-ins and Friends are
-  // pages pushed over this one (`Visited`, `Crew`), opened as the rows
-  // further down open them.
-  // The four fetches behind them, for the one line that says a count
-  // could not be loaded and the one press that asks again.
-  const counts = [mine, visits, ships, trips];
-  const hop = (tab: 'Collections' | 'Trips', first: 'CollectionsHome' | 'TripsHome') => {
-    fireHaptic('selection');
-    const at = Date.now();
-    const params = {
-      screen: first,
-      params: tab === 'Collections' ? { tab: 'yours', at } : { at },
-      pop: true,
-    };
-    const parent = navigation.getParent();
-    if (parent) parent.navigate(tab, params);
-    else goTo(tab, params);
-  };
 
   return (
     <>
@@ -190,58 +119,6 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
           </View>
         </View>
       </View>
-
-      {/* Bare numbers over a hairline, not boxed tiles: four filled boxes
-          beside a title read as a second toolbar (the desk learned this in
-          #634), where the number alone is the thing being read. No review
-          count: there is no review feature, and a count with no data
-          behind it is the one number that must not appear.
-
-          Collections, Check-ins, Friends, Trips (owner, 16 Nov 2026). It
-          was Collections, Saved places, Trips. "Saved places" went: the
-          places are the ones in the collections beside it — a detail of
-          that number, not a fourth thing — and it had no door of its
-          own, opening the same list Collections does. The one other
-          place for it, Places filtered to saved, shows one city where
-          the number counts every city. The figure still sets the level
-          (`saved`, below the ring); it is only not drawn.
-
-          Check-ins and Friends took the room: each is a thing the reader
-          did and each has a page that lists exactly what is counted —
-          `Visited` spans every city, as its number does. They were
-          numbers at the ends of their rows further down, and a figure
-          said twice on one page is one of them wasted, so those rows
-          keep their words and lose their pills. Four short words fit
-          where three with a long one did. */}
-      <View style={s.stats}>
-        <StatTile n={mine.loaded ? mine.data.length : null} label={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')} onPress={() => hop('Collections', 'CollectionsHome')} />
-        <View style={s.statDivider} />
-        {/* Distinct places, not visits: three evenings at one bar is one
-            place been to — the figure the row below carried. */}
-        <StatTile n={visits.loaded ? visitSummary(visits.data).places : null} label={t('Check-ins', 'Check-in', 'チェックイン', '打卡', '打卡')} onPress={() => navigation.navigate('Visited')} />
-        <View style={s.statDivider} />
-        <StatTile n={ships.loaded ? crew.friends.length : null} label={t('Friends', 'Bạn bè', '友達', '好友', '好友')} onPress={() => navigation.navigate('Crew')} />
-        <View style={s.statDivider} />
-        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', 'トリップ', '行程', '行程')} onPress={() => hop('Trips', 'TripsHome')} />
-      </View>
-      {/* A dash that stays a dash is a question the screen cannot answer,
-          and it says so — only for a count still unknown: a fetch that
-          fails over figures already on screen (a cached copy) leaves
-          those standing, and they are not wrong enough to interrupt. */}
-      {counts.some((c) => !c.loaded && c.error) ? (
-        <View style={s.statsFailed} testID="stats-failed">
-          <Text style={s.statsFailedText}>
-            {t("Couldn't load your counts.", 'Không tải được số liệu.', '件数を読み込めませんでした。', '无法加载统计数据。', '無法載入統計資料。')}
-          </Text>
-          <PressableScale
-            onPress={() => counts.forEach((c) => { if (!c.loaded) c.reload(); })}
-            accessibilityRole="button"
-            hitSlop={10}
-          >
-            <Text style={s.statsRetry}>{t('Try again', 'Thử lại', '再試行', '重试', '重試')}</Text>
-          </PressableScale>
-        </View>
-      ) : null}
 
       <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介', '关于我', '關於我')}</Text>
       <Card style={s.featureCard}>
@@ -364,8 +241,9 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
 
       {/* Where you have been, after what you like: both are facts about
           who you are, and they read in that order — taste, then the
-          evidence. Its number is a stat tile under the hero since 16 Nov
-          2026 and not on the row. A section of its
+          evidence. Its number is a count on your own page (`Counts`;
+          under this page's hero from 16 to 19 Nov 2026) and not on the
+          row. A section of its
           own rather than a row in Interests, because the chips there are
           a picker at rest and a navigation row under a picker is two
           kinds of thing in one card. */}
@@ -391,7 +269,7 @@ export function AccountProfile({ navigation }: { navigation: Nav }) {
       {/* The pill said "Coming soon" from the day this screen shipped;
           the row opens the crew now. The dot is requests. The number of
           friends was a pill at the row's end until 16 Nov 2026; it is a
-          stat tile under the hero now, and not said twice. */}
+          count on your own page now (`Counts`), and not said twice. */}
       <Card style={s.featureCard}>
         <PressableScale
           contentStyle={[s.twoLineRow, s.featureRowDivider]}

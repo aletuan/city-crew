@@ -135,7 +135,6 @@ import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
-import { Requests } from './person/Requests';
 import { useCollections, usePlaces } from '../lib/catalog';
 import {
   type Collection, coverUriOf, type FriendProfile, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
@@ -169,8 +168,13 @@ const TITLE_LINE = 28;
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
 
-/** What only the last tab's first page does — see `home`. */
-export type Home = { toAccount: () => void; toCrew: () => void };
+/** What only the last tab's first page has — see `home`. */
+export type Home = {
+  toAccount: () => void;
+  /** What only you see on your page: the counts and the requests
+   *  waiting (`MeScreen`). Under the head, over the activity. */
+  owner: React.ReactNode;
+};
 
 export default function PersonScreen({ navigation, route, home }: {
   navigation: Nav;
@@ -178,12 +182,14 @@ export default function PersonScreen({ navigation, route, home }: {
   /**
    * Drawn as the last tab's first page, your own (owner, 19 Nov 2026 —
    * docs/profile-home-plan.md): no way back, since there is nothing
-   * under it, and what only its owner is shown — the requests waiting.
+   * under it; no title, since the tab says whose page it is and the
+   * owner found the line over the cover not needed; and what only its
+   * owner is shown — the counts and the requests waiting.
    * Your own page reached from a card in another tab is not this: it is
    * the page as others see it.
    *
-   * The ways this page opens Friends and Account come from `MeScreen`,
-   * not from here: those rooms are only in the last tab's stack, and a
+   * That part, and the way to Account, come from `MeScreen`, not from
+   * here: the rooms they open are only in the last tab's stack, and a
    * screen registered in three stacks may only navigate to what all
    * three have (`nav.test.ts`).
    */
@@ -297,8 +303,8 @@ export default function PersonScreen({ navigation, route, home }: {
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
-      {/* The friend requests waiting on you — `person/Requests`. */}
-      {home && own ? <Requests me={me} onOpen={home.toCrew} /> : null}
+      {/* What only you see on your own page — `Home.owner`. */}
+      {home?.owner}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
@@ -343,6 +349,7 @@ export default function PersonScreen({ navigation, route, home }: {
     <Screen
       title={t('Profile', 'Trang cá nhân', 'プロフィール', '主页', '主頁')}
       onBack={home ? undefined : () => navigation.goBack()}
+      titleScrolls={!!home}
       backTestID="person-back"
       backBare
       compactTitle
@@ -353,7 +360,7 @@ export default function PersonScreen({ navigation, route, home }: {
         testID="person-scroll"
         onScroll={(e) => { top.onScroll(e); end.onScroll(e); }}
         scrollEventThrottle={16}
-        contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
+        contentContainerStyle={[s.content, home && s.contentHome, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
       >
         {page}
@@ -640,6 +647,9 @@ function Acts({ friend, onLayout }: { friend: React.ReactNode; onLayout: (e: Lay
 
 const s = StyleSheet.create({
   content: { paddingHorizontal: space.page },
+  // With no title over it, the cover starts where a title's band would:
+  // the 8 a large title stands under the safe area (`Screen`'s header).
+  contentHome: { paddingTop: 8 },
   spinner: { marginTop: 20 },
   // The accent's tint: a cover with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },

@@ -27,7 +27,8 @@
 // `goTo()` is deliberately not checked. It crosses tabs on purpose, via
 // the container ref rather than a stack's navigator — see `nav.ts`.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { toPerson } from './nav';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -111,4 +112,36 @@ describe('every stack registers what its screens navigate to', () => {
       });
     }
   }
+});
+
+// Your own face pressed inside the last tab (19 Nov 2026,
+// docs/profile-home-plan.md): the tab's first page is your page, so the
+// press goes back to it rather than pushing a second copy over it.
+describe('toPerson', () => {
+  const nav = (first: string | null) => ({
+    navigate: vi.fn(),
+    popToTop: vi.fn(),
+    getState: () => (first ? { routes: [{ name: first }, { name: 'CollectionDetail' }] } : undefined),
+  });
+
+  it('goes back to the last tab’s first page for your own face there', () => {
+    const n = nav('ProfileHome');
+    toPerson(n as never, '@TuanAnh', 'tuananh');
+    expect(n.popToTop).toHaveBeenCalledTimes(1);
+    expect(n.navigate).not.toHaveBeenCalled();
+  });
+
+  it('opens the page for anybody else, for yours in another tab, and when it does not know yours', () => {
+    for (const [first, handle, mine] of [
+      ['ProfileHome', 'lan', 'tuananh'],
+      ['CollectionsHome', 'tuananh', 'tuananh'],
+      ['ProfileHome', 'tuananh', ''],
+      [null, 'tuananh', 'tuananh'],
+    ] as const) {
+      const n = nav(first);
+      toPerson(n as never, handle, mine);
+      expect(n.navigate, `${first} ${handle} ${mine}`).toHaveBeenCalledExactlyOnceWith('Person', { handle });
+      expect(n.popToTop).not.toHaveBeenCalled();
+    }
+  });
 });

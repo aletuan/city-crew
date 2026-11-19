@@ -220,6 +220,9 @@ vi.mock('../lib/rewards', async () => {
 });
 
 import ProfileScreen from './ProfileScreen';
+import { Counts } from './profile/Counts';
+import { s } from './profile/styles';
+import { StyleSheet } from 'react-native';
 
 // `pushed`: the account's page over your own, as it is since 19 Nov
 // 2026; not pushed, the tab's first page, which only the guest's hub is.
@@ -774,7 +777,14 @@ describe('the role badge', () => {
 // Collections, Check-ins, Friends, Trips (owner, 16 Nov 2026). "Saved
 // places" was the second until then — a detail of the collections beside
 // it, opening the same list.
+// On your own person page since 19 Nov 2026 (`Counts`, drawn by
+// `MeScreen`); read here with the hooks this file already mocks.
 describe('the four doors', () => {
+  const draw = () => {
+    const r = nav();
+    render(<Counts navigation={r.n} />);
+    return r;
+  };
   const p = (slug: string) => ({ slug });
   const edge = (requester: string, addressee: string, status: string) =>
     ({ requester, addressee, status, created_at: '2026-01-01' });
@@ -817,7 +827,8 @@ describe('the four doors', () => {
     const tile = screen.getByRole('button', { name: '1 Collections' });
     const [n, label] = [...tile.querySelectorAll('[dir]')].map((e) => Number(textStyleOf(e as HTMLElement)?.fontSize));
     expect(n).toBe(18);
-    expect(n).toBeLessThan(Number(textStyleOf(screen.getByText('About me'))?.fontSize));
+    // Under the 22 a section is headed at (`s.section`).
+    expect(n).toBeLessThan(Number(StyleSheet.flatten(s.section)?.fontSize));
     expect(n).toBeGreaterThan(label);
   });
 
@@ -858,7 +869,7 @@ describe('the four doors', () => {
   it('takes the same door through the root when there is no parent', () => {
     const r = nav();
     r.raw.getParent.mockReturnValue(undefined as never);
-    render(<ProfileScreen navigation={r.n} />);
+    render(<Counts navigation={r.n} />);
     fireEvent.click(screen.getByRole('button', { name: '0 Trips' }));
     expect(goTo).toHaveBeenCalledWith('Trips', expect.objectContaining({ screen: 'TripsHome', pop: true }));
   });
@@ -944,6 +955,17 @@ describe('the four doors', () => {
     expect(screen.getByRole('button', { name: '0 Trips' })).toBeTruthy();
   });
 
+});
+
+// Said once, on your own page (19 Nov 2026): not here as well.
+describe('the account page', () => {
+  it('no longer carries the four counts', () => {
+    draw(true);
+    for (const name of ['Collections', 'Check-ins', 'Friends', 'Trips']) {
+      expect(screen.queryByRole('button', { name: `0 ${name}` })).toBeNull();
+    }
+    expect(screen.getByText('About me')).toBeTruthy();
+  });
 });
 
 describe('the level ring', () => {
@@ -1181,13 +1203,14 @@ describe('friends card', () => {
   // The number of friends was a pill at this row's end until 16 Nov
   // 2026. It is a number under the hero now (`the four doors`), and a
   // figure said twice on one page is one of them wasted.
-  it('carries no number: the friends are counted under the hero', () => {
+  // Counted on your own page since 19 Nov 2026 (`Counts`), and under
+  // the hero here before that: never on the row.
+  it('carries no number: the friends are counted on your own page', () => {
     state.ships = [edge('me', 'a', 'accepted'), edge('b', 'me', 'accepted')];
     draw();
     const row = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]')!;
     expect(row.querySelector('[data-testid="count-badge"]')).toBeNull();
     expect(row.textContent).toBe('Connect with friends' + 'Make friends and plan together.');
-    expect(screen.getByRole('button', { name: '2 Friends' })).toBeTruthy();
   });
 
   // Ringed in the card's own colour, picked in JS by the app's scheme: a
