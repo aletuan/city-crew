@@ -164,7 +164,8 @@ appId: host.exp.Exponent
     timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "profile-scroll"
+      # Your own page signed in (19 Nov 2026), the guest's hub signed out.
+      id: "person-scroll|profile-scroll"
     timeout: 10000
 
 # Back to Collections and out again, once more.

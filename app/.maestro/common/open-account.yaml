@@ -1,0 +1,29 @@
+# Reusable: the last tab, and on it the Account page — where the settings,
+# the email and Sign out are. Ends on Account signed in, on the guest's hub
+# signed out.
+#
+# Since 19 Nov 2026 the tab opens your own person page, with Account a
+# page over it ("Account ›" beside the activity heading;
+# docs/profile-home-plan.md). A guest has no page of their own, so the
+# tab still opens the hub, which is the page these flows want.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-profile"
+# Either page, once it has loaded: the person page is found by handle and
+# shows a spinner first.
+- extendedWaitUntil:
+    visible:
+      id: "person-account|profile-sign-in"
+    timeout: 15000
+- runFlow:
+    when:
+      visible:
+        id: "person-account"
+    commands:
+      - tapOn:
+          id: "person-account"
+      - extendedWaitUntil:
+          visible:
+            id: "account-back"
+          timeout: 10000

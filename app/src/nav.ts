@@ -183,6 +183,9 @@ export type RootStackParamList = {
    *  neither means anything for a day nobody has agreed to yet. */
   TripInvitation: { id: string };
   ProfileHome: undefined;
+  /** The account's own page — settings, about you, the ways out. Under
+   *  your person page since 19 Nov 2026 (docs/profile-home-plan.md). */
+  Account: undefined;
   /** The crew list, and the screen that answers what happened while you
    *  were away. Both live in the Profile stack: friends are a fact about
    *  the account, not about any city. */

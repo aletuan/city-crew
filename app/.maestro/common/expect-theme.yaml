@@ -4,8 +4,7 @@
 # what is being checked is whose theme the sheet put on.
 appId: host.exp.Exponent
 ---
-- tapOn:
-    id: "tab-profile"
+- runFlow: open-account.yaml
 - scrollUntilVisible:
     element:
       id: "profile-theme"

@@ -61,10 +61,16 @@ describe('the smoke flows and the app agree on ids', () => {
     expect(ids.size).toBeGreaterThan(20);
   });
 
+  // An id is a regular expression to Maestro, and a flow that waits for
+  // one of two pages writes both (`person-account|profile-sign-in`, since
+  // 19 Nov 2026): each of them has to be in the app, or the wait is for a
+  // page that no longer exists half the time.
   for (const [id, file] of ids) {
     it(`${id} (${file}) is set somewhere in src/`, () => {
-      const found = exact.has(id) || [...prefixes].some((p) => id.startsWith(p) && id.length > p.length);
-      expect(found, `no testID "${id}" in src/ — renamed or removed?`).toBe(true);
+      for (const one of id.split('|')) {
+        const found = exact.has(one) || [...prefixes].some((p) => one.startsWith(p) && one.length > p.length);
+        expect(found, `no testID "${one}" in src/ — renamed or removed?`).toBe(true);
+      }
     });
   }
 });

@@ -21,4 +21,10 @@ export const ProfileReturn = createContext<{
   spendSheet: () => void;
   y: React.MutableRefObject<number>;
   scrollBy: (dy: number) => void;
+  /**
+   * The last tab's pages under and including this one, when it is not the
+   * tab's first (`Return.stack`): the account's page is pushed over your
+   * own since 19 Nov 2026; the guest's is still the first.
+   */
+  stack?: string[];
 }>({ sheet: null, spendSheet: noop, y: { current: 0 }, scrollBy: noop });

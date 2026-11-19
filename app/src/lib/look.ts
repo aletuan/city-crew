@@ -246,6 +246,15 @@ export function writeLook(store: LookStore, look: Look): boolean {
 export type Return = {
   /** The tab the reader was on. */
   tab: string;
+  /**
+   * The tab's screens under the reader, its first one first, when the
+   * sheet was not on that first one. The theme sheet lives on Account,
+   * which since 19 Nov 2026 is a page under the last tab's own page
+   * (docs/profile-home-plan.md): landing on the tab alone opened the
+   * person page, where no sheet waits, and the restart lost the reader
+   * the step they were in the middle of.
+   */
+  stack?: string[];
   /** The sheet that was open on it, if one was. */
   sheet?: 'theme';
   /** How far down that tab's page was scrolled, in points. */
@@ -279,6 +288,7 @@ function parseReturn(raw: unknown): Return | null {
     return {
       tab: v.tab,
       at: v.at,
+      ...(Array.isArray(v.stack) && v.stack.length > 1 && v.stack.every((n) => typeof n === 'string') ? { stack: v.stack } : {}),
       ...(v.sheet === 'theme' ? { sheet: 'theme' as const } : {}),
       ...(typeof v.y === 'number' ? { y: v.y } : {}),
     };
@@ -307,11 +317,18 @@ export function takeReturn(store: LookStore, now: number): Return | null {
   return r;
 }
 
+/** A navigator's state as far as a landing names it. */
+type Landing = { index: number; routes: { name: string; state?: Landing }[] };
+
 /**
- * Where the navigator opens: on the tab the reader left, or wherever it
- * would have anyway. A partial state — the tab navigator fills in the
- * other tabs around the one named.
+ * Where the navigator opens: on the tab the reader left, and on the page
+ * within it when there was one over the tab's first (`stack`), or
+ * wherever it would have anyway. A partial state — the tab navigator
+ * fills in the other tabs around the one named. The whole stack, not its
+ * top alone: Back from the page has to find the page it came from.
  */
-export function landingState(r: Return | null): { index: number; routes: { name: string }[] } | undefined {
-  return r ? { index: 0, routes: [{ name: r.tab }] } : undefined;
+export function landingState(r: Return | null): Landing | undefined {
+  if (!r) return undefined;
+  const state = r.stack ? { index: r.stack.length - 1, routes: r.stack.map((name) => ({ name })) } : undefined;
+  return { index: 0, routes: [state ? { name: r.tab, state } : { name: r.tab }] };
 }

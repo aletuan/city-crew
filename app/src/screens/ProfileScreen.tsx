@@ -1,12 +1,20 @@
-// Profile — two personas, per the reference screens.
+// Account — two personas, per the reference screens.
 //
 // Guests get a hub: who-you-are hero with one big sign-in action, a
 // preview of what an account unlocks, and a quiet exit to keep
 // browsing. Signed-in users get their identity: avatar, name, bio, an
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
+//
+// ── where it stands (owner, 19 Nov 2026) ──
+//
+// This was the last tab's first page. It is the `Account` page now,
+// pushed over your own person page, which the tab opens instead
+// (`MeScreen`, docs/profile-home-plan.md). The guest's hub is still the
+// tab's first page — a guest has no page of their own — and is drawn
+// here, by `MeScreen`, as it always was.
 
-import { useCallback, useMemo, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { AmbientWarmth, Screen, useTabBarClearance } from '../components/ui';
 import { useScrollToTop } from '@react-navigation/native';
@@ -58,10 +66,27 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   // Down by `dy` from where the page is, for a card that needs something
   // of its own kept in view (the guide switch, under its invitation).
   const scrollBy = useCallback((dy: number) => scrollRef.current?.scrollTo({ y: y.current + dy, animated: true }), []);
-  const returning = useMemo(() => ({ sheet, spendSheet, y, scrollBy }), [sheet, spendSheet, scrollBy]);
+  // Pushed: the account's page over your own (19 Nov 2026,
+  // docs/profile-home-plan.md). Not pushed: the guest's, which is still
+  // the tab's first page. Read once — a page does not move in its stack.
+  const [pushed] = useState(() => navigation.canGoBack());
+  const stack = useMemo(() => (pushed ? ['ProfileHome', 'Account'] : undefined), [pushed]);
+  const returning = useMemo(() => ({ sheet, spendSheet, y, scrollBy, stack }), [sheet, spendSheet, scrollBy, stack]);
+  // Signed out from here — the last rows of this page — there is no
+  // account for it to be the page of: back to the tab's first page, which
+  // is the guest's now.
+  useEffect(() => {
+    if (pushed && ready && !session) navigation.popToTop();
+  }, [pushed, ready, session, navigation]);
 
   return (
-    <Screen title={t('Account', 'Tài khoản', 'アカウント', '账号', '帳號')}>
+    <Screen
+      title={t('Account', 'Tài khoản', 'アカウント', '账号', '帳號')}
+      onBack={pushed ? () => navigation.goBack() : undefined}
+      compactTitle={pushed}
+      backBare
+      backTestID="account-back"
+    >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         <ScrollView

@@ -69,16 +69,19 @@ vào mặt mình) giữ nguyên như hôm nay: là trang người khác thấy, 
 quay lại. Lý do ở mục 6.
 
 1. **Đầu trang:** "Trang cá nhân", không có nút quay lại. Bên phải:
-   chuông (Hoạt động, có chấm theo mục 3) và lối vào Tài khoản.
+   chuông (Hoạt động, có chấm theo mục 3).
 2. **Ảnh bìa, ảnh đại diện, tên, handle, tiểu sử** như hôm nay. Ảnh đại
    diện thêm vòng cấp độ và nhãn "Lv", bấm mở Thành tích, như ở Tài khoản
    hôm nay.
 3. **Bốn con số:** Bộ sưu tập, Check-in, Bạn bè, Chuyến đi. Mỗi số là một
    cửa, như ở Tài khoản hôm nay (`StatTile`, cùng đích đến).
 4. **Thẻ lời mời kết bạn**, chỉ khi có lời mời.
-5. **Sửa hồ sơ**, thay cho liên kết "Hồ sơ ›" cạnh tiêu đề Hoạt động
-   (#1447).
-6. **Hoạt động** (các bộ sưu tập), như hôm nay.
+5. **Hoạt động** (các bộ sưu tập), với **"Tài khoản ›"** bên phải tiêu đề.
+   Đây là lối vào Tài khoản: #1451 đã đặt nó ở đó ngày 19/11, trước khi kế
+   hoạch này viết xong, nên câu hỏi "bánh răng hay ⋯" không còn.
+
+Nút "Sửa hồ sơ" trên trang: xem lại ở P2. Hôm nay bấm vào tiểu sử (hoặc
+"Viết vài dòng về bạn") đã mở Sửa hồ sơ, và Tài khoản có nút riêng.
 
 ## 5. Tài khoản sau khi đổi
 
@@ -109,7 +112,13 @@ nhưng ở trang khác, nên giữ. Xem lại ở P4.
   được tới màn mà mọi stack đều có, và `Account`, `Activity`, `Crew` chỉ
   có ở `ProfileStack`.
 - **Bấm vào mặt mình bên trong tab cuối** thì quay về gốc tab, không đẩy
-  thêm một bản thứ hai của chính trang đó.
+  thêm một bản thứ hai của chính trang đó. *Chưa làm ở P1:* mỗi nơi mở
+  trang một người tự gọi `navigate('Person')`, và biết đó là mình cần
+  phiên đăng nhập ở từng nơi. Bản thứ hai hôm nay là trang như người khác
+  thấy, có nút quay lại; không hỏng gì. Để P2.
+- **Lối vào Friends và Account do `MeScreen` trao cho trang** (`home`), không
+  do `PersonScreen` tự gọi: `PersonScreen` có trong ba stack, và
+  `nav.test.ts` giữ luật một màn chỉ đi tới màn mà cả ba stack đều có.
 - **Tên tab cho VoiceOver:** "Tài khoản" thành "Trang cá nhân". Thanh tab
   không có chữ, nên chỉ VoiceOver đọc tên này.
 - **Kích thước file:** `PersonScreen.tsx` đã dài 669 dòng. Phần chỉ chủ
@@ -120,12 +129,17 @@ nhưng ở trang khác, nên giữ. Xem lại ở P4.
 
 Mỗi PR một commit, revert là về như trước.
 
-- [ ] **P1. Đổi gốc tab.** `ProfileHome` vẽ Trang cá nhân của mình; route
-  `Account`; lối vào Tài khoản ở đầu trang; mở lại sau khi đổi giao diện
-  rơi đúng `Account`; tên tab. Nội dung Tài khoản chưa đổi, nên bốn con
-  số tạm thời vẫn ở đó.
-- [ ] **P2. Bốn con số và lời mời kết bạn** lên Trang cá nhân (chỉ ở gốc
-  tab); bỏ bốn con số khỏi Tài khoản; "Sửa hồ sơ" thay "Hồ sơ ›".
+- [x] **P1. Đổi gốc tab, và thẻ lời mời kết bạn.** `ProfileHome` vẽ
+  Trang cá nhân của mình (`MeScreen`); route `Account`; "Tài khoản ›" mở
+  nó; mở lại sau khi đổi giao diện rơi đúng `Account` (`Return.stack`);
+  đăng xuất ở Tài khoản thì về trang khách; tên tab. Thẻ lời mời kết bạn
+  đi cùng P1 chứ không đợi P2: đó là lý do thường gặp nhất của chấm, và
+  một chấm dẫn tới trang không có gì vi phạm mục 3 ngay từ bản đầu. Nội
+  dung Tài khoản chưa đổi, nên bốn con số tạm thời vẫn ở đó, và huy hiệu
+  mới vẫn chỉ thấy ở Tài khoản cho tới P3.
+- [ ] **P2. Bốn con số** lên Trang cá nhân (chỉ ở gốc tab); bỏ khỏi Tài
+  khoản; bấm vào mặt mình trong tab cuối thì về gốc; xem lại nút Sửa hồ
+  sơ.
 - [ ] **P3. Thông báo.** Chuông vào Hoạt động; vòng cấp độ và Thành tích
   lên ảnh đại diện; bỏ ảnh, tên và dòng Hoạt động khỏi Tài khoản; test
   cho luật ở mục 3.
@@ -147,10 +161,7 @@ trên tab; P3 sửa *lối vào* Hoạt động. Để hai bên không giẫm l�
 
 ## 9. Còn mở
 
-1. **Lối vào Tài khoản: bánh răng hay ⋯?** Ảnh tham khảo dùng ⋯. Đề xuất
-   bánh răng (`settings-outline`): trên trang người khác, ⋯ là menu báo
-   cáo và chặn, nên ⋯ trên trang mình mà mở một trang khác là một hình
-   mang hai nghĩa.
+1. ~~Lối vào Tài khoản: bánh răng hay ⋯?~~ Đã có: "Tài khoản ›" (#1451).
 2. **Vòng cấp độ và "Lv": chỉ chủ trang thấy, hay ai cũng thấy?** Cấp độ
    tính từ số địa điểm đã lưu, tức là nói ra mức hoạt động. Đề xuất: chỉ
    chủ trang, cho tới khi có lý do khác.

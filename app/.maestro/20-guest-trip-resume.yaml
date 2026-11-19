@@ -89,8 +89,7 @@ env:
 - assertTrue: ${maestro.copiedText === output.draftName}
 - runFlow: common/assert-trips-empty.yaml
 # Check the actual resumed session, not only the draft and a Sign out control.
-- tapOn:
-    id: "tab-profile"
+- runFlow: common/open-account.yaml
 - scrollUntilVisible:
     element:
       id: "profile-email"

@@ -7,8 +7,7 @@
 # the `.*` either side.
 appId: host.exp.Exponent
 ---
-- tapOn:
-    id: "tab-profile"
+- runFlow: open-account.yaml
 - scrollUntilVisible:
     element:
       text: ".*Connect with friends.*"

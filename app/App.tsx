@@ -61,6 +61,7 @@ import TripsScreen from './src/screens/TripsScreen';
 import TripDetailScreen from './src/screens/TripDetailScreen';
 import TripInvitationScreen from './src/screens/TripInvitationScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import MeScreen from './src/screens/MeScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
@@ -201,7 +202,10 @@ function CollectionsStack() {
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions} screenLayout={screenLayout}>
-      <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+      {/* Your own page, or the guest's hub — `MeScreen`. Account, which
+          stood here until 19 Nov 2026, is a page over it. */}
+      <Stack.Screen name="ProfileHome" component={MeScreen} />
+      <Stack.Screen name="Account" component={ProfileScreen} />
       <Stack.Screen name="SignIn" component={SignInScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
@@ -278,7 +282,12 @@ function Tabs() {
     // tab was "Cá nhân" and that page "Hồ sơ", which had the two the
     // wrong way round: email, theme, language and delete live here. The
     // route keeps its name; nothing a reader sees is the route.
-    Profile: t('Account', 'Tài khoản', 'アカウント'),
+    //
+    // And Profile again since 19 Nov 2026: the tab opens your own Profile
+    // now, with Account a page under it (`MeScreen`), so the tab wears the
+    // name of the page it opens. The bar shows no words; this is what
+    // VoiceOver says.
+    Profile: t('Profile', 'Trang cá nhân', 'プロフィール'),
   };
   return (
     <Tab.Navigator

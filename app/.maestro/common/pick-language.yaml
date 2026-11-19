@@ -2,8 +2,7 @@
 # Ends on Profile with the tab bar showing, so the caller can read it.
 appId: host.exp.Exponent
 ---
-- tapOn:
-    id: "tab-profile"
+- runFlow: open-account.yaml
 - scrollUntilVisible:
     element:
       id: "profile-language"
