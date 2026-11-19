@@ -83,7 +83,7 @@ const HEART = ICON.action;
 const MARK = ICON.meta;
 
 export default function ActivityCard({
-  face, who, did, when, mark, title, uri, meta, desc, liked, likes, onOpen, onHeart, comments, onComments, testID,
+  face, who, did, when, mark, title, uri, meta, desc, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -117,6 +117,10 @@ export default function ActivityCard({
    *  comments is drawn at all. Only ever handed in beside `onHeart`: a
    *  thread and a heart are both a public collection's. */
   onComments?: () => void;
+  /** The thread is closed and has nothing in it: the bubble is drawn
+   *  dimmed and opens nothing — there is nothing to read and nothing may
+   *  be written. (A closed thread with comments still opens.) */
+  commentsOff?: boolean;
   testID?: string;
 }) {
   const { t } = useI18n();
@@ -174,12 +178,14 @@ export default function ActivityCard({
             testID="activity-heart"
             countTestID="activity-likes"
           />
-          {onComments ? (
+          {onComments || commentsOff ? (
             <PressableScale
-              onPress={onComments}
+              onPress={commentsOff ? undefined : onComments}
+              disabled={commentsOff}
               haptic="selection"
               scaleTo={0.82}
-              contentStyle={s.heart}
+              // Dimmed, not gone — `CommentRow` has the reason.
+              contentStyle={commentsOff ? [s.heart, s.off] : s.heart}
               hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
               accessibilityRole="button"
               accessibilityLabel={n === 1
@@ -212,6 +218,7 @@ export default function ActivityCard({
 }
 
 const s = StyleSheet.create({
+  off: { opacity: 0.35 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: space.cardPadding, paddingBottom: 12 },
   headWords: { flex: 1 },
   line: { color: colors.textSecondary, fontSize: 15, lineHeight: 20 },

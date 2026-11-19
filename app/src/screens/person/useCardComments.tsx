@@ -22,7 +22,7 @@ import type { Preview } from '../../lib/comments';
 import { useFlag } from '../../lib/useFlag';
 import type { Collection } from '../../lib/types';
 
-export type CardComments = { comments?: Preview; onComments?: () => void };
+export type CardComments = { comments?: Preview; onComments?: () => void; commentsOff?: boolean };
 
 export function useCardComments(
   /** The collections whose cards are drawn. */
@@ -45,9 +45,11 @@ export function useCardComments(
     if (!on || !id || !hasThread(c)) return {};
     const comments = previews.data[id];
     // A thread closed with nothing in it has no way in from a card: there
-    // is nothing to read and nothing may be written. (Its owner reaches
-    // the switch from the list's own page — `CommentsDoor`.)
-    if (comments?.off && comments.n === 0) return {};
+    // is nothing to read and nothing may be written. The bubble is still
+    // drawn, dimmed — taken away, the card's foot shifted (owner, 19 Nov
+    // 2026). (Its owner reaches the switch from the list's own page —
+    // `CommentsDoor`.)
+    if (comments?.off && comments.n === 0) return { comments, commentsOff: true };
     return {
       comments,
       onComments: () => (quick && quickOrThread({
