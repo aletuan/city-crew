@@ -36,7 +36,7 @@ vi.mock('../../lib/i18n', () => ({
 import { useCommentMenu } from './useCommentMenu';
 
 const placed = (over: Partial<Placed> = {}): Placed => ({
-  id: 'k1', parent_id: null, root_id: null, depth: 0, level: 0, to: null,
+  id: 'k1', parent_id: null, root_id: null, depth: 0, level: 0, to: null, under: 0,
   body: 'Lovely rooftop', created_at: 'x',
   author: 'them', handle: '@Trang', full_name: null, avatar_url: 'https://faces/trang.jpg', mentions: [], likes: 0, liked: false,
   ...over,

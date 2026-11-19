@@ -13,7 +13,7 @@ import type { Branch, Placed } from '../../lib/comments';
 import { LIT_MS, useThreadFocus } from './useThreadFocus';
 
 const placed = (id: string, parent: string | null = null): Placed => ({
-  id, parent_id: parent, root_id: parent, depth: parent ? 1 : 0, level: parent ? 1 : 0, to: null,
+  id, parent_id: parent, root_id: parent, depth: parent ? 1 : 0, level: parent ? 1 : 0, to: null, under: 0,
   body: id, created_at: 'x', author: 'u', handle: 'h', full_name: null, avatar_url: null, mentions: [], likes: 0, liked: false,
 });
 // Three roots; the second has four answers.

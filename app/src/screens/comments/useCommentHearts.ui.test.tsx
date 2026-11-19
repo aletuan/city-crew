@@ -27,7 +27,7 @@ vi.mock('../../components/ui', async (orig) => ({
 import { useCommentHearts } from './useCommentHearts';
 
 const placed = (id: string, likes = 0, liked = false): Placed => ({
-  id, parent_id: null, root_id: null, depth: 0, level: 0, to: null,
+  id, parent_id: null, root_id: null, depth: 0, level: 0, to: null, under: 0,
   body: 'Lovely rooftop', created_at: 'x',
   author: 'u1', handle: 'trang', full_name: null, avatar_url: null, mentions: [], likes, liked,
 });

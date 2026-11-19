@@ -106,6 +106,9 @@ export type Placed = CommentRow & {
   /** The handle of who it answers, when the indent alone no longer says:
    *  a comment deeper than the last level drawn. Null otherwise. */
   to: string | null;
+  /** How many comments are under it, at any depth — the figure beside
+   *  its bubble. See `threadOf`. */
+  under: number;
 };
 
 /** A comment on the subject itself, and everything said under it. */
@@ -173,6 +176,20 @@ export function mentionsOf(raw: unknown): Mention[] {
  * this function decided which of those lines still had a reason to be
  * there).
  *
+ * ── the figure beside the bubble (owner, 19 Nov 2026) ──
+ *
+ * `under` is everything said beneath a comment, not its direct answers
+ * alone. The screen draws three levels and lays the deeper ones on the
+ * third, so a reader sees a branch, not a tree: under "Love it" with one
+ * answer and an answer to that, two rows stand, and "1" would be a
+ * figure the page contradicts. It is also the size of what a folded
+ * branch is hiding, which is when the figure is most use.
+ *
+ * Counted here, from the list the server sent, and not by the server:
+ * the thread comes whole, and what was left out of it for this reader —
+ * a blocked person's comment and all beneath — is then left out of the
+ * figure too, with no second rule to keep in step.
+ *
  * A comment whose parent is not in the list is dropped: there is no
  * honest place to draw an answer to nothing. That is a thread read while
  * something in it was being deleted, and the next read is whole.
@@ -187,11 +204,6 @@ export function threadOf(rows: readonly CommentRow[]): Branch[] {
     if (list) list.push(r); else kids.set(r.parent_id, [r]);
   }
 
-  const place = (r: CommentRow, level: number): Placed => {
-    const parent = r.depth > LEVEL_MAX && r.parent_id ? byId.get(r.parent_id) : undefined;
-    return { ...r, level, to: parent ? parent.handle : null };
-  };
-
   // Everything under a comment, oldest first whatever it answers.
   const under = (r: CommentRow, into: CommentRow[]): CommentRow[] => {
     for (const k of kids.get(r.id) ?? []) {
@@ -199,6 +211,11 @@ export function threadOf(rows: readonly CommentRow[]): Branch[] {
       under(k, into);
     }
     return into;
+  };
+
+  const place = (r: CommentRow, level: number): Placed => {
+    const parent = r.depth > LEVEL_MAX && r.parent_id ? byId.get(r.parent_id) : undefined;
+    return { ...r, level, to: parent ? parent.handle : null, under: under(r, []).length };
   };
 
   const out: Branch[] = [];
