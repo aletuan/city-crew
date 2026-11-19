@@ -671,10 +671,20 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
             {/* Answered here as well as in Activity, and that is not a
                 duplicate: Activity is what happened while you were away,
                 this is the desk where the crew is managed. Both reach
-                the same two verbs. */}
+                the same two verbs.
+
+                Each heading carries its own figure, as Trips' "Upcoming ·
+                1" does (owner, 20 Nov 2026). The Requests tab's pill
+                counts these alone — the ones waiting on you — and "Pending
+                · 1" under it is the same number, so the pill says what it
+                counts without a word of explanation, while "Sent · 2" says
+                what you are waiting on. Suggestions get none: they are not
+                requests. Weighed and not taken: counting Sent into the
+                pill, which would leave it lit for days with nothing for
+                the reader to do, and at odds with the tab bar's dot. */}
             {crew.incoming.length > 0 && (
               <>
-                <Text style={s.head}>{t('Pending', 'Đang chờ', '保留中', '待处理', '待處理')}</Text>
+                <Text style={s.head}>{t('Pending', 'Đang chờ', '保留中', '待处理', '待處理')} · {crew.incoming.length}</Text>
                 {crew.incoming.map((r, i) => {
                   const p = people[r.requester];
                   return (
@@ -728,7 +738,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 the other person's screen. */}
             {crew.outgoing.length > 0 && (
               <>
-                <Text style={s.head}>{t('Sent', 'Đã gửi', '送信済み', '已发送', '已傳送')}</Text>
+                <Text style={s.head}>{t('Sent', 'Đã gửi', '送信済み', '已发送', '已傳送')} · {crew.outgoing.length}</Text>
                 <Card>
                   {crew.outgoing.map((r, i) => {
                     const p = people[r.addressee];

@@ -222,14 +222,14 @@ describe('which tab opens', () => {
     expect(within(bao).getByTestId('crew-who-handle').textContent).toBe('bao');
     expect(within(bao).queryByTestId('crew-who-name')).toBeNull();
     expect(anh.textContent).not.toContain('@');
-    expect(screen.queryByText('Pending')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
   });
 
   it('opens on Requests when somebody is waiting, with the count in a pill on the open tab', () => {
     crew.ships.data = [edge('r', ME, 'pending')];
     crew.people = { r: person('r', 'minh', 'Minh') };
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('Pending')).toBeTruthy();
+    expect(screen.getByText(/^Pending · /)).toBeTruthy();
     expect(screen.getByText('Minh')).toBeTruthy();
     expect(screen.getByText('wants to join your crew')).toBeTruthy();
     // A pill on the chosen tab too, since 20 Nov 2026 (`TabsLook`): the
@@ -242,11 +242,11 @@ describe('which tab opens', () => {
     crew.ships.loadedAt = null;
     crew.ships.data = [edge('r', ME, 'pending')];
     const { rerender } = render(<CrewScreen navigation={nav()} />);
-    expect(screen.queryByText('Pending')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
 
     crew.ships.loadedAt = 2;
     rerender(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('Pending')).toBeTruthy();
+    expect(screen.getByText(/^Pending · /)).toBeTruthy();
 
     // The reader chooses Friends; a reload that brings another request
     // must not drag them back.
@@ -254,7 +254,7 @@ describe('which tab opens', () => {
     crew.ships.data = [...crew.ships.data, edge('s', ME, 'pending', '2026-02-01')];
     crew.ships.loadedAt = 3;
     rerender(<CrewScreen navigation={nav()} />);
-    expect(screen.queryByText('Pending')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
     // ...and the unchosen Requests tab rings with the count instead.
     expect(tab(/Requests/).textContent).toBe('Requests2');
   });
@@ -304,6 +304,20 @@ describe('the tabs, drawn as words', () => {
     const { UnderlineTabs } = await import('../components/ui');
     render(<UnderlineTabs tabs={[{ key: 'a', icon: 'mail-outline', label: 'Alpha' }, { key: 'b', icon: 'people-outline', label: 'Beta' }]} active="a" onChange={() => {}} />);
     expect(screen.getByRole('tab', { name: /Alpha/ }).querySelector('[data-icon]')).toBeTruthy();
+  });
+});
+
+// The figures on the headings (owner, 20 Nov 2026): Pending is the
+// tab's pill again, Sent is the other half of the tab, and nothing else
+// is counted.
+describe('the headings, counted', () => {
+  it('counts what waits on you under Pending and what you sent under Sent, and the tab counts the first alone', () => {
+    crew.ships.data = [edge('r', ME, 'pending'), edge(ME, 'x', 'pending'), edge(ME, 'y', 'pending', '2026-02-01')];
+    crew.people = { r: person('r', 'minh', 'Minh'), x: person('x', 'xuan'), y: person('y', 'yen') };
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByText('Pending · 1')).toBeTruthy();
+    expect(screen.getByText('Sent · 2')).toBeTruthy();
+    expect(tab(/Requests/).getAttribute('aria-label')).toBe('Requests (1)');
   });
 });
 
@@ -418,7 +432,7 @@ describe('a request you sent', () => {
 
   it('is listed under Sent by its handle and name alone, and Cancel withdraws it through the sheet', async () => {
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('Sent')).toBeTruthy();
+    expect(screen.getByText(/^Sent · /)).toBeTruthy();
     const sent = screen.getByTestId('crew-sent-0');
     expect(within(sent).getByTestId('crew-who-handle').textContent).toBe('oanh');
     expect(within(sent).getByTestId('crew-who-name').textContent).toBe('Oanh');
@@ -604,8 +618,8 @@ describe('empty and loading', () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));
     expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
-    expect(screen.queryByText('Pending')).toBeNull();
-    expect(screen.queryByText('Sent')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
+    expect(screen.queryByText(/^Sent/)).toBeNull();
   });
 });
 
