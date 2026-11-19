@@ -29,6 +29,17 @@
 // picture it is read with the face, and the arc runs on behind it, as
 // it did behind the corner.
 //
+// ── the gap, filled (owner, 19 Nov 2026) ──
+//
+// The gap between the picture and the track was left open, which on
+// the Account page is the page. On your own person page the ring lies
+// half over the cover photograph, which would show through it, so the
+// page drew its own 4 of page round the picture inside the ring — and
+// the owner, on a photograph with a black ground, read 7.5 of white
+// round it as too much. The gap is filled with the page now, one band
+// of 3.5 on every page that draws the ring, and your own page hands in
+// the bare picture: the 4 it dropped went to the picture, 80 to 88.
+//
 // The pill is a press that says what the level is (owner, 16 Nov 2026) —
 // as the role's disc on the opposite corner says what the role is. What
 // it says is the caller's (`onExplain`): the ring is handed a level, not
@@ -39,7 +50,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from './ui';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, font, gradAI, ringSweep, ringTrack } from '../theme';
+import { bgHex, colors, font, gradAI, ringSweep, ringTrack } from '../theme';
 import { useI18n } from '../lib/i18n';
 import { sampleSweep, visibleSweep } from '../lib/ring';
 import { useScheme } from '../lib/theme';
@@ -48,7 +59,8 @@ import { useScheme } from '../lib/theme';
 // test runner can reach it without loading React Native.
 export { levelFromSaves, PER_LEVEL } from '../lib/level';
 
-/** A gap of page between avatar and track, then the track. */
+/** A gap of page between avatar and track, then the track. Filled with
+ *  the page (`ground`), not left open: see the head of the file. */
 const GAP = 3.5;
 const STROKE = 4;
 /** How far the ring stands outside the picture it is handed — for a
@@ -72,7 +84,8 @@ export default function EngagementRing({ size, level, progress, fresh = false, o
   const { t } = useI18n();
   // Read rather than resolved: see `ringTrack` for why this cannot be a
   // dynamic pair.
-  const track = ringTrack[useScheme().scheme];
+  const { scheme } = useScheme();
+  const track = ringTrack[scheme];
 
   // A gap of page between avatar and track, so the ring reads as a
   // separate object rather than a border the picture grew.
@@ -93,6 +106,9 @@ export default function EngagementRing({ size, level, progress, fresh = false, o
   return (
     <View style={{ width: box, height: box, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={box} height={box} style={StyleSheet.absoluteFill}>
+        {/* The gap, in the page's own colour: what lies under it is not
+            always the page (see the head). Plain hex, as the track is. */}
+        <Circle cx={c} cy={c} r={size / 2 + GAP} fill={bgHex[scheme]} testID="ring-ground" />
         {/* The headroom, drawn whole and then covered by the arc. */}
         <Circle cx={c} cy={c} r={r} stroke={track} strokeWidth={STROKE} fill="none" />
         {/* Floored, so a new account gets a ring rather than a bare

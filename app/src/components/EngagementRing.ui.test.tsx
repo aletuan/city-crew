@@ -17,8 +17,8 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, viewStyleOf } from '../uitest/render';
-import { ringTrack } from '../theme';
+import { cleanup, fireEvent, render, screen, viewStyleOf } from '../uitest/render';
+import { bgHex, ringTrack } from '../theme';
 import { visibleSweep } from '../lib/ring';
 
 // The scheme is the one thing the ring reads from outside its props, and
@@ -30,7 +30,7 @@ vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }))
 import EngagementRing from './EngagementRing';
 
 const paths = (root: HTMLElement) => root.querySelectorAll('[data-stub="Path"]');
-const track = (root: HTMLElement) => root.querySelector('[data-stub="Circle"]');
+const track = (root: HTMLElement) => root.querySelector('[data-stub="Circle"]:not([data-testid="ring-ground"])');
 
 const explain = vi.fn();
 const ring = (progress: number, level = 3) =>
@@ -80,6 +80,21 @@ describe('the engagement ring', () => {
     expect(explain).not.toHaveBeenCalled();
     fireEvent.click(pill);
     expect(explain).toHaveBeenCalledOnce();
+  });
+
+  // The gap between the picture and the track is the page's, filled
+  // (owner, 19 Nov 2026): over a cover photograph it would show through.
+  it('fills the gap round the picture with the page, up to the track and not under it', () => {
+    const { container } = ring(0.4);
+    const ground = screen.getByTestId('ring-ground');
+    expect(ground.getAttribute('fill')).toBe(bgHex.dark);
+    // 88 / 2 + 3.5; the track's inner edge is there too: (103 − 4) / 2 − 2.
+    expect(Number(ground.getAttribute('r'))).toBe(47.5);
+    expect(Number(track(container)!.getAttribute('r')) - 2).toBe(47.5);
+    theme.scheme = 'light';
+    cleanup();
+    ring(0.4);
+    expect(screen.getByTestId('ring-ground').getAttribute('fill')).toBe(bgHex.light);
   });
 
   // Lighter since 19 Nov 2026 (owner): it read as a second object
