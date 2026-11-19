@@ -18,7 +18,7 @@ phải viết lại.
 | 3 | Ai được bình luận | Mọi người đã đăng nhập, trên bộ sưu tập công khai. Chủ bộ có công tắc **tắt bình luận** cho từng bộ. | Instagram |
 | 4 | Tag | Tag người mở Trang cá nhân; tag địa điểm (chỉ địa điểm trong chính bộ đó) mở trang chi tiết địa điểm. Tag được: bạn bè của người viết, chủ bộ, người đã bình luận trong luồng. | Instagram (mức "người mình theo dõi") |
 | 5 | Xoá | Xoá của mình; chủ bộ xoá được bình luận trên bộ của họ. **Xoá một bình luận là xoá luôn các trả lời bên dưới** (đổi ngày 18/11/2026, xem dưới). Không cho sửa. | Instagram, Facebook |
-| 6 | Thông báo | Chủ bộ và người đã tham gia luồng được báo trong màn Hoạt động sẵn có. Chưa có thông báo đẩy. | Letterboxd |
+| 6 | Thông báo | Bốn việc được báo trong màn Hoạt động: có người bình luận vào bộ của bạn, trả lời bình luận của bạn, tag bạn, thả tim bình luận của bạn. Mỗi việc báo cho **đúng một người có liên quan trực tiếp**, không báo cả luồng (viết lại ngày 19/11/2026, xem dưới). Thông báo đẩy là bước riêng (C11). | Instagram, Threads |
 | 7 | Giới hạn | 500 ký tự; 30 bình luận mỗi người mỗi ngày. | |
 | 8 | An toàn (Apple 1.2) | Bộ lọc từ cấm lúc đăng; báo cáo từng bình luận; hai người chặn nhau không thấy bình luận của nhau. | App Review Guidelines 1.2 |
 | 9 | Phát hành | Làm sau cờ `comments` (tắt sẵn), merge dần; bật trong một bản nộp duyệt kèm ghi chú cho App Review. | Điều 2.5.2 |
@@ -63,11 +63,108 @@ ngày 18/11/2026; ba bình luận thử đang có lúc đó đã bị xoá theo 
 - Không còn dòng "đã bị xoá", không còn cột `deleted_at`, nội dung không
   bao giờ rỗng.
 
+### Về thông báo (quyết định 6, viết lại ngày 19/11/2026)
+
+Bản đầu chỉ có một câu: "chủ bộ và người đã tham gia luồng được báo".
+Chủ dự án yêu cầu nghĩ kỹ hơn. Phần này là thiết kế; việc phải làm ở C7
+và C11.
+
+**Báo việc gì, cho ai**
+
+| Việc xảy ra | Người được báo | Dòng trong Hoạt động |
+|---|---|---|
+| Có người bình luận vào bộ của bạn | Chủ bộ | "trang đã bình luận về *Cà phê Hội An*" + trích bình luận |
+| Có người trả lời bình luận của bạn | Người viết bình luận được trả lời | "trang đã trả lời bạn" + trích trả lời |
+| Có người tag bạn | Người được tag | "trang đã nhắc tới bạn" + trích bình luận |
+| Có người thả tim bình luận của bạn | Người viết bình luận | "trang và 2 người khác thích bình luận của bạn" |
+
+**Luật**
+
+1. **Một bình luận, một người nhận, một dòng.** Một trả lời có thể vừa
+   nằm trên bộ của bạn, vừa trả lời bạn, vừa tag bạn. Bạn chỉ thấy một
+   dòng, theo lý do mạnh nhất: tag, rồi trả lời, rồi "trên bộ của bạn".
+2. **Chỉ báo người được trả lời trực tiếp**, không báo mọi người đã viết
+   trong luồng. Đây là chỗ đổi so với bản đầu. Báo cả luồng là cách
+   Facebook làm và là lý do người ta tắt thông báo: bạn viết một câu, rồi
+   nhận mười dòng về chuyện của người khác. Muốn gọi ai vào thì tag.
+3. **Tim gộp theo bình luận**: một dòng cho mỗi bình luận được thả tim,
+   mang tên người mới nhất và số người còn lại, đứng ở thời điểm của tim
+   mới nhất. Mười tim là một dòng, không phải mười.
+4. **Không báo việc của chính mình**, và không báo gì giữa hai người đã
+   chặn nhau.
+5. **Dòng còn khi việc còn**, như phần còn lại của Hoạt động: bình luận
+   bị xoá thì dòng mất, tim rút lại thì mất, bộ chuyển về riêng tư thì
+   dòng ẩn cho tới khi công khai lại. Vì vậy **không có bảng thông báo
+   riêng**: các dòng được tính lúc đọc từ chính bảng bình luận, tag và
+   tim. Lợi: không bao giờ có dòng trỏ vào thứ đã mất, và không có dữ
+   liệu thứ hai phải giữ khớp. Giá: không có "đã đọc" cho từng dòng (xem
+   "Cái gì là mới").
+6. **Hai tuần**, cùng cửa sổ với Hoạt động hôm nay.
+7. **Bấm vào dòng** thì mở màn Bình luận của bộ đó, cuộn tới đúng bình
+   luận và làm nó nổi lên một nhịp. Màn Bình luận nhận thêm một tham số
+   cho việc này.
+8. **Người thả tim được nêu tên với người viết bình luận** (và chỉ với
+   người đó), như lượt thích bộ sưu tập đang nêu tên với chủ bộ. Trong
+   luồng vẫn chỉ hiện con số (quyết định 11). Chủ dự án chốt ngày
+   19/11/2026.
+
+**Cái gì là mới**
+
+Con số trên dòng Hoạt động ở Trang cá nhân hôm nay là *tổng số dòng*,
+không phải "chưa xem" (chủ dự án chốt trước đây, để cùng nghĩa với các
+con số bên cạnh). Với lượt thích bộ sưu tập thì ổn. Với bình luận thì
+không đủ: một câu trả lời là thứ người ta cần biết *vừa có*, và hôm nay
+muốn thấy nó phải mở app, sang tab Trang cá nhân, rồi vào Hoạt động.
+
+Chủ dự án chốt ngày 19/11/2026, làm ở C7c:
+
+- Giữ con số là tổng.
+- Thêm một mốc "lần cuối mở Hoạt động", lưu trên máy. Dòng mới hơn mốc
+  có một chấm.
+- **Một chấm trên tab Trang cá nhân** khi có trả lời, tag hoặc bình luận
+  mới hơn mốc. Tim không bật chấm này: tim là tin vui, không phải việc
+  cần đáp.
+
+Mốc lưu trên máy nghĩa là đổi máy thì mọi thứ trong hai tuần lại "mới"
+một lần. Chấp nhận được; lưu trên máy chủ thì thêm một bảng cho một cái
+chấm.
+
+**Thông báo đẩy (C11)**
+
+Không có thông báo đẩy thì bình luận chỉ sống với người đang mở app. Đó
+là giới hạn thật của bản đầu, không phải chi tiết: người được trả lời
+không biết mình được trả lời cho tới lần mở app sau.
+
+Nhưng thông báo đẩy là một tính năng riêng, lớn ngang C1:
+
+- App chưa từng gửi thông báo từ máy chủ; nhắc lịch chuyến đi hôm nay là
+  thông báo đặt sẵn trên máy (`lib/reminders.ts`).
+- Cần: bảng lưu mã thiết bị, lời xin quyền đúng lúc (sau bình luận đầu
+  tiên, không phải lúc mở app), một Edge Function gửi đi, gộp để mười tim
+  không thành mười lần rung, công tắc theo từng loại trong Cài đặt.
+- Chính sách quyền riêng tư phải nói về mã thiết bị
+  (`app/src/lib/legal.ts`), và có thể cần một bản binary mới (phải kiểm
+  tra quyền push của bản đang phát hành).
+
+Vì vậy tách thành C11, làm sau khi bình luận đã phát hành và đã có người
+dùng thật. Lúc đó chỉ đẩy ba loại cần đáp (trả lời, tag, bình luận trên
+bộ của bạn); tim chỉ nằm trong Hoạt động.
+
+**Đã cân nhắc và không chọn**
+
+- *Bảng `notifications` ghi lúc việc xảy ra* (cách thông thường). Cho
+  "đã đọc" từng dòng và đọc nhanh hơn. Không chọn cho bản đầu vì luật 5:
+  mỗi lần xoá, rút tim, chặn, đổi công khai đều phải dọn bảng đó, và sót
+  một chỗ là có dòng trỏ vào thứ không còn. Khi làm C11 sẽ xét lại, vì
+  gửi đẩy cần biết "đã gửi cái gì".
+- *Báo cho người theo dõi luồng* (nút "theo dõi bình luận"). Luồng ở đây
+  ngắn; chưa có nhu cầu.
+- *Email.* Không.
+
 ### Hoãn, sẽ làm sau
 
 - Kiểu xếp "Nổi bật" theo số tim. Tim đã có (quyết định 11); thứ tự vẫn
   là mới nhất trước.
-- Báo cho người viết khi bình luận của họ được thả tim. Xem lại ở C7.
 - Ảnh trong bình luận (trùng với Moment, bước 5 của kế hoạch feed).
 
 ## 2. Thiết kế để mở rộng
@@ -258,8 +355,14 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
   (`lib/commentsChanged`). Không vẽ trước bình luận khi máy chủ chưa nhận.
 - Chưa kiểm được bằng kiểm thử tự động: ô có trượt lên đúng theo bàn phím
   không. Phải xem trên máy.
+- **Gửi xong thì bàn phím hạ xuống** (19/11/2026, sau khi xem trên máy:
+  bàn phím ở lại che nửa trang, đúng chỗ bình luận vừa viết hiện ra).
+  Luồng bình luận không phải khung chat. Bị máy chủ từ chối thì bàn phím
+  ở lại để sửa chữ.
 
-*C4d — tim trên bình luận (chủ dự án yêu cầu 18/11/2026):*
+*C4d — xong: tim trên bình luận (chủ dự án yêu cầu 18/11/2026;
+migration đã áp lên cơ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã
+sinh lại):*
 - Máy chủ (`20261118190000_comment_likes.sql`): bảng `comment_likes`
   (một dòng cho mỗi cặp bình luận và người; xoá bình luận hoặc xoá tài
   khoản thì tim đi theo), hàm `like_comment(id, bật/tắt)` gọi lặp lại
@@ -306,22 +409,87 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 - Chủ bộ xoá bình luận của người khác vẫn là C6, chưa có ở đây dù máy chủ
   đã cho phép.
 
-**C5. Tag**
-- Cần trước: tag địa điểm hiện chỉ mang `id`, mà trang địa điểm mở bằng
-  `slug`. Hoặc cho `comment_thread` trả thêm `slug` trong mỗi tag địa
-  điểm (một migration nhỏ), hoặc tra `id` trong danh sách địa điểm của
-  bộ. Từ C3a tag địa điểm đã được tô màu nhưng chưa bấm được.
-- Gõ "@" mở danh sách người tag được; nút địa điểm mở danh sách địa điểm
-  của bộ.
-- Tag hiện thành liên kết; bấm mở Trang cá nhân hoặc trang địa điểm.
+**C5. Tag** — xong (`20261119050000_comment_tags.sql`; đã áp lên cơ sở
+dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
+- Máy chủ: hàm `comment_taggable(bộ)` trả một lần cả **người** được tag
+  (chủ bộ, rồi người đã viết trong luồng theo bình luận mới nhất, rồi bạn
+  bè; không có chính mình, không có người chặn nhau) và **địa điểm** của
+  bộ (chỉ địa điểm đã duyệt, theo thứ tự của bộ). Danh sách người khớp
+  đúng với luật của `post_comment`; kiểm thử giữ hai bên với nhau bằng
+  cách đăng thử một tag cho từng người được trả về.
+- Mỗi tag địa điểm trong `comment_thread` nay mang thêm `slug`, nên bấm
+  vào là mở trang địa điểm. Địa điểm bị gỡ khỏi bộ sau khi bình luận đã
+  viết thì tag vẫn mở được.
+- Ô soạn: gõ **"@"** thì hiện tối đa 5 dòng phía trên ô, người trước rồi
+  địa điểm (giữ 2 dòng cho địa điểm khi cả hai đều nhiều), gõ thêm chữ
+  thì lọc theo đầu handle, đầu tên, hoặc đầu một từ trong tên, không
+  phân biệt dấu. Bấm một dòng thì "@…" đang gõ thành "@handle" hoặc
+  "@Tên quán" kèm một dấu cách. Dùng được ở cả màn Bình luận và ô gõ tại
+  chỗ.
+- **Khác với bản kế hoạch đầu: không có nút địa điểm riêng.** Địa điểm
+  cũng vào từ "@". Lý do: tên quán chèn từ một nút là chữ thường, không
+  có gì cho thấy nó là tag (sửa một chữ là mất tag mà không ai biết);
+  viết thành "@Tên quán" thì nhìn là biết. Và viên ô soạn đã có ảnh, bộ
+  đếm, nút gửi; thêm một nút nữa là chật.
+- Sửa vào chữ của một tag thì tag đó thành chữ thường (không xoá cả cụm
+  bằng một lần lùi như Instagram, vì việc đó đòi đặt con trỏ từ phía app,
+  thứ React Native làm không ổn định trên iOS).
+- Trong ô soạn, tag chưa được tô màu; đăng xong mới thấy màu. Tối đa 10
+  tag một bình luận: tới đó "@" thôi gợi ý.
+- Vị trí tag tính theo ký tự và theo nội dung đã cắt khoảng trắng hai đầu
+  (`lib/commentTags.outgoing`), khớp với cách máy chủ đo.
+- Chưa kiểm được bằng kiểm thử tự động: con trỏ và bàn phím trên máy thật
+  khi chọn một dòng gợi ý ở giữa câu.
 
-**C6. Quyền của chủ bộ**
-- Công tắc tắt bình luận trong màn sửa bộ sưu tập.
-- Chủ bộ xoá bình luận của người khác trên bộ của mình.
+**C6. Quyền của chủ bộ** — xong (`20261119070000_comment_owner.sql`; đã
+áp lên cơ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại)
+- **Công tắc tắt bình luận nằm trên chính màn Bình luận**, sau nút ⋯ ở
+  đầu trang mà chỉ chủ bộ thấy, không nằm trong màn sửa bộ sưu tập như
+  bản kế hoạch đầu. Lý do: Instagram và Threads đặt nó trên bài, không
+  trong màn sửa; màn sửa lưu bằng nút Lưu còn công tắc này phải có hiệu
+  lực ngay; và hàm của màn sửa đã chạm trần độ dài.
+- Bấm ⋯ thì một hộp hỏi nói trước việc sẽ xảy ra: bình luận đang có vẫn
+  đọc được, không ai viết thêm được cho tới khi bật lại.
+- Luồng đã tắt: chỗ ô soạn là một dòng "Chủ bộ sưu tập đã tắt bình luận"
+  (chủ bộ đọc "Bạn đã tắt…"), không còn bong bóng trả lời, tim vẫn thả
+  được.
+- Bong bóng trên thẻ và trên trang bộ sưu tập: luồng đã tắt mà chưa có
+  bình luận nào thì không hiện (không có gì để đọc, không viết được).
+  Riêng chủ bộ vẫn thấy bong bóng trên trang bộ của mình, và với chủ bộ
+  nó luôn mở màn Bình luận (không bật ô gõ tại chỗ), vì công tắc nằm ở
+  đó.
+- Chủ bộ xoá được bình luận của người khác trên bộ của mình: ⋯ của bình
+  luận có cả "Báo cáo bình luận" và "Xoá bình luận".
+- Máy chủ: `comment_previews` nay trả một dòng cho mọi bộ được hỏi mà
+  người đọc thấy được (kể cả bộ chưa có bình luận), kèm `off`;
+  `comment_taggable` trả thêm `off` và `mine`. Không luật nào đổi: tắt
+  bình luận và quyền xoá của chủ bộ đã có ở máy chủ từ C1.
 
-**C7. Hoạt động**
-- Dòng "trả lời bạn" và "nhắc tới bạn" trong màn Hoạt động, bấm mở đúng
-  luồng.
+**C7. Hoạt động** — thiết kế ở "Về thông báo"; chia ba PR
+
+*C7a — máy chủ — xong (`20261119080000_comment_news.sql`; đã áp lên cơ
+sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
+- Hàm `comment_news(từ lúc nào)` trả các dòng của người gọi: loại (`tag`,
+  `reply`, `on_list`, `heart`), bình luận nào, bộ nào (id, slug, tên theo
+  từng ngôn ngữ), ai làm, nội dung bình luận, lúc nào, và với tim là số
+  người còn lại. Đã áp luật 1 đến 5. Mới nhất trước, tối đa 200 dòng; cửa
+  sổ do app gửi, máy chủ không cho quá 31 ngày.
+- Kiểm thử: mỗi loại tới đúng người; một bình luận chỉ ra một dòng cho
+  một người; không có dòng cho việc của chính mình; chặn nhau thì không
+  có; xoá bình luận, rút tim, bộ về riêng tư thì dòng mất, công khai lại
+  thì dòng trở lại.
+- Chủ bộ cũng nhận dòng cho **trả lời** viết trên bộ của mình (không chỉ
+  bình luận gốc): mọi thứ viết trên bộ là việc của chủ bộ, người có quyền
+  xoá nó.
+
+*C7b — ứng dụng:*
+- Bốn loại dòng trong màn Hoạt động, xếp chung dòng thời gian với phần
+  đang có. Con số trên Trang cá nhân tính thêm chúng.
+- Bấm mở màn Bình luận, cuộn tới bình luận đó và làm nổi một nhịp.
+
+*C7c — cái gì là mới:*
+- Mốc "lần cuối mở Hoạt động" trên máy; chấm trên dòng mới; chấm trên
+  tab Trang cá nhân cho trả lời, tag và bình luận mới.
 
 **C8. Data Desk**
 - Hàng chờ báo cáo hiện loại `comment` kèm nội dung; nút gỡ bình luận.
@@ -339,6 +507,11 @@ cơ sở dữ liệu thật ngày 18/11/2026, kiểu dữ liệu đã sinh lại
 
 **C10. Phát hành**
 - Bật cờ, nộp bản mới, theo dõi kết quả duyệt.
+
+**C11. Thông báo đẩy** — sau khi phát hành; xem "Về thông báo"
+- Bắt đầu bằng một trang đề xuất riêng: bảng mã thiết bị, lúc xin quyền,
+  Edge Function gửi, gộp, công tắc theo loại, phần chính sách quyền riêng
+  tư, và có cần bản binary mới không.
 
 ## 3b. Xem thử trước khi bật cho mọi người
 

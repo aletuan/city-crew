@@ -465,6 +465,32 @@ export type Database = {
           },
         ]
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_mentions: {
         Row: {
           at: number
@@ -1581,18 +1607,35 @@ export type Database = {
         }[]
       }
       comment_clean: { Args: { p_body: string }; Returns: boolean }
+      comment_news: {
+        Args: { p_since: string }
+        Returns: {
+          actor: string
+          at: string
+          avatar_url: string
+          body: string
+          comment_id: string
+          full_name: string
+          handle: string
+          kind: string
+          list: Json
+          others: number
+        }[]
+      }
       comment_previews: {
         Args: { p_collections: string[] }
         Returns: {
           collection_id: string
           latest: Json
           n: number
+          off: boolean
         }[]
       }
       comment_subject_visible: {
         Args: { p_collection: string }
         Returns: boolean
       }
+      comment_taggable: { Args: { p_collection: string }; Returns: Json }
       comment_thread: {
         Args: { p_collection: string; p_order?: string }
         Returns: {
@@ -1604,6 +1647,8 @@ export type Database = {
           full_name: string
           handle: string
           id: string
+          liked: boolean
+          likes: number
           mentions: Json
           parent_id: string
           root_id: string
@@ -1687,6 +1732,10 @@ export type Database = {
       is_local_guide:
         | { Args: never; Returns: boolean }
         | { Args: { p_city_id: string }; Returns: boolean }
+      like_comment: {
+        Args: { p_id: string; p_on: boolean }
+        Returns: undefined
+      }
       likes_on_list: {
         Args: { cid: string }
         Returns: {

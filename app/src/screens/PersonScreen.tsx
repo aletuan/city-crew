@@ -145,7 +145,7 @@ import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
 import { bgHex, colors, display, font, radius, space, type } from '../theme';
-import type { Nav, RootRoute } from '../nav';
+import { goTo, type Nav, type RootRoute } from '../nav';
 
 /** The face: 88, the size Edit profile draws your own at. */
 const FACE = 88;
@@ -203,6 +203,23 @@ export default function PersonScreen({ navigation, route }: {
   // The feed's next cards, drawn before the reader reaches them —
   // `useReach`.
   const end = useReach();
+  // From your own page to the Account tab's page — `Shared`'s `onAccount`
+  // has why it is that page and that word.
+  //
+  // To the tab's first page, with whatever was open over it closed
+  // (`pop` — React Navigation 7's `navigate` no longer goes back to a
+  // screen already in the stack by itself). Most readers reach their own
+  // page from that very page, and for them this is the way back to it,
+  // not a second copy pushed over the first. Reached from another tab —
+  // your name on a list in Collections — it changes tab. Through the
+  // parent as `AccountProfile`'s `hop` does it, and through the
+  // container where the page is read with no navigator above it.
+  const toAccount = () => {
+    const params = { screen: 'ProfileHome', pop: true };
+    const tabs = navigation.getParent();
+    if (tabs) tabs.navigate('Profile', params);
+    else goTo('Profile', params);
+  };
 
   const tabClearance = useTabBarClearance();
   // A ring is a border, and a dynamic colour on a border flattens against
@@ -254,7 +271,7 @@ export default function PersonScreen({ navigation, route }: {
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
 
       {/* What they have shared: what they did, newest first, and every
-          collection they made a tap away — `person/Shared`. */}
+          — `person/Shared`. */}
       <Shared
         me={me}
         person={person}
@@ -263,6 +280,7 @@ export default function PersonScreen({ navigation, route }: {
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
         onComments={(c) => navigation.navigate('Comments', { subject: { kind: 'collection', id: c.id as string } })}
+        onAccount={me && person.id === me ? toAccount : undefined}
         reach={end.reach}
       />
     </>

@@ -58,6 +58,9 @@ export type Mention = {
   /** The person's handle as it is today, which may not be the text tagged. */
   handle: string | null;
   place: string | null;
+  /** The place's slug, which its page opens by. Null on a person's tag,
+   *  and on a place's from a server older than 20261119050000. */
+  slug: string | null;
 };
 
 /** One comment, as `comment_thread` returns it. */
@@ -141,7 +144,11 @@ export function mentionsOf(raw: unknown): Mention[] {
     const person = typeof m.person === 'string' ? m.person : null;
     const place = typeof m.place === 'string' ? m.place : null;
     if ((person === null) === (place === null)) continue;
-    out.push({ at: m.at, len: m.len, person, place, handle: typeof m.handle === 'string' ? m.handle : null });
+    out.push({
+      at: m.at, len: m.len, person, place,
+      handle: typeof m.handle === 'string' ? m.handle : null,
+      slug: typeof m.slug === 'string' ? m.slug : null,
+    });
   }
   return out;
 }
@@ -212,7 +219,7 @@ export function threadOf(rows: readonly CommentRow[]): Branch[] {
 export type Segment =
   | { kind: 'text'; text: string }
   | { kind: 'person'; text: string; id: string; handle: string | null }
-  | { kind: 'place'; text: string; id: string };
+  | { kind: 'place'; text: string; id: string; slug: string | null };
 
 /**
  * A body cut into words and tags, in reading order.
@@ -237,7 +244,7 @@ export function segmentsOf(body: string, mentions: readonly Mention[]): Segment[
     // `mentionsOf` lets through exactly one of the two; a tag built by
     // hand with neither is words.
     if (m.person !== null) out.push({ kind: 'person', text, id: m.person, handle: m.handle });
-    else if (m.place !== null) out.push({ kind: 'place', text, id: m.place });
+    else if (m.place !== null) out.push({ kind: 'place', text, id: m.place, slug: m.slug });
     else out.push({ kind: 'text', text });
     at = m.at + m.len;
   }
@@ -281,6 +288,9 @@ export type Preview = {
   n: number;
   /** The two newest, newest first. */
   latest: PreviewComment[];
+  /** Whether the owner has closed the thread to new comments. What is
+   *  there still reads. */
+  off: boolean;
 };
 
 export type PreviewComment = {

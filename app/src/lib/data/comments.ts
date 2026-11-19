@@ -1,5 +1,5 @@
-// Comments, on the wire: the four functions of 20261118050000_comments
-// and nothing else. No client reads or writes the two tables — row level
+// Comments, on the wire: the functions of 20261118050000_comments and
+// the migrations after it, and nothing else. No client reads or writes the two tables — row level
 // security is on and there is not one policy — so there is no query
 // here, only calls.
 //
@@ -16,6 +16,7 @@
 // between them is here, and no screen changes.
 
 import { supabase } from '../supabase';
+import { taggableOf, type Taggable } from '../commentTags';
 import {
   latestOf, mentionsOf,
   type CommentRow, type Mention, type Preview, type Subject,
@@ -85,7 +86,11 @@ export async function fetchPreviews(subjects: readonly Subject[]): Promise<Recor
   });
   if (error) throw new Error(error.message);
   const out: Record<string, Preview> = {};
-  for (const r of data ?? []) out[r.collection_id] = { n: r.n, latest: latestOf(r.latest) };
+  // `off` only on the word `true`: a server from before 20261119070000
+  // sends no such column, and every thread was open then.
+  for (const r of data ?? []) {
+    out[r.collection_id] = { n: r.n, latest: latestOf(r.latest), off: r.off === true };
+  }
   return out;
 }
 
@@ -138,10 +143,35 @@ export async function deleteComment(id: string): Promise<void> {
  * does.
  */
 export async function likeComment(id: string, on: boolean): Promise<void> {
-  // Not in the generated types until the migration has run on the live
-  // project and they are generated again; named here as what it is.
-  const { error } = await (supabase.rpc as unknown as (
-    fn: string, args: Record<string, unknown>,
-  ) => PromiseLike<{ error: { message: string } | null }>)('like_comment', { p_id: id, p_on: on });
+  const { error } = await supabase.rpc('like_comment', { p_id: id, p_on: on });
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Whom and what the reader may tag in a comment on this subject: the
+ * people `post_comment` would accept and the list's places. Nobody and
+ * nowhere for a guest, or on a subject no comment could be written on —
+ * the server answers empty there, not with a refusal.
+ */
+export async function fetchTaggable(subject: Subject): Promise<Taggable> {
+  const { data, error } = await supabase.rpc('comment_taggable', { p_collection: collectionOf(subject) });
+  if (error) throw new Error(error.message);
+  return taggableOf(data);
+}
+
+/**
+ * Close a subject's thread to new comments, or open it again. The
+ * owner's alone: the write goes to their own row, and row level security
+ * makes anybody else's change nothing — which is why a write that
+ * changed no row throws here, so a stranger's switch does not look
+ * thrown.
+ */
+export async function setCommentsOff(subject: Subject, off: boolean): Promise<void> {
+  const { data, error } = await supabase
+    .from('collections')
+    .update({ comments_off: off })
+    .eq('id', collectionOf(subject))
+    .select('id');
+  if (error) throw new Error(error.message);
+  if (!data?.length) throw new Error('comment:subject');
 }

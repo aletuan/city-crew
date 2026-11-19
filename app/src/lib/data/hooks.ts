@@ -24,7 +24,8 @@ import {
   fetchRoleOf, type FriendProfile, type PersonRole, type PlaceInCommon, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
-import { fetchPreviews, fetchThread } from './comments';
+import { fetchPreviews, fetchTaggable, fetchThread } from './comments';
+import type { Taggable } from '../commentTags';
 import type { CommentRow, Preview, Subject } from '../comments';
 import { changes, onChange } from '../commentsChanged';
 import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
@@ -569,4 +570,26 @@ export const usePreviewsQuery = (collectionIds: readonly string[]): Fetch<Record
     [joined, stamp],
   );
   return useFetch(fetcher, NO_PREVIEWS);
+};
+
+// ── whom the composer may tag ──
+//
+// Asked once when a field opens on a subject, for somebody signed in:
+// the people and the places "@" offers (`comment_taggable`). Not asked
+// again when a comment is written — the one thing a new comment changes
+// is that its writer becomes taggable, and a field that is open has just
+// been used by the only writer it could add, who cannot tag themself. A
+// failure is the empty answer: "@" then offers nothing, and a comment
+// can still be written.
+const NOBODY: Taggable = { people: [], places: [], off: false, mine: false };
+
+/** What may be tagged on a subject; no subject, or nobody reading, asks nothing. */
+export const useTaggableQuery = (subject: Subject | null, readerId: string | null | undefined): Fetch<Taggable> => {
+  const kind = subject?.kind;
+  const id = subject?.id;
+  const fetcher = useCallback(
+    () => (kind && id && readerId ? fetchTaggable({ kind, id }) : Promise.resolve(NOBODY)),
+    [kind, id, readerId],
+  );
+  return useFetch(fetcher, NOBODY);
 };

@@ -62,9 +62,9 @@
 // reads as no comments: the list went private while this page was open,
 // and saying so here would tell a stranger that it exists.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from '../components/CommentComposer';
@@ -72,16 +72,16 @@ import CommentRow, { INDENT } from '../components/CommentRow';
 import { useKeyboardUp } from '../components/keyboard';
 import { useCommentHearts } from './comments/useCommentHearts';
 import { useCommentMenu } from './comments/useCommentMenu';
+import { useThreadOwner } from './comments/useThreadOwner';
+import { useThreadWriting } from './comments/useThreadWriting';
 import { EmptyState, GradientCta, PressableScale, Screen } from '../components/ui';
 import { useTabBarAway } from '../components/tabBarDuck';
 import { agoLabel } from '../lib/ago';
-import { threadOf, type Branch, type Placed } from '../lib/comments';
-import { commentsChanged } from '../lib/commentsChanged';
-import { postComment, useThreadQuery } from '../lib/data';
+import { threadOf, type Branch } from '../lib/comments';
+import { useTaggableQuery, useThreadQuery } from '../lib/data';
 import { nearEnd } from '../lib/feed';
 import { useProfile, useSession } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { normalizeHandle } from '../lib/handle';
 import { useSaveActions } from '../lib/save';
 import { colors, font, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -137,6 +137,7 @@ export default function CommentsScreen({ navigation, route }: {
   const typing = useKeyboardUp();
   const now = Date.now();
   const onPerson = (handle: string) => navigation.navigate('Person', { handle });
+  const onPlace = (slug: string) => navigation.navigate('PlaceDetail', { slug });
 
   // Writing — see the header.
   const { session } = useSession();
@@ -145,22 +146,14 @@ export default function CommentsScreen({ navigation, route }: {
   const { subject } = route.params;
   const me = session?.user?.id ?? null;
   const askIn = () => askToSignIn('comment');
-  // The comment the field's next words answer, or none.
-  const [replyTo, setReplyTo] = useState<Placed | null>(null);
-  const field = useRef<React.ComponentRef<typeof TextInput>>(null);
-  const nameOf = (c: Placed) => (c.handle ? normalizeHandle(c.handle) : c.full_name ?? '');
-  const reply = (c: Placed) => {
-    if (!me) { askIn(); return; }
-    setReplyTo(c);
-    field.current?.focus();
-  };
-  const send = async (body: string) => {
-    await postComment(subject, replyTo ? replyTo.id : null, body);
-    setReplyTo(null);
-    commentsChanged();
-  };
+  // Whom the next words answer, and sending them — `useThreadWriting`.
+  const { replyTo, field, reply, send, cancelReply } = useThreadWriting(subject, me, askIn);
+  // Whom and what "@" offers in the field — asked once, for a reader.
+  const taggable = useTaggableQuery(subject, me);
   // Delete your own, report somebody else's — `useCommentMenu`.
-  const { menuOf, node: menuSheet } = useCommentMenu(me);
+  // Closed by its owner, or the owner's to close — `useThreadOwner`.
+  const owner = useThreadOwner(subject, taggable.data, taggable.reload);
+  const { menuOf, node: menuSheet } = useCommentMenu(me, taggable.data.mine);
   // A heart on each, drawn on the press — `useCommentHearts`.
   const { heartsOf, toggle } = useCommentHearts(me, thread.loadedAt, askIn);
 
@@ -169,9 +162,9 @@ export default function CommentsScreen({ navigation, route }: {
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(b.root)} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={owner.closed ? undefined : () => reply(b.root)} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onReply={() => reply(r)} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={owner.closed ? undefined : () => reply(r)} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} />
         ))}
         {more > 0 ? (
           <PressableScale
@@ -231,6 +224,7 @@ export default function CommentsScreen({ navigation, route }: {
       backTestID="comments-back"
       backBare
       compactTitle
+      right={owner.right}
     >
       {/* The field rides up on the keyboard and the thread shortens
           above it. `padding` on iOS, where the keyboard overlays the
@@ -253,11 +247,13 @@ export default function CommentsScreen({ navigation, route }: {
         </ScrollView>
         <CommentComposer
           avatarUrl={profile?.avatar_url}
-          replyTo={replyTo ? { who: nameOf(replyTo) } : null}
-          onCancelReply={() => setReplyTo(null)}
+          replyTo={replyTo}
+          onCancelReply={cancelReply}
           onSend={send}
           onGuest={me ? undefined : askIn}
           inputRef={field}
+          taggable={taggable.data}
+          closed={owner.closed}
           bottomInset={typing ? 0 : insets.bottom}
         />
       </KeyboardAvoidingView>

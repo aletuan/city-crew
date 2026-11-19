@@ -8,7 +8,7 @@
 // real; only the one RPC wrapper and the providers are stood in.
 
 import React from 'react';
-import { Keyboard, StyleSheet } from 'react-native';
+import { Alert, Keyboard, StyleSheet } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, viewStyleOf, within } from '../uitest/render';
 import type { CommentRow as Row, Subject } from '../lib/comments';
@@ -21,7 +21,9 @@ const ago = (min: number) => new Date(NOW.getTime() - min * 60_000).toISOString(
 
 const data = vi.hoisted(() => ({
   fetchThread: vi.fn(async (_s: unknown): Promise<unknown[]> => []),
-  postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string): Promise<string> => 'k-new'),
+  postComment: vi.fn(async (_s: unknown, _parent: string | null, _body: string, _mentions: unknown[]): Promise<string> => 'k-new'),
+  fetchTaggable: vi.fn(async (_s: unknown): Promise<Record<string, unknown>> => ({ people: [], places: [] })),
+  setCommentsOff: vi.fn(async (_s: unknown, _off: boolean): Promise<void> => {}),
   likeComment: vi.fn(async (_id: string, _on: boolean): Promise<void> => {}),
 }));
 // The module the hook reads the RPC from, not the barrel.
@@ -29,6 +31,8 @@ vi.mock('../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchThread: data.fetchThread,
   postComment: data.postComment,
+  fetchTaggable: data.fetchTaggable,
+  setCommentsOff: data.setCommentsOff,
   likeComment: data.likeComment,
 }));
 // A phone with a home indicator: 34 under the page, where the bench's
@@ -361,7 +365,7 @@ describe('writing', () => {
     type('Lovely rooftop');
     await sendIt();
     await flush();
-    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'Lovely rooftop');
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'Lovely rooftop', []);
     expect(data.fetchThread).toHaveBeenCalledTimes(2);
     expect(drawn()).toEqual([['says new'], ['says a']]);
     expect(field().value).toBe('');
@@ -378,9 +382,11 @@ describe('writing', () => {
     expect(document.activeElement).toBe(field());
     type('Agreed');
     await sendIt();
-    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'Agreed');
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'Agreed', []);
     // Sent, the next words answer nobody again.
     expect(replying()).toBeNull();
+    // And the keyboard goes down, off the comment just written.
+    expect(document.activeElement).not.toBe(field());
   });
 
   it('answers nobody after the ✕, and the words typed stay', async () => {
@@ -391,7 +397,7 @@ describe('writing', () => {
     expect(replying()).toBeNull();
     expect(field().value).toBe('On second thought');
     await sendIt();
-    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'On second thought');
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, null, 'On second thought', []);
   });
 
   it('keeps whom it answers, and the words, when the server refuses', async () => {
@@ -403,6 +409,8 @@ describe('writing', () => {
     expect(screen.getByTestId('composer-error').textContent).toContain('limit');
     expect(replying()).toBe('Replying to trang');
     expect(field().value).toBe('One more');
+    // The keyboard stays, for the words to be mended.
+    expect(document.activeElement).toBe(field());
     // Nothing was written, so nothing is asked again.
     expect(data.fetchThread).toHaveBeenCalledTimes(1);
   });
@@ -483,5 +491,168 @@ describe('a heart on each comment', () => {
     expect(askToSignIn).toHaveBeenCalledWith('comment');
     expect(data.likeComment).not.toHaveBeenCalled();
     state.me = 'me';
+  });
+});
+
+describe('tags', () => {
+  const field = () => screen.getByTestId('composer-field') as HTMLTextAreaElement;
+
+  it('opens a tagged place by its slug', async () => {
+    const nav = await show([row('a', null, {
+      body: 'at Cong',
+      mentions: [{ at: 3, len: 4, person: null, handle: null, place: 'p1', slug: 'cong-ca-phe' }],
+    })]);
+    fireEvent.click(screen.getByTestId('comment-tag-place'));
+    expect(nav.navigate).toHaveBeenCalledExactlyOnceWith('PlaceDetail', { slug: 'cong-ca-phe' });
+  });
+
+  it('opens one tagged in a reply as well', async () => {
+    const nav = await show([row('a', null), row('a1', 'a', {
+      body: 'Tan Hien too',
+      mentions: [{ at: 0, len: 8, person: null, handle: null, place: 'p2', slug: 'tan-hien' }],
+    })]);
+    fireEvent.click(screen.getByTestId('comment-tag-place'));
+    expect(nav.navigate).toHaveBeenCalledExactlyOnceWith('PlaceDetail', { slug: 'tan-hien' });
+  });
+
+  it('asks once whom the reader may tag here, offers them on "@", and sends the tag under what is answered', async () => {
+    data.fetchTaggable.mockClear(); data.postComment.mockClear();
+    data.fetchTaggable.mockImplementation(async () => ({
+      people: [{ id: 'u-trang', handle: 'trang', full_name: 'Trang Lê', avatar_url: null }],
+      places: [{ id: 'p-cong', slug: 'cong-ca-phe', name_en: 'Cong Cafe', name_vi: 'Cộng Cà Phê' }],
+    }));
+    await show([row('a', null)]);
+    await flush();
+    expect(data.fetchTaggable).toHaveBeenCalledExactlyOnceWith(SUBJECT);
+    fireEvent.click(screen.getByTestId('comment-reply'));
+    fireEvent.change(field(), { target: { value: 'go with @t' } });
+    fireEvent.click(screen.getByTestId('composer-offer-person'));
+    fireEvent.change(field(), { target: { value: 'go with @trang to @c' } });
+    fireEvent.click(screen.getByTestId('composer-offer-place'));
+    await act(async () => { fireEvent.click(screen.getByTestId('composer-send')); await Promise.resolve(); await Promise.resolve(); });
+    expect(data.postComment).toHaveBeenCalledExactlyOnceWith(SUBJECT, 'a', 'go with @trang to @Cong Cafe', [
+      { at: 8, len: 6, person: 'u-trang', place: null, handle: null, slug: null },
+      { at: 18, len: 10, person: null, place: 'p-cong', handle: null, slug: null },
+    ]);
+    // A comment written does not ask again whom may be tagged.
+    await flush();
+    expect(data.fetchTaggable).toHaveBeenCalledTimes(1);
+    data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [] }));
+  });
+
+  it('asks nothing for a guest, who has no field to tag in', async () => {
+    state.me = null;
+    data.fetchTaggable.mockClear();
+    await show([row('a', null)]);
+    await flush();
+    expect(data.fetchTaggable).not.toHaveBeenCalled();
+    state.me = 'me';
+  });
+});
+
+// C6. Whether a thread is closed and whose list it is come with the
+// field's own answer (`comment_taggable`).
+describe('the owner\'s side', () => {
+  const told = (over: Record<string, unknown>) => data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [], ...over }));
+  const alerts = () => vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const open = async (rows: Row[] = [row('a', null), row('a1', 'a')]) => { const nav = await show(rows); await flush(); return nav; };
+  afterEach(() => { told({}); data.setCommentsOff.mockReset(); data.setCommentsOff.mockImplementation(async () => {}); });
+
+  it('is nothing on somebody else\'s open thread: a field, reply bubbles, no ⋯ in the header', async () => {
+    told({ off: false, mine: false });
+    await open();
+    expect(screen.queryByTestId('comments-owner')).toBeNull();
+    expect(screen.queryByTestId('composer-closed')).toBeNull();
+    expect(screen.getByTestId('composer-field')).toBeTruthy();
+    expect(screen.getAllByTestId('comment-reply')).toHaveLength(2);
+  });
+
+  it('says a closed thread is closed where the field would be, and takes the reply bubbles away, the hearts staying', async () => {
+    told({ off: true, mine: false });
+    await open();
+    expect(screen.getByTestId('composer-closed').textContent).toBe('The owner turned off comments.');
+    expect(screen.queryByTestId('composer-field')).toBeNull();
+    expect(screen.queryAllByTestId('comment-reply')).toHaveLength(0);
+    expect(screen.getAllByTestId('comment-heart')).toHaveLength(2);
+    expect(drawn()).toEqual([['says a', 'says a1']]);
+    expect(screen.queryByTestId('comments-owner')).toBeNull();
+  });
+
+  it('says it to the owner in the first person', async () => {
+    told({ off: true, mine: true });
+    await open();
+    expect(screen.getByTestId('composer-closed').textContent).toBe('You turned off comments on this collection.');
+  });
+
+  it('gives the owner a ⋯ that asks before closing, saying what closing does', async () => {
+    told({ off: false, mine: true });
+    const alert = alerts();
+    await open();
+    const more = screen.getByTestId('comments-owner');
+    expect(more.getAttribute('aria-label')).toBe('Comment settings');
+    fireEvent.click(more);
+    expect(alert).toHaveBeenCalledTimes(1);
+    const [title, body, buttons] = alert.mock.calls[0];
+    expect(title).toBe('Turn off comments?');
+    expect(body).toBe('Comments already here stay readable. Nobody can add one until you turn them back on.');
+    expect(buttons!.map((b) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Turn off', 'destructive']]);
+    expect(buttons![0].onPress).toBeUndefined();
+    expect(data.setCommentsOff).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it('closes the thread, then asks again what the field is told and tells the cards', async () => {
+    told({ off: false, mine: true });
+    const alert = alerts();
+    await open();
+    const asked = data.fetchTaggable.mock.calls.length;
+    const threads = data.fetchThread.mock.calls.length;
+    fireEvent.click(screen.getByTestId('comments-owner'));
+    told({ off: true, mine: true });
+    await act(async () => { alert.mock.calls[0][2]![1].onPress!(); await Promise.resolve(); await Promise.resolve(); });
+    await flush();
+    expect(data.setCommentsOff).toHaveBeenCalledExactlyOnceWith(SUBJECT, true);
+    expect(data.fetchTaggable.mock.calls.length).toBe(asked + 1);
+    // `commentsChanged`: the thread is asked again, as the cards' counts are.
+    expect(data.fetchThread.mock.calls.length).toBe(threads + 1);
+    expect(screen.getByTestId('composer-closed')).toBeTruthy();
+    alert.mockRestore();
+  });
+
+  it('opens a closed thread again the same way, without the warning colour', async () => {
+    told({ off: true, mine: true });
+    const alert = alerts();
+    await open();
+    fireEvent.click(screen.getByTestId('comments-owner'));
+    const [title, body, buttons] = alert.mock.calls[0];
+    expect(title).toBe('Turn comments back on?');
+    expect(body).toBe('People will be able to comment on this collection again.');
+    expect(buttons!.map((b) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Turn on', undefined]]);
+    await act(async () => { buttons![1].onPress!(); await Promise.resolve(); await Promise.resolve(); });
+    expect(data.setCommentsOff).toHaveBeenCalledExactlyOnceWith(SUBJECT, false);
+    alert.mockRestore();
+  });
+
+  it('says so when the switch could not be thrown, and asks nothing again', async () => {
+    told({ off: false, mine: true });
+    const alert = alerts();
+    data.setCommentsOff.mockRejectedValueOnce(new Error('down'));
+    await open();
+    const asked = data.fetchTaggable.mock.calls.length;
+    fireEvent.click(screen.getByTestId('comments-owner'));
+    await act(async () => { alert.mock.calls[0][2]![1].onPress!(); await Promise.resolve(); await Promise.resolve(); });
+    await flush();
+    expect(alert).toHaveBeenCalledTimes(2);
+    expect(alert.mock.calls[1].slice(0, 2)).toEqual(['Could not change that', 'Please try again later.']);
+    expect(data.fetchTaggable.mock.calls.length).toBe(asked);
+    alert.mockRestore();
+  });
+
+  it('lets the owner delete somebody else\'s comment from its ⋯', async () => {
+    told({ off: false, mine: true });
+    await open([row('a', null, { author: 'them' })]);
+    fireEvent.click(screen.getByTestId('comment-more-menu'));
+    expect(screen.getByTestId('sheet-action-delete')).toBeTruthy();
+    expect(screen.getByTestId('sheet-action-report')).toBeTruthy();
   });
 });
