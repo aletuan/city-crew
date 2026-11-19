@@ -118,6 +118,7 @@
 // sends no usage analytics (`lib/legal`), so the answer will come from
 // asking people.
 import React, { useEffect, useRef, useState } from 'react';
+import { useScrollToTop } from '@react-navigation/native';
 import {
   ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
   ScrollView, StyleSheet, Text, View,
@@ -134,6 +135,7 @@ import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
+import { Requests } from './person/Requests';
 import { useCollections, usePlaces } from '../lib/catalog';
 import {
   type Collection, coverUriOf, type FriendProfile, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
@@ -167,9 +169,25 @@ const TITLE_LINE = 28;
  *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
 const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
 
-export default function PersonScreen({ navigation, route }: {
+/** What only the last tab's first page does — see `home`. */
+export type Home = { toAccount: () => void; toCrew: () => void };
+
+export default function PersonScreen({ navigation, route, home }: {
   navigation: Nav;
   route: RootRoute<'Person'>;
+  /**
+   * Drawn as the last tab's first page, your own (owner, 19 Nov 2026 —
+   * docs/profile-home-plan.md): no way back, since there is nothing
+   * under it, and what only its owner is shown — the requests waiting.
+   * Your own page reached from a card in another tab is not this: it is
+   * the page as others see it.
+   *
+   * The ways this page opens Friends and Account come from `MeScreen`,
+   * not from here: those rooms are only in the last tab's stack, and a
+   * screen registered in three stacks may only navigate to what all
+   * three have (`nav.test.ts`).
+   */
+  home?: Home;
 }) {
   const { t } = useI18n();
   const { session } = useSession();
@@ -193,7 +211,8 @@ export default function PersonScreen({ navigation, route }: {
   const friend = friendButton(personId);
   // Your own page, come back to from the form its "Write a few words about you" opens:
   // read again — `useReloadOnReturn`.
-  useReloadOnReturn(navigation, !!me && personId === me, who.reload);
+  const own = !!me && personId === me;
+  useReloadOnReturn(navigation, own, who.reload);
   // The same button, small, for the header once the row has scrolled
   // away — a thing to do only (`actsOnly`): a fact is not worth the
   // header's room. Switched off for now: `TOP_FRIEND_ON`.
@@ -203,23 +222,32 @@ export default function PersonScreen({ navigation, route }: {
   // The feed's next cards, drawn before the reader reaches them —
   // `useReach`.
   const end = useReach();
-  // From your own page to the Account tab's page — `Shared`'s `onAccount`
-  // has why it is that page and that word.
+  // From your own page to the Account page — `Shared`'s `onAccount` has
+  // why it is that page and that word.
   //
-  // To the tab's first page, with whatever was open over it closed
-  // (`pop` — React Navigation 7's `navigate` no longer goes back to a
-  // screen already in the stack by itself). Most readers reach their own
-  // page from that very page, and for them this is the way back to it,
-  // not a second copy pushed over the first. Reached from another tab —
-  // your name on a list in Collections — it changes tab. Through the
-  // parent as `AccountProfile`'s `hop` does it, and through the
+  // Account was the last tab's first page until 19 Nov 2026, and this
+  // went there with whatever was over it closed (`pop`). It is a page
+  // under your own page now (docs/profile-home-plan.md), so: pushed, from
+  // the tab's first page (`home`); from anywhere else — your name on a
+  // list in Collections — the last tab, with Account over its first page
+  // (`initial: false`), so Back from Account is your page there. Through
+  // the parent as `AccountProfile`'s `hop` does it, and through the
   // container where the page is read with no navigator above it.
   const toAccount = () => {
-    const params = { screen: 'ProfileHome', pop: true };
+    if (home) {
+      home.toAccount();
+      return;
+    }
+    const params = { screen: 'Account', initial: false };
     const tabs = navigation.getParent();
     if (tabs) tabs.navigate('Profile', params);
     else goTo('Profile', params);
   };
+  // The tab pressed again while this is its first page: back to the top,
+  // as every tab's first page does (ExploreScreen's `tabPress` note). On
+  // a pushed page React Navigation does nothing with it.
+  const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  useScrollToTop(scroll);
 
   const tabClearance = useTabBarClearance();
   // A ring is a border, and a dynamic colour on a border flattens against
@@ -269,6 +297,8 @@ export default function PersonScreen({ navigation, route }: {
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
+      {/* The friend requests waiting on you — `person/Requests`. */}
+      {home && own ? <Requests me={me} onOpen={home.toCrew} /> : null}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
@@ -280,7 +310,7 @@ export default function PersonScreen({ navigation, route }: {
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
         onComments={(c) => navigation.navigate('Comments', { subject: { kind: 'collection', id: c.id as string } })}
-        onAccount={me && person.id === me ? toAccount : undefined}
+        onAccount={own ? toAccount : undefined}
         reach={end.reach}
       />
     </>
@@ -312,13 +342,15 @@ export default function PersonScreen({ navigation, route }: {
   return (
     <Screen
       title={t('Profile', 'Trang cá nhân', 'プロフィール', '主页', '主頁')}
-      onBack={() => navigation.goBack()}
+      onBack={home ? undefined : () => navigation.goBack()}
       backTestID="person-back"
       backBare
       compactTitle
       right={<View style={s.topRight}>{topFriend}{menu.button}</View>}
     >
       <ScrollView
+        ref={scroll}
+        testID="person-scroll"
         onScroll={(e) => { top.onScroll(e); end.onScroll(e); }}
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}

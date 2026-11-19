@@ -1,8 +1,7 @@
 # Reusable: be a guest, whatever the last run left. Ends on Profile.
 appId: host.exp.Exponent
 ---
-- tapOn:
-    id: "tab-profile"
+- runFlow: open-account.yaml
 - waitForAnimationToEnd:
     timeout: 5000
 - runFlow:

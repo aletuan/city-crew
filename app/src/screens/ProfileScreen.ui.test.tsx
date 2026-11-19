@@ -221,14 +221,16 @@ vi.mock('../lib/rewards', async () => {
 
 import ProfileScreen from './ProfileScreen';
 
-const nav = () => {
+// `pushed`: the account's page over your own, as it is since 19 Nov
+// 2026; not pushed, the tab's first page, which only the guest's hub is.
+const nav = (pushed = false) => {
   const parent = { navigate: vi.fn() };
-  const n = { navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent) };
+  const n = { navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), canGoBack: vi.fn(() => pushed), popToTop: vi.fn() };
   return { n: n as unknown as Nav, raw: n, parent };
 };
 
-const draw = () => {
-  const r = nav();
+const draw = (pushed = false) => {
+  const r = nav(pushed);
   render(<ProfileScreen navigation={r.n} />);
   return r;
 };
@@ -291,6 +293,27 @@ describe('the gate', () => {
     expect(document.querySelector('[role="progressbar"]')).toBeTruthy();
     expect(screen.queryByText('Keep the places you love')).toBeNull();
     expect(screen.queryByText('Sign out')).toBeNull();
+  });
+
+  // The account's page over your own (19 Nov 2026): a way back, the
+  // compact title every pushed page has, and on signing out, the tab's
+  // first page — the guest's hub — since there is no account left.
+  it('is a page over your own: a way back, and out to the tab’s first page on signing out', () => {
+    const r = draw(true);
+    fireEvent.click(screen.getByTestId('account-back'));
+    expect(r.raw.goBack).toHaveBeenCalledTimes(1);
+    expect(r.raw.popToTop).not.toHaveBeenCalled();
+    cleanup();
+    state.session = null;
+    const out = draw(true);
+    expect(out.raw.popToTop).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no way back as the tab’s first page, and stays there signed out', () => {
+    state.session = null;
+    const r = draw();
+    expect(screen.queryByTestId('account-back')).toBeNull();
+    expect(r.raw.popToTop).not.toHaveBeenCalled();
   });
 
   it('gives a reader with no session the guest hub, not the account', () => {
@@ -1339,17 +1362,28 @@ describe('settings card', () => {
   // What the sheet is told when it asks: this tab, this sheet, and how far
   // down the page is at that moment — read off the scroll as it happens,
   // and still handed on to the tab bar's own listener.
+  // The account's page is pushed over your own since 19 Nov 2026, so the
+  // restart lands on it with your page under it; the guest's hub is still
+  // the tab's first page and names no stack.
   it('tells the theme sheet where the page is, at the moment it asks', () => {
     spies.duck = vi.fn();
-    draw();
+    draw(true);
     const el = screen.getByTestId('profile-scroll');
     el.scrollTop = 260;
     fireEvent.scroll(el);
     expect(spies.duck).toHaveBeenCalledTimes(1);
     press('Theme');
     fireEvent.click(screen.getByText('return-to'));
-    expect(spies.returnTo).toHaveBeenCalledWith({ tab: 'Profile', sheet: 'theme', y: 260 });
+    expect(spies.returnTo).toHaveBeenCalledWith({ tab: 'Profile', stack: ['ProfileHome', 'Account'], sheet: 'theme', y: 260 });
     spies.duck = undefined;
+  });
+
+  it('names no stack for the guest’s hub, the tab’s first page', () => {
+    state.session = null;
+    draw();
+    press('Theme');
+    fireEvent.click(screen.getByText('return-to'));
+    expect(spies.returnTo).toHaveBeenCalledWith({ tab: 'Profile', sheet: 'theme', y: 0 });
   });
 
   // "Giao diện" in Vietnamese since 17 Oct 2026 (UX-07); the loanword

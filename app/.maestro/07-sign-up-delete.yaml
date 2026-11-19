@@ -81,8 +81,7 @@ env:
 
 # A real session exists immediately, without an emailed code.
 - runFlow: common/start.yaml
-- tapOn:
-    id: "tab-profile"
+- runFlow: common/open-account.yaml
 - scrollUntilVisible:
     element:
       id: "profile-sign-out"

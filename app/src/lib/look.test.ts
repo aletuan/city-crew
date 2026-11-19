@@ -170,9 +170,17 @@ describe('the return after a restart', () => {
       expect(takeReturn(store, NOW), String(bad)).toBeNull();
       expect(kept[RETURN_KEY], String(bad)).toBe('');
     }
-    // A sheet it does not know, or a y that is not a number, are left out.
+    // A sheet it does not know, or a y that is not a number, are left out;
+    // and a stack that is not a list of names, or names only the tab's
+    // first page, which landing on the tab already opens.
     kept[RETURN_KEY] = JSON.stringify({ tab: 'Profile', at: NOW, sheet: 'city', y: 'far' });
     expect(takeReturn(store, NOW)).toEqual({ tab: 'Profile', at: NOW });
+    for (const stack of ['Account', ['ProfileHome', 3], ['ProfileHome'], []]) {
+      kept[RETURN_KEY] = JSON.stringify({ tab: 'Profile', at: NOW, stack });
+      expect(takeReturn(store, NOW), JSON.stringify(stack)).toEqual({ tab: 'Profile', at: NOW });
+    }
+    kept[RETURN_KEY] = JSON.stringify({ tab: 'Profile', at: NOW, stack: ['ProfileHome', 'Account'] });
+    expect(takeReturn(store, NOW)).toEqual({ tab: 'Profile', at: NOW, stack: ['ProfileHome', 'Account'] });
   });
 
   it('reads nothing off a missing, empty or broken store', () => {
@@ -186,6 +194,16 @@ describe('the return after a restart', () => {
   it('opens the navigator on the tab the reader left, and nowhere in particular otherwise', () => {
     expect(landingState({ tab: 'Profile', at: NOW })).toEqual({ index: 0, routes: [{ name: 'Profile' }] });
     expect(landingState(null)).toBeUndefined();
+  });
+
+  // The theme sheet is on Account, a page over the last tab's own
+  // (19 Nov 2026): the landing opens the page, with the one under it for
+  // Back to find.
+  it('opens the page the reader was on within the tab, over the pages under it', () => {
+    expect(landingState({ tab: 'Profile', stack: ['ProfileHome', 'Account'], at: NOW })).toEqual({
+      index: 0,
+      routes: [{ name: 'Profile', state: { index: 1, routes: [{ name: 'ProfileHome' }, { name: 'Account' }] } }],
+    });
   });
 });
 

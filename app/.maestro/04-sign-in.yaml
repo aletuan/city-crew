@@ -49,8 +49,7 @@ env:
 - assertVisible:
     id: "tab-explore"
     selected: true
-- tapOn:
-    id: "tab-profile"
+- runFlow: common/open-account.yaml
 - scrollUntilVisible:
     element:
       id: "profile-sign-out"
@@ -62,8 +61,7 @@ env:
 
 # The session is stored on the device: a cold start is still signed in.
 - runFlow: common/start.yaml
-- tapOn:
-    id: "tab-profile"
+- runFlow: common/open-account.yaml
 - scrollUntilVisible:
     element:
       id: "profile-sign-out"

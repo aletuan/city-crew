@@ -117,9 +117,10 @@ export function SettingsCard() {
       <ThemeSwitcherModal
         visible={themeOpen}
         onClose={() => setThemeOpen(false)}
-        // Asked at the moment of the choice: this tab, this sheet, and how
-        // far down the page is right then.
-        returnTo={() => ({ tab: 'Profile', sheet: 'theme', y: back.y.current })}
+        // Asked at the moment of the choice: this tab, the page within it
+        // when that is not its first (Account, since 19 Nov 2026), this
+        // sheet, and how far down the page is right then.
+        returnTo={() => ({ tab: 'Profile', ...(back.stack ? { stack: back.stack } : {}), sheet: 'theme', y: back.y.current })}
       />
     </>
   );

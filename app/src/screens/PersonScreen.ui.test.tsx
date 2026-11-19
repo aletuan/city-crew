@@ -41,6 +41,7 @@ const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], loading: false, reload: vi.fn() },
   blocks: { data: [] as string[], reload: vi.fn() },
   mutual: {} as Record<string, number>,
+  people: {} as Record<string, { id: string; handle: string; full_name: string; avatar_url: string }>,
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 
@@ -143,7 +144,8 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 
-import PersonScreen from './PersonScreen';
+import PersonScreen, { type Home } from './PersonScreen';
+import { askers } from './person/Requests';
 
 const LAN: Who = { id: 'lan-id', handle: 'lan', full_name: 'Lan Phạm', avatar_url: 'https://faces/lan.jpg', bio: 'Coffee first, then the rest.' };
 
@@ -167,7 +169,7 @@ const opens = (): (string | null)[] => cards().map((c) => within(c).getByTestId(
  *  page was left and come back to. */
 const heard: Record<string, (() => void)[]> = {};
 const said = (event: 'blur' | 'focus') => act(() => { (heard[event] ?? []).forEach((fn) => fn()); });
-const show = async (handle = 'lan') => {
+const show = async (handle = 'lan', home?: Home) => {
   const navigation = {
     goBack: vi.fn(), navigate: vi.fn(), getParent: () => out.tabs,
     addListener: vi.fn((event: string, fn: () => void) => {
@@ -175,7 +177,7 @@ const show = async (handle = 'lan') => {
       return () => { heard[event] = heard[event].filter((f) => f !== fn); };
     }),
   };
-  render(<PersonScreen navigation={navigation as unknown as Nav} route={{ params: { handle } } as RootRoute<'Person'>} />);
+  render(<PersonScreen navigation={navigation as unknown as Nav} route={{ params: { handle } } as RootRoute<'Person'>} home={home} />);
   await flush();
   return navigation;
 };
@@ -994,12 +996,14 @@ describe('lists that are not for everybody', () => {
     // grid until the same morning (owner, 19 Nov 2026): the page had no
     // way to what only you can do about it. To the Account tab's page —
     // not the form the profile is edited in, which it opened for an hour.
-    it('has the way to your account on the heading: the tab’s first page, with what was over it closed', async () => {
+    // Account is a page over your own since 19 Nov 2026: from a page that
+    // is not the tab's first, the tab, with Account over its first page.
+    it('has the way to your account on the heading: the last tab, with Account over its first page', async () => {
       const navigation = await show('me');
       const link = screen.getByTestId('person-account');
       expect(link.textContent).toBe('Account');
       fireEvent.click(link);
-      expect(out.tabs!.navigate).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'ProfileHome', pop: true });
+      expect(out.tabs!.navigate).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Account', initial: false });
       // Not a page pushed on this stack, and not the container's way
       // while there is a navigator to ask.
       expect(navigation.navigate).not.toHaveBeenCalled();
@@ -1012,7 +1016,7 @@ describe('lists that are not for everybody', () => {
       out.tabs = undefined;
       await show('me');
       fireEvent.click(screen.getByTestId('person-account'));
-      expect(out.goTo).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'ProfileHome', pop: true });
+      expect(out.goTo).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Account', initial: false });
     });
 
     // It is not a way to your lists, so it does not wait for one.
@@ -1821,5 +1825,81 @@ describe('comments on the cards', () => {
     // it opens that thread too.
     fireEvent.click(within(cards[0]).getByTestId('activity-comments'));
     expect(nav.navigate).toHaveBeenLastCalledWith('Comments', { subject: { kind: 'collection', id: 'one' } });
+  });
+});
+
+// The last tab's first page, your own (owner, 19 Nov 2026 —
+// docs/profile-home-plan.md): `MeScreen` hands it `home`.
+describe('as the last tab’s first page', () => {
+  const row = (requester: string, at: string): FriendshipRow =>
+    ({ requester, addressee: 'me-id', status: 'pending', created_at: at }) as FriendshipRow;
+  const face = (id: string, full_name: string) => ({ id, handle: id, full_name, avatar_url: '' });
+  const home = () => ({ toAccount: vi.fn(), toCrew: vi.fn() });
+
+  beforeEach(() => {
+    state.people = { ...state.people, me: { id: 'me-id', handle: 'me', full_name: 'Me', avatar_url: '' } };
+    crew.ships.data = [];
+    crew.people = {};
+  });
+
+  it('has no way back, and opens Account by the way it was handed', async () => {
+    const h = home();
+    await show('me', h);
+    expect(screen.queryByTestId('person-back')).toBeNull();
+    fireEvent.click(screen.getByTestId('person-account'));
+    expect(h.toAccount).toHaveBeenCalledTimes(1);
+    expect(out.tabs!.navigate).not.toHaveBeenCalled();
+    expect(out.goTo).not.toHaveBeenCalled();
+  });
+
+  // The commonest reason for the tab's dot, in sight where the tab opens.
+  it('shows the requests waiting: how many, who, and one way to Friends', async () => {
+    crew.ships.data = [row('mai', '2026-11-18T10:00:00Z'), row('vu', '2026-11-19T10:00:00Z')];
+    crew.people = { mai: face('mai', 'Mai Anh'), vu: face('vu', 'Quang Vũ') };
+    const h = home();
+    await show('me', h);
+    const card = screen.getByTestId('person-requests');
+    expect(card.textContent).toContain('2 friend requests');
+    // Newest first, as Friends lists them.
+    expect(card.textContent).toContain('Quang Vũ and Mai Anh want to be friends');
+    expect(screen.getAllByTestId('person-requests-face')).toHaveLength(2);
+    fireEvent.click(card);
+    expect(h.toCrew).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows nothing when nobody is waiting, nor for a request you sent', async () => {
+    crew.ships.data = [{ requester: 'me-id', addressee: 'vu', status: 'pending', created_at: '2026-11-19T10:00:00Z' } as FriendshipRow];
+    await show('me', home());
+    expect(screen.queryByTestId('person-requests')).toBeNull();
+  });
+
+  // Your page reached from a card in another tab is the page as others
+  // see it: the rooms the card opens are not in that tab's stack.
+  it('keeps the requests to the tab’s first page', async () => {
+    crew.ships.data = [row('mai', '2026-11-18T10:00:00Z')];
+    crew.people = { mai: face('mai', 'Mai Anh') };
+    await show('me');
+    expect(screen.queryByTestId('person-requests')).toBeNull();
+    expect(screen.getByTestId('person-back')).toBeTruthy();
+  });
+
+  it('names who is asking before the faces have come, by the count alone', async () => {
+    crew.ships.data = [row('mai', '2026-11-18T10:00:00Z')];
+    await show('me', home());
+    const card = screen.getByTestId('person-requests');
+    expect(card.textContent).toBe('1 friend request');
+    expect(screen.queryAllByTestId('person-requests-face')).toHaveLength(0);
+  });
+});
+
+describe('askers', () => {
+  const t = (en: string) => en;
+  it('says one name, two, or the first and how many more', () => {
+    expect(askers([], 3, t)).toBeNull();
+    expect(askers(['Mai'], 1, t)).toBe('Mai wants to be friends');
+    expect(askers(['Mai', 'Vu'], 2, t)).toBe('Mai and Vu want to be friends');
+    // The second face not yet come: the first, and one other.
+    expect(askers(['Mai'], 2, t)).toBe('Mai and 1 other want to be friends');
+    expect(askers(['Mai', 'Vu', 'Lan'], 3, t)).toBe('Mai and 2 others want to be friends');
   });
 });
