@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ageLabel, DUE_HOURS, hoursSince, newCount, previewOf, REASON_LABEL,
+  ageLabel, DUE_HOURS, hoursSince, KIND, kindOf, newCount, placeOf, previewOf, REASON_LABEL,
   SLA_HOURS, slaState, sortQueue,
 } from '../src/reports.js';
 
@@ -75,4 +75,30 @@ test('the preview carries the words being judged', () => {
   assert.equal(previewOf(row({ title: null, body: 'just a bio' })), 'just a bio');
   assert.equal(previewOf(row({ title: '  ', body: null })), '');
   assert.equal(previewOf(row({ title: 'x'.repeat(300), body: null }), 20), `${'x'.repeat(20)}…`);
+});
+
+// ---- three kinds (C8): a comment is not a profile.
+
+test('each kind the table allows has a name and a mark of its own', () => {
+  assert.deepEqual(Object.keys(KIND).sort(), ['collection', 'comment', 'profile']);
+  assert.equal(new Set(Object.values(KIND).map((k) => k.icon)).size, 3);
+  assert.deepEqual(kindOf(row({ kind: 'comment' })), { label: 'comment', icon: 'balloon' });
+  assert.deepEqual(kindOf(row({ kind: 'collection' })), { label: 'collection', icon: 'list' });
+  assert.deepEqual(kindOf(row({ kind: 'profile' })), { label: 'profile', icon: 'users' });
+});
+
+test('a kind this build has not heard of is named as itself, not taken for a profile', () => {
+  assert.deepEqual(kindOf(row({ kind: 'checkin' })), { label: 'checkin', icon: 'alert' });
+  assert.deepEqual(kindOf(row({ kind: null })), { label: 'unknown', icon: 'alert' });
+});
+
+test('a comment is judged by what was said; the list it is on stands beside it', () => {
+  const c = row({ kind: 'comment', title: 'Coffee in Hoi An', body: 'buy followers here' });
+  assert.equal(previewOf(c), 'buy followers here');
+  assert.equal(placeOf(c), 'Coffee in Hoi An');
+  // Removed: nothing left, and the list's name does not stand in for it.
+  assert.equal(previewOf(row({ kind: 'comment', title: 'Coffee in Hoi An', body: null })), '');
+  assert.equal(placeOf(row({ kind: 'comment', title: null, body: null })), '');
+  // The other kinds have no "where": their title is part of what is judged.
+  assert.equal(placeOf(row({ kind: 'collection', title: 'Best cafés' })), '');
 });

@@ -10,23 +10,29 @@
 //
 // ── what the desk can actually do ──
 //
-// Three verbs, and they are deliberately narrow (see the moderation
-// migration): hide a public list, blank one field of a profile, stop an
-// account signing in. Nothing here can rewrite somebody's words, and
-// nothing here can reach a private list — which was never public, and
-// so was never reportable. Every one of the three is reversible, because
-// the desk is people and people misjudge.
+// Four verbs, and they are deliberately narrow (see the moderation
+// migrations): hide a public list, blank one field of a profile, take a
+// comment down, stop an account signing in. Nothing here can rewrite
+// somebody's words, and nothing here can reach a private list — which
+// was never public, and so was never reportable. Three of the four are
+// reversible, because the desk is people and people misjudge.
+//
+// The fourth is not. A removed comment is deleted, with the answers
+// under it, and no copy is kept (the comment_desk migration says why).
+// So it is the second act on this page that asks first, and its
+// question says what will not come back.
 //
 // Dismiss is a first-class answer, not a fallback. A report that was
 // looked at and found harmless is work done, and the queue must be able
 // to say so or it will fill with rows nobody dares clear.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { CategoryIcon } from '../icons.jsx';
 import { useToast } from '../App.jsx';
 import {
-  ageLabel, newCount, previewOf, REASON_LABEL, slaState, sortQueue, SLA_HOURS,
+  ageLabel, kindOf, newCount, placeOf, previewOf, REASON_LABEL, slaState, sortQueue, SLA_HOURS,
 } from '../reports.js';
 
 const STATE_LABEL = { fresh: 'waiting', due: 'due today', overdue: 'overdue', done: '' };
@@ -81,15 +87,20 @@ export default function Reports() {
       <div className="addplace">
         <h2>Reports</h2>
         <p className="addsub">
-          What readers have flagged in the two places this app publishes without review: a
-          public collection’s words, and a profile. Everything else — every place in the
+          What readers have flagged in the three places this app publishes without review: a
+          public collection’s words, a profile, and a comment. Everything else — every place in the
           catalog — already passes this desk before anyone sees it.
         </p>
         <p className="addsub">
           <strong>Within {SLA_HOURS} hours.</strong> That is the window the App Store expects
           for acting on reported content, and the only reason this page leads with a clock.
           Hiding a list and clearing a field are both reversible; suspending an account stops
-          a sign-in and leaves the person’s own rows where they are.
+          a sign-in and leaves the person’s own rows where they are. Removing a comment is the
+          one act here that cannot be undone.
+        </p>
+        <p className="addsub">
+          Words no comment may contain are kept on their own page:{' '}
+          <Link to="/banned-words">Banned words</Link>.
         </p>
 
         <div className="repsum">
@@ -108,6 +119,8 @@ export default function Reports() {
         {queue.map((r) => {
           const state = slaState(r, now);
           const gone = r.status !== 'new';
+          const kind = kindOf(r);
+          const place = placeOf(r);
           return (
             <section key={r.id} className={`panel repcard${gone ? ' done' : ''}`}>
               <div className="rephead">
@@ -115,11 +128,15 @@ export default function Reports() {
                   {gone ? r.status : `${ageLabel(r.created_at, now)} · ${STATE_LABEL[state]}`}
                 </span>
                 <span className="repkind">
-                  <CategoryIcon name={r.kind === 'collection' ? 'list' : 'users'} />
-                  {r.kind === 'collection' ? 'collection' : 'profile'}
+                  <CategoryIcon name={kind.icon} />
+                  {kind.label}
                 </span>
                 <span className="repreason">{REASON_LABEL[r.reason] ?? r.reason}</span>
                 {r.owner_handle ? <span className="rephandle">@{r.owner_handle}</span> : null}
+                {/* Where it was said. A comment is judged in its place:
+                    "rubbish" under a list of bins is not the same word
+                    as under a list of somebody's cafés. */}
+                {place ? <span className="repplace">on “{place}”</span> : null}
               </div>
 
               {/* The words themselves. A queue that shows an id and asks
@@ -158,6 +175,22 @@ export default function Reports() {
                         Clear the photo
                       </button>
                     </>
+                  )}
+                  {r.kind === 'comment' && previewOf(r) && (
+                    <button
+                      type="button"
+                      className="syncbtn danger"
+                      disabled={busy === r.id}
+                      onClick={() => {
+                        if (!window.confirm(
+                          'Remove this comment?\n\n'
+                          + 'It is deleted, with any answers under it, and cannot be put back.',
+                        )) return;
+                        act(r, 'Comment removed', () => api.moderateComment(r.target_id));
+                      }}
+                    >
+                      Remove the comment
+                    </button>
                   )}
                   {r.owner_id && (
                     <button
