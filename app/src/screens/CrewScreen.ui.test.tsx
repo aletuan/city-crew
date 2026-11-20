@@ -232,7 +232,7 @@ describe('which tab opens', () => {
     expect(screen.getByText(/^Pending · /)).toBeTruthy();
     expect(screen.getByText('Minh')).toBeTruthy();
     expect(screen.getByText('wants to join your crew')).toBeTruthy();
-    // A pill on the chosen tab too, since 20 Nov 2026 (`TabsLook`): the
+    // A pill on the chosen tab too, since 20 Nov 2026 (`WordTabs`): the
     // underline folds it into the name there; words alone do not.
     expect(tab(/Requests/).textContent).toBe('Requests1');
     expect(tab(/Requests/).getAttribute('aria-label')).toBe('Requests (1)');
@@ -260,9 +260,9 @@ describe('which tab opens', () => {
   });
 });
 
-// The tabs on this screen are words alone since 20 Nov 2026 — a trial
-// here before anywhere else (`TabsLook`). What makes it more than a look
-// is that the chosen tab still differs in something besides colour.
+// The tabs are words alone since 20 Nov 2026, here first and then in the
+// rest of the app (`WordTabs`). What makes it more than a look is that the
+// chosen tab still differs in something besides colour.
 describe('the tabs, drawn as words', () => {
 
   it('draws no glyph and no rule, and tells the chosen one by weight as well as colour', () => {
@@ -275,12 +275,14 @@ describe('the tabs, drawn as words', () => {
     expect(off.querySelector('[data-icon]')).toBeNull();
     expect(styleOf('Requests')).toEqual(expect.objectContaining({ color: colors.text, fontWeight: font.semibold, fontSize: 17 }));
     expect(styleOf('Your friends')).toEqual(expect.objectContaining({ color: colors.textTertiary, fontWeight: font.regular, fontSize: 17 }));
-    // The rule is drawn on both and transparent on both, so the row is
-    // as tall as the underlined one and nothing moves between the looks.
-    const rule = (el: HTMLElement) => [el, ...el.querySelectorAll('div')]
-      .map((x) => viewStyleOf(x)).find((v) => v.borderBottomWidth != null);
-    expect(rule(on)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
-    expect(rule(off)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
+    // The rule's 2pt is padding at the foot now, so the row is as tall as
+    // it was with one, and nothing holding it moved.
+    const item = (el: HTMLElement) => [el, ...el.querySelectorAll('div')]
+      .map((x) => viewStyleOf(x)).find((v) => v.paddingBottom != null);
+    for (const el of [on, off]) {
+      expect(item(el)).toEqual(expect.objectContaining({ paddingTop: 7, paddingBottom: 9 }));
+      expect(item(el)?.borderBottomWidth).toBeUndefined();
+    }
   });
 
   // News and fact are told apart by the pill's ground: the count wears
@@ -296,14 +298,6 @@ describe('the tabs, drawn as words', () => {
     expect(pill(/Requests/, '1')).toEqual(expect.objectContaining({ backgroundColor: colors.badgeSolid }));
     expect(styleOf(2)).toEqual(expect.objectContaining({ color: colors.textSecondary }));
     expect(pill(/Your friends/, '2')).toEqual(expect.objectContaining({ backgroundColor: colors.surfaceGlass }));
-  });
-
-  // The rest of the app keeps the underline until the owner has seen this
-  // on the phone.
-  it('leaves the underlined look the default', async () => {
-    const { UnderlineTabs } = await import('../components/ui');
-    render(<UnderlineTabs tabs={[{ key: 'a', icon: 'mail-outline', label: 'Alpha' }, { key: 'b', icon: 'people-outline', label: 'Beta' }]} active="a" onChange={() => {}} />);
-    expect(screen.getByRole('tab', { name: /Alpha/ }).querySelector('[data-icon]')).toBeTruthy();
   });
 });
 

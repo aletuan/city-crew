@@ -69,7 +69,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Avatar, Card, PressableScale, UnderlineTabs } from '../../components/ui';
+import { Avatar, Card, PressableScale, WordTabs } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { type ActivityEntry, type CommentNews, newestAt } from '../../lib/commentNews';
 import type { FriendProfile } from '../../lib/data';
@@ -115,11 +115,10 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
     <View testID="earlier-card">
       {/* The page already has its margins; the tabs bring their own. */}
       <View style={s.tabs}>
-        <UnderlineTabs
-          look="words"
+        <WordTabs
           tabs={[
-            { key: 'forYou', icon: 'notifications-outline', label: t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), count: groups.forYou.filter((e) => isNew(e.at)).length, testID: 'activity-tab-for-you' },
-            { key: 'yours', icon: 'person-outline', label: t('What you did', 'Việc bạn đã làm', 'あなたがしたこと', '你做过的', '你做過的'), testID: 'activity-tab-yours' },
+            { key: 'forYou', label: t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), count: groups.forYou.filter((e) => isNew(e.at)).length, testID: 'activity-tab-for-you' },
+            { key: 'yours', label: t('What you did', 'Việc bạn đã làm', 'あなたがしたこと', '你做过的', '你做過的'), testID: 'activity-tab-yours' },
           ]}
           active={tab}
           onChange={setTab}
@@ -329,7 +328,7 @@ const LINE = 21;
 const FACE = 44;
 
 const s = StyleSheet.create({
-  // Out to the screen's edge by the page's margin, which `UnderlineTabs`
+  // Out to the screen's edge by the page's margin, which `WordTabs`
   // puts back: it is drawn for screens whose content is not inset.
   tabs: { marginHorizontal: -space.page },
   // What an empty tab says, in the meta grey: a fact, not an error.

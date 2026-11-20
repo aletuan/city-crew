@@ -32,7 +32,7 @@ vi.mock('../lib/auth', () => {
 });
 
 import LocalGuidePanel from './LocalGuidePanel';
-import { NARROW_WINDOW, UnderlineTabs, useNarrowWindow } from './ui';
+import { NARROW_WINDOW, useNarrowWindow, WordTabs } from './ui';
 import type { Place } from '../lib/types';
 
 const place = {
@@ -68,17 +68,17 @@ describe('a 320pt window', () => {
   it('keeps every tab and the strip’s control', () => {
     const onChange = vi.fn();
     render(
-      <UnderlineTabs
+      <WordTabs
         tabs={[
-          { key: 'requests', icon: 'mail-outline', label: 'Requests', count: 3 },
-          { key: 'friends', icon: 'people-outline', label: 'Your friends', tally: 12 },
+          { key: 'requests', label: 'Requests', count: 3 },
+          { key: 'friends', label: 'Your friends', tally: 12 },
         ]}
         active="requests"
         onChange={onChange}
         right={<>view</>}
       />,
     );
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Requests (3)', 'Your friends (12)']);
+    expect(screen.getAllByRole('tab').map((t) => t.getAttribute('aria-label'))).toEqual(['Requests (3)', 'Your friends (12)']);
     expect(screen.getByText('view')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: /Your friends/ }));
     expect(onChange).toHaveBeenCalledWith('friends');

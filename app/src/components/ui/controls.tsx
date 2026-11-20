@@ -293,116 +293,85 @@ export function TileGrid({ cols, gap = 8, rowGap = gap, children }: {
   );
 }
 
-/**
- * The switch between the halves of a screen — labelled doors, the open
- * one underlined.
- *
- * Underlines, after two filled attempts on the Crew screen: a gradient
- * made a tab as loud as Accept, and the soft pill that works over the
- * tab bar's glass sank into flat paper — pale coral on a pale track on
- * cream is three warm greys pretending to differ. On a flat page,
- * contrast has to come from the type itself: the chosen tab's word and
- * glyph go accent over a 2pt rule, and there is no tray, no fill, no
- * slab across the screen. The row hugs its words, left-aligned, like
- * every chip row in the app.
- *
- * `count` rides differently on each half: a bubble on an unchosen tab —
- * a bell, rung from the other room, the only place a bell is news — and
- * folded into the label on the chosen one, where whatever it counts is
- * already on screen. Zero draws nothing either way.
- *
- * `tally` is the other kind of number — a fact rather than news: how
- * many the tab holds, folded into the label in both states and never a
- * bubble, because a permanent bubble would ring a bell over nothing
- * new. Zero draws nothing here too: "Friends (0)" states an absence
- * twice. A tab carries one kind or the other, not both.
- */
 /** What the tabs leave under themselves. A screen that hangs a row just
  *  below them (Collections' pinned city bar) reaches up into it. */
 export const TABS_ROW_GAP = 14;
 
 /**
- * How a switch is drawn. `underline` is everything above. `words` is the
- * same row with the glyph and the rule taken away, and the type carrying
- * all of it: a larger word, the chosen one in the page's ink and a weight
- * heavier, the others in the tertiary grey (owner, 20 Nov 2026 — from a
+ * The switch between the halves of a screen: words alone, the chosen one
+ * in the page's ink and a weight heavier, the others in the tertiary
+ * grey, and a figure after a word as a pill (owner, 20 Nov 2026 — from a
  * reference of "text tabs" over an activity list).
  *
- * On the Crew screen alone, as a trial. The owner asked for it there
- * first and the rest only if it holds up on the phone, so Collections
- * still draws `underline`. If it is taken everywhere, the default moves
- * and this option goes.
+ * ── how it got here ──
  *
- * What the underline was answering, and what `words` keeps of it:
+ * The Crew screen tried two filled switches first: a gradient made a tab
+ * as loud as Accept, and the soft pill that works over the tab bar's
+ * glass sank into flat paper — pale coral on a pale track on cream is
+ * three warm greys pretending to differ. So the switch became labelled
+ * doors with the open one underlined: the chosen word and its glyph in
+ * the accent over a 2pt rule, no tray, no fill.
+ *
+ * On 20 Nov 2026 the owner took the glyphs and the rule away, on Crew
+ * first, then Activity, then Collections once the first had been seen on
+ * the phone. What the underline was answering, and what is kept of it:
  *
  * - "contrast has to come from the type itself" — kept, and taken further:
- *   with no rule, type is the only cue, so the chosen tab differs in two
- *   things, weight and colour, never colour alone. Colour alone on cream
- *   was the failure the note above records.
- * - The bubble rule — kept unchanged. The reference rang its bubble on
- *   the chosen tab; here it rings on the unchosen one only, as above.
- * - The row's height — kept: the rule's 2pt stays drawn and transparent,
- *   so a screen moving between the two looks does not shift a pixel.
+ *   with no rule the type is the only cue, so the chosen tab differs in
+ *   two things, weight and colour, never colour alone. Colour alone on
+ *   cream was the failure above.
+ * - The row hugs its words, left-aligned, like every chip row in the app.
+ * - The row's height: the rule's 2pt is in the item's foot as padding, so
+ *   no screen holding it moved when the rule went.
  *
- * What it gives up: the glyphs, and with them the envelope that told
- * Requests from a list at a glance. Two words do that well enough; five
- * would not, which is one reason this is not the default.
+ * What it gave up: the glyphs, which told a tab at a glance — the
+ * envelope from the two heads, the globe from the bookmark. Two words do
+ * that well enough; a row of five would want them back.
  *
- * ── the figures as pills (owner, 20 Nov 2026, seen on the phone) ──
+ * ── the figures ──
  *
- * The first cut kept the underline's figures: "Requests (1)" on the
- * chosen tab, a bubble on the other, "Your friends (13)" on both. Beside
- * a 17pt word with nothing else around it, the parentheses read as part
- * of the name. So both figures are pills after the word, in either state:
+ * `count` is news: what waits on the reader (requests, new rows). A pill
+ * in the badge, on the chosen tab as on the other. The underline folded
+ * it into the chosen tab's name, where what it counts is already on
+ * screen; beside a 17pt word with nothing else near it, "Requests (1)"
+ * read as part of the name, and the owner chose the reference's pill on
+ * the chosen tab knowing that.
  *
- * - `count`, the news — the badge the bubble always was, now on the
- *   chosen tab too. This undoes, for this look, "folded into the label
- *   on the chosen one, where whatever it counts is already on screen":
- *   the owner chose the reference's pill on the chosen tab knowing that.
- * - `tally`, the fact — the same shape on the glass the screen's quiet
- *   "Add" wears, its figure in the secondary grey. The two must still
- *   differ: one asks something of the reader and one does not, and the
- *   colour is now the only thing that says which.
+ * `tally` is a fact: how many the tab holds. The same pill on the glass
+ * Crew's quiet "Add" stands on, its figure in the secondary grey — the
+ * two must differ, since one asks something of the reader and one does
+ * not, and the ground is now the only thing that says which. A tab
+ * carries one kind or the other, not both.
  *
- * VoiceOver hears "Requests (1)" as before: the pill is drawn, and the
- * name it reads is written out (`said`).
+ * Zero draws nothing either way: "Friends (0)" states an absence twice.
+ * VoiceOver hears "Requests (1)": the pill is drawn, and the name it
+ * reads is written out.
  */
-export type TabsLook = 'underline' | 'words';
-
-export function UnderlineTabs<K extends string>({ tabs, active, onChange, right, look = 'underline' }: {
-  tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number; tally?: number; testID?: string }[];
+export function WordTabs<K extends string>({ tabs, active, onChange, right }: {
+  tabs: { key: K; label: string; count?: number; tally?: number; testID?: string }[];
   active: K;
   onChange: (k: K) => void;
-  /** See `TabsLook`. */
-  look?: TabsLook;
   /** The row's far end — a small control about the list the tabs switch
    *  (a view toggle), in the space left-aligned tabs leave free. Removed
    *  once as unused; back with a tenant. */
   right?: React.ReactNode;
 }) {
   // The strip's gap is the one thing in it that can give on a small
-  // phone: Crew's two tabs — "Requests" with its bubble, "Your friends
-  // (12)" — come to about 280pt with the 26pt gap, and a 320pt window has
-  // 276 between the page margins. The tabs can also shrink now, so on a
+  // phone: Crew's two tabs — "Requests" with its pill, "Your friends"
+  // with its — come to about 280pt with the 26pt gap, and a 320pt window
+  // has 276 between the page margins. The tabs can also shrink, so on a
   // width nothing anticipated the last label ellipsizes rather than
   // running off the edge under the screen's rounded corner.
   const narrow = useNarrowWindow();
-  const words = look === 'words';
   return (
     <View style={[s.tabsRow, narrow && s.tabsRowNarrow]}>
-      {tabs.map(({ key, icon, label, count, tally, testID }) => {
+      {tabs.map(({ key, label, count, tally, testID }) => {
         const on = active === key;
-        const worded = tally
-          ? `${label} (${tally})`
-          : on && count ? `${label} (${count})` : label;
-        // In `words` the figure is a pill, so the word stands alone and the
-        // name read aloud is the one the underline would have drawn.
         const figure = tally || count || 0;
-        const said = figure ? `${label} (${figure})` : label;
         return (
           <PressableScale
             key={key}
-            contentStyle={[s.tabItem, on && !words && s.tabItemOn]}
+            contentStyle={s.wordItem}
             scaleTo={0.97}
             haptic="selection"
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
@@ -410,25 +379,19 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right,
             testID={testID}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            accessibilityLabel={words ? said : undefined}
+            accessibilityLabel={figure ? `${label} (${figure})` : label}
           >
-            {words ? null : <Glyph name={icon} size={ICON.text} color={on ? colors.accent : colors.textTertiary} />}
-            <Text
-              style={words ? [s.tabWord, on && s.tabWordOn] : [s.tabText, on && s.tabTextOn]}
-              numberOfLines={1}
-            >
-              {words ? label : worded}
-            </Text>
-            {words && tally ? (
+            <Text style={[s.tabWord, on && s.tabWordOn]} numberOfLines={1}>{label}</Text>
+            {tally ? (
               <View style={[s.tabBadge, s.tabTally]}>
                 <Text style={[s.tabBadgeText, s.tabTallyText]} maxFontSizeMultiplier={labelScaleCap}>{tally}</Text>
               </View>
             ) : null}
-            {(words || !on) && count ? (
+            {count ? (
               <View style={s.tabBadge}>
-                {/* A 21pt disc; the number is capped so it stays a
-                    number in a disc rather than a digit spilling out of
-                    one. See `labelScaleCap`. */}
+                {/* A 21pt pill; the number is capped so it stays a number
+                    in a pill rather than a digit spilling out of one. See
+                    `labelScaleCap`. */}
                 <Text style={s.tabBadgeText} maxFontSizeMultiplier={labelScaleCap}>{count}</Text>
               </View>
             ) : null}
@@ -451,9 +414,9 @@ const CHOICE_ROW: PeekRow = { padLeft: space.page, base: 22, min: 14, max: 34 };
 const ALL_KEY = '__all__';
 
 /**
- * A row of things to narrow by, one at a time, drawn as `UnderlineTabs`
- * draws a switch: the word and a 2pt rule in the accent under the chosen
- * one, no fill, no outline (owner, 24 Oct 2026 — Explore's categories,
+ * A row of things to narrow by, one at a time, drawn as the tabs drew a
+ * switch until 20 Nov 2026 (`WordTabs` has what they became): the word
+ * and a 2pt rule in the accent under the chosen one, no fill, no outline (owner, 24 Oct 2026 — Explore's categories,
  * which were chips with a filled ground, the last boxed row in a header
  * whose other controls had all lost theirs).
  *
@@ -907,7 +870,9 @@ const s = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
   tabItemOn: { borderBottomColor: colors.accent },
-  tabText: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium, flexShrink: 1 },
+  // `WordTabs`' item: `tabItem` with no rule, its 2pt kept as padding at
+  // the foot so the row is the height it was when it had one.
+  wordItem: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1, paddingTop: 7, paddingBottom: 9 },
   // `UnderlineChoice`: the tabs' items with the page's margins and the
   // tabs' 26pt gap brought down to 22 — nine of them rather than two, and
   // the gap is what tells one from the next, not a box. The unchosen word
@@ -923,7 +888,7 @@ const s = StyleSheet.create({
   // words as on a row of actions.
   choiceOff: { opacity: 0.45 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
-  // `TabsLook` 'words'. 17pt where the underlined word is 15: with the
+  // `WordTabs`. 17pt where the underlined word was 15: with the
   // glyph gone the word is the whole tab. Chosen, not measured — one
   // step over the 16pt names in the list the tabs head (`type.body`,
   // Crew's `name`), so the switch reads above its rows and still well
@@ -940,7 +905,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.badgeSolid,
   },
   tabBadgeText: { color: colors.accentInk, fontSize: 13, fontWeight: font.semibold },
-  // The tally's pill (`TabsLook` 'words'): the badge's shape on the glass
+  // The tally's pill (`WordTabs`): the badge's shape on the glass
   // Crew's quiet "Add" stands on, so it reads as a fact beside the name,
   // not as news.
   tabTally: { backgroundColor: colors.surfaceGlass },
