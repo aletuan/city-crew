@@ -273,3 +273,27 @@ Suite `20261114-211304`: **19/22 đạt**, JUnit 4630,893 giây. Cùng code/test
 - 07 signup/delete, 16 invite/delete/leave, 18/20 guest resume, 19 privacy và 21 tab responsive đều đạt. Runner xác nhận cleanup, không còn credential ledger hoặc lock. Không sửa source hay test để làm lượt này đạt.
 
 **Kiểm chứng bản sửa 11 (14/11):** Matcher card mới khớp đúng tên fixture và phần metadata bắt đầu bằng dấu phẩy; cleanup chỉ khớp hai tên fixture, không xóa collection chỉ vì trùng tiền tố. Maestro check-syntax OK. Hai lượt riêng liên tiếp `20261114-224647` và `20261114-225010` đều PASS đến bước xác nhận xóa trên Yours. Không thay code app.
+
+
+## Chạy lại 15 ca lỗi sau sửa Profile — 20/11/2026
+
+Lượt `20261120-035122`, commit `7ebbea9c`: **10 PASS / 5 FAIL**. PASS: 04, 09, 10, 11, 12, 15, 17, 18, 19, 21. FAIL: 05, 06, 13, 16, 20.
+
+**Common error: bấm tab không bảo đảm về root.** Cả năm ca fail ở `common/open-account.yaml`, đợi `person-account|profile-sign-in` trong khi hierarchy có `account-back` và `profile-email`. Stack Account được giữ khi chuyển tab; helper cần nhận cả trạng thái đang ở Account. Không có `POP_TO_TOP` tại các điểm lỗi này. 05/13/16 fail ở đăng xuất cuối, 20 fail khi chuẩn bị guest trước phần resume. Chưa sửa helper trong lượt này.
+
+**Common error: URL trong YAML lấn override của runner.** Log lượt `034446` mở 8081 dù runner truyền 8084. Lượt chính dùng bản sao flow chỉ thay cổng thành 8084, giữ nguyên assertion. Khi chẩn đoán phải đọc URL thực tế ở `Maestro.openLink`, không chỉ kiểm tra Metro /status.
+
+**Hạ tầng:** runner ở checkout khác gây DeviceUnreachable trước lượt chính; lock cục bộ từng checkout không ngăn tranh simulator. Sau cùng ổ đĩa hết chỗ khiến report.xml không tạo được. Kết quả được đối chiếu console “5/15 Flows Failed” và commands.json của cả 15 ca; ca 12 hoàn tất assertion cuối. Nén log riêng lượt chạy, kiểm chứng nội dung giải nén, giải phóng khoảng 1.3 GB. Cần kiểm tra dung lượng trước suite dài và lock simulator chung. Không quy thời gian chờ driver/cold start thành hiệu năng app.
+
+Cleanup tài khoản fixture thành công, không còn JSON ledger/lock của lượt này. Chi tiết và bằng chứng ở `.smoke-local/maestro/20261120-035122/summary.md` (local, không commit artifacts).
+
+
+### Bản sửa helper Account và kiểm chứng — 20/11/2026
+
+`common/open-account.yaml` nhận ba trạng thái sau khi bấm Profile: `person-account` (trang cá nhân), `account-back` (Account đang mở), `profile-sign-in` (guest hub). Chỉ bấm nút Account ở trang cá nhân; mọi nhánh đều phải xác nhận hậu điều kiện `account-back|profile-sign-in`. Không tăng timeout, không bỏ kiểm tra trạng thái cuối, không đổi code app.
+
+**Bài học:** helper điều hướng dùng lại phải nhận các trạng thái đầu vào hợp lệ khi navigator giữ stack, đồng thời giữ hậu điều kiện rõ ràng. Chỉ thêm selector vào bước chờ mà không kiểm tra đích cuối có thể làm test đi tiếp sai màn hình.
+
+Lượt `20261120-060554`: 05 PASS **3m01s**, 06 PASS **2m20s**, 13 PASS **4m51s**, 16 PASS **20m14s**. 20 bị `Unknown error` tại tap `tab-trips` trong chuẩn bị, screenshot đã hiển thị Trips rỗng; cleanup đồng thời báo `fetch failed`. Chưa xác định chính xác nguyên nhân gián đoạn; không coi đây là assertion lỗi Account hoặc lỗi nghiệp vụ resume. Ledger được giữ lại và cleanup chạy lại thành công khi mạng phản hồi.
+
+Chạy riêng 20, giữ máy thức trong lúc runner hoạt động: `20261120-065804` **PASS 4m06s**, runner exit 0, cleanup tài khoản fixture thành công. Tổng cộng **5/5 ca mục tiêu đã PASS qua hai lượt**, không phải một lượt 5/5 hay toàn bộ 22 flow. Cả hai lượt đều có JUnit; kiểm tra cú pháp helper và diff whitespace đạt. Chạy trên Metro 8084 bằng bản sao flow chỉ thay URL như lượt trước, source helper mới giống hệt bản được kiểm chứng.
