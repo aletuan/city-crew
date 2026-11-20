@@ -2,6 +2,8 @@
 
 **Kết quả: toàn suite 19/22 PASS; sửa helper rồi chạy lại 3/3 PASS. Chưa có một lượt 22/22 trên revision cuối.** Giờ/run ID theo Việt Nam (UTC+7).
 
+**Cập nhật trước merge PR #1484:** đã đồng bộ main `9c10c182` sau các lượt E2E nêu dưới. Main đổi nút Account sang `person-settings` và cập nhật helper tương ứng; giữ thay đổi đó. Kết quả E2E dưới đây là lịch sử trên SHA đã ghi, không chứng nhận bản tích hợp mới. Các gate được chạy lại trước push.
+
 ## Revision và phạm vi
 
 - Branch: `codex/maestro-stable-baseline`, base main `0a1008d9` (đã có #1479/#1480/#1481).
